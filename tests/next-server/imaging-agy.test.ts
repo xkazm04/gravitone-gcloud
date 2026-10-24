@@ -70,3 +70,11 @@ describe("the agy workspace", () => {
     await vi.waitFor(() => expect(existsSync(fake.workspaces[0]!), "the failed call's workspace was left in tmp").toBe(false));
   });
 });
+
+describe("a batch", () => {
+  it("is capped at the 8 images google and leonardo cap at: each is a ~57 s sequential agent turn", async () => {
+    const out = await agyProvider().generate!({ ...REQ, count: 12 });
+    expect(fake.workspaces, "agy was spawned once per requested image past the cap").toHaveLength(8);
+    expect(out.images).toHaveLength(8);
+  });
+});

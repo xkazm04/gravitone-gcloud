@@ -223,7 +223,9 @@ export function agyProvider(): ImagingProvider {
           "agy",
         );
 
-      const count = Math.max(req.count ?? 1, 1);
+      // Capped at 8, the bound google.ts and leonardo.ts apply and the HTTP door
+      // refuses past: each image here is a full sequential agent turn (~57 s).
+      const count = Math.min(Math.max(req.count ?? 1, 1), 8);
       const images: ImageRef[] = [];
       for (let i = 0; i < count; i++) images.push(await generateOne(req.prompt, ratio));
 
