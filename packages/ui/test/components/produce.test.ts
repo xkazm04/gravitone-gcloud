@@ -252,6 +252,18 @@ describe("markup", () => {
     expect(html).toContain("current");
   });
 
+  test("a delta's tone is read off its words: a ±$0 / ±0 delta is never coloured dearer or later", () => {
+    const tone = (dEtaS: number, dUsd: number): string =>
+      renderToStaticMarkup(h(RerouteList, { options: [{ option: NANO, current: false, dEtaS, dUsd, queuePos: 1 }], units: 24, onPick: noop, busy: null }));
+    const even = tone(59.5, 0.0045);
+    expect(even).toContain("eta ±0");
+    expect(even).toContain("±$0");
+    expect(even).not.toMatch(/_bad_/);
+    const dearer = tone(65 * 60, 0.96);
+    expect(dearer.match(/_bad_/g)?.length).toBe(2);
+    expect(tone(-65 * 60, -0.96).match(/_good_/g)?.length).toBe(2);
+  });
+
   test("a held lane says v1's sentence verbatim and offers one act", () => {
     const html = renderToStaticMarkup(h(LaneHold, { lane: "box.chrome", job: "Hunt", stage: "submit · 2 of 4", nowMs: NOW, onAck: noop, busy: false }));
     expect(html).toContain(HOLD_SENTENCE);

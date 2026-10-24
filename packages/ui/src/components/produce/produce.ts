@@ -85,8 +85,13 @@ export function relUsd(d: number): string {
   return `${d > 0 ? "+" : "−"}${fmtUsd(Math.abs(d))}`;
 }
 
-/** Which way a delta leans for the operator: later or dearer is `bad`. */
-export const lean = (d: number, epsilon: number): "good" | "bad" | "even" => (d > epsilon ? "bad" : d < -epsilon ? "good" : "even");
+/**
+ * Which way a delta leans for the operator, read off the words drawn for it (relDur, relUsd):
+ * later or dearer is `bad`. Read from the words, not from a second threshold, so a tone can never
+ * call `±$0` dearer - it did, with `lean(d, 0.004)` beside relUsd's 0.005 and `lean(s, 59)` beside
+ * relDur's 60.
+ */
+export const leanOf = (words: string): "good" | "bad" | "even" => (words.startsWith("+") ? "bad" : words.startsWith("−") ? "good" : "even");
 
 export const isWork = (p: PlanPart): p is WorkPlanPart => p.kind !== "gate" && p.kind !== "slot";
 
