@@ -86,7 +86,7 @@ const fileSchema = z.object({
     .default({}),
 });
 
-type ClassState = { readonly cls: SpendClass; readonly unit: "usd" | "audio-s"; readonly rows: readonly V1Row[]; readonly holds: readonly (Hold & { readonly alive: boolean | null })[]; readonly counters: MeterCounters };
+type ClassState = { readonly cls: SpendClass; readonly unit: "usd" | "audio-s" | "chars"; readonly rows: readonly V1Row[]; readonly holds: readonly (Hold & { readonly alive: boolean | null })[]; readonly counters: MeterCounters };
 export type SpendSnapshot = { readonly classes: readonly ClassState[]; readonly skipped: readonly Skipped[] };
 
 const METER = { kind: "machine", id: "spend-meter" } as const;

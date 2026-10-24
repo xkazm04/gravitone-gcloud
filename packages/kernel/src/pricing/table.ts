@@ -32,7 +32,7 @@ import { z } from "zod";
 // ENV-FREE AND IMPORT-FREE apart from the schema, as every v1 copy was: the
 // table can be handed to a browser without saying which keys this box holds.
 
-export const PRICE_UNITS = ["image", "input-token", "output-token", "audio-second", "clip-5s", "clip-10s"] as const;
+export const PRICE_UNITS = ["image", "input-token", "output-token", "audio-second", "character", "clip-5s", "clip-10s"] as const;
 export const priceUnitSchema = z.enum(PRICE_UNITS);
 export type PriceUnit = z.output<typeof priceUnitSchema>;
 
@@ -245,6 +245,18 @@ export const PRICE_TABLE: readonly PriceRow[] = [
     source:
       "Never measured here, and NOT assumed to match music: a different model on a different endpoint, 0.5..30 s per request where music runs 3..600 s. Fill it the same way: one call of known length, credit delta, divide.",
     checked: "2026-08-29",
+  },
+
+  /* ── speech (lib/music/elevenlabs.ts `speak`): characters exact, and priced ── */
+  {
+    provider: "elevenlabs-voice",
+    model: "eleven_multilingual_v2",
+    unit: "character",
+    usd: 0.08,
+    per: 1000,
+    source:
+      "The vendor's own API rate card, elevenlabs.io/pricing/api, read 2026-10-24: Text to Speech, v2 Multilingual, $0.08 per 1K characters, the same rate on every tier (plans differ only in characters included), billed in US dollars, not credits, per character of the request's text. An estimate of the bill, not a receipt: the TTS response reports no cost, and characters a plan includes cost less than this.",
+    checked: "2026-10-24",
   },
 
   /* ── video (lib/imaging/video/pricing.ts) ─────────────────────────────── */

@@ -52,12 +52,14 @@ export type MusicBillingUnit =
   /** Charged against the ElevenLabs credit balance. */
   | "credits"
   /** Charged nothing. A DECLARED zero, not an unmeasured one. */
-  | "none";
+  | "none"
+  /** Charged in US dollars per character of text (text-to-speech API usage, not credits). */
+  | "characters";
 
 /** The operations this engine can perform, as the log and the ledger name
  *  them. One model can bill differently per endpoint, so the row is keyed on
  *  the operation as well as the model. */
-export type MusicOp = "generate" | "compose" | "sfx" | "plan";
+export type MusicOp = "generate" | "compose" | "sfx" | "plan" | "tts";
 
 interface MusicPriceRow {
   vendor: "elevenlabs";
@@ -70,6 +72,8 @@ interface MusicPriceRow {
   creditsPerSecond?: number;
   /** USD the operator pays per credit, on their plan. Absent = not checked. */
   usdPerCredit?: number;
+  /** USD per character of text, for an operation billed by its text (`bills: "characters"`). */
+  usdPerCharacter?: number;
   source: string;
   checked: string;
 }
@@ -126,6 +130,19 @@ export const MUSIC_PRICES: readonly MusicPriceRow[] = [
       "Never measured here, and NOT assumed to match music: text-to-sound is a different model on a different endpoint, and its requests run 0.5..30s where music runs 3s..600s. Fill it the same way — one call of known length, credit delta, divide.",
     checked: "2026-08-29",
   },
+  {
+    vendor: "elevenlabs",
+    op: "tts",
+    model: "eleven_multilingual_v2",
+    bills: "characters",
+    // PRICED, and by its text rather than its seconds. The same figure, source and date as the
+    // kernel price table's elevenlabs-voice row (packages/kernel/src/pricing/table.ts), which the
+    // part act's receipt quotes; this row is what the call's log line quotes.
+    usdPerCharacter: 0.00008,
+    source:
+      "The vendor's own API rate card, elevenlabs.io/pricing/api, read 2026-10-24: Text to Speech, v2 Multilingual, $0.08 per 1K characters on every tier, billed in US dollars per character, not credits. An estimate of the bill: the TTS response reports no cost, and characters a plan includes cost less.",
+    checked: "2026-10-24",
+  },
 ];
 
 /** Which link of the unit chain a quote reached. */
@@ -161,7 +178,7 @@ const rowFor = (op: MusicOp, model?: string): MusicPriceRow | undefined =>
  * dollar figure and never $0.00 — an unpriced call is unpriced, not free, and
  * `free` is a separate basis precisely so the two can never be confused.
  */
-export function priceCall(args: { op: MusicOp; model?: string; seconds: number }): MusicQuote {
+export function priceCall(args: { op: MusicOp; model?: string; seconds: number; characters?: number }): MusicQuote {
   const { op, model } = args;
   const seconds = Number.isFinite(args.seconds) && args.seconds > 0 ? args.seconds : 0;
   const row = rowFor(op, model);
@@ -181,6 +198,13 @@ export function priceCall(args: { op: MusicOp; model?: string; seconds: number }
       basis: "free",
       note: `Charged nothing. ${row.source} Checked ${row.checked}.`,
     };
+
+  // Billed by the text: the characters are exact before the call, so the dollars are arithmetic.
+  if (row.bills === "characters") {
+    const chars = args.characters !== undefined && Number.isFinite(args.characters) && args.characters > 0 ? args.characters : 0;
+    if (row.usdPerCharacter === undefined) return { seconds, basis: "unpriced", note: `${chars} characters at an undeclared rate. ${row.source}` };
+    return { seconds, usd: chars * row.usdPerCharacter, basis: "estimated", note: `Estimated: ${chars} characters x $${row.usdPerCharacter}/character (${row.source} Checked ${row.checked}).` };
+  }
 
   if (row.creditsPerSecond === undefined)
     return {
@@ -234,6 +258,7 @@ export interface PublicMusicPrice {
   bills: MusicBillingUnit;
   creditsPerSecond?: number;
   usdPerCredit?: number;
+  usdPerCharacter?: number;
   source: string;
   checked: string;
 }
@@ -268,6 +293,7 @@ export function priceTable(): MusicPriceTable {
       bills: p.bills,
       creditsPerSecond: p.creditsPerSecond,
       usdPerCredit: p.usdPerCredit,
+      usdPerCharacter: p.usdPerCharacter,
       source: p.source,
       checked: p.checked,
     })),

@@ -13,9 +13,12 @@ import { cutProducer, cutUnits } from "@/lib/producers/cut";
 import { framesProducer, framesUnits } from "@/lib/producers/frames";
 import { motionProducer, motionUnits } from "@/lib/producers/motion";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
+import { dryOnlyFrom } from "@gt/kernel/dryrun";
+import { isMusicConfigured } from "@/lib/music/elevenlabs";
 import type { EditorKind, PartActKind, PartOp, PartReceipt, PartView } from "@gt/domain/partView";
 
 import type { ServerPart } from "./port.ts";
+import { actModeOf } from "./actMode.ts";
 import { receiptOf } from "./fixtureActs.ts";
 import { basisOf, OPERATOR, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type Scene } from "./realScene.ts";
 
@@ -37,6 +40,9 @@ export type RealDeps = {
   /** How long a confirm waits for its job to end before answering with it running (default ACT_WAIT_MS). */
   readonly actWaitMs?: number;
 };
+
+/** The mode an act is priced and launched in: `live` for the voice act alone (./actMode.ts). */
+const modeOf = (kind: EditorKind, act: PartActKind): "dry" | "live" => actModeOf(kind, act, { dryOnly: dryOnlyFrom(process.env), keyed: isMusicConfigured() });
 
 /** A dry act lands in milliseconds; a live turn takes minutes and is answered as running. */
 const ACT_WAIT_MS = 2500;
@@ -144,7 +150,7 @@ function launchAct(deps: RealDeps, store: Store, projectId: string, key: string,
   const units = UNITS[kind];
   if (units === undefined) return err("unavailable", `no producer is bound for a ${kind} part yet`);
   const ref = { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) };
-  const l = launchPartAct(store, ref, units, { mode: "dry", now, token, actor: OPERATOR });
+  const l = launchPartAct(store, ref, units, { mode: modeOf(kind, act), now, token, actor: OPERATOR });
   if (!l.ok) return l;
   return l.value.kind === "stale" ? ok({ kind: "stale", fresh: partReceiptOf(l.value.fresh, act) }) : ok({ kind: "go", jobId: l.value.jobId, kind_: kind });
 }
@@ -159,7 +165,8 @@ function partReceiptOf(r: StepReceipt, act: PartActKind): PartReceipt {
  * An act's receipt. A kind with a bound producer (L37) is priced from THAT producer's units - the
  * same function its job's plan step books - placed among the live queue (lib/producers
  * `partActReceipt`). A kind whose producer is not bound yet keeps the editor side's static receipt.
- * Every receipt reads `dry` until the editor can arm live (decision 4: a confirm of a live receipt).
+ * Every receipt reads `dry` but the voice act's, which reads `live` where this process may spend
+ * (./actMode.ts): its confirm is the arm (decision 4: a confirm of a live receipt).
  */
 function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartActKind, target?: string): Result<PartReceipt> {
   const k = deps.store();
@@ -169,7 +176,7 @@ function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartAct
   if (!scene.ok) return scene;
   const units = UNITS[scene.value.kind];
   if (units !== undefined) {
-    const r = partActReceipt(k.value, { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) }, units, { mode: "dry", now });
+    const r = partActReceipt(k.value, { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) }, units, { mode: modeOf(scene.value.kind, act), now });
     return r.ok ? ok(partReceiptOf(r.value, act)) : r;
   }
   const b = unwrap(k.value.read((r) => basisOf(r, projectId, key, act, now, target)));

@@ -94,6 +94,9 @@ export interface MusicCallLog {
    *  engine has (see pricing.ts's unit chain), so it is on every line whether
    *  or not money could be attached to it. */
   seconds: number;
+  /** Characters of text, for a call billed by its text (`tts`): printed INSTEAD of the seconds,
+   *  which a speech call does not ask for and only learns after it answers. */
+  chars?: number;
   /* — set when the call succeeded — */
   model?: string;
   /** Which link of the unit chain the price reached. */
@@ -117,7 +120,7 @@ export function formatCall(l: MusicCallLog): string {
   else if (l.model) f.push(`model=${l.model}`);
 
   f.push(`ms=${l.ms}`);
-  f.push(`sec=${l.seconds}`);
+  f.push(l.chars === undefined ? `sec=${l.seconds}` : `chars=${l.chars}`);
 
   // COST, IN WHICHEVER UNIT THE CHAIN ACTUALLY REACHED. A missing figure is
   // never a zero, and "free" is a declared fact rather than the absence of one

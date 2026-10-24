@@ -23,8 +23,10 @@ import type { MediumTable, Pace, RouterMedium } from "./types.ts";
 // studio.js LANES and CATALOG), with capabilities only where v1 declares them:
 //   Suno v6           lib/suno (create from fields), driven in Chrome on the render box
 //   ElevenLabs        lib/capabilities.ts musicGenerate / musicSectionEdit / musicSfx
-//   "local TTS",      named by the prototype, declared by nothing in v1: listed with
-//   ElevenLabs voice  no capability, so a pin to them is refused `unsupported`
+//   ElevenLabs voice  speech: text-to-speech, one default voice (lib/music/elevenlabs.ts `speak`,
+//                     2026-10-24), billed per character of the text
+//   "local TTS"       named by the prototype, declared by nothing in v1: listed with no
+//                     capability, so a pin to it is refused `unsupported`
 //   Wan 2.2 i2v       lib/capabilities.ts localVideoRender (pipeline/video, ComfyUI)
 //   strips            pipeline/strips/run.mts, the HTML/SVG card renderer
 //   ffmpeg            lib/capabilities.ts localRender (cut export, MV export)
@@ -218,12 +220,23 @@ export const AUDIO_TABLE: MediumTable = {
       bills: { music: "audio-second", "section-edit": "audio-second", sfx: "audio-second" },
       credential: "ELEVENLABS_API_KEY",
     },
-    { provider: "elevenlabs-voice", capabilities: [], lane: "cloud.elevenlabs", transport: "cloud", honours: [], models: {}, credential: "ELEVENLABS_API_KEY" },
+    {
+      provider: "elevenlabs-voice",
+      capabilities: ["speech"],
+      lane: "cloud.elevenlabs",
+      transport: "cloud",
+      honours: [],
+      // The vendor's documented default TTS model (elevenlabs.io/docs/api-reference/text-to-speech/convert,
+      // read 2026-10-24), priced per character in the price table.
+      models: { speech: "eleven_multilingual_v2" },
+      bills: { speech: "character" },
+      credential: "ELEVENLABS_API_KEY",
+    },
     { provider: "local-tts", capabilities: [], lane: "seat.text", transport: "local-binary", honours: [], models: {}, credential: "none declared in v1" },
   ],
   plans: {
-    local: { music: ["suno", "elevenlabs"], "section-edit": ["elevenlabs"], sfx: ["elevenlabs"] },
-    hosted: { music: [], "section-edit": [], sfx: [] },
+    local: { music: ["suno", "elevenlabs"], "section-edit": ["elevenlabs"], sfx: ["elevenlabs"], speech: ["elevenlabs-voice"] },
+    hosted: { music: [], "section-edit": [], sfx: [], speech: [] },
   },
 };
 

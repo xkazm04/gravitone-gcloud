@@ -10,7 +10,10 @@ import type { Store } from "@gt/kernel/store";
 // nothing new: the same audio judged against the same profile is one fact. Advisory: nothing
 // reads the verdict to block a cut (operator decision, 2026-10-24).
 
-export const acceptKeyOf = (sha: string, profile: string): string => `audio.accept:${sha}:${profile}`;
+// The key's prefix is `audio-accept`, not the event type: an event key is `<kind>:<rest>` with a
+// kind of [a-z0-9-] (@gt/domain/event `eventKeySchema`), so `audio.accept:` is refused by the door
+// and every row would fail to write.
+export const acceptKeyOf = (sha: string, profile: string): string => `audio-accept:${sha}:${profile}`;
 
 export type AcceptInput = {
   readonly sha: string;
@@ -21,7 +24,9 @@ export type AcceptInput = {
   readonly actor: Actor;
 };
 
-export function recordAcceptance(kernel: Store, input: AcceptInput): Result<{ readonly recorded: boolean }> {
+/** `kernel`: anything that runs a store transaction - the Store, or a producer step's effect port
+ *  (lib/producers/voice.ts lands takes through `ctx.fx`, which has no Store to hand). */
+export function recordAcceptance(kernel: Pick<Store, "tx">, input: AcceptInput): Result<{ readonly recorded: boolean }> {
   if (input.sha === "") return err("invalid", "an acceptance row names the blob it measured");
   const { acceptance: a, measure: m } = input;
   const r = kernel.tx((t) =>

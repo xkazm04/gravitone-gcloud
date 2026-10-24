@@ -49,6 +49,14 @@ describe("model options", () => {
     expect(nano.src).toBe("illustrative");
   });
 
+  it("prices the narration voice by the characters it bills, on the ElevenLabs lane", () => {
+    const voice = opt("voice", "elevenlabs-voice");
+    expect(voice).toMatchObject({ lane: "cloud.elevenlabs", model: "eleven_multilingual_v2" });
+    // A take is priced at the catalog's assumed 200 characters x the table's $0.08 per 1K.
+    expect(voice.usdPerUnit).toBeCloseTo(0.016, 6);
+    expect(opt("voice", "local-tts").usdPerUnit).toBeNull();
+  });
+
   it("never presents a placeholder price: a cloud text turn is unpriced with the table's reason", () => {
     const gemini = opt("research", "google");
     expect(gemini.usdPerUnit).toBeNull();

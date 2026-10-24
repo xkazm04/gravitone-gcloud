@@ -1,7 +1,8 @@
 // THE ALBUM WORDS AND EXPLAINER VOICE ACTS (Phase 4 wave C, L37), through their receipts and
 // jobs: words is one `mv-metadata` turn whose answer passes v1's fitter and is booked on the job
-// (the words part holds no step record yet); voice has no engine in this studio, so a live job is
-// refused at its plan step with that sentence, and a dry one needs lines to speak.
+// (the words part holds no step record yet); voice needs lines to speak - strip cards with
+// captions - and a live job on an option with no engine is refused at its plan step. Voice that
+// speaks is tests/next-server/producer-step-voice.test.ts.
 
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -25,7 +26,7 @@ import { compose } from "@gt/kernel/records/write";
 import type { Store } from "@gt/kernel/store";
 
 import { driveStep, launchPartAct, partActReceipt, type UnitsFn } from "../../lib/producers/research.ts";
-import { NO_VOICE_ENGINE } from "../../packages/producers/src/voice/define.ts";
+import { NO_LINES, NO_VOICE_ENGINE } from "../../packages/producers/src/voice/define.ts";
 import { voiceUnits } from "../../lib/producers/voice.ts";
 import { wordsProducer, wordsUnits } from "../../lib/producers/words.ts";
 
@@ -78,8 +79,8 @@ describe("explainer voice", () => {
     const s = store("explainer", "ex");
     const ref = { projectId: "ex", partId: "ex/voice", act: "record-line" };
     const dry = partActReceipt(s, ref, voiceUnits, { mode: "dry", now: NOW });
-    expect(dry.ok ? "" : dry.error.message).toBe("record lines needs an adopted script with spoken beats");
-    // The live refusal (no engine) is held on literal inputs in packages/producers/test/steps.test.ts.
+    expect(dry.ok ? "" : dry.error.message).toBe(NO_LINES);
+    // The live refusal (an option with no engine) is held on literal inputs in packages/producers/test/steps.test.ts.
     expect(NO_VOICE_ENGINE).toContain("no speech engine");
   });
 });
