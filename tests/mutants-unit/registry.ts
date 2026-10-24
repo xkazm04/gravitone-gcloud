@@ -2349,6 +2349,14 @@ export const MUTANTS: UnitMutant[] = [
     replace: "",
     why: "A gate check that throws after an edit is an unhandled rejection in the server process, not a log line.",
   },
+  {
+    id: "part-action-drops-who",
+    test: "tests/next-server/part-actions-who.test.ts",
+    file: "app/(studio)/projects/[id]/_part/actions.ts",
+    find: "serverPart().opPart(i, as(who))",
+    replace: "serverPart().opPart(i)",
+    why: "Every part edit's op log names a blanket operator instead of the signed-in caller who made it.",
+  },
   // ── Phase 4 wave C, L38: the part view contract and the part workspace ──
   {
     id: "partview-core-op-dropped-from-the-trail",
