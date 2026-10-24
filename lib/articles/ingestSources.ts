@@ -5,7 +5,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { readTextFile, writeFileAtomic, writeJsonAtomic } from "./store";
+import { readJsonFile, readTextFile, writeFileAtomic, writeJsonAtomic } from "./store";
 import type { Claim, Source } from "./types";
 
 /* ── ingestion: the agent's out/ is untrusted input ────────────────────────── */
@@ -78,9 +78,11 @@ const SOURCE_FIELDS = ["n", "url", "title", "publisher", "date", "primary", "cou
 /** The run's experiment source. A trial run without it cannot be researched: the post would cite a
  *  first-hand measurement it has no record of. */
 export async function readExperimentSource(dir: string): Promise<Source> {
-  const raw = await readTextFile(path.join(dir, EXPERIMENT_SOURCE_FILE));
-  if (!raw) throw new Error(`the run is written around a trial but holds no ${EXPERIMENT_SOURCE_FILE}`);
-  return validateSources([JSON.parse(raw)])[0];
+  // readJsonFile names the file when it does not parse; a bare JSON.parse failed the step with
+  // "Unexpected end of JSON input" and no word of which file.
+  const raw = await readJsonFile<unknown>(path.join(dir, EXPERIMENT_SOURCE_FILE), undefined);
+  if (raw === undefined) throw new Error(`the run is written around a trial but holds no ${EXPERIMENT_SOURCE_FILE}`);
+  return validateSources([raw])[0];
 }
 
 /** Row 1 of a trial run's research IS the trial's record, field for field: the post's first-hand

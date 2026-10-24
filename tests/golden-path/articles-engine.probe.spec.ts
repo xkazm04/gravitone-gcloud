@@ -29,6 +29,7 @@ import { test, expect } from "@playwright/test";
 import { agentArgs, assertIsolatedWorkspace, classifyOutcome, parseEnvelope, runAgent } from "@/lib/agent/cliSeam";
 import { approveRun, createRun, defaultDeps, driveRun, getRunDetail, rejectRun, resumeRun } from "@/lib/articles/engine";
 import { ingestPatches } from "@/lib/articles/ingestDraft";
+import { EXPERIMENT_SOURCE_FILE, readExperimentSource } from "@/lib/articles/ingestSources";
 import { markdownToStoryHtml } from "@/lib/articles/mediumPackage";
 import { MAX_PATCHES } from "@/lib/articles/prompt";
 import { patchIsSafe } from "@/lib/articles/registryWrite";
@@ -260,6 +261,15 @@ test("proposals past the ones read are named in patches.rejected.json, never dro
   expect(rejected.filter((r) => /^id must be/.test(r.reason))).toHaveLength(MAX_PATCHES * 2);
   expect(rejected.map((r) => r.reason)).toContain(`3 more proposals past the first ${MAX_PATCHES * 2} were not read`);
   expect(JSON.parse(readFileSync(path.join(dir, "patches.json"), "utf8"))).toEqual([]);
+});
+
+test("trial: an experiment-source.json that does not parse fails by its file name", async () => {
+  const dir = path.join(box.dir, "experiment-run");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, EXPERIMENT_SOURCE_FILE), '{"n": 1, "url": ');
+  await expect(readExperimentSource(dir)).rejects.toThrow(EXPERIMENT_SOURCE_FILE);
+  rmSync(path.join(dir, EXPERIMENT_SOURCE_FILE));
+  await expect(readExperimentSource(dir)).rejects.toThrow(`holds no ${EXPERIMENT_SOURCE_FILE}`);
 });
 
 test("a run on a registry subject records the subject and reads its golden path", async () => {
