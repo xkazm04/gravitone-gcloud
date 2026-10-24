@@ -7,7 +7,8 @@ import type { ResourceLane } from "@gt/domain/lane";
 import type { IngestEvent, ProjectCtx } from "./types.ts";
 
 // THE PROJECTION'S VOCABULARY - the few pure rules every adapter applies the
-// same way, so eleven sources cannot spell "when did this happen" eleven ways.
+// same way, so the sources (./sources.ts V1_SOURCES) cannot each spell "when did
+// this happen" their own way.
 //
 //   instant()   v1 writes time in three shapes: Python's `isoformat()` with
 //               `+00:00` and whole seconds (pipeline/foundry/forge.py `now()`),
