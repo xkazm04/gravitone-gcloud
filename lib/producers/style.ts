@@ -46,7 +46,9 @@ import { ImagingError } from "@/lib/imaging/errors";
 import { generate, recognize } from "@/lib/imaging/router";
 import type { GeneratedImages, ImageRef, Recognition } from "@/lib/imaging/types";
 import { OUT_DIRNAME } from "@/lib/fixtures/mode";
-import { blobRootOf } from "@/lib/parts/gates";
+// The kernel process's own spelling, not lib/parts/gates.ts's re-export: that module is `server-only`, and
+// the registry (which binds this producer) loads it lazily, so the worker and a CLI can import the registry.
+import { blobRootOf } from "@/lib/kernelProcess";
 import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
 
 import { codeRoot } from "./forge.ts";
