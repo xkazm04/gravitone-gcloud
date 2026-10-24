@@ -6,7 +6,9 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { projectArticles, readArticles, type ArticlesSnapshot } from "../../lib/ledger/v1/sources/articles.ts";
+import { openKernel } from "@gt/kernel/kernel";
+
+import { heldIn, projectArticles, readArticles, type ArticlesSnapshot } from "../../lib/ledger/v1/sources/articles.ts";
 import type { IngestEvent, ProjectCtx } from "../../lib/ledger/v1/types.ts";
 
 // The article adapter over literal run.json records (lib/articles/types.ts
@@ -102,5 +104,14 @@ describe("articles reader", () => {
       ["b-dead", false],
     ]);
     expect(r.value.skipped).toEqual([{ id: "c-bad", reason: expect.stringMatching(/^article run c-bad: status: /) }]);
+  });
+
+  it("a job list that cannot be read fails the read, never reads as `no holder` (every held run stalled, offered Resume)", async () => {
+    put("d-held", "run.json", JSON.stringify(run({ id: "d-held" })));
+    const k = openKernel(":memory:");
+    if (!k.ok) throw k.error;
+    k.value.close();
+    const r = await readArticles(root, () => heldIn(k.value.store));
+    expect(r.ok ? r.value.runs.find((x) => x.run.id === "d-held")?.driving : r.error.message).toMatch(/^articles: the kernel's job list could not be read: /);
   });
 });

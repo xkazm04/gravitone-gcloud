@@ -10,6 +10,7 @@ import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 import type { JobState } from "@gt/domain/job";
 import { list } from "@gt/kernel/job";
+import type { Store } from "@gt/kernel/store";
 
 import { ARTICLE_STATUSES, STEP_NAMES } from "../../../../lib/articles/types.ts";
 import { readJsonFile, RUN_ID_RE, storeRoot } from "../../../../lib/articles/store.ts";
@@ -102,16 +103,24 @@ async function driverAt(dir: string): Promise<boolean> {
  * reads the process's kernel when this process has it open (the app opens it before any page reads,
  * app/_server/kernel.ts), and a process that never did - a test over a store of its own - reads no
  * jobs, so a `.driver` alone holds. Opening one here would leave a handle nobody closes.
+ *
+ * A job list that cannot be read is an error, never an empty set: an empty set would draw every
+ * job-held run as `stalled` and tell the operator to resume it - a second drive of a running article.
  */
-export function heldByJobs(): ReadonlySet<string> {
-  const open = globalThis.__gravitoneKernel;
-  if (open === undefined || open.location !== storeLocation()) return new Set();
-  const jobs = list(open.kernel.store);
-  if (!jobs.ok) return new Set();
-  return new Set(jobs.value.filter((j) => j.producer === "article" && j.of.kind === "run" && (j.state === "queued" || j.state === "running")).map((j) => j.of.id));
+export function heldIn(store: Store | undefined): Result<ReadonlySet<string>> {
+  if (store === undefined) return ok(new Set());
+  const jobs = list(store);
+  if (!jobs.ok) return err(jobs.error.code, `articles: the kernel's job list could not be read: ${jobs.error.message}`, { cause: jobs.error });
+  return ok(new Set(jobs.value.filter((j) => j.producer === "article" && j.of.kind === "run" && (j.state === "queued" || j.state === "running")).map((j) => j.of.id)));
 }
 
-export async function readArticles(root: string, held: () => ReadonlySet<string> = () => new Set()): Promise<Result<ArticlesSnapshot>> {
+/** {@link heldIn} over the process's open kernel, when it is this store's. */
+export function heldByJobs(): Result<ReadonlySet<string>> {
+  const open = globalThis.__gravitoneKernel;
+  return heldIn(open === undefined || open.location !== storeLocation() ? undefined : open.kernel.store);
+}
+
+export async function readArticles(root: string, held: () => Result<ReadonlySet<string>> = () => ok(new Set())): Promise<Result<ArticlesSnapshot>> {
   let names: string[];
   try {
     names = await readdir(root);
@@ -121,7 +130,8 @@ export async function readArticles(root: string, held: () => ReadonlySet<string>
   }
   const ids = names.filter((n) => RUN_ID_RE.test(n)).sort().reverse().slice(0, ARTICLES_READ_CAP);
   const byJob = held();
-  const got = await readEach(ids, async (id) => ({ id, raw: await readJsonFile<unknown>(path.join(root, id, "run.json"), null), driving: byJob.has(id) || (await driverAt(path.join(root, id))) }));
+  if (!byJob.ok) return byJob;
+  const got = await readEach(ids, async (id) => ({ id, raw: await readJsonFile<unknown>(path.join(root, id, "run.json"), null), driving: byJob.value.has(id) || (await driverAt(path.join(root, id))) }));
   const runs: Article[] = [];
   const skipped: Skipped[] = [...got.skipped];
   for (const d of got.items) {
