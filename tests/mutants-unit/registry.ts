@@ -1473,8 +1473,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "mv-failure-records-after-a-lost-fence",
     test: "packages/producers/test/audio-text.test.ts",
     file: "packages/producers/src/mv/producer.ts",
-    find: "    if (fenceLost(e)) throw e;",
-    replace: "    if (fenceLost(e) && false) throw e;",
+    find: "  if (fenceLost(e)) throw e;",
+    replace: "  if (fenceLost(e) && false) throw e;",
     why: "A driver whose slot was taken over writes its failure into mv.json and books a fatal over the new holder's job.",
   },
   {

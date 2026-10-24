@@ -1,7 +1,6 @@
-import { errorMessage, isAppError } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
 import { vendorHealth, type Health, type MissingStep, type Outputs, type Producer, type StepContext, type StepOutcome } from "@gt/kernel/job-core";
-import { fenceLost } from "../mv/producer.ts";
+import { wornFailure } from "../mv/producer.ts";
 
 // THE SUNO PRODUCER - one proposal's render on both models as one kernel job on
 // `box.chrome`, the lane of the operator's Chrome profile that Suno is driven
@@ -73,14 +72,7 @@ export function defineSuno(ports: SunoPorts): Producer {
         const r = await ports.create(ctx.job, model, ctx);
         return { kind: "produced", output: { model, made: r === "made" }, ...(r === "made" && ctx.meter.used() ? {} : { costUsd: 0 }) };
       } catch (e) {
-        if (!(e instanceof Error) || fenceLost(e)) throw e;
-        const message = e.message;
-        const worn = await ports.fail(ctx.job, message, ctx).then(
-          () => message,
-          (w: unknown) => `${message} (and suno.json could not record it: ${errorMessage(w)})`,
-        );
-        if (isAppError(e) && e.code === "budget") return { kind: "money-stop", message: worn };
-        return { kind: "fatal", code: isAppError(e) ? e.code : "internal", message: worn };
+        return wornFailure(e, "suno.json", (m) => ports.fail(ctx.job, m, ctx));
       }
     },
     ...(ports.health === undefined ? {} : { health: vendorHealth(ports.health) }),
