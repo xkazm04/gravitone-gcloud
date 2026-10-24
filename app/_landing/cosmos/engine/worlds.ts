@@ -130,7 +130,10 @@ export function buildWorld(cx: Cx, id: string, keep = false): void {
   if (!keep) place();
   let wp = cx.worldPre;
   if (wp && wp.key === worldKey(cx, id)) cx.worldPre = null;
-  else wp = paintWorld(cx, id, -1, "world");
+  else {
+    dropPrewarm(cx); // a prewarm for another world is let go before this one paints
+    wp = paintWorld(cx, id, -1, "world");
+  }
   let landed = 0;
   const land = (i: number, srf: Surface) => {
     if (tok !== cx.worldTok || cx.life.dead) return release(srf);

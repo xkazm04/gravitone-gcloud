@@ -17,6 +17,10 @@
 //      main path's catch dropped its own; a worker that could not paint fell back to the
 //      main thread with the tier line saying only "raster main". Each now reports its
 //      reason on the console; run() still resolves null.
+//   4. worlds.ts: "One at a time; a world nobody opened is let go." buildWorld adopted a
+//      matching prewarm and otherwise painted the opened world beside it, leaving the
+//      other prewarm painting and its full-viewport layers held in cx.worldPre until the
+//      next hover.
 //
 // raster.ts is loaded natively (ESM) because it spells `new URL(..., import.meta.url)`
 // for the bundler, which the Playwright node lane cannot load as CommonJS.
@@ -172,5 +176,89 @@ describe("raster.ts: a failure says why", () => {
     expect(log.said().some((s) => s.includes("main thread"))).toBe(true);
     log.done();
     r.destroy();
+  });
+});
+
+/* ---------- a document of plain objects, for the modules that build DOM ---------- */
+class FakeEl {
+  children: FakeEl[] = [];
+  parent: FakeEl | null = null;
+  className = "";
+  innerHTML = "";
+  dataset: Record<string, string> = {};
+  props = new Map<string, string>();
+  style = { cssText: "", setProperty: (k: string, v: string) => void this.props.set(k, v) } as Record<string, unknown>;
+  classes = new Set<string>();
+  classList = { add: (...c: string[]) => c.forEach((x) => this.classes.add(x)), remove: (...c: string[]) => c.forEach((x) => this.classes.delete(x)) };
+  constructor(public tag: string) {}
+  get isConnected(): boolean {
+    return !!this.parent;
+  }
+  appendChild(c: FakeEl): FakeEl {
+    c.parent = this;
+    this.children.push(c);
+    return c;
+  }
+  remove(): void {
+    if (this.parent) this.parent.children = this.parent.children.filter((x) => x !== this);
+    this.parent = null;
+  }
+  querySelectorAll(): FakeEl[] {
+    return [];
+  }
+  setAttribute(): void {}
+  getContext(): unknown {
+    return { transferFromImageBitmap() {}, drawImage() {} };
+  }
+}
+function fakeDom(): void {
+  stub("document", { createElement: (tag: string) => new FakeEl(tag) });
+  stub("HTMLCanvasElement", class {});
+  stub("performance", performance);
+}
+/** a bitmap that knows whether it was closed */
+const bitmap = () => ({ width: 4, height: 4, closed: false, close() {
+  this.closed = true;
+} });
+
+describe("worlds.ts: one prewarm at a time, and a world nobody opened is let go", () => {
+  test("opening another world than the one prewarmed releases the prewarm's layers and drops its job", async () => {
+    fakeDom();
+    const { buildWorld, prewarmWorld } = await import("../../app/_landing/cosmos/engine/worlds.ts");
+    const runs: { prio: number; tag: string; part?: (i: number, s: unknown) => void }[] = [];
+    const drops: string[] = [];
+    const cx = {
+      g: { W: 1280, H: 800, portrait: false, RS: 1, DPR: 1, S: 800 },
+      tier: "full",
+      life: { dead: false, want() {} },
+      els: { world: new FakeEl("div") },
+      worldTok: 0,
+      worldReady: false,
+      worldReadyAt: 0,
+      worldPre: null as unknown,
+      wplanes: [],
+      raster: {
+        run: (_job: unknown, prio: number, tag: string, part?: (i: number, s: unknown) => void) => {
+          runs.push({ prio, tag, part });
+          return new Promise(() => {});
+        },
+        drop: (tag: string) => void drops.push(tag),
+      },
+    };
+    // a pointer rested on type A: its world starts painting, two layers land
+    prewarmWorld(cx as never, "type-a");
+    const a = runs[0];
+    expect(a.tag).toBe("prewarm");
+    const [a0, a1, a2] = [bitmap(), bitmap(), bitmap()];
+    a.part!(0, a0);
+    a.part!(1, a1);
+    // ...and type B is the one clicked
+    buildWorld(cx as never, "type-b");
+    expect(runs.at(-1)!.tag, "B paints as the open world").toBe("world");
+    expect(cx.worldPre, "A is no longer the prewarm").toBeNull();
+    expect(drops, "A's job, if still queued, is dropped").toContain("prewarm");
+    expect([a0.closed, a1.closed], "A's landed layers are released").toEqual([true, true]);
+    a.part!(2, a2);
+    expect(a2.closed, "a layer of A that lands later is released too").toBe(true);
   });
 });

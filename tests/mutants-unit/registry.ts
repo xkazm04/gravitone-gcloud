@@ -5458,4 +5458,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void err;",
     why: "On a browser without OffscreenCanvas a picture that throws while painting is simply missing, with no error on the console to say why.",
   },
+  {
+    id: "cosmos-world-keeps-stale-prewarm",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/worlds.ts",
+    find: "dropPrewarm(cx); // a prewarm for another world is let go before this one paints",
+    replace: "// (no drop)",
+    why: "A visitor who hovers one medallion and clicks another holds the first world's full-viewport layers (~42 MB at 1080p) and its paint job for nothing until the next hover.",
+  },
 ];
