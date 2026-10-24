@@ -5385,4 +5385,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "inRange={212}",
     why: "The kit's time strip says 212 events over days whose bars hold 127, and says it again for any range a drag picks.",
   },
+  {
+    id: "ledger-sound-pile-counts-fixture-takes",
+    test: "tests/next-server/v1-sound.test.ts",
+    file: "lib/ledger/v1/sources/sound.ts",
+    find: 'const pending = (t: Take): boolean => t.verdict === "unjudged" && t.origin !== "fixture";',
+    replace: 'const pending = (t: Take): boolean => t.verdict === "unjudged";',
+    why: "The audio triage pile counts demo fixture takes, which have no file and nobody judges, so the Floor offers a pile that can never empty.",
+  },
 ];
