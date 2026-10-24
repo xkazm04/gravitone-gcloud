@@ -102,6 +102,13 @@ export const QUOTE_MAX = 400;
 export const WHY_MAX = 200;
 /** A run's USE: the content it can serve (a children's cartoon series, a music video, an explainer), one line. */
 export const USE_MAX = 140;
+/** A brief's application (what the output is for), a closed list; its specific target rides beside it. */
+export const USE_APPS = ["videogame", "dating-sim", "roleplay", "companion-chat", "genre-video", "short", "other"] as const;
+export type UseApp = (typeof USE_APPS)[number];
+/** WHY the run was chosen, one free sentence (not the prompt). */
+export const AIM_MAX = 200;
+/** A look direction's slug, the key of the muse repeat guard. */
+export const LOOK_SLUG = /^[a-z0-9-]{3,40}$/;
 export const MAX_SOURCES_PER_NIGHT = 60;
 
 /* ── The night ───────────────────────────────────────────────────────────── */
@@ -223,6 +230,12 @@ type CandidateBase = {
    *  no purpose is a mindless output). Rejected with the `use case` reason, it steers the next nights
    *  away from that direction (taste.ts). Absent on runs from before the field. */
   readonly use?: string;
+  /** The application `use` names (the closed list); absent on runs from before spark scout-use-aim. */
+  readonly app?: UseApp;
+  /** Why this run was chosen: the question `use` raises answered in one sentence. The image prompt is NOT the aim. */
+  readonly aim?: string;
+  /** The look direction as a slug (muse character briefs): two briefs sharing one are a repeat. */
+  readonly look?: string;
   /** `<night>/<c-id>` of the kept idea this candidate develops - it takes the idea off the to-develop list (taste.ts). */
   readonly fromIdea?: string;
   /**

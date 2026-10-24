@@ -51,6 +51,8 @@ export type RowWords = {
   readonly checks?: readonly string[];
   /** What content the run can serve, as stated when it was launched. */
   readonly use?: string;
+  /** The prompt the run was drawn from; shown in the zoom, after triage (it is not the aim). */
+  readonly prompt?: string;
 };
 
 /** What the machine said before the gate (hitl-approval oracle-before-gate). */
