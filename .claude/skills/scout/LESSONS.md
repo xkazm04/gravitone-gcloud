@@ -182,3 +182,14 @@ run 3's clusters + run 2's rows are complementary evidence over the same gallery
   (`node --env-file-if-exists=.env.local workers/runner.mts`) before the first launch, and never restart it mid-night -
   each restart leaves jobs `interrupted` and their paid lanes held until retried and acknowledged (2026-10-23: the reels
   and five style runs sat queued behind three lane holds for two hours).
+
+## 2026-10-24 · night 2026-10-24 (2 h round)
+
+- A worker started before a new producer landed never claims its jobs and logs nothing about it (the 10:14 worker left
+  `scout-storyboard` pending all night). After a spark adds a producer, the operator restarts the worker BETWEEN nights;
+  the night's doctor should name a queued head no binding reaches. Argues a change in lib/foundry/scout/doctor.ts.
+- `open --tracks 0` is refused ("needs a positive number") although SKILL.md says to pass it while music is paused: open
+  without the flag and launch no track. Argues a fix in pipeline/scout.mts `num()` (0 is a valid cap) or in SKILL.md.
+- Storyboards draw nothing on this box: the Flux 2 weights (flux2_dev_fp8mixed, mistral_3_small_flux2_fp8, flux2-vae) are
+  not under ComfyUI's models; the doctor's `flux weights` note says so. Send no storyboard brief until the operator has
+  put them there - a failed board can be redone, but it fills the packet with a loss.
