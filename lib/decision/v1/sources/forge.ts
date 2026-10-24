@@ -264,7 +264,8 @@ function packet(v1: ForgeV1): Result<OpenPlan> {
     if (rec === undefined || (rec.verdict !== "keep" && rec.verdict !== "reject")) continue;
     const imp = importVerdict(rec);
     const when = instantOr(rec.at, v1.verdictsAt);
-    if (imp.lost.length > 0) losses.push({ candidate: c.id, grade: "approximate", reason: `v1 reason(s) ${imp.lost.join(", ")} are not forge reasons; kept in the note` });
+    // On a keep EVERY reason is lost (the door gives reasons to a reject only), forge words included.
+    if (imp.lost.length > 0) losses.push({ candidate: c.id, grade: "approximate", reason: rec.verdict === "reject" ? `v1 reason(s) ${imp.lost.join(", ")} are not forge reasons; kept in the note` : `v1 reason(s) on a keep (${imp.lost.join(", ")}) ride in the note; only a reject carries reasons` });
     if (imp.cut) losses.push({ candidate: c.id, grade: "approximate", reason: `v1's note is longer than ${SPEC.noteMax} characters; the packet holds it cut, v1 keeps it whole` });
     if (!when.exact) losses.push({ candidate: c.id, grade: "approximate", reason: `v1 recorded no readable instant (${JSON.stringify(rec.at)}); the verdict map's write time stands in` });
     initial.push({ candidate: c.id, verdict: imp.verdict, reasons: imp.reasons, ...(imp.note === undefined ? {} : { note: imp.note }), by: byOf(rec.by), surface: "v1", at: when.at });

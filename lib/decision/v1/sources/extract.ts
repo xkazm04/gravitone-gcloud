@@ -245,7 +245,8 @@ export function planLooks(v1: ExtractV1): Result<OpenPlan> {
     if (rec === undefined || (rec.verdict !== "keep" && rec.verdict !== "reject")) continue;
     const imp = importVerdict(rec);
     const when = instantOr(rec.at, v1.verdictsAt);
-    if (imp.lost.length > 0) losses.push({ candidate: look, grade: "approximate", reason: `v1 tag(s) ${imp.lost.join(", ")} are not extract reasons; kept in the note` });
+    // On a keep EVERY tag is lost (the door gives reasons to a reject only), extract words included.
+    if (imp.lost.length > 0) losses.push({ candidate: look, grade: "approximate", reason: rec.verdict === "reject" ? `v1 tag(s) ${imp.lost.join(", ")} are not extract reasons; kept in the note` : `v1 tag(s) on a keep (${imp.lost.join(", ")}) ride in the note; only a reject carries reasons` });
     if (imp.cut) losses.push({ candidate: look, grade: "approximate", reason: `v1's note is longer than ${SPEC.noteMax} characters; the packet holds it cut` });
     if (!when.exact) losses.push({ candidate: look, grade: "approximate", reason: "v1 recorded no readable instant; the verdict map's write time stands in" });
     // v1 decided the look whole: every image of it carries the look's verdict.

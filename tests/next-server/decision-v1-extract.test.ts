@@ -140,6 +140,13 @@ describe("extract adapter - the packet (pure)", () => {
     expect(importVerdict({ verdict: "keep", at: "x", reasons: ["style"] })).toMatchObject({ reasons: [], note: "tags: style" });
   });
 
+  it("a keep's tags are disclosed as a keep's, never as words outside the extract list", () => {
+    const kept = must(extractAdapter.packet(literal({ verdicts: { grain: { verdict: "keep", at: "2026-10-14T11:00:00.000Z", reasons: ["style"], by: "human" } } })));
+    expect(kept.losses.filter((l) => l.candidate === "grain").map((l) => l.reason)).toEqual(["v1 tag(s) on a keep (style) ride in the note; only a reject carries reasons"]);
+    const rejected = must(extractAdapter.packet(literal()));
+    expect(rejected.losses.find((l) => l.candidate === "grain")?.reason).toBe("v1 tag(s) muddy are not extract reasons; kept in the note");
+  });
+
   it("a look is kept when any image is kept, rejected only when every one is, undecided while any is open", () => {
     const d = (verdict: "keep" | "reject" | null, reasons: string[] = [], note?: string): Decision => ({ key: "p::x", verdict, reasons, ...(note === undefined ? {} : { note }), rev: 1, by: "operator", surface: "board", at: "2026-10-14T00:00:00.000Z" });
     expect(lookDecision([d("keep"), d("reject", ["craft"])]).verdict).toBe("keep");
