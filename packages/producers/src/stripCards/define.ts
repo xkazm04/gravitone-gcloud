@@ -36,14 +36,18 @@ export { cardIdOf, unitNames } from "./cards.ts";
 //   draw:<card>        FREE. The lint (frame purity AND the caption's door), then the capture, its
 //                      four gates, and the full-size poster (the strip's LAST frame) as an
 //                      image/png blob. A lint finding is not rendered.
-//   fix:<card>:r1      PAID, and only when round 0 failed: the fixer is shown round 0's findings.
-//   draw:<card>:r1     FREE, the same draw over the fixed page.
+//   fix:<card>:r<n>    PAID, and only when round n-1 failed: the fixer is shown that round's findings.
+//   draw:<card>:r<n>   FREE, the same draw over the fixed page.
 //
-// ONE FIX ROUND, NOT TWO. The run producer defaults to two fix rounds and a contact-sheet review;
-// a card here is a narrated still in a cut, judged by its operator on the Board, so a passing
-// round 0 is the end and a failing one gets ONE fix (`CARD_ROUNDS`): worst case two turns a card,
-// which is what the receipt prices. The units are fixed when the plan is booked; a round that
-// need not run is booked as skipped with its reason (a booked unit is never performed again).
+// TWO FIX ROUNDS, the foundry's default (lib/foundry/strips/cards.ts `DEFAULT_OPTIONS.rounds`,
+// pinned equal by tests/next-server/producer-strip-cards.test.ts), and no contact-sheet review: a
+// card here is a narrated still in a cut, judged by its operator on the Board, so a passing round
+// is the end. One round was tried first and measured against a REAL card (2026-10-24: 804 s, $2.67
+// reported, a clean strip refused after its one fix by "smallest 25px at 1080w ... bar 26; 1 text
+// box(es) outside the safe box") - a near-miss a second fix turn exists for. Worst case three turns
+// a card (`CARD_ROUNDS` + 1), which is what the receipt prices. The units are fixed when the plan
+// is booked; a round that need not run is booked as skipped with its reason (a booked unit is never
+// performed again), and a card lands `refused` only when its LAST round that ran failed.
 //
 // DRY: the turn is the meter's stand-in (the seat is never entered) and the draw takes no capture,
 // so each card lands `pending` - "dry stand-in: no capture was taken" - with the section's first
@@ -56,7 +60,7 @@ export { cardIdOf, unitNames } from "./cards.ts";
 export const STRIP_CARDS = "strip-cards";
 export const STRIP_CARDS_ACT = "draw-strips";
 /** Fix rounds after round 0 (see the header). */
-export const CARD_ROUNDS = 1;
+export const CARD_ROUNDS = 2;
 
 export const NO_ARTICLE = "draw strips needs an article";
 export const ALL_DRAWN = "every section of the article is drawn: name a section to draw it again";

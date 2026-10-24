@@ -5,7 +5,7 @@ import { splitCeiling } from "../src/research/facts.ts";
 import { unitStep } from "../src/research/partAct.ts";
 import { cardOutcome, DRY_WHY, mergeCards, NO_PAGE, type DrawOut, type TurnOut } from "../src/stripCards/cards.ts";
 import { ALL_DRAWN, CARD_ROUNDS, cardUnitOf, feedbackOf, NO_ARTICLE, parseUnit, skipOf, stripCardsPlan, type StripCardsView } from "../src/stripCards/define.ts";
-import { RENDER_ESTIMATE, TURN_ESTIMATE } from "../src/strips/plan.ts";
+import { cardWorstUsd, RENDER_ESTIMATE, TURN_ESTIMATE } from "../src/strips/plan.ts";
 
 // The strip-cards act over literal inputs: which cards a draw plans (every undrawn section, or the
 // one named), the units each card books and when a round is skipped, and the card each booking
@@ -25,23 +25,25 @@ const GOOD = drawn({ round: 0, pass: true, lint: [], caption: "the turn's captio
 const FAILED = drawn({ round: 0, pass: false, lint: [], gates: { seek: { ok: true, detail: "ok" }, legibility: { ok: false, detail: "smallest 18px at 1080w" } } });
 
 describe("the plan", () => {
-  it("a whole-part draw plans every undrawn section's card: a turn and a draw, then one fix round", () => {
-    expect(CARD_ROUNDS).toBe(1);
-    expect(names(view({ drawn: new Set(["supply"]) }))).toEqual([
-      "turn:card-intro", "draw:card-intro", "fix:card-intro:r1", "draw:card-intro:r1",
-      "turn:card-price", "draw:card-price", "fix:card-price:r1", "draw:card-price:r1",
-    ]);
+  const card = (c: string) => [`turn:${c}`, `draw:${c}`, ...Array.from({ length: CARD_ROUNDS }, (_, i) => [`fix:${c}:r${i + 1}`, `draw:${c}:r${i + 1}`]).flat()];
+  it("a whole-part draw plans every undrawn section's card: a turn and a draw, then two fix rounds", () => {
+    expect(CARD_ROUNDS).toBe(2);
+    expect(card("card-intro")).toEqual(["turn:card-intro", "draw:card-intro", "fix:card-intro:r1", "draw:card-intro:r1", "fix:card-intro:r2", "draw:card-intro:r2"]);
+    expect(names(view({ drawn: new Set(["supply"]) }))).toEqual([...card("card-intro"), ...card("card-price")]);
   });
 
   it("a targeted draw plans that section's card alone, drawn or not", () => {
-    expect(names(view({ drawn: new Set(["supply"]) }), "supply")).toEqual(["turn:card-supply", "draw:card-supply", "fix:card-supply:r1", "draw:card-supply:r1"]);
+    expect(names(view({ drawn: new Set(["supply"]) }), "supply")).toEqual(card("card-supply"));
   });
 
   it("prices each turn at the strip run's measured figure and each draw as this machine's free work", () => {
     const p = stripCardsPlan(view(), null, "intro");
     if (!p.ok) throw p.error;
     expect(p.value.act).toBe("draw-strips");
-    expect(p.value.units.map((u) => u.estimate)).toEqual([TURN_ESTIMATE, RENDER_ESTIMATE, TURN_ESTIMATE, RENDER_ESTIMATE]);
+    expect(p.value.units.map((u) => u.estimate)).toEqual(Array.from({ length: CARD_ROUNDS + 1 }, () => [TURN_ESTIMATE, RENDER_ESTIMATE]).flat());
+    // The receipt's worst case a card: a turn a round, every round taken.
+    expect(p.value.units.reduce((n, u) => n + (u.estimate.usd ?? 0), 0)).toBeCloseTo(cardWorstUsd(CARD_ROUNDS, false, 0), 6);
+    expect(cardWorstUsd(CARD_ROUNDS, false, 0)).toBeCloseTo(3 * (TURN_ESTIMATE.usd ?? 0), 6);
     expect(p.value.units[0]?.input).toEqual({ section: "intro", heading: "Heading intro", body: "The body of intro.", title: "Why bitcoin", card: "card-intro", round: 0 });
   });
 
@@ -121,21 +123,25 @@ describe("the card a section's bookings make", () => {
 });
 
 describe("a whole-part draw's ceiling, split across its card jobs", () => {
-  const worst = 2 * (TURN_ESTIMATE.usd ?? 0);
+  const worst = cardWorstUsd(CARD_ROUNDS, false, 0);
+  const usd = (x: number) => `$${x.toFixed(2)}`;
   it("three cards under 3 x a card's worst + $1: each share covers its card, rounded down to cents, and they never sum past the ceiling", () => {
     const r = splitCeiling(3 * worst + 1, [worst, worst, worst]);
     if (!r.ok) throw r.error;
-    expect(r.value).toEqual([6.73, 6.73, 6.73]);
+    const share = Math.floor(Math.round((3 * worst + 1) * 100) / 3) / 100;
+    expect(r.value).toEqual([share, share, share]);
     expect(r.value.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(3 * worst + 1);
     expect(r.value.every((c) => c >= worst)).toBe(true);
   });
   it("splits in proportion to each job's own receipt, and an exact ceiling gives each exactly its worst case", () => {
     expect(splitCeiling(30, [10, 20])).toEqual({ ok: true, value: [10, 20] });
-    expect(splitCeiling(3 * worst, [worst, worst, worst])).toEqual({ ok: true, value: [worst, worst, worst] });
+    const exact = splitCeiling(3 * worst, [worst, worst, worst]);
+    if (!exact.ok) throw exact.error;
+    for (const c of exact.value) expect(c).toBeCloseTo(worst, 6);
   });
   it("refuses a ceiling that cannot cover every card's worst case, naming the shortfall", () => {
     const r = splitCeiling(5, [worst, worst, worst]);
-    expect(r.ok ? "" : r.error.message).toBe("the ceiling $5.00 does not cover the 3 jobs' worst case $19.20: $14.20 short");
+    expect(r.ok ? "" : r.error.message).toBe(`the ceiling $5.00 does not cover the 3 jobs' worst case ${usd(3 * worst)}: ${usd(3 * worst - 5)} short`);
     expect(r.ok ? "" : r.error.code).toBe("refused");
   });
 });

@@ -39,6 +39,8 @@ import { compose } from "@gt/kernel/records/write";
 import type { Store } from "@gt/kernel/store";
 
 import { makeRealPart } from "../../app/(studio)/projects/[id]/_part/real.ts";
+import { CARD_ROUNDS } from "@gt/producers/stripCards/define";
+import { cardWorstUsd } from "@gt/producers/strips/plan";
 
 afterAll(() => rmSync(DIR, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }));
 let open: Kernel[] = [];
@@ -99,7 +101,7 @@ describe("draw-strips on the real side", () => {
     expect(whole.mode).toBe("dry");
     const per = await Promise.all(sections.map((target) => must(port.actReceipt({ projectId: ID, key: "strips", act: "draw-strips", target }))));
     expect(whole.lines[0]?.usd).toBeCloseTo(per.reduce((n, r) => n + (r.lines[0]?.usd ?? 0), 0), 6);
-    expect(whole.lines[0]?.usd).toBeCloseTo(3 * 2 * 3.2, 6);
+    expect(whole.lines[0]?.usd).toBeCloseTo(3 * cardWorstUsd(CARD_ROUNDS, false, 0), 6);
     const launched = await must(port.act({ projectId: ID, key: "strips", act: "draw-strips", token: whole.token }));
     expect(launched.kind).toBe("launched");
     const jobs = await must(list(store));
@@ -125,7 +127,7 @@ describe("draw-strips on the real side", () => {
     const b = (await sectionsOf(store)).map((s) => s.id);
     expect(b.some((s) => a.includes(s))).toBe(false);
     const second = await must(port.actReceipt({ projectId: ID, key: "strips", act: "draw-strips" }));
-    expect(second.lines[0]?.label).toBe(`draw-strips · ${b.length * 4} units`);
+    expect(second.lines[0]?.label).toBe(`draw-strips · ${b.length * 2 * (CARD_ROUNDS + 1)} units`);
     await must(port.act({ projectId: ID, key: "strips", act: "draw-strips", token: second.token }));
     expect((await cardsOf(store)).map((c) => c.section)).toEqual(b);
   });

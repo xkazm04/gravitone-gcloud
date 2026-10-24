@@ -1597,6 +1597,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "The shares are computed and thrown away: each fanned-out job is enqueued with the whole ceiling, and the receipt's figure is no longer the bound.",
   },
   {
+    id: "strip-cards-one-fix-round",
+    test: "tests/next-server/producer-strip-cards.test.ts",
+    file: "packages/producers/src/stripCards/define.ts",
+    find: "export const CARD_ROUNDS = 2;",
+    replace: "export const CARD_ROUNDS = 1;",
+    why: "A card one pixel under the legibility bar after its first fix is refused instead of fixed again: the real card of 2026-10-24 (smallest 25px, bar 26) lands as a picture gap.",
+  },
+  {
     id: "audio-accept-unmeasured-passes",
     test: "packages/domain/test/audio.test.ts",
     file: "packages/domain/src/audio.accept.ts",

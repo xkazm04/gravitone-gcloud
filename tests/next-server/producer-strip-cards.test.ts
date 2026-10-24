@@ -46,6 +46,13 @@ import { standInCaption } from "../../lib/foundry/strips/brief.ts";
 import { linesOf, type ExplainerCard } from "../../lib/cut/explainer.ts";
 import { blobRootOf, effectsOf, launchPartAct, partActReceipt } from "../../lib/producers/research.ts";
 import { stripCardsProducer, stripCardsSplit, stripCardsUnits, type StripCardsEngines } from "../../lib/producers/stripCards.ts";
+import { DEFAULT_OPTIONS } from "../../lib/foundry/strips/cards.ts";
+import { CARD_ROUNDS } from "@gt/producers/stripCards/define";
+import { cardWorstUsd } from "@gt/producers/strips/plan";
+
+/** One card's worst case, as the receipt prices it: a turn a round, every fix round taken. */
+const WORST = cardWorstUsd(CARD_ROUNDS, false, 0);
+const usd2 = (x: number) => `$${x.toFixed(2)}`;
 
 afterAll(() => disposeRoot());
 const kernels: Kernel[] = [];
@@ -96,8 +103,10 @@ describe("a DRY strip-cards job on a three-section explainer", () => {
     const seat = cardSeat();
     const cap = cardCapture();
     const { jobId, usd } = launch(store, "dry");
-    // The receipt is the worst case, priced: a turn and a fix a card at the strip run's measured $3.20.
-    expect(usd).toBeCloseTo(3 * 2 * 3.2, 6);
+    // The receipt is the worst case, priced: a turn and every fix a card at the strip run's measured $3.20.
+    expect(CARD_ROUNDS).toBe(DEFAULT_OPTIONS.rounds);
+    expect(usd).toBeCloseTo(3 * WORST, 6);
+    expect(WORST).toBeCloseTo((DEFAULT_OPTIONS.rounds + 1) * 3.2, 6);
     const job = must(list(store))[0];
     expect([job?.producer, job?.lane, job?.mode.kind]).toEqual(["strip-cards", "seat.text", "dry"]);
     const report = must(await drive(store, jobId, { seat: seat.seat, capture: cap.capture }, true));
@@ -144,16 +153,17 @@ describe("a LIVE strip-cards job, on the fakes", () => {
     expect(rec.engine).toMatchObject({ mode: "live", usd: 3.75 });
   });
 
-  it("a 12-word caption fails the lint, so the fix round redoes it; a card failing its gates twice is refused in the gate's words", async () => {
+  it("a 12-word caption fails the lint, so the fix round redoes it; a card failing its gates in every round is refused in the gate's words", async () => {
     const { store } = explainer();
     const seat = cardSeat((card, fix) => (card === "card-supply" && !fix ? 12 : 40));
-    const cap = cardCapture(() => 90, new Map([["card-price", 2]]));
+    const cap = cardCapture(() => 90, new Map([["card-price", CARD_ROUNDS + 1]]));
     const { jobId } = launch(store, "live");
     const report = must(await drive(store, jobId, { seat: seat.seat, capture: cap.capture }, false));
     expect(report.outcome).toBe("done");
-    expect(seat.calls).toEqual(["author:card-intro", "author:card-supply", "fix:card-supply", "author:card-price", "fix:card-price"]);
+    const fixes = Array.from({ length: CARD_ROUNDS }, () => "fix:card-price");
+    expect(seat.calls).toEqual(["author:card-intro", "author:card-supply", "fix:card-supply", "author:card-price", ...fixes]);
     // The 12-word round was never rendered: the lint refused it before the capture.
-    expect(cap.renders).toEqual(["card-intro", "card-supply", "card-price", "card-price"]);
+    expect(cap.renders).toEqual(["card-intro", "card-supply", ...Array.from({ length: CARD_ROUNDS + 1 }, () => "card-price")]);
     const fixOut = must(store.read((r) => r.get("SELECT output FROM job_outputs WHERE job_id = ? AND step = ?", jobId, "unit:draw:card-supply")));
     expect(JSON.parse(String(fixOut?.["output"]))).toMatchObject({ pass: false, lint: ["caption: 12 words, the bar is 30-60"] });
     const rec = stripsOf(store);
@@ -163,7 +173,26 @@ describe("a LIVE strip-cards job, on the fakes", () => {
     expect(rec.cards[2]).toMatchObject({ why: "legibility: smallest 18px" });
     expect(rec.cards[2]?.caption).toMatch(/^Narration for card-price /);
     expect(rec.cards[2]?.blob).toBeUndefined();
-    expect(must(list(store))[0]?.spend.usd).toBeCloseTo(5 * 1.25, 6);
+    expect(must(list(store))[0]?.spend.usd).toBeCloseTo((4 + CARD_ROUNDS) * 1.25, 6);
+  });
+
+  it("a card that fails its gates at r0 and r1 and passes at r2 lands drawn, with three turns booked", async () => {
+    const { store } = explainer();
+    const seat = cardSeat();
+    const cap = cardCapture((c) => GREY[c] ?? 0, new Map([["card-price", 2]]));
+    const { jobId } = launch(store, "live", "price");
+    const report = must(await drive(store, jobId, { seat: seat.seat, capture: cap.capture }, false));
+    expect(report.outcome).toBe("done");
+    expect(seat.calls).toEqual(["author:card-price", "fix:card-price", "fix:card-price"]);
+    expect(cap.renders).toEqual(["card-price", "card-price", "card-price"]);
+    const turns = must(store.read((r) => r.all("SELECT step, output FROM job_outputs WHERE job_id = ? AND (step LIKE 'unit:turn:%' OR step LIKE 'unit:fix:%') ORDER BY step", jobId)));
+    expect(turns.map((t) => [t["step"], (JSON.parse(String(t["output"])) as { outcome: string }).outcome])).toEqual([["unit:fix:card-price:r1", "completed"], ["unit:fix:card-price:r2", "completed"], ["unit:turn:card-price", "completed"]]);
+    const drawsPassed = must(store.read((r) => r.all("SELECT step, output FROM job_outputs WHERE job_id = ? AND step LIKE 'unit:draw:%' ORDER BY step", jobId))).map((o) => [o["step"], (JSON.parse(String(o["output"])) as { pass: boolean }).pass]);
+    expect(drawsPassed).toEqual([["unit:draw:card-price", false], ["unit:draw:card-price:r1", false], ["unit:draw:card-price:r2", true]]);
+    const card = stripsOf(store).cards.find((c) => c.id === "card-price");
+    expect(card).toMatchObject({ state: "drawn", blob: { mime: "image/png" } });
+    expect(card?.why).toBeUndefined();
+    expect(must(list(store))[0]?.spend.usd).toBeCloseTo(3 * 1.25, 6);
   });
 
   it("a targeted draw replaces that card alone; every line id stays the card's", async () => {
@@ -252,7 +281,6 @@ describe("a LIVE strip-cards job that dies after any effect", () => {
 });
 
 describe("a whole-part draw under a ceiling, fanned out", () => {
-  const WORST = 2 * 3.2;
   const confirm = (s: Store, ceilingUsd: number) => {
     const receipt = must(partActReceipt(s, REF, stripCardsUnits, { mode: "dry", now: NOW, ceilingUsd }));
     return launchPartAct(s, REF, stripCardsUnits, { mode: "dry", now: NOW, ceilingUsd, token: receipt.token, actor: OP, split: stripCardsSplit });
@@ -271,7 +299,7 @@ describe("a whole-part draw under a ceiling, fanned out", () => {
   it("a ceiling below one card's worst case is refused with its shortfall, and no job is enqueued", () => {
     const { store } = explainer();
     const r = confirm(store, WORST - 1);
-    expect(r.ok ? "" : r.error.message).toBe("the ceiling $5.40 does not cover the 3 jobs' worst case $19.20: $13.80 short");
+    expect(r.ok ? "" : r.error.message).toBe(`the ceiling ${usd2(WORST - 1)} does not cover the 3 jobs' worst case ${usd2(3 * WORST)}: ${usd2(2 * WORST + 1)} short`);
     expect(must(list(store))).toEqual([]);
   });
   it("with no ceiling, every job runs uncapped as an unsplit act's does", () => {
