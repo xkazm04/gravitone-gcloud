@@ -2,10 +2,12 @@
 // Its own file so the read side can be read without the acts that change a run.
 
 import { stat } from "node:fs/promises";
+import path from "node:path";
 
 import { readCritiqueDetail } from "./critique";
 import { readCheckPasses } from "./checkLoop";
 import { inRun, listRuns, readJsonFile, readRun, readTextFile, runDir } from "./store";
+import { readTrialDetail } from "./trial/store";
 import type { ArticleRun, ArticleRunDetail, CheckReport, Claim, PostMeta, RegistryPatch, Source } from "./types";
 
 /* ── reads ─────────────────────────────────────────────────────────────────── */
@@ -20,8 +22,14 @@ export async function readPatches(id: string): Promise<RegistryPatch[]> {
   return readJsonFile<RegistryPatch[]>(inRun(id, "patches.json"), []);
 }
 
+/** A trial run's `trial` is its `experiment/` read back: absent when that directory holds no
+ *  verdict.json (the gate names the file), and a refusal naming the file when it holds a
+ *  verdict without the prereg or results it was computed from, or an exec.jsonl line that does
+ *  not parse. Those two are evidence gone bad, read the way a corrupt run.json is: never
+ *  papered over. */
 export async function getRunDetail(id: string): Promise<ArticleRunDetail> {
   const run = await readRun(id);
+  const trial = run.trial ? await readTrialDetail(path.join(runDir(id), "experiment")) : undefined;
   const [sources, claims, outline, meta, check, patches, critique, checkPasses] = await Promise.all([
     readJsonFile<Source[]>(inRun(id, "sources.json"), []),
     readJsonFile<Claim[]>(inRun(id, "claims.json"), []),
@@ -45,5 +53,6 @@ export async function getRunDetail(id: string): Promise<ArticleRunDetail> {
     ...(checkPasses.length ? { checkPasses } : {}),
     ...(post ? { post } : {}),
     ...(critique ? { critique } : {}),
+    ...(trial ? { trial } : {}),
   };
 }

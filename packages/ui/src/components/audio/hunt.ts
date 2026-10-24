@@ -319,6 +319,8 @@ export function sfxAnatomy(prompt: string): { readonly part: SfxPart; readonly t
 export function loopOf(node: Pick<HuntNodeView, "technique" | "prompt" | "label"> & { readonly loop?: boolean | null }): boolean {
   if (typeof node.loop === "boolean") return node.loop;
   const field = sfxAnatomy(node.prompt).find((a) => a.part === "loop");
-  if (field !== undefined) return /^(yes|true|on|seamless|loop)/i.test(field.text);
+  // Whole words: an unanchored prefix read "one-shot", "once" and "only" as `on` and sent a one-shot
+  // effect to the vendor as a loop.
+  if (field !== undefined) return /^(yes|true|on|seamless|loop(?:ing|able)?)\b/i.test(field.text);
   return node.technique.includes("loop-seam-acceptance") || /(loop|loopable|looping|seamless loop)/i.test(`${node.label} ${node.prompt}`);
 }

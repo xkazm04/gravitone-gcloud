@@ -197,6 +197,7 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/articles/[runId]/file/[...path]/route.ts": { door: "access", ok: { GET: "4xx" } },
   // `no-such-sha` is not a sha256: the address is refused before the store is opened.
   "app/api/blob/[sha]/route.ts": { door: "access", ok: { GET: "4xx", HEAD: "4xx" } },
+  "app/api/articles/[runId]/medium/route.ts": { door: "money", ok: { POST: "4xx" } },
   // The ledger as Server-Sent Events (app/_server/sse.ts): a 200 stream that
   // never ends by itself, so drive() cancels its body rather than reading it.
   "app/api/events/stream/route.ts": { door: "access", ok: { GET: "2xx" } },

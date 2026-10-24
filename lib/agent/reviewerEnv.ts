@@ -23,10 +23,18 @@ import type { ReviewerEngineName } from "./reviewerEngines";
 /** A variable NAME that looks like a credential. */
 const CREDENTIAL_NAME = /(API_?KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIAL|PRIVATE_?KEY|AUTH)/i;
 
+/** A copy of `env` with every variable whose NAME looks like a credential removed.
+ *  Exported for the article trial's `trial exec` (lib/articles/trial/store.ts), which
+ *  runs an agent's measurement commands: it must strip exactly this pattern, and
+ *  importing it is how the two cannot drift. */
+export function stripCredentials(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out = { ...env };
+  for (const k of Object.keys(out)) if (CREDENTIAL_NAME.test(k)) delete out[k];
+  return out;
+}
+
 /** The reviewer environment: the metered-key strip, then every credential-
  *  looking variable removed, then the engine's own extras. */
 export function reviewerEnv(engine: ReviewerEngineName, base: NodeJS.ProcessEnv = seatOnlyEnv()): NodeJS.ProcessEnv {
-  const env = { ...base };
-  for (const k of Object.keys(env)) if (CREDENTIAL_NAME.test(k)) delete env[k];
-  return { ...env, ...reviewerCommand({ engine, model: "m", effort: "high", cwd: ".", prompt: "", timeoutMin: 1 }).env };
+  return { ...stripCredentials(base), ...reviewerCommand({ engine, model: "m", effort: "high", cwd: ".", prompt: "", timeoutMin: 1 }).env };
 }

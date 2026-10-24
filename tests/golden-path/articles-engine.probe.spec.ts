@@ -15,7 +15,12 @@
 //   · agent outcomes: errored and seat-limit fail the step by name; resume
 //     re-runs only what did not finish; a hung agent is killed at its timeout
 //   · a proposed patch outside knowledge/ and recipes/ never becomes a patch
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+//   · a run written around a closed trial (seeded on disk): the bundle copied to
+//     experiment/, source 1 = the trial's record (ingest refuses anything else),
+//     every writer turn and reviewer reads the experiment, the trial prompt
+//     sections and the two trial check items; a void, unclosed, dropped, taken,
+//     missing or mismatched trial creates nothing
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
@@ -26,6 +31,7 @@ import { approveRun, createRun, defaultDeps, driveRun, getRunDetail, rejectRun, 
 import { markdownToStoryHtml } from "@/lib/articles/mediumPackage";
 import { patchIsSafe } from "@/lib/articles/registryWrite";
 import { ArticleError, readRun, runDir } from "@/lib/articles/store";
+import type { CreateRunInput, TrialExecRecord, TrialPrereg, TrialRecord, TrialResults, TrialSeal, TrialValidity, TrialVerdict } from "@/lib/articles/types";
 
 import { keepEnv } from "./_helpers";
 import { ARTICLE_ENV, articleSandbox, type ArticleSandbox } from "./_articles";
@@ -257,4 +263,259 @@ test("medium story: the Markdown subset, figures as PNG with captions", () => {
   expect(html).toContain('<figure><img src="figures/01-a.png" alt="Fig 1 [2]"><figcaption>Fig 1 shows a thing [2]</figcaption></figure>');
   expect(html).toContain("<pre><code>const a = 1 &lt; 2;</code></pre>");
   expect(html).toContain("<ul><li>one</li><li>two</li></ul>");
+});
+
+/* ── a run written around a trial (2026-10-18) ─────────────────────────────── */
+//
+// A closed trial is seeded on disk exactly as the trial store lays it out (lib/articles/types.ts,
+// "the trial"), never through the trial verbs: these cases pin what the ENGINE does with one.
+// The fixture's numbers follow the verdict rule (metric lower-is-better, band 2 absolute,
+// delta -10 with the golden arm eligible: upheld).
+
+keepEnv(["ARTICLES_TRIALS_DIR", "ARTICLES_REGISTRY_REMOTE", "ARTICLES_LEADS_FILE", "STUB_TRIAL_SOURCE", "STUB_TRIAL_AMENDMENT", "STUB_CRITIQUE_DECISIONS"]);
+
+const TRIAL_SUBJECT_FILE = "knowledge/software-engineering/llm-agent/token-budgeting/token-budgeting.md";
+const TRIAL_TECHNIQUE = "knowledge/software-engineering/llm-agent/token-budgeting/techniques/count-before-send.md";
+const TRIAL_APPLICATION = "knowledge/software-engineering/llm-agent/token-budgeting/applications/node--count-before-send.md";
+const TRIAL_PREREG: TrialPrereg = {
+  schema: "article-trial-prereg/1",
+  subject: { bundle: "software-engineering", slug: "token-budgeting" },
+  technique: "count-before-send",
+  claim: "Count the request's tokens with the model's own tokenizer before sending it.",
+  alternative: { name: "character estimate", description: "Divide the character count by four and send when under the window.", source: { url: "https://example.org/docs/estimate", title: "Estimating tokens", date: "2026-05-01" } },
+  prior: "The tokenizer count prevents overflows that the estimate lets through.",
+  question: "Does counting with the model's tokenizer prevent more context overflows than a characters-over-four estimate?",
+  arms: [
+    { id: "golden", label: "counted", description: "Count with the model's tokenizer, then send." },
+    { id: "alternative", label: "estimate", description: "Estimate characters over four, then send." },
+  ],
+  metric: { id: "overflow_rate", label: "overflow rate", unit: "percent", direction: "lower" },
+  minEffect: { kind: "absolute", value: 2 },
+  thresholds: [{ metric: "p95_ms", op: "<=", value: 50, label: "p95 latency" }],
+  n: 20,
+  controls: [{ id: "same-model", statement: "Both arms send to the same model." }],
+  stack: "node",
+  environment: "node@24.12.0",
+  budget: { wallMin: 30, modelCalls: 0 },
+};
+const TRIAL_RESULTS: TrialResults = {
+  schema: "article-trial-results/1",
+  arms: [
+    { id: "golden", observations: Array.from({ length: 20 }, () => 0), guards: { p95_ms: 12 } },
+    { id: "alternative", observations: Array.from({ length: 20 }, (_, i) => (i % 2 ? 15 : 5)), guards: { p95_ms: 3 } },
+  ],
+  controls: [{ id: "same-model", held: true, evidence: "both arms logged the same model id" }],
+  modelCalls: 0,
+};
+const TRIAL_VERDICT: TrialVerdict = {
+  schema: "article-trial-verdict/1",
+  verdict: "upheld",
+  reason: "The golden arm's overflow rate is lower by 10, beyond the band of 2, and it clears every guard.",
+  arms: [
+    { id: "golden", n: 20, mean: 0, sd: 0, guardsCleared: true },
+    { id: "alternative", n: 20, mean: 10, sd: 5.13, guardsCleared: true },
+  ],
+  delta: -10,
+  band: 2,
+  deltaCi95: [-12.2, -7.8],
+  at: "2026-10-17T10:00:00.000Z",
+};
+
+/** Point the trial store, the leads file and the registry remote into the sandbox. */
+function trialEnv(): string {
+  const trials = path.join(box.dir, "trials");
+  process.env.ARTICLES_TRIALS_DIR = trials;
+  process.env.ARTICLES_LEADS_FILE = path.join(box.dir, "leads.jsonl");
+  process.env.ARTICLES_REGISTRY_REMOTE = "github:fixture/ai-registry";
+  return trials;
+}
+
+/** A trial directory on disk, closed `upheld` unless told otherwise. */
+function seedTrial(over: { id?: string; status?: TrialRecord["status"]; verdict?: TrialVerdict["verdict"] | "none" } = {}): string {
+  const id = over.id ?? "t-token-budgeting";
+  const dir = path.join(process.env.ARTICLES_TRIALS_DIR!, id);
+  const put = (rel: string, data: string | Buffer) => {
+    mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+    writeFileSync(path.join(dir, rel), data);
+  };
+  const kind = over.verdict ?? "upheld";
+  const status = over.status ?? "closed";
+  const seal: TrialSeal = { sha256: "0".repeat(64), at: "2026-10-17T09:00:00.000Z" };
+  const record: TrialRecord = {
+    schema: "article-trial/1",
+    id,
+    status,
+    subject: { bundle: "software-engineering", slug: "token-budgeting", file: TRIAL_SUBJECT_FILE },
+    createdAt: "2026-10-17T08:00:00.000Z",
+    updatedAt: "2026-10-17T10:00:00.000Z",
+    ...(status === "closed" || status === "sealed" ? { seal } : {}),
+    ...(status === "closed" && kind !== "none" ? { verdict: kind, closedAt: "2026-10-17T10:00:00.000Z" } : {}),
+  };
+  put("trial.json", JSON.stringify(record, null, 2));
+  put("prereg.json", JSON.stringify(TRIAL_PREREG, null, 2));
+  put("seal.json", JSON.stringify(seal));
+  const validity: TrialValidity = { state: "current", reasons: ["the technique is the vendor's documented practice"], sources: [TRIAL_PREREG.alternative.source] };
+  put("validity.json", JSON.stringify(validity));
+  const execs: TrialExecRecord[] = [
+    { at: "2026-10-17T08:30:00.000Z", cmd: ["node", "run.mjs", "--pilot"], pilot: true, exitCode: 0, durationMs: 900, timedOut: false },
+    { at: "2026-10-17T09:30:00.000Z", cmd: ["node", "run.mjs"], pilot: false, exitCode: 0, durationMs: 4200, timedOut: false },
+  ];
+  put("exec.jsonl", `${execs.map((e) => JSON.stringify(e)).join("\n")}\n`);
+  put("REPORT.md", "# Report\n\nBoth arms ran against one fixture corpus.\n");
+  put("harness/run.mjs", "console.log('measure both arms');\n");
+  put("harness/node_modules/left-pad/index.js", "module.exports = 1;\n");
+  put("harness/corpus.bin", Buffer.alloc(1024 * 1024 + 1, 7));
+  if (status === "closed" && kind !== "none") {
+    put("results.json", JSON.stringify(TRIAL_RESULTS, null, 2));
+    const verdict: TrialVerdict = kind === "void" ? { ...TRIAL_VERDICT, verdict: "void", reason: "the control same-model did not hold" } : { ...TRIAL_VERDICT, verdict: kind };
+    if (kind === "void") delete verdict.deltaCi95;
+    put("verdict.json", JSON.stringify(verdict, null, 2));
+  }
+  return id;
+}
+
+const SUBJECT_TOPIC = { kind: "subject" as const, bundle: "software-engineering", subject: "token-budgeting", text: "" };
+const storeEntries = () => (existsSync(box.store) ? readdirSync(box.store) : []);
+type ArgvLine = { engine: string; entries: string[]; inputs?: string[]; registry?: string[]; experiment?: string[] };
+const argvLines = () => readFileSync(path.join(box.dir, "argv.log"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as ArgvLine);
+
+test("trial: a closed upheld trial becomes a run that reaches the gate on its own measurement", async () => {
+  const trials = trialEnv();
+  process.env.STUB_AGENT_ARGV_LOG = path.join(box.dir, "argv.log");
+  const trialId = seedTrial();
+  const created = await createRun({ topic: SUBJECT_TOPIC, trial: trialId }, deps());
+  expect(created.trial).toEqual({ id: trialId, verdict: "upheld", technique: "count-before-send", alternative: "character estimate", metric: "overflow rate", n: 20, sourceN: 1, applicationPath: TRIAL_APPLICATION });
+  expect(created.topic).toMatchObject({ kind: "subject", bundle: "software-engineering", subject: "token-budgeting", angle: TRIAL_PREREG.question });
+  expect(JSON.parse(readFileSync(path.join(trials, trialId, "trial.json"), "utf8")).runId).toBe(created.id);
+
+  // the bundle is copied to experiment/, environments and files over 1 MB left behind and named
+  const dir = runDir(created.id);
+  for (const f of ["trial.json", "prereg.json", "seal.json", "exec.jsonl", "results.json", "verdict.json", "validity.json", "REPORT.md", "harness/run.mjs"]) {
+    expect(existsSync(path.join(dir, "experiment", f)), f).toBe(true);
+  }
+  expect(existsSync(path.join(dir, "experiment", "harness", "node_modules"))).toBe(false);
+  expect(existsSync(path.join(dir, "experiment", "harness", "corpus.bin"))).toBe(false);
+  const skipped = readFileSync(path.join(dir, "experiment", "SKIPPED.txt"), "utf8");
+  expect(skipped).toContain("harness/node_modules/ (node_modules)");
+  expect(skipped).toContain("harness/corpus.bin (1048577 bytes, over 1048576)");
+  const source = JSON.parse(readFileSync(path.join(dir, "experiment-source.json"), "utf8"));
+  expect(source).toMatchObject({ n: 1, url: `https://github.com/fixture/ai-registry/blob/main/${TRIAL_APPLICATION}`, date: "2026-10-17", primary: true, counter: false });
+
+  const run = await driveRun(created.id, deps());
+  expect(run.status, run.error).toBe("awaiting-approval");
+  expect(run.trial).toEqual(created.trial);
+  const sources = JSON.parse(readFileSync(path.join(dir, "sources.json"), "utf8"));
+  expect(sources[0]).toEqual(source);
+  const detail = await getRunDetail(run.id);
+  for (const id of ["trial-preview", "trial-figure"]) expect(detail.check?.items.find((i) => i.id === id), id).toMatchObject({ status: "pass", dimension: "truth" });
+  expect(detail.check?.dimensions.truth).toBe("pass");
+  // no writing-standard patch: a trial run proposes against its subject only
+  expect(detail.patches.every((p) => !p.target.startsWith("knowledge/technical-writing/"))).toBe(true);
+
+  // the prompts carry the trial section and the code-rendered summary
+  const draft = readFileSync(path.join(dir, "agent", "draft-prompt.md"), "utf8");
+  expect(draft).toContain("ARTICLE-PHASE: draft");
+  expect(draft).toContain("REGISTRY PATCHES, for this post, replace the draft phase's rule above.");
+  expect(draft).toContain(`THE TRIAL ${trialId}, measured first-hand`);
+  expect(draft).toContain("| golden (counted) | 20 | 0 | 0 | cleared: p95_ms 12 |");
+  expect(draft).toContain(TRIAL_TECHNIQUE);
+  expect(draft).not.toMatch(/\{\{[A-Z_0-9]+\}\}/);
+  expect(readFileSync(path.join(dir, "agent", "research-prompt.md"), "utf8")).toContain("SOURCE 1 IS THE TRIAL.");
+  expect(readFileSync(path.join(dir, "agent", "outline-prompt.md"), "utf8")).toContain("THE POST IS A STORY OF A QUESTION, NOT A LAB REPORT");
+  expect(readFileSync(path.join(dir, "agent", "critique-r1-writer-prompt.md"), "utf8")).toContain("METHOD FINDINGS");
+  const review = readFileSync(path.join(dir, "critique", "round-1", "prompts", "gpt.md"), "utf8");
+  expect(review).toContain("LENS: METHOD.");
+  expect(review).toContain(`THE TRIAL ${trialId}`);
+
+  // every writer turn read the experiment; the draft read the subject, not the writing standard
+  const seen = argvLines();
+  const writer = seen.filter((s) => s.entries.includes("inputs"));
+  expect(writer.length).toBeGreaterThanOrEqual(4);
+  for (const s of writer) expect(s.inputs).toEqual(expect.arrayContaining(["experiment", "experiment-source.json"]));
+  expect(writer.find((s) => s.registry)?.registry).toEqual([TRIAL_APPLICATION, TRIAL_TECHNIQUE, TRIAL_SUBJECT_FILE].sort());
+  // every reviewer read the experiment's text files, and nothing that is not text
+  const reviewers = seen.filter((s) => !s.entries.includes("inputs"));
+  expect(reviewers).toHaveLength(4);
+  for (const s of reviewers) {
+    expect(s.entries, `${s.engine}'s workspace`).toEqual(["REVIEW.md", "experiment", "post", "sources.json"]);
+    expect(s.experiment).toEqual(expect.arrayContaining(["prereg.json", "verdict.json", "results.json", "exec.jsonl", "REPORT.md", "SKIPPED.txt", "harness/run.mjs"]));
+  }
+  // a METHOD finding travels as a factual one, and the writer answered it
+  const gpt = JSON.parse(readFileSync(path.join(dir, "critique", "round-1", "reviews", "gpt.json"), "utf8")) as { findings: { id: string; kind: string; location: string }[] };
+  expect(gpt.findings.find((f) => f.location.startsWith("METHOD:"))).toMatchObject({ id: "f3", kind: "factual" });
+  const dispositions = JSON.parse(readFileSync(path.join(dir, "critique", "round-1", "dispositions.json"), "utf8")) as { reviewer: string; findingId: string }[];
+  expect(dispositions.filter((d) => d.findingId === "f3")).toHaveLength(4);
+});
+
+test("trial: a void, an unclosed, a dropped, a taken, a missing or a mismatched trial is refused and creates nothing", async () => {
+  trialEnv();
+  const create = (trial: string, topic: CreateRunInput["topic"] = SUBJECT_TOPIC) => createRun({ topic, trial }, deps());
+  await expect(create(seedTrial({ id: "t-void", verdict: "void" }))).rejects.toMatchObject({ status: 400, code: "trial-void" });
+  await expect(create(seedTrial({ id: "t-sealed", status: "sealed" }))).rejects.toMatchObject({ status: 409, code: "trial-not-closed" });
+  await expect(create(seedTrial({ id: "t-dropped", verdict: "none" }))).rejects.toMatchObject({ status: 400, code: "trial-void" });
+  await expect(create("t-nowhere")).rejects.toMatchObject({ status: 404, code: "no-trial" });
+  // The agent harness refuses a subagent's REPORT.md; the orchestrator must save it, and a
+  // trial without one is refused rather than written up blind to its anomalies.
+  const unreported = seedTrial({ id: "t-unreported" });
+  rmSync(path.join(process.env.ARTICLES_TRIALS_DIR!, unreported, "REPORT.md"));
+  await expect(create(unreported)).rejects.toMatchObject({ status: 409, code: "trial-no-report" });
+  const ok = seedTrial();
+  await expect(create(ok, { kind: "free", text: "token budgets" })).rejects.toMatchObject({ status: 400, code: "trial-mismatch" });
+  await expect(create(ok, { kind: "subject", bundle: "technical-writing", subject: "article-structure", text: "" })).rejects.toMatchObject({ status: 400, code: "trial-mismatch" });
+  expect(storeEntries(), "a refused trial created a run directory").toEqual([]);
+
+  // a trial is written up once: a second run on it is refused before it exists
+  const first = await create(ok);
+  await expect(create(ok)).rejects.toMatchObject({ status: 409, code: "trial-taken" });
+  expect(storeEntries()).toEqual([first.id]);
+});
+
+test("trial: a research answer whose source 1 is not the trial's record fails the step by name", async () => {
+  trialEnv();
+  process.env.STUB_TRIAL_SOURCE = "reworded";
+  const created = await createRun({ topic: SUBJECT_TOPIC, trial: seedTrial() }, deps());
+  const run = await driveRun(created.id, deps());
+  expect(run.status).toBe("failed");
+  expect(run.error).toMatch(/^research: source 1 must be the trial's record \(experiment-source\.json\); its title differ/);
+  expect(existsSync(path.join(runDir(created.id), "sources.json")), "a refused research wrote sources.json").toBe(false);
+});
+
+test("trial: the reviewers read the proposed amendment, and a revision that rewrites it replaces the patch", async () => {
+  // 2026-10-18, eval-harness: the critique caught a reversed mechanism in the post, but the draft's
+  // amendment to the technique repeated it and nobody reviewed it. Now the reviewers get it in
+  // experiment/proposed-amendments/ and the revise turn may write it again.
+  trialEnv();
+  process.env.STUB_AGENT_ARGV_LOG = path.join(box.dir, "argv.log");
+  process.env.STUB_TRIAL_AMENDMENT = "1";
+  process.env.STUB_CRITIQUE_DECISIONS = "rewrite,keep";
+  const created = await createRun({ topic: SUBJECT_TOPIC, trial: seedTrial({ verdict: "challenged" }) }, deps());
+  const run = await driveRun(created.id, deps());
+  expect(run.status, run.error).toBe("awaiting-approval");
+  const reviewers = argvLines().filter((l) => l.entries.includes("experiment"));
+  expect(reviewers.length, "trial reviewers ran").toBeGreaterThan(0);
+  for (const r of reviewers) expect(r.experiment, "the reviewer saw the amendment").toContain("proposed-amendments/p1.patch");
+  const revise = argvLines().find((l) => l.inputs?.includes("amendments"));
+  expect(revise, "the revision was handed the amendment").toBeDefined();
+  const patches = JSON.parse(readFileSync(path.join(runDir(run.id), "patches.json"), "utf8")) as { id: string; required?: true }[];
+  expect(patches.map((p) => p.id).sort()).toEqual(["p1", "t1"]);
+  expect(patches.find((p) => p.id === "t1")?.required, "the trial record still lands with the post").toBe(true);
+  const p1 = readFileSync(path.join(runDir(run.id), "patches", "p1.patch"), "utf8");
+  expect(p1).toContain("the check tightens as runs are added");
+  expect(p1).not.toContain("loosens");
+});
+
+test("trial: the fix turn of a trial run reads the experiment and carries the trial-writer section", async () => {
+  trialEnv();
+  process.env.STUB_AGENT_ARGV_LOG = path.join(box.dir, "argv.log");
+  process.env.STUB_POST_DEFECT = "draft";
+  const created = await createRun({ topic: SUBJECT_TOPIC, trial: seedTrial() }, deps());
+  const run = await driveRun(created.id, deps());
+  expect(run.status, run.error).toBe("awaiting-approval");
+  const fix = readFileSync(path.join(runDir(run.id), "agent", "fix-draft-1-prompt.md"), "utf8");
+  expect(fix).toContain("ARTICLE-PHASE: fix");
+  expect(fix).toContain("NEVER CHANGE A NUMBER ABOUT THE ARMS.");
+  expect(fix).toContain("`trial-preview`");
+  const fixes = argvLines().filter((s) => s.inputs?.includes("check-failures.json"));
+  expect(fixes.length).toBeGreaterThan(0);
+  for (const s of fixes) expect(s.inputs).toEqual(expect.arrayContaining(["experiment", "experiment-source.json"]));
 });

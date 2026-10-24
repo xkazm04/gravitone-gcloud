@@ -18,7 +18,10 @@ import type { AgentTool } from "./cliSeam";
  * as a fence breach).
  *
  * The workspace holds only REVIEW_WORKSPACE — a copy of `post/`, `sources.json`
- * and `REVIEW.md` (the full prompt). claude and codex also get the full prompt
+ * and `REVIEW.md` (the full prompt), and, for a post written around a trial,
+ * `experiment/`: a text-only copy of the trial's files, so the METHOD lens can
+ * read the measurement it judges (2026-10-18). A classic workspace never holds
+ * it; the refusal only allows it. claude and codex also get the full prompt
  * on stdin; agy takes the prompt as an argument, so they get a short
  * pointer at REVIEW.md, which keeps the argv far under Windows' command-line
  * ceiling (the contest runner's shape).
@@ -54,7 +57,10 @@ export const REVIEWER_ENGINE_NAMES: readonly ReviewerEngineName[] = ["claude", "
 /** A claude reviewer's tools: research and read, never write. */
 export const REVIEWER_TOOLS: readonly AgentTool[] = ["WebSearch", "WebFetch", "Read"];
 export const REVIEW_PROMPT_FILE = "REVIEW.md";
-export const REVIEW_WORKSPACE: readonly string[] = ["post", "sources.json", REVIEW_PROMPT_FILE];
+/** A trial run's reviewers also read the experiment (text files only, copied by the engine). */
+export const REVIEW_EXPERIMENT_DIR = "experiment";
+/** What a reviewer's workspace may hold; `experiment` only on a trial run. */
+export const REVIEW_WORKSPACE: readonly string[] = ["post", "sources.json", REVIEW_PROMPT_FILE, REVIEW_EXPERIMENT_DIR];
 export const REVIEW_POINTER =
   "Read REVIEW.md in the current directory and do exactly what it says. You are read-only: do not create, edit or delete any file. Your whole final message is the one JSON object REVIEW.md asks for.";
 

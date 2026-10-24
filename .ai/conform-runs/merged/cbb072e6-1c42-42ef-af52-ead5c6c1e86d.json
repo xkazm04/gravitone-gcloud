@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "cbb072e6-1c42-42ef-af52-ead5c6c1e86d",
+ "subject": "multi-speaker-speech-production",
+ "evaluatedAt": "2026-10-22T01:33:24.844748+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "landing-cosmos-scenes",
+   "subject": "multi-speaker-speech-production",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/scene.ts:85 Searches found no speech, speaker, pronunciation, or lexicon matches in the cosmos context; its inspected rendering path produces canvases, so offline multi-speaker speech production does not apply.",
+   "techniques": [
+    {
+     "technique": "chunk-boundary-continuity",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/planes.ts:67 Bands group visual depth planes; no speech script, character cap, or audio joins were found."
+    },
+    {
+     "technique": "inline-direction-dialect",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/banner.ts:26 Names become DOM display text; no script direction passed to a speech engine was found."
+    },
+    {
+     "technique": "line-addressed-re-render",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/scene.ts:80 Render jobs contain image dimensions and paint operations; no spoken-line revision workflow was found."
+    },
+    {
+     "technique": "voice-asset-model-generation-binding",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/medal.ts:49 Stored specifications select seeded visual motifs; no cloned or designed voice assets were found."
+    },
+    {
+     "technique": "world-lexicon-as-pronunciation-dictionary",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/worlds.ts:44 Worlds describe painted scenery; no spoken terms or pronunciation dictionary workflow was found."
+    }
+   ],
+   "absenceTerms": [
+    "speech",
+    "speaker",
+    "pronunciation",
+    "lexicon"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T01:33:24.844748+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "multi-speaker-speech-production"
+   ],
+   "techniques": [
+    "chunk-boundary-continuity",
+    "inline-direction-dialect",
+    "line-addressed-re-render",
+    "voice-asset-model-generation-binding",
+    "world-lexicon-as-pronunciation-dictionary"
+   ],
+   "deviations": 0,
+   "context": "landing-cosmos-scenes",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

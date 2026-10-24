@@ -12,6 +12,19 @@ Structure: the code sends the `shared` section, then the section for the phase
 Everything outside a section marker (this comment included) is never sent.
 The REVIEWERS' prompt is a separate file, pipeline/ARTICLE-REVIEW-PROMPT.md.
 
+THE TRIAL SECTIONS (2026-10-18). A run written around a trial (run.trial: a
+registry subject's claim measured first-hand against its strongest current
+alternative before the run existed) gets ONE more section after its phase's:
+`trial-research`, `trial-outline`, `trial-draft`, or `trial-writer` for every
+writer turn of the critique and the check (critique, revise-research, revise,
+fix). They come last so that where they differ from the rules above, they win.
+A classic run never receives one, so a classic prompt is unchanged byte for
+byte. {{TRIAL}} is a summary rendered by code from the experiment's
+prereg.json, verdict.json and results.json (lib/articles/prompt.ts
+trialSummary). The evidence: 17 of 17 posts before trials disclaimed any
+first-hand measurement in their preview, and 88 to 94 percent of their prose
+sat in cited paragraphs.
+
 THE STANDARD IS NOT IN THIS FILE. Tone, structure and the output contract live
 here; the post standard is registry content — the technical-blog-post-authoring
 recipe and the technical-writing bundle — and arrives in {{STANDARD}}, resolved
@@ -44,6 +57,14 @@ THE TOPIC:
 THE READER. Two at once: an engineer who has shipped the thing the post is about, and a capable newcomer to it. Neither is served by a flat post. Explain a term of art in a clause at first use and move on; spend the length on mechanism, what changes in a production system, where the claim stops holding, and what it means.
 
 THE VOICE. Third person, impersonal, about the topic and the results. Never "I", "my", "me", "we", "our" or "us" in prose — not "we found", not "I measured". The post reports: "the measurement shows", "a tokenizer trained mostly on English splits…". A measurement the post itself reports is stated impersonally with the command that produced it in the sources. Sentences vary in length. NO EM DASH AND NO EN DASH (U+2014, U+2013) anywhere: not in prose, headings, captions, code comments, figure text or alt text; use a period, comma, colon or parentheses, and write ranges with "to". No throat-clearing openers, no stacked hedges, no "in today's fast-paced world", no "delve", no closing "in conclusion".
+
+THE SKIM SPINE (checked by code). The paragraphs run long, and a fast reader follows the post by its bold type alone, so the bold type has to carry the argument. Every paragraph of more than {{SKIM_MIN_WORDS}} words inside a section gets exactly one bold span (`**…**` in post.md, the same words in `<strong>` in index.html); no paragraph gets two.
+- The span is the paragraph's point, in the paragraph's own words: its claim, its consequence or its instruction. Prefer a whole short sentence; otherwise the clause that carries the claim. Between {{SKIM_SPAN_MIN}} and {{SKIM_SPAN_MAX}} words, most under 15. While drafting, write the paragraph so that such a sentence exists rather than bolding a weaker one; once the critique has read the post, the words are settled and only the bold moves.
+- Read in order, the spans alone tell the post: the incident, what it reveals, each section's finding, and the change asked for. So each span stands out of context: no "this", "it" or "that" pointing back to an unbolded sentence, and no span that only announces what comes next.
+- Bold a claim, never its decoration: not a lone keyword, a term being defined, a bare number, a source name or a citation marker. A span ends before its `[n]`.
+- Never in the title, subtitle, headings, captions, figure text, tables, code, callouts (a callout's label is already bold) or Sources. Before the first section the check does not count: the opening may bold its turn (one span per paragraph), and the content preview only each line's head and the one sentence that states what the post sets out.
+- Bold stays near one word in eight of the paragraph prose and never above {{SKIM_MAX_PERCENT}} percent. Past that it stops guiding the eye.
+- Example, from a paragraph on a status code's history: "**Two of the three things a caller needs, the key and the counting rule, are left to the implementer**; the third, the wait, is a MAY. [3]"
 
 HOUSE RULES the owner set after the first full run (each is checked by code):
 - The post never states its reading time, its word count or a words-per-minute figure. The platform shows its own.
@@ -126,13 +147,14 @@ Write the post as files under `out/post/`:
    - A content preview before the first `<h2>`, with no heading of its own above it: one element carrying `data-role="content-preview"` that lists the sections and says what the reader gains. It states no read time and no word count.
    - Figures as `<figure><img src="figures/NN-short-name.svg" alt="…"><figcaption>…</figcaption></figure>`. Every caption names its source numbers as `[n]`.
    - Code, if any, as `<pre><code class="language-…">` with the highlighting already in the markup as `<span class="tok-…">` elements, coloured for light and dark. No highlighter script.
+   - The skim spine as `<strong>`, the same spans as post.md's `**…**`, word for word.
    - Citations inline as `<a href="#src-N">[N]</a>`. The page ends with `<ol id="sources">` holding one `<li id="src-N">` per source: title, publisher, date and URL.
    - A closing section that restates what was established, numbers included, carries a summary or comparison table of the body's comparison, returns to the opening, and says what to do differently.
    - Visual cadence: no more than two consecutive prose paragraphs without a figure, table, code block, diagram strip or callout.
    - Code labels and inline code never below {{MIN_CHROME}} px.
    - No placeholders: no lorem ipsum, no "[insert …]", no "TODO".
 
-3. `out/post/post.md` — the same post as Medium-ready Markdown: `# ` title, the subtitle as an italic line, the content preview (no read time), the sections, figures as `![caption](figures/NN-short-name.png)` with the caption (source numbers included) on the line below, code in fenced blocks with a language, citations as `[N]`, and a final `## Sources` numbered list in the same order as `inputs/sources.json`.
+3. `out/post/post.md` — the same post as Medium-ready Markdown: `# ` title, the subtitle as an italic line, the skim spine as `**…**`, the content preview (no read time), the sections, figures as `![caption](figures/NN-short-name.png)` with the caption (source numbers included) on the line below, code in fenced blocks with a language, citations as `[N]`, and a final `## Sources` numbered list in the same order as `inputs/sources.json`.
 
 4. `out/post/meta.json` — `{"title": "…", "subtitle": "…", "tags": ["…"]}` with at most five tags.
 
@@ -202,7 +224,7 @@ Then reply with one line: how many sources were added and how many claims change
 <!-- section: revise -->
 YOUR PHASE: CRITIQUE REWRITE, after round {{ROUND}} of at most {{MAX_ROUNDS}}. You decided to rewrite the post. `inputs/decision.json` says why; `inputs/dispositions.json` lists every finding with your disposition, and each `accepted` one carries the `action` you committed to. The current post is in `inputs/post/`, the outline in `inputs/outline.md`, the research in `inputs/sources.json` and `inputs/claims.json` (updated if you researched again). Do not search the web.
 
-The shared rules bind this rewrite exactly as they bound the draft, and these are the ones that break first (each costs a fix turn when it does): visual cadence counted in paragraphs AND in words (recount every run), the opening as one short incident, the words before the first section, the closing table and its list items, font sizes in the page CSS (body text at least {{MIN_BODY_1440}} px at 1440 wide and {{MIN_BODY_390}} px at 390; captions, code labels and page chrome at least {{MIN_CHROME}} px), and source numbering (renumber the citations if a source was dropped).
+The shared rules bind this rewrite exactly as they bound the draft, and these are the ones that break first (each costs a fix turn when it does): visual cadence counted in paragraphs AND in words (recount every run), the skim spine (one bold span per long paragraph, the same spans in both files, re-read in order after the rewrite), the opening as one short incident, the words before the first section, the closing table and its list items, font sizes in the page CSS (body text at least {{MIN_BODY_1440}} px at 1440 wide and {{MIN_BODY_390}} px at 390; captions, code labels and page chrome at least {{MIN_CHROME}} px), and source numbering (renumber the citations if a source was dropped).
 
 Rewrite the post so that every accepted finding's action is carried out and nothing rejected or deferred is changed because of its finding. Keep everything that was right. The finished post is no longer than the post you were given. Every number still comes from a claim in `inputs/claims.json` and is cited with that claim's source number.
 
@@ -223,6 +245,7 @@ How to fix, by kind:
 - A font size below its bar: raise it in the page's CSS (body text at least {{MIN_BODY_1440}}px at 1440 wide and {{MIN_BODY_390}}px at 390; page chrome, captions and bylines at least {{MIN_CHROME}}px).
 - Over the word ceiling ({{MAX_WORDS}}): cut the flattest material first (a restated point, a second example of the same thing, a paragraph a table already carries). Never trade length for a missing claim.
 - Prose between two visuals longer than {{MAX_RUN_WORDS}} words: put a visual in the middle of the stretch (a small table or callout is enough) or cut the stretch; do not split a paragraph in two to pass.
+- The skim spine: ADD BOLD ONLY. Put `**…**` in post.md and `<strong>` in index.html around words that are already in each named paragraph, and change no word anywhere: not in the paragraph, not in a caption, a table or a heading. When no single sentence states the point, bold the clause that comes closest. Where a paragraph has two spans, keep the stronger; re-cut a span outside the word range or one holding a citation. The critique has already reviewed every word, so a reworded sentence is an unreviewed claim.
 - Too many one-line paragraphs: merge them into the paragraph they belong to, or delete the ones that only announce the next paragraph.
 - More than {{MAX_PRE_WORDS}} words before the first section: cut the opening to one incident and the preview to one line per section.
 - A closing list item over {{MAX_CLOSING_ITEM_WORDS}} words: cut it to the action and move the reason into the body.
@@ -232,3 +255,113 @@ How to fix, by kind:
 The post is no longer than the post you were given unless a failure is the missing piece itself. `out/post/` must end up complete to the draft phase's contract (`out/post/figures/NN-short-name.svg`, `out/post/index.html`, `out/post/post.md` with a final `## Sources` list in source order, `out/post/meta.json`); the seeded copy already is, so only the edited files change. The same rules hold: no em or en dash, no stated reading time, the content preview before the first `<h2>`, the closing carries its summary table. Do not search the web and do not write registry patches in this phase. The failures are also in `inputs/check-failures.json`.
 
 Then reply with one line: the title and how many failures you met.
+
+<!-- section: trial-research -->
+THIS POST IS WRITTEN AROUND A TRIAL. Before this run existed, the claim below was measured first-hand against its strongest current alternative: both arms run under one sealed preregistration, and the verdict computed by code from the numbers. The experiment is DONE. It is the post's spine; this phase does not re-measure it, re-judge it or replace it. Its files are in `inputs/experiment/` (`prereg.json`, `results.json`, `verdict.json`, `validity.json`, `REPORT.md`, `exec.jsonl`, and the harness's text files under `harness/`). Where the rules above and these differ, these win.
+
+{{TRIAL}}
+
+THE RESEARCH IS SUPPLEMENTARY: it surrounds the measurement and does not compete with it. Search for, and open:
+- prior published measurements of the same comparison (the same two practices, the same or a nearby metric), each with its population and date. One that disagrees with this trial is the most valuable page this phase can find.
+- each practice's current documentation: the golden path's practice and the alternative, at the versions in use today.
+- counter-evidence to the result: the conditions under which the verdict above would not hold (another workload, version or scale), stated as such.
+- the state of each practice today: who uses the alternative, and whether either practice has changed since the sources the trial was framed on (`inputs/experiment/validity.json`).
+
+SOURCE 1 IS THE TRIAL. Row 1 of `out/sources.json` is `inputs/experiment-source.json` copied VERBATIM, every field and every character; code compares it field for field and rejects the research when it differs. Your own sources are numbered from 2. Every bar above still holds for the whole list ({{MIN_SOURCES}} sources, {{MIN_PRIMARY}} primary, {{MIN_COUNTER}} counter), and the trial counts once.
+
+THE TRIAL'S NUMBERS ARE CLAIMS OF SOURCE 1. Write into `out/claims.json`, each carried by source 1, every number the post may state about the arms: the per-arm n, mean and sd of the metric, the delta and its interval, each guard's value, each control and whether it held, the verdict and its reason. Copy them from `inputs/experiment/verdict.json` and `inputs/experiment/results.json`; never round one into a stronger claim, and never add a number about the arms that those files do not hold.
+
+<!-- section: trial-outline -->
+THIS POST IS WRITTEN AROUND A TRIAL, measured first-hand before this run existed; its files are in `inputs/experiment/` and its record is source [1]. The story is built around the result, and the research supplements it. Where the rules above and these differ, these win.
+
+{{TRIAL}}
+
+THE POST IS A STORY OF A QUESTION, NOT A LAB REPORT. A reader keeps reading when they know, at every point, why they are reading it. Plan the story in this order of motivation, and give each step its reason:
+1. THE SITUATION: who makes the decision this practice governs (a team ranking models, an author deciding where an agent's rules live), what they want, and what getting it wrong costs them, in their own terms.
+2. THE PRACTICE AND ITS PROMISE: what the recommended rule says and why a careful team adopts it (it is cheap, it is already in the tools, a standard recommends it), stated at its strongest.
+3. THE DOUBT AND THE CHALLENGER: why the rule was worth testing at all, and why the alternative is its strongest current rival (who uses it, what it costs).
+4. THE TEST, every choice with its "because": why this setting (a simulation, a live workload), why this metric is the one the reader's decision turns on, what each floor stops a rule from gaming, why that smallest difference. A design choice stated without its reason is a line of a lab log.
+5. WHAT HAPPENED, WHY, AND WHAT CHANGES: the result in words before its numbers, the mechanism, the consequence for the reader's practice, the limits.
+Every section opens with the question it answers, in one sentence, before any number.
+
+THE OPENING is the situation and its stake, then what the measurement found, told as what it means to the reader: sentences a practitioner could repeat to a colleague. For a trial post this replaces the house rule's dated incident: the run is not the incident, so the opening names no run, run date, observation or row. The harness, timestamps, exit codes, durations, seeds, versions and pilot counts are not in the post's prose at all; they are in the record [1], which the post points to once. (2026-10-18: one trial post opened on "A sealed run of bench.py finished at 23:58:27Z, exit code 0"; the next opened on "Observation 24 of a sealed run on 2026-10-17". The owner read both as a laboratory log.)
+
+NO INTERNAL IDENTIFIERS. The experiment's files number things for code; a reader never sees those numbers. Never print an observation, evaluation, row, seed, run, pilot or trial number or id, a hash, a harness file or command name, or a label the pipeline made ("Table A", "Strip", "golden arm"). A case is described by what it was ("one simulated benchmark of eight models"), and a table is captioned with what it shows.
+
+THE TITLE names the contest: `<practice> vs <practice>`, each in the short name the post uses for it, then a colon and a hook that says what is at stake for the reader. THE SUBTITLE says in words what was measured and why a reader should care; it may hint the outcome. Neither carries a number, a percentage or n: the figures are the post's payoff, not its label. (2026-10-18: "One SD as a ranking's only check: a false order in one pair in four", under a 50-word subtitle quoting 25.07 and 0.131 percent.)
+
+THE BACKGROUND WRAPS THE POST: THE OPENING STARTS WITH IT AND THE CLOSE RETURNS TO IT. A practice is a tool for a job, and a reader who has not been told the job cannot weigh two tools for it: a post that compares two practices without it is comparing long division by hand with a calculator and never saying what is being calculated, or why. So before the example's mechanics the opening answers, in plain words for a reader new to the field:
+- what the activity is and why people do it (what an evaluation is for, where an agent's instructions live and who reads them);
+- what is decided with it, and by whom (which model or prompt a product ships, which order a public board prints);
+- what a right call is worth and what a wrong one costs, in the reader's terms (a model that is not better shipped at a higher price, weeks of migration spent chasing noise, a published claim that others buy on);
+- the question the two practices both answer, in the reader's words ("is the order in this table real, or noise?").
+Then the example makes that background concrete, and the two practices arrive as two answers to its question. Only the first lines of it fit before the first section; the first section carries the rest. The close returns to the same background, not only to the example's checklist: what the reader's decision looks like now and what the result is worth to them. (2026-10-18, a second rework: the post opened on "a team has six candidates on one test suite", and the owner asked: candidates for what, what is the team trying to achieve, and what is it worth?)
+
+ONE PRACTICAL EXAMPLE CARRIES THE POST, FROM THE OPENING TO THE CLOSE. A reader cannot care about a number before they can picture the situation it is about, and cannot follow a practice nobody has shown them. Never assume the reader already knows what either practice is or when it is used.
+- The opening is built on one concrete use case the reader can picture: a real one from the research where one exists (a public leaderboard, a vendor's documented workflow, a named benchmark), cited; otherwise a hypothetical said to be one ("Take a team choosing between two support-bot prompts…"), its values marked as invented. It names who is deciding, what they are deciding, what they see on their screen, and what a wrong call costs them.
+- Each practice is explained in plain words through that example before any measured number: what it does to that team's decision, in a sentence a newcomer follows, with an illustration where a picture says it faster. A term of art (a standard deviation, a paired test, a correction for many comparisons) is shown working in the example the first time it appears; one the argument does not need is left out.
+- Apart from the preview's verdict and n, no measured number appears before the reader knows what both practices do and why the comparison matters to the example.
+- The closing returns to the same example: what that team does now, step by step. It names the real situations where the result applies and those where it does not (for a ranking rule: choosing one model for production, publishing a leaderboard, a regression check between two releases), in a small table or figure.
+(2026-10-18: a reworked post explained its why but still opened on "a ranked table of eight candidates" and 25.07 percent; the owner found no practical example to carry a reader through, and no line on where the result is valid.)
+
+PICTURES BEFORE TABLES. A reader takes in a mechanism from a picture faster than from a grid of values. Each section's idea gets an abstract illustration (shapes and arrows showing what a practice does, how the error arises, what the reader's table claims), and a table appears in the body only where a reader must look up exact values: at most two before the closing section. The setup's declared values go in one short table or a compact figure; exact breakdowns stay in the record [1]. A table a picture can carry becomes the picture.
+
+WORDS FOR A READER. The pipeline's words are not the reader's. Never print `golden`, `alternative`, `arm`, `guard`, `band`, `prereg`, `seal`, a trial id, "the registry" or "golden path" bare. Name each practice by what it does ("the one-SD tie rule", "paired tests with a Holm correction"); call the golden path once "the rule our engineering standards recommend" and then by its name; the band is "the smallest difference decided in advance to count"; a guard is "a floor both had to clear". Verdicts go in a sentence in lower case ("the recommended rule lost"), never as CHALLENGED.
+
+SAY WHAT WAS TESTED, EXACTLY. When the rule is a precondition or a check (it forbids something when it fails) and the trial used it as a decision rule (it permits everything when it passes), the post says so in the setup and scopes the verdict to that reading: a necessary condition was tested as if it were sufficient (2026-10-18: the METHOD lens caught exactly this, after the post had overclaimed it).
+
+The outline's sections, in this order unless the result asks otherwise:
+- `## Opening`: the background in its first lines (the activity, the decision, its worth), the practical example and its stake, the finding in a line of words, and the preview sentence: the verdict ({{TRIAL_VERDICT}}) in words, `n={{TRIAL_N}} per arm`, and that the measurement was made first-hand for this post, citing [1].
+- WHY THIS RULE, AND WHY DOUBT IT: the practice and its promise, the challenger and why it is the one to beat.
+- HOW IT WAS TESTED: the two practices, the metric and why it is the reader's metric, each floor and what it prevents, what was held the same and why, n per arm. Every choice with its reason.
+- WHAT HAPPENED, with at least one figure drawn from `inputs/experiment/results.json` (the per-arm values with their n, the difference against the smallest difference that counts), its caption citing [1].
+- WHY IT HAPPENED: the mechanism, with the research for what the trial cannot show by itself.
+- WHAT IT CHANGES for the recommended practice, in plain words: upheld, challenged or null.
+- WHAT THE TRIAL CANNOT SAY: its limits, the smallest difference that counts, n, the setting, the workloads it did not cover.
+- THE CLOSE returns to the background and the example: what the reader's decision looks like now and what the result is worth to them, what that team does now, and where the result applies and where it does not.
+
+A `null` verdict is planned as "no difference beyond the band at n={{TRIAL_N}}", never as a tie or a win. No number about the arms goes in the outline unless a claim of source 1 holds it.
+
+<!-- section: trial-draft -->
+THIS POST IS WRITTEN AROUND A TRIAL, measured first-hand before this run existed; its files are in `inputs/experiment/`, its record is source [1] (`inputs/experiment-source.json`), and the outline already places the result. Where the rules above and these differ, these win.
+
+{{TRIAL}}
+
+- THE STORY OF A QUESTION, as in the outline: the situation and its stake, the practice and its promise, the doubt and the challenger, the test with a reason for every choice, then what happened, why, and what changes. Every section opens on the question it answers before any number. Where `inputs/outline.md` reads as a list of results, keep its claims and give each section its why; the room comes from cutting log lines, not from appending.
+- THE BACKGROUND WRAPS THE POST, as in the outline: before the example's mechanics, say in plain words what the activity is and why people do it, what is decided with it and by whom, what a right call is worth and a wrong one costs, and the question both practices answer; the close returns to it with what the reader's decision looks like now and what the result is worth to them. Where `inputs/outline.md` opens straight on the example, add the background in front of it.
+- ONE PRACTICAL EXAMPLE, as in the outline, carries the post: the opening is a use case the reader can picture (a real one from the research where one exists, cited; else a hypothetical said to be one, its values marked invented), each practice is explained in plain words through it before any measured number, and the closing returns to it with what that team does now and where the result applies and where it does not. Never assume the reader knows either practice.
+- THE OPENING is that example and what the measurement found, said in words; apart from the preview's verdict and n it carries no measured number. Never a dated run, an observation or the run's log.
+- PICTURES BEFORE TABLES, as in the outline: an abstract illustration for each section's idea; at most two tables before the closing section; exact breakdowns stay in the record [1].
+- NO INTERNAL IDENTIFIERS, as in the outline: no observation, evaluation, row, seed, run, pilot or trial number or id, hash, harness file or command name, timestamp, exit code or duration in the prose, and no pipeline label on a table or caption ("Table A", "Strip"). Versions, seeds and commands live in the record [1]; the post points to it once.
+- THE TITLE is `<practice> vs <practice>: <the stake>` and THE SUBTITLE says in words what was measured and why it matters; neither carries a number, a percentage or n. The same title and subtitle go in `out/post/meta.json` and at the head of both post files.
+- WORDS FOR A READER, as in the outline: no bare `golden`, `alternative`, `arm`, `guard`, `band`, `prereg`, `seal`, trial id, "the registry" or "golden path"; practices are named by what they do, verdicts are said in lower case in a sentence. A table's row labels follow the same rule.
+- PRECISION FOR A READER: in prose, round to two or three significant figures ($0.0097 per question, 25.1 percent, about 31,000 tokens); the exact values live in a table and in the record [1]. Rounding is not a stronger claim, but a rounded figure may never move a comparison across the band or change a verdict word. (2026-10-18: a draft's prose quoted "0.00970834 USD" and a "0.001941668 USD band".)
+- A MECHANISM SENTENCE IS CHECKED AGAINST THE TRIAL'S OWN NUMBERS before it is written: if `REPORT.md` or a breakdown in `results.json` shows a quantity moving one way, the mechanism may not say it moves the other (2026-10-18: a draft said adding runs loosens a gate whose measured false-order rate fell as runs were added, and two reviewers raised it as a blocker).
+- WHAT WAS TESTED, EXACTLY: a precondition used as a decision rule is said to be one, and the verdict is scoped to that reading.
+- THE CONTENT PREVIEW states the verdict, the per-arm n written as `n={{TRIAL_N}} per arm`, and that the measurement is first-hand, citing [1]. Code checks the text before the first section (the first `<h2>` of `index.html`, the first `## ` of `post.md`) for `[1]` and for n, in both files.
+- HOW IT WAS TESTED: the two practices, the metric and its direction, the floors, the controls, what was held constant, each with the reason it was chosen.
+- THE RESULT carries at least one figure drawn from `inputs/experiment/results.json`: the per-arm values with their n, and the delta against the band. Its caption cites [1]. Code checks that at least one figure caption cites [1].
+- THE MECHANISM: why the result came out as it did.
+- WHAT IT CHANGES FOR THE GOLDEN PATH, in plain words: upheld (the rule held against its strongest current alternative, under the conditions measured), challenged (the alternative won by more than the band) or null.
+- WHAT THE TRIAL CANNOT SAY: its limits, the band, n, the environment, what it did not cover.
+- EVERY NUMBER ABOUT THE ARMS comes from `inputs/experiment/verdict.json` or `results.json`, through a claim of [1]. A number those files do not hold is never stated, never rounded into a stronger one and never extrapolated.
+- A `null` verdict is reported as "no difference beyond <band> at n=<n>", never as a tie, a draw or a win for either arm, and the title and preview never say "as well as", "equal" or "the same": a band is the largest difference the trial could have missed, not a proof of equality (2026-10-18: a one-check band would also have called a 0.95-check deficit null, under a title that said "held the rules as well as"). When the metric pools several checks, state how many sessions each check ran in.
+
+REGISTRY PATCHES, for this post, replace the draft phase's rule above. `inputs/registry/` holds the subject's golden path, the technique under test (`{{TRIAL_TECHNIQUE_PATH}}`) and, when the registry already has one, the application record (`{{TRIAL_APPLICATION_PATH}}`). The measurement's own record is written by code from the experiment's files and lands with the post: do not propose it.
+- When the verdict is `challenged` or `null`: at most ONE proposal, and only to `{{TRIAL_TECHNIQUE_PATH}}`: a short dated section (`## Amendment <date>: <the condition>`) stating the condition under which the rule did not hold, citing [1]. The measurement's numbers stay out of it; they belong in the application record. Never golden-path text, never the writing standard.
+- When the verdict is `upheld`: no proposal. Write `out/patches.json` as `[]`.
+
+This trial's verdict is {{TRIAL_VERDICT}}.
+
+<!-- section: trial-writer -->
+THIS POST IS WRITTEN AROUND A TRIAL, measured first-hand before this run existed. Its files are in `inputs/experiment/`; its record, source [1], is `inputs/experiment-source.json`. Where the rules above and these differ, these win.
+
+{{TRIAL}}
+
+- METHOD FINDINGS (a finding whose `location` starts `METHOD:`: a confound, an unfair arm, a control, n against the floor, the band, whether the verdict follows) cannot be answered by measuring again: there is no shell here and the experiment is closed. Answer one by stating the limit in the post (accepted, its `action` naming the sentence the limits section gains) or reject it with the reason the experiment's files give (naming the file and the field).
+- NEVER CHANGE A NUMBER ABOUT THE ARMS. Each one is a claim of [1] copied from `verdict.json` or `results.json`; a finding that asks for a different number is answered from those files.
+- Source 1 stays exactly `inputs/experiment-source.json`: the same number, the same url, every field unchanged.
+- A `null` verdict stays "no difference beyond <band> at n=<n>", never a tie or a win.
+- THE AMENDMENT, in a revision: `inputs/amendments/<id>.patch` holds the amendment the draft proposed (a diff against `inputs/registry/`). When an accepted finding concerns it (a `location` starting `METHOD: amendment`, or a mechanism the post corrected that the amendment repeats), write it again whole, exactly as the draft phase does: `out/patches.json` and `out/proposals/<id>/<registry path>`, same id, the corrected file. Write no `out/patches.json` when the amendment needs no change: the draft's patches then stand.
+- A revision keeps the draft's reader rules: the post stays the story of a question (each section opens on its why, each design choice keeps its reason), one practical example carries it from the opening to the close and explains each practice before any number, pictures come before tables (at most two body tables), the opening is that example and what the measurement found (never the run's log), no internal identifier is printed (observation, run, trial, row or seed numbers, hashes, harness names, "Table A", "Strip"), the title stays `<practice> vs <practice>: <the stake>` with no number in it or the subtitle, the pipeline's words (`golden`, `arm`, `guard`, `band`, `prereg`, `seal`, "the registry", "golden path", an upper-case verdict) are not printed bare, and a mechanism sentence never contradicts the trial's own numbers. A finding that asks for a run detail in the prose is answered by pointing to the record [1].
+- The trial's two check items: `trial-preview` (the text before the first `<h2>`, in both files, cites [1] and states `n={{TRIAL_N}} per arm`) and `trial-figure` (at least one figure caption cites [1]). A fix for either adds the missing words or citation and changes nothing else.

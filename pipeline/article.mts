@@ -1,14 +1,30 @@
 // ARTICLE — the headless surface of the article pipeline (lib/articles/).
 //
-//   npx tsx pipeline/article.mts run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort <level>] [--reviewers <file>] [--budget-usd X]
+//   npx tsx pipeline/article.mts run (--subject <bundle/slug> | --topic "<text>" | --trial <id>) [--angle "<text>"] [--model <id>] [--effort <level>] [--reviewers <file>] [--budget-usd X]
 //   npx tsx pipeline/article.mts status [<runId>]          # one run, or the list
 //   npx tsx pipeline/article.mts approve <runId> [--patches p1,p2]
-//   npx tsx pipeline/article.mts reject <runId> --note "<text>"
-//   npx tsx pipeline/article.mts rework <runId> --note "<text>"
+//   npx tsx pipeline/article.mts reject <runId> (--note "<text>" | --note-file <path>)
+//   npx tsx pipeline/article.mts rework <runId> (--note "<text>" | --note-file <path>)
 //   npx tsx pipeline/article.mts resume <runId> [--reviewers <file>] [--budget-usd X]
 //   npx tsx pipeline/article.mts topics [--limit N] [--include-bundle <bundle>]
 //   npx tsx pipeline/article.mts loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3]
 //        [--max-resumes 2] [--run-usd 120] [--turn-usd 30] [--run-turns 45] [--est-run-usd 70] [--topics auto|<file>]
+//   npx tsx pipeline/article.mts trial candidates [--limit N]
+//   npx tsx pipeline/article.mts trial open <bundle/slug>
+//   npx tsx pipeline/article.mts trial check <id>
+//   npx tsx pipeline/article.mts trial seal <id>
+//   npx tsx pipeline/article.mts trial exec <id> [--pilot] -- <cmd...>
+//   npx tsx pipeline/article.mts trial close <id>
+//   npx tsx pipeline/article.mts trial drop <id> --reason "<text>"
+//   npx tsx pipeline/article.mts trial status [<id>]
+//
+//   trial is the measured claim a subject run is written around (lib/articles/trial/store.ts):
+//   an agent with a shell opens one on a registry subject, frames and checks it, seals its
+//   prereg, measures both arms through `trial exec`, and closes it with a verdict computed by
+//   code. `run --trial <id>` then writes the post around a closed trial. `trial exec` exits
+//   with the command's own code (124 when the wall cap killed it) and prints its record to
+//   stderr as one `[trial] {json}` line, so the command's stdout reaches the caller untouched.
+//   Everything after `--` is the command's argv, a `--json` in it included.
 //
 //   topics lists the registry subjects no article covers yet, ranked, each with a suggested
 //   angle. loop runs articles to the human gate until N topics are covered (--target is the
@@ -36,6 +52,9 @@
 //                   under that is refused at the receipt, before anything is created; one
 //                   above it is held between steps and between the turns inside a step.
 //   GRAVITONE_DRY_ONLY=1 refuses every live job (decision 4).
+// --note-file reads the note from a UTF-8 file. A multi-line --note does not survive Windows:
+// npx is a .cmd shim and cmd.exe ends an argument at its first newline, so a rework sent with
+// a paragraph-per-change note recorded only its first sentence (2026-10-18).
 //
 // `rework` is the third act at the gate: it sends the draft back with the note,
 // keeps the research and outline, and drives draft, critique and check again to
@@ -92,15 +111,24 @@ const { ArticleError, readRun, runDir } = await import("../lib/articles/store");
 const { approveArticle, articleJobsOf, articleKernel, driveArticle, launchArticle, loopDriver, resumeArticle, reworkArticle } = await import("../lib/producers/article");
 const { closeProcessKernel } = await import("@gt/kernel/process");
 type AppError = import("@gt/domain/errors").AppError;
-const { EFFORT_LEVELS } = await import("../lib/articles/types");
+const { EFFORT_LEVELS, WORKING } = await import("../lib/articles/types");
+const { checkTrial, closeTrial, describeTrial, dropTrial, execTrial, openTrial, readTrial, scanTrials, sealTrial } = await import("../lib/articles/trial/store");
+const { rankTrialCandidates } = await import("../lib/articles/trial/candidates");
+const { leadsFile } = await import("../lib/articles/trial/leads");
 type ArticleRun = import("../lib/articles/types").ArticleRun;
+type TrialStatusView = import("../lib/articles/trial/store").TrialStatusView;
 type EffortLevel = import("../lib/articles/types").EffortLevel;
 
 const argv = process.argv.slice(2);
-const JSON_OUT = argv.includes("--json");
-const DRY = argv.includes("--dry");
-const DETACH = argv.includes("--detach");
-const args = argv.filter((a) => a !== "--json" && a !== "--dry" && a !== "--detach");
+// `trial exec <id> -- <cmd...>`: everything after the first `--` is the command's argv and is
+// never read as this CLI's flags (a `--json` there belongs to the command).
+const DASHES = argv.indexOf("--");
+const own = DASHES < 0 ? argv : argv.slice(0, DASHES);
+const childArgv = DASHES < 0 ? [] : argv.slice(DASHES + 1);
+const JSON_OUT = own.includes("--json");
+const DRY = own.includes("--dry");
+const DETACH = own.includes("--detach");
+const args = own.filter((a) => a !== "--json" && a !== "--dry" && a !== "--detach");
 const cmd = args[0];
 /** The operator at this terminal: their confirm arms a live job, their retry may re-spend. */
 const ACTOR = { kind: "operator", id: userInfo().username || "operator" } as const;
@@ -116,12 +144,14 @@ function usage(msg?: string): never {
   else {
     if (msg) console.error(`article: ${msg}\n`);
     console.error(
-      "usage: npx tsx pipeline/article.mts <run|status|approve|reject|rework|resume|topics|loop> [--json]\n" +
-        '  run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort low|medium|high|xhigh|max] [--reviewers <file>] [--budget-usd X]\n' +
-        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"   rework <runId> --note \"<text>\"   resume <runId> [--reviewers <file>] [--budget-usd X]\n" +
+      "usage: npx tsx pipeline/article.mts <run|status|approve|reject|rework|resume|topics|loop|trial> [--json]\n" +
+        '  run (--subject <bundle/slug> | --topic "<text>" | --trial <id>) [--angle "<text>"] [--model <id>] [--effort low|medium|high|xhigh|max] [--reviewers <file>] [--budget-usd X]\n' +
+        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"|--note-file <path>   rework <runId> --note \"<text>\"|--note-file <path>   resume <runId> [--reviewers <file>] [--budget-usd X]\n" +
         "  run, approve, rework, resume, loop also take --dry (a dry job: the stub answers, nothing spends) and --detach (enqueue; the worker drives)\n" +
         "  topics [--limit N] [--include-bundle <bundle>]\n" +
-        "  loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3] [--max-resumes 2] [--run-usd 120] [--turn-usd 30] [--run-turns 45] [--est-run-usd 70] [--topics auto|<file>]",
+        "  loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3] [--max-resumes 2] [--run-usd 120] [--turn-usd 30] [--run-turns 45] [--est-run-usd 70] [--topics auto|<file>]\n" +
+        "  trial candidates [--limit N]   trial open <bundle/slug>   trial check <id>   trial seal <id>   trial close <id>\n" +
+        '  trial exec <id> [--pilot] -- <cmd...>   trial drop <id> --reason "<text>"   trial status [<id>]',
     );
   }
   process.exit(2);
@@ -133,6 +163,19 @@ function flag(name: string): string | undefined {
   const v = args[i + 1];
   if (v === undefined || v.startsWith("--")) usage(`--${name} needs a value`);
   return v;
+}
+
+/** The operator's note: `--note-file <path>` (read whole, any number of lines) or `--note`. */
+function noteFlag(verb: string): string {
+  const file = flag("note-file");
+  if (file !== undefined) {
+    try {
+      return fs.readFileSync(file, "utf8");
+    } catch (e) {
+      return usage(`--note-file ${file}: ${(e as Error).message}`);
+    }
+  }
+  return flag("note") ?? usage(`${verb} needs --note "<text>" or --note-file <path>`);
 }
 
 /** A positive number flag, or undefined when absent. */
@@ -243,7 +286,10 @@ async function main() {
     case "run": {
       const subject = flag("subject");
       const topic = flag("topic");
-      if (!!subject === !!topic) usage("run needs exactly one of --subject <bundle/slug> or --topic \"<text>\"");
+      const trial = flag("trial");
+      if (trial) {
+        if (subject || topic) usage("run --trial takes its subject from the trial: leave out --subject and --topic");
+      } else if (!!subject === !!topic) usage("run needs exactly one of --subject <bundle/slug> or --topic \"<text>\"");
       const effort = flag("effort");
       if (effort && !EFFORT_LEVELS.includes(effort as EffortLevel)) usage(`--effort must be one of ${EFFORT_LEVELS.join(", ")}`);
       const angle = flag("angle");
@@ -251,7 +297,12 @@ async function main() {
       const budget = numFlag("budget-usd");
       const opts = { ...(model ? { model } : {}), ...(effort ? { effort: effort as EffortLevel } : {}) };
       let input: import("../lib/articles/types").CreateRunInput;
-      if (subject) {
+      if (trial) {
+        // The topic is the trial's subject; what a run does with a trial is createRun's (the angle
+        // defaults to the prereg's question there).
+        const t = await readTrial(trial);
+        input = { topic: { kind: "subject", bundle: t.subject.bundle, subject: t.subject.slug, text: "", ...(angle ? { angle } : {}) }, trial, ...opts };
+      } else if (subject) {
         const m = /^([a-z0-9-]+)\/([a-z0-9-]+)$/.exec(subject);
         if (!m) usage("--subject is <bundle>/<slug>");
         input = { topic: { kind: "subject", bundle: m[1], subject: m[2], text: "", ...(angle ? { angle } : {}) }, ...opts };
@@ -278,7 +329,15 @@ async function main() {
         return;
       }
       const { runs, damaged } = await listArticleRuns();
-      if (JSON_OUT) return emit(JSON.stringify({ runs: runs.map(brief), damaged }, null, 2));
+      // `driving`: the working runs a kernel job is running (the claim, not a pid file), so an
+      // orchestrator sizing its batch does not re-implement the read.
+      const driving: string[] = [];
+      const kernel = articleKernel();
+      if (kernel.ok) for (const r of runs) if (WORKING.includes(r.status)) {
+        const jobs = articleJobsOf(r.id, kernel.value.store);
+        if (jobs.ok && jobs.value.some((j) => j.state === "running")) driving.push(r.id);
+      }
+      if (JSON_OUT) return emit(JSON.stringify({ runs: runs.map(brief), damaged, driving }, null, 2));
       if (!runs.length) console.log("  (no runs)");
       for (const r of runs) console.log(`  ${r.id.padEnd(56)} ${r.status.padEnd(18)} ${r.topic.text.slice(0, 50)}`);
       if (damaged.length) console.log(`  damaged: ${damaged.join(", ")}`);
@@ -295,12 +354,12 @@ async function main() {
     }
     case "reject": {
       const id = positional();
-      const note = flag("note") ?? usage("reject needs --note \"<text>\"");
+      const note = noteFlag("reject");
       return finish(await rejectRun(id, note), ["rejected"]);
     }
     case "rework": {
       const id = positional();
-      const note = flag("note") ?? usage("rework needs --note \"<text>\"");
+      const note = noteFlag("rework");
       const r = await reworkArticle(id, note, acts());
       if (!r.ok) return refused(r.error);
       if (!JSON_OUT) console.error(`article: ${id} sent back (rework ${r.value.run.rework?.count}); job ${r.value.jobId} re-drafts from the kept research…`);
@@ -356,6 +415,8 @@ async function main() {
       closeProcessKernel();
       process.exit(report.stop === "target-reached" ? 0 : 1);
     }
+    case "trial":
+      return trialVerb();
     case "resume": {
       const id = positional();
       // --budget-usd on resume raises the job's ceiling with the retry (a job stopped for budget).
@@ -366,6 +427,120 @@ async function main() {
     }
     default:
       usage(cmd ? `unknown command ${cmd}` : undefined);
+  }
+}
+
+/* ── trial ─────────────────────────────────────────────────────────────────── */
+
+/** A path as the operator reads it: repo-relative inside the repo, else absolute. */
+const shown = (abs: string) => {
+  const rel = path.relative(ROOT, abs);
+  return (rel.startsWith("..") || path.isAbsolute(rel) ? abs : rel).split(path.sep).join("/");
+};
+const trialDoc = (v: TrialStatusView) => ({ ...v, dir: shown(v.dir) });
+
+function printTrial(v: TrialStatusView) {
+  const t = v.trial;
+  console.log(`${t.id}  ${t.status}${t.verdict ? `  ${t.verdict}` : ""}`);
+  console.log(`  subject  ${t.subject.bundle}/${t.subject.slug} (${t.subject.file})`);
+  if (t.seal) console.log(`  sealed   ${t.seal.at} sha256 ${t.seal.sha256.slice(0, 12)}`);
+  const measured = v.execs.filter((e) => !e.pilot).length;
+  console.log(`  execs    ${measured} measured · ${v.execs.length - measured} pilot · ${Math.round(v.measuredMs / 1000)} s measured${v.budget ? ` of ${v.budget.wallMin} min` : ""}`);
+  if (v.verdict) console.log(`  verdict  ${v.verdict.verdict}: ${v.verdict.reason}`);
+  if (v.drop) console.log(`  dropped  ${v.drop.at}: ${v.drop.reason}`);
+  if (t.runId) console.log(`  run      ${t.runId}`);
+  console.log(`  files    ${v.files.join(", ")}`);
+  console.log(`  dir      ${shown(v.dir)}`);
+}
+
+async function trialVerb() {
+  const sub = args[1];
+  const id = (): string => {
+    const v = args[2];
+    if (!v || v.startsWith("--")) usage(`trial ${sub} needs a trial id`);
+    return v;
+  };
+  const out = (doc: unknown, text: () => void) => (JSON_OUT ? emit(JSON.stringify(doc, null, 2)) : text());
+  switch (sub) {
+    case "candidates": {
+      const limit = numFlag("limit");
+      const r = await rankTrialCandidates({ ...(limit ? { limit } : {}) });
+      return out(r, () => {
+        if (!r.candidates.length) console.log("  (no candidates)");
+        for (const c of r.candidates) {
+          console.log(`  ${String(c.score).padStart(6)}  ${`${c.bundle}/${c.slug}`.padEnd(56)} governs ${c.governsHere} · contested ${c.contested} · at risk ${c.atRisk} · volatile ${c.volatile}  ${c.title}`);
+        }
+        if (r.claimed.length) console.log(`  claimed: ${r.claimed.join(", ")}`);
+      });
+    }
+    case "open": {
+      const m = /^([a-z0-9-]+)\/([a-z0-9-]+)$/.exec(args[2] ?? "");
+      if (!m) usage("trial open needs <bundle>/<slug>");
+      const rec = await openTrial({ bundle: m[1], slug: m[2] });
+      const v = await describeTrial(rec.id);
+      return out(trialDoc(v), () => printTrial(v));
+    }
+    case "check": {
+      const r = await checkTrial(id());
+      const v = await describeTrial(r.record.id);
+      return out({ ...trialDoc(v), prereg: r.prereg, validity: r.validity }, () => {
+        printTrial(v);
+        console.log(`  validity ${r.validity.state}${r.validity.reasons.length ? `: ${r.validity.reasons.join("; ")}` : ""}`);
+      });
+    }
+    case "seal": {
+      const rec = await sealTrial(id());
+      const v = await describeTrial(rec.id);
+      return out(trialDoc(v), () => printTrial(v));
+    }
+    case "exec": {
+      const tid = id();
+      if (!childArgv.length) usage("trial exec needs a command after --: trial exec <id> [--pilot] -- <cmd...>");
+      // Under --json stdout carries the one document, so the command's stdout goes to stderr.
+      const r = await execTrial(tid, childArgv, {
+        pilot: args.includes("--pilot"),
+        onStdout: (c) => void (JSON_OUT ? process.stderr : process.stdout).write(c),
+        onStderr: (c) => void process.stderr.write(c),
+      });
+      if (JSON_OUT) emit(JSON.stringify({ trial: tid, exec: r }));
+      else process.stderr.write(`[trial] ${JSON.stringify(r)}\n`);
+      process.exit(r.timedOut ? 124 : (r.exitCode ?? 1));
+    }
+    case "close": {
+      const tid = id();
+      const verdict = await closeTrial(tid);
+      const v = await describeTrial(tid);
+      const lead = verdict.verdict === "void" ? { leadsFile: leadsFile() } : undefined;
+      return out({ ...trialDoc(v), ...(lead ?? {}) }, () => {
+        printTrial(v);
+        if (lead) console.log(`  lead     appended to ${lead.leadsFile}`);
+      });
+    }
+    case "drop": {
+      const tid = id();
+      const reason = flag("reason") ?? usage('trial drop needs --reason "<text>"');
+      const r = await dropTrial(tid, reason);
+      const v = await describeTrial(tid);
+      return out({ ...trialDoc(v), ...(r.lead ? { lead: r.lead, leadsFile: r.leadsFile } : {}) }, () => {
+        printTrial(v);
+        if (r.lead) console.log(`  lead     ${r.lead.kind} lead appended to ${r.leadsFile}`);
+      });
+    }
+    case "status": {
+      const tid = args[2] && !args[2].startsWith("--") ? args[2] : undefined;
+      if (tid) {
+        const v = await describeTrial(tid);
+        return out(trialDoc(v), () => printTrial(v));
+      }
+      const { trials, damaged } = await scanTrials();
+      return out({ trials, damaged }, () => {
+        if (!trials.length) console.log("  (no trials)");
+        for (const t of trials) console.log(`  ${t.id.padEnd(56)} ${t.status.padEnd(7)} ${(t.verdict ?? "").padEnd(10)} ${t.subject.bundle}/${t.subject.slug}`);
+        if (damaged.length) console.log(`  damaged: ${damaged.join(", ")}`);
+      });
+    }
+    default:
+      usage(sub ? `unknown trial verb ${sub}` : "trial needs a verb: candidates, open, check, seal, exec, close, drop or status");
   }
 }
 

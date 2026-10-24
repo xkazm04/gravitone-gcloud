@@ -65,8 +65,40 @@ export function validateClaims(raw: unknown, sources: Source[]): Claim[] {
   return out;
 }
 
-export async function ingestResearch(ws: string, dir: string): Promise<void> {
+/* ── a trial run's source 1 ────────────────────────────────────────────────── */
+
+/** `<run>/experiment-source.json`: the Source a trial run cites as [1], written once by
+ *  `createRun` (lib/articles/trial/record.ts `experimentSource`). */
+export const EXPERIMENT_SOURCE_FILE = "experiment-source.json";
+/** `<run>/experiment/`: the closed trial's directory, copied by `createRun`. */
+export const EXPERIMENT_DIR = "experiment";
+
+const SOURCE_FIELDS = ["n", "url", "title", "publisher", "date", "primary", "counter", "took"] as const;
+
+/** The run's experiment source. A trial run without it cannot be researched: the post would cite a
+ *  first-hand measurement it has no record of. */
+export async function readExperimentSource(dir: string): Promise<Source> {
+  const raw = await readTextFile(path.join(dir, EXPERIMENT_SOURCE_FILE));
+  if (!raw) throw new Error(`the run is written around a trial but holds no ${EXPERIMENT_SOURCE_FILE}`);
+  return validateSources([JSON.parse(raw)])[0];
+}
+
+/** Row 1 of a trial run's research IS the trial's record, field for field: the post's first-hand
+ *  number cites it, and a model that paraphrased its title or moved its url would cite a record
+ *  the registry will not hold. */
+export function assertTrialSource(sources: Source[], expected: Source): void {
+  const first = sources.find((s) => s.n === 1);
+  const differ = first ? SOURCE_FIELDS.filter((k) => first[k] !== expected[k]) : [];
+  if (!first || differ.length) {
+    throw new Error(`source 1 must be the trial's record (${EXPERIMENT_SOURCE_FILE}); ${first ? `its ${differ.join(", ")} differ` : "there is no source 1"}`);
+  }
+}
+
+/** A research answer in, sources.json and claims.json out. `trialSource` (a trial run) holds row 1
+ *  to the experiment's record before anything is written. */
+export async function ingestResearch(ws: string, dir: string, trialSource?: Source): Promise<void> {
   const sources = validateSources(await readOutJson(path.join(ws, "out", "sources.json"), "out/sources.json"));
+  if (trialSource) assertTrialSource(sources, trialSource);
   const claims = validateClaims(await readOutJson(path.join(ws, "out", "claims.json"), "out/claims.json"), sources);
   await writeJsonAtomic(path.join(dir, "sources.json"), sources);
   await writeJsonAtomic(path.join(dir, "claims.json"), claims);

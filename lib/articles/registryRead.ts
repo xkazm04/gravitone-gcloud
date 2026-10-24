@@ -57,22 +57,47 @@ export interface RegistryLocation {
 
 const isRegistry = (dir: string) => existsSync(path.join(dir, "recipes", "index.json")) && existsSync(path.join(dir, "knowledge"));
 
-/** `registry.local` out of .ai/manifest.yaml, without a YAML dependency: the
+/** One scalar of .ai/manifest.yaml's `registry:` block, without a YAML dependency: the
  *  block is two-space indented scalars, and unknown fields must be ignored. */
-export function manifestRegistryLocal(yaml: string): string | undefined {
+function manifestRegistryField(yaml: string, key: "local" | "remote"): string | undefined {
   const lines = yaml.split(/\r?\n/);
   const start = lines.findIndex((l) => /^registry:\s*(#.*)?$/.test(l));
   if (start < 0) return undefined;
+  const field = new RegExp(`^\\s+${key}:\\s*(.+?)\\s*$`);
   for (let i = start + 1; i < lines.length; i++) {
     const l = lines[i];
     if (/^\S/.test(l)) break;
-    const m = /^\s+local:\s*(.+?)\s*$/.exec(l);
+    const m = field.exec(l);
     if (m) {
       const v = m[1].replace(/\s+#.*$/, "").replace(/^["']|["']$/g, "").trim();
       return v || undefined;
     }
   }
   return undefined;
+}
+
+/** `registry.local` out of .ai/manifest.yaml. */
+export function manifestRegistryLocal(yaml: string): string | undefined {
+  return manifestRegistryField(yaml, "local");
+}
+
+/** `registry.remote` out of .ai/manifest.yaml (`github:owner/repo`, or a GitHub URL). */
+export function manifestRegistryRemote(yaml: string): string | undefined {
+  return manifestRegistryField(yaml, "remote");
+}
+
+/** The registry's origin, as a trial run's source 1 cites it: `$ARTICLES_REGISTRY_REMOTE`, else
+ *  `.ai/manifest.yaml` `registry.remote`. Undefined when neither names one; the caller decides
+ *  whether that is an error (lib/articles/trial/record.ts `experimentSource` makes it one). */
+export function resolveRegistryRemote(
+  env: Record<string, string | undefined> = process.env,
+  repoRoot: string = process.cwd(),
+  readManifest: (file: string) => string | undefined = defaultReadManifest,
+): string | undefined {
+  const explicit = env.ARTICLES_REGISTRY_REMOTE?.trim();
+  if (explicit) return explicit;
+  const yaml = readManifest(path.join(repoRoot, ".ai", "manifest.yaml"));
+  return yaml ? manifestRegistryRemote(yaml) : undefined;
 }
 
 export function resolveRegistryDir(

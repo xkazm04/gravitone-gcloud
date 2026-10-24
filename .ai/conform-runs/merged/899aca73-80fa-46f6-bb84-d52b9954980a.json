@@ -1,0 +1,90 @@
+{
+ "schema": "conform-run/1",
+ "worker": "899aca73-80fa-46f6-bb84-d52b9954980a",
+ "subject": "delivery-guarantees",
+ "evaluatedAt": "2026-10-21T22:06:28.636075+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "job-queue-and-leases",
+   "subject": "delivery-guarantees",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/job-worker.ts:75 Recovery runs before the worker loop but not periodically within it, so a subsequently crashed worker's running jobs can continue occupying capacity until another recovery runs.",
+   "techniques": [
+    {
+     "technique": "atomic-claiming",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job.ts:108 BEGIN IMMEDIATE serializes the claim's state check and update, and later writes check the lease fence; nevertheless, the claim uses an update by identity rather than the standard's explicitly required single conditional pending-to-processing write."
+    },
+    {
+     "technique": "co-transactional-consume",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/effects.ts:8 Vendor-job effects cross the queue store boundary; job-run performs the asynchronous step between separate dispatch and booking transactions."
+    },
+    {
+     "technique": "dead-letter-design",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job.ts:314 Failed and interrupted jobs remain visible and support individual operator retry, but the inspected job APIs and Runs surface lack the required bulk redrive/discard workflow with per-item outcomes and an explicit dead-letter retention policy."
+    },
+    {
+     "technique": "guarantee-selection",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job-core.ts:90 The producer contract supplies stable identity and documents interruption risk, but leaves vendor deduplication optional and does not name a delivery posture per producer class with the required duplicate-effect analysis."
+    },
+    {
+     "technique": "marker-certifies-what-was-done",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/job-run.ts:331 A step output is recorded only after perform returns a validated produced outcome, within the fenced booking transaction; dispatch records the separate in-flight stage beforehand."
+    },
+    {
+     "technique": "non-delivery-ledgers",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job.ts:307 Cancellation durably records the actor and transition, but accepts and writes no closed-vocabulary non-delivery reason or explicit replayability classification."
+    },
+    {
+     "technique": "ordered-lane-blocking",
+     "verdict": "not-applicable",
+     "evidence": "packages/domain/src/lane.ts:8 These lanes group resource capacity rather than conversation or document streams; upstream-dependent jobs remain planned until released, while paid-lane crash holds address uncertain spend."
+    },
+    {
+     "technique": "retry-escalation",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job-core.ts:289 Successful steps reset the failure streak, and attempt increments only on operator retry; the bounded consecutive-failure breaker does not provide the standard's persisted per-item attempt budget across partial progress."
+    },
+    {
+     "technique": "stuck-reaping",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job-queue-core.ts:77 The worker counts running records against capacity without periodically recovering expired claims, so a full lane containing dead workers' jobs cannot reach claim-triggered recovery; startup recovery alone misses this case."
+    }
+   ],
+   "registryProposal": "Clarify whether atomic-claiming intentionally excludes SQLite BEGIN IMMEDIATE transactions that serialize state checks and writes; the current text explicitly requires a single conditional update and rejects a lock around the read/write pair."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-21T22:06:28.636075+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "delivery-guarantees"
+   ],
+   "techniques": [
+    "atomic-claiming",
+    "co-transactional-consume",
+    "dead-letter-design",
+    "guarantee-selection",
+    "marker-certifies-what-was-done",
+    "non-delivery-ledgers",
+    "ordered-lane-blocking",
+    "retry-escalation",
+    "stuck-reaping"
+   ],
+   "deviations": 1,
+   "context": "job-queue-and-leases",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

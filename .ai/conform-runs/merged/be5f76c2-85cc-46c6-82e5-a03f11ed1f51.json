@@ -1,0 +1,39 @@
+{
+  "schema": "conform-run/1",
+  "worker": "be5f76c2-85cc-46c6-82e5-a03f11ed1f51",
+  "subject": "subprocess-lifecycle",
+  "evaluatedAt": "2026-10-22T21:37:52.959009+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "subprocess-lifecycle",
+      "context": "run-records-and-slots",
+      "reason": "withdrawn after review: reviewer (sonnet): The main anchor, records/schema.ts:110, is `insertRun`, which only inserts a row. It does not show that child processes are absent. The context's own records/launch.ts, read.ts and schedule.ts import LANE_CAPACITY and ResourceLane and compute lane admission capacity and ETA for jobs that occupy a GP"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-22T21:37:52.959009+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "subprocess-lifecycle"
+      ],
+      "techniques": [
+        "cancellation-needs-a-terminable-unit",
+        "concurrency-and-slots",
+        "decode-child-output-per-line",
+        "host-resource-protection",
+        "liveness-and-heartbeats",
+        "session-reuse",
+        "spawn-contract",
+        "termination-and-reaping"
+      ],
+      "deviations": 0,
+      "context": "run-records-and-slots",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
