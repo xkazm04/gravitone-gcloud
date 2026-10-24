@@ -53,7 +53,7 @@ import {
   type BlindState,
   type ImprovementBlind,
 } from "./blind";
-import { keeperThumb, normalizeLedger, replaceCycleRows } from "./ledger";
+import { keeperThumb, replaceCycleRows } from "./ledger";
 import type {
   CycleManifest,
   Improvement,
@@ -62,7 +62,6 @@ import type {
   TrainingCycleDetail,
   TrainingCycleSummary,
   TrainingLedgerRow,
-  TrainingLedgerRowV2,
   TrainingVerdict,
   TrainingVerdicts,
 } from "./types";
@@ -401,10 +400,4 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
 
     return { deleted, thumbs, ledger_rows: decided.length };
   }));
-}
-
-/** The tracked ledger as schema-2 rows, whichever shape each row was written in. */
-export async function readTrainingLedger(file = foundryFile("training-ledger.json")): Promise<TrainingLedgerRowV2[]> {
-  const doc = await readJson<{ rows?: unknown[] }>(file, {});
-  return normalizeLedger(doc.rows);
 }
