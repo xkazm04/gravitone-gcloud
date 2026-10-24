@@ -5482,4 +5482,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<span class=\"chipx\" aria-label=\"locked\">",
     why: "A screen reader opening a locked family on the landing hears its title and nothing that says it is locked: the lock chip is an icon whose label is dropped.",
   },
+  {
+    id: "part-finish-legend-draws-the-timeline",
+    test: "tests/next-server/part-editor-media.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx",
+    find: "mode=\"part.finish\"",
+    replace: "mode=\"part.cut\"",
+    why: "The ad's finish draws the timeline's legend - play, shuttle, frame, edit, gap, zoom - and not one of those eight keys does anything on a screen with no clock.",
+  },
+  {
+    id: "ads-takes-legend-claims-takes",
+    test: "tests/next-server/part-editor-media.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/Takes.tsx",
+    find: "const facts = [...(shot === undefined ? [] : [\"unit\"]), ...((shot?.takes.length ?? 0) > 0 ? [\"takes\"] : [])];",
+    replace: "const facts = shot === undefined ? [] : [\"unit\", \"takes\"];",
+    why: "A shot with no takes draws 1-9 adopt take in its legend, and every one of those keys is declined.",
+  },
 ];

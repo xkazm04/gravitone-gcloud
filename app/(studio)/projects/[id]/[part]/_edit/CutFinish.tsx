@@ -28,7 +28,9 @@ export function CutFinish({ frame, send, busy, error, act, data: d }: EditorProp
   return (
     <PartWorkspace
       {...frame}
-      mode="part.cut"
+      // Its own mode, bound to nothing: the finish has no clock, so the timeline's part.cut rows
+      // (play, shuttle, frame, edit, gap, zoom) would be a legend of keys nothing here answers.
+      mode="part.finish"
       rail={{
         label: "shots",
         children:
