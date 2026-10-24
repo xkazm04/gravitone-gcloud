@@ -7,7 +7,7 @@
 // and a placeholder under it would be a picture of nothing.
 //
 // The tiles and rows are read-only here: the prototype's play and Spawn MV controls write to
-// stores the Floor does not own in this phase, so they are not drawn (a dead control is a lie).
+// stores the Floor does not own, so they are not drawn (a dead control is a lie).
 
 import type { ReactNode } from "react";
 
@@ -52,9 +52,9 @@ export function ShelfGrid({ children }: { readonly children: ReactNode }) {
 }
 
 /**
- * One ratified style: a ground where its plate will sit, its lock, its name. v1's catalogue
- * names no hero plate per style (lib/foundry/types.ts StyleDef); the plate arrives with the
- * Library's media (Phase 5) and the tile draws it then.
+ * One ratified style: a ground where its plate will sit, its lock, its name. The shelf's row
+ * carries no plate (app/(studio)/floor/_floor/shelf.ts ShelfStyleRow: id, name, family), so the
+ * ground stays bare; the tile draws a plate once the row brings one.
  */
 export function ShelfStyle({ name, href }: { readonly name: string; readonly href?: string }) {
   const body = (
