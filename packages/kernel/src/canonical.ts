@@ -50,7 +50,9 @@ function enc(v: unknown, at: string): string {
     return JSON.stringify(v);
   }
   if (typeof v === "string") return str(v, at);
-  if (Array.isArray(v)) return `[${v.map((x, i) => enc(x, `${at}[${i}]`)).join(",")}]`;
+  // Array.from, not map: map skips a hole and join renders it as nothing ("[1,,3]", not JSON);
+  // Array.from visits it as undefined, which is refused like any other undefined.
+  if (Array.isArray(v)) return `[${Array.from(v, (x: unknown, i) => enc(x, `${at}[${i}]`)).join(",")}]`;
   if (typeof v === "object" && isPlainObject(v)) {
     const keys = Object.keys(v).sort();
     const parts: string[] = [];
