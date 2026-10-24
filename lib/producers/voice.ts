@@ -81,7 +81,8 @@ export function voiceProducer(lane: ResourceLane = "cloud.elevenlabs", hooks: Dr
         return failureOf(e);
       }
     },
-    // A voice part holds no step record yet: the takes stay on the job (blobs), where cut reads them.
+    // The VOICE record exists (@gt/domain/steps/parts.ts: takes and the active one per line), but this
+    // landing does not write it yet: the takes stay on the job (blobs), where cut reads them.
     async land() {
       return ok({ rev: 0, unchanged: true });
     },

@@ -65,7 +65,8 @@ export function wordsProducer(lane: ResourceLane = "seat.text", hooks: DriveHook
         return textFailure(e);
       }
     },
-    // The words part holds no step record yet: the answer stays on the job, where render reads it.
+    // The WORDS record exists (@gt/domain/steps/parts.ts, `written`), but this landing does not write it
+    // yet: the answer stays on the job, where render reads it.
     async land() {
       return ok({ rev: 0, unchanged: true });
     },

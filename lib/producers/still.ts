@@ -16,10 +16,9 @@ import { ImagingError } from "@/lib/imaging/errors";
 // imaging router (`generate`, one paid image per unit, metered with a dry stand-in), each take's
 // pixels a blob.
 //
-// WHERE THE TAKES LIVE, SAID: a still part has no step record (@gt/domain/steps registers the six
-// film kinds; the parts driver refuses any other), so this job's `land` writes nothing and the
-// takes are the job's booked outputs - `{ n, blob, model, costUsd? }` per `unit:take:<n>` - until a
-// `still` record exists (L39 is defining its shape). The project title is the prompt's subject
+// WHERE THE TAKES LIVE, SAID: the STILL record exists (@gt/domain/steps/still.ts: takes as blob
+// refs and the adopted one), but this job's `land` does not write it yet, so the takes are the
+// job's booked outputs - `{ n, blob, model, costUsd? }` per `unit:take:<n>`. The project title is the prompt's subject
 // (the album recipe has no research part to write one), drawn under the project's look the way a
 // frames plate is (./frames.ts, Phase 5 L56): its style's block and references, or the named
 // default with its miss on the receipt - an album project carries no style today, so that is
@@ -59,7 +58,7 @@ export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHoo
         return imageFailure(e);
       }
     },
-    // No still record to land in (see the header): the takes stay the job's outputs.
+    // The still record is not written yet (see the header): the takes stay the job's outputs.
     land: async () => ok({ rev: 0, unchanged: true }),
     ...(hooks.onSettled === undefined ? {} : { settled: hooks.onSettled }),
   });
