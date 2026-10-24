@@ -415,6 +415,9 @@ async function run<T extends { provenance: Provenance }>(
           // apart is the whole reason SpendBasis exists.
           basis: served.provenance.costBasis === "vendor-reported" ? "vendor" : "estimate",
         });
+        // Settled, so the hold is gone: `finally` has nothing left to release,
+        // and asking it to would cost one more ledger transaction per call.
+        hold = undefined;
         logCall({
           cap,
           env: currentEnv(),
