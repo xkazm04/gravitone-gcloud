@@ -139,7 +139,7 @@ export function buildTypeView(cx: Cx, id: string): void {
   paperStrip(cx, head, t.label, "tv", palette(id), hash32(id));
   const chips = el("div", "tv-chips", head);
   if (list.length) {
-    chips.insertAdjacentHTML("beforeend", `<span class="chipx" aria-label="${list.length} templates">${ICON.stack}${list.length}</span>`);
+    chips.insertAdjacentHTML("beforeend", `<span class="chipx" role="img" aria-label="${list.length} templates">${ICON.stack}${list.length}</span>`);
     const sc = list.map((x) => x.seconds).filter((x): x is number => typeof x === "number");
     if (sc.length) {
       const a = Math.min(...sc),

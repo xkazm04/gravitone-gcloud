@@ -52,8 +52,8 @@ function buildLib(cx: Cx, id: string): void {
     h1 = el("h1", "lv-title", hd);
   h1.textContent = f.label;
   const total = famItems(f);
-  if (locked) hd.insertAdjacentHTML("beforeend", `<span class="chipx" aria-label="locked">${ICON.lock}</span>`);
-  else if (total) hd.insertAdjacentHTML("beforeend", `<span class="chipx" aria-label="${fmtN(total)} items">${ICON.stack}${fmtN(total)}</span>`);
+  if (locked) hd.insertAdjacentHTML("beforeend", `<span class="chipx" role="img" aria-label="locked">${ICON.lock}</span>`);
+  else if (total) hd.insertAdjacentHTML("beforeend", `<span class="chipx" role="img" aria-label="${fmtN(total)} items">${ICON.stack}${fmtN(total)}</span>`);
   const area = el("div", "lv-area", sh);
   cx.famSorted = [];
   if (!f.categories.length) {

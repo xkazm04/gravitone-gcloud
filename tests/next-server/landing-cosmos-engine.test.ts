@@ -24,13 +24,21 @@
 //   5. banner.ts: "one read, then only writes". A name too wide for the stage wrote its
 //      smaller size and then read the name's height: a second synchronous layout on the
 //      hover, and the height it read was already the shrunk one the formula subtracts from.
+//   6. The header chips (a type's template count, a family's item count, a locked family's
+//      lock) were <span aria-label=...>: a name on a generic, which ARIA 1.2 prohibits and
+//      screen readers drop, so the lock chip read as nothing at all.
 //
 // raster.ts is loaded natively (ESM) because it spells `new URL(..., import.meta.url)`
 // for the bundler, which the Playwright node lane cannot load as CommonJS.
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { Raster } from "../../app/_landing/cosmos/engine/raster.ts";
 import type { Job } from "../../app/_landing/cosmos/engine/rasterJobs.ts";
+
+const ROOT = path.resolve(import.meta.dirname, "../..");
 
 type G = Record<string, unknown>;
 const G = globalThis as unknown as G;
@@ -313,5 +321,29 @@ describe("banner.ts: one read, then only writes", () => {
     const cx = { g: { W: 1280, H: 800, S: 800, portrait: false }, els: { banner } };
     showBanner(cx as never, { name: "A name far wider than sixty per cent of the stage", x: 640, y: 400 });
     expect(st.layouts).toBe(1);
+  });
+});
+
+describe("the engine's markup names only what can carry a name", () => {
+  test("no generic <span> in the engine's HTML strings carries an aria-label without a role", () => {
+    const dir = path.join(ROOT, "app/_landing/cosmos/engine");
+    const files = readdirSync(dir).filter((f) => f.endsWith(".ts"));
+    // a walk that reads nothing would pass in a voice indistinguishable from success
+    expect(files.length).toBeGreaterThan(8);
+    const bad: string[] = [];
+    let spans = 0;
+    for (const f of files) {
+      // comment-only lines out: a header may quote the markup it is about
+      const src = readFileSync(path.join(dir, f), "utf8")
+        .split(/\r?\n/)
+        .filter((l) => !/^\s*(\/\/|\/\*|\*)/.test(l))
+        .join("\n");
+      for (const m of src.matchAll(/<span\b[^>]*>/g)) {
+        spans++;
+        if (/\baria-label=/.test(m[0]) && !/\brole=/.test(m[0])) bad.push(`${f}: ${m[0]}`);
+      }
+    }
+    expect(spans, "the walk found the engine's spans").toBeGreaterThan(3);
+    expect(bad, "ARIA 1.2 prohibits naming a generic: a screen reader drops these labels").toEqual([]);
   });
 });

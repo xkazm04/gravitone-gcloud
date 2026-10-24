@@ -5474,4 +5474,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "    h = h - nm.offsetHeight * (1 - k);",
     why: "Hovering a medallion or a category with a long name forces a second synchronous layout, and its torn bottom edge is cut below the paper.",
   },
+  {
+    id: "cosmos-lock-chip-unnamed",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/library.ts",
+    find: "<span class=\"chipx\" role=\"img\" aria-label=\"locked\">",
+    replace: "<span class=\"chipx\" aria-label=\"locked\">",
+    why: "A screen reader opening a locked family on the landing hears its title and nothing that says it is locked: the lock chip is an icon whose label is dropped.",
+  },
 ];
