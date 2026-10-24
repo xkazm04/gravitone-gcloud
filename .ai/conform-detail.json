@@ -11962,6 +11962,37 @@
       "evaluatedTs": "2026-10-24T21:25:50.452Z",
       "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
       "techniques": []
+    },
+    "c425f431-c0d1-4f34-b736-1a5d70683ef4/structured-output": {
+      "context": "notebook-contract-validation",
+      "subject": "structured-output",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:40:04.273Z",
+      "worker": "9e03f2ee-443a-4052-a542-6771339d7762",
+      "techniques": [
+        {
+          "technique": "schema-validation-and-repair",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/shape.ts:60 Findings are path-addressed and repair is bounded (lib/text/repair.ts MAX_REPAIR_ATTEMPTS = 2), but the domain layer is missing: the schema enum ['high','medium','low'] (schema-facts.ts:21) is never re-checked by the validator. Where enums are checked (leap/useFor), the vocabulary is a hand-typed second copy (shape-helpers.ts:19 LEAPS), not derived from the schema."
+        },
+        {
+          "technique": "display-vs-machine-channels",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/retrieval.ts:95 Whether the notebook admits that no search ran is recovered by running a regex over the human-prose `researchGaps[0]`, not carried as a typed field. That is the scraper-of-prose shape the technique bans. A rephrased confession refuses a valid notebook, and a confession that happens to match wins acceptance."
+        },
+        {
+          "technique": "graded-span-grounding",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/retrieval.ts:106 The system, not the model, decides whether a cited URL was grounded: it aligns against this run's own fetch receipts with transport-only normalization (scheme, www, trailing slash, fragment). The result is graded, downgrading high to medium with a recorded finding rather than trusting the model's word."
+        },
+        {
+          "technique": "enumerable-domain-decoding",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/schema-facts.ts:21 The closed value domains are carried in the request schema, so Gemini's constrained decoding enforces them on the native rung. The validator's failure to re-check them is recorded under schema-validation-and-repair."
+        }
+      ]
     }
   }
 }
