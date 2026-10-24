@@ -15,6 +15,8 @@
 //
 // Exit 0 ok (findings may still flag - triage names evidence, it never fails a take) · 1 the sidecar
 // is unavailable or a store could not be read/written · 2 usage.
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -23,11 +25,22 @@ import { processKernel } from "@gt/kernel/process";
 import type { Triage } from "@gt/domain/audio.triage";
 
 import { sidecarDoctor, triageFile } from "../lib/audio/sidecar.ts";
-import { mediaRef } from "../lib/decision/v1/types.ts";
 import { filePathAbs, readTakes, storeRoot } from "../lib/sound/store.ts";
 import { triageContextOf } from "../lib/sound/triageContext.ts";
 
-export type TriageRecord = { readonly sha: string; readonly contextDigest: string; readonly triage: Triage; readonly at: string };
+/** sha256 of the file's bytes - the digest lib/decision/v1/types.ts mediaRef gives the Board (that
+ *  module is server-only, so a CLI cannot import it; the arithmetic is the same). */
+function sha256File(abs: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const h = createHash("sha256");
+    createReadStream(abs)
+      .on("data", (b) => h.update(b))
+      .on("error", reject)
+      .on("end", () => resolve(h.digest("hex")));
+  });
+}
+
+export type TriageRecord ={ readonly sha: string; readonly contextDigest: string; readonly triage: Triage; readonly at: string };
 export const TRIAGE_FILE = "triage.json";
 
 const args = process.argv.slice(2);
@@ -57,9 +70,11 @@ async function main(): Promise<number> {
   const failed: string[] = [];
   for (const t of takes) {
     const abs = filePathAbs(t.file?.path ?? "");
-    const ref = await mediaRef(abs);
-    if (!ref.ok) {
-      failed.push(`${t.id}: ${ref.error.message}`);
+    let sha: string;
+    try {
+      sha = await sha256File(abs);
+    } catch (e) {
+      failed.push(`${t.id}: ${e instanceof Error ? e.message : String(e)}`);
       continue;
     }
     const context = triageContextOf(t);
@@ -68,7 +83,7 @@ async function main(): Promise<number> {
       failed.push(`${t.id}: ${r.error.message}`);
       continue;
     }
-    const rec: TriageRecord = { sha: ref.value.sha256, contextDigest: triageDigest(context), triage: r.value, at: new Date().toISOString() };
+    const rec: TriageRecord = { sha, contextDigest: triageDigest(context), triage: r.value, at: new Date().toISOString() };
     held[t.id] = rec;
     rows.push({ sha: rec.sha, contextDigest: rec.contextDigest, triage: rec.triage, at: rec.at });
     if (!JSON_OUT) console.log(`  ${t.id}  ${t.kind.padEnd(5)} ${String(r.value.flagged).padStart(2)} flagged  ${t.title}`);
