@@ -4439,6 +4439,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A file is filed onto an ElevenLabs leaf the receipt prices: a hand upload masks a render that was paid for, and the refusal no longer says why.",
   },
   {
+    id: "hunt-return-chunked-body-uncapped",
+    test: "tests/next-server/audio-hunt-return.test.ts",
+    file: "app/(studio)/audio/hunt-return/route.ts",
+    find: "if (size > CAP) c.error(new Error(over));",
+    replace: "if (size < 0) c.error(new Error(over));",
+    why: "A hunt return that declares no length is buffered whole: any access-holding client can make the server hold an unbounded upload in memory.",
+  },
+  {
     id: "l72-map-return-drop-on-every-leaf",
     test: "packages/ui/test/components/hunt.test.ts",
     file: "packages/ui/src/components/audio/HuntMap.tsx",

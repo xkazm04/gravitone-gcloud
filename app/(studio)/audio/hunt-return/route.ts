@@ -7,6 +7,11 @@
 // A route, not a Server Action: a returned WAV is tens of MB and an action's body is capped far
 // below that (plan §9.2: route handlers are for CLIs, agents and FILES). Access-gated, not money:
 // nothing here spends (v1 POST /api/sound/takes, the same reasoning).
+//
+// THE CAP IS HELD HERE, ON THE BYTES. route()'s `bodyCap` binds its JSON reader, and this door
+// declares no `input`, so the cap it passes is not applied for it; a declared content-length is
+// checked up front, and a body that declares none (chunked) is counted as it is read and refused
+// at the cap, never buffered whole (tests/next-server/audio-hunt-return.test.ts).
 import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
@@ -25,21 +30,40 @@ export const maxDuration = 60;
 const soundId = z.string().regex(/^[A-Za-z0-9_-]{1,80}$/);
 const fields = z.object({ hunt: soundId, node: soundId, op: z.string().regex(HUNT_OP_RE) });
 
+const CAP = MAX_UPLOAD_BYTES + 1_000_000;
+const over = `the upload is over ${MAX_UPLOAD_BYTES / 1048576} MB`;
+
+/** The multipart body, read through a counter that errors past CAP. */
+async function cappedForm(req: Request): Promise<Result<FormData>> {
+  let size = 0;
+  const counted = req.body?.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, c) {
+        size += chunk.byteLength;
+        if (size > CAP) c.error(new Error(over));
+        else c.enqueue(chunk);
+      },
+    }),
+  );
+  try {
+    return ok(await new Response(counted ?? null, { headers: { "content-type": req.headers.get("content-type") ?? "" } }).formData());
+  } catch (e) {
+    return size > CAP ? err("invalid", over) : err("invalid", `expected multipart/form-data with file, hunt, node and op: ${errorMessage(e)}`);
+  }
+}
+
 const field = (form: FormData, k: string): string | undefined => {
   const v = form.get(k);
   return typeof v === "string" && v !== "" ? v : undefined;
 };
 
-export const POST = route({ guard: "access", bodyCap: MAX_UPLOAD_BYTES + 1_000_000, maxDuration }, async ({ req, who }): Promise<Result<{ readonly id: string; readonly created: boolean }>> => {
+export const POST = route({ guard: "access", bodyCap: CAP, maxDuration }, async ({ req, who }): Promise<Result<{ readonly id: string; readonly created: boolean }>> => {
   if (!can(engineById(deskEngines(), "suno"), "file-return")) return err("refused", "the desk takes no Suno return here: the engine registry withholds file-return");
   const declared = Number(req.headers.get("content-length") ?? 0);
-  if (declared > MAX_UPLOAD_BYTES + 1_000_000) return err("invalid", `the upload is over ${MAX_UPLOAD_BYTES / 1048576} MB`);
-  let form: FormData;
-  try {
-    form = await req.formData();
-  } catch (e) {
-    return err("invalid", `expected multipart/form-data with file, hunt, node and op: ${errorMessage(e)}`);
-  }
+  if (declared > CAP) return err("invalid", over);
+  const read = await cappedForm(req);
+  if (!read.ok) return read;
+  const form = read.value;
   const p = parseAt("hunt return", fields, { hunt: field(form, "hunt"), node: field(form, "node"), op: field(form, "op") });
   if (!p.ok) return p;
   const f = form.get("file");
