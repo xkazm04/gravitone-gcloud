@@ -528,3 +528,190 @@ describe("perf.ts: the governor", () => {
     expect(wanted(), "the same window may be asked for again").toBe(true);
   });
 });
+
+/* ---------- a document just rich enough for the shell's builders: a tree, classes, a focus ---------- */
+const DOC = { activeElement: null as DomEl | null, body: null as unknown as DomEl, createElement: (t: string) => new DomEl(t) };
+/** `tag`, `.class` and `[data-x="v"]` compounds, joined by descendant spaces: what the shell asks */
+const SIMPLE = /^([a-z][a-z0-9]*)?((?:\.[\w-]+)*)((?:\[[\w-]+="[^"]*"\])*)$/i;
+class DomEl {
+  tagName: string;
+  children: DomEl[] = [];
+  parent: DomEl | null = null;
+  classes = new Set<string>();
+  attrs = new Map<string, string>();
+  dataset: Record<string, string> = {};
+  style: Record<string, unknown> = { cssText: "", setProperty() {} };
+  textContent = "";
+  value = "";
+  disabled = false;
+  type = "";
+  inert = false;
+  onclick: (() => void) | null = null;
+  constructor(tag: string) {
+    this.tagName = tag.toUpperCase();
+  }
+  get className(): string {
+    return [...this.classes].join(" ");
+  }
+  set className(v: string) {
+    this.classes = new Set(v.split(/\s+/).filter(Boolean));
+  }
+  classList = {
+    add: (...c: string[]) => c.forEach((x) => this.classes.add(x)),
+    remove: (...c: string[]) => c.forEach((x) => this.classes.delete(x)),
+    toggle: (c: string, on?: boolean) => {
+      const want = on ?? !this.classes.has(c);
+      if (want) this.classes.add(c);
+      else this.classes.delete(c);
+      return want;
+    },
+    contains: (c: string) => this.classes.has(c),
+  };
+  get innerHTML(): string {
+    return "";
+  }
+  set innerHTML(html: string) {
+    for (const c of this.children) c.parent = null;
+    this.children = [];
+    // the stage's nav buttons are an icon string and one <span>, which they then fill
+    if (html.includes("<span></span>")) this.appendChild(new DomEl("span"));
+  }
+  insertAdjacentHTML(): void {}
+  appendChild(c: DomEl): DomEl {
+    c.remove();
+    c.parent = this;
+    this.children.push(c);
+    return c;
+  }
+  remove(): void {
+    if (this.parent) this.parent.children = this.parent.children.filter((x) => x !== this);
+    this.parent = null;
+  }
+  get isConnected(): boolean {
+    return DOC.body.contains(this);
+  }
+  contains(n: DomEl | null): boolean {
+    for (let x = n; x; x = x.parent) if (x === this) return true;
+    return false;
+  }
+  setAttribute(k: string, v: string): void {
+    this.attrs.set(k, String(v));
+  }
+  getAttribute(k: string): string | null {
+    return this.attrs.get(k) ?? null;
+  }
+  removeAttribute(k: string): void {
+    this.attrs.delete(k);
+  }
+  focus(): void {
+    DOC.activeElement = this;
+  }
+  getBoundingClientRect() {
+    return { left: 0, top: 0, width: 100, height: 100, right: 100, bottom: 100 };
+  }
+  get offsetWidth(): number {
+    return 0;
+  }
+  get offsetHeight(): number {
+    return 0;
+  }
+  is(sel: string): boolean {
+    const m = SIMPLE.exec(sel);
+    if (!m) throw new Error("DomEl cannot match " + sel);
+    if (m[1] && m[1].toUpperCase() !== this.tagName) return false;
+    for (const c of m[2].split(".").filter(Boolean)) if (!this.classes.has(c)) return false;
+    for (const [, k, v] of m[3].matchAll(/\[([\w-]+)="([^"]*)"\]/g)) {
+      const got = k.startsWith("data-") ? this.dataset[k.slice(5).replace(/-(\w)/g, (_x, ch: string) => ch.toUpperCase())] : this.attrs.get(k);
+      if (got !== v) return false;
+    }
+    return true;
+  }
+  querySelectorAll(sel: string): DomEl[] {
+    const parts = sel.trim().split(/\s+/);
+    const out: DomEl[] = [];
+    const fits = (e: DomEl) => {
+      if (!e.is(parts[parts.length - 1])) return false;
+      let i = parts.length - 2;
+      for (let a = e.parent; a && a !== this && i >= 0; a = a.parent) if (a.is(parts[i])) i--;
+      return i < 0;
+    };
+    const walk = (e: DomEl) =>
+      e.children.forEach((c) => {
+        if (fits(c)) out.push(c);
+        walk(c);
+      });
+    walk(this);
+    return out;
+  }
+  querySelector(sel: string): DomEl | null {
+    return this.querySelectorAll(sel)[0] ?? null;
+  }
+}
+function shellDom(): DomEl {
+  DOC.body = new DomEl("body");
+  DOC.activeElement = DOC.body;
+  stub("document", DOC);
+  stub("HTMLCanvasElement", class {});
+  stub("Image", function Image() {
+    return new DomEl("img");
+  });
+  const root = new DomEl("div");
+  DOC.body.appendChild(root);
+  return root;
+}
+const kid = (root: DomEl, tag = "div") => root.appendChild(new DomEl(tag));
+/** an open family whose three categories have pictures, so the stage paints no diorama */
+function familyCx(root: DomEl) {
+  const cats = ["a", "b", "c"].map((id) => ({ id, label: "Category " + id, items: 3, art: `/presets/${id}.png` }));
+  const fam = { id: "styles", label: "Styles", status: "live" as const, categories: cats };
+  return {
+    root,
+    els: { stageView: kid(root, "section"), crumbs: kid(root, "nav"), depth: kid(root, "nav"), back: kid(root, "button") },
+    g: { W: 1280, H: 800, S: 800, DPR: 1, RS: 1, portrait: false },
+    tier: "full",
+    RM: true,
+    ST: { lv: "cat", type: null, tpl: null, fam: "styles", cat: "a", opener: null },
+    SV: { kind: "cat", idx: 0, list: cats },
+    famById: new Map([["styles", fam]]),
+    typeById: new Map(),
+    templates: [],
+    steps: [],
+    strips: [],
+    stageTok: 0,
+    life: { dead: false, timeout() {}, observe: (x: unknown) => x, unobserve() {} },
+    raster: { run: () => new Promise(() => {}) },
+  };
+}
+
+describe("stage.ts: Previous and Next keep the focus they were pressed with", () => {
+  //   8. renderStage rebuilds the whole stage (v.innerHTML = ""), its Previous / Next with it, so the
+  //      button a keyboard user had just pressed left the document and the focus fell to <body>:
+  //      the next Tab started from the top of the page, and a second Enter did nothing.
+  const navBtn = (cx: ReturnType<typeof familyCx>, dir: "Previous" | "Next") =>
+    cx.els.stageView.querySelectorAll(".sv-nav button").find((b) => (b.getAttribute("aria-label") || "").startsWith(dir + ":"))!;
+
+  test("Next pressed from the keyboard leaves the focus on the new Next, and on Previous at the end", async () => {
+    const root = shellDom();
+    const { renderStage } = await import("../../app/_landing/cosmos/engine/stage.ts");
+    const cx = familyCx(root);
+    renderStage(cx as never, "cat", 0, null);
+    navBtn(cx, "Next").focus();
+    navBtn(cx, "Next").onclick!();
+    expect(cx.SV.idx).toBe(1);
+    const a = DOC.activeElement!;
+    expect(cx.els.stageView.contains(a), "the focus is still on the stage").toBe(true);
+    expect(a.getAttribute("aria-label")).toBe("Next: Category c");
+    a.onclick!();
+    expect(cx.SV.idx).toBe(2);
+    expect(DOC.activeElement!.getAttribute("aria-label"), "the last item has no Next: its Previous takes the focus").toBe("Previous: Category b");
+  });
+
+  test("the arrow keys, pressed with the focus elsewhere, do not pull it onto the stage", async () => {
+    const root = shellDom();
+    const { renderStage, stageGo } = await import("../../app/_landing/cosmos/engine/stage.ts");
+    const cx = familyCx(root);
+    renderStage(cx as never, "cat", 0, null);
+    stageGo(cx as never, 1);
+    expect(DOC.activeElement).toBe(DOC.body);
+  });
+});
