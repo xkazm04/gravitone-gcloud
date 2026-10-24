@@ -3804,7 +3804,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/project.ts:8 The domain defines a project as a production composition whose state is derived from its parts, not as a managed software project in a portfolio; packages/domain/src has no portfolio, unwatched, watcher or 'working set' term, so the subject's portfolio-management techniques do not apply, although the record does rhyme with them.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "video-assembly",

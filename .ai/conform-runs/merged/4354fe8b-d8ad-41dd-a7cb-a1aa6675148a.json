@@ -1,0 +1,179 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4354fe8b-d8ad-41dd-a7cb-a1aa6675148a",
+ "subject": "multi-project",
+ "evaluatedAt": "2026-10-24T23:29:07.819064+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "multi-project",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/contract.ts:20 Here a projectId addresses the parts of one media composition for the part editors, not a managed codebase in a portfolio; searching app/(studio)/projects and packages/domain/src for portfolio, unwatched, watcher and 'working set' found nothing, so the subject's precondition (a manager holding N software projects) does not hold.",
+   "techniques": [
+    {
+     "technique": "project-identity-and-joins",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/page.tsx:32 The id identifies one production plan read through the produce port. Nothing here is a portfolio registry entry with a path or remote that could be re-bound."
+    },
+    {
+     "technique": "passive-signal-ingestion",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/real.ts:25 Reads one composition's part records from the kernel. Nothing watches a project's VCS or ledger exhaust."
+    }
+   ],
+   "absenceTerms": [
+    "portfolio",
+    "unwatched",
+    "watcher",
+    "working set"
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "multi-project",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/page.tsx:1 The Projects index lists media compositions (recipe plans launched as producer jobs), not a portfolio of managed repositories; a search of the context's directories for portfolio, unwatched, watcher and 'working set' returned no hits, so walls, watchers, tabs-as-working-set and admission doors have nothing to govern here.",
+   "techniques": [
+    {
+     "technique": "portfolio-drill-hierarchy",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/page.tsx:25 A list of compositions that opens on the first one's plan. It is not a triage wall over managed projects."
+    },
+    {
+     "technique": "passive-signal-ingestion",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/_port/realRead.ts:22 Figures come from kernel job and part records of the studio's own work, not from watchers over a project's exhaust."
+    }
+   ],
+   "absenceTerms": [
+    "portfolio",
+    "unwatched",
+    "watcher",
+    "working set"
+   ]
+  },
+  {
+   "context": "domain-parts-projects-slots",
+   "subject": "multi-project",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/domain/src/project.ts:8 The domain defines a project as a production composition whose state is derived from its parts, not as a managed software project in a portfolio; packages/domain/src has no portfolio, unwatched, watcher or 'working set' term, so the subject's portfolio-management techniques do not apply, although the record does rhyme with them.",
+   "techniques": [
+    {
+     "technique": "project-identity-and-joins",
+     "verdict": "not-applicable",
+     "evidence": "packages/domain/src/project.ts:35 An opaque id separate from the title does rhyme with minted identity. But there is no admission door, path, remote or cross-tool join for the technique to judge."
+    },
+    {
+     "technique": "project-onboarding-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "packages/domain/src/project.machine.ts:13 A production lifecycle (draft to ratified) derived from part state. It is not a candidate/onboarding/active/paused/archived management lifecycle."
+    },
+    {
+     "technique": "per-project-tabs-and-state",
+     "verdict": "not-applicable",
+     "evidence": "packages/domain/src/project.ts:48 A discarded draft keeps its row (archival as a state), but domain types hold no tab set or per-project view state."
+    }
+   ],
+   "absenceTerms": [
+    "portfolio",
+    "unwatched",
+    "watcher",
+    "working set"
+   ]
+  },
+  {
+   "context": "plan-and-import",
+   "subject": "multi-project",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/import/page.tsx:2 Import moves v1 browser compositions into kernel Projects, and the plan view prices one composition before launch; neither admits or manages a codebase in a portfolio, and searching these directories for portfolio, unwatched, watcher and 'working set' found nothing.",
+   "techniques": [
+    {
+     "technique": "project-onboarding-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/import/page.tsx:7 A data-migration door for compositions with preview and confirm. It is not an admission door that equips a metadata contract."
+    },
+    {
+     "technique": "portfolio-drill-hierarchy",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/_plan/Plan.tsx:3 Shows one composition's plan beside its list. It is not a wall, matrix or detail drill over a portfolio's dimensions."
+    }
+   ],
+   "absenceTerms": [
+    "portfolio",
+    "unwatched",
+    "watcher",
+    "working set"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T23:29:07.819064+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-project"
+   ],
+   "techniques": [
+    "passive-signal-ingestion",
+    "project-identity-and-joins"
+   ],
+   "deviations": 0,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:29:07.819064+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-project"
+   ],
+   "techniques": [
+    "passive-signal-ingestion",
+    "portfolio-drill-hierarchy"
+   ],
+   "deviations": 0,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:29:07.819064+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-project"
+   ],
+   "techniques": [
+    "per-project-tabs-and-state",
+    "project-identity-and-joins",
+    "project-onboarding-lifecycle"
+   ],
+   "deviations": 0,
+   "context": "domain-parts-projects-slots",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:29:07.819064+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-project"
+   ],
+   "techniques": [
+    "portfolio-drill-hierarchy",
+    "project-onboarding-lifecycle"
+   ],
+   "deviations": 0,
+   "context": "plan-and-import",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

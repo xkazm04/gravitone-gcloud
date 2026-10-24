@@ -12403,6 +12403,32 @@
       "evaluatedTs": "2026-10-24T23:20:28.938Z",
       "worker": "950657ee-324f-44b9-8484-6ad829af7ce1",
       "techniques": []
+    },
+    "298a4b92-0268-4d06-99a5-7ad103981170/multi-project": {
+      "context": "domain-parts-projects-slots",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:29:07.819Z",
+      "worker": "4354fe8b-d8ad-41dd-a7cb-a1aa6675148a",
+      "techniques": [
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/project.ts:35 An opaque id separate from the title does rhyme with minted identity. But there is no admission door, path, remote or cross-tool join for the technique to judge."
+        },
+        {
+          "technique": "project-onboarding-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/project.machine.ts:13 A production lifecycle (draft to ratified) derived from part state. It is not a candidate/onboarding/active/paused/archived management lifecycle."
+        },
+        {
+          "technique": "per-project-tabs-and-state",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/project.ts:48 A discarded draft keeps its row (archival as a state), but domain types hold no tab set or per-project view state."
+        }
+      ]
     }
   }
 }
