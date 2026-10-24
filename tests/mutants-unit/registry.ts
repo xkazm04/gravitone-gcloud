@@ -5971,4 +5971,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "mechanism: [mechanism], run: [run],",
     why: "A fixture plate holds no scene facet though its vocabulary names one and the kernel indexes it, so its detail drops the scene line and a scene word misses 49 plates.",
   },
+  {
+    id: "library-fixture-cover-always-jpeg",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixtureCorpus.ts",
+    find: "(cover?.mime ?? POSTER_MIME)",
+    replace: "POSTER_MIME",
+    why: "A fixture row names every cover image/jpeg, so a webp deck still reaches an agent under a type its bytes are not, where the kernel names the blob's own type.",
+  },
 ];

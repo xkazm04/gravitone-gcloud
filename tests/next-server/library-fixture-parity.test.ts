@@ -246,3 +246,16 @@ describe("a detail lists the vocabulary the index lists", () => {
     });
   }
 });
+
+describe("a row's cover names the blob and the type the index names", () => {
+  // kernel library/query.ts rowOf: an image is its own cover under its own type, a clip its keyframe.
+  it("over 40 items of every kind", () => {
+    const ids = ["image", "plate", "style", "motion", "audio", "video", "doc", "model", "character"].flatMap((kind) => corpus.filter((x) => x.raw.kind === kind).slice(0, 40).map((x) => x.raw.id));
+    const cover = (id: string, side: "fixture" | "real") => {
+      const d = side === "fixture" ? fixtureDetail(id) : libraryDetail(k.store, id);
+      if (!d.ok) throw d.error;
+      return `${id} ${d.value.row.cover.blobSha ?? "-"} ${d.value.row.cover.mime ?? "-"}`;
+    };
+    expect(ids.map((id) => cover(id, "fixture"))).toEqual(ids.map((id) => cover(id, "real")));
+  });
+});

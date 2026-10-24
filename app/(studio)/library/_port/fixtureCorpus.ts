@@ -17,7 +17,7 @@ import "server-only";
 
 import type { z } from "zod";
 
-import { CHIP_GROUPS, normText, techniqueBand, type Attention, type LibraryExtras, type LibraryRow, type LineageNode, type MediaFacts } from "@gt/domain/library";
+import { CHIP_GROUPS, normText, POSTER_MIME, techniqueBand, type Attention, type LibraryExtras, type LibraryRow, type LineageNode, type MediaFacts } from "@gt/domain/library";
 import type { libraryItemSchema } from "@gt/domain/libraryItem";
 
 import { fixtureCharacters } from "./fixtureCharacters.ts";
@@ -123,7 +123,8 @@ export function buildCorpus(): readonly FixtureRecord[] {
       origin: raw.origin,
       source: raw.source,
       date: raw.at ?? null,
-      cover: { blobSha: coverSha, mime: coverSha === null ? null : "image/jpeg", nearBlack: d.media?.nearBlack ?? false },
+      // An image is its own cover under its own type, a clip its keyframe (kernel library/query.ts rowOf).
+      cover: { blobSha: coverSha, mime: coverSha === null ? null : raw.kind === "video" || raw.kind === "motion" ? POSTER_MIME : (cover?.mime ?? POSTER_MIME), nearBlack: d.media?.nearBlack ?? false },
       ...(attention === undefined ? {} : { attention }),
       chips,
       ...(raw.kind === "model" && d.poster !== undefined ? { poster: d.poster } : {}),
