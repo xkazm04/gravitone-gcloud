@@ -2,12 +2,7 @@
 //
 // The dev/prod split is the user's standing decision, and the table that
 // encodes it lives in router.ts (PLAN) — this file only answers "is there a key
-// for that vendor". As of the 60-cell style trial:
-//
-//   dev   Google generates and edits, Leonardo is the re-route target for
-//         generate, Qwen recognises.
-//   prod  Google does everything — one vendor, one style-lock mechanism, and
-//         the reference-image window the production style block is tuned for.
+// for that vendor". Read the roster there; a copy here is a copy that rots.
 //
 // Keys are read lazily, per call, rather than captured at module load: a route
 // handler that booted before .env.local was filled in would otherwise hold a

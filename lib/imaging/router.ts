@@ -58,8 +58,9 @@ import type {
 /**
  * Vendor preference per capability, most-preferred first.
  *
- * dev  — Google for pixels (measured, see below), Leonardo behind it as the
- *        re-route target, Qwen for eyes.
+ * dev  — the operator's agy CLI first where it is present, then Google for
+ *        pixels (measured, see below) with Leonardo behind it as the re-route
+ *        target; the local eye (Ollama) first for recognition, Google behind it.
  * prod — Google throughout: one vendor, one style-lock mechanism, and the
  *        reference-image window the production style block is tuned against.
  *
