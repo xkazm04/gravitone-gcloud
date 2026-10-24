@@ -5514,4 +5514,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const i = Math.floor(((now - t0) / 1000) * FPS * 2);",
     why: "The poster preview plays the envelope faster than the export will - the particles and the low-band light run at twice the speed the mp4 has.",
   },
+  {
+    id: "mv-prompt-file-from-cwd",
+    test: "tests/next-server/mv-pipeline-edges.test.ts",
+    file: "lib/sound/mv/treatment.ts",
+    find: "needs: readonly string[], code: string = codeRoot()",
+    replace: "needs: readonly string[], code: string = process.cwd()",
+    why: "A worker or server whose cwd is a data universe fails every music-video job at its treatment turn: the prompt file the code ships is looked for in the data.",
+  },
 ];

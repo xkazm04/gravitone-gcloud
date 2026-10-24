@@ -19,11 +19,16 @@ const ROOT = vi.hoisted(() => {
   return dir;
 });
 
-import { rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
+import path from "node:path";
 
 import { closeProcessKernel } from "@gt/kernel/process";
 
 import { isLookId, MV_LOOK_IDS } from "../../lib/sound/mv/looks.ts";
+import { writeMetadata } from "../../lib/sound/mv/metadata.ts";
+import { treatmentInput, writeTreatment } from "../../lib/sound/mv/treatment.ts";
+import type { MvAnalysis } from "../../lib/sound/mv/types.ts";
+import type { TextRequest, TextResult } from "../../lib/text/types.ts";
 
 afterAll(() => {
   closeProcessKernel();
@@ -39,5 +44,48 @@ describe("a look's name", () => {
     expect(inherited.filter((n) => isLookId(n))).toEqual([]);
     expect(isLookId("garage-blue")).toBe(false);
     expect(isLookId(undefined)).toBe(false);
+  });
+});
+
+const ANALYSIS: MvAnalysis = {
+  durationS: 95,
+  tempoBpm: [120, 60],
+  energyShape: [0.2, 0.3, 0.5, 0.6, 0.8, 0.9, 0.7, 0.5, 0.3, 0.1],
+  sections: [
+    { startS: 0, label: "intro" },
+    { startS: 20, label: "verse" },
+    { startS: 50, label: "chorus" },
+  ],
+};
+
+/** A text engine that answers each mv turn with a valid shape and keeps what it was asked. */
+function fakeReason(asked: TextRequest[]) {
+  return async (req: TextRequest): Promise<TextResult> => {
+    asked.push(req);
+    const json = req.turn === "mv-metadata"
+      ? { title: "Porch Light · an ambient visualizer", description: "A slow track.", tags: ["ambient"] }
+      : { prompt: "a dusk valley in matte paint", motion: { particleDensity: 0.5, particleHue: 200, pulseStrength: 0.5 }, rationale: "quiet" };
+    return { text: JSON.stringify(json), json, provenance: { provider: "claude-cli" } as TextResult["provenance"] };
+  };
+}
+
+describe("the text turns' prompt files", () => {
+  it("are read from the checkout, whatever directory the process runs in", async () => {
+    const home = process.cwd();
+    const away = mkdtempSync(path.join(ROOT, "elsewhere-"));
+    const asked: TextRequest[] = [];
+    const input = treatmentInput("Porch Light", ANALYSIS);
+    process.chdir(away);
+    try {
+      const t = await writeTreatment(input, { reason: fakeReason(asked) });
+      const m = await writeMetadata(input, { rationale: t.rationale, reason: fakeReason(asked) });
+      expect(t.prompt).toContain("dusk valley");
+      expect(m.title.startsWith("Porch Light")).toBe(true);
+    } finally {
+      process.chdir(home);
+    }
+    expect(asked.map((r) => r.turn)).toEqual(["mv-treatment", "mv-metadata"]);
+    // The prompt documents' own words reached the turns, not an empty template.
+    for (const r of asked) expect(r.prompt).toContain("Porch Light");
   });
 });
