@@ -203,4 +203,16 @@ describe("an act answers what the kernel answers, and leaves the events it leave
     }
     expect(fixtureEvents(id)).toEqual(realEvents(id));
   });
+
+  it("use in a project twice: one event, as the kernel writes one", () => {
+    const id = image(1);
+    const projectId = PROJECTS[0]?.id ?? "";
+    for (let i = 0; i < 2; i++) {
+      const a = both(id, { act: "use-in-project", projectId });
+      expect(a.fixture).toBe(a.real);
+    }
+    expect(fixtureEvents(id)).toEqual(realEvents(id));
+    const gone = both(id, { act: "use-in-project", projectId: "prj-nope" });
+    expect(gone.fixture).toBe(gone.real);
+  });
 });

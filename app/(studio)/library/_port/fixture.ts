@@ -225,7 +225,10 @@ export function fixtureAct(id: string, act: LibraryAct, now: () => string): Resu
   const p = PROJECTS.find((pr) => pr.id === act.projectId);
   if (p === undefined) return err("not-found", `no project ${act.projectId}`);
   const used = x.f["project"] ?? [];
-  if (!used.includes(p.id)) x.f["project"] = [...used, p.id];
-  u.acts.push({ at: now(), type: "library.used", id, projectId: p.id });
+  // Using it again is the same answer and no second event: the kernel writes a mark once (kernel write.ts).
+  if (!used.includes(p.id)) {
+    x.f["project"] = [...used, p.id];
+    u.acts.push({ at: now(), type: "library.used", id, projectId: p.id });
+  }
   return ok({ said: `${x.row.title} → ${p.title}` });
 }

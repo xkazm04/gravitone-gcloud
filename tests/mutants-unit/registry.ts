@@ -5923,4 +5923,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "?",
     why: "An item the index no longer holds (deleted, pruned) draws an error line over the set on every open of an old link, though nothing failed.",
   },
+  {
+    id: "library-fixture-used-twice-logs-twice",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixture.ts",
+    find: "  if (!used.includes(p.id)) {",
+    replace: "  if (!used.includes(p.id) || true) {",
+    why: "The fixture Library logs a second library.used for an item already in the project, where the kernel writes the mark once and no second event.",
+  },
 ];
