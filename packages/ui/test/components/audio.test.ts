@@ -52,6 +52,13 @@ describe("measured beside asked", () => {
     expect(measureCells(facts({ tempoBpm: 124 })).find((c) => c.key === "bpm")?.asked).toBe("120");
   });
 
+  test("a key is one key in any spelling the brief typed; a real miss still names what was asked", () => {
+    const keyOf = (asked: string, measured: string) => measureCells({ ...facts({ key: measured }), asked: { tempoBpm: null, key: asked, durationS: null } }).find((c) => c.key === "key");
+    // The tracker writes "Ab major" / "A minor"; a person types "G# major", "Am", "A♭ maj".
+    expect([keyOf("Am", "A minor"), keyOf("G# major", "Ab major"), keyOf("A♭ maj", "Ab major"), keyOf("Cmaj", "C major")].map((c) => c?.asked)).toEqual([undefined, undefined, undefined, undefined]);
+    expect(keyOf("A major", "A minor")).toMatchObject({ value: "A minor", asked: "A major" });
+  });
+
   test("nothing measured draws the brief, marked as asked; nothing at all is a dash", () => {
     const cells = measureCells(facts(null));
     expect(cells.map((c) => [c.key, c.value, c.from])).toEqual([

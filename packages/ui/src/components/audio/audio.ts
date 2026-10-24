@@ -11,6 +11,8 @@
 
 import type { AudioFacts } from "@gt/domain/library";
 
+import { sameKey } from "./brief.ts";
+
 // The facts' type lives in @gt/domain (L49's LibraryDetail carries it, and the domain cannot
 // import the kit); the kit aliases it so the detail panel hands it over whole (Director,
 // 2026-10-17).
@@ -44,12 +46,13 @@ export function energyBand(rms: number): "high" | "medium" | "low" {
 }
 
 const bpm = (n: number): string => String(Math.round(n * 10) / 10);
-const norm = (k: string): string => k.trim().toLowerCase().replace(/\s+/g, " ");
 
 /**
  * Tempo agrees within 3 % - the tolerance v1 graded a tempo method by (app/library/audio/
  * referenceTracks.ts `tempoError`, "within x%"); a half-time read is a disagreement, which is
  * the point. A length agrees within a second (a render is never cut to the frame it was asked).
+ * A key is a pitch class and a mode (./brief.ts `sameKey`): a brief typed "Am" or "G# major"
+ * holds against the tracker's "A minor" / "Ab major" - compared as text, each read as a miss.
  */
 const sameTempo = (a: number, m: number): boolean => a > 0 && Math.abs(m / a - 1) <= 0.03;
 const sameLength = (a: number, m: number): boolean => Math.abs(a - m) <= 1;
@@ -71,7 +74,7 @@ export function measureCells(f: AudioFacts): readonly MeasureCell[] {
   const m = f.measured;
   return [
     pair<number>("bpm", "bpm", f.asked.tempoBpm, m?.tempoBpm ?? null, bpm, sameTempo),
-    pair<string>("key", "key", f.asked.key, m?.key ?? null, (k) => k, (a, b) => norm(a) === norm(b)),
+    pair<string>("key", "key", f.asked.key, m?.key ?? null, (k) => k, sameKey),
     pair<number>("length", "length", f.asked.durationS, m?.durationS ?? null, fmtDur, sameLength),
     solo("lufs", "lufs", m?.lufs ?? null, (n) => String(Math.round(n * 10) / 10)),
     solo("peak", "true peak", m?.truePeakDb ?? null, (n) => `${Math.round(n * 10) / 10} dB`),
