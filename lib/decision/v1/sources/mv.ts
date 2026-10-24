@@ -183,15 +183,24 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
   const file = await v1Call(() => readMv());
   if (!file.ok) return file;
   const now = new Map(file.value.jobs.map((j) => [j.id, j.verdict]));
+  const marks = [...claim.decisions]
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .flatMap((d) => {
+      const v = verdictOf(d);
+      return v === undefined ? [] : [{ id: candidateOf(d), v }];
+    });
+  // Every job is checked BEFORE the first is written: a permanent refusal (a job gone, or marked
+  // otherwise since) parks the row stuck, and a drop that sorted before the refused job would
+  // already have deleted its render files for an outcome v1 never took whole.
+  for (const { id, v } of marks) {
+    if (!now.has(id)) return fromV1(new SoundError(`no music-video job ${id}`, 404));
+    const held = now.get(id);
+    if (held !== null && held !== undefined && held !== v) return fromV1(new SoundError(`video ${id} is marked ${held} in Settled; this packet would mark it ${v} - judge it there`, 403));
+  }
   // Job by job, as v1's Settled verbs wrote them; a redelivery finds the jobs
   // it already marked and skips them (a drop's files are gone with the first).
-  for (const d of [...claim.decisions].sort((a, b) => a.key.localeCompare(b.key))) {
-    const id = candidateOf(d);
-    const v = verdictOf(d);
-    if (v === undefined) continue;
-    const held = now.get(id);
-    if (held === v) continue;
-    if (held !== null && held !== undefined) return fromV1(new SoundError(`video ${id} is marked ${held} in Settled; this packet would mark it ${v} - judge it there`, 403));
+  for (const { id, v } of marks) {
+    if (now.get(id) === v) continue;
     const r = await v1Call(() => patchMv(id, { verdict: v }));
     if (!r.ok) return r;
   }

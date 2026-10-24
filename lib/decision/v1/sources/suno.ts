@@ -161,15 +161,24 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
   const file = await v1Call(() => readSuno());
   if (!file.ok) return file;
   const now = new Map(file.value.clips.map((c) => [c.id, c.verdict]));
+  const marks = [...claim.decisions]
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .flatMap((d) => {
+      const v = verdictOf(d);
+      return v === undefined ? [] : [{ id: candidateOf(d), v }];
+    });
+  // Every clip is checked BEFORE the first is written: a permanent refusal (a clip gone, or marked
+  // otherwise since) parks the row stuck, and it must find suno.json as the commit found it, not
+  // holding the half of this packet that sorted before the refused clip.
+  for (const { id, v } of marks) {
+    if (!now.has(id)) return fromV1(new SoundError(`no Suno clip ${id}`, 404));
+    const held = now.get(id);
+    if (held !== null && held !== undefined && held !== v) return fromV1(new SoundError(`Suno clip ${id} is marked ${held} in the Sound lab; this packet would mark it ${v} - judge it there`, 403));
+  }
   // Clip by clip, as v1's gate wrote them (each its own patchClip under the
   // lock); a redelivery after a crash finds the clips already marked and skips them.
-  for (const d of [...claim.decisions].sort((a, b) => a.key.localeCompare(b.key))) {
-    const id = candidateOf(d);
-    const v = verdictOf(d);
-    if (v === undefined) continue;
-    const held = now.get(id);
-    if (held === v) continue;
-    if (held !== null && held !== undefined) return fromV1(new SoundError(`Suno clip ${id} is marked ${held} in the Sound lab; this packet would mark it ${v} - judge it there`, 403));
+  for (const { id, v } of marks) {
+    if (now.get(id) === v) continue;
     const r = await v1Call(() => patchClip(id, { verdict: v }));
     if (!r.ok) return r;
   }
