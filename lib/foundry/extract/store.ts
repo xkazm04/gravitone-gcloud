@@ -43,7 +43,7 @@ import { blobRootOf } from "../../kernelProcess.ts";
 import type { BlobRef } from "@gt/domain/blob";
 import { DEFAULT_CALL_ESTIMATE_USD, newManifest, settleReason } from "./engine";
 import type { EngineIO } from "./engine";
-import { imageDims, nearestAspect } from "./imageDims";
+import { imageDims, imageFormat, nearestAspect } from "./imageDims";
 import { exportStyles, extractRoot, OPERATOR, readStyleDefs, styleStore } from "../catalogue";
 import { planExtractCommit } from "../commitPlan";
 import { EXTRACT_COMMITTABLE } from "../plant";
@@ -176,16 +176,19 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
     if (!bytes.length) throw new FoundryError(`Image ${i + 1} (${u.name}) is empty.`, 400);
     if (bytes.length > MAX_SOURCE_BYTES) throw new FoundryError(`Image ${i + 1} (${u.name}) is over ${MAX_SOURCE_BYTES / 1024 / 1024} MB.`, 400);
     const dims = imageDims(new Uint8Array(bytes));
-    if (!dims) throw new FoundryError(`Image ${i + 1} (${u.name}) is not a PNG, JPEG or WebP.`, 400);
+    // The bytes name the format, not the file name or the declared type: the
+    // stored extension is what readImage tells the vision vendor the mime is.
+    const mime = imageFormat(new Uint8Array(bytes));
+    if (!dims || !mime) throw new FoundryError(`Image ${i + 1} (${u.name}) is not a PNG, JPEG or WebP.`, 400);
     const sid = `s${String(i + 1).padStart(2, "0")}`;
-    const rel = `sources/${sid}${EXT[u.mime]}`;
+    const rel = `sources/${sid}${EXT[mime]}`;
     prepared.push({
       bytes,
       source: {
         id: sid,
         name: u.name.slice(0, 120),
         file: rel,
-        mime: u.mime,
+        mime,
         width: dims.width,
         height: dims.height,
         aspect: nearestAspect(dims.width, dims.height),

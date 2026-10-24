@@ -16,6 +16,17 @@ export function imageDims(bytes: Uint8Array): Dims | null {
   return png(bytes) ?? jpeg(bytes) ?? webp(bytes);
 }
 
+/** The format the bytes ARE, by signature, or null for anything else. A
+ *  gallery's file name or a caller's declared type can lie (a web image saved
+ *  as .jpg is often a WebP); the stored extension and the mime a vision vendor
+ *  is told come from this instead. */
+export function imageFormat(b: Uint8Array): "image/png" | "image/jpeg" | "image/webp" | null {
+  if (b.length >= 4 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  if (b.length >= 12 && String.fromCharCode(b[0], b[1], b[2], b[3]) === "RIFF" && String.fromCharCode(b[8], b[9], b[10], b[11]) === "WEBP") return "image/webp";
+  return null;
+}
+
 function u32be(b: Uint8Array, at: number): number {
   return ((b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3]) >>> 0;
 }

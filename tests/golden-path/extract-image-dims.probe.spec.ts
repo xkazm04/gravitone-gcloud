@@ -10,7 +10,7 @@
 // bytes 26-29, and it read as 500x318). No vendor, no disk.
 import { test, expect } from "@playwright/test";
 
-import { imageDims, nearestAspect } from "@/lib/foundry/extract/imageDims";
+import { imageDims, imageFormat, nearestAspect } from "@/lib/foundry/extract/imageDims";
 
 const bytes = (xs: number[]) => new Uint8Array(xs);
 
@@ -37,4 +37,13 @@ test("the VP8 scale bits (the top two of each size field) are not read as size",
   scaled[27] |= 0xc0; // horizontal scale = 3
   scaled[29] |= 0x40; // vertical scale = 1
   expect(imageDims(scaled)).toEqual({ width: 300, height: 500 });
+});
+
+test("imageFormat names the format the bytes are, whatever the file was called", () => {
+  const PNG = bytes([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 5, 0, 0, 0, 2, 0xd0]);
+  const JPEG = bytes([0xff, 0xd8, 0xff, 0xe0, 0, 16]);
+  expect(imageFormat(PNG)).toBe("image/png");
+  expect(imageFormat(JPEG)).toBe("image/jpeg");
+  expect(imageFormat(LOSSY_300x500)).toBe("image/webp");
+  expect(imageFormat(bytes([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]))).toBeNull(); // GIF
 });
