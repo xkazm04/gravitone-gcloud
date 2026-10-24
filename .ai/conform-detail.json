@@ -11716,6 +11716,48 @@
           "evidence": "lib/ledger/v1/sources/roots.ts:27 The order is declared in the header comment (lines 19-22) and absent or blank skips, but there is no provenance: no startup line or diagnostic names the winning source. An override that is set also labels the rows src from the universe, not from the rung that answered."
         }
       ]
+    },
+    "3eb496e8-52aa-446d-bf75-07dc7c891b16/translation-pipeline-topology": {
+      "context": "kernel-python-protocol",
+      "subject": "translation-pipeline-topology",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:38:35.278Z",
+      "worker": "7ea0c467-6d22-44ef-bd88-385bc2d3c793",
+      "techniques": [
+        {
+          "technique": "language-registry-single-source",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:7 'both languages' means Python and TypeScript sharing one spec. There is no locale registry."
+        }
+      ]
+    },
+    "e660bf0f-199c-4cd9-91e1-1a13e318e55f/translation-pipeline-topology": {
+      "context": "article-human-gate-and-landing",
+      "subject": "translation-pipeline-topology",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:38:35.278Z",
+      "worker": "7ea0c467-6d22-44ef-bd88-385bc2d3c793",
+      "techniques": [
+        {
+          "technique": "canonical-and-derived-split",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/mediumPackage.ts:257 The post is landed only in the canonical language. No machine-translated output exists to keep off the source branch."
+        }
+      ]
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/translation-pipeline-topology": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "translation-pipeline-topology",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:38:35.278Z",
+      "worker": "7ea0c467-6d22-44ef-bd88-385bc2d3c793",
+      "techniques": []
     }
   }
 }

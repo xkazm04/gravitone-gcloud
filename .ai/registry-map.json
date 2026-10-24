@@ -1250,7 +1250,11 @@
           "revision": 12,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/mediumPackage.ts:257 The Medium package and the registry landing ship one post in one fixed language (lang=\"en\"). There are no translated variants, derived store or fallback. A grep of lib/articles for translation, i18n, hreflang and pseudo-loc found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
+          "evaluatedRevision": 12
         },
         {
           "subject": "agent-instruction-files",
@@ -6222,7 +6226,11 @@
           "revision": 12,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:7 These modules are the Python side of the SQLite kernel protocols (job queue, lease, ledger, meter, styles). Here 'languages' means Python and Node, not human locales. A grep of packages/kernel/py for translation, i18n, hreflang and pseudo-loc found nothing, so this context has no translated content, catalog or pipeline for the subject to govern.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
+          "evaluatedRevision": 12
         },
         {
           "subject": "supply-chain",
@@ -6961,7 +6969,11 @@
           "revision": 12,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/layout.ts:353 The cosmos engine paints paper and raster layers. Its one locale touch hard-pins number formatting to en-US. It holds no translated strings, catalog or serving path. A grep for translation, i18n, hreflang and pseudo-loc found nothing; the 'translate' hits are CSS/canvas transforms.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
+          "evaluatedRevision": 12
         },
         {
           "subject": "repository-landing-document",
