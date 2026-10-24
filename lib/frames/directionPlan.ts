@@ -1,8 +1,8 @@
 // THE DIRECTION PASS AS A PROPOSAL — pure functions, no React, no I/O.
 //
-// "Direct the cut" is the most expensive call in the step. Applying its answer
-// wholesale (`applySceneSpecs`) erased human fact bindings and hand placement
-// with no undo. This module turns the answer into typed ops that can be shown,
+// "Direct the cut" is the most expensive call in the step. v1 applied its answer
+// wholesale (a since-retired `applySceneSpecs`), which erased human fact
+// bindings and hand placement with no undo. This module turns the answer into typed ops that can be shown,
 // accepted per beat, and reverted:
 //
 //   planFromSpecs    specs -> a DirectionProposal; reads frames, writes nothing
@@ -142,7 +142,9 @@ export function applyOps(frame: Frame, ops: EditOp[], policy: ConflictPolicy = "
     switch (op.type) {
       case "setSubject":
         // renderedSubject is deliberately NOT touched: that is what makes the
-        // plate stale when the subject moves on.
+        // plate stale when the subject moves on. Nor is the plate cleared: a
+        // rendered picture is money already spent, the new subject may well
+        // produce the same image, and re-rendering is a decision per frame.
         f = { ...f, plate: { ...f.plate, subject: op.subject } };
         break;
       case "setMotion":

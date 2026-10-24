@@ -309,31 +309,3 @@ export function parseSceneSpecs(
 ): SceneSpec[] {
   return reviewSceneSpecs(raw, frames, knownFactIds, grades).specs;
 }
-
-/** Fold authored specs into the frames, replacing the seeded layers.
- *
- *  Frames with no spec in the list are returned untouched — which is exactly
- *  what a rejected or unmentioned beat gets. It keeps whatever it had, which is
- *  usually the template output this pass exists to replace, and the row says so
- *  rather than the frame quietly emptying. */
-export function applySceneSpecs(frames: Frame[], specs: SceneSpec[]): Frame[] {
-  const byAt = new Map(specs.map((s) => [s.beatAt, s]));
-  return frames.map((f) => {
-    const s = byAt.get(f.at);
-    if (!s) return f;
-    return {
-      ...f,
-      rationale: s.rationale,
-      // The plate is NOT cleared. A rendered picture is money already spent, and
-      // the new subject may well produce the same image; re-render is a
-      // decision the user makes per frame.
-      plate: { ...f.plate, subject: s.subject },
-      // The clip's STATUS is carried through untouched rather than reset. There
-      // is nothing to reset it from — no renderer has ever set it — and folding
-      // direction in is authoring, not un-rendering.
-      clip: { ...(f.clip ?? { status: "not-started" as const, motion: "" }), motion: s.motion },
-      elements: s.elements.map((e, i) => ({ ...e, id: `e-${f.id}-${i}` })),
-      texts: s.texts.map((t, i) => ({ ...t, id: `t-${f.id}-${i}` })),
-    };
-  });
-}

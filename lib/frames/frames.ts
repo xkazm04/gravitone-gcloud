@@ -140,11 +140,6 @@ export interface FrameClip {
 /** A clip nobody has authored yet. Absence, stated. */
 export const emptyClip = (): FrameClip => ({ status: "not-started", motion: "" });
 
-/** A clip is authored when it says what moves. Nothing else can be true of it
- *  yet — see the note on `FrameClip`. */
-export const isAuthoredClip = (f: Frame) => Boolean(f.clip?.motion.trim());
-export const authoredClipCount = (fs: Frame[]) => fs.filter(isAuthoredClip).length;
-
 // Cuts stored before the clip layer existed have no `clip` key at all. That
 // used to be filled here, by hand, at every read (`withClips`); it is now a
 // step of the frames record's v1 → v2 migration (./picture/migrate.ts).
@@ -206,14 +201,6 @@ export interface DirectionSpend {
 }
 
 export const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
-
-/** A duration a human reads at a glance. Minutes are spelled out because the
- *  direction pass is the one call in this step measured in them, and "251s" is
- *  a number the reader has to do arithmetic on. */
-export function humanMs(ms: number): string {
-  const s = Math.round(ms / 1000);
-  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
-}
 
 /**
  * "m:ss" or "h:mm:ss" → seconds, or NULL when the string is not a timecode.
@@ -561,11 +548,3 @@ export function subjectFor(frame: Frame): string {
   };
   return `${shape[base] ?? shape.statement} Large simple shapes, generous empty space, nothing in the lower third.`;
 }
-
-/** A layer reference — which array, which index. Selection and every layer
- *  operation speak this, so the canvas and the panel cannot disagree about
- *  what is selected. */
-export type LayerRef = { type: "element" | "text"; id: string } | null;
-
-export const isComposed = (f: Frame) => f.plate.state === "ready";
-export const composedCount = (fs: Frame[]) => fs.filter(isComposed).length;
