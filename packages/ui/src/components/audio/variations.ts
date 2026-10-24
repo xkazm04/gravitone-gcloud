@@ -13,6 +13,7 @@
 // measured tempo and key plus the terms its kept descendants share. No model guesses a genre
 // here (core.js#conceptFor). The registry's reference-track-anchoring: a reference carries
 // style, never melody - which is why only terms, tempo and key cross into the seed.
+import { TEMPO } from "./batch.ts";
 import { relativeKey, sameKey } from "./brief.ts";
 import type { Seed, Term, TermFacet } from "./recipe.ts";
 
@@ -43,7 +44,8 @@ export function variationsOfSeed(base: Seed, terms: readonly Term[]): Variation[
     out.push({ axis: "mood", diff: [`−${wm.term}`, `+${bm.term}`], seed: { ...base, moods: base.moods.map((x) => (x === wm.term ? bm.term : x)) }, why: pctKept(bm) });
   }
   const bpm = base.bpm !== null && base.bpm > 0 ? base.bpm : 100;
-  for (const d of [-6, 6]) out.push({ axis: "tempo", diff: [`${d > 0 ? "+" : ""}${d} BPM`], seed: { ...base, bpm: bpm + d }, why: `${Math.round(bpm + d)} BPM` });
+  // A step past the range a brief may lock is not a variation the batch would take (batch.ts TEMPO).
+  for (const d of [-6, 6]) if (bpm + d >= TEMPO.min && bpm + d <= TEMPO.max) out.push({ axis: "tempo", diff: [`${d > 0 ? "+" : ""}${d} BPM`], seed: { ...base, bpm: bpm + d }, why: `${Math.round(bpm + d)} BPM` });
   const rel = base.key === null ? null : relativeKey(base.key);
   if (base.key !== null && rel !== null) out.push({ axis: "key", diff: [`${base.key} → ${rel}`], seed: { ...base, key: rel }, why: "relative" });
   const fence =

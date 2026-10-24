@@ -69,6 +69,12 @@ export const DURATION: { readonly [K in BatchKind]: { readonly min: number; read
 
 export const COUNT = { min: 1, max: 6 } as const;
 
+/** The tempos a music brief may lock, the batch's and the composer's seed alike. */
+export const TEMPO = { min: 40, max: 220 } as const;
+
+/** A locked tempo outside TEMPO, in its own words; null when the tempo is free or in range. */
+export const tempoProblem = (bpm: number | null): string | null => (bpm === null || (bpm >= TEMPO.min && bpm <= TEMPO.max) ? null : `tempo ${TEMPO.min}–${TEMPO.max}`);
+
 const list = (s: string): string[] =>
   s
     .split(",")
@@ -93,7 +99,7 @@ export function batchProblem(kind: BatchKind, f: BatchForm): string | null {
   if (!(f.durationS >= d.min && f.durationS <= d.max)) return `length ${d.min}–${d.max}s`;
   if (!(Number.isInteger(f.count) && f.count >= COUNT.min && f.count <= COUNT.max)) return `${COUNT.min}–${COUNT.max} takes`;
   if (kind === "sfx" && f.promptInfluence !== null && !(f.promptInfluence >= 0 && f.promptInfluence <= 1)) return "influence 0–1";
-  if (kind === "music" && f.tempoBpm !== null && !(f.tempoBpm >= 40 && f.tempoBpm <= 220)) return "tempo 40–220";
+  if (kind === "music" && tempoProblem(f.tempoBpm) !== null) return tempoProblem(f.tempoBpm);
   return null;
 }
 

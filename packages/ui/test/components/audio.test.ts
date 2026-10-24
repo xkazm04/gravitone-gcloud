@@ -228,4 +228,14 @@ describe("the composer's markup", () => {
     expect(sunoCut(SEED, {})).toBe(0);
     expect(renderToStaticMarkup(h(SeedComposer, { ...props, seed: SEED }))).not.toContain(">cut<");
   });
+
+  test("a tempo the batch would refuse is refused here too: Send waits and says why, and no variation steps past it", () => {
+    const send = (seed: Seed): string => /<button[^>]*>Send to Suno[\s\S]*?<\/button>/.exec(renderToStaticMarkup(h(SeedComposer, { ...props, seed })))?.[0] ?? "";
+    expect(send({ ...SEED, bpm: 999 })).toContain('aria-disabled="true"');
+    expect(send({ ...SEED, bpm: 999 })).toContain("tempo 40–220");
+    expect(send({ ...SEED, bpm: 120 })).not.toContain('aria-disabled="true"');
+    const bpms = [218, 42, 220, 40].flatMap((bpm) => variationsOfSeed({ ...SEED, bpm }, []).filter((v) => v.axis === "tempo").map((v) => v.seed.bpm ?? 0));
+    expect(bpms.filter((b) => b < 40 || b > 220)).toEqual([]);
+    expect(variationsOfSeed({ ...SEED, bpm: 218 }, []).filter((v) => v.axis === "tempo").map((v) => v.diff[0])).toEqual(["-6 BPM"]);
+  });
 });
