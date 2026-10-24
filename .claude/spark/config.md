@@ -80,6 +80,11 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
 ## Repo law
 
 See `.claude/perfect/config.md` `## Repo law` verbatim, plus:
+- **A vendor-billing batch is rendered from an explicit id list, spawned WITHOUT a shell, after one
+  dry call proves the arguments arrive whole** (measured 2026-10-24: `spawnSync(..., { shell: true })` split every
+  prompt at its first space and ~7,650 ElevenLabs credits bought one-word takes; a title-matching rerun then
+  re-rendered kept items). Say "live" in a commit or a report only for a path that made a real vendor call; a
+  fake-fetch test is a stand-in and is called one.
 - A step surface MUST be scouted against `knowledge/templates/<template>/steps/<step>/PATTERNS.md`
   and `params.json` before it is designed. "Commission the craft research" is a valid answer.
 - `WORK_KINDS` and `RECIPES` in `packages/catalog/src/recipes.ts` are append-only registries
@@ -142,3 +147,8 @@ One AskUserQuestion call of up to 4 questions per wave.
   copy. Also: a fan-out of a priced act must state in the brief how the confirmed ceiling divides (a builder copied it
   to every job); one real unit at the go-gate ($2.67) surfaced a gate near-miss no fake could (rounds 1 -> 2); inline
   nested quoting mangled paths three times in one session - write scripts to files.
+- 2026-10-24 (audio session, end) · The repo-specific lesson seen twice - nested shell quoting corrupting a path or an argument
+  (junction targets, a .cmd, a Python regex, then a spawn that split prompts) - is promoted to Repo law above. A plan
+  document is worth a verified / not-verified ledger: this session's "live" TTS, LLM chains and voice FX were all
+  exercised only by fakes or fixtures, which commit messages alone did not show. When the operator redirects the whole
+  session's scope, stop building, write the plan, and end - do not widen the next spark.
