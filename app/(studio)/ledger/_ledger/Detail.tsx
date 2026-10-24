@@ -31,6 +31,8 @@ import s from "./ledger.module.css";
 
 export type DetailProps = {
   readonly event: Event | null;
+  /** The selected seq when no act holds it (an `ev` link to an act this ledger lacks). */
+  readonly missing?: number;
   readonly nowMs: number;
   readonly related: (input: { seq: number }) => Promise<ActionResult<Related & { readonly event: Event }>>;
   readonly onSelect: (e: Event) => void;
@@ -52,7 +54,7 @@ type Rel = { readonly seq: number; readonly value: Related } | { readonly seq: n
 
 const text = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" ? v : null);
 
-export function Detail({ event: e, nowMs, related, onSelect, onQuery, onClose, onCopy }: DetailProps) {
+export function Detail({ event: e, missing, nowMs, related, onSelect, onQuery, onClose, onCopy }: DetailProps) {
   const [rel, setRel] = useState<Rel | null>(null);
   const seq = e?.seq ?? null;
   useEffect(() => {
@@ -84,7 +86,14 @@ export function Detail({ event: e, nowMs, related, onSelect, onQuery, onClose, o
     return (
       <aside className={s.detail} aria-label="event detail">
         {head}
-        <div className={s.dtEmpty}>0 selected</div>
+        {missing === undefined ? (
+          <div className={s.dtEmpty}>0 selected</div>
+        ) : (
+          // The words actions.ts relatedEvents answers for the same seq.
+          <div className={s.dt}>
+            <ErrorLine message={`ledger: no event #${missing}`} />
+          </div>
+        )}
       </aside>
     );
   }

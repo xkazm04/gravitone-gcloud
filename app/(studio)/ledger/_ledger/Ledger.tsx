@@ -249,6 +249,7 @@ export function Ledger(p: LedgerProps) {
         />
         <Detail
           event={current}
+          {...(sel !== null && current === null ? { missing: sel } : {})}
           nowMs={p.nowMs}
           related={p.related}
           onSelect={(e) => {

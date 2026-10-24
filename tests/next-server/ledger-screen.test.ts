@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { FacetCount } from "@gt/kernel/events-count";
 
+import { Detail } from "../../app/(studio)/ledger/_ledger/Detail.tsx";
 import { Facets } from "../../app/(studio)/ledger/_ledger/Facets.tsx";
 import { EMPTY, type LedgerFilter } from "../../app/(studio)/ledger/_ledger/filter.ts";
 import { List } from "../../app/(studio)/ledger/_ledger/List.tsx";
@@ -117,5 +118,30 @@ describe("the list", () => {
 
   it("an empty answer that examined everything is 0 events", () => {
     expect(empty(list(f({ q: "plate" }), { capped: false, scanned: 40, exhausted: true }))).toMatch(/^0 events /);
+  });
+});
+
+describe("the detail", () => {
+  const detail = (missing?: number) =>
+    renderToStaticMarkup(
+      h(Detail, {
+        event: null,
+        nowMs: 0,
+        related: () => new Promise<never>(() => undefined),
+        onSelect: () => undefined,
+        onQuery: () => undefined,
+        onClose: () => undefined,
+        onCopy: () => undefined,
+        ...(missing === undefined ? {} : { missing }),
+      }),
+    );
+
+  it("a link to an act the ledger does not hold says so, in the read's own words", () => {
+    expect(detail(99)).toContain("ledger: no event #99");
+    expect(detail(99)).not.toContain("0 selected");
+  });
+
+  it("with nothing selected, 0 selected", () => {
+    expect(detail()).toContain("0 selected");
   });
 });
