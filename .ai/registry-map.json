@@ -5501,7 +5501,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/frames/frames.ts:16 Frames turns the beats of a narrated script (each carrying its spoken sentence) into plate, vector-element and text layers, so it is about narrated explainers and not a narration-free race or chart video; a search of lib/frames for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "music-prompt-composition",
@@ -5757,7 +5761,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/imaging/video/types.ts:1 These files are vendor transports (image providers, the browser-driven Studio driver, the image-to-clip hop with its price and budget) and contain no frame, chart, theme, card or title design; a search of lib/imaging/providers, lib/imaging/studio and lib/imaging/video for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing, so the subject's precondition (designing the look of a narration-free data video) does not hold here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "generative-provider-routing",

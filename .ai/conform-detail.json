@@ -11032,6 +11032,26 @@
       "evaluatedTs": "2026-10-24T04:25:32.793Z",
       "worker": "45b07cb8-b0ea-44d8-82f5-bd5a39515db1",
       "techniques": []
+    },
+    "60361278-9fbe-43c5-add7-454ed78ef0f5/data-video-art-direction": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:37:10.922Z",
+      "worker": "c73cdd3e-e560-464f-ba22-270f1eb93982",
+      "techniques": []
+    },
+    "158d061e-feaa-4660-a1d3-6e8774b1f152/data-video-art-direction": {
+      "context": "frames-picture-composition",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:37:10.922Z",
+      "worker": "c73cdd3e-e560-464f-ba22-270f1eb93982",
+      "techniques": []
     }
   }
 }
