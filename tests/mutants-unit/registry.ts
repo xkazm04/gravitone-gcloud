@@ -5410,4 +5410,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (this.dead) return;",
     why: "A resize in the landing's first moments paints the whole overview on the main thread while the worker is still starting, and two drainers then race for one queue.",
   },
+  {
+    id: "ledger-facets-folds-a-pressed-type",
+    test: "tests/next-server/ledger-screen.test.ts",
+    file: "app/(studio)/ledger/_ledger/Facets.tsx",
+    find: "(subs.length > 1 || subs.some((t) => f.type.includes(t.value))) &&",
+    replace: "subs.length > 1 &&",
+    why: "A Ledger filtered by a full type whose group lists no other type draws no pressed row in the facet rail, so the filter narrowing the list cannot be seen or unpressed there.",
+  },
 ];
