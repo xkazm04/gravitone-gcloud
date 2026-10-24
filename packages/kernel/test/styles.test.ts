@@ -151,6 +151,20 @@ describe("adopt, in place (v1 adopt.ts)", () => {
   });
 });
 
+describe("a judgement that changes nothing", () => {
+  it("is refused as unchanged when only the note's whitespace differs, or an empty note meets none", () => {
+    const s = store();
+    adopted(s, "p", 2);
+    op(s, "p", { kind: "judge-proof", proofId: "p0", state: "approved", note: "reads as one scene" });
+    for (const [proofId, note] of [["p0", "  reads as one scene "], ["p1", ""]] as const) {
+      const rev = must(readStyle(s, "p")).rev;
+      const r = applyStyleOp(s, { styleId: "p", baseRev: rev, op: { kind: "judge-proof", proofId, state: proofId === "p0" ? "approved" : "pending", note } }, OP);
+      expect(r.ok ? r.value.kind : r.error.code).toBe("invalid");
+      expect(must(readStyle(s, "p")).rev).toBe(rev);
+    }
+  });
+});
+
 describe("the lock gate (v1 canLock / lockBlocker), refused at the write", () => {
   it("refuses with the work's sentence until no proof is pending and three problems are approved", () => {
     const s = store();
