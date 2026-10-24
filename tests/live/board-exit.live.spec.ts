@@ -311,15 +311,12 @@ async function cull(page: Page, withReason: boolean): Promise<number> {
   const n = await tiles(page).count();
   expect(n).toBeGreaterThan(0);
   await tiles(page).nth(0).click();
-  await page.keyboard.press("x");
-  if (withReason) {
-    await tiles(page).nth(0).click();
-    await page.keyboard.press("1");
-    await expect(tiles(page).nth(0)).toHaveAttribute("aria-label", /, reject: /);
-  }
+  // The number row (spark scout-storyboards): 2 rejects with the run's first reason, 5 bare, 1 keeps.
+  await page.keyboard.press(withReason ? "2" : "5");
+  if (withReason) await expect(tiles(page).nth(0)).toHaveAttribute("aria-label", /, reject: /);
   for (let i = 1; i < n; i++) {
     await tiles(page).nth(i).click();
-    await page.keyboard.press("k");
+    await page.keyboard.press("1");
   }
   await landed(page);
   // ⌫ MUST TAKE BACK A RECORDED ACT (L74; the mv/strips flake, 4/4 on repeat). The gate takes an

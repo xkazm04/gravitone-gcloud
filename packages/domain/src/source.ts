@@ -7,8 +7,9 @@
 // one reason vocabulary per surface and the rebuild's first domain had one for
 // all of them (the prototype's REJECT_REASONS, four image words), so an audio
 // take could only be rejected for "motion". Each list below is v1's own, cited
-// where it lives; the Board binds keys 1-9, 0, - to a list in order, so the
-// ORDER is part of the contract and a reorder rebinds the operator's fingers.
+// where it lives; the Board binds keys 2, 3 and 4 to the first three of a row's
+// order (`reasonsBy`, else this list), so the ORDER is part of the contract and
+// a reorder rebinds the operator's fingers.
 //
 // What the table refuses by construction: `satisfies { [S in PacketSource]: … }`
 // makes a source without a row a compile error, so a new source cannot reach
@@ -31,7 +32,7 @@ export type PacketMode = (typeof PACKET_MODES)[number];
 export type SourceSpec = {
   /** The desk modes a packet of this source may be opened in. */
   readonly modes: readonly PacketMode[];
-  /** The reject reasons, in key order (1-9, 0, -). Empty: a reject is one thing. */
+  /** The reject reasons, in chip order; the first three are keys 2-4 where `reasonsBy` names no order. Empty: a reject is one thing. */
   readonly reasons: readonly string[];
   /** How many reasons one verdict may carry. */
   readonly maxReasons: number;
@@ -80,7 +81,7 @@ export const SOURCES = {
   // lib/articles/types.ts:337 CHECK_DIMENSIONS, the Board's reject axes for
   // articles (lib/board/sources/articles.ts:569). A reject may name all seven.
   article: { modes: ["packet-review"], reasons: ["structure", "storytelling", "depth", "figures", "voice", "medium-fidelity", "truth"], maxReasons: 7, noteMax: NOTE_LONG },
-  // lib/sound/types.ts:48 DEFECTS - eleven codes, which is exactly 1-9, 0, -.
+  // lib/sound/types.ts:48 DEFECTS - eleven codes; keys 2-4 name the first three, the chips all eleven.
   // takes.ts reasonsOf de-duplicated and capped nothing, so all eleven may stand.
   audio: {
     modes: ["matrix-cull"],
@@ -249,7 +250,7 @@ export type ReasonVocabulary = {
 };
 
 /** The reasons a row of `group` offers, in key order: its group's order first, then the rest of the list. */
-export function reasonsOf(v: ReasonVocabulary, group: string | undefined): readonly string[] {
+export function reasonsOf(v: Pick<ReasonVocabulary, "list" | "by">, group: string | undefined): readonly string[] {
   const first = group === undefined ? undefined : v.by?.[group];
   return first === undefined ? v.list : [...first, ...v.list.filter((r) => !first.includes(r))];
 }
@@ -260,18 +261,23 @@ export function reasonVocabulary(source: PacketSource): ReasonVocabulary {
   return { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax, meaning: REASON_MEANING[source], ...(spec.reasonOnReject === true ? { required: true as const } : {}), ...(spec.reasonsBy === undefined ? {} : { by: spec.reasonsBy }) };
 }
 
-/** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */
-export const REASON_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"] as const;
-export type ReasonKey = (typeof REASON_KEYS)[number];
+/**
+ * The keys that reject WITH a reason (spark scout-storyboards, the operator: "1 keep, 2-4 reject with reason
+ * 1-3 in order, 5 reject without one, the reason clicked"): 2, 3 and 4 name the first three of a row's ordered
+ * list (`reasonsOf`). A source's other reasons are reached by the chips only. Before this the number row bound
+ * the whole list, 1-9, 0, - (plan §8), which no hand could hold.
+ */
+export const REJECT_KEYS = ["2", "3", "4"] as const;
+export type RejectKey = (typeof REJECT_KEYS)[number];
 
 export function sourceSpec(source: PacketSource): SourceSpec {
   return SOURCES[source];
 }
 
-/** The reason a key names for this source, or undefined when the key is past the list. */
-export function reasonForKey(source: PacketSource, key: string): string | undefined {
-  const i = REASON_KEYS.findIndex((k) => k === key);
-  return i < 0 ? undefined : SOURCES[source].reasons[i];
+/** The reason a reject key names on a row of `group`, or undefined when the key is not one or its slot is past the list. */
+export function keyedReason(v: ReasonVocabulary, group: string | undefined, key: string): string | undefined {
+  const i = REJECT_KEYS.findIndex((k) => k === key);
+  return i < 0 ? undefined : reasonsOf(v, group)[i];
 }
 
 export type VerdictInput = {

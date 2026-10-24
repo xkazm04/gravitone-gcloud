@@ -7,7 +7,7 @@
 // stills are: spark scout-idea-artboards). A picture, clip or take run opens across the whole
 // screen (RunModal): its brief, its variants at most three to a row, a verdict by click under each
 // and on the whole run, a clip with its own bar. Every act is also a key (bindings.ts `board.cull`):
-// K / X / a reason on a run in the mosaic judge it whole, inside a run each variant; ← → ↑ ↓ walk;
+// 1 / 2-4 / 5 on a run judge it whole, ⇧1 / ⇧2 inside a run each variant; ← → ↑ ↓ walk;
 // Z or a click opens; ⌫ undoes; ⏎ commits - refusing while anything is open, and taking the cursor
 // (and the tab) to the first open variant. Where the source keeps a note, E writes one on the decision
 // under the cursor: in place on a words row, in the opened run's head on a picture run.
@@ -65,7 +65,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
   }, [tab]);
 
   const reasons = view.reasons;
-  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasonless={d.reasonless} reasons={reasons} audio={view.lane === "audio"} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
+  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasonless={d.reasonless} reasons={reasons} {...(d.run === undefined ? {} : { group: d.run.group })} audio={view.lane === "audio"} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
   const note = d.note;
   const noteField =
     note === undefined ? undefined : <NoteField key={note.cell} label={d.wordsOf(d.cells[note.cell]?.id ?? "").label} value={note.draft} max={note.max} onChange={note.setDraft} onSave={note.save} />;
@@ -99,7 +99,8 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             {...(run.words?.ref !== undefined ? { reference: run.words.ref } : {})}
             {...(run.words?.checks !== undefined ? { checks: run.words.checks } : {})}
             runVerdict={runVerdictOf(run, d.cells, verdicts)}
-            reasons={reasons}
+            reasons={d.reasonsFor(run)}
+            ask={d.ask}
             onRunVerdict={(v) => d.decideCells(run.members, v, run.words?.label ?? run.row)}
             {...(note !== undefined && run.members.includes(note.cell) ? { note: noteField } : curNote !== undefined ? { note: <NoteText text={curNote} /> } : {})}
             onClose={() => {
@@ -109,7 +110,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             live={keys}
             foot={foot}
           >
-            <RunView run={run} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} onFocus={d.setCur} onVerdict={(i, v) => d.decideItem(i, v)} />
+            <RunView run={run} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={d.reasonsFor(run)} onFocus={d.setCur} onVerdict={(i, v) => d.decideItem(i, v)} />
           </RunModal>
         ) : undefined
       }
@@ -131,6 +132,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
               cur={d.cur}
               nudged={d.nudged}
               reasons={reasons}
+              {...(d.ask && run !== undefined ? { asked: run.members[0] ?? -1 } : {})}
               onFocus={d.setCur}
               onVerdict={(i, v) => d.decideItem(i, v)}
               {...(note === undefined ? {} : { noting: { cell: note.cell, field: noteField } })}

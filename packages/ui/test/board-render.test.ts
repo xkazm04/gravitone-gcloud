@@ -89,12 +89,12 @@ describe("the matrix cull", () => {
     expect(html).toMatch(/aria-pressed="true"[^>]*>(<span[^>]*><\/span>)?keep/);
   });
 
-  test("the key legend draws only the reason keys this source binds: four for a forge plate, none for Suno", () => {
+  test("the key legend draws only the reason keys that name a reason: 2-4 for a forge plate, none for Suno", () => {
     // A reason cap is wrapped in its tip (Tip): unwrap it, and drop the tip's words, to read the row.
     const bare = (html: string) => html.replace(/<span[^>]*role="tooltip"[^>]*>.*?<\/span>/g, "").replace(/<span class="[^"]*"[^>]*>(<kbd[^>]*>[^<]*<\/kbd>)<\/span>/g, "$1");
     const keysOf = (html: string) => [...(/<span[^>]*>((?:<kbd[^>]*>[^<]*<\/kbd>)+) reason<\/span>/.exec(bare(html))?.[1] ?? "").matchAll(/<kbd[^>]*>([^<]*)<\/kbd>/g)].map((m) => m[1]);
     const forge = packet({ source: "forge", items: [img("a", "r")] }, { items: {}, rows: [] });
-    expect(keysOf(renderToStaticMarkup(h(MatrixCull, { packet: forge, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false })))).toEqual(["1", "2", "3", "4"]);
+    expect(keysOf(renderToStaticMarkup(h(MatrixCull, { packet: forge, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false })))).toEqual(["2", "3", "4"]);
     const suno = packet({ source: "suno", lane: "audio", items: [img("a", "r")] }, { items: {}, rows: [] });
     expect(renderToStaticMarkup(h(MatrixCull, { packet: suno, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false }))).not.toContain(" reason</span>");
   });

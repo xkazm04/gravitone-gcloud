@@ -3,6 +3,7 @@
 // with no picture to open. Filed under their categories (seeds, notes, sources). A row is the run's one
 // cell; the desk's cursor rides it like any tile. A decision's note shows under its row, and the row
 // being noted (E) holds the note's field there (spark scout-decision-graph).
+import { reasonsOf } from "@gt/domain/source";
 import type { ReactNode } from "react";
 
 import type { BoardVerdict } from "../../board/boardGate.ts";
@@ -25,11 +26,13 @@ export type IdeaListProps = {
   readonly reasons: VerdictReasons;
   readonly onFocus: (cell: number) => void;
   readonly onVerdict: (cell: number, v: BoardVerdict | null) => void;
+  /** The row 5 rejected without a reason (a cell index): its chips are asked for. */
+  readonly asked?: number;
   /** The row being noted, and its field (./NoteField.tsx). */
   readonly noting?: { readonly cell: number; readonly field: ReactNode };
 };
 
-export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, reasons, onFocus, onVerdict, noting }: IdeaListProps) {
+export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, reasons, asked, onFocus, onVerdict, noting }: IdeaListProps) {
   const required = reasons.required === true;
   return (
     <div className={s.ideas} role="grid" aria-label="ideas">
@@ -60,7 +63,7 @@ export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, re
                     {w.meta !== undefined && <span className={s.ideaMeta}>{w.meta}</span>}
                     {noting?.cell === i ? noting.field : v?.note !== undefined && <NoteText text={v.note} />}
                   </div>
-                  <VerdictPick label={w.label} verdict={v} reasons={reasons} onChange={(nv) => onVerdict(i, nv)} size="sm" />
+                  <VerdictPick label={w.label} verdict={v} reasons={{ ...reasons, list: reasonsOf(reasons, run.group) }} onChange={(nv) => onVerdict(i, nv)} size="sm" keyed ask={asked === i} />
                 </article>
               );
             }),

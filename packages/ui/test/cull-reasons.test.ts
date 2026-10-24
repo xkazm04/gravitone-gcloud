@@ -1,22 +1,23 @@
 // EVERY X NEEDS A REASON, AND A NOTE ON THE CULL (spark scout-decision-graph WP-S1). Where a source's vocabulary
 // says `required` (the seeds), a reasonless reject is not done: the commit gate counts it beside the undecided,
-// flashes and jumps to it and says `<n> need a reason`; X then a reason key sets it and moves on. E opens a
+// flashes and jumps to it and says `<n> need a reason`; 5 then a chip (or a reject key) sets it and moves on. E opens a
 // one-line note field on the decision under the cursor (its ⏎ and Esc are the keymap's field rows, Escape still
 // closing the top layer first); the saved note rides the verdict and shows under its row, in its words.
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { reasonVocabulary } from "@gt/domain/source";
+import { reasonsOf, reasonVocabulary } from "@gt/domain/source";
 
 import type { BoardVerdict } from "../src/board/boardGate.ts";
-import { keepingNote, noteAct, notDoneOf, notDoneWords, reasonAct, stillOpen, type Cell } from "../src/board/cull.ts";
+import { chipThen, keepingNote, nextOpen, noteAct, notDoneOf, notDoneWords, reasonAct, runKeyAct, stillOpen, type Cell, type KeyAct } from "../src/board/cull.ts";
 import { categoryOf, tabOf } from "../src/board/runs.ts";
 import { CullFoot } from "../src/components/cull/CullFoot.tsx";
 import { IdeaList } from "../src/components/cull/IdeaList.tsx";
 import { NoteField } from "../src/components/cull/NoteField.tsx";
 import { KEYMAP } from "../src/keymap/bindings.ts";
-import { keyTable } from "../src/keymap/keymap.ts";
+import { chordsOf } from "../src/keymap/chord.ts";
+import { keyTable, resolve } from "../src/keymap/keymap.ts";
 import { route, type Decision, type KeyInput } from "../src/keymap/route.ts";
 import { NO_TARGET, type TargetInfo } from "../src/keymap/target.ts";
 import { EMPTY_STACK, push, type LayerEntry } from "../src/layers/stack.ts";
@@ -26,6 +27,42 @@ const cells: Cell[] = ["sd-001", "sd-002", "sd-003", "sd-004"].map((id) => ({ id
 const keep: BoardVerdict = { verdict: "keep", reasons: [] };
 const reject = (...reasons: string[]): BoardVerdict => ({ verdict: "reject", reasons });
 const noop = () => undefined;
+
+/** A key pressed on a cull desk, through the real keymap, to what it does to the run under the cursor. */
+function press(key: string, list: readonly string[], max: number, current: BoardVerdict | undefined, required = false): KeyAct | null {
+  const m = resolve(KEYMAP, { chords: chordsOf({ key }), repeat: false, target: NO_TARGET }, "board.cull", new Set());
+  return m === null ? null : runKeyAct(m.binding.verb, m.cap, list, max, current, required);
+}
+
+describe("the number row decides a run on every cull desk (spark scout-storyboards)", () => {
+  const FORGE = reasonVocabulary("forge");
+  test("1 keeps and moves on; 2-4 reject with reasons #1-3 and move on; 5 rejects bare and stays for a chip", () => {
+    expect(press("1", FORGE.list, FORGE.max, undefined)).toEqual({ kind: "mark", verdict: keep, then: "advance" });
+    expect(["2", "3", "4"].map((k) => press(k, FORGE.list, FORGE.max, undefined))).toEqual(["style", "subject", "text"].map((r) => ({ kind: "mark", verdict: reject(r), then: "advance" })));
+    expect(press("5", FORGE.list, FORGE.max, undefined)).toEqual({ kind: "mark", verdict: reject(), then: "ask" });
+  });
+
+  test("K and X, and the old reason keys past 4, do nothing", () => {
+    for (const k of ["k", "K", "x", "X", "6", "9", "0", "-"]) expect(press(k, FORGE.list, FORGE.max, undefined), k).toBeNull();
+  });
+
+  test("a scout run's keys 2-4 follow its group's order", () => {
+    const SCOUT = reasonVocabulary("scout");
+    const keyed = (group: string) => ["2", "3", "4"].map((k) => {
+      const act = press(k, reasonsOf(SCOUT, group), SCOUT.max, undefined);
+      return act?.kind === "mark" ? act.verdict.reasons[0] : act?.kind;
+    });
+    expect(keyed("3d")).toEqual(["topology", "texture", "rig"]);
+    expect(keyed("ideas")).toEqual(["generic", "use case", "subject"]);
+    expect(keyed("storyboards")).toEqual(["story", "generic", "use case"]);
+  });
+
+  test("a source with no reasons: 2-4 are a plain reject that moves on, 5 a plain reject that stays", () => {
+    const SUNO = reasonVocabulary("suno");
+    for (const k of ["2", "3", "4"]) expect(press(k, SUNO.list, SUNO.max, undefined), k).toEqual({ kind: "mark", verdict: reject(), then: "advance" });
+    expect(press("5", SUNO.list, SUNO.max, undefined)).toEqual({ kind: "mark", verdict: reject(), then: "advance" });
+  });
+});
 
 describe("the commit gate on a source whose reject needs a reason", () => {
   test("the seeds' vocabulary requires it; the scout's does not", () => {
@@ -44,13 +81,30 @@ describe("the commit gate on a source whose reject needs a reason", () => {
     expect([stillOpen(reject(), true), stillOpen(reject(), false), stillOpen(reject("format"), true), stillOpen(undefined, false)]).toEqual([true, false, false, true]);
   });
 
-  test("X then a reason key: the key sets the reason AND moves on; on a reasoned reject it toggles and stays", () => {
+  test("5 then a reject key: the key sets the reason AND moves on; on a reasoned reject it toggles and stays", () => {
     const list = SEEDS.list;
-    expect(reasonAct(list, SEEDS.max, "1", reject(), true)).toEqual({ kind: "mark", verdict: reject("generic"), advance: true });
-    expect(reasonAct(list, SEEDS.max, "2", { ...reject(), note: "kept" }, true)).toEqual({ kind: "mark", verdict: { ...reject("not for us"), note: "kept" }, advance: true });
-    expect(reasonAct(list, SEEDS.max, "3", reject("generic"), true)).toEqual({ kind: "mark", verdict: reject("generic", "audience"), advance: false });
-    expect(reasonAct(list, SEEDS.max, "1", reject(), false)).toEqual({ kind: "mark", verdict: reject("generic"), advance: false });
-    expect(reasonAct(list, SEEDS.max, "6", reject(), true)).toEqual({ kind: "refuse", why: "key 6 names no reason here" });
+    expect(reasonAct(list, SEEDS.max, "2", reject(), true)).toEqual({ kind: "mark", verdict: reject("generic"), then: "advance" });
+    expect(reasonAct(list, SEEDS.max, "3", { ...reject(), note: "kept" }, true)).toEqual({ kind: "mark", verdict: { ...reject("not for us"), note: "kept" }, then: "advance" });
+    expect(reasonAct(list, SEEDS.max, "4", reject("generic"), true)).toEqual({ kind: "mark", verdict: reject("generic", "audience"), then: "stay" });
+    expect(reasonAct(list, SEEDS.max, "2", reject(), false)).toEqual({ kind: "mark", verdict: reject("generic"), then: "advance" });
+    expect(reasonAct(list, SEEDS.max, "6", reject(), true)).toEqual({ kind: "refuse", why: "key 6 names no reason" });
+  });
+
+  test("5 then a chip on a seeds desk: the click sets the reason and moves on to the next open run", () => {
+    // The press: 5 rejects with no reason and asks for the chips, staying on the row.
+    expect(press("5", SEEDS.list, SEEDS.max, undefined, true)).toEqual({ kind: "mark", verdict: reject(), then: "ask" });
+    // The click on the asked row (VerdictPick's toggle) finishes it; anywhere else, or on a source that
+    // asks nothing, a chip only sets the reason.
+    expect(chipThen(true, true, reject("audience"))).toBe("advance");
+    expect(chipThen(true, true, reject())).toBe("stay");
+    expect(chipThen(true, false, reject("audience"))).toBe("stay");
+    expect(chipThen(false, true, reject("audience"))).toBe("stay");
+    // Next OPEN run: sd-002 is kept already, so the click on sd-001 lands on sd-003.
+    const runs = cells.map((_, i) => ({ members: [i] }));
+    expect(nextOpen([0, 1, 2, 3], 0, runs, cells, { "sd-001": reject("generic"), "sd-002": keep }, true)).toBe(2);
+    expect(nextOpen([0, 1, 2, 3], 2, runs, cells, { "sd-004": keep }, true)).toBe(3);
+    // Nothing open after it: the next run, clamped to the last.
+    expect(nextOpen([0, 1, 2, 3], 3, runs, cells, {}, true)).toBe(3);
   });
 
   test("the bar's commit names both what is undecided and what needs a reason", () => {

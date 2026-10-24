@@ -67,7 +67,7 @@ describe("Escape closes one thing", () => {
 describe("the active mode", () => {
   it("is the top claiming layer's mode: the sheet's desk, not the Floor beneath", () => {
     const s = stackOf(entry("sheet", "sheet", { mode: "board.cull" }));
-    expect(verb(decide(key("k"), s, "floor"))).toBe("keep");
+    expect(verb(decide(key("1"), s, "floor"))).toBe("keep");
     expect(verb(decide(key("c"), s, "floor"))).toBe("none");
   });
   it("a claiming layer with no mode (a confirm) blocks the page's rows", () => {
@@ -76,7 +76,7 @@ describe("the active mode", () => {
   });
   it("the zoom does not claim keys: the cull still decides through it", () => {
     const s = stackOf(entry("sheet", "sheet", { mode: "board.cull" }), entry("zoom", "zoom"));
-    expect(verb(decide(key("x"), s, "floor"))).toBe("reject");
+    expect(verb(decide(key("5"), s, "floor"))).toBe("reject");
   });
   it("a /kit specimen that does not claim keys leaves the page live", () => {
     const s = stackOf(entry("spec", "dialog", { claimsKeys: () => false }));
@@ -86,7 +86,7 @@ describe("the active mode", () => {
     const s = closing(stackOf(entry("sheet", "sheet", { mode: "board.cull" })), "sheet").stack;
     const scopes = [{ mode: "floor" }, { mode: "board.cull" }];
     expect(pageMode(scopes, s)).toBe("floor");
-    expect(verb(decide(key("k"), s, pageMode(scopes, s)))).toBe("none");
+    expect(verb(decide(key("5"), s, pageMode(scopes, s)))).toBe("none");
   });
 });
 
@@ -155,7 +155,7 @@ describe("the tooltip kind (a hover or focus disclosure)", () => {
   });
   it("does not claim the keyboard: the page's rows, and a layer's mode beneath, keep firing", () => {
     expect(verb(decide(key("c"), stackOf(tip()), "floor"))).toBe("calendar");
-    expect(verb(decide(key("k"), stackOf(entry("sheet", "sheet", { mode: "board.cull" }), tip()), "floor"))).toBe("keep");
+    expect(verb(decide(key("1"), stackOf(entry("sheet", "sheet", { mode: "board.cull" }), tip()), "floor"))).toBe("keep");
   });
   it("Escape in a named field still reaches the tip first: the dismissal is not an inner back-out", () => {
     const s = stackOf(entry("sheet", "sheet", { mode: "board.review" }), tip());

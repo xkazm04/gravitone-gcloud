@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { checkEditPlan, EDIT_DIRECTIVES, pickVerdicts, PICK_OUTCOMES, type EditPlan } from "../src/board.ts";
 import { editPlanSchema } from "../src/decision.ts";
-import { checkVerdict, PACKET_SOURCES, reasonForKey, REASON_KEYS, REASON_MEANING, reasonsOf, reasonVocabulary, SOURCES, type PacketSource, type SourceSpec } from "../src/source.ts";
+import { checkVerdict, keyedReason, PACKET_SOURCES, REASON_MEANING, REJECT_KEYS, reasonsOf, reasonVocabulary, SOURCES, type PacketSource, type SourceSpec } from "../src/source.ts";
 
 // Reasons belong to the source (Phase 3 decision 4). These pin each list to the
 // v1 vocabulary it was taken from, the key binding, and the verdict door.
@@ -22,16 +22,26 @@ describe("packet sources", () => {
     expect(SOURCES.forge.reasons).toEqual(["style", "subject", "text", "craft"]);
   });
 
-  it("binds keys 1-9, 0, - to a source's list in order; eleven audio defects use all eleven keys", () => {
-    expect(REASON_KEYS).toHaveLength(11);
-    expect(reasonForKey("audio", "1")).toBe("smeared-transients");
-    expect(reasonForKey("audio", "0")).toBe("off-brief");
-    expect(reasonForKey("audio", "-")).toBe("wrong-event");
-    expect(reasonForKey("forge", "4")).toBe("craft");
-    expect(reasonForKey("forge", "5")).toBeUndefined();
-    expect(reasonForKey("suno", "1")).toBeUndefined();
-    // scout outgrew the eleven keys with `story` (spark scout-storyboards): its rows key off reasonsBy instead.
-    for (const s of PACKET_SOURCES) if (!("reasonsBy" in SOURCES[s])) expect(SOURCES[s].reasons.length, s).toBeLessThanOrEqual(REASON_KEYS.length);
+  it("binds keys 2-4 to the first three of a row's order; past the list, or on another key, nothing", () => {
+    expect(REJECT_KEYS).toEqual(["2", "3", "4"]);
+    const audio = reasonVocabulary("audio");
+    expect(keyedReason(audio, undefined, "2")).toBe("smeared-transients");
+    expect(keyedReason(audio, undefined, "4")).toBe("section-bleed");
+    // The rest of a long list is the chips', never a key's.
+    for (const k of ["1", "5", "0", "-"]) expect(keyedReason(audio, undefined, k), k).toBeUndefined();
+    expect(keyedReason(reasonVocabulary("forge"), undefined, "4")).toBe("text");
+    expect(keyedReason(reasonVocabulary("suno"), undefined, "2")).toBeUndefined();
+    const scout = reasonVocabulary("scout");
+    expect(REJECT_KEYS.map((k) => keyedReason(scout, "3d", k))).toEqual(["topology", "texture", "rig"]);
+    expect(REJECT_KEYS.map((k) => keyedReason(scout, "ideas", k))).toEqual(["generic", "use case", "subject"]);
+    expect(REJECT_KEYS.map((k) => keyedReason(scout, "storyboards", k))).toEqual(["story", "generic", "use case"]);
+    // A group the source names no order for keys off its own list.
+    expect(REJECT_KEYS.map((k) => keyedReason(scout, "nobody", k))).toEqual(["style", "subject", "craft"]);
+    // Every cull source with reasons fills the three keys, so 2-4 never fall back to a bare reject where a reason exists.
+    for (const s of PACKET_SOURCES) {
+      const spec: SourceSpec = SOURCES[s];
+      if (spec.modes.includes("matrix-cull") && spec.reasons.length > 0) expect(spec.reasons.length, s).toBeGreaterThanOrEqual(REJECT_KEYS.length);
+    }
   });
 
   it("orders a row group's reasons from the source's own list, three at least, no repeats", () => {

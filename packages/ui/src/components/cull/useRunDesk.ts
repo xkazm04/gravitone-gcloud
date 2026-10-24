@@ -7,29 +7,35 @@
 //   run   one run's variants, large. ← → walk its variants, ↑ ↓ the neighbouring run (still
 //         open); Z or Esc back to the grid.
 //
-// TWO TRIAGE LEVELS (operator, 2026-10-23): K / X / U / a reason judge the WHOLE run, in both
-// layers, and move to the next run. An item differs from its run by click, or ⇧K / ⇧X on the
-// variant under the cursor of an opened run - the subject may not fit. The run's verdict is read
+// TWO TRIAGE LEVELS (operator, 2026-10-23): the verdict keys judge the WHOLE run, in both layers, and
+// move to the next run. An item differs from its run by click, or ⇧1 / ⇧2 on the variant under the
+// cursor of an opened run - the subject may not fit.
+//
+// THE NUMBER ROW (spark scout-storyboards, the operator: "1 keep, 2-4 reject with reason 1-3 in order,
+// 5 reject without reason, the reason will be clicked"): 1 keeps, 2 / 3 / 4 reject with the first three
+// of the run's GROUP order (@gt/domain/source `reasonsOf`: a 3D run's keys name a mesh's defects, an
+// idea's an idea's), 5 rejects bare and STAYS with the run's reason chips drawn and focused. The chip
+// clicked sets the reason; where the source requires one, that click moves on to the next open run. The run's verdict is read
 // off its items (runs.ts `runState`, `itemAct`): keeping an item keeps the run (its open items with
 // it), and a run whose every item is rejected is rejected.
 //
 // ⌫ and ⏎ are the same in both: the gate's undo, and the commit that refuses while anything is
 // open - jumping to the first open variant's run, opened, and flashing what is open.
 //
-// EVERY X NEEDS A REASON where the source says so (spark scout-decision-graph, the vocabulary's
+// EVERY REJECT NEEDS A REASON where the source says so (spark scout-decision-graph, the vocabulary's
 // `required`): a reasonless reject is OPEN to the commit as an undecided tile is (flashed, jumped to,
-// announced `<n> need a reason`); X rejects and STAYS, the row's reason chips open under it, and the
-// reason key that follows sets it and moves on.
+// announced `<n> need a reason`).
 //
 // A NOTE (E, a source with `noteMax`): the one-line field opens on the tile under the cursor - a
 // words-only row's one cell, the run's first variant on the mosaic (the run is opened to hold the
 // field), the variant itself inside an opened run. ⏎ saves it as that decision's note, Esc leaves.
-// A note rides its verdict: K, X and a reason key carry the note the tile holds; U clears both.
+// A note rides its verdict: every verdict key carries the note the tile holds; U clears both.
+import { reasonsOf } from "@gt/domain/source";
 import { useEffect, useState } from "react";
 
 import type { BoardPacket } from "../../board/port.ts";
 import type { BoardVerdict } from "../../board/boardGate.ts";
-import { clamp, cullCells, keepingNote, noteAct, notDoneOf, notDoneWords, reasonAct, undecidedOf } from "../../board/cull.ts";
+import { chipThen, clamp, cullCells, keepingNote, nextOpen, noteAct, notDoneOf, notDoneWords, runKeyAct, undecidedOf } from "../../board/cull.ts";
 import { itemAct, runAt, runsOf, runVerdictOf, type Run } from "../../board/runs.ts";
 import { useKeys } from "../../keymap/dispatch.ts";
 
@@ -64,9 +70,16 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
   /** The tile whose note is being written, and its draft. */
   const [noting, setNoting] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
+  /** The run 5 left rejected without a reason, its chips asked for. */
+  const [asking, setAsking] = useState<number | null>(null);
   const runIx = runAt(runs, cur);
   const run = runs[runIx];
   const order = arrange?.(runs, runIx) ?? runs.map((_, i) => i);
+  /** A run's reasons in its group's order: the chips draw it, keys 2-4 name its first three. */
+  const reasonsFor = (r: Run | undefined) => ({ ...view.reasons, list: reasonsOf(view.reasons, r?.group) });
+  const runVerdict = run === undefined ? undefined : runVerdictOf(run, cells, verdicts);
+  /** The chips are asked for while the run 5 rejected still names no reason. */
+  const ask = asking === runIx && runVerdict?.verdict === "reject" && runVerdict.reasons.length === 0;
 
   useEffect(() => {
     if (nudged.size === 0) return;
@@ -155,6 +168,24 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
     whole(v);
     toPos(posOf(runIx) + 1);
   };
+  /** 1, 2-4 and 5 on the run (cull.ts `runKeyAct`), and where the cursor goes after. */
+  const verdictKey = (verb: string, cap: string) => {
+    if (run === undefined) return;
+    setAsking(null);
+    const act = runKeyAct(verb, cap, reasonsFor(run).list, view.reasons.max, runVerdict, required);
+    if (act === null) return;
+    if (act.kind === "refuse") return announce(act.why);
+    whole(act.verdict);
+    if (act.then === "advance") return toPos(posOf(runIx) + 1);
+    if (act.then !== "ask") return;
+    setAsking(runIx);
+    // A picture run's chips are in its opened head; a words row holds its own.
+    if (wordy?.(run) !== true) setOpen(true);
+  };
+  /** A chip's click on the run 5 asked about: where a reason is required, the reason given moves on. */
+  const answered = (runOf: number, v: BoardVerdict | null) => {
+    if (chipThen(required, asking === runOf, v) === "advance") toPos(nextOpen(order, posOf(runOf), runs, cells, verdicts, required));
+  };
   /** One item's verdict, with what it moves in its run (`itemAct`). */
   const item = (i: number, v: BoardVerdict | null) => {
     const r = runs[runAt(runs, i)];
@@ -166,17 +197,10 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
   useKeys(
     "board.cull",
     {
-      keep: () => judge({ verdict: "keep", reasons: [] }),
-      // Where a reject needs a reason, X stays on the row with its reasons open; the reason key moves on.
-      reject: () => (required ? whole({ verdict: "reject", reasons: [] }) : judge({ verdict: "reject", reasons: [] })),
+      keep: ({ cap }) => verdictKey("keep", cap),
+      reason: ({ cap }) => verdictKey("reason", cap),
+      reject: ({ cap }) => verdictKey("reject", cap),
       undecide: () => run !== undefined && mark(run.members, null, run.words?.label ?? run.row),
-      reason: ({ cap }) => {
-        if (run === undefined) return;
-        const act = reasonAct(view.reasons.list, view.reasons.max, cap, runVerdictOf(run, cells, verdicts), required);
-        if (act.kind === "refuse") return announce(act.why);
-        whole(act.verdict);
-        if (act.advance) toPos(posOf(runIx) + 1);
-      },
       prev: () => (open ? setCur(clamp(cells, cur - 1)) : toPos(posOf(runIx) - 1)),
       next: () => (open ? setCur(clamp(cells, cur + 1)) : toPos(posOf(runIx) + 1)),
       "row-up": () => toPos(posOf(runIx) - (open ? 1 : columns())),
@@ -212,16 +236,21 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
   /** A verdict by click on these cells: the same act the keys make, the cursor on the first. */
   const decideCells = (idx: readonly number[], v: BoardVerdict | null, what?: string) => {
     const first = idx[0];
-    if (first !== undefined) setCur(first);
+    if (first === undefined) return;
+    setCur(first);
     mark(idx, v, what);
+    answered(runAt(runs, first), v);
   };
-  /** An item's verdict by click: it moves what `itemAct` says, the cursor on the item. */
+  /** An item's verdict by click: it moves what `itemAct` says, the cursor on the item. A words row's one
+   *  item is its run, so its chip answers what 5 asked; one variant of a picture run does not. */
   const decideItem = (i: number, v: BoardVerdict | null) => {
     setCur(i);
     item(i, v);
+    const at = runAt(runs, i);
+    if (runs[at]?.members.length === 1) answered(at, v);
   };
   /** The note being written, while it is: the tile, its draft and the field's acts. */
   const note = noting === null ? undefined : { cell: noting, draft, setDraft, save: saveNote, max: noteMax };
   const cancelNote = () => setNoting(null);
-  return { cells, runs, run, runIx, cur, setCur, open, setOpen, nudged, refusals, commit, wordsOf, openRun, decideCells, decideItem, note, cancelNote, reasonless: notDoneOf(cells, verdicts, required).reasonless.length };
+  return { cells, runs, run, runIx, cur, setCur, open, setOpen, nudged, refusals, commit, wordsOf, openRun, decideCells, decideItem, note, cancelNote, reasonless: notDoneOf(cells, verdicts, required).reasonless.length, reasonsFor, ask };
 }

@@ -51,16 +51,20 @@ const board: Binding[] = [
   { mode: "board", keys: ["[", "]"], verb: "packet", does: "packet" },
   { mode: "board", keys: ["⏎"], verb: "open-next", does: "next packet", when: "!desk" },
 
-  { mode: "board.cull", keys: ["K"], verb: "keep", does: "keep" },
-  { mode: "board.cull", keys: ["X"], verb: "reject", does: "reject" },
+  // THE NUMBER ROW DECIDES (spark scout-storyboards, the operator: "simplify so I can use only numerics"): 1 keeps,
+  // 2-4 reject with reason 1-3 of the run's group order (@gt/domain/source REJECT_KEYS, `reasonsOf`), 5 rejects
+  // with none and stays for a chip to be clicked. K and X are unbound; a source's other reasons are the chips'.
+  { mode: "board.cull", keys: ["1"], verb: "keep", does: "keep" },
+  { mode: "board.cull", keys: ["2", "3", "4"], verb: "reason", does: "reason" },
+  { mode: "board.cull", keys: ["5"], verb: "reject", does: "reject" },
   { mode: "board.cull", keys: ["U"], verb: "undecide", does: "undecide" },
-  { mode: "board.cull", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"], verb: "reason", does: "reason" },
   { mode: "board.cull", keys: ["←"], alias: ["J"], verb: "prev", does: "move", repeat: true },
   { mode: "board.cull", keys: ["→"], alias: ["L"], verb: "next", does: "move", repeat: true },
   { mode: "board.cull", keys: [], alias: ["↑"], verb: "row-up", does: "move", repeat: true },
   { mode: "board.cull", keys: [], alias: ["↓"], verb: "row-down", does: "move", repeat: true },
-  { mode: "board.cull", keys: ["⇧K"], verb: "keep-item", does: "item" },
-  { mode: "board.cull", keys: ["⇧X"], verb: "reject-item", does: "item" },
+  // ⇧ on a digit is matched by its position too (chord.ts: Shift+1 reports "!" on a US board, `code` Digit1).
+  { mode: "board.cull", keys: ["⇧1"], verb: "keep-item", does: "item" },
+  { mode: "board.cull", keys: ["⇧2"], verb: "reject-item", does: "item" },
   { mode: "board.cull", keys: ["Z"], verb: "zoom", does: "zoom" },
   // A note on the decision under the cursor (spark scout-decision-graph), for a source that keeps one:
   // E opens the row's one-line field, ⏎ in it saves the note with the verdict, Esc leaves it unsaved.

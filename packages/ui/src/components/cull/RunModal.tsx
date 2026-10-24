@@ -32,7 +32,10 @@ export type RunModalProps = {
   readonly reference?: string;
   /** The whole run's verdict when every variant agrees, else undefined. */
   readonly runVerdict: BoardVerdict | undefined;
+  /** The run's reasons in its group's order: the whole-run chips are keyed (2-4 judge the whole run). */
   readonly reasons: VerdictReasons;
+  /** 5 rejected the run without a reason: its chips are asked for. */
+  readonly ask?: boolean;
   readonly onRunVerdict: (v: BoardVerdict | null) => void;
   /** The note on the variant under the cursor: its words, or its field while it is being written. */
   readonly note?: ReactNode;
@@ -43,7 +46,7 @@ export type RunModalProps = {
   readonly children: ReactNode;
 };
 
-export function RunModal({ category, label, position, use, aim, prompt, checks, reference, runVerdict, reasons, onRunVerdict, note, onClose, live = true, foot, children }: RunModalProps) {
+export function RunModal({ category, label, position, use, aim, prompt, checks, reference, runVerdict, reasons, ask = false, onRunVerdict, note, onClose, live = true, foot, children }: RunModalProps) {
   const panel = useRef<HTMLDivElement | null>(null);
   useLayer(live, { kind: "zoom", panelRef: panel, onClose });
   return (
@@ -72,7 +75,7 @@ export function RunModal({ category, label, position, use, aim, prompt, checks, 
             )}
           </dl>
           <div className={s.headActs}>
-            <VerdictPick label="the whole run" verdict={runVerdict} reasons={reasons} onChange={onRunVerdict} size="sm" />
+            <VerdictPick label="the whole run" verdict={runVerdict} reasons={reasons} onChange={onRunVerdict} size="sm" keyed ask={ask} />
             <button type="button" className={s.close} onClick={onClose} aria-label="back to the runs">
               <Keycap mode="board.cull" verb="zoom" />
             </button>

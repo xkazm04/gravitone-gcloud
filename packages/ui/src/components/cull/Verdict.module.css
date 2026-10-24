@@ -14,6 +14,9 @@
 .reasons{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
 .reason{padding:var(--sp-1) var(--sp-3);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:500 var(--fs-micro)/1.2 var(--mono);color:var(--muted);background:var(--ink-2)}
 .reason[aria-pressed="true"]{border-color:var(--rose);color:var(--text);background:color-mix(in srgb,var(--rose) 18%,var(--ink-2))}
+/* a keyed chip's cap (2-4), and the chips 5 asks a reason of: ringed until one is picked */
+.reason:has(.reasonCap){display:inline-flex;align-items:center;gap:var(--sp-2);padding-left:var(--sp-1)}
+.asked{padding:var(--sp-1);border-radius:var(--r-chip);box-shadow:0 0 0 var(--ring-halo) var(--rose)}
 .sm .opt{padding:var(--sp-1) var(--sp-3);font-size:var(--fs-micro)}
 
 /* the variant, large */

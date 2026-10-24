@@ -65,9 +65,9 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
           <VariantCard index={2} words={{ label: "clip · replica-1", meta: "5s · local · free" }} media={{ url: "/clips/presets/blueprint.webm", mime: "video/webm" }} verdict={undefined} current={false} nudged={false} reasons={STILL} onFocus={noop} onVerdict={noop} />
         </div>
       </Spec>
-      <Spec names={["VerdictPick", "Tip"]} source="a reason's meaning, on hover and focus (2026-10-23)" wide>
+      <Spec names={["VerdictPick", "Tip"]} source="a reason's meaning, on hover and focus (2026-10-23) · keys 2-4 on the first three (2026-10-24)" wide>
         <div className={b.pick}>
-          <VerdictPick label="replica 2" verdict={{ verdict: "reject", reasons: ["craft"] }} reasons={SCOUT} onChange={noop} seededTip="use case" />
+          <VerdictPick label="replica 2" verdict={{ verdict: "reject", reasons: ["craft"] }} reasons={SCOUT} onChange={noop} seededTip="use case" keyed />
         </div>
       </Spec>
       <Spec names={["IdeaList"]} source="words-only runs, decided in place (2026-10-22)" wide>
