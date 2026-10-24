@@ -2,7 +2,7 @@ import "server-only";
 
 import path from "node:path";
 
-import type { Triage } from "@gt/domain/audio.triage";
+import { EXPERIMENTAL_CHECKS, type Triage } from "@gt/domain/audio.triage";
 import { triageWords } from "@gt/domain/audio.triage.words";
 import type { BlobRef } from "@gt/domain/blob";
 import type { Decision } from "@gt/domain/decision";
@@ -205,6 +205,51 @@ function words(t: SoundTake, measured: BriefMeasured | undefined, triage: Triage
   };
 }
 
+/* ── runs: a kind, or a kind's takes that share a use and an aim ───────────── */
+//
+// A run is what the cull's zoom opens and what its header names (RunModal: use, aim, checks). A
+// take that states where it would ship and what it was briefed to achieve (SoundTake.use / .aim,
+// 2026-10-24) files into a run with every take of its kind that states the same two - so the
+// listener reads the goal before judging the take against it. A take that states neither files
+// under its kind, exactly as before; the header then honestly reads "use: not stated".
+
+const purposeKey = (t: SoundTake): string => (t.use || t.aim ? `${t.kind}\u0000${t.use ?? ""}\u0000${t.aim ?? ""}` : t.kind);
+
+/** Row ids in first-seen order: the bare kind for an unstated take, `<kind>-<n>` for each purpose. */
+function rowIdsOf(takes: readonly SoundTake[]): ReadonlyMap<string, string> {
+  const ids = new Map<string, string>();
+  const n = { music: 0, sfx: 0 };
+  for (const t of takes) {
+    const k = purposeKey(t);
+    if (ids.has(k)) continue;
+    ids.set(k, k === t.kind ? t.kind : `${t.kind}-${++n[t.kind]}`);
+  }
+  return ids;
+}
+
+const rowOf = (t: SoundTake, ids: ReadonlyMap<string, string>): string => ids.get(purposeKey(t)) ?? t.kind;
+
+/** The runs, with what their takes were for and briefed to do, and the triage checks that judged them. */
+function rowsOf(takes: readonly SoundTake[], ids: ReadonlyMap<string, string>, triage: ReadonlyMap<string, Triage> | undefined): RowWords[] {
+  const out: RowWords[] = [];
+  const seen = new Set<string>();
+  for (const t of takes) {
+    const id = rowOf(t, ids);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const mates = takes.filter((x) => rowOf(x, ids) === id);
+    const checks = [...new Set(mates.flatMap((x) => (triage?.get(x.id)?.findings ?? []).filter((f) => f.verdict !== "skip" && !EXPERIMENTAL_CHECKS.has(f.check)).map((f) => f.check)))];
+    out.push({
+      id,
+      label: id === t.kind ? t.kind : `${t.kind} · ${t.use ?? "use not stated"}`,
+      ...(t.use ? { use: t.use } : {}),
+      ...(t.aim ? { aim: t.aim } : {}),
+      ...(checks.length > 0 ? { checks } : {}),
+    });
+  }
+  return out;
+}
+
 function packet(v1: AudioV1): Result<OpenPlan> {
   const losses: Loss[] = [];
   const judgeable: SoundTake[] = [];
@@ -213,6 +258,7 @@ function packet(v1: AudioV1): Result<OpenPlan> {
     else losses.push({ candidate: t.id, grade: "dropped", reason: t.file === null ? "the take has no file to listen to; it stays unjudged in the Sound lab" : `${t.file.path} is not on disk; the take stays unjudged in the Sound lab` });
   }
   if (judgeable.length === 0) return err("not-found", `no unjudged take with a file is waiting at or before ${new Date(v1.cutoff).toISOString()}`);
+  const rowIds = rowIdsOf(judgeable);
   if (v1.measureError !== undefined) losses.push({ grade: "approximate", reason: `brief vs measured reads the takes' own measures only: ${v1.measureError}` });
   const minted = mintPacket({
     id: packetIdOf("audio", v1.runId),
@@ -223,11 +269,10 @@ function packet(v1: AudioV1): Result<OpenPlan> {
     runId: v1.runId,
     title: `${judgeable.length} take${judgeable.length === 1 ? "" : "s"} to judge`,
     // A lab take is its own job record in v1 (no queue job behind an ElevenLabs render).
-    items: judgeable.map((t) => ({ id: t.id, jobId: t.huntId ?? t.id, media: v1.media.get(t.id), row: t.kind, grades: [] })),
+    items: judgeable.map((t) => ({ id: t.id, jobId: t.huntId ?? t.id, media: v1.media.get(t.id), row: rowOf(t, rowIds), grades: [] })),
   });
   if (!minted.ok) return minted;
-  const kinds = (["music", "sfx"] as const).filter((k) => judgeable.some((t) => t.kind === k));
-  const rows: RowWords[] = kinds.map((k) => ({ id: k, label: k }));
+  const rows = rowsOf(judgeable, rowIds, v1.triage);
   return ok({
     packet: minted.value,
     // The pile is the UNJUDGED takes: v1 holds no verdict on any of them to import.

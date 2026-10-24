@@ -27,7 +27,8 @@ export const USAGE =
   "  list [--kind] [--verdict] [--stage] [--provider] [--origin] [--fixtures]\n" +
   "  generate --kind music|sfx --prompt <p> --duration <s> [--op compose|plan|sfx] [--technique a,b] [--negative n]\n" +
   "           [--genre a,b] [--mood a,b] [--instrument a,b] [--category c] [--loop] [--influence 0..1] [--tempo n] [--key k] [--title t]\n" +
-  "  judge <id> --verdict kept|rejected|unjudged [--score dim=n,...] [--reasons a,b] [--note t] [--stage s|none] [--group g] [--label l]\n" +
+  "           [--use <where it would ship>] [--aim <what it is briefed to achieve>]\n" +
+  "  judge <id> --verdict kept|rejected|unjudged [--score dim=n,...] [--reasons a,b] [--note t] [--stage s|none] [--group g] [--label l] [--use u] [--aim a]\n" +
   "  finalized [--kind] [--group] [--label]      lessons [--kind]      knowledge [--check]";
 
 class Usage extends Error {}
@@ -119,6 +120,8 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
           huntId: null,
           nodeId: null,
           title: flag("title") ?? null,
+          use: flag("use") ?? null,
+          aim: flag("aim") ?? null,
         });
         const take = await generateTake(req);
         if (JSON_OUT) json({ take });
@@ -154,7 +157,9 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
         }
         if (flag("group") !== undefined) body.group = flag("group");
         if (flag("label") !== undefined) body.label = flag("label");
-        if (!Object.keys(body).length) throw new Usage("judge needs at least one of --verdict --score --reasons --note --stage --group --label");
+        if (flag("use") !== undefined) body.use = flag("use");
+        if (flag("aim") !== undefined) body.aim = flag("aim");
+        if (!Object.keys(body).length) throw new Usage("judge needs at least one of --verdict --score --reasons --note --stage --group --label --use --aim");
         const take = await patchTake(id, parseTakePatch(body));
         if (JSON_OUT) json({ take });
         else printTakes([take]);

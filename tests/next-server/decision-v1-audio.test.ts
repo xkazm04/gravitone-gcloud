@@ -229,6 +229,21 @@ describe("brief vs measured on the tile", () => {
     expect(plan.packet.items.map((c) => c.id)).toEqual(["st-tri", "st-clean"]);
   });
 
+  it("files takes that state a use and an aim into one run per purpose, with both on its header; an unstated take files under its kind", async () => {
+    const bed = { use: "ambience bed looped under narration", aim: "a seamless wrap at a steady level - loop-seam, loudness" };
+    const a = take("st-loop-a", { kind: "sfx", op: "sfx", ...bed });
+    const b = take("st-loop-b", { kind: "sfx", op: "sfx", ...bed, createdAt: "2026-10-15T09:01:00.000Z" });
+    const plain = take("st-plain", { createdAt: "2026-10-15T09:02:00.000Z" });
+    seed([a, b, plain]);
+    triaged(a, flagged);
+    const plan = must(audioAdapter.packet(must(await audioAdapter.read({ runId: RUN }))));
+    expect(plan.packet.items.map((c) => [c.id, c.row])).toEqual([["st-loop-a", "sfx-1"], ["st-loop-b", "sfx-1"], ["st-plain", "music"]]);
+    expect(plan.present.rows).toEqual([
+      { id: "sfx-1", label: "sfx · ambience bed looped under narration", use: bed.use, aim: bed.aim, checks: ["clipping", "true-peak-over", "dead-air"] },
+      { id: "music", label: "music" },
+    ]);
+  });
+
   it("a triage against a brief the take no longer carries is not shown", async () => {
     const before = take("st-rebrief", { durationS: 30 });
     triaged(before, flagged);

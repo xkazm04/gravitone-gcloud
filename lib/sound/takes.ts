@@ -328,6 +328,8 @@ export async function createTake(
       stage: stageOf(meta.stage),
       group: str(meta.group, 80),
       label: str(meta.label, 120),
+      use: str(meta.use, 200),
+      aim: str(meta.aim, 600),
       parentId: typeof meta.parentId === "string" && ID_RE.test(meta.parentId) ? meta.parentId : null,
       huntId: str(meta.huntId, 80),
       nodeId: str(meta.nodeId, 80),
@@ -406,6 +408,8 @@ export function parseTakePatch(body: unknown): TakePatch {
   if ("stage" in b) p.stage = stageOf(b.stage);
   if ("group" in b) p.group = b.group === null ? null : str(b.group, 80);
   if ("label" in b) p.label = b.label === null ? null : str(b.label, 120);
+  if ("use" in b) p.use = b.use === null ? null : str(b.use, 200);
+  if ("aim" in b) p.aim = b.aim === null ? null : str(b.aim, 600);
   if ("peaks" in b) p.peaks = b.peaks === null ? null : peaksOf(b.peaks);
   if ("measured" in b) p.measured = b.measured === null ? null : measuredOf(b.measured);
   // The Library's facts: a string set, null clears. An empty string is a clear

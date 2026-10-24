@@ -144,6 +144,13 @@ export interface SoundTake {
   group: string | null;
   /** The library label a finalized take carries — what agents select by. */
   label: string | null;
+  /** What the take is FOR - where it would ship ("ambience bed looped under narration"). Optional:
+   *  a take made before 2026-10-24 has none, and every reader treats absent as not stated. */
+  use?: string | null;
+  /** What it was briefed to achieve and which triage checks it puts to the test - the goal a
+   *  listener compares the take against (operator, 2026-10-24: a pile without it reads as an API
+   *  smoke test, not as a test of anything). */
+  aim?: string | null;
   parentId: string | null;
   huntId: string | null;
   nodeId: string | null;
@@ -188,6 +195,8 @@ export type TakePatch = Partial<
     | "stage"
     | "group"
     | "label"
+    | "use"
+    | "aim"
     | "peaks"
     | "measured"
     | "referenceTrackId"
@@ -235,6 +244,9 @@ export interface GenerateRequest {
   huntId: string | null;
   nodeId: string | null;
   title: string | null;
+  /** Filed on the take (SoundTake.use / .aim): where it would ship, and what it was briefed to achieve. */
+  use?: string | null;
+  aim?: string | null;
 }
 
 /** One cell of the strengths map: how a provider fares on one term or technique. */
