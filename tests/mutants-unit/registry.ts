@@ -4951,4 +4951,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: 'if (job.state !== "queued" && job.state !== "failed") return { kind: "report", report: { outcome: "not-queued", job } };',
     why: "The driver takes a failed job back on its own, so a vendor refusal the operator never saw is retried and paid again with no retry on the record.",
   },
+  {
+    id: "decision-v1-400-not-invalid",
+    test: "tests/next-server/decision-v1-seam.test.ts",
+    file: "lib/decision/v1/types.ts",
+    find: '{ 400: "invalid", 401:',
+    replace: "{ 401:",
+    why: "A v1 writer's 400 is classed internal, so a record v1 will never take is retried five times before it is parked, instead of stuck at once.",
+  },
+  {
+    id: "decision-v1-5xx-not-unavailable",
+    test: "tests/next-server/decision-v1-seam.test.ts",
+    file: "lib/decision/v1/types.ts",
+    find: '(status >= 500 ? "unavailable" : "internal")',
+    replace: '("internal")',
+    why: "A v1 store that is down reads as a defect in the outbox's record, and the only code logged as a bug is spent on an outage.",
+  },
 ];
