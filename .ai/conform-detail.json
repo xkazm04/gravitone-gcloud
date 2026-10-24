@@ -11052,6 +11052,88 @@
       "evaluatedTs": "2026-10-24T04:37:10.922Z",
       "worker": "c73cdd3e-e560-464f-ba22-270f1eb93982",
       "techniques": []
+    },
+    "b412ea73-0dc3-4362-93c4-2a9b913f9a61/data-access": {
+      "context": "v1-import-and-archive",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:57:15.207Z",
+      "worker": "fe7817ef-7901-4c5b-ac9e-96014860f6cf",
+      "techniques": [
+        {
+          "technique": "layering-rules",
+          "verdict": "deviation",
+          "evidence": "lib/import/runs.ts:65 Statements naming physical tables and columns live outside the data layer, also at project.ts:211, shelf.ts:171, export.ts:64 and commit.ts:273."
+        },
+        {
+          "technique": "existence-authority-written-last",
+          "verdict": "conformant",
+          "evidence": "lib/import/commit.ts:45 Content-addressed blobs (dependent) land before the rows that reference them (authority), so a rollback leaves only unreferenced, reusable files."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "lib/import/commit.ts:270 There is one boundary per project, owned by the code that knows the invariant. afterLanded runs only after commit (commit.ts:277)."
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "lib/import/archive.ts:164 The archive read fails whole on any bad line. The run sources degrade visibly instead, recording each unreadable run's identity and error (runSources.ts:74)."
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "lib/import/project.ts:211 Statements are static with bound values. There is no interpolation."
+        },
+        {
+          "technique": "repo-testing",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/import-roundtrip.test.ts:50 A real migrated SQLite file and a real blob store in a temp dir."
+        }
+      ]
+    },
+    "e2f6231a-d39f-4d39-9465-0a48436cae92/data-access": {
+      "context": "project-step-store",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:57:15.207Z",
+      "worker": "fe7817ef-7901-4c5b-ac9e-96014860f6cf",
+      "techniques": [
+        {
+          "technique": "row-mapping",
+          "verdict": "deviation",
+          "evidence": "lib/steps/readStep.ts:39 A single-record read must keep failure distinct from absence. The decode seam itself is sound (recordRegistry.ts:168 refuses malformed and future records). grep finds no production caller of loadStep outside lib/steps, only tests/golden-path/dal-real-engine.probe.spec.ts, but it is still on the door (index.ts:56)."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "lib/steps/patchStep.ts:53 Read-modify-write runs in one readwrite transaction. A throw in decide aborts it."
+        },
+        {
+          "technique": "layering-rules",
+          "verdict": "conformant",
+          "evidence": "lib/steps/index.ts:30 One door re-exports named operations. The connection helper withStore is not exported on it."
+        },
+        {
+          "technique": "repo-testing",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/dal-real-engine.probe.spec.ts:26 Tests run against a spec-complete IndexedDB engine, not a mock of the repo's calls, and state their quota-coverage limit."
+        },
+        {
+          "technique": "sequence-token-write-ordering",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/saveOrder.ts:58 Latest-wins is a per-tab in-memory ticket over one store. No stream spans stores with different durability, so the token technique's precondition does not hold."
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/withStore.ts:18 Key-value IndexedDB with no query language. The one key builder is the single authority."
+        }
+      ]
     }
   }
 }

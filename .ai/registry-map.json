@@ -10288,7 +10288,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/steps/readStep.ts:39 loadStep, exported on the step store's door, answers a FAILED single-record read with the seeded default, the same answer as never-written. A caller that saves after it overwrites the stored record, which is the bug patchStep's header describes.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "hitl-approval",
@@ -13967,7 +13971,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/import/runs.ts:65 The import module writes raw SQL against kernel tables and even the JSON path inside the jobs record, so a kernel schema or record-shape change has consumers in lib/import that the kernel cannot enumerate.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         }
       ],
       "governance": "governed"
