@@ -191,6 +191,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A blind pair with a single arm is accepted, so the operator is shown one image as a comparison and the trial's verdict is not a choice at all.",
   },
   {
+    id: "decision-bound-narrower-than-a-source",
+    test: "packages/domain/test/packet.test.ts",
+    file: "packages/domain/src/decision.ts",
+    find: "const REASONS_MAX = Math.max(...SPECS.map((s) => s.maxReasons));",
+    replace: "const REASONS_MAX = Math.max(...SPECS.map((s) => s.maxReasons)) - 1;",
+    why: "An audio reject naming all eleven defects passes checkVerdict and is then refused by the record's door, so the verdict the Board accepted never lands.",
+  },
+  {
     id: "source-reasons-past-the-max",
     test: "packages/domain/test/source.test.ts",
     file: "packages/domain/src/source.ts",

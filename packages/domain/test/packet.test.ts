@@ -4,6 +4,7 @@ import { candidateSchema, shownGrades, type Grade } from "../src/candidate.ts";
 import { decisionKey, decisionSchema } from "../src/decision.ts";
 import { candidateIdSchema, packetIdSchema } from "../src/ids.ts";
 import { packetSchema } from "../src/packet.ts";
+import { checkVerdict, SOURCES, type PacketSource } from "../src/source.ts";
 import { accept, AT, forgeCandidate, refuse } from "./_records.ts";
 
 const cull = {
@@ -102,5 +103,17 @@ describe("decision", () => {
   });
   it("by is the ledger's actor word, not v1's", () => {
     refuse(decisionSchema, { ...keep, by: "human" }, "by");
+  });
+  it("admits every source's widest verdict, and nothing wider than the widest", () => {
+    for (const [source, spec] of Object.entries(SOURCES)) {
+      const reasons = spec.reasons.slice(0, spec.maxReasons);
+      const note = spec.noteMax > 0 ? { note: "n".repeat(spec.noteMax) } : {};
+      expect(checkVerdict(source as PacketSource, { verdict: "reject", reasons, ...note }).ok, source).toBe(true);
+      accept(decisionSchema, { ...keep, verdict: "reject", reasons, ...note });
+    }
+    const widest = Math.max(...Object.values(SOURCES).map((s) => s.maxReasons));
+    const longest = Math.max(...Object.values(SOURCES).map((s) => s.noteMax));
+    refuse(decisionSchema, { ...keep, verdict: "reject", reasons: Array.from({ length: widest + 1 }, (_, i) => `r${i}`) }, "reasons");
+    refuse(decisionSchema, { ...keep, note: "n".repeat(longest + 1) }, "note");
   });
 });
