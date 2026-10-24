@@ -263,6 +263,8 @@ export function useTransport(totalS: number): {
       setPlaying((p) => !p && totalS > 0);
     },
     shuttle: (r) => {
+      // From the end, like play: a shuttle there would run one frame and stop where it stood.
+      if (at.current >= totalS) seek(0);
       setRate(r);
       setPlaying(totalS > 0);
     },

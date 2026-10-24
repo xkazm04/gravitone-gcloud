@@ -39,6 +39,7 @@ import type { AdFinishData, AdsClips, AdsTakes, BedData, PartView, RenderData } 
 import { BINDINGS } from "@gt/ui/keymap/bindings";
 import { keyTable, type KeyRow } from "@gt/ui/keymap/keymap";
 
+import { useTransport } from "../../app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx";
 import { CutFinish } from "../../app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx";
 import type { EditorProps, Frame } from "../../app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx";
 import { RenderEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Render.tsx";
@@ -192,5 +193,34 @@ describe("the poster preview plays the envelope at its own 30 fps", () => {
   it("one second on a 120 Hz display draws the same 30", async () => {
     const f = await previewAt(120);
     expect(Math.max(...f)).toBe(30);
+  });
+});
+
+/* ── the transport (CutClock.tsx useTransport: the cut's and the score's one clock) ── */
+
+describe("the transport at the end of the film", () => {
+  async function atTheEnd(press: (t: ReturnType<typeof useTransport>) => void): Promise<{ t: number; playing: boolean }> {
+    const frames: ((now: number) => void)[] = [];
+    vi.stubGlobal("requestAnimationFrame", (cb: (now: number) => void) => frames.push(cb));
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+    vi.stubGlobal("performance", { now: () => 0 });
+    const h = harness(() => useTransport(10));
+    (await h.settleUp()).seek(10);
+    press(await h.settleUp());
+    await h.settleUp();
+    frames.shift()?.(100);
+    const tr = await h.settleUp();
+    h.unmount();
+    return { t: tr.t, playing: tr.playing };
+  }
+
+  it("play from the end starts again from the top", async () => {
+    const r = await atTheEnd((tr) => tr.toggle());
+    expect(r).toEqual({ t: 0.1, playing: true });
+  });
+
+  it("a shuttle from the end starts again from the top, like play", async () => {
+    const r = await atTheEnd((tr) => tr.shuttle(2));
+    expect(r).toEqual({ t: 0.2, playing: true });
   });
 });

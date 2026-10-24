@@ -5522,4 +5522,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "needs: readonly string[], code: string = process.cwd()",
     why: "A worker or server whose cwd is a data universe fails every music-video job at its treatment turn: the prompt file the code ships is looked for in the data.",
   },
+  {
+    id: "cut-shuttle-stands-at-the-end",
+    test: "tests/next-server/part-editor-media.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx",
+    find: "if (at.current >= totalS) seek(0);",
+    replace: "void 0;",
+    why: "J, K or L pressed at the end of the cut or the score runs one frame and stops where it stood, where Space starts the film again from the top.",
+  },
 ];
