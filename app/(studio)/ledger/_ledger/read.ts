@@ -176,13 +176,15 @@ export type Strip = { readonly days: readonly DayCount[]; readonly today: string
  * Events per day under the filter minus its date range, split by actor kind. One count per
  * day up to today (later days are drawn empty and hatched), each the kernel's own count
  * over the day's half-open window - so a bar and the list a click on it opens can never
- * disagree. With an actor filter set the day's total belongs to that kind alone.
+ * disagree. With an actor filter set the day's total belongs to the kinds it holds alone.
  */
 export function readStrip(store: Store, f: LedgerFilter, nowMs: number): Result<Strip> {
   const today = dayKey(nowMs);
   const { kernel } = splitFilter({ ...f, from: null, to: null });
   const days = daysBetween(dayKey(nowMs - (STRIP_PAST - 1) * DAY_MS), dayKey(nowMs + STRIP_AHEAD * DAY_MS));
-  const only = kernel.actor?.kind?.length === 1 ? kernel.actor.kind[0] : undefined;
+  // The actor facet counts with its own filter left out, so a kind the filter excludes still
+  // has a count there; it is drawn as 0, or the bar would hold acts the list never shows.
+  const held = kernel.actor?.kind;
   const out: DayCount[] = [];
   for (const day of days) {
     if (day > today) {
@@ -194,7 +196,7 @@ export function readStrip(store: Store, f: LedgerFilter, nowMs: number): Result<
     const c = countEvents(store, { ...kernel, since, until });
     if (!c.ok) return c;
     const kinds = facet(c.value.facets, "actorKind");
-    const n = (k: ActorKind): number => (only === undefined ? (kinds.values.find((v) => v.value === k)?.n ?? 0) : only === k ? c.value.total : 0);
+    const n = (k: ActorKind): number => (held !== undefined && !held.includes(k) ? 0 : (kinds.values.find((v) => v.value === k)?.n ?? 0));
     out.push({ day, operator: n("operator"), agent: n("agent"), machine: n("machine") });
   }
   return ok({ days: out, today });

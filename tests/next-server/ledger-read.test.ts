@@ -206,6 +206,11 @@ describe("readStrip", () => {
     const actorOnly = readStrip(s, f({ actor: "machine" }), now);
     if (!actorOnly.ok) throw actorOnly.error;
     expect(actorOnly.value.days.find((x) => x.day === "2026-10-14")).toEqual({ day: "2026-10-14", operator: 0, agent: 0, machine: 1 });
+    // Two kinds by token: the bars hold those two, never the kind the list leaves out.
+    const two = readStrip(s, f({ q: "actor:agent,machine" }), now);
+    if (!two.ok) throw two.error;
+    expect(two.value.days.find((x) => x.day === "2026-10-14")).toEqual({ day: "2026-10-14", operator: 0, agent: 0, machine: 1 });
+    expect(two.value.days.find((x) => x.day === "2026-10-15")).toEqual({ day: "2026-10-15", operator: 0, agent: 1, machine: 0 });
   });
 });
 
