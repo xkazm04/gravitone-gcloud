@@ -5421,7 +5421,11 @@
           "revision": 2,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/frames/frames.ts:438 The frame model keys its picture by rhetorical beat kind (hook/turn/movement…) through a lookup table instead of a closed visual-function vocabulary, and it has no motif threads and no boundary declarations, so the arc-level obligations exist only as prompt prose that the validator cannot check.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:b936a9a456cd5767",
+          "evaluatedRevision": 2
         },
         {
           "subject": "image-prompt-composition",
@@ -7279,7 +7283,11 @@
           "revision": 2,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/sceneSpec.ts:2 The landing cosmos is a procedural paper-collage parallax (sky, ridges, disc sheets, medallions) with no narration beats, no spoken lines and no cited figures. A case-insensitive search of app/_landing for beat, narration, factId, voiceover and visualFunction returned no hits, so the subject's precondition (deciding what is on screen while a beat is spoken) does not hold.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:b936a9a456cd5767",
+          "evaluatedRevision": 2
         },
         {
           "subject": "evidence-bound-visuals",

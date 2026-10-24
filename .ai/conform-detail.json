@@ -12034,6 +12034,63 @@
           "evidence": "lib/articles/checks.ts:47 Thresholds carry their date, measurement and n (e.g. maxWords set 2026-10-06 from 6,942 and 6,497)."
         }
       ]
+    },
+    "158d061e-feaa-4660-a1d3-6e8774b1f152/frame-direction": {
+      "context": "frames-picture-composition",
+      "subject": "frame-direction",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:19:22.265Z",
+      "worker": "1951f6e7-3f9d-4896-bb73-a099f7e658b8",
+      "techniques": [
+        {
+          "technique": "per-beat-rejection",
+          "verdict": "conformant",
+          "evidence": "lib/frames/sceneSpec.ts:271 reviewSceneSpecs collects refusals per beat, keeps applied, rejected and missing disjoint, fails the whole pass only on unusable JSON, and rethrows non-gate exceptions. Not realized: no single finding when most beats fail for the same reason, and the duplicate guard (line 264) fixes the unit at one scene per beat."
+        },
+        {
+          "technique": "plate-elements-text-split",
+          "verdict": "conformant",
+          "evidence": "lib/frames/sceneSpec.ts:179 Plate, elements and texts are separate layers (frames.ts:3-11). ASKS_FOR_TEXT rejects glyph requests in the subject. A figure must cite a notebook fact, and a low-grade fact may not carry an exact figure."
+        },
+        {
+          "technique": "motion-intent-authoring",
+          "verdict": "conformant",
+          "evidence": "lib/frames/sceneSpec.ts:148 Motion is required (12+ chars), may not move text, and is rejected when it restates the subject. FrameClip has no duration field by design (frames.ts:124), and no verb or easing whitelist is enforced (sceneSpec.ts:139-143)."
+        },
+        {
+          "technique": "one-function-per-visual",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shots.ts:204 The shot lane gives a reset beat exactly one shot. Weak evidence: the explainer gate allows one scene per beat and cannot count functions, because no function field exists."
+        },
+        {
+          "technique": "visual-function-vocabulary",
+          "verdict": "deviation",
+          "evidence": "lib/frames/frames.ts:438 There is no closed function vocabulary (evidence, comparison, mechanism, metaphor, reveal, state-change, texture with sub-roles). The seed subject (subjectFor, lines 525-538) is a template per rhetorical role, which is the slide-deck failure the standard names. A metaphor budget or image-led mode cannot be computed."
+        },
+        {
+          "technique": "motif-establish-vary-payoff",
+          "verdict": "deviation",
+          "evidence": "lib/frames/sceneSpec.ts:26 The SceneSpec has no named thread and no lifecycle op (establish, carry, change, reprise, retire). Motifs live only in the free-text rationale the prompt asks for, so the rule that change and reprise need an earlier establish is not machine-checked."
+        },
+        {
+          "technique": "boundary-transition-class",
+          "verdict": "deviation",
+          "evidence": "lib/frames/frames.ts:154 Frame carries plate, clip, elements, texts and rationale, but no carry/agent/refresh declaration for its join. Hold beats cannot say whether they keep the last picture or clear the screen."
+        }
+      ],
+      "registryProposal": "per-beat-rejection says a rejected beat 'keeps the template output the pass exists to replace', and visual-function-vocabulary names a template keyed by rhetorical category as the slide-deck failure. Here the fallback seed is exactly that template (PROBLEM_OF by BeatKind). The standard could say whether the honest-fallback seed must itself be keyed by visual function, or whether a category-keyed seed is acceptable as long as it is marked unauthored, as this repo does by leaving `rationale` empty."
+    },
+    "076622f1-4906-4cdc-9a76-307df47fdd14/frame-direction": {
+      "context": "landing-cosmos-scenes",
+      "subject": "frame-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:19:22.265Z",
+      "worker": "1951f6e7-3f9d-4896-bb73-a099f7e658b8",
+      "techniques": []
     }
   }
 }
