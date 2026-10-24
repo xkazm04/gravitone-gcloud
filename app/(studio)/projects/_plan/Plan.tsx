@@ -37,6 +37,7 @@ import { CompositionList, ordered } from "./CompositionList.tsx";
 import { useCompose } from "./compose.tsx";
 import { PlanSummary } from "./PlanSummary.tsx";
 import { clock } from "./shelf.ts";
+import { titleGate } from "./title.ts";
 import { outcomeOf, useReceipt } from "./receipt.tsx";
 import s from "./Plan.module.css";
 
@@ -64,6 +65,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
     setView(first);
   }
   const [title, setTitle] = useState(first.project.title);
+  const [titles] = useState(titleGate);
   const [sel, setSel] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const flow = useReceipt(nowMs);
@@ -108,14 +110,22 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
     void drain();
   };
 
+  // On the queue's revision (rev.current), as every other write here: p.rev is a render behind
+  // while a units write is in flight. A conflict re-reads the page, as the queue's does.
   const commitTitle = (): void => {
-    const t = title.trim();
-    if (!draft || t === "" || t === p.title) return;
-    void settled(port.rename({ id: p.id, rev: p.rev, title: t })).then((r) => {
+    if (!draft) return;
+    const t = titles.take(title, p.title);
+    if (t === null) return;
+    void settled(port.rename({ id: p.id, rev: rev.current, title: t })).then((r) => {
+      titles.settle();
       if (r.ok) {
+        rev.current = r.value.project.rev;
         setView(r.value);
         router.refresh();
-      } else setErr(r.error.error);
+      } else {
+        setErr(r.error.error);
+        if (r.error.code === "conflict") router.refresh();
+      }
     });
   };
 
@@ -142,7 +152,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
   };
 
   const discard = (): void => {
-    void settled(port.discard({ id: p.id, rev: p.rev })).then((r) => {
+    void settled(port.discard({ id: p.id, rev: rev.current })).then((r) => {
       if (!r.ok) return setErr(r.error.error);
       toast(`${p.title} · discarded`, { href: `/ledger?q=${encodeURIComponent(p.id)}`, subject: p.title });
       const next = ordered(list).find((x) => x.id !== p.id);
@@ -193,6 +203,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
         titleRef.current?.blur();
       },
       "leave-field": () => {
+        if (document.activeElement === titleRef.current) titles.cancel();
         setTitle(p.title);
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
       },

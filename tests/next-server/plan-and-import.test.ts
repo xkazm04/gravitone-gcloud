@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import { onOpen, settledOutcome } from "../../app/(studio)/projects/_plan/receipt.tsx";
 import { clock } from "../../app/(studio)/projects/_plan/shelf.ts";
+import { titleGate } from "../../app/(studio)/projects/_plan/title.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const PROJECTS = path.join(ROOT, "app", "(studio)", "projects");
@@ -70,6 +71,54 @@ describe("the Plan's runtime reads through the shelf's one clock", () => {
     const src = code("_plan/Plan.tsx");
     expect(src.match(/%\s*60/g) ?? []).toEqual([]);
     expect(src.match(/clock\(p\.runtimeS\)/g) ?? []).toHaveLength(1);
+  });
+});
+
+describe("the Plan title - one rename per ⏎, none on Esc", () => {
+  // ⏎ runs the commit and then blurs the field; the blur runs it again in the same tick.
+  const enter = (take: (typed: string, current: string) => string | null): string[] => {
+    const sent: string[] = [];
+    for (const _ of ["rename verb", "the blur it causes"]) {
+      const t = take("Glass Harbor", "Untitled film");
+      if (t !== null) sent.push(t);
+    }
+    return sent;
+  };
+
+  it("control: HEAD's guard (empty or unchanged) sends ⏎'s rename twice", () => {
+    const head = (typed: string, current: string): string | null => {
+      const t = typed.trim();
+      return t === "" || t === current ? null : t;
+    };
+    expect(enter(head)).toEqual(["Glass Harbor", "Glass Harbor"]);
+  });
+
+  it("the gate sends it once, and again only after it settled", () => {
+    const g = titleGate();
+    expect(enter(g.take)).toEqual(["Glass Harbor"]);
+    g.settle();
+    expect(g.take("Glass Harbor", "Untitled film")).toBe("Glass Harbor");
+  });
+
+  it("Esc's blur sends nothing, and the next real commit still sends", () => {
+    const g = titleGate();
+    g.cancel();
+    expect(g.take("half typed", "Untitled film")).toBeNull();
+    expect(g.take("Glass Harbor", "Untitled film")).toBe("Glass Harbor");
+  });
+
+  it("empty and unchanged send nothing", () => {
+    const g = titleGate();
+    expect(g.take("   ", "Untitled film")).toBeNull();
+    expect(g.take(" Untitled film ", "Untitled film")).toBeNull();
+  });
+
+  it("Plan.tsx commits through the gate, cancels it on Esc, and sends the queue's revision", () => {
+    const src = code("_plan/Plan.tsx");
+    expect(src.match(/titles\.take\(title, p\.title\)/g) ?? []).toHaveLength(1);
+    expect(src.match(/titles\.cancel\(\)/g) ?? []).toHaveLength(1);
+    expect(src.match(/rev: p\.rev\b/g) ?? []).toEqual([]);
+    expect(src.match(/rev: rev\.current/g) ?? []).toHaveLength(4);
   });
 });
 
