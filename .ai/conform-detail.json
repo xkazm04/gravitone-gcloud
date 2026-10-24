@@ -11350,6 +11350,58 @@
       "evaluatedTs": "2026-10-24T05:45:33.728Z",
       "worker": "4dd4e440-425c-42be-bdc6-9bb02d7c7c94",
       "techniques": []
+    },
+    "f54f23e7-c790-44ff-beaf-a5cb83c8d5c4/generated-music-acceptance": {
+      "context": "audio-lessons-measures",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:55:20.362Z",
+      "worker": "89811f2a-232b-4f37-9393-1f74f7526544",
+      "techniques": [
+        {
+          "technique": "loudness-and-peak-acceptance",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/audio.ts:10 Says outright that nothing sets a loudness target. There is no -14/-23 LUFS destination target, no -1 dBTP ceiling, no LRA and no basis recorded."
+        },
+        {
+          "technique": "brief-conformance-listen",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:20 The music rubric is a fixed set of quality dimensions on a 1-10 scale, not a per-brief checklist of commitments with pass, fail or unmeasured."
+        },
+        {
+          "technique": "generated-audio-defect-taxonomy",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/strengths.ts:189 Rejected takes carry named defect classes that roll up per provider and facet into lesson drafts. This is the technique's recurrence rule: a record of which provider and brief pair keeps earning which defect."
+        },
+        {
+          "technique": "structure-verification-against-plan",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/audio.ts:75 Total length is compared with the brief within one second. Section boundaries and the ending shape are not compared."
+        }
+      ]
+    },
+    "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867/generated-music-acceptance": {
+      "context": "audio-composer-briefs",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:55:20.362Z",
+      "worker": "89811f2a-232b-4f37-9393-1f74f7526544",
+      "techniques": [
+        {
+          "technique": "structure-verification-against-plan",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/brief.ts:87 Total duration and tempo are verified by a tool with honest three-state results, but section boundaries and the ending cliff or slope are not, although the plan commits to them."
+        },
+        {
+          "technique": "generated-audio-defect-taxonomy",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/AudioPrompt.tsx:4 Reject reasons are named defect codes taken from the registry taxonomy (lib/sound/types.ts DEFECTS) and are shown with the brief and its exclusions."
+        }
+      ]
     }
   }
 }

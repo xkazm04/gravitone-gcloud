@@ -2098,7 +2098,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/brief.ts:87 The deterministic brief check covers tempo, key and total length, keeping held, missed, octave, unmeasured and unasked apart. It never checks the section offsets that plan-shaped briefs commit to (lib/music/elevenlabs.ts carries per-section duration_ms), nor the ending shape.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "hitl-approval",
@@ -2553,7 +2557,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/audio.ts:10 Loudness and true peak are only displayed. No destination target or ceiling exists to check them against, so an unmeasured or over-ceiling file is never refused, while the technique treats the target as a property of the destination.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
