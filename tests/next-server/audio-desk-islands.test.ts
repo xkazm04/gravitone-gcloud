@@ -11,6 +11,11 @@
 // the cancel paths drag-drop drag-lifecycle names and the board's drag lacked - Escape mid-drag
 // is a cancel, never the drop the next release would have made - and one drag at a time: a second
 // press while a drag is live is inert, and a press that never travelled does not block the next.
+//
+// THE TRANSPORT (./useTransport.ts), the same dispatcher over an <audio> stand-in that keeps the
+// media element's promise rule: pause() while a play() is pending rejects that play with an
+// AbortError. A stop pressed while the take is still loading is the person's own stop, never a
+// failure line (media-playback transport-contract: a failure is a play that did not happen).
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -21,6 +26,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 
 import { answered } from "../../app/(studio)/audio/_audio/Arrange.tsx";
 import { useCardDrag } from "../../app/(studio)/audio/_audio/useCardDrag.ts";
+import { useTransport } from "../../app/(studio)/audio/_audio/useTransport.ts";
 import { harness } from "../golden-path/_studio/hooks.ts";
 
 afterEach(() => {
@@ -107,5 +113,69 @@ describe("useCardDrag - the drag's exits", () => {
     b.dispatchEvent(pointer("pointermove", 20));
     b.dispatchEvent(pointer("pointerup", 20));
     expect(drops).toEqual([`b@${CELL}`]);
+  });
+});
+
+// ── the transport ──
+
+class FakeAudio extends EventTarget {
+  static last: FakeAudio | null = null;
+  paused = true;
+  src = "";
+  preload = "";
+  error: { code: number } | null = null;
+  currentTime = 0;
+  duration = Number.NaN;
+  private pending: ((e: Error) => void) | null = null;
+  constructor() {
+    super();
+    FakeAudio.last = this;
+  }
+  play(): Promise<void> {
+    this.paused = false;
+    return new Promise((_ok, reject) => {
+      this.pending = reject;
+    });
+  }
+  pause(): void {
+    if (this.paused) return;
+    this.paused = true;
+    this.pending?.(Object.assign(new Error("The play() request was interrupted by a call to pause()."), { name: "AbortError" }));
+    this.pending = null;
+    setTimeout(() => this.dispatchEvent(new Event("pause")), 0);
+  }
+  load(): void {}
+  removeAttribute(): void {}
+}
+
+async function transport() {
+  g["Audio"] = FakeAudio;
+  const fails: string[] = [];
+  // "stable": the hook syncs its onFail ref in a dep-less effect, which re-queues every render.
+  const h = harness(() => useTransport((w) => fails.push(w)), { settleWhen: "stable" });
+  return { fails, h, t: await h.settleUp() };
+}
+
+describe("useTransport - a stop is not a failure", () => {
+  it("a stop pressed while the take is still loading says nothing and stops", async () => {
+    const { fails, h, t } = await transport();
+    t.toggle("a", "/a.wav");
+    const loading = await h.settleUp();
+    expect([loading.playing, FakeAudio.last?.paused]).toEqual(["a", false]);
+    loading.toggle("a", "/a.wav");
+    const after = await h.settleUp();
+    expect(fails).toEqual([]);
+    expect(after.playing).toBeNull();
+    h.unmount();
+  });
+
+  it("another take pressed while one loads moves the one element, and says nothing", async () => {
+    const { fails, h, t } = await transport();
+    t.toggle("a", "/a.wav");
+    (await h.settleUp()).toggle("b", "/b.wav");
+    const after = await h.settleUp();
+    expect(fails).toEqual([]);
+    expect([after.playing, FakeAudio.last?.src]).toEqual(["b", "/b.wav"]);
+    h.unmount();
   });
 });
