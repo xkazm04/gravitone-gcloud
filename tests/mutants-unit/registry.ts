@@ -2255,6 +2255,15 @@ export const MUTANTS: UnitMutant[] = [
   },
   // ── Phase 4 wave C, L38: the part view contract and the part workspace ──
   {
+    id: "partview-core-op-dropped-from-the-trail",
+    test: "packages/domain/test/partView.test.ts",
+    file: "packages/domain/src/partView.ts",
+    find: " \"pick-idea\": true,",
+    replace: "",
+    why: "A research or script op missing from the core list falls through opLabel as its bare name, so the undo trail says 'pick-idea' where it should name the idea picked.",
+    typecheck: true,
+  },
+  {
     id: "partview-free-choice-ignored",
     test: "packages/domain/test/partView.test.ts",
     file: "packages/domain/src/partView.ts",
