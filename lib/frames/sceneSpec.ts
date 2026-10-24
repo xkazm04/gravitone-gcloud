@@ -243,12 +243,22 @@ export function reviewSceneSpecs(
   const end = raw.lastIndexOf("}");
   if (start === -1 || end <= start) throw new SceneSpecError("The engine returned no JSON object.");
 
-  let doc: { scenes?: unknown };
-  try {
-    doc = JSON.parse(raw.slice(start, end + 1));
-  } catch {
-    throw new SceneSpecError("The engine returned malformed JSON.");
+  // Each "{" up to the last "}" is tried in turn and the first that parses wins:
+  // a preamble that itself holds a brace ("the plan {draft}:") used to make the
+  // whole answer read as malformed. When none parses, the refusal carries the
+  // parser's own sentence for the outermost try - its position is the one fact
+  // that says where the answer broke.
+  let doc: { scenes?: unknown } | undefined;
+  let parseError = "";
+  for (let i = start; i !== -1 && i < end; i = raw.indexOf("{", i + 1)) {
+    try {
+      doc = JSON.parse(raw.slice(i, end + 1));
+      break;
+    } catch (e) {
+      parseError ||= e instanceof Error ? e.message : String(e);
+    }
   }
+  if (doc === undefined) throw new SceneSpecError(`The engine returned malformed JSON (${parseError}).`);
   if (!Array.isArray(doc.scenes)) throw new SceneSpecError("The engine returned no `scenes` array.");
 
   const byAt = new Map(frames.map((f) => [f.at, f]));

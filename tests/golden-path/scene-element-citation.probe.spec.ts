@@ -55,6 +55,15 @@ test("scene-element-citation: a subject or motion asking for glyphs is refused i
   expect(reviewSceneSpecs(sceneWith({}), frames, ids).rejected).toEqual([]);
 });
 
+test("scene-element-citation: a braced preamble does not hide the answer; a broken answer says where", () => {
+  const r = reviewSceneSpecs(`Here is the plan {draft one}:\n${sceneWith({})}\nDone.`, frames, ids);
+  expect(r.specs).toHaveLength(1);
+  // No object parses: the refusal carries the parser's own position.
+  expect(() => reviewSceneSpecs(`{"scenes": [{"beatAt": "0:04",, }]}`, frames, ids)).toThrow(
+    /^The engine returned malformed JSON \(.*position \d+/,
+  );
+});
+
 test("scene-element-citation: a null scene, element or text is a finding, not a lost pass", () => {
   // The engine's JSON is a request, not a guarantee. A `null` in any of its
   // three lists used to throw a TypeError out of the review, discarding every
