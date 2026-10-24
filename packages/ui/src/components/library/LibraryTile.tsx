@@ -43,9 +43,9 @@ export type LibraryCard = {
 
 export const ATTENTION_LABEL: { readonly [A in Attention]: string } = { unreadable: "media unreadable", missing: "media missing" };
 
-/** The option's name: what the face and the dot say, in words. */
+/** The option's name: what the face, the dot and the lock say, in words. */
 export function cardName(c: LibraryCard): string {
-  return [c.title, kindShort(c.kind), c.state, ...(c.attention === undefined ? [] : [ATTENTION_LABEL[c.attention]])].join(", ");
+  return [c.title, kindShort(c.kind), c.state, ...(c.locked === true ? ["locked"] : []), ...(c.attention === undefined ? [] : [ATTENTION_LABEL[c.attention]])].join(", ");
 }
 
 export type LibraryTileProps = {

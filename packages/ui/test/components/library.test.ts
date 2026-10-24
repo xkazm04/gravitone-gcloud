@@ -125,6 +125,12 @@ describe("what the parts expose", () => {
     }
   });
 
+  test("a locked style's option names the lock the tile draws", () => {
+    const style: LibraryCard = { ...c, id: "style-0001", kind: "style", state: "ratified", locked: true, chips: [] };
+    expect(cardName(style)).toBe("Peak and Fall · ad spot 8, style, ratified, locked, media unreadable");
+    expect(cardName({ ...style, locked: false })).not.toContain("locked");
+  });
+
   test("a row's facet chips keep distinct keys when two groups share a label (plate: family collage, render_mode collage)", () => {
     // The fixture corpus has 382 of 5,000 rows like this; keyed by label, React drops or duplicates a chip on update.
     const keysUnder = (node: unknown, out: string[][] = []): string[][] => {
