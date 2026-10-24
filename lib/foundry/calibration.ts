@@ -274,13 +274,6 @@ export function fieldStatus(cal: Calibration | null | undefined, f: GradeField, 
   return own && own.status !== "insufficient" ? own.status : cal.fields[f].all.status;
 }
 
-/** Whether a meter should still be drawn as a measurement. An inverted or
- *  chance field is measured and known not to predict; an insufficient one is
- *  simply unknown, and stays drawn. */
-export function misleads(status: CalibrationStatus | undefined): boolean {
-  return status === "inverted" || status === "chance";
-}
-
 /** A candidate's value on a field, as the ledger row would carry it. */
 function valueOf(c: Candidate, f: GradeField): number | boolean | null {
   const g = c.grade;

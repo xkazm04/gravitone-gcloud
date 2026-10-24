@@ -53,15 +53,6 @@ export const STYLES_FILE = "styles.json";
  *  only for tests/golden-path/foundry-catalogue-tx.probe.spec.ts, which asserts that no commit
  *  writes it and removes a stale one before it seeds. */
 export const CATALOGUE_JOURNAL = "catalogue-journal.jsonl";
-/** RETIRED with CATALOGUE_JOURNAL: the shape v1's journal lines had. */
-export interface JournalLine {
-  rev: number;
-  at: string;
-  op: string;
-  run: string;
-  ids: string[];
-  by: string;
-}
 
 /** Where extract runs live (the exemplars' files): EXTRACT_STORE_DIR, else <out>/extract. */
 export const extractRoot = (): string => process.env["EXTRACT_STORE_DIR"]?.trim() || outPath("extract");
