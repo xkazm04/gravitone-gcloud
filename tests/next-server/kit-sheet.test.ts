@@ -11,6 +11,10 @@
 //   2. Every keyed row of the keymap is drawn in a legend - its field's rows too. keyTable draws
 //      a field's rows only when asked for that field, so one legend per mode hid every key that
 //      fires inside a field (save a note, clear a search, rename): 21 of 170 rows.
+//   3. An act the Motion card plays is the animation a component ships: the same keyframes and
+//      the same timing. CSS modules scope keyframes, so the kit redefines them, and the copy
+//      drifted - its fadeUp ran .35s where the Library detail's runs .22s. Acts nothing ships
+//      are named in UNSHIPPED_ACTS, and the list can only shrink.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
@@ -95,5 +99,58 @@ describe("/kit: the key legends draw the whole keymap", () => {
       })
       .map((b) => `${b.mode}/${b.verb}${b.field === undefined ? "" : `@${b.field}`}`);
     expect(missing).toEqual([]);
+  });
+});
+
+/**
+ * OWED, NOT ALLOWED: the kit's acts no @gt/ui component plays (kit.js "acts" from the prototype;
+ * nothing ratifies or re-routes with motion yet). The case fails on an unshipped act NOT listed
+ * and on a listed act that now ships, so this list cannot outlive the decision.
+ */
+const UNSHIPPED_ACTS: readonly string[] = ["lockIn", "moved"];
+
+/** `@keyframes name{...}` bodies in a stylesheet, braces balanced. */
+function keyframes(text: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const open = /@keyframes\s+([\w-]+)\s*\{/g;
+  for (let m = open.exec(text); m !== null; m = open.exec(text)) {
+    let depth = 1;
+    let i = m.index + m[0].length;
+    const start = i;
+    for (; i < text.length && depth > 0; i++) {
+      if (text[i] === "{") depth++;
+      else if (text[i] === "}") depth--;
+    }
+    out.set(m[1] ?? "", text.slice(start, i - 1).replace(/\s+/g, ""));
+  }
+  return out;
+}
+
+/** `animation:<name> <rest>` declarations: name -> the rest (timing), whitespace collapsed. */
+const animations = (text: string): [string, string][] =>
+  [...text.matchAll(/animation\s*:\s*([\w-]+)\s+([^;}]+)/g)].map((m) => [m[1] ?? "", (m[2] ?? "").trim().replace(/\s+/g, " ")]);
+
+describe("/kit: the Motion card plays what ships", () => {
+  test("each act's keyframes and timing are a shipped component's", () => {
+    const kit = css(path.join(ROOT, "app/(studio)/kit/kit.module.css"));
+    const acts = animations(kit).filter(([name]) => keyframes(kit).has(name));
+    expect(acts.length, "the kit plays no act").toBeGreaterThan(0);
+    const shipped = cssFiles(path.join(ROOT, "packages/ui/src")).map(css);
+    const drift: string[] = [];
+    const unshipped: string[] = [];
+    for (const [name, timing] of acts) {
+      const bodies = shipped.flatMap((t) => {
+        const body = keyframes(t).get(name);
+        return body === undefined ? [] : [{ body, timings: animations(t).filter(([n]) => n === name).map(([, r]) => r) }];
+      });
+      if (bodies.length === 0) {
+        unshipped.push(name);
+        continue;
+      }
+      const ownBody = keyframes(kit).get(name);
+      if (!bodies.some((b) => b.body === ownBody && b.timings.includes(timing))) drift.push(`${name} ${timing} vs ${bodies.flatMap((b) => b.timings).join(" | ")}`);
+    }
+    expect(drift).toEqual([]);
+    expect(unshipped).toEqual(UNSHIPPED_ACTS);
   });
 });

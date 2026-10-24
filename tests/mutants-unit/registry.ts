@@ -5321,4 +5321,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "",
     why: "The kit's key legends draw none of the keys that fire inside a field - save a note, clear a search, rename - though the page claims the whole keymap.",
   },
+  {
+    id: "kit-fadeup-runs-its-own-clock",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/kit.module.css",
+    find: ".playFade{animation:fadeUp .22s var(--ease)}",
+    replace: ".playFade{animation:fadeUp .35s var(--ease)}",
+    why: "The kit's fadeUp plays a motion no component ships, half again slower than the Library detail's, and a retune reads off the wrong specimen.",
+  },
 ];
