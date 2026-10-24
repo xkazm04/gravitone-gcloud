@@ -5377,4 +5377,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: 'url: "/trials/google/chalk-argument/flywheel.jpg" }, chips: ["hand made"',
     why: "A fresh clone's /kit draws a broken picture where the plate tile stands: the trial grid is gitignored and only the operator's disk has it.",
   },
+  {
+    id: "kit-ledger-strip-counts-a-literal",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/LedgerKit.tsx",
+    find: "inRange={eventsIn(range)}",
+    replace: "inRange={212}",
+    why: "The kit's time strip says 212 events over days whose bars hold 127, and says it again for any range a drag picks.",
+  },
 ];

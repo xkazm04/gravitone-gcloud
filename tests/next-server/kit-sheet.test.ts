@@ -26,6 +26,8 @@
 //      gitignored (a fresh clone lacks it); the style atelier's fixture was moved off it
 //      (f03cf366) and the kit, its twin, still drew six plates a clone does not have. The case
 //      reads `git ls-files`, not the disk, so the operator's own regenerated plates cannot hide it.
+//   7. The Ledger strip's readout counts the bars it draws. The specimen passed a literal 212 for
+//      a range whose days hold 127 events, and kept saying 212 after any drag picked another range.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -42,7 +44,7 @@ import { AudioSection } from "../../app/(studio)/kit/AudioKit.tsx";
 import { BoardSection } from "../../app/(studio)/kit/BoardKit.tsx";
 import { boardKitData } from "../../app/(studio)/kit/boardKitData.ts";
 import { FloorSection } from "../../app/(studio)/kit/FloorKit.tsx";
-import { LedgerSections } from "../../app/(studio)/kit/LedgerKit.tsx";
+import { DAYS, LedgerSections, RANGE } from "../../app/(studio)/kit/LedgerKit.tsx";
 import { LibrarySection } from "../../app/(studio)/kit/LibraryKit.tsx";
 import { PartSection } from "../../app/(studio)/kit/PartKit.tsx";
 import { ProduceSection } from "../../app/(studio)/kit/ProduceKit.tsx";
@@ -263,5 +265,14 @@ describe("/kit: the screen kits draw only committed pictures", () => {
     expect(named.size, "the screen kits draw no picture").toBeGreaterThan(5);
     const untracked = [...named].filter(([file]) => !tracked.has(`public${file}`)).map(([file, screen]) => `${screen}: ${file}`);
     expect(untracked).toEqual([]);
+  });
+});
+
+describe("/kit: the Ledger strip's readout counts its own bars", () => {
+  test("the range's event count is the sum of the days the range covers", () => {
+    const sum = DAYS.filter((d) => d.day >= RANGE.from && d.day <= RANGE.to).reduce((a, d) => a + d.operator + d.agent + d.machine, 0);
+    expect(sum, "the range covers no event").toBeGreaterThan(0);
+    const html = renderToStaticMarkup(h(LedgerSections));
+    expect(html.match(/(\d+) events/)?.[1]).toBe(String(sum));
   });
 });
