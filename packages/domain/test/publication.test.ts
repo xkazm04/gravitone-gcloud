@@ -56,6 +56,16 @@ describe("metric semantics (StatReel's law, kept by v1)", () => {
     expect(latestValue(snaps, "watchTimeS")).toBeNull();
   });
 
+  it("orders readings by instant, not by spelling: the door admits a second-precision stamp beside a millisecond one", () => {
+    accept(metricSnapshotSchema, snap("p1", "2026-10-05T09:00:00Z", 1));
+    const mixed = [snap("p1", "2026-10-05T09:00:00Z", 200), snap("p1", "2026-10-05T09:00:00.500Z", 210)];
+    expect(latestValue(mixed, "views")).toBe(210);
+    expect(dailySeries([snap("p1", "2026-10-04T09:00:00.000Z", 190), ...mixed], "views")).toEqual([
+      { date: "2026-10-04", total: 190, delta: null },
+      { date: "2026-10-05", total: 210, delta: 20 },
+    ]);
+  });
+
   it("per-day deltas start null, skip unmeasured days, and a day is its last measured value", () => {
     expect(dailySeries(snaps, "views")).toEqual([
       { date: "2026-10-01", total: 100, delta: null },

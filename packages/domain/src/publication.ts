@@ -68,7 +68,9 @@ export type MetricKey = (typeof METRIC_KEYS)[number];
 //   · a group sums its members' totals and counts the unmeasured ones; any unmeasured member
 //     makes the sum a lower bound.
 
-const byAt = (a: { at: string }, b: { at: string }): number => a.at.localeCompare(b.at);
+// By instant, not by spelling: the door admits any precision, and a collation puts
+// "…09:00:00.500Z" before "…09:00:00Z" ('.' sorts below 'Z'), so the later reading lost.
+const byAt = (a: { at: string }, b: { at: string }): number => Date.parse(a.at) - Date.parse(b.at);
 
 /** One publication's snapshots, oldest first. */
 export function snapshotsOf(publicationId: string, snapshots: readonly MetricSnapshot[]): MetricSnapshot[] {

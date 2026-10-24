@@ -2297,6 +2297,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "Rejecting a voice take is written to the trail as keeping it, so the operator undoing 'keep' re-admits the take they threw out.",
   },
   {
+    id: "metrics-readings-ordered-by-spelling",
+    test: "packages/domain/test/publication.test.ts",
+    file: "packages/domain/src/publication.ts",
+    find: "Date.parse(a.at) - Date.parse(b.at)",
+    replace: "a.at.localeCompare(b.at)",
+    why: "A reading stamped to the millisecond sorts before a second-precision one of the same second, so a publication's total is an older count and its day's delta is wrong.",
+  },
+  {
     id: "partview-free-choice-ignored",
     test: "packages/domain/test/partView.test.ts",
     file: "packages/domain/src/partView.ts",
