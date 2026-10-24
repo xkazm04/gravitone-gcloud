@@ -28,6 +28,7 @@ import { keepEnv, stripComments } from "./_helpers";
 import { spendRows, __resetBudget, BUDGET_VAR, WINDOW_VAR, FLOOR_VAR } from "@/lib/imaging/budget";
 import { ImagingError, presumedBilled } from "@/lib/imaging/errors";
 import { ollamaProvider } from "@/lib/imaging/providers/ollama";
+import { qwenProvider } from "@/lib/imaging/providers/qwen";
 import { billedOnFailure, generate } from "@/lib/imaging/router";
 
 const realFetch = globalThis.fetch;
@@ -40,6 +41,7 @@ keepEnv([
   "GOOGLE_AI_API_KEY",
   "LEONARDO_API_KEY",
   "OLLAMA_HOST",
+  "QWEN_API_KEY",
   "OLLAMA_LEASE_WAIT_MS",
   "GRAVITONE_STORE_PATH",
   "IMAGING_ENV",
@@ -49,7 +51,7 @@ const INTERACTIONS = "generativelanguage.googleapis.com";
 const LEONARDO = "cloud.leonardo.ai";
 
 /** Every dispatch, by method and URL, so a case can count per endpoint. */
-let calls: Array<{ method: string; url: string }> = [];
+let calls: Array<{ method: string; url: string; model?: string }> = [];
 const count = (host: string, method?: string) =>
   calls.filter((c) => c.url.includes(host) && (!method || c.method === method)).length;
 
@@ -283,6 +285,39 @@ test("14. [guard] ollama rejects `think` with a 400 -> one retry without it, ser
     expect(JSON.parse(bodies[0]).think).toBe(false);
     expect("think" in JSON.parse(bodies[1])).toBe(false);
   });
+});
+
+test("15. qwen rotates SKUs on a 429 or empty content, never on a 400; each SKU is asked once", async () => {
+  process.env.QWEN_API_KEY = "probe-qwen-key";
+  const QWEN = "aliyuncs.com";
+  const asked = () => calls.filter((c) => c.url.includes(QWEN)).map((c) => c.model);
+  const stubQwen = (answer: (model: string) => Response) => {
+    calls = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      const model = String((JSON.parse(String(init?.body ?? "{}")) as { model?: string }).model);
+      calls.push({ method: (init?.method ?? "GET").toUpperCase(), url, model });
+      return answer(model);
+    }) as typeof fetch;
+  };
+  const answer = (content: string) => json({ choices: [{ message: { content } }] });
+
+  // 429 on the primary, then served by the first fallback.
+  stubQwen((m) => (m === "qwen3.8-max" ? status(429) : answer("a qwen answer")));
+  const served = await qwenProvider().recognize!(RECOGNIZE);
+  expect(served.provenance.model).toBe("qwen3.7-plus");
+  expect(asked()).toEqual(["qwen3.8-max", "qwen3.7-plus"]);
+
+  // Empty content is a soft failure: the next SKU is asked.
+  stubQwen((m) => (m === "qwen3.6-flash" ? answer("the last SKU") : answer("  ")));
+  expect((await qwenProvider().recognize!(RECOGNIZE)).text).toBe("the last SKU");
+  expect(asked()).toEqual(["qwen3.8-max", "qwen3.7-plus", "qwen3.6-flash"]);
+
+  // A 400 fails identically on every SKU: thrown at once.
+  stubQwen(() => status(400));
+  const err = await failure(qwenProvider().recognize!(RECOGNIZE));
+  expect(err.kind).toBe("failed");
+  expect(asked(), "a malformed request was re-sent to the fallback SKUs").toEqual(["qwen3.8-max"]);
 });
 
 test("9. one authority: the router's billing predicate IS errors.ts's presumedBilled", () => {
