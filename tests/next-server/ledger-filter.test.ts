@@ -148,6 +148,15 @@ describe("how an act reads", () => {
 });
 
 describe("the stream's wire", () => {
+  it("a CRLF split across two reads is one line end, not a frame boundary", () => {
+    // The chunk boundary falls between the \r and the \n of one line end.
+    const one = parseFrames("id: 1\r\ndata: a\r");
+    expect(one.frames).toEqual([]);
+    const two = parseFrames(`${one.rest}\ndata: b\r\n\r\n`);
+    expect(two.frames).toEqual([{ kind: "event", id: 1, data: "a\nb" }]);
+    expect(two.rest).toBe("");
+  });
+
   it("splits frames at blank lines and keeps the incomplete tail", () => {
     const { frames, rest } = parseFrames('retry: 2000\n\nid: 5\ndata: {"seq":5}\n\n: hb\n\nevent: rotate\ndata: {"after":5}\n\nid: 6\nda');
     expect(frames).toEqual([{ kind: "retry", ms: 2000 }, { kind: "event", id: 5, data: '{"seq":5}' }, { kind: "comment" }, { kind: "control", name: "rotate", data: '{"after":5}' }]);
