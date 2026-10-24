@@ -20,7 +20,7 @@ import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Ghost } from "@gt/ui/components/ghost/Ghost.tsx";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 import { StrengthHead, StrengthTable } from "@gt/ui/components/audio/Strengths.tsx";
-import { cellKey, cellView, claimDraft, evidenceFor, FACETS, type Facet, type Sort, type StrengthCell } from "@gt/ui/components/audio/strengths.ts";
+import { cellKey, cellView, claimDraft, evidenceFor, FACETS, MIN_N, type Facet, type Sort, type StrengthCell } from "@gt/ui/components/audio/strengths.ts";
 
 import { useShell } from "../../_shell/Providers.tsx";
 import { settled } from "../_hunt/settled.ts";
@@ -81,7 +81,7 @@ function Detail({ cell, view, door }: { readonly cell: StrengthCell; readonly vi
               <Button label={signed ? "Signed" : "Sign lesson"} tone="emerald" disabled={busy || signed || claim.trim() === ""} onPress={() => void sign()} />
             </>
           ) : (
-            <Ghost count={2} label={`${cell.n} of 3 judged takes; no lesson until the floor`} />
+            <Ghost count={2} label={`${cell.n} of ${MIN_N} judged takes; no lesson until the floor`} />
           )}
         </>
       )}
