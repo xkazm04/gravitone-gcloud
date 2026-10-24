@@ -7,10 +7,11 @@
 // touched (lib/imaging/video/clips.ts startClip), so the call that would cross
 // the ceiling is refused with nothing dispatched and nothing billed.
 //
-// In-memory and per-process, exactly as imaging's ledger is; the window
-// survives nothing but this process. Every export that touches the ledger
-// returns a promise (card IMG-A stage 3a): the store may be one another process
-// shares, behind an async lock.
+// The window lives on whichever store lib/spend/select.ts picks for the class,
+// per call: the machine's file store by default (a restart forgets nothing), the
+// in-process one under SPEND_STORE=memory or the managed posture. Every export
+// that touches the ledger returns a promise (card IMG-A stage 3a): that store
+// may be one another process shares, behind an async lock.
 //
 // THE LEDGER HAS A READ SIDE (2026-10-07, card IMG-A stage 2). It used to
 // export reserve, settle, release and a stats total, and nothing else: the class
