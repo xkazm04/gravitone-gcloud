@@ -72,8 +72,8 @@ sketch · short`), and a child seed's first line the parent it narrows (`from: <
 60). On the Floor an uncommitted live batch is one pile; a dry one opens by its id only.
 
 EVERY X NEEDS A REASON. On this packet a reject is not done until it names one of `generic`, `not for us`,
-`audience`, `done before`, `format` (at most two): X rejects and stays, the row's reason chips open, and a
-reason key (1-5) sets it and moves on. The commit refuses a reasonless reject - the desk counts it beside
+`audience`, `done before`, `format` (at most two): keys 2-4 reject with the first three and move on; 5
+rejects and stays with the row's reason chips ringed, and a chip click sets the reason and moves on. The commit refuses a reasonless reject - the desk counts it beside
 the undecided (`<n> need a reason`, flashed, the cursor on the first) and the kernel's commit refuses
 `decision: <n> rejected need a reason: sd-004, sd-019` (`@gt/domain/source` `reasonOnReject`, enforced in
 `planCommit`). E writes a one-line note on the row under the cursor (⏎ saves, Esc leaves); the note rides
