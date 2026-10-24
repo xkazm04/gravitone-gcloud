@@ -36,6 +36,7 @@ import type { ComposeChoices, ProducePort } from "../_port/contract.ts";
 import { CompositionList, ordered } from "./CompositionList.tsx";
 import { useCompose } from "./compose.tsx";
 import { PlanSummary } from "./PlanSummary.tsx";
+import { clock } from "./shelf.ts";
 import { outcomeOf, useReceipt } from "./receipt.tsx";
 import s from "./Plan.module.css";
 
@@ -51,8 +52,6 @@ export type PlanProps = {
   /** Arrived asking to compose (`/projects?compose=1`): the dialog opens over the plan. */
   readonly composing?: boolean;
 };
-
-const runtime = (s: number): string => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
 export function Plan({ view: first, list, choices, port, nowMs, floorRuns, composed, composing = false }: PlanProps) {
   const router = useRouter();
@@ -238,7 +237,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
                 p.title
               )}
             </h1>
-            <span className={s.sub}>{[p.runtimeS === undefined ? null : runtime(p.runtimeS), p.styleId ?? p.topic ?? null].filter((x) => x !== null).join(" · ")}</span>
+            <span className={s.sub}>{[p.runtimeS === undefined ? null : clock(p.runtimeS), p.styleId ?? p.topic ?? null].filter((x) => x !== null).join(" · ")}</span>
             <div className={s.totals}>
               {draft ? <Chip label="plan" casing="lower" /> : <StatusPill machine="project" state={p.state} />}
               <Chip label={fmtDur(t.seconds)} value="work" />

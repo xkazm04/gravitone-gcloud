@@ -12,6 +12,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { onOpen, settledOutcome } from "../../app/(studio)/projects/_plan/receipt.tsx";
+import { clock } from "../../app/(studio)/projects/_plan/shelf.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const PROJECTS = path.join(ROOT, "app", "(studio)", "projects");
@@ -56,6 +57,19 @@ describe("the Plan's and Compose's writes go through settled", () => {
     const src = code("_plan/compose.tsx");
     expect(src.match(/void port\s*\.\s*compose\(/g) ?? []).toEqual([]);
     expect(src.match(/settled\(\s*port\.compose\(/g) ?? []).toHaveLength(1);
+  });
+});
+
+describe("the Plan's runtime reads through the shelf's one clock", () => {
+  // Plan.tsx had its own m:ss that split before it rounded: a 179.5 s take read "2:60".
+  it("a fractional second rounds before it splits", () => {
+    expect([59.6, 119.7, 179.5, 90, 61.2].map(clock)).toEqual(["1:00", "2:00", "3:00", "1:30", "1:01"]);
+  });
+
+  it("Plan.tsx draws its sub-line's runtime with shelf.ts clock, not a second formatter", () => {
+    const src = code("_plan/Plan.tsx");
+    expect(src.match(/%\s*60/g) ?? []).toEqual([]);
+    expect(src.match(/clock\(p\.runtimeS\)/g) ?? []).toHaveLength(1);
   });
 });
 
