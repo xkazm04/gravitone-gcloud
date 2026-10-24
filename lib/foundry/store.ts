@@ -61,6 +61,7 @@ import {
   patchVerdictMap,
   readVerdictState,
   replaceVerdictMap,
+  unreadableVerdicts,
   withRunLock,
   type VerdictPatch,
   type VerdictSpec,
@@ -88,14 +89,25 @@ async function readManifest(id: string): Promise<RunManifest> {
 }
 
 async function readVerdicts(id: string): Promise<Verdicts> {
-  return readJson<Verdicts>(path.join(runDir(id), "verdicts.json"), {});
+  return readJson<Verdicts>(path.join(runDir(id), "verdicts.json"), {}).catch((e: unknown) => {
+    throw e instanceof SyntaxError ? unreadableVerdicts(runDir(id)) : e;
+  });
 }
 
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
 export async function listRuns(): Promise<RunSummary[]> {
   const { items } = await listManifests<RunManifest, RunSummary>(OUT_ROOT, "run.json", async (name, m) => {
-    const v = await readJson<Verdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
+    let v: Verdicts;
+    try {
+      v = await readJson<Verdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
+    } catch (e) {
+      // The manifest rule (listManifests), for the file beside it: one damaged
+      // verdict map is skipped and named, never a failure of the whole shelf.
+      if (!(e instanceof SyntaxError)) throw e;
+      console.warn(`[foundry] ${name}: verdicts.json is unreadable — skipped from the list`);
+      return null;
+    }
     return {
       id: m.id,
       created: m.created,

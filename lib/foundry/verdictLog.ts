@@ -118,8 +118,21 @@ export async function readVerdictRev(dir: string): Promise<number> {
   return typeof doc.rev === "number" && Number.isInteger(doc.rev) && doc.rev >= 0 ? doc.rev : 0;
 }
 
+/** The refusal for a verdicts.json that exists and does not parse: the manifest
+ *  rule (store.ts readManifest), so a route answers it instead of a bare 500. */
+export function unreadableVerdicts(dir: string): FoundryError {
+  return new FoundryError(`The verdicts of ${path.basename(dir)} are unreadable — ${VERDICTS_FILE} is damaged. Inspect ${path.join(dir, VERDICTS_FILE)}.`, 503);
+}
+
 export async function readVerdictState<R>(dir: string): Promise<VerdictState<R>> {
-  const [verdicts, rev] = await Promise.all([foundryFs().readJson<Record<string, R>>(path.join(dir, VERDICTS_FILE), {}), readVerdictRev(dir)]);
+  const [verdicts, rev] = await Promise.all([
+    foundryFs()
+      .readJson<Record<string, R>>(path.join(dir, VERDICTS_FILE), {})
+      .catch((e: unknown) => {
+        throw e instanceof SyntaxError ? unreadableVerdicts(dir) : e;
+      }),
+    readVerdictRev(dir),
+  ]);
   return { rev, verdicts };
 }
 

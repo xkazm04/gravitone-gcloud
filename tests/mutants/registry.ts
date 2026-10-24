@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 156;
+export const UNGUARDED_PROBE_BUDGET = 155;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -471,6 +471,14 @@ export const MUTANTS: Mutant[] = [
     find: "s2 += 2 * below[v] + count[v];",
     replace: "s2 += 2 * below[v];",
     why: "A tie between a kept and a rejected plate counts as the reject winning, so every grade field on a coarse scale reads lower than it is and a chance field can read inverted.",
+  },
+  {
+    id: "forge-list-dies-on-damaged-verdicts",
+    probe: "foundry-store-disk.probe.spec.ts",
+    file: "lib/foundry/store.ts",
+    find: "if (!(e instanceof SyntaxError)) throw e;",
+    replace: "throw e;",
+    why: "One run's half-written verdicts.json fails listRuns for every run, so the ledger, the Library's foundry feed and the import list go dark over a single damaged file.",
   },
   {
     id: "extract-text-round-wins-recipe",
