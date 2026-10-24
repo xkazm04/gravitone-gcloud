@@ -82,6 +82,7 @@ export const SCENE_SCHEMA = {
 
 const num = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 const clamp = (v: number) => Math.max(0, Math.min(100, v));
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** Asking a generative layer for glyphs is the one unconditional defect: a plate
  *  that comes back carrying letters is not a nicer plate, it is an unusable one.
@@ -149,7 +150,8 @@ function parseScene(
     throw new SceneSpecError("The motion just restates the subject. A still is not a move.");
 
   const elements = (Array.isArray(s.elements) ? s.elements : []).map((e) => {
-    const el = e as Record<string, unknown>;
+    if (!isRecord(e)) throw new SceneSpecError("An element is not an object.");
+    const el = e;
     const kind = String(el.kind ?? "");
     if (!(ELEMENT_KINDS as readonly string[]).includes(kind))
       throw new SceneSpecError(`Unknown element kind "${kind}".`);
@@ -171,7 +173,8 @@ function parseScene(
   });
 
   const texts = (Array.isArray(s.texts) ? s.texts : []).map((t) => {
-    const tx = t as Record<string, unknown>;
+    if (!isRecord(t)) throw new SceneSpecError("A text is not an object.");
+    const tx = t;
     const role = String(tx.role ?? "");
     if (!(TEXT_ROLES as readonly string[]).includes(role)) throw new SceneSpecError(`Unknown text role "${role}".`);
     const factId = tx.factId ? String(tx.factId) : undefined;
@@ -256,10 +259,15 @@ export function reviewSceneSpecs(
   const specs: SceneSpec[] = [];
   const rejected: SpecRejection[] = [];
 
-  for (const s of doc.scenes as Record<string, unknown>[]) {
+  for (const item of doc.scenes as unknown[]) {
+    // A scene that is not an object (null, a string) is the ENGINE'S defect, not
+    // this parser's, so it is a finding like any other - not a TypeError that
+    // throws away the pass's other scenes.
+    const s: Record<string, unknown> = isRecord(item) ? item : {};
     const beatAt = String(s.beatAt ?? "");
     mentioned.add(beatAt);
     try {
+      if (!isRecord(item)) throw new SceneSpecError("The scene is not an object.");
       if (!byAt.has(beatAt)) throw new SceneSpecError(`"${beatAt}" is not a beat in this script.`);
       if (accepted.has(beatAt)) throw new SceneSpecError(`A second scene for ${beatAt} — the first one stands.`);
       specs.push({ beatAt, ...parseScene(s, knownFactIds, grades) });

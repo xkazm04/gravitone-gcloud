@@ -39,3 +39,19 @@ test("scene-element-citation: an uncited element still passes (back-compat)", ()
   expect(r.rejected).toEqual([]);
   expect(r.specs[0].elements[0].factId).toBeUndefined();
 });
+
+test("scene-element-citation: a null scene, element or text is a finding, not a lost pass", () => {
+  // The engine's JSON is a request, not a guarantee. A `null` in any of its
+  // three lists used to throw a TypeError out of the review, discarding every
+  // good scene beside it.
+  const good = JSON.parse(sceneWith({}));
+  const scene = good.scenes[0];
+  const r = reviewSceneSpecs(JSON.stringify({ scenes: [null, scene] }), frames, ids);
+  expect(r.specs).toHaveLength(1);
+  expect(r.rejected).toEqual([{ beatAt: "(no beatAt)", reason: "The scene is not an object." }]);
+  for (const [key, reason] of [["elements", "An element is not an object."], ["texts", "A text is not an object."]] as const) {
+    const bad = reviewSceneSpecs(JSON.stringify({ scenes: [{ ...scene, [key]: [null] }] }), frames, ids);
+    expect(bad.specs, key).toHaveLength(0);
+    expect(bad.rejected, key).toEqual([{ beatAt: "0:04", reason }]);
+  }
+});
