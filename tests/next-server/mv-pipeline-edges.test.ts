@@ -26,6 +26,7 @@ import path from "node:path";
 import { closeProcessKernel } from "@gt/kernel/process";
 
 import { CREDITS_PER_STILL, planBatch, resolveDir } from "../../lib/sound/mv/batch.ts";
+import { fetchClipBytes } from "../../lib/sound/mv/fetchAudio.ts";
 import { importFolder } from "../../lib/sound/mv/importFolder.ts";
 import { isLookId, MV_LOOK_IDS } from "../../lib/sound/mv/looks.ts";
 import { writeMetadata } from "../../lib/sound/mv/metadata.ts";
@@ -120,5 +121,12 @@ describe("the album plan and the import", () => {
     // What the import then takes is exactly what the plan queued.
     const imported = await importFolder(dir);
     expect({ added: imported.added, skipped: imported.skipped }).toEqual({ added: 1, skipped: 1 });
+  });
+});
+
+describe("a Suno clip's audio URL", () => {
+  it("that cannot be parsed fails with the download's own sentence, not a bare 'Invalid URL'", async () => {
+    // Refused by fetch before any connection is made: nothing leaves the box.
+    await expect(fetchClipBytes("suno clip without a scheme")).rejects.toThrow(/^the clip's audio could not be downloaded from suno clip without a scheme: /);
   });
 });

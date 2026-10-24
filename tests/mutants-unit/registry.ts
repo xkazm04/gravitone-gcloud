@@ -5627,4 +5627,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<span className={l.activeTakeId === null ? s.rose : s.ok}>",
     why: "A voice line whose take's bytes are gone is drawn green in the rail beside a lines-recorded tally that does not count it.",
   },
+  {
+    id: "mv-clip-url-parsed-in-its-catch",
+    test: "tests/next-server/mv-pipeline-edges.test.ts",
+    file: "lib/sound/mv/fetchAudio.ts",
+    find: "    throw new Error(`the clip's audio could not be downloaded from ${hostOf(url)}: ${errorMessage(e)}`);",
+    replace: "    throw new Error(`the clip's audio could not be downloaded from ${new URL(url).host}: ${errorMessage(e)}`);",
+    why: "A Suno clip whose audio URL does not parse fails its music-video job with a bare 'Invalid URL', naming neither the clip's download nor the URL.",
+  },
 ];
