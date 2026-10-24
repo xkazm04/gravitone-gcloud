@@ -11402,6 +11402,130 @@
           "evidence": "packages/ui/src/components/audio/AudioPrompt.tsx:4 Reject reasons are named defect codes taken from the registry taxonomy (lib/sound/types.ts DEFECTS) and are shown with the brief and its exclusions."
         }
       ]
+    },
+    "0572228c-bd2e-42a3-a146-6a91d10fa08f/review-iteration-loops": {
+      "context": "article-check-and-critique",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:08:48.356Z",
+      "worker": "858359f8-f3d6-4496-9a0e-843793fca516",
+      "techniques": [
+        {
+          "technique": "follow-up-that-can-kill-a-fact",
+          "verdict": "deviation",
+          "evidence": "lib/articles/critiqueWriter.ts:97 The research turn's record has no subtractive verb and no verdict. It counts additions only (confirmation-only shape)."
+        },
+        {
+          "technique": "critique-carries-its-fix",
+          "verdict": "conformant",
+          "evidence": "lib/articles/critique.ts:191 Every finding must name a location and carry a suggestion before the review is kept. The consumer is the writer agent, which acts on findings, so a blocker never arrives without its fix."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "lib/articles/critique.ts:236 Every finding gets exactly one accepted, rejected or deferred disposition with a non-empty reason, so a dropped finding is refused rather than lost silently."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/critiqueStep.ts:25 The critique rewrite runs before the first human review, which is the technique's own carve-out. The check-fix turn already carries unflagged paragraphs byte for byte (checkLoop.ts:105), and the check re-runs after each revision."
+        }
+      ]
+    },
+    "8c854c7a-5467-4ddc-80ed-76f19b1f5094/review-iteration-loops": {
+      "context": "board-decision-adapters",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:08:48.356Z",
+      "worker": "858359f8-f3d6-4496-9a0e-843793fca516",
+      "techniques": [
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "deviation",
+          "evidence": "lib/decision/v1/sources/article.ts:251 A reviewed artifact's notes become a redraft brief, not a list of operations. Sections no note names are not held byte-identical."
+        },
+        {
+          "technique": "note-taxonomy-focus-scope-order",
+          "verdict": "deviation",
+          "evidence": "lib/decision/v1/sources/article.ts:237 The closed directive vocabulary is mapped to English phrases for a writer agent, not to minimal operations. Keeping less_weight distinct from remove is left to the model."
+        },
+        {
+          "technique": "gate-record-outlives-the-media",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/dojo.ts:331 A dojo commit writes ledger rows and exactly one thumbnail per approval into git (the shared channel) and deletes the decided pairs' media. Approvals enter the loop's reflected:false queue (line 347), which is the discharge marker."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/dojo.ts:296 Refusal happens before apply. The preview refuses an overturn or a half-picked claim in v1's words before any commit runs."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/proof.ts:201 A Board verdict cannot override what the governing surface (the atelier, or a style lock) decided. The refusal names that surface."
+        }
+      ]
+    },
+    "571eae96-e297-40c6-a556-3a3bf8f48e3f/review-iteration-loops": {
+      "context": "review-and-runs-history",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:08:48.356Z",
+      "worker": "858359f8-f3d6-4496-9a0e-843793fca516",
+      "techniques": [
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:117 This is the silent loser and vanishing consideration: attached notes are dropped on approve with no refusal or announcement."
+        },
+        {
+          "technique": "note-taxonomy-focus-scope-order",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/review/ArticlePage.tsx:34 Each section note is typed from a closed set of five directives (more/less weight, remove, reposition, free_text), and notes render in place under the section they target."
+        }
+      ]
+    },
+    "5195e631-ab0c-4f12-930b-8c0da09fcd3d/review-iteration-loops": {
+      "context": "research-producers",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:08:48.356Z",
+      "worker": "858359f8-f3d6-4496-9a0e-843793fca516",
+      "techniques": [
+        {
+          "technique": "follow-up-that-can-kill-a-fact",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/followUp.ts:22 The subtractive verbs are first-class, and each effect carries a reason."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/followUp.ts:25 The revision deliverable is a list of operations on named fact ids, not a regenerated notebook."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/followUp.ts:58 A violating answer is refused whole, before apply, with the ids named, and never partially applied."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/research/followUp.ts:23 This is the evidence base itself, with no timed beats to split. A new fact must still declare its source."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/research/followUp.ts:17 The notebook is discrete text records, so there are no continuous-media seams."
+        }
+      ]
     }
   }
 }
