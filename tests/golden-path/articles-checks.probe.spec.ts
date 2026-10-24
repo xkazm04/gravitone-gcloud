@@ -357,3 +357,13 @@ test("trial items: runCheck measures them when run.json carries a trial, and onl
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// The page's prose is read once per entity: `&amp;lt;` is the text "&lt;", not "<"; a hex or a
+// named dash reads as the dash; an entity naming no character is left as written instead of
+// throwing out of the whole check (String.fromCodePoint refuses past U+10FFFF).
+test("entities: decoded once, hex and dash names read, an impossible code point left as text", () => {
+  expect(htmlProse("<p>&amp;lt;tag&amp;gt; and &amp;amp;</p>")).toBe("&lt;tag&gt; and &amp;");
+  expect(htmlProse("<p>a&#x2014;b &#8212; c &mdash; d &ndash; e &#39;f&#x27;</p>")).toBe("a\u2014b \u2014 c \u2014 d \u2013 e 'f'");
+  expect(() => htmlProse("<p>x &#99999999; y</p>")).not.toThrow();
+  expect(htmlProse("<p>x &#99999999; y &#x110000; z</p>")).toBe("x &#99999999; y &#x110000; z");
+});
