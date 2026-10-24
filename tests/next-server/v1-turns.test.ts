@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import path from "node:path";
 
@@ -77,5 +77,25 @@ describe("turns reader", () => {
       ["tn-00000000000c", "gone"],
     ]);
     expect(r.value.skipped).toEqual([{ id: "tn-00000000000d", reason: expect.stringMatching(/^turn tn-00000000000d: status: /) }]);
+  });
+
+  it("past the cap it keeps the most recently written records: turn ids are random hex, so their order is no clock", async () => {
+    const capped = mkdtempSync(path.join(tmpdir(), "gt-turns-cap-"));
+    try {
+      const at = (id: string, sec: number) => {
+        const file = path.join(capped, `${id}.json`);
+        writeFileSync(file, JSON.stringify({ v: 1, ...rec(id, "running") }));
+        utimesSync(file, sec, sec);
+      };
+      // The lexically last id is the oldest write; the lexically first is the live turn just written.
+      at("tn-ffffffffffff", 1_700_000_000);
+      at("tn-888888888888", 1_700_000_100);
+      at("tn-000000000000", 1_700_000_200);
+      const r = await readTurns(capped, 2);
+      if (!r.ok) throw r.error;
+      expect(r.value.turns.map((t) => t.rec.id)).toEqual(["tn-000000000000", "tn-888888888888"]);
+    } finally {
+      rmSync(capped, { recursive: true, force: true });
+    }
   });
 });
