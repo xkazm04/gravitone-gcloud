@@ -15,6 +15,7 @@ import { makeRealPart } from "../../app/(studio)/projects/[id]/_part/real.ts";
 import { loadPart, opPart, resetParts, undoPart } from "../../app/(studio)/projects/[id]/_part/fixture.ts";
 import { DRY_STILLS, dryPreset, owes, type UnitRec } from "../../app/(studio)/projects/[id]/_part/fixtureFrames.ts";
 import { plateView, takeUrl } from "../../app/(studio)/projects/[id]/_part/fixtureFramesView.ts";
+import { actReceipt, confirmAct } from "../../app/(studio)/projects/[id]/_part/fixtureActs.ts";
 import { fixtureProduce } from "../../app/(studio)/projects/_port/port.ts";
 import { isStalePlate } from "../../lib/frames/frames.ts";
 import { frameOfUnit } from "../../lib/frames/picture/unit.ts";
@@ -141,5 +142,24 @@ describe("a dry stand-in's pixels", () => {
       }
     }
     expect(takeUrl("dry:shot-1:7", undefined)).toBe(dryPreset(7, "jpg"));
+  });
+});
+
+describe("an undo refused because a job rewrote what the edit wrote", () => {
+  it("names the job and its act, the kernel's words (core.ts planUndo)", async () => {
+    const id = "why-bitcoin";
+    const v0 = loadPart(id, "research", NOW);
+    if (!v0.ok) throw v0.error;
+    const q = opPart(id, "research", v0.value.rev, { op: "queue-follow-up", prompt: "who holds the float?" }, NOW);
+    if (!q.ok || q.value.kind !== "applied") throw new Error("queue-follow-up did not apply");
+    const receipt = actReceipt(id, "research", "run-research", NOW);
+    if (!receipt.ok) throw receipt.error;
+    const ran = confirmAct(id, "research", "run-research", receipt.value.token, NOW);
+    if (!ran.ok || ran.value.kind !== "launched") throw new Error("run-research did not land");
+    const undo = undoPart(id, "research", ran.value.view.rev, NOW);
+    expect(undo.ok ? null : { code: undo.error.code, message: undo.error.message }).toEqual({
+      code: "conflict",
+      message: `queue question: followUps was rewritten by ${ran.value.jobId} (run-research) since`,
+    });
   });
 });

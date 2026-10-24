@@ -329,8 +329,9 @@ function undoIn<R extends object>(rec: Rec<R>, now: number): Result<null> {
   if (last === undefined) return err("refused", "nothing on this part is left to undo");
   for (const k of Object.keys(last.wrote) as (keyof R)[]) {
     if (rec.data[k] !== last.wrote[k]) {
-      const by = [...rec.log].reverse().find((e) => e.kind === "job" && k in e.wrote)?.by ?? "a later write";
-      return err("conflict", `${last.label}: ${String(k)} was rewritten by ${by} since`);
+      // The writer as planUndo names a landing: its job and the act it landed.
+      const job = [...rec.log].reverse().find((e) => e.kind === "job" && k in e.wrote);
+      return err("conflict", `${last.label}: ${String(k)} was rewritten by ${job === undefined ? "a later write" : `${job.by} (${job.label})`} since`);
     }
   }
   last.undone = true;
