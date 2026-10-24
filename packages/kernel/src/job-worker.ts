@@ -81,7 +81,8 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
   const alive = opts.alive;
   const idleMs = opts.idleMs ?? 1000;
   const clock = opts.now ?? Date.now;
-  const swept = recover(fx, { holder, ...(alive === undefined ? {} : { alive }), ...(opts.spendClasses === undefined ? {} : { spendClasses: opts.spendClasses }) });
+  const recoverOpts = { holder, ...(alive === undefined ? {} : { alive }), ...(opts.spendClasses === undefined ? {} : { spendClasses: opts.spendClasses }) };
+  const swept = recover(fx, recoverOpts);
   if (!swept.ok) return swept;
 
   const inFlight = new Map<string, { pick: Pick; done: Promise<void> }>();
@@ -126,12 +127,28 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
 
   const gate = opts.admission === undefined ? undefined : admissionGate(fx, producers, opts.admission, holder, opts.onWait);
 
+  let recovered = swept.value.length;
   while (!opts.signal.aborted) {
-    const seen = look(fx);
+    let seen = look(fx);
     if (!seen.ok) return seen;
     looks++;
     const mine = new Map<ResourceLane, string[]>();
     for (const { pick } of inFlight.values()) mine.set(pick.lane, [...(mine.get(pick.lane) ?? []), pick.jobId]);
+    // THE REAPER RUNS ON EVERY LOOK THAT SEES SOMEONE ELSE'S RUNNING JOB (delivery-guarantees:
+    // stuck-reaping), not only at start. A drive another process abandoned after this loop began
+    // (a CLI killed mid-step) left its job `running`; a lane of capacity one then counted full on
+    // every look, nothing was claimed there, and so the claim's own take-over sweep never ran -
+    // the lane waited for this worker's restart. A running job that is not one of this worker's
+    // drives is the only thing that can be such a corpse, and `recover` names it only on proof.
+    if (seen.value.some((l) => l.running > (mine.get(l.lane)?.length ?? 0))) {
+      const reaped = recover(fx, recoverOpts);
+      if (!reaped.ok) return reaped;
+      if (reaped.value.length > 0) {
+        recovered += reaped.value.length;
+        seen = look(fx);
+        if (!seen.ok) return seen;
+      }
+    }
     const decided = pickWork(seen.value, (name, lane) => producers.has(producerKey(name, lane)), mine, coolingNow());
     orphans = decided.orphans;
     // Only a drive actually started skips the idle wait: a pick with no binding (a `carries` that
@@ -167,7 +184,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
     await idle(idleMs, opts.signal, [...inFlight.values()].map((f) => f.done));
   }
   await Promise.all([...inFlight.values()].map((f) => f.done));
-  return ok({ looks, started, recovered: swept.value.length, reports, orphans });
+  return ok({ looks, started, recovered, reports, orphans });
 }
 
 /**
