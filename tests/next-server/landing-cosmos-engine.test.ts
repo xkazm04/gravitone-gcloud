@@ -368,3 +368,163 @@ describe("the engine's markup names only what can carry a name", () => {
     expect(bad, "ARIA 1.2 prohibits naming a generic: a screen reader drops these labels").toEqual([]);
   });
 });
+
+/* ============ THE SHELL (landing-cosmos-shell): perf, stage, search, keyboard, the first paint ============
+ *
+ *   7. perf.ts's header is the tier contract: a probe verdict, lowered (never raised) by what an
+ *      earlier visit's governor measured on the same signature within a day; and a governor that
+ *      steps down when the 90th-percentile frame is over 22 ms across at least 45 frames, once per
+ *      window per tier, never in a hidden tab, never when forced. None of it was pinned.
+ */
+
+/** Node 21+ defines `navigator` as a getter: an assignment is ignored, so define it, and put it back */
+const defined = new Map<string, PropertyDescriptor | undefined>();
+function define(name: string, value: unknown): void {
+  if (!defined.has(name)) defined.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+  Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
+}
+afterEach(() => {
+  for (const [k, d] of defined) {
+    if (d) Object.defineProperty(globalThis, k, d);
+    else delete G[k];
+  }
+  defined.clear();
+});
+
+/** a Storage over a Map; `broken` throws on every call, like a blocked or private one */
+function storage(broken = false): Map<string, string> {
+  const m = new Map<string, string>();
+  const no = () => {
+    throw new Error("SecurityError: storage is blocked");
+  };
+  define("localStorage", {
+    getItem: (k: string) => (broken ? no() : (m.get(k) ?? null)),
+    setItem: (k: string, v: string) => (broken ? no() : void m.set(k, v)),
+  });
+  return m;
+}
+
+describe("perf.ts: the tier a machine gets", () => {
+  const GPU = "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0)";
+
+  test("the probe: no WebGL, a software renderer, two cores, 2 GB or Save-Data is lite; a hardware renderer is full", async () => {
+    const { classify } = await import("../../app/_landing/cosmos/engine/perf.ts");
+    define("navigator", { hardwareConcurrency: 8, deviceMemory: 8 });
+    expect(classify(null).tier).toBe("lite");
+    expect(classify("Google SwiftShader").tier).toBe("lite");
+    expect(classify("llvmpipe (LLVM 15.0.7, 256 bits)").tier).toBe("lite");
+    expect(classify(GPU)).toEqual({ tier: "full", why: "hardware renderer: " + GPU.slice(0, 80) });
+    define("navigator", { hardwareConcurrency: 2, deviceMemory: 8 });
+    expect(classify(GPU)).toEqual({ tier: "lite", why: "cores 2" });
+    define("navigator", { hardwareConcurrency: 8, deviceMemory: 2 });
+    expect(classify(GPU).tier).toBe("lite");
+    define("navigator", { hardwareConcurrency: 8, deviceMemory: 8, connection: { saveData: true } });
+    expect(classify(GPU)).toEqual({ tier: "lite", why: "Save-Data" });
+  });
+
+  test("a governor's downgrade is remembered for a day under the same signature, and only ever lowers", async () => {
+    const { decide, remember, signature } = await import("../../app/_landing/cosmos/engine/perf.ts");
+    define("navigator", { hardwareConcurrency: 8, deviceMemory: 8 });
+    const m = storage();
+    expect(decide(GPU).tier, "a first visit is the probe's").toBe("full");
+    remember(signature(GPU), { tier: "lite", why: "governor: p90 31.0 ms" });
+    const v = decide(GPU);
+    expect(v.tier, "the next visit starts where the governor left it").toBe("lite");
+    expect(v.why).toBe("remembered: governor: p90 31.0 ms");
+    expect(v.sig).toBe(signature(GPU));
+    // the same verdict a day and an hour old is a busy afternoon long gone
+    const [key] = [...m.keys()];
+    m.set(key, JSON.stringify({ ...JSON.parse(m.get(key)!), at: Date.now() - 25 * 3600 * 1000 }));
+    expect(decide(GPU).tier).toBe("full");
+    // another machine's verdict is not this one's
+    m.set(key, JSON.stringify({ sig: "other|8|8|0", tier: "still", why: "x", at: Date.now() }));
+    expect(decide(GPU).tier).toBe("full");
+    // a remembered tier never RAISES the probe's
+    m.set(key, JSON.stringify({ sig: signature("Google SwiftShader"), tier: "full", why: "x", at: Date.now() }));
+    expect(decide("Google SwiftShader").tier).toBe("lite");
+  });
+
+  test("storage that throws is a first visit, and remembering into it throws nothing", async () => {
+    const { decide, remember } = await import("../../app/_landing/cosmos/engine/perf.ts");
+    define("navigator", { hardwareConcurrency: 8, deviceMemory: 8 });
+    storage(true);
+    expect(decide(GPU).tier).toBe("full");
+    expect(() => remember("s", { tier: "lite", why: "w" })).not.toThrow();
+  });
+});
+
+describe("perf.ts: the governor", () => {
+  async function governor() {
+    const { Governor } = await import("../../app/_landing/cosmos/engine/perf.ts");
+    const steps = new Map<string, (now: number) => boolean>();
+    const downs: [number, number, string][] = [];
+    const g = new Governor({ want: (n, s) => void steps.set(n, s), stepDown: (p90, n, w) => void downs.push([p90, n, w]) });
+    /** frames `dt` ms apart for as long as the governor wants them; returns how many it took */
+    const frames = (dt: number) => {
+      const s = steps.get("governor");
+      steps.delete("governor");
+      if (!s) return 0;
+      let now = 1000,
+        n = 1;
+      while (s(now) && n < 5000) {
+        now += dt;
+        n++;
+      }
+      return n;
+    };
+    return { g, downs, frames, wanted: () => steps.has("governor") };
+  }
+
+  test("a window of slow frames steps the tier down once, with its p90; fast frames step nothing", async () => {
+    define("document", { hidden: false });
+    const slow = await governor();
+    slow.g.kick("boot", 3000);
+    slow.frames(30);
+    expect(slow.downs).toEqual([[30, expect.any(Number), "boot"]]);
+    expect(slow.downs[0][1]).toBeGreaterThanOrEqual(45);
+    const fast = await governor();
+    fast.g.kick("boot", 3000);
+    expect(fast.frames(16.7)).toBeGreaterThan(150);
+    expect(fast.downs).toEqual([]);
+  });
+
+  test("a window past its duration with fewer than 45 frames keeps sampling until it has them", async () => {
+    define("document", { hidden: false });
+    const { g, downs, frames } = await governor();
+    g.kick("move", 200);
+    // 100 ms frames: the 200 ms are over after three, a verdict needs 45 intervals
+    expect(frames(100)).toBe(46);
+    expect(downs.map((d) => d[1])).toEqual([45]);
+  });
+
+  test("each window runs once per tier, one at a time, and again after a reset; an off governor opens none", async () => {
+    define("document", { hidden: false });
+    const { g, frames, wanted } = await governor();
+    g.kick("boot", 300);
+    g.kick("level", 300); // asked for while boot samples: not run, and not spent
+    frames(16);
+    g.kick("boot", 300);
+    expect(wanted(), "boot already ran in this tier").toBe(false);
+    g.kick("level", 300);
+    expect(wanted(), "level was never run, so it runs now").toBe(true);
+    frames(16);
+    g.reset();
+    g.kick("boot", 300);
+    expect(wanted(), "a new tier is watched the same way").toBe(true);
+    frames(16);
+    g.off = true;
+    g.kick("move", 300);
+    expect(wanted()).toBe(false);
+  });
+
+  test("a hidden tab has no frames worth judging: the window is given back, unjudged", async () => {
+    define("document", { hidden: true });
+    const { g, downs, frames, wanted } = await governor();
+    g.kick("boot", 3000);
+    expect(frames(30), "the first frame in a hidden tab ends it").toBe(1);
+    expect(downs).toEqual([]);
+    define("document", { hidden: false });
+    g.kick("boot", 3000);
+    expect(wanted(), "the same window may be asked for again").toBe(true);
+  });
+});
