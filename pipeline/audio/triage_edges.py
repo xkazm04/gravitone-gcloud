@@ -33,15 +33,42 @@ the repetition and the spectrum disposes: the largest proposed k whose k power-a
 (level, four band groups) lie on one line within 1 dB. The line's slope across the whole length is
 the drift between repeats - the step the loop's end makes into its start; a seamless loop has
 none. A TEXTURE (no rhythm: a bed, rain, a drone) has no repeats but is locally continuous: the
-step from its last 0.5 s into its first, minus the median of the same step everywhere inside it.
-(Its own slow swells are why a trend is wrong there: one clean sfx loop wanders 2.5 dB between
-1 s spans and read 3.1 dB of "drift".) Then a hard waveform discontinuity: the jump from the last
-sample to the first over the take's 99.9th-percentile sample-to-sample change, dB. The value is
-the largest of the three. On the corpus: no clean loop flags (0 of 16); every medium (4 dB) and
-high (8 dB) music-loop defect flags; of the sfx textures every high defect flags and no medium one
-does (0 of 4: 0.9..2.6 dB) - a swelling bed's own wander is the size of a 4 dB drift, and no level
-test separates the two. On this file's own drum loop a 6 dB drift reads 6.05 and an 8 dB hat
-drift 8.04; the clean loop 0.52.
+step its wrap makes, against the same step at every boundary inside it. (Its own slow swells are
+why a trend is wrong there: one clean sfx loop wanders 2.5 dB between 1 s spans and read 3.1 dB
+of "drift".) Then a hard waveform discontinuity: the jump from the last sample to the first over
+the take's 99.9th-percentile sample-to-sample change, dB. The value is the largest of the three.
+
+The texture step, second cut (2026-10-24, same corpus). The first cut was the mean of the last
+0.5 s against the first, minus the median such step inside: every high (8 dB) sfx defect flagged
+and no medium (4 dB) one did (0 of 4: 0.9..2.6 dB). Two things hid a 4 dB step, measured per
+band on those files:
+  - the bed's own swell. A clean bed's level slopes by up to 2.0..7.6 dB a second (the
+    steepest 1 s line fit of each of the 8 clean beds), and a mean-against-mean step reads that
+    slope as a step - with either sign, so a swell falling into the wrap cancelled most of a
+    rising seam (sfx-loop-1, 4 dB: level read 0.7). Now the step is FITTED: per band,
+    a + b t + c t^2 + a jump at the boundary, by least squares over the ten 100 ms windows
+    wholly on each side (0.5 s; the one straddling it is left out). A slope and a curvature
+    are absorbed; a jump is not. (0.75, 1, 1.5 and 2 s a side were
+    measured with everything below unchanged: clean beds stay under 1.4 dB at every length, but
+    the weakest 4 dB step reads 2.9, 2.6, 2.2, 0.9 dB - over a longer span the bed's swell is no
+    longer a parabola, and its odd part trades against the jump. 0.5 s flags all four.)
+  - the low bands' own noise. A 100 ms window holds a dozen bins under 250 Hz; a band's fitted
+    step there wanders 3-5 dB at random between boundaries, against 0.4-1 dB above 2 kHz, and
+    the level - a power sum the low bands dominate - inherits it. Now each band is weighted by
+    the inverse of its own fitted-step variance inside the take (RMS over every boundary whose
+    fit does not reach the wrap, floored at 0.25 dB). The common step is the weighted MEDIAN of
+    the bands' steps - every band steps together when a bed's level drifts, and a median is not
+    moved by the few that did not - and each of the four band groups' weighted mean minus that
+    common step is the spectrum's. A spectral drift above 2 kHz moves the steady high bands, so
+    the median follows them and the low groups read the step against it: the note says "median
+    band", never "level", for that reason.
+Each of the five statistics is then taken at the wrap minus its median at every boundary inside
+- the take's own wander, as before; same unit, same 3 dB bar. On the corpus: clean sfx loops
+0.14..1.42 dB (0 of 8 flag); the four former misses read level-medium 3.89 and 4.26,
+spectral-medium 3.87 and 3.65; every sfx high defect 7.28..8.04; 2 dB (low) defects 1.3..2.4
+still pass. The rhythm regime is untouched (every music row reads as it did), and one music
+loop whose rhythm test fails (music-loop-2, 8 dB) reads 8.01 here, against 5.67 before. On this
+file's own drum loop a 6 dB drift reads 6.05 and an 8 dB hat drift 8.04; the clean loop 0.52.
 """
 
 import math
@@ -66,6 +93,7 @@ SEAM_K_MAX = 32
 SEAM_REPEAT_DB = 1.0
 SEAM_REPEAT_R = 0.8
 SEAM_TEXTURE_S = 0.5
+SEAM_SIGMA_FLOOR_DB = 0.25
 SEAM_FLOOR_DB = 60.0
 JUMP_PERCENTILE = 99.9
 _LEVEL_FLOOR_DB = -120.0
@@ -186,22 +214,51 @@ def _rhythmic_drift(level, bands, proposed, floor, grid):
     return k, np.abs(_trend(*_spans(level, bands, k, floor, grid))[0])
 
 
-def _pair_step(level, bands, rows, per, floor, active):
-    """|features of the second `per` rows - features of the first| (rows taken circularly)."""
-    p = _energy_mean(level, bands, rows[:per])
-    q = _energy_mean(level, bands, rows[per:])
-    f = _features(np.array([p[0], q[0]]), np.array([p[1], q[1]]), floor, active)
-    return np.abs(f[1] - f[0])
+def _step_kernel(m):
+    """(frame offsets, weights): the least-squares STEP at a boundary, from the m windows wholly
+    before it and the m wholly after (the one straddling it is left out). Model: a + b t + c t^2
+    + (d/2) sign(t), t the window centre's distance from the boundary - a swell (the slope and
+    curvature a bed wanders with) is absorbed, a jump is not. The two sides are symmetric, so the
+    step is the odd part's sign term alone: a higher even term would not change it."""
+    off = np.concatenate((np.arange(-m - 1, -1), np.arange(0, m)))
+    t = (off + 1) / m
+    a = np.column_stack((np.ones_like(t), np.sign(t), t, t * t))
+    return off, 2 * np.linalg.pinv(a)[1]
 
 
-def _texture_step(level, bands, per, floor):
-    """A take with no rhythm: the step from its last `per` frames into its first, minus the median
-    of the same step between adjacent runs everywhere inside it (circularly, every half run)."""
-    n = len(level)
-    active = np.any(bands > floor, axis=0)  # one band set for the whole take (a tone has one band)
-    inside = [_pair_step(level, bands, np.arange(a, a + 2 * per) % n, per, floor, active) for a in range(0, n, max(1, per // 2))]
-    wrap = _pair_step(level, bands, np.arange(n - per, n + per) % n, per, floor, active)
-    return wrap - np.median(np.array(inside), axis=0)
+def _steps(y, m):
+    """The fitted step (dB, per column of y) at every boundary of the circular frame series: row p
+    is the boundary at the start of frame p, so row 0 is the wrap."""
+    off, w = _step_kernel(m)
+    return sum(wk * np.roll(y, -o, axis=0) for o, wk in zip(off, w))
+
+
+def _weighted_median(v, w):
+    """Per row of v, the median of its columns weighted by w."""
+    o = np.argsort(v, axis=1)
+    cw = np.cumsum(w[o], axis=1)
+    k = np.argmax(cw >= cw[:, -1:] / 2, axis=1)
+    return np.take_along_axis(v, o, axis=1)[np.arange(len(v)), k]
+
+
+def _texture_step(bands, m, floor):
+    """A take with no rhythm: (common step, largest band-group step against it) at the wrap, each
+    minus the median of the same statistic at every boundary inside it, dB. Per band, the fitted
+    step over m windows each side; each band weighted by the inverse of its own step variance
+    inside the take (a low band holds few bins and wanders 3-5 dB between 0.5 s spans, a high
+    band under 1 dB); the common step is the weighted median across bands - every band steps
+    together when the level drifts - and a group's step is its weighted mean minus that."""
+    b = np.maximum(bands, floor)
+    b = b[:, np.any(b > floor, axis=0)]  # a band at the floor throughout is no evidence (a tone has one band)
+    n = len(b)
+    d = _steps(b, m)
+    inside = np.ones(n, bool)
+    inside[np.r_[0:m + 2, n - m - 2:n]] = False  # boundaries whose fit reaches the wrap
+    w = 1.0 / np.maximum(np.sqrt(np.mean(d[inside] ** 2, axis=0)), SEAM_SIGMA_FLOOR_DB) ** 2
+    common = _weighted_median(d, w)
+    groups = [d[:, g] @ w[g] / w[g].sum() - common for g in np.array_split(np.arange(b.shape[1]), SEAM_GROUPS) if g.size]
+    stat = np.abs(np.column_stack([common] + groups))
+    return stat[0] - np.median(stat[inside], axis=0)
 
 
 def loop_seam(take, th, ctx):
@@ -214,21 +271,29 @@ def loop_seam(take, th, ctx):
         return t.skip("loop-seam", "too short to hold two repetitions", bar)
     x = take.x.astype(np.float64)
     ring = np.vstack((x, x[:s]))  # the loop played into itself: a window may straddle the wrap
-    level, bands = _seam_frames(ring, take.rate, np.arange(0, take.n, h), s)
-    floor = float(np.max(bands)) - SEAM_FLOOR_DB
     proposed = _rhythmic(take, spans)
     if proposed:
-        k, drift = _rhythmic_drift(level, bands, proposed, floor, (np.arange(0, take.n, h), take.n, s))
-        how = f"drift across {k} repeats of {take.duration / k:.2f} s"
+        starts = np.arange(0, take.n, h)
+        level, bands = _seam_frames(ring, take.rate, starts, s)
+        k, drift = _rhythmic_drift(level, bands, proposed, float(np.max(bands)) - SEAM_FLOOR_DB, (starts, take.n, s))
+        how, tag = f"drift across {k} repeats of {take.duration / k:.2f} s", "level"
     else:
-        drift = _texture_step(level, bands, int(round(SEAM_TEXTURE_S / SEAM_HOP_S)), floor)
-        how = f"wrap over the median {SEAM_TEXTURE_S:g} s step inside"
+        # Windows on a grid that divides the length exactly, so the frame series is circular and
+        # the windows before the wrap end at it (an 8.03 s loop at a whole 50 ms hop would put a
+        # window holding the start among them). The hop is then 50 ms to within half a hop over
+        # the frame count - 49.88 ms for 8.03 s, whose last window before the wrap reaches 12 of
+        # its 4800 samples past it.
+        frames = max(1, int(round(take.n / h)))
+        _, bands = _seam_frames(ring, take.rate, np.round(np.arange(frames) * take.n / frames).astype(int), s)
+        m = int(round(SEAM_TEXTURE_S / SEAM_HOP_S))
+        drift = _texture_step(bands, m, float(np.max(bands)) - SEAM_FLOOR_DB)
+        how, tag = f"step at the wrap ({SEAM_TEXTURE_S:g} s a side) over the median step inside", "median band"
     lstep, sstep = float(drift[0]), float(np.max(drift[1:])) if len(drift) > 1 else 0.0
     d = np.abs(np.diff(x, axis=0))
     ref_j = float(np.percentile(d, JUMP_PERCENTILE))
     j = float(np.max(np.abs(x[0] - x[-1])))
     jump = 20.0 * math.log10(j / ref_j) if j > 0 and ref_j > 0 else None
     v = max(lstep, sstep) if jump is None else max(lstep, sstep, jump)
-    note = f"{how}: level {lstep:.1f} dB, spectrum {sstep:.1f} dB"
+    note = f"{how}: {tag} {lstep:.1f} dB, spectrum {sstep:.1f} dB"
     note += "" if jump is None else f"; waveform jump {jump:+.1f} dB"
     return t.finding("loop-seam", t.reaches(v, bar), v, bar, at_s=take.duration, note=note)

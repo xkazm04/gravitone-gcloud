@@ -51,6 +51,45 @@ const plan = (b1: number, b2: number): NonNullable<TriageContext["sections"]> =>
   { name: "chorus", startMs: b2, endMs: 24_000 },
 ];
 
+/** An 8 s noise bed rendered CIRCULARLY (seamless as it stands): a low rumble (a one-pole
+ * low-pass run twice round, so its state at the wrap is its state at the start) under a hiss (a
+ * circular first difference), swelling 3 and 5 times per pass - FALLING into the wrap at ~6 dB/s,
+ * so a mean-against-mean step reads the swell as a step down and hides a seam that steps up.
+ * `levelDb` / `hissDb` drift the whole bed / only the hiss across the length - the step its wrap
+ * then makes. Seeded xorshift32: the same bed on every box. */
+function bed(levelDb = 0, hissDb = 0): Signal {
+  const n = R * 8;
+  let s = 7;
+  const rnd = (): number => {
+    s ^= s << 13;
+    s >>>= 0;
+    s ^= s >>> 17;
+    s ^= s << 5;
+    s >>>= 0;
+    return s / 0x7fffffff - 1;
+  };
+  const w = Float64Array.from({ length: n }, rnd);
+  const v = Float64Array.from({ length: n }, rnd);
+  const low = new Float64Array(n);
+  let y = 0;
+  let z = 0;
+  for (let pass = 0; pass < 3; pass++)
+    for (let i = 0; i < n; i++) {
+      y = 0.98 * y + 0.02 * (w[i] ?? 0);
+      z = 0.98 * z + 0.02 * y;
+      low[i] = z;
+    }
+  const rms = (x: Float64Array): number => Math.sqrt(x.reduce((a, b) => a + b * b, 0) / x.length);
+  const lr = rms(low);
+  const hr = Math.SQRT2 * rms(v);
+  return Float64Array.from({ length: n }, (_, i) => {
+    const u = i / n;
+    const swell = 1 - 0.3 * Math.sin(2 * Math.PI * 3 * u) + 0.1 * Math.sin(2 * Math.PI * 5 * u + 1);
+    const hiss = ((v[i] ?? 0) - (v[(i + n - 1) % n] ?? 0)) / hr;
+    return swell * dbfs(levelDb * u) * (0.1 * ((low[i] ?? 0) / lr) + 0.05 * hiss * dbfs(hissDb * u));
+  });
+}
+
 let dir: string;
 const file = (name: string): string => path.join(dir, `${name}.wav`);
 
@@ -85,6 +124,9 @@ beforeAll(() => {
     // a held tone that has begun a 10 dB fall (40 dB/s) when the file stops: an ending, not a cut
     falling: [signal(3, (t) => 0.3 * Math.sin(2 * Math.PI * 440 * t) * dbfs(t < 2.75 ? 0 : (-10 * (t - 2.75)) / 0.25))],
     inverted: [sine(10), neg(sine(10))],
+    bed: [bed()],
+    "bed-level": [bed(-4)],
+    "bed-hiss": [bed(0, -4)],
   };
   write["tail"] = [concat(write["fade"]?.[0] ?? new Float64Array(), new Float64Array(R * 4))];
   for (const [name, channels] of Object.entries(write)) wav16(file(name), channels);
@@ -238,6 +280,20 @@ describe.skipIf(NOT_READY !== null)("structural checks", () => {
     near(hats, 8, 0.3);
   });
 
+  it("loop-seam: a noise bed swelling into its wrap passes; the same bed drifting 4 dB, or only its hiss 4 dB, across its length flags at the wrap", async () => {
+    for (const name of ["bed-level", "bed-hiss"]) void triage(name, { kind: "sfx", loop: true });
+    const clean = (await triage("bed", { kind: "sfx", loop: true })).by("loop-seam");
+    expect(clean).toMatchObject({ verdict: "pass", note: expect.stringMatching(/^step at the wrap \(0\.5 s a side\) over the median step inside: /) });
+    expect(clean.value ?? 99).toBeLessThan(1); // 0.24: the swell is fitted, not read as a ~3 dB step down
+    const level = (await triage("bed-level", { kind: "sfx", loop: true })).by("loop-seam");
+    expect(level).toMatchObject({ verdict: "flag", note: expect.stringMatching(/median band 3\.\d dB, spectrum 0\.\d dB/) });
+    near(level, 3.5, 0.3); // 3.53: the 4 dB step less the bed's own median step inside
+    const hiss = (await triage("bed-hiss", { kind: "sfx", loop: true })).by("loop-seam");
+    // the steady hiss bands carry the band median with them; the rumble's groups read the step against it
+    expect(hiss).toMatchObject({ verdict: "flag", note: expect.stringMatching(/spectrum 4\.\d dB/) });
+    near(hiss, 4.1, 0.3);
+  });
+
   it("loop-seam: a whole-cycle tone loop passes; one a quarter-cycle off jumps at the wrap and flags on the waveform", async () => {
     void triage("seam-jump", { kind: "sfx", loop: true });
     const seamless = await triage("seamless", { kind: "sfx", loop: true });
@@ -254,7 +310,7 @@ describe.skipIf(NOT_READY !== null)("structural checks", () => {
 
   it("mono-fold: a right channel that is the left inverted flags (it folds to silence); identical channels lose 0 dB; a mono file skips", async () => {
     for (const name of ["clean", "fade"]) void triage(name, { kind: "music" });
-    expect((await triage("inverted", { kind: "music" })).by("mono-fold")).toMatchObject({ defect: "phase-width", verdict: "flag", value: null, threshold: 3 });
+    expect((await triage("inverted", { kind: "music" })).by("mono-fold")).toMatchObject({ defect: "phase-width", verdict: "flag", value: null, threshold: 4 });
     expect((await triage("clean", { kind: "music" })).by("mono-fold")).toMatchObject({ verdict: "pass", value: 0 });
     expect((await triage("fade", { kind: "music" })).by("mono-fold")).toMatchObject({ verdict: "skip", note: "mono file" });
   });

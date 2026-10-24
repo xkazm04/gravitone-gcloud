@@ -68,9 +68,11 @@ THE CHECKS (method in one line each; units and defaults are the TS table's):
                     (lags L/k and 2L/k of its 10 ms envelope autocorrelating >= 0.8): the largest
                     such k whose k power-averaged spans lie on one line within 1 dB, and value =
                     that line's slope across the whole length - the drift its repeats make, which
-                    is the step its end makes into its start. A TEXTURE (no such k): the step from
-                    its last 0.5 s into its first minus the median of that step at every 0.25 s
-                    inside it. And the waveform jump |x[0] - x[-1]| over the take's 99.9th-
+                    is the step its end makes into its start. A TEXTURE (no such k): per band, the
+                    step fitted at the wrap (a + b t + c t^2 + a jump, least squares over the 0.5 s
+                    of windows on each side); bands weighted by the inverse of their own step
+                    variance inside the take; the weighted-median band's step and each band
+                    group's step against it, each minus its median at every boundary inside. And the waveform jump |x[0] - x[-1]| over the take's 99.9th-
                     percentile sample step, dB. value = the largest; atS = the length. Skips a
                     loop under 2 s. 3 dB.
   mono-fold         LUFS(L, R) - LUFS(M, M) where M = (L+R)/2: the fold-down as it is heard, on both
