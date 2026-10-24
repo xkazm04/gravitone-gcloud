@@ -13,6 +13,8 @@ import { AudioPrompt } from "../../src/components/audio/AudioPrompt.tsx";
 import { DraftList } from "../../src/components/audio/DraftList.tsx";
 import { SeedComposer } from "../../src/components/audio/SeedComposer.tsx";
 import { TermRail } from "../../src/components/audio/TermRail.tsx";
+import { VariationList } from "../../src/components/audio/VariationList.tsx";
+import { ReferenceList } from "../../src/components/audio/ReferenceList.tsx";
 import { BLANK_SEED, addTo, avoidFloats, compose, fitTo, handsOf, preferredFloats, removeFrom, sortTerms, sunoCut, sunoFieldsOf, termId, type Seed, type Term } from "../../src/components/audio/recipe.ts";
 import { conceptFor, keyRelation, tempoError, variationsOfSeed } from "../../src/components/audio/variations.ts";
 
@@ -258,5 +260,17 @@ describe("the term rail's markup", () => {
     expect(html).toContain('aria-label="add cello to the seed"');
     expect(html).not.toContain('aria-label="add impact to the seed"');
     expect(html).toContain("impact");
+  });
+});
+
+describe("repeated acts carry what they act on", () => {
+  test("each variation's Load and Send, and each reference method's Seed, sit in a group named for its row", () => {
+    const vars = renderToStaticMarkup(h(VariationList, { list: variationsOfSeed(SEED, []), onLoad: () => {}, onSend: () => {}, busy: false }));
+    const groups = [...vars.matchAll(/role="group" aria-label="([^"]*)"/g)].map((m) => m[1]);
+    expect(groups).toEqual(["tempo -6 BPM", "tempo +6 BPM", "key G major → E minor"]);
+    const refs = renderToStaticMarkup(
+      h(ReferenceList, { refs: [{ id: "r1", artist: "A", title: "T", truth: { tempo: 120, key: "A minor" }, methods: [{ id: "m1", label: "onset", tempo: 60, key: "C major" }, { id: "m2", label: "chroma", tempo: 121, key: "A minor" }], kept: 1, rejected: 0 }], onSeed: () => {} }),
+    );
+    expect([...refs.matchAll(/role="group" aria-label="([^"]*)"/g)].map((m) => m[1])).toEqual(["onset 60.0 bpm C major", "chroma 121.0 bpm A minor"]);
   });
 });

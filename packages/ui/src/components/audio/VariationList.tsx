@@ -35,7 +35,7 @@ export function VariationList({ list, onLoad, onSend, busy }: VariationListProps
                 </span>
               ))}
             </span>
-            <span className={s.varActs}>
+            <span className={s.varActs} role="group" aria-label={`${v.axis} ${v.diff.join(" ")}`}>
               <Button label="Load" size="sm" onPress={() => onLoad(v)} />
               <Button label="Send" size="sm" tone="cyan" disabled={busy} onPress={() => onSend(v)} />
             </span>
