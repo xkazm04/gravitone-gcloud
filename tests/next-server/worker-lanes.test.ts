@@ -87,7 +87,7 @@ describe("the --once drain names what it does not carry", () => {
     const after = must(openKernel(file));
     expect(must(get(after.store, "job:run:forge-x" as never)).job.state).toBe("queued");
     after.close();
-  });
+  }, 60_000); // spawns the real runner, whose cold start alone measured 5.56 s - past vitest's 5 s default
 
   it("a head on a lane outside --lanes is not this worker's to report", () => {
     const file = fresh();
@@ -97,7 +97,7 @@ describe("the --once drain names what it does not carry", () => {
     const r = runner(file, ["--once", "--idle-ms", "50", "--lanes", "seat.text"]);
     expect(r.status, r.stderr).toBe(0);
     expect(r.stderr).not.toContain("forge-y");
-  });
+  }, 60_000);
 });
 
 const unit = (id: string, at: string) => ({
