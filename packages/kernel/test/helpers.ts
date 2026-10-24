@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -15,6 +16,16 @@ export function must<T>(r: Result<T>): T {
 export function scratch(label: string): { dir: string; dispose(): void } {
   const dir = mkdtempSync(path.join(tmpdir(), `gt-kernel-${label}-`));
   return { dir, dispose: () => rmSync(dir, { recursive: true, force: true }) };
+}
+
+/** The Python 3 the cross-language suites spawn (packages/kernel/py): `python`, `python3`, then the
+ *  Windows `py` launcher; undefined when none answers, and each suite skips with its own warning. */
+export function findPython(): string | undefined {
+  for (const bin of ["python", "python3", "py"]) {
+    const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
+    if (r.status === 0 && r.stdout.trim() === "3") return bin;
+  }
+  return undefined;
 }
 
 export const fixedClock = (iso = "2026-10-15T12:00:00.000Z") => () => new Date(iso);

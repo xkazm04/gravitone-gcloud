@@ -1,4 +1,4 @@
-import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { copyFileSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
@@ -22,7 +22,7 @@ import { launchProject, planReceipt } from "../src/records/launch.ts";
 import { compose } from "../src/records/write.ts";
 import { reconcileJobSpend } from "../src/spend/projection.ts";
 import type { Store } from "../src/store.ts";
-import { must, scratch } from "./helpers.ts";
+import { findPython, must, scratch } from "./helpers.ts";
 import { eventTypes, jobId } from "./job-fixture.ts";
 
 // spec/job.json is the job protocol across two languages as a table. A
@@ -76,13 +76,6 @@ type Step = z.output<typeof stepSchema>;
 const spec = must(parseJsonAt("spec/job.json", specSchema, readFileSync(specFile, "utf8")));
 const operator: Actor = { kind: "operator", id: "spec" };
 
-function findPython(): string | undefined {
-  for (const bin of ["python", "python3", "py"]) {
-    const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
-    if (r.status === 0 && r.stdout.trim() === "3") return bin;
-  }
-  return undefined;
-}
 const python = findPython();
 if (python === undefined) console.warn("[job.python] SKIPPED: no Python 3 on PATH; the cross-language job protocol did not run");
 

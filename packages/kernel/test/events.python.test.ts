@@ -6,7 +6,7 @@ import { z } from "zod";
 import { parseJsonAt } from "@gt/domain/door";
 import type { EventInput } from "@gt/domain/event";
 import { append, chainHead, eventsMigrations, verify } from "../src/events.ts";
-import { must, templateStores } from "./helpers.ts";
+import { findPython, must, templateStores } from "./helpers.ts";
 
 // Node writes, Python checks: the chain must verify in the second language with
 // the standard library alone (packages/kernel/py/verify_events.py), byte for
@@ -17,13 +17,6 @@ const verifier = path.join(here, "..", "py", "verify_events.py");
 const tpl = templateStores([eventsMigrations]);
 afterAll(() => tpl.dispose());
 
-function findPython(): string | undefined {
-  for (const bin of ["python", "python3", "py"]) {
-    const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
-    if (r.status === 0 && r.stdout.trim() === "3") return bin;
-  }
-  return undefined;
-}
 const python = findPython();
 if (python === undefined) console.warn("[events.python] SKIPPED: no Python 3 on PATH (tried python, python3, py); the cross-language check did not run");
 

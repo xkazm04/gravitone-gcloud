@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
@@ -8,7 +8,7 @@ import { blobStore } from "../src/blob.ts";
 import { liveEffects } from "../src/effects.ts";
 import { migrate } from "../src/migrate.ts";
 import { openStore } from "../src/store.ts";
-import { must, scratch } from "./helpers.ts";
+import { findPython, must, scratch } from "./helpers.ts";
 
 // Node and Python processes contend for ONE lease on ONE store file (v1's
 // pipeline/gpu/selftest.py case 4, upgraded from "one try each" to sustained
@@ -23,13 +23,6 @@ const pyChild = path.join(here, "..", "py", "lease_contend.py");
 const tmp = scratch("lease-mixed");
 afterAll(() => tmp.dispose());
 
-function findPython(): string | undefined {
-  for (const bin of ["python", "python3", "py"]) {
-    const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
-    if (r.status === 0 && r.stdout.trim() === "3") return bin;
-  }
-  return undefined;
-}
 const python = findPython();
 if (python === undefined) console.warn("[lease.mixed] SKIPPED: no Python 3 on PATH; Node/Python contention did not run");
 
