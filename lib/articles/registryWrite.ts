@@ -34,7 +34,7 @@
 
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -42,6 +42,7 @@ import { cwdBoundGitEnv } from "@/lib/gitEnv";
 
 import { citedNumbers, htmlProse, postWords, THRESHOLDS } from "./checks";
 import { readCritiqueDetail, registryCritique, type RegistryCritique } from "./critique";
+import { copyDir } from "./files";
 import { resolveRegistryDir, type RegistryLocation } from "./registryRead";
 import { ArticleError, slugify } from "./store";
 import { uniqueDir } from "./tempDir";
@@ -223,25 +224,6 @@ async function readJson<T>(file: string): Promise<T> {
   return JSON.parse(await readFile(file, "utf8")) as T;
 }
 
-async function copyTree(from: string, to: string): Promise<string[]> {
-  const out: string[] = [];
-  let entries: import("node:fs").Dirent[];
-  try {
-    entries = await readdir(from, { withFileTypes: true });
-  } catch {
-    return out;
-  }
-  await mkdir(to, { recursive: true });
-  for (const e of entries) {
-    if (e.isDirectory()) out.push(...(await copyTree(path.join(from, e.name), path.join(to, e.name))).map((p) => `${e.name}/${p}`));
-    else if (e.isFile()) {
-      await copyFile(path.join(from, e.name), path.join(to, e.name));
-      out.push(e.name);
-    }
-  }
-  return out;
-}
-
 /** The default branch of `origin`, as a ref a worktree can start from. */
 async function baseRef(registry: string): Promise<string> {
   const head = await run(["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"], registry);
@@ -338,7 +320,7 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
       ? `\n${experimentsMarkdown({ prereg: trial.prereg, verdict: trial.verdict, results: trial.results, execs: trial.execs, trialId: art.trial.id, applicationPath: art.trial.applicationPath })}`
       : "";
   await writeFile(path.join(pubDir, "SOURCES.md"), `${sourcesMarkdown(meta.title, sources)}${experiments}`, "utf8");
-  await copyTree(path.join(runDir, "post", "figures"), path.join(pubDir, "figures"));
+  await copyDir(path.join(runDir, "post", "figures"), path.join(pubDir, "figures"));
   // The registry is a text-only repository (its .gitattributes says so), so the
   // medium/ record there is the three text files; the PNGs stay in the run.
   await mkdir(path.join(pubDir, "medium"), { recursive: true });
