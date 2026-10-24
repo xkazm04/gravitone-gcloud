@@ -172,7 +172,8 @@ export function judge(stored: Stored | undefined, secret: string, nowMs: number)
   const equal = timingSafeEqual(want, got);
   if (!(equal && stored !== undefined)) return { ok: false, why: "unknown" };
   if (stored.revokedAt !== undefined) return { ok: false, why: "revoked" };
-  if (nowMs >= Date.parse(stored.expiresAt)) return { ok: false, why: "expired" };
+  // "Not before the end", so an end that is not an instant (NaN) refuses rather than admits.
+  if (!(nowMs < Date.parse(stored.expiresAt))) return { ok: false, why: "expired" };
   return { ok: true, token: publicOf(stored) };
 }
 
@@ -240,8 +241,9 @@ const rowSchema = z.object({
   name: z.string(),
   scope: z.enum(TOKEN_SCOPES),
   hash: z.string().regex(HASH_RE),
-  created_at: z.string(),
-  expires_at: z.string(),
+  // Instants, not text: the schema's CHECK compares strings, and 'never' > '2026-...' passes it.
+  created_at: z.iso.datetime(),
+  expires_at: z.iso.datetime(),
   revoked_at: z.string().nullable(),
   last_used_at: z.string().nullable(),
 });

@@ -149,6 +149,20 @@ describe("token verify", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("an expiry that is not an instant refuses: it never reads as a token that never ends", () => {
+    const s = tpl.fresh();
+    const { record, token } = mint(s);
+    // 'never' > '2026-...' as text, so the schema's CHECK (expires_at > created_at) lets it through.
+    must(s.tx((t) => t.exec(`DROP TRIGGER tokens_fixed_at_mint; UPDATE tokens SET expires_at = 'never' WHERE id = '${record.id}';`)));
+    const r = verifyToken(s, token, t0 + MAX_TTL_MS * 10);
+    // Corruption refuses at the door (err), as a damaged hash does.
+    expect(r.ok).toBe(false);
+    const plan = must(mintPlan(MONEY, NOW, counting()));
+    const secret = parseToken(plan.token)?.secret ?? "";
+    expect(judge({ ...plan.record, expiresAt: "never" }, secret, t0).ok).toBe(false);
+    expect(judge(plan.record, secret, Number.NaN).ok).toBe(false);
+  });
+
   it("judge is pure over the stored record, the secret and the clock", () => {
     const plan = must(mintPlan(MONEY, NOW, counting()));
     const secret = parseToken(plan.token)?.secret ?? "";
