@@ -156,6 +156,13 @@ describe("brief vs measured", () => {
     expect(html).toContain("length asked 2s, measured 4.5s, +2.5s");
     expect(renderToStaticMarkup(h(BriefDelta, { check: briefCheck("music", { tempoBpm: null, key: null, durationS: null }, null), label: "t" }))).toBe("");
   });
+
+  test("a key is held whatever its spelling: enharmonic, abbreviated, flat glyph; a real miss stays a miss", () => {
+    // The tracker spells keys as lib/sound/measure.ts NOTES does ("C#", "Eb", "Ab", "Bb"); a brief is typed.
+    const held = (askedKey: string, measuredKey: string): string | undefined => briefCheck("music", { tempoBpm: null, key: askedKey, durationS: null }, { tempoBpm: null, key: measuredKey, durationS: null }).axes[1]?.verdict;
+    expect([held("Db major", "C# major"), held("G# minor", "Ab minor"), held("Am", "A minor"), held("A♭ major", "Ab major"), held("F#m", "F# minor"), held("Cmaj", "C major"), held("Bb", "Bb major")]).toEqual(["held", "held", "held", "held", "held", "held", "held"]);
+    expect([held("A minor", "C major"), held("A major", "A minor"), held("C# minor", "D minor")]).toEqual(["missed", "missed", "missed"]);
+  });
 });
 
 describe("the operator batch", () => {
