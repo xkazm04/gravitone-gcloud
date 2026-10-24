@@ -7,8 +7,9 @@ import type { Producer } from "@gt/kernel/job-core";
 import { processKernel, storeLocation } from "@gt/kernel/process";
 import { factsPlan, MEDIA_FACTS_LANE, mediaFactsProducer, type MediaProbe } from "@gt/producers/media-facts/run";
 
+import { measureFile, sidecarDoctor } from "../audio/sidecar.ts";
 import { OUT_DIRNAME } from "../fixtures/mode.ts";
-import { ffmpegDecode, measureMissing, type Decode } from "../sound/measureRun.ts";
+import { ffmpegDecode, measureMissing, type Decode, type Loudness } from "../sound/measureRun.ts";
 
 // THE MEDIA-FACTS PORT, BOUND TO THIS BOX (Phase 5): ffprobe for what a blob is,
 // ffmpeg for a video's keyframe and for the 1x1 average that is its mean luma.
@@ -61,6 +62,21 @@ export function ffmpegProbe(): MediaProbe {
 }
 
 /**
+ * The audio sidecar as the measure pass's Loudness port. Its doctor runs ONCE, on the first file:
+ * a box without Python or without the sidecar's modules then answers every file with the
+ * doctor's own sentence and spawns nothing more, and the measure rows land with the five NULL.
+ * Made per step, so a worker that outlives a `pip install` picks the sidecar up on its next run.
+ */
+export function sidecarLoudness(): Loudness {
+  let ready: ReturnType<typeof sidecarDoctor> | null = null;
+  return async (file) => {
+    ready ??= sidecarDoctor();
+    const d = await ready;
+    return d.ok ? measureFile(file) : d;
+  };
+}
+
+/**
  * The producer as the worker binds it (lib/producers/registry.ts BOUND): the store and the blob
  * directory are the PROCESS's (the worker's GRAVITONE_STORE_PATH, as lib/producers/strips.ts
  * `stripsKernel`), opened when a step runs rather than when the registry is imported, so a CLI
@@ -70,9 +86,11 @@ export function ffmpegProbe(): MediaProbe {
  * (lib/sound/measureRun.ts) decodes the audio blobs those facts call decodable and writes their
  * peaks, length, energy, tempo and key beside them - so the job that learns a take decodes is the
  * job that measures it. The measure pass's own failures are the step's output, not its failure:
- * the facts already landed and stand.
+ * the facts already landed and stand. The same holds one level down for the audio sidecar's
+ * loudness figures (`loudness` = null leaves them out): a sidecar that is missing or fails is
+ * `loudnessFailed` in the output and NULL figures in the row, never a failed step.
  */
-export function mediaFactsBound(limit?: number, decode: Decode = ffmpegDecode()): Producer {
+export function mediaFactsBound(limit?: number, decode: Decode = ffmpegDecode(), loudness: (() => Loudness) | null = sidecarLoudness): Producer {
   const lazy = (): { readonly producer: Producer; readonly measure: () => ReturnType<typeof measureMissing> } | { readonly error: string } => {
     const location = storeLocation(OUT_DIRNAME);
     const k = processKernel(location);
@@ -80,7 +98,7 @@ export function mediaFactsBound(limit?: number, decode: Decode = ffmpegDecode())
     const blobs = blobStore(location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(location), "blobs"));
     return {
       producer: mediaFactsProducer({ store: k.value.store, blobs, probe: ffmpegProbe(), ...(limit === undefined ? {} : { limit }) }),
-      measure: () => measureMissing(k.value.store, blobs, decode, { limit: limit ?? 500, now: () => new Date() }),
+      measure: () => measureMissing(k.value.store, blobs, decode, { limit: limit ?? 500, now: () => new Date(), ...(loudness === null ? {} : { loudness: loudness() }) }),
     };
   };
   return {
@@ -92,7 +110,8 @@ export function mediaFactsBound(limit?: number, decode: Decode = ffmpegDecode())
       const facts = await p.producer.perform(step, ctx);
       if (facts.kind !== "produced") return facts;
       const m = await p.measure();
-      const measures = m.ok ? { measured: m.value.measured, measureFailed: [...m.value.failed] } : { measured: 0, measureFailed: [m.error.message] };
+      const loud = m.ok && m.value.loudness !== undefined ? { loudnessMeasured: m.value.loudness.measured, loudnessFailed: [...m.value.loudness.failed] } : {};
+      const measures = m.ok ? { measured: m.value.measured, measureFailed: [...m.value.failed], ...loud } : { measured: 0, measureFailed: [m.error.message] };
       return { ...facts, output: { ...facts.output, ...measures } };
     },
   };

@@ -1,5 +1,5 @@
 import type { ModuleMigrations } from "../migrate.ts";
-import { MEASURES_DDL } from "./measures.ts";
+import { LOUDNESS_DDL, MEASURES_DDL } from "./measures.ts";
 
 // THE LIBRARY INDEX'S TABLES (Phase 5, COMMON decisions 5 and 6).
 //
@@ -52,7 +52,9 @@ import { MEASURES_DDL } from "./measures.ts";
 //                   sort that sinks broken media are queries over the facts, and a
 //                   writer that forgets to update the item cannot exist.
 //   audio_measures  one row per audio blob sha beside its facts: peaks, decoded
-//                   length, energy, tempo and key (v2, ./measures.ts).
+//                   length, energy, tempo and key (v2, ./measures.ts); loudness,
+//                   true peak, range, clipping and tail silence from the audio
+//                   sidecar (v4), NULL until the sidecar has measured the blob.
 //   library_ingest  the projection's memo of files it has hashed into blobs.
 //   library_marks   pins and project uses, the operator's acts.
 
@@ -207,5 +209,9 @@ export const libraryMigrations: ModuleMigrations = {
     // v3 (spark game-3d-assets): a glb's counts beside its facts. A glb probed before v3 fell
     // through to ffprobe and was written undecodable; its row is cleared so the job re-probes it.
     { version: 3, sql: "ALTER TABLE media_facts ADD COLUMN mesh TEXT; DELETE FROM media_facts WHERE mime = 'model/gltf-binary';" },
+    // v4 (spark audio-postproduction-research): the audio sidecar's loudness figures beside the
+    // ingest measure. Nullable and nothing cleared: a row measured before v4 keeps its peaks and
+    // reads NULL here until the measure pass backfills it (./measures.ts `loudnessMissing`).
+    { version: 4, sql: LOUDNESS_DDL },
   ],
 };
