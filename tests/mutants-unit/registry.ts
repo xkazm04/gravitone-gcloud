@@ -4377,6 +4377,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A draft signed after a crown moved in another tab is saved over evidence the signer never saw: the lesson cites winners it was not drafted from.",
   },
   {
+    id: "schedule-angle-title-sent",
+    test: "tests/next-server/schedule-snippet-parity.test.ts",
+    file: "packages/ui/src/components/floor/schedule.ts",
+    find: "if (/[<>]/.test(title)) out.push({ field: \"title\", words: \"title holds < or >\" });",
+    replace: "",
+    why: "A title with a < or > is scheduled on YouTube without a word; the upload refuses it at the slot's hour and the slot fails with nobody watching.",
+  },
+  {
     id: "schedule-held-not-warned",
     test: "packages/ui/test/components/floor-schedule.test.ts",
     file: "packages/ui/src/components/floor/schedule.ts",

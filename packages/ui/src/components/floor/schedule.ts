@@ -107,6 +107,28 @@ export const splitTags = (s: string): string[] => [
 /** The YouTube snippet limits v1's form held its fields to (lib/publish/youtube.ts snippetProblem). */
 export const TITLE_MAX = 100;
 export const DESCRIPTION_MAX = 5000;
+/** Tags, counted as YouTube counts them: every comma, and the quotes a tag with a space carries. */
+export const TAGS_MAX = 500;
+
+const UTF8 = new TextEncoder();
+const tagChars = (tags: readonly string[]): number => tags.reduce((n, t) => n + t.length + (t.includes(" ") ? 2 : 0), 0) + Math.max(0, tags.length - 1);
+
+/**
+ * The rest of snippetProblem, which the upload applies at the slot's HOUR: a description over
+ * 5000 BYTES (the field caps characters), a `<` or `>` in title or description, tags past 500.
+ * A slot the form let through would be accepted, wait, and fail at its hour with nobody
+ * watching - so the form refuses it now. YouTube's alone; no other channel uploads yet.
+ * tests/next-server/schedule-snippet-parity.test.ts feeds the same cases to both doors.
+ */
+function youtubeBlocked(title: string, description: string, tags: readonly string[]): Blocked[] {
+  const out: Blocked[] = [];
+  if (/[<>]/.test(title)) out.push({ field: "title", words: "title holds < or >" });
+  if (/[<>]/.test(description)) out.push({ field: "description", words: "description holds < or >" });
+  // Past 5000 characters the length rule below has already said so.
+  if (description.length <= DESCRIPTION_MAX && UTF8.encode(description).length > DESCRIPTION_MAX) out.push({ field: "description", words: `description over ${DESCRIPTION_MAX} bytes` });
+  if (tagChars(tags) > TAGS_MAX) out.push({ field: "tags", words: `tags over ${TAGS_MAX}` });
+  return out;
+}
 
 /**
  * Where the time field opens: the next full hour when the day is today (or none was picked),
@@ -151,7 +173,7 @@ function instantOf(when: string): string | null {
   return Number.isNaN(t) ? null : new Date(t).toISOString();
 }
 
-export type Blocked = { readonly field: "item" | "channel" | "when" | "title" | "description"; readonly words: string };
+export type Blocked = { readonly field: "item" | "channel" | "when" | "title" | "description" | "tags"; readonly words: string };
 
 /**
  * What stops the form from being sent at all, field by field, in the work's words; empty when
@@ -169,9 +191,11 @@ export function checkSchedule(f: ScheduleForm, channels: readonly ChannelReady[]
   if (title === "") blocked.push({ field: "title", words: "no title" });
   else if (title.length > TITLE_MAX) blocked.push({ field: "title", words: `title over ${TITLE_MAX}` });
   if (f.description.length > DESCRIPTION_MAX) blocked.push({ field: "description", words: `description over ${DESCRIPTION_MAX}` });
+  const tags = splitTags(f.tags);
+  if (f.channel === "youtube") blocked.push(...youtubeBlocked(title, f.description, tags));
   const draft =
     blocked.length === 0 && f.item !== null && f.channel !== null && at !== null
-      ? { item: f.item, channel: f.channel, at, title, description: f.description, tags: splitTags(f.tags) }
+      ? { item: f.item, channel: f.channel, at, title, description: f.description, tags }
       : null;
   return { blocked, draft };
 }
