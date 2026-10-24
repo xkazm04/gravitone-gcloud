@@ -5345,4 +5345,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const FRAME = [\"frame\", \"roles-layer\", \"roles-component\", \"board\", \"library\"];",
     why: "The kit's list of drawn token groups names a group source.json does not hold, so the page's placement check reads a list that is not what the sheet draws.",
   },
+  {
+    id: "kit-nav-mark-ignores-a-leaving-section",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/KitNav.tsx",
+    find: "else inBand.delete(e.target.id);",
+    replace: "else inBand.has(e.target.id);",
+    why: "Scrolling back up out of a /kit section leaves the nav marking the section below, not the one being read.",
+  },
 ];

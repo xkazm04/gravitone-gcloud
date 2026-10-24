@@ -14,9 +14,17 @@ export function KitNav({ bodyId }: { readonly bodyId: string }) {
   useEffect(() => {
     const root = document.getElementById(bodyId);
     if (root === null) return;
+    // Every section in the band, not only the last to enter it: one leaving hands the mark
+    // back to the one still there (scrolling up out of the section below).
+    const inBand = new Set<string>();
     const io = new IntersectionObserver(
       (entries) => {
-        for (const e of entries) if (e.isIntersecting) setHere(e.target.id);
+        for (const e of entries) {
+          if (e.isIntersecting) inBand.add(e.target.id);
+          else inBand.delete(e.target.id);
+        }
+        const last = SECTIONS.findLast((s) => inBand.has(s.id));
+        if (last !== undefined) setHere(last.id);
       },
       { root, rootMargin: "0px 0px -70% 0px" },
     );
