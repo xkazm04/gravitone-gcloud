@@ -62,6 +62,8 @@ import type { Reader, Tx } from "./store.ts";
 // `interrupted` when the fence was lost - in which case its outcome is as
 // unknown as a crash's. Only a throw that is not an Error passes untouched:
 // that is the crash harness ending the process, which no real code can catch.
+// The one exception is a store that refuses the recording write as well: the
+// job stays running until recovery, and the returned error says so.
 //
 // THE DEADLINE ADMITS, IT DOES NOT BOUND (job-coordination:
 // no-wall-clock-in-the-advance-contract). It is checked between steps only; a
@@ -228,7 +230,10 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
       releaseIn(t, slot, fence);
       return out;
     });
-    if (!r.ok) return { ok: false, error: e };
+    // The one way a throw DOES leave a job running: the store refused the write that would have
+    // ended it. Said with both sentences, so the caller does not read the job as failed; recovery
+    // names it once the slot's fence lapses.
+    if (!r.ok) return { ok: false, error: new AppError(e.code, `${e.message}; the job was left running - recording its end failed too: ${r.error.message}`, { cause: r.error, ...(e.detail === undefined ? {} : { detail: e.detail }) }) };
     return { ok: false, error: e };
   };
 

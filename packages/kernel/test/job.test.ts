@@ -1,5 +1,6 @@
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
+import { AppError } from "@gt/domain/errors";
 import { verify } from "../src/events.ts";
 import { runJob, recover, type RunOptions } from "../src/job-run.ts";
 import { cancel, enqueue, get, list, pause, resume, retry } from "../src/job.ts";
@@ -147,6 +148,23 @@ describe("runJob", () => {
       throw new Error("ffmpeg exited 1: moov atom not found");
     });
     expect(must(await runJob(w.fx, p, "job-1", opts)).job?.error).toEqual({ code: "internal", message: "ffmpeg exited 1: moov atom not found" });
+    w.store.close();
+  });
+
+  // The one drive error that DOES leave a job running: the store refused the write that would
+  // have failed it. The caller must hear that, not only the error that came first.
+  it("a drive whose failure cannot be recorded says the job was left running, with both sentences", async () => {
+    const w = world();
+    queued(w);
+    const { p } = producer("gpu.local", ["a"]);
+    const fx: World["fx"] = { ...w.fx, tx: (name, fn) => (name === "next" || name === "abandon" ? { ok: false, error: new AppError("unavailable", `${name}: database is locked`) } : w.fx.tx(name, fn)) };
+    const r = await runJob(fx, p, "job-1", opts);
+    expect(r).toMatchObject({ ok: false, error: { code: "unavailable" } });
+    if (r.ok) throw new Error("expected the drive's error");
+    expect(r.error.message).toContain("next: database is locked");
+    expect(r.error.message).toContain("abandon: database is locked");
+    expect(r.error.message).toContain("left running");
+    expect(must(get(w.store, J)).job.state).toBe("running");
     w.store.close();
   });
 
