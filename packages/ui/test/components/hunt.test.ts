@@ -188,7 +188,8 @@ describe("drawn", () => {
 
   test("a shelf card names its hunt in words beside the pips", () => {
     const html = renderToStaticMarkup(h(HuntShelf, { hunts: [{ id: "h1", idea: "a vault bed", createdAt: "2026-10-01T00:00:00Z", counts: { leaves: 4, rendered: 2, awaiting: 1, failed: 1, winners: 1 }, lessonId: null, mini: [{ axis: "tempo", leaves: [{ state: "rendered", winner: true }] }] }], open: "h1", hrefOf: (id) => `/audio?s=hunt&h=${id}` }));
-    expect(html).toContain('aria-label="a vault bed · 2 of 4 heard · 1 crowned"');
+    // The meta under the pips is aria-hidden, so the name carries every count it draws.
+    expect(html).toContain('aria-label="a vault bed · 2 of 4 heard · 1 crowned · 1 failed"');
     expect(html).toContain('aria-current="page"');
   });
 });
