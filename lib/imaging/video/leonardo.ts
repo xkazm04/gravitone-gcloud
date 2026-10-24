@@ -224,6 +224,9 @@ export function leonardoVideoAdapter(opts: LeonardoVideoOptions = {}): VideoAdap
 
       // 3. poll. One bad poll is not a failed clip; a terminal status is.
       let url: string | null = null;
+      // The last poll that errored, kept for the give-up: polls that all failed
+      // (a key revoked mid-render) must not read as a vendor that was only slow.
+      let lastPollError: string | null = null;
       for (let i = 0; i < maxPolls && !url; i++) {
         await sleep(pollMs);
         let res: Record<string, unknown>;
@@ -232,7 +235,9 @@ export function leonardoVideoAdapter(opts: LeonardoVideoOptions = {}): VideoAdap
             headers,
             attempts: 1,
           });
-        } catch {
+          lastPollError = null;
+        } catch (e) {
+          lastPollError = describe(e);
           continue;
         }
         const pk = ((res.generation ?? res.generations_by_pk ?? res) as Record<string, unknown>) ?? {};
@@ -248,7 +253,12 @@ export function leonardoVideoAdapter(opts: LeonardoVideoOptions = {}): VideoAdap
         url = findVideoUrl(res);
       }
       if (!url)
-        return { kind: "failed", message: `Leonardo produced no video within ${Math.round((maxPolls * pollMs) / 1000)}s (generation ${gid}).` };
+        return {
+          kind: "failed",
+          message:
+            `Leonardo produced no video within ${Math.round((maxPolls * pollMs) / 1000)}s (generation ${gid}).` +
+            (lastPollError ? ` The last poll failed: ${lastPollError}` : ""),
+        };
 
       // 4. download.
       try {

@@ -465,6 +465,22 @@ test.describe("leonardo adapter against a scripted vendor (no network)", () => {
     expect(seen.filter((s) => s.endsWith("/v2/generations")).length).toBe(1);
   });
 
+  test("every poll errors: the give-up names what the last poll said, not only the clock", async () => {
+    // A key revoked mid-render answers every poll 401. The run gives up at the cap
+    // either way; the record must say the polls failed, or it reads as a slow vendor.
+    stub((url, init) => {
+      const c = common(url, init);
+      if (c) return c;
+      if (url.endsWith("/v2/generations")) return json({ generate: { generationId: "gen-401" } });
+      if (url.endsWith("/v2/generations/gen-401")) return json({ error: "Invalid authentication token" }, 401);
+      return undefined;
+    }, []);
+    const out = await leonardoVideoAdapter(opts).render(input, () => undefined);
+    expect(out.kind).toBe("failed");
+    expect(out.kind !== "done" && out.message).toMatch(/gen-401/);
+    expect(out.kind !== "done" && out.message, "the poll's own failure was dropped").toMatch(/Invalid authentication token/);
+  });
+
   test("terminal FAILED and NSFW statuses during the poll", async () => {
     for (const [status, kind] of [["FAILED", "failed"], ["NSFW", "refused"]] as const) {
       stub((url, init) => {
