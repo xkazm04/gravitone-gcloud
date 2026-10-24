@@ -158,4 +158,15 @@ describe("the view a screen is handed", () => {
     expect(v.lock).toMatchObject({ can: false, legacySheet: false });
     expect(styleSummary(s, 7, "2026-10-17T11:00:00.000Z")).toMatchObject({ cover: s.proofs[0]?.media, proofs: { approved: 2, rejected: 1, pending: 0 } });
   });
+  it("fills the reference window with approvals that are sent, so a stale one leaves room", () => {
+    const sheet = (stale: number) =>
+      style({ proofs: Array.from({ length: PROOF_CAP }, (_, i) => proof(`p${i}`, i < stale ? { blockDigest: "00000000" } : {})) });
+    expect(styleView(sheet(0), 1, "2026-10-17T11:00:00.000Z").sheet).toMatchObject({ approved: PROOF_CAP, full: true });
+    expect(styleView(sheet(1), 1, "2026-10-17T11:00:00.000Z").sheet).toMatchObject({ approved: PROOF_CAP, full: false });
+  });
+  it("counts an operator's keep and shows an agent's", () => {
+    const v = styleView(style({ evidence: [kept("a"), kept("b", "agent")] }), 1, "2026-10-17T11:00:00.000Z");
+    expect(v.evidence.map((e) => [e.by, e.counts])).toEqual([["operator", true], ["agent", false]]);
+    expect(v.keptCells).toBe(1);
+  });
 });
