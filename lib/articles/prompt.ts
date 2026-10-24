@@ -105,11 +105,20 @@ export interface PromptTrial {
   results: TrialResults;
 }
 
+/** `knowledge/<...>/<subject>` out of `<subject dir>/applications/<stack>--<technique>.md`. */
+export function trialSubjectDir(ref: Pick<ArticleTrialRef, "applicationPath">): string {
+  const p = ref.applicationPath.replace(/\\/g, "/");
+  const at = p.lastIndexOf("/applications/");
+  if (at <= 0 || !p.startsWith("knowledge/")) throw new Error(`run.trial.applicationPath ${JSON.stringify(ref.applicationPath)} is not <subject dir>/applications/<file>`);
+  return p.slice(0, at);
+}
+
 /** `<subject dir>/techniques/<technique>.md`, from the application path the run carries (both sit
- *  beside the subject's golden path, the registry's own layout). */
+ *  beside the subject's golden path, the registry's own layout). The subject directory is
+ *  `trialSubjectDir`'s, so the path the writer is shown and the scope a trial patch is held to
+ *  (ingestDraft.ts `trialPatchProblem`) are read off the application path one way. */
 export function trialTechniquePath(ref: Pick<ArticleTrialRef, "applicationPath" | "technique">): string {
-  const subjectDir = ref.applicationPath.replace(/\/applications\/[^/]+$/, "");
-  return `${subjectDir}/techniques/${ref.technique}.md`;
+  return `${trialSubjectDir(ref)}/techniques/${ref.technique}.md`;
 }
 
 /** A number as the files hold it, without float noise (0.30000000000000004 -> 0.3). */
