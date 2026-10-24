@@ -154,7 +154,7 @@ export function MonthCalendar(p: MonthCalendarProps) {
                   data-day={c.key}
                   tabIndex={day === c.key || (day === null && c.key === today) ? 0 : -1}
                   aria-selected={day === c.key}
-                  aria-label={`${dayLabel(c.key)}, ${list.length} slots${fails > 0 ? `, ${fails} failed` : ""}`}
+                  aria-label={`${dayLabel(c.key)}, ${list.length} ${list.length === 1 ? "slot" : "slots"}${fails > 0 ? `, ${fails} failed` : ""}`}
                   className={cx(s.day, c.out && s.out, c.key < today && s.past, c.key === today && s.today, day === c.key && s.sel, fails > 0 && s.hasFail)}
                   onClick={() => onDay(day === c.key ? null : c.key)}
                 >

@@ -218,4 +218,11 @@ describe("rows and the month", () => {
     expect(on).toContain("vertical cut");
     expect(renderToStaticMarkup(h(MonthCalendar, { ...props, channelsOff: new Set(["tiktok"]) }))).not.toContain("vertical cut");
   });
+
+  test("a day speaks its count in the singular for one slot", () => {
+    const props = { slots: [slot("one", "2026-10-20T06:00:00.000Z", "scheduled")], nowMs: NOW, month: { y: 2026, m: 9 }, day: null, channelsOff: new Set<string>(), onMonth: () => undefined, onToday: () => undefined, onDay: () => undefined, onChannel: () => undefined, onClose: () => undefined };
+    const html = renderToStaticMarkup(h(MonthCalendar, props));
+    expect(html).toContain('aria-label="Tue 20 Oct, 1 slot"');
+    expect(html).toContain('aria-label="Wed 21 Oct, 0 slots"');
+  });
 });
