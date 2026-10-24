@@ -24,7 +24,7 @@
 //
 // ─── DERIVED, NOT AUTHORED ──────────────────────────────────────────────────
 //
-// `frames.ts:17-19`: "SCENES COME FROM STEP 2 … the frame list is derived,
+// `frames.ts`' header: "SCENES COME FROM STEP 2 … the frame list is derived,
 // never authored. Nobody retypes the script here." The same holds one layer
 // down. A shot already carries its size, its facing, where the eye is asked to
 // look and (once somebody writes one) its move — that is a staging instruction,
@@ -49,7 +49,7 @@
 //
 // ─── THE EPISTEMIC SPLIT, AND WHAT IT DEGENERATES TO HERE ───────────────────
 //
-// `frames.ts:5-15` states it: "if a viewer could check it against a fact, code
+// `frames.ts`' header states it: "if a viewer could check it against a fact, code
 // draws it; if it only has to feel right, a model may" — which in an explainer
 // puts every number and caption in the vector layer, bound to a notebook fact
 // through `factId`, and `sceneSpec.ts` REFUSES a figure that cites none.
@@ -80,7 +80,7 @@ import type { Shot, ShotSize, TrailerRole } from "@/lib/frames/shots";
  * One IP-neutral subject clause per (role × size) the ladder can actually
  * produce — nine entries, each lifted from a numbered recipe in [A] § 2.
  *
- * SHAPE FIRST, NOUNS SECOND, which is `subjectFor`'s rule (`frames.ts:280-286`)
+ * SHAPE FIRST, NOUNS SECOND, which is `subjectFor`'s rule (`frames.ts#subjectFor`)
  * and its stated reason: "a plate drawn from the literal words gets the
  * reservation book with 'Reservation' written in it, which the trial grid
  * measured leaking text on 6 of 6 styles". So no clause below is built from the
@@ -199,7 +199,7 @@ export function actionFor(shot: Shot): string {
 
   // The move, ONLY when somebody wrote one. `Shot.motion` is seeded empty on
   // purpose and an invented move here would re-introduce exactly the canned
-  // lookup `frames.ts:266-268` refused — one rung short of the plate this time,
+  // lookup `frames.ts#framesFromRender` refused — one rung short of the plate this time,
   // which makes it no better.
   if (shot.motion.trim()) parts.push(`The frame is the first frame of a shot that ${shot.motion.trim()}.`);
 

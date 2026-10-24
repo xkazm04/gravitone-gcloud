@@ -168,7 +168,7 @@ export interface Shot {
    * DERIVED, NEVER AUTHORED, and that is the whole reason this field may exist
    * where `FrameClip` refuses one: it is the beat's own span — a real number
    * from the script — divided by the shot count. No constant is added to it and
-   * no default stands in for it. `frames.ts:93-96` refuses to invent a clip
+   * no default stands in for it. `frames.ts#FrameClip` refuses to invent a clip
    * length; this does not invent one either.
    */
   holdS: number;

@@ -27,7 +27,7 @@
 //
 // ─── WHAT IS DELIBERATELY NOT CHECKED ───────────────────────────────────────
 //
-// `sceneSpec.ts:129-133` already refused a verb whitelist and a duration
+// `sceneSpec.ts#parseScene` already refused a verb whitelist and a duration
 // validator over impressions — "Nothing has measured those, and a validator
 // built on an impression rejects good direction with total confidence." That
 // refusal is inherited verbatim and extended: this file does not grade a
@@ -513,7 +513,7 @@ export function reviewShotList(
  * report covered, and does not.
  */
 export const NOT_CHECKED: readonly string[] = [
-  // Inherited verbatim from `sceneSpec.ts:129-133`.
+  // Inherited verbatim from `sceneSpec.ts#parseScene`.
   "whether a shot's motion is a good move — no verb whitelist, no easing vocabulary. Nothing has measured those.",
   // The refusal `FrameClip` makes, unchanged: the atlas measures how long real
   // trailers HOLD, not how long a generated clip should RUN.
