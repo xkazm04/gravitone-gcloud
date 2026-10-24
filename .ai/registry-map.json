@@ -10875,7 +10875,11 @@
           "revision": 4,
           "changedAt": "2026-09-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/producers/src/research/partJob.ts:75 Every research act is a persisted kernel job, single-flighted per act and unit at claim time inside the confirm's transaction, so a double click is one purchase and a reload loses nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
+          "evaluatedRevision": 5
         },
         {
           "subject": "fleet-orchestration",

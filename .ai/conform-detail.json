@@ -12132,6 +12132,37 @@
       "evaluatedTs": "2026-10-24T22:31:10.573Z",
       "worker": "cd721550-d90c-43ce-8484-fc0bf3d478cd",
       "techniques": []
+    },
+    "5195e631-ab0c-4f12-930b-8c0da09fcd3d/production-pipeline-phasing": {
+      "context": "research-producers",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:47:13.711Z",
+      "worker": "429520ce-eba4-4e7d-bea7-4324f0aa283b",
+      "techniques": [
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/partJob.ts:75 The job row is the record. A crash during a unit is reported as the kernel's interruption, and a paid lane holds until the operator looks (partAct.ts:31). See notes for the cross-act serialization question."
+        },
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/define.ts:49 Acts refuse before any spend when upstream is not settled: no brief, no notebook for a follow-up, no topic."
+        },
+        {
+          "technique": "asset-vs-disposable-render",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/followUp.ts:22 A follow-up answers the notebook (an asset) with allowlisted edits to named facts, never a regeneration, and is refused whole rather than applied in part."
+        },
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/research/define.ts:21 Research comes before a runtime target exists; the view carries topic, notebook and queue, no seconds. The technique excludes this phase."
+        }
+      ]
     }
   }
 }
