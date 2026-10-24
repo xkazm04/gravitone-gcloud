@@ -12,7 +12,7 @@ import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { compose } from "@gt/kernel/records/write";
 
 import { makeRealPart } from "../../app/(studio)/projects/[id]/_part/real.ts";
-import { loadPart, opPart, resetParts } from "../../app/(studio)/projects/[id]/_part/fixture.ts";
+import { loadPart, opPart, resetParts, undoPart } from "../../app/(studio)/projects/[id]/_part/fixture.ts";
 import { fixtureProduce } from "../../app/(studio)/projects/_port/port.ts";
 
 // THE FIXTURE SIDE ANSWERS WHAT THE REAL SIDE ANSWERS. GRAVITONE_PRODUCE_SIDE=fixture is how every
@@ -79,5 +79,16 @@ describe("an op of another kind's editor", () => {
     const f = await outcome(() => opPart(id, key, 1, op, NOW));
     expect(r).toBe("invalid");
     expect(f).toBe(r);
+  });
+});
+
+describe("an undo with nothing left to undo", () => {
+  it("is refused with the kernel's code and words on both sides", async () => {
+    const real = realAd();
+    const id = fixtureAd();
+    const r = await real.undoPart({ projectId: "ad1", key: "research", baseRev: 1 });
+    const f = undoPart(id, "research", 1, NOW);
+    expect(r.ok ? null : { code: r.error.code, message: r.error.message }).toEqual({ code: "refused", message: "nothing on this part is left to undo" });
+    expect(f.ok ? null : { code: f.error.code, message: f.error.message }).toEqual(r.ok ? null : { code: r.error.code, message: r.error.message });
   });
 });

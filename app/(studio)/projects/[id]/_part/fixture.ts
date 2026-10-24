@@ -321,7 +321,8 @@ export function opPart(projectId: string, key: string, baseRev: number, op: Part
 
 function undoIn<R extends object>(rec: Rec<R>, now: number): Result<null> {
   const last = effective(rec)[0];
-  if (last === undefined) return err("invalid", "nothing to undo");
+  // The kernel's refusal, code and words (@gt/kernel/parts/core.ts planUndo).
+  if (last === undefined) return err("refused", "nothing on this part is left to undo");
   for (const k of Object.keys(last.wrote) as (keyof R)[]) {
     if (rec.data[k] !== last.wrote[k]) {
       const by = [...rec.log].reverse().find((e) => e.kind === "job" && k in e.wrote)?.by ?? "a later write";
