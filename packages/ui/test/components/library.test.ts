@@ -2,6 +2,9 @@
 // fold, the blocks a window asks for, what each key does to the selection, the Esc cascade - and
 // what the parts expose, rendered with react-dom/server (Vitest runs without a DOM; the route is
 // driven live in tests/live/library.live.spec.ts).
+import { readFileSync } from "node:fs";
+
+import { LIBRARY_STATES } from "@gt/domain/library";
 import { createElement as h, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
@@ -66,6 +69,21 @@ describe("the rail's values", () => {
     expect(f.shown.map((v) => v.value)).toEqual(["v0", "v1", "v2", "v3", "v4", "v5", "v6", "v9"]);
     expect(f.hidden).toBe(2);
     expect(foldValues(ten, true)).toMatchObject({ hidden: 0, canFold: true });
+  });
+
+  test("every Library state has its dot on the rail and in a tile, and its segment in the set's bar", () => {
+    // One authority per vocabulary (faceting-and-filters): the states are @gt/domain/library's,
+    // and each place that colours a state must carry a class for every one of them.
+    const css = (f: string): string => readFileSync(new URL(`../../src/components/library/${f}`, import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const f of ["LibraryTile.module.css", "SetSummary.module.css"]) {
+      const text = css(f);
+      expect(text.length).toBeGreaterThan(0);
+      for (const st of LIBRARY_STATES) expect(text, `${f} .${st}`).toMatch(new RegExp(`\\.${st}\\{`));
+    }
+    const all: RailGroup = { key: "state", label: "state", section: "state", values: LIBRARY_STATES.map((st) => fv(st, 1)) };
+    const out = html(h(Rail, { kind: "all", kindCounts: {}, groups: [all], closed: new Set<string>(), expanded: new Set<string>(), onKind: noop, onToggle: noop, onFold: noop, onMore: noop }));
+    const leads = out.match(/<span class="[^"]*"><\/span>/g) ?? [];
+    expect(leads.length).toBe(LIBRARY_STATES.length);
   });
 
   test("Attention appears only while something needs attention; the vocabulary heads its kind", () => {
