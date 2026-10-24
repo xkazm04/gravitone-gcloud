@@ -1,8 +1,8 @@
 import "server-only";
 
 // THE FIXTURE LIBRARY'S VOCABULARY - the tables the generated corpus (./fixtureCorpus.ts) draws
-// from, over media this repo ships in public/ (the six preset plates, the 25 trial plates, the
-// deck art, the preset clips and their posters), so the Library is built, driven and photographed
+// from, over media this repo tracks in public/ (the six preset plates, the deck art, the preset
+// clips and their posters), so the Library is built, driven and photographed
 // against real pixels without a store (the Board fixture's rule, board/_port/fixtureData.ts).
 //
 // The words are the studio's: the style observables are the vocab's `style_source` fields
@@ -52,7 +52,7 @@ export const PALETTES: Readonly<Record<string, readonly [string, string]>> = {
   "complementary-split": ["#6a2d1f", "#1f5a43"],
 };
 
-/** The trial plates in public/trials/google: five styles over five scenes. */
+/** The styles a generated plate or still is drawn in: five of the presets, each plate its preset's picture. */
 export const TRIAL_STYLES = ["blueprint", "chalk-argument", "data-neon", "newsprint-cutout", "paper-relief"] as const;
 export const SCENES = ["the-exit", "flywheel", "peak-and-fall", "booking-not-meal", "wish-list"] as const;
 export const DECK = [

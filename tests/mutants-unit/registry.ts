@@ -5979,4 +5979,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "POSTER_MIME",
     why: "A fixture row names every cover image/jpeg, so a webp deck still reaches an agent under a type its bytes are not, where the kernel names the blob's own type.",
   },
+  {
+    id: "library-fixture-plate-names-trials",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixtureCorpus.ts",
+    find: "        const m = fileBlob(`/presets/${st}.jpg`, 1920, 1080);",
+    replace: "        const m = fileBlob(`/trials/google/${st}/${scene}.jpg`, 1920, 1080);",
+    why: "Every fixture plate is drawn from a gitignored trial render, so on a fresh clone the Library's largest kind is a grid of broken images whose facts say they decode.",
+  },
 ];

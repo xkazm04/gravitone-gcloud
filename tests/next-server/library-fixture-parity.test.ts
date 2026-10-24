@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -12,7 +14,7 @@ import { putMediaFacts, upsertItems, type MarkAct } from "@gt/kernel/library/wri
 
 import { fixtureAct, fixtureActs, fixtureDetail, fixtureQuery, resetLibraryFixture } from "../../app/(studio)/library/_port/fixture.ts";
 import { buildCorpus } from "../../app/(studio)/library/_port/fixtureCorpus.ts";
-import { PROJECTS, STYLES } from "../../app/(studio)/library/_port/fixtureData.ts";
+import { fixtureUrl, PROJECTS, STYLES } from "../../app/(studio)/library/_port/fixtureData.ts";
 import { makeRealLibrary, type ServerLibrary } from "../../app/(studio)/library/_port/real.ts";
 
 // THE FIXTURE INDEX ANSWERS WHAT THE KERNEL'S INDEX ANSWERS, OVER THE SAME ITEMS. GRAVITONE_PRODUCE_SIDE
@@ -257,5 +259,26 @@ describe("a row's cover names the blob and the type the index names", () => {
       return `${id} ${d.value.row.cover.blobSha ?? "-"} ${d.value.row.cover.mime ?? "-"}`;
     };
     expect(ids.map((id) => cover(id, "fixture"))).toEqual(ids.map((id) => cover(id, "real")));
+  });
+});
+
+describe("every picture the fixture names is a file git tracks", () => {
+  // public/trials/**/*.jpg is gitignored (a fresh clone lacks it), so a tile drawn from one is a
+  // broken image on every box but the one that rendered the trials. The one exception is the
+  // deliberately broken clip, whose facts say it does not decode.
+  it("over the whole corpus", () => {
+    const tracked = new Set(execFileSync("git", ["ls-files", "public"], { cwd: process.cwd(), encoding: "utf8" }).split(String.fromCharCode(10)).filter(Boolean));
+    const named = new Map<string, number>();
+    for (const x of corpus) {
+      const d = fixtureDetail(x.raw.id);
+      if (!d.ok) throw d.error;
+      const path = d.value.extras.file?.path;
+      const shas = [x.raw.media?.sha256, x.media?.posterSha].filter((s): s is string => typeof s === "string");
+      for (const url of [...(path === undefined ? [] : [path]), ...shas.map((s) => fixtureUrl(s) ?? `<no url for ${s}>`)]) {
+        if (url.startsWith("data:") || url.endsWith(".broken.webm")) continue;
+        if (!tracked.has(`public${url}`)) named.set(url, (named.get(url) ?? 0) + 1);
+      }
+    }
+    expect([...named.keys()].sort()).toEqual([]);
   });
 });

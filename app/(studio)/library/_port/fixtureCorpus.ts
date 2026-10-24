@@ -176,7 +176,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
         const deck = r() < 0.5;
         const scene = pick(SCENES);
         const set = deck ? "deck-art" : pick(RUNS.forge);
-        const m = deck ? fileBlob(`/deck-art/${pick(DECK)}.webp`, 1600, 1000) : fileBlob(`/trials/google/${pick(TRIAL_STYLES)}/${scene}.jpg`, 1920, 1080);
+        const m = deck ? fileBlob(`/deck-art/${pick(DECK)}.webp`, 1600, 1000) : fileBlob(`/presets/${pick(TRIAL_STYLES)}.jpg`, 1920, 1080);
         const aspect = deck ? ("3:2" as const) : ("16:9" as const);
         const styles = some(TRIAL_STYLES, 1, 2);
         const f: Record<string, string[]> = { set: [set], scene: [scene], style: styles, aspect: [aspect], run: deck ? [] : [set], project: proj() };
@@ -187,7 +187,8 @@ export function buildCorpus(): readonly FixtureRecord[] {
         const st = pick(TRIAL_STYLES);
         const scene = pick(SCENES);
         const missing = r() < 0.006;
-        const m = fileBlob(`/trials/google/${st}/${scene}.jpg`, 1920, 1080);
+        // The style's preset plate, which git tracks (public/trials is gitignored: a fresh clone lacks it).
+        const m = fileBlob(`/presets/${st}.jpg`, 1920, 1080);
         const style = styleOf(st);
         const run = pick(station === "forge" ? RUNS.forge : station === "extract" ? RUNS.extract : RUNS.dojo);
         const mechanism = pick(MECHANISMS);
