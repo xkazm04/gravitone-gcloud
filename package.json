@@ -52,6 +52,7 @@
     "check:ads-prompts": "npx tsx pipeline/ads-prompts-regression.mts",
     "check:scout-scene": "npx tsx pipeline/scout-scene-regression.mts",
     "check:voice-fx": "npx tsx pipeline/voice-fx-regression.mts",
+    "check:audio-triage": "npx tsx pipeline/audio-triage-eval.mts --gate",
     "check:style-refs": "npx tsx pipeline/style-ref-stability.mts",
     "check:narration": "node pipeline/check-narration.mjs",
     "check:clips": "node pipeline/check-clips.mjs",

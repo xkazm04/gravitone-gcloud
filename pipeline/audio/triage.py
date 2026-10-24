@@ -103,9 +103,9 @@ CHECK_DEFECT = {
 TRIAGE_KINDS = ("music", "sfx", "voice")
 
 THRESHOLDS = {
-    "music": {"clipping": 3, "truePeakDb": 0, "lufsMin": -30, "lufsMax": -6, "deadAirS": 2, "durationRatio": 0.1, "endingDb": -12, "tailS": 3, "tempoDriftBpm": 3, "sectionS": 2, "seamDb": 3, "monoLossDb": 3},
-    "sfx": {"clipping": 3, "truePeakDb": 0, "lufsMin": -40, "lufsMax": -6, "deadAirS": 1.5, "durationRatio": 0.1, "endingDb": -12, "tailS": 2, "tempoDriftBpm": 3, "sectionS": 2, "seamDb": 3, "monoLossDb": 3},
-    "voice": {"clipping": 3, "truePeakDb": 0, "lufsMin": -30, "lufsMax": -10, "deadAirS": 1.5, "durationRatio": 0.35, "endingDb": -12, "tailS": 2, "tempoDriftBpm": 3, "sectionS": 2, "seamDb": 3, "monoLossDb": 3},
+    "music": {"clipping": 3, "truePeakDb": 0, "lufsMin": -30, "lufsMax": -6, "deadAirS": 2, "durationRatio": 0.1, "endingDb": -12, "tailS": 3, "tempoDriftBpm": 3, "sectionS": 2, "seamDb": 3, "monoLossDb": 4},
+    "sfx": {"clipping": 3, "truePeakDb": 0, "lufsMin": -40, "lufsMax": -6, "deadAirS": 1.5, "durationRatio": 0.1, "endingDb": -12, "tailS": 2, "tempoDriftBpm": 3, "sectionS": 2, "seamDb": 3, "monoLossDb": 4},
+    "voice": {"clipping": 3, "truePeakDb": 0, "lufsMin": -30, "lufsMax": -10, "deadAirS": 1.5, "durationRatio": 0.35, "endingDb": -12, "tailS": 2, "tempoDriftBpm": 3, "sectionS": 2, "seamDb": 3, "monoLossDb": 4},
 }
 
 UNITS = {

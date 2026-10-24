@@ -1,4 +1,4 @@
-import type { Finding, Triage } from "./audio.triage.ts";
+import { EXPERIMENTAL_CHECKS, type Finding, type Triage } from "./audio.triage.ts";
 
 // A triage as the Board's one line of work facts - only what flagged, each in its own unit and
 // at its place in the file: "clipped run 12 · true peak +0.8 dBTP · dead air 3.1 s at 41.0 s".
@@ -34,8 +34,9 @@ function said(f: Finding): string {
   }
 }
 
-/** The flagged findings as one line, or null when nothing flagged. */
+/** The flagged findings as one line, or null when nothing flagged. An experimental check
+ *  (audio.triage.ts EXPERIMENTAL_CHECKS) is stored but never said here. */
 export function triageWords(t: Triage): string | null {
-  const flagged = t.findings.filter((f) => f.verdict === "flag").map(said);
+  const flagged = t.findings.filter((f) => f.verdict === "flag" && !EXPERIMENTAL_CHECKS.has(f.check)).map(said);
   return flagged.length === 0 ? null : flagged.join(" · ");
 }

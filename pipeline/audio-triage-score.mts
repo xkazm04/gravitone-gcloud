@@ -255,11 +255,13 @@ export const scoreAll = (rows: readonly LabelRow[], answers: Readonly<Record<str
 export type Floor = { readonly recallMH: number; readonly fprClean: number };
 
 /** One sentence per failing check, with its numbers; empty when every floor holds. */
-export function gateFailures(scores: readonly CheckScore[], floors: Readonly<Record<TriageCheck, Floor>>): string[] {
+export function gateFailures(scores: readonly CheckScore[], floors: Readonly<Record<TriageCheck, Floor | null>>): string[] {
   const out: string[] = [];
   const pct = (r: Rate): string => (r.rate === null ? "n/a" : `${(r.rate * 100).toFixed(1)} % (${r.hit}/${r.n})`);
   for (const s of scores) {
     const f = floors[s.check];
+    // A null floor is an experimental check: scored and reported, never gated.
+    if (f === null) continue;
     if (s.errors > 0) out.push(`${s.check}: ${s.errors} file(s) answered no triage`);
     if (s.recallMH.rate === null) out.push(`${s.check}: no medium/high positives to measure recall on`);
     else if (s.recallMH.rate < f.recallMH) out.push(`${s.check}: recall at medium+high ${pct(s.recallMH)} < floor ${f.recallMH} - missed ${s.misses.slice(0, 5).join(", ")}`);

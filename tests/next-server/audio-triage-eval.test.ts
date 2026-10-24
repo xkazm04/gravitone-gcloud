@@ -124,6 +124,9 @@ describe("audio-triage score: a known confusion matrix", () => {
     expect(f.some((x) => x.startsWith("dead-air: recall at medium+high 0.0 % (0/2)"))).toBe(true);
     // A check with no positives at all cannot pass by default.
     expect(f).toContain("tempo-instability: no medium/high positives to measure recall on");
+    // An experimental check (a null floor) is scored and reported, never gated.
+    expect(FLOORS["section-boundary"]).toBeNull();
+    expect(f.some((x) => x.startsWith("section-boundary:"))).toBe(false);
   });
 });
 

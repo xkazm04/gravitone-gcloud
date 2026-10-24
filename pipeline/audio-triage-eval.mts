@@ -15,7 +15,9 @@
 //    (overall, per severity, at medium+high), the false-positive rate on clean controls and on
 //    every negative, the threshold that would reach recall 0.9. SYNTHETIC and REAL rows are scored
 //    apart: a kept take may carry a real defect of its own, so its numbers are reported, never
-//    gated. Written to <out>/report.json and <out>/report.md.
+//    gated. Written to <out>/report.json and <out>/report.md, beside <out>/answers.json - every
+//    file's answer in `--stub`'s shape, so a run can be re-scored (or a threshold replayed)
+//    without spawning the sidecar again.
 //
 // THE GATE (`--gate`): synthetic bases only, seed GATE_SEED, offline (no vendor, no network, no
 // store - the sidecar is a local process), and FLOORS below per check. Exit codes, as
@@ -46,7 +48,7 @@ export const GATE_SEED = 7;
 export const REPORT_VERSION = 1;
 
 /** Per check: recall at medium+high at least `recallMH`, clean-control FPR at most `fprClean`. */
-export const FLOORS: Readonly<Record<TriageCheck, Floor>> = {
+export const FLOORS: Readonly<Record<TriageCheck, Floor | null>> = {
   clipping: { recallMH: 0.9, fprClean: 0.05 },
   "true-peak-over": { recallMH: 0.9, fprClean: 0.05 },
   "loudness-range": { recallMH: 0.9, fprClean: 0.05 },
@@ -54,7 +56,9 @@ export const FLOORS: Readonly<Record<TriageCheck, Floor>> = {
   duration: { recallMH: 0.9, fprClean: 0.05 },
   "broken-ending": { recallMH: 0.9, fprClean: 0.05 },
   "tempo-instability": { recallMH: 0.9, fprClean: 0.05 },
-  "section-boundary": { recallMH: 0.9, fprClean: 0.05 },
+  // Experimental (@gt/domain/audio.triage EXPERIMENTAL_CHECKS): reported, not gated - 2026-10-24 eval
+  // recall m+h 0.40, clean FPR 0.13.
+  "section-boundary": null,
   "loop-seam": { recallMH: 0.9, fprClean: 0.05 },
   "mono-fold": { recallMH: 0.9, fprClean: 0.05 },
 };
@@ -70,7 +74,7 @@ export type Report = {
   readonly corpus: { readonly dir: string; readonly rows: number; readonly synthetic: number; readonly real: unknown };
   readonly answered: number;
   readonly failedFiles: readonly { readonly file: string; readonly error: string }[];
-  readonly floors: Readonly<Record<TriageCheck, Floor>>;
+  readonly floors: Readonly<Record<TriageCheck, Floor | null>>;
   readonly synthetic: readonly CheckScore[];
   readonly real: readonly CheckScore[] | null;
   readonly failures: readonly string[] | null;
@@ -229,6 +233,8 @@ export async function run(argv: readonly string[], deps: RunDeps = {}): Promise<
     toMarkdown("Synthetic bases (gated)", scores, failures),
     ...(realScores === null ? [] : [toMarkdown("Real bases (reported, never gated)", realScores, null)]),
   ].join("\n");
+  if (o.stub === undefined) writeFileSync(path.join(out, "answers.json"), `${JSON.stringify(answers)}
+`, "utf8");
   writeFileSync(path.join(out, "report.json"), `${JSON.stringify(report, null, 1)}\n`, "utf8");
   writeFileSync(path.join(out, "report.md"), md, "utf8");
   for (const l of summary("synthetic bases", scores)) say(l);

@@ -29,6 +29,11 @@ export const STRUCTURAL_CHECKS = ["broken-ending", "tempo-instability", "section
 export const TRIAGE_CHECKS = [...TECHNICAL_CHECKS, ...STRUCTURAL_CHECKS] as const;
 export type TriageCheck = (typeof TRIAGE_CHECKS)[number];
 
+/** Checks that run and are stored but are not yet trusted: kept off the Board line and out of the
+ *  gate until the eval says otherwise. section-boundary on the 2026-10-24 eval (seed 7): recall at
+ *  medium+high 0.40, 13 % false alarms on clean controls (operator: run it, hide it, rework next). */
+export const EXPERIMENTAL_CHECKS: ReadonlySet<TriageCheck> = new Set<TriageCheck>(["section-boundary"]);
+
 /** The human defect code (lib/sound/types.ts DEFECTS) a structural check evidences. */
 export const CHECK_DEFECT = {
   "broken-ending": "broken-ending",
@@ -67,12 +72,14 @@ export type TriageKind = (typeof TRIAGE_KINDS)[number];
  *                     first, over the median such step inside it; or the waveform jump across the
  *                     wrap over the take's 99.9th-percentile sample step - the largest. Skips
  *                     unless briefed as a loop
- *   mono-fold         integrated loudness lost when L+R are summed to mono (dB); skips mono files
+ *   mono-fold         integrated loudness lost when L+R are summed to mono (dB); skips mono files.
+ *                     The bar is 4 dB, not 3: fully decorrelated stereo loses 3.01 dB on its own
+ *                     (eval 2026-10-24: medium/high defects read ~6 / ~15 dB, recall unchanged)
  */
 export const TRIAGE_THRESHOLDS = {
-  music: { clipping: 3, truePeakDb: 0, lufsMin: -30, lufsMax: -6, deadAirS: 2, durationRatio: 0.1, endingDb: -12, tailS: 3, tempoDriftBpm: 3, sectionS: 2, seamDb: 3, monoLossDb: 3 },
-  sfx: { clipping: 3, truePeakDb: 0, lufsMin: -40, lufsMax: -6, deadAirS: 1.5, durationRatio: 0.1, endingDb: -12, tailS: 2, tempoDriftBpm: 3, sectionS: 2, seamDb: 3, monoLossDb: 3 },
-  voice: { clipping: 3, truePeakDb: 0, lufsMin: -30, lufsMax: -10, deadAirS: 1.5, durationRatio: 0.35, endingDb: -12, tailS: 2, tempoDriftBpm: 3, sectionS: 2, seamDb: 3, monoLossDb: 3 },
+  music: { clipping: 3, truePeakDb: 0, lufsMin: -30, lufsMax: -6, deadAirS: 2, durationRatio: 0.1, endingDb: -12, tailS: 3, tempoDriftBpm: 3, sectionS: 2, seamDb: 3, monoLossDb: 4 },
+  sfx: { clipping: 3, truePeakDb: 0, lufsMin: -40, lufsMax: -6, deadAirS: 1.5, durationRatio: 0.1, endingDb: -12, tailS: 2, tempoDriftBpm: 3, sectionS: 2, seamDb: 3, monoLossDb: 4 },
+  voice: { clipping: 3, truePeakDb: 0, lufsMin: -30, lufsMax: -10, deadAirS: 1.5, durationRatio: 0.35, endingDb: -12, tailS: 2, tempoDriftBpm: 3, sectionS: 2, seamDb: 3, monoLossDb: 4 },
 } as const satisfies Record<TriageKind, Record<string, number>>;
 export type TriageThresholds = (typeof TRIAGE_THRESHOLDS)[TriageKind];
 

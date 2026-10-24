@@ -147,6 +147,13 @@ export const GATES: readonly Gate[] = [
     rationale: "pipeline/VOICE-FX-PROMPT.md against the stage kinds and bounds read off @gt/domain/audio.fx, its worked examples through the chain door, and proposeChain's refusals on a stub agent's recorded answers. Filesystem only, no model.",
   },
   {
+    id: "audio-triage",
+    npmScript: "check:audio-triage",
+    class: "advisory",
+    outcomes: "012",
+    rationale: "Every audio-triage detector (pipeline/audio/triage*.py through lib/audio/sidecar.ts triageFile) scored against a seeded corpus of injected defects (pipeline/audio/corpus.py, seed 7): recall at medium+high >= 0.9 and clean-control false positives <= 0.05 per check, section-boundary reported but not gated (experimental). ADVISORY on input determinism: the numbers come from numpy/scipy/pyloudnorm resolved from an unpinned pip install, and the corpus is ~630 MB of WAVs built per run - a toolchain bump can move a score with no change in this tree.",
+  },
+  {
     id: "style-refs",
     npmScript: "check:style-refs",
     class: "blocking",

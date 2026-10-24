@@ -1492,8 +1492,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "triage-words-says-passes",
     test: "packages/domain/test/audio.triage.test.ts",
     file: "packages/domain/src/audio.triage.words.ts",
-    find: "t.findings.filter((f) => f.verdict === \"flag\").map(said)",
-    replace: "t.findings.filter((f) => f.verdict !== \"skip\").map(said)",
+    find: "t.findings.filter((f) => f.verdict === \"flag\" && !EXPERIMENTAL_CHECKS.has(f.check)).map(said)",
+    replace: "t.findings.filter((f) => f.verdict !== \"skip\" && !EXPERIMENTAL_CHECKS.has(f.check)).map(said)",
     why: "The Board line lists every measured check, passes included: a clean take reads like a defective one and the flagged evidence drowns.",
   },
   {
@@ -1689,6 +1689,14 @@ export const MUTANTS: UnitMutant[] = [
     find: "folded = loudness.integrated_lufs(np.stack((m, m), axis=1), take.rate)",
     replace: "folded = loudness.integrated_lufs(m[:, None], take.rate)",
     why: "The fold-down is measured as one channel against two: a take whose L and R are identical loses 3.01 dB and every mono-compatible stereo take flags phase-width.",
+  },
+  {
+    id: "triage-words-says-experimental",
+    test: "packages/domain/test/audio.triage.test.ts",
+    file: "packages/domain/src/audio.triage.words.ts",
+    find: " && !EXPERIMENTAL_CHECKS.has(f.check)).map(said)",
+    replace: ").map(said)",
+    why: "section-boundary, whose eval was recall 0.40 with 13 % false alarms, prints on the Board line as if it were evidence.",
   },
   {
     id: "audio-accept-unmeasured-passes",

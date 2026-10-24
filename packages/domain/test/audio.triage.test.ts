@@ -24,6 +24,11 @@ describe("triageWords", () => {
     expect(triageWords(triage([f("clipping", "pass", 0), f("loop-seam", "skip", null)]))).toBeNull();
   });
 
+  it("keeps an experimental check off the line though it flagged (section-boundary, 2026-10-24 eval)", () => {
+    expect(triageWords(triage([f("section-boundary", "flag", 4, { atS: 20 }), f("clipping", "flag", 12)]))).toBe("clipped run 12");
+    expect(triageWords(triage([f("section-boundary", "flag", 4)]))).toBeNull();
+  });
+
   it("names an unmeasured loudness rather than printing a number", () => {
     expect(triageWords(triage([f("loudness-range", "flag", null)]))).toBe("loudness not measured");
   });
