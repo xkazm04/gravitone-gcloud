@@ -5,7 +5,8 @@ import type { AdShotTakes, FactOption, FramesData, LayerView, PartVerdict, Plate
 import { STEP_RECORDS } from "@gt/domain/steps/registry";
 import { shotsFromRender, type Shot } from "@/lib/frames/shots";
 import { promptsForShots } from "@/lib/frames/shotPrompt";
-import { trailerRender } from "@/lib/frames/frames";
+import { isStalePlate, trailerRender } from "@/lib/frames/frames";
+import { frameOfUnit } from "@/lib/frames/picture/unit";
 import { recipeById } from "@gt/catalog/recipes";
 import { derive } from "@/lib/script/trailer/ops";
 import type { AdScenario } from "@/lib/ads/types";
@@ -48,7 +49,7 @@ export function takeUrl(id: string, blobs: Readonly<Record<string, BlobRef>> | u
 
 export function plateView(u: UnitRec): PlateView {
   const p = u.plate;
-  const stale = p.state === "ready" && p.renderedSubject !== undefined && p.subject !== undefined && p.subject.trim() !== p.renderedSubject.trim();
+  const stale = isStalePlate(frameOfUnit(u));
   return {
     state: p.rejected !== undefined ? "rejected" : p.state,
     url: p.state === "ready" ? plateUrl(p) : null,

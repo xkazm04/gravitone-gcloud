@@ -4,7 +4,8 @@ import { recipeById } from "@gt/catalog/recipes";
 import type { BlobRef } from "@gt/domain/blob";
 import { err, ok, type Result } from "@gt/domain/errors";
 import { framesOpLabel, scriptFaceOf, type FramesOp, type PartActKind, type PartActView } from "@gt/domain/partView";
-import { explainerRender, subjectFor, trailerRender, type Frame, type Plate } from "@/lib/frames/frames";
+import { needsPlate } from "@gt/producers/frames/define";
+import { explainerRender, isStalePlate, subjectFor, trailerRender, type Frame, type Plate } from "@/lib/frames/frames";
 import { frameOfUnit, framesFromUnits, unitsFromRender, type PictureUnit } from "@/lib/frames/picture/unit";
 import { reviewSceneSpecs } from "@/lib/frames/sceneSpec";
 import { RENDERS } from "@/lib/script/renders";
@@ -92,8 +93,11 @@ export function unitsOf(ctx: KCtx, r: FramesRec): readonly UnitRec[] {
 /** The subject a plate is asked for: the stored one, else v1's beat-role seed (`subjectFor`). */
 export const subjectOf = (u: UnitRec): string => u.plate.subject ?? (u.kind === "beat" ? subjectFor(frameOfUnit(u)) : (u.staging?.subject ?? u.line));
 
-/** A plate the next render owes: empty, refused, rejected at the gate, or behind its subject. */
-export const owes = (u: UnitRec): boolean => u.plate.state !== "ready" || (u.plate.renderedSubject !== undefined && u.plate.subject !== undefined && u.plate.subject.trim() !== u.plate.renderedSubject.trim());
+/** A plate the next render owes: the producer's rule, called (@gt/producers/frames/define
+ *  `needsPlate`: empty - a gate's rejection empties it - refused, or behind its subject by
+ *  lib/frames `isStalePlate`), so the act's label counts what its receipt prices. A `generating`
+ *  plate belongs to a job in flight and is not owed twice. */
+export const owes = (u: UnitRec): boolean => needsPlate({ id: u.id, plate: u.plate.state, stale: isStalePlate(frameOfUnit(u)) });
 
 /* ── ops ──────────────────────────────────────────────────────────────────── */
 

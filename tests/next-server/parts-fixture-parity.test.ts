@@ -13,7 +13,12 @@ import { compose } from "@gt/kernel/records/write";
 
 import { makeRealPart } from "../../app/(studio)/projects/[id]/_part/real.ts";
 import { loadPart, opPart, resetParts, undoPart } from "../../app/(studio)/projects/[id]/_part/fixture.ts";
+import { owes, type UnitRec } from "../../app/(studio)/projects/[id]/_part/fixtureFrames.ts";
+import { plateView } from "../../app/(studio)/projects/[id]/_part/fixtureFramesView.ts";
 import { fixtureProduce } from "../../app/(studio)/projects/_port/port.ts";
+import { isStalePlate } from "../../lib/frames/frames.ts";
+import { frameOfUnit } from "../../lib/frames/picture/unit.ts";
+import { needsPlate } from "@gt/producers/frames/define";
 
 // THE FIXTURE SIDE ANSWERS WHAT THE REAL SIDE ANSWERS. GRAVITONE_PRODUCE_SIDE=fixture is how every
 // part editor is built and photographed, so a state the fixture reaches and the kernel cannot (an
@@ -110,5 +115,18 @@ describe("an op that changes nothing", () => {
     expect(shape(f)).toEqual(shape(r));
     const after = loadPart(id, "research", NOW);
     expect(after.ok ? { rev: after.value.rev, ops: after.value.ops.length } : null).toEqual({ rev: fixtureRev, ops: 0 });
+  });
+});
+
+describe("a plate the next render owes", () => {
+  // The producer's rule (needsPlate) prices the act; the module's (owes) labels it and lands it.
+  const states = ["empty", "generating", "ready", "refused"] as const;
+  const cases = states.flatMap((state) => [false, true].map((moved) => ({ state, moved })));
+  it.each(cases)("$state, subject moved: $moved - the fixture owes it exactly when the producer would buy it", ({ state, moved }) => {
+    const plate = { state, subject: moved ? "a lighthouse at dusk" : "a harbour wall", renderedSubject: "a harbour wall" };
+    const u = { id: "u1", kind: "beat", beatKind: "claim", beatRef: { at: 0 }, title: "t", line: "l", startS: 0, holdS: 3, plate, clip: { status: "not-started", motion: "" }, elements: [], texts: [] } as unknown as UnitRec;
+    const stale = isStalePlate(frameOfUnit(u));
+    expect(owes(u)).toBe(needsPlate({ id: u.id, plate: state, stale }));
+    expect(plateView(u).stale).toBe(stale);
   });
 });
