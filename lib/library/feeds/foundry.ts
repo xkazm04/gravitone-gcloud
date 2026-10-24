@@ -98,12 +98,14 @@ export const forgeFeed: Feed = {
   async read(ctx): Promise<FeedRead> {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
+    const held: string[] = [];
     for (const summary of (await listRuns()).slice(0, RUN_CAP)) {
       let detail;
       try {
         detail = await getRun(summary.id);
       } catch (e) {
         skipped.push({ id: summary.id, reason: errorMessage(e) });
+        held.push(`image:forge:${summary.id}:`, `plate:forge:${summary.id}:`);
         continue;
       }
       const { run, verdicts } = detail;
@@ -157,7 +159,7 @@ export const forgeFeed: Feed = {
         });
       }
     }
-    return { items, skipped };
+    return { items, skipped, held };
   },
 };
 
@@ -166,12 +168,14 @@ export const extractFeed: Feed = {
   async read(ctx): Promise<FeedRead> {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
+    const held: string[] = [];
     for (const summary of (await listExtractRuns()).slice(0, RUN_CAP)) {
       let detail;
       try {
         detail = await getExtractRun(summary.id);
       } catch (e) {
         skipped.push({ id: summary.id, reason: errorMessage(e) });
+        held.push(`image:extract:${summary.id}:`, `plate:extract:${summary.id}:`);
         continue;
       }
       const { run, verdicts } = detail;
@@ -231,7 +235,7 @@ export const extractFeed: Feed = {
         }
       }
     }
-    return { items, skipped };
+    return { items, skipped, held };
   },
 };
 
@@ -240,12 +244,14 @@ export const dojoFeed: Feed = {
   async read(ctx): Promise<FeedRead> {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
+    const held: string[] = [];
     for (const summary of (await listCycles()).slice(0, RUN_CAP)) {
       let detail;
       try {
         detail = await getCycle(summary.id);
       } catch (e) {
         skipped.push({ id: summary.id, reason: errorMessage(e) });
+        held.push(`plate:dojo:${summary.id}:`);
         continue;
       }
       const { cycle, verdicts } = detail;
@@ -283,7 +289,7 @@ export const dojoFeed: Feed = {
         });
       }
     }
-    return { items, skipped };
+    return { items, skipped, held };
   },
 };
 
@@ -292,12 +298,14 @@ export const stripsFeed: Feed = {
   async read(ctx): Promise<FeedRead> {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
+    const held: string[] = [];
     for (const summary of (await listStripRuns()).slice(0, RUN_CAP)) {
       let detail;
       try {
         detail = await getStripRun(summary.id);
       } catch (e) {
         skipped.push({ id: summary.id, reason: errorMessage(e) });
+        held.push(`motion:strips:${summary.id}:`);
         continue;
       }
       const { run, verdicts } = detail;
@@ -330,6 +338,6 @@ export const stripsFeed: Feed = {
         }
       }
     }
-    return { items, skipped };
+    return { items, skipped, held };
   },
 };

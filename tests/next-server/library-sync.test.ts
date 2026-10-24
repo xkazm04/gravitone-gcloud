@@ -111,4 +111,28 @@ describe("syncLibrary", () => {
     if (!all.ok) throw all.error;
     expect(all.value.items.map((i) => i.id).sort()).toEqual(["o1", "p1"]);
   });
+
+  it("keeps the items of a record its feed listed and could not read, and prunes them once it reads clean", async () => {
+    const { k, dir } = setup();
+    const blobs = blobStore(path.join(dir, "blobs"));
+    let read: () => { items: FeedItem[]; held?: string[] } = () => ({ items: [plate("plate:forge:r1:a"), plate("plate:forge:r2:a"), plate("plate:forge:r2:b")] });
+    const feeds: Feed[] = [{ id: "forge", read: async () => ({ skipped: [], ...read() }) }];
+    await syncLibrary(k.store, blobs, feeds, ctx);
+    // r2's manifest could not be read this sync: its two plates are held, not pruned as gone.
+    read = () => ({ items: [plate("plate:forge:r1:a")], held: ["plate:forge:r2:"] });
+    const heldSync = await syncLibrary(k.store, blobs, feeds, ctx);
+    if (!heldSync.ok) throw heldSync.error;
+    expect(heldSync.value.feeds[0]).toMatchObject({ items: 1, pruned: 0 });
+    const ids = () => {
+      const p = queryLibrary(k.store, { limit: 10 });
+      if (!p.ok) throw p.error;
+      return p.value.items.map((i) => i.id).sort();
+    };
+    expect(ids()).toEqual(["plate:forge:r1:a", "plate:forge:r2:a", "plate:forge:r2:b"]);
+    read = () => ({ items: [plate("plate:forge:r1:a")] });
+    const clean = await syncLibrary(k.store, blobs, feeds, ctx);
+    if (!clean.ok) throw clean.error;
+    expect(clean.value.feeds[0]).toMatchObject({ pruned: 2 });
+    expect(ids()).toEqual(["plate:forge:r1:a"]);
+  });
 });
