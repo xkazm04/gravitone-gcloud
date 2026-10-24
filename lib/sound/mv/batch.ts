@@ -34,7 +34,6 @@
 // new video, not keep the old one.
 
 import { copyFile, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import path from "node:path";
 
 import type { Receipt, ReceiptMode } from "@gt/domain/produce";
@@ -43,7 +42,7 @@ import { driveMv, launchMvNow, mvKernelId, mvKernelJobs, resumeMvJobs } from "@/
 import { OPERATOR } from "@/lib/producers/sound";
 
 import { SoundError } from "../store";
-import { IMPORT_EXTS, importFolder } from "./importFolder";
+import { expandHome, IMPORT_EXTS, importFolder } from "./importFolder";
 import { enqueueMv, readMvLive, retryMv } from "./queue";
 import { filePathAbs } from "../store";
 import { isLookId, MV_LOOK_IDS, type MvLookId } from "./looks";
@@ -138,7 +137,6 @@ export interface BatchOptions {
   prompt?: string;
 }
 
-const expandHome = (dir: string): string => (dir === "~" || /^~[\/]/.test(dir) ? path.join(homedir(), dir.slice(1)) : dir);
 export const resolveDir = (dir: string): string => path.resolve(expandHome(dir.trim()));
 
 const versionOf = (title: string): BatchRow["version"] => (/\(instrumental\)$/i.test(title) ? "instrumental" : "main");

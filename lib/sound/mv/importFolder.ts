@@ -39,9 +39,14 @@ export function parseImportDir(body: unknown): string {
   return dir.trim();
 }
 
+/** `~` and then this platform's separator: on Windows `~\Music` as well as
+ *  `~/Music` (a `\` on POSIX is a file-name character, not a separator). */
+const HOME_PREFIX = path.sep === "\\" ? /^~[\\/]/ : /^~\//;
+
 /** A leading `~` is the studio machine's home: the canvas offers
- *  "~/Downloads/Misu" so no tracked file spells one machine's user directory. */
-const expandHome = (dir: string): string => (dir === "~" || /^~[\/]/.test(dir) ? path.join(homedir(), dir.slice(1)) : dir);
+ *  "~/Downloads/Misu" so no tracked file spells one machine's user directory.
+ *  The one spelling of it: the batch's plan (./batch.ts resolveDir) reads it too. */
+export const expandHome = (dir: string): string => (dir === "~" || HOME_PREFIX.test(dir) ? path.join(homedir(), dir.slice(1)) : dir);
 
 export async function importFolder(dirIn: string, now = Date.now()): Promise<MvImportResult> {
   const dir = path.resolve(expandHome(dirIn));

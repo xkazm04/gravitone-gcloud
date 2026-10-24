@@ -20,10 +20,13 @@ const ROOT = vi.hoisted(() => {
 });
 
 import { mkdtempSync, rmSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 
 import { closeProcessKernel } from "@gt/kernel/process";
 
+import { resolveDir } from "../../lib/sound/mv/batch.ts";
+import { importFolder } from "../../lib/sound/mv/importFolder.ts";
 import { isLookId, MV_LOOK_IDS } from "../../lib/sound/mv/looks.ts";
 import { writeMetadata } from "../../lib/sound/mv/metadata.ts";
 import { treatmentInput, writeTreatment } from "../../lib/sound/mv/treatment.ts";
@@ -87,5 +90,16 @@ describe("the text turns' prompt files", () => {
     expect(asked.map((r) => r.turn)).toEqual(["mv-treatment", "mv-metadata"]);
     // The prompt documents' own words reached the turns, not an empty template.
     for (const r of asked) expect(r.prompt).toContain("Porch Light");
+  });
+});
+
+describe("an album folder spelled from home", () => {
+  it("expands a leading ~ followed by this platform's own separator, in the plan and the import alike", async () => {
+    const own = `~${path.sep}Music${path.sep}Misu`;
+    expect(resolveDir(own)).toBe(path.join(homedir(), "Music", "Misu"));
+    expect(resolveDir("~/Music")).toBe(path.join(homedir(), "Music"));
+    expect(resolveDir("~")).toBe(homedir());
+    // The import resolves the same spelling to the same folder: its refusal names it.
+    await expect(importFolder(`~${path.sep}gt-no-such-album-${process.pid}`)).rejects.toThrow(path.join(homedir(), `gt-no-such-album-${process.pid}`));
   });
 });

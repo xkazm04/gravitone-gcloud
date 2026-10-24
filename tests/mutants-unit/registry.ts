@@ -5530,4 +5530,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void 0;",
     why: "J, K or L pressed at the end of the cut or the score runs one frame and stops where it stood, where Space starts the film again from the top.",
   },
+  {
+    id: "mv-home-prefix-forward-slash-only",
+    test: "tests/next-server/mv-pipeline-edges.test.ts",
+    file: "lib/sound/mv/importFolder.ts",
+    find: "const HOME_PREFIX = path.sep === \"\\\\\" ? /^~[\\\\/]/ : /^~\\//;",
+    replace: "const HOME_PREFIX = /^~\\//;",
+    why: "On Windows an album folder typed as ~\\Music\\Misu resolves under the server's cwd, and the batch and the import both report there is no folder.",
+  },
 ];
