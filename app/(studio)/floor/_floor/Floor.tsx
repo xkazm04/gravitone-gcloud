@@ -198,7 +198,6 @@ export function Floor({ data, initial, produce, calendar, slot, choices }: Floor
               lane={l}
               state={state}
               onFocus={() => focus(l.id)}
-              shelfEmpty={(shelfCount(l.id, data.shelf) ?? 1) === 0}
               foundry={
                 <Foundry
                   work={lanes[l.id]}

@@ -30,11 +30,9 @@ export type LaneProps = {
   readonly foundry: ReactNode;
   readonly weir: ReactNode;
   readonly shelf: ReactNode;
-  /** The ratified column holds nothing: it folds to its heading row. */
-  readonly shelfEmpty?: boolean;
 };
 
-export function Lane({ lane, state, onFocus, foundry, weir, shelf, shelfEmpty = false }: LaneProps) {
+export function Lane({ lane, state, onFocus, foundry, weir, shelf }: LaneProps) {
   const cap = capsFor("floor", "open-lane")[lane.n - 1];
   return (
     <section className={cx(s.lane, state === "focused" && s.focused, state === "folded" && s.folded)} data-component="Lane" data-lane={lane.id} data-state={state} aria-label={`${lane.name} lane`}>
@@ -54,7 +52,7 @@ export function Lane({ lane, state, onFocus, foundry, weir, shelf, shelfEmpty = 
       <div className={cx(s.cell, s.weir)} data-cell="weir">
         {weir}
       </div>
-      <div className={cx(s.cell, s.shelf, shelfEmpty && s.shelfEmpty)} data-cell="shelf">
+      <div className={cx(s.cell, s.shelf)} data-cell="shelf">
         {shelf}
       </div>
     </section>
