@@ -89,7 +89,7 @@ export const DEFAULT_OPTIONS: ExtractOptions = {
   grouping: "engine",
 };
 
-export { LEASE_TTL_MS, activeLease, foreignLease } from "./lease";
+export { LEASE_TTL_MS, activeLease } from "./lease";
 export { BREAKER_LIMIT, pruneFailures } from "./breaker";
 export { clampCeiling } from "./spend";
 export { unitLabel, settleReason, next, totalUnits, doneUnits } from "./units";

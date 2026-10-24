@@ -1,9 +1,11 @@
-// THE DRIVER LOOP — the CLI's run-to-end loop, and the probe that says whether a
+// THE DRIVER LOOP — the run-to-end loop a probe drives, and the read that says whether a
 // retry has anything to take.
 //
 // Its own file because neither is a unit: runToEnd is a loop over step(), and
-// hasFailures reads the manifest only. The CLI and the tests use runToEnd; the
-// browser calls step() once per request and never needs this file.
+// hasFailures reads the manifest only. Since Phase 4 (L29) every driver - the
+// CLI, the /step route, the worker - is the run's kernel job, which calls step()
+// once per unit (lib/producers/extract.ts); runToEnd is the probes' loop, and
+// the CLI reads hasFailures to say whether --retry has anything to take.
 
 import type { EngineIO } from "./engine";
 import { step } from "./perform";
@@ -19,7 +21,7 @@ export function hasFailures(m: ExtractManifest): boolean {
   return false;
 }
 
-/** Run to completion. The CLI's loop; also what a test drives. */
+/** Run to completion, with no job: what a probe drives. */
 export async function runToEnd(m: ExtractManifest, io: EngineIO, onUnit?: (r: StepResult) => void): Promise<ExtractManifest> {
   for (;;) {
     const r = await step(m, io);
