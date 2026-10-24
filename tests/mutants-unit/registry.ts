@@ -5851,4 +5851,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "} else toast(`library: ${r.error.error}`);",
     why: "The detail's refusal goes back to a toast: the panel says 'reading' after the toast is gone.",
   },
+  {
+    id: "library-fixture-tie-by-id",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixture.ts",
+    find: "return y.t - x.t || s(y) - s(x);",
+    replace: "return y.t - x.t || x.row.id.localeCompare(y.row.id);",
+    why: "The fixture Library breaks a tie on the date by id where the kernel breaks it by the newer write, so the newest page leads with a different character and the undated documents run backwards.",
+  },
 ];

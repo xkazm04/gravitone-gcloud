@@ -69,13 +69,17 @@ const KIND_RANK = new Map<string, number>(LIBRARY_KINDS.map((k, i) => [k, i]));
 function ordered(u: Universe, sort: NonNullable<LibraryQuery["sort"]>): FixtureRecord[] {
   const have = u.order.get(sort);
   if (have !== undefined) return have;
+  // A tie on the date falls to the newer write, as the kernel's ORDER does (kernel library/query.ts
+  // `seq DESC`); the corpus order is that write order.
+  const seq = new Map(u.items.map((x, i) => [x, i]));
+  const s = (x: FixtureRecord): number => seq.get(x) ?? 0;
   const bad = (x: FixtureRecord): number => (x.row.attention === undefined ? 0 : 1);
   const a = [...u.items].sort((x, y) => {
     const b = bad(x) - bad(y);
     if (b !== 0) return b;
     if (sort === "name") return x.row.title.localeCompare(y.row.title) || x.row.id.localeCompare(y.row.id);
-    if (sort === "kind") return (KIND_RANK.get(x.row.kind) ?? 0) - (KIND_RANK.get(y.row.kind) ?? 0) || y.t - x.t || x.row.id.localeCompare(y.row.id);
-    return y.t - x.t || x.row.id.localeCompare(y.row.id);
+    if (sort === "kind") return (KIND_RANK.get(x.row.kind) ?? 0) - (KIND_RANK.get(y.row.kind) ?? 0) || y.t - x.t || s(y) - s(x);
+    return y.t - x.t || s(y) - s(x);
   });
   u.order.set(sort, a);
   return a;

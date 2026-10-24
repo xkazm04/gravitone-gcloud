@@ -101,3 +101,22 @@ describe("the kind counts are the index's: under the shared groups and the searc
     });
   }
 });
+
+describe("a page is the same window of the same order", () => {
+  // kernel library/query.ts ORDER: a tie on the date falls to the newer write (seq DESC), and an
+  // undated item sorts after every dated one. The fixture's corpus order is the kernel's seq here.
+  const WINDOWS: readonly [string, LibraryQuery][] = [
+    ["newest, the first page", { limit: 500 }],
+    ["newest, the undated tail", { offset: 4500, limit: 500 }],
+    ["by kind, the undated documents", { sort: "kind", offset: 4400, limit: 500 }],
+    ["by name", { sort: "name", offset: 2000, limit: 500 }],
+    ["models, one night", { kind: "model", limit: 10 }],
+    ["characters", { kind: "character", limit: 10 }],
+  ];
+  for (const [name, q] of WINDOWS) {
+    it(name, () => {
+      const { fixture, real } = pages(q);
+      expect(fixture.items.map((r) => r.id)).toEqual(real.items.map((r) => r.id));
+    });
+  }
+});
