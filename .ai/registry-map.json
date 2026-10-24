@@ -4762,7 +4762,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/performGroup.ts:52 The synthesis prompt is built and sent with only cost and model booked to the manifest, so the run records no digest or version of the instruction that grouped its styles. The replica image prompts, by contrast, are persisted in full.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "mcp-tools",
@@ -8334,7 +8338,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/library/feeds/types.ts:9 Feeds read v1 stores and map them into library items. 'prompt' appears only as stored generation metadata (extras.prompt) and a fixture string. A search found no lib/text import, reason(), schemaInstruction, generateContent or claude/gemini call, so nothing here assembles or sends a model prompt.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "retrieval",
@@ -12548,7 +12556,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/log.ts:20 The single chokepoint for every reasoning call records only promptChars and deliberately never a digest of the prompt it sends, so 'which prompt did this run receive?' cannot be answered from artifacts once the call returns: the 'unrecorded send' the standard names.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "mcp-tools",

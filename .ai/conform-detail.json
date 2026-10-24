@@ -9976,6 +9976,129 @@
         "at": "2026-10-24T00:42:09.337856+00:00",
         "reason": "reviewer (sonnet): The anchor (handlers.ts:5) only says the routes were retired and does not show that no tool surface exists, and lib/imaging/providers/agy.ts prompts an agent CLI to call its own generate_image tool, so \"publishes no tool catalog and consumes no tool results\" is not cleanly supported."
       }
+    },
+    "94e6b933-0f6a-4631-b2f0-4c98b0799c28/prompt-assembly": {
+      "context": "text-reasoning-engine",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:07:42.727Z",
+      "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+      "techniques": [
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "lib/text/log.ts:20 The ledger floor is size plus content digest at the send site. Only size travels, and hashing is refused explicitly. No version stamp is recorded either."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:403 The transport appends a schema instruction to a prompt the caller already assembled (TextRequest.prompt is a plain string). That is a post-assembly append, outside the caller's assembler, budget and any fingerprint."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "lib/text/repair.ts:165 The repair prompt interpolates the findings list with no cap, and the refused model output (untrusted class) is interpolated with no declared trust class."
+        },
+        {
+          "technique": "task-envelope",
+          "verdict": "conformant",
+          "evidence": "lib/text/repair.ts:171 No role priming. The task locates the object, states a concrete done criterion, and pairs its prohibition with a positive instruction. Guards check the result in code."
+        },
+        {
+          "technique": "endpoint-sealed-continuation-metadata",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/google.ts:292 Each turn is one fresh user message. No stored assistant turn with sealed metadata is replayed, even on fallback or repair."
+        },
+        {
+          "technique": "response-reservation-sizing",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/google.ts:293 No output ceiling is set. Prompts are small (about 40KB at the largest) next to the window, so by the technique's own 'when not to use it' the reservation is not charged against input that needs the room."
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/google.ts:296 Reason turns carry no operations, so there is no capability layer to derive."
+        },
+        {
+          "technique": "context-ownership-regimes",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:87 The only multi-turn path is held by the CLI agent. The client sends one prompt and runs no compaction of its own, so nothing is doubled up."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:38 Single-turn by construction, so no transcript layer exists to spend down."
+        },
+        {
+          "technique": "tiered-history-projection",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:38 Same precondition: no history."
+        },
+        {
+          "technique": "amortized-compaction-cadence",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:38 Same precondition: no history."
+        }
+      ],
+      "registryProposal": "fingerprinting-and-cache-keys asks for a content digest of every prompt sent. This engine refuses even a hash on privacy grounds, because the prompt is unpublished creator material. The technique could say whether a keyed or salted digest meets the floor where a plain hash of a sensitive prompt is judged a confirmation risk."
+    },
+    "0335f0dc-2987-4b19-96e1-58941a70c9d5/prompt-assembly": {
+      "context": "foundry-extract-engine",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:07:42.727Z",
+      "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+      "techniques": [
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/performGroup.ts:52 Synthesis, readback and critique prompts are not recorded by digest or version. Only the replica prompt is kept (performReplica.ts:37), and readbacks carry VOCAB_VERSION, not a prompt version."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/prompts.ts:1 One assembler module. Callers pass typed inputs (sources, partition), and synthesisPrompt puts RULES first and SOURCES last. Minor: the critique prompt repeats its naming policy after the volatile recipe."
+        },
+        {
+          "technique": "house-vocabulary-layer",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/performCommon.ts:25 A closed observable vocabulary from one authority (ENUMS), defined in the prompt, and adoption is checked: off-vocabulary words are logged by field."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/prompts.ts:89 Vision-model prose (prior model output, untrusted class) is interpolated with no declared trust class. The list itself is capped (MAX_SOURCES=60 at store.ts:82, colours sliced to 5 in performRead.ts:25)."
+        },
+        {
+          "technique": "task-envelope",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/prompts.ts:92 Opens with a role sentence. The done criteria are explicit, but there is no self-check before answering: coverage is only validated after the paid turn."
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/store.ts:284 No tools are offered. The schema constrains the answer, but no operation roster exists."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 Every unit is a fresh single call and state lives in the manifest, so there is no transcript to compact."
+        }
+      ]
+    },
+    "d067e4e3-6739-4666-9103-06dac7f825ac/prompt-assembly": {
+      "context": "library-projection-feeds",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:07:42.727Z",
+      "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+      "techniques": []
     }
   }
 }
