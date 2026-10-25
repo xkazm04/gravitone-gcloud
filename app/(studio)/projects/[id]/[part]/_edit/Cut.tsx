@@ -21,7 +21,7 @@ import { clock, secs } from "@gt/ui/components/part/part.ts";
 import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
-import { CLOCK_ZOOM_OPTIONS, CutClock, useTransport, zoomStep, type ClockLane, type ClockZoom } from "./CutClock.tsx";
+import { CLOCK_ZOOM_OPTIONS, CutClock, useClockT, useTransport, zoomStep, type ClockLane, type ClockStore, type ClockZoom } from "./CutClock.tsx";
 import { CutFinish } from "./CutFinish.tsx";
 import type { EditorProps, Send } from "./PartEditor.tsx";
 import s from "./Cut.module.css";
@@ -58,8 +58,13 @@ export function FinishRows({ rows, projectId }: { readonly rows: readonly Finish
   );
 }
 
-function Monitor({ d, t, tall, safe }: { readonly d: TimelineData; readonly t: number; readonly tall: boolean; readonly safe: boolean }) {
-  const i = d.scenes.findIndex((x) => t >= x.startS && t < x.startS + x.durS);
+/** The timecode: subscribed to the clock, so a playing film re-renders this and nothing around it. */
+function Readout({ clock: c, fps }: { readonly clock: ClockStore; readonly fps: number }) {
+  return <span className={s.read}>{useClockT(c, (t) => tc(t, fps))}</span>;
+}
+
+function Monitor({ d, clock: c, tall, safe }: { readonly d: TimelineData; readonly clock: ClockStore; readonly tall: boolean; readonly safe: boolean }) {
+  const i = useClockT(c, (t) => d.scenes.findIndex((x) => t >= x.startS && t < x.startS + x.durS));
   const at = i < 0 ? d.scenes.length - 1 : i;
   const sc = d.scenes[at];
   const f = sc === undefined ? undefined : d.monitor[sc.id];
@@ -130,9 +135,9 @@ function Timeline(p: P & { readonly data: TimelineData }) {
   const [zoom, setZoom] = useState<ClockZoom>("1");
   const tr = useTransport(d.totalS);
   const clip = d.clips.find((c) => c.id === sel) ?? null;
-  const step = (dt: number): void => tr.seek(tr.t + dt);
-  const edit = (dir: 1 | -1): number | undefined => (dir > 0 ? d.edits.find((x) => x > tr.t + 0.04) : [...d.edits].reverse().find((x) => x < tr.t - 0.04));
-  const gap = (dir: 1 | -1): number | undefined => (dir > 0 ? d.gaps.find((g) => g.startS > tr.t + 0.04) : [...d.gaps].reverse().find((g) => g.startS < tr.t - 0.04))?.startS;
+  const step = (dt: number): void => tr.seek(tr.at() + dt);
+  const edit = (dir: 1 | -1): number | undefined => (dir > 0 ? d.edits.find((x) => x > tr.at() + 0.04) : [...d.edits].reverse().find((x) => x < tr.at() - 0.04));
+  const gap = (dir: 1 | -1): number | undefined => (dir > 0 ? d.gaps.find((g) => g.startS > tr.at() + 0.04) : [...d.gaps].reverse().find((g) => g.startS < tr.at() - 0.04))?.startS;
   const facts = clip === null ? [] : ["clip"];
   useKeys(
     "part.cut",
@@ -213,18 +218,18 @@ function Timeline(p: P & { readonly data: TimelineData }) {
             ) : (
               <>
                 <div className={s.monitorRow}>
-                  <Monitor d={d} t={tr.t} tall={aspect === "9:16"} safe={safe} />
+                  <Monitor d={d} clock={tr.clock} tall={aspect === "9:16"} safe={safe} />
                   <div className={s.transport}>
                     <Seg label="aspect" options={[{ value: "16:9", label: "16:9" }, { value: "9:16", label: "9:16" }]} value={aspect} onChange={setAspect} />
                     <Chip label="safe zone" casing="lower" pressed={safe} onPress={() => setSafe((x) => !x)} />
                     <Button label={tr.playing ? "pause" : "play"} size="sm" shortcut={{ mode: "part.cut", verb: "play" }} onPress={tr.toggle} />
-                    <span className={s.read}>{tc(tr.t, d.fps)}</span>
+                    <Readout clock={tr.clock} fps={d.fps} />
                     <span className={s.mono}>{`/ ${tc(d.totalS, d.fps)} · ${d.fps}fps`}</span>
                     {d.targetS !== null && <span className={s.mono}>{`target ${clock(d.targetS)}`}</span>}
                     <Seg label="zoom" options={CLOCK_ZOOM_OPTIONS} value={zoom} onChange={setZoom} />
                   </div>
                 </div>
-                <CutClock label="lanes" totalS={d.totalS} scenes={d.scenes} lanes={lanes} zoom={Number(zoom)} t={tr.t} selected={sel} sceneLane={false} marks={d.turn === null ? [] : [{ atS: d.turn.atS, label: d.turn.label }]} onSeek={tr.seek} onSelect={setSel} />
+                <CutClock label="lanes" totalS={d.totalS} scenes={d.scenes} lanes={lanes} zoom={Number(zoom)} clock={tr.clock} selected={sel} sceneLane={false} marks={d.turn === null ? [] : [{ atS: d.turn.atS, label: d.turn.label }]} onSeek={tr.seek} onSelect={setSel} />
               </>
             )}
           </>

@@ -93,7 +93,7 @@ export interface Fact {
   claim: string;
   loadBearing: boolean;
   /** @deprecated Use `sources[]`. Kept so the control fixture still compiles. */
-  source: string;
+  source?: string;
   sources?: FactSource[];
   kind?: FactKind;
   confidence: Confidence;

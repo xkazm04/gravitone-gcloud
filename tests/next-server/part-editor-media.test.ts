@@ -95,6 +95,15 @@ function legend(ws: { mode: string; facts: readonly string[] }): { drawn: KeyRow
 
 const SCENARIO = { id: "s1", title: "Rain shell" };
 
+/** Every string a JSX subtree draws, in order (no component is expanded: the check rows are plain elements). */
+function textsOf(node: ReactNode): string[] {
+  if (node === null || node === undefined || typeof node === "boolean") return [];
+  if (typeof node === "string" || typeof node === "number") return [String(node)];
+  if (Array.isArray(node)) return node.flatMap(textsOf);
+  return textsOf((node as ReactElement<{ children?: ReactNode }>).props?.children);
+}
+
+
 describe("the legend draws only the keys the editor answers", () => {
   it("the ad's finish draws no transport it does not run", async () => {
     const d: AdFinishData = {
@@ -109,6 +118,26 @@ describe("the legend draws only the keys the editor answers", () => {
     };
     const l = legend(await workspaceOf(() => CutFinish(props(d)) as ReactElement));
     expect(l.drawn).toEqual(l.live);
+  });
+
+  it("the ad's finish checks each draw their value against their target", async () => {
+    const check = (id: string, label: string, value: string, target: string) => ({ id, label, value, target, verdict: "pass" as const, blocking: false });
+    const d: AdFinishData = {
+      face: "finish",
+      scenario: SCENARIO,
+      shots: [],
+      endCard: { cta: "Pack one", line: "", holdS: 2 },
+      aspects: [],
+      checks: [check("runtime", "runtime", "11s", "6-20s"), check("loudness", "loudness", "-13.2 LUFS", "-14 LUFS")],
+      runtimeS: 11,
+      targetS: 15,
+    };
+    const h = harness(() => CutFinish(props(d)) as ReactElement, { settleWhen: "stable" });
+    const el = (await h.settleUp()) as ReactElement<{ inspector: { children: ReactNode } }>;
+    const rows = textsOf(el.props.inspector.children);
+    console.log(`[finish checks] ${rows.join(" | ")}`);
+    expect(rows).toContain("-13.2 LUFS / -14 LUFS");
+    expect(rows).toContain("11s / 6-20s");
   });
 
   it("the ad's bed draws no transport, cue walk or zoom it does not run", async () => {
@@ -256,7 +285,7 @@ describe("the transport at the end of the film", () => {
     frames.shift()?.(100);
     const tr = await h.settleUp();
     h.unmount();
-    return { t: tr.t, playing: tr.playing };
+    return { t: tr.at(), playing: tr.playing };
   }
 
   it("play from the end starts again from the top", async () => {
@@ -268,6 +297,31 @@ describe("the transport at the end of the film", () => {
     const r = await atTheEnd((tr) => tr.shuttle(2));
     expect(r).toEqual({ t: 0.2, playing: true });
   });
+});
+
+describe("the transport while the film plays", () => {
+  it("ten display frames of playback do not re-render the editor that owns the transport", async () => {
+    const frames: ((now: number) => void)[] = [];
+    vi.stubGlobal("requestAnimationFrame", (cb: (now: number) => void) => frames.push(cb));
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+    vi.stubGlobal("performance", { now: () => 0 });
+    const FRAMES = 10; // one settle pass per frame is the harness's cost, not the transport's
+    const h = harness(() => useTransport(30));
+    (await h.settleUp()).toggle();
+    await h.settleUp();
+    const before = h.renderRequests();
+    for (let i = 1; i <= FRAMES; i++) {
+      frames.shift()?.((i * 1000) / 60);
+      await h.settleUp();
+    }
+    // Counted at the setter, not by passes: the harness re-renders on every settleUp, a renderer
+    // only when state asks it to.
+    const during = h.renderRequests() - before;
+    console.log(`[transport] ${during} state-driven editor renders over ${FRAMES} frames`);
+    expect((await h.settleUp()).at()).toBeCloseTo(FRAMES / 60, 2);
+    expect(during, "the editor re-rendered on display frames").toBeLessThanOrEqual(1);
+    h.unmount();
+  }, 60_000);
 });
 
 /* ── a key and its button say the same thing ───────────────────────────── */

@@ -198,9 +198,14 @@ notebook's `tension: high`) wired to nothing that could act on it.
   approach/refusal card is the one card the board may **not** descope.
 
 ### `unknowns[]`
-`{id, what, why, impact, about[]?, resolved_by?}` — **`impact` is the important field**: it tells the
+`{id, what, why, impact, about[]?, resolved_by?, probe?}` — **`impact` is the important field**: it tells the
 script what it may not say. "Sources disagree on price" → *impact: say 'roughly half its high', never
 a figure.*
+
+- **`probe?`** — the machine form of `impact`, enforced at the render boundary; an unknown without one
+  is reported unmeasured. `{when_mentions[]?, forbid[]?, require_one[]?, no_causal_link?: {a[], b[]},
+  tests}`. `tests` (required) is what the probe checks, in a sentence. `forbid` items are literal
+  strings, or `{source, flags?}` patterns that may not match.
 
 - **`impact` keeps its prohibition force**, unchanged. What was wrong was the traffic it carried, not
   the field: two other material classes were sharing one deny-list-shaped container and had their

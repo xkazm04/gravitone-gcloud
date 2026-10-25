@@ -9,7 +9,7 @@
 //
 // A block may be draggable (the score's music spans): its edges trim, its body moves, and the
 // drop snaps to scene marks - the cue's span IS its first and last scene, so the drop is one op.
-import { useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type PointerEvent as RPointerEvent, type ReactNode } from "react";
 
 import type { SceneView } from "@gt/domain/partView";
 import { cx } from "@gt/ui/components/cx.ts";
@@ -27,6 +27,37 @@ export type ClockBlock = {
   /** Spoken with the block: the reason it is missing, the line it carries. */
   readonly title?: string;
 };
+/** The needle's time, outside React state: a frame loop writes it, and only the parts that DRAW the
+ *  time (the needle, a readout, the monitor's scene) subscribe, so the editor does not re-render
+ *  at display rate while the film plays. */
+export type ClockStore = {
+  readonly get: () => number;
+  readonly subscribe: (listener: () => void) => () => void;
+  readonly set: (t: number) => void;
+};
+
+function makeClockStore(): ClockStore {
+  let t = 0;
+  const listeners = new Set<() => void>();
+  return {
+    get: () => t,
+    subscribe: (l) => {
+      listeners.add(l);
+      return () => void listeners.delete(l);
+    },
+    set: (next) => {
+      if (Object.is(next, t)) return;
+      t = next;
+      for (const l of [...listeners]) l();
+    },
+  };
+}
+
+/** The time on the clock, or a value derived from it (re-renders only when the derived value changes). */
+export function useClockT<T = number>(store: ClockStore, select: (t: number) => T = (t) => t as unknown as T): T {
+  return useSyncExternalStore(store.subscribe, () => select(store.get()), () => select(0));
+}
+
 export type ClockLane = { readonly id: string; readonly label: string; readonly blocks: readonly ClockBlock[]; readonly drag?: boolean };
 
 /** A drop: the scenes a dragged block now spans, by index into `scenes`. */
@@ -83,7 +114,7 @@ export function CutClock({
   scenes,
   lanes,
   zoom,
-  t,
+  clock: needle,
   selected,
   marks = [],
   onSeek,
@@ -97,7 +128,8 @@ export function CutClock({
   readonly scenes: readonly SceneView[];
   readonly lanes: readonly ClockLane[];
   readonly zoom: number;
-  readonly t: number | null;
+  /** The needle's time; none draws no needle. */
+  readonly clock: ClockStore | null;
   readonly selected: string | null;
   readonly marks?: readonly { readonly atS: number; readonly label: string }[];
   readonly onSeek?: (t: number) => void;
@@ -123,13 +155,6 @@ export function CutClock({
   // four screens of film at 1x, and zoom multiplies that.
   const pps = zoom === 0 ? fit : Math.min(fit * 4, Math.max(fit, CELL / Math.max(0.1, median(scenes.map((x) => x.durS))))) * zoom;
   const W = Math.max(width - LABEL, totalS * pps);
-  // Keep the needle and the selection in view: a lane wider than its region scrolls to them.
-  useEffect(() => {
-    const el = box.current;
-    if (el === null || t === null) return;
-    const nx = t * pps + LABEL;
-    if (nx < el.scrollLeft + LABEL || nx > el.scrollLeft + el.clientWidth - CELL) el.scrollLeft = Math.max(0, nx - LABEL - CELL);
-  }, [t, pps]);
   useEffect(() => {
     if (selected === null) return;
     box.current?.querySelector(`[data-block="${CSS.escape(selected)}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -225,23 +250,39 @@ export function CutClock({
             })}
           </div>
         ))}
-        {t !== null && <span className={s.needle} style={{ left: x(t) }} aria-hidden="true" />}
+        {needle !== null && <Needle clock={needle} pps={pps} />}
       </div>
     </div>
   );
 }
 
+/** The needle: the one part of the clock that follows the time, and keeps itself in view -
+ *  a lane wider than its region scrolls to it. */
+function Needle({ clock: c, pps }: { readonly clock: ClockStore; readonly pps: number }): ReactNode {
+  const t = useClockT(c);
+  const self = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = self.current?.closest<HTMLElement>(`.${s.clockWrap}`);
+    if (el === null || el === undefined) return;
+    const nx = t * pps + LABEL;
+    if (nx < el.scrollLeft + LABEL || nx > el.scrollLeft + el.clientWidth - CELL) el.scrollLeft = Math.max(0, nx - LABEL - CELL);
+  }, [t, pps]);
+  return <span ref={self} className={s.needle} style={{ left: t * pps }} aria-hidden="true" />;
+}
+
 /** The transport outside React's render (v1 cut/clock.ts): a frame loop advances the needle at
  *  the J/K/L rate and stops at either end; a seek parks it. One per editor. */
 export function useTransport(totalS: number): {
-  readonly t: number;
+  /** The time, read when asked (a key press); a part that DRAWS it subscribes to `clock`. */
+  readonly at: () => number;
+  readonly clock: ClockStore;
   readonly playing: boolean;
   readonly rate: number;
   readonly seek: (t: number) => void;
   readonly toggle: () => void;
   readonly shuttle: (rate: number) => void;
 } {
-  const [t, setT] = useState(0);
+  const [clock] = useState(makeClockStore);
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
   const at = useRef(0);
@@ -252,18 +293,19 @@ export function useTransport(totalS: number): {
       const next = Math.max(0, Math.min(totalS, at.current + ((now - last) / 1000) * rate));
       last = now;
       at.current = next;
-      setT(next);
+      clock.set(next);
       if ((rate > 0 && next >= totalS) || (rate < 0 && next <= 0)) setPlaying(false);
       else raf = requestAnimationFrame(step);
     });
     return () => cancelAnimationFrame(raf);
-  }, [playing, rate, totalS]);
+  }, [playing, rate, totalS, clock]);
   const seek = (x: number): void => {
     at.current = Math.max(0, Math.min(totalS, x));
-    setT(at.current);
+    clock.set(at.current);
   };
   return {
-    t,
+    at: () => at.current,
+    clock,
     playing,
     rate,
     seek,

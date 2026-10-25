@@ -19,6 +19,7 @@ import { stripComments } from "./_helpers";
 
 import { buildCards } from "@/lib/notebook/cards";
 import { NOTEBOOK } from "@/lib/notebook/notebook";
+import { NOTEBOOK_SCHEMA } from "@/lib/notebook/schema";
 
 const ROOT = resolve(__dirname, "../..");
 
@@ -189,4 +190,31 @@ test("connections: every unclosed exemption still describes a file that leaks", 
       `${file} now closes its connection - drop the exemption rather than leaving it claiming a leak`,
     ).toBe(false);
   }
+});
+
+/* ── 5 · the contract document states every field the schema enforces on an unknown ── */
+
+test("NOTEBOOK-SCHEMA.md: every unknowns[] property, probe included, is spelled (snake_case) in its section", () => {
+  const doc = readFileSync(join(ROOT, "pipeline/NOTEBOOK-SCHEMA.md"), "utf8");
+  const at = doc.indexOf("### `unknowns[]`");
+  expect(at, "the unknowns[] section moved").toBeGreaterThan(0);
+  const section = doc.slice(at, doc.indexOf("\n### ", at + 5));
+  const keys = new Set<string>();
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) return void node.forEach(walk);
+    if (node === null || typeof node !== "object") return;
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      if (k === "properties" && v !== null && typeof v === "object") for (const p of Object.keys(v as object)) keys.add(p);
+      walk(v);
+    }
+  };
+  walk((NOTEBOOK_SCHEMA.properties as unknown as Record<string, { items: unknown }>).unknowns.items);
+  expect(keys.size, "the schema walk found no properties").toBeGreaterThan(8);
+  const snake = (k: string) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+  const missing = [...keys]
+    .filter((k) => k.length > 1)
+    .filter((k) => !new RegExp(`(?<![A-Za-z0-9_])(${k}|${snake(k)})(?![A-Za-z0-9_])`).test(section))
+    .sort();
+  console.log(`[schema-doc] ${keys.size} unknowns[] properties, ${missing.length} absent from the section: ${missing.join(" ")}`);
+  expect(missing).toEqual([]);
 });
