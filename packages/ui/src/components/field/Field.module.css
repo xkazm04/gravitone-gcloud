@@ -9,6 +9,7 @@
 /* The right inset clears the keycap the same way the left clears the glyph: the cap's inset,
    the cap, and a gap - 6 + 22 + 6, ledger.css's 34px. tokens.css reserved nothing there, so
    typed text ran under the cap; both pages that draw a search patched it, the Library with
-   32px and the Ledger with 34px (a design finding, owner to rule - see docs/next/style-contract). */
+   32px and the Ledger with 34px. The owner ruled 34px on 2026-10-15 (docs/next/style-contract,
+   "Accepted deviations"). */
 .search .field{padding-left:calc(var(--sp-control) + var(--size-glyph) + var(--sp-2));padding-right:calc(var(--sp-2) + var(--h-chip) + var(--sp-2));width:100%}
 .cap{position:absolute;right:var(--sp-2);display:inline-flex}
