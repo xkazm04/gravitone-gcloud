@@ -18,6 +18,7 @@ import { Ghost } from "../../src/components/ghost/Ghost.tsx";
 import { UpstreamBreak, nodeStates } from "../../src/components/upstream/UpstreamBreak.tsx";
 import ub from "../../src/components/upstream/UpstreamBreak.module.css";
 import { Provenance } from "../../src/components/provenance/Provenance.tsx";
+import { Facts } from "../../src/components/facts/Facts.tsx";
 import { ErrorLine } from "../../src/components/errorline/ErrorLine.tsx";
 import { LedgerLink } from "../../src/components/ledgerlink/LedgerLink.tsx";
 import { waveBars } from "../../src/components/wave/wave.ts";
@@ -25,6 +26,8 @@ import { Wave } from "../../src/components/wave/Wave.tsx";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
 const count = (s: string, re: RegExp): number => (s.match(re) ?? []).length;
+/** The React keys of an element's child array (a duplicate is a row React may drop or repeat). */
+const keysOf = (el: unknown): readonly (string | null)[] => ((el as { props: { children: readonly { key: string | null }[] } }).props.children).map((c) => c.key);
 
 describe("Chip", () => {
   test.each(TONES.filter((t) => t !== "neutral"))("tone %s maps to its class", (t) => {
@@ -127,6 +130,13 @@ describe("UpstreamBreak", () => {
     expect(u).toContain(`${ub.node} ${ub.brk}`);
     expect(u).toContain(">, broke</span>");
     expect(u).toContain(">OAuth token expired</div>");
+  });
+});
+
+describe("Facts", () => {
+  test("two facts with one term are two rows with two keys (a Ledger event's data may repeat an envelope term)", () => {
+    const keys = keysOf(Facts({ facts: [{ term: "lane", value: "image" }, { term: "lane", value: "image.flux" }] }));
+    expect(new Set(keys).size).toBe(2);
   });
 });
 
