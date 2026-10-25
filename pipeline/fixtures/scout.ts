@@ -22,6 +22,8 @@
 // And it composed a STORYBOARD (spark scout-storyboards) from the committed night's kept idea: four local
 // Flux frames, a paragraph and four bullets - the rung a full video must grow from. The committed night kept a storyboard
 // of its own (spark scout-vision S2), and yesterday's night proposes a GENRE resting on it: a words row under `genres`.
+// Yesterday's night also drew a TRIAL of a live genre - a storyboard whose panels were each clipped on LTX, one clip
+// refused - and cut that genre's PIECE: its clips as video cells in the trial's run, the piece one video row under `pieces`.
 //
 // THE MUSE WING (spark scout-muse) has its own root, fixtures-out/scout-muse/, and one CLOSED night on the
 // same day as yesterday's scout night - two packets, pkt:scout:<night> and pkt:scout:muse:<night>, one day:
@@ -31,7 +33,7 @@ import { rmSync } from "node:fs";
 
 import { standConcept } from "../../lib/foundry/scout/concept";
 import type { MuseJudge } from "../../lib/foundry/scout/muse";
-import type { Asset3dCandidate, DirectionCandidate, GenreProposalCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource, Seed, SeedBatch, SeedMusic, StoryboardCandidate } from "../../lib/foundry/scout/types";
+import type { Asset3dCandidate, DirectionCandidate, GenreProposalCandidate, IdeaCandidate, Night, PieceCandidate, SceneCandidate, ScoutSource, Seed, SeedBatch, SeedMusic, StoryboardCandidate } from "../../lib/foundry/scout/types";
 import { DAY, HOUR, NOW, outFile, plate, writeBytes, writeJson } from "./kit";
 
 const PALETTE = ["#1d2b3a", "#e0a458", "#5c8a8a", "#f2e8cf"];
@@ -177,6 +179,34 @@ function genreProposal(id: string, fromStoryboard: string): GenreProposalCandida
   };
 }
 
+/** The live genre the trial and the piece belong to (the Library fixture's piece-due genre). */
+const TRIAL_GENRE = "gn-kitchen-table-science-chalk-diagram";
+/** Not a video: a placeholder the Board names by its .mp4 path (the foundry fixtures' rule). */
+const MP4 = Buffer.from("fixture-mp4-placeholder");
+
+/** A trial of the live genre: the storyboard's frames, each panel clipped on LTX, clip 3 refused by the engine. */
+function trial(night: string, id: string, fromIdea: string): StoryboardCandidate {
+  const clips = [1, 2, 3, 4].map((k) => (k === 3 ? null : { path: `storyboards/${id}/clip-${k}.mp4`, durationS: 5, from: `storyboards/${id}/panel-${k}.png`, engine: "ltx-local" as const, usd: 0 }));
+  for (const c of clips) if (c !== null) writeBytes(outFile("scout", night, c.path), MP4);
+  return storyboard(night, id, fromIdea, {
+    jobId: `job:scout-storyboard:${night}:${id}`,
+    title: "Why the kettle sings before it boils",
+    paragraph: "A chalk diagram grows on the kitchen table while the kettle heats: bubbles, a pressure arrow, and the note the steam plays.",
+    genre: TRIAL_GENRE,
+    clips,
+    error: "clip 3: ComfyUI LTXVSampler (node 40) failed: out of memory",
+  });
+}
+
+/** The genre's piece: the committed night's kept board cut whole, 20 s with the clips' own audio. */
+function piece(night: string, id: string, fromTrial: string): PieceCandidate {
+  const video = `pieces/${id}/piece.mp4`;
+  writeBytes(outFile("scout", night, video), MP4);
+  const clips = [1, 2, 3, 4].map((k) => ({ path: `pieces/${id}/clip-${k}.mp4`, durationS: 5, from: `${fromTrial.slice(0, fromTrial.indexOf("/"))}/storyboards/${fromTrial.slice(fromTrial.indexOf("/") + 1)}/panel-${k}.png`, engine: "ltx-local" as const, usd: 0 }));
+  for (const c of clips) writeBytes(outFile("scout", night, c.path), MP4);
+  return { id, kind: "piece", sourceIds: [], status: "rendered", jobId: `job:scout-piece:${night}:${id}`, genre: TRIAL_GENRE, fromTrial, title: "Why the kettle sings before it boils", clips, video, durationS: 20, use: "short: a 20 s chalk-diagram explainer" };
+}
+
 function closedNight(): Night {
   const id = dayOf(DAY);
   const s1 = source(id, "s-01", "Fixture trailer one", 4);
@@ -205,8 +235,10 @@ function closedNight(): Night {
       direction("c-09", [`${dayOf(2 * DAY)}/c-01/replica-1`]),
       storyboard(id, "c-10", `${dayOf(2 * DAY)}/c-03`),
       genreProposal("c-11", `${dayOf(2 * DAY)}/c-04`),
+      trial(id, "c-12", `${dayOf(2 * DAY)}/c-03`),
+      piece(id, "c-13", `${dayOf(2 * DAY)}/c-04`),
     ],
-    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-asset:${id}:c-04`, `job:scout-ideas:${id}`, `job:scout-storyboard:${id}:c-10`],
+    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-asset:${id}:c-04`, `job:scout-ideas:${id}`, `job:scout-storyboard:${id}:c-10`, `job:scout-storyboard:${id}:c-12`, `job:scout-piece:${id}:c-13`],
   };
 }
 

@@ -13,7 +13,7 @@ import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
 import { TECHNIQUE_LABEL, type GateResult, type MeshAsset } from "../../../foundry/mesh/types.ts";
 import { patternsRel } from "../../../foundry/scout/knowledge.ts";
 import { mss } from "../../../foundry/scout/track.ts";
-import { CANDIDATE_KINDS, cellId, parseCellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type GenreProposalCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip, type Seed, type StoryboardCandidate, type TrackCandidate, type VentureProposalCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
+import { CANDIDATE_KINDS, cellId, parseCellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type GenreProposalCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type PieceCandidate, type SceneCandidate, type SceneClip, type Seed, type StoryboardCandidate, type TrackCandidate, type VentureProposalCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
 import { WORDS_PART } from "../../../foundry/scout/storyboardKept.ts";
 import { stillOf } from "../../../foundry/scout/visualizer.ts";
 import { meshFileUrl } from "../../../library/feeds/mesh.ts";
@@ -70,7 +70,12 @@ import { museFacts, scoutFileUrl } from "./scoutWing.ts";
 //            lib/foundry/scout/storyboardKept.ts parses: the words kept, or any cell kept and none rejected.
 //   genre    (spark scout-vision S2) a night's proposal to birth a genre, ONE words cell `c-11/words` under `genres`: its
 //   venture  name the label, the look and grammar (a venture's frame) and the cells it stands on its words. Kept, the
-//            Board's apply births the genre or venture in the kernel (./scout.ts); a piece is still a Loss until WP3.
+//            Board's apply births the genre or venture in the kernel (./scout.ts).
+//   trial    (spark scout-vision S2) a storyboard WITH a genre: its frames, then each panel's LTX clip as a video cell
+//            `c-10/clip-N` (the scene's clip cell), then its words - one run, judged whole by the storyboard rule.
+//   piece    a genre's piece, ONE cell `c-12/video` under `pieces` (the visualizer's video cell): the trial's title its
+//            label; a dry or not-yet-cut piece is that cell as words. Kept, the genre is publishable (derived, nothing
+//            written) and its `genre-publishable` registry lead queues (./scout.ts).
 //            An idea, a seed or a storyboard made inside a venture names it in its meta (`venture: vn-...`).
 // A text cell's media is the content address of its own words (text/plain):
 // the kernel holds candidates by blob, and the words are the thing judged.
@@ -428,6 +433,8 @@ export const STORYBOARD_VERDICT = { keep: "ready for a full video", reject: "ref
 
 /** A storyboard's frame cell (`c-10/panel-2`) and its words cell (`c-10/words`). */
 export const panelCell = (candidate: CandidateId, i: number): string => cellId(candidate, `panel-${i + 1}`);
+/** A trial's clip cell (`c-10/clip-2`), by panel index. */
+export const trialClipCell = (candidate: CandidateId, i: number): string => cellId(candidate, `clip-${i + 1}`);
 export const wordsCell = (candidate: CandidateId): string => cellId(candidate, WORDS_PART);
 
 /** A storyboard's words as the card reads them: the paragraph, a blank line, then each bullet as a `- ` line. */
@@ -450,14 +457,60 @@ function storyboardCells(night: Night, c: StoryboardCandidate, v1: Pick<ScoutV1,
     out.cells.push({ id: panelCell(c.id, i), candidate: c.id, kind: "storyboard", row: c.id, jobId, media: m, grades: [], url: scoutFileUrl(night.id, file), words: { label: `frame ${i + 1}`, ...(c.panels[i] === undefined ? {} : { prompt: c.panels[i] }) } });
     frames++;
   });
+  // A trial's clips, each the scene's video cell, after every frame (the run's face stays a still).
+  let clips = 0;
+  (c.clips ?? []).forEach((clip, i) => {
+    if (clip === null) return;
+    const m = v1.media[clip.path];
+    if (m === undefined) {
+      out.losses.push({ candidate: trialClipCell(c.id, i), grade: "dropped", reason: `${clip.path} is not on disk` });
+      return;
+    }
+    out.cells.push({ id: trialClipCell(c.id, i), candidate: c.id, kind: "storyboard", row: c.id, jobId, media: m, grades: [], url: scoutFileUrl(night.id, clip.path), words: { label: `clip ${i + 1}`, meta: clipMeta(clip), ...(c.panels[i] === undefined ? {} : { prompt: c.panels[i] }) } });
+    clips++;
+  });
   // A panel the engine refused names itself in `error` (`panel N: ...`), beside the frames that drew.
   if (c.error !== undefined) out.losses.push({ candidate: c.id, grade: "approximate", reason: c.error });
   const body = storyboardBody(c);
   const framesWord = frames === c.panels.length ? `${frames} frame${frames === 1 ? "" : "s"}` : `${frames} of ${c.panels.length} frames`;
   const idea = v1.ideas?.[c.fromIdea];
-  const meta = [`idea: ${idea === undefined ? c.fromIdea : clip40(idea)}`, framesWord, "local · free", seedHead(c, v1.seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · ");
+  const trial = c.genre === undefined ? undefined : `trial: ${c.genre}${c.clips === undefined ? "" : ` · ${clips} of ${c.panels.length} clips`}`;
+  const meta = [`idea: ${idea === undefined ? c.fromIdea : clip40(idea)}`, framesWord, trial, "local · free", seedHead(c, v1.seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · ");
   out.cells.push({ id: wordsCell(c.id), candidate: c.id, kind: "storyboard", row: c.id, jobId, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words: { label: c.title, meta, prompt: body } });
   out.rows.push({ id: c.id, label: c.title, group: "storyboards", prompt: c.paragraph, ...(c.aim === undefined ? {} : { aim: c.aim }), ...(c.use === undefined ? {} : { use: c.use }) });
+}
+
+/** A piece's one cell (`c-12/video`): its verdict is the piece's (lib/foundry/scout/genres.ts PIECE_PART). */
+export const pieceCell = (candidate: CandidateId): string => cellId(candidate, "video");
+
+/** What a piece's verdict does, as the preview says it. */
+export const pieceVerdictLine = (c: Pick<PieceCandidate, "genre">, verdict: "keep" | "reject"): string => (verdict === "keep" ? `genre ${c.genre} publishable` : `refused: genre ${c.genre} stays piece-due`);
+
+/** `pieces/c-12/piece.mp4`'s meta: `gn-x · trial 2026-10-20/c-04 · 4 of 5 clips · 20s · local · free`. */
+const pieceMeta = (c: PieceCandidate): string =>
+  [c.genre, `trial ${c.fromTrial}`, c.clips.length === 0 ? undefined : `${c.clips.filter((x) => x !== null).length} of ${c.clips.length} clips`, c.durationS === undefined ? undefined : `${c.durationS}s`, "local · free", ventureOf(c)].filter((x) => x !== undefined).join(" · ");
+
+function pieceCells(night: Night, c: PieceCandidate, media: ScoutV1["media"], out: Mutable): void {
+  if (c.status === "failed") {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
+    return;
+  }
+  const jobId = c.jobId ?? `scout:${night.id}`;
+  const m = c.video === undefined ? undefined : media[c.video];
+  if (c.video !== undefined && m === undefined) {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: `${c.video} is not on disk` });
+    return;
+  }
+  const words: ItemWords = { label: c.title, meta: pieceMeta(c) };
+  if (c.video !== undefined && m !== undefined) out.cells.push({ id: pieceCell(c.id), candidate: c.id, kind: "piece", row: c.id, jobId, media: m, grades: [], url: scoutFileUrl(night.id, c.video), words });
+  else {
+    // A dry or not-yet-cut piece: its words alone, under the same cell id (the verdict is the piece's either way).
+    const body = [`piece · ${c.genre}`, c.title, `trial ${c.fromTrial}`].join("\n");
+    out.cells.push({ id: pieceCell(c.id), candidate: c.id, kind: "piece", row: c.id, jobId, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words: { ...words, prompt: body } });
+  }
+  // A clip that could not be made names itself in `error` (`clip N: ...`), beside the cut.
+  if (c.error !== undefined) out.losses.push({ candidate: c.id, grade: "approximate", reason: c.error });
+  out.rows.push({ id: c.id, label: clip40(c.title), group: "pieces", ...(c.use === undefined ? {} : { use: c.use }), ...(c.aim === undefined ? {} : { aim: c.aim }) });
 }
 
 /** What a rejected proposal does, as the preview says it; a kept one's line is its birth (bornLine). */
@@ -502,8 +555,7 @@ export function build(v1: ScoutV1): Built {
     else if (c.kind === "visualizer") visualizerCells(night, c, v1, out);
     else if (c.kind === "storyboard") storyboardCells(night, c, v1, out);
     else if (c.kind === "genre" || c.kind === "venture") proposalCell(night, c, out);
-    // spark scout-vision S2 - WP3 gives the piece its cell; until then it draws no row.
-    else if (c.kind === "piece") out.losses.push({ candidate: c.id, grade: "dropped", reason: `${c.kind}: no packet row yet` });
+    else if (c.kind === "piece") pieceCells(night, c, v1.media, out);
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

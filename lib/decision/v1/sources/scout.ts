@@ -49,7 +49,7 @@ import {
   type Preview,
 } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
-import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, PROPOSAL_REJECTED, STORYBOARD_VERDICT, bornLine, build, commitOf, extractDecisions, ideaCell, meshKey, sameOutcome, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, PROPOSAL_REJECTED, STORYBOARD_VERDICT, bornLine, build, commitOf, extractDecisions, ideaCell, meshKey, pieceCell, pieceVerdictLine, sameOutcome, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
 import { musicOf } from "./scoutMusic.ts";
 import { nightRefusal, partOfBuilt, partWords, settledPart, withPart } from "./scoutPart.ts";
 import { inWing, isCharacter, keptTechnique, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta, partOfRun } from "./scoutWing.ts";
@@ -80,7 +80,8 @@ import { inWing, isCharacter, keptTechnique, knowledgeOf, knowledgeWrite, nightO
 //   genre    (spark scout-vision S2) a kept proposal BIRTHS its genre or venture in the kernel (packages/kernel/src/
 //   venture  ventures/ bornGenre, bornVenture - idempotent on the proposal `<night>/<c-id>`, so a redelivery births
 //            nothing twice); the preview names the birth. A rejected one is the record alone: its reasons ban it.
-//   piece    a kept piece queues its genre's `genre-publishable` registry lead (leadEvents.ts genreLead) with the leads.
+//   piece    a kept piece queues its genre's `genre-publishable` registry lead (leadEvents.ts genreLead) with the leads;
+//            the genre's publishable state is derived from the record (lib/foundry/scout/genres.ts), never written.
 //   leads    what the keeps EARNED for the ai-registry (../../../foundry/scout/
 //            leadEvents.ts) into the lead queue, once by key; the preview names each.
 //   all      every verdict, its reasons and its note into `night.committed`,
@@ -210,9 +211,17 @@ async function read(ref: AdapterRef, storeOf: () => Result<Store>): Promise<Resu
           return fromV1(e);
         }
       }
-    } else if (c.kind === "track" || c.kind === "visualizer" || c.kind === "storyboard") {
-      // Every cell file must be listed here, or media misses it: a storyboard's frames too (a failed panel is null).
-      const own = c.kind === "track" ? c.clips.map((x) => x.path) : c.kind === "storyboard" ? (c.images ?? []).map((f) => f ?? undefined) : [c.video, c.still];
+    } else if (c.kind === "track" || c.kind === "visualizer" || c.kind === "storyboard" || c.kind === "piece") {
+      // Every cell file must be listed here, or media misses it: a storyboard's frames and a trial's clips too (a failed
+      // panel or clip is null), and a piece's cut.
+      const own =
+        c.kind === "track"
+          ? c.clips.map((x) => x.path)
+          : c.kind === "storyboard"
+            ? [...(c.images ?? []).map((f) => f ?? undefined), ...(c.clips ?? []).map((x) => x?.path)]
+            : c.kind === "piece"
+              ? [c.video]
+              : [c.video, c.still];
       try {
         for (const f of own) if (f !== undefined) files.push({ key: f, abs: locate(f) });
       } catch (e) {
@@ -396,6 +405,11 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
       const d = byCell.get(words)?.verdict;
       if (d === "keep") parts.promotions.push({ target: c.kind === "genre" ? "genres" : "ventures", candidate: words, detail: bornLine(c) });
       else if (d === "reject") parts.writes.push({ ...nightFile, candidate: words, detail: PROPOSAL_REJECTED });
+    } else if (c.kind === "piece") {
+      // Kept, the genre is publishable - derived from this record, nothing else written; its lead is named below.
+      const cell = pieceCell(c.id);
+      const d = byCell.get(cell)?.verdict;
+      if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: pieceVerdictLine(c, d) });
     }
   }
   // What the keeps earn, over every part's keeps; a later part names only the leads it adds.

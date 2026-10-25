@@ -14,7 +14,7 @@
 //               other actor too).
 
 import { errorMessage, type Result } from "@gt/domain/errors";
-import { PIECE_TRIALS, genreStateOf, type Genre, type GenreEvidence, type GenreState, type Venture } from "@gt/domain/genre";
+import { PIECE_TRIALS, TRIALS_PER_GENRE, genreStateOf, type Genre, type GenreEvidence, type GenreState, type Venture } from "@gt/domain/genre";
 import type { Store } from "@gt/kernel/store";
 import { listGenres, listVentures, readGenre, readVenture, retireGenre, retireVenture } from "@gt/kernel/ventures/store";
 
@@ -64,14 +64,61 @@ export function genreViews(nights: readonly Night[], genres: readonly Genre[]): 
   });
 }
 
-/** The trial slots each LIVE genre has left on night `id` (TRIALS_PER_GENRE minus its trials already on that night). */
-export function trialSlots(_nights: readonly Night[], _genres: readonly Genre[], _id: NightId): ReadonlyMap<string, number> {
-  throw new Error("trialSlots: WP3");
+/** A genre that still takes trials: perfecting, or piece-due (its piece may yet be rejected). */
+export const takesTrials = (s: GenreState): boolean => s === "perfecting" || s === "piece-due";
+
+/** The trials of `genreId` night `n` already holds - every one counts, a failed one too (it held the place). */
+export const trialsOn = (n: Night, genreId: string): number => n.candidates.filter((c) => c.kind === "storyboard" && c.genre === genreId).length;
+
+/**
+ * The trial slots each LIVE genre has left on night `id` (TRIALS_PER_GENRE minus its trials already on that night).
+ * A retired or publishable genre has no entry; a night not among `nights` holds no trial yet.
+ */
+export function trialSlots(nights: readonly Night[], genres: readonly Genre[], id: NightId): ReadonlyMap<string, number> {
+  const night = nights.find((n) => n.id === id);
+  const out = new Map<string, number>();
+  for (const v of genreViews(nights, genres)) {
+    if (!takesTrials(v.state)) continue;
+    out.set(v.id, Math.max(0, TRIALS_PER_GENRE - (night === undefined ? 0 : trialsOn(night, v.id))));
+  }
+  return out;
 }
 
-/** Genres whose piece is due (state piece-due and no piece in flight), each with its best kept trial `<night>/<c-id>`. */
-export function piecesDue(_nights: readonly Night[], _genres: readonly Genre[]): readonly { readonly genre: string; readonly trial: string }[] {
-  throw new Error("piecesDue: WP3");
+/**
+ * A piece of the genre still in flight: pending, or made but not yet judged (its night uncommitted, or its cell open).
+ * A dry night's piece is a rehearsal (words only, never evidence) and holds nothing up.
+ */
+function pieceInFlight(nights: readonly Night[], genreId: string): boolean {
+  return nights.some((n) => !n.dry && n.candidates.some((c) => c.kind === "piece" && c.genre === genreId && c.status !== "failed" && (c.status === "pending" || pieceVerdict(n, c.id) === "open")));
+}
+
+/** Kept clip cells (`c-NN/clip-N`) of trial `cid` on night `n`; a cell still open on a remainder is not kept. */
+function keptClips(n: Night, cid: string): number {
+  const k = n.committed;
+  if (k === undefined) return 0;
+  const open = new Set(k.open ?? []);
+  return k.kept.filter((cell) => !open.has(cell) && cell.startsWith(`${cid}/clip-`)).length;
+}
+
+/**
+ * Genres whose piece is due (state piece-due and no piece in flight), each with its best kept trial `<night>/<c-id>`:
+ * the kept trial with the most kept clip cells, ties to the newest (evidence is oldest first, so the later wins).
+ */
+export function piecesDue(nights: readonly Night[], genres: readonly Genre[]): readonly { readonly genre: string; readonly trial: string }[] {
+  const byId = new Map(nights.map((n) => [n.id, n]));
+  const out: { genre: string; trial: string }[] = [];
+  for (const v of genreViews(nights, genres)) {
+    if (v.state !== "piece-due" || pieceInFlight(nights, v.id)) continue;
+    let best: { readonly trial: string; readonly clips: number } | undefined;
+    for (const ref of v.evidence.keptTrials) {
+      const cut = ref.lastIndexOf("/");
+      const n = byId.get(ref.slice(0, cut));
+      const clips = n === undefined ? 0 : keptClips(n, ref.slice(cut + 1));
+      if (best === undefined || clips >= best.clips) best = { trial: ref, clips };
+    }
+    if (best !== undefined) out.push({ genre: v.id, trial: best.trial });
+  }
+  return out;
 }
 
 /** What the genre does next, in the work's words. */

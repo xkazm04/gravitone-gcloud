@@ -35,6 +35,7 @@ import { finishProducer } from "./finish.ts";
 import { scoutAssetProducer } from "./scoutAsset.ts";
 import { scoutIdeasProducer } from "./scoutIdea.ts";
 import { scoutReelsProducer } from "./scoutReel.ts";
+import { scoutPieceProducer } from "./scoutPiece.ts";
 import { scoutStoryboardProducer } from "./scoutStoryboard.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
@@ -148,6 +149,9 @@ export const BOUND: readonly Bound[] = [
   // A /scout night's storyboards (spark scout-storyboards): one job per kept idea's storyboard, its frames drawn by Flux 2
   // on this box's ComfyUI, on gpu.local (engine comfy).
   { name: "scout-storyboard", producer: scoutStoryboardProducer() },
+  // A genre's piece (spark scout-vision S2): its best kept trial's rejected clips re-made on LTX and every clip cut with
+  // ffmpeg, one job per piece on gpu.local (engine comfy).
+  { name: "scout-piece", producer: scoutPieceProducer() },
   ...stepsBound(),
 ];
 

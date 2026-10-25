@@ -131,6 +131,8 @@ export const SOURCES = {
       sources: ["generic", "use case", "subject"],
       // spark scout-vision S2: a night's proposal to birth a genre or a venture.
       genres: ["generic", "use case", "story"],
+      // spark scout-vision S2: a genre's piece, its best kept trial cut whole.
+      pieces: ["story", "craft", "motion"],
     },
   },
   // A batch of one-sentence SEEDS (spark scout-decision-graph): genre, subgenre, type of content,

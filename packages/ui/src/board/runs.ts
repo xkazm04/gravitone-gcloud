@@ -33,9 +33,11 @@ export function runsOf(cells: readonly Cell[], rows: readonly RowWords[]): Run[]
  * music and 3D later). `ideas` - a scout night's idea artboards, one picture each - is drawn before
  * the words in the same tab (spark scout-idea-artboards). `seeds` - a batch's one-sentence seeds (spark
  * scout-decision-graph) - are words, filed in that tab under their own name. `storyboards` - a kept idea's
- * frames and its words, one run judged whole (spark scout-storyboards) - has a tab of its own.
+ * frames and its words, one run judged whole (spark scout-storyboards) - has a tab of its own. `genres` - a night's
+ * proposals to birth a genre or a venture, words (spark scout-vision S2) - sit with the ideas; `pieces` - a genre's
+ * cut video - with the videos.
  */
-export const CATEGORIES = ["art styles", "videos", "music", "3d", "ideas", "storyboards", "seeds", "notes", "sources", "other"] as const;
+export const CATEGORIES = ["art styles", "videos", "pieces", "music", "3d", "ideas", "storyboards", "genres", "seeds", "notes", "sources", "other"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 const isCategory = (g: string): g is Category => (CATEGORIES as readonly string[]).includes(g);
@@ -72,9 +74,11 @@ const TAB_OF: Readonly<Record<Category, Tab>> = {
   "3d": "images",
   other: "images",
   videos: "videos",
+  pieces: "videos",
   music: "audio",
   ideas: "ideas",
   storyboards: "storyboards",
+  genres: "ideas",
   seeds: "ideas",
   notes: "ideas",
   sources: "ideas",

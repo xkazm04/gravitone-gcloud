@@ -35,6 +35,14 @@
 //   the storyboard files it as one line in that step's PATTERNS.md, exactly as a kept finding is filed
 //   (./knowledge.ts appendTechnique); not kept, nothing is written.
 //
+//   A TRIAL, OPTIONAL (spark scout-vision S2): `genre: "gn-..."` makes the storyboard a trial of that genre. The
+//   genre must be LIVE in the kernel (./genres.ts: perfecting or piece-due - never retired, never publishable), and a
+//   night takes at most TRIALS_PER_GENRE trials of each (./genres.ts trialSlots), counted under the lock with the cap.
+//   Trials come FIRST from the cap: a plain storyboard may not take a place a live genre's unused trial slot still
+//   holds. Any kept idea may become a trial of any live genre - one trial per idea per genre, and a plain storyboard
+//   and a trial of one idea never refuse each other. A trial's job clips every drawn panel on LTX after its frames
+//   (lib/producers/scoutStoryboardActs.ts), the clips judged as `c-NN/clip-N` cells beside the frames.
+//
 //   A DRY NIGHT DRAWS NOTHING. Its storyboards are written `rendered` with no frame (`images: []`), so the
 //   Board triages the words alone, and no job is launched - a dry night spends nothing, and a stand-in frame
 //   would be judged as if it were the plan.
@@ -45,17 +53,17 @@ import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
-import { VENTURE_ID_RE } from "@gt/domain/genre";
+import { GENRE_ID_RE, TRIALS_PER_GENRE, VENTURE_ID_RE } from "@gt/domain/genre";
 import type { Store } from "@gt/kernel/store";
 import { get } from "@gt/kernel/job";
 import { jobIdSchema } from "@gt/domain/ids";
 
 import { kernel } from "../../kernelProcess.ts";
 import { driveStoryboard, launchStoryboard } from "../../producers/scoutStoryboard.ts";
-import { settledBoard, type StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
+import { settledBoard, type StoryboardClip, type StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
 import { launchable, Refusal, type ActContext } from "./acts";
 import { IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
-import { ventureRefusal } from "./genres";
+import { genreViews, headsOf, takesTrials, trialSlots, trialsOn, ventureRefusal, type GenreView } from "./genres";
 import { STEP_NAME_RE, STEP_RULE, TEMPLATE_NAME_RE, TEMPLATE_RULE, templateProblem } from "./knowledge";
 import { namesIn } from "./scene";
 import { mutateNight, nextCandidateId, readAllNights, readNight, withCandidate } from "./store";
@@ -86,6 +94,8 @@ export { keptStoryboardFor } from "./storyboardKept";
 export type StoryboardEngines = {
   /** Draw one frame: the PNG bytes and the seed it drew with. */
   readonly draw?: StoryboardDraw;
+  /** Clip one panel still (a trial's): the mp4 bytes and their length. */
+  readonly clip?: StoryboardClip;
 };
 
 export type StoryboardResult = {
@@ -138,6 +148,8 @@ const briefSchema = z
       .optional(),
     /** The live venture the storyboard is made inside (spark scout-vision S2). */
     venture: z.string().trim().regex(VENTURE_ID_RE, "a venture id vn-...").optional(),
+    /** The live genre this storyboard is a TRIAL of (spark scout-vision S2): its panels are clipped. */
+    genre: z.string().trim().regex(GENRE_ID_RE, "a genre id gn-...").optional(),
   })
   .strict();
 
@@ -145,7 +157,7 @@ export type StoryboardBrief = z.output<typeof briefSchema>;
 
 /** The skill's batch as briefs, or the first bad brief's place and reason; nothing is read or written here. */
 export function parseStoryboards(raw: unknown): Result<StoryboardBrief[]> {
-  if (!Array.isArray(raw)) return err("invalid", "storyboard: the input is a JSON array of briefs {fromIdea, title, paragraph, bullets, panels, use?, aim?, technique?, venture?}");
+  if (!Array.isArray(raw)) return err("invalid", "storyboard: the input is a JSON array of briefs {fromIdea, title, paragraph, bullets, panels, use?, aim?, technique?, venture?, genre?}");
   if (raw.length === 0) return err("invalid", "storyboard: the batch holds no brief");
   const out: StoryboardBrief[] = [];
   for (const [i, item] of raw.entries()) {
@@ -157,8 +169,8 @@ export function parseStoryboards(raw: unknown): Result<StoryboardBrief[]> {
     // the operator only and follow the idea door's rule (the skill writes them, docs/scout.md holds it to that).
     const names = namesIn(b.panels, []);
     if (names.length > 0) return err("refused", `${at}: the panels name ${names.join(", ")}: craft, not content (no person, studio or franchise)`);
-    const twice = out.findIndex((x) => x.fromIdea === b.fromIdea);
-    if (twice >= 0) return err("invalid", `${at}: fromIdea: ${b.fromIdea} is storyboard ${twice + 1}'s too; one storyboard per idea`);
+    const twice = out.findIndex((x) => x.fromIdea === b.fromIdea && x.genre === b.genre);
+    if (twice >= 0) return err("invalid", `${at}: fromIdea: ${b.fromIdea} is storyboard ${twice + 1}'s too; one ${b.genre === undefined ? "storyboard" : `trial of ${b.genre}`} per idea`);
     out.push(b);
   }
   return ok(out);
@@ -167,10 +179,57 @@ export function parseStoryboards(raw: unknown): Result<StoryboardBrief[]> {
 /** The aspect a storyboard draws at, from its idea's: a portrait idea (9:16, 4:5) is drawn 9:16, any other 16:9. */
 export const boardAspect = (ideaAspect: string | undefined): "16:9" | "9:16" => (ideaAspect === "9:16" || ideaAspect === "4:5" ? "9:16" : "16:9");
 
-/** Why a brief for `ref` cannot be written over `nights`, or undefined: one storyboard per idea. */
-function heldFor(nights: readonly Night[], ref: string, place: number): string | undefined {
-  const had = storyboardOf(nights, ref);
+/** The trial of `genre` some night already holds for `ref` (any status but failed): one trial per idea per genre. */
+function trialOf(nights: readonly Night[], ref: string, genre: string): { readonly night: NightId; readonly candidate: StoryboardCandidate } | undefined {
+  for (const n of nights) for (const c of n.candidates) if (c.kind === "storyboard" && c.fromIdea === ref && c.genre === genre && c.status !== "failed") return { night: n.id, candidate: c };
+  return undefined;
+}
+
+/** Why a brief cannot be written over `nights`, or undefined: one plain storyboard per idea, one trial per idea per genre. */
+function heldFor(nights: readonly Night[], b: Pick<StoryboardBrief, "fromIdea" | "genre">, place: number): string | undefined {
+  const ref = b.fromIdea;
+  if (b.genre !== undefined) {
+    const had = trialOf(nights, ref, b.genre);
+    return had === undefined ? undefined : `storyboard ${place}: idea ${ref} already has trial ${had.night}/${had.candidate.id} of ${b.genre} (${had.candidate.status}); one trial per idea per genre, unless that one failed`;
+  }
+  const plain = nights.map((n) => ({ ...n, candidates: n.candidates.filter((c) => c.kind !== "storyboard" || c.genre === undefined) }));
+  const had = storyboardOf(plain, ref);
   return had === undefined ? undefined : `storyboard ${place}: idea ${ref} already has storyboard ${had.night}/${had.candidate.id} (${had.candidate.status}); one storyboard per idea, unless that one failed`;
+}
+
+/** Why the briefs' genres cannot take trials, or undefined: each names a genre the kernel holds that is still live. */
+function genreRefusal(briefs: readonly StoryboardBrief[], views: readonly GenreView[]): string | undefined {
+  for (const [i, b] of briefs.entries()) {
+    if (b.genre === undefined) continue;
+    const v = views.find((x) => x.id === b.genre);
+    if (v === undefined) return `storyboard ${i + 1}: genre: no genre ${b.genre}`;
+    if (!takesTrials(v.state)) return `storyboard ${i + 1}: genre: ${b.genre} is ${v.state}${v.retiredAt === undefined ? "" : ` (${v.retiredAt.slice(0, 10)})`}; only a perfecting or piece-due genre takes trials`;
+  }
+  return undefined;
+}
+
+/**
+ * Why the batch does not fit night `n`, or undefined: the cap, each genre's trial slots, and the places the live genres'
+ * unused slots hold (trials come first: a plain storyboard takes only what the cap has left past them).
+ */
+function capRefusal(n: Night, briefs: readonly StoryboardBrief[], slots: ReadonlyMap<string, number>): string | undefined {
+  const used = storyboardsUsed(n);
+  const cap = storyboardCapOf(n);
+  const left = Math.max(0, cap - used);
+  if (briefs.length > left) return `night ${n.id} holds ${used} of its ${cap} storyboards; ${left} left, and the batch has ${briefs.length} - nothing was drawn`;
+  const asked = new Map<string, number>();
+  for (const b of briefs) if (b.genre !== undefined) asked.set(b.genre, (asked.get(b.genre) ?? 0) + 1);
+  for (const [g, want] of asked) {
+    const free = slots.get(g) ?? 0;
+    if (want > free) return `genre ${g} holds ${trialsOn(n, g)} of its ${TRIALS_PER_GENRE} trials on night ${n.id}; ${free} left, and the batch has ${want} - nothing was drawn`;
+  }
+  const held = [...slots.values()].reduce((a, x) => a + x, 0);
+  const plain = briefs.length - [...asked.values()].reduce((a, x) => a + x, 0);
+  if (plain > Math.max(0, left - held)) {
+    const which = [...slots].filter(([, x]) => x > 0).map(([g, x]) => `${g} ${x}`).join(", ");
+    return `night ${n.id} holds ${used} of its ${cap} storyboards; ${left} left, ${Math.min(held, left)} of them held for genre trials (${which}), and the batch has ${plain} plain - nothing was drawn`;
+  }
+  return undefined;
 }
 
 /* ── The act ──────────────────────────────────────────────────────────────── */
@@ -206,21 +265,24 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
     if (!k.ok) throw new Refusal(`storyboard ${i + 1}: fromIdea: ${k.error.message}`);
     ideas.push(k.value);
   }
-  const others = (await readAllNights()).filter((n) => n.id !== id);
+  const all = await readAllNights();
+  const others = all.filter((n) => n.id !== id);
   for (const [i, b] of briefs.entries()) {
-    const held = heldFor(others, b.fromIdea, i + 1);
+    const held = heldFor(others, b, i + 1);
     if (held !== undefined) throw new Refusal(held);
   }
+  // The kernel's genres: every live one holds its trial slots, so a plain batch reads them too.
+  const heads = headsOf(ctx.store);
+  if (!heads.ok) throw new Refusal(`storyboard: the genres did not read: ${heads.error.message}`);
+  const genres = heads.value.genres;
+  const unfit = genreRefusal(briefs, genreViews(all, genres));
+  if (unfit !== undefined) throw new Refusal(unfit);
   const { mode } = await launchable(ctx, id);
 
   let made: StoryboardCandidate[] = [];
   let full: string | undefined;
   await mutateNight(id, (n) => {
-    full = briefs.map((b, i) => heldFor([n], b.fromIdea, i + 1)).find((x) => x !== undefined);
-    const used = storyboardsUsed(n);
-    const cap = storyboardCapOf(n);
-    const left = Math.max(0, cap - used);
-    if (full === undefined && briefs.length > left) full = `night ${id} holds ${used} of its ${cap} storyboards; ${left} left, and the batch has ${briefs.length} - nothing was drawn`;
+    full = briefs.map((b, i) => heldFor([n], b, i + 1)).find((x) => x !== undefined) ?? capRefusal(n, briefs, trialSlots([...others, n], genres, id));
     if (full !== undefined) return n;
     let next = n;
     made = [];
@@ -244,6 +306,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
         ...(b.aim === undefined ? {} : { aim: b.aim }),
         ...(b.technique === undefined ? {} : { technique: { claim: b.technique.claim, quote: b.technique.quote, url: b.technique.url, template: b.technique.template, step: b.technique.step } }),
         ...(b.venture === undefined ? {} : { venture: b.venture }),
+        ...(b.genre === undefined ? {} : { genre: b.genre }),
         ...(n.dry ? { images: [] } : {}),
       };
       next = { ...next, candidates: [...next.candidates, c] };
@@ -289,7 +352,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
 
   let outcome = "done";
   for (const jobId of jobIds) {
-    const d = await driveStoryboard(ctx.store, ctx.location, jobId, { dryOnly: ctx.dryOnly, ...(engines.draw === undefined ? {} : { engines: { draw: engines.draw } }) });
+    const d = await driveStoryboard(ctx.store, ctx.location, jobId, { dryOnly: ctx.dryOnly, ...(engines.draw === undefined ? {} : { engines: { draw: engines.draw, ...(engines.clip === undefined ? {} : { clip: engines.clip }) } }) });
     const o = d.ok ? d.value.outcome : d.error.message;
     if (outcome === "done" && o !== "done") outcome = o;
   }
