@@ -8178,47 +8178,42 @@
       "context": "trailer-structure-engine",
       "subject": "creator-voice-and-tone",
       "bundle": "media-generation",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T02:11:43.195Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:32:28.794Z",
+      "worker": "a10915a7-5b73-4849-a4b8-91ed4884bd2a",
       "techniques": [
         {
           "technique": "delivery-rate-budgeting",
           "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/types.ts:30 The structural model does not set a narration rate or duration budget."
-        },
-        {
-          "technique": "dial-vs-subject-property",
-          "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/plan.ts:33 These are explicit structural-edit fields; the searched context exposes no creator-tone dials."
+          "evidence": "lib/script/trailer/types.ts:30 The cut has no duration or word budget; timing belongs to the separate shot layer."
         },
         {
           "technique": "engine-tone-separation",
           "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/cut.ts:3 This module composes structural data rather than rendering prose against a tone profile."
-        },
-        {
-          "technique": "reference-world-and-bookends",
-          "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/plan.ts:134 Plan application patches existing beats; searches found no reference-world or signature-bookend machinery."
+          "evidence": "lib/script/trailer/structure.ts:40 Structure is kept as data, but nothing here takes a tone input, so there is no separation to enforce."
         },
         {
           "technique": "spoken-delivery-direction",
           "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/types.ts:402 The downstream seam described here concerns shots, with no synthetic-narrator casting or speech-direction path found."
+          "evidence": "lib/script/trailer/types.ts:51 This is a form vocabulary only. No narrator casting or speech render happens in this context."
+        },
+        {
+          "technique": "dial-vs-subject-property",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/types.ts:30 No creator-facing dials exist here."
+        },
+        {
+          "technique": "reference-world-and-bookends",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/structure.ts:40 No bookend slots and no analogy-domain lists in this context."
         },
         {
           "technique": "voice-profile-from-accepted-work",
           "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/ops.ts:269 Rebasing retains structural edits and the campaign budget; no learned voice-profile update path was found."
+          "evidence": "lib/script/trailer/types.ts:51 No learned profile in this context."
         }
-      ],
-      "withdrawn": {
-        "worker": "c7a94e8e-ad80-40f1-87cf-463119460401",
-        "state": "not-applicable",
-        "at": "2026-10-19T02:12:00.284165+00:00",
-        "reason": "reviewer (sonnet): The anchor (structure.ts:40) is a comment saying the checker has no access to duration, shot count, loudness or image. That says nothing about creator voice or tone. The absence search is the only support for the claim. The context's plan.ts also lets a model rewrite beat `text` and `label` (PATCHAB"
-      }
+      ]
     },
     "e5b296e2-cccf-47a5-b8bd-ce730d40ace8/embedded-db": {
       "context": "kernel-store-and-events",
@@ -13028,6 +13023,33 @@
           "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:9 The provenance marks here describe where a cost or time came from, not the memory a companion turn spends. No recall strip exists."
         }
       ]
+    },
+    "970bf5b7-6aa6-407d-97c3-cbe87f301ec5/creator-voice-and-tone": {
+      "context": "audio-text-producers",
+      "subject": "creator-voice-and-tone",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:32:28.794Z",
+      "worker": "a10915a7-5b73-4849-a4b8-91ed4884bd2a",
+      "techniques": [
+        {
+          "technique": "spoken-delivery-direction",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/voice/define.ts:10 Casting is a default: one voice for every creator and format, with no audition. The VoiceLine type (line 28) has no slot for delivery markup. Partly realized: re-recording one line by target (line 42) is the smallest-patch form the technique asks for, and the binding measures rendered seconds."
+        },
+        {
+          "technique": "engine-tone-separation",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/script/define.ts:20 ScriptView carries face, scope, spine, notes and staged state but no tone or profile input, so the script producer has no tone control to separate."
+        },
+        {
+          "technique": "dial-vs-subject-property",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/words/define.ts:19 No producer view exposes a tone dial."
+        }
+      ],
+      "registryProposal": "spoken-delivery-direction does not say what a single-operator studio should do when the vendor offers only a dated default voice (this repo's George expires 2026-12-31). It could add a rule for when re-casting is forced by the vendor rather than chosen."
     }
   }
 }

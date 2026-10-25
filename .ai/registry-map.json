@@ -2844,7 +2844,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/voice/define.ts:10 Every voice part speaks through one fixed catalog voice (packages/catalog/src/partOptions.ts DEFAULT_VOICE 'George'), so the narrator is a default rather than cast per creator × format after an audition, and each VoiceLine is only {id, text}, so it carries no pause or emphasis direction.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:750a2ae7e033a1e6",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"
@@ -13200,7 +13204,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/trailer/types.ts:30 The trailer engine only models and checks declared trailer structure (no durations, no prose, no narrator). A recursive search of lib/script/trailer, rules/ included, for voice, tone, wpm, bookend, narrator and profile found nothing, so there is no tone layer, voice profile or rate dial for this subject to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:750a2ae7e033a1e6",
+          "evaluatedRevision": 5
         },
         {
           "subject": "test-harness",
