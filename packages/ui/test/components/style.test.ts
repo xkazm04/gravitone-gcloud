@@ -1,6 +1,8 @@
 // The style atelier's parts (Phase 5, L51): which plate a trial column shows, where J/K land,
 // what the atelier's keys answer, and the markup the sheet and the ratchet speak - pure functions
 // over literal data, the components through react-dom/server.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
@@ -164,5 +166,16 @@ describe("the trial matrix, drawn", () => {
     expect(buttons(matrix())).toBe(0);
     expect(matrix()).toContain('role="img" aria-label="the fall: a, approved"');
     expect(buttons(matrix(noop))).toBe(1);
+  });
+});
+
+describe("the trial matrix's columns", () => {
+  const css = readFileSync(join(import.meta.dirname, "../../src/components/style/Style.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const mrow = /\.mrow\{([^}]*)\}/.exec(css)?.[1] ?? "";
+
+  test("follow the trials a row holds, not a count typed into the stylesheet", () => {
+    expect(mrow).not.toMatch(/repeat\(\s*\d/);
+    expect(mrow).toMatch(/grid-auto-flow:\s*column/);
+    expect(mrow).toMatch(/grid-auto-columns:/);
   });
 });

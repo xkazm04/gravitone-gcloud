@@ -7318,4 +7318,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "@media (max-width:900px){.cut{padding:var(--sp-6)}}",
     why: "The cut review keeps its 300px beats column at phone width, so the player is squeezed to a sliver.",
   },
+  {
+    id: "trial-matrix-counts-its-columns-by-hand",
+    test: "packages/ui/test/components/style.test.ts",
+    file: "packages/ui/src/components/style/Style.module.css",
+    find: "grid-auto-flow:column;grid-auto-columns:minmax(calc(var(--w-tile) * .8),1fr);",
+    replace: "grid-template-columns:repeat(5,minmax(calc(var(--w-tile) * .8),1fr));",
+    why: "A sixth trial wraps the matrix head row and face row independently, so a head no longer sits over its face.",
+  },
 ];
