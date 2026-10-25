@@ -2272,6 +2272,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "An arm with every PNG on disk is billed to Nano Banana again.",
   },
   {
+    id: "dojo-google-failed-call-unbooked",
+    test: "tests/next-server/producer-dojo.test.ts",
+    file: "packages/producers/src/dojo/define.ts",
+    find: "if (e instanceof Error && !(isAppError(e) && e.code === \"budget\")) {",
+    replace: "if (false) {",
+    why: "A google call that threw after reaching the vendor leaves no spend row, so a retry storm is invisible.",
+  },
+  {
+    id: "dojo-google-refusal-booked-as-spend",
+    test: "tests/next-server/producer-dojo.test.ts",
+    file: "packages/producers/src/dojo/define.ts",
+    find: "if (e instanceof Error && !(isAppError(e) && e.code === \"budget\")) {",
+    replace: "if (e instanceof Error) {",
+    why: "A refusal for money, which never reached the vendor, is booked as a failed call.",
+  },
+  {
     id: "dojo-node-refusal-misnames-cause",
     test: "tests/next-server/producer-dojo.test.ts",
     file: "packages/producers/src/dojo/plan.ts",

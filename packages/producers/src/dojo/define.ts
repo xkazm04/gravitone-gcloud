@@ -77,8 +77,17 @@ async function metered<T>(ctx: StepContext, kind: "generate" | "recognize", usd:
     stand,
   };
   const r = await ctx.meter.paid(JOB_USD, usd, intent, async () => {
-    const served = await live();
-    return { value: served, entries: entriesOf(served, kind, usd) };
+    try {
+      const served = await live();
+      return { value: served, entries: entriesOf(served, kind, usd) };
+    } catch (e) {
+      // "Failures are spend" (cost-metering): a call that reached the provider and threw leaves a row with
+      // its reason, so the breaker's retries are visible. A refusal for money never reached it (money-stop below).
+      if (e instanceof Error && !(isAppError(e) && e.code === "budget")) {
+        ctx.meter.book(JOB_USD, { amount: undefined, outcome: "failed", basis: "estimate", axes: { call: kind }, reason: `dojo ${kind} failed after the call was made: ${e.message}` });
+      }
+      throw e;
+    }
   });
   if (!r.ok) throw r.error;
   return r.value;

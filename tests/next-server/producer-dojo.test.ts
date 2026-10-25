@@ -237,7 +237,7 @@ const hostB: Holder = { bootId: "boot-b", pid: 502, host: "box" };
 const RUN = { holder: hostA, alive: () => true, sleep: async () => {} } as const;
 
 type Fake = { calls: string[]; ports: DojoGooglePorts };
-function fakeGoogle(root: string, script: { readonly generateUsd?: number; readonly unpricedReadback?: boolean; readonly overBudget?: boolean } = {}): Fake {
+function fakeGoogle(root: string, script: { readonly generateUsd?: number; readonly unpricedReadback?: boolean; readonly overBudget?: boolean; readonly throwGenerate?: string } = {}): Fake {
   const calls: string[] = [];
   const disk = dojoGooglePorts(root);
   const ports: DojoGooglePorts = {
@@ -245,6 +245,7 @@ function fakeGoogle(root: string, script: { readonly generateUsd?: number; reado
     async generate({ prompt, count }): Promise<Served<readonly string[]>> {
       calls.push(`generate:${prompt}`);
       if (script.overBudget === true) throw new AppError("budget", "The imaging spend ceiling for this window is reached.");
+      if (script.throwGenerate !== undefined) throw new Error(script.throwGenerate);
       return { value: Array.from({ length: count }, () => PNG.toString("base64")), model: "google/fake-pixels", costUsd: script.generateUsd ?? 0.09 };
     },
     async recognize(): Promise<Served<unknown>> {
@@ -316,6 +317,25 @@ describe("a google cycle as a job, every call metered", () => {
     expect(job.error?.code).toBe("budget");
     expect(job.failStreak).toBe(0);
     expect(fake.calls).toHaveLength(1);
+    expect(job.spend.unpriced, "a refusal never reached the vendor").toBe(0);
+    k.close();
+  });
+
+  it("a generate that throws after reaching the vendor books a row for every call", async () => {
+    const u = universe();
+    cycle(u, "gt", GOOGLE);
+    const k = kernelOf(u);
+    const id = await launchGoogle(k, u, "gt", "live");
+    const fake = fakeGoogle(u.training, { throwGenerate: "socket hang up after the request was accepted" });
+    const r = await driveDojo(k.store, u.store, id, { ...RUN, producer: defineDojoGoogle(fake.ports) });
+    expect(r.ok).toBe(true);
+    const job = jobOf(k, id);
+    expect(job.state).toBe("failed");
+    expect(fake.calls.length).toBeGreaterThan(0);
+    expect(job.spend.unpriced, "one unpriced row per failed call").toBe(fake.calls.length);
+    const why = k.store.read((t) => t.all("SELECT reason FROM spend_unpriced WHERE job_id = ?", id));
+    expect(why.ok && why.value.every((row) => String(row["reason"]).includes("socket hang up"))).toBe(true);
+    expect(k.store.read((t) => assertReconciled(t, id)).ok).toBe(true);
     k.close();
   });
 
