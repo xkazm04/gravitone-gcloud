@@ -78,7 +78,7 @@ describe("job", () => {
 describe("slot", () => {
   const scheduled = {
     id: "sl-58ca3dd6",
-    libraryItemId: "5c255235-afa7-403c-9e08-fb10c42c924c",
+    libraryItemId: "video:export:5c255235-afa7-403c-9e08-fb10c42c924c",
     channel: "youtube",
     at: "2026-09-23T14:00:00.000Z",
     state: "scheduled",

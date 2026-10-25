@@ -26,6 +26,12 @@ describe("the slot record, Phase 6", () => {
     refuse(slotSchema, { ...scheduled, channel: "myspace" }, "channel");
   });
 
+  it("pairs a channel with the kind of item it can carry: a blog slot an article, a video channel an export", () => {
+    refuse(slotSchema, { ...scheduled, channel: "blog" }, "a blog slot names an article");
+    refuse(slotSchema, { ...scheduled, libraryItemId: slotItemId.article("run-7f3a") }, "names an export");
+    for (const channel of CHANNELS.filter((c) => c !== "blog")) accept(slotSchema, { ...scheduled, channel });
+  });
+
   it("keeps a failed slot's error when it is cancelled, and allows it nowhere else", () => {
     accept(slotSchema, failed);
     accept(slotSchema, { ...failed, state: "cancelled" });
