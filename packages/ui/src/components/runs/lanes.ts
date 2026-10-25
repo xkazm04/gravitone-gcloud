@@ -39,17 +39,9 @@ const LABELS: { readonly [L in ResourceLane]: LaneLabel } = {
   "cloud.qwen": { label: "Qwen", engines: "recognition · vision", kind: "cloud" },
 };
 
-export const LANE_SPECS: { readonly [L in ResourceLane]: LaneSpec } = {
-  "gpu.local": { ...LABELS["gpu.local"], cap: LANE_CAPACITY["gpu.local"] },
-  "box.render": { ...LABELS["box.render"], cap: LANE_CAPACITY["box.render"] },
-  "box.blender": { ...LABELS["box.blender"], cap: LANE_CAPACITY["box.blender"] },
-  "box.chrome": { ...LABELS["box.chrome"], cap: LANE_CAPACITY["box.chrome"] },
-  "seat.text": { ...LABELS["seat.text"], cap: LANE_CAPACITY["seat.text"] },
-  "cloud.google": { ...LABELS["cloud.google"], cap: LANE_CAPACITY["cloud.google"] },
-  "cloud.elevenlabs": { ...LABELS["cloud.elevenlabs"], cap: LANE_CAPACITY["cloud.elevenlabs"] },
-  "cloud.leonardo": { ...LABELS["cloud.leonardo"], cap: LANE_CAPACITY["cloud.leonardo"] },
-  "cloud.qwen": { ...LABELS["cloud.qwen"], cap: LANE_CAPACITY["cloud.qwen"] },
-};
+// Each lane is spelled ONCE, in LABELS (the mapped type makes it total); its capacity is joined
+// from the lease table here. The cast is the one fromEntries needs, and runs.test pins the keys.
+export const LANE_SPECS = Object.fromEntries(RESOURCE_LANES.map((l) => [l, { ...LABELS[l], cap: LANE_CAPACITY[l] }])) as { readonly [L in ResourceLane]: LaneSpec };
 
 /** The rows in drawing order: @gt/domain's RESOURCE_LANES, from the same zod-free module. */
 export const LANE_ORDER: readonly ResourceLane[] = RESOURCE_LANES;
