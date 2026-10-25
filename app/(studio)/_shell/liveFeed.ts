@@ -39,6 +39,11 @@ export function openFeed({ head, refresh, fail }: Feed): () => void {
   let es: EventSource | null = null;
   let timer: number | null = null;
   let closed = false;
+  // The server ends every stream before its route's maxDuration with `event: rotate`
+  // (app/_server/sse.ts lifetime-cap-rotation); the close that follows reaches `onerror` as the
+  // EventSource reconnects, losslessly. That one error is the plan, not an outage, so it does not
+  // reach `fail` - without this the Floor and Runs read stale for a backstop tick every rotation.
+  let rotating = false;
   const soon = (): void => {
     if (timer !== null) return;
     timer = window.setTimeout(() => {
@@ -55,7 +60,16 @@ export function openFeed({ head, refresh, fail }: Feed): () => void {
       if (!type.startsWith("ingest.")) soon();
     };
     es.addEventListener("reset", soon);
-    es.onerror = fail;
+    es.addEventListener("rotate", () => {
+      rotating = true;
+    });
+    es.onerror = () => {
+      if (rotating) {
+        rotating = false;
+        return;
+      }
+      fail();
+    };
   };
   const shut = (): void => {
     es?.close();

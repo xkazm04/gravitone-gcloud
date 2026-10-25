@@ -6092,4 +6092,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (false)",
     why: "An agent's `open /projects/../api/session` passes the section guard as Projects and the router lands on an API route.",
   },
+  {
+    id: "studio-shell-rotation-reads-as-failure",
+    test: "tests/next-server/live-feed.test.ts",
+    file: "app/(studio)/_shell/liveFeed.ts",
+    find: "rotating = true;",
+    replace: "rotating = false;",
+    why: "Every planned stream rotation (~4 min) reaches the freshness edge as a failure, and the Floor and Runs read stale until the next backstop re-read.",
+  },
 ];
