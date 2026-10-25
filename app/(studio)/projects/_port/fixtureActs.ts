@@ -334,9 +334,11 @@ export function reroute(u: Universe, id: string, key: string, now: number, token
     return receiptOf({ subject, lines: [lineOf({ key: job.partId ?? job.id, label: job.kind, option: o, units: job.units }, placed.get(job.partId ?? job.id), now)], mode: job.mode, token: tokenOf(subject, { id, key }, u), now, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) });
   });
   if (token === undefined) return ok({ kind: "receipt", receipt });
-  if (token !== receipt.token) return ok({ kind: "stale", fresh: receipt });
+  // The hold comes before the token, as in the real confirm (realReroute.ts): a stale token on a
+  // held job is told the hold, not handed a fresh receipt for a move the lane would refuse.
   const held = holdNames(u, job);
   if (held !== null) return err("refused", `${held} is on hold for this job: acknowledge the hold first`);
+  if (token !== receipt.token) return ok({ kind: "stale", fresh: receipt });
   // Kernel records/reroute.ts: only an operator puts a failed or interrupted job back in a queue, by a steer or a successor.
   if ((job.state === "failed" || job.state === "interrupted") && by.kind !== "operator") return err("refused", `job ${id}: only an operator re-routes a ${job.state} job; ${by.kind} ${by.id} may not`);
   const from = job.option.label;
