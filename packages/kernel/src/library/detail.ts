@@ -37,10 +37,14 @@ export const styleItemId = (styleId: string): string => `style:${styleId}`;
 
 function lineageOf(r: Reader, item: LibraryItem): LineageNode[] {
   // One lookup a pointer: the title is both the proof the index holds it and its label.
-  const titleOf = (id: string): string | undefined => {
+  return resolveLineage(item, (id) => {
     const t = r.get("SELECT title FROM library_docs WHERE id = ?", id)?.["title"];
     return typeof t === "string" ? t : undefined;
-  };
+  });
+}
+
+/** The pure half of `lineageOf`: the fixture port resolves its records' pointers with this same rule. */
+export function resolveLineage(item: LibraryItem, titleOf: (id: string) => string | undefined): LineageNode[] {
   const node = (l: LibraryItem["lineage"][number]): LineageNode => {
     const role = item.source === "derived" && l.kind === "library-item" ? "derived from" : (ROLE[l.kind] ?? l.kind);
     const target = l.kind === "library-item" ? l.id : l.kind === "style" ? styleItemId(l.id) : undefined;

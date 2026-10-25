@@ -249,6 +249,23 @@ describe("a detail lists the vocabulary the index lists", () => {
   }
 });
 
+describe("a detail's lineage is what the kernel resolves", () => {
+  // kernel library/detail.ts lineageOf: the record's pointers by role, the item's own title for
+  // THIS, the lesson / bundle / group steps, a link only where the index holds the target.
+  const KINDS = ["image", "plate", "style", "motion", "audio", "video", "doc", "model", "character"] as const;
+  for (const kind of KINDS) {
+    it(kind, () => {
+      const ids = corpus.filter((x) => x.raw.kind === kind).slice(0, 40).map((x) => x.raw.id);
+      const shown = (id: string, side: "fixture" | "real") => {
+        const d = side === "fixture" ? fixtureDetail(id) : libraryDetail(k.store, id);
+        if (!d.ok) throw d.error;
+        return { id, lineage: d.value.lineage };
+      };
+      expect(ids.map((id) => shown(id, "fixture"))).toEqual(ids.map((id) => shown(id, "real")));
+    });
+  }
+});
+
 describe("a detail's media facts are the blob's", () => {
   // kernel library/detail.ts readFacts: media_facts holds ONE row a sha, so two items on one public
   // file show one set of facts. The harness loads the first fact it meets per sha.

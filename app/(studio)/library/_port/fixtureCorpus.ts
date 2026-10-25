@@ -18,7 +18,7 @@ import "server-only";
 import { thumbSrc } from "@gt/catalog/presets";
 import type { z } from "zod";
 
-import { CHIP_GROUPS, normText, POSTER_MIME, techniqueBand, type Attention, type LibraryExtras, type LibraryRow, type LineageNode, type MediaFacts } from "@gt/domain/library";
+import { CHIP_GROUPS, normText, POSTER_MIME, techniqueBand, type Attention, type LibraryExtras, type LibraryRow, type MediaFacts } from "@gt/domain/library";
 import type { libraryItemSchema } from "@gt/domain/libraryItem";
 
 import { fixtureCharacters } from "./fixtureCharacters.ts";
@@ -36,7 +36,6 @@ export type FixtureRecord = {
   /** Milliseconds, 0 when undated. */
   readonly t: number;
   readonly extras: LibraryExtras;
-  readonly lineage: readonly LineageNode[];
   readonly media: MediaFacts | null;
   readonly peaks?: readonly number[];
   readonly palette?: readonly [string, string];
@@ -121,9 +120,9 @@ export function buildCorpus(): readonly FixtureRecord[] {
   const counter: Record<string, number> = {};
   const nextId = (k: string): string => `${k}-${String((counter[k] = (counter[k] ?? 0) + 1)).padStart(4, "0")}`;
 
-  type Draft = Omit<FixtureRecord, "row" | "hay" | "t"> & { readonly meta: string };
+  type Draft = Omit<FixtureRecord, "row" | "hay" | "t"> & { readonly meta: string; readonly lineage: Raw["lineage"] };
   const add = (d: Draft): void => {
-    const raw = d.raw;
+    const raw: Raw = { ...d.raw, lineage: d.lineage };
     const f = d.f;
     f["state"] = [raw.state];
     f["origin"] = [raw.origin];
@@ -150,17 +149,21 @@ export function buildCorpus(): readonly FixtureRecord[] {
       ...(raw.kind === "model" && d.poster !== undefined ? { poster: d.poster } : {}),
     };
     const hay = hayOf(raw, d.meta, f);
-    const { meta: _meta, ...rest } = d;
+    const { meta: _meta, lineage: _lineage, ...rest } = d;
     void _meta;
-    out.push({ ...rest, row, hay, t: raw.at === undefined ? 0 : Date.parse(raw.at) });
+    void _lineage;
+    out.push({ ...rest, raw, row, hay, t: raw.at === undefined ? 0 : Date.parse(raw.at) });
   };
   const base = (kind: Raw["kind"], title: string, state: Raw["state"], origin: Raw["origin"], f: Record<string, string[]>, at: string | undefined) => {
     const collections = (["project", "run", "hunt"] as const).flatMap((k) => (f[k] ?? []).map((id) => ({ kind: k, id })));
     return { id: nextId(kind), title, state, origin, source: "fixture" as const, rights: { use: kind === "image" ? ("reference-only" as const) : ("publishable" as const) }, collections, lineage: [], ...(at === undefined ? {} : { at }) };
   };
-  const self = (id: string, kind: string): LineageNode => ({ role: "this", ref: { kind: "self", id }, label: kind });
-  const runNode = (id: string): LineageNode => ({ role: "run", ref: { kind: "run", id }, label: id, facet: { group: "run", value: id } });
-  const projNodes = (ps: readonly string[], role = "used by"): LineageNode[] => ps.map((p) => ({ role, ref: { kind: "project", id: p }, label: labelOf("project", p), facet: { group: "project", value: p } }));
+  // A record's lineage is pointers, as the kernel holds them; the detail resolves them
+  // (kernel library/detail.ts resolveLineage) the way the real side does.
+  type Pointer = Raw["lineage"][number];
+  const runPtr = (id: string): Pointer => ({ kind: "run", id });
+  const stylePtr = (id: string): Pointer => ({ kind: "style", id });
+  const projPtrs = (ps: readonly string[]): Pointer[] => ps.map((id): Pointer => ({ kind: "project", id }));
 
   const quota = SHARE.map(([k, w]) => [k, Math.round(TOTAL * w)] as const);
   const models = fixtureModels();
@@ -181,7 +184,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
       f,
       meta: `${st.family} · ${st.derivation}`,
       extras: { prompt: st.recipe, negative: st.negative, observables: st.obs, evidence },
-      lineage: [{ role: "origin", ref: { kind: "run", id: f["run"]?.[0] ?? "" }, label: `${st.derivation} · ${f["run"]?.[0] ?? ""}`, facet: { group: "run", value: f["run"]?.[0] ?? "" } }, self(b.id, "style"), { role: "plates", ref: { kind: "style", id: st.id }, label: "plates in this style", facet: { group: "style", value: st.id } }, ...projNodes(f["project"] ?? [])],
+      lineage: [runPtr(f["run"]?.[0] ?? ""), stylePtr(st.id), ...projPtrs(f["project"] ?? [])],
       media: hero === undefined ? null : facts(hero),
       ...(st.hero ? {} : { palette: PALETTES[st.obs.palette_strategy] ?? ["#24304a", "#3a2537"] }),
     });
@@ -201,7 +204,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
         const styles = some(TRIAL_STYLES, 1, 2);
         const f: Record<string, string[]> = { set: [set], scene: [scene], style: styles, aspect: [aspect], run: deck ? [] : [set], project: proj() };
         const b = base("image", `${cap(words(scene))} · frame ${String(100 + Math.floor(r() * 9800)).padStart(4, "0")}`, "reference", deck ? "import" : "forge", f, date());
-        add({ raw: { kind, vocabulary: { set, scene, styles, aspect }, ...b, media: { sha256: m.sha, bytes: 240_000, mime: m.mime } }, f, meta: `${deck ? "import" : "forge"} · ${scene}`, extras: { file: { w: m.w, h: m.h, path: m.url } }, lineage: [...(deck ? [] : [runNode(set)]), self(b.id, "image"), ...styles.map((s) => ({ role: "styles", ref: { kind: "style" as const, id: s }, label: labelOf("style", s), ...(styleItem.has(s) ? { itemId: styleItem.get(s) ?? "" } : {}) }))], media: facts(m) });
+        add({ raw: { kind, vocabulary: { set, scene, styles, aspect }, ...b, media: { sha256: m.sha, bytes: 240_000, mime: m.mime } }, f, meta: `${deck ? "import" : "forge"} · ${scene}`, extras: { file: { w: m.w, h: m.h, path: m.url } }, lineage: [...(deck ? [] : [runPtr(set)]), ...styles.map(stylePtr)], media: facts(m) });
       } else if (kind === "plate") {
         const station = weighted([["forge", 0.6], ["extract", 0.25], ["dojo", 0.15]] as const);
         const st = pick(TRIAL_STYLES);
@@ -225,7 +228,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
           f,
           meta: `${mechanism} · s${100 + Math.floor(r() * 900)}`,
           extras: { file: { w: pm.w, h: pm.h, path: pm.url }, run: { id: run } },
-          lineage: [runNode(run), self(b.id, "plate"), { role: "style", ref: { kind: "style", id: st }, label: labelOf("style", st), ...(styleItem.has(st) ? { itemId: styleItem.get(st) ?? "" } : {}) }, ...(lesson === undefined ? [] : [{ role: "lesson", ref: { kind: "run" as const, id: run }, label: words(lesson), facet: { group: "lesson", value: lesson } }]), ...projNodes(f["project"] ?? [])],
+          lineage: [runPtr(run), stylePtr(st), ...projPtrs(f["project"] ?? [])],
           media: missing ? null : facts(pm, dark ? { meanLuma: 9, nearBlack: true } : {}),
           palette: PALETTES[style?.obs.palette_strategy ?? ""] ?? ["#24304a", "#3a2537"],
         });
@@ -239,7 +242,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
         const f: Record<string, string[]> = { subject: [subject], format: [format], run: [run], project: proj() };
         const b = base("motion", `${cap(subject)} · E${20 + Math.floor(r() * 80)}${format === "clip" ? " · clip" : ""}`, weighted([["ratified", 0.3], ["rejected", 0.2], ["unjudged", 0.5]] as const), "strips", f, date());
         const main = format === "clip" ? v : p;
-        add({ raw: { kind, vocabulary: { subject, format }, ...b, media: { sha256: main.sha, bytes: 400_000, mime: main.mime } }, f, meta: `${format === "clip" ? "webm" : "poster"} · edu-${subject}`, extras: { run: { id: run } }, lineage: [runNode(run), self(b.id, "motion")], media: facts(main, { posterSha: p.sha, durationS: format === "clip" ? 6 : null }), ...(format === "clip" ? { video: v.url } : {}), poster: p.url, palette: pick(Object.values(PALETTES)) });
+        add({ raw: { kind, vocabulary: { subject, format }, ...b, media: { sha256: main.sha, bytes: 400_000, mime: main.mime } }, f, meta: `${format === "clip" ? "webm" : "poster"} · edu-${subject}`, extras: { run: { id: run } }, lineage: [runPtr(run)], media: facts(main, { posterSha: p.sha, durationS: format === "clip" ? 6 : null }), ...(format === "clip" ? { video: v.url } : {}), poster: p.url, palette: pick(Object.values(PALETTES)) });
       } else if (kind === "audio") {
         const type = r() < 0.7 ? ("music" as const) : ("sfx" as const);
         const genre = type === "music" ? some(SOUND.genre, 1, 1) : [];
@@ -272,7 +275,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
               src: "/library/fixture-tone",
             },
           },
-          lineage: [hunt === undefined ? { role: "group", ref: { kind: "run", id: group }, label: group, facet: { group: "group", value: group } } : { role: "hunt", ref: { kind: "run", id: hunt }, label: labelOf("hunt", hunt), facet: { group: "hunt", value: hunt } }, self(b.id, "audio"), ...projNodes(f["project"] ?? [], "project")],
+          lineage: [...(hunt === undefined ? [] : [runPtr(hunt)]), ...projPtrs(f["project"] ?? [])],
           media: null,
           peaks: peaksOf(seed),
         });
@@ -291,7 +294,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
           f,
           meta: `${b.id} · captions ${captions}`,
           extras: { ...(captions === "none" ? {} : { captions: 4 + Math.floor(r() * 30) }) },
-          lineage: [...projNodes([p.id], "project"), self(b.id, "video")],
+          lineage: projPtrs([p.id]),
           media: broken ? { ...facts(v), decodable: false, posterSha: null, meanLuma: null, error: "MEDIA_ERR_SRC_NOT_SUPPORTED · ffprobe: Invalid data found when processing input" } : facts(v, { posterSha: poster.sha, durationS: 30 + Math.floor(r() * 90) }),
           ...(broken ? {} : { video: v.url, poster: poster.url }),
           palette: PALETTES[styleOf(p.style)?.obs.palette_strategy ?? ""] ?? ["#24304a", "#3a2537"],
@@ -308,7 +311,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
           f,
           meta: `${bundle} · ${techniques} techniques`,
           extras: runId === undefined ? {} : { run: { id: runId, stage: "awaiting gate" } },
-          lineage: [{ role: "bundle", ref: { kind: "run", id: bundle }, label: bundle, facet: { group: "bundle", value: bundle } }, self(b.id, "document"), ...(runId === undefined ? [] : [{ role: "article", ref: { kind: "run" as const, id: runId }, label: runId, facet: { group: "run", value: runId } }])],
+          lineage: runId === undefined ? [] : [runPtr(runId)],
           media: null,
         });
       }
@@ -317,13 +320,12 @@ export function buildCorpus(): readonly FixtureRecord[] {
   // The models last, drawing nothing from the stream (fixed dates): the corpus before them is unchanged.
   for (const m of models) {
     const b = { ...base("model", m.title, m.state, "mesh", m.f, m.at), id: m.id };
-    add({ raw: { kind: "model", vocabulary: m.vocabulary, ...b, media: m.media }, f: m.f, meta: m.meta, extras: { model: m.extras }, lineage: [runNode(m.night), self(m.id, "model")], media: m.facts, ...(m.poster === undefined ? {} : { poster: m.poster }) });
+    add({ raw: { kind: "model", vocabulary: m.vocabulary, ...b, media: m.media }, f: m.f, meta: m.meta, extras: { model: m.extras }, lineage: [runPtr(m.night)], media: m.facts, ...(m.poster === undefined ? {} : { poster: m.poster }) });
   }
   // The characters after them, drawing nothing from the stream either: one item per woman, her stills' runs and the styles two of them became in her lineage.
   for (const c of characters) {
     const b = { ...base("character", c.title, c.state, "scout", c.f, c.at), id: c.id, rights: { use: "publishable" as const } };
-    const styles = c.styleIds.map((id): LineageNode => ({ role: "look", ref: { kind: "style", id }, label: labelOf("style", id), ...(styleItem.has(id) ? { itemId: styleItem.get(id) ?? "" } : {}) }));
-    add({ raw: { kind: "character", vocabulary: c.vocabulary, ...b, media: c.media }, f: c.f, meta: c.meta, extras: { character: c.extras }, lineage: [...c.runs.map(runNode), self(c.id, "character"), ...styles], media: heldFacts(c.facts, 90, "2026-10-24T09:00:00.000Z") });
+    add({ raw: { kind: "character", vocabulary: c.vocabulary, ...b, media: c.media }, f: c.f, meta: c.meta, extras: { character: c.extras }, lineage: [...c.runs.map(runPtr), ...c.styleIds.map(stylePtr)], media: heldFacts(c.facts, 90, "2026-10-24T09:00:00.000Z") });
   }
   return derive(out, r);
 }
@@ -335,14 +337,13 @@ function derive(all: FixtureRecord[], r: () => number): FixtureRecord[] {
     const parent = all.find((p, j) => j < i && p.raw.kind === x.raw.kind && p.raw.source === "fixture");
     if (parent === undefined) return x;
     const f = { ...x.f, source: ["derived"] };
-    const raw: Raw = { ...x.raw, source: "derived", lineage: [{ kind: "library-item", id: parent.raw.id }] };
+    const raw: Raw = { ...x.raw, source: "derived", lineage: [{ kind: "library-item", id: parent.raw.id }, ...x.raw.lineage] };
     return {
       ...x,
       f,
       raw,
       hay: hayOf(raw, x.row.meta, f),
       row: { ...x.row, source: "derived" },
-      lineage: [{ role: "derived from", ref: { kind: "library-item", id: parent.raw.id }, label: parent.raw.title, itemId: parent.raw.id }, ...x.lineage],
     };
   });
 }
