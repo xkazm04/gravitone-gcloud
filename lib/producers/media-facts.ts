@@ -22,13 +22,16 @@ import { ffmpegDecode, measureMissing, type Decode } from "../sound/measureRun.t
 const TIMEOUT_MS = 30_000;
 const MAX_BYTES = 32 * 1024 * 1024;
 
-function run(bin: string, args: readonly string[]): Promise<{ readonly ok: true; readonly out: Buffer } | { readonly ok: false; readonly error: string }> {
+function run(bin: string, args: readonly string[]): Promise<{ readonly ok: true; readonly out: Buffer } | { readonly ok: false; readonly error: string; readonly unavailable: boolean }> {
   return new Promise((resolve) => {
     execFile(bin, [...args], { encoding: "buffer", timeout: TIMEOUT_MS, maxBuffer: MAX_BYTES, windowsHide: true }, (e, stdout, stderr) => {
       if (e === null) resolve({ ok: true, out: stdout });
       else {
         const said = stderr.toString("utf8").trim().split("\n").slice(-3).join(" | ");
-        resolve({ ok: false, error: said !== "" ? said : e.message });
+        // The tool did not run (absent, not executable, or killed at its bound): the box's fact, not the file's.
+        const code = (e as NodeJS.ErrnoException).code;
+        const unavailable = code === "ENOENT" || code === "EACCES" || (e.killed === true && e.signal !== null && code === undefined);
+        resolve({ ok: false, error: said !== "" ? said : e.message, unavailable });
       }
     });
   });
@@ -41,7 +44,7 @@ export function ffmpegProbe(): MediaProbe {
   return {
     async probe(file) {
       const r = await run(ffprobe(), ["-v", "error", "-print_format", "json", "-show_streams", "-show_format", file]);
-      return r.ok ? { ok: true, json: r.out.toString("utf8") } : { ok: false, error: r.error };
+      return r.ok ? { ok: true, json: r.out.toString("utf8") } : r.unavailable ? { ok: false, error: r.error, unavailable: true } : { ok: false, error: r.error };
     },
     async poster(file) {
       // 0.6 s in, as the prototype's tiles seeked (`#t=0.6`): past a fade-in's first black frame.

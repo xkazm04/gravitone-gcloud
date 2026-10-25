@@ -10,7 +10,8 @@ import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { libraryDetail } from "@gt/kernel/library/detail";
 import { queryLibrary } from "@gt/kernel/library/query";
 import { factsMissing, upsertItems } from "@gt/kernel/library/write";
-import { probeMissing } from "@gt/producers/media-facts/run";
+import { err } from "@gt/domain/errors";
+import { probeMissing, type MediaProbe } from "@gt/producers/media-facts/run";
 
 import { ffmpegProbe } from "../../lib/producers/media-facts.ts";
 
@@ -111,5 +112,49 @@ describe("probeMissing on ffprobe/ffmpeg", () => {
     const plates = queryLibrary(k.store, { kind: "plate", limit: 10 });
     if (!plates.ok) throw plates.error;
     expect(plates.value.items.find((i) => i.id === "black")?.cover.nearBlack).toBe(true);
+  });
+});
+
+describe("probeMissing when the tool did not run", () => {
+  it("writes no fact for a probe that was never run: the blobs stay missing and are reported failed", async () => {
+    const d = mkdtempSync(path.join(tmpdir(), "gt-facts-unavail-"));
+    const opened = openKernel(":memory:");
+    if (!opened.ok) throw opened.error;
+    const kk = opened.value;
+    try {
+      const bs = blobStore(path.join(d, "blobs"));
+      const inputs = [];
+      for (let i = 0; i < 4; i++) {
+        const ref = await bs.put(new TextEncoder().encode(`frame ${i}`), "image/png");
+        if (!ref.ok) throw ref.error;
+        inputs.push({ item: item(`n${i}`, "plate", ref.value.sha256, "image/png"), meta: "", extras: {}, feed: "t" });
+      }
+      const up = upsertItems(kk.store, inputs, { styleOf: () => undefined });
+      if (!up.ok) throw up.error;
+      // ffprobe absent: the binding answers ENOENT and says the tool did not run.
+      const absent = { ok: false, error: "spawn ffprobe ENOENT", unavailable: true } as unknown as Awaited<ReturnType<MediaProbe["probe"]>>;
+      const probe: MediaProbe = { probe: async () => absent, poster: async () => err("unavailable", "no ffmpeg"), luma: async () => err("unavailable", "no ffmpeg") };
+      const r = await probeMissing(kk.store, bs, probe, { limit: 10, now: () => new Date("2026-10-25T00:00:00.000Z") });
+      if (!r.ok) throw r.error;
+      expect(r.value.failed).toHaveLength(4);
+      expect(r.value.undecodable).toBe(0);
+      const missing = factsMissing(kk.store, 10);
+      expect(missing.ok && missing.value).toHaveLength(4);
+    } finally {
+      kk.close();
+      rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("the binding flags an absent ffprobe as unavailable", async () => {
+    const was = process.env["FFPROBE"];
+    process.env["FFPROBE"] = path.join(tmpdir(), "gt-no-such-ffprobe-binary");
+    try {
+      const r = await ffmpegProbe().probe(path.join(tmpdir(), "whatever.png"));
+      expect(r).toMatchObject({ ok: false, unavailable: true });
+    } finally {
+      if (was === undefined) delete process.env["FFPROBE"];
+      else process.env["FFPROBE"] = was;
+    }
   });
 });
