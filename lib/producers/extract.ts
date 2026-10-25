@@ -362,12 +362,14 @@ export async function settleExtractManifest(store: Store, jobId: string): Promis
  * alone.
  */
 async function settleExtract(job: Job): Promise<void> {
-  if (job.producer !== "extract" || job.state !== "failed" || job.error === undefined) return;
+  if (job.producer !== "extract" || (job.state !== "failed" && job.state !== "cancelled")) return;
+  const reason = job.error?.message ?? `job ${job.id} was ${job.state}`;
+  if (job.state === "failed" && job.error === undefined) return;
   const { run: m } = await getExtractRun(job.of.id);
   if (m.job !== job.id || m.status === "done" || m.status === "failed" || m.status === "committed") return;
   m.status = "failed";
-  m.error = job.error.message;
+  m.error = reason;
   if (job.stop !== undefined) m.stopped = { by: job.stop.by, spentUsd: job.stop.spentUsd, ...(job.stop.ceilingUsd === undefined ? {} : { ceilingUsd: job.stop.ceilingUsd }), at: job.stop.at };
-  m.log.push({ at: new Date().toISOString(), msg: `stopped: ${job.error.message}` });
+  m.log.push({ at: new Date().toISOString(), msg: `stopped: ${reason}` });
   await saveManifest(m);
 }
