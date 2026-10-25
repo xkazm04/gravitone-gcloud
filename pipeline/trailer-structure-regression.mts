@@ -332,6 +332,13 @@ const CASES: Case[] = [
     expect: { kind: "violation", rule: "promise" },
   },
   {
+    name: "a promise the cut spends is surfaced as its own advisory row",
+    cut: withBeat(baseline(), "b2", {
+      promises: [{ id: "p1", sentence: "They are enemies.", source: "assembly", payer: "b9", spentByTheCut: true }],
+    }),
+    expect: { kind: "unmeasured", rule: "promise", subject: "p1:spent" },
+  },
+  {
     name: "spending an asset the budget HOLDS",
     cut: withBeat(baseline(), "b7", { spends: ["a-turn"] }),
     budget: { campaignId: "c1", assets: [{ id: "a-turn", kind: "turn", name: "the reversal", allowance: "hold" }] },
