@@ -34,7 +34,6 @@ describe("canonical JSON (RFC 8785)", () => {
   });
 
   it("refuses an array hole as it refuses undefined, never renders it as an empty slot", () => {
-    // eslint-disable-next-line no-sparse-arrays
     const sparse: unknown[] = [1, , 3];
     expect(() => canonical(sparse)).toThrow(/canonical: \$\[1\]/);
     expect(() => canonical({ a: new Array(2) })).toThrow(/canonical/);

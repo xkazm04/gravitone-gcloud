@@ -151,15 +151,19 @@ export function Ledger(p: LedgerProps) {
   }, [tail.cursor, loading, p, toast]);
 
   // An arrival past an exhausted oldest-first tail: read past the last drawn row.
+  // The ref is written after each commit and read only from the burst's flush, never during
+  // render (react-hooks/refs): the flush must see the latest order, page and rows.
   const readPast = useRef<() => void>(() => undefined);
-  readPast.current = () => {
-    const cursor = pastTail(f.order, more, rows);
-    if (cursor === null) return;
-    void settled(p.older({ search: p.search, cursor })).then((r) => {
-      if (!r.ok) return toast(`ledger: ${r.error.error}`);
-      if (r.value.events.length > 0) setMore((m) => withOlder(m, p.page.events, r.value));
-    });
-  };
+  useEffect(() => {
+    readPast.current = () => {
+      const cursor = pastTail(f.order, more, rows);
+      if (cursor === null) return;
+      void settled(p.older({ search: p.search, cursor })).then((r) => {
+        if (!r.ok) return toast(`ledger: ${r.error.error}`);
+        if (r.value.events.length > 0) setMore((m) => withOlder(m, p.page.events, r.value));
+      });
+    };
+  });
 
   // ── windowing state: selection and view, kept in the URL without a render ──
   const [sel, setSel] = useState<number | null>(f.ev ?? p.selected?.seq ?? rows[0]?.seq ?? null);
@@ -197,24 +201,28 @@ export function Ledger(p: LedgerProps) {
   const remember = useCallback((e: Event) => setExtra((m) => new Map(m).set(e.seq, e)), []);
 
   // ── live: coalesced refresh, arrivals flash once drawn ──
+  // The coalescer is built in an effect, not in render, so its flush may read readPast's ref.
   const [fresh, setFresh] = useState<ReadonlySet<number>>(new Set());
-  const burst = useMemo(
-    () =>
-      coalescer(WINDOW_TIMERS, {
-        flush: (arrived) => {
-          setFresh(arrived);
-          startTransition(() => router.refresh());
-          readPast.current();
-        },
-        clear: () => setFresh(new Set()),
-      }),
-    [router],
-  );
+  const burst = useRef<ReturnType<typeof coalescer> | null>(null);
+  useEffect(() => {
+    const b = coalescer(WINDOW_TIMERS, {
+      flush: (arrived) => {
+        setFresh(arrived);
+        startTransition(() => router.refresh());
+        readPast.current();
+      },
+      clear: () => setFresh(new Set()),
+    });
+    burst.current = b;
+    return () => {
+      b.dispose();
+      burst.current = null;
+    };
+  }, [router]);
   const live = useLedgerFeed(p.facets.head, {
-    onEvents: (seqs) => burst.push(seqs),
+    onEvents: (seqs) => burst.current?.push(seqs),
     onReset: () => startTransition(() => router.refresh()),
   });
-  useEffect(() => () => burst.dispose(), [burst]);
 
   // ── keys: the `ledger` mode of the one keymap (bindings.ts) ──
   const list = useRef<ListHandle | null>(null);
