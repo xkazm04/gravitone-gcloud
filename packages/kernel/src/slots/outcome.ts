@@ -8,7 +8,7 @@ import { append } from "../events.ts";
 import { assertFence, heartbeatIn, processHolder, releaseIn } from "../lease.ts";
 import type { Store, Tx } from "../store.ts";
 import { publishedText, toFailed, toPublished, toPublishing } from "./core.ts";
-import { priorPublicationIn, publicationOfIn, readPublicationIn, readSlotIn } from "./read.ts";
+import { instantOf, priorPublicationIn, publicationOfIn, readPublicationIn, readSlotIn } from "./read.ts";
 import { claimResource, type SlotRow } from "./schema.ts";
 import { ACT_CHANNELS } from "./sweep-core.ts";
 import { putSlotIn } from "./write.ts";
@@ -40,7 +40,7 @@ export type PublicationDraft = Omit<Publication, "slotId" | "channel" | "id"> & 
 function admitPublication(row: SlotRow, draft: PublicationDraft): Publication {
   const p = parseAt("publication", publicationSchema, { ...draft, id: draft.id ?? `pub-${randomUUID().slice(0, 8)}`, slotId: row.slot.id, channel: row.slot.channel });
   if (!p.ok) throw p.error;
-  return p.value;
+  return { ...p.value, publishedAt: instantOf(p.value.publishedAt) };
 }
 
 /** The slot, marked dry when its publication is (./schema.ts steps 2-4), and its publication. */
@@ -107,7 +107,8 @@ export function publishByAct(store: Store, slotId: string, draft: PublicationDra
 export function recordMetric(store: Store, snapshot: MetricSnapshot, by: Actor): Result<MetricSnapshot> {
   const s = parseAt("metric snapshot", metricSnapshotSchema, snapshot);
   if (!s.ok) return s;
-  const snap = s.value;
+  // Ordered as TEXT (snapshotsIn): held in the instant's one shape, as the v1 import writes it.
+  const snap = { ...s.value, at: instantOf(s.value.at) };
   return store.tx((t) => {
     const pub = readPublicationIn(t, snap.publicationId);
     if (pub === undefined) throw new AppError("not-found", `no publication ${snap.publicationId}`);

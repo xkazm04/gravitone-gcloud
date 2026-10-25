@@ -137,6 +137,16 @@ describe("metrics", () => {
     expect(must(w.k.store.read((r) => snapshotsIn(r, live.id)))).toEqual([reading]);
     expect(code(recordMetric(w.k.store, { ...reading, publicationId: plan.id }, PUBLISHER))).toBe("refused");
     expect(eventTypes(w.k, live.id)).toEqual(["publish", "metric.snapshot"]);
+    // An instant is held in one shape whatever its spelling, as the v1 import writes it: a reading
+    // at "13:00:00Z" sorted after one half a second later ('Z' > '.').
+    const whole = (iso: string): string => iso.replace(/\.000Z$/, "Z");
+    const late = { ...reading, at: new Date(Date.parse(at(120)) + 500).toISOString() };
+    must(recordMetric(w.k.store, late, PUBLISHER));
+    must(recordMetric(w.k.store, { ...reading, at: whole(at(120)) }, PUBLISHER));
+    expect(must(w.k.store.read((r) => snapshotsIn(r, live.id))).map((x) => x.at)).toEqual([at(60), at(120), late.at]);
+    expect(live.publishedAt).toBe(at(1));
+    const act = must(createSlot(w.k.store, draft({ channel: "blog", libraryItemId: "article:run-9" }), OP)).slot;
+    expect(must(publishByAct(w.k.store, act.id, { platformId: "7", dry: false, publishedAt: whole(at(0)) }, OP)).publication.publishedAt).toBe(at(0));
   });
 });
 
