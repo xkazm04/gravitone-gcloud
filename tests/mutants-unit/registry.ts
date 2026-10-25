@@ -6386,7 +6386,7 @@ export const MUTANTS: UnitMutant[] = [
     id: "library-fixture-plate-names-trials",
     test: "tests/next-server/library-fixture-parity.test.ts",
     file: "app/(studio)/library/_port/fixtureCorpus.ts",
-    find: "        const m = fileBlob(`/presets/${st}.jpg`, 1920, 1080);",
+    find: "        const m = fileBlob(thumbSrc(st), 1920, 1080);",
     replace: "        const m = fileBlob(`/trials/google/${st}/${scene}.jpg`, 1920, 1080);",
     why: "Every fixture plate is drawn from a gitignored trial render, so on a fresh clone the Library's largest kind is a grid of broken images whose facts say they decode.",
   },
