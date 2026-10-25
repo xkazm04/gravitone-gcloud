@@ -18,7 +18,14 @@ export type SplitInput = {
  * root, so the graphs never join), and the split the scout wing's steer holds now (absent: none set). The steer's
  * acts are the scout wing's: the muse wing has no seeds to pause and no audiences to split.
  */
-export type ScoutView = { readonly graphs: Readonly<Record<ScoutWing, ScoutGraph>>; readonly split?: SplitInput };
+export type ScoutView = { readonly graphs: Readonly<Record<ScoutWing, ScoutGraph>>; readonly split?: SplitInput; readonly backlog?: ScoutBacklog };
+
+/**
+ * The scout wing's backlog (spark scout-vision; lib/foundry/scout/backlog.ts backlogOf) as numbers: kept ideas
+ * waiting for a storyboard, kept seeds no idea grows from yet, and the seed gate that follows (`freshAllowed`: the
+ * fresh seeds a gated batch may take, null when ungated). Absent from the view when it is not known.
+ */
+export type ScoutBacklog = { readonly waiting: number; readonly seedsWaiting: number; readonly gated: boolean; readonly freshAllowed: number | null };
 
 export type ScoutPort = {
   readonly pause: (input: { readonly ref: string }) => Promise<ActionResult<ScoutView>>;

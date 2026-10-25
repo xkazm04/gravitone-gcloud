@@ -5,23 +5,41 @@ import "server-only";
 // (lib/kernelStore.ts kernel()). Pause, resume and the split are steer.ts's own writers; each answers with the
 // graph rebuilt after it, so the screen draws what the store now holds. A read that throws (a manifest
 // mid-write, the store unopenable) answers with its own sentence, verbatim.
+//
+// The backlog (spark scout-vision) is the SCOUT wing's - the muse wing has no seeds and no storyboards - read inside
+// that wing's scope with the same readers the graph uses, and counted by backlog.ts backlogOf. A backlog that cannot
+// be counted is left out of the view (the head draws no mark), never guessed; the graph still draws.
 
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 import { kernel } from "../../../../lib/kernelStore.ts";
+import { backlogOf } from "../../../../lib/foundry/scout/backlog.ts";
 import { buildGraphs } from "../../../../lib/foundry/scout/graph.ts";
+import { listSeedBatches } from "../../../../lib/foundry/scout/seedStore.ts";
 import { pauseBranch, readSteer, resumeBranch, setSplit } from "../../../../lib/foundry/scout/steer.ts";
+import { readAllNights } from "../../../../lib/foundry/scout/store.ts";
 import type { Steer } from "../../../../lib/foundry/scout/types.ts";
-import type { ScoutView } from "./contract.ts";
+import { withWing } from "../../../../lib/foundry/scout/wingScope.ts";
+import type { ScoutBacklog, ScoutView } from "./contract.ts";
 import type { ServerScout } from "./port.ts";
+
+async function backlog(): Promise<ScoutBacklog | undefined> {
+  const [nights, batches, steer] = await withWing("scout", () => Promise.all([readAllNights(), listSeedBatches(), readSteer()]));
+  try {
+    const b = backlogOf(nights, batches, steer);
+    return { waiting: b.waiting.length, seedsWaiting: b.seedsWaiting, gated: b.gated, freshAllowed: b.freshAllowed };
+  } catch {
+    return undefined;
+  }
+}
 
 async function view(): Promise<Result<ScoutView>> {
   const k = kernel();
   if (!k.ok) return k;
   try {
     // Outside any wing's scope the steer read is the scout wing's: the only one with a split to edit.
-    const [graphs, steer] = await Promise.all([buildGraphs({ store: k.value.store }), readSteer()]);
-    return ok({ graphs, ...(steer.split === undefined ? {} : { split: steer.split }) });
+    const [graphs, steer, b] = await Promise.all([buildGraphs({ store: k.value.store }), readSteer(), backlog()]);
+    return ok({ graphs, ...(steer.split === undefined ? {} : { split: steer.split }), ...(b === undefined ? {} : { backlog: b }) });
   } catch (e) {
     return err("unavailable", errorMessage(e));
   }

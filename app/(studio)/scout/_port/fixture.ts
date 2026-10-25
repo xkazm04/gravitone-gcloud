@@ -10,7 +10,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { graphOf } from "../../../../lib/foundry/scout/graph.ts";
 import { checkSplit } from "../../../../lib/foundry/scout/steer.ts";
 import { SEED_REF_RE, type Steer, type SteerSplit } from "../../../../lib/foundry/scout/types.ts";
-import { FIXTURE_NOW, fixtureEffort, fixtureMuse, fixtureSteer, fixtureUniverse } from "./fixtureData.ts";
+import { FIXTURE_BACKLOG, FIXTURE_NOW, fixtureEffort, fixtureMuse, fixtureSteer, fixtureUniverse } from "./fixtureData.ts";
 import type { ScoutView } from "./contract.ts";
 import type { ServerScout } from "./port.ts";
 
@@ -34,6 +34,7 @@ const muse = (() => {
 const view = (): ScoutView => ({
   graphs: { scout: graphOf({ nights: world.nights, batches: world.batches, steer, effort: world.effort, now: FIXTURE_NOW }), muse },
   ...(steer.split === undefined ? {} : { split: steer.split }),
+  backlog: FIXTURE_BACKLOG,
 });
 
 function act(next: (s: Steer) => Result<Steer>): Result<ScoutView> {

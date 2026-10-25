@@ -14,6 +14,7 @@ import "server-only";
 
 import type { GraphEffort } from "@gt/domain/scoutGraph";
 
+import type { ScoutBacklog } from "./contract.ts";
 import type { Candidate, IdeaCandidate, Night, SeedAudience, SeedBatch, Steer } from "../../../../lib/foundry/scout/types.ts";
 
 export const FIXTURE_NOW = new Date("2026-10-24T07:00:00.000Z");
@@ -197,6 +198,13 @@ function universe(x: Ids): { readonly batches: SeedBatch[]; readonly nights: Nig
     ],
   };
 }
+
+/**
+ * The scout wing's backlog the fixture draws: gated (52 kept ideas wait, past BACKLOG_GATE), so a batch takes at
+ * most GATED_FRESH_SEEDS fresh seeds. Stated, not counted from the universe above, so the head's gated marks are
+ * on screen whatever backlogOf's rule makes of these few nights.
+ */
+export const FIXTURE_BACKLOG: ScoutBacklog = { waiting: 52, seedsWaiting: 89, gated: true, freshAllowed: 20 };
 
 /** The muse wing's nights: ideas only, each a style, a scene or a character poster at 9:16. */
 export function fixtureMuse(): Night[] {

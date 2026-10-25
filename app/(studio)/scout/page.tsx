@@ -29,7 +29,8 @@ export default async function ScoutPage({ searchParams }: { readonly searchParam
   await connection();
   const [q, view, packets, facts] = await Promise.all([searchParams, serverScout().view(), serverBoard().listPackets(), scoutHeaderFacts()]);
   const undecided = packets.ok ? packets.value.packets.filter((p) => isScoutPacket(p) && p.state === "open").length : 0;
-  const head = <ScoutHead current="graph" undecided={undecided} facts={facts} />;
+  const backlog = view.ok ? view.value.backlog : undefined;
+  const head = <ScoutHead current="graph" undecided={undecided} facts={facts} {...(backlog === undefined ? {} : { backlog })} />;
   if (!view.ok) {
     return (
       <div className={s.page}>

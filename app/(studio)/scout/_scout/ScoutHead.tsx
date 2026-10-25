@@ -6,14 +6,20 @@
 // NEXT scout pile - the oldest scout or seeds pile still waiting (_shell/facts.ts nextScoutPile), opened on the Runs
 // tab. No pile waiting draws no button: the Runs tab's tally already says 0. A scout store that could not be read
 // draws a rose `next unread` instead, so its silence is never read as "nothing waiting".
+//
+// Before them (spark scout-vision): the scout wing's backlog when the view knows it - a `52 backlog` stamp (kept ideas
+// waiting for a storyboard) and, while the seed gate holds, an amber `fresh ≤ 20` chip (the fresh seeds a batch may
+// take). The runs pages hold no view, so they pass none and draw neither.
 import type { PacketSummary } from "@gt/domain/board";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Crumbs } from "@gt/ui/components/crumbs/Crumbs.tsx";
 import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
+import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 
 import { SCOUT_PILE_SOURCES } from "../../_shell/facts.ts";
 import type { ScoutHeaderFacts } from "../../_shell/headerFacts.ts";
 import { SpendSlot } from "../../_shell/SpendSlot.tsx";
+import type { ScoutBacklog } from "../_port/contract.ts";
 import s from "./scout.module.css";
 import { ScoutNext } from "./ScoutNext.tsx";
 
@@ -23,7 +29,20 @@ export const isScoutPacket = (p: Pick<PacketSummary, "source">): boolean => SCOU
 /** Where the Runs tab opens a packet (the Board island builds the same address from its `railBase`). */
 export const runFor = (packetId: string): string => `/scout/runs/${encodeURIComponent(packetId)}`;
 
-export function ScoutHead({ current, undecided, facts }: { readonly current: "graph" | "runs"; readonly undecided?: number; readonly facts: ScoutHeaderFacts }) {
+function Backlog({ backlog }: { readonly backlog: ScoutBacklog }) {
+  return (
+    <>
+      <span role="group" aria-label={`${backlog.waiting} kept ideas wait for a storyboard`} data-backlog="waiting">
+        <Tally value={backlog.waiting} label="backlog" />
+      </span>
+      {backlog.gated && backlog.freshAllowed !== null && (
+        <Chip label="fresh" value={`≤ ${backlog.freshAllowed}`} tone="amber" casing="lower" name={`fresh seeds limited to ${backlog.freshAllowed}`} />
+      )}
+    </>
+  );
+}
+
+export function ScoutHead({ current, undecided, facts, backlog }: { readonly current: "graph" | "runs"; readonly undecided?: number; readonly facts: ScoutHeaderFacts; readonly backlog?: ScoutBacklog }) {
   const next = facts.next;
   return (
     <div className={s.head}>
@@ -38,6 +57,7 @@ export function ScoutHead({ current, undecided, facts }: { readonly current: "gr
         ]}
       />
       <div className={s.headEnd}>
+        {backlog !== undefined && <Backlog backlog={backlog} />}
         <SpendSlot facts={facts} />
         {next !== null ? (
           <span className={s.headNext}>
