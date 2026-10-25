@@ -10,11 +10,11 @@
 //               as spent. A capped read says the sum is a floor.
 //   LedgerDelta a door to the Ledger carrying `+N`.
 
-import type { MouseEvent } from "react";
 
 import { Chip } from "../chip/Chip.tsx";
 import { usd } from "../eventrow/usd.ts";
 import { capsFor } from "../keycaps/caps.ts";
+import { plainClick } from "../link/plain.ts";
 import keycap from "../keycaps/Keycaps.module.css";
 import { SourceTag } from "../source/SourceTag.tsx";
 import { Tally } from "../tally/Tally.tsx";
@@ -23,8 +23,6 @@ import s from "./HeaderChips.module.css";
 
 /** `1 item`, `2 items`: the names below are read aloud. */
 const count = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
-
-const plain = (e: MouseEvent): boolean => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 
 export type NextPile = { readonly title: string; readonly count: number; readonly href: string };
 
@@ -38,7 +36,7 @@ export function NextButton({ next, onOpen }: { readonly next: NextPile | null; r
       data-component="NextButton"
       aria-label={`Open next decision: ${next.title}, ${count(next.count, "item")}`}
       onClick={(e) => {
-        if (onOpen === undefined || !plain(e)) return;
+        if (onOpen === undefined || !plainClick(e)) return;
         e.preventDefault();
         onOpen(next.href);
       }}
