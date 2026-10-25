@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ApplyStatus } from "@gt/domain/board";
 import type { Decision } from "@gt/domain/decision";
 import { parseAt } from "@gt/domain/door";
-import { AppError, err, errorMessage, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
+import { AppError, err, errorMessage, isAppError, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
 import { packetIdSchema, type PacketId } from "@gt/domain/ids";
 import type { Packet } from "@gt/domain/packet";
 import type { Effects } from "../effects.ts";
@@ -145,7 +145,7 @@ function claimOf(t: Tx, row: ApplyRow & { readonly packetId: PacketId }, holder:
       },
     };
   } catch (e) {
-    if (!(e instanceof AppError)) throw e;
+    if (!isAppError(e)) throw e;
     return { ok: false, error: `apply: packet ${row.packetId} cannot be read for delivery: ${e.message}` };
   }
 }
