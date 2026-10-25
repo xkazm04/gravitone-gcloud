@@ -13143,6 +13143,27 @@
         }
       ],
       "registryProposal": "section-plan-as-the-brief lets a short prose prompt stand when the purpose is exploring identity. This context's batch lane runs N identical briefs to measure provider variance and keep-rates per term, which is a learning lab, not a production piece. The technique should say whether a variance or vocabulary measurement lane counts as exploration, and whether such a lane may claim the technique as a tag (batch.ts:41) when it cannot express a plan."
+    },
+    "e5f8b2b5-3ac7-422b-9950-c7431117591a/native-shell-integration": {
+      "context": "landing-cosmos-shell",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:05:32.197Z",
+      "worker": "15828de5-56c3-4800-90a2-e9aa6423ea5c",
+      "techniques": [
+        {
+          "technique": "host-forwarded-key-contract",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/keyboard.ts:15 Keys reach the page directly from a desktop browser. No host keeps keys for itself and no native wrapper forwards them."
+        },
+        {
+          "technique": "native-owned-stream",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/perf.ts:137 When the tab is hidden the perf throttle stops on purpose. There is no background stream and no native owner."
+        }
+      ]
     }
   }
 }

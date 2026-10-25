@@ -7566,7 +7566,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/keyboard.ts:15 The landing gets its keys straight from the browser window's keydown event, with no wrapper or embedded web view forwarding them, and a search for electron, tauri, ipcRenderer and webview found 0 hits in app/_landing, so there is no native shell for any technique to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:9034ad02704d9c88",
+          "evaluatedRevision": 5
         },
         {
           "subject": "translation-pipeline-topology",
