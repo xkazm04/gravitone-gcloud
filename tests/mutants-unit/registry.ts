@@ -7182,4 +7182,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "!/^\\d+$/.test(p)",
     why: "The runtime digest reads 0:75 as 75 s while the cut's clock refuses it, so the two disagree on the same beat mark.",
   },
+  {
+    id: "ledger-scout-muse-failure-fails-source",
+    test: "tests/next-server/scout-muse-unreadable.test.ts",
+    file: "lib/ledger/v1/sources/scout.ts",
+    find: "if (!muse.ok) return ok({ nights: scout.value.nights,",
+    replace: "if (!muse.ok) return muse; if (false) return ok({ nights: scout.value.nights,",
+    why: "An unreadable muse root fails the whole scout source again, so the scout wing's morning pile leaves the Floor.",
+  },
+  {
+    id: "ledger-seeds-muse-failure-fails-source",
+    test: "tests/next-server/scout-muse-unreadable.test.ts",
+    file: "lib/ledger/v1/sources/seeds.ts",
+    find: "if (!muse.ok) return ok({ batches: scout.value,",
+    replace: "if (!muse.ok) return muse; if (false) return ok({ batches: scout.value,",
+    why: "An unreadable muse root fails the whole seeds source again, so the scout wing's seed pile leaves the Floor.",
+  },
 ];

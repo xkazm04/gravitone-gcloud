@@ -32,7 +32,7 @@ import type { IngestEvent, ProjectCtx, Projection, Source, WeirItem } from "../t
 // part n `commit.<n>` at its own instant.
 
 /** `batches` are the scout wing's; `muse` the muse wing's (absent in a snapshot taken before the wings). */
-export type SeedsSnapshot = { readonly batches: readonly SeedBatch[]; readonly muse?: readonly SeedBatch[] };
+export type SeedsSnapshot = { readonly batches: readonly SeedBatch[]; readonly muse?: readonly SeedBatch[]; readonly skipped?: readonly { readonly id: string; readonly reason: string }[] };
 
 export const SEEDS_READ_CAP = 120;
 
@@ -41,13 +41,24 @@ const OPERATOR: Actor = { kind: "operator", id: "operator" };
 const AGENT: Actor = { kind: "agent", id: "scout-cull-model" };
 const HREF = "/floor?lane=image";
 
+// Each wing is listed on its own: the scout wing failing fails the source, the muse wing failing is a skip, so an
+// unreadable muse root does not take the scout wing's seed pile off the Floor.
+async function readWing(w: ScoutWing): Promise<Result<SeedBatch[]>> {
+  return withWing(w, async () => {
+    try {
+      return ok((await listSeedBatches()).slice(0, SEEDS_READ_CAP));
+    } catch (e) {
+      return err("unavailable", `seeds: listSeedBatches failed${w === "scout" ? "" : ` (${w})`}: ${errorMessage(e)}`, { cause: e });
+    }
+  });
+}
+
 async function read(): Promise<Result<SeedsSnapshot>> {
-  try {
-    const [batches, muse] = await Promise.all(SCOUT_WINGS.map((w) => withWing(w, async () => (await listSeedBatches()).slice(0, SEEDS_READ_CAP))));
-    return ok({ batches: batches ?? [], muse: muse ?? [] });
-  } catch (e) {
-    return err("unavailable", `seeds: listSeedBatches failed: ${errorMessage(e)}`, { cause: e });
-  }
+  const [scout, muse] = await Promise.all(SCOUT_WINGS.map(readWing));
+  if (scout === undefined || !scout.ok) return scout ?? err("unavailable", "seeds: no scout wing");
+  if (muse === undefined) return ok({ batches: scout.value, muse: [] });
+  if (!muse.ok) return ok({ batches: scout.value, skipped: [{ id: "muse", reason: muse.error.message }] });
+  return ok({ batches: scout.value, muse: muse.value });
 }
 
 function eventsOf(wing: ScoutWing, b: SeedBatch, ctx: ProjectCtx): IngestEvent[] {
@@ -100,7 +111,7 @@ export function projectSeeds(s: SeedsSnapshot, ctx: ProjectCtx): Projection {
     live: [],
     weir: s.batches.map(weirOf).filter((w) => w !== null),
     tally: tallyOf([...s.batches, ...muse]),
-    skipped: [],
+    skipped: s.skipped ?? [],
   };
 }
 
