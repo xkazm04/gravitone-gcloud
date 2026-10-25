@@ -12986,6 +12986,48 @@
           "evidence": "lib/notebook/unknowns.ts:61 Each unknown has a stable id and an impact phrased as what the render may not say. Resolved unknowns are kept with resolvedBy (lines 40, 54), and UNKNOWN_BY_ID keys the script ledger by id (notebook.ts:188)."
         }
       ]
+    },
+    "5414e8ac-5105-43f0-a153-088e12501c9d/conversation-orchestration": {
+      "context": "ui-marks-and-text",
+      "subject": "conversation-orchestration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:23:09.353Z",
+      "worker": "2cd2242e-38ca-461a-9e1a-9b92de83a35e",
+      "techniques": [
+        {
+          "technique": "model-proposed-quick-replies",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/chip/Chip.tsx:2 Chip is a label/filter door the screens author. It is never a model-proposed next message, and no quick-reply grammar exists here."
+        },
+        {
+          "technique": "progress-beat-grammar",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/hint/words.ts:2 In this context 'narration' means app self-description that a gate holds down. No model writes progress lines and nothing lifts them out of a token stream."
+        }
+      ]
+    },
+    "2e702395-189e-4eb9-910c-dc4b76ff6e9a/conversation-orchestration": {
+      "context": "ui-ledger-timeline",
+      "subject": "conversation-orchestration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:23:09.353Z",
+      "worker": "2cd2242e-38ca-461a-9e1a-9b92de83a35e",
+      "techniques": [
+        {
+          "technique": "structured-visual-replies",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:3 The rows are runtime records rendered at a fixed height. They are not tables or charts a model composed as its answer."
+        },
+        {
+          "technique": "recall-transparency",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:9 The provenance marks here describe where a cost or time came from, not the memory a companion turn spends. No recall strip exists."
+        }
+      ]
     }
   }
 }

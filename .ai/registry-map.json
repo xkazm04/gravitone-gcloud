@@ -13655,7 +13655,11 @@
           "revision": 6,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:1 This context draws ledger acts, crumbs, cost chips, JSON, a time strip and a waveform: records of things the system did, which the golden path puts on the transcript side of the border. A case-insensitive search of its seven component directories and INVENTORY.md for companion, avatar, transcript, quickReply/quick repl, chat, recall and walkthrough found zero hits, so no model-composed conversation exists here to orchestrate.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:f3ecee1630629b34",
+          "evaluatedRevision": 6
         },
         {
           "subject": "time-travel-replay",
@@ -13772,7 +13776,11 @@
           "revision": 6,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/hint/words.ts:2 This context is a static mark vocabulary (chip, ghost, glyph, hint, heading, empty, errorline, keycaps, stalebadge, sr-only), and its only 'narration' is the app describing itself, which it caps; a case-insensitive search of all ten component directories for companion, avatar, transcript, quickReply/quick repl, chat, recall and walkthrough found zero hits, so there's no resident companion, model turn or chat surface for the subject to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:f3ecee1630629b34",
+          "evaluatedRevision": 6
         },
         {
           "subject": "document-text-extraction",
