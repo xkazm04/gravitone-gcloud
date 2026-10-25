@@ -84,7 +84,7 @@ describe("the rail", () => {
     expect(Object.keys(VOCAB_GROUPS).sort()).toEqual(["all", ...LIBRARY_KINDS].sort());
   });
   it("bands a doc's technique count", () => {
-    expect([1, 4, 5, 8, 9, 15, 16, 40].map(techniqueBand)).toEqual(["1–4", "1–4", "5–8", "5–8", "9–15", "9–15", "16+", "16+"]);
+    expect([0, 1, 4, 5, 8, 9, 15, 16, 40].map(techniqueBand)).toEqual(["0", "1–4", "1–4", "5–8", "5–8", "9–15", "9–15", "16+", "16+"]);
   });
 });
 

@@ -122,7 +122,7 @@ export const FIXED_ORDER: Readonly<Record<string, readonly string[]>> = {
   state: LIBRARY_STATES,
   source: LIBRARY_SOURCES,
   attention: ATTENTION,
-  techniques: ["1–4", "5–8", "9–15", "16+"],
+  techniques: ["0", "1–4", "5–8", "9–15", "16+"],
   tris: TRIS_BANDS,
   age: AGE_BANDS,
 };
@@ -134,9 +134,9 @@ export const CHIP_GROUPS: { readonly [K in LibraryKindName]: readonly string[] }
   ...{ character: ["age", "build", "application"] },
 };
 
-/** A doc's technique count as its facet band (library-data.js `band`). */
+/** A doc's technique count as its facet band (library-data.js `band`); a subject with none is "0", not one to four. */
 export function techniqueBand(n: number): string {
-  return n <= 4 ? "1–4" : n <= 8 ? "5–8" : n <= 15 ? "9–15" : "16+";
+  return n <= 0 ? "0" : n <= 4 ? "1–4" : n <= 8 ? "5–8" : n <= 15 ? "9–15" : "16+";
 }
 // ── the search grammar ──────────────────────────────────────────────────────
 
