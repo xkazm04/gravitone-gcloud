@@ -6910,4 +6910,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const cookieHeld = false;",
     why: "The shell never tells the renewal that its cookie was just verified, so the redundant post on every mount comes back.",
   },
+  {
+    id: "studio-shell-handoff-dropped-cookie-silent",
+    test: "tests/next-server/shell-handoff.test.ts",
+    file: "app/(studio)/_shell/Handoff.tsx",
+    find: "setTimeout(() => setRefusal(COOKIE_DROPPED), REFRESH_MS)",
+    replace: "setTimeout(() => undefined, REFRESH_MS)",
+    why: "A studio reached over plain http on a LAN address gets a Secure cookie the browser drops, and the handoff stays a blank screen with no error.",
+  },
+  {
+    id: "studio-shell-handoff-never-arms-the-wait",
+    test: "tests/next-server/shell-handoff.test.ts",
+    file: "app/(studio)/_shell/Handoff.tsx",
+    find: "setRefreshed(true);",
+    replace: "",
+    why: "The handoff never starts watching for the refreshed request's outcome, so a dropped cookie is again a blank screen.",
+  },
 ];
