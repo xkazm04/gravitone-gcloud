@@ -530,6 +530,27 @@ const planCheck = (name: string, ok: boolean, why: string) => {
     planCheck("opening plan: 1 opened, 0 closed", d.opened.length === 1 && d.opened[0] === "escalation/b4" && d.closed.length === 0, JSON.stringify(d));
   }
 
+  // 5. every wrong-typed value of every declared patch field is refused. The
+  //    fields are read off the schema, so a field added there is walked here.
+  //    Before the door checked types, 48 of these were accepted and 15 of those
+  //    threw inside runStructureCheck (`raises: "scale"` reached `.filter`).
+  const patchProps = trailerEditPlanSchema(base).properties.ops.items.properties.patch.properties as Record<string, unknown>;
+  const WRONG: unknown[] = [42, null, true, {}, [1], "SO", ["warp"]];
+  const legal = (f: string, v: unknown) =>
+    f === "label" || f === "text" ? typeof v === "string"
+    : f === "connector" ? v === "BUT" || v === "THEREFORE" || v === "AND THEN"
+    : f === "spends" ? Array.isArray(v) && v.every((x) => typeof x === "string")
+    : f === "raises" ? Array.isArray(v) && v.every((x) => ["scale", "threat", "speed", "intimacy", "cost"].includes(x as string))
+    : false;
+  const letIn = Object.keys(patchProps).flatMap((f) =>
+    WRONG.filter((v) => !legal(f, v))
+      .filter((v) => parseTrailerPlan(base, { ops: [{ beatId: "b4", patch: { [f]: v }, why: "w" }], summary: "s" }).ok)
+      .map((v) => `${f}=${JSON.stringify(v)}`),
+  );
+  planCheck("refuses every wrong-typed value of every declared patch field", letIn.length === 0, letIn.join(" "));
+  const promise = parseTrailerPlan(base, { ops: [{ beatId: "b4", patch: { promises: [] }, why: "w" }], summary: "s" });
+  planCheck("refuses a promises patch the schema never offered", !promise.ok, JSON.stringify(promise));
+
   // the schema enumerates the cut's actual beat ids.
   const enumIds = (trailerEditPlanSchema(base).properties.ops.items.properties.beatId as { enum: string[] }).enum;
   planCheck("schema beatId enum is the cut's beat ids", enumIds.join() === base.beats.map((b) => b.id).join(), enumIds.join());

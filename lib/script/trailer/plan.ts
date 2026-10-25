@@ -8,7 +8,7 @@
 // would replace.
 //
 // THE SPINE STAYS THE CREATOR'S. A patch can change what a beat says and how it
-// connects (label, text, connector, raises, promises, spends). It can never
+// connects (label, text, connector, raises, spends). It can never
 // change `kind` or `movement`, and it can never name a beat the cut does not
 // have. Those are refused, not repaired, and the refusal lists every finding so
 // the creator sees what the model tried.
@@ -29,12 +29,39 @@ export interface TrailerPlan {
   summary: string;
 }
 
-/** The fields a patch may carry — `BeatPatch`'s keys, as runtime data. */
-export const PATCHABLE_FIELDS = ["label", "text", "connector", "raises", "promises", "spends"] as const;
 const FORBIDDEN_FIELDS = ["kind", "movement"] as const;
 
 const CONNECTOR_ENUM = ["BUT", "THEREFORE", "AND THEN"] as const;
 const RAISES_ENUM = ["scale", "threat", "speed", "intimacy", "cost"] as const;
+
+/** The patch's declared properties: the schema below hands these to the engine,
+ *  and `parseTrailerPlan` walks the same table, so the request and the refusal
+ *  cannot disagree. `promises` is not here on purpose: a promise row carries a
+ *  payer and a grade, which `../types.ts` says is a judgement "never computed
+ *  here", and a model writing its own `grade: "paid"` would grade its own work. */
+const PATCH_PROPERTIES = {
+  label: { type: "string" },
+  text: { type: "string" },
+  connector: { type: "string", enum: CONNECTOR_ENUM },
+  raises: { type: "array", items: { type: "string", enum: RAISES_ENUM } },
+  spends: { type: "array", items: { type: "string" } },
+} as const;
+
+/** The fields a patch may carry, as runtime data — the schema's own keys. */
+export const PATCHABLE_FIELDS = Object.keys(PATCH_PROPERTIES) as (keyof typeof PATCH_PROPERTIES)[];
+
+type Prop = { readonly type: "string" | "array"; readonly enum?: readonly string[]; readonly items?: Prop };
+
+/** Does `v` have the declared type? Before this, value types were "the schema's
+ *  request, not a guarantee": `raises: "scale"` reached the checker as a string
+ *  and `checkEscalation` threw on `.filter`. */
+function conforms(p: Prop, v: unknown): boolean {
+  if (p.type === "array") return Array.isArray(v) && !!p.items && v.every((x) => conforms(p.items!, x));
+  return typeof v === "string" && (!p.enum || p.enum.includes(v));
+}
+
+const describe = (p: Prop): string =>
+  p.type === "array" ? `list of ${p.items ? describe(p.items) : "?"}` : p.enum ? `one of ${p.enum.join(" / ")}` : "string";
 
 /** The shape the engine must return, as JSON Schema. A function of the cut: the
  *  `beatId` enum is the cut's ACTUAL beat ids, so the contract itself forbids
@@ -52,13 +79,7 @@ export function trailerEditPlanSchema(cut: Pick<TrailerCut, "beats">) {
             beatId: { type: "string", enum: cut.beats.map((b) => b.id) },
             patch: {
               type: "object",
-              properties: {
-                label: { type: "string" },
-                text: { type: "string" },
-                connector: { type: "string", enum: CONNECTOR_ENUM },
-                raises: { type: "array", items: { type: "string", enum: RAISES_ENUM } },
-                spends: { type: "array", items: { type: "string" } },
-              },
+              properties: PATCH_PROPERTIES,
               additionalProperties: false,
             },
             why: { type: "string", description: "written for the person deciding whether to accept it" },
@@ -112,13 +133,15 @@ export function parseTrailerPlan(cut: TrailerCut, raw: unknown): ParsedTrailerPl
       } else if (!patchable.includes(k)) {
         findings.push(`${at} (${o.beatId}): unknown patch field \`${k}\`.`);
         clean = false;
+      } else if (!conforms(PATCH_PROPERTIES[k as keyof typeof PATCH_PROPERTIES], o.patch[k])) {
+        findings.push(`${at} (${o.beatId}): \`${k}\` is ${JSON.stringify(o.patch[k])}, not the declared ${describe(PATCH_PROPERTIES[k as keyof typeof PATCH_PROPERTIES])}.`);
+        clean = false;
       }
     }
     if (!clean) return;
     ops.push({
       beatId: o.beatId,
-      // Keys were checked against PATCHABLE_FIELDS just above; value types are
-      // the schema's request, not a guarantee.
+      // Every key is declared and every value has its declared type (above).
       patch: o.patch as BeatPatch,
       why: typeof o.why === "string" ? o.why : "",
     });
