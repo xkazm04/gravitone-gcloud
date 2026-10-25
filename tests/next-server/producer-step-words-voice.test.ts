@@ -26,8 +26,11 @@ import { compose } from "@gt/kernel/records/write";
 import type { Store } from "@gt/kernel/store";
 
 import { driveStep, launchPartAct, partActReceipt, type UnitsFn } from "../../lib/producers/research.ts";
-import { NO_VOICE_ENGINE } from "../../packages/producers/src/voice/define.ts";
-import { standInSeconds, voiceUnits } from "../../lib/producers/voice.ts";
+import { encodeRecord } from "../../packages/domain/src/steps/registry.ts";
+import type { PartSnapshot } from "../../packages/kernel/src/parts/driver.ts";
+import { FREE } from "../../packages/producers/src/research/partAct.ts";
+import { NO_VOICE_ENGINE, voicePlan } from "../../packages/producers/src/voice/define.ts";
+import { landVoice, standInSeconds, voiceUnits } from "../../lib/producers/voice.ts";
 import { wordsProducer, wordsUnits } from "../../lib/producers/words.ts";
 
 const dirs: string[] = [SOUND];
@@ -99,5 +102,28 @@ describe("explainer voice", () => {
   it("sizes a stand-in take by the words on the line, not the whitespace around them", () => {
     expect(standInSeconds("  two words  ")).toBe(1);
     expect(standInSeconds("\tone two three four five six\n")).toBeCloseTo(2.4);
+  });
+
+  // No recipe composes a driven record-line job (see above), so the landing is held on the plan
+  // and booked outputs a job would hand it, through the record's own door.
+  it("lands a take per line on the voice record: the first is active, a rerun adds beside it", () => {
+    const lines = [{ id: "r:1", text: "Bitcoin is scarce." }, { id: "r:2", text: "Scarcity is not price." }];
+    const planned = voicePlan({ lines, engine: null, dry: true }, null, FREE);
+    if (!planned.ok) throw planned.error;
+    const blob = (n: number) => ({ sha256: String(n).repeat(64).slice(0, 64), mime: "audio/wav", bytes: 44 });
+    const book = (n: number) => new Map(planned.value.units.map((u, i) => [u.name, { id: u.input["id"], blob: blob(n + i), seconds: 1, standIn: true }] as const));
+    const none = { records: new Map() } as unknown as PartSnapshot;
+    const first = landVoice("job1", planned.value, book(1), none, 10);
+    if (!first.ok) throw first.error;
+    const enc = encodeRecord("voice", first.value["voice"]);
+    expect(enc.ok).toBe(true);
+    const rec = first.value["voice"] as { takes: Record<string, unknown>; byLine: Record<string, { takeIds: string[]; active: string | null }> };
+    expect(Object.keys(rec.takes)).toEqual(["job1:line:r:1", "job1:line:r:2"]);
+    expect(rec.byLine["r:1"]).toEqual({ takeIds: ["job1:line:r:1"], active: "job1:line:r:1" });
+    const again = landVoice("job2", planned.value, book(5), { records: new Map([["voice", rec]]) } as unknown as PartSnapshot, 20);
+    if (!again.ok) throw again.error;
+    const rec2 = again.value["voice"] as typeof rec;
+    expect(rec2.byLine["r:1"]).toEqual({ takeIds: ["job1:line:r:1", "job2:line:r:1"], active: "job1:line:r:1" });
+    expect(encodeRecord("voice", rec2).ok).toBe(true);
   });
 });

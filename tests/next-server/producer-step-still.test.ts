@@ -1,7 +1,7 @@
 // THE ALBUM STILL PART'S TAKES AS ONE KERNEL JOB (Phase 4 wave C, L37): a receipt over the plan
-// facts (a still part has no step record: the snapshot is null), its confirm, four takes as blobs booked on the
-// job - the job's outputs ARE the takes until a `still` record exists - and a second confirm of
-// the same receipt while the job is live adopts it (one purchase).
+// facts (a still part has no units snapshot: it is null), its confirm, four takes as blobs booked on the
+// job and landed on the `still` record (the adopted one is the gate's pick, so it stays null), and a second
+// confirm of the same receipt while the job is live adopts it (one purchase).
 
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,6 +14,7 @@ import type { Result } from "@gt/domain/errors";
 import { blobStore } from "@gt/kernel/blob";
 import { loadOutputs } from "@gt/kernel/job";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
+import { readPart } from "@gt/kernel/parts/driver";
 import { compose } from "@gt/kernel/records/write";
 
 import { stillProducer, stillUnits } from "../../lib/producers/still.ts";
@@ -63,5 +64,10 @@ describe("still takes", () => {
     expect(takes.length).toBe(4);
     const blobs = blobStore(path.join(dir, "blobs"));
     for (const t of takes) expect(await blobs.has(t.value["blob"] as never)).toBe(true);
+    const rec = must(readPart(store, { projectId: "al", partId: "al/still" })).records.get("still");
+    const landed = (rec?.["takes"] ?? []) as { id: string; blob: unknown }[];
+    expect(landed.map((t) => t.blob)).toEqual(takes.map((t) => t.value["blob"]));
+    expect(new Set(landed.map((t) => t.id)).size).toBe(4);
+    expect(rec?.["adopted"]).toBeNull();
   });
 });
