@@ -25,7 +25,7 @@ import { adsShotsFor, imageFailure, LIVE_IMAGING, pickedScenario, unitsOf, type 
 import { adTemplateOf, asData, field, jobBlobRoot, must, partFacts, priceOf, recOf, text, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
 
 // THE MOTION PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/motion's ports over
-// v1's engines: the two recognize passes of app/_phases/motion/direction.ts `directMotion` (READ,
+// v1's engines: the two recognize passes of lib/motion/direction.ts `directMotion` (READ,
 // PROPOSE and the code-side filter, called as written - only its `recognize` is the job's,
 // metered per pass), and a clip renderer per the part's option: Leonardo image-to-video through
 // lib/imaging/video/clips.ts (`startClip`, its own pre-gate hold and record kept), or Wan i2v on
