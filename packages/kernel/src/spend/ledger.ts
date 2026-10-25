@@ -176,9 +176,13 @@ const num = (v: unknown): number => (typeof v === "number" ? v : 0);
 export function totals(r: Reader, cls: SpendClass, now: number = nowOf(r)): Totals {
   const since = now - cls.windowMs;
   const spent = num(r.get("SELECT total(amount) AS v FROM spend_rows WHERE class = ? AND at_ms >= ?", cls.id, since)?.["v"]);
-  const held = num(r.get("SELECT total(amount) AS v FROM spend_reservations WHERE class = ? AND state = 'held'", cls.id)?.["v"]);
-  const lapsed = num(r.get("SELECT total(amount) AS v FROM spend_reservations WHERE class = ? AND state = 'lapsed' AND closed_ms >= ?", cls.id, since)?.["v"]);
-  return { spent, held, lapsed };
+  // Live holds and in-window lapses in one pass over the class's open reservations (spend_reservations_open).
+  const open = r.get(
+    "SELECT total(CASE WHEN state = 'held' THEN amount END) AS held, total(CASE WHEN state = 'lapsed' AND closed_ms >= ? THEN amount END) AS lapsed FROM spend_reservations WHERE class = ? AND state IN ('held', 'lapsed')",
+    since,
+    cls.id,
+  );
+  return { spent, held: num(open?.["held"]), lapsed: num(open?.["lapsed"]) };
 }
 
 const usage = (cls: SpendClass) => ({ class: cls.id, unit: cls.unit });
