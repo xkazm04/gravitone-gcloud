@@ -7182,4 +7182,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "!/^\\d+$/.test(p)",
     why: "The runtime digest reads 0:75 as 75 s while the cut's clock refuses it, so the two disagree on the same beat mark.",
   },
+  {
+    id: "plate-error-not-remembered",
+    test: "packages/ui/test/components/plate.test.ts",
+    file: "packages/ui/src/components/desk/Plate.tsx",
+    find: "onError={() => setFailed(src)}",
+    replace: "onError={() => undefined}",
+    why: "A candidate whose blob 404s is drawn as the browser's broken-image glyph, indistinguishable from a dark picture, and the operator can keep or reject a picture nobody saw.",
+  },
 ];
