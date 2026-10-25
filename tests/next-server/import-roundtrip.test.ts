@@ -136,6 +136,21 @@ describe("what the import will not take, and says so", () => {
     expect(outcome).toMatchObject({ outcome: "refused", reason: "template hologram is not in the catalogue" });
     expect(store.read((r) => r.get("SELECT 1 AS x FROM projects WHERE id = ?", kernelIdOf(seed.empty.id)))).toEqual(ok(undefined));
   });
+
+  it("grades a v1 frames row its walk cannot read as data only, and stages every other project", async () => {
+    const seed = await seedV1("uid-a");
+    await putStep(seed.film.id, "frames", { frames: "x", renderId: "r" });
+    const u = universe();
+    const archive = read(await v1Archive(seed.uid));
+    const p = u.store.read((r) => planImport(r, archive));
+    if (!p.ok) throw p.error;
+    const film = p.value.projects.find((x) => x.preview.v1Id === seed.film.id)?.preview;
+    expect(film?.outcome).toBe("import");
+    expect(film?.losses).toEqual(expect.arrayContaining([{ entity: "frames", grade: "data-only", reason: "frames v1 could not be read: frames is not a list" }]));
+    // The other six records are still held (frames-alts keeps the frames part done).
+    expect(film?.held).toBe(6);
+    expect(p.value.projects.map((x) => x.preview.outcome)).toEqual(["import", "import", "import", "import"]);
+  });
 });
 
 describe("the Plan the import opens", () => {
