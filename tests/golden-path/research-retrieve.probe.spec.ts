@@ -40,6 +40,7 @@ import { retrievalEnabled } from "@/lib/text/env";
 import { TextError } from "@/lib/text/errors";
 import { parseRetrieveStream, runClaudeRetrieve } from "@/lib/text/providers/claudeCliRetrieve";
 import { engineStatus, retrieve } from "@/lib/text/router";
+import { __resetTextSpend, __setTextSpendStore, textSpendRows } from "@/lib/text/spend";
 import { RESEARCH_SPEC } from "@/lib/turns/kinds/research";
 import type { TurnRecord } from "@/lib/turns/ledger";
 import { startTurn, whenIdle, type TurnSpec } from "@/lib/turns/runner";
@@ -334,6 +335,23 @@ test("retrieve door: the caller's signal ends the run, and an aborted signal spa
     expect((e2 as CliError).spawned).toBe(true);
     expect(Date.now() - started, "the cancel waited for the engine").toBeLessThan(15_000);
   });
+});
+
+test("retrieve door: a run that hits its turn cap is refused, and the cost its result event reports is booked", async () => {
+  process.env.TEXT_RETRIEVE = "1";
+  __setTextSpendStore(null);
+  __resetTextSpend();
+  const capped = [INIT, { type: "result", subtype: "error_max_turns", is_error: true, total_cost_usd: 1.25, num_turns: 30 }];
+  await withFakeEngine(retrieveCassette(capped, NOTEBOOK), async () => {
+    const e = await retrieve({ turn: "research", prompt: "# RETRIEVE capped\n" }).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(TextError);
+    expect((e as TextError).message).toMatch(/turn cap/);
+  });
+  const rows = await textSpendRows();
+  expect(rows, "a 30-turn run's reported cost left no row").toHaveLength(1);
+  expect(rows[0]).toMatchObject({ amount: 1.25, outcome: "failed", basis: "vendor" });
+  expect(rows[0]!.axes).toMatchObject({ turn: "research", provider: "claude-cli-retrieve" });
+  __resetTextSpend();
 });
 
 /* ── case 6: the flag ────────────────────────────────────────────────────── */

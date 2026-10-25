@@ -121,6 +121,19 @@ const breach = (what: string) =>
     "failed",
   );
 
+/** A run that ended without an answer (the turn cap, an error result), with
+ *  what its result event says it cost: up to RETRIEVE_MAX_TURNS turns of
+ *  searching and fetching were spent, and a refused answer is still a bill
+ *  (cost-metering, failures are spend). */
+export class RetrieveRunFailed extends CliError {
+  constructor(
+    message: string,
+    readonly costUsd: number | undefined,
+  ) {
+    super(message, "failed");
+  }
+}
+
 /** A tool_result's content as the text the model read: a string, or the
  *  concatenated text blocks of an array. */
 function resultText(content: unknown): string {
@@ -180,11 +193,11 @@ export class RetrieveStream {
     const r = this.result;
     if (!r) throw new CliError("The retrieval run ended without a result event.", "failed");
     if (r.is_error || r.subtype !== "success")
-      throw new CliError(
+      throw new RetrieveRunFailed(
         r.subtype === "error_max_turns"
           ? `The retrieval run hit its ${RETRIEVE_MAX_TURNS}-turn cap before it answered.`
           : (typeof r.result === "string" && r.result) || `The retrieval run ended as ${String(r.subtype)}.`,
-        "failed",
+        typeof r.total_cost_usd === "number" && Number.isFinite(r.total_cost_usd) ? r.total_cost_usd : undefined,
       );
     return {
       text: String(r.result ?? ""),
@@ -329,7 +342,15 @@ export function claudeCliRetrieveProvider(): TextProvider {
         };
       } catch (e) {
         // The reasoning door's mapping and evidence rule, not a copy of them.
-        if (e instanceof CliError) throw cliTextError(e, "claude-cli-retrieve");
+        // A failed run's reported cost rides on the error, where spend.ts books it.
+        if (e instanceof CliError)
+          throw cliTextError(
+            e,
+            "claude-cli-retrieve",
+            e instanceof RetrieveRunFailed && e.costUsd !== undefined
+              ? { costUsd: e.costUsd, costBasis: "vendor-reported", model: MODEL }
+              : undefined,
+          );
         throw e;
       }
     },
