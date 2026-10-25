@@ -18,6 +18,8 @@ import facet from "../../src/components/facet/FacetRow.module.css";
 import { Toast } from "../../src/components/toast/Toast.tsx";
 import toast from "../../src/components/toast/Toast.module.css";
 import { Panel } from "../../src/components/panel/Panel.tsx";
+import { LevelSheet } from "../../src/components/sheet/LevelSheet.tsx";
+import sheetCss from "../../src/components/sheet/LevelSheet.module.css";
 import { CapsHeading } from "../../src/components/heading/CapsHeading.tsx";
 import { Empty } from "../../src/components/empty/Empty.tsx";
 import { Facts } from "../../src/components/facts/Facts.tsx";
@@ -182,6 +184,39 @@ describe("containers", () => {
     expect(html(h(CapsHeading, { text: "after", tally: { value: 3 }, level: 4 }))).toMatch(/^<h4[^>]*>after<span/);
     expect(html(h(Empty<"no events match">, { label: "no events match", action: { label: "Clear" } }))).toMatch(/^<div[^>]*role="status"><span>no events match<\/span><button/);
     expect(html(h(Facts, { facts: [{ term: "model", value: "flux-2" }] }))).toMatch(/^<dl[^>]*><dt[^>]*>model<\/dt><dd[^>]*>flux-2<\/dd><\/dl>$/);
+  });
+});
+
+describe("LevelSheet", () => {
+  const trail = [{ label: "Floor", href: "/floor" }, { label: "Board", href: "/board" }];
+  const sheet = (over: { full?: boolean; specimen?: boolean; fit?: boolean }): string =>
+    html(h(LevelSheet, { trail, here: "sweep-01", mode: "board.cull", back: "Board", onClose: noop, ...over, children: h("p", null, "body") }));
+  const cls = (out: string): string[] => (/<section class="([^"]*)"/.exec(out)?.[1] ?? "").split(" ");
+
+  test("over the Floor it is a modal dialog named by its trail, with the scrim and the grab", () => {
+    const out = sheet({});
+    expect(out).toMatch(/role="dialog" aria-modal="true" aria-label="Floor › Board › sweep-01"/);
+    expect(out).toContain(`class="${sheetCss.scrim}"`);
+    expect(out).toContain(`class="${sheetCss.grab}"`);
+    expect(out).toContain("<p>body</p>");
+  });
+
+  test("loaded as a page it is a region in flow: no scrim, no grab, not modal", () => {
+    const out = sheet({ full: true, fit: true });
+    expect(out).toMatch(/role="region" aria-label=/);
+    expect(out).not.toContain("aria-modal");
+    expect(out).not.toContain(sheetCss.scrim);
+    expect(out).not.toContain(sheetCss.grab);
+    expect(cls(out)).toContain(sheetCss.full);
+    expect(cls(out)).not.toContain(sheetCss.fit);
+  });
+
+  test("fit hugs its body only over the Floor; a specimen is drawn risen with no scrim", () => {
+    expect(cls(sheet({ fit: true }))).toContain(sheetCss.fit);
+    const spec = sheet({ specimen: true, fit: true });
+    expect(cls(spec)).toEqual(expect.arrayContaining([sheetCss.specimen, sheetCss.open]));
+    expect(cls(spec)).not.toContain(sheetCss.fit);
+    expect(spec).not.toContain(sheetCss.scrim);
   });
 });
 

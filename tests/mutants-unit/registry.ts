@@ -821,6 +821,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A disabled Button lights its hover wash like a live one, so the pointer reads an unavailable act as pressable.",
   },
   {
+    id: "ui-controls-sheet-page-is-a-dialog",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/sheet/LevelSheet.tsx",
+    find: "aria-modal={full ? undefined : true}",
+    replace: "aria-modal={true}",
+    why: "A Board packet loaded as a page claims to be modal, so assistive technology hides the header and the rest of the page that is drawn and live around it.",
+  },
+  {
     id: "ui-controls-seg-presses-every-option",
     test: "packages/ui/test/components/controls.test.ts",
     file: "packages/ui/src/components/seg/Seg.tsx",
