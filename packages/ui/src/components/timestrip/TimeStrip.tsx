@@ -17,6 +17,8 @@ import { vars } from "../vars.ts";
 import { bars as barsOf, dragRange, nowAt, slotAt, ticks, total, type DayCount, type Range } from "./strip.ts";
 import s from "./TimeStrip.module.css";
 
+type Drag = { readonly a: number; readonly b: number };
+
 export type TimeStripProps = {
   readonly days: readonly DayCount[];
   /** `YYYY-MM-DD` (UTC) of NOW: later days are hatched. */
@@ -42,9 +44,13 @@ export function restingReadout(days: readonly string[], range: Range | null, inR
   return first === undefined || last === undefined ? ["", ""] : [span(first, last), count(days.length, "day")];
 }
 
+/** The drag after the pointer reaches slot `i`: the SAME object while the slot is unchanged, so
+ *  setState bails out and a drag renders once per slot crossed, not once per pointermove. */
+export const stepDrag = (d: Drag, i: number): Drag => (d.b === i ? d : { a: d.a, b: i });
+
 export function TimeStrip({ days, today, nowMs, range, inRange, onRange }: TimeStripProps) {
   const [hover, setHover] = useState<number | null>(null);
-  const [drag, setDrag] = useState<{ readonly a: number; readonly b: number } | null>(null);
+  const [drag, setDrag] = useState<Drag | null>(null);
   const keys = days.map((d) => d.day);
   const drawn = barsOf(days, { today, range });
   const now = nowAt(keys, nowMs);
@@ -64,7 +70,7 @@ export function TimeStrip({ days, today, nowMs, range, inRange, onRange }: TimeS
   const move = (e: PointerEvent<HTMLDivElement>): void => {
     if (n === 0) return;
     const i = slot(e);
-    if (drag !== null) setDrag({ a: drag.a, b: i });
+    if (drag !== null) setDrag(stepDrag(drag, i));
     setHover(i);
   };
   const up = (): void => {

@@ -18,7 +18,7 @@ import seg from "../../src/components/seg/Seg.module.css";
 import { SourceTag } from "../../src/components/source/SourceTag.tsx";
 import { StaleBadge, type StaleBadgeProps } from "../../src/components/stalebadge/StaleBadge.tsx";
 import { BAR_MAX, bars, daysBetween, dragRange, MIN_BAR, nowAt, slotAt, ticks, type DayCount } from "../../src/components/timestrip/strip.ts";
-import { restingReadout, type TimeStripProps } from "../../src/components/timestrip/TimeStrip.tsx";
+import { restingReadout, stepDrag, type TimeStripProps } from "../../src/components/timestrip/TimeStrip.tsx";
 import { Toggle } from "../../src/components/toggle/Toggle.tsx";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
@@ -87,6 +87,13 @@ describe("time strip geometry", () => {
     const d = daysBetween("2026-10-01", "2026-10-05");
     expect(restingReadout(d, { from: "2026-10-02", to: "2026-10-03" }, 41)).toEqual(["02 Oct → 03 Oct", "41 events"]);
     expect(restingReadout(d, null, undefined)).toEqual(["01 Oct → 05 Oct", "5 days"]);
+  });
+
+  test("a drag moving inside one slot is the same state object, so the strip does not re-render", () => {
+    const d = { a: 2, b: 4 };
+    expect(stepDrag(d, 4)).toBe(d);
+    expect(stepDrag(d, 5)).toEqual({ a: 2, b: 5 });
+    expect(stepDrag(d, 5)).not.toBe(d);
   });
 
   test("the readout counts one event and one day in the singular", () => {

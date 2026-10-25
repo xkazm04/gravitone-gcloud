@@ -6630,4 +6630,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "overCeiling: i.ceilingUsd !== undefined && exposure > i.ceilingUsd,",
     why: "The kernel's recorded overCeiling and the screen's may-stop mark are two comparisons again, so the receipt can mark a crossing the launch event does not record.",
   },
+  {
+    id: "timestrip-drag-renders-per-pointermove",
+    test: "packages/ui/test/components/ledger.test.ts",
+    file: "packages/ui/src/components/timestrip/TimeStrip.tsx",
+    find: "(d.b === i ? d : { a: d.a, b: i })",
+    replace: "({ a: d.a, b: i })",
+    why: "Every pointermove inside one day slot hands setState a fresh object, so the 98-day strip re-renders its bars and ticks at pointer rate for a drag that changed nothing.",
+  },
 ];
