@@ -19,7 +19,9 @@ import { test, expect } from "@playwright/test";
 
 import { __resetMusicBudget } from "@/lib/music/budget";
 import { runSoundCli } from "@/lib/sound/cli";
-import { readTakes } from "@/lib/sound/store";
+import { buildEditPlan, editSeconds } from "@/lib/sound/editPlan";
+import { generateTake, parseGenerateRequest } from "@/lib/sound/generate";
+import { readTakes, SoundError } from "@/lib/sound/store";
 
 import { keepEnv } from "./_helpers";
 
@@ -96,4 +98,58 @@ test("cli generate: GRAVITONE_DRY_ONLY=1 refuses the live render - nothing sent,
   expect((JSON.parse(dry.out) as { error: string }).error).toContain("GRAVITONE_DRY_ONLY");
   expect(calls.length, "a dry-only generate reached the vendor").toBe(1);
   expect((await readTakes()).takes.length, "a dry-only generate filed a take").toBe(1);
+});
+
+/* ── a section edit's modes ──────────────────────────────────────────────── */
+
+const genReq = (over: Record<string, unknown> = {}) => ({
+  kind: "music",
+  provider: "elevenlabs",
+  op: "compose",
+  prompt: "Warm lo-fi instrumental, 80 BPM, rhodes and vinyl",
+  negative: null,
+  durationS: 10,
+  loop: null,
+  technique: [],
+  terms: { genre: ["lo-fi"], mood: [], instrument: [], sfxCategory: null },
+  tempoBpm: null,
+  key: null,
+  origin: "lab",
+  sourceTakeId: null,
+  editModes: null,
+  plan: null,
+  huntId: null,
+  nodeId: null,
+  title: null,
+  ...over,
+});
+
+/** The store's refusal, or null when the call went through. */
+async function refusal(run: () => Promise<unknown>): Promise<{ status: number; message: string } | null> {
+  try {
+    await run();
+    return null;
+  } catch (e) {
+    if (e instanceof SoundError) return { status: e.status, message: e.message };
+    throw e;
+  }
+}
+
+test("section edit: a mode that is not one is refused before the vendor, and the meter's guard reads it as the plan does", async () => {
+  const source = await generateTake(parseGenerateRequest(genReq()));
+  expect(calls.length).toBe(1);
+  // "kep" is no mode: buildEditPlan keeps that section, so this edit asks for nothing new -
+  // a render of the source, billed. It is refused naming the word, nothing sent.
+  const bad = await refusal(async () => generateTake(parseGenerateRequest(genReq({ op: "section-edit", prompt: "", sourceTakeId: source.id, editModes: ["kep", "keep"] }))));
+  console.log(`[sound-door] edit modes ["kep","keep"] -> ${JSON.stringify(bad)}`);
+  expect(bad?.status).toBe(400);
+  expect(bad?.message).toContain('"kep"');
+  expect(calls.length, "an edit of no section reached the vendor").toBe(1);
+  // The guard and the plan agree on what an unknown word is: kept, so no new seconds.
+  expect(editSeconds(PLAN, ["kep", "keep"])).toBe(0);
+  expect(buildEditPlan(PLAN, "s", ["kep", "keep"]).chunks.every((c) => "song_id" in c)).toBe(true);
+  // A real edit still goes through.
+  const ok = await generateTake(parseGenerateRequest(genReq({ op: "section-edit", prompt: "", sourceTakeId: source.id, editModes: ["keep", "high"] })));
+  expect(ok.parentId).toBe(source.id);
+  expect(calls.length).toBe(2);
 });

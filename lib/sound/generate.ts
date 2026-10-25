@@ -44,7 +44,7 @@ import { composeDetailed, draftPlan, generateSfx, toWirePlan } from "@/lib/music
 import { cueDurationS, cueToPlan } from "@/lib/music/plan";
 import type { CueBrief, CuePicture, WirePlan } from "@/lib/music/types";
 
-import { asWirePlan, buildEditPlan, editSeconds, isGenChunk, planMs } from "./editPlan";
+import { asWirePlan, buildEditPlan, EDIT_MODES, editSeconds, isGenChunk, planMs } from "./editPlan";
 import { getTake, createTake, termsOf } from "./takes";
 import { SoundError, withStore } from "./store";
 import type { GenerateRequest, SoundKind, SoundTake } from "./types";
@@ -161,6 +161,10 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
   if (op === "section-edit") {
     if (!sourceTakeId) throw new SoundError('a section edit needs "sourceTakeId"', 400);
     if (!editModes || !editModes.length) throw new SoundError('a section edit needs "editModes", one per section', 400);
+    // The plan reads a word it does not know as "keep" (editPlan.ts modeOf), so a typo'd mode
+    // would buy a render of sections nobody asked to change. Refused by name instead.
+    const unknown = editModes.filter((m) => !(EDIT_MODES as readonly string[]).includes(m));
+    if (unknown.length) throw new SoundError(`unknown edit mode(s): ${unknown.map((m) => JSON.stringify(m)).join(", ")} (one of ${EDIT_MODES.join(", ")})`, 400);
     if (editModes.every((m) => m === "keep")) throw new SoundError("every section is kept — there is nothing to render", 400);
   }
   // prompt_influence is the SFX endpoint's own knob (lib/music/elevenlabs.ts

@@ -14,6 +14,10 @@ import type { WireChunk, WireGenerationChunk, WirePlan } from "@/lib/music/types
 export type EditMode = "keep" | "low" | "medium" | "high" | "free";
 export const EDIT_MODES: readonly EditMode[] = ["keep", "low", "medium", "high", "free"];
 
+/** A mode word as the plan reads it: one of EDIT_MODES, else "keep" - the one reading both the
+ *  plan and its seconds take, so the guard on new audio cannot count a section the plan keeps. */
+export const modeOf = (m: string | undefined): EditMode => ((EDIT_MODES as readonly string[]).includes(m ?? "") ? (m as EditMode) : "keep");
+
 export const isGenChunk = (c: WireChunk): c is WireGenerationChunk => (c as WireGenerationChunk).text !== undefined;
 
 export const chunkMs = (c: WireChunk) => (isGenChunk(c) ? c.duration_ms : Math.max(0, c.range.end_ms - c.range.start_ms));
@@ -48,7 +52,7 @@ export function buildEditPlan(source: WirePlan, songId: string, modes: readonly 
     const start = cursor;
     const end = cursor + c.duration_ms;
     cursor = end;
-    const mode = (EDIT_MODES as readonly string[]).includes(modes[i] ?? "") ? (modes[i] as EditMode) : "keep";
+    const mode = modeOf(modes[i]);
     if (mode === "keep") {
       chunks.push({ song_id: songId, range: { start_ms: start, end_ms: end } });
     } else {
@@ -68,5 +72,5 @@ export function buildEditPlan(source: WirePlan, songId: string, modes: readonly 
  *  Kept sections are references, so they cost nothing to keep. */
 export function editSeconds(source: WirePlan, modes: readonly string[]): number {
   const gen = source.chunks.filter(isGenChunk);
-  return gen.reduce((n, c, i) => n + ((modes[i] ?? "keep") === "keep" ? 0 : c.duration_ms), 0) / 1000;
+  return gen.reduce((n, c, i) => n + (modeOf(modes[i]) === "keep" ? 0 : c.duration_ms), 0) / 1000;
 }
