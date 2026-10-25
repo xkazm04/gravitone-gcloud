@@ -9,7 +9,7 @@ import { Button } from "../../src/components/button/Button.tsx";
 import btn from "../../src/components/button/Button.module.css";
 import { Toggle } from "../../src/components/toggle/Toggle.tsx";
 import { Seg } from "../../src/components/seg/Seg.tsx";
-import { Field, Search, Select } from "../../src/components/field/Field.tsx";
+import { Field, Search, Select, TextArea } from "../../src/components/field/Field.tsx";
 import { Fold } from "../../src/components/fold/Fold.tsx";
 import { TabRail } from "../../src/components/tabrail/TabRail.tsx";
 import { Crumbs } from "../../src/components/crumbs/Crumbs.tsx";
@@ -115,6 +115,30 @@ describe("fields", () => {
     const f = html(h(Field, { label: "query", value: "", onChange: noop, keyfield: "search" }));
     expect(f).toContain(`aria-label="query"`);
     expect(f).toContain(`data-keyfield="search"`);
+  });
+
+  test("a busy field keeps its place in the tab order: aria-disabled and read-only, never `disabled`", () => {
+    const f = html(h(Field, { label: "title", value: "a", onChange: noop, disabled: true }));
+    expect(f).toContain('aria-disabled="true"');
+    expect(f).toContain('readOnly=""');
+    expect(f).not.toMatch(/\sdisabled(=|\s|>)/);
+    expect(html(h(Field, { label: "title", value: "a", onChange: noop }))).not.toContain("aria-disabled");
+  });
+
+  test("a field says its type, length and description", () => {
+    const f = html(h(Field, { label: "when", value: "", onChange: noop, type: "datetime-local", maxLength: 40, describedBy: "w" }));
+    expect(f).toContain('type="datetime-local"');
+    expect(f).toContain('maxLength="40"');
+    expect(f).toContain('aria-describedby="w"');
+  });
+
+  test("TextArea is named, bounded and busy the way Field is", () => {
+    const a = html(h(TextArea, { label: "description", value: "", onChange: noop, maxLength: 5000, disabled: true }));
+    expect(a).toMatch(/^<textarea/);
+    expect(a).toContain('aria-label="description"');
+    expect(a).toContain('maxLength="5000"');
+    expect(a).toContain('aria-disabled="true"');
+    expect(a).toContain('rows="3"');
   });
 
   test("Search draws the search verb's caps from the mode", () => {

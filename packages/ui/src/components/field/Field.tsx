@@ -15,19 +15,55 @@ export type FieldProps = {
   /** An example of the query syntax (`mood:tense · kind:audio`), never an instruction. */
   readonly placeholder?: string;
   readonly keyfield?: string;
+  /** The native input type; a text field when absent. */
+  readonly type?: "text" | "datetime-local";
+  readonly maxLength?: number | undefined;
+  /** Busy: aria-disabled and read-only, so the field keeps focus and its place in the tab order (the Button convention). */
+  readonly disabled?: boolean | undefined;
+  /** The id of the element that describes this field. */
+  readonly describedBy?: string | undefined;
 };
+
+const stateAttrs = (p: Pick<FieldProps, "disabled" | "describedBy">) => ({
+  "aria-disabled": p.disabled === true ? true : undefined,
+  readOnly: p.disabled === true ? true : undefined,
+  "aria-describedby": p.describedBy,
+});
 
 const keyAttr = (keyfield: string | undefined) => (keyfield === undefined ? {} : { [FIELD_ATTR]: keyfield });
 
-export function Field({ label, value, onChange, placeholder, keyfield }: FieldProps) {
+export function Field({ label, value, onChange, placeholder, keyfield, type, maxLength, disabled, describedBy }: FieldProps) {
   return (
     <input
       className={s.field}
+      type={type}
       aria-label={label}
       value={value}
       placeholder={placeholder}
+      maxLength={maxLength}
       onChange={(e) => onChange(e.currentTarget.value)}
+      {...stateAttrs({ disabled, describedBy })}
       {...keyAttr(keyfield)}
+    />
+  );
+}
+
+export type TextAreaProps = Pick<FieldProps, "label" | "value" | "onChange" | "placeholder" | "maxLength" | "disabled" | "describedBy"> & {
+  readonly rows?: number;
+};
+
+/** The multi-line field: the same required name and busy convention as Field. */
+export function TextArea({ label, value, onChange, placeholder, maxLength, disabled, describedBy, rows = 3 }: TextAreaProps) {
+  return (
+    <textarea
+      className={`${s.field} ${s.area}`}
+      aria-label={label}
+      value={value}
+      placeholder={placeholder}
+      maxLength={maxLength}
+      rows={rows}
+      onChange={(e) => onChange(e.currentTarget.value)}
+      {...stateAttrs({ disabled, describedBy })}
     />
   );
 }

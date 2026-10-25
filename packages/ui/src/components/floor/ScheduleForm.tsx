@@ -23,7 +23,7 @@ import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
 import { Plate } from "../desk/Plate.tsx";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
-import fieldCss from "../field/Field.module.css";
+import { Field, TextArea } from "../field/Field.tsx";
 import { Ghost } from "../ghost/Ghost.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { clock, whenUtc as at, type RailSlot } from "./calendar.ts";
@@ -159,15 +159,7 @@ export function ScheduleForm({ items, channels, slots, nowMs, day, item: asked, 
       <section className={s.section}>
         <CapsHeading text="when · UTC" variant="section" level={4} />
         <div className={s.row}>
-          <input
-            className={fieldCss.field}
-            type="datetime-local"
-            aria-label="publish at, UTC"
-            value={when}
-            disabled={busy}
-            onChange={(e) => setWhen(e.currentTarget.value)}
-            {...(warnings.length === 0 ? {} : { "aria-describedby": `${id}-warn` })}
-          />
+          <Field type="datetime-local" label="publish at, UTC" value={when} disabled={busy} onChange={setWhen} describedBy={warnings.length === 0 ? undefined : `${id}-warn`} />
           <span className={s.utc}>UTC</span>
         </div>
         {warnings.length > 0 && (
@@ -181,11 +173,11 @@ export function ScheduleForm({ items, channels, slots, nowMs, day, item: asked, 
 
       <section className={s.section}>
         <CapsHeading text="title" variant="section" level={4} />
-        <input className={fieldCss.field} aria-label="title" value={title} maxLength={TITLE_MAX} disabled={busy} onChange={(e) => setTitle(e.currentTarget.value)} />
+        <Field label="title" value={title} maxLength={TITLE_MAX} disabled={busy} onChange={setTitle} />
         <CapsHeading text="description" variant="section" level={4} />
-        <textarea className={cx(fieldCss.field, s.text)} aria-label="description" value={description} maxLength={DESCRIPTION_MAX} rows={3} disabled={busy} onChange={(e) => setDescription(e.currentTarget.value)} />
+        <TextArea label="description" value={description} maxLength={DESCRIPTION_MAX} disabled={busy} onChange={setDescription} />
         <CapsHeading text="tags" variant="section" level={4} />
-        <input className={fieldCss.field} aria-label="tags, comma separated" value={tags} placeholder="harbor, documentary" disabled={busy} onChange={(e) => setTags(e.currentTarget.value)} />
+        <Field label="tags, comma separated" value={tags} placeholder="harbor, documentary" disabled={busy} onChange={setTags} />
         {tagList.length > 0 && (
           <div className={s.tags} role="list" aria-label="tags">
             {tagList.map((t) => (

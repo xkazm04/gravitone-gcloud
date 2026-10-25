@@ -7326,4 +7326,28 @@ export const MUTANTS: UnitMutant[] = [
     replace: "grid-template-columns:repeat(5,minmax(calc(var(--w-tile) * .8),1fr));",
     why: "A sixth trial wraps the matrix head row and face row independently, so a head no longer sits over its face.",
   },
+  {
+    id: "field-busy-is-aria-disabled",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/field/Field.tsx",
+    find: "\"aria-disabled\": p.disabled === true ? true : undefined,",
+    replace: "\"aria-disabled\": undefined,",
+    why: "A busy field says nothing to assistive technology again.",
+  },
+  {
+    id: "schedule-title-back-to-raw-input",
+    test: "packages/ui/test/raw-controls.test.ts",
+    file: "packages/ui/src/components/floor/ScheduleForm.tsx",
+    find: "<Field label=\"title\" value={title} maxLength={TITLE_MAX} disabled={busy} onChange={setTitle} />",
+    replace: "<input aria-label=\"title\" value={title} maxLength={TITLE_MAX} disabled={busy} onChange={(e) => setTitle(e.currentTarget.value)} />",
+    why: "A text control is hand-rolled beside the primitive again, past the ratchet.",
+  },
+  {
+    id: "slot-move-back-to-raw-input",
+    test: "packages/ui/test/raw-controls.test.ts",
+    file: "packages/ui/src/components/floor/SlotDetail.tsx",
+    find: "<Field type=\"datetime-local\" label=\"move to, UTC\" value={field} onChange={setField} />",
+    replace: "<input type=\"datetime-local\" aria-label=\"move to, UTC\" value={field} onChange={(e) => setField(e.currentTarget.value)} />",
+    why: "A text control is hand-rolled beside the primitive again, past the ratchet.",
+  },
 ];
