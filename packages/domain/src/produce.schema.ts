@@ -2,7 +2,7 @@ import { UNIT_INPUTS } from "@gt/catalog/recipes";
 import { z } from "zod";
 
 import { usdSchema } from "./estimate.ts";
-import { RECEIPT_MODES, type ComposerInput, type NativeProducer } from "./produce.ts";
+import { IMAGE_MECHANISMS, RECEIPT_MODES, type ComposerInput, type NativeProducer } from "./produce.ts";
 
 // THE DOORS for the produce contract (./produce.ts, zod-free). Kept apart so a client that only
 // holds the shapes never loads zod; a server action parses here before the kernel sees anything.
@@ -12,25 +12,24 @@ import { RECEIPT_MODES, type ComposerInput, type NativeProducer } from "./produc
 
 const text = z.string().trim().min(1).max(4000);
 
-export const composerInputSchema = z.union([
-  z.object({ lane: z.literal("image"), text, mechanisms: z.array(z.enum(["text", "ref-early"])).min(1), styleId: z.string().min(1) }).strict(),
-  z.object({ lane: z.literal("image"), text, mechanisms: z.array(z.enum(["text", "ref-early"])).min(1), sweep: z.literal(true) }).strict(),
-  z.object({ lane: z.literal("article"), text, topic: z.string().trim().min(1) }).strict(),
-  z.object({ lane: z.literal("audio"), text, kind: z.enum(["music", "sfx"]) }).strict(),
-  z.object({ lane: z.literal("video"), text, subject: z.string().trim().min(1) }).strict(),
-]) satisfies z.ZodType<ComposerInput>;
+// The five composers, written once over the sentence rule each door takes: the launch's and the
+// estimate's unions held two copies of every branch, and a branch dropped from one was invisible
+// to tsc and to every test.
+const mechanisms = z.array(z.enum(IMAGE_MECHANISMS)).min(1);
+const composers = (sentence: z.ZodString) =>
+  z.union([
+    z.object({ lane: z.literal("image"), text: sentence, mechanisms, styleId: z.string().min(1) }).strict(),
+    z.object({ lane: z.literal("image"), text: sentence, mechanisms, sweep: z.literal(true) }).strict(),
+    z.object({ lane: z.literal("article"), text: sentence, topic: z.string().trim().min(1) }).strict(),
+    z.object({ lane: z.literal("audio"), text: sentence, kind: z.enum(["music", "sfx"]) }).strict(),
+    z.object({ lane: z.literal("video"), text: sentence, subject: z.string().trim().min(1) }).strict(),
+  ]);
+
+export const composerInputSchema = composers(text) satisfies z.ZodType<ComposerInput>;
 
 /** The estimate's door: the composer union with the sentence allowed empty (the receipt is drawn before
  *  a word is typed; the launch takes `composerInputSchema`). Shared by the Floor's action and the MCP door. */
-const draft = z.string().max(4000);
-const mechanisms = z.array(z.enum(["text", "ref-early"])).min(1);
-export const composerEstimateSchema = z.union([
-  z.object({ lane: z.literal("image"), text: draft, mechanisms, styleId: z.string().min(1) }).strict(),
-  z.object({ lane: z.literal("image"), text: draft, mechanisms, sweep: z.literal(true) }).strict(),
-  z.object({ lane: z.literal("article"), text: draft, topic: z.string().trim().min(1) }).strict(),
-  z.object({ lane: z.literal("audio"), text: draft, kind: z.enum(["music", "sfx"]) }).strict(),
-  z.object({ lane: z.literal("video"), text: draft, subject: z.string().trim().min(1) }).strict(),
-]);
+export const composerEstimateSchema = composers(z.string().max(4000)) satisfies z.ZodType<ComposerInput>;
 
 /**
  * A producer's own launch (./produce.ts `ProducerRunInput`). Not pinned by `satisfies`: every

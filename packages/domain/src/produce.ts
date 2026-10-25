@@ -279,7 +279,8 @@ export type PartPatch = { readonly option?: string; readonly units?: number };
 /* ── the composers ────────────────────────────────────────────────────────── */
 
 /** The forge mechanisms the image composer toggles (prototype index.html :1287). */
-export type ImageMechanism = "text" | "ref-early";
+export const IMAGE_MECHANISMS = ["text", "ref-early"] as const;
+export type ImageMechanism = (typeof IMAGE_MECHANISMS)[number];
 
 export type ComposerInput =
   | ({ readonly lane: "image"; readonly text: string; readonly mechanisms: readonly ImageMechanism[] } & (
