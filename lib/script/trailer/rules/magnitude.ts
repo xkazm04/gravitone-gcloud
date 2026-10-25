@@ -30,8 +30,16 @@ export function checkMagnitude(cut: TrailerCut, magnitudeOf?: MagnitudeOf): Stru
   const rungs = kindsOf(cut, "rung");
   const peak = peaks.length === 1 ? peaks[0] : null;
 
-  const mag = (b: TrailerBeat) => (magnitudeOf ? magnitudeOf(b) : null);
-  const noResolver = `No magnitude resolver was supplied. Magnitude lives in the shot layer (duration, shot count, energy); this file models beats and movements and refuses to invent a scale for them. Supply \`magnitudeOf\` — the shot lane's seam — to make this rule executable.`;
+  // A resolver's NaN or Infinity is not a size. Every comparison against NaN is
+  // false, so before this guard a NaN button and peak read as `pass` ("smaller
+  // than the climax") over a figure nobody measured.
+  const mag = (b: TrailerBeat) => {
+    const v = magnitudeOf ? magnitudeOf(b) : null;
+    return typeof v === "number" && Number.isFinite(v) ? v : null;
+  };
+  const noResolver = magnitudeOf
+    ? `The magnitude resolver gave no finite size for at least one of these beats, so there is nothing to compare.`
+    : `No magnitude resolver was supplied. Magnitude lives in the shot layer (duration, shot count, energy); this file models beats and movements and refuses to invent a scale for them. Supply \`magnitudeOf\` — the shot lane's seam — to make this rule executable.`;
 
   if (buttons.length === 0) {
     out.push({

@@ -74,6 +74,20 @@ test("the same rule becomes executable when the shot lane injects a resolver", (
   expect(rows(small, "magnitude", "pass").length).toBeGreaterThan(0);
 });
 
+// Every comparison against NaN is false, so a resolver that answered NaN made
+// `a >= b` false and the button read as "smaller than the climax" - a pass over a
+// size nobody measured (2 magnitude passes before the guard).
+test("a resolver's NaN or Infinity is unmeasured, never a pass", () => {
+  for (const junk of [NaN, Infinity]) {
+    const r = runStructureCheck(minimal(), { magnitudeOf: (b) => (b.kind === "peak" ? 9 : junk) });
+    console.log(`[trailer] resolver=${junk} -> magnitude pass=${rows(r, "magnitude", "pass").length}, unmeasured=${rows(r, "magnitude", "unmeasured").length}`);
+    expect(rows(r, "magnitude", "pass")).toHaveLength(0);
+    expect(rows(r, "magnitude", "violation")).toHaveLength(0);
+    expect(rows(r, "magnitude", "unmeasured").length).toBeGreaterThan(0);
+    for (const f of rows(r, "magnitude", "unmeasured")) expect(f.detail).not.toContain("No magnitude resolver was supplied");
+  }
+});
+
 test("a declared specialty-lane cut is never graded malformed", () => {
   const broken: TrailerCut = { ...minimal(), lane: "specialty" };
   broken.beats = broken.beats.filter((b) => b.kind !== "reset");
