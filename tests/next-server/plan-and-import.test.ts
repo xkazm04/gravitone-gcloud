@@ -17,7 +17,7 @@ import { CompositionList } from "../../app/(studio)/projects/_plan/CompositionLi
 import { onOpen, settledOutcome } from "../../app/(studio)/projects/_plan/receipt.tsx";
 import { clock } from "../../app/(studio)/projects/_plan/shelf.ts";
 import { titleGate } from "../../app/(studio)/projects/_plan/title.ts";
-import { commitAll, lastDoor, post, type Answer, type Source } from "../../app/(studio)/projects/import/answer.ts";
+import { commitAll, lastDoor, post, readAccounts, type Answer, type Previewed, type Source } from "../../app/(studio)/projects/import/answer.ts";
 import { harness } from "../golden-path/_studio/hooks.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
@@ -282,5 +282,42 @@ describe("a row of the composition list is a client navigation", () => {
     expect(rows.map((r) => (r.type === "a" ? "a" : "Link"))).toEqual(["Link", "Link", "Link"]);
     // All lanes is one static route; the project and v1 rows are a page per row.
     expect(rows.slice(1).map((r) => (r.props as { prefetch?: boolean }).prefetch)).toEqual([false, false]);
+  });
+});
+
+describe("the first door previews every account it can read", () => {
+  // One account v1's archive reader (or the route) refuses used to BE the screen: the accounts
+  // after it were never previewed, importable ones included.
+  const source = (name: string): Source => ({ name, bytes: new Blob([name]), preview: { token: `t-${name}`, projects: [], themes: [], items: [], losses: [], bytes: 0 } as unknown as Source["preview"] });
+  const previewOne = async (uid: string): Promise<Previewed> =>
+    uid === "bad" ? { kind: "refused", name: uid, code: "truncated", message: "the archive ends mid-record" } : uid === "odd" ? { kind: "error", message: "boom" } : source(uid);
+  const exportOne = async (uid: string): Promise<Blob> => {
+    if (uid === "locked") throw new Error("database is closed");
+    return new Blob([uid]);
+  };
+
+  it("a refused account is a refused row beside the previews of the accounts after it", async () => {
+    const r = await readAccounts(["bad", "good-a", "good-b"], exportOne, previewOne);
+    expect(r.sources.map((x) => x.name)).toEqual(["good-a", "good-b"]);
+    expect(r.refused).toEqual([{ name: "bad", code: "truncated", message: "the archive ends mid-record" }]);
+  });
+
+  it("an account that cannot be exported, or fails to preview, is named with its words and does not stop the walk", async () => {
+    const r = await readAccounts(["locked", "odd", "good"], exportOne, previewOne);
+    expect(r.sources.map((x) => x.name)).toEqual(["good"]);
+    expect(r.refused).toEqual([
+      { name: "locked", code: "unreadable", message: "database is closed" },
+      { name: "odd", code: "error", message: "boom" },
+    ]);
+  });
+
+  it("with nothing refused there are no refused rows", async () => {
+    expect((await readAccounts(["a", "b"], exportOne, previewOne)).refused).toEqual([]);
+  });
+
+  it("ImportView walks the browser's accounts through it, and a refused one is never the whole phase", () => {
+    const view = code("import/ImportView.tsx");
+    expect(view.match(/await readAccounts\(/g) ?? []).toHaveLength(1);
+    expect(view.match(/if \(!isSource\(one\)\) return one;/g) ?? []).toEqual([]);
   });
 });
