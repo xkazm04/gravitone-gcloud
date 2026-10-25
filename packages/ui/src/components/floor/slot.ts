@@ -22,6 +22,7 @@
 
 import { SLOT_MOVABLE } from "@gt/domain/slot.machine";
 
+import { count } from "../tally/count.ts";
 import { clock, type RailSlot } from "./calendar.ts";
 
 const HOUR_MS = 3_600_000;
@@ -106,12 +107,10 @@ export function breakOf(error: string): number {
 
 /* ── metrics: null is unmeasured, a sum over gaps is a floor ─────────────── */
 
-const NUM = new Intl.NumberFormat("en-US");
-
 /** A measured figure: "—" when never measured, "≥ N" when some parts were not, else N. */
 export function figure(value: number | null, lowerBound = false): string {
   if (value === null || !Number.isFinite(value)) return "—";
-  return lowerBound ? `≥ ${NUM.format(value)}` : NUM.format(value);
+  return lowerBound ? `≥ ${count(value)}` : count(value);
 }
 
 /** Seconds as m:ss (h:mm:ss past an hour); "—" when unmeasured. */
@@ -126,5 +125,5 @@ export function duration(s: number | null): string {
 /** A signed change: "+3", "−2", "0"; "—" when unmeasured. */
 export function signed(n: number | null): string {
   if (n === null || !Number.isFinite(n)) return "—";
-  return n > 0 ? `+${NUM.format(n)}` : n < 0 ? `−${NUM.format(-n)}` : "0";
+  return n > 0 ? `+${count(n)}` : n < 0 ? `−${count(-n)}` : "0";
 }

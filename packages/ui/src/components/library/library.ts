@@ -17,6 +17,7 @@
 import { FIXED_ORDER, LIBRARY_STATES, type LibrarySource, type LibraryState } from "@gt/domain/library";
 
 import { tokens, type TokenName } from "../../tokens.ts";
+import { count } from "../tally/count.ts";
 import type { Layout } from "../../window/core.ts";
 
 export type Density = "s" | "m" | "l";
@@ -160,4 +161,4 @@ export function backStep(s: { readonly railDrawer: boolean; readonly detailDrawe
 }
 
 /** `12,345`: the prototype's en-US counts, the same on the server and in the browser. */
-export const count = (n: number): string => n.toLocaleString("en-US");
+export { count };

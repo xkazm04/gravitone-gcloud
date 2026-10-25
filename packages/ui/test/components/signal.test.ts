@@ -2,6 +2,8 @@
 // to. Rendered with react-dom/server (Vitest runs without a DOM).
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { Chip } from "../../src/components/chip/Chip.tsx";
 import chip from "../../src/components/chip/Chip.module.css";
@@ -56,6 +58,30 @@ describe("Tally", () => {
 
   test("a bare count speaks the count", () => {
     expect(html(h(Tally, { value: 20 }))).toMatch(/>20<\/span><\/span>$/);
+  });
+
+  test("a number groups its thousands, in the drawing and the spoken sentence; a string is the caller's", () => {
+    const t = html(h(Tally, { value: 12345, of: 20000, label: "events" }));
+    expect(t).toContain(`<span aria-hidden="true">12,345/20,000</span>`);
+    expect(t).toMatch(/>events 12,345 of 20,000<\/span><\/span>$/);
+    expect(html(h(Tally, { value: "48.2k" }))).toContain(`aria-hidden="true">48.2k<`);
+  });
+
+  test("one number formatter in @gt/ui: Tally, the floor's figures, the library's counts and the model chips share it", () => {
+    const files: string[] = [];
+    const walk = (dir: string): void => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (/\.(ts|tsx)$/.test(name)) files.push(full);
+      }
+    };
+    walk(join(import.meta.dirname, "../../src"));
+    const sites = files.flatMap((f) => {
+      const code = readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      return code.match(/toLocaleString\(|Intl\.NumberFormat/g)?.map(() => f) ?? [];
+    });
+    expect(sites).toHaveLength(1);
   });
 });
 

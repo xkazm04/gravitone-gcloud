@@ -20,6 +20,7 @@ import { lazy, Suspense, useState, useSyncExternalStore } from "react";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
+import { count } from "../tally/count.ts";
 import { Toggle } from "../toggle/Toggle.tsx";
 import type { ModelLoad } from "./model.ts";
 import s from "./ModelViewer.module.css";
@@ -60,8 +61,6 @@ let webgl: boolean | undefined;
 const webglNow = (): boolean => (webgl ??= hasWebGL());
 const unchanging = (): (() => void) => () => undefined;
 
-const fmt = (n: number): string => n.toLocaleString("en-US");
-
 export function ModelViewer({ src, title, poster, tris, bones, fill = false }: ModelViewerProps) {
   const gl = useSyncExternalStore(unchanging, webglNow, () => null);
   const [loaded, setLoad] = useState<ModelLoad>({ kind: "loading" });
@@ -95,7 +94,7 @@ export function ModelViewer({ src, title, poster, tris, bones, fill = false }: M
         )}
       </div>
       <figcaption className={s.bar}>
-        {shownTris !== undefined && <Chip label="tris" value={fmt(shownTris)} casing="lower" />}
+        {shownTris !== undefined && <Chip label="tris" value={count(shownTris)} casing="lower" />}
         {shownBones !== undefined && shownBones > 0 && <Chip label="bones" value={shownBones} casing="lower" />}
         {stage && (
           <span className={s.toggles}>
