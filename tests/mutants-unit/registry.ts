@@ -6878,4 +6878,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "align-items:center;",
     why: "The rail's +N more / fewer control is 22px tall again, under the 24px touch target, 2px above the last facet row.",
   },
+  {
+    id: "hatch-stripe-under-mark-floor",
+    test: "tests/next-gates/hatch-contrast.test.ts",
+    file: "packages/ui/tokens/source.json",
+    find: "rgba(255,255,255,.36) 0 2px,transparent 2px 5px",
+    replace: "rgba(255,255,255,.28) 0 2px,transparent 2px 5px",
+    why: "The --hatch stripes fall back to .28 alpha: 2.5:1 on a StackBar's track, so undecided reads as empty.",
+  },
 ];

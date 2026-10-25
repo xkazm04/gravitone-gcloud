@@ -169,7 +169,7 @@ export const tokens = {
   "chan-tiktok": "#8ef0f7",
   "chan-youtube": "#ff8a8a",
   "cloud-mark": "#cbd5e1",
-  "hatch": "repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 2px,transparent 2px 5px)",
+  "hatch": "repeating-linear-gradient(135deg,rgba(255,255,255,.36) 0 2px,transparent 2px 5px)",
   "panel-ground": "rgba(0,0,0,.14)",
   "warn-cut": "#3b0712",
   // board

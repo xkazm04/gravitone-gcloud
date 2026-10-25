@@ -182,7 +182,7 @@
     {"id": "roles-mark", "tokens": [
       {"name": "panel-ground", "tier": "role", "value": "rgba(0,0,0,.14)", "note": "Recessed ground of a route panel."},
       {"name": "ambient", "tier": "role", "value": "radial-gradient(900px 500px at 8% -10%,rgba(34,211,238,.10),transparent 60%),radial-gradient(700px 600px at 100% 110%,rgba(139,92,246,.10),transparent 60%),radial-gradient(600px 400px at 70% 0%,rgba(16,185,129,.06),transparent 60%)", "note": "The ambient light behind every page (prototype tokens.css body::before)."},
-      {"name": "hatch", "tier": "role", "value": "repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 2px,transparent 2px 5px)", "note": "Fill of an undecided or unmeasured span."},
+      {"name": "hatch", "tier": "role", "value": "repeating-linear-gradient(135deg,rgba(255,255,255,.36) 0 2px,transparent 2px 5px)", "note": "Fill of an undecided or unmeasured span."},
       {"name": "warn-cut", "tier": "role", "value": "#3b0712", "note": "Cut-out mark inside the warning glyph."},
       {"name": "chan-youtube", "tier": "role", "value": "#ff8a8a", "note": "Mark colour of the YouTube channel."},
       {"name": "chan-tiktok", "tier": "role", "value": "#8ef0f7", "note": "Mark colour of the TikTok channel."},
