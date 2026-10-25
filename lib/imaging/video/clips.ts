@@ -229,6 +229,18 @@ async function run(
         outcome: outcome.kind === "done" ? "served" : "failed",
         basis: acc.costBasis,
       });
+    } else if (outcome.kind === "failed" && outcome.billed) {
+      // The vendor took the start and never named a job: a timeout or a 5xx is
+      // presumed billed (lib/imaging/errors.ts presumedBilled), so the hold's
+      // figure is booked as an estimate rather than released as $0.
+      await settleVideo(hold, {
+        usd: hold.amount,
+        project: rec.projectId,
+        provider: a.id,
+        model: rec.model,
+        outcome: "failed",
+        basis: "estimated",
+      });
     } else await releaseVideo(hold);
   } catch (e) {
     console.error(

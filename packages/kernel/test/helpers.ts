@@ -19,12 +19,15 @@ export function scratch(label: string): { dir: string; dispose(): void } {
 }
 
 /** The Python 3 the cross-language suites spawn (packages/kernel/py): `python`, `python3`, then the
- *  Windows `py` launcher; undefined when none answers, and each suite skips with its own warning. */
+ *  Windows `py` launcher; undefined when none answers, and each suite skips with its own warning.
+ *  Under CI (`CI` set) a missing interpreter throws instead: a skipped protocol check must not read
+ *  as a pass on a runner image that lost its python3. */
 export function findPython(): string | undefined {
   for (const bin of ["python", "python3", "py"]) {
     const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
     if (r.status === 0 && r.stdout.trim() === "3") return bin;
   }
+  if (process.env.CI) throw new Error("findPython: CI is set and no Python 3 answered (python, python3, py); the cross-language kernel suites would skip green");
   return undefined;
 }
 

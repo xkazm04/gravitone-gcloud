@@ -32,7 +32,7 @@
 
 import { errorMessage } from "@gt/domain/errors";
 import { sleep as defaultSleep } from "../../sleep";
-import { ImagingError } from "../errors";
+import { ImagingError, presumedBilled } from "../errors";
 import { isConfigured, keyFor } from "../env";
 import { requestJson } from "../http";
 import { scrub } from "../log";
@@ -79,7 +79,11 @@ export interface VideoAccepted {
 
 export type VideoOutcome =
   | { kind: "done"; bytes: Uint8Array }
-  | { kind: "failed"; message: string }
+  /** `billed`: the vendor was reached before the failure and no id came back
+   *  (a start that timed out or answered 5xx). The runner books the gate's hold
+   *  as a failed estimate row instead of releasing it, by the same
+   *  presumedBilled rule the image meter reads. */
+  | { kind: "failed"; message: string; billed?: true }
   | { kind: "refused"; message: string };
 
 export interface VideoAdapter {
@@ -210,7 +214,8 @@ export function leonardoVideoAdapter(opts: LeonardoVideoOptions = {}): VideoAdap
       } catch (e) {
         const said = e instanceof ImagingError ? messageIn(e.detail) : "";
         if (said && MODERATION_RE.test(said)) return { kind: "refused", message: vendorWords(said) };
-        return { kind: "failed", message: `Leonardo did not start the clip: ${describe(e)}` };
+        const message = `Leonardo did not start the clip: ${describe(e)}`;
+        return e instanceof ImagingError && presumedBilled(e) ? { kind: "failed", message, billed: true } : { kind: "failed", message };
       }
 
       // v2 nests the job under `generate`, alongside what it just charged.

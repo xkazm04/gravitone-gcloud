@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { findPython } from "./helpers.ts";
 
@@ -38,4 +38,26 @@ describe.skipIf(python === undefined)("a kernel Python script asked with no argu
     expect(lines.length, `stderr: ${JSON.stringify(r.stderr)}`).toBeGreaterThan(0);
     for (const line of lines) expect(line).toMatch(new RegExp(`^python (-I )?(packages/kernel/py/)?${file.replace(".", "\\.")} `));
   }, 30_000);
+});
+
+describe("findPython under CI", () => {
+  // A child process with only node on PATH: no interpreter answers. Off CI the suites skip with a
+  // warning; on CI the lookup itself fails, so a runner image without python3 cannot read as green.
+  const lookup = (ci: string | undefined) =>
+    spawnSync(process.execPath, ["-e", `import(${JSON.stringify(pathToFileURL(path.join(here, "helpers.ts")).href)}).then((m) => console.log(String(m.findPython())))`], {
+      encoding: "utf8",
+      env: { PATH: path.dirname(process.execPath), SystemRoot: process.env.SystemRoot, ...(ci === undefined ? {} : { CI: ci }) },
+    });
+
+  it("throws when CI is set and no Python 3 answers", () => {
+    const r = lookup("1");
+    expect(r.status, r.stderr).not.toBe(0);
+    expect(r.stderr).toMatch(/findPython: CI is set/);
+  });
+
+  it("answers undefined off CI so a laptop without Python still runs the rest", () => {
+    const r = lookup(undefined);
+    expect(r.stderr).toBe("");
+    expect(r.stdout.trim()).toBe("undefined");
+  });
 });

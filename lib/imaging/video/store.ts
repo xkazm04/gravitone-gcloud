@@ -17,7 +17,7 @@
 //   record that has lost one of them.
 
 import { randomBytes } from "node:crypto";
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { renameRetry, type RetryOptions } from "../../renameRetry";
@@ -66,8 +66,15 @@ const RENAME_RETRY: RetryOptions = { retries: 20, delayMs: (attempt) => 5 + atte
 async function writeAtomic(file: string, data: string | Uint8Array): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true });
   const tmp = tmpOf(file);
-  await writeFile(tmp, data);
-  await renameRetry(tmp, file, RENAME_RETRY);
+  try {
+    await writeFile(tmp, data);
+    await renameRetry(tmp, file, RENAME_RETRY);
+  } catch (e) {
+    // A rename that never succeeds (up to 200 MB of mp4) must not leave its tmp
+    // behind: nothing lists or reads a .tmp name, so it would sit here forever.
+    await rm(tmp, { force: true }).catch(() => undefined);
+    throw e;
+  }
 }
 
 export async function writeClipRecord(rec: ClipRecord): Promise<void> {

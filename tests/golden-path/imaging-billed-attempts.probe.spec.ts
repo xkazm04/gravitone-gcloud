@@ -27,6 +27,7 @@ import { join } from "node:path";
 import { keepEnv, stripComments } from "./_helpers";
 import { spendRows, __resetBudget, BUDGET_VAR, WINDOW_VAR, FLOOR_VAR } from "@/lib/imaging/budget";
 import { ImagingError, presumedBilled } from "@/lib/imaging/errors";
+import { leonardoProvider } from "@/lib/imaging/providers/leonardo";
 import { ollamaProvider } from "@/lib/imaging/providers/ollama";
 import { qwenProvider } from "@/lib/imaging/providers/qwen";
 import { billedOnFailure, generate, recognize } from "@/lib/imaging/router";
@@ -237,6 +238,21 @@ test("12. leonardo started the generation, then its poll reports FAILED -> `fail
   expect(count(LEONARDO, "POST")).toBe(1);
   const rows = await spendRows();
   expect(rows.map((r) => r.outcome)).toEqual(["failed"]);
+});
+
+test("19. leonardo started the generation, then every poll answers 401 -> the give-up carries the 401 sentence", async () => {
+  // Same rule the video and Flare adapters keep: polls that all failed must not read as a slow vendor.
+  process.env.LEONARDO_API_KEY = "probe-leonardo-key";
+  stubFetch((_n, url, method) => {
+    if (method === "POST") return json({ sdGenerationJob: { generationId: "gen-401", apiCreditCost: 10 } });
+    if (method === "DELETE") return json({});
+    return json({ error: "Invalid authentication token" }, 401);
+  });
+  const p = leonardoProvider({ sleep: async () => undefined, pollMs: 1, maxPolls: 3 });
+  const err = await failure(p.generate!({ prompt: "probe poll 401", aspect: "16:9", count: 1 }));
+  expect(err.kind).toBe("timeout");
+  expect(err.message, "the polls' own failure was dropped").toMatch(/Invalid authentication token/);
+  expect(err.message).toMatch(/last poll failed/);
 });
 
 /** The Ollama eye takes the card's lease from the kernel store: a temp store per case. */

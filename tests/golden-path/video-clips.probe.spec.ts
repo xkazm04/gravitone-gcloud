@@ -23,14 +23,14 @@
 // adapter does it against a stubbed global fetch and a resolver that never asks
 // DNS, with a placeholder key that is not a credential.
 
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
 import { keepEnv } from "./_helpers";
-import { VIDEO_BUDGET_VAR, __resetVideoBudget, videoBudgetStats } from "@/lib/imaging/video/budget";
+import { VIDEO_BUDGET_VAR, __resetVideoBudget, videoBudgetStats, videoSpendRows } from "@/lib/imaging/video/budget";
 import { parseClipRequest, readClip, setVideoAdapterForTests, startClip, videoCapability } from "@/lib/imaging/video/clips";
 import { videoErrorResponse } from "@/lib/imaging/video/errors";
 import { leonardoVideoAdapter, type VideoAdapter, type VideoOutcome } from "@/lib/imaging/video/leonardo";
@@ -167,6 +167,15 @@ test("store: a minted id round-trips a record and an mp4; patches serialise", as
   writeFileSync(clipRecordPath(id), "{ half a rec");
   await expect(readClipRecord(id)).rejects.toThrow(/not a readable clip record/);
   expect((await listClipRecords()).unreadable).toBe(1);
+});
+
+test("store: a write whose rename never succeeds leaves no .tmp behind", async () => {
+  // A directory squatting on the target name makes the rename fail for good (EPERM on
+  // Windows after its retries, EISDIR elsewhere) - no seam into the retry needed.
+  const id = mintClipId();
+  mkdirSync(clipRecordPath(id), { recursive: true });
+  await expect(writeClipRecord({ clipId: id } as ClipRecord)).rejects.toThrow();
+  expect(readdirSync(dir).filter((n) => n.endsWith(".tmp")), "an orphan tmp survived the failed rename").toEqual([]);
 });
 
 test("store: an id the store did not mint names no path", async () => {
@@ -494,5 +503,34 @@ test.describe("leonardo adapter against a scripted vendor (no network)", () => {
       expect(out.kind, status).toBe(kind);
       expect(out.kind !== "done" && out.message).toMatch(new RegExp(`vendor says ${status}`));
     }
+  });
+
+  test("a start the vendor received and then timed out on books a failed row at the hold; an undispatched start books none", async () => {
+    // The start POST is aborted after dispatch: the vendor probably ran it. The video window
+    // must read the same rule the image meter reads (presumedBilled), not $0.
+    const abort = Object.assign(new Error("aborted"), { name: "AbortError" });
+    const refuseStart = (err: Error): Script => (url, init) => {
+      const c = common(url, init);
+      if (c) return c;
+      if (url.endsWith("/v2/generations")) throw err;
+      return undefined;
+    };
+    const run = async () => {
+      setVideoAdapterForTests(leonardoVideoAdapter(opts));
+      const { done } = await startClip(body({ model: "hailuo-03" }));
+      return done;
+    };
+
+    stub(refuseStart(abort), []);
+    const rec = await run();
+    expect(rec.status).toBe("failed");
+    const rows = await videoSpendRows();
+    expect(rows.map((r) => [r.outcome, r.amount, r.basis])).toEqual([["failed", gateHoldUsd("hailuo-03", 5), "estimated"]]);
+
+    // Control: a refusal to connect never left the machine - nothing is booked.
+    __resetVideoBudget();
+    stub((url, init) => common(url, init) ?? (url.endsWith("/v2/generations") ? (() => { throw new TypeError("fetch failed"); })() : undefined), []);
+    expect((await run()).status).toBe("failed");
+    expect(await videoSpendRows()).toEqual([]);
   });
 });
