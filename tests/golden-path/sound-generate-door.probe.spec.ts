@@ -11,7 +11,7 @@
 // other URL fails the test. SOUND_STORE_DIR / SOUND_LEDGER_PATH point at a fresh temp dir per
 // test and the env is restored afterwards (keepEnv).
 
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -24,7 +24,7 @@ import { runSoundCli } from "@/lib/sound/cli";
 import { buildEditPlan, editSeconds } from "@/lib/sound/editPlan";
 import { generateTake, parseGenerateRequest } from "@/lib/sound/generate";
 import { parseLessonInput } from "@/lib/sound/ledger";
-import { readTakes, SoundError } from "@/lib/sound/store";
+import { DEFAULT_GROUPS, readGroups, readTakes, SoundError } from "@/lib/sound/store";
 import { createTake } from "@/lib/sound/takes";
 
 import { keepEnv } from "./_helpers";
@@ -286,4 +286,17 @@ test("lesson: the claim the server keeps is capped where the composer caps it (l
   const at = (n: number) => () => parseLessonInput({ kind: "music", claim: "w".repeat(n) });
   expect(at(CLAIM_MAX)).not.toThrow();
   expect(at(CLAIM_MAX + 1)).toThrow(String(CLAIM_MAX));
+});
+
+/* ── a groups file missing one kind's rows ───────────────────────────────── */
+
+test("groups: a file that lost one kind's rows reads that kind at its defaults, the other as written", async () => {
+  mkdirSync(process.env.SOUND_STORE_DIR!, { recursive: true });
+  writeFileSync(path.join(process.env.SOUND_STORE_DIR!, "groups.json"), JSON.stringify({ version: 1, groups: { music: ["drone"], sfx: "impacts" } }), "utf8");
+  const { groups } = await readGroups();
+  console.log(`[sound-door] groups read -> ${JSON.stringify(groups)}`);
+  expect(groups.music).toEqual(["drone"]);
+  expect(groups.sfx).toEqual([...DEFAULT_GROUPS.sfx]);
+  writeFileSync(path.join(process.env.SOUND_STORE_DIR!, "groups.json"), JSON.stringify({ version: 1, groups: { sfx: ["hits"] } }), "utf8");
+  expect((await readGroups()).groups).toEqual({ music: [...DEFAULT_GROUPS.music], sfx: ["hits"] });
 });

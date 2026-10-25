@@ -134,7 +134,13 @@ async function readKind<K extends Kind>(kind: K): Promise<Shape[K]> {
     const f = parsed as HuntsFile;
     f.hunts = Array.isArray(f.hunts) ? f.hunts.map((h) => ({ ...h, nodes: Array.isArray(h.nodes) ? h.nodes.map(withNodeDefaults) : [] })) : [];
   }
-  else if (kind === "groups") (parsed as GroupsFile).groups ??= EMPTY.groups().groups;
+  else if (kind === "groups") {
+    // Per kind: a file that lost (or mangled) one kind's rows reads that kind at its defaults, not
+    // as undefined - the board and the group edit index groups[kind] and would throw on it.
+    const g = ((parsed as GroupsFile).groups ?? {}) as Partial<Record<keyof SoundGroups, unknown>>;
+    const rows = (v: unknown, k: keyof SoundGroups): string[] => (Array.isArray(v) && v.every((x) => typeof x === "string") ? v : [...DEFAULT_GROUPS[k]]);
+    (parsed as GroupsFile).groups = { music: rows(g.music, "music"), sfx: rows(g.sfx, "sfx") };
+  }
   return parsed;
 }
 
