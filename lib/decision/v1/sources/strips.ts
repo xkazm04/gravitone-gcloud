@@ -11,7 +11,7 @@ import type { ApplyClaim } from "@gt/kernel/decision/apply";
 import type { InitialDecision } from "@gt/kernel/decision/driver";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
-import { commitStripRun, getStripRun, patchStripVerdicts, planStripCommit, previewStripCommit, stripFileStat, stripsRoot } from "../../../foundry/strips/store.ts";
+import { commitStripRun, getStripRun, judgedVerdicts, patchStripVerdicts, planStripCommit, previewStripCommit, stripFileStat, stripsRoot } from "../../../foundry/strips/store.ts";
 import { JUDGEABLE, STRIP_COMMITTABLE } from "../../../foundry/strips/triage.ts";
 import { STRIP_CHIPS, type StripCard, type StripChip, type StripRun, type StripVerdict, type StripVerdicts } from "../../../foundry/strips/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
@@ -230,7 +230,7 @@ function consequence(v1: StripsV1, at: DecisionsAt): Result<Preview> {
   if (no !== undefined) return err("refused", `strip run ${v1.run.id}: ${no}`);
   const cards = judgeable(v1);
   const ids = new Set(cards.map((c) => c.id));
-  const verdicts = effectiveVerdicts(v1, at, ids);
+  const verdicts = judgedVerdicts(v1.run, effectiveVerdicts(v1, at, ids));
   const plan = planStripCommit(v1.run, verdicts);
   // The universe's own root (store.ts `stripsRoot`, Phase 4 L33), repo-relative as the consequence names it.
   const runRel = (rel: string) => `${path.relative(process.cwd(), stripsRoot()).replace(/\\/g, "/")}/${v1.run.id}/${rel}`;

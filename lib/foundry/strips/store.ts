@@ -306,8 +306,17 @@ function approachOf(run: StripRun, card: StripCard): Approach | undefined {
   return run.approaches.find((a) => a.id === card.approach);
 }
 
+/** The verdicts that still stand: the verdict door takes one only on a JUDGEABLE
+ *  card, so a keep or reject left on a card a retry re-rendered as failed is not
+ *  read by the plan, the commit or the Board's preview. */
+export function judgedVerdicts(run: StripRun, stored: StripVerdicts): StripVerdicts {
+  const judgeable = new Set(run.cards.filter((c) => JUDGEABLE.includes(c.status)).map((c) => c.id));
+  return Object.fromEntries(Object.entries(stored).filter(([cardId]) => judgeable.has(cardId)));
+}
+
 /** Pure projection of what `commitStripRun` will do. */
-export function planStripCommit(run: StripRun, verdicts: StripVerdicts): StripCommitPlan {
+export function planStripCommit(run: StripRun, stored: StripVerdicts): StripCommitPlan {
+  const verdicts = judgedVerdicts(run, stored);
   const kept = run.cards.filter((c) => verdicts[c.id]?.verdict === "keep");
   const rejected = run.cards.filter((c) => verdicts[c.id]?.verdict === "reject");
   const del: string[] = [];
@@ -411,7 +420,7 @@ export async function commitStripRun(id: string, token?: string): Promise<StripC
     if (run.status === "committed") throw new FoundryError("This strip run is already committed.", 409);
     if (run.dry === true) throw new FoundryError("This strip run was a dry job: its pages are stand-ins and nothing was captured. It cannot be committed.", 409);
     if (!STRIP_COMMITTABLE.includes(run.status)) throw new FoundryError("The pipeline is still running this strip run.", 409);
-    const verdicts = await readStripVerdicts(id);
+    const verdicts = judgedVerdicts(run, await readStripVerdicts(id));
     const plan = planStripCommit(run, verdicts);
     if (token !== undefined && token !== plan.token) throw new FoundryError("The run state changed since the preview was generated.", 409);
 

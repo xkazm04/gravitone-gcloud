@@ -349,3 +349,24 @@ test("commit: a replica whose sheet matched its original's (noise 0) still commi
   expect(JSON.parse(readFileSync(runFile, "utf8")).status).toBe("committed");
   expect(readFileSync(path.join(ROOT, runId, "findings.md"), "utf8")).toMatch(/^- E01: no noise floor/m);
 });
+
+test("commit: a verdict stands only on a card that is still rendered (the verdict door's own rule)", async () => {
+  expect((await put({ verdicts: { "edu-edu-01--E01": { verdict: "keep", at: "2026-10-06T00:00:00Z" }, "edu-edu-01--E02": { verdict: "reject", at: "2026-10-06T00:00:01Z" } } })).status).toBe(200);
+  // A retry re-rendered both after the operator judged them.
+  const runFile = path.join(ROOT, runId, "run.json");
+  const run = JSON.parse(readFileSync(runFile, "utf8")) as StripRun;
+  run.cards.find((c) => c.id === "edu-edu-01--E01")!.status = "render-failed";
+  run.cards.find((c) => c.id === "edu-edu-01--E02")!.status = "lint-failed";
+  writeFileSync(runFile, JSON.stringify(run, null, 2));
+
+  const plan = await previewStripCommit(runId);
+  console.log(`[strips] stale verdicts on unrendered cards -> ${JSON.stringify(plan.counts)} styles ${plan.styles.length} delete ${plan.delete.length}`);
+  expect(plan.counts).toEqual({ kept: 0, rejected: 0, undecided: 4 });
+  expect(plan.styles).toEqual([]);
+  expect(plan.delete).toEqual([]);
+
+  const res = await answer(() => commitStripRun(runId, plan.token));
+  expect(res.status).toBe(200);
+  expect(existsSync(path.join(foundryDir(), "motion-styles", `${runId}--edu-edu-01--E01`)), "nothing promoted").toBe(false);
+  expect(existsSync(path.join(ROOT, runId, "edu-edu-01--E02", "strip.webm")), "nothing deleted").toBe(true);
+});
