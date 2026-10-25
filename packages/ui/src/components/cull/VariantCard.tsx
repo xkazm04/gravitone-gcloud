@@ -8,7 +8,7 @@
 // A MODEL (model/*, a game asset's glb - spark game-3d-assets): the variant under the cursor is the
 // live 3D viewer, every other one its poster render, so one WebGL context exists at a time and it
 // follows the cursor. The live stage is not inside the media button - the viewer's own toggles are
-// buttons - and a press on it takes no focus, so K, X, the arrows and Z still reach the desk; it
+// buttons - and a press on it takes no focus, so the number keys, the arrows and Z still reach the desk; it
 // orbits by pointer only. Lazy: a run that never shows a model fetches none of three.
 //
 // WORDS (text/*) are one wide card: the label as the headline, the body as paragraphs and a list (WordsBody) -

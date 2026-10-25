@@ -188,7 +188,7 @@ export function noteAct(current: BoardVerdict | undefined, text: string, noteMax
   return t === "" ? { kind: "mark", verdict: bare, cleared: true } : { kind: "mark", verdict: { ...bare, note: t }, cleared: false };
 }
 
-/** A verdict the keys or a click cast, carrying the note the tile already holds (a note survives K, X and a reason). */
+/** A verdict the keys or a click cast, carrying the note the tile already holds (a note survives 1, 2-4 and 5). */
 export function keepingNote(prev: BoardVerdict | undefined, next: BoardVerdict | null): BoardVerdict | null {
   if (next === null || next.note !== undefined || prev?.note === undefined) return next;
   return { ...next, note: prev.note };
