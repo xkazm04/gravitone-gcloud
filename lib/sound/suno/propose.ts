@@ -108,6 +108,14 @@ export function parseProposals(json: unknown, count: number): { fields: NewPropo
 
 const sameLane = (a: SunoLane, b: SunoLane) => a.axis === b.axis && a.value === b.value;
 
+/** The lane's own prompts, newest first, then its job styles (a job outlives a deleted proposal):
+ *  what is already written there, so a turn varies from it. One rule for the lane draft and the sentence. */
+function laneExamples(f: Awaited<ReturnType<typeof readSuno>>, lane: SunoLane): string[] {
+  const proposed = f.proposals.filter((p) => sameLane(p.lane, lane)).reverse().map((p) => p.fields.style);
+  const jobStyles = f.jobs.filter((j) => sameLane(j.lane, lane)).map((j) => j.fields.style);
+  return [...new Set([...proposed, ...jobStyles])].slice(0, EXAMPLES_MAX);
+}
+
 /* ── one prompt from a sentence (L52) ─────────────────────────────────────── */
 //
 // The Floor's audio composer launches from a SENTENCE ("A bed that holds a full minute…"), and
@@ -136,7 +144,7 @@ export function sentencePrompt(sections: Record<string, string>, sentence: strin
 export async function proposeFromSentence(sentence: string, lane: SunoLane, reason: ReasonFn = routerReason): Promise<{ fields: NewProposal["fields"]; note?: string }> {
   if (!sentence.trim()) throw new SoundError("a Suno prompt needs a first sentence", 400);
   const f = await readSuno();
-  const examples = [...new Set(f.proposals.filter((p) => sameLane(p.lane, lane)).reverse().map((p) => p.fields.style))].slice(0, EXAMPLES_MAX);
+  const examples = laneExamples(f, lane);
   const out = await reason({ turn: SUNO_TURN.propose, prompt: sentencePrompt(await promptSections(), sentence, lane, examples), schema: PROPOSE_SCHEMA });
   const [first] = parseProposals(out.json, 1);
   if (first === undefined) throw new SoundError("the text engine wrote no usable Suno prompt", 502);
@@ -158,8 +166,7 @@ export async function proposeSuno(
   const lane = source ? source.lane : input.lane;
   // Examples: the lane's own prompts, newest first - what is already written
   // there, so the model varies from it instead of repeating it.
-  const jobStyles = f.jobs.filter((j) => sameLane(j.lane, lane)).map((j) => j.fields.style);
-  const examples = [...new Set([...f.proposals.filter((p) => sameLane(p.lane, lane)).reverse().map((p) => p.fields.style), ...jobStyles])].slice(0, EXAMPLES_MAX);
+  const examples = laneExamples(f, lane);
   const sections = await promptSections();
   const out = await reason({ turn: SUNO_TURN[source ? "riff" : "propose"], prompt: proposePrompt(sections, lane, count, examples, source), schema: PROPOSE_SCHEMA });
   const rows = parseProposals(out.json, count);

@@ -7270,4 +7270,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void 0;",
     why: "A take's copy or a clip's download that fails part-way leaves its staged half in the job folder.",
   },
+  {
+    id: "suno-sentence-examples-include-job-styles",
+    test: "tests/next-server/suno-propose-examples.test.ts",
+    file: "lib/sound/suno/propose.ts",
+    find: "[...new Set([...proposed, ...jobStyles])]",
+    replace: "[...new Set([...proposed])]",
+    why: "A lane's rendered prompts vanish from both Suno turns once their proposals are deleted, so a draft repeats what was rendered.",
+  },
 ];
