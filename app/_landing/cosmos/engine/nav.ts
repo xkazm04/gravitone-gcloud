@@ -55,6 +55,18 @@ export function setLv(cx: Cx, lv: Level): void {
   renderNav(cx);
 }
 
+/** a template or category has just opened: the card or tile that opened it is inert now, so
+ *  the focus goes to the stage's first control (or the stage itself when it has none) */
+export function focusStage(cx: Cx): void {
+  const v = cx.els.stageView;
+  const b = [...v.querySelectorAll<HTMLButtonElement>(".sv-nav button")].find((x) => !x.disabled);
+  if (b) b.focus({ preventScroll: true });
+  else {
+    v.tabIndex = -1;
+    v.focus({ preventScroll: true });
+  }
+}
+
 export function renderNav(cx: Cx): void {
   const { ST } = cx;
   type Crumb = { root?: boolean; label: string; go?: () => void; cur?: boolean };

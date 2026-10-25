@@ -1129,3 +1129,73 @@ describe("library.ts: hotCat reads the area's box before it writes the hot class
     }
   });
 });
+
+
+/* ---------- opening a template or a category moves the focus onto its stage (nav.ts) ---------- */
+describe("nav.ts: the card or tile that opened a stage is inert, so the stage takes the focus", () => {
+  /** a landing mid-level: every element setLv, renderStage and buildWorld touch, on the shell's DomEl */
+  function openCx(root: DomEl, lv: "type" | "fam") {
+    const base = familyCx(root);
+    const cats = base.SV.list as { id: string; label: string; art: string }[];
+    const tpls = cats.map((c) => ({ ...c, seconds: 30 }));
+    const world = new DomEl("div");
+    world.querySelectorAll = () => [];
+    return Object.assign(base, {
+      els: { ...base.els, typeView: kid(root, "section"), libView: kid(root, "section"), world, banner: kid(root), scene: kid(root) },
+      ST: { lv, type: lv === "type" ? "film" : null, tpl: null, fam: lv === "fam" ? "styles" : null, cat: null, opener: null },
+      SV: { kind: null, idx: 0, list: [] },
+      famSorted: cats,
+      tplByType: new Map([["film", tpls]]),
+      typeById: new Map([["film", { id: "film", label: "Film" }]]),
+      templates: tpls,
+      CAR: { cards: [kid(root, "button"), kid(root, "button"), kid(root, "button")] },
+      gov: null,
+      covered: false,
+      coverT: 0,
+      navTok: 0,
+      worldTok: 0,
+      worldReady: false,
+      worldReadyAt: 0,
+      worldPre: null as unknown,
+      wplanes: [],
+      medalsEl: null,
+      reamsEl: null,
+      life: { dead: false, timeout: () => 0 as never, clear() {}, raf() {}, want() {}, observe: (x: unknown) => x, unobserve() {} },
+      raster: { run: () => new Promise(() => {}), paint: () => new Promise(() => {}), drop() {}, bump() {} },
+    });
+  }
+
+  test("openTpl from a focused card leaves the focus inside #stageView", async () => {
+    const root = shellDom();
+    stub("performance", performance);
+    const { openTpl } = await import("../../app/_landing/cosmos/engine/carousel.ts");
+    const cx = openCx(root, "type");
+    (cx.CAR.cards[1] as DomEl).focus();
+    openTpl(cx as never, 1);
+    expect(cx.els.stageView.inert).toBe(false);
+    expect(cx.els.stageView.contains(DOC.activeElement)).toBe(true);
+    expect(DOC.activeElement!.getAttribute("aria-label")).toBe("Previous: Category a");
+  });
+
+  test("openCat from a focused tile leaves the focus inside #stageView", async () => {
+    const root = shellDom();
+    stub("performance", performance);
+    const { openCat } = await import("../../app/_landing/cosmos/engine/library.ts");
+    const cx = openCx(root, "fam");
+    const tile = kid(cx.els.libView, "button");
+    tile.classes.add("cat");
+    tile.dataset.k = "0";
+    tile.focus();
+    openCat(cx as never, 0);
+    expect(cx.els.stageView.contains(DOC.activeElement)).toBe(true);
+    expect(DOC.activeElement!.getAttribute("aria-label"), "the first item has no Previous: Next takes it").toBe("Next: Category b");
+  });
+
+  test("a stage with nothing to step to takes the focus itself", async () => {
+    const root = shellDom();
+    const { focusStage } = await import("../../app/_landing/cosmos/engine/nav.ts");
+    const cx = openCx(root, "type");
+    focusStage(cx as never);
+    expect(DOC.activeElement).toBe(cx.els.stageView);
+  });
+});

@@ -5997,6 +5997,30 @@ export const MUTANTS: UnitMutant[] = [
     replace: "area.classList.add(\"hasHot\"); area.getBoundingClientRect();",
     why: "Every hover on a category tile forces a synchronous layout for the area's box ahead of the banner's own, two layouts on the hover where one is needed.",
   },
+  {
+    id: "cosmos-open-template-focus-lost",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/carousel.ts",
+    find: "focusStage(cx);",
+    replace: "void cx;",
+    why: "A keyboard user who presses Enter on a template card has the focus dropped to the page body when the card goes inert, and the next Tab starts at the HUD.",
+  },
+  {
+    id: "cosmos-open-category-focus-lost",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/library.ts",
+    find: "focusStage(cx);",
+    replace: "void cx;",
+    why: "A keyboard user who presses Enter on a category tile has the focus dropped to the page body when the sheet goes inert, and the next Tab starts at the HUD.",
+  },
+  {
+    id: "cosmos-stage-focus-skips-controls",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/nav.ts",
+    find: "if (b) b.focus({ preventScroll: true });",
+    replace: "if (b) void b;",
+    why: "Opening a stage focuses nothing, so a screen reader announces no change and the stage's Previous and Next are a Tab away from the HUD.",
+  },
   // ---- the landing's shell (landing-cosmos-shell): perf, stage, search, keyboard, the first paint
   {
     id: "cosmos-governor-judges-three-frames",

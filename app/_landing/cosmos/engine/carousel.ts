@@ -5,7 +5,7 @@
 import { paperStrip, hideBanner } from "./banner";
 import { el, ICON } from "./dom";
 import { carMetrics, cardPose, fmtDur } from "./layout";
-import { setLv } from "./nav";
+import { focusStage, setLv } from "./nav";
 import { palette } from "./palette";
 import { artGet, artPut, drawInto, type Surface } from "./raster";
 import { clamp, hash32 } from "./rng";
@@ -330,6 +330,7 @@ export function openTpl(cx: Cx, i: number): void {
   renderStage(cx, "tpl", i, r);
   setLv(cx, "tpl");
   hideBanner(cx);
+  focusStage(cx);
 }
 
 export function closeTpl(cx: Cx): void {

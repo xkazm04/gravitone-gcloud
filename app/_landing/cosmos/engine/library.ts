@@ -5,7 +5,7 @@
 import { hideBanner, showBanner } from "./banner";
 import { el, ICON } from "./dom";
 import { famItems, fmtN, squarify, tornTop } from "./layout";
-import { setLv } from "./nav";
+import { focusStage, setLv } from "./nav";
 import { palette } from "./palette";
 import { artGet, artPut, drawInto, type Surface } from "./raster";
 import type { Op } from "./rasterJobs";
@@ -188,6 +188,7 @@ export function openCat(cx: Cx, k: number): void {
   renderStage(cx, "cat", k, r);
   setLv(cx, "cat");
   hideBanner(cx);
+  focusStage(cx);
 }
 
 export function closeCat(cx: Cx): void {
