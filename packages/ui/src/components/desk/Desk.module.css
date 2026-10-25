@@ -26,6 +26,9 @@
 .foot{flex:none;display:flex;align-items:center;gap:var(--sp-loose);padding:var(--sp-4) var(--sp-6);border-top:1px solid var(--hair);background:color-mix(in srgb,var(--letterbox) 20%,transparent)}
 .commit{white-space:nowrap;margin-left:auto;display:flex;align-items:center;gap:var(--sp-4);height:var(--h-commit);padding:0 var(--sp-3) 0 var(--sp-loose);border-radius:var(--r-tile);font-weight:600;font-size:var(--fs-nav);border:1px solid color-mix(in srgb,var(--emerald) 45%,transparent);background:color-mix(in srgb,var(--emerald) 14%,transparent);color:var(--ink-bright)}
 .commit:hover{background:color-mix(in srgb,var(--emerald) 22%,transparent)}
+/* A commit in flight: the press still lands (the caller's latch decides), so the button reads as waiting, not as dead. */
+.commit[aria-busy="true"]{cursor:progress;opacity:.72}
+.commit[aria-busy="true"]:hover{background:color-mix(in srgb,var(--emerald) 14%,transparent)}
 .wait{border-color:var(--hair-2);background:color-mix(in srgb,var(--wash) 75%,transparent);color:var(--muted)}
 .refuse{border-color:color-mix(in srgb,var(--rose) 60%,transparent);background:var(--rose-a);animation:shake .4s}
 .refuse.again{animation-name:shake-again}

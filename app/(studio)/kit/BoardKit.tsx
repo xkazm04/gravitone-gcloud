@@ -174,6 +174,9 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
         <Row label="ready">
           <CommitButton mode="board.cull" refusals={0} onPress={noop} />
         </Row>
+        <Row label="committing">
+          <CommitButton mode="board.cull" refusals={0} busy onPress={noop} />
+        </Row>
       </Spec>
       <Spec names={["BlindPair"]} source="index.html :575-622 · masked until the operator picks" wide>
         <div className={b.desk}>

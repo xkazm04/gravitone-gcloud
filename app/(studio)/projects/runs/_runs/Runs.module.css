@@ -57,6 +57,13 @@
 
 @media (max-width:1440px){.legend{display:none}}
 
+/* Narrow: the list, the day-line and the inspector stack and the frame scrolls, so the day-line keeps the full width. */
+@media (max-width:900px){
+.proj{grid-template-columns:minmax(0,1fr);grid-auto-rows:min-content;overflow:auto}
+.runs{grid-template-columns:minmax(0,1fr);min-height:80vh}
+.inspector{border-left:0;border-top:1px solid var(--hair)}
+}
+
 /* Phase 4 acts: the retry with its optional ceiling, beside the other acts. */
 .retry{display:inline-flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
 .ceil{display:inline-flex;align-items:center;gap:var(--sp-1);font:500 var(--fs-micro)/1 var(--mono);color:var(--faint)}
