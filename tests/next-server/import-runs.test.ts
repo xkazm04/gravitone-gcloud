@@ -87,6 +87,20 @@ describe("v1 runs as Run rows with a terminal job", () => {
   });
 });
 
+describe("a dry import reports what the wet one will do", () => {
+  it("refuses a run the Run door refuses, with the door's sentence, and writes nothing", () => {
+    const s = store();
+    const bad: V1Run = { source: "extract", runId: "ex-bad", input: { producer: "extract", slug: "Not A Slug!", sources: 3, rounds: 2, replicas: 1, grouping: "engine" }, at: "2026-09-02T10:00:00Z", state: "done" };
+    const runs = [RUNS[0]!, bad];
+    const dry = importRuns(s, runs, { dry: true, now: 0 });
+    const wet = importRuns(store(), runs, { dry: false, now: 0 });
+    expect(wet.ok && wet.value.map((x) => x.outcome)).toEqual(["imported", "refused"]);
+    expect(dry.ok && dry.value.map((x) => [x.runId, x.outcome === "would-import" ? "imported" : x.outcome])).toEqual([["forge:r1", "imported"], ["ex-bad", "refused"]]);
+    expect(dry.ok && dry.value[1]!.reason).toBe(wet.ok ? wet.value[1]!.reason : undefined);
+    expect(s.read((x) => x.get("SELECT (SELECT count(*) FROM runs) + (SELECT count(*) FROM jobs) + (SELECT count(*) FROM events WHERE type LIKE '%imported') AS n")?.["n"])).toEqual({ ok: true, value: 0 });
+  });
+});
+
 describe("the v1 stores the importer reads", () => {
   it("reports a record whose instant no Date can hold as unread, and lists every other run of every store", async () => {
     const dir = temp("gt-import-sources-");
