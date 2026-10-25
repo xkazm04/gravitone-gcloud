@@ -120,6 +120,8 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
     return { verdict: "keep" as const, reasons: [], note: encodeSchedule({ ...schedule, ...(notes === "" ? {} : { notes }) }).slice(0, view.reasons.noteMax) };
   };
   const send = () => {
+    // The same door as a verdict: returning the packet while its commit is in flight races it.
+    if (busy) return;
     if (plan.length === 0) {
       announce("edit plan · attach a note first");
       return;
