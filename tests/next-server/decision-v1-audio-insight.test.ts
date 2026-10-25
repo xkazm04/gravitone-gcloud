@@ -16,6 +16,22 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+// The Suno draft door with a seam: `ensureFails.at` makes the n-th ensure of a confirm throw the
+// way the real one does (a SoundError 409 / a 503 lock timeout); null leaves it untouched.
+const ensureFails = vi.hoisted(() => ({ at: null as number | null, calls: 0 }));
+vi.mock("../../lib/sound/suno/draft.ts", async (orig) => {
+  const m = await orig<typeof import("../../lib/sound/suno/draft.ts")>();
+  const { SoundError } = await import("../../lib/sound/store.ts");
+  return {
+    ...m,
+    ensureDraftJob: (...a: Parameters<typeof m.ensureDraftJob>) => {
+      ensureFails.calls += 1;
+      if (ensureFails.at !== null && ensureFails.calls === ensureFails.at) return Promise.reject(new SoundError("suno store is busy", 503));
+      return m.ensureDraftJob(...a);
+    },
+  };
+});
+
 const ROOT = vi.hoisted(() => {
   const fs = process.getBuiltinModule("node:fs");
   const os = process.getBuiltinModule("node:os");
@@ -206,6 +222,27 @@ describe("the operator batch", () => {
     expect(new Set(suno().proposals.map((p) => JSON.stringify(p.fields))).size).toBe(1);
     expect(suno().proposals[0]?.fields).toMatchObject({ style: "slow synthwave, warm pads", exclude: "vocals" });
     expect(suno().jobs.map((j) => j.job)).toEqual(c.kind === "launched" ? c.jobIds : []);
+  });
+
+  it("music: a confirm that throws on draft k takes back the drafts it already queued; the retry starts clean", async () => {
+    seed([]);
+    const form = { ...music, count: 4 };
+    const rec = must(await sendBatch({ kind: "music", form, batch: "bthrows0001" }, DESK, o()));
+    if (rec.kind !== "receipt") throw new Error(rec.kind);
+    const kernelJobs = jobIds();
+    ensureFails.at = 3;
+    ensureFails.calls = 0;
+    try {
+      const r = await sendBatch({ kind: "music", form, batch: "bthrows0001" }, DESK, o({ token: rec.receipt.token }));
+      expect(r.ok ? r.value.kind : [r.error.code, r.error.message]).toEqual(["unavailable", "suno store is busy"]);
+    } finally {
+      ensureFails.at = null;
+    }
+    expect(suno().jobs.filter((j) => j.job === undefined)).toEqual([]);
+    expect(jobIds()).toEqual(kernelJobs);
+    const again = must(await sendBatch({ kind: "music", form, batch: "bthrows0001" }, DESK, o({ token: rec.receipt.token })));
+    expect(again.kind).toBe("launched");
+    expect(suno().jobs).toHaveLength(4);
   });
 
   it("sfx: ONE run of N clips under the sfx producer, its brief filed before the job; another brief under the batch is refused", async () => {

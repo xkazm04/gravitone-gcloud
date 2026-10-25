@@ -122,19 +122,25 @@ async function sunoBatch(batch: string, brief: BatchBrief, n: number, o: BatchOp
   if (pre.kind !== "receipt") return err("internal", `a batch receipt read answered ${pre.kind}`);
   if (token === undefined) return ok({ kind: "receipt", receipt: pre.receipt });
   if (pre.receipt.token !== token) return ok({ kind: "stale", fresh: pre.receipt });
-  for (const id of ids) await ensureDraftJob(id, { kind: "fields", fields }, { dry: o.mode === "dry", now: o.now });
-  const r = launchJobs(spec, { ...read, token });
-  if (r.kind === "stale") {
-    for (const id of ids) await dropUnlaunched(id);
-    return ok({ kind: "stale", fresh: r.fresh });
+  // A confirm that does not end launched takes back every draft it queued, whether the records
+  // answered stale or a draft threw part-way (a lock timeout, a vanished proposal): the retry
+  // mints a fresh batch id, so a draft left queued here is never adopted.
+  let launchedAll = false;
+  try {
+    for (const id of ids) await ensureDraftJob(id, { kind: "fields", fields }, { dry: o.mode === "dry", now: o.now });
+    const r = launchJobs(spec, { ...read, token });
+    if (r.kind === "stale") return ok({ kind: "stale", fresh: r.fresh });
+    if (r.kind !== "launched") return err("internal", "a batch confirm answered a receipt");
+    launchedAll = true;
+    const launched = new Set(r.jobIds);
+    // The records name the kernel job that drives them (lib/producers/suno.ts `nameJobs`).
+    await withSuno((f) => {
+      for (const j of f.jobs) if (launched.has(sunoKernelId(j))) j.job = sunoKernelId(j);
+    });
+    return ok({ kind: "launched", engine: "suno", runIds: ids.map((id) => `suno.${id}`), jobIds: r.jobIds });
+  } finally {
+    if (!launchedAll) for (const id of ids) await dropUnlaunched(id).catch(() => false);
   }
-  if (r.kind !== "launched") return err("internal", "a batch confirm answered a receipt");
-  const launched = new Set(r.jobIds);
-  // The records name the kernel job that drives them (lib/producers/suno.ts `nameJobs`).
-  await withSuno((f) => {
-    for (const j of f.jobs) if (launched.has(sunoKernelId(j))) j.job = sunoKernelId(j);
-  });
-  return ok({ kind: "launched", engine: "suno", runIds: ids.map((id) => `suno.${id}`), jobIds: r.jobIds });
 }
 
 /* ── sfx: one Run of N clips ───────────────────────────────────────────── */
