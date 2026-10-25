@@ -67,11 +67,12 @@ function skipOf(r: Reader, run: V1Run): string | null {
   return null;
 }
 
-function land(t: Tx, run: V1Run, now: number): void {
-  const read = readRunIn(t, run.input, { mode: "dry", ...(run.units === undefined ? {} : { units: run.units }) }, { now });
+/** Everything of `land` that only reads: the Run door's read of the input, the option and the run record. A dry pass runs exactly this, so it refuses what the wet pass would, without the write lock. */
+function prepare(r: Reader, run: V1Run, now: number, stamp: string) {
+  const read = readRunIn(r, run.input, { mode: "dry", ...(run.units === undefined ? {} : { units: run.units }) }, { now });
   const option = read.line.option ?? read.picked.option;
   const est = priceLine(read.line.units, option);
-  const at = iso(run.at) ?? t.at;
+  const at = iso(run.at) ?? stamp;
   const rec = parseAt("imported run", runSchema, {
     id: run.runId,
     lane: read.plan.lane,
@@ -84,8 +85,13 @@ function land(t: Tx, run: V1Run, now: number): void {
     createdAt: at,
   });
   if (!rec.ok) throw rec.error;
+  return { read, option, rec: rec.value, at };
+}
+
+function land(t: Tx, run: V1Run, now: number): void {
+  const { read, option, rec, at } = prepare(t, run, now, t.at);
   const jobId = runJobId(run.runId);
-  insertRun(t, rec.value, jobId);
+  insertRun(t, rec, jobId);
   // Through the job machine (kernel `recordImportedJobIn`), ending as v1 recorded it.
   const ending = run.state === "done" ? { state: "done" as const } : { state: "failed" as const, code: "unavailable" as const, message: run.error ?? `failed in v1 (${run.source} recorded no sentence)` };
   recordImportedJobIn(t, { id: jobId, of: { kind: "run", id: run.runId }, producer: run.input.producer, lane: option.lane, correlation: { runId: run.runId }, units: read.plan.units, ending, data: { from: "v1", source: run.source } }, IMPORT_RUN_ACTOR);
@@ -114,7 +120,9 @@ export function importRuns(store: Store, runs: readonly V1Run[], opts: { readonl
       continue;
     }
     if (opts.dry) {
-      out.push({ source: run.source, runId: run.runId, outcome: "would-import", state: run.state });
+      // The same door the wet pass goes through, read-only: a run it would refuse is reported refused.
+      const seen = store.read((r) => prepare(r, run, opts.now, new Date(opts.now).toISOString()));
+      out.push(seen.ok ? { source: run.source, runId: run.runId, outcome: "would-import", state: run.state } : { source: run.source, runId: run.runId, outcome: "refused", state: run.state, reason: seen.error.message });
       continue;
     }
     const w = store.tx((t) => land(t, run, opts.now));
