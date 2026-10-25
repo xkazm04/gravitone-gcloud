@@ -109,13 +109,19 @@ export function blobStore(root: string): BlobStore {
         await renameInto(tmp, file);
         return ok(ref);
       } catch (e) {
-        await rm(tmp, { force: true });
+        // The write error is the one to report; a failed cleanup (EPERM on a held temp) must not replace it.
+        await rm(tmp, { force: true }).catch(() => undefined);
         return err("unavailable", `blob: cannot write ${ref.sha256}`, { cause: e });
       }
     },
     async has(ref) {
       const p = pathOf(ref);
-      return p.ok && (await sizeOf(p.value)) === ref.bytes;
+      if (!p.ok) return false;
+      try {
+        return (await sizeOf(p.value)) === ref.bytes;
+      } catch {
+        return false; // a stat error we cannot read is "not there", never a rejection
+      }
     },
     async read(ref) {
       const p = pathOf(ref);
