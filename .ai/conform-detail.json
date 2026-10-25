@@ -13299,6 +13299,38 @@
           "evidence": "lib/notebook/validate.ts:18 The validator reads one parsed model answer and never loads author-chosen sub-documents, so there is no recursion to bound."
         }
       ]
+    },
+    "0c02b354-237b-44cb-9283-518ed620e846/durable-agent-operations": {
+      "context": "job-queue-and-leases",
+      "subject": "durable-agent-operations",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:48:20.641Z",
+      "worker": "f964446e-24b4-4e47-a315-6108b9007aa5",
+      "techniques": [
+        {
+          "technique": "total-restart-point-by-reference",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-core.ts:29 This is the job discipline's in-flight-is-a-position design: a status plus a stage marker on a job row. It is not a total agent-operation state that names its next procedure, and the golden path explicitly sends this shape to the job subject."
+        },
+        {
+          "technique": "intent-mints-the-identity",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-run.ts:270 The step is marked in flight in the transaction before the call and booked in the next one. That is the intent-like commit pair of a step cursor. Outputs are keyed by step name, not by transcript identities that other records reference, which is the technique's own carve-out ('a linear pipeline of keyed effects... the cursor is the simpler design')."
+        },
+        {
+          "technique": "settlement-order-is-not-placement-order",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-core.ts:191 A job performs one step at a time, the first missing one. No parallel batch settles out of order into an ordered record."
+        },
+        {
+          "technique": "close-is-a-controlled-crash",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-worker.ts:27 On worker stop, each drive finishes its current step and then writes `job.yielded` (running->paused->queued, job-run.ts:248-250). That is a write made only on graceful exit. The comment cites admission-queue as its rule, so it is judged by that subject, not this one."
+        }
+      ],
+      "registryProposal": "The golden path defers the generic job record to 'a different bundle' but names neither the bundle nor a subject. Repos like this one cite the governing subjects by name in their comments (job-coordination: in-flight-is-a-position, background-jobs: startup-sweeps, admission-queue: drain-and-shutdown). Naming them in the scoping paragraph would let a judge route a job-queue context without reasoning from the discriminator alone."
     }
   }
 }

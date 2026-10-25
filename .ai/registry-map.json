@@ -6211,7 +6211,11 @@
           "revision": 4,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/job-core.ts:21 The unit here is a vendor job whose durable state is a status column plus a step cursor (the next step is the first missing output, and `progress.stage` marks a step as in flight). The golden path's own scoping section ('The generic durable work record is not this subject') gives that shape to the job discipline in another bundle. A case-insensitive search of packages/kernel/src for transcript, compaction, tool_call, toolCall and placement found no hits: there is no provider stream, no parallel tool batch and no ordered transcript for this subject to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2939cd03f8f3a4d1",
+          "evaluatedRevision": 6
         },
         {
           "subject": "test-harness",
