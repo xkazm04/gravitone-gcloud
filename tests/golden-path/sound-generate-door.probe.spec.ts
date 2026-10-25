@@ -24,6 +24,7 @@ import { runSoundCli } from "@/lib/sound/cli";
 import { buildEditPlan, editSeconds } from "@/lib/sound/editPlan";
 import { generateTake, parseGenerateRequest } from "@/lib/sound/generate";
 import { parseLessonInput } from "@/lib/sound/ledger";
+import { clipRequest, sentenceBrief } from "@/lib/sound/sfxJob";
 import { DEFAULT_GROUPS, readGroups, readTakes, SoundError } from "@/lib/sound/store";
 import { createTake } from "@/lib/sound/takes";
 
@@ -299,4 +300,13 @@ test("groups: a file that lost one kind's rows reads that kind at its defaults, 
   expect(groups.sfx).toEqual([...DEFAULT_GROUPS.sfx]);
   writeFileSync(path.join(process.env.SOUND_STORE_DIR!, "groups.json"), JSON.stringify({ version: 1, groups: { sfx: ["hits"] } }), "utf8");
   expect((await readGroups()).groups).toEqual({ music: [...DEFAULT_GROUPS.music], sfx: ["hits"] });
+});
+
+/* ── an effect batch's clip title ────────────────────────────────────────── */
+
+test("sfx clip: a title never starts empty - the first worded phrase, else the word effect", () => {
+  const brief = (prompt: string, sfxCategory: string | null) => ({ ...sentenceBrief(prompt), terms: { genre: [], mood: [], instrument: [], sfxCategory } });
+  const titles = [clipRequest(brief(", iron door slams. dry room", null), 1, 3).title, clipRequest(brief("...", ""), 2, 3).title, clipRequest(brief("door", "impacts"), 3, 3).title];
+  console.log(`[sound-door] clip titles -> ${JSON.stringify(titles)}`);
+  expect(titles).toEqual(["iron door slams · 1/3", "effect · 2/3", "impacts · 3/3"]);
 });
