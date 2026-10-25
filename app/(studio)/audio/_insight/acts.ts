@@ -23,12 +23,11 @@ import { SCORE_MAX, SCORE_MIN } from "@gt/ui/components/audio/rubric.ts";
 import type { ActionResult } from "../../../_server/actionCore.ts";
 import { action } from "../../../_server/action.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
-import type { Principal } from "../../../../lib/principal.ts";
+import { actorOf } from "../../../../lib/principal.ts";
 import { BATCH_RE, mintBatchId, sendBatch, type BatchOutcome } from "../../../../lib/sound/batch.ts";
 import { RATE_OP_RE, rateTake } from "../../../../lib/sound/rubric.ts";
 import { deskEngines } from "../_audio/arrangeRead.ts";
 
-const actorOf = (who: Principal) => ({ kind: "operator" as const, id: "uid" in who ? who.uid : "operator" });
 
 /* ── the rubric ──────────────────────────────────────────────────────────── */
 

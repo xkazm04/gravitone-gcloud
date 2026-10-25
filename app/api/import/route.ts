@@ -22,6 +22,7 @@ import { ARCHIVE_CAPS } from "../../../lib/import/archive.ts";
 import { confirmLive, exportLive, previewLive } from "../../../lib/import/serve.ts";
 import { route } from "../../_server/route.ts";
 import { queryOf } from "../../_server/http.ts";
+import { actorOf } from "../../../lib/principal.ts";
 
 export const maxDuration = 300;
 
@@ -55,7 +56,7 @@ export const POST = route<undefined, unknown>({ guard: "access", bodyCap: ARCHIV
   const bytes = await bytesOf(req, ARCHIVE_CAPS.bodyBytes);
   if (!bytes.ok) return bytes;
   if (q.value.act === "preview") return previewLive(bytes.value);
-  const actor = { kind: "operator" as const, id: who !== null && "uid" in who ? who.uid : "operator" };
+  const actor = actorOf(who);
   const done = await confirmLive(bytes.value, q.value.token, actor);
   if (!done.ok) return done;
   if (done.value.kind === "stale") return Response.json({ error: "the archive or the studio changed since this preview; read the fresh one", code: "conflict", detail: "stale-preview", fresh: done.value }, { status: 409 });
@@ -66,7 +67,7 @@ export const GET = route({ guard: "access", bodyCap: 0, maxDuration }, async ({ 
   const ids = new URL(req.url).searchParams.getAll("project");
   const parsed = parseAt("GET /api/import", z.array(projectId).min(1).max(100), ids);
   if (!parsed.ok) return parsed;
-  const uid = who !== null && "uid" in who ? who.uid : "operator";
+  const uid = actorOf(who).id;
   const out = await exportLive(parsed.value, uid);
   if (!out.ok) return out;
   const name = parsed.value.length === 1 ? parsed.value[0] : `${parsed.value.length}-projects`;

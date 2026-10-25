@@ -30,6 +30,7 @@ import type { StyleAct, StyleActOutcome, StyleOp, StyleOpOutcome, StyleView } fr
 import type { Store } from "@gt/kernel/store";
 import { readStyle } from "@gt/kernel/styles/driver";
 
+import { actReceipt as fixtureReceipt } from "../../app/(studio)/library/style/_port/fixtureActs.ts";
 import { makeRealStyle } from "../../app/(studio)/library/style/_port/real.ts";
 import { closeKernel, kernel } from "../../lib/kernelStore.ts";
 import { driveStyleJob, type StyleEngines } from "../../lib/producers/style.ts";
@@ -68,6 +69,13 @@ async function run(act: StyleAct): Promise<StyleView> {
   return done.view;
 }
 
+/** What a receipt line prices: the figures, not the key, label or queue placement. */
+const priced = (r: Receipt) => r.lines.map((l) => ({ lane: l.lane, provider: l.provider, model: l.model, units: l.units, seconds: l.seconds, usd: l.usd, src: l.src, unpricedReason: l.unpricedReason }));
+const fixturePriced = async (act: StyleAct): Promise<Receipt> => {
+  const r = await fixtureReceipt(act, "dry", NOW, async (file) => ok({ sha256: "0".repeat(64), bytes: file.length, mime: "image/jpeg" }));
+  return must(r);
+};
+
 const keep = (run: string, scene: string) => ({ run, scene, mechanism: "text", verdict: "keep" as const, at: "2026-09-01T00:00:00.000Z" });
 const def = (id: string, status: string, evidence: unknown[]) => ({ id, name: id === "painted" ? "Painted" : id, family: "animation", status, origin: { kind: "readback" }, observables: { render_mode: "painterly" }, recipe: "Painted matte surfaces. A warm palette of ochre. Soft rim light.", negative: "photograph", evidence });
 const row = (scene: string, seed: number) => ({ run: "r1", scene, style: "painted", mechanism: "text", seed, verdict: "keep", craft: null, style_score: null, has_text: null, at: "2026-09-01T00:00:00.000Z" });
@@ -75,14 +83,14 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex");
 
 beforeAll(() => {
   mkdirSync(catDir, { recursive: true });
-  writeFileSync(path.join(catDir, "styles.json"), JSON.stringify({ styles: [def("painted", "proven", [keep("r1", "a"), keep("r1", "b")]), def("raw", "candidate", []), def("lost", "proven", [keep("r9", "a"), keep("r9", "b")])] }));
+  writeFileSync(path.join(catDir, "styles.json"), JSON.stringify({ styles: [def("painted", "proven", [keep("r1", "a"), keep("r1", "b")]), def("raw", "candidate", []), def("lost", "proven", [keep("r9", "a"), keep("r9", "b")]), def("later", "proven", [keep("r1", "c"), keep("r1", "d")])] }));
   // `lost` has a kept row in the ledger and no plate on this machine.
-  writeFileSync(path.join(catDir, "ledger.json"), JSON.stringify({ rows: [row("a", 1), row("b", 2), { ...row("a", 1), run: "r9", style: "lost" }] }));
-  for (const [scene, seed] of [["a", 1], ["b", 2]] as const) {
+  writeFileSync(path.join(catDir, "ledger.json"), JSON.stringify({ rows: [row("a", 1), row("b", 2), { ...row("a", 1), run: "r9", style: "lost" }, { ...row("c", 3), style: "later" }, { ...row("d", 4), style: "later" }] }));
+  for (const [scene, seed, style] of [["a", 1, "painted"], ["b", 2, "painted"], ["c", 3, "later"], ["d", 4, "later"]] as const) {
     const dir = path.join(ROOT, "foundry-out", "runs", "r1", "scenes", scene, "candidates");
     mkdirSync(dir, { recursive: true });
-    writeFileSync(path.join(dir, `painted--text--s${seed}.png`), PNG);
-    writeFileSync(path.join(dir, `painted--text--s${seed}.json`), JSON.stringify({ mechanism: { reference: false }, workflow: { "1": { inputs: { unet_name: "flux2-klein-9b" } } } }));
+    writeFileSync(path.join(dir, `${style}--text--s${seed}.png`), PNG);
+    writeFileSync(path.join(dir, `${style}--text--s${seed}.json`), JSON.stringify({ mechanism: { reference: false }, workflow: { "1": { inputs: { unet_name: "flux2-klein-9b" } } } }));
   }
 });
 
@@ -112,6 +120,8 @@ describe("the real atelier, adopt to locked, dry", () => {
     const rc = await receipt({ kind: "adopt", fromStyleId: "painted" });
     expect(rc.lines.map((l) => [l.label, l.usd])).toEqual([["palette readback", null]]);
     expect(rc.lines[0]?.unpricedReason).toBeTruthy();
+    // The fixture prices the same act from the same options: every figure on the line agrees.
+    expect(priced(await fixturePriced({ kind: "adopt", fromStyleId: "painted-3d" }))).toEqual(priced(rc));
     const done = await confirm({ kind: "adopt", fromStyleId: "painted" }, rc.token);
     if (done.kind !== "launched") throw new Error("stale");
     expect(done.jobId).toBe(styleJobId("painted", rc.token));
@@ -135,6 +145,8 @@ describe("the real atelier, adopt to locked, dry", () => {
     const stale = await receipt(act);
     expect(stale.lines.map((l) => l.label)).toEqual(["the fall · quantity", "the wish list · inventory", "the booking · analogy"]);
     expect(stale.lines.every((l) => l.usd !== null && l.usd > 0)).toBe(true);
+    const fixture = await fixturePriced({ kind: "generate-proofs", styleId: "chalk-argument", baseRev: 1, trialIds: TRIALS });
+    expect(priced(fixture)).toEqual(priced(stale));
     await op("painted", { kind: "set-elements", elements: ["a ledger"] });
     const moved = await confirm(act, stale.token);
     expect(moved.kind).toBe("stale");
@@ -228,5 +240,31 @@ describe("the job renders what was priced, or nothing", () => {
     expect(proof).toMatchObject({ trialId: "the-exit", provider: "google", costUsd: 0.045, state: "pending" });
     expect(proof?.label).not.toContain("stand-in");
     expect(existsSync(path.join(catDir, "styles.json"))).toBe(true);
+  });
+
+  // Every paid call of a style job is preceded by the re-check (packages/producers/src/style/define.ts):
+  // an adopt whose style gained a look after its receipt buys no palette read.
+  it("buys no palette read for an adopt whose style gained a look after the receipt", async () => {
+    const s = must(store());
+    const act: StyleAct = { kind: "adopt", fromStyleId: "later" };
+    const o = { mode: "live", now: NOW, kept: true } as const;
+    const rc = must(styleActReceipt(s, act, o));
+    const launched = must(launchStyleAct(s, act, rc.token, { ...o, actor: { kind: "operator", id: "op-1" }, dryOnly: false }));
+    if (launched.kind !== "launched") throw new Error("stale");
+    const look = (await view("painted")).block;
+    if (look === null) throw new Error("painted carries the look");
+    expect((await op("later", { kind: "set-block", block: look })).kind).toBe("applied");
+    let reads = 0;
+    const fake: StyleEngines = {
+      generate: NEVER.generate,
+      recognize: async () => {
+        reads++;
+        return { text: "", json: { palette: look.palette }, provenance: { provider: "google", model: "gemini-3.6-flash", modelBasis: "requested", costUsd: 0.01, durationMs: 800 } };
+      },
+    };
+    const report = must(await driveStyleJob(s, launched.jobId, { dryOnly: false, engines: fake }));
+    expect(report.outcome).toBe("failed");
+    expect(report.job?.error?.message).toMatch(/already has a look/);
+    expect(reads).toBe(0);
   });
 });

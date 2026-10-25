@@ -220,6 +220,22 @@ test("5f · past SEED_CAP plates or the byte cap, the capped set is seeded in le
   expect((await adoptionDraft(style(), LEDGER, port(GOOD).io)).proofsLeftOut).toBeUndefined();
 });
 
+test("5h · a plate whose read throws is skipped and counted in leftOut, with the first error's words", async () => {
+  const d = await adoptionDraft(
+    style(),
+    LEDGER,
+    port(GOOD, true, (rel) => {
+      if (rel.includes("--s2.")) throw new Error("EACCES: permission denied");
+      if (rel.includes("--s3.")) throw new Error("second failure");
+      return sidecar();
+    }).io,
+  );
+  expect(d.proofs).toHaveLength(0);
+  expect(d.proofsLeftOut?.count).toBe(2);
+  expect(d.proofsLeftOut?.reason).toBe("2 plates did not read: EACCES: permission denied");
+  expect(d.paletteMissing).toBeUndefined();
+});
+
 test("5g · a paletteMissing draft carries proofs []", async () => {
   const d = await adoptionDraft(style(), LEDGER, port(new Error("nope")).io);
   expect(d.paletteMissing).toBe(true);

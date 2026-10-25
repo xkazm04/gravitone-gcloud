@@ -20,7 +20,7 @@ import { receiptModeSchema } from "@gt/domain/produce.schema";
 import type { ActionResult } from "../../../_server/actionCore.ts";
 import { action } from "../../../_server/action.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
-import type { Principal } from "../../../../lib/principal.ts";
+import { actorOf } from "../../../../lib/principal.ts";
 import { crownLeaf, draftMap, HUNT_DESK_OP_RE, type Crowned } from "../../../../lib/sound/huntDesk.ts";
 import { huntReason } from "../../../../lib/sound/huntEngine.ts";
 import { driveHuntRender, launchHuntRender } from "../../../../lib/sound/huntRender.ts";
@@ -31,7 +31,6 @@ const id = z.string().regex(/^[A-Za-z0-9_-]{1,80}$/);
 const opId = z.string().regex(HUNT_DESK_OP_RE);
 const kind = z.enum(["music", "sfx"]);
 
-const actorOf = (who: Principal) => ({ kind: "operator" as const, id: "uid" in who ? who.uid : "operator" });
 
 const draftInput = z.object({ kind, idea: z.string().trim().min(1, "a hunt needs an idea: the problem to solve, in your words").max(2000), opId }).strict();
 const renderInput = z.object({ huntId: id, leafIds: z.array(id).min(1).max(48), mode: receiptModeSchema, opId, token: z.string().min(8).max(200).optional() }).strict();

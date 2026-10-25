@@ -5158,9 +5158,9 @@ export const MUTANTS: UnitMutant[] = [
   {
     id: "hunt-return-chunked-body-uncapped",
     test: "tests/next-server/audio-hunt-return.test.ts",
-    file: "app/(studio)/audio/hunt-return/route.ts",
-    find: "if (size > CAP) c.error(new Error(over));",
-    replace: "if (size < 0) c.error(new Error(over));",
+    file: "app/_server/route.ts",
+    find: "if (size > cap) c.error(bodyTooBig(where, cap));",
+    replace: "if (size < 0) c.error(bodyTooBig(where, cap));",
     why: "A hunt return that declares no length is buffered whole: any access-holding client can make the server hold an unbounded upload in memory.",
   },
   {

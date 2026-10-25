@@ -176,8 +176,8 @@ describe("acts: a receipt, then a confirm", () => {
     const v = await view("chalk-argument");
     const act: StyleAct = { kind: "generate-proofs", styleId: v.id, baseRev: v.rev, trialIds: ["peak-and-fall", "flywheel"] };
     const rc = await actReceipt(act, "dry", NOW, media);
-    expect(rc.ok && rc.value.lines.map((l) => [l.key, l.usd])).toEqual([["peak-and-fall", 0.045], ["flywheel", 0.045]]);
-    expect(rc.ok && rc.value.totals.usd).toBe(0.09);
+    expect(rc.ok && rc.value.lines.map((l) => [l.key, l.usd])).toEqual([["peak-and-fall", 0.05], ["flywheel", 0.05]]);
+    expect(rc.ok && rc.value.totals.usd).toBe(0.1);
     const live = await actReceipt(act, "live", NOW, media);
     expect(live.ok ? null : live.error.code).toBe("refused");
   });
