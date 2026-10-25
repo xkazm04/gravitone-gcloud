@@ -30,6 +30,7 @@ const ROOT = vi.hoisted(() => {
 import path from "node:path";
 import { rmSync } from "node:fs";
 
+import { RECIPES } from "@gt/catalog/recipes";
 import { AppError, ok, type Result } from "@gt/domain/errors";
 import type { Producer } from "@gt/kernel/job-core";
 import { list } from "@gt/kernel/job";
@@ -182,5 +183,32 @@ describe("a rename is a project's, launched or not, and the same words write not
     const realSaid = await rename(real, c.value.id, p.value.project.title);
     expect(realSaid).toEqual({ said: "ok", moved: 0 });
     expect(await rename(fixture, "untitled-port-strike", "Untitled — the port strike")).toEqual(realSaid);
+  });
+});
+
+describe("a composed project is titled and keeps its picks by the kernel's rule", () => {
+  const titled = async (side: typeof real, input: Parameters<typeof real.compose>[0]): Promise<{ title: string; topic?: string }> => {
+    const c = await side.compose(input, op);
+    if (!c.ok) throw c.error;
+    const p = side.loadPlan({ id: c.value.id });
+    if (!p.ok) throw p.error;
+    return { title: p.value.project.title, ...(p.value.project.topic === undefined ? {} : { topic: p.value.project.topic }) };
+  };
+
+  it("every recipe composed with no picks is titled alike on both sides", async () => {
+    const differ: string[] = [];
+    for (const r of RECIPES) {
+      const [a, b] = [await titled(real, { recipe: r.id }), await titled(fixture, { recipe: r.id })];
+      if (a.title !== b.title) differ.push(`${r.id}: real "${a.title}", fixture "${b.title}"`);
+    }
+    expect(RECIPES.length).toBeGreaterThan(10);
+    expect(differ).toEqual([]);
+  });
+
+  it("an article keeps the topic it was composed on, as an explainer does", async () => {
+    for (const recipe of ["article/post", "explainer"]) {
+      const input = { recipe, topic: "cost-metering" };
+      expect((await titled(fixture, input)).topic).toBe((await titled(real, input)).topic);
+    }
   });
 });

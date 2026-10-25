@@ -109,8 +109,18 @@ export function compose(u: Universe, input: ComposeInput, now: number): Result<{
   if (recipe === undefined) return err("invalid", `no recipe ${input.recipe}`);
   const take = KEPT_TAKES.find((t) => t.id === input.takeId);
   const topic = TOPICS.find((t) => t.slug === input.topic);
+  // A topic is what an explainer or an article is made from; the titles are the kernel's (records/write.ts
+  // `titleFor`), with the take's and the topic's own names where the real port finds them (./real.ts `compose`).
+  const topical = recipe.family === "explainer" || recipe.family === "article";
   const title =
-    input.title ?? (recipe.family === "album" ? `${take?.title ?? "Album"} — music video` : recipe.family === "explainer" ? `${topic?.title ?? "Explainer"} — explainer` : recipe.family === "film" ? "Untitled film" : recipe.label);
+    input.title ??
+    (recipe.family === "album"
+      ? `${take?.title ?? input.takeId ?? "Untitled take"} — music video`
+      : topical
+        ? `${topic?.title ?? input.topic ?? "Untitled topic"} — ${recipe.family}`
+        : recipe.family === "film"
+          ? "Untitled film"
+          : `Untitled ${recipe.label.toLowerCase()}`);
   const id = `${slug(title)}-${++u.seq}`;
   u.projects.set(id, {
     id,
@@ -119,7 +129,7 @@ export function compose(u: Universe, input: ComposeInput, now: number): Result<{
     recipe,
     ...(recipe.family !== "album" && input.styleId !== undefined ? { styleId: input.styleId } : {}),
     ...(recipe.family === "album" && take !== undefined ? { takeId: take.id, runtimeS: take.durationS } : {}),
-    ...(recipe.family === "explainer" && topic !== undefined ? { topic: topic.slug } : {}),
+    ...(topical && input.topic !== undefined ? { topic: input.topic } : {}),
     createdAt: now,
     launched: false,
     parts: partsOf(id, recipe, input.units ?? {}),
