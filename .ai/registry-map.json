@@ -10784,7 +10784,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/producers/src/publish/timers.ts:20 The publish context's two loops are named once from a closed set, and each TimerSpec registers its cadence, deadline and staggered first firing. The tick body reports when the next slot is due, sweeps orphans and downtime misses through the steady-state code path, and stops at safe points between claims. A store-read status surface also exposes staleness, standing failure and quarantine, so this context supplies what the background-jobs envelope needs.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:22ed2a99172ae050",
+          "evaluatedRevision": 5
         },
         {
           "subject": "fleet-orchestration",

@@ -8891,52 +8891,47 @@
       "context": "publish-producers",
       "subject": "background-jobs",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T22:37:07.444Z",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T22:16:40.602Z",
+      "worker": "a7bb55b2-ffca-4a6e-8732-c8e64597b987",
       "techniques": [
-        {
-          "technique": "adaptive-cadence",
-          "verdict": "conformant",
-          "evidence": "packages/producers/src/publish/tick.ts:89 publishTick inspects upcoming scheduled slots and returns next to wake earlier when a slot is due before the idle cadence interval."
-        },
-        {
-          "technique": "job-progress-and-cancellation",
-          "verdict": "not-applicable",
-          "evidence": "packages/producers/src/publish/publish.ts:53 Publishing operates under recurring timer ticks above the kernel job model rather than as watched jobs with progress streams or snapshot re-attachment."
-        },
-        {
-          "technique": "loop-health-telemetry",
-          "verdict": "conformant",
-          "evidence": "packages/producers/src/publish/timers.ts:75 timerStatusIn provides a queryable current-state surface for registered timers, detecting silence via stale lease heartbeats and surfacing standing failures."
-        },
         {
           "technique": "loop-supervision",
           "verdict": "conformant",
-          "evidence": "packages/producers/src/publish/timers.ts:20 Names come from a closed set with explicit TimerSpec registration parameters and lease TTL slack for singleton loops."
-        },
-        {
-          "technique": "startup-sweeps",
-          "verdict": "conformant",
-          "evidence": "packages/producers/src/publish/tick.ts:55 downtimeOf attributes slots missed during worker downtime directly to the detected gap window, recording provenance on the missed event."
+          "evidence": "packages/producers/src/publish/timers.ts:20 Closed name roster. TimerSpec carries name, everyMs, deadlineMs and firstDelayMs, so cadence and first-tick delay sit in the registration, not the body. Each timer is a kernel lease on timer:<name> with a TTL of three missed beats (timerTtlS, line 44): a heartbeat claim with slack."
         },
         {
           "technique": "tick-isolation",
           "verdict": "conformant",
-          "evidence": "packages/producers/src/publish/publish.ts:118 publishClaimed catches throws from adapter sends, converting crashes to recorded failures on the slot so an upload error never kills the tick loop."
+          "evidence": "packages/producers/src/publish/timers.ts:27 Each loop declares a per-tick deadline in its spec (30 min for publish-tick). Abandoned work is fenced, so it cannot corrupt shared state. Inside the body, publishClaimed catches adapter throws per slot (publish.ts:117) and records them as slot failures, so one bad slot costs one outcome, not the tick. Crash capture, the re-entrancy skip and quarantine run in the worker envelope (workers/timers.ts), which is outside this context."
+        },
+        {
+          "technique": "adaptive-cadence",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:51 The tick returns the earliest still-scheduled slot (computed at tick.ts:89), so the loop can wake at that slot's time. The 30 s idle cadence stays as the safety net, and timers.ts:33 states the worst-case latency next to the constant. firstDelayMs staggers boot (0 vs 60 s), a deliberate stagger rather than random jitter. The metrics cadence is justified next to its constant by quota."
+        },
+        {
+          "technique": "loop-health-telemetry",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/timers.ts:75 A read-only current-state surface: one row per roster entry with lastRunAt, nextDueAt, stale (silence via lease heartbeat lapse or a dead process), the standing failure verbatim, and quarantined. Transitions only (timer.fail/recover/quarantine/gap), not one event per tick. Two partial gaps: there is no explicit consecutive-failure count (failing.since stands in) and no last-success time separate from the heartbeat."
+        },
+        {
+          "technique": "startup-sweeps",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:74 The startup catch-up is the steady-state sweep itself, the publish-tick's first firing at firstDelayMs 0. It reports missed, interrupted (claims held by dead holders), drifted and cleared slots. A miss inside the downtime gap is attributed with downtime {from, to} in the same commit as the miss."
+        },
+        {
+          "technique": "job-progress-and-cancellation",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:82 Cooperative stop at safe points between claimed uploads. Unstarted claims fail with a stated cause (STOPPED_TEXT, publish.ts:53), never left phantom-running. Uploads heartbeat the claim per chunk (the keeper in publish.ts), which serves as the is-it-moving signal. A lost fence stops the sender. Outcomes are a closed published/failed/lost set keyed by slot id. An upload already in flight is an uncancellable span; there is no done/total progress, only liveness."
         },
         {
           "technique": "timeout-is-a-status-not-a-consumption",
           "verdict": "not-applicable",
-          "evidence": "packages/producers/src/publish/timers.ts:28 Publishing ticks use deadlines that abandon and fence timed-out runs rather than bounded waits on tracked operations that return a non-consuming give-up status."
+          "evidence": "packages/producers/src/publish/tick.ts:106 Nothing here is a budgeted wait on a tracked operation that can give up and wait again. publish-now runs the tick inline and awaits its result. The only deadline (deadlineMs) abandons and fences the work, which is the cancellation contract this technique excludes."
         }
-      ],
-      "withdrawn": {
-        "worker": "f9ebe6cd-2da8-41bc-ba6f-cb25a251525b",
-        "state": "conformant",
-        "at": "2026-10-19T22:37:30.959317+00:00",
-        "reason": "reviewer (sonnet): The anchors back only part of the claim: timers.ts shows the closed TIMER_NAMES set, TimerSpec and timerStatusIn, and tick.ts:89 shows the `next` wakeup. Three other claims are unsupported. publish.ts:53 is just the STOPPED_TEXT constant, so it does not show publishing runs as timer ticks rather tha"
-      }
+      ]
     },
     "0c02b354-237b-44cb-9283-518ed620e846/cross-instance-cache-lease": {
       "context": "job-queue-and-leases",
