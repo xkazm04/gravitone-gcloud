@@ -293,7 +293,7 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
       signal: ac.signal,
       idleMs,
       spendClasses: [JOB_USD],
-      run: { dryOnly: dryOnlyFrom(io.env) },
+      run: { dryOnly: dryOnlyFrom(io.env), spendClasses: [JOB_USD] },
       ...(admission === undefined ? {} : {
         admission,
         onWait: (pick: Pick, verdict: { readonly resource: string; readonly why: string }) => {

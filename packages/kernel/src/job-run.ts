@@ -91,6 +91,8 @@ export type RunOptions = {
   /** The producers' preflights, by job (the worker's map): a part whose act waits on a human act
    *  stays planned at the release instead of being released into a certain failure (L45). */
   readonly preflightOf?: (job: Job, r: Reader) => string | undefined;
+  /** The classes whose holds a dead drive leaves behind: lapsed when this drive interrupts an orphan (take-over, fence loss), as `recover` does. */
+  readonly spendClasses?: readonly SpendClass[];
 };
 
 export type RunReport = {
@@ -111,8 +113,10 @@ export const defaultBackoff = (streak: number, random: () => number = Math.rando
 export const spendOwner = (h: Holder): string => `${h.host}/${h.pid}/${h.bootId}`;
 
 /** Interrupt one orphaned running job, naming its holder and the step in flight; a paid lane holds. */
-function interrupt(t: Tx, job: Job, by: Holder, why: string): Job {
+function interrupt(t: Tx, job: Job, by: Holder, why: string, classes: readonly SpendClass[] = []): Job {
   const holder = job.lease?.holder ?? by;
+  // The dead drive's holds: the vendor may have been paid, so they keep counting (job-core.ts: every dead drive).
+  for (const cls of classes) lapseOwner(t, cls, spendOwner(holder));
   // The record is re-projected from the meter: a step that settled and then
   // died before its booking still shows its spend on the interrupted job.
   const out = { ...interrupted(job, holder, t.at), spend: meterOf(t, job.id) };
@@ -179,7 +183,7 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
       }
       let heldNow = false;
       for (const orphan of runningOn(t, job.lane, slot)) {
-        if ((orphan.lease?.fence ?? 0) < c.lease.fence) heldNow = interrupt(t, orphan, holder, "lane-taken-over").state === "interrupted" && laneHold(t, job.lane) !== undefined;
+        if ((orphan.lease?.fence ?? 0) < c.lease.fence) heldNow = interrupt(t, orphan, holder, "lane-taken-over", opts.spendClasses).state === "interrupted" && laneHold(t, job.lane) !== undefined;
       }
       if (heldNow) {
         // The take-over found a paid step that died unbooked: the lane holds, and this claim gives the slot back.
@@ -223,7 +227,7 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
       const { job } = loadJob(t, jobId);
       if (job.state !== "running" || job.lease?.fence !== fence || job.slot !== slot) return undefined;
       const loss = fenceLoss(snapshotOf(t, slot).row, fence, Date.parse(t.at));
-      if (loss !== undefined) return interrupt(t, job, holder, `fence-lost: ${loss}`);
+      if (loss !== undefined) return interrupt(t, job, holder, `fence-lost: ${loss}`, opts.spendClasses);
       const out = failed(job, e.code, e.message);
       putJob(t, out);
       jobEvent(t, actor, out, "job.failed", { code: e.code, message: e.message });
@@ -378,9 +382,7 @@ export function recover(fx: Effects, opts: { holder?: Holder; alive?: Alive; spe
       const loss = fenceLoss(snapshotOf(t, job.slot).row, lease.fence, Date.parse(t.at));
       const why = loss ?? (gone(lease.holder, me, alive) ? "holder-gone" : undefined);
       if (why === undefined) continue;
-      // The dead drive's holds: the vendor may have been paid, so they keep counting.
-      for (const cls of opts.spendClasses ?? []) lapseOwner(t, cls, spendOwner(lease.holder));
-      out.push(interrupt(t, job, me, why));
+      out.push(interrupt(t, job, me, why, opts.spendClasses));
     }
     return out;
   });
