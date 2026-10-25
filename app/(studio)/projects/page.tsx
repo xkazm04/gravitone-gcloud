@@ -28,8 +28,8 @@ export default async function ProjectsPage({ searchParams }: { readonly searchPa
   if (!read.ok) throw read.error;
   const list = read.value;
   const choices = port.composeChoices();
-  const jobs = port.listJobs();
-  const floorRuns = jobs.ok ? jobs.value.filter((j) => j.projectId === undefined && j.state !== "done").length : 0;
+  const open = port.floorRunsOpen();
+  const floorRuns = open.ok ? open.value : 0;
   const nowMs = produceNow();
   const first = ordered(list)[0];
   const view = first === undefined ? null : port.loadPlan({ id: first.id });

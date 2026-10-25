@@ -128,6 +128,20 @@ function statusOf(state: JobState): SchedItem["status"] {
   return "stuck";
 }
 
+/**
+ * How many of the newest JOBS_CAP jobs are a Floor run that has not finished: the count the
+ * projects page draws, without serving, pricing or placing one job. A job a project's part owns
+ * (a `parts` row names it) is the project's, not the Floor's; a cancelled or failed run is still
+ * open, as `jobsView` counted it. One query, answered from the jobs and parts indexes.
+ */
+export function floorRunsOpen(r: Reader, cap = JOBS_CAP): number {
+  const row = r.get(
+    "SELECT count(*) AS c FROM (SELECT id, state FROM jobs ORDER BY n DESC LIMIT ?) j WHERE j.state != 'done' AND NOT EXISTS (SELECT 1 FROM parts p WHERE p.job_id = j.id)",
+    cap,
+  );
+  return typeof row?.["c"] === "number" ? row["c"] : 0;
+}
+
 /** The newest jobs, each served, priced and placed. */
 export function jobsView(r: Reader, now: number, cap = JOBS_CAP): ProduceJob[] {
   const day = dayOf(now);

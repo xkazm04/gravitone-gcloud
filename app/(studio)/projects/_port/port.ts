@@ -42,6 +42,8 @@ type Verb<K extends keyof ProducePort> = (...args: [...Parameters<ProducePort[K]
 
 export type ServerProduce = { readonly [K in keyof ProducePort]: Verb<K> } & {
   readonly listJobs: () => Result<readonly ProduceJob[]>;
+  /** The Floor runs not yet done: the projects page's count, read without a full jobs view. */
+  readonly floorRunsOpen: () => Result<number>;
   readonly listHolds: () => Result<readonly LaneHoldView[]>;
   /** The kernel's cancel (job.ts), for the agent door; no browser verb calls it (spark athena-control-mcp). */
   readonly cancelJob: (i: { readonly jobId: string }, w?: Who) => Result<ActOutcome>;
@@ -85,6 +87,7 @@ const fixture: ServerProduce = {
   reroute: ({ jobId, option, token, ceilingUsd }, w) => acts.reroute(u(), jobId, option, now(), token, ceilingUsd, actorOf(w)),
   ackLane: ({ lane }, w) => acts.ackLane(u(), lane, actorOf(w)),
   listJobs: () => ({ ok: true, value: jobsView(u(), now()) }),
+  floorRunsOpen: () => ({ ok: true, value: jobsView(u(), now()).filter((j) => j.projectId === undefined && j.state !== "done").length }),
   listHolds: () => ({ ok: true, value: holdsView(u()) }),
   cancelJob: () => err("unavailable", "the fixture universe holds no kernel job to cancel"),
 };
