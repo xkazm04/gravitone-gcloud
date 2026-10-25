@@ -1,6 +1,7 @@
 // The desks' markup, rendered with react-dom/server: what a tile says aloud, that a blind pair
 // draws no label and no machine pick before the operator's pick, that the commit button names
 // what is still open, and that the consequence panel shows every outward act verbatim.
+import { readFileSync } from "node:fs";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
@@ -22,7 +23,7 @@ import { VariantCard } from "../src/components/cull/VariantCard.tsx";
 import { beatNote, CutReview, withNote } from "../src/components/cut/CutReview.tsx";
 import { CommitButton } from "../src/components/desk/Desk.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
-import { BlindPair } from "../src/components/pair/BlindPair.tsx";
+import { BlindPair, defaultRevealMs, REVEAL_MS } from "../src/components/pair/BlindPair.tsx";
 
 const must = <T>(r: Result<T>): T => {
   if (!r.ok) throw r.error;
@@ -158,6 +159,29 @@ describe("the blind pair", () => {
     expect(html).toContain("machine pick ▒▒ masked");
     expect(html).toContain("Which is lit?");
     expect(html).toContain('aria-label="commit packet, 1 left"');
+  });
+});
+
+describe("the blind pair's reveal follows the viewer's motion setting", () => {
+  const withMedia = (matches: boolean, run: () => void) => {
+    const was = (globalThis as { matchMedia?: unknown }).matchMedia;
+    (globalThis as { matchMedia?: unknown }).matchMedia = (q: string) => ({ matches: matches && q.includes("prefers-reduced-motion"), media: q });
+    try {
+      run();
+    } finally {
+      (globalThis as { matchMedia?: unknown }).matchMedia = was;
+    }
+  };
+
+  test("reduced motion reveals for 500 ms, otherwise 1150, and with no media query the full reveal", () => {
+    withMedia(true, () => expect(defaultRevealMs()).toBe(500));
+    withMedia(false, () => expect(defaultRevealMs()).toBe(REVEAL_MS));
+    expect(defaultRevealMs()).toBe(1150);
+  });
+
+  test("the reveal timer reads it when the caller passes no revealMs", () => {
+    const code = readFileSync(new URL("../src/components/pair/BlindPair.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toMatch(/setTimeout\(\(\) => setRevealing\(null\), revealMs \?\? defaultRevealMs\(\)\)/);
   });
 });
 
