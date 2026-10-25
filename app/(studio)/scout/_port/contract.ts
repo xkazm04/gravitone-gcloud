@@ -18,7 +18,17 @@ export type SplitInput = {
  * root, so the graphs never join), and the split the scout wing's steer holds now (absent: none set). The steer's
  * acts are the scout wing's: the muse wing has no seeds to pause and no audiences to split.
  */
-export type ScoutView = { readonly graphs: Readonly<Record<ScoutWing, ScoutGraph>>; readonly split?: SplitInput; readonly backlog?: ScoutBacklog };
+export type ScoutView = {
+  readonly graphs: Readonly<Record<ScoutWing, ScoutGraph>>;
+  readonly split?: SplitInput;
+  readonly backlog?: ScoutBacklog;
+  /** The live ventures (spark scout-vision S2) the scout wing's nodes may carry (GraphNode.venture), oldest birth
+   *  first; omitted when there is none, and then no venture filter is drawn. */
+  readonly ventures?: readonly ScoutVenture[];
+};
+
+/** A venture as the filter names it. */
+export type ScoutVenture = { readonly id: string; readonly name: string };
 
 /**
  * The scout wing's backlog (spark scout-vision; lib/foundry/scout/backlog.ts backlogOf) as numbers: kept ideas

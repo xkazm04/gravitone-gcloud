@@ -156,6 +156,13 @@ export function facetsOf(item: LibraryItem, ctx: IndexContext): FacetRow[] {
       for (const l of item.vocabulary.looks) add("look", l);
       for (const a of item.vocabulary.applications) add("application", a);
       break;
+    case "genre":
+      add("ladder", item.vocabulary.ladder);
+      add("venture", item.vocabulary.venture, item.vocabulary.ventureName);
+      break;
+    case "venture":
+      add("type", item.vocabulary.type);
+      break;
   }
   for (const c of item.collections) {
     const grp = c.kind === "pin" ? "pin" : c.kind;

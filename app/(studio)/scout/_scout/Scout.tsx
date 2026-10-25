@@ -4,7 +4,8 @@
 // renders: which wing's graph (spark scout-muse: scout | muse, `?wing=` deep-links it), the live | all view, which
 // bands are open, the selected node, and the steer's writes (pause, resume, the split), each answered with the view
 // rebuilt, which replaces the one held here. Changing wing starts its bands afresh and drops the selection: node ids
-// are only unique inside one wing's graph.
+// are only unique inside one wing's graph. Once a venture exists (spark scout-vision S2), a venture filter narrows the
+// scout wing's bands to the nodes that produce for it; the split editor and the node panel still read the whole graph.
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
@@ -17,7 +18,7 @@ import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import type { ScoutWing } from "../../../../lib/foundry/scout/wing.ts";
 import { boardFor } from "../../_shell/links.ts";
 import type { ScoutPort, ScoutView, SplitInput } from "../_port/contract.ts";
-import { bandsOf, nodeOf, openAtFirst } from "./bands.ts";
+import { ALL_VENTURES, bandsOf, byVenture, nodeOf, openAtFirst } from "./bands.ts";
 import { BandView } from "./Band.tsx";
 import { NodePanel } from "./NodePanel.tsx";
 import { SplitEditor } from "./SplitEditor.tsx";
@@ -35,8 +36,12 @@ export function Scout({ initial, port, wing: first = "scout" }: ScoutProps) {
   const [wing, setWing] = useState<ScoutWing>(first);
   const [mode, setMode] = useState<GraphView>("live");
   const [selected, setSelected] = useState<string | null>(null);
+  const [venture, setVenture] = useState<string>(ALL_VENTURES);
   const g = view.graphs[wing];
-  const bands = useMemo(() => bandsOf(g), [g]);
+  // The venture filter is the scout wing's (the muse wing produces for none) and is drawn only once a venture exists.
+  const ventures = wing === "scout" ? (view.ventures ?? []) : [];
+  const shown = ventures.some((v) => v.id === venture) ? venture : ALL_VENTURES;
+  const bands = useMemo(() => bandsOf(byVenture(g, shown)), [g, shown]);
   const [open, setOpen] = useState<Record<string, boolean>>(() => openAtFirst(bands));
   const panel = useRef<HTMLDivElement | null>(null);
 
@@ -56,6 +61,7 @@ export function Scout({ initial, port, wing: first = "scout" }: ScoutProps) {
   const pickWing = (next: ScoutWing): void => {
     setWing(next);
     setSelected(null);
+    setVenture(ALL_VENTURES);
     setOpen(openAtFirst(bandsOf(view.graphs[next])));
     // The address keeps the wing, so a reload or a shared link lands on the same graph.
     const url = new URL(window.location.href);
@@ -64,12 +70,25 @@ export function Scout({ initial, port, wing: first = "scout" }: ScoutProps) {
     window.history.replaceState(window.history.state, "", url);
   };
 
+  const pickVenture = (next: string): void => {
+    setVenture(next);
+    setOpen(openAtFirst(bandsOf(byVenture(g, next))));
+  };
+
   return (
     <div className={s.scout} data-component="Scout">
       <header className={s.top}>
         {wing === "scout" && <PacketDoor word="seeds" open={g.open.seeds} />}
         <PacketDoor word="night" open={g.open.night} />
         <span className={s.grow} />
+        {ventures.length > 0 && (
+          <Seg
+            label="venture"
+            value={shown}
+            onChange={pickVenture}
+            options={[{ value: ALL_VENTURES, label: "all", count: g.nodes.length }, ...ventures.map((v) => ({ value: v.id, label: v.name, count: g.nodes.filter((n) => n.venture === v.id).length }))]}
+          />
+        )}
         <Seg label="wing" value={wing} onChange={pickWing} options={(Object.keys(view.graphs) as ScoutWing[]).map((w) => ({ value: w, label: w, count: view.graphs[w].nodes.length }))} />
         <Seg
           label="nodes"

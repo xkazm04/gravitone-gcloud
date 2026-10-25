@@ -9,8 +9,9 @@ import "server-only";
 // The prototype padded its 254 real items with "illustrative" ones; a stored record may not be
 // illustrative (@gt/domain/libraryItem), so here every item is `fixture` - honest about being a
 // fixture universe - except a tenth that are `derived` and name the item they came from.
-// Four game-asset `model` items (./fixtureModels.ts) and six muse `character` items
-// (./fixtureCharacters.ts) take the last documents' places, so the corpus stays 5,000 and every
+// Four game-asset `model` items (./fixtureModels.ts), six muse `character` items
+// (./fixtureCharacters.ts) and the scout's four genres and one venture (./fixtureGenres.ts) take the
+// last documents' places, so the corpus stays 5,000 and every
 // record drawn before them is the one it always was.
 // A few items carry the media trouble the index measures at ingest (an export that does not
 // decode, a plate whose file is gone), so the attention facet has something to find.
@@ -22,6 +23,7 @@ import { CHIP_GROUPS, normText, POSTER_MIME, techniqueBand, type Attention, type
 import type { libraryItemSchema } from "@gt/domain/libraryItem";
 
 import { fixtureCharacters } from "./fixtureCharacters.ts";
+import { FIXTURE_VENTURE_NAMES, fixtureGenres } from "./fixtureGenres.ts";
 import { fixtureModels } from "./fixtureModels.ts";
 import { BUNDLES, CLIPS, DECK, dataBlob, fileBlob, HUNTS, LESSONS, MECHANISMS, PALETTES, peaksOf, PROJECTS, rng, RUNS, SCENES, SOUND, STYLES, SUBJECTS, TOPICS, TRIAL_STYLES, type FixtureMedia } from "./fixtureData.ts";
 
@@ -58,6 +60,7 @@ const styleOf = (id: string) => STYLES.find((s) => s.id === id);
  */
 export function labelOf(group: string, value: string): string {
   if (group === "style") return styleOf(value)?.name ?? words(value);
+  if (group === "venture") return FIXTURE_VENTURE_NAMES.get(value) ?? value;
   if (group === "project") return PROJECTS.find((p) => p.id === value)?.title ?? value;
   if (group === "run" || group === "hunt" || group === "pin" || group === "set" || group === "bundle" || group === "attention" || group === "state" || group === "source" || group === "origin") return value;
   return words(value);
@@ -168,6 +171,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
   const quota = SHARE.map(([k, w]) => [k, Math.round(TOTAL * w)] as const);
   const models = fixtureModels();
   const characters = fixtureCharacters();
+  const genres = fixtureGenres();
   const sum = quota.reduce((s, q) => s + q[1], 0);
 
   // ── styles first: every other kind points at them ──
@@ -193,7 +197,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
   for (const [kind, n0] of quota) {
     // Plates absorb the rounding and the style quota the nine catalogue styles do not fill.
     const styleQuota = quota.find(([k]) => k === "style")?.[1] ?? 0;
-    const n = kind === "plate" ? n0 + (TOTAL - sum) + styleQuota - STYLES.length : kind === "style" ? 0 : kind === "doc" ? n0 - models.length - characters.length : n0;
+    const n = kind === "plate" ? n0 + (TOTAL - sum) + styleQuota - STYLES.length : kind === "style" ? 0 : kind === "doc" ? n0 - models.length - characters.length - genres.length : n0;
     for (let i = 0; i < n; i++) {
       if (kind === "image") {
         const deck = r() < 0.5;
@@ -327,13 +331,21 @@ export function buildCorpus(): readonly FixtureRecord[] {
     const b = { ...base("character", c.title, c.state, "scout", c.f, c.at), id: c.id, rights: { use: "publishable" as const } };
     add({ raw: { kind: "character", vocabulary: c.vocabulary, ...b, media: c.media }, f: c.f, meta: c.meta, extras: { character: c.extras }, lineage: [...c.runs.map(runPtr), ...c.styleIds.map(stylePtr)], media: heldFacts(c.facts, 90, "2026-10-24T09:00:00.000Z") });
   }
+  // Then the genres and the venture, drawing nothing from the stream: words first, a panel when one was drawn.
+  for (const g of genres) {
+    const b = { ...base(g.kind, g.title, g.state, "scout", g.f, g.at), id: g.id };
+    const media = g.facts === undefined ? null : heldFacts(g.facts, 96, "2026-10-24T09:00:00.000Z");
+    const common = { ...b, ...(g.media === undefined ? {} : { media: g.media }) };
+    const raw: Raw = "ladder" in g.vocabulary ? { kind: "genre", vocabulary: g.vocabulary, ...common } : { kind: "venture", vocabulary: g.vocabulary, ...common };
+    add({ raw, f: g.f, meta: g.meta, extras: g.extras, lineage: [...g.lineage], media });
+  }
   return derive(out, r);
 }
 
 /** A tenth of the corpus becomes `derived`: same vocabulary, and a lineage node naming its parent. */
 function derive(all: FixtureRecord[], r: () => number): FixtureRecord[] {
   return all.map((x, i) => {
-    if (i < STYLES.length || x.raw.kind === "model" || x.raw.kind === "character" || r() > 0.1) return x;
+    if (i < STYLES.length || x.raw.kind === "model" || x.raw.kind === "character" || x.raw.kind === "genre" || x.raw.kind === "venture" || r() > 0.1) return x;
     const parent = all.find((p, j) => j < i && p.raw.kind === x.raw.kind && p.raw.source === "fixture");
     if (parent === undefined) return x;
     const f = { ...x.f, source: ["derived"] };

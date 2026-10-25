@@ -75,6 +75,22 @@ export function LibraryGlyph({ name, className }: { readonly name: LibraryGlyphN
           <path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
         </svg>
       );
+    case "genre":
+      // A ladder: the rungs a genre climbs (perfecting, piece due, publishable).
+      return (
+        <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+          <path d="M6 2.5v15M14 2.5v15" />
+          <path d="M6 6h8M6 10h8M6 14h8" />
+        </svg>
+      );
+    case "venture":
+      // A flag on its pole: a channel, an album or a game planted.
+      return (
+        <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M5 17.5v-15" />
+          <path d="M5 3.5h10l-2.5 3.5 2.5 3.5H5" />
+        </svg>
+      );
     case "play":
       return (
         <svg className={className} viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">

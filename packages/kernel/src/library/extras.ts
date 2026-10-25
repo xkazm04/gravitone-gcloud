@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { GENRE_STATES, VENTURE_KINDS } from "@gt/domain/genre";
 import { MODEL_CLASSES, MODEL_TECHNIQUES } from "@gt/domain/library";
 
 // The detail's per-kind extras (@gt/domain/library `LibraryExtras`) as a door:
@@ -7,6 +8,8 @@ import { MODEL_CLASSES, MODEL_TECHNIQUES } from "@gt/domain/library";
 // them back (./detail.ts), so a row edited by hand is refused, not drawn.
 
 const nul = <T extends z.ZodType>(s: T) => s.nullable();
+/** A genre or a venture a detail links to (@gt/domain/library NamedRef). */
+const named = z.object({ id: z.string().min(1), name: z.string().min(1) });
 
 export const audioFactsSchema = z.object({
   asked: z.object({ tempoBpm: nul(z.number()), key: nul(z.string()), durationS: nul(z.number()) }),
@@ -77,6 +80,33 @@ export const extrasSchema = z.object({
           styleId: z.string().min(1).optional(),
         }),
       ),
+    })
+    .optional(),
+  genre: z
+    .object({
+      state: z.enum(GENRE_STATES),
+      use: z.string(),
+      look: z.string(),
+      grammar: z.array(z.string()),
+      keptTrials: z.array(z.string().min(1)),
+      piece: z.object({ ref: z.string().min(1), verdict: z.enum(["kept", "rejected", "open"]), video: z.string().min(1).optional() }).optional(),
+      bornFrom: z.object({ ref: z.string().min(1), image: z.string().min(1).optional() }),
+      proposal: z.string().min(1),
+      venture: named.optional(),
+      retiredAt: z.string().min(1).optional(),
+    })
+    .optional(),
+  venture: z
+    .object({
+      kind: z.enum(VENTURE_KINDS),
+      tone: z.string(),
+      audience: z.string(),
+      format: z.string(),
+      look: z.string(),
+      genres: z.array(named),
+      characters: z.array(z.string().min(1)).optional(),
+      proposal: z.string().min(1),
+      retiredAt: z.string().min(1).optional(),
     })
     .optional(),
   model: z

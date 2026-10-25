@@ -9,8 +9,12 @@ import "server-only";
 // The backlog (spark scout-vision) is the SCOUT wing's - the muse wing has no seeds and no storyboards - read inside
 // that wing's scope with the same readers the graph uses, and counted by backlog.ts backlogOf. A backlog that cannot
 // be counted is left out of the view (the head draws no mark), never guessed; the graph still draws.
+//
+// The live ventures (spark scout-vision S2) are the kernel's heads (listVentures); none, and the view carries none.
 
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
+import type { Store } from "@gt/kernel/store";
+import { listVentures } from "@gt/kernel/ventures/store";
 
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { backlogOf } from "../../../../lib/foundry/scout/backlog.ts";
@@ -20,7 +24,7 @@ import { pauseBranch, readSteer, resumeBranch, setSplit } from "../../../../lib/
 import { readAllNights } from "../../../../lib/foundry/scout/store.ts";
 import type { Steer } from "../../../../lib/foundry/scout/types.ts";
 import { withWing } from "../../../../lib/foundry/scout/wingScope.ts";
-import type { ScoutBacklog, ScoutView } from "./contract.ts";
+import type { ScoutBacklog, ScoutVenture, ScoutView } from "./contract.ts";
 import type { ServerScout } from "./port.ts";
 
 async function backlog(): Promise<ScoutBacklog | undefined> {
@@ -33,13 +37,20 @@ async function backlog(): Promise<ScoutBacklog | undefined> {
   }
 }
 
+/** The live ventures, for the filter (spark scout-vision S2); a read that fails leaves the filter out, never guesses. */
+function ventures(store: Store): readonly ScoutVenture[] {
+  const r = store.read((x) => listVentures(x));
+  return r.ok ? r.value.filter((v) => v.retiredAt === undefined).map((v) => ({ id: v.id, name: v.name })) : [];
+}
+
 async function view(): Promise<Result<ScoutView>> {
   const k = kernel();
   if (!k.ok) return k;
   try {
     // Outside any wing's scope the steer read is the scout wing's: the only one with a split to edit.
     const [graphs, steer, b] = await Promise.all([buildGraphs({ store: k.value.store }), readSteer(), backlog()]);
-    return ok({ graphs, ...(steer.split === undefined ? {} : { split: steer.split }), ...(b === undefined ? {} : { backlog: b }) });
+    const vs = ventures(k.value.store);
+    return ok({ graphs, ...(steer.split === undefined ? {} : { split: steer.split }), ...(b === undefined ? {} : { backlog: b }), ...(vs.length === 0 ? {} : { ventures: vs }) });
   } catch (e) {
     return err("unavailable", errorMessage(e));
   }

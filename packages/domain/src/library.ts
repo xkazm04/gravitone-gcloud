@@ -11,14 +11,16 @@
 // which the prototype's `toLowerCase().replace(/[-_]/g, " ")` did not.
 
 import { AGE_BANDS } from "./libraryCharacter.ts";
+import { LADDER_VALUES } from "./libraryGenre.ts";
 import { TRIS_BANDS, type LibraryExtras, type MediaFacts, type ModelExportProject } from "./libraryMedia.ts";
 
 export * from "./libraryCharacter.ts";
+export * from "./libraryGenre.ts";
 export * from "./libraryMedia.ts";
 
 // ── the closed sets (moved here from ./libraryItem.ts so the client holds them zod-free) ──
 
-export const LIBRARY_KINDS = ["image", "plate", "style", "motion", "audio", "video", "doc", "model", "character"] as const;
+export const LIBRARY_KINDS = ["image", "plate", "style", "motion", "audio", "video", "doc", "model", "character", "genre", "venture"] as const;
 export type LibraryKindName = (typeof LIBRARY_KINDS)[number];
 
 /** The Library's shared state facet (library-data.js `STATES`). */
@@ -57,6 +59,8 @@ export const KIND_LABELS: readonly { readonly kind: LibraryKindName | "all"; rea
   { kind: "doc", label: "Documents", short: "document" },
   { kind: "model", label: "3D models", short: "model" },
   { kind: "character", label: "Characters", short: "character" },
+  { kind: "genre", label: "Genres", short: "genre" },
+  { kind: "venture", label: "Ventures", short: "venture" },
 ];
 
 /**
@@ -81,6 +85,8 @@ export const VOCAB_GROUPS: { readonly [K in LibraryKindName | "all"]: readonly s
   doc: ["bundle", "techniques"],
   model: ["class", "technique", "rig", "tris"],
   character: ["age", "build", "look", "application"],
+  genre: ["ladder", "venture"],
+  venture: ["type"],
 };
 export type RailSection = "vocabulary" | "attention" | "state" | "collections" | "origin";
 
@@ -125,13 +131,14 @@ export const FIXED_ORDER: Readonly<Record<string, readonly string[]>> = {
   techniques: ["0", "1–4", "5–8", "9–15", "16+"],
   tris: TRIS_BANDS,
   age: AGE_BANDS,
+  ladder: LADDER_VALUES,
 };
 
 /** library.js `CHIPKEYS`: the facets a list row shows, first value of each, at most three. */
 export const CHIP_GROUPS: { readonly [K in LibraryKindName]: readonly string[] } = {
   ...{ image: ["scene", "set"], plate: ["family", "render_mode", "station"], style: ["family", "render_mode", "palette_strategy"] },
   ...{ motion: ["subject", "format"], audio: ["genre", "mood", "type"], video: ["format", "captions"], doc: ["bundle", "techniques"], model: ["class", "technique", "tris"] },
-  ...{ character: ["age", "build", "application"] },
+  ...{ character: ["age", "build", "application"], genre: ["ladder", "venture"], venture: ["type"] },
 };
 
 /** A doc's technique count as its facet band (library-data.js `band`); a subject with none is "0", not one to four. */

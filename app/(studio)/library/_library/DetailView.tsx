@@ -30,7 +30,9 @@ import type { ModelExportProject } from "@gt/domain/library";
 import type { Choice, ShownDetail } from "../_port/contract.ts";
 import { ledgerFor } from "../../_shell/links.ts";
 import { CharacterFacts } from "./CharacterDetail.tsx";
+import { GenreFacts } from "./GenreDetail.tsx";
 import { ExportRow, ModelFacts } from "./ModelDetail.tsx";
+import { VentureFacts } from "./VentureDetail.tsx";
 import s from "./library.module.css";
 
 export type DetailViewProps = {
@@ -43,7 +45,7 @@ export type DetailViewProps = {
   readonly onExport: (project: ModelExportProject) => void;
 };
 
-function Extras({ d, onFacet }: { readonly d: ShownDetail; readonly onFacet: (group: string, value: string) => void }) {
+function Extras({ d, onFacet, onItem }: { readonly d: ShownDetail; readonly onFacet: (group: string, value: string) => void; readonly onItem: (id: string) => void }) {
   const k = d.card.kind;
   const x = d.extras;
   if (k === "audio" && x.audio !== undefined) {
@@ -109,6 +111,8 @@ function Extras({ d, onFacet }: { readonly d: ShownDetail; readonly onFacet: (gr
   }
   if (k === "model" && x.model !== undefined) return <ModelFacts model={x.model} mesh={d.media?.mesh} />;
   if (k === "character" && x.character !== undefined) return <CharacterFacts character={x.character} lines={d.lines} onFacet={onFacet} />;
+  if (k === "genre" && x.genre !== undefined) return <GenreFacts genre={x.genre} onItem={onItem} />;
+  if (k === "venture" && x.venture !== undefined) return <VentureFacts venture={x.venture} onItem={onItem} />;
   if (k === "doc" && x.run !== undefined) {
     return (
       <DetailSection title="Article run">
@@ -189,7 +193,7 @@ export function DetailView({ d, busy, onFacet, onItem, onPin, onUse, onExport }:
       <DetailSection title="Lineage">
         <Lineage nodes={d.lineage} onItem={onItem} onFacet={onFacet} />
       </DetailSection>
-      <Extras d={d} onFacet={(g, v) => onFacet(g, v)} />
+      <Extras d={d} onFacet={(g, v) => onFacet(g, v)} onItem={onItem} />
       <DetailSection title="Acts">
         <div className={s.acts}>
           <div className={s.actRow}>
