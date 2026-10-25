@@ -161,7 +161,7 @@ export function Floor({ data, initial, produce, calendar, slot, choices }: Floor
     { facts: url.lane === null ? [] : ["lane-focused"], enabled: !levelOver(url, data.calendar !== null) },
   );
 
-  const rows = laneRows(url.lane, (l) => (shelfCount(l, data.shelf) ?? 0) > 0);
+  const rows = laneRows(url.lane, (l) => shelfCount(l, data.shelf) > 0);
 
   return (
     <div className={s.floor} data-component="Floor" data-hydrated={hydrated ? "" : undefined}>

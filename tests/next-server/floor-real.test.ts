@@ -31,6 +31,7 @@ import { sweep } from "@gt/kernel/slots/sweep";
 import { createSlot } from "@gt/kernel/slots/write";
 import type { Store } from "@gt/kernel/store";
 
+import { stylePlates } from "../../app/(studio)/floor/_floor/shelf.ts";
 import { realCancel, realDetail, realItems, realMove, realPublishNow, realSchedule, realSlots, unimported } from "../../app/(studio)/floor/_calendar/real.ts";
 import { NO_STORE_FACTS, readinessOf, standingWords } from "../../app/(studio)/floor/_calendar/readiness.ts";
 import { closeKernel, kernel } from "../../lib/kernelStore.ts";
@@ -99,6 +100,30 @@ beforeAll(() => {
 
 afterAll(() => {
   closeKernel();
+});
+
+describe("the styles shelf's plates", () => {
+  it("gives a style its kept plate's address and a style with none no key", () => {
+    const plate: LibraryItemInput = {
+      kind: "plate",
+      id: "plate-shelf-1",
+      title: "Plate shelf 1",
+      state: "ratified",
+      collections: [],
+      origin: "forge",
+      rights: { use: "unknown" },
+      source: "fixture",
+      lineage: [{ kind: "run", id: "run-1" }],
+      vocabulary: { station: "forge", styleId: "shelf-ink", mechanism: "text" },
+      at: iso(-30),
+      media: { sha256: sha("f"), bytes: 10, mime: "image/png" },
+    };
+    must(upsertItems(store, [{ item: plate, meta: "plate · 10 B", extras: {}, feed: "t" }], { styleOf: () => undefined }));
+    must(putMediaFacts(store, [{ sha: sha("f"), decodable: true, mime: "image/png", w: 10, h: 10, durationS: null, posterSha: null, meanLuma: 120, nearBlack: false, probedAt: iso(-29), error: null }]));
+    const plates = stylePlates(["shelf-ink", "shelf-none"]);
+    expect(plates.get("shelf-ink")).toBe(`/api/blob/${sha("f")}?type=image%2Fpng`);
+    expect(plates.has("shelf-none")).toBe(false);
+  });
 });
 
 describe("the rail and the month read the slot table", () => {

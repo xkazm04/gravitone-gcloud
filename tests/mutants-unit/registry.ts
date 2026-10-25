@@ -1955,8 +1955,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "suno-start-leaves-the-hold",
     test: "tests/next-server/producer-suno.test.ts",
     file: "lib/producers/suno.ts",
-    find: "  if (hold !== undefined && jobs.has(hold.jobId)) must(ackLane(store, \"box.chrome\", actor));",
-    replace: "  if (hold !== undefined && jobs.has(hold.jobId) && false) must(ackLane(store, \"box.chrome\", actor));",
+    find: "  if (hold !== undefined && sunoJobOf(store, hold.jobId) !== undefined) must(ackLane(store, \"box.chrome\", actor));",
+    replace: "  if (hold !== undefined && sunoJobOf(store, hold.jobId) !== undefined && false) must(ackLane(store, \"box.chrome\", actor));",
     why: "Nothing on box.chrome ever runs after a crash.",
   },
   {

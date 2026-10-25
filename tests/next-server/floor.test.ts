@@ -15,7 +15,9 @@ import { SLOTS } from "../../app/(studio)/floor/_calendar/fixtureData.ts";
 import { applyCancel, applyMove, applyPublishNow, fixtureAct, fixtureFacts, fixtureItems, fixtureSchedule, fixtureSlots, seedRow, viewOf, type FixtureRow } from "../../app/(studio)/floor/_calendar/fixture.ts";
 import { byLane, floorRunsOf, floorSearch, levelOver, parseFloorUrl, scheduleHref, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
 import type { ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
-import { downsample } from "../../app/(studio)/floor/_floor/shelf.ts";
+import { downsample, projects as shelfProjects, SHELF_ROWS } from "../../app/(studio)/floor/_floor/shelf.ts";
+import { shelfCount } from "../../app/(studio)/floor/_floor/LaneCells.tsx";
+import { fixtureProduce } from "../../app/(studio)/projects/_port/port.ts";
 import type { LiveJob, WeirItem } from "../../lib/ledger/v1/types.ts";
 
 // The Floor's pure rules: which pile is NEXT (the header and the Floor share it), how runs and
@@ -285,5 +287,26 @@ describe("a kept take's waveform", () => {
     expect(downsample([0.1, 0.9, 0.2, 0.3, 0.8, 0.4], 3)).toEqual([0.9, 0.3, 0.8]);
     expect(downsample([0.5, 0.6], 37)).toEqual([0.5, 0.6]);
     expect(downsample(Array.from({ length: 1000 }, (_, i) => i / 1000), 37)).toHaveLength(37);
+  });
+});
+
+describe("the video lane's shelf", () => {
+  it("reads the produce port's projects: a count, bounded rows, each a door to its plan", () => {
+    const listed = fixtureProduce().listProjects();
+    if (!listed.ok) throw new Error(listed.error.message);
+    const read = shelfProjects(fixtureProduce());
+    if (!read.ok) throw new Error(read.error);
+    expect(listed.value.projects.length).toBeGreaterThan(0);
+    expect(read.value.total).toBe(listed.value.projects.length);
+    expect(read.value.rows.length).toBe(Math.min(SHELF_ROWS, read.value.total));
+    expect(read.value.rows[0]).toEqual({ id: listed.value.projects[0]!.id, title: listed.value.projects[0]!.title, recipe: listed.value.projects[0]!.recipe, href: `/projects/${encodeURIComponent(listed.value.projects[0]!.id)}` });
+    const shelf = { projects: read } as Parameters<typeof shelfCount>[1];
+    expect(shelfCount("video", shelf)).toBe(read.value.total);
+  });
+
+  it("says a failed read in the shelf, counting nothing", () => {
+    const read = shelfProjects({ listProjects: () => ({ ok: false, error: { code: "internal", message: "store closed" } }) } as never);
+    expect(read).toEqual({ ok: false, error: "projects: store closed" });
+    expect(shelfCount("video", { projects: read } as Parameters<typeof shelfCount>[1])).toBe(0);
   });
 });

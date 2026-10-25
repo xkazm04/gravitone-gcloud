@@ -1,9 +1,9 @@
 import { AppError, errorMessage } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
-import type { Job } from "@gt/domain/job";
+import type { Job, JobState } from "@gt/domain/job";
 import type { CallIntent } from "@gt/kernel/dryrun";
 import type { Producer, StepContext } from "@gt/kernel/job-core";
-import { cancel, list, pause, resume, retry } from "@gt/kernel/job";
+import { cancel, get, list, pause, resume, retry } from "@gt/kernel/job";
 import { ackLane, laneHold } from "@gt/kernel/job-queue";
 import type { Store } from "@gt/kernel/store";
 import { JOB_USD } from "@gt/kernel/spend/meter";
@@ -42,6 +42,19 @@ export const sunoKernelId = (j: Pick<SunoJob, "id">): string => `job:run:${sunoR
 
 export function sunoKernelJobs(store: Store = soundKernel().store): Map<string, Job> {
   return new Map(must(list(store)).filter((j) => j.producer === SUNO_PRODUCER).map((j) => [j.id, j]));
+}
+
+/** The suno jobs in these states, read off those states only: the store holds every producer's. */
+function sunoJobsIn(store: Store, states: readonly JobState[]): Job[] {
+  return states.flatMap((state) => must(list(store, { state })).filter((j) => j.producer === SUNO_PRODUCER));
+}
+
+/** One suno job by its id: one row; none for an absent id or another producer's. */
+function sunoJobOf(store: Store, id: string): Job | undefined {
+  const r = get(store, jobIdOf(id));
+  if (r.ok) return r.value.job.producer === SUNO_PRODUCER ? r.value.job : undefined;
+  if (r.error.code === "not-found") return undefined;
+  throw r.error;
 }
 
 /* ── the ports ────────────────────────────────────────────────────────────── */
@@ -240,8 +253,7 @@ export const driveSuno = (jobIds: readonly string[], o: DriveOptions & { readonl
 /** Stop between models: every waiting or running Suno job pauses; the create in flight finishes. */
 export function pauseSunoJobs(actor: Actor, store: Store = soundKernel().store): string[] {
   const out: string[] = [];
-  for (const j of sunoKernelJobs(store).values()) {
-    if (j.state !== "queued" && j.state !== "running") continue;
+  for (const j of sunoJobsIn(store, ["queued", "running"])) {
     must(pause(store, j.id, actor));
     out.push(j.id);
   }
@@ -254,14 +266,12 @@ export function pauseSunoJobs(actor: Actor, store: Store = soundKernel().store):
  * create in flight is re-made only if it landed no clips (the port's check).
  */
 export function resumeSunoJobs(actor: Actor, store: Store = soundKernel().store): string[] {
-  const jobs = sunoKernelJobs(store);
   const hold = must(store.read((r) => laneHold(r, "box.chrome")));
-  if (hold !== undefined && jobs.has(hold.jobId)) must(ackLane(store, "box.chrome", actor));
+  if (hold !== undefined && sunoJobOf(store, hold.jobId) !== undefined) must(ackLane(store, "box.chrome", actor));
   const out: string[] = [];
-  for (const j of jobs.values()) {
+  for (const j of sunoJobsIn(store, ["paused", "interrupted"])) {
     if (j.state === "paused") must(resume(store, j.id, actor));
-    else if (j.state === "interrupted") must(retry(store, j.id, actor));
-    else continue;
+    else must(retry(store, j.id, actor));
     out.push(j.id);
   }
   return out;

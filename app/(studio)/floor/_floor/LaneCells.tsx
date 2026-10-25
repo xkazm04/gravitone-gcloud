@@ -138,18 +138,18 @@ export function Weir({ work, folded, next, onOpen, unapplied = [] }: WeirProps) 
   );
 }
 
-/** How much a lane's ratified column holds (null: the server cannot count it). */
-export function shelfCount(lane: MediaLane, shelf: Shelf): number | null {
+/** How much a lane's ratified column holds (0 where its read failed: the column draws the error). */
+export function shelfCount(lane: MediaLane, shelf: Shelf): number {
   if (lane === "image") return shelf.styles.ok ? shelf.styles.value.proven.length : 0;
   if (lane === "article") return shelf.posts.ok ? shelf.posts.value.length : 0;
   if (lane === "audio") return shelf.takes.ok ? shelf.takes.value.total : 0;
-  return null;
+  return shelf.projects.ok ? shelf.projects.value.total : 0;
 }
 
 export function ShelfFor({ lane, shelf, folded }: { readonly lane: FloorLane; readonly shelf: Shelf; readonly folded: boolean }) {
   const n = shelfCount(lane.id, shelf);
   if (folded) {
-    return <LaneSummary>{n === null ? <span className={s.ratified}>{lane.shelf}</span> : <Tally value={n} label={lane.shelf.replace("Library · ", "")} />}</LaneSummary>;
+    return <LaneSummary><Tally value={n} label={lane.shelf.replace("Library · ", "")} /></LaneSummary>;
   }
   return <ShelfBody lane={lane} shelf={shelf} />;
 }
@@ -171,7 +171,7 @@ function ShelfBody({ lane, shelf }: { readonly lane: FloorLane; readonly shelf: 
         {proven.length > 0 && (
           <ShelfGrid>
             {proven.map((st) => (
-              <ShelfStyle key={st.id} name={st.name} />
+              <ShelfStyle key={st.id} name={st.name} {...(st.plate === undefined ? {} : { plate: st.plate })} />
             ))}
           </ShelfGrid>
         )}
@@ -214,6 +214,17 @@ function ShelfBody({ lane, shelf }: { readonly lane: FloorLane; readonly shelf: 
       </ShelfCell>
     );
   }
-  // Projects are not read into this column yet (./shelf.ts); the column is their door.
-  return <ShelfCell title={lane.shelf} href="/projects" extra={<Chip label="runs ›" tone="cyan" href="/projects/runs" />} />;
+  if (!shelf.projects.ok) return failed(lane, shelf.projects.error);
+  const { rows, total } = shelf.projects.value;
+  return (
+    <ShelfCell title={lane.shelf} href="/projects" tallies={[{ value: total, label: "projects" }]} extra={<Chip label="runs ›" tone="cyan" href="/projects/runs" />}>
+      {rows.length > 0 && (
+        <ShelfList>
+          {rows.map((p) => (
+            <ShelfRow key={p.id} href={p.href} lead={<FloorGlyph name="video" className={s.rowMark} />} title={p.title} trail={<Chip label={p.recipe} casing="lower" />} />
+          ))}
+        </ShelfList>
+      )}
+    </ShelfCell>
+  );
 }

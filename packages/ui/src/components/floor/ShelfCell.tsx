@@ -52,14 +52,18 @@ export function ShelfGrid({ children }: { readonly children: ReactNode }) {
 }
 
 /**
- * One ratified style: a ground where its plate will sit, its lock, its name. The shelf's row
- * carries no plate (app/(studio)/floor/_floor/shelf.ts ShelfStyleRow: id, name, family), so the
- * ground stays bare; the tile draws a plate once the row brings one.
+ * One ratified style: its plate (the shelf's row brings one when the style has a kept plate;
+ * app/(studio)/floor/_floor/shelf.ts ShelfStyleRow), else a bare ground, its lock, its name.
  */
-export function ShelfStyle({ name, href }: { readonly name: string; readonly href?: string }) {
+export function ShelfStyle({ name, href, plate }: { readonly name: string; readonly href?: string; readonly plate?: string }) {
   const body = (
     <>
-      <span className={cx(s.hero, s.noHero)} aria-hidden="true" />
+      {plate === undefined ? (
+        <span className={cx(s.hero, s.noHero)} aria-hidden="true" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- a style is shown as its own plate's bytes (desk/Plate.tsx, library/Face.tsx)
+        <img className={s.hero} src={plate} alt={name} loading="lazy" />
+      )}
       <span className={s.lock} aria-hidden="true">
         <FloorGlyph name="lock" className={s.lockMark} />
       </span>

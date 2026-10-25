@@ -224,6 +224,14 @@ describe("components", () => {
     expect(renderToStaticMarkup(h(ShelfRow, { lead: null, title: "rain", fact: "0:42" }))).toContain("rain<span");
   });
 
+  test("a style tile draws its plate with the style's name as the alt; without one it keeps the ground", () => {
+    const withPlate = renderToStaticMarkup(h(ShelfStyle, { name: "ghibli", plate: "/api/blob/abc?type=image%2Fpng" }));
+    expect(withPlate).toMatch(/<img [^>]*src="\/api\/blob\/abc\?type=image%2Fpng"[^>]*alt="ghibli"|<img [^>]*alt="ghibli"[^>]*src="\/api\/blob\/abc/);
+    const bare = renderToStaticMarkup(h(ShelfStyle, { name: "ghibli" }));
+    expect(bare).not.toContain("<img");
+    expect(bare).toContain("ghibli");
+  });
+
   test("a failed slot shows its error verbatim; an unknown channel speaks its id", () => {
     const html = renderToStaticMarkup(h(SlotRow, { slot: slot("s", "2026-10-15T08:00:00.000Z", "failed", { error: "upload: 403 quotaExceeded", channel: "mastodon" }) }));
     expect(html).toContain("upload: 403 quotaExceeded");
