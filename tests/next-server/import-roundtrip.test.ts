@@ -11,7 +11,7 @@ import { readPartIn, writePart } from "@gt/kernel/parts/driver";
 import { gateContext, gateFacts } from "@gt/kernel/parts/gates";
 import { launchProject, planReceipt } from "@gt/kernel/records/launch";
 import { planViewIn } from "@gt/kernel/records/read";
-import { setPart } from "@gt/kernel/records/write";
+import { compose, setPart } from "@gt/kernel/records/write";
 import type { Store } from "@gt/kernel/store";
 
 import { inspectArchive } from "../../lib/studioArchive.ts";
@@ -285,5 +285,20 @@ describe("the re-export", () => {
     // The rest still byte for byte.
     const cut = (a: Archive) => a.rows.steps.find((r) => r["id"] === `${seed.film.id}:cut`);
     expect(rowLine("steps", cut(read(out.value)) ?? {})).toBe(rowLine("steps", cut(archive) ?? {}));
+  });
+
+  it("writes a project the kernel composed itself in v1's project shape when its recipe is a v1 template's film, and refuses an album by name", async () => {
+    const { store, blobs } = universe();
+    expect(compose(store, { recipe: "film/trailer", title: "Tidal tariffs" }, OP, { id: "flm" }).ok).toBe(true);
+    expect(compose(store, { recipe: "album-video", title: "Night drive" }, OP, { id: "alb" }).ok).toBe(true);
+    const out = await exportProjects(store, blobs, { ids: ["flm"], uid: "uid-k", now: NOW });
+    if (!out.ok) throw out.error;
+    const back = read(out.value);
+    expect(back.header).toMatchObject({ from: "uid-k", scope: "project", projectIds: ["flm"], exportedAt: NOW });
+    expect(back.rows.projects).toEqual([expect.objectContaining({ id: "flm", uid: "uid-k", title: "Tidal tariffs", template: "trailer", targetS: expect.any(Number) })]);
+    const v1 = await inspectArchive(new Blob([Buffer.from(out.value)]));
+    expect(v1.manifest.counts).toMatchObject({ projects: 1 });
+    const album = await exportProjects(store, blobs, { ids: ["flm", "alb"], uid: "uid-k", now: NOW });
+    expect(album.ok ? null : [album.error.code, album.error.message]).toEqual(["refused", "a album-video project has no v1 shape; only a film of a v1 template exports"]);
   });
 });
