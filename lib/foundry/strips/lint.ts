@@ -58,8 +58,81 @@ const RULES: Rule[] = [
 
 const CONTEXT = 600;
 
-export function lintStrip(html: string): LintFinding[] {
+/** Blank `text[from, to)` to spaces, keeping newlines so every later offset and line number is the original's. */
+const blank = (text: string, from: number, to: number): string => text.slice(0, from) + text.slice(from, to).replace(/[^\n]/g, " ") + text.slice(to);
+
+/**
+ * PROSE ABOUT CODE IS NOT CODE. A comment that names a banned call (`// never Math.random()`) must not fail
+ * the strip, so the rules run over the page with comments blanked (same length, same lines). Blanking only ever
+ * errs toward KEEPING text, since a lint that hides a real call is a loosened gate: strings are skipped so a
+ * `"https://..."` stays; a `//` is a comment only when it starts the line or follows whitespace (the tail of a
+ * regex literal like `/:\/\//` is not one); a block comment that never closes is left alone.
+ */
+function blankScriptComments(js: string): string {
+  let out = js;
+  let i = 0;
+  while (i < out.length) {
+    const c = out[i] as string;
+    if (c === '"' || c === "'" || c === "`") {
+      // A quote opens a string to its closer; ' and " end at the line, a template may span lines.
+      let j = i + 1;
+      while (j < out.length && out[j] !== c && (c === "`" || out[j] !== "\n")) j += out[j] === "\\" ? 2 : 1;
+      i = j + 1;
+    } else if (c === "/" && out[i + 1] === "/" && (i === 0 || /\s/.test(out[i - 1] as string))) {
+      const nlAt = out.indexOf("\n", i);
+      const end = nlAt === -1 ? out.length : nlAt;
+      out = blank(out, i, end);
+      i = end;
+    } else if (c === "/" && out[i + 1] === "*" && (i === 0 || /[\s;{}()]/.test(out[i - 1] as string))) {
+      const close = out.indexOf("*/", i + 2);
+      if (close === -1) break;
+      out = blank(out, i, close + 2);
+      i = close + 2;
+    } else i += 1;
+  }
+  return out;
+}
+
+function blankCssComments(css: string): string {
+  let out = css;
+  let i = 0;
+  while (i < out.length) {
+    const c = out[i] as string;
+    if (c === '"' || c === "'") {
+      let j = i + 1;
+      while (j < out.length && out[j] !== c && out[j] !== "\n") j += out[j] === "\\" ? 2 : 1;
+      i = j + 1;
+    } else if (c === "/" && out[i + 1] === "*") {
+      const close = out.indexOf("*/", i + 2);
+      if (close === -1) break;
+      out = blank(out, i, close + 2);
+      i = close + 2;
+    } else i += 1;
+  }
+  return out;
+}
+
+/** The page with its script and style comments, and the markup's own `<!-- -->`, blanked. */
+export function withoutComments(html: string): string {
+  let out = "";
+  let last = 0;
+  const blocks = /(<(script|style)\b[^>]*>)([\s\S]*?)(<\/\2\s*>)/gi;
+  const markup = (t: string): string => t.replace(/<!--[\s\S]*?-->/g, (c) => c.replace(/[^\n]/g, " "));
+  for (let m = blocks.exec(html); m; m = blocks.exec(html)) {
+    const type = /\btype\s*=\s*["']?([^\s"'>]+)/i.exec(m[1] as string)?.[1]?.toLowerCase();
+    const body = m[3] as string;
+    // A data block (JSON) is not code and is left as it was.
+    const code = type === undefined || /javascript|module|ecmascript/.test(type);
+    const cleaned = m[2]?.toLowerCase() === "style" ? blankCssComments(body) : code ? blankScriptComments(body) : body;
+    out += markup(html.slice(last, m.index)) + (m[1] as string) + cleaned + (m[4] as string);
+    last = m.index + m[0].length;
+  }
+  return out + markup(html.slice(last));
+}
+
+export function lintStrip(page: string): LintFinding[] {
   const out: LintFinding[] = [];
+  const html = withoutComments(page);
   for (const r of RULES) {
     r.re.lastIndex = 0;
     let m: RegExpExecArray | null;
@@ -71,11 +144,11 @@ export function lintStrip(html: string): LintFinding[] {
       if (out.filter((f) => f.rule === r.rule).length >= 3) break;
     }
   }
-  if (!/window\.renderFrameAt\s*=/.test(html) && !/renderFrameAt\s*[:=]\s*(?:async\s*)?(?:function|\()/.test(html)) {
+  if (!/window\.renderFrameAt\s*=/.test(page) && !/renderFrameAt\s*[:=]\s*(?:async\s*)?(?:function|\()/.test(page)) {
     out.push({ rule: "api: window.renderFrameAt is not defined", excerpt: "" });
   }
-  if (!/STRIP_READY/.test(html)) out.push({ rule: "api: window.STRIP_READY is never set", excerpt: "" });
-  if (!/strip-frame/.test(html)) out.push({ rule: "api: no strip-frame message listener", excerpt: "" });
+  if (!/STRIP_READY/.test(page)) out.push({ rule: "api: window.STRIP_READY is never set", excerpt: "" });
+  if (!/strip-frame/.test(page)) out.push({ rule: "api: no strip-frame message listener", excerpt: "" });
   return out;
 }
 
