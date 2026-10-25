@@ -22,7 +22,6 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { agentArgs, assertIsolatedWorkspace, MIN_TIMEOUT_MIN } from "@/lib/agent/agentArgs";
 import type { AgentResult, ReviewerCall, RunAgentInput } from "@/lib/agent/cliSeam";
@@ -32,20 +31,37 @@ import { reviewerEnv } from "@/lib/agent/reviewerEnv";
 import { REVIEW_WORKSPACE } from "@/lib/agent/reviewerEngines";
 import { seatOnlyEnv } from "@/lib/claudeCli";
 
+const STAND_IN = path.join("lib", "articles", "dryStandIn.mjs");
+
+/** `from` or the nearest ancestor of it that holds the stand-in, as the stand-in's path. */
+function upFrom(from: string): string | undefined {
+  let dir = path.resolve(from);
+  for (let i = 0; i < 8; i++) {
+    const at = path.join(dir, STAND_IN);
+    if (existsSync(at)) return at;
+    const up = path.dirname(dir);
+    if (up === dir) return undefined;
+    dir = up;
+  }
+  return undefined;
+}
+
 /**
- * The stand-in beside this module. A bundler may place the module where `import.meta.url` names no
- * real file (the check below says so); the working directory is then the last resort, which is the
- * repository root only for a process started there.
+ * The stand-in, found from the engine's own code and not from the working directory alone: this
+ * module's directory where the loader names one (`__dirname`: CJS, vitest; a bundler or an ES
+ * module run by tsx names none, and `import.meta` is not an option - the Playwright lane compiles
+ * this file as CJS), then the entry script's, then the working directory, each walked up to the
+ * repository root. A worker started from workers/ or a server from elsewhere still finds it.
  */
 function standInPath(root?: string): string {
-  if (root !== undefined) return path.join(root, "lib", "articles", "dryStandIn.mjs");
-  try {
-    const near = path.join(path.dirname(fileURLToPath(import.meta.url)), "dryStandIn.mjs");
-    if (existsSync(near)) return near;
-  } catch {
-    // not a file: URL under this bundler; fall through
+  if (root !== undefined) return path.join(root, STAND_IN);
+  const entry = process.argv[1];
+  const starts = [typeof __dirname === "string" ? __dirname : undefined, entry === undefined ? undefined : path.dirname(entry), process.cwd()];
+  for (const from of starts) {
+    const found = from === undefined ? undefined : upFrom(from);
+    if (found !== undefined) return found;
   }
-  return path.join(process.cwd(), "lib", "articles", "dryStandIn.mjs");
+  return path.join(process.cwd(), STAND_IN);
 }
 
 /** The stand-in's argv prefix. Never a real CLI: the default is lib/articles/dryStandIn.mjs, found from this module, not from the cwd. */

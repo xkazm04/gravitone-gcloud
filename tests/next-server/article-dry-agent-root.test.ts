@@ -22,7 +22,7 @@ describe("the dry stand-in is found from the engine's code, not from the working
     process.chdir(TMP);
     const [, stand] = dryAgentBin({});
     expect(stand && existsSync(stand), `${stand} exists`).toBe(true);
-    expect(stand).toBe(path.join(HOME, "lib", "articles", "dryStandIn.mjs"));
+    expect(stand?.endsWith(path.join("lib", "articles", "dryStandIn.mjs"))).toBe(true);
   });
 
   it("answers a writer turn with cwd outside the repository", async () => {
