@@ -28,11 +28,12 @@ export type HuntAuditionProps = {
   readonly onCrown: (leaf: HuntLeafView, takeId: string, on: boolean) => void;
 };
 
-/** The take ← or → moves to from the one playing (wrapping), in board order. */
-export function stepTake(heard: readonly HuntLeafView[], playing: string | null, by: -1 | 1): string | undefined {
+/** The take ← or → moves to from the one playing (wrapping), in board order. A take with no bytes
+ *  (or none in `takes`) is passed over: the step lands on what plays, never sticks before it. */
+export function stepTake(heard: readonly HuntLeafView[], playing: string | null, by: -1 | 1, takes: Readonly<Record<string, AuditionTake>>): string | undefined {
   const ids = heard.flatMap((l) => {
     const t = headTake(l);
-    return t === undefined ? [] : [t];
+    return t === undefined || (takes[t]?.src ?? null) === null ? [] : [t];
   });
   if (ids.length === 0) return undefined;
   const at = playing === null ? -1 : ids.indexOf(playing);

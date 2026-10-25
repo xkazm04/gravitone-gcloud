@@ -124,12 +124,27 @@ describe("the audition", () => {
     expect(headTake(heard[1] ?? leaf({ id: "z" }))).toBe("t-b");
   });
 
+  const takes = { "t-a": take("t-a"), "t-b": take("t-b") };
+
   test("← and → step through the heard takes in board order, wrapping", () => {
-    expect(stepTake(heard, null, 1)).toBe("t-a");
-    expect(stepTake(heard, null, -1)).toBe("t-b");
-    expect(stepTake(heard, "t-a", 1)).toBe("t-b");
-    expect(stepTake(heard, "t-b", 1)).toBe("t-a");
-    expect(stepTake([], null, 1)).toBeUndefined();
+    expect(stepTake(heard, null, 1, takes)).toBe("t-a");
+    expect(stepTake(heard, null, -1, takes)).toBe("t-b");
+    expect(stepTake(heard, "t-a", 1, takes)).toBe("t-b");
+    expect(stepTake(heard, "t-b", 1, takes)).toBe("t-a");
+    expect(stepTake([], null, 1, takes)).toBeUndefined();
+  });
+
+  test("a step passes over a take that cannot play, in both directions", () => {
+    const three = buildTree([...MAP, leaf({ id: "e", parentId: "br", state: "rendered", takeIds: ["t-e"] })]).leaves.filter((l) => l.state === "rendered");
+    const takes = { "t-a": take("t-a", { src: null }), "t-b": take("t-b"), "t-e": take("t-e") };
+    expect(stepTake(three, "t-b", 1, takes)).toBe("t-e");
+    expect(stepTake(three, "t-e", 1, takes)).toBe("t-b");
+    expect(stepTake(three, "t-b", -1, takes)).toBe("t-e");
+    expect(stepTake(three, null, 1, takes)).toBe("t-b");
+    expect(stepTake(three, null, -1, takes)).toBe("t-e");
+    const gone = { "t-b": take("t-b") };
+    expect(stepTake(heard, "t-b", 1, gone)).toBe("t-b");
+    expect(stepTake(heard, null, 1, { "t-a": take("t-a", { src: null }) })).toBeUndefined();
   });
 });
 

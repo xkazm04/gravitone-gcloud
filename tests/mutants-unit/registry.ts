@@ -6462,4 +6462,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: 'credentials: "same-origin" })',
     why: "A hunt return upload the studio never answers neither resolves nor rejects, so its leaf stays `returning` until a reload and a second drop on it is refused.",
   },
+  {
+    id: "audition-step-sticks-on-unplayable-take",
+    test: "packages/ui/test/components/hunt.test.ts",
+    file: "packages/ui/src/components/audio/HuntAudition.tsx",
+    find: "t === undefined || (takes[t]?.src ?? null) === null ? [] : [t];",
+    replace: "t === undefined ? [] : [t];",
+    why: "← and → land on a heard take with no bytes, the island does nothing, and the transport can never step past it: every take beyond is walled off from the keys.",
+  },
 ];
