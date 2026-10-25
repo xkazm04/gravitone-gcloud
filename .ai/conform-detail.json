@@ -12855,6 +12855,49 @@
         "at": "2026-10-25T01:49:10.777994+00:00",
         "reason": "reviewer (sonnet): escalation.ts:29 flags any non-moodLed cut with no rung beats as a violation, whatever its rung or droppedParts. The ladder's DROP_ORDER includes 'middle-rungs', so a legitimately derived spot or platform cut would be flagged. The seat's own evidence names this gap, so 'conformant' is contradicted o"
       }
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/canvas-graph": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:55:16.965Z",
+      "worker": "4eb90336-6af0-4a3a-84c6-40e70bc9e64a",
+      "techniques": [
+        {
+          "technique": "viewport-transform",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/layout.ts:3 layout.ts derives fixed screen geometry from W/H and counts. Nothing converts between screen and world space and nothing reads a pointer, so there is no conversion authority to judge."
+        }
+      ]
+    },
+    "430ace14-ef3a-4ef0-acd0-71c989368950/canvas-graph": {
+      "context": "part-workspace-desk",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:55:16.965Z",
+      "worker": "4eb90336-6af0-4a3a-84c6-40e70bc9e64a",
+      "techniques": [
+        {
+          "technique": "direct-manipulation",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:78 Capturing at press on the layer itself (line 72) is correct. But any movement becomes a live move with no screen-space threshold: a 1px jitter on a ~800px frame rounds to 0.1% and up() then emits an onMove edit for what was meant as a click. Cancel and capture-lost exit paths are also missing (pair anchor)."
+        },
+        {
+          "technique": "viewport-transform",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:64 No camera, but there is still a mapping. The one inverse (screen px to frame percent) is a single function next to the forward percent styling, reads the live container rect, and guards against zero size."
+        },
+        {
+          "technique": "edge-management",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:42 The surface's only collection is positioned layers. There is no edge or connection type, so no anchor geometry, routing or edge economy to judge."
+        }
+      ],
+      "registryProposal": "canvas-graph scopes itself to relationship/topology surfaces, yet its direct-manipulation and 'no camera is not no authority' rules bind just as well to edge-less layer-composition canvases (a percent-positioned frame editor). Saying explicitly whether such surfaces fall under this subject or under drag-drop would stop seats disagreeing on applicability."
     }
   }
 }

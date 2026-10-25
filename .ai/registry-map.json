@@ -7089,7 +7089,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/paper.ts:2 This context is a pure paint and rasterisation pipeline (paper grain, inks, palette, seeded RNG, a worker job queue). It has no node/edge model, no pan/zoom camera and no pointer manipulation: a search of app/_landing/cosmos for toWorld, setPointerCapture, zoom and onWheel found nothing, and the only 'edges' hits are paper sheet edges (paper.ts, banner.ts), not graph edges.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "engine-host-contract",
@@ -9882,7 +9886,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:126 FrameCanvas ends a drag only on pointerup and has no onPointerCancel or lostpointercapture handler. After a cancelled gesture the `drag` state stays set, so later pointermove events over that layer keep moving it until some pointerup arrives: the 'drag sticks to the cursor' failure that direct-manipulation names.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "frame-direction",
