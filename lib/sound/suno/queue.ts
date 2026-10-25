@@ -184,7 +184,7 @@ export async function cancelJob(id: string): Promise<SunoJob> {
   const kernel = sunoKernelJobs();
   const live = overlaySuno((await readSuno()).jobs, kernel).jobs.find((j) => j.id === id);
   if (!live) throw new SoundError(`no Suno job ${id}`, 404);
-  if (live.state === "active") throw new SoundError("rendering now - it lands in triage when Suno finishes", 409);
+  if (live.state === "active" || (await readSuno()).jobs.some((j) => j.id === id && j.phase !== undefined)) throw new SoundError("rendering now - it lands in triage when Suno finishes", 409);
   if (live.state !== "queued") throw new SoundError(`this job is already ${live.state}`, 409);
   const k = kernel.get(sunoKernelId(live));
   if (k !== undefined) cancelSunoJob(k.id, OPERATOR);
@@ -275,9 +275,9 @@ export async function setSunoQueue(running: boolean): Promise<SunoQueueState> {
     await withSuno((f) => {
       for (const j of f.jobs) {
         if (!paused.has(sunoKernelId(j)) || j.state !== "active") continue;
+        // The phase stays: a create still spending after Stop is the record's only mark that it is,
+        // and clearSuno / cancelJob read it. The producer deletes it when the create lands.
         j.state = "queued";
-        delete j.phase;
-        delete j.model;
       }
     });
     return state;

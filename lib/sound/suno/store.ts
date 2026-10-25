@@ -239,7 +239,8 @@ export async function patchClip(id: string, patch: ClipPatch): Promise<SunoClip>
 /* ── housekeeping ─────────────────────────────────────────────────────────── */
 
 /** Remove our records in one write: proposals (not while queued or running),
- *  queued jobs (cancelled - a running one is skipped, its credits are spent),
+ *  queued jobs (cancelled - a running one is skipped, its credits are spent; so is a
+ *  stopped one whose create is still in flight, which wears its phase until the clips land),
  *  and clips (the record only: the song stays in the operator's Suno library
  *  and a library import brings it back). Unknown ids are skipped, not refused,
  *  because a board read can be a poll behind. */
@@ -254,7 +255,7 @@ export async function clearSuno(req: SunoClearRequest, now = Date.now()): Promis
     const out: SunoClearResult = { removed: 0, cancelled: 0, skipped: 0 };
     for (const id of jobIds) {
       const j = f.jobs.find((x) => x.id === id);
-      if (!j || j.state !== "queued") {
+      if (!j || j.state !== "queued" || j.phase !== undefined) {
         out.skipped++;
         continue;
       }
