@@ -51,7 +51,8 @@ export function JsonLine({ n, text, selected, index, onSelect }: JsonLineProps) 
 
 export function JsonBlock({ text, label }: { readonly text: string; readonly label: string }) {
   return (
-    <pre className={cx(s.block)} aria-label={label}>
+    // A pre is generic to ARIA and a generic may not be named: the group role carries the label.
+    <pre className={cx(s.block)} role="group" aria-label={label}>
       <Runs text={text} />
     </pre>
   );

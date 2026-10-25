@@ -122,6 +122,10 @@ describe("JSON runs", () => {
     expect(out).toContain("&lt;script&gt;");
   });
 
+  test("the record's name sits on a role that can carry one", () => {
+    expect(html(h(JsonBlock, { text: "{}", label: "event 7 as JSON" }))).toMatch(/^<pre[^>]* role="group" aria-label="event 7 as JSON"/);
+  });
+
   test("a JSON line is a selectable row with its number hidden from speech", () => {
     const out = html(h(JsonLine, { n: 12, text: "{}", selected: true, index: 3, onSelect: noop }));
     expect(out).toMatch(/^<div[^>]*role="row" aria-rowindex="3" aria-selected="true"/);
@@ -178,7 +182,11 @@ describe("EventRow", () => {
   });
 
   test("a cost carries its source unless it is a receipt; no cost is spoken as such", () => {
-    expect(html(h(EventRow, row({ cost: { usd: 0.42, src: "model" } })))).toMatch(/\$0\.42<sup aria-label="model">est<\/sup>/);
+    // The mark is a glyph and the source is spoken in words: a sup is not a role that takes
+    // an aria-label (ARIA 1.2 prohibits naming it), so a name there is never read.
+    const est = html(h(EventRow, row({ cost: { usd: 0.42, src: "model" } })));
+    expect(est).toMatch(/\$0\.42<sup aria-hidden="true">est<\/sup><span[^>]*>, model<\/span>/);
+    expect(est).not.toMatch(/<sup[^>]*aria-label/);
     expect(html(h(EventRow, row({ cost: { usd: 1.2, src: "real" } })))).not.toContain("<sup");
     expect(html(h(EventRow, row()))).toContain("no cost");
   });
