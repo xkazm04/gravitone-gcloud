@@ -12529,6 +12529,22 @@
           "evidence": "app/_landing/cosmos/engine/camera.ts:1 Camera motion is interactive parallax from user input, not a briefed move for a generator."
         }
       ]
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/copy-quality-gates": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "copy-quality-gates",
+      "bundle": "localization",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:37:07.140Z",
+      "worker": "330e510a-4fa6-4b7d-b65f-a87a3ca970d5",
+      "techniques": [
+        {
+          "technique": "rendered-string-extraction",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/reams.ts:48 A code-literal accessible name, assembled from fragments, is not extracted by the gate or declared out of scope."
+        }
+      ]
     }
   }
 }

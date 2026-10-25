@@ -7134,7 +7134,11 @@
           "revision": 10,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_landing/cosmos/engine/reams.ts:48 This mostly paint-side context still renders copy: the reams' accessible names and their label text (reams.ts:67). Those strings fall outside the copy contract's `app/_landing/*.tsx` sources, so the UK spelling 'stylised' ships unchecked against the declared US variant.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:f00a2dbd4e8fdce1",
+          "evaluatedRevision": 10
         },
         {
           "subject": "engine-binding-surface",
