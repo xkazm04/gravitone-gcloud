@@ -41,7 +41,7 @@ import { openKernel } from "@gt/kernel/kernel";
 import { closeProcessKernel } from "@gt/kernel/process";
 
 import { fixtureProduce } from "../../app/(studio)/projects/_port/port.ts";
-import { resetProduce } from "../../app/(studio)/projects/_port/fixture.ts";
+import { resetProduce, universe } from "../../app/(studio)/projects/_port/fixture.ts";
 import { makeRealProduce } from "../../app/(studio)/projects/_port/real.ts";
 
 const T0 = Date.parse("2026-10-16T09:00:00.000Z");
@@ -161,6 +161,28 @@ describe("what only an operator may do, an agent is refused on both sides", () =
     if (other === undefined) throw new Error("the fixture's frames job has no other route");
     expect(await said(fixture.reroute({ jobId: failed, option: other.option.key, token: await token(fixture, failed, other.option.key) }, agent), failed)).toBe(realSaid);
     expect(fixtureState(failed)).toBe("failed");
+  });
+});
+
+describe("a move passes the neighbour in the queue's order, not the schedule's", () => {
+  it("names the next job in the line on both sides", async () => {
+    // Real: two films launched, their research jobs queued on seat.text in launch order.
+    const first = await realFilm();
+    await realFilm();
+    const realMoved = await real.moveJob({ jobId: first.research, dir: "later" }, op);
+    if (!realMoved.ok) throw realMoved.error;
+    expect(realMoved.value.note).toMatch(/^behind /);
+    // Fixture: three cuts wait on box.render in the order why-bitcoin, the-quiet-tariff, provider-routing,
+    // but the schedule starts them in the reverse order (each waits on a different upstream).
+    const line = [...universe().jobs.values()].filter((j) => j.option.lane === "box.render" && (j.state === "queued" || j.state === "planned")).sort((a, b) => a.order - b.order);
+    expect(line.map((j) => j.id)).toEqual(["job:part:why-bitcoin:cut", "job:part:the-quiet-tariff:cut", "job:part:provider-routing-explainer:cut"]);
+    const moved = await fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op);
+    if (!moved.ok) throw moved.error;
+    expect(moved.value.note).toBe(`behind ${line[1]!.title}`);
+    const end = await fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op);
+    if (!end.ok) throw end.error;
+    expect(end.value.note).toBe(`behind ${line[2]!.title}`);
+    expect(await said(fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op))).toBe("refused: end of the lane queue");
   });
 });
 

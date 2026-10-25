@@ -266,13 +266,12 @@ export function retryJob(u: Universe, id: string, now: number, ceilingUsd?: numb
   return ok({ jobId: id, note: `retry · attempt ${j.value.attempt} · same route${ceilingUsd === undefined ? "" : ` · ceiling $${ceilingUsd}`}` });
 }
 
-export function moveJob(u: Universe, id: string, dir: "earlier" | "later", now: number): Result<ActOutcome> {
+export function moveJob(u: Universe, id: string, dir: "earlier" | "later", _now: number): Result<ActOutcome> {
   const j = jobOf(u, id);
   if (!j.ok) return j;
   if (j.value.state !== "queued" && j.value.state !== "planned") return err("refused", `job ${id} is ${j.value.state}; only a waiting job (queued or planned) moves in the line`);
-  const placed = placeAll(u, now);
-  const at = (x: FxJob): number => placed.get(x.partId ?? x.id)?.s ?? Number.POSITIVE_INFINITY;
-  const lane = [...u.jobs.values()].filter((x) => x.option.lane === j.value.option.lane && (x.state === "queued" || x.state === "planned")).sort((a, b) => at(a) - at(b) || a.order - b.order);
+  // The line is the queue's order, as the kernel swaps in it (job-queue.ts `move`, ORDER BY ord, n) - not the start the schedule gives a job that waits on an upstream.
+  const lane = [...u.jobs.values()].filter((x) => x.option.lane === j.value.option.lane && (x.state === "queued" || x.state === "planned")).sort((a, b) => a.order - b.order);
   const i = lane.indexOf(j.value);
   const k = lane[i + (dir === "earlier" ? -1 : 1)];
   if (k === undefined) return err("refused", "end of the lane queue");
