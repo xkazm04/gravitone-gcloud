@@ -19,6 +19,7 @@ import type { StyleAct, StyleOp, StyleOpOutcome, StyleView } from "@gt/domain/st
 import { land, loadStyle, opStyle, recOf, resetStyles, type Media } from "../../app/(studio)/library/style/_port/fixture.ts";
 import { actReceipt, confirmAct } from "../../app/(studio)/library/style/_port/fixtureActs.ts";
 import { ADOPT_SEEDS, DRY_GRID, SEEDS, presetPlate } from "../../app/(studio)/library/style/_port/fixtureData.ts";
+import { styleActSchema } from "../../app/(studio)/library/style/_port/schema.ts";
 import { styleJobId } from "../../lib/producers/styleLaunch.ts";
 
 const media: Media = async (file): Promise<Result<BlobRef>> => ok({ sha256: createHash("sha256").update(file).digest("hex"), bytes: file.length, mime: "image/jpeg" });
@@ -211,6 +212,14 @@ describe("acts: a receipt, then a confirm", () => {
     expect(first.value.jobId).toBe(styleJobId(v.id, rc.value.token));
     expect(second.ok && second.value).toMatchObject({ kind: "launched", jobId: first.value.jobId, view: { rev: first.value.view.rev } });
     expect((await view("chalk-argument")).proofs).toHaveLength(1);
+  });
+
+  // A trial named twice is two priced plates under one id: the landing's door refuses the second
+  // after both were paid for. The act's door refuses it before any price.
+  it("admits a render's trials at the door only once each", async () => {
+    const act = { kind: "generate-proofs", styleId: "chalk-argument", baseRev: 1, trialIds: ["flywheel", "flywheel"] };
+    expect(styleActSchema.safeParse(act).success).toBe(false);
+    expect(styleActSchema.safeParse({ ...act, trialIds: ["flywheel", "the-exit"] }).success).toBe(true);
   });
 
   it("refuses to adopt a candidate (v1's 409, kept)", async () => {

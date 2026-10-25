@@ -28,7 +28,15 @@ export const styleOpSchema = z.discriminatedUnion("kind", [
 
 export const styleOpRequestSchema = z.object({ styleId: id, baseRev: z.number().int().positive(), op: styleOpSchema }).strict();
 
+// A trial named twice is two priced plates the landing then refuses (one plate id per trial per
+// receipt): each trial once.
+const trialIds = z
+  .array(id)
+  .min(1)
+  .max(5)
+  .refine((ts) => new Set(ts).size === ts.length, { message: "each trial is rendered once per receipt" });
+
 export const styleActSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("adopt"), fromStyleId: id }).strict(),
-  z.object({ kind: z.literal("generate-proofs"), styleId: id, baseRev: z.number().int().positive(), trialIds: z.array(id).min(1).max(5) }).strict(),
+  z.object({ kind: z.literal("generate-proofs"), styleId: id, baseRev: z.number().int().positive(), trialIds }).strict(),
 ]);

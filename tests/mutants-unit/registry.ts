@@ -3834,6 +3834,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A dry-only process draws a live price the operator cannot confirm, so the atelier shows a spend that the meter will then refuse - the contract says a live read there is refused.",
   },
   {
+    id: "style-door-admits-a-trial-twice",
+    test: "tests/next-server/style-atelier.test.ts",
+    file: "app/(studio)/library/style/_port/schema.ts",
+    find: "  .refine((ts) => new Set(ts).size === ts.length, ",
+    replace: "  .refine(() => true, ",
+    why: "A render naming one trial twice is priced and rendered as two plates, then its landing is refused for a repeated plate id - paid for, nothing on the sheet.",
+  },
+  {
     id: "look-refs-unselected",
     test: "packages/producers/test/frames-look.test.ts",
     file: "packages/producers/src/frames/look.ts",
