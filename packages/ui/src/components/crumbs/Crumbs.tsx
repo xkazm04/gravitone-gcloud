@@ -8,8 +8,8 @@ export type Crumb = { readonly label: string; readonly href: string } | { readon
 export function Crumbs({ trail, here }: { readonly trail: readonly Crumb[]; readonly here: string }) {
   return (
     <nav className={s.crumbs} aria-label="breadcrumb">
-      {trail.map((c) => (
-        <Fragment key={c.label}>
+      {trail.map((c, i) => (
+        <Fragment key={`${i}:${c.label}`}>
           {"href" in c ? (
             <a className={s.step} href={c.href}>
               {c.label}

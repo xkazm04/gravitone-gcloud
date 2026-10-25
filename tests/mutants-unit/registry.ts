@@ -7278,4 +7278,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: '<Chip label="spend 24h" value="$0.00" />',
     why: "The kit's header chip spells zero spend `$0.00`, a figure the product's usd() never draws, so the specimen teaches a spelling nothing ships.",
   },
+  {
+    id: "ui-crumbs-keyed-by-label-again",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/crumbs/Crumbs.tsx",
+    find: "key={`${i}:${c.label}`}",
+    replace: "key={c.label}",
+    why: "A trail whose two steps share a name gives React two siblings with one key, and a trail change may reuse the wrong step's DOM.",
+  },
 ];
