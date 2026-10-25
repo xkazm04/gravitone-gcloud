@@ -290,3 +290,47 @@ the barycentre of what each node grows from -, `nodeBox`, `linkPath`, `visibleOf
 Not a StackBar: StackBar's segments are kept / rejected / undecided and speak those words; a share against a
 target is one quantity and a mark (ShareMeter's header says why). The graph is not windowed: /scout draws only
 unfolded bands, and the 10x fixture measure (WP-S2 report) decides whether a column needs `window/useWindow`.
+
+
+## Rows owed (24 shapes that shipped without one; closes `inventory.test.ts` OWED)
+
+Audio desk, the Recipe Book half (`/audio`, the Library's audio detail).
+
+| Kit name | Replaces (v1 / prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `AudioMeasures` | prototype library.js :552-554, library.css `.meas` | /audio, L (audio detail) | bpm, key, length / lufs, true peak, energy; the asked figure beside the measured one in amber only where the bytes disagree with the brief; a figure read off the brief (nothing measured) in its label's tone |
+| `AudioPrompt` | prototype library.js :550-551, `.prompt-s`, `.neg`, `.dchips`; v1 InspectorRecipe `draft` pre, InspectorTake quote | /audio, L (audio detail) | prompt whole in the reading serif; exclusions after a rose minus; defect codes as rose chips; each part absent when the take has none |
+| `DraftList` | v1 app/library/audio/InspectorDrafts.tsx | /audio | draft proposed / queued / running / done / failed / cancelled; its clips with keep / drop / unjudged; a link to the Board's audio triage (never keeps or rejects itself) |
+| `ReferenceList` | v1 app/library/audio/References.tsx | /audio | per reference: published truth against each method's tempo and key with the kind of error; kept / rejected of its descendants; Seed per method |
+| `SeedComposer` | v1 InspectorComposer.tsx, InspectorComposerTempo.tsx, InspectorAddTerm.tsx | /audio | term chips per facet; preferred terms (★) and avoided ones as fences (⊘); tempo and key; prompt per vendor dialect, copyable; Send to Suno opens a receipt; busy |
+| `TermRail` | v1 app/library/audio/Terms.tsx | /audio | per facet: keep rate, judged count, kept / rejected rail, most frequent defect; ★ prefer, ⊘ avoid and a phrase committed on submit or blur; an effects category carries no hand; a press adds the term to the seed |
+| `VariationList` | v1 app/library/audio/InspectorVariations.tsx | /audio | one-change fan-outs, one axis each, the change as a diff and the evidence that picked it; Load into the composer, Send opens its receipt; busy |
+| `PlayMark` | prototype shell.js play / pause marks | /audio, L (audio detail), Board audio tile | on / off; the mark shared by AudioPreview, HuntAudition, HuntMap, Rubric and the Arrange card's transport |
+
+Style atelier (`/library/style/[id]`).
+
+| Kit name | Replaces (v1 / prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `LockGate` | v1 parts.tsx `StyleStepper`, SpecEditor blocker line, coverage pips | L (style dossier) | candidate / proven / locked; keep pips against the proven threshold and coverage pips against the lock gate; the server's blocker sentence; the lock act only when the gate holds |
+| `ProofSheet`, `ProofTile` | v1 app/library/parts.tsx `StyleSheet`, `ProofThumb` | L (style atelier) | tile pending / approved / rejected; approve and reject on the plate; reject opens a one-line note (Esc backs out); reference window counts approved only; an approval under an earlier block dimmed; a forge plate marked with its origin; held; busy |
+| `StyleSlots` | v1 SpecEditor (finish) + Playground (technique, subject) | L (style dossier) | technique, subject, finish as text slots committing on blur or Esc and only when changed; palette drawn with its roles; locked as prose; busy |
+| `TrialMatrix` | v1 app/library/TrialMatrix.tsx | L (style atelier) | five trial columns: head covered / uncovered, face the covering plate or an outline, foot verdict counts with `earlier` for a stale plate; a head chosen for proof generation |
+| `Palette`, `EvidenceTable`, `PlateStrip` | v1 parts.tsx `PaletteDots`; prototype library detail `.evt` table; v1 StylesShelf document strip | L (style atelier, detail panel) | Palette swatches labelled by role; EvidenceTable keep / reject / scenes with an agent's keep marked and not counted, rows past the first page behind a count (`all` shows them); PlateStrip exemplar plates, an abandoned replica marked |
+
+Part workspace (`/projects/[id]/[part]`).
+
+| Kit name | Replaces (v1 / prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `PartWorkspace` | STEPS-DESIGN §1; v1 research page | P (every part editor) | header crumbs, verdict, acts, undo; rail, one primary and an optional inspector as labelled regions; foot part tabs and the upstream break when a part is not ready; fixed viewport |
+| `PartTabs` | v1 phase rail | P | the project's parts in recipe order with a state mark; the current one; a part with no editor, a gate and the slot aria-disabled; `[` `]` walk the rail |
+| `RailList` | v1 research board (39 cards, 7000 px) | P | one listbox, windowed past a screen, active-descendant keyboard (J / K); selected row scrolled into view; row height `h-pile-face`, or 1.5x when tall |
+| `VerdictChip` | STEPS-DESIGN §1 header verdict | P | the part's state as a status pill, its first reason in the work's words, the rest in a Tip on `+N` |
+| `FrameCanvas` | v1 app/_phases/frames/parts.tsx `FrameCanvas` | P (Frames, Motion) | plate underneath, vector elements, then texts, in percent of the frame; 16:9 or 9:16; plate absent as a dashed ground; hidden layer faint, selected ringed with a resize handle; unsourced figure marked ●; drag local until release, one edit; Motion movers over the same plate |
+
+Cull and status.
+
+| Kit name | Replaces (v1 / prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `RunFace` | none (the Run card's picture, split out of `RunCard`) | Board (cull mosaic), /kit | the reference when the run has one, else its first variant: a plate, a clip's first frame, a take's waveform, a finding's claim, a model's poster |
+| `SeriesBadge` | none (StaleBadge cannot say a different grader) | Board (cull) | amber chip carrying the graded series verbatim, its accessible name saying which was graded and which the calibration was measured on; draws nothing when no grade differs |
+| `EntryPill` | prototype `GT.State` over a ledger entry | Runs inspector, /scout | an already-resolved status entry (a wire token through `statusFromWire`) as the pill of its look and label; `StatusPill` is the same pill from a machine and its state |

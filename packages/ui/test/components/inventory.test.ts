@@ -3,8 +3,8 @@
 // next author cannot find, and will hand-roll a second spelling of. The population is walked
 // off the filesystem (every `export function Name` in a components/**/*.tsx), never listed.
 //
-// OWED is the debt this test found on its first run (2026-10-25): components that shipped
-// without a row. It may only shrink - a new component lands with its row, and a row that
+// OWED was the debt this test found on its first run (2026-10-25): 24 components that shipped
+// without a row, all written since. It may only shrink - a new component lands with its row, and a row that
 // lands for an OWED name takes the name off this list in the same commit.
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -13,32 +13,7 @@ import { describe, expect, test } from "vitest";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "src", "components");
 
-const OWED: readonly string[] = [
-  "AudioMeasures",
-  "AudioPrompt",
-  "DraftList",
-  "EntryPill",
-  "EvidenceTable",
-  "FrameCanvas",
-  "LockGate",
-  "Palette",
-  "PartTabs",
-  "PartWorkspace",
-  "PlateStrip",
-  "PlayMark",
-  "ProofSheet",
-  "ProofTile",
-  "RailList",
-  "ReferenceList",
-  "RunFace",
-  "SeedComposer",
-  "SeriesBadge",
-  "StyleSlots",
-  "TermRail",
-  "TrialMatrix",
-  "VariationList",
-  "VerdictChip",
-];
+const OWED: readonly string[] = [];
 
 function tsxFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? tsxFiles(join(dir, e.name)) : e.name.endsWith(".tsx") ? [join(dir, e.name)] : []));
