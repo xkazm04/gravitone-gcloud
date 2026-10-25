@@ -41,7 +41,8 @@ const topicOf = (ctx: KCtx): string => ctx.project.title;
 
 /* ── article ──────────────────────────────────────────────────────────────── */
 
-/** The article run's steps (lib/articles drive), as its dry stand-in reports them. */
+/** The article run's steps (lib/articles drive), as its dry stand-in reports them. They are drawn only for
+ *  a record a run booked (its engine is there): an imported article has sections and no run. */
 const STEPS = ["research", "outline", "draft", "check", "critique"] as const;
 const HEADINGS = ["What it is", "How it works", "Where it breaks", "What to do"] as const;
 
@@ -51,7 +52,7 @@ function articleData(_ctx: KCtx, a: ArticleRec): ArticleData {
     title: a.title,
     sections: a.sections.map((s) => ({ id: s.id, heading: s.heading, words: words(s.body), lead: s.body.split(/(?<=\.)\s/)[0] ?? "" })),
     words: a.sections.reduce((n, s) => n + words(s.body), 0),
-    steps: a.title === null ? [] : STEPS.map((name) => ({ name, state: "done" as const, usd: null })),
+    steps: a.title === null || a.engine === undefined ? [] : STEPS.map((name) => ({ name, state: "done" as const, usd: null })),
     ...(a.engine === undefined ? {} : { engine: a.engine }),
   };
 }
