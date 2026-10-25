@@ -19,6 +19,7 @@ import type { ChannelAdapter, PublishPlan, UploadHooks } from "../src/publish/ad
 import { publishMode } from "../src/publish/mode.ts";
 import { refreshMetrics } from "../src/publish/metrics.ts";
 import { STOPPED_TEXT } from "../src/publish/publish.ts";
+import { standingIn } from "../src/publish/standing.ts";
 import { publishSlotNow, publishTick, type TickDeps } from "../src/publish/tick.ts";
 
 // THE PUBLISH STEP over a real kernel on a scratch file, with a stub channel (the YouTube binding
@@ -290,6 +291,34 @@ describe("the metrics pull", () => {
     expect(liveRead.ok && liveRead.value).toEqual({ refreshed: 1, note: null });
     expect(reads).toBe(1);
     w.k.close();
+  });
+});
+
+describe("the channel's standing, from the ledger the publish writes", () => {
+  it("a dry rehearsal is no attempt at the channel: it neither goes out nor clears a live failure", async () => {
+    const failing = world(stub({ upload: () => Promise.resolve(err("unauthenticated", "token request failed: invalid_grant")) }), live());
+    slot(failing.k);
+    await publishTick(failing.deps, new Date(NOW));
+    slot(failing.k, { item: "video:export:rehearsal" });
+    const dry = await publishTick({ ...failing.deps, mode: DRY }, new Date(NOW));
+    expect(dry.ok && dry.value.outcomes.map((o) => o.kind)).toEqual(["published"]);
+    const s = failing.k.store.read((rd) => standingIn(rd, "youtube"));
+    expect(s.ok && s.value).toEqual({ channel: "youtube", attempts: 1, lastAttemptAt: at(0), lastSuccessAt: null, lastError: "token request failed: invalid_grant", failuresSinceSuccess: 1 });
+    // A live upload that lands is the channel working again.
+    slot(failing.k, { item: "video:export:live-again" });
+    await publishTick({ ...failing.deps, adapters: new Map<Channel, ChannelAdapter>([["youtube", stub()]]) }, new Date(NOW));
+    const back = failing.k.store.read((rd) => standingIn(rd, "youtube"));
+    expect(back.ok && back.value).toMatchObject({ attempts: 2, lastSuccessAt: at(0), failuresSinceSuccess: 0 });
+    failing.k.close();
+  });
+
+  it("a channel only ever rehearsed has never gone out", async () => {
+    const { k, deps } = world(stub());
+    slot(k);
+    await publishTick(deps, new Date(NOW));
+    const s = k.store.read((rd) => standingIn(rd, "youtube"));
+    expect(s.ok && s.value).toEqual({ channel: "youtube", attempts: 0, lastAttemptAt: null, lastSuccessAt: null, lastError: null, failuresSinceSuccess: 0 });
+    k.close();
   });
 });
 

@@ -15,7 +15,9 @@ import { STOPPED_TEXT } from "./publish.ts";
 // (the sentence an operator can act on) into "missed" (one they cannot). Deviation recorded.
 
 /** One publish attempt. `notTheChannel`: the slot failed for a reason of this machine's (a dead
- *  claimant, a stop before the upload began) - it says nothing about the channel's health. */
+ *  claimant, a stop before the upload began), or it went out DRY - a rehearsal that wrote a plan
+ *  and never reached the platform. Either says nothing about the channel's health: a dry run is
+ *  not "the last time it worked", and it must not clear a live failure still standing. */
 export type Attempt = { readonly at: string; readonly ok: boolean; readonly error?: string; readonly notTheChannel: boolean };
 
 export type Standing = {
@@ -52,13 +54,14 @@ const WINDOW = 200;
 export function attemptsIn(r: Reader, channel: Channel, limit = WINDOW): Attempt[] {
   return r
     .all(
-      "SELECT type, at, json_extract(data, '$.error') AS error, json_extract(data, '$.interrupted') AS interrupted FROM events WHERE type IN ('publish', 'slot.fail') AND json_extract(data, '$.channel') = ? ORDER BY seq DESC LIMIT ?",
+      "SELECT type, at, json_extract(data, '$.error') AS error, json_extract(data, '$.interrupted') AS interrupted, json_extract(data, '$.dry') AS dry FROM events WHERE type IN ('publish', 'slot.fail') AND json_extract(data, '$.channel') = ? ORDER BY seq DESC LIMIT ?",
       channel,
       limit,
     )
     .map((row) => {
       const error = row["error"];
-      const ours = (row["interrupted"] !== null && row["interrupted"] !== undefined) || error === STOPPED_TEXT;
+      const rehearsal = row["type"] === "publish" && row["dry"] === 1;
+      const ours = rehearsal || (row["interrupted"] !== null && row["interrupted"] !== undefined) || error === STOPPED_TEXT;
       return { at: String(row["at"]), ok: row["type"] === "publish", ...(typeof error === "string" ? { error } : {}), notTheChannel: ours };
     });
 }
