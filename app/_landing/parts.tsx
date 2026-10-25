@@ -98,13 +98,15 @@ export function EnterButton({ className = "" }: { className?: string }) {
           <ArrowRight className="pc-enter-arrow" aria-hidden />
         </button>
       )}
-      {ended && (
-        <StaleBadge words={ended} glyph="history" />
-      )}
-      {error && (
-        <p role="alert" className="pc-enter-err">
-          {error}
-        </p>
+      {(ended || error) && (
+        <div className="pc-enter-under">
+          {ended && <StaleBadge words={ended} glyph="history" />}
+          {error && (
+            <p role="alert" className="pc-enter-err">
+              {error}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
