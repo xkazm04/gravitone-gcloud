@@ -81,8 +81,9 @@ Library: LibraryNav (`.kind`), FacetGroup body, LibraryToolbar (`.fchips`), Libr
 - Ghost rows are one height (32px, `--h-field`); the prototype set 32 or 34 inline per site.
 - The two facet rows (Library check, Ledger rail) are one component with two marks, both
   pixel-exact; which survives is the owner's call.
-- The prototype's `blog` channel ("PR", amber) had no badge at first (the domain publishes to
-  youtube, tiktok and instagram only); lot 20 gave it one, as a badge, not a slot channel.
+- The prototype's `blog` channel ("PR", amber) had no badge at first; lot 20 gave it one, and
+  since Phase 6 (owner ruling 2026-10-17) it is a slot channel in `@gt/domain/slot` `CHANNELS`,
+  whose slot publishes as the article approve's pull request. `BADGE_CHANNELS` is that list.
 
 ## Ledger parts (Phase 2, lot 16)
 
