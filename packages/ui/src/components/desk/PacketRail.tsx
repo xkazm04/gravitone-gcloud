@@ -15,13 +15,11 @@ import { FloorGlyph } from "../floor/FloorGlyph.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import s from "./Desk.module.css";
 
-/** The Floor's lane order and names (⇧1-4); restated here because @gt/domain's list is zod-side. */
-const LANES: readonly { readonly id: MediaLane; readonly name: string }[] = [
-  { id: "image", name: "Image" },
-  { id: "article", name: "Article" },
-  { id: "audio", name: "Audio" },
-  { id: "video", name: "Video" },
-];
+/** The Floor's lane names in its order (⇧1-4); restated here because @gt/domain's list is zod-side.
+ *  Keyed BY the domain's type, so a lane added there and not here is a type error - a plain list
+ *  typechecked with one missing, and the rail dropped that lane's packets without a word. */
+const LANE_NAME: { readonly [L in MediaLane]: string } = { image: "Image", article: "Article", audio: "Audio", video: "Video" };
+const LANES: readonly { readonly id: MediaLane; readonly name: string }[] = (Object.keys(LANE_NAME) as MediaLane[]).map((id) => ({ id, name: LANE_NAME[id] }));
 
 const MODE_WORDS: { readonly [M in PacketMode]: string } = { "matrix-cull": "matrix cull", "blind-pair": "blind pair", "packet-review": "packet review" };
 

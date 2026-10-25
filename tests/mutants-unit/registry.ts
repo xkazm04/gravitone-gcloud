@@ -2497,6 +2497,15 @@ export const MUTANTS: UnitMutant[] = [
     why: "Each refused press would remount the commit button, so a keyboard user who pressed it early would lose focus to the document body.",
   },
   {
+    id: "packet-rail-drops-a-lane",
+    test: "packages/ui/test/board-render.test.ts",
+    file: "packages/ui/src/components/desk/PacketRail.tsx",
+    find: 'audio: "Audio", video: "Video" };',
+    replace: 'audio: "Audio" };',
+    why: "The Board's rail would draw no group for video and drop every video packet from the rail, with nothing saying a lane is missing.",
+    typecheck: true,
+  },
+  {
     id: "produce-strips-run-renamed-at-confirm",
     test: "tests/next-server/produce-real.test.ts",
     file: "lib/produce/laneDoors.ts",

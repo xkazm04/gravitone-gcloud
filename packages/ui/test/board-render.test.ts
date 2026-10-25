@@ -8,6 +8,7 @@ import { describe, expect, test } from "vitest";
 import type { Consequence, PacketView, PairView } from "@gt/domain/board";
 import { parseAt } from "@gt/domain/door";
 import { candidateIdSchema, packetIdSchema } from "@gt/domain/ids";
+import { MEDIA_LANES } from "@gt/domain/lane";
 import { reasonVocabulary } from "@gt/domain/source";
 import type { Result } from "@gt/domain/errors";
 
@@ -185,6 +186,11 @@ describe("the packet rail", () => {
       ["image", 1, ["pkt:x:1", "pkt:x:2"]],
       ["audio", 1, ["pkt:x:3"]],
     ]);
+  });
+
+  test("every media lane the domain names has a rail group: the rail's own list is not the ground truth", () => {
+    const g = railGroups(MEDIA_LANES.map((lane, i) => ({ id: must(parseAt("test", packetIdSchema, `pkt:x:${i}`)), lane, source: "forge" as const, mode: "matrix-cull" as const, state: "open" as const, rev: 0, items: 1, decided: 0, openedAt: "2026-10-15T08:00:00.000Z" })));
+    expect(g.map((x) => x.lane.id)).toEqual([...MEDIA_LANES]);
   });
 });
 
