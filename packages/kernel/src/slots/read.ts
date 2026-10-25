@@ -21,6 +21,9 @@ export type SlotQuery = {
   readonly from?: string;
   readonly to?: string;
   readonly states?: readonly SlotState[];
+  /** One item on one channel - the clash check's question, so it never reads the whole calendar. */
+  readonly item?: string;
+  readonly channel?: Channel;
 };
 
 /**
@@ -45,6 +48,14 @@ export function listSlotsIn(r: Reader, q: SlotQuery = {}): SlotRow[] {
   if (q.to !== undefined) {
     where.push("at < ?");
     params.push(instantOf(q.to));
+  }
+  if (q.item !== undefined) {
+    where.push("item = ?");
+    params.push(q.item);
+  }
+  if (q.channel !== undefined) {
+    where.push("channel = ?");
+    params.push(q.channel);
   }
   if (q.states !== undefined) {
     if (q.states.length === 0) return [];

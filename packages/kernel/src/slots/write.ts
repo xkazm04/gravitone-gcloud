@@ -66,7 +66,8 @@ export function putSlotIn(t: Tx, before: SlotRow | null, draft: Slot, fence: num
 }
 
 function guardClash(t: Tx, s: Slot): void {
-  const c = clashOf(listSlotsIn(t, { states: ["scheduled", "publishing", "published"] }), s.libraryItemId, s.channel, s.id);
+  const held = listSlotsIn(t, { item: s.libraryItemId, channel: s.channel, states: ["scheduled", "publishing", "published"] });
+  const c = clashOf(held, s.libraryItemId, s.channel, s.id);
   if (c !== undefined) throw new AppError("conflict", clashText(s.libraryItemId, s.channel, c));
 }
 
