@@ -18,6 +18,7 @@ import { spendMigrations } from "./spend/ledger.ts";
 import { stylesMigrations } from "./styles/schema.ts";
 import { openStore, type Store, type StoreOptions } from "./store.ts";
 import { tokenMigrations } from "./token.ts";
+import { ventureMigrations } from "./ventures/schema.ts";
 
 // THE KERNEL, OPENED - one store, every module's schema, in one call.
 //
@@ -65,6 +66,8 @@ const DECLARED: readonly Entry[] = [
   { migrations: loadMigrations, after: ["events", "job"] },
   // An agent's asks to spend, held for the operator's verdict on `pkt:spend:<day>`; `spend.*` events per move.
   { migrations: spendRequestMigrations, after: ["events"] },
+  // Genre and venture heads born from kept scout proposals; `genre.*` / `venture.*` events in the same transactions.
+  { migrations: ventureMigrations, after: ["events"] },
 ];
 
 /** The pure check: `entries` in an order where every module follows what it names. */
