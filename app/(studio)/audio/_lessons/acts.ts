@@ -14,6 +14,7 @@ import type { ActionResult } from "../../../_server/actionCore.ts";
 import { action } from "../../../_server/action.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { confirmLesson, LESSON_OP_RE, type Confirmed } from "../../../../lib/sound/lessons.ts";
+import { actorOf } from "../../../../lib/principal.ts";
 
 const evidence = z
   .object({
@@ -44,7 +45,7 @@ const confirmAction = action("audio lesson confirm", confirmInput, async (i, who
   const k = kernel();
   if (!k.ok) return k;
   const { key, ...rest } = i;
-  return confirmLesson(k.value.store, { ...rest, ...(key === undefined ? {} : { key }) }, { kind: "operator", id: "uid" in who ? who.uid : "operator" }, new Date());
+  return confirmLesson(k.value.store, { ...rest, ...(key === undefined ? {} : { key }) }, actorOf(who), new Date());
 });
 
 export async function confirmLessonAct(input: ConfirmLessonInput): Promise<ActionResult<Confirmed>> {

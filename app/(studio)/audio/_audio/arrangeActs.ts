@@ -12,7 +12,7 @@ import { STAGES } from "@gt/ui/components/audio/arrange.ts";
 import type { ActionResult } from "../../../_server/actionCore.ts";
 import { action } from "../../../_server/action.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
-import type { Principal } from "../../../../lib/principal.ts";
+import { actorOf } from "../../../../lib/principal.ts";
 import { editGroups, moveTake, OP_ID_RE, type GroupsEdited } from "../../../../lib/sound/arrange.ts";
 
 const cell = z.object({ stage: z.enum(STAGES), group: z.string().trim().min(1).max(80).nullable() }).strict();
@@ -35,7 +35,6 @@ const groupInput = z
   })
   .strict();
 
-const actorOf = (who: Principal) => ({ kind: "operator" as const, id: "uid" in who ? who.uid : "operator" });
 
 export type Moved = { readonly id: string; readonly stage: string; readonly group: string | null; readonly label: string | null; readonly already: boolean };
 

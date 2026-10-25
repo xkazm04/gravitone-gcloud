@@ -23,6 +23,7 @@ import { fileReturn, OP_ID_RE } from "../../../../lib/sound/arrange.ts";
 import { can, engineById } from "../../../../lib/sound/engines.ts";
 import { MAX_UPLOAD_BYTES } from "../../../../lib/sound/takes.ts";
 import { deskEngines } from "../_audio/arrangeRead.ts";
+import { actorOf } from "../../../../lib/principal.ts";
 
 export const maxDuration = 60;
 
@@ -65,7 +66,7 @@ export const POST = route({ guard: "access", bodyCap: CAP, maxDuration }, async 
   const k = kernel();
   if (!k.ok) return k;
   const file = { bytes: new Uint8Array(await f.arrayBuffer()), mime: f.type, name: f.name };
-  const r = await fileReturn(k.value.store, { headId: p.value.head, stage: p.value.stage, opId: p.value.op, file, ...(p.value.label === undefined ? {} : { label: p.value.label }) }, { kind: "operator", id: who !== null && "uid" in who ? who.uid : "operator" }, new Date());
+  const r = await fileReturn(k.value.store, { headId: p.value.head, stage: p.value.stage, opId: p.value.op, file, ...(p.value.label === undefined ? {} : { label: p.value.label }) }, actorOf(who), new Date());
   if (!r.ok) return r;
   return ok({ id: r.value.take.id, version: r.value.version, created: r.value.created });
 });

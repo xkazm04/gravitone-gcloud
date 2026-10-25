@@ -97,6 +97,12 @@ export type Principal =
   /** The bundle's shared secret. Legacy mode only; says nothing about who. */
   | { kind: "shared-secret"; legacy: true };
 
+/** The ledger actor a principal acts as: the operator, named by the accessor when the caller has
+ *  one (a person, a token, the local owner) and plainly `operator` when it does not. */
+export function actorOf(who: Principal | null): { readonly kind: "operator"; readonly id: string } {
+  return { kind: "operator", id: who !== null && "uid" in who ? who.uid : "operator" };
+}
+
 export type RefusalCode =
   // legacy gate verdicts, with their pre-principal responses
   | "no-config"

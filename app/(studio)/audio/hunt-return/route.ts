@@ -23,6 +23,7 @@ import { HUNT_OP_RE } from "../../../../lib/sound/huntRender.ts";
 import { MAX_UPLOAD_BYTES } from "../../../../lib/sound/takes.ts";
 import { deskEngines } from "../_audio/arrangeRead.ts";
 import { fileLeafReturn } from "../_hunt/leafReturn.ts";
+import { actorOf } from "../../../../lib/principal.ts";
 
 export const maxDuration = 60;
 
@@ -60,6 +61,6 @@ export const POST = route({ guard: "access", bodyCap: CAP, maxDuration }, async 
   const k = kernel();
   if (!k.ok) return k;
   const file = { bytes: new Uint8Array(await f.arrayBuffer()), mime: f.type, name: f.name };
-  const r = await fileLeafReturn(k.value.store, { huntId: p.value.hunt, nodeId: p.value.node, opId: p.value.op, file }, { kind: "operator", id: who !== null && "uid" in who ? who.uid : "operator" }, new Date());
+  const r = await fileLeafReturn(k.value.store, { huntId: p.value.hunt, nodeId: p.value.node, opId: p.value.op, file }, actorOf(who), new Date());
   return r.ok ? ok({ id: r.value.take.id, created: r.value.created }) : r;
 });
