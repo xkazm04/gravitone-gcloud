@@ -184,7 +184,7 @@ describe("kernel/decision - the apply outbox", () => {
     const r = s.tx((t) => {
       const foreign = Object.create(t, {
         get: {
-          value: (sql: string, ...p: unknown[]) => {
+          value: (sql: string, ...p: never[]) => {
             if (sql.includes("FROM packets WHERE id")) throw new other.AppError("invalid", "the stored packet is unreadable");
             return t.get(sql, ...p);
           },
