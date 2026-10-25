@@ -32,9 +32,10 @@ import { rmSync } from "node:fs";
 
 import { RECIPES } from "@gt/catalog/recipes";
 import { AppError, ok, type Result } from "@gt/domain/errors";
+import type { Holder } from "@gt/domain/job";
 import type { Producer } from "@gt/kernel/job-core";
 import { list } from "@gt/kernel/job";
-import { runJob } from "@gt/kernel/job-run";
+import { recover, runJob } from "@gt/kernel/job-run";
 import { blobStore } from "@gt/kernel/blob";
 import { liveEffects } from "@gt/kernel/effects";
 import { openKernel } from "@gt/kernel/kernel";
@@ -298,5 +299,29 @@ describe("a draft's part write is refused for the kernel's reasons, in its words
     const { id } = await realFilm();
     const launched = await write(real, id, "/", "frames", { units: 3 });
     expect(await write(fixture, "glass-harbor-trailer", ":", "frames", { units: 3 })).toBe(launched);
+  });
+});
+
+describe("a re-route confirm on a job its lane holds for names the hold before the token", () => {
+  it("answers a stale token with the hold on both sides, never with a fresh receipt", async () => {
+    const { research } = await realFilm();
+    const host = "parity-box";
+    const dead: Holder = { bootId: "boot-dead", pid: 999_999, host };
+    const crash: Producer = {
+      lane: "seat.text",
+      plan: (_j, outputs) => (outputs.has("a") ? [] : [{ name: "a", estimate: { seconds: 1, usd: 0 } }]),
+      perform: () => Promise.reject("crash"),
+    };
+    await expect(runJob(fx, crash, research, { holder: dead, alive: () => true, heartbeatMs: 60_000 })).rejects.toBe("crash");
+    const swept = recover(fx, { holder: { bootId: "boot-sweep", pid: 1, host }, alive: () => false });
+    expect(swept.ok && swept.value.map((j) => j.id)).toEqual([research]);
+    const realSaid = await said(real.reroute({ jobId: research, option: "research/google/gemini-3.1-pro-preview", token: "moved-queue-token" }, op), research);
+    expect(realSaid).toBe("refused: seat.text is on hold for this job: acknowledge the hold first");
+    // The fixture's seeded Suno crash holds box.chrome on job:run:run-seed-suno.
+    const held = "job:run:run-seed-suno";
+    const options = fixture.rerouteOptions({ jobId: held });
+    const other = options.ok ? options.value.find((o) => !o.current) : undefined;
+    if (other === undefined) throw new Error("the fixture's interrupted run has no other route");
+    expect(await said(fixture.reroute({ jobId: held, option: other.option.key, token: "moved-queue-token" }, op), held)).toBe(realSaid.replace("seat.text", "box.chrome"));
   });
 });

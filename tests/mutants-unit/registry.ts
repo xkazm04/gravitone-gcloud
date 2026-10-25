@@ -1931,9 +1931,17 @@ export const MUTANTS: UnitMutant[] = [
     id: "suno-cancel-while-creating",
     test: "tests/next-server/producer-suno.test.ts",
     file: "lib/sound/suno/queue.ts",
-    find: "  if (live.state === \"active\") throw new SoundError(\"rendering now - it lands in triage when Suno finishes\", 409);",
+    find: "  if (live.state === \"active\" || (await readSuno()).jobs.some((j) => j.id === id && j.phase !== undefined)) throw new SoundError(\"rendering now - it lands in triage when Suno finishes\", 409);",
     replace: "  if (live.state === \"active\" && false) throw new SoundError(\"rendering now - it lands in triage when Suno finishes\", 409);",
     why: "A create in flight is cancelled; its clips are never collected.",
+  },
+  {
+    id: "suno-clear-while-stopped-creating",
+    test: "tests/next-server/producer-suno.test.ts",
+    file: "lib/sound/suno/store.ts",
+    find: "      if (!j || j.state !== \"queued\" || j.phase !== undefined) {",
+    replace: "      if (!j || j.state !== \"queued\") {",
+    why: "A clear after Stop cancels a create still spending, and its proposal is rendered a second time.",
   },
   {
     id: "suno-done-proposal-rerenders",

@@ -142,6 +142,10 @@ export function sunoProducer(binding: { readonly driver: SunoDriver }): Producer
             file.clips.push(c);
             x.clipIds.push(c.id);
           }
+          // The create is over: a record that still wears a phase is one whose create is in flight
+          // (Stop keeps it, so a clear or a cancel cannot reopen the proposal for a second render).
+          delete x.phase;
+          delete x.model;
         },
         ctx,
       );

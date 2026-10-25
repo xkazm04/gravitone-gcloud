@@ -55,7 +55,7 @@ import { must, OPERATOR, soundKernel } from "../../lib/producers/sound.ts";
 import { driveSuno, launchSuno, sunoKernelId, sunoKernelJobs } from "../../lib/producers/suno.ts";
 import { runSunoCli } from "../../lib/sound/suno/cli.ts";
 import { FAKE_SUNO, resetFakeSuno } from "../../lib/sound/suno/fakeDriver.ts";
-import { cancelJob, enqueueProposals, FAKE_SUNO_DRIVER, setSunoQueue, sunoSnapshot, type SunoDriver } from "../../lib/sound/suno/queue.ts";
+import { cancelJob, clearSunoQueue, enqueueProposals, FAKE_SUNO_DRIVER, setSunoQueue, sunoSnapshot, type SunoDriver } from "../../lib/sound/suno/queue.ts";
 import { addProposals, readSuno } from "../../lib/sound/suno/store.ts";
 import type { SunoJob, SunoSnapshot } from "../../lib/suno/types.ts";
 import { makeRealProduce } from "../../app/(studio)/projects/_port/real.ts";
@@ -162,6 +162,29 @@ describe("the Suno producer on the kernel", () => {
     expect(FAKE_SUNO.calls.map((c) => c.model)).toEqual(["v6", "v6-wild"]);
     expect((await rec(job.id)).state).toBe("done");
     await setSunoQueue(false);
+  });
+
+  it("a clear never cancels a job whose create is in flight, so its proposal is not queued a second time", async () => {
+    const job = await queued();
+    const kid = await launched(job.id, "live");
+    let release!: () => void;
+    FAKE_SUNO.hold = new Promise<void>((r) => (release = r));
+    const running = driveSuno([kid], { driver: FAKE_SUNO_DRIVER, dryOnly: false });
+    while (FAKE_SUNO.calls.length === 0) await new Promise((r) => setTimeout(r, 5));
+    await setSunoQueue(false);
+    // Stop reads `queued`, but the create is still spending: neither door cancels it.
+    await expect(cancelJob(job.id)).rejects.toMatchObject({ status: 409, message: expect.stringContaining("rendering now") });
+    expect(await clearSunoQueue({ jobIds: [job.id] })).toMatchObject({ cancelled: 0, skipped: 1 });
+    const again = await enqueueProposals([job.proposalId], Date.now(), { launch: false });
+    expect(again[0]!.id).toBe(job.id);
+    expect(sunoKernelJobs().get(kid)?.state).toBe("paused");
+    FAKE_SUNO.hold = null;
+    release();
+    await running;
+    // Once the create has landed its clips the job is an idle paused one, and a clear takes it.
+    expect((await rec(job.id)).phase).toBeUndefined();
+    expect(await clearSunoQueue({ jobIds: [job.id] })).toMatchObject({ cancelled: 1, skipped: 0 });
+    expect(sunoKernelJobs().get(kid)?.state).toBe("cancelled");
   });
 
   it("a crash mid-create: the job is interrupted and box.chrome HELD; the column says check the library; Start acknowledges and retries", async () => {
