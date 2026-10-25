@@ -63,7 +63,7 @@ export function Keycaps({ mode, label, map, tips, ...opts }: KeycapsProps) {
             ) : (
               <Tip key={k} text={tip.text} term={tip.term} above>
                 {(id) => (
-                  <kbd className={s.cap} tabIndex={0} aria-describedby={id}>
+                  <kbd className={s.cap} role="term" tabIndex={0} aria-describedby={id}>
                     {k}
                   </kbd>
                 )}

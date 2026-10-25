@@ -11,6 +11,7 @@ import { readPartIn, writePart } from "@gt/kernel/parts/driver";
 import { gateFacts } from "@gt/kernel/parts/gates";
 import { launchProject, planReceipt } from "@gt/kernel/records/launch";
 import { planViewIn } from "@gt/kernel/records/read";
+import { loadProject, putProject as putKernelProject } from "@gt/kernel/records/schema";
 import { compose, setPart } from "@gt/kernel/records/write";
 import type { Store } from "@gt/kernel/store";
 
@@ -347,6 +348,29 @@ describe("the re-export", () => {
     // The rest still byte for byte.
     const cut = (a: Archive) => a.rows.steps.find((r) => r["id"] === `${seed.film.id}:cut`);
     expect(rowLine("steps", cut(read(out.value)) ?? {})).toBe(rowLine("steps", cut(archive) ?? {}));
+  });
+
+  it("carries a kernel rename and a new runtime of an imported project back to v1, and leaves an untouched project's row byte for byte", async () => {
+    const seed = await seedV1("uid-a");
+    const { store, blobs, archive } = await imported(seed);
+    const id = kernelIdOf(seed.film.id);
+    const renamed = store.tx((t) => {
+      const head = loadProject(t, id);
+      putKernelProject(t, { ...head, title: "Glass harbor, recut", runtimeS: 75, rev: head.rev + 1 }, head.rev);
+    });
+    expect(renamed.ok).toBe(true);
+    const out = await exportProjects(store, blobs, { ids: [id, kernelIdOf(seed.ad.id)], uid: seed.uid, now: NOW });
+    if (!out.ok) throw out.error;
+    const back = read(out.value);
+    const row = (a: Archive, v1Id: string) => a.rows.projects.find((r) => r["id"] === v1Id);
+    expect(row(back, seed.film.id)).toMatchObject({ title: "Glass harbor, recut", targetS: 75 });
+    expect(rowLine("projects", row(back, seed.ad.id) ?? {})).toBe(rowLine("projects", row(archive, seed.ad.id) ?? {}));
+    // Only the two fields move: the rest of the film's row is v1's, as it was.
+    const { title: _t, targetS: _s, ...rest } = row(back, seed.film.id) ?? {};
+    const { title: _t0, targetS: _s0, ...was } = row(archive, seed.film.id) ?? {};
+    expect(rest).toEqual(was);
+    const v1 = await inspectArchive(new Blob([Buffer.from(out.value)]));
+    expect(v1.manifest.counts).toMatchObject({ projects: 2 });
   });
 
   it("writes a project the kernel composed itself in v1's project shape when its recipe is a v1 template's film, and refuses an album by name", async () => {

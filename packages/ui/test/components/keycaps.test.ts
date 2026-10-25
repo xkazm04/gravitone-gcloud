@@ -48,6 +48,17 @@ describe("Keycaps renders the keymap's rows for a mode", () => {
   });
 });
 
+describe("a cap that takes focus is announced as something", () => {
+  test("every tabIndex=0 cap a tip opens carries a role", () => {
+    const map = compile([{ mode: "t", keys: ["3", "4"], verb: "reject" }]);
+    const tips = { reject: { "3": { term: "style", text: "The look is wrong." }, "4": { term: "use case", text: "Serves no video." } } };
+    const html = renderToStaticMarkup(createElement(Keycaps, { mode: "t", label: "keys", map, tips }));
+    const focusable = [...html.matchAll(/<kbd[^>]*tabindex="0"[^>]*>/gi)].map((m) => m[0]);
+    expect(focusable).toHaveLength(2);
+    expect(focusable.filter((k) => !/\srole="\w+"/.test(k))).toEqual([]);
+  });
+});
+
 describe("Keycap draws the caps of one verb", () => {
   test("approve in the review desk is A", () => {
     expect(capsFor("board.review", "approve")).toEqual(["A"]);

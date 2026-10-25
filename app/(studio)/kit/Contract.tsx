@@ -29,6 +29,7 @@ import { Button } from "@gt/ui/components/button/Button.tsx";
 import { ChannelBadge } from "@gt/ui/components/channel/ChannelBadge.tsx";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { usd } from "@gt/ui/components/eventrow/usd.ts";
 import { Crumbs } from "@gt/ui/components/crumbs/Crumbs.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { FacetRow } from "@gt/ui/components/facet/FacetRow.tsx";
@@ -70,7 +71,7 @@ export function ContractSection() {
       <Spec names={["Chip"]} source="header · floor · board · plan · runs" wide>
         <Row label="header">
           <Hook role="chip">
-            <Chip label="spend 24h" value="$0.00" />
+            <Chip label="spend 24h" value={usd(0)} />
           </Hook>
         </Row>
         <Row label="floor">

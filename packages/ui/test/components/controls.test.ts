@@ -192,6 +192,15 @@ describe("navigation", () => {
     expect(c).toContain(`<button type="button"`);
     expect(c).toMatch(/aria-current="page">sweep-01<\/span><\/nav>$/);
   });
+
+  test("Crumbs: two steps with one name get two keys", () => {
+    // A part named like its project makes a trail whose labels repeat; sibling keys must not.
+    const nav = Crumbs({ trail: [{ label: "Intro", href: "/p/1" }, { label: "Intro", href: "/p/1/a" }], here: "cut" });
+    const steps = (nav.props as { children: [{ key: string | null }[], unknown] }).children[0];
+    const keys = steps.map((x) => x.key);
+    expect(keys).toHaveLength(2);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
 });
 
 describe("containers", () => {
