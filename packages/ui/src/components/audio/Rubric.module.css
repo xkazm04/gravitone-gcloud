@@ -17,6 +17,8 @@
 .dimName{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;color:var(--faint)}
 .steps{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:var(--sp-hair)}
 .step{height:var(--sp-5);padding:0;border-radius:var(--r-xs);border:1px solid var(--hair-2);background:none;cursor:pointer}
+/* WCAG 2.5.8: a finger needs 24px; the meter keeps its 12px under a mouse. */
+@media (pointer:coarse){.step{height:calc(var(--sp-5) * 2)}}
 .step:hover{border-color:var(--hair-3);background:var(--wash-hi)}
 .step:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
 .lit{background:color-mix(in srgb,var(--cyan) 35%,transparent);border-color:color-mix(in srgb,var(--cyan) 45%,transparent)}
