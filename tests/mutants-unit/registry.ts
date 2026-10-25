@@ -6382,4 +6382,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "",
     why: "A receipt shown just before another's clock runs out is closed by the older clock within a moment, before anyone reads it.",
   },
+  {
+    id: "runs-console-pause-offered-on-planned",
+    test: "tests/next-server/runs-console.test.ts",
+    file: "app/(studio)/projects/runs/_runs/Acts.tsx",
+    find: "jobMachine.can(j.state, \"paused\")",
+    replace: "j.state === \"queued\" || j.state === \"running\" || j.state === \"planned\"",
+    why: "Runs draws a pause button, and P fires, on a planned part the kernel refuses to pause: the operator presses and reads a refusal.",
+  },
 ];

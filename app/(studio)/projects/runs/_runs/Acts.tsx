@@ -18,6 +18,7 @@
 // writer is v1 until its producer migrates, COMMON decision 9) and keeps its way out to v1.
 import type { RefObject } from "react";
 
+import { jobMachine } from "@gt/domain/job.machine";
 import type { RerouteOption } from "@gt/domain/produce";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
@@ -47,7 +48,8 @@ export type JobActsProps = {
   readonly altsRef: RefObject<HTMLDivElement | null>;
 };
 
-export const canPause = (j: ProduceJob): boolean => j.state === "queued" || j.state === "running" || j.state === "planned";
+/** The job machine's own edge: a planned job has not joined the line, so the kernel refuses its pause. */
+export const canPause = (j: ProduceJob): boolean => jobMachine.can(j.state, "paused");
 export const canRetry = (j: ProduceJob): boolean => j.state === "failed" || j.state === "interrupted";
 export const canMove = (j: ProduceJob): boolean => (j.state === "queued" || j.state === "planned") && !j.blocked;
 
