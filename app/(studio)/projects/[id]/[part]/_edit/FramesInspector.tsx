@@ -141,8 +141,10 @@ function UnitFields({ data: d, unit: u, layerSel, onLayer, send, act }: P) {
           {[...u.layers].reverse().map((l) => {
             const k = layerKey(l);
             return (
-              <div key={k} className={s.layer} aria-pressed={layerSel === k} role="button" tabIndex={0} onClick={() => onLayer(layerSel === k ? null : k)} data-layer={k}>
-                <span className={s.ell}>{`${l.unsourced ? "● " : ""}${l.role} · ${l.label || l.id}${l.by === "human" ? " · ✎" : ""}`}</span>
+              <div key={k} className={s.layer} data-selected={layerSel === k} data-layer={k}>
+                <button type="button" className={s.pick} aria-pressed={layerSel === k} onClick={() => onLayer(layerSel === k ? null : k)}>
+                  <span className={s.ell}>{`${l.unsourced ? "● " : ""}${l.role} · ${l.label || l.id}${l.by === "human" ? " · ✎" : ""}`}</span>
+                </button>
                 <span className={s.layerActs}>
                   <Button label={l.hidden ? "show" : "hide"} size="sm" onPress={() => send({ op: "hide-layer", unitId: u.id, layer: l.layer, layerId: l.id, hidden: !l.hidden })} />
                 </span>
