@@ -92,18 +92,28 @@ export function RunsDayline(p: RunsDaylineProps) {
   const W = widthOf(span, pph);
   const byId = useMemo(() => new Map(bars.map((b) => [b.id, b])), [bars]);
 
-  const prio = (id: string): number => (id === selected ? 3 : lit?.ids.has(id) === true ? 2 : 0);
-  const laid: Laid[] = [];
-  let top = 0;
-  for (const row of rows) {
-    const mine = bars.filter((b) => b.row === row.id);
-    const pk = pack(mine, x, { cap: row.cap, open: open.has(row.id), prio });
-    const h = rowHeight(pk.shown);
-    laid.push({ row, top, height: h, placed: pk.placed.filter((q) => q.track < pk.shown), shown: pk.shown, over: pk.over.length });
-    top += h;
-  }
-  const placedAt = new Map<string, { readonly q: Placed; readonly top: number }>();
-  for (const l of laid) for (const q of l.placed) placedAt.set(q.id, { q, top: l.top });
+  // The layout is a function of the data and the selection, never of the scroll position: the
+  // scroll listener below re-renders on every frame, and packing every bar of every row each
+  // time (~3 ms at the ledger's 1000-run cap) would be paid per frame for an identical answer.
+  const { laid, top, placedAt, labelSeat } = useMemo(() => {
+    const at = (t: number): number => xAt(span, pph, t);
+    const prio = (id: string): number => (id === selected ? 3 : lit?.ids.has(id) === true ? 2 : 0);
+    const laid: Laid[] = [];
+    let top = 0;
+    for (const row of rows) {
+      const mine = bars.filter((b) => b.row === row.id);
+      const pk = pack(mine, at, { cap: row.cap, open: open.has(row.id), prio });
+      const h = rowHeight(pk.shown);
+      laid.push({ row, top, height: h, placed: pk.placed.filter((q) => q.track < pk.shown), shown: pk.shown, over: pk.over.length });
+      top += h;
+    }
+    const placedAt = new Map<string, { readonly q: Placed; readonly top: number }>();
+    for (const l of laid) for (const q of l.placed) placedAt.set(q.id, { q, top: l.top });
+    // Seats are decided per row: track 0 of one lane is not track 0 of the next.
+    const labelSeat = new Map<string, "in" | "beside" | "hover">();
+    for (const l of laid) for (const [id, seat] of seatLabels(l.placed, (x) => approxLabelWidth(byId.get(x)?.label ?? ""))) labelSeat.set(id, seat);
+    return { laid, top, placedAt, labelSeat };
+  }, [rows, bars, byId, span, pph, open, selected, lit]);
 
   const scroller = useRef<HTMLDivElement | null>(null);
   // Before the first measure (and on the server) the window is NOW plus or minus WINDOW_PX,
@@ -150,10 +160,6 @@ export function RunsDayline(p: RunsDaylineProps) {
     const el = scroller.current?.querySelector<HTMLElement>(`[data-bar="${CSS.escape(selected)}"]`);
     el?.focus({ preventScroll: true });
   }, [selected, p.centre.key]);
-
-  // Seats are decided per row: track 0 of one lane is not track 0 of the next.
-  const labelSeat = new Map<string, "in" | "beside" | "hover">();
-  for (const l of laid) for (const [id, seat] of seatLabels(l.placed, (x) => approxLabelWidth(byId.get(x)?.label ?? ""))) labelSeat.set(id, seat);
 
   // The selection is always drawn, in the window or not: focus never lands on a bar that is not there.
   const drawn = (l: Laid): readonly Placed[] => [...inWindow(l.placed, view.x0, view.x1), ...l.placed.filter((q) => q.id === selected && !(q.l <= view.x1 && q.l + q.w >= view.x0))];
