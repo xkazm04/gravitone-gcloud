@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { NAV_TOOLS, arrived, hereOf, sectionHref, studioPath } from "../../app/(studio)/_shell/agentNav.ts";
-import { SECTIONS } from "../../app/(studio)/_shell/nav.ts";
+import { SECTIONS, sectionOf } from "../../app/(studio)/_shell/nav.ts";
 
 describe("the studio's in-page navigation tools (athena page bridge)", () => {
   it("declares every tool reversible with no side effects, so Athena's gate classifies it AUTO", () => {
@@ -37,6 +37,19 @@ describe("the studio's in-page navigation tools (athena page bridge)", () => {
       expect(studioPath(p).ok, p).toBe(false);
     }
     expect(studioPath(`/floor?${"a".repeat(400)}`).ok).toBe(false);
+  });
+
+  it("sectionOf: the longest section on a segment boundary, and the scout's Board packets are Scout's", () => {
+    expect(sectionOf("/projects/runs")).toBe("runs");
+    expect(sectionOf("/projects/runs/x")).toBe("runs");
+    expect(sectionOf("/projects/pj_1")).toBe("projects");
+    // A prefix that is not a whole segment is not the section (the header's aria-current, open's guard).
+    expect(sectionOf("/projectsx")).toBeNull();
+    expect(sectionOf("/floorplan")).toBeNull();
+    expect(sectionOf("/board/pkt:scout:2026-10-23")).toBe("scout");
+    expect(sectionOf("/board/pkt%3Aseeds%3Ab1")).toBe("scout");
+    expect(sectionOf("/board/pkt:forge:r1")).toBeNull();
+    expect(sectionOf("/")).toBeNull();
   });
 
   it("answers the section an address is in", () => {

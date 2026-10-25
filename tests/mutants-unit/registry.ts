@@ -6140,4 +6140,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "return body;",
     why: "The handoff's error line and the renewal toast show the session door's JSON envelope instead of its sentence.",
   },
+  {
+    id: "studio-shell-section-prefix-not-segment",
+    test: "tests/next-server/agent-nav.test.ts",
+    file: "app/(studio)/_shell/nav.ts",
+    find: "pathname.startsWith(`${s.href}/`)",
+    replace: "pathname.startsWith(s.href)",
+    why: "/floorplan reads as the Floor: the header marks it current and an agent's open admits it as a studio section.",
+  },
+  {
+    id: "studio-shell-seed-batch-not-scout",
+    test: "tests/next-server/agent-nav.test.ts",
+    file: "app/(studio)/_shell/nav.ts",
+    find: "(scout|seeds)",
+    replace: "(scout)",
+    why: "A seed batch's Board packet is in no section, so the header marks nothing current while the Scout's page is open.",
+  },
 ];
