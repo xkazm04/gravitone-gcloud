@@ -17,7 +17,7 @@
 .noted{border-left-color:var(--amber)}
 .regen{margin-left:var(--sp-2)}
 .secTools{position:absolute;right:var(--sp-3);top:var(--sp-3);opacity:0;transition:opacity var(--dur-fast)}
-.sec:hover .secTools,.focus .secTools{opacity:1}
+.sec:hover .secTools,.focus .secTools,.secTools:focus-within{opacity:1}
 .editNote{margin-top:var(--sp-4);padding:var(--sp-4);border-radius:var(--r-control);border:1px solid color-mix(in srgb,var(--amber) 40%,transparent);background:color-mix(in srgb,var(--amber) 6%,transparent);font:var(--fs-ui)/1.45 var(--sans)}
 .directives{display:flex;flex-wrap:wrap;gap:var(--sp-tight);margin-bottom:var(--sp-3)}
 .directive{height:var(--h-directive);padding:0 var(--sp-control);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
