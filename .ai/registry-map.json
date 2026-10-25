@@ -3868,7 +3868,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/partView.frames.ts:212 The frames part view counts figures that cite no fact for the human author, which is the count the technique asks for. But the bind edit only reaches texts, so an arrow or loop a person keeps can never be bound to a sourced relation, and nothing in the view flags a figure bound to a fact graded too weak to draw.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a3b657bb0d44f7d8",
+          "evaluatedRevision": 9
         },
         {
           "subject": "agent-instruction-files",
@@ -5529,7 +5533,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/frames/frames.ts:494 The scene validator holds figures to a citation that resolves in the notebook and keeps text out of plates, but arrows and loops are seeded and accepted without a fact that grades the relation as causal, plates are asked to draw arrows, and only a low-confidence grade caps a figure (medium passes as an exact value).",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a3b657bb0d44f7d8",
+          "evaluatedRevision": 9
         },
         {
           "subject": "agent-memory",
