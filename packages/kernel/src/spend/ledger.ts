@@ -194,8 +194,11 @@ export function reserve(t: Tx, cls: SpendClass, input: { readonly id: string; re
   if (input.id.length === 0 || input.owner.length === 0) return err("invalid", "spend: a reservation names its id and its owner");
   const prior = readReservation(t, input.id);
   if (prior !== undefined) {
-    if (prior.cls === cls.id && prior.amount === input.amount && prior.owner === input.owner) return ok(prior);
-    return err("conflict", `spend: reservation ${input.id} already exists for another call`);
+    if (prior.cls !== cls.id || prior.amount !== input.amount || prior.owner !== input.owner) return err("conflict", `spend: reservation ${input.id} already exists for another call`);
+    // Only a LIVE hold is the retried reserve's answer. A closed one is no hold at all: handing it
+    // back would admit a second call against the ceiling unheld, and its settle would book nothing.
+    if (prior.state !== "held") return err("conflict", `spend: reservation ${input.id} is ${prior.state}; a new call needs a new reservation id`);
+    return ok(prior);
   }
   const now = nowOf(t);
   const tot = totals(t, cls, now);

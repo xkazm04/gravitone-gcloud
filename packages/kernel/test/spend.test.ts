@@ -85,6 +85,20 @@ describe("kernel/spend - reserve -> settle -> book", () => {
     expect(st(s).spent).toBeCloseTo(0.1, 12);
   });
 
+  it("a reserve replayed after its hold closed is a new call, not the old hold: refused, never admitted unheld", () => {
+    const s = tpl.fresh();
+    hold(s, "r1", 0.6);
+    must(s.tx((t) => settle(t, imaging, { id: "r1", entries: [served(0.6)] })));
+    // 0.6 spent + 0.6 would pass the $1 ceiling; the same id must not wave it through.
+    const replay = hold(s, "r1", 0.6);
+    expect(!replay.ok && replay.error.code).toBe("conflict");
+    hold(s, "r2", 0.2);
+    must(s.tx((t) => release(t, imaging, { id: "r2", by: "op-kazda" })));
+    const released = hold(s, "r2", 0.2);
+    expect(!released.ok && released.error.message).toContain("is released");
+    expect(st(s)).toMatchObject({ spent: 0.6, held: 0 });
+  });
+
   it("the window is the only thing that removes spend, and it removes nothing from the table", () => {
     const s = tpl.fresh();
     hold(s, "r1", 0.4);
