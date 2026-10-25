@@ -114,7 +114,7 @@ function Inspector({ u, send, act, busy }: { readonly u: MotionUnitView; readonl
         {u.motion !== "" && (
           <Button label={u.clip.url === null ? "render clip" : "render again"} size="sm" tone="cyan" shortcut={{ mode: "part.motion", verb: "render" }} onPress={() => act("render-clip", `clip ${u.at}`, u.id)} />
         )}
-        {u.motion !== "" && <Button label="clear" size="sm" onPress={() => send({ op: "clear-motion", unitId: u.id })} />}
+        {u.motion !== "" && <Button label="clear" size="sm" disabled={busy} onPress={() => send({ op: "clear-motion", unitId: u.id })} />}
       </div>
     </div>
   );

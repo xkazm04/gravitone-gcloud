@@ -35,7 +35,7 @@ type Data = Extract<ScriptData, { face: "document" }>;
 const VIEWS = ["gate", "ledger", "coverage", "spend", "tracks"] as const;
 type View = (typeof VIEWS)[number];
 
-function Usage({ c, d, view, send }: { readonly c: Candidate; readonly d: Data; readonly view: View; readonly send: Send }) {
+function Usage({ c, d, view, send, busy }: { readonly c: Candidate; readonly d: Data; readonly view: View; readonly send: Send; readonly busy: boolean }) {
   if (view === "tracks")
     return (
       <>
@@ -65,11 +65,12 @@ function Usage({ c, d, view, send }: { readonly c: Candidate; readonly d: Data; 
           <select
             className={s.select}
             aria-label={`note on ${u.cardId}`}
+            aria-disabled={busy ? true : undefined}
             value=""
            
             onChange={(e) => {
               const kind = e.currentTarget.value as NoteKind;
-              if (kind !== "custom") send({ op: "note-add", cardId: u.cardId, kind });
+              if (kind !== "custom" && !busy) send({ op: "note-add", cardId: u.cardId, kind });
             }}
           >
             <option value="">note</option>
@@ -271,7 +272,7 @@ export function DocumentEditor({ frame, send, busy, error, data: d }: EditorProp
                     </div>
                   </div>
                 ))}
-              {(tab === "coverage" || tab === "spend" || tab === "tracks") && <Usage c={c} d={d} view={tab} send={send} />}
+              {(tab === "coverage" || tab === "spend" || tab === "tracks") && <Usage c={c} d={d} view={tab} send={send} busy={busy} />}
             </>
           ),
       }}

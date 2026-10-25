@@ -119,7 +119,8 @@ export function BeatsEditor({ view, frame, send, busy, error, data: d }: EditorP
                         aria-pressed={sl.pick === v.id}
                         data-variant={v.id}
                         {...(v.id === sel ? { "data-on": "" } : {})}
-                        onClick={() => (setSlotSel(sl.id), setSel(v.id), pick(sl, v.id))}
+                        aria-disabled={busy ? true : undefined}
+                        onClick={() => (setSlotSel(sl.id), setSel(v.id), busy ? undefined : pick(sl, v.id))}
                       >
                         <span className={s.blabel}>
                           <span>{v.kind}</span>

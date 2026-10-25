@@ -36,7 +36,7 @@ vi.mock("@/lib/sound/mv/compositor", () => ({
 
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 
-import type { AdFinishData, AdsClips, AdsTakes, BedData, PartOp, PartView, RenderData, SpottingData, TakeView, VoiceData, VoiceLineView } from "@gt/domain/partView";
+import type { AdFinishData, AdsClips, AdsTakes, BedData, FramesBoard, MotionBoard, PartOp, PartView, RenderData, SpottingData, TakeView, VoiceData, VoiceLineView } from "@gt/domain/partView";
 import { BINDINGS } from "@gt/ui/keymap/bindings";
 import { keyTable, type KeyRow } from "@gt/ui/keymap/keymap";
 
@@ -48,6 +48,8 @@ import { ScoreEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Score
 import { ScoreBed } from "../../app/(studio)/projects/[id]/[part]/_edit/ScoreBed.tsx";
 import { ScoreTakes } from "../../app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx";
 import { AdsClipsEditor, AdsTakesEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Takes.tsx";
+import { FramesEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Frames.tsx";
+import { MotionEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Motion.tsx";
 import { TrailerEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Trailer.tsx";
 import { VoiceEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Voice.tsx";
 import cut from "../../app/(studio)/projects/[id]/[part]/_edit/Cut.module.css";
@@ -399,4 +401,125 @@ describe("the clock's zoom, one table for the cut and the score", () => {
     expect(CLOCK_ZOOMS.map((z) => zoomStep(z, 0))).toEqual(["1", "2", "4", "4"]);
     expect(CLOCK_ZOOMS.map((z) => zoomStep(z, 1))).toEqual(["0", "0", "1", "2"]);
   });
+});
+
+/* ── a write button and its key say the same thing while a write is in flight ── */
+
+// PartEditor's write() declines a second op while one is in flight, so a press on a Button that
+// still draws enabled does nothing and says nothing. The walk presses every Button an editor draws
+// (its own sub-components rendered, the kit's not) with a recording `send`/`act`: a Button that
+// reaches `send` is a write button, and it must draw disabled while busy.
+const LOCAL = new Set(["FramesBoardEditor", "MotionBoardEditor", "FramesInspector", "UnitFields", "Inspector", "BeatBlock"]);
+async function writeButtons(run: () => ReactElement): Promise<{ label: string; disabled: boolean }[]> {
+  const out: ReactElement[] = [];
+  const walk = (node: ReactNode): void => {
+    const hits: ReactElement[] = [];
+    const seek = (n: ReactNode): void => {
+      if (Array.isArray(n)) return n.forEach(seek);
+      if (!isValidElement(n)) return;
+      hits.push(n);
+      for (const v of Object.values(n.props as Record<string, unknown>)) {
+        if (isValidElement(v) || Array.isArray(v)) seek(v as ReactNode);
+        else if (v !== null && typeof v === "object" && "children" in v) seek((v as { children: ReactNode }).children);
+      }
+    };
+    seek(node);
+    for (const el of hits) {
+      if (typeof el.type !== "function") continue;
+      if (el.type.name === "Button") out.push(el);
+      else if (LOCAL.has(el.type.name)) walk((el.type as (q: unknown) => ReactNode)(el.props));
+    }
+  };
+  await harness(
+    () => {
+      out.length = 0;
+      walk(run());
+      return null;
+    },
+    { settleWhen: "stable" },
+  ).settleUp();
+  return out
+    .filter((b) => {
+      let sent = 0;
+      const onPress = (b.props as { onPress?: () => void }).onPress;
+      // the walk's send is wired through the editor's props: see `pressed`
+      pressed.length = 0;
+      onPress?.();
+      sent = pressed.length;
+      return sent > 0;
+    })
+    .map((b) => ({ label: (b.props as { label: string }).label, disabled: (b.props as { disabled?: boolean }).disabled === true }));
+}
+const pressed: unknown[] = [];
+const spy = { send: (op: unknown) => void pressed.push(op) };
+
+const layerOf = (id: string, layer: "element" | "text"): never =>
+  ({ id, layer, role: layer === "text" ? "caption" : "arrow", label: id, x: 0.1, y: 0.1, hidden: false, by: "human", unsourced: false }) as never;
+const plate = { state: "ready", url: null, subject: "s", stale: false, dry: false } as const;
+const framesBoard = {
+  face: "assembly",
+  source: { id: "c1", title: "chain" },
+  sourceMoved: true,
+  units: [
+    {
+      id: "u1",
+      at: "0:00",
+      startS: 0,
+      holdS: 3,
+      grain: "beat",
+      beatKind: "open",
+      title: "Open",
+      line: "",
+      plate,
+      clip: { status: "none", motion: "", url: null },
+      layers: [layerOf("e1", "element"), layerOf("t1", "text")],
+      pips: { elements: 1, texts: 1, unsourced: 0 },
+      alts: [],
+      proposal: { ops: ["subject"], conflicts: 1 },
+    },
+  ],
+  tally: { total: 1, composed: 1, stale: 0, rejected: 0, unsourced: 0, clips: 0 },
+  style: { name: "ink", fallback: false, refs: 0 },
+  facts: [],
+  proposal: { rows: 1, conflicts: 1, rejected: 0, missing: [] },
+  checkpoint: true,
+  direction: { runs: 0, usd: 0, unpriced: 0 },
+} as unknown as FramesBoard;
+const motionBoard = {
+  face: "plates",
+  units: [{ id: "u1", at: "0:00", title: "Open", beatKind: "open", plate, motion: "pan left", state: "moving", outcomeStale: false, clip: { status: "none", motion: "pan left", url: null } }],
+  tally: { moving: 1, declined: 0, open: 0, total: 1, clips: 0 },
+} as unknown as MotionBoard;
+const trailerData = {
+  face: "trailer",
+  targetS: 90,
+  runtimeS: 90,
+  lane: "wide-release",
+  movements: [],
+  beats: [{ id: "b1", movement: "m1", at: "0:00", kind: "open", connector: null, label: "Cold open", text: "rain", raises: [], spends: [], edited: true }],
+  energy: [],
+  structure: { malformed: false, violations: 0, passes: 0, unmeasured: 0, notEngaged: 0, enforced: 100, findings: [] },
+  spineMoved: false,
+  origin: "fixture",
+};
+
+const MEDIA: readonly [string, (busy: boolean) => ReactElement, readonly string[]][] = [
+  [
+    "frames",
+    (busy) => FramesEditor({ ...props(framesBoard), view: { data: framesBoard } as never, busy, send: spy.send }) as ReactElement,
+    ["revert pass", "rederive", "accept", "accept over human", "discard", "accept row", "revert row", "×", "+ caption", "+ figure", "+ label", "hide"],
+  ],
+  ["motion", (busy) => MotionEditor({ ...props(motionBoard), view: { data: motionBoard } as never, busy, send: spy.send }) as ReactElement, ["clear"]],
+  ["trailer", (busy) => TrailerEditor({ ...props(trailerData), busy, send: spy.send } as never) as ReactElement, ["reset to dealt"]],
+];
+
+describe("while a write is in flight no media write button reads as pressable", () => {
+  for (const [name, run, expected] of MEDIA) {
+    it(name, async () => {
+      const bs = await writeButtons(() => run(true));
+      expect(bs.map((b) => b.label)).toEqual(expect.arrayContaining([...expected]));
+      expect(bs.filter((b) => !b.disabled).map((b) => b.label)).toEqual([]);
+      expect((await writeButtons(() => run(false))).filter((b) => !b.disabled).map((b) => b.label)).toEqual(bs.map((b) => b.label));
+    });
+  }
 });

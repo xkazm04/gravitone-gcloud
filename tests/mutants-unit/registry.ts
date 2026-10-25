@@ -7190,4 +7190,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "\"> -1 * coalesce((SELECT max(seq)",
     why: "Python recover() selects every ended job again, so a worker start opens two transactions per finished job in the store's whole history.",
   },
+  {
+    id: "plate-error-not-remembered",
+    test: "packages/ui/test/components/plate.test.ts",
+    file: "packages/ui/src/components/desk/Plate.tsx",
+    find: "onError={() => setFailed(src)}",
+    replace: "onError={() => undefined}",
+    why: "A candidate whose blob 404s is drawn as the browser's broken-image glyph, indistinguishable from a dark picture, and the operator can keep or reject a picture nobody saw.",
+  },
 ];
