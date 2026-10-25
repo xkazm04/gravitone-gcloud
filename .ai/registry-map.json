@@ -8862,7 +8862,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/notebook/notebook.ts:46 The shipped notebook's mechanism chains still hold bare AND links in their prose `chain[]`, with no typed `steps[]` and no per-link evidence. So the causal spine the board and script read is a sequence with an unconnected joint, which is the exact defect pre-linked mechanisms exist to prevent.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:094f1b2708130460",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-instruction-files",
@@ -10903,7 +10907,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/research/followUp.ts:23 A fact that a follow-up turn adds to the notebook goes through a door that accepts one free-text `source` string. It carries no evidence class, locator, plural sources, loadBearing flag, kind, or as-of/event/period dates, so a newly added claim enters the research asset ungraded. That is the comma-joined, ungradeable source the ladder names as its first failure.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:094f1b2708130460",
+          "evaluatedRevision": 5
         },
         {
           "subject": "review-iteration-loops",
