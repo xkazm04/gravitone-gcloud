@@ -6422,4 +6422,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "j.projectId === undefined",
     why: "The All lanes row reads one count of floor runs on Plan and another on Runs: Runs counts v1's live work, kernel jobs no producer serves and finished runs.",
   },
+  {
+    id: "runs-load-kernel-cap-silent",
+    test: "tests/next-server/runs-load.test.ts",
+    file: "app/(studio)/projects/runs/_runs/load.ts",
+    find: "if (over > 0) problems.push(",
+    replace: "if (over < 0) problems.push(",
+    why: "A kernel holding more than KERNEL_CAP jobs draws a day-line missing its oldest ones and nothing on Runs says any were left out.",
+  },
 ];

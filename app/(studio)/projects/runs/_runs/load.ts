@@ -20,8 +20,8 @@ import { buildRuns, spanAround, type KernelJobInput, type RunsModel } from "./mo
 // What it reads, each bounded:
 //   v1 live work   liveNow() walks every registered source (lib/ledger/v1/sources.ts); each
 //                  adapter bounds its own fan-out (its READ_CAP, facts.ts readEach width 8);
-//   kernel jobs    @gt/kernel/job list(): at most KERNEL_CAP, newest last (Phase 4 adds the
-//                  rows; list() itself has no limit yet - reported, not worked around here);
+//   kernel jobs    @gt/kernel/job list(): the last KERNEL_CAP in queue order (ord, n), and a
+//                  problem naming how many were left out (list() itself has no limit yet);
 //   ledger past    one time-ordered page of run.start/run.end/commit in the window (at most
 //                  LEDGER_CAP), plus the starts of runs that ended inside it but began before
 //                  it, by subject id, at most 200 ids a query.
@@ -98,7 +98,11 @@ export async function loadRuns(now: number = Date.now()): Promise<RunsData> {
     }
     const kj = list(store);
     if (!kj.ok) problems.push({ source: "kernel jobs", error: kj.error.message });
-    else jobs.push(...kj.value.slice(-KERNEL_CAP).map(kernelInput));
+    else {
+      const over = kj.value.length - KERNEL_CAP;
+      if (over > 0) problems.push({ source: "kernel jobs", error: `more than ${KERNEL_CAP} kernel jobs; the first ${over} in queue order are not drawn` });
+      jobs.push(...kj.value.slice(-KERNEL_CAP).map(kernelInput));
+    }
   }
 
   const port = serverProduce();
