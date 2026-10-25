@@ -12,7 +12,8 @@ import { PipRow, pipClasses } from "../../src/components/piprow/PipRow.tsx";
 import pip from "../../src/components/piprow/PipRow.module.css";
 import { SourceTag } from "../../src/components/source/SourceTag.tsx";
 import src from "../../src/components/source/SourceTag.module.css";
-import { ChannelBadge } from "../../src/components/channel/ChannelBadge.tsx";
+import { BADGE_CHANNELS, ChannelBadge } from "../../src/components/channel/ChannelBadge.tsx";
+import { CHANNELS } from "@gt/domain/slot";
 import { Ghost } from "../../src/components/ghost/Ghost.tsx";
 import { UpstreamBreak, nodeStates } from "../../src/components/upstream/UpstreamBreak.tsx";
 import ub from "../../src/components/upstream/UpstreamBreak.module.css";
@@ -92,6 +93,10 @@ describe("SourceTag, ChannelBadge, Ghost, ErrorLine, LedgerLink", () => {
     const c = html(h(ChannelBadge, { channel: "youtube" }));
     expect(c).toContain(`<span aria-hidden="true">YT</span>`);
     expect(c).toContain(">youtube</span>");
+  });
+
+  test("the badge channels are the domain's CHANNELS, not a second hand list", () => {
+    expect(BADGE_CHANNELS).toBe(CHANNELS);
   });
 
   test("a ghost draws its outlines hidden and speaks its label", () => {
