@@ -58,6 +58,7 @@ const ITEMS: readonly ScheduleItem[] = [
   { id: "video:export:chokepoint", title: "Chokepoint explainer", meta: "film · 63.5 MB", poster: "/clips/presets/blueprint.jpg" },
   { id: "video:export:quiet-tariff", title: "The quiet tariff", meta: "ad · 9.1 MB", poster: "/clips/presets/chalk-argument.jpg" },
   { id: "video:export:river-steps", title: "Two hundred days of rain", meta: "music-video · 54.0 MB" },
+  { id: "video:export:radar-sweep", title: "Radar sweep · cut A", meta: "film · 41.2 MB" },
 ];
 
 const FAILED: SlotView = {
@@ -204,7 +205,7 @@ export function FloorSection() {
       </Spec>
 
       <Spec names={["ScheduleForm"]} source="floor/ScheduleForm.tsx · v1 app/calendar/Composer.tsx" wide>
-        <ScheduleForm items={{ kind: "read", items: ITEMS }} channels={CHANNELS} slots={SLOTS} nowMs={NOW} day="2026-10-16" item={null} lastChannel="youtube" busy={false} refusal="video:export:chokepoint is already on youtube (slot s5, scheduled for 2026-10-16T12:00:00.000Z)" onSchedule={() => undefined} />
+        <ScheduleForm items={{ kind: "read", items: ITEMS }} channels={CHANNELS} slots={SLOTS} nowMs={NOW} day="2026-10-16" item={null} lastChannel="youtube" busy={false} refusal="video:export:radar-sweep is already on youtube (slot s1, scheduled for 2026-10-15T07:00:00.000Z)" onSchedule={() => undefined} />
       </Spec>
 
       <Spec names={["ChannelReadiness"]} source="floor/ChannelReadiness.tsx · v1 app/calendar/ChannelsTab.tsx">

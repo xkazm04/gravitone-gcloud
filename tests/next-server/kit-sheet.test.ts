@@ -61,6 +61,8 @@ import { SignalSections } from "../../app/(studio)/kit/Signal.tsx";
 import { DRAWN_GROUPS, TokenSections } from "../../app/(studio)/kit/Tokens.tsx";
 import { KitNav } from "../../app/(studio)/kit/KitNav.tsx";
 import { MonthCalendar } from "@gt/ui/components/floor/MonthCalendar.tsx";
+import { ScheduleForm } from "@gt/ui/components/floor/ScheduleForm.tsx";
+import { SLOT_HOLDS } from "@gt/domain/slot.machine";
 import { harness } from "../golden-path/_studio/hooks.ts";
 
 // boardKitData is a server module (it mints ids at the zod door); the guard is Next's, not node's.
@@ -339,6 +341,23 @@ describe("/kit: the Floor month's controls are live", () => {
     expect((await month()).month, "past December").toEqual({ y: 2027, m: 1 });
     (await month()).onToday();
     expect(await month()).toMatchObject({ month: { y: 2026, m: 9 }, day: "2026-10-15" });
+    floor.unmount();
+  });
+});
+
+describe("/kit: the ScheduleForm refusal is one its rail could produce", () => {
+  test("the slot the refusal names is in the specimen's slots, holding at the time it states", async () => {
+    const floor = harness(() => FloorSection(), { settleWhen: "stable" });
+    const form = find(await floor.settleUp(), ScheduleForm);
+    if (form === undefined) throw new Error("the Floor kit draws no ScheduleForm");
+    const { refusal, slots } = form.props as { readonly refusal: string; readonly slots: readonly { readonly id: string; readonly status: string; readonly publishAt: string }[] };
+    const m = /\(slot (\w+), (\w+) for (\S+)\)/.exec(refusal);
+    expect(m, refusal).not.toBeNull();
+    const named = slots.find((s) => s.id === m?.[1]);
+    expect(named, `slot ${m?.[1]} is not in the specimen's slots`).toBeDefined();
+    expect(named?.status).toBe(m?.[2]);
+    expect(named?.publishAt).toBe(m?.[3]);
+    expect(SLOT_HOLDS, "a slot that holds nothing cannot refuse a second").toContain(named?.status);
     floor.unmount();
   });
 });
