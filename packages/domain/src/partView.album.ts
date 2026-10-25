@@ -16,13 +16,25 @@ import type { ExportView, TakeView } from "./partView.finish.ts";
  *  characters in all - the mv-metadata turn's own bounds, lib/sound/mv). */
 export const WORDS_LIMITS = { title: 100, description: 5000, tags: 500 } as const;
 
+const UTF8 = new TextEncoder();
+
+/** THE ONE COUNT of the words, as the platform counts them (lib/publish/youtube.ts snippetProblem,
+ *  API-NOTES "Video resource"): the title in code points, the description in UTF-8 BYTES, the tags
+ *  with a comma between each and quotes around a tag that holds a space. The verdict, the view's
+ *  `tagChars`, the words editor's counter, the schedule form and the uploader all read these. */
+export const wordsCount = {
+  title: (title: string): number => [...title].length,
+  description: (description: string): number => UTF8.encode(description).length,
+  tags: (tags: readonly string[]): number => tags.reduce((n, t) => n + t.length + (t.includes(" ") ? 2 : 0), 0) + Math.max(0, tags.length - 1),
+} as const;
+
 export type WordsData = {
   readonly face: "words";
   readonly track: { readonly title: string; readonly durationS: number | null } | null;
   readonly title: string;
   readonly description: string;
   readonly tags: readonly string[];
-  /** Characters the tags take as the platform counts them (joined with commas). */
+  /** Characters the tags take as the platform counts them (`wordsCount.tags`: commas, and quotes around a tag with a space). */
   readonly tagChars: number;
   /** The words were written by a turn and edited since (the turn's text is not what is here). */
   readonly edited: boolean;

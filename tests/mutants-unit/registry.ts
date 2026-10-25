@@ -3439,7 +3439,7 @@ export const MUTANTS: UnitMutant[] = [
     id: "l40-words-title-limit",
     test: "tests/next-server/parts-finish.test.ts",
     file: "app/(studio)/projects/[id]/_part/fixtureAlbum.ts",
-    find: "if (w.title.length > WORDS_LIMITS.title)",
+    find: "if (title > WORDS_LIMITS.title)",
     replace: "if (false)",
     why: "A 101-character title would read READY and reach the platform, which truncates or refuses it.",
   },

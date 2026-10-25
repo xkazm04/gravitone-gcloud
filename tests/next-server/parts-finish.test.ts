@@ -237,4 +237,18 @@ describe("the trailer's score and cut on the fixture side", () => {
     const v = await fop(id, "words", { op: "words-field", field: "title", value: "x".repeat(101) });
     expect(v.verdict).toEqual({ state: "blocked", codes: [{ code: "over-limit", text: "over the limit: title 101/100" }] });
   });
+
+  it("counts the words as the platform does: description bytes, tags with their quotes", async () => {
+    await must(loadPart("why-bitcoin", "research", at));
+    const list = fixtureProduce().listProjects();
+    if (!list.ok) throw list.error;
+    const id = list.value.projects.find((p) => p.title === "Salt lines — album video")?.id ?? "";
+    const spaced = await fop(id, "words", { op: "words-tags", tags: ["lo fi", "rain"] });
+    expect(spaced.data).toMatchObject({ face: "words", tagChars: 12 });
+    const many = await fop(id, "words", { op: "words-tags", tags: Array.from({ length: 100 }, (_, i) => `${i} y`) });
+    expect(many.verdict).toEqual({ state: "blocked", codes: [{ code: "over-limit", text: "over the limit: tags 689/500" }] });
+    await fop(id, "words", { op: "words-tags", tags: [] });
+    const accented = await fop(id, "words", { op: "words-field", field: "description", value: "é".repeat(3000) });
+    expect(accented.verdict).toEqual({ state: "blocked", codes: [{ code: "over-limit", text: "over the limit: description 6000/5000" }] });
+  });
 });

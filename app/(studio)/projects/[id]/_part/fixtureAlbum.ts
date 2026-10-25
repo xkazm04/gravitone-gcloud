@@ -1,7 +1,7 @@
 import "server-only";
 
 import { err, ok, type Result } from "@gt/domain/errors";
-import { RENDER_RES, WORDS_LIMITS, albumOpLabel, type EngineView, type PartActView, type PartVerdict, type RenderData, type RenderRes, type WordsData } from "@gt/domain/partView";
+import { RENDER_RES, WORDS_LIMITS, albumOpLabel, wordsCount, type EngineView, type PartActView, type PartVerdict, type RenderData, type RenderRes, type WordsData } from "@gt/domain/partView";
 
 import type { Ctx } from "./fixture.ts";
 import { engineOf } from "./fixtureScoreRecs.ts";
@@ -53,13 +53,14 @@ export function keyOfKind(ctx: Ctx, kind: string): string | null {
 
 /* ── words ────────────────────────────────────────────────────────────────── */
 
-const tagChars = (tags: readonly string[]): number => tags.join(",").length;
-
 function wordsVerdict(_ctx: KCtx, w: WordsRec): PartVerdict {
   const over: string[] = [];
-  if (w.title.length > WORDS_LIMITS.title) over.push(`title ${w.title.length}/${WORDS_LIMITS.title}`);
-  if (w.description.length > WORDS_LIMITS.description) over.push(`description ${w.description.length}/${WORDS_LIMITS.description}`);
-  if (tagChars(w.tags) > WORDS_LIMITS.tags) over.push(`tags ${tagChars(w.tags)}/${WORDS_LIMITS.tags}`);
+  const title = wordsCount.title(w.title);
+  const description = wordsCount.description(w.description);
+  const tags = wordsCount.tags(w.tags);
+  if (title > WORDS_LIMITS.title) over.push(`title ${title}/${WORDS_LIMITS.title}`);
+  if (description > WORDS_LIMITS.description) over.push(`description ${description}/${WORDS_LIMITS.description}`);
+  if (tags > WORDS_LIMITS.tags) over.push(`tags ${tags}/${WORDS_LIMITS.tags}`);
   if (over.length > 0) return { state: "blocked", codes: over.map((o) => ({ code: "over-limit", text: `over the limit: ${o}` })) };
   const missing = [...(w.title.trim() === "" ? ["title"] : []), ...(w.description.trim() === "" ? ["description"] : [])];
   if (missing.length === 2) return { state: "empty", codes: [{ code: "no-words", text: "no title, no description" }] };
@@ -69,7 +70,7 @@ function wordsVerdict(_ctx: KCtx, w: WordsRec): PartVerdict {
 
 function wordsData(ctx: KCtx, w: WordsRec): WordsData {
   const edited = w.written !== null && (w.written.title !== w.title || w.written.description !== w.description || w.written.tags.join() !== w.tags.join());
-  return { face: "words", track: trackOf(ctx), title: w.title, description: w.description, tags: w.tags, tagChars: tagChars(w.tags), edited, ...(w.engine === undefined ? {} : { engine: w.engine }) };
+  return { face: "words", track: trackOf(ctx), title: w.title, description: w.description, tags: w.tags, tagChars: wordsCount.tags(w.tags), edited, ...(w.engine === undefined ? {} : { engine: w.engine }) };
 }
 
 const wordsActs = (ctx: KCtx, w: WordsRec): PartActView[] => [{ act: "write-words", label: w.written === null ? "write words" : "write again", needs: trackOf(ctx) === null ? ["a track"] : [] }];

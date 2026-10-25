@@ -6,7 +6,7 @@
 // the record so an edited field shows as edited. RAIL: the track the words are about.
 import { useEffect, useRef, useState } from "react";
 
-import { WORDS_LIMITS, type PartView, type WordsData } from "@gt/domain/partView";
+import { WORDS_LIMITS, wordsCount, type PartView, type WordsData } from "@gt/domain/partView";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { cx } from "@gt/ui/components/cx.ts";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
@@ -24,15 +24,7 @@ import s from "./Cut.module.css";
 // quotes around a tag holding a space. The tags are counted as the op will land them (trimmed,
 // empties dropped, repeats once - the words kind's apply), not as the draft spells them.
 const tagsOf = (v: string): readonly string[] => [...new Set(v.split(",").map((t) => t.trim()).filter((t) => t !== ""))];
-const BYTES = new TextEncoder();
-const COUNT = {
-  title: (v: string): number => [...v].length,
-  description: (v: string): number => BYTES.encode(v).length,
-  tags: (v: string): number => {
-    const tags = tagsOf(v);
-    return tags.reduce((n, t) => n + t.length + (t.includes(" ") ? 2 : 0), 0) + Math.max(0, tags.length - 1);
-  },
-} as const;
+const COUNT = { title: wordsCount.title, description: wordsCount.description, tags: (v: string): number => wordsCount.tags(tagsOf(v)) } as const;
 
 function Counted({ label, value, limit, count: measure, area = false, busy, commit }: { readonly label: string; readonly value: string; readonly limit: number; readonly count: (v: string) => number; readonly area?: boolean; readonly busy: boolean; readonly commit: (v: string) => void }) {
   const [v, setV] = useState(value);
