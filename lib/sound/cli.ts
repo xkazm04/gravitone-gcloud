@@ -57,6 +57,14 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
     return v;
   };
   const has = (name: string) => args.includes(`--${name}`);
+  /** A number flag, read or refused: Number("ninety") is NaN, which the request door files as "no tempo". */
+  const numFlag = (name: string): number | null => {
+    const v = flag(name);
+    if (v === undefined) return null;
+    const n = Number(v);
+    if (v.trim() === "" || !Number.isFinite(n)) throw new Usage(`--${name} needs a number; got ${JSON.stringify(v)}`);
+    return n;
+  };
   const list = (name: string) =>
     (flag(name) ?? "")
       .split(",")
@@ -108,7 +116,7 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
           promptInfluence: flag("influence") !== undefined ? Number(flag("influence")) : null,
           technique: list("technique"),
           terms: { genre: list("genre"), mood: list("mood"), instrument: list("instrument"), sfxCategory: flag("category") ?? null },
-          tempoBpm: flag("tempo") ? Number(flag("tempo")) : null,
+          tempoBpm: numFlag("tempo"),
           key: flag("key") ?? null,
           // THE AGENT LANE: a take generated from a terminal arrives in Triage
           // as an agent's, unjudged, for a person to hear.

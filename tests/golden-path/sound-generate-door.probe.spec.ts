@@ -310,3 +310,15 @@ test("sfx clip: a title never starts empty - the first worded phrase, else the w
   console.log(`[sound-door] clip titles -> ${JSON.stringify(titles)}`);
   expect(titles).toEqual(["iron door slams · 1/3", "effect · 2/3", "impacts · 3/3"]);
 });
+
+/* ── the CLI's generate reads its numbers or says so ─────────────────────── */
+
+test("cli generate: a --tempo that is not a number is usage, not a take filed with no tempo", async () => {
+  const r = await cli("generate", "--kind", "music", "--prompt", "Warm lo-fi bed", "--duration", "10", "--tempo", "ninety", "--json");
+  console.log(`[sound-door] --tempo ninety -> ${r.code} ${r.out.slice(0, 90)}`);
+  expect(r.code).toBe(2);
+  expect(calls.length, "a misread tempo still bought a render").toBe(0);
+  const fine = await cli("generate", "--kind", "music", "--prompt", "Warm lo-fi bed", "--duration", "10", "--tempo", "92", "--json");
+  expect(fine.code).toBe(0);
+  expect((JSON.parse(fine.out) as { take: { tempoBpm: number } }).take.tempoBpm).toBe(92);
+});
