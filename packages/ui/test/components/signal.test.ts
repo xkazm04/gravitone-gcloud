@@ -131,6 +131,13 @@ describe("UpstreamBreak", () => {
     expect(u).toContain(">, broke</span>");
     expect(u).toContain(">OAuth token expired</div>");
   });
+
+  test("a chain naming one step twice draws two nodes with two keys (two upstream parts of one name)", () => {
+    const el = UpstreamBreak({ steps: ["image", "image", "edit"], brokeAt: 0, detail: "image · image not ready" }) as { props: { children: readonly unknown[] } };
+    const keys = keysOf(el.props.children[0]);
+    expect(keys).toHaveLength(3);
+    expect(new Set(keys).size).toBe(3);
+  });
 });
 
 describe("Facts", () => {
