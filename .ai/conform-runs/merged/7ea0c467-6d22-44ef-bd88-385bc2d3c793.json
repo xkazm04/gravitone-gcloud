@@ -1,0 +1,159 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7ea0c467-6d22-44ef-bd88-385bc2d3c793",
+ "subject": "translation-pipeline-topology",
+ "evaluatedAt": "2026-10-24T06:38:35.278105+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "kernel-python-protocol",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/py/job.py:7 These modules are the Python side of the SQLite kernel protocols (job queue, lease, ledger, meter, styles). Here 'languages' means Python and Node, not human locales. A grep of packages/kernel/py for translation, i18n, hreflang and pseudo-loc found nothing, so this context has no translated content, catalog or pipeline for the subject to govern.",
+   "techniques": [
+    {
+     "technique": "language-registry-single-source",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/py/job.py:7 'both languages' means Python and TypeScript sharing one spec. There is no locale registry."
+    }
+   ],
+   "absenceTerms": [
+    "translation",
+    "i18n",
+    "hreflang",
+    "pseudo-loc"
+   ]
+  },
+  {
+   "context": "article-human-gate-and-landing",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "lib/articles/mediumPackage.ts:257 The Medium package and the registry landing ship one post in one fixed language (lang=\"en\"). There are no translated variants, derived store or fallback. A grep of lib/articles for translation, i18n, hreflang and pseudo-loc found nothing.",
+   "techniques": [
+    {
+     "technique": "canonical-and-derived-split",
+     "verdict": "not-applicable",
+     "evidence": "lib/articles/mediumPackage.ts:257 The post is landed only in the canonical language. No machine-translated output exists to keep off the source branch."
+    }
+   ],
+   "absenceTerms": [
+    "translation",
+    "i18n",
+    "hreflang",
+    "pseudo-loc"
+   ]
+  },
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/contract.ts:1 The part port is an internal operator studio surface (load/op/undo/act over kernel records). It has no locale catalog or translation pipeline. A grep of app/(studio)/projects for translation, i18n, hreflang and pseudo-loc found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "translation",
+    "i18n",
+    "hreflang",
+    "pseudo-loc"
+   ]
+  },
+  {
+   "context": "landing-cosmos-paper-raster",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/layout.ts:353 The cosmos engine paints paper and raster layers. Its one locale touch hard-pins number formatting to en-US. It holds no translated strings, catalog or serving path. A grep for translation, i18n, hreflang and pseudo-loc found nothing; the 'translate' hits are CSS/canvas transforms.",
+   "techniques": [],
+   "absenceTerms": [
+    "translation",
+    "i18n",
+    "hreflang",
+    "pseudo-loc"
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/_port/contract.ts:1 The projects port serves single-language studio screens: fixture or real reads, launches and reroutes. A grep of app/(studio)/projects for translation, i18n, hreflang and pseudo-loc found nothing, so there is no translation topology to judge.",
+   "techniques": [],
+   "absenceTerms": [
+    "translation",
+    "i18n",
+    "hreflang",
+    "pseudo-loc"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T06:38:35.278105+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [
+    "language-registry-single-source"
+   ],
+   "deviations": 0,
+   "context": "kernel-python-protocol",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:38:35.278105+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [
+    "canonical-and-derived-split"
+   ],
+   "deviations": 0,
+   "context": "article-human-gate-and-landing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:38:35.278105+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:38:35.278105+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "landing-cosmos-paper-raster",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T06:38:35.278105+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

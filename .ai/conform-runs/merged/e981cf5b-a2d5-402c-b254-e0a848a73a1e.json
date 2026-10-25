@@ -1,0 +1,37 @@
+{
+  "schema": "conform-run/1",
+  "worker": "e981cf5b-a2d5-402c-b254-e0a848a73a1e",
+  "subject": "time-travel-replay",
+  "evaluatedAt": "2026-10-23T21:12:02.093888+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "time-travel-replay",
+      "context": "ui-ledger-timeline",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (timestrip/TimeStrip.tsx) and the techniques at timestrip/strip.ts and wave/Wave.tsx are not among the context's listed files (crumbs, header, eventrow, ledgerlink, jsonl), and Wave is an audio component. I confirmed the comments as written, but I could not confirm that the timestrip and "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-23T21:12:02.093888+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "time-travel-replay"
+      ],
+      "techniques": [
+        "accrual-overlays",
+        "estimate-labeling",
+        "renderer-reuse",
+        "scrub-performance",
+        "timeline-derivation",
+        "transport-and-time-mapping"
+      ],
+      "deviations": 0,
+      "context": "ui-ledger-timeline",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}

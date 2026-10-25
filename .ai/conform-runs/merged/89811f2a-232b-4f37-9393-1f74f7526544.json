@@ -1,0 +1,173 @@
+{
+ "schema": "conform-run/1",
+ "worker": "89811f2a-232b-4f37-9393-1f74f7526544",
+ "subject": "generated-music-acceptance",
+ "evaluatedAt": "2026-10-24T05:55:20.362092+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-insight-lessons",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/_insight/Rubric.tsx:4 The judging surface scores every take 1-10 on fixed per-kind dimensions. It never derives a pass/fail/unmeasured sheet from the take's own brief, so acceptance can drift into taste, which is exactly what the technique guards against.",
+   "techniques": [
+    {
+     "technique": "brief-conformance-listen",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_insight/Rubric.tsx:4 Scores fixed rubric dimensions 1-10 instead of a checklist derived from the brief (sections, exclusions item by item, vocal/instrumental, ending shape). An absent score is never zero, which is good, but the checklist itself is missing."
+    },
+    {
+     "technique": "structure-verification-against-plan",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_insight/read.ts:113 Only total tempo, key and length are checked. The section durations in the take's stored provider plan are never verified, and the check sits beside the score instead of gating the listen."
+    },
+    {
+     "technique": "loudness-and-peak-acceptance",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_insight/read.ts:112 The take's own lufs and truePeakDb are dropped here, so the rubric pile judges takes without any loudness or peak measurement in view and with no destination target."
+    }
+   ]
+  },
+  {
+   "context": "audio-lessons-measures",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/ui/src/components/audio/audio.ts:10 Loudness and true peak are only displayed. No destination target or ceiling exists to check them against, so an unmeasured or over-ceiling file is never refused, while the technique treats the target as a property of the destination.",
+   "techniques": [
+    {
+     "technique": "loudness-and-peak-acceptance",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/audio/audio.ts:10 Says outright that nothing sets a loudness target. There is no -14/-23 LUFS destination target, no -1 dBTP ceiling, no LRA and no basis recorded."
+    },
+    {
+     "technique": "brief-conformance-listen",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/audio/rubric.ts:20 The music rubric is a fixed set of quality dimensions on a 1-10 scale, not a per-brief checklist of commitments with pass, fail or unmeasured."
+    },
+    {
+     "technique": "generated-audio-defect-taxonomy",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/audio/strengths.ts:189 Rejected takes carry named defect classes that roll up per provider and facet into lesson drafts. This is the technique's recurrence rule: a record of which provider and brief pair keeps earning which defect."
+    },
+    {
+     "technique": "structure-verification-against-plan",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/audio/audio.ts:75 Total length is compared with the brief within one second. Section boundaries and the ending shape are not compared."
+    }
+   ]
+  },
+  {
+   "context": "audio-arrange-desk",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/return/route.ts:55 A returned Suno file is filed as a kept version, finalized too if a label is given, with no loudness or peak measurement and no rights record. lib/sound/arrange.ts fileReturn, which this calls, checks only the head, the stage and the label.",
+   "techniques": [
+    {
+     "technique": "loudness-and-peak-acceptance",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/return/route.ts:55 A file can be finalized without being measured, which the technique's unmeasured-is-not-pass rule forbids."
+    },
+    {
+     "technique": "rights-and-provenance-record",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/return/route.ts:47 A library label is the only finalize-time fact this door collects. It records no account, plan tier, terms date or cleared destination for the returned Suno audio."
+    }
+   ]
+  },
+  {
+   "context": "audio-composer-briefs",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/ui/src/components/audio/brief.ts:87 The deterministic brief check covers tempo, key and total length, keeping held, missed, octave, unmeasured and unasked apart. It never checks the section offsets that plan-shaped briefs commit to (lib/music/elevenlabs.ts carries per-section duration_ms), nor the ending shape.",
+   "techniques": [
+    {
+     "technique": "structure-verification-against-plan",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/audio/brief.ts:87 Total duration and tempo are verified by a tool with honest three-state results, but section boundaries and the ending cliff or slope are not, although the plan commits to them."
+    },
+    {
+     "technique": "generated-audio-defect-taxonomy",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/audio/AudioPrompt.tsx:4 Reject reasons are named defect codes taken from the registry taxonomy (lib/sound/types.ts DEFECTS) and are shown with the brief and its exclusions."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "generated-music-acceptance",
+   "context": "audio-text-producers",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T05:55:20.362092+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "brief-conformance-listen",
+    "loudness-and-peak-acceptance",
+    "structure-verification-against-plan"
+   ],
+   "deviations": 1,
+   "context": "audio-insight-lessons",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:55:20.362092+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "brief-conformance-listen",
+    "generated-audio-defect-taxonomy",
+    "loudness-and-peak-acceptance",
+    "structure-verification-against-plan"
+   ],
+   "deviations": 1,
+   "context": "audio-lessons-measures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:55:20.362092+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "loudness-and-peak-acceptance",
+    "rights-and-provenance-record"
+   ],
+   "deviations": 1,
+   "context": "audio-arrange-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T05:55:20.362092+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "generated-audio-defect-taxonomy",
+    "structure-verification-against-plan"
+   ],
+   "deviations": 1,
+   "context": "audio-composer-briefs",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

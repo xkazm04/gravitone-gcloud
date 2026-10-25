@@ -1,0 +1,143 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c73cdd3e-e560-464f-ba22-270f1eb93982",
+ "subject": "data-video-art-direction",
+ "evaluatedAt": "2026-10-24T04:37:10.922690+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "imaging-vendor-providers-and-video",
+   "subject": "data-video-art-direction",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/imaging/video/types.ts:1 These files are vendor transports (image providers, the browser-driven Studio driver, the image-to-clip hop with its price and budget) and contain no frame, chart, theme, card or title design; a search of lib/imaging/providers, lib/imaging/studio and lib/imaging/video for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing, so the subject's precondition (designing the look of a narration-free data video) does not hold here.",
+   "techniques": [],
+   "absenceTerms": [
+    "bar race",
+    "statreel",
+    "champion",
+    "leaderboard"
+   ]
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "data-video-art-direction",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Strips.tsx:3 The only chart-like surface in these editors is the narrated explainer's strips grid, where voice lines play under each card and the screen only reviews cards already drawn; a search of the _edit directory for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing, so these review screens never design a narration-free data-video frame.",
+   "techniques": [],
+   "absenceTerms": [
+    "bar race",
+    "statreel",
+    "champion",
+    "leaderboard"
+   ]
+  },
+  {
+   "context": "frames-picture-composition",
+   "subject": "data-video-art-direction",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/frames/frames.ts:16 Frames turns the beats of a narrated script (each carrying its spoken sentence) into plate, vector-element and text layers, so it is about narrated explainers and not a narration-free race or chart video; a search of lib/frames for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "bar race",
+    "statreel",
+    "champion",
+    "leaderboard"
+   ]
+  },
+  {
+   "context": "ledger-screen",
+   "subject": "data-video-art-direction",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/ledger/page.tsx:1 The ledger is an append-only event list with facets and a per-day strip, so it draws no data-video frame; a search of app/(studio)/ledger for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing (its one 'race' hit is an async-race-guard comment).",
+   "techniques": [],
+   "absenceTerms": [
+    "bar race",
+    "statreel",
+    "champion",
+    "leaderboard"
+   ]
+  },
+  {
+   "context": "kit-screen-specimens",
+   "subject": "data-video-art-direction",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/kit/ProduceKit.tsx:3 The kit renders @gt/ui specimens of studio screens from fixed fixture data, and its palettes and 'photo' strings describe still styles, not a data-video frame; a search of app/(studio)/kit for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "bar race",
+    "statreel",
+    "champion",
+    "leaderboard"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T04:37:10.922690+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "data-video-art-direction"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "imaging-vendor-providers-and-video",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:37:10.922690+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "data-video-art-direction"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:37:10.922690+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "data-video-art-direction"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "frames-picture-composition",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:37:10.922690+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "data-video-art-direction"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:37:10.922690+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "data-video-art-direction"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "kit-screen-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

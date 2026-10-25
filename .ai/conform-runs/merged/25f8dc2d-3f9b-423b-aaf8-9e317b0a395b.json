@@ -1,0 +1,219 @@
+{
+ "schema": "conform-run/1",
+ "worker": "25f8dc2d-3f9b-423b-aaf8-9e317b0a395b",
+ "subject": "image-prompt-composition",
+ "evaluatedAt": "2026-10-24T03:48:08.658523+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "frames-picture-composition",
+   "subject": "image-prompt-composition",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/frames/shotPrompt.ts:237 Every shot prompt is built by the one style compiler with a required StyleBlock. The action half comes from the shot's own fields, so no call can skip or reword the style half.",
+   "techniques": [
+    {
+     "technique": "two-block-style-and-action",
+     "verdict": "conformant",
+     "evidence": "lib/frames/shotPrompt.ts:237 promptsForShots needs a StyleBlock and compiles style plus action, and shotReview checks that each prompt restates compileStyleBlock's own output."
+    },
+    {
+     "technique": "style-first-token-ordering",
+     "verdict": "conformant",
+     "evidence": "lib/frames/shotPrompt.ts:215 The order is style, then action, then the constraint. I checked it against lib/stylePrompt.ts:62, which is outside this context."
+    },
+    {
+     "technique": "shape-language-over-nouns",
+     "verdict": "conformant",
+     "evidence": "lib/frames/frames.ts:533 subjectFor builds the subject from the beat's role as countable geometry, never from the beat's sentence. The comment cites the reservation-book leak measured on 6 of 6 styles."
+    },
+    {
+     "technique": "prompt-budget-limits",
+     "verdict": "conformant",
+     "evidence": "lib/frames/shotReview.ts:483 The vendor's character ceiling is checked before the call, using the compiler's own constant rather than a copy."
+    },
+    {
+     "technique": "default-look-attractor",
+     "verdict": "conformant",
+     "evidence": "lib/frames/shotPrompt.ts:150 The model's default framing was sampled (a dojo A/B) and is overruled one axis at a time with attitude sentences. The lighting clauses name what stays dark."
+    },
+    {
+     "technique": "verbatim-text-locking",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/sceneSpec.ts:137 This is a composited-plate architecture: text goes to the vector layer, and a subject that asks for text is refused."
+    }
+   ]
+  },
+  {
+   "context": "foundry-extract-engine",
+   "subject": "image-prompt-composition",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/foundry/extract/vocabulary.ts:366 When the engine's answer is unusable, fallbackStyle writes the palette as a plain list of up to five dominant colours, with no ground/figure/accent role. That is the listed palette the technique says gets re-cast on every generation, while the engine path (PALETTE_AS_ROLES) does assign roles.",
+   "techniques": [
+    {
+     "technique": "assigned-colour-roles",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/extract/vocabulary.ts:366 The fallback recipe lists colours. The engine path requires roles (prompts.ts:19-20), so the two paths disagree."
+    },
+    {
+     "technique": "two-block-style-and-action",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/prompts.ts:120 The full recipe is restated on every replica and transfer, followed by the shot and the constraint."
+    },
+    {
+     "technique": "style-first-token-ordering",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/prompts.ts:4 The recipe leads, the depiction or scene follows, and NO_TEXT is last."
+    },
+    {
+     "technique": "medium-vocabulary-locking",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/prompts.ts:102 The recipe opens with the medium in the generator's own words, and this rule rests on a measured failure."
+    },
+    {
+     "technique": "shape-language-over-nouns",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/prompts.ts:40 Depictions that would attract text are rewritten as shapes, after a measured veto."
+    },
+    {
+     "technique": "negative-prompting",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/performReplica.ts:48 Each style's negative is written once with its recipe, always contains text and watermark, and is sent verbatim on every call."
+    },
+    {
+     "technique": "prompt-budget-limits",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/prompts.ts:56 The style block's word share is sized here. The hard character ceiling is enforced at the provider layer, outside this context (leonardo.ts:133). usableFix sets no upper bound on a recipe_fix."
+    },
+    {
+     "technique": "verbatim-text-locking",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/prompts.ts:12 Every generation bans text, so the model never sets words."
+    },
+    {
+     "technique": "reference-role-map",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/performTransfer.ts:4 Replicas and transfers are text-only and carry no reference attachments."
+    }
+   ]
+  },
+  {
+   "context": "bound-producers",
+   "subject": "image-prompt-composition",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/producers/still.ts:28 An album still's whole subject is the project title, a proper noun, passed to the image model raw. This is the text magnet the technique names: it invites the model to letter the title onto the plate instead of describing shapes.",
+   "techniques": [
+    {
+     "technique": "shape-language-over-nouns",
+     "verdict": "deviation",
+     "evidence": "lib/producers/still.ts:28 The subject is the project title verbatim, with no translation into geometry. The NO_TEXT clause cannot outweigh the noun."
+    },
+    {
+     "technique": "negative-prompting",
+     "verdict": "deviation",
+     "evidence": "lib/producers/style.ts:138 NEGATIVE_PROMPT includes opposites of a flat-vector look (photorealistic, 3D render, glow, gradient) and is sent with every style, including photoreal or glow-lit extracted styles. A negative not derived from the style's own contract fights it."
+    },
+    {
+     "technique": "two-block-style-and-action",
+     "verdict": "conformant",
+     "evidence": "lib/producers/frames.ts:230 Frame plates, ad shots and stills all go through compilePrompt with the project's look block."
+    }
+   ]
+  },
+  {
+   "context": "audio-composer-briefs",
+   "subject": "image-prompt-composition",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/audio/brief.ts:20 The briefs and prompts here are music and sound-effect briefs only. A case-insensitive search of packages/ui/src/components/audio for image, palette, diffusion and negativePrompt found nothing, so no image-generation prompt is composed in this context.",
+   "techniques": [],
+   "absenceTerms": [
+    "image",
+    "palette",
+    "diffusion",
+    "negativePrompt"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "image-prompt-composition",
+   "context": "style-atelier",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T03:48:08.658523+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "image-prompt-composition"
+   ],
+   "techniques": [
+    "default-look-attractor",
+    "prompt-budget-limits",
+    "shape-language-over-nouns",
+    "style-first-token-ordering",
+    "two-block-style-and-action",
+    "verbatim-text-locking"
+   ],
+   "deviations": 0,
+   "context": "frames-picture-composition",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T03:48:08.658523+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "image-prompt-composition"
+   ],
+   "techniques": [
+    "assigned-colour-roles",
+    "medium-vocabulary-locking",
+    "negative-prompting",
+    "prompt-budget-limits",
+    "reference-role-map",
+    "shape-language-over-nouns",
+    "style-first-token-ordering",
+    "two-block-style-and-action",
+    "verbatim-text-locking"
+   ],
+   "deviations": 1,
+   "context": "foundry-extract-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T03:48:08.658523+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "image-prompt-composition"
+   ],
+   "techniques": [
+    "negative-prompting",
+    "shape-language-over-nouns",
+    "two-block-style-and-action"
+   ],
+   "deviations": 1,
+   "context": "bound-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T03:48:08.658523+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "image-prompt-composition"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-composer-briefs",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -1,0 +1,247 @@
+{
+ "schema": "conform-run/1",
+ "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+ "subject": "prompt-assembly",
+ "evaluatedAt": "2026-10-24T01:07:42.727658+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "text-reasoning-engine",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/text/log.ts:20 The single chokepoint for every reasoning call records only promptChars and deliberately never a digest of the prompt it sends, so 'which prompt did this run receive?' cannot be answered from artifacts once the call returns: the 'unrecorded send' the standard names.",
+   "techniques": [
+    {
+     "technique": "fingerprinting-and-cache-keys",
+     "verdict": "deviation",
+     "evidence": "lib/text/log.ts:20 The ledger floor is size plus content digest at the send site. Only size travels, and hashing is refused explicitly. No version stamp is recorded either."
+    },
+    {
+     "technique": "layered-composition",
+     "verdict": "deviation",
+     "evidence": "lib/text/router.ts:403 The transport appends a schema instruction to a prompt the caller already assembled (TextRequest.prompt is a plain string). That is a post-assembly append, outside the caller's assembler, budget and any fingerprint."
+    },
+    {
+     "technique": "variable-interpolation",
+     "verdict": "deviation",
+     "evidence": "lib/text/repair.ts:165 The repair prompt interpolates the findings list with no cap, and the refused model output (untrusted class) is interpolated with no declared trust class."
+    },
+    {
+     "technique": "task-envelope",
+     "verdict": "conformant",
+     "evidence": "lib/text/repair.ts:171 No role priming. The task locates the object, states a concrete done criterion, and pairs its prohibition with a positive instruction. Guards check the result in code."
+    },
+    {
+     "technique": "endpoint-sealed-continuation-metadata",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:292 Each turn is one fresh user message. No stored assistant turn with sealed metadata is replayed, even on fallback or repair."
+    },
+    {
+     "technique": "response-reservation-sizing",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:293 No output ceiling is set. Prompts are small (about 40KB at the largest) next to the window, so by the technique's own 'when not to use it' the reservation is not charged against input that needs the room."
+    },
+    {
+     "technique": "capability-documentation",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:296 Reason turns carry no operations, so there is no capability layer to derive."
+    },
+    {
+     "technique": "context-ownership-regimes",
+     "verdict": "conformant",
+     "evidence": "lib/text/providers/claudeCliRetrieve.ts:87 The only multi-turn path is held by the CLI agent. The client sends one prompt and runs no compaction of its own, so nothing is doubled up."
+    },
+    {
+     "technique": "history-compaction",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:38 Single-turn by construction, so no transcript layer exists to spend down."
+    },
+    {
+     "technique": "tiered-history-projection",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:38 Same precondition: no history."
+    },
+    {
+     "technique": "amortized-compaction-cadence",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:38 Same precondition: no history."
+    }
+   ],
+   "registryProposal": "fingerprinting-and-cache-keys asks for a content digest of every prompt sent. This engine refuses even a hash on privacy grounds, because the prompt is unpublished creator material. The technique could say whether a keyed or salted digest meets the floor where a plain hash of a sensitive prompt is judged a confirmation risk."
+  },
+  {
+   "context": "foundry-extract-engine",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/foundry/extract/performGroup.ts:52 The synthesis prompt is built and sent with only cost and model booked to the manifest, so the run records no digest or version of the instruction that grouped its styles. The replica image prompts, by contrast, are persisted in full.",
+   "techniques": [
+    {
+     "technique": "fingerprinting-and-cache-keys",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/extract/performGroup.ts:52 Synthesis, readback and critique prompts are not recorded by digest or version. Only the replica prompt is kept (performReplica.ts:37), and readbacks carry VOCAB_VERSION, not a prompt version."
+    },
+    {
+     "technique": "layered-composition",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/prompts.ts:1 One assembler module. Callers pass typed inputs (sources, partition), and synthesisPrompt puts RULES first and SOURCES last. Minor: the critique prompt repeats its naming policy after the volatile recipe."
+    },
+    {
+     "technique": "house-vocabulary-layer",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/performCommon.ts:25 A closed observable vocabulary from one authority (ENUMS), defined in the prompt, and adoption is checked: off-vocabulary words are logged by field."
+    },
+    {
+     "technique": "variable-interpolation",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/extract/prompts.ts:89 Vision-model prose (prior model output, untrusted class) is interpolated with no declared trust class. The list itself is capped (MAX_SOURCES=60 at store.ts:82, colours sliced to 5 in performRead.ts:25)."
+    },
+    {
+     "technique": "task-envelope",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/extract/prompts.ts:92 Opens with a role sentence. The done criteria are explicit, but there is no self-check before answering: coverage is only validated after the paid turn."
+    },
+    {
+     "technique": "capability-documentation",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/store.ts:284 No tools are offered. The schema constrains the answer, but no operation roster exists."
+    },
+    {
+     "technique": "history-compaction",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/engine.ts:11 Every unit is a fresh single call and state lives in the manifest, so there is no transcript to compact."
+    }
+   ]
+  },
+  {
+   "context": "studio-shell",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/facts.ts:1 The shell renders header facts, toasts, a bell and a live feed from kernel events. A search of app/(studio)/_shell for prompt, lib/text, reason(, schemaInstruction, generateContent and claude/gemini found nothing, so no model prompt is assembled here.",
+   "techniques": [],
+   "absenceTerms": [
+    "prompt",
+    "lib/text",
+    "schemaInstruction",
+    "generateContent",
+    "systemInstruction"
+   ]
+  },
+  {
+   "context": "library-projection-feeds",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/library/feeds/types.ts:9 Feeds read v1 stores and map them into library items. 'prompt' appears only as stored generation metadata (extras.prompt) and a fixture string. A search found no lib/text import, reason(), schemaInstruction, generateContent or claude/gemini call, so nothing here assembles or sends a model prompt.",
+   "techniques": [],
+   "absenceTerms": [
+    "lib/text",
+    "reason(",
+    "schemaInstruction",
+    "generateContent",
+    "systemInstruction"
+   ]
+  },
+  {
+   "context": "part-editor-writing-research",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx:111 The editors send the operator's text as typed ops to the part port. Assembly happens server-side elsewhere. A search of the [part] directory found no lib/text import, reason(), schemaInstruction, generateContent or claude/gemini call.",
+   "techniques": [],
+   "absenceTerms": [
+    "lib/text",
+    "reason(",
+    "schemaInstruction",
+    "generateContent",
+    "maxOutputTokens"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T01:07:42.727658+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [
+    "amortized-compaction-cadence",
+    "capability-documentation",
+    "context-ownership-regimes",
+    "endpoint-sealed-continuation-metadata",
+    "fingerprinting-and-cache-keys",
+    "history-compaction",
+    "layered-composition",
+    "response-reservation-sizing",
+    "task-envelope",
+    "tiered-history-projection",
+    "variable-interpolation"
+   ],
+   "deviations": 1,
+   "context": "text-reasoning-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:07:42.727658+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [
+    "capability-documentation",
+    "fingerprinting-and-cache-keys",
+    "history-compaction",
+    "house-vocabulary-layer",
+    "layered-composition",
+    "task-envelope",
+    "variable-interpolation"
+   ],
+   "deviations": 1,
+   "context": "foundry-extract-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:07:42.727658+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:07:42.727658+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "library-projection-feeds",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:07:42.727658+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

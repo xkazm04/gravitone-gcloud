@@ -1,0 +1,137 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f98b025d-2a46-4121-94c3-420353024a33",
+ "subject": "agent-instruction-files",
+ "evaluatedAt": "2026-10-24T02:37:17.740506+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-writing-research",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:3 These files are a React editor island and its sub-editors with no agent-instruction asset, harness file or agent launch; searching app/(studio)/projects/[id]/[part]/ for CLAUDE.md, AGENTS.md, SKILL.md and 'instruction' found 0 hits, so the subject's precondition does not hold here.",
+   "techniques": [],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "SKILL.md",
+    "instruction"
+   ]
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:3 These are media editor screens (cut, frames, score, voice) with no instruction file, skill or agent spawn; searching the same app/(studio)/projects/[id]/[part]/ tree for CLAUDE.md, AGENTS.md, SKILL.md and 'instruction' found 0 hits, so the subject's precondition does not hold here.",
+   "techniques": [],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "SKILL.md",
+    "instruction"
+   ]
+  },
+  {
+   "context": "article-run-engine",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/articles/agentSteps.ts:83 Each turn's record holds outcome, turns, duration, exit code, cost and errors, but not the instruction files the session loaded. Isolation is shown only by where the workspace sits (os.tmpdir, agentSteps.ts:36) and what it holds (assertIsolatedWorkspace). If an ancestor or user-level brief ever loads, for example after a CLI change to `--safe-mode`, posts and trial critiques would change and nothing in the run record would show why.",
+   "techniques": [
+    {
+     "technique": "workspace-ancestry-isolation",
+     "verdict": "deviation",
+     "evidence": "lib/articles/agentSteps.ts:83 The positional rule holds: makeWorkspace puts the workspace under os.tmpdir() (line 36), outside the repo, and dryAgent.ts:91 checks the workspace contents before every spawn. The technique's second half does not: no list of loaded instruction files is captured or asserted. The fence's own header (lib/agent/cliSeam.ts) says the flags' combined behaviour is unproven without a real turn."
+    },
+    {
+     "technique": "enforcement-demotion",
+     "verdict": "conformant",
+     "evidence": "lib/articles/runCreate.ts:148 The skill rule 'save the agent's REPORT.md' was taken out of skill prose and enforced by the throw at line 150 (409, trial-no-report). The comment records the failure that prompted it: 2 of 2 trials on 2026-10-18."
+    },
+    {
+     "technique": "capability-before-steering",
+     "verdict": "conformant",
+     "evidence": "lib/articles/runCreate.ts:147 The cause was diagnosed as a capability gap (the harness refuses a subagent's report file). The fix moved the act to the orchestrator instead of adding more steering text for the agent."
+    }
+   ],
+   "registryProposal": "workspace-ancestry-isolation says to capture the loaded set through a session-inspection command, a load hook, or a debug log. When isolation is done with a flag that turns off instruction files AND hooks together (here `--safe-mode`), the hook route is gone. The technique should say how to assert an empty loaded set in that case, for example a probe that plants a canary brief in an ancestor directory and checks that the agent ignores it."
+  },
+  {
+   "context": "article-human-gate-and-landing",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/articles/registryWrite.ts:3 The gate and landing code is deterministic: it records human acts and notes, builds diffs and the Medium package, and opens the registry PR. It authors, injects and launches no instruction file. Searching lib/articles for CLAUDE.md, AGENTS.md and SKILL.md found 0 hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "SKILL.md"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-instruction-files",
+   "context": "ui-marks-and-text",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T02:37:17.740506+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T02:37:17.740506+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T02:37:17.740506+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [
+    "capability-before-steering",
+    "enforcement-demotion",
+    "workspace-ancestry-isolation"
+   ],
+   "deviations": 1,
+   "context": "article-run-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T02:37:17.740506+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "article-human-gate-and-landing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

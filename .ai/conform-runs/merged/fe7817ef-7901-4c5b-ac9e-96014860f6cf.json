@@ -1,0 +1,192 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fe7817ef-7901-4c5b-ac9e-96014860f6cf",
+ "subject": "data-access",
+ "evaluatedAt": "2026-10-24T04:57:15.207330+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/ledger/_ledger/read.ts:182 readStrip calls countEvents once per day over 84 days. Each call runs a total, a head and two statements for each of seven facets (16 statements in its own read transaction), so one render issues about 1,344 count statements to draw one per-day actor-kind bar series that a single grouped read could answer.",
+   "techniques": [
+    {
+     "technique": "batching-and-n-plus-one",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:182 A loop of per-item reads (for each day at read.ts:175). It computes all seven facets when only actorKind is used, and no test sets a query-count ceiling."
+    },
+    {
+     "technique": "layering-rules",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:6 The screen issues no SQL: every read goes through the kernel's named query and count operations."
+    },
+    {
+     "technique": "read-models-and-projections",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:232 Display reads return a consumer-shaped, read-only projection (page, facets, strip) that is never written back."
+    },
+    {
+     "technique": "query-construction",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/filter.ts:74 URL tokens are mapped onto closed vocabularies and passed to the kernel as a structured query. No query text is assembled here."
+    },
+    {
+     "technique": "repo-testing",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/ledger-read.test.ts:24 Each test gets a fresh real kernel store, and fixtures are written through append (the front door)."
+    }
+   ]
+  },
+  {
+   "context": "v1-import-and-archive",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/import/runs.ts:65 The import module writes raw SQL against kernel tables and even the JSON path inside the jobs record, so a kernel schema or record-shape change has consumers in lib/import that the kernel cannot enumerate.",
+   "techniques": [
+    {
+     "technique": "layering-rules",
+     "verdict": "deviation",
+     "evidence": "lib/import/runs.ts:65 Statements naming physical tables and columns live outside the data layer, also at project.ts:211, shelf.ts:171, export.ts:64 and commit.ts:273."
+    },
+    {
+     "technique": "existence-authority-written-last",
+     "verdict": "conformant",
+     "evidence": "lib/import/commit.ts:45 Content-addressed blobs (dependent) land before the rows that reference them (authority), so a rollback leaves only unreferenced, reusable files."
+    },
+    {
+     "technique": "transactions-and-units-of-work",
+     "verdict": "conformant",
+     "evidence": "lib/import/commit.ts:270 There is one boundary per project, owned by the code that knows the invariant. afterLanded runs only after commit (commit.ts:277)."
+    },
+    {
+     "technique": "row-mapping",
+     "verdict": "conformant",
+     "evidence": "lib/import/archive.ts:164 The archive read fails whole on any bad line. The run sources degrade visibly instead, recording each unreadable run's identity and error (runSources.ts:74)."
+    },
+    {
+     "technique": "query-construction",
+     "verdict": "conformant",
+     "evidence": "lib/import/project.ts:211 Statements are static with bound values. There is no interpolation."
+    },
+    {
+     "technique": "repo-testing",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/import-roundtrip.test.ts:50 A real migrated SQLite file and a real blob store in a temp dir."
+    }
+   ]
+  },
+  {
+   "context": "project-step-store",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/steps/readStep.ts:39 loadStep, exported on the step store's door, answers a FAILED single-record read with the seeded default, the same answer as never-written. A caller that saves after it overwrites the stored record, which is the bug patchStep's header describes.",
+   "techniques": [
+    {
+     "technique": "row-mapping",
+     "verdict": "deviation",
+     "evidence": "lib/steps/readStep.ts:39 A single-record read must keep failure distinct from absence. The decode seam itself is sound (recordRegistry.ts:168 refuses malformed and future records). grep finds no production caller of loadStep outside lib/steps, only tests/golden-path/dal-real-engine.probe.spec.ts, but it is still on the door (index.ts:56)."
+    },
+    {
+     "technique": "transactions-and-units-of-work",
+     "verdict": "conformant",
+     "evidence": "lib/steps/patchStep.ts:53 Read-modify-write runs in one readwrite transaction. A throw in decide aborts it."
+    },
+    {
+     "technique": "layering-rules",
+     "verdict": "conformant",
+     "evidence": "lib/steps/index.ts:30 One door re-exports named operations. The connection helper withStore is not exported on it."
+    },
+    {
+     "technique": "repo-testing",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/dal-real-engine.probe.spec.ts:26 Tests run against a spec-complete IndexedDB engine, not a mock of the repo's calls, and state their quota-coverage limit."
+    },
+    {
+     "technique": "sequence-token-write-ordering",
+     "verdict": "not-applicable",
+     "evidence": "lib/steps/saveOrder.ts:58 Latest-wins is a per-tab in-memory ticket over one store. No stream spans stores with different durability, so the token technique's precondition does not hold."
+    },
+    {
+     "technique": "query-construction",
+     "verdict": "not-applicable",
+     "evidence": "lib/steps/withStore.ts:18 Key-value IndexedDB with no query language. The one key builder is the single authority."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "data-access",
+   "context": "kernel-store-and-events",
+   "reason": "evidence leans on test/events.python.test.ts, which is not a tracked file"
+  },
+  {
+   "subject": "data-access",
+   "context": "kernel-python-protocol",
+   "reason": "evidence leans on parts/gates.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T04:57:15.207330+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [
+    "batching-and-n-plus-one",
+    "layering-rules",
+    "query-construction",
+    "read-models-and-projections",
+    "repo-testing"
+   ],
+   "deviations": 1,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:57:15.207330+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [
+    "existence-authority-written-last",
+    "layering-rules",
+    "query-construction",
+    "repo-testing",
+    "row-mapping",
+    "transactions-and-units-of-work"
+   ],
+   "deviations": 1,
+   "context": "v1-import-and-archive",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:57:15.207330+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [
+    "layering-rules",
+    "query-construction",
+    "repo-testing",
+    "row-mapping",
+    "sequence-token-write-ordering",
+    "transactions-and-units-of-work"
+   ],
+   "deviations": 1,
+   "context": "project-step-store",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

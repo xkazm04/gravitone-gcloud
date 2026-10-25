@@ -1007,7 +1007,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/checksStatic.ts:174 The `source-primary` (≥3) and `source-counter` (≥1) items count `primary`/`counter` booleans that the research agent writes itself into sources.json; ingestSources.ts:44-45 copies them through unverified, so the gated party supplies the very evidence the floor is judged on.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "copy-quality-gates",
@@ -1060,7 +1064,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/critique.ts:378 The truth-dimension `critique` item passes once the writer (the reviewed candidate) has written a disposition with any non-empty reason for each blocker factual finding. It reads the writer's own account of how a finding was handled, never the revised post. Nothing checks those dispositions against the post, and the last round's rewrite is not re-reviewed (critique.ts:244), so a green critique row can stand over an artifact no reviewer saw.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "review-iteration-loops",
@@ -1076,7 +1084,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/critiqueWriter.ts:97 The critique's 'research' follow-up records only how many sources were added. Existing sources are pinned by number (assertSourcesStable), and claims.json is rewritten whole with no typed kill, downgrade or unanswered effect, so the channel can only grow or silently drop evidence, never retract it on the record.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "agent-memory",
@@ -1238,7 +1250,11 @@
           "revision": 12,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/mediumPackage.ts:257 The Medium package and the registry landing ship one post in one fixed language (lang=\"en\"). There are no translated variants, derived store or fallback. A grep of lib/articles for translation, i18n, hreflang and pseudo-loc found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
+          "evaluatedRevision": 12
         },
         {
           "subject": "agent-instruction-files",
@@ -1254,7 +1270,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/registryWrite.ts:3 The gate and landing code is deterministic: it records human acts and notes, builds diffs and the Medium package, and opens the registry PR. It authors, injects and launches no instruction file. Searching lib/articles for CLAUDE.md, AGENTS.md and SKILL.md found 0 hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "agent-runtime-assembly",
@@ -1270,7 +1290,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/humanActs.ts:25 The gate records human acts, diffs files and lands an approved post through git/gh (registryWrite.ts execFile with a cwd-bound git env). runAgent, cliSeam, plugin, mcp and registerHook appear in none of its eight files, so this context makes no model call and has no hook chain; the agent turns live in the sibling engine files of lib/articles.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "test-harness",
@@ -1388,7 +1412,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/drive.ts:143 When a dead driver left a step `running`, the next walk overwrites that record with a fresh `running` record and a new startedAt and carries only the cost a finished attempt reported, so the interrupted metered turn is never closed as indeterminate in run.json and its spend never reaches the step's cost (the kernel job's `interrupted` state, outside this context, is the only honest closure).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "prompt-assembly",
@@ -1468,7 +1496,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/agentSteps.ts:83 Each turn's record holds outcome, turns, duration, exit code, cost and errors, but not the instruction files the session loaded. Isolation is shown only by where the workspace sits (os.tmpdir, agentSteps.ts:36) and what it holds (assertIsolatedWorkspace). If an ancestor or user-level brief ever loads, for example after a CLI change to `--safe-mode`, posts and trial critiques would change and nothing in the run record would show why.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "hitl-approval",
@@ -2054,7 +2086,11 @@
           "revision": 14,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/brief.ts:20 The briefs and prompts here are music and sound-effect briefs only. A case-insensitive search of packages/ui/src/components/audio for image, palette, diffusion and negativePrompt found nothing, so no image-generation prompt is composed in this context.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:d254a22feb4a9423",
+          "evaluatedRevision": 14
         },
         {
           "subject": "generated-music-acceptance",
@@ -2070,7 +2106,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/brief.ts:87 The deterministic brief check covers tempo, key and total length, keeping held, missed, octave, unmeasured and unasked apart. It never checks the section offsets that plan-shaped briefs commit to (lib/music/elevenlabs.ts carries per-section duration_ms), nor the ending shape.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "hitl-approval",
@@ -2525,7 +2565,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/audio.ts:10 Loudness and true peak are only displayed. No destination target or ceiling exists to check them against, so an unmeasured or over-ceiling file is never refused, while the technique treats the target as a property of the destination.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
@@ -2651,7 +2695,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/voice/define.ts:24 The pure voice producer refuses every live job at plan time because no speech engine exists. The other producers here (mv, score, suno, words, script, article, dojo, forge) produce music, text or plans, which the golden path puts outside voice-io. A search of packages/producers/src found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone or utterance; the one 'transcri' hit is research follow-up text.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "generated-music-acceptance",
@@ -2806,7 +2854,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/article.ts:43 After human review, the operator's typed per-section edit plan is flattened into one prose note and answered by reworkRun with a whole new draft plus a full critique and check. The reviewed post's approval capital is spent instead of edited.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "hitl-approval",
@@ -3172,7 +3224,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/producers/voice.ts:75 The bound voice producer is a DRY-only stand-in: its only output is a silent WAV sized from the word count, and any live call is rejected with NO_VOICE_ENGINE. Nothing in lib/producers listens or speaks. A search found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone or utterance; the one 'transcri' hit is research.ts text about transcribed research answers, not audio.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "fleet-orchestration",
@@ -3204,7 +3260,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/research.ts:129 A generic unchecked-cast helper, named like a door, is exported to every step binding and used well beyond the invariant its doc comment states (records this binding's own landing wrote), e.g. casting a job's unit input string to an Aspect union at cut.ts:177.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "video-assembly",
@@ -3316,7 +3376,11 @@
           "revision": 14,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/still.ts:28 An album still's whole subject is the project title, a proper noun, passed to the image model raw. This is the text magnet the technique names: it invites the model to letter the title onto the plate instead of describing shapes.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:d254a22feb4a9423",
+          "evaluatedRevision": 14
         }
       ],
       "governance": "governed"
@@ -3370,7 +3434,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/decision/commit.ts:79 The commit transition checks only the packet's state, never whether the author is the operator, so a caller whose `by` is 'agent' can commit a packet, and gates.ts then reads it as a ratified gate part that releases held jobs.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "test-harness",
@@ -3967,7 +4035,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/steps/registry.ts:57 This is an unchecked key-union assertion with no stated invariant, in a package whose own record door says 'never cast' and whose transitions.ts does the same Object.keys narrowing through a checked type predicate. The hatch was opened where the checked path could already express the operation.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "quality-gates",
@@ -4636,7 +4708,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/floor.ts:5 Here a \"lane\" is a media production lane of the Floor's work-in-flight view, not a retrieval lane. A grep of packages/ui/src/components/floor for embedding, rerank, retriev, cosine and bm25 found zero hits, so there is no corpus, query or ranked slice for the subject to govern.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a49d27f889212d3f",
+          "evaluatedRevision": 19
         },
         {
           "subject": "table",
@@ -4754,7 +4830,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/performGroup.ts:52 The synthesis prompt is built and sent with only cost and model booked to the manifest, so the run records no digest or version of the instruction that grouped its styles. The replica image prompts, by contrast, are persisted in full.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "mcp-tools",
@@ -4770,7 +4850,11 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:4 The extract engine is a resumable step machine driven by a CLI, a route kick and a kernel job, and it calls vision/image vendors directly; a grep of lib/foundry/extract for mcp, modelcontextprotocol, tools/call, inputSchema and tool_use found no tool protocol or function-calling surface.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34
         },
         {
           "subject": "voice-io",
@@ -4802,7 +4886,11 @@
           "revision": 14,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/vocabulary.ts:366 When the engine's answer is unusable, fallbackStyle writes the palette as a plain list of up to five dominant colours, with no ground/figure/accent role. That is the listed palette the technique says gets re-cast on every generation, while the engine path (PALETTE_AS_ROLES) does assign roles.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:d254a22feb4a9423",
+          "evaluatedRevision": 14
         },
         {
           "subject": "generative-provider-routing",
@@ -4955,7 +5043,11 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/store.ts:4 The forge store, verdict log, commit plan and catalogue are a server-side disk and kernel-store layer behind the human cull, with no tool server or client; a grep of lib/foundry for mcp, modelcontextprotocol, tools/call, inputSchema and jsonrpc returned no hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34
         },
         {
           "subject": "agent-runtime-assembly",
@@ -4971,7 +5063,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/store.ts:3 This context is the disk layer over runs the Python forge writes, plus the verdict log, commit planning and calibration. plugin, mcp, checkpoint and registerHook do not appear in lib/foundry and runAgent and cliSeam appear in none of the context's own files (only in lib/foundry/strips, another context), so no agent runtime is assembled here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "quality-gates",
@@ -5293,7 +5389,11 @@
           "revision": 19,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/frames/directionPlan.ts:19 The direction pass's answer becomes typed composition ops that are shown, accepted per beat and reverted, never applied wholesale. Frames are a declarative source (plate, vector elements, texts) derived from the script's beats, with refusals and stale plates kept as states.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f548f222df2e692",
+          "evaluatedRevision": 20
         },
         {
           "subject": "frame-direction",
@@ -5325,7 +5425,11 @@
           "revision": 14,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:237 Every shot prompt is built by the one style compiler with a required StyleBlock. The action half comes from the shot's own fields, so no call can skip or reword the style half.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:d254a22feb4a9423",
+          "evaluatedRevision": 14
         },
         {
           "subject": "prompt-assembly",
@@ -5421,7 +5525,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/frames/frames.ts:16 Frames turns the beats of a narrated script (each carrying its spoken sentence) into plate, vector-element and text layers, so it is about narrated explainers and not a narration-free race or chart video; a search of lib/frames for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "music-prompt-composition",
@@ -5475,7 +5583,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/router.ts:90 The dev generate plan puts agy, which is unpriced and was only checked to work live, ahead of Google, the measured cost-per-usable winner, so for unreferenced requests the plan order is a belief and not a measurement, even though the router mechanics (steer, trail, refusal walk, pre-call gate, plan-top reachability) all follow the standard.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "module-design",
@@ -5491,7 +5603,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/http.ts:95 The shared vendor HTTP helper returns every provider's response body as a caller-chosen T with no runtime check and no stated invariant, so every adapter's typed view of a foreign party's bytes is an unmarked assertion rather than a checked surface.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -5673,7 +5789,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/imaging/video/types.ts:1 These files are vendor transports (image providers, the browser-driven Studio driver, the image-to-clip hop with its price and budget) and contain no frame, chart, theme, card or title design; a search of lib/imaging/providers, lib/imaging/studio and lib/imaging/video for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing, so the subject's precondition (designing the look of a narration-free data video) does not hold here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "generative-provider-routing",
@@ -5689,7 +5809,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/providers/google.ts:53 Output size is one process-wide env knob for every Google generate, so drafts and promoted winners bill at the same rung, which is the flat-rate resolution failure; refusal reading, adapter constraint declarations and unpriced video rows otherwise conform.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "video-assembly",
@@ -5860,7 +5984,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/job-queue-core.ts:78 The worker counts store rows in `running` against lane capacity on every look, but its only staleness sweep (`recover`) runs once at loop start and the per-slot orphan sweep runs only inside a claim. A job left `running` by a dead process outside the worker (a CLI or a route drive) fills a capacity-1 lane (gpu.local, box.render), so no claim is ever attempted and the ghost is never swept until the worker restarts: there is no upper bound on how long a dead job can pose as a working one.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "delivery-guarantees",
@@ -6098,7 +6226,11 @@
           "revision": 12,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:7 These modules are the Python side of the SQLite kernel protocols (job queue, lease, ledger, meter, styles). Here 'languages' means Python and Node, not human locales. A grep of packages/kernel/py for translation, i18n, hreflang and pseudo-loc found nothing, so this context has no translated content, catalog or pipeline for the subject to govern.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
+          "evaluatedRevision": 12
         },
         {
           "subject": "supply-chain",
@@ -6130,7 +6262,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/py/lease_spec.py:6 The Python lease, job and style modules are second implementations of TypeScript kernel protocols, and a shared JSON spec run against both holds them to one contract. The decision logic is a pure function, with the clock, the pid probe and threads kept at the driver edge.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "engine-host-contract",
@@ -6833,7 +6969,11 @@
           "revision": 12,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/layout.ts:353 The cosmos engine paints paper and raster layers. Its one locale touch hard-pins number formatting to en-US. It holds no translated strings, catalog or serving path. A grep for translation, i18n, hreflang and pseudo-loc found nothing; the 'translate' hits are CSS/canvas transforms.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
+          "evaluatedRevision": 12
         },
         {
           "subject": "repository-landing-document",
@@ -7193,7 +7333,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/Cosmos.tsx:3 The public landing is a canvas/DOM shadow-box of medallions and cards with no tabular surface: a search of app/_landing for <table, columnheader, aria-sort, gridcell, paginat and csv found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "app-shell",
@@ -7575,7 +7719,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/ledger/v1/types.ts:12 The projection contract defines read-only Source adapters and pure event projection into the kernel event store, with no settings key space, accessor or configuration resolution; a grep of lib/ledger/v1 for setting, preference, localStorage and getSetting found nothing, and the core files contain no process.env read.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         },
         {
           "subject": "test-harness",
@@ -7863,7 +8011,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sources/roots.ts:27 Each v1 store root is resolved through a three-rung chain (v1's env override, then the fixture universe's fixtures-out, then v1's own root), but universeRoot returns a bare path and records nowhere which rung answered, so 'the Ledger shows fixture articles while v1 shows real ones' on one host cannot be traced to its source without reading the environment by hand.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         },
         {
           "subject": "agent-runtime-assembly",
@@ -8298,7 +8450,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/library/project.ts:14 The context is a deterministic projection of studio feeds into the kernel's Library index for the screens, not a store an agent carries forward between sessions; searching lib/library (feeds included) found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hits are the SQLite ':memory:' path and an ingest memo (rememberIngest), which is a content-hash cache.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
+          "evaluatedRevision": 51
         },
         {
           "subject": "prompt-assembly",
@@ -8314,7 +8470,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/library/feeds/types.ts:9 Feeds read v1 stores and map them into library items. 'prompt' appears only as stored generation metadata (extras.prompt) and a fixture string. A search found no lib/text import, reason(), schemaInstruction, generateContent or claude/gemini call, so nothing here assembles or sends a model prompt.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "retrieval",
@@ -8464,7 +8624,11 @@
           "revision": 19,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/sound/mv/compositor.ts:245 Every frame is computed from (seed, frameIndex) and precomputed arrays, so the headless export and a scrub draw the same frame for the same index. Sections are derived from the track's own envelope, and the generated still is moved by code (rung zero), not by a video model.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f548f222df2e692",
+          "evaluatedRevision": 20
         },
         {
           "subject": "sound-effect-generation",
@@ -9929,7 +10093,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/produce/produce.ts:153 mayStopAtCeiling holds only the priced total against the operator's ceiling. A job made of unpriced lines (credits, seats) is therefore presented as never able to reach its ceiling, and unknown cost counts as zero under the ceiling, which is what price-tables' 'never zero' rule forbids.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "test-harness",
@@ -10047,7 +10215,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:2 This is an IndexedDB store for UI step content keyed `${projectId}:${phase}`, with no agent reading it as recalled memory; searching lib/steps found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hit is a comment about an in-memory mirror in saveWatchers.ts. Its honest never-written vs failed read path is the same idea as durable-store-failure-posture, but it is not an agent memory store.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
+          "evaluatedRevision": 51
         },
         {
           "subject": "settings",
@@ -10079,7 +10251,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/steps/withStore.ts:1 This context only persists the browser's own step records in IndexedDB. Its imports are relative modules plus @/lib and @gt/domain, with no third-party package. Searching lib/steps for gunzip, unzip, pickle, child_process, lockfile and tarfile found nothing, so no supply-chain crossing happens here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "prompt-assembly",
@@ -10148,7 +10324,11 @@
           "revision": 26,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/dal-real-engine.probe.spec.ts:258 The probes that hold lib/steps' guarantees (latest-wins, failed-read honesty, storage-trouble clearing) have no seeded mutant: no tests/mutants/registry.ts entry names dal-real-engine, storage-remedy or step-records. They are among the 159 unguarded probes, and only the coupling case records that it was ever seen to fail, so the others remain unvalidated instruments.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c96e1ee699a88119",
+          "evaluatedRevision": 27
         },
         {
           "subject": "data-access",
@@ -10164,7 +10344,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/steps/readStep.ts:39 loadStep, exported on the step store's door, answers a FAILED single-record read with the seeded default, the same answer as never-written. A caller that saves after it overwrites the stored record, which is the bug patchStep's header describes.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "hitl-approval",
@@ -10595,7 +10779,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/producers/src/research/followUp.ts:22 A follow-up answer is a typed set of effects that includes 'kills' and 'downgrades', with an overall verdict that can be inconclusive, and it passes an allowlist door before it can revise the notebook. Review can therefore retract evidence, not only add it.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "module-design",
@@ -10729,7 +10917,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:117 On a packet-review source with no schedule channel (the dojo review, which has sections and accepts notes), Approve discards every attached edit note without trace. Where a schedule exists, line 119 truncates the notes to noteMax with no notice, so notes vanish silently.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "test-harness",
@@ -10793,7 +10985,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:205 The human gate draws each check row in one of two tones. The ReviewCheck type carries only `ok: boolean`, and the article adapter (lib/decision/v1/sources/article.ts:153) sets ok whenever the status is not \"fail\", so a not-measured item is drawn in the emerald pass tone. That is the green row nobody measured that lib/articles/checks.ts says must never read as passed; only the value text says \"not measured\".",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-runtime-assembly",
@@ -10964,7 +11160,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/records/schema.ts:11 The context stores production run records (launch receipts, plans, reroutes, DRY or live mode, cost ceilings) and calendar publish slots. A search of packages/kernel/src/records and packages/kernel/src/slots found no rubric, benchmark, pass-rate or eval construct. The only `judge` hit is a gate part's `judges` field (read.ts:211) naming the part an operator gate waits on, and the only `scenario` hit is the ads-scenarios record key in digest.ts. No scenario suite is run or scored.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "data-access",
@@ -11312,7 +11512,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/validate.ts:291 The model's answer is parsed as plain JSON data, then checked shape by shape. Prompt documents are read as text from the repo's own knowledge/ tree (compose.ts:26). Searching lib/script for gunzip, unzip, pickle, child_process, lockfile and tarfile found nothing; 'advisory' does appear, but only as a trailer-rule name. So no archive, object-graph loader, executed content or dependency gate is in scope.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "mcp-tools",
@@ -11344,7 +11548,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/versions.ts:136 The receipt for accepting a version over a blocking gate records when, which violations and how much of the gate was enforced, but not who overrode it, so the record cannot attribute the decision.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "live-system-demo-film",
@@ -11446,7 +11654,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/sound/engines.ts:25 lib/sound's engines make music and sound-effect takes (compose, plan, section-edit, sfx). The golden path names producing music and sound design as a separate craft outside voice-io, and nothing here speaks or listens. A search of lib/sound found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone, transcri, utterance or dictat.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "sound-effect-generation",
@@ -11748,7 +11960,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/spend/ledger.ts:197 reserve() dedupes a caller-minted id against a prior reservation in any state, so a retry with an id whose hold was already released (or settled) gets ok with no live hold and the vendor is called against a debit that no longer exists; this is the closed-attempt free pass the reversible-debit technique exists to name.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "generative-provider-routing",
@@ -11764,7 +11980,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/spend/core.ts:44 The kernel's SpendClass and SpendStats carry only a ceiling and the remaining amount, with no floor or band, so the rebuilt spend authority looks only upward; v1's floorOf/underFloor (lib/spend, outside this context) was not carried into it.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "module-design",
@@ -12520,7 +12740,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/log.ts:20 The single chokepoint for every reasoning call records only promptChars and deliberately never a digest of the prompt it sends, so 'which prompt did this run receive?' cannot be answered from artifacts once the call returns: the 'unrecorded send' the standard names.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "mcp-tools",
@@ -12552,7 +12776,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/spend.ts:108 A failed reasoning turn gets a ledger row only when its error carries a vendor cost, and no adapter attaches one. In practice every failed turn that reached Claude or Google leaves no row, so the ledger under-reads during retry storms.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "voice-io",
@@ -12616,7 +12844,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/text/router.ts:1 lib/text is a per-call router that walks one provider ladder for one turn and keeps no registry, roster or dispatch of sessions. A search of lib/text and lib/text/providers for harvest, hibernat, sweeper, fan-out and heartbeat found nothing, so the fleet layer lives in the kernel, not here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "agent-memory",
@@ -12648,7 +12880,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/spend.ts:5 Text spend is count-only with no pre-call ceiling, so the metered Google fallback can spend without any gate, which the standard calls a report, not a control; the routing, trail, refusal and pricing rules otherwise conform.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "agent-cli-transport",
@@ -13031,7 +13267,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/toggle/Toggle.tsx:4 The primitives are controlled, stateless components whose caller owns the value, so they hold no settings store or save path; save-experience would apply to a settings surface built from them, not to the primitives, and a grep of packages/ui/src/components for setting, preference and getSetting found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         }
       ],
       "governance": "governed"
@@ -13665,7 +13905,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/import/archive.ts:9 This context converts v1 data to and from the NDJSON archive and the kernel store, with no agent and no carried-forward memory; searching lib/import found no hit for recall, consolidat, belief, distill or memories (the one 'memory' hit is an out-of-memory comment in archive.ts).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
+          "evaluatedRevision": 51
         },
         {
           "subject": "supply-chain",
@@ -13734,7 +13978,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/import/archive.ts:12 This server-side import/export of v1's NDJSON archive renders no table and writes no CSV: a search of lib/import for csv, <table, columnheader, aria-sort, gridcell and paginat found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "standards-layered-runtime",
@@ -13811,7 +14059,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/import/runs.ts:65 The import module writes raw SQL against kernel tables and even the JSON path inside the jobs record, so a kernel schema or record-shape change has consumers in lib/import that the kernel cannot enumerate.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         }
       ],
       "governance": "governed"
@@ -13860,7 +14112,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/router/tables.ts:126 The kernel table copied v1's plan faithfully, including agy at the top of dev generate with no usable-output measurement, while its comment cites the Google/Leonardo grid as the reason for the order; meanwhile route.ts realizes the steer, constraint and refusal-walk rules as a pure function.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "prompt-assembly",

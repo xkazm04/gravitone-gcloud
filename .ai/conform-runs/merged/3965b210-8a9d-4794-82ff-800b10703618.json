@@ -1,0 +1,186 @@
+{
+  "schema": "conform-run/1",
+  "worker": "3965b210-8a9d-4794-82ff-800b10703618",
+  "subject": "agent-runtime-assembly",
+  "evaluatedAt": "2026-10-24T04:05:46.301474+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "article-run-engine",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/articles/drive.ts:143 When a dead driver left a step `running`, the next walk overwrites that record with a fresh `running` record and a new startedAt and carries only the cost a finished attempt reported, so the interrupted metered turn is never closed as indeterminate in run.json and its spend never reaches the step's cost (the kernel job's `interrupted` state, outside this context, is the only honest closure).",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "lib/articles/drive.ts:143 An orphaned `running` step is re-issued in place: no indeterminate status on the run record, and the killed metered turn's spend is not reconciled (drive.ts:165 counts only attempts that reported a figure). resume.ts:22 says such a run is 'resumable as it stands'. The kernel job does hold a first-class `interrupted` state and makes retry an operator act (lib/producers/article.ts:344, off-context)."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "conformant",
+          "evidence": "lib/articles/loop.ts:275 The loop that grants the turn computes the ceiling in its own memory and passes it to the CLI as --max-budget-usd. The agent in its temp workspace can spend it but cannot raise it. Registry inputs are staged as copies (agentSteps.ts:144)."
+        },
+        {
+          "technique": "session-scoped-capability",
+          "verdict": "conformant",
+          "evidence": "lib/articles/dryAgent.ts:8 Dry vs live resolves from the job's own declaration, not a process env slot (the v1 ARTICLES_AGENT_BIN trick is retired), so a dry job and a live job can share a process."
+        },
+        {
+          "technique": "semantic-hook-placement",
+          "verdict": "conformant",
+          "evidence": "lib/articles/agentSteps.ts:83 This is a small chain written only by the host: the loop guard plus the kernel meter, with no extension surface. The record of each turn is written outside the refusing guard, so a refused turn (returned as a result, loop.ts:252) still lands in agent/<name>.json and the ledger has no gap. The reason is written down at loop.ts:23-26."
+        },
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "conformant",
+          "evidence": "lib/articles/dryAgent.ts:36 The only key that names code to spawn comes from the process environment (operator tier). The service-writable run input is a model id that runCreate.ts:40 validates against MODEL_RE, so it cannot name code."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/rework.ts:49 Operator input arrives only at the gate, after the unit finished. Mid-unit input is refused, never cancel-and-restart."
+        },
+        {
+          "technique": "bounded-projection-of-external-work",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:28 The agent's tool roster has no remote long-running operation and no handle to poll. Each turn is awaited with its own timeout."
+        },
+        {
+          "technique": "checkpoint-mode-custody",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/store.ts:224 Run state is one full, self-contained run.json, rewritten under a lock. There is no graph checkpointer and no full/delta mode to freeze."
+        },
+        {
+          "technique": "assembly-identity",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:69 One deployment. The run records the prompt sha, the standard bundleHash, the model and the effort, but nobody asks for a digest comparing assemblies across deployments."
+        }
+      ],
+      "registryProposal": "indeterminate-closure-on-interruption could say what to do when two records describe one unit: the job record holds an honest `interrupted` state while the domain record it drives (a step row) is re-issued in place. Does the closure obligation fall on each record, or only on the authority?"
+    },
+    {
+      "context": "studio-shell",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/_shell/live.ts:23 The shell is page chrome: it reads kernel events and v1 live work once per request, runs a toast queue and makes a Firebase cookie handoff. A search of app/(studio)/_shell for runAgent, cliSeam, plugin, mcp and registerHook (and for spawn, child_process and prompt) found nothing, so no model or tool call is assembled here.",
+      "techniques": [],
+      "absenceTerms": [
+        "runAgent",
+        "cliSeam",
+        "plugin",
+        "mcp",
+        "registerHook"
+      ]
+    },
+    {
+      "context": "article-human-gate-and-landing",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/articles/humanActs.ts:25 The gate records human acts, diffs files and lands an approved post through git/gh (registryWrite.ts execFile with a cwd-bound git env). runAgent, cliSeam, plugin, mcp and registerHook appear in none of its eight files, so this context makes no model call and has no hook chain; the agent turns live in the sibling engine files of lib/articles.",
+      "techniques": [],
+      "absenceTerms": [
+        "plugin",
+        "mcp",
+        "registerHook"
+      ]
+    },
+    {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/foundry/store.ts:3 This context is the disk layer over runs the Python forge writes, plus the verdict log, commit planning and calibration. plugin, mcp, checkpoint and registerHook do not appear in lib/foundry and runAgent and cliSeam appear in none of the context's own files (only in lib/foundry/strips, another context), so no agent runtime is assembled here.",
+      "techniques": [],
+      "absenceTerms": [
+        "plugin",
+        "mcp",
+        "checkpoint",
+        "registerHook"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-runtime-assembly",
+      "context": "imaging-gateway-and-spend",
+      "reason": "withdrawn after review: reviewer (sonnet): The claim that no agent loop exists in lib/imaging is contradicted: router.ts:37 imports agyProvider, and providers/agy.ts spawns the agentic `agy` CLI (`-p`, `--sandbox`, an empty workspace, killTree). The verdict only searched for runAgent, cliSeam, plugin, mcp and registerHook, so it missed this."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T04:05:46.301474+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [
+        "additive-input-at-the-call-boundary",
+        "assembly-identity",
+        "bounded-projection-of-external-work",
+        "checkpoint-mode-custody",
+        "guard-input-custody",
+        "indeterminate-closure-on-interruption",
+        "operator-tier-code-loading",
+        "semantic-hook-placement",
+        "session-scoped-capability"
+      ],
+      "deviations": 1,
+      "context": "article-run-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T04:05:46.301474+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "studio-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T04:05:46.301474+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "article-human-gate-and-landing",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T04:05:46.301474+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "foundry-forge-store-and-verdicts",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T04:05:46.301474+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "imaging-gateway-and-spend",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
