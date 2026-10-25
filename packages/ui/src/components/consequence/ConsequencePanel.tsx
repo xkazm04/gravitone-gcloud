@@ -103,7 +103,8 @@ export function ConsequencePanel({ consequence: c, refreshed, busy, error, onCon
         {error !== undefined && <ErrorLine message={error} live />}
         <div className={s.foot}>
           <Button label="Cancel" onPress={onCancel} />
-          <Button label={busy ? "Committing" : "Commit"} tone="emerald" onPress={onConfirm} disabled={c === null || busy} />
+          {/* `busy` is the commit OR the preview read; with nothing shown yet it can only be the read. */}
+          <Button label={busy && c !== null ? "Committing" : "Commit"} tone="emerald" onPress={onConfirm} disabled={c === null || busy} />
         </div>
       </div>
     </div>

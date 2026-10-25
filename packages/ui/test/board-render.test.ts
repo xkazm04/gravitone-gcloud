@@ -232,6 +232,13 @@ describe("the consequence panel", () => {
     expect(html).toContain("reading the consequence");
     expect(html).toContain('aria-busy="true"');
   });
+
+  test("the button says Committing only for a commit, not while the preview reads", () => {
+    const reading = renderToStaticMarkup(h(ConsequencePanel, { consequence: null, refreshed: false, busy: true, onConfirm: noop, onCancel: noop, specimen: true }));
+    expect(reading).not.toContain("Committing");
+    const committing = renderToStaticMarkup(h(ConsequencePanel, { consequence: c, refreshed: false, busy: true, onConfirm: noop, onCancel: noop, specimen: true }));
+    expect(committing).toContain("Committing");
+  });
 });
 
 describe("the packet rail", () => {
