@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { holdFor } from "../src/router/reserve.ts";
 import { route } from "../src/router/route.ts";
 import { AUDIO_TABLE, IMAGE_TABLE, TABLES, tableProblems, TEXT_TABLE, VIDEO_TABLE } from "../src/router/tables.ts";
 import type { Availability, Facts, MediumTable, Posture, RouteOutcome, RouteRequest } from "../src/router/types.ts";
@@ -169,6 +170,29 @@ describe("audio and video (the prototype's providers, v1's capabilities)", () =>
   it("a strips card-round routes on the text seat, its paid lane, at its measured pace", () => {
     const o = routed(route({ medium: "video", capability: "strip-render", units: 2 }, LOCAL, facts(["strips"])));
     expect(o.choice).toMatchObject({ provider: "strips", lane: "seat.text", seconds: 2040 });
+  });
+});
+
+describe("the hold a routed request takes (reserve.ts holdFor)", () => {
+  // No seeded video candidate is cloud yet; a table with one is how a Leonardo clip would route.
+  const CLOUD_VIDEO: MediumTable = {
+    medium: "video",
+    candidates: [{ provider: "leonardo", capabilities: ["image-to-video"], lane: "cloud.leonardo", transport: "cloud", honours: [], models: { "image-to-video": "kling-2-5" }, credential: "LEONARDO_API_KEY" }],
+    plans: { local: { "image-to-video": ["leonardo"] } },
+  };
+  const clip = (extra: Partial<RouteRequest> = {}): RouteRequest => ({ medium: "video", capability: "image-to-video", units: 1, ...extra });
+
+  it("an unpriced cloud clip holds per second of its duration, and a clip whose duration is unsaid holds the longest", () => {
+    const at = (req: RouteRequest) => holdFor(req, routed(route(req, LOCAL, facts(["leonardo"]), CLOUD_VIDEO)), NOW)?.amount;
+    expect(at(clip({ usage: { "clip-5s": 1 } }))).toBe(3.75);
+    expect(at(clip({ usage: { "clip-10s": 2 } }))).toBe(15);
+    expect(at(clip())).toBe(7.5);
+    expect(at(clip({ units: 2 }))).toBe(15);
+  });
+
+  it("a clip this box renders is billed by nobody and holds nothing", () => {
+    const req = clip({ units: 3 });
+    expect(holdFor(req, routed(route(req, LOCAL, facts(["wan"]))), NOW)).toBeNull();
   });
 });
 
