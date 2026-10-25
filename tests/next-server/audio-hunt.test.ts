@@ -45,7 +45,8 @@ import { fileLeafReturn } from "../../app/(studio)/audio/_hunt/leafReturn.ts";
 import { producers } from "../../lib/producers/registry.ts";
 import { crownLeaf } from "../../lib/sound/huntDesk.ts";
 import { HUNT_LANE, huntJobId, huntProducer, huntRunId, launchHuntRender, type RenderLaunch } from "../../lib/sound/huntRender.ts";
-import { confirmLesson, handDraft } from "../../lib/sound/lessons.ts";
+import { stubReason } from "../../lib/sound/huntEngine.ts";
+import { confirmLesson, draftLesson, handDraft } from "../../lib/sound/lessons.ts";
 import type { GenerateRequest, Hunt, HuntNode, SoundTake } from "../../lib/sound/types.ts";
 
 const SOUND = path.join(ROOT, "sound");
@@ -251,6 +252,25 @@ describe("the lesson door", () => {
     expect(lessonsOnDisk()).toEqual([]);
     expect(huntOnDisk("hn-les02")?.lessonId).toBeNull();
     expect(events("lesson.confirmed", "ls-lsop0002")).toBe(0);
+  });
+});
+
+describe("the engine's lesson draft", () => {
+  it("the engine writes the claim; its techniques are held to the kind's list and the evidence is the map's, not the model's", async () => {
+    seed([heardHunt("hn-les03", ["a"])], [take("hn-les03-ta", { ...WHOLE, huntId: "hn-les03", nodeId: "a", verdict: "kept" }), take("hn-les03-tb", { ...WHOLE, huntId: "hn-les03", nodeId: "b", verdict: "rejected", reasons: ["section-bleed"] })]);
+    const sent: string[] = [];
+    const reason = async (req: Parameters<typeof stubReason>[0]) => {
+      sent.push(req.prompt);
+      const r = await stubReason(req);
+      return { ...r, json: { claim: CLAIM, technique: ["duration-and-tempo-locking", "invented"], provider: "elevenlabs" } };
+    };
+    const d = must(await draftLesson("hn-les03", reason));
+    expect(d).toMatchObject({ engineError: null, proposal: { claim: CLAIM, technique: ["duration-and-tempo-locking"], provider: "elevenlabs", source: "hunt", huntId: "hn-les03" } });
+    expect(d.proposal.evidence).toEqual(must(await handDraft("hn-les03")).proposal.evidence);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain("WINNER");
+    expect(sent[0]).toContain("section-bleed");
+    expect(lessonsOnDisk(), "a draft is never stored").toEqual([]);
   });
 });
 
