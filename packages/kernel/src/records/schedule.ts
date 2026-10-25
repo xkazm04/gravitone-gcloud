@@ -42,7 +42,8 @@ export type ScheduleInput = {
   readonly now: number;
 };
 
-/** Every item placed, by key. Items whose upstream never resolves (a missing key) are left out. */
+/** Every item placed, by key. An item waiting on a key no item has is drawn blocked, from now;
+ *  items that wait on each other (a cycle - their upstream never resolves) are left out. */
 export function schedule(input: ScheduleInput): Map<string, Placed> {
   const { items, capacity, now } = input;
   const free = new Map<ResourceLane, number[]>();
@@ -133,9 +134,10 @@ function queuePos(it: SchedItem, p: { start: number }, items: readonly SchedItem
   return ahead + 1;
 }
 
-/** The latest end among the items that are not a calendar slot: when the work is done. */
-export function etaOf(placed: ReadonlyMap<string, Placed>, exclude: ReadonlySet<string> = new Set()): number | null {
+/** The latest end among `placed`: when the work is done. Every caller passes only the work lines
+ *  (a gate or a calendar slot is drawn 20 minutes wide, and is not work). */
+export function etaOf(placed: ReadonlyMap<string, Placed>): number | null {
   let eta: number | null = null;
-  for (const [k, p] of placed) if (!exclude.has(k)) eta = eta === null ? p.end : Math.max(eta, p.end);
+  for (const p of placed.values()) eta = eta === null ? p.end : Math.max(eta, p.end);
   return eta;
 }

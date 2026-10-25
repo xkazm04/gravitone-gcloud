@@ -103,6 +103,13 @@ describe("schedule", () => {
     // Neither the stuck item nor the one blocked behind it holds a slot, so neither is ahead of x.
     expect(s.get("x")?.queuePos).toBe(1);
   });
+
+  it("draws an item waiting on a key no item has blocked, from now; leaves out items that wait on each other", () => {
+    const s = schedule({ items: [item("orphan", "gpu.local", 600, ["ghost"]), item("a", "gpu.local", 60, ["b"]), item("b", "gpu.local", 60, ["a"]), item("x", "gpu.local", 60)], capacity: LANE_CAPACITY, now: NOW });
+    expect(s.get("orphan")).toMatchObject({ start: NOW, blocked: true });
+    expect([s.has("a"), s.has("b")]).toEqual([false, false]);
+    expect(s.get("x")?.start).toBe(NOW);
+  });
 });
 
 const QUEUE: QueueRead = { others: [], digest: "empty" };
