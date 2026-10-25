@@ -19,6 +19,7 @@ import { useKeys } from "../../keymap/dispatch.ts";
 import { useLayer } from "../../layers/useLayer.ts";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { FloorGlyph } from "../floor/FloorGlyph.tsx";
+import { Ghost } from "../ghost/Ghost.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { capsFor } from "../keycaps/caps.ts";
 import kc from "../keycaps/Keycaps.module.css";
@@ -53,13 +54,17 @@ function Src({ label, value, options, onChange }: { readonly label: string; read
   return (
     <label className={s.src}>
       <span>{label}</span>
-      <select className={s.field} aria-label={label} value={value} onChange={(e) => onChange(e.currentTarget.value)}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      {options.length === 0 ? (
+        <Ghost label={`no ${label}`} />
+      ) : (
+        <select className={s.field} aria-label={label} value={value} onChange={(e) => onChange(e.currentTarget.value)}>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      )}
     </label>
   );
 }

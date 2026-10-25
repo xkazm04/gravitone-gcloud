@@ -5,6 +5,7 @@
 
 import { STEPS_STORE } from "@/lib/studioDb";
 
+import { inIssueOrder } from "./saveOrder";
 import { seededFor } from "./seededDefault";
 import type { ResearchStepData } from "./stepDataResearch";
 import type { ReadOutcome } from "./storageOutcome";
@@ -15,13 +16,17 @@ export async function readStep<T = ResearchStepData>(
   projectId: string,
   phase: string,
 ): Promise<ReadOutcome<T>> {
-  const r = await withStore("read", projectId, phase, (db) =>
-    new Promise<T | undefined>((resolve, reject) => {
-      const tx = db.transaction(STEPS_STORE, "readonly");
-      const req = tx.objectStore(STEPS_STORE).get(key(projectId, phase));
-      req.onsuccess = () => resolve(req.result?.data);
-      req.onerror = () => reject(req.error ?? new Error("read failed"));
-    }),
+  // In issue order with the writes to this key (saveOrder.ts): a read issued after a save in the
+  // same tick opened its transaction first and returned what the save was about to replace.
+  const r = await inIssueOrder(key(projectId, phase), () =>
+    withStore("read", projectId, phase, (db) =>
+      new Promise<T | undefined>((resolve, reject) => {
+        const tx = db.transaction(STEPS_STORE, "readonly");
+        const req = tx.objectStore(STEPS_STORE).get(key(projectId, phase));
+        req.onsuccess = () => resolve(req.result?.data);
+        req.onerror = () => reject(req.error ?? new Error("read failed"));
+      }),
+    ),
   );
   if (!r.ok) return r;
   return { ok: true, data: (r.value ?? seededFor(projectId, phase)) as T | undefined };

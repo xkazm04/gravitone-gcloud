@@ -323,6 +323,18 @@ describe("markup", () => {
     expect(html.match(/<kbd[^>]*>[123]<\/kbd>/g)?.length).toBe(3);
     expect(html).toContain('data-recipe="d"');
   });
+
+  test("compose draws an empty source as a shape, never as an empty select", () => {
+    const recipes = [{ id: "a", label: "A", sub: "x", icon: "video" as const }];
+    const base = { open: true, specimen: true, onClose: noop, recipes, value: { styleId: "", takeId: "", topic: "" }, onValue: noop, onRecipe: noop, busy: false };
+    const empty = renderToStaticMarkup(h(ComposeDialog, { ...base, styles: [], takes: [], topics: [] }));
+    expect(empty).not.toContain("<select");
+    for (const label of ["no style", "no take", "no topic"]) expect(empty).toContain(label);
+    const one = [{ value: "v", label: "V" }];
+    const full = renderToStaticMarkup(h(ComposeDialog, { ...base, styles: one, takes: one, topics: one }));
+    expect(full.match(/<select/g)?.length).toBe(3);
+    expect(full).not.toContain("no style");
+  });
 });
 
 describe("the keys the produce surfaces add", () => {

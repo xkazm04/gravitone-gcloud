@@ -295,7 +295,11 @@ export function Library({ url: u, page, detail: first, port }: LibraryProps) {
           onShown={setShown}
           onFocusChange={setInResults}
         />
-        {blocks.error !== null && <p className={s.blockErr} role="alert">{blocks.error}</p>}
+        {blocks.error !== null && (
+          <div className={s.blockErr}>
+            <ErrorLine message={`library: ${blocks.error}`} live />
+          </div>
+        )}
       </section>
       <button type="button" className={s.scrim} aria-label="close drawer" tabIndex={-1} onClick={() => (railOpen ? setRailOpen(false) : setDetailPref(false))} />
       <aside className={s.det} id="lib-detail" aria-label="Item detail" hidden={!detailOn && !narrow}>
