@@ -1,7 +1,7 @@
 // Discrete state, drawn: one pip per slot (tokens.css `.piprow`, GT.PipRow(states, label)).
 //
 // The prototype's pips were five of its state words; here a pip takes a Look from the one
-// status table, so a project's parts draw `PipRow looks={parts.map(p => lookOf("part", p))}`
+// status table, so a project's parts draw `PipRow looks={parts.map((p) => STATUS.part[p].look)}`
 // and no surface keeps a sixth copy of the mapping (projects.js mapped queued, paused and
 // failed by hand before drawing). Shapes differ as well as hues: filled, ringed, pulsing,
 // triangle, dashed - never colour alone.
