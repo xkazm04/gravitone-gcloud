@@ -5051,7 +5051,11 @@
           "revision": 3,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 The 'engine' is the host's own resumable step machine. Each unit is a vendor call (readback, synthesis, generation), not guest code on an embedded interpreter, so nothing here can be counted or terminated in this subject's sense; a search of lib/foundry/extract for interpreter, node:vm, quickjs, isolated-vm, worker_threads, sandbox and recursion found 0 hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a59e479b7cea486b",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"

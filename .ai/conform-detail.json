@@ -13050,6 +13050,44 @@
         }
       ],
       "registryProposal": "spoken-delivery-direction does not say what a single-operator studio should do when the vendor offers only a dated default voice (this repo's George expires 2026-12-31). It could add a rule for when re-casting is forced by the vendor rather than chosen."
+    },
+    "8c6c65cc-6679-4c2c-8951-670d77b8ad7c/guest-execution-bounding": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "guest-execution-bounding",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:35:12.248Z",
+      "techniques": [
+        {
+          "technique": "terminate-from-outside-when-you-cannot-count",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/http.ts:58 This timeout aborts a fetch to a remote vendor. It does not bound an embedded third-party engine in the host process, so the technique's precondition does not hold."
+        }
+      ],
+      "registryProposal": "terminate-from-outside mentions 'a connection the host handed off', where a timeout drops the await while the remote work goes on. The same thing happens when a billed remote vendor job is aborted client-side: the vendor may still finish and bill it (http.ts treats an in-flight timeout as 'presumed billed'). The subject should say whether remote vendor jobs are in scope or belong to a neighbour subject such as retry-backoff or cost-metering.",
+      "withdrawn": {
+        "worker": "0a0ebcc3-2f71-4672-995b-62ab844838a5",
+        "state": "not-applicable",
+        "at": "2026-10-25T02:35:41.052415+00:00",
+        "reason": "reviewer (sonnet): The claim that a search of lib/imaging for sandbox and similar terms found 0 hits is false: providers/agy.ts spawns an agentic CLI with --sandbox via child_process, and studio/browser.ts and driver.ts drive Playwright. The anchor http.ts:1 is only a header comment about HTTP retry, so it does not sh"
+      }
+    },
+    "0335f0dc-2987-4b19-96e1-58941a70c9d5/guest-execution-bounding": {
+      "context": "foundry-extract-engine",
+      "subject": "guest-execution-bounding",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:35:12.248Z",
+      "worker": "0a0ebcc3-2f71-4672-995b-62ab844838a5",
+      "techniques": [
+        {
+          "technique": "nested-liveness-ceilings",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:7 The unit and request ceilings here bound the host's own step machine on Cloud Run, not foreign guest work, so the technique's guest-work precondition does not hold."
+        }
+      ]
     }
   }
 }
