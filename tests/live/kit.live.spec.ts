@@ -66,6 +66,28 @@ test.describe("/kit", () => {
     expect(wanted.filter((n) => !drawn.has(n)), "tokens the kit does not draw").toEqual([]);
   });
 
+  test("hydrating the PacketReview scrolls nothing into view", async ({ page }) => {
+    // The sheet scrolls inside its own body, so scrollY cannot see a jump; the call itself is the
+    // measure, taken on any element inside the review before the review's own fiber appears.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __reviewScrolls: number };
+      w.__reviewScrolls = 0;
+      const native = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = function (this: Element, ...args: Parameters<Element["scrollIntoView"]>): void {
+        if (this.closest('[data-component="PacketReview"]') !== null) w.__reviewScrolls++;
+        native.apply(this, args);
+      };
+    });
+    await page.reload({ waitUntil: "networkidle" });
+    // Hydration of the whole sheet is slow and in pieces: wait for the review's own fiber.
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-component="PacketReview"]');
+      return el !== null && Object.keys(el).some((k) => k.startsWith("__reactFiber"));
+    });
+    await page.waitForTimeout(1000);
+    expect(await page.evaluate(() => (window as unknown as { __reviewScrolls: number }).__reviewScrolls)).toBe(0);
+  });
+
   test("no readable text under 12px (computed, after v1's cascade)", async ({ page }) => {
     const r = await page.evaluate(() => {
       const world = document.querySelector('[data-world="next"]');

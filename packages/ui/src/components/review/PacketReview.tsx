@@ -22,7 +22,7 @@
 // carries the schedule as the verdict's note. The applier makes the slot from that note in the
 // commit's own apply; nothing is scheduled before the commit, and a schedule changed after the
 // preview is a stale preview like any other decision.
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import type { EditDirective, EditNote as Note } from "@gt/domain/board";
 
@@ -89,8 +89,14 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
     return first === undefined ? null : { channel: first, publishAt: proposeAt(nowMs ?? Date.now()) };
   });
 
+  // A section the reader walks to is brought into view; the first render is not a walk, and the
+  // query stays inside this review (the kit mounts one far down a page that scrolls inside its body).
+  const root = useRef<HTMLDivElement>(null);
+  const walked = useRef(focus);
   useEffect(() => {
-    document.querySelector(`[data-sec="${focus}"]`)?.scrollIntoView({ block: "nearest" });
+    if (walked.current === focus) return;
+    walked.current = focus;
+    root.current?.querySelector(`[data-sec="${focus}"]`)?.scrollIntoView({ block: "nearest" });
   }, [focus]);
 
   const openNote = (i: number) => {
@@ -174,7 +180,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
         </>
       }
     >
-      <div className={s.review} data-component="PacketReview">
+      <div ref={root} className={s.review} data-component="PacketReview">
         <div className={s.pageWrap}>
           {doc === undefined ? (
             <article className={s.article}>
