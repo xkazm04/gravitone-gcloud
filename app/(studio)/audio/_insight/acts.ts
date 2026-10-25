@@ -17,7 +17,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { Receipt, ReceiptMode } from "@gt/domain/produce";
 import { ceilingUsdSchema, receiptModeSchema } from "@gt/domain/produce.schema";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
-import { COUNT, DURATION, TECHNIQUES, TEMPO, type BatchForm } from "@gt/ui/components/audio/batch.ts";
+import { BATCH_LIMITS, COUNT, DURATION, TECHNIQUES, TEMPO, type BatchForm } from "@gt/ui/components/audio/batch.ts";
 import { SCORE_MAX, SCORE_MIN } from "@gt/ui/components/audio/rubric.ts";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
@@ -62,22 +62,22 @@ export async function scoreTake(input: RateInput): Promise<ActionResult<Scored>>
 const words = (max: number) => z.string().max(max);
 const form = z
   .object({
-    prompt: words(2000),
-    negative: words(1000),
+    prompt: words(BATCH_LIMITS.prompt),
+    negative: words(BATCH_LIMITS.negative),
     technique: z.array(z.enum([...new Set([...TECHNIQUES.music, ...TECHNIQUES.sfx])])).max(12),
-    genre: words(400),
-    mood: words(400),
-    instrument: words(400),
-    event: words(300),
-    material: words(300),
-    space: words(300),
-    sfxCategory: words(80),
+    genre: words(BATCH_LIMITS.genre),
+    mood: words(BATCH_LIMITS.mood),
+    instrument: words(BATCH_LIMITS.instrument),
+    event: words(BATCH_LIMITS.event),
+    material: words(BATCH_LIMITS.material),
+    space: words(BATCH_LIMITS.space),
+    sfxCategory: words(BATCH_LIMITS.sfxCategory),
     loop: z.boolean(),
     promptInfluence: z.number().min(0).max(1).nullable(),
     durationS: z.number().min(DURATION.sfx.min).max(DURATION.music.max),
     count: z.number().int().min(COUNT.min).max(COUNT.max),
     tempoBpm: z.number().min(TEMPO.min).max(TEMPO.max).nullable(),
-    key: z.string().max(40).nullable(),
+    key: words(BATCH_LIMITS.key).nullable(),
   })
   .strict();
 

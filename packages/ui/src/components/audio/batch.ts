@@ -72,6 +72,20 @@ export const COUNT = { min: 1, max: 6 } as const;
 /** The tempos a music brief may lock, the batch's and the composer's seed alike. */
 export const TEMPO = { min: 40, max: 220 } as const;
 
+/** The longest each free-text field of the form may be: the door's zod caps and `batchProblem` read this one table. */
+export const BATCH_LIMITS = {
+  prompt: 2000,
+  negative: 1000,
+  genre: 400,
+  mood: 400,
+  instrument: 400,
+  event: 300,
+  material: 300,
+  space: 300,
+  sfxCategory: 80,
+  key: 40,
+} as const;
+
 /** A locked tempo outside TEMPO, in its own words; null when the tempo is free or in range. */
 export const tempoProblem = (bpm: number | null): string | null => (bpm === null || (bpm >= TEMPO.min && bpm <= TEMPO.max) ? null : `tempo ${TEMPO.min}–${TEMPO.max}`);
 
@@ -100,6 +114,10 @@ export function batchProblem(kind: BatchKind, f: BatchForm): string | null {
   if (!(Number.isInteger(f.count) && f.count >= COUNT.min && f.count <= COUNT.max)) return `${COUNT.min}–${COUNT.max} takes`;
   if (kind === "sfx" && f.promptInfluence !== null && !(f.promptInfluence >= 0 && f.promptInfluence <= 1)) return "influence 0–1";
   if (kind === "music" && tempoProblem(f.tempoBpm) !== null) return tempoProblem(f.tempoBpm);
+  for (const field of Object.keys(BATCH_LIMITS) as (keyof typeof BATCH_LIMITS)[]) {
+    const v = f[field];
+    if (typeof v === "string" && v.length > BATCH_LIMITS[field]) return `${field} over ${BATCH_LIMITS[field]} characters`;
+  }
   return null;
 }
 
