@@ -26,7 +26,7 @@
 // verdicts.rev.json; a map with no such file is revision 0. A write that
 // changes nothing bumps nothing and logs nothing.
 
-import { appendFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import { acquireLock } from "../diskTx";
@@ -179,8 +179,8 @@ async function apply<M, R>(
     return own === "human" || own === "model" ? own : who;
   };
   const lines = changes.map((c) => JSON.stringify({ at, rev, op: c.op, key: c.key, ...(c.op === "set" ? { value: c.value } : {}), by: byOf(c), surface } satisfies VerdictLogLine<R>));
-  await appendFile(path.join(spec.dir, VERDICT_LOG), lines.join("\n") + "\n", "utf8");
   const fs = foundryFs();
+  await fs.appendFile(path.join(spec.dir, VERDICT_LOG), lines.join("\n") + "\n");
   // The revision lands before the map: a death between the two leaves a revision ahead of its map,
   // which a stale client reads as a 409, where the reverse order let it overwrite a change it never saw.
   await fs.writeJsonAtomic(path.join(spec.dir, VERDICT_REV), { rev });

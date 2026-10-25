@@ -54,9 +54,9 @@ import { recordForgeEvidenceIn } from "@gt/kernel/styles/writers";
 
 import { registerRunGrades } from "./calibrationRegister";
 import { exportStyles, OPERATOR, readStyleDefs, styleStore, withCatalogue } from "./catalogue";
-import { planForgeCommit } from "./commitPlan";
+import { deriveForgeCommit, planForgeCommit } from "./commitPlan";
 import { COMMITTABLE } from "./plant";
-import { graderCalibrationText, graderStamp } from "./calibration";
+import { graderCalibrationText } from "./calibration";
 import {
   patchVerdictMap,
   readVerdictState,
@@ -271,28 +271,22 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     // Board's gate and the ledger read too; extract-commit-gate.probe.spec.ts
     // holds this door to it.
     if (!COMMITTABLE.includes(run.status)) throw new FoundryError("The forge is still running this run.", 409);
-    const verdicts = await readVerdicts(id);
+    const stored = await readVerdicts(id);
     // Read once, inside the lock: the plan, the token and the writes below all
     // see these same bytes.
     const ledger = await tx.read("ledger.json");
     const catalogue = await readStyleDefs();
 
-    const plan = planForgeCommit(run, verdicts, { styles: catalogue.styles, ledger: ledger.rows }, undecidedAs);
+    // ONE derivation (commitPlan.ts): what is judged, what is auto-rejected and
+    // what the ledger rows are come from the plan the preview showed, stamped
+    // with this commit's time. Undecided candidates that never produced a file
+    // are outside the cull either way.
+    const at = new Date().toISOString();
+    const { plan, decided, verdicts, autoRejected } = deriveForgeCommit(run, stored, { styles: catalogue.styles, ledger: ledger.rows }, undecidedAs, at);
     if (token !== undefined && token !== plan.token) {
       throw new FoundryError("The run state changed since the preview was generated.", 409);
     }
-
-    const at = new Date().toISOString();
-
-    // Undecided candidates that never produced a file cannot be kept or
-    // rejected — they are outside the cull either way.
-    const withFile = run.candidates.filter((c) => c.status !== "pending" && c.status !== "failed" && !c.deleted);
-    const preVerdicts = new Set(Object.keys(verdicts));
-    if (undecidedAs === "reject") {
-      for (const c of withFile) if (!verdicts[c.id]) verdicts[c.id] = { verdict: "reject", at };
-    }
-    const decided = withFile.filter((c) => verdicts[c.id]);
-    const undecided = withFile.length - decided.length;
+    const undecided = plan.counts.undecided;
 
     // The style store FIRST, in one transaction: a run's evidence rows are
     // REPLACED, not appended (a retry writes the same rows), and `proven` is
@@ -316,7 +310,7 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
 
     // The auto-rejects are verdicts that delete files, so they go through the verdict kernel (a log
     // line per key, a revision bump) before the indices name them and before any unlink.
-    if (undecidedAs === "reject" && withFile.some((c) => !preVerdicts.has(c.id))) await replaceVerdictMapHeld(verdictSpec(id), run, verdicts, "commit");
+    if (undecidedAs === "reject" && autoRejected.length) await replaceVerdictMapHeld(verdictSpec(id), run, verdicts, "commit");
 
     // Then ledger.json. A run's rows are REPLACED, not appended. Indices are
     // written before any file is unlinked, so a failure here leaves the banner
@@ -324,21 +318,7 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     // the same store rows (no change) and this file.
     await tx.begin([...new Set(decided.map((c) => c.style))]);
     ledger.rows = ledger.rows.filter((r) => r.run !== id);
-    for (const c of decided) {
-      ledger.rows.push({
-        run: id,
-        scene: c.scene,
-        style: c.style,
-        mechanism: c.mechanism,
-        seed: c.seed,
-        verdict: verdicts[c.id].verdict as Verdict,
-        craft: c.grade?.craft?.score ?? null,
-        style_score: c.grade?.style?.score ?? null,
-        has_text: c.grade?.veto?.has_text ?? null,
-        at,
-        ...graderStamp(c.grade),
-      });
-    }
+    ledger.rows.push(...plan.ledgerRows);
     await tx.write("ledger.json");
     // The calibration is a pure function of the ledger just written, so it
     // follows it directly: a crash between the two leaves a stale derived file

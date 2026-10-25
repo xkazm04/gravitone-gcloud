@@ -76,12 +76,17 @@ import {
   type VerdictState,
 } from "../verdictLog";
 
-const OUT_ROOT = outPath("training");
+/** The Dojo's store in this process's universe: TRAINING_STORE_DIR (a test's temp root), else
+ *  `<out>/training`. Read per call, as the strips store reads STRIPS_STORE_DIR. */
+export function trainingRoot(): string {
+  const o = process.env.TRAINING_STORE_DIR?.trim();
+  return o ? path.resolve(o) : outPath("training");
+}
 /** The blind gate's picks, beside verdicts.json (lib/foundry/training/blind.ts). */
 const BLIND_FILE = "blind.json";
 
 function cycleDir(id: string): string {
-  return runRoot(OUT_ROOT, id, "cycle");
+  return runRoot(trainingRoot(), id, "cycle");
 }
 
 /** Containment only — the commit must also unlink video files, which are
@@ -117,10 +122,10 @@ const decidedCount = (v: TrainingVerdicts) => Object.values(v).filter((x) => x =
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
 export async function listCycles(): Promise<TrainingCycleSummary[]> {
-  const { items } = await listManifests<CycleManifest, TrainingCycleSummary>(OUT_ROOT, "cycle.json", async (name, m) => {
+  const { items } = await listManifests<CycleManifest, TrainingCycleSummary>(trainingRoot(), "cycle.json", async (name, m) => {
     let v: TrainingVerdicts;
     try {
-      v = await readJson<TrainingVerdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
+      v = await readJson<TrainingVerdicts>(path.join(trainingRoot(), name, "verdicts.json"), {});
     } catch (e) {
       // Listed and named, never a failure of the whole list. Still LISTED: the Library's dojo
       // feed holds a listed cycle whose detail read (getCycle, a 503 here) fails, and would prune
@@ -215,7 +220,7 @@ export function patchBlind(id: string, edits: BlindEdit[]): Promise<BlindState> 
       const imp = cycle.improvements.find((i) => i.id === e.imp);
       if (!imp) throw new FoundryError(`No improvement called ${e.imp} in this cycle.`, 400);
       if (e.pair !== undefined) {
-        if (!(imp.pairs ?? []).some((p) => p.id === e.pair)) throw new FoundryError(`No pair called ${e.pair} in ${e.imp}.`, 400);
+        if (!pairsOf(imp).some((p) => p.id === e.pair)) throw new FoundryError(`No pair called ${e.pair} in ${e.imp}.`, 400);
         if (e.pick !== null && e.pick !== "A" && e.pick !== "B" && e.pick !== "tie") throw new FoundryError("A blind pick is A, B or tie.", 400);
       }
       state = applyBlindEdit(state, e);
@@ -225,16 +230,21 @@ export function patchBlind(id: string, edits: BlindEdit[]): Promise<BlindState> 
   });
 }
 
+/** An improvement's pairs. The loop writes them only after judging, so a cycle
+ *  that failed first carries an improvement with none: zero pairs, never a throw. */
+const pairsOf = (imp: Improvement): Improvement["pairs"] => imp.pairs ?? [];
+
 /** Fraction of an improvement's pairs where the chokepoint picked the challenger. */
 function judgePickRate(imp: Improvement): number {
-  if (!imp.pairs.length) return 0;
-  return imp.pairs.filter((p) => p.judge_pick === "challenger").length / imp.pairs.length;
+  const pairs = pairsOf(imp);
+  if (!pairs.length) return 0;
+  return pairs.filter((p) => p.judge_pick === "challenger").length / pairs.length;
 }
 
 /** Fraction of Gemini-judged pairs where Gemini agreed with the chokepoint;
  *  undefined when Gemini judged none. */
 function geminiAgreement(imp: Improvement): number | undefined {
-  const judged = imp.pairs.filter((p) => p.gemini_pick !== undefined);
+  const judged = pairsOf(imp).filter((p) => p.gemini_pick !== undefined);
   if (!judged.length) return undefined;
   return judged.filter((p) => p.gemini_pick === p.judge_pick).length / judged.length;
 }
@@ -266,7 +276,7 @@ function findingsMarkdown(cycle: CycleManifest, verdicts: TrainingVerdicts, deci
   for (const imp of decided) {
     const gem = geminiAgreement(imp);
     rows.push(
-      `- **${imp.technique}** (${imp.id}): human ${verdicts[imp.id] === "approve" ? "approved" : "rejected"}, judge picked the challenger on ${pct(judgePickRate(imp))} of ${imp.pairs.length} pair(s)${gem !== undefined ? `, gemini agreed with the judge on ${pct(gem)}` : ""}.`,
+      `- **${imp.technique}** (${imp.id}): human ${verdicts[imp.id] === "approve" ? "approved" : "rejected"}, judge picked the challenger on ${pct(judgePickRate(imp))} of ${pairsOf(imp).length} pair(s)${gem !== undefined ? `, gemini agreed with the judge on ${pct(gem)}` : ""}.`,
     );
   }
   const undecided = cycle.improvements.filter((i) => !decided.includes(i));
@@ -376,7 +386,7 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
     // commitRun has always counted this way.
     let deleted = 0;
     for (const imp of decided) {
-      for (const pair of imp.pairs) {
+      for (const pair of pairsOf(imp)) {
         for (const ref of [pair.baseline, pair.challenger]) {
           if (ref.deleted) continue;
           for (const rel of mediaFiles(ref)) {
