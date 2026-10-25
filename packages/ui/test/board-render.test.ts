@@ -182,6 +182,12 @@ describe("the cut review", () => {
     expect(disabled(review(true))).toBe(2);
     expect(disabled(review(false))).toBe(0);
   });
+
+  test("the beat under the cursor is named to a screen reader, not only tinted", () => {
+    const html = review(false);
+    expect(html.split('aria-current="true"').length - 1).toBe(1);
+    expect(html).toMatch(/aria-current="true"[^>]*><span[^>]*>0:00–0:03<\/span>/);
+  });
 });
 
 describe("the consequence panel", () => {

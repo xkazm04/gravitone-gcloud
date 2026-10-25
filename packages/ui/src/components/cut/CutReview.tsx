@@ -147,7 +147,7 @@ export function CutReview({ packet, decide, onCommit, busy = false, announce = (
             <div className={s.beats}>
               {beats.map((b, i) => (
                 <div key={`${b.t0}:${i}`}>
-                  <button type="button" className={cx(s.beat, focus === i && s.focus, notes[i] !== undefined && s.noted)} onClick={() => setFocus(i)}>
+                  <button type="button" className={cx(s.beat, focus === i && s.focus, notes[i] !== undefined && s.noted)} aria-current={focus === i ? "true" : undefined} onClick={() => setFocus(i)}>
                     <span className={s.tc}>
                       {clock(b.t0)}–{clock(b.t1)}
                     </span>
