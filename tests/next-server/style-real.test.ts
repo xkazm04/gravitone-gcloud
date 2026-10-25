@@ -30,6 +30,7 @@ import type { StyleAct, StyleActOutcome, StyleOp, StyleOpOutcome, StyleView } fr
 import type { Store } from "@gt/kernel/store";
 import { readStyle } from "@gt/kernel/styles/driver";
 
+import { actReceipt as fixtureReceipt } from "../../app/(studio)/library/style/_port/fixtureActs.ts";
 import { makeRealStyle } from "../../app/(studio)/library/style/_port/real.ts";
 import { closeKernel, kernel } from "../../lib/kernelStore.ts";
 import { driveStyleJob, type StyleEngines } from "../../lib/producers/style.ts";
@@ -67,6 +68,13 @@ async function run(act: StyleAct): Promise<StyleView> {
   if (done.kind !== "launched") throw new Error("stale");
   return done.view;
 }
+
+/** What a receipt line prices: the figures, not the key, label or queue placement. */
+const priced = (r: Receipt) => r.lines.map((l) => ({ lane: l.lane, provider: l.provider, model: l.model, units: l.units, seconds: l.seconds, usd: l.usd, src: l.src, unpricedReason: l.unpricedReason }));
+const fixturePriced = async (act: StyleAct): Promise<Receipt> => {
+  const r = await fixtureReceipt(act, "dry", NOW, async (file) => ok({ sha256: "0".repeat(64), bytes: file.length, mime: "image/jpeg" }));
+  return must(r);
+};
 
 const keep = (run: string, scene: string) => ({ run, scene, mechanism: "text", verdict: "keep" as const, at: "2026-09-01T00:00:00.000Z" });
 const def = (id: string, status: string, evidence: unknown[]) => ({ id, name: id === "painted" ? "Painted" : id, family: "animation", status, origin: { kind: "readback" }, observables: { render_mode: "painterly" }, recipe: "Painted matte surfaces. A warm palette of ochre. Soft rim light.", negative: "photograph", evidence });
@@ -112,6 +120,8 @@ describe("the real atelier, adopt to locked, dry", () => {
     const rc = await receipt({ kind: "adopt", fromStyleId: "painted" });
     expect(rc.lines.map((l) => [l.label, l.usd])).toEqual([["palette readback", null]]);
     expect(rc.lines[0]?.unpricedReason).toBeTruthy();
+    // The fixture prices the same act from the same options: every figure on the line agrees.
+    expect(priced(await fixturePriced({ kind: "adopt", fromStyleId: "painted-3d" }))).toEqual(priced(rc));
     const done = await confirm({ kind: "adopt", fromStyleId: "painted" }, rc.token);
     if (done.kind !== "launched") throw new Error("stale");
     expect(done.jobId).toBe(styleJobId("painted", rc.token));
@@ -135,6 +145,8 @@ describe("the real atelier, adopt to locked, dry", () => {
     const stale = await receipt(act);
     expect(stale.lines.map((l) => l.label)).toEqual(["the fall · quantity", "the wish list · inventory", "the booking · analogy"]);
     expect(stale.lines.every((l) => l.usd !== null && l.usd > 0)).toBe(true);
+    const fixture = await fixturePriced({ kind: "generate-proofs", styleId: "chalk-argument", baseRev: 1, trialIds: TRIALS });
+    expect(priced(fixture)).toEqual(priced(stale));
     await op("painted", { kind: "set-elements", elements: ["a ledger"] });
     const moved = await confirm(act, stale.token);
     expect(moved.kind).toBe("stale");

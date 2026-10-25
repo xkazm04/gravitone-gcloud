@@ -33,7 +33,7 @@ import { STYLE_PRODUCER, STYLE_REQUEST, type StyleRequest } from "@gt/producers/
 // the browser; the Foundry's adopt spent its recognize call on a button.
 
 /** The proof plates' option: the frames kind's Nano Banana row (router lane, quoted price). */
-function imageOption(day: string): ModelOption | undefined {
+export function imageOption(day: string): ModelOption | undefined {
   return modelOptions("frames", day).find((o) => o.provider === "google");
 }
 
@@ -42,7 +42,7 @@ export const STYLE_LANE: ResourceLane = imageOption(new Date().toISOString().sli
 
 /** The palette read: the router's recognize model for Google, priced by the table (tokens are
  *  counted after the call, so the quote says why there is no figure). */
-function recognizeOption(day: string): ModelOption {
+export function recognizeOption(day: string): ModelOption {
   const model = TABLES.image.candidates.find((c) => c.provider === "google")?.models["recognize"] ?? "recognize";
   const q = quote({ provider: "google", model, usage: {}, on: day });
   return {

@@ -1,14 +1,15 @@
 import "server-only";
 
 import { err, ok, type Result } from "@gt/domain/errors";
-import type { Receipt, ReceiptLine, ReceiptMode } from "@gt/domain/produce";
+import { LANE_CAPACITY } from "@gt/domain/lane";
+import type { Receipt, ReceiptMode } from "@gt/domain/produce";
 import { STYLE_TRIALS, blockDigest } from "@gt/domain/style.ratchet";
 import type { Style } from "@gt/domain/style";
 import type { StyleAct, StyleActOutcome } from "@gt/domain/styleView";
-import { quote } from "@gt/kernel/pricing/quote";
+import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
 
 import { recipeSlots } from "../../../../../lib/foundry/adopt.ts";
-import { actRefusal, styleJobId } from "../../../../../lib/producers/styleLaunch.ts";
+import { actRefusal, imageOption, recognizeOption, styleJobId } from "../../../../../lib/producers/styleLaunch.ts";
 import { digest } from "../../../projects/[id]/_part/hash.ts";
 import { door, land, landedJob, loadStyle, recOf, type Media } from "./fixture.ts";
 import { ADOPT_REPLY, ADOPT_SEEDS, DRY_GRID, presetPlate } from "./fixtureData.ts";
@@ -23,71 +24,40 @@ import { ADOPT_REPLY, ADOPT_SEEDS, DRY_GRID, presetPlate } from "./fixtureData.t
 //                    person, and the kept text-lane forge plates seeded as UNDECIDED proofs that
 //                    say where they came from (v1 seedProofs; never a production render).
 //   generate-proofs  one plate per chosen trial under the CURRENT block, priced per image from the
-//                    kernel table (google gemini-3.1-flash-image at 1K, $0.045 measured), each
+//                    the real side's own option (lib/producers/styleLaunch.ts `imageOption`), each
 //                    proof stamped with its trialId and blockDigest so coverage reads lineage.
 // The token digests the style's rev, the act and its inputs and the mode: any write to the style
 // makes an open receipt stale, and its confirm answers the fresh receipt instead of running.
 // THIS SIDE IS DRY ONLY (GRAVITONE_DRY_ONLY): a live read is refused in words; a confirm lands
 // the act's stand-in - the recorded palette reply, a committed grid plate - as the job would.
 
-const IMAGE = { provider: "google", model: "gemini-3.1-flash-image", size: "1K" } as const;
-const RECOGNIZE = { provider: "google", model: "gemini-3.6-flash" } as const;
-/** Fixture-assumed durations (no measurement behind them): the receipt marks them illustrative. */
-const IMAGE_S = 20;
-const RECOGNIZE_S = 8;
 const DRY_ONLY = "this side runs dry only — nothing is generated live from the fixture universe";
 
 type Basis = { readonly rev: number; readonly style: Style };
-
-function line(key: string, label: string, p: { readonly provider: string; readonly model: string }, seconds: number, startMs: number, q: ReturnType<typeof quote>): ReceiptLine {
-  return {
-    key,
-    label,
-    lane: "cloud.google",
-    provider: p.provider,
-    model: p.model,
-    units: 1,
-    seconds,
-    usd: q.usd,
-    ...(q.usd === null ? { unpricedReason: q.note } : {}),
-    src: "illustrative",
-    queuePos: 1,
-    start: new Date(startMs).toISOString(),
-    end: new Date(startMs + seconds * 1000).toISOString(),
-  };
-}
 
 /** Why the act cannot run, in the real side's words and by its rule (the reference window counts
  *  approvals still sent, as the view's `sheet.full` does); kept = a recorded palette reply. */
 const refusal = (act: StyleAct, b: Basis): string | null => actRefusal(act, b.style, ADOPT_REPLY[b.style.id] !== undefined);
 
-function receiptOf(act: StyleAct, b: Basis, mode: ReceiptMode, now: number): Receipt {
-  const lines: ReceiptLine[] = [];
+/** The receipt, priced by the real side's own options (lib/producers/styleLaunch.ts: the frames
+ *  catalog's Google row and the router's recognize model) through the kernel's own receipt, on an
+ *  empty queue; only the token is the fixture's (a digest of the style, its rev, the act, the mode). */
+function receiptOf(act: StyleAct, b: Basis, mode: ReceiptMode, now: number): Result<Receipt> {
+  const day = new Date(now).toISOString().slice(0, 10);
+  let lines: PlanLine[];
   if (act.kind === "adopt") {
-    lines.push(line("palette", "palette readback", RECOGNIZE, RECOGNIZE_S, now, quote({ ...RECOGNIZE, usage: { "input-token": 1, "output-token": 1 }, on: new Date(now).toISOString() })));
+    const option = recognizeOption(day);
+    lines = [{ key: "palette", label: "palette readback", lane: option.lane, units: 1, option, after: [], order: 0, status: "pending" }];
   } else {
-    let at = now;
-    for (const id of act.trialIds) {
+    const option = imageOption(day);
+    if (option === undefined) return err("internal", "the frames catalog offers no Google image option to price a proof with");
+    lines = act.trialIds.map((id, i) => {
       const t = STYLE_TRIALS.find((x) => x.id === id);
-      lines.push(line(id, `${t?.label ?? id} · ${t?.problem ?? "free"}`, IMAGE, IMAGE_S, at, quote({ ...IMAGE, usage: { image: 1 }, on: new Date(now).toISOString() })));
-      at += IMAGE_S * 1000;
-    }
+      return { key: id, label: `${t?.label ?? id} · ${t?.problem ?? "free"}`, lane: option.lane, units: 1, option, after: [], order: i, status: "pending" };
+    });
   }
-  const seconds = lines.reduce((a, l) => a + l.seconds, 0);
-  const unpriced = lines.filter((l) => l.usd === null).length;
-  const usd = Math.round(lines.reduce((a, l) => a + (l.usd ?? 0), 0) * 1000) / 1000;
-  const end = new Date(now + seconds * 1000).toISOString();
-  return {
-    token: digest({ style: b.style.id, rev: b.rev, act, mode }),
-    subject: { kind: "run", lane: "image" },
-    mode,
-    lines,
-    totals: { seconds, usd, unpriced, src: "illustrative" },
-    queuePos: 1,
-    etaAt: end,
-    overCeiling: false,
-    readAt: new Date(now).toISOString(),
-  };
+  const priced = receiptFor({ subject: { kind: "run", lane: "image" }, lines, plan: lines, queue: { others: [], digest: "" }, capacity: LANE_CAPACITY, now, mode });
+  return ok({ ...priced, token: digest({ style: b.style.id, rev: b.rev, act, mode }) });
 }
 
 /** A plate's id names the receipt that made it, as the real producer's does (`pr-<token tail>-<trial>`,
@@ -108,7 +78,7 @@ async function basis(act: StyleAct, mode: ReceiptMode, media: Media): Promise<Re
 
 export async function actReceipt(act: StyleAct, mode: ReceiptMode, now: number, media: Media): Promise<Result<Receipt>> {
   const b = await basis(act, mode, media);
-  return b.ok ? ok(receiptOf(act, b.value, mode, now)) : b;
+  return b.ok ? receiptOf(act, b.value, mode, now) : b;
 }
 
 async function landed(act: StyleAct, b: Basis, at: string, token: string, media: Media): Promise<Result<Style>> {
@@ -126,13 +96,15 @@ async function landed(act: StyleAct, b: Basis, at: string, token: string, media:
     return door({ ...s, palette, block: { technique, subject: "", palette, finish }, proofs: [...s.proofs, ...seeds] });
   }
   if (s.block === undefined) return err("refused", `${s.name} has no block yet`);
+  const image = imageOption(at.slice(0, 10));
+  if (image === undefined) return err("internal", "the frames catalog offers no Google image option to price a proof with");
   const d = blockDigest(s.block);
   const made = [];
   for (const id of act.trialIds) {
     const t = STYLE_TRIALS.find((x) => x.id === id);
     const m = await media(presetPlate(DRY_GRID[s.id] ?? "newsprint-cutout"));
     if (!m.ok) return m;
-    made.push({ id: plateId(token, id), label: `${t?.label ?? id} · dry stand-in`, media: m.value, state: "pending" as const, trialId: id, blockDigest: d, provider: "dry-run", model: IMAGE.model, costUsd: 0, at });
+    made.push({ id: plateId(token, id), label: `${t?.label ?? id} · dry stand-in`, media: m.value, state: "pending" as const, trialId: id, blockDigest: d, provider: "dry-run", model: image.model, costUsd: 0, at });
   }
   return door({ ...s, proofs: [...s.proofs, ...made] });
 }
@@ -148,7 +120,8 @@ export async function confirmAct(act: StyleAct, mode: ReceiptMode, token: string
   const b = await basis(act, mode, media);
   if (!b.ok) return b;
   const fresh = receiptOf(act, b.value, mode, now);
-  if (fresh.token !== token) return ok({ kind: "stale", fresh });
+  if (!fresh.ok) return fresh;
+  if (fresh.value.token !== token) return ok({ kind: "stale", fresh: fresh.value });
   const at = new Date(now).toISOString();
   const next = await landed(act, b.value, at, token, media);
   if (!next.ok) return next;
