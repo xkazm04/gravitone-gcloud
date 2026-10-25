@@ -13164,6 +13164,32 @@
           "evidence": "app/_landing/cosmos/engine/perf.ts:137 When the tab is hidden the perf throttle stops on purpose. There is no background stream and no native owner."
         }
       ]
+    },
+    "17769afc-f302-4371-8956-63b8f52ada32/optional-dependency-degradation": {
+      "context": "asset-library-store",
+      "subject": "optional-dependency-degradation",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:10:58.391Z",
+      "techniques": [
+        {
+          "technique": "guarded-singleton-accessor",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/detail.ts:122 No client is built; the store comes in as a parameter, and the accessor that opens it lives elsewhere (kernel-store-and-events / lib/kernelProcess)."
+        },
+        {
+          "technique": "capability-honest-refusal",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/detail.ts:125 A missing row is a real not-found inside a configured store. That is error handling, not a refusal for a missing capability."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c1da637f-0196-44cf-9af8-a70254ddd30a",
+        "state": "not-applicable",
+        "at": "2026-10-25T03:11:28.718944+00:00",
+        "reason": "reviewer (sonnet): The claim that this context has no optional dependency to degrade is contradicted by the code: measures.ts:37-39,145-147, triage.ts:24-25 and schema.ts:58 model an optional Python audio sidecar (NULL columns, 'sidecar unavailable', a missing sidecar writes no row), and the seat's search terms never "
+      }
     }
   }
 }
