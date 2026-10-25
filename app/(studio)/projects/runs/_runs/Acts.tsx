@@ -22,6 +22,7 @@ import { jobMachine } from "@gt/domain/job.machine";
 import type { RerouteOption } from "@gt/domain/produce";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Facts, type Fact } from "@gt/ui/components/facts/Facts.tsx";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { LaneHold } from "@gt/ui/components/produce/LaneHold.tsx";
@@ -110,7 +111,7 @@ export function JobActs({ job: j, busy, onPause, onResume, onRetry, onMove, retr
           <CapsHeading text="re-route" tally={{ value: options === null ? 0 : options.filter((o) => !o.current).length, label: "options" }} />
           <div ref={altsRef}>
             {options !== null && <RerouteList options={options} units={j.units} onPick={onReroute} busy={reading} />}
-            {optionsError !== undefined && <span className={s.dm}>{optionsError}</span>}
+            {optionsError !== undefined && <ErrorLine message={optionsError} />}
           </div>
         </section>
       )}

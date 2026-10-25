@@ -6430,4 +6430,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (over < 0) problems.push(",
     why: "A kernel holding more than KERNEL_CAP jobs draws a day-line missing its oldest ones and nothing on Runs says any were left out.",
   },
+  {
+    id: "runs-console-options-refusal-faint",
+    test: "tests/next-server/runs-console.test.ts",
+    file: "app/(studio)/projects/runs/_runs/Acts.tsx",
+    find: "<ErrorLine message={optionsError} />",
+    replace: "<span>{optionsError}</span>",
+    why: "The port's refusal to list a job's re-route options is drawn as faint metadata under the heading, so the operator reads an empty list instead of an error.",
+  },
 ];

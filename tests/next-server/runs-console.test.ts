@@ -8,12 +8,16 @@
 //   2. A retry's ceiling is the one typed for that job, and the button and T send the same one.
 //   3. The header's counts and the inspector's lists count each job once, in the same place.
 
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+
+import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import { jobMachine, type JobState } from "@gt/domain/job.machine";
 
 import type { LaneHoldView, ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
-import { canMove, canPause, canReroute, canRetry, ceilingFor, retryPress } from "../../app/(studio)/projects/runs/_runs/Acts.tsx";
+import { canMove, canPause, canReroute, canRetry, ceilingFor, JobActs, retryPress } from "../../app/(studio)/projects/runs/_runs/Acts.tsx";
 import { buildRuns, type KernelJobInput } from "../../app/(studio)/projects/runs/_runs/model.ts";
 import { failedOf, floorRunsOf, totalsOf } from "../../app/(studio)/projects/runs/_runs/view.ts";
 
@@ -109,5 +113,13 @@ describe("3b. the All lanes row counts floor runs as Plan does", () => {
     const plan = produce.filter((j) => j.projectId === undefined && j.state !== "done").length;
     expect(floorRunsOf(m)).toBe(plan);
     expect(plan).toBe(1);
+  });
+});
+
+describe("4. a refusal is drawn as an error", () => {
+  it("the port's refusal of the re-route options is an ErrorLine, the error's shape, not faint metadata", () => {
+    const words = "seat.text: no other route prices this part";
+    const props = { job: job({ state: "failed", reroutable: true }), busy: false, onPause: () => undefined, onResume: () => undefined, onRetry: () => undefined, onMove: () => undefined, retryCeiling: "", onRetryCeiling: () => undefined, options: null, optionsError: words, reading: null, onReroute: () => undefined, altsRef: { current: null }, holds: [] };
+    expect(renderToStaticMarkup(h(JobActs, props))).toContain(renderToStaticMarkup(h(ErrorLine, { message: words })));
   });
 });
