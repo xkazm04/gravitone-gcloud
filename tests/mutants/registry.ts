@@ -536,4 +536,12 @@ export const MUTANTS: Mutant[] = [
     replace: "price: undefined,",
     why: "A failed estimate row books the dearest-rate stand-in without naming the price row, so the window total cannot be reconciled to a rate after the table changes.",
   },
+  {
+    id: "pricing-reads-env-unguarded",
+    probe: "imaging-auth.probe.spec.ts",
+    file: "lib/imaging/pricing.ts",
+    find: "import type { CostBasis, ProviderId } from \"./types\";",
+    replace: "import type { CostBasis, ProviderId } from \"./types\";\nexport const PRICING_READS_ENV = process.env.GOOGLE_AI_API_KEY;",
+    why: "The price table starts reading process.env, so a public price route would tell a caller which keys this deployment holds, and no test fails because the only walk over it ran for an emptied list.",
+  },
 ];
