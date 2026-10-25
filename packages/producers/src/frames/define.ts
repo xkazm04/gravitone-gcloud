@@ -37,8 +37,10 @@ export type FramesView = {
 
 export type FramesPrices = { readonly image: UnitPrice; readonly turn: UnitPrice };
 
-/** A plate this act would (re)render: absent, refused, or behind its subject. A plate the batch is
- *  `generating` belongs to a job in flight and is not bought twice. */
+/** A plate this act would (re)render: absent, refused, or behind its subject. A `generating` plate is
+ *  skipped: no v2 writer sets that state, so it is a v1-imported plate whose render's receipt key
+ *  (lib/frames `pendingReceipt`) may already have been paid; the batch does not re-buy it, an explicit
+ *  render of its unit does. */
 export const needsPlate = (u: FramesUnitView): boolean => u.plate === "empty" || u.plate === "refused" || (u.plate === "ready" && u.stale);
 
 export const framesDefaultAct = (v: FramesView): FramesAct => (v.face === "ads" ? "image-takes" : "render-plates");

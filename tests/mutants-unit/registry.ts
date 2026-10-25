@@ -2921,7 +2921,7 @@ export const MUTANTS: UnitMutant[] = [
     file: "packages/producers/src/frames/define.ts",
     find: "u.plate === \"empty\" || u.plate === \"refused\" || (u.plate === \"ready\" && u.stale)",
     replace: "u.plate === \"empty\" || u.plate === \"generating\" || u.plate === \"refused\" || (u.plate === \"ready\" && u.stale)",
-    why: "A batch re-buys a plate another job is rendering: two paid images for one unit.",
+    why: "A batch re-buys a v1-imported plate left generating, whose receipt key may already be paid: two paid images for one unit.",
   },
   {
     id: "frames-budget-cap-ignored",

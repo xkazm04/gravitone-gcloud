@@ -38,7 +38,7 @@ import { activeSourceOf, adTemplateOf, asData, engineView, field, jobBlobRoot, m
 // v1's engines: the imaging router (`generate`: a plate, an alternative, an ads take), the
 // scene-direction turn (lib/turns/kinds/frames.ts) and its landing (lib/frames/direction.ts
 // `landDirection`: spend counted before the parse, every per-beat rejection kept as the work's
-// sentence) turned into a PROPOSAL (app/_phases/frames/direction/plan.ts `planFromSpecs`, which v1
+// sentence) turned into a PROPOSAL (lib/frames/directionPlan.ts `planFromSpecs`, which v1
 // wrote and never wired). Also THE IMAGING GLUE the motion and still bindings share.
 //
 // What changed from v1 (INVENTORY §3): plates are BLOBS (v1 kept base64 data: URLs, twice, ~5 MB

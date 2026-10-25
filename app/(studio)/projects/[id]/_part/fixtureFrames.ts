@@ -94,7 +94,7 @@ export const subjectOf = (u: UnitRec): string => u.plate.subject ?? (u.kind === 
 /** A plate the next render owes: the producer's rule, called (@gt/producers/frames/define
  *  `needsPlate`: empty - a gate's rejection empties it - refused, or behind its subject by
  *  lib/frames `isStalePlate`), so the act's label counts what its receipt prices. A `generating`
- *  plate belongs to a job in flight and is not owed twice. */
+ *  plate (v1-imported; no v2 writer sets it) may hold a paid receipt key and is not owed twice. */
 export const owes = (u: UnitRec): boolean => needsPlate({ id: u.id, plate: u.plate.state, stale: isStalePlate(frameOfUnit(u)) });
 
 /* ── ops ──────────────────────────────────────────────────────────────────── */
