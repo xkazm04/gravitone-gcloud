@@ -52,6 +52,8 @@ interface TextModelPrice {
   source: string;
   /** ISO date the `source` was last checked. */
   checked: string;
+  /** Last ISO day the rates hold. A turn priced for a later day is unpriced, not estimated at a rate that ended. */
+  validUntil?: string;
 }
 
 /**
@@ -131,6 +133,7 @@ const PRICES: TextModelPrice[] = [
       "already measures (12.8x the answer on 3.6) should be re-measured, not assumed carried " +
       "over: at an unchanged per-token rate that ratio is the whole cost story.",
     checked: "2026-09-02",
+    validUntil: "2026-12-31",
   },
 ];
 
@@ -148,6 +151,8 @@ export function priceTurn(args: {
   model: string;
   inputTokens?: number;
   outputTokens?: number;
+  /** The ISO day the turn is priced for; today (UTC) when absent. */
+  on?: string;
 }): TextPriceQuote {
   const row = PRICES.find((p) => p.provider === args.provider && p.model === args.model);
   if (!row)
@@ -156,6 +161,13 @@ export function priceTurn(args: {
       note:
         `No price row for ${args.provider}/${args.model}. A model this app can reach but cannot ` +
         `price is a gap in lib/text/pricing.ts, not a free call.`,
+    };
+
+  const day = (args.on ?? new Date().toISOString()).slice(0, 10);
+  if (row.validUntil !== undefined && !(/^\d{4}-\d{2}-\d{2}$/.test(day) && day <= row.validUntil))
+    return {
+      basis: "unpriced",
+      note: `the ${row.provider}/${row.model} rate held until ${row.validUntil}; re-check it (${row.source})`,
     };
 
   const { usdPerMInput: inRate, usdPerMOutput: outRate } = row;

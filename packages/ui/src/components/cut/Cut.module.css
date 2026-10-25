@@ -2,6 +2,8 @@
    and the prototype's `.playing` set from the player's timeupdate), and the beat's note input
    in the EditNote frame. */
 .cut{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(var(--w-desk-side),1fr);gap:var(--sp-6);padding:var(--sp-6)}
+/* A phone, at the desk's own 900px: the beats sit under the player, not 300px beside a ~36px one. */
+@media (max-width:900px){.cut{grid-template-columns:minmax(0,1fr)}}
 .player{border-radius:var(--r-arm);overflow:hidden;background:var(--letterbox);border:1px solid var(--hair-2)}
 .video{width:100%;aspect-ratio:16/9;max-height:58vh;display:block;background:var(--letterbox)}
 .kv{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-4)}

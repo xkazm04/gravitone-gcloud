@@ -24,7 +24,7 @@ across pages lives in `tokens.css` and `shell.js`, so that is where the kit come
 | `Button` | `.btn`, `.btn.{tone}`, `.btn.sm`, `kbd.keycap` inside | F P L G | tone x size; glyph; badge chip; tally stamp (`history 9`); trailing glyph (`Open record ›`); shortcut from keymap; aria-disabled |
 | `Toggle` | `.toggle[aria-pressed]` | F P L G | on/off; glyph; count of what is on; keycap; aria-controls/expanded for a drawer |
 | `Seg` | `.seg button[aria-pressed]` | F P L G | one of n; option glyph, count, actor accent (Ledger actors) |
-| `Field`, `Select`, `Search` | `.field`, `select.field`, `.search` | P L G | keyfield; search caps from the mode's `search` verb |
+| `Field`, `Select`, `Search`, `TextArea` | `.field`, `select.field`, `.search` | P L G | keyfield; search caps from the mode's `search` verb; `disabled` is aria-disabled + read-only; `type`, `maxLength`, `describedBy`; `TextArea` the multi-line field |
 | `CapsHeading` | `.side-h`, `.h4` / `.detail h4` | F P L G | side / section; level; tally |
 | `Panel` | `.panel`, `.panel-head`, `.panel-body`, `.toolbar` | P L G | title + tally; toolbar |
 | `Empty` | `.empty` | F L G | label (<= 12 words by type); one act |

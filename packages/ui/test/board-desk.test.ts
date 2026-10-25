@@ -1,6 +1,8 @@
 // The Board desks' pure halves: where the cull's cursor goes, what a reason key does under each
 // source's list (1-9, 0, −), the undecided jump, how a blind pick draws, and the commit flow's
 // table. Literal cells and verdicts in, values out.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 import type { PairView } from "@gt/domain/board";
@@ -142,5 +144,19 @@ describe("the commit flow", () => {
     expect(cycleDirective("more_weight", true)).toBe("free_text");
     expect(noteText("less_weight", "  ")).toBe("less weight");
     expect(noteText("remove", " cut the anecdote ")).toBe("cut the anecdote");
+  });
+});
+
+// The cut review on a phone: the stylesheet is the only place its columns are decided, so the source is the instrument
+// (measured in a 390px page: the player was 36px wide beside the 300px beats column, 354px once stacked).
+describe("the cut review's columns", () => {
+  const css = readFileSync(join(import.meta.dirname, "../src/components/cut/Cut.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  test("stack under the player at the desk's own phone width", () => {
+    expect(css).toMatch(/@media\s*\(max-width:\s*900px\)\s*\{[^}]*\.cut\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  });
+
+  test("keep the side column beside the player above it", () => {
+    expect(css).toMatch(/^\.cut\{[^}]*minmax\(var\(--w-desk-side\),\s*1fr\)/m);
   });
 });

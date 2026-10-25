@@ -23,7 +23,7 @@ import { useState } from "react";
 
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
-import fieldCss from "../field/Field.module.css";
+import { Field } from "../field/Field.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { LedgerLink } from "../ledgerlink/LedgerLink.tsx";
@@ -223,7 +223,7 @@ export function SlotDetail({ view, nowMs, busy, error, asked, onMove, onCancel, 
                     if (problem === null && at !== null && idle) onMove(at);
                   }}
                 >
-                  <input className={fieldCss.field} type="datetime-local" aria-label="move to, UTC" value={field} onChange={(e) => setField(e.currentTarget.value)} />
+                  <Field type="datetime-local" label="move to, UTC" value={field} onChange={setField} />
                   <span className={s.utc}>UTC</span>
                   <Button label="Move" tone="violet" size="sm" submit disabled={problem !== null || !idle} />
                   {problem !== null && <ErrorLine message={problem} />}

@@ -104,7 +104,7 @@ export function Toolbar(p: ToolbarProps) {
         <Tally value={post && !p.exhausted ? `${shown}+` : shown} of={p.facets.head} label="events" />
       </span>
       <span className={s.cost}>
-        <Chip label="cost" value={cost.priced === 0 ? "—" : `${usd(Number(cost.total.toFixed(2)))}${p.capped ? "+" : ""}`} name={`cost of loaded events ${usd(cost.total)}`} />
+        <Chip label="cost" value={cost.priced === 0 ? "—" : `${usd(cost.total)}${p.capped ? "+" : ""}`} name={`cost of loaded events ${usd(cost.total)}`} />
         {marks.map((k) => (
           <SourceTag key={k} kind={k} value={usd(cost.bySrc[k] ?? 0)} />
         ))}

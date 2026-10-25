@@ -43,7 +43,11 @@ import { schemaInstruction } from "../json";
 import { priceTurn } from "../pricing";
 import type { ProbeResult, TextProvider, TextRequest, TextResult, SchemaEnforcement } from "../types";
 
-const BASE = process.env.GOOGLE_TEXT_BASE_URL?.trim() || "https://generativelanguage.googleapis.com/v1beta";
+// Read per call, like every key (lib/text/env.ts): an override set after boot, or by a test
+// after import, steers the next turn rather than waiting for a restart.
+const base = (): string => process.env.GOOGLE_TEXT_BASE_URL?.trim() || "https://generativelanguage.googleapis.com/v1beta";
+const pro = (): string => process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview";
+const flash = (): string => process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash";
 
 /**
  * Which model answers which turn.
@@ -110,44 +114,44 @@ const BASE = process.env.GOOGLE_TEXT_BASE_URL?.trim() || "https://generativelang
  * edit to a table that knows the rate, and records that the rate is introductory
  * and doubles on 2027-01-01.
  */
-const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
-  "edit-plan": process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",
+const MODEL_FOR_TURN: Record<TextRequest["turn"], () => string> = {
+  "edit-plan": pro,
   // The PRO model: composing is engine arbitration plus whole beat chains
   // held to a notebook, which is the judgement work `edit-plan` is priced for.
-  compose: process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",
-  "scene-direction": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
-  "style-synthesis": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  compose: pro,
+  "scene-direction": flash,
+  "style-synthesis": flash,
   // The PRO model, like `edit-plan` and unlike the other two. A notebook is nine
   // phases of judgement ending in a large structured object, and RESEARCH-PROMPT
   // § Cost note is explicit that the bottleneck is Phase 2 — tension-finding —
   // "which is judgment, not retrieval". Flash is the wrong instrument for the
   // one step that decides whether the run produced a video or a wiki timeline.
-  research: process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",
+  research: pro,
   // Flash, like `style-synthesis`: a hunt map and a lesson draft are a few KB
   // of prompt and one schema-shaped answer each — judgement over a short list,
   // not the nine-phase reasoning that earns the pro model above.
-  "sound-hunt": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
-  "sound-lesson": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  "sound-hunt": flash,
+  "sound-lesson": flash,
   // Flash for the Suno pair, like the hunt: a few short schema-shaped prompts.
-  "suno-propose": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
-  "suno-riff": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  "suno-propose": flash,
+  "suno-riff": flash,
   // Flash for the music-video pair: one short schema-shaped answer each.
-  "mv-treatment": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
-  "mv-metadata": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  "mv-treatment": flash,
+  "mv-metadata": flash,
   // THE PRO MODEL for the ideas round, like `research`: it is judgement — a
   // product truth, six ideas pushed apart by mechanism, five yes/no gates per
   // idea — and the ads discipline's whole bet is that the idea is most of the
   // work (knowledge/templates/ad-social-15/TEMPLATE.md, "What makes this
   // template hard" 1). Flash regresses toward the typical idea, which is the
   // failure the round exists to resist.
-  "ad-ideas": process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",
+  "ad-ideas": pro,
   // Flash for scenarios: the idea is fixed, and the turn is arithmetic and
   // shot-writing against a typed schema that lib/ads/validate.ts checks.
-  "ad-scenarios": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  "ad-scenarios": flash,
   // Flash: a repair edits the listed paths of an object it is handed; the
   // judgement was spent on the turn that produced the draft.
-  repair: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
-  probe: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  repair: flash,
+  probe: flash,
 };
 
 /** The documented ceiling on a single inline request body. Checked here so an
@@ -271,7 +275,7 @@ export function googleProvider(): TextProvider {
     async reason(req: TextRequest, timeoutMs: number): Promise<TextResult> {
       const started = Date.now();
       const key = keyFor("google");
-      const model = MODEL_FOR_TURN[req.turn];
+      const model = MODEL_FOR_TURN[req.turn]();
 
       // The schema decision, made once and reported honestly. See the header:
       // a translated-and-weakened schema reported as `native` would be a claim
@@ -307,7 +311,7 @@ export function googleProvider(): TextProvider {
 
       const res = await postJson<GenerateContentResponse>(
         "google",
-        `${BASE}/models/${encodeURIComponent(model)}:generateContent`,
+        `${base()}/models/${encodeURIComponent(model)}:generateContent`,
         {
           // By HEADER, never a query param, so no URL this adapter builds
           // carries the credential — the same rule lib/imaging/log.ts audited
