@@ -34,7 +34,7 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { CliError } from "@/lib/claudeCli";
+import { CliError, probeClaude } from "@/lib/claudeCli";
 import { crossCheckRetrieval, NotebookError, parseNotebook } from "@/lib/notebook/validate";
 import { retrievalEnabled } from "@/lib/text/env";
 import { TextError } from "@/lib/text/errors";
@@ -441,5 +441,19 @@ test("retrieve avoid: ruling out the only retrieval engine is named as such, and
     expect(err.message, "the refusal does not name the candidate the caller ruled out").toContain("claude-cli-retrieve");
     expect(err.message).not.toMatch(/no candidates were planned/);
     expect(engine.turns(), "an avoided rung was spawned").toHaveLength(0);
+  });
+});
+
+test("pre-flight: with retrieval on, the one binary behind two candidates is asked its version once", async () => {
+  process.env.TEXT_RETRIEVE = "1";
+  await withFakeEngine(RECORDED, async (engine) => {
+    // The first spawn through a fresh shim is logged twice on Windows; warm it
+    // so the pre-flight's own spawns are what is counted.
+    await probeClaude();
+    const before = engine.calls().filter((c) => c.kind === "version").length;
+    const pf = await engineStatus("research");
+    expect(pf.candidates.map((c) => c.provider)).toEqual(expect.arrayContaining(["claude-cli-retrieve", "claude-cli"]));
+    expect(pf.candidates.filter((c) => c.provider.startsWith("claude-cli")).every((c) => c.ok)).toBe(true);
+    expect(engine.calls().filter((c) => c.kind === "version").length - before).toBe(1);
   });
 });

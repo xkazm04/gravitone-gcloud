@@ -65,6 +65,7 @@ import { claudeCliRetrieveProvider } from "./providers/claudeCliRetrieve";
 import { googleProvider } from "./providers/google";
 import type {
   LadderRung,
+  ProbeResult,
   RerouteStep,
   TextProvider,
   TextProviderId,
@@ -717,6 +718,7 @@ export async function engineStatus(turn: TurnClass = "edit-plan"): Promise<{
   const env = currentTextEnv();
   const candidates: { provider: TextProviderId; ok: boolean; detail: string }[] = [];
   let serving: TextProviderId | null = null;
+  const probed = new Map<TextProviderId, Promise<ProbeResult>>();
 
   // The retrieval candidates first, because when one is open it is what a run
   // of this turn would use (/api/research tries it before reasoning). Off, it is
@@ -733,7 +735,11 @@ export async function engineStatus(turn: TurnClass = "edit-plan"): Promise<{
       candidates.push({ provider: id, ok: false, detail: blockError(id, blocked).message });
       continue;
     }
-    const p = await PROVIDERS[id]().probe();
+    // One probe per BINARY: the retrieval rung's probe IS the reasoning
+    // adapter's (claudeCliRetrieve.ts), so two candidates would spawn
+    // `claude --version` twice for one answer.
+    const key = id === "claude-cli-retrieve" ? "claude-cli" : id;
+    const p = await (probed.get(key) ?? probed.set(key, PROVIDERS[id]().probe()).get(key)!);
     candidates.push({ provider: id, ok: p.ok, detail: p.detail });
     if (p.ok && !serving) serving = id;
   }
