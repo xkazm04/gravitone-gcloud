@@ -145,6 +145,9 @@ export function land(id: string, rev: number, next: Style, at: string, jobId: st
   const r = w.styles.get(id);
   if (r === undefined) return err("not-found", `no style ${id}`);
   if (r.rev !== rev) return err("conflict", `${r.style.name} changed while the act was priced — read its receipt again`);
+  // The ratchet holds on a landing as on an op (the real driver's putStyleIn runs it on every write).
+  const blocked = ratchetBlocker(r.style, next);
+  if (blocked !== null) return err("refused", blocked);
   r.style = next;
   r.rev += 1;
   r.at = at;

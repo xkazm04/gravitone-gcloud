@@ -3810,6 +3810,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A second confirm of one receipt on the fixture side answers a fresh receipt instead of the job, so one more Enter renders the set again - the real side's one-confirm-one-job rule is not what the fixture lane photographs.",
   },
   {
+    id: "style-fixture-landing-skips-ratchet",
+    test: "tests/next-server/style-atelier.test.ts",
+    file: "app/(studio)/library/style/_port/fixture.ts",
+    find: "  if (blocked !== null) return err(\"refused\", blocked);",
+    replace: "  void blocked;",
+    why: "An act's landing on the fixture side may unlock a locked style or demote it, where the real driver refuses the same write - the one-way ratchet holds on one write path of two.",
+  },
+  {
     id: "look-refs-unselected",
     test: "packages/producers/test/frames-look.test.ts",
     file: "packages/producers/src/frames/look.ts",

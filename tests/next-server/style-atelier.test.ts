@@ -16,7 +16,7 @@ import { ok, type Result } from "@gt/domain/errors";
 import { STYLE_TRIALS } from "@gt/domain/style.ratchet";
 import type { StyleAct, StyleOp, StyleOpOutcome, StyleView } from "@gt/domain/styleView";
 
-import { loadStyle, opStyle, resetStyles, type Media } from "../../app/(studio)/library/style/_port/fixture.ts";
+import { land, loadStyle, opStyle, recOf, resetStyles, type Media } from "../../app/(studio)/library/style/_port/fixture.ts";
 import { actReceipt, confirmAct } from "../../app/(studio)/library/style/_port/fixtureActs.ts";
 import { ADOPT_SEEDS, DRY_GRID, SEEDS, presetPlate } from "../../app/(studio)/library/style/_port/fixtureData.ts";
 import { styleJobId } from "../../lib/producers/styleLaunch.ts";
@@ -112,6 +112,17 @@ describe("an op at a rev", () => {
     const out = await op("newsprint-cutout", { kind: "remove-proof", proofId: "pr-nc-flywheel" });
     expect(out.kind).toBe("refused");
     expect((await view("newsprint-cutout")).proofs.some((p) => p.id === "pr-nc-flywheel")).toBe(true);
+  });
+
+  // An act's landing is a write like an op's: the ratchet holds there too (nothing unlocks).
+  it("refuses an act's landing that would unlock a style, and writes nothing", async () => {
+    const bp = await recOf("blueprint", media);
+    if (!bp.ok) throw bp.error;
+    const { lock: _lock, ...unlocked } = bp.value.style;
+    void _lock;
+    const out = land("blueprint", bp.value.rev, { ...unlocked, status: "proven" }, who.at, "job:style:blueprint:seeded");
+    expect(out.ok ? null : out.error.code).toBe("refused");
+    expect(await view("blueprint")).toMatchObject({ status: "locked", rev: bp.value.rev });
   });
 
   it("freezes a locked block; duplicate is the way on, with the look and none of the sheet", async () => {
