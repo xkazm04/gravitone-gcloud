@@ -7,13 +7,14 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 
 vi.mock("server-only", () => ({}));
 
+import { recordImportedJobIn } from "@gt/kernel/job";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { reconcileJobSpend } from "@gt/kernel/spend/projection";
 import type { Store } from "@gt/kernel/store";
 
 import { ARTICLE_STATUSES, WORKING } from "../../lib/articles/types.ts";
 import { listV1Runs } from "../../lib/import/runSources.ts";
-import { importRuns, type V1Run } from "../../lib/import/runs.ts";
+import { IMPORT_RUN_ACTOR, importRuns, type V1Run } from "../../lib/import/runs.ts";
 import { clearV1, seedV1, v1Archive } from "./import-harness.ts";
 
 // THE ONE-TIME IMPORTERS (Phase 4 wave D, L42): v1 runs that predate the job system become Run
@@ -42,6 +43,9 @@ function store(): Store {
   open.push(k.value);
   return k.value.store;
 }
+
+/** One scan of 5,000 jobs is milliseconds; 500 of them (the per-run json_extract) is seconds. */
+const JOBS_SCAN_BUDGET_MS = 500;
 
 const RUNS: V1Run[] = [
   { source: "forge", runId: "forge:r1", input: { producer: "forge", plan: "plan-a" }, units: 4, at: "2026-09-01T10:00:00Z", state: "done" },
@@ -98,6 +102,25 @@ describe("a dry import reports what the wet one will do", () => {
     expect(dry.ok && dry.value.map((x) => [x.runId, x.outcome === "would-import" ? "imported" : x.outcome])).toEqual([["forge:r1", "imported"], ["ex-bad", "refused"]]);
     expect(dry.ok && dry.value[1]!.reason).toBe(wet.ok ? wet.value[1]!.reason : undefined);
     expect(s.read((x) => x.get("SELECT (SELECT count(*) FROM runs) + (SELECT count(*) FROM jobs) + (SELECT count(*) FROM events WHERE type LIKE '%imported') AS n")?.["n"])).toEqual({ ok: true, value: 0 });
+  });
+});
+
+describe("a dry import over a populated store", () => {
+  it("answers 500 runs against 5,000 jobs from one read of the jobs, not one scan per run", () => {
+    const s = store();
+    const T = Date.parse("2026-10-16T09:00:00Z");
+    const seeded = s.tx((t) => {
+      for (let i = 0; i < 5000; i++) recordImportedJobIn(t, { id: `job:run:old-${i}`, of: { kind: "run", id: `old-${i}` }, producer: "forge", lane: "box.render", correlation: { runId: `old-${i}` }, units: 1 }, IMPORT_RUN_ACTOR);
+    });
+    expect(seeded.ok).toBe(true);
+    const runs: V1Run[] = Array.from({ length: 500 }, (_, i) => ({ source: "forge", runId: i % 50 === 0 ? `old-${i}` : `forge:new-${i}`, input: { producer: "forge", plan: "plan-a" }, units: 1, at: "2026-09-01T10:00:00Z", state: "done" as const }));
+    const t0 = performance.now();
+    const dry = importRuns(s, runs, { dry: true, now: T });
+    const ms = performance.now() - t0;
+    console.log(`import-runs dry 500 runs / 5000 jobs: ${ms.toFixed(0)} ms`);
+    expect(dry.ok && dry.value.filter((x) => x.outcome === "skipped").map((x) => x.reason)).toEqual(Array(10).fill("a job already serves this id"));
+    expect(dry.ok && dry.value.filter((x) => x.outcome === "would-import")).toHaveLength(490);
+    expect(ms).toBeLessThan(JOBS_SCAN_BUDGET_MS);
   });
 });
 
