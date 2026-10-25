@@ -32,7 +32,7 @@ import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
 import type { TextRequest } from "@/lib/text/types";
 import { FRAMES_SPEC, type FramesResult } from "@/lib/turns/kinds/frames";
 
-import { activeSourceOf, adTemplateOf, asData, blobRootOf, engineView, field, meteredText, must, partFacts, priceOf, recOf, stepKernel, TEXT_SEAT, text, textFailure, written, enginesOf, type DriveHooks, type Engines, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
+import { activeSourceOf, adTemplateOf, asData, engineView, field, jobBlobRoot, meteredText, must, partFacts, priceOf, recOf, TEXT_SEAT, text, textFailure, written, enginesOf, type DriveHooks, type Engines, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
 
 // THE FRAMES PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/frames's ports over
 // v1's engines: the imaging router (`generate`: a plate, an alternative, an ads take), the
@@ -110,8 +110,8 @@ export async function lookImages(look: ProjectLook, blobs: () => BlobStore): Pro
   return out;
 }
 
-/** The kernel's own blob store, opened only when a reference is actually read. */
-export const kernelBlobs = (): BlobStore => blobStore(blobRootOf(stepKernel().store));
+/** The blobs of the store the job runs on (research.ts `jobBlobRoot`), opened only when a reference is actually read. */
+export const jobBlobs = (ctx: StepContext): BlobStore => blobStore(jobBlobRoot(ctx));
 
 /** What an image call is drawn under: the look's block in the prompt, its references attached. */
 export type Drawn = { readonly look: ProjectLook; readonly images: readonly ImageRef[] };
@@ -248,13 +248,13 @@ function plateRequest(u: PictureUnit, look: ProjectLook): { req: GenerateRequest
   return { subject, req: { prompt: compilePrompt(look.block, subject), negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1 } };
 }
 
-async function performFrames(ctx: StepContext, unit: ActUnit, eng: ImagingEngines, blobs: () => BlobStore, turns: Engines): Promise<StepOutcome> {
+async function performFrames(ctx: StepContext, unit: ActUnit, eng: ImagingEngines, blobs: (ctx: StepContext) => BlobStore, turns: Engines): Promise<StepOutcome> {
   const s = must(partSnapshot(ctx));
   // The look is read at the unit, from the store as it is now: a lock is frozen, so a locked
   // style draws exactly what the receipt named; an unlocked one draws its current block.
   const f = must(partFacts(ctx));
   if (unit.name === "direction") return directionUnit(ctx, unit, s, f, turns);
-  const drawn: Drawn = { look: f.look, images: await lookImages(f.look, blobs) };
+  const drawn: Drawn = { look: f.look, images: await lookImages(f.look, () => blobs(ctx)) };
   if (unit.name.startsWith("take:")) {
     const shot = pickedScenario(s)?.shots.find((x) => x.id === unit.input["shotId"]);
     if (shot === undefined) return { kind: "fatal", code: "refused", message: `shot ${String(unit.input["shotId"])} is not in the picked scenario` };
@@ -323,8 +323,8 @@ function landFrames(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Part
   return ok({ frames: { ...rec, units: asData({ u: units })["u"], renderId: u.renderId } });
 }
 
-/** `blobs`: where the look's references are read (default: the kernel's own, opened lazily). */
-export function framesProducer(lane: ResourceLane = "cloud.google", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING, blobs: () => BlobStore = kernelBlobs): Producer {
+/** `blobs`: where the look's references are read (default: the blobs of the store the job runs on, opened lazily). */
+export function framesProducer(lane: ResourceLane = "cloud.google", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING, blobs: (ctx: StepContext) => BlobStore = jobBlobs): Producer {
   // The direction turn's engine: the drive's own when it hands one (a test's fake vendor), else the router.
   const turns = enginesOf(hooks);
   return defineFrames(lane, {

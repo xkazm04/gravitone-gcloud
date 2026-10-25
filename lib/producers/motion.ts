@@ -22,7 +22,7 @@ import { readClip, startClip } from "@/lib/imaging/video/clips";
 import { clipPath } from "@/lib/imaging/video/store";
 
 import { adsShotsFor, imageFailure, LIVE_IMAGING, pickedScenario, unitsOf, type ImagingEngines } from "./frames.ts";
-import { adTemplateOf, asData, blobRootOf, field, must, partFacts, priceOf, recOf, stepKernel, text, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
+import { adTemplateOf, asData, field, jobBlobRoot, must, partFacts, priceOf, recOf, text, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
 
 // THE MOTION PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/motion's ports over
 // v1's engines: the two recognize passes of app/_phases/motion/direction.ts `directMotion` (READ,
@@ -223,7 +223,8 @@ function landMotion(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Part
 }
 
 export function motionProducer(lane: ResourceLane = "gpu.local", hooks: DriveHooks = {}, engines: MotionEngines = LIVE_MOTION, blobs?: BlobStore): Producer {
-  const store = (): BlobStore => blobs ?? blobStore(blobRootOf(stepKernel().store));
+  // The job's own store's blobs (research.ts `jobBlobRoot`), unless a test hands its own.
+  const store = (ctx: StepContext): BlobStore => blobs ?? blobStore(jobBlobRoot(ctx));
   return defineMotion(lane, {
     // Held at the release, not failed by the worker, while its act waits on a human act (L45).
     preflight: preflightFrom(motionUnits),
@@ -236,7 +237,7 @@ export function motionProducer(lane: ResourceLane = "gpu.local", hooks: DriveHoo
     },
     async perform(_job, _plan, unit, ctx) {
       try {
-        return await performMotion(ctx, unit, engines, store());
+        return await performMotion(ctx, unit, engines, store(ctx));
       } catch (e) {
         // A refused clip or read is the vendor's sentence on this unit's job, not a retry.
         if (e instanceof ImagingError && e.kind === "refused") return { kind: "fatal", code: "refused", message: e.message };

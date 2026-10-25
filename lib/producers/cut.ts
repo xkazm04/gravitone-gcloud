@@ -9,7 +9,6 @@ import type { ResourceLane } from "@gt/domain/lane";
 import { blobStore } from "@gt/kernel/blob";
 import type { Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
 import type { PartSnapshot } from "@gt/kernel/parts/driver";
-import { storeLocation } from "@gt/kernel/process";
 import { defineCut, cutPlan, type CutView } from "@gt/producers/cut/define";
 import { failureOf, meteredCall } from "@gt/producers/research/metered";
 import { madeFree, madePaid, type ActAsk, type ActPlan, type ActUnit } from "@gt/producers/research/partAct";
@@ -21,7 +20,6 @@ import type { AdBrief, AdsFinishData, AdsShotsData } from "@/lib/ads/types";
 import { compileCut, cutDocumentHash, takePointers, type CutDocument } from "@/lib/cut/cutDocument";
 import { deriveTimeline } from "@/lib/cut/deriveTimeline";
 import { ExportError, runCutExport, type CutExportResult } from "@/lib/cutExport";
-import { OUT_DIRNAME } from "@/lib/fixtures/mode";
 import type { PictureUnit } from "@/lib/frames/picture/unit";
 import type { Aspect } from "@/lib/imaging/types";
 import { exportsRoot } from "@/lib/publish/exports";
@@ -29,7 +27,7 @@ import { pictureFromUnits } from "@/lib/score/picture";
 import type { ScoreSpot } from "@/lib/score/spots";
 import { getTake } from "@/lib/sound/takes";
 
-import { asData, field, must, partFacts, priceOf, recOf, text, withRecords, written, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
+import { asData, field, jobBlobRoot, must, partFacts, priceOf, recOf, text, withRecords, written, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
 import { pickedScenario } from "./frames.ts";
 
 // THE CUT PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/cut's ports over v1's
@@ -72,12 +70,6 @@ const LIVE: CutEngines = {
 
 const FREE_LOCAL = "ffmpeg on this studio's own box; nobody invoices it";
 
-/** The blob root beside the store this process drives (lib/producers/research.ts `blobRootOf`). */
-function blobRoot(): string {
-  const at = storeLocation(OUT_DIRNAME);
-  return at === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(at), "blobs");
-}
-
 const unitsOf = (s: PartSnapshot): PictureUnit[] => {
   const u = recOf(s, "frames")["units"];
   return Array.isArray(u) ? written<PictureUnit[]>(u) : [];
@@ -119,8 +111,9 @@ const renderFailure = (e: unknown): StepOutcome =>
   failureOf(e, (x) => (x instanceof ExportError ? (x.code === "bad-request" || x.code === "local-binaries-forbidden" ? "fatal" : "retry") : x instanceof AdRenderError ? "fatal" : undefined));
 
 /** The plates' bytes as data: URLs for the call only (see the header's SEAM). */
-async function withPlates(units: readonly PictureUnit[]): Promise<PictureUnit[]> {
-  const blobs = blobStore(blobRoot());
+/** `root`: the blob root of the store the job runs on (research.ts `jobBlobRoot`). */
+async function withPlates(units: readonly PictureUnit[], root: string): Promise<PictureUnit[]> {
+  const blobs = blobStore(root);
   return Promise.all(
     units.map(async (u) => {
       const ref = field(field(u.plate)?.["blob"]);
@@ -152,7 +145,7 @@ const standBytes = (what: string): Uint8Array => new TextEncoder().encode(`dry s
 async function animaticUnit(ctx: StepContext, unit: ActUnit, s: PartSnapshot, f: PartFacts, eng: CutEngines): Promise<StepOutcome> {
   const projectId = projectOf(ctx.job);
   const spots = spotsOf(s);
-  const units = await withPlates(unitsOf(s));
+  const units = await withPlates(unitsOf(s), jobBlobRoot(ctx));
   const cut = deriveTimeline({ projectId, project: f.targetS === null ? null : { title: f.plan.project.title, logline: "", targetS: f.targetS }, units, spots, storeTakeIds: await storeHeld(spots) });
   const offsets = field(recOf(s, "cut")["offsets"]) ?? {};
   const doc = compileCut(cut, written<Record<string, number>>(offsets), takePointers(spots));
