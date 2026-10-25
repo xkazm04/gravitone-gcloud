@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { err } from "@gt/domain/errors";
 import type { Effects } from "../src/effects.ts";
 import { eventsMigrations, verify } from "../src/events.ts";
+import { lapseOpen, type MeterHold } from "../src/spend/meter.ts";
 import { createSettler } from "../src/spend/settler.ts";
 import type { SpendClass } from "../src/spend/core.ts";
 import { book, lapseOwner, release, reservationOf, reserve, settle, stats, spendMigrations, type SettleEntry } from "../src/spend/ledger.ts";
@@ -137,6 +138,47 @@ describe("kernel/spend - a settle the store cannot take now is kept, never dropp
     expect(st(s)).toMatchObject({ spent: 0.4, held: 0, rows: 2, counters: { lateWrites: 1, booked: 2 } });
     expect(must(settler.flush())).toBe(0);
     expect(must(verify(s)).state).toBe("intact");
+  });
+});
+
+describe("kernel/spend - a pending settle that can never apply is dropped and counted, not left to block the rest", () => {
+  const counter = (s: Store, name: string) => num(must(s.read((r) => r.get("SELECT value FROM spend_counters WHERE class = ? AND name = ?", imaging.id, name)?.["value"])));
+  const num = (v: unknown): number => (typeof v === "number" ? v : 0);
+  const dropped = (s: Store) => must(s.read((r) => r.all("SELECT subject_id FROM events WHERE type = 'spend.dropped' ORDER BY seq"))).map((e) => String(e["subject_id"]));
+
+  it("the settler: r1 deferred, then released by someone else; r2's settle applies and r1 is dropped with a counter and an event", () => {
+    const s = tpl.fresh();
+    hold(s, "r1", 0.3);
+    hold(s, "r2", 0.2);
+    let busy = 1;
+    const fx: Effects = {
+      blob: () => Promise.reject(new Error("no blobs here")),
+      call: (_name, fn) => fn(),
+      tx(_name, fn) {
+        if (busy-- > 0) return err("unavailable", "the store is busy");
+        return s.tx(fn);
+      },
+    };
+    const settler = createSettler(fx);
+    expect(must(settler.settle(imaging, "r1", [served(0.25)]))).toBe("deferred");
+    must(s.tx((t) => release(t, imaging, { id: "r1", by: "operator" })));
+    expect(must(settler.settle(imaging, "r2", [served(0.15)]))).toBe("applied");
+    expect(settler.pending()).toEqual([]);
+    expect(st(s)).toMatchObject({ spent: 0.15, held: 0, rows: 1 });
+    expect(counter(s, "droppedWrites")).toBe(1);
+    expect(dropped(s)).toEqual(["r1"]);
+    expect(must(verify(s)).state).toBe("intact");
+  });
+
+  it("lapseOpen: a pending settle whose hold was released before the booking is counted, not skipped silently", () => {
+    const s = tpl.fresh();
+    hold(s, "r1", 0.3);
+    must(s.tx((t) => release(t, imaging, { id: "r1", by: "operator" })));
+    const open: MeterHold = { id: "r1", cls: imaging, amount: 0.3, dry: false, pending: [served(0.25)] };
+    must(s.tx((t) => lapseOpen(t, [open])));
+    expect(counter(s, "droppedWrites")).toBe(1);
+    expect(dropped(s)).toEqual(["r1"]);
+    expect(st(s)).toMatchObject({ spent: 0, rows: 0 });
   });
 });
 

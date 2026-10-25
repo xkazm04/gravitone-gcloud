@@ -6,7 +6,7 @@ import type { Effects } from "../effects.ts";
 import type { Tx } from "../store.ts";
 import type { SpendClass } from "./core.ts";
 import { book, bump, lapse, release, reserve, settle, type SettleEntry } from "./ledger.ts";
-import { createSettler } from "./settler.ts";
+import { createSettler, dropPending, unappliable } from "./settler.ts";
 
 // THE STEP METER - spend is the meter's (Director's decision 7). Every priced
 // call inside a job reserves against kernel/spend WITH the job id and the step,
@@ -160,7 +160,11 @@ export function lapseOpen(t: Tx, holds: readonly MeterHold[]): void {
     if (h.pending !== undefined) {
       const s = settle(t, h.cls, { id: h.id, entries: h.pending });
       if (s.ok && !s.value.already) bump(t, h.cls.id, "lateWrites", 1);
-      if (!s.ok && s.error.code !== "refused") throw s.error;
+      // A settle that can never apply (the hold was released or expired meanwhile) is dropped, counted.
+      if (!s.ok) {
+        if (!unappliable(s.error)) throw s.error;
+        dropPending(t, { cls: h.cls, id: h.id, entries: h.pending }, s.error);
+      }
       continue;
     }
     const r = lapse(t, h.cls, h.id);
