@@ -1,0 +1,90 @@
+{
+ "schema": "conform-run/1",
+ "worker": "99221ceb-288c-4b48-8722-42544bec97a1",
+ "subject": "browser-credential-boundary",
+ "evaluatedAt": "2026-10-25T22:45:06.628938+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "library-browser-screen",
+   "subject": "browser-credential-boundary",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/library/page.tsx:42 The Library reads its index only on the server, through the server-only port, and the client island gets Server Action references and same-origin media URLs, so the browser holds no credential for any dependency. A case-insensitive search of app/(studio)/library for NEXT_PUBLIC, apiKey/api_key, authorization, createClient, supabase, anon_key, signedUrl and x-api-key found no hits.",
+   "techniques": [
+    {
+     "technique": "public-vs-server-env-split",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/page.tsx:41 The only env-derived value (SIDE, from unprefixed GRAVITONE_PRODUCE_SIDE in the server-only _port) is used in the Server Component. No browser-read config value exists in this context."
+    },
+    {
+     "technique": "broker-proxy-attaches-secret",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_library/Library.tsx:86 The client calls a same-origin Server Action for the app's own index. No privileged upstream or vendor secret is reached from this screen, so nothing needs brokering."
+    },
+    {
+     "technique": "outbound-fetch-destination-validation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/fixture-tone/route.ts:24 The context's one route builds a WAV in memory and makes no outbound fetch, so no destination arrives as data."
+    },
+    {
+     "technique": "opaque-upstream-errors",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/page.tsx:44 The error message shown comes from the app's own local index, not from an upstream behind a broker, and the project deliberately renders real store errors verbatim. That exposes no third-party topology."
+    },
+    {
+     "technique": "aggregate-view-not-base-table",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/page.tsx:43 Kind and facet counts are computed server-side by the port. No browser role queries a hosted store's tables or views directly."
+    },
+    {
+     "technique": "omit-the-column-not-the-value",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_library/DetailView.tsx:143 The client renders a shaped ShownDetail projection the server built. There is no schema a public role can read, so there is no regime-one column grant to judge."
+    },
+    {
+     "technique": "default-deny-plus-defaulted-owner",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_library/Library.tsx:143 Writes go through a Server Action, so the server is the only client of the store. This matches the technique's 'your code is the only client' exclusion; there are no row policies to write."
+    },
+    {
+     "technique": "allowlisted-operator-stream",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_library/Library.tsx:89 The only outcome surface is a toast of an action's error code. No debug or log stream renders requests that carried credentials."
+    }
+   ],
+   "absenceTerms": [
+    "NEXT_PUBLIC",
+    "apiKey",
+    "authorization",
+    "createClient",
+    "supabase"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T22:45:06.628938+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "browser-credential-boundary"
+   ],
+   "techniques": [
+    "aggregate-view-not-base-table",
+    "allowlisted-operator-stream",
+    "broker-proxy-attaches-secret",
+    "default-deny-plus-defaulted-owner",
+    "omit-the-column-not-the-value",
+    "opaque-upstream-errors",
+    "outbound-fetch-destination-validation",
+    "public-vs-server-env-split"
+   ],
+   "deviations": 0,
+   "context": "library-browser-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
