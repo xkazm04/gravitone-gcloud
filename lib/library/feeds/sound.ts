@@ -15,6 +15,7 @@ import { readSuno } from "../../sound/suno/store.ts";
 import { sunoModelLabel } from "../../suno/types.ts";
 import { filePathAbs } from "../../sound/store.ts";
 import { listTakes } from "../../sound/takes.ts";
+import { takeFileHref } from "../../sound/takeHref.ts";
 import { isoOf, words, type Feed, type FeedItem, type FeedRead } from "./types.ts";
 
 // THE SOUND STORE, THE MUSIC VIDEOS AND THE REGISTRY, AS LIBRARY ITEMS.
@@ -83,7 +84,7 @@ export const takesFeed: Feed = {
                   : { tempoBpm: t.measured.tempoBpm, key: t.measured.key, durationS: t.measured.durationS, lufs: t.measured.lufs, truePeakDb: t.measured.truePeakDb, energy: t.measured.energy },
             },
             peaks: (t.peaks ?? []).map((p) => Math.max(0, Math.min(1, p))),
-            src: t.file === null ? null : `/api/sound/takes/${encodeURIComponent(t.id)}/file`,
+            src: t.file === null ? null : takeFileHref(t.id),
           },
         },
         ...(t.file === null ? {} : { file: { abs: filePathAbs(t.file.path), mime: t.file.mime } }),

@@ -23,7 +23,7 @@ import {
   decisionMap,
   foundryFileUrl,
   instantOr,
-  mediaRef,
+  mediaRefs,
   mintPacket,
   runIdOf,
   v1Call,
@@ -100,7 +100,7 @@ async function read(ref: AdapterRef): Promise<Result<DojoV1>> {
   const detail = await v1Call(() => getCycle(id));
   if (!detail.ok) return detail;
   const { cycle, verdicts, blind, rev } = detail.value;
-  const media: Record<string, BlobRef> = {};
+  const files: { key: string; abs: string }[] = [];
   for (const imp of cycle.improvements) {
     // The thumbnail is what a cycle decided wholly in v1 shows per improvement (ruling 3).
     const rels = [...imp.pairs.flatMap((p) => [p.baseline, p.challenger].filter((r) => !r.deleted).map(shown)), ...(imp.thumbnail === undefined ? [] : [imp.thumbnail])];
@@ -110,11 +110,13 @@ async function read(ref: AdapterRef): Promise<Result<DojoV1>> {
         if (at.error.code === "not-found" || at.error.code === "invalid") continue;
         return at;
       }
-      const b = await mediaRef(at.value.abs);
-      if (b.ok) media[rel] = b.value;
-      else if (b.error.code !== "not-found") return b;
+      files.push({ key: rel, abs: at.value.abs });
     }
   }
+  // Hashed together, eight at a time, once every path has been resolved.
+  const hashed = await mediaRefs(files);
+  if (!hashed.ok) return hashed;
+  const media: Record<string, BlobRef> = Object.fromEntries(hashed.value);
   const sidecar = await v1Call(() => trainingFileStat(id, "blind.json"));
   const fallback = instantOr(cycle.at, new Date(0).toISOString()).at;
   const picksAt = sidecar.ok ? await stat(sidecar.value.abs).then((s) => s.mtime.toISOString(), () => fallback) : fallback;

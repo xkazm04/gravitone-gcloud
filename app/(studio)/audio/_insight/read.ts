@@ -13,6 +13,7 @@ import type { EngineDef } from "../../../../lib/sound/engines.ts";
 import { computeInsights } from "../../../../lib/sound/insights.ts";
 import { readLedger } from "../../../../lib/sound/store.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
+import { takeFileHref } from "../../../../lib/sound/takeHref.ts";
 import type { SoundTake } from "../../../../lib/sound/types.ts";
 import type { Kind } from "../_audio/desk.ts";
 import type { Read } from "../_audio/read.ts";
@@ -121,7 +122,7 @@ export function rubricTake(t: SoundTake & { verdict: "kept" | "rejected" }, m: A
     provider: t.provider,
     verdict: t.verdict,
     loop: t.loop,
-    src: t.file === null ? null : `/api/sound/takes/${encodeURIComponent(t.id)}/file`,
+    src: t.file === null ? null : takeFileHref(t.id),
     prompt: t.prompt,
     rubric: readRubric(t),
     ratings: t.ratings,
