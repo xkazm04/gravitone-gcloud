@@ -182,6 +182,15 @@ export function makeRealBoard(deps: Deps): ServerBoard {
     // v1's piles not opened yet, opened lazily when the operator opens one. A bare aggregate
     // is shown only while no pile of its base is open: the open one is that pile.
     const weir = await deps.weir();
+    // The page is cut at 100 rows: a decided packet past it whose pile v1 still lists (a stuck apply)
+    // is held all the same, so the Weir's ids are asked of the kernel directly.
+    if (listed.value.truncated) {
+      for (const w of weir) {
+        if (w.packetId === undefined || held.has(w.packetId)) continue;
+        const there = exists(k.value, w.packetId);
+        if (there.ok && there.value) held.add(w.packetId);
+      }
+    }
     const unopened: PacketSummary[] = [];
     for (const w of weir) {
       if (w.packetId === undefined || held.has(w.packetId) || openIds.some((o) => o.startsWith(`${w.packetId}/`))) continue;

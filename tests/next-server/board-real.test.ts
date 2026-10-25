@@ -34,7 +34,14 @@ import path from "node:path";
 
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { PacketId } from "@gt/domain/ids";
+import { parseAt } from "@gt/domain/door";
+import { packetIdSchema } from "@gt/domain/ids";
+import { packetSchema } from "@gt/domain/packet";
 import { redriveApply, takeApply, type Applier } from "@gt/kernel/decision/apply";
+import { commit as kernelCommit } from "@gt/kernel/decision/commit";
+import { consequenceToken } from "@gt/kernel/decision/consequence";
+import { openPacket, patchMany } from "@gt/kernel/decision/driver";
+import { currentDecisions } from "@gt/kernel/decision/read";
 import { openKernel } from "@gt/kernel/kernel";
 import type { Store } from "@gt/kernel/store";
 import { queryEvents } from "@gt/kernel/events-query";
@@ -294,5 +301,34 @@ describe("the real Board port over the fixture universe", () => {
     must(store.tx((t) => redriveApply(t, { by: "operator", surface: "board", packetId: p.view.id })));
     expect(must(await drainNow(store, { packetId: p.view.id })).map((x) => x.result)).toEqual(["applied"]);
     expect(eventTypes(p.view.id)).toEqual(expect.arrayContaining(["decision.apply-stuck", "decision.apply-redriven", "decision.applied"]));
+  });
+});
+
+describe("the rail past its first page", () => {
+  it("lists a decided packet beyond the 100-row page once, not again as an unopened pile", async () => {
+    const k2 = openKernel(path.join(ROOT, "rail-page.sqlite"), { clock: () => new Date(now) });
+    if (!k2.ok) throw k2.error;
+    try {
+      const s2 = k2.value.store;
+      const mint = (id: string) => {
+        const p = must(parseAt("packet id", packetIdSchema, id));
+        return { p, packet: must(parseAt("packet", packetSchema, { id, lane: "image", source: "forge", mode: "matrix-cull", state: "open", items: [{ id: "s1/a", jobId: "job-a", row: "s1", media: { sha256: "9f2c6a1e0b7d4c3f8a5e2d1c0b9a8f7e6d5c4b3a29180f7e6d5c4b3a2918a0b1", bytes: 1, mime: "image/png" }, grades: [] }] })) };
+      };
+      const stuck = mint("pkt:forge:run-stuck");
+      must(s2.tx((t) => openPacket(t, { packet: stuck.packet }, { by: "agent", surface: "cli" })));
+      must(s2.tx((t) => patchMany(t, { by: "operator", surface: "board", packetId: stuck.p, baseRev: 0, changes: [{ key: "pkt:forge:run-stuck::s1/a", verdict: "keep" as const }] })));
+      const decisions = must(s2.read((r) => currentDecisions(r, stuck.p))).decisions;
+      must(must(s2.tx((t) => kernelCommit(t, { by: "operator", surface: "board", packetId: stuck.p, ticket: "t-stuck", token: consequenceToken(decisions, "v1"), v1Digest: "v1" }))));
+      // 100 later piles, all open: open ones list first, so the decided one falls to row 101.
+      for (let i = 0; i < 100; i++) must(s2.tx((t) => openPacket(t, { packet: mint(`pkt:forge:run-${String(i).padStart(3, "0")}`).packet }, { by: "agent", surface: "cli" })));
+      const weirItem = { source: "forge", id: "run-stuck", title: "stuck", media: "image", kind: "cull", decided: 1, pending: 0, href: "/x", packetId: "pkt:forge:run-stuck" } as const;
+      const rail = makeRealBoard({ store: () => ok(s2), weir: async () => [weirItem as never], kick: () => {} });
+      const listed = must(await rail.listPackets());
+      // The page is truncated, so the decided packet is not listed at all; it must not come back as an untouched open pile.
+      expect(listed.truncated).toBe(true);
+      expect(listed.packets.filter((x) => x.id === "pkt:forge:run-stuck" && x.state === "open")).toEqual([]);
+    } finally {
+      k2.value.close();
+    }
   });
 });
