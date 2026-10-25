@@ -8,14 +8,13 @@
 // below that (plan §9.2: route handlers are for CLIs, agents and FILES). Access-gated, not money:
 // nothing here spends (v1 POST /api/sound/takes, the same reasoning).
 //
-// THE CAP IS HELD HERE, ON THE BYTES. route()'s `bodyCap` binds its JSON reader, and this door
-// declares no `input`, so the cap it passes is not applied for it; a declared content-length is
-// checked up front, and a body that declares none (chunked) is counted as it is read and refused
-// at the cap, never buffered whole (tests/next-server/audio-hunt-return.test.ts).
+// THE CAP IS route()'s: its `bodyCap` counts the body as the handler reads it (a route with no `input`
+// included) and a declared content-length over it is refused up front; this door words the refusal
+// in MB (tests/next-server/audio-hunt-return.test.ts).
 import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
-import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 import { route } from "../../../_server/route.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
@@ -33,22 +32,12 @@ const fields = z.object({ hunt: soundId, node: soundId, op: z.string().regex(HUN
 const CAP = MAX_UPLOAD_BYTES + 1_000_000;
 const over = `the upload is over ${MAX_UPLOAD_BYTES / 1048576} MB`;
 
-/** The multipart body, read through a counter that errors past CAP. */
+/** The multipart body. route()'s `bodyCap` counts it as it is read and errors past CAP (body-too-large). */
 async function cappedForm(req: Request): Promise<Result<FormData>> {
-  let size = 0;
-  const counted = req.body?.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, c) {
-        size += chunk.byteLength;
-        if (size > CAP) c.error(new Error(over));
-        else c.enqueue(chunk);
-      },
-    }),
-  );
   try {
-    return ok(await new Response(counted ?? null, { headers: { "content-type": req.headers.get("content-type") ?? "" } }).formData());
+    return ok(await req.formData());
   } catch (e) {
-    return size > CAP ? err("invalid", over) : err("invalid", `expected multipart/form-data with file, hunt, node and op: ${errorMessage(e)}`);
+    return e instanceof AppError && e.detail === "body-too-large" ? err("invalid", over) : err("invalid", `expected multipart/form-data with file, hunt, node and op: ${errorMessage(e)}`);
   }
 }
 

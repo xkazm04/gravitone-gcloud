@@ -125,6 +125,25 @@ export async function guardOf(req: Request, guard: Exclude<Guard, "public">): Pr
   return { who };
 }
 
+function bodyTooBig(where: string, cap: number): AppError {
+  return new AppError("invalid", `${where}: body exceeds ${cap} bytes`, { detail: "body-too-large" });
+}
+
+/** The same request with its body counted as it is read: past `cap` the stream errors with body-too-large. */
+function cappedRequest(req: Request, cap: number, where: string): Request {
+  let size = 0;
+  const counted = req.body!.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, c) {
+        size += chunk.byteLength;
+        if (size > cap) c.error(bodyTooBig(where, cap));
+        else c.enqueue(chunk);
+      },
+    }),
+  );
+  return new Request(req, { body: counted, duplex: "half" } as RequestInit);
+}
+
 function deadline(req: Request, maxDuration: number | undefined): AbortSignal {
   if (maxDuration === undefined) return req.signal;
   return AbortSignal.any([req.signal, AbortSignal.timeout(Math.max(1_000, maxDuration * 1000 - DEADLINE_MARGIN_MS))]);
@@ -154,6 +173,13 @@ export function route<S extends z.ZodType | undefined = undefined, T = unknown>(
         // A route that declared no input takes no body; one byte is refused, not ignored.
         const none = await readJson(req, 0, z.null(), where);
         if (!none.ok) return envelope(none.error, where);
+      } else if (HAS_BODY.has(req.method) && opts.bodyCap > 0 && req.body !== null) {
+        // A route that declared no input reads its own body (a multipart file, an archive, JSON-RPC):
+        // the cap it declared still binds the bytes as the handler pulls them, so a body that
+        // declares no length is cut at the cap, never buffered whole.
+        const declared = Number(req.headers.get("content-length") ?? "NaN");
+        if (Number.isFinite(declared) && declared > opts.bodyCap) return envelope(bodyTooBig(where, opts.bodyCap), where);
+        req = cappedRequest(req, opts.bodyCap, where);
       }
       // `input` is the schema door's output when `opts.input` is a schema and
       // undefined when it is not - which is InputOf<S> by construction; the
