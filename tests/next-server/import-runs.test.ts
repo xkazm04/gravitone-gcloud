@@ -11,6 +11,7 @@ import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { reconcileJobSpend } from "@gt/kernel/spend/projection";
 import type { Store } from "@gt/kernel/store";
 
+import { ARTICLE_STATUSES, WORKING } from "../../lib/articles/types.ts";
 import { listV1Runs } from "../../lib/import/runSources.ts";
 import { importRuns, type V1Run } from "../../lib/import/runs.ts";
 import { clearV1, seedV1, v1Archive } from "./import-harness.ts";
@@ -103,6 +104,27 @@ describe("the v1 stores the importer reads", () => {
     } finally {
       if (was === undefined) delete process.env["SOUND_STORE_DIR"];
       else process.env["SOUND_STORE_DIR"] = was;
+    }
+  });
+
+  it("reads an article run as working by the article store's own WORKING set, failed as failed, the rest done", async () => {
+    const dir = temp("gt-import-articles-");
+    const was = process.env["ARTICLES_STORE_DIR"];
+    process.env["ARTICLES_STORE_DIR"] = dir;
+    try {
+      for (const status of ARTICLE_STATUSES) {
+        mkdirSync(path.join(dir, `a-${status}`));
+        writeFileSync(path.join(dir, `a-${status}`, "run.json"), JSON.stringify({ id: `a-${status}`, status, createdAt: "2026-09-05T10:00:00.000Z", topic: { kind: "free", text: "glass harbors" } }));
+      }
+      const r = await listV1Runs(["article"]);
+      if (!r.ok) throw r.error;
+      const got = Object.fromEntries(r.value.runs.map((x) => [x.runId.slice(2), x.state]));
+      expect(got).toEqual(Object.fromEntries(ARTICLE_STATUSES.map((s) => [s, s === "failed" ? "failed" : WORKING.includes(s) ? "live" : "done"])));
+      // approved and landing are still the driver's: never imported as finished history.
+      expect([got["approved"], got["landing"]]).toEqual(["live", "live"]);
+    } finally {
+      if (was === undefined) delete process.env["ARTICLES_STORE_DIR"];
+      else process.env["ARTICLES_STORE_DIR"] = was;
     }
   });
 });

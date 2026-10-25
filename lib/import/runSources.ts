@@ -9,6 +9,7 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { readJsonFile, RUN_ID_RE } from "@/lib/articles/store";
+import { ARTICLE_STATUSES, WORKING } from "@/lib/articles/types";
 import { articlesRoot } from "@/lib/ledger/v1/sources/articles";
 import { getExtractRun, listExtractRuns } from "@/lib/foundry/extract/store";
 import { getRun, listRuns as listForgeRuns } from "@/lib/foundry/store";
@@ -28,7 +29,8 @@ import type { V1Run, V1RunState } from "./runs.ts";
 //   extract   done | committed -> done; failed -> failed; the rest is working
 //   dojo      awaiting-gate | committed -> done (its gate is a Board packet); failed -> failed
 //   strips    awaiting-triage | committed -> done; running -> working (v1 never marks a crash)
-//   article   awaiting-approval | approved... | landed | rejected -> done; failed -> failed
+//   article   failed -> failed; the article store's own WORKING set (queued ... checking, approved,
+//             landing: a driver's) -> working; awaiting-approval | landed | rejected -> done; a status it does not know -> working
 //   mv, suno  done -> done; failed | cancelled -> failed; queued | active -> working
 // The run input is each producer's own (@gt/domain/produce `ProducerRunInput`), built as its
 // producer builds it: extract's after lib/producers/extract.ts `extractInput` (a v1 `transfers`
@@ -133,6 +135,8 @@ async function strips(c: Collect): Promise<void> {
 }
 
 const SUBJECT = /^[a-z0-9-]+\/[a-z0-9-]+$/;
+/** Every article status no driver is working through, but `failed` (and a status this build does not know is working). */
+const ARTICLE_DONE: readonly string[] = ARTICLE_STATUSES.filter((s) => s !== "failed" && !WORKING.includes(s));
 
 /** v1's `listRuns` walk (lib/articles/store.ts) over the root the ledger reads it at
  *  (`articlesRoot`: the article store honours ARTICLES_STORE_DIR only, not the fixture universe). */
@@ -158,7 +162,7 @@ async function article(c: Collect): Promise<void> {
       const subject = m.topic.kind === "subject" ? `${m.topic.bundle ?? ""}/${m.topic.subject ?? ""}` : "";
       const angle = m.topic.angle === undefined || m.topic.angle.trim() === "" ? {} : { angle: m.topic.angle };
       const input: ProducerRunInput = SUBJECT.test(subject) ? { producer: "article", subject, ...angle } : { producer: "article", topic: m.topic.text.trim() || m.id, ...angle };
-      return { source: "article", runId: m.id, input, at: m.createdAt, state: stateOf(m.status, ["awaiting-approval", "landed", "rejected"], ["failed"]), ...errorOf(m) };
+      return { source: "article", runId: m.id, input, at: m.createdAt, state: stateOf(m.status, ARTICLE_DONE, ["failed"]), ...errorOf(m) };
     });
   }
 }
