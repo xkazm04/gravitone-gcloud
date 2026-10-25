@@ -72,6 +72,7 @@
 import { PROMPT_CHAR_LIMIT, compilePrompt, compileStyleBlock, NO_TEXT_CLAUSE } from "@/lib/stylePrompt";
 import type { StyleBlock } from "@gt/catalog/style";
 
+import type { PictureUnit } from "@/lib/frames/picture/unit";
 import type { Shot, ShotSize, TrailerRole } from "@/lib/frames/shots";
 
 /* ── The subject recipes ──────────────────────────────────────────────────── */
@@ -181,7 +182,7 @@ const DIRECTION_PHRASE: Readonly<Record<Shot["direction"], string>> = {
  * stage the same way produce the same clause and a reader can diff them. There
  * is no prose written here that a shot does not already contain.
  */
-export function actionFor(shot: Shot): string {
+export function actionFor(shot: Pick<Shot, "role" | "size" | "angle" | "direction" | "placement" | "motion"> & { subject?: string | undefined }): string {
   const parts: string[] = [];
 
   if (shot.size) {
@@ -204,6 +205,14 @@ export function actionFor(shot: Shot): string {
   if (shot.motion.trim()) parts.push(`The frame is the first frame of a shot that ${shot.motion.trim()}.`);
 
   return parts.join(" ");
+}
+
+/** The plate subject of a SHOT unit: `actionFor` over the staging the unit carries and the motion
+ *  it holds, so a trailer's plates differ per shot as the shot lane designed. Null for a unit with
+ *  no staging (a beat unit, or a shot row written before staging was carried). */
+export function actionOfUnit(u: Pick<PictureUnit, "kind" | "staging" | "clip">): string | null {
+  if (u.kind !== "shot" || u.staging === undefined) return null;
+  return actionFor({ ...u.staging, motion: u.clip?.motion ?? "" });
 }
 
 /* ── The proposal ─────────────────────────────────────────────────────────── */

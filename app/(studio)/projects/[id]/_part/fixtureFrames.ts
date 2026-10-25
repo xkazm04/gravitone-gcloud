@@ -7,6 +7,7 @@ import { framesOpLabel, scriptFaceOf, type FramesOp, type PartActKind, type Part
 import { needsPlate } from "@gt/producers/frames/define";
 import { explainerRender, isStalePlate, subjectFor, trailerRender, type Frame, type Plate } from "@/lib/frames/frames";
 import { frameOfUnit, framesFromUnits, unitsFromRender, type PictureUnit } from "@/lib/frames/picture/unit";
+import { actionOfUnit } from "@/lib/frames/shotPrompt";
 import { reviewSceneSpecs } from "@/lib/frames/sceneSpec";
 import { RENDERS } from "@/lib/script/renders";
 import { derive } from "@/lib/script/trailer/ops";
@@ -93,7 +94,7 @@ export function unitsOf(ctx: KCtx, r: FramesRec): readonly UnitRec[] {
 }
 
 /** The subject a plate is asked for: the stored one, else v1's beat-role seed (`subjectFor`). */
-export const subjectOf = (u: UnitRec): string => u.plate.subject ?? (u.kind === "beat" ? subjectFor(frameOfUnit(u)) : (u.staging?.subject ?? u.line));
+export const subjectOf = (u: UnitRec): string => u.plate.subject ?? (u.kind === "beat" ? subjectFor(frameOfUnit(u)) : (actionOfUnit(u) ?? u.staging?.subject ?? u.line));
 
 /** A plate the next render owes: the producer's rule, called (@gt/producers/frames/define
  *  `needsPlate`: empty - a gate's rejection empties it - refused, or behind its subject by

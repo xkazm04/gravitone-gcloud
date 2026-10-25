@@ -17,6 +17,7 @@ import { planFromSpecs } from "@/lib/frames/directionPlan";
 import { landDirection } from "@/lib/frames/direction";
 import { explainerRender, subjectFor, type Frame, type Plate } from "@/lib/frames/frames";
 import { frameOfUnit, framesFromUnits, unitsFromRender, type PictureUnit } from "@/lib/frames/picture/unit";
+import { actionOfUnit } from "@/lib/frames/shotPrompt";
 import { SCENE_SCHEMA } from "@/lib/frames/sceneSpec";
 import { budgetQuote, earliestExpiry } from "@/lib/imaging/budgetForecast";
 import { ImagingError } from "@/lib/imaging/errors";
@@ -225,7 +226,7 @@ async function imageUnit(ctx: StepContext, unit: ActUnit, req: GenerateRequest, 
 }
 
 function plateRequest(u: PictureUnit, look: ProjectLook): { req: GenerateRequest; subject: string } {
-  const subject = u.plate.subject?.trim() || subjectFor(frameOfUnit(u));
+  const subject = u.plate.subject?.trim() || actionOfUnit(u) || subjectFor(frameOfUnit(u));
   return { subject, req: { prompt: compilePrompt(look.block, subject), negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1 } };
 }
 
