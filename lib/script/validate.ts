@@ -510,9 +510,22 @@ export function parseDraft(raw: string, ctx: ComposeContext): ComposeOutcome {
 export function asNotebook(x: unknown): Notebook | null {
   if (!x || typeof x !== "object") return null;
   const n = x as Loose;
-  const arrays = ["facts", "mechanisms", "reversals", "unknowns", "engineFit"] as const;
+  const arrays = ["facts", "mechanisms", "reversals", "unknowns", "engineFit", "counterPositions"] as const;
   if (!arrays.every((k) => Array.isArray(n[k]))) return null;
   if (!n.steelMan || typeof n.steelMan !== "object") return null;
-  if (!(n.facts as Loose[]).every((f) => f && typeof f.id === "string" && typeof f.claim === "string")) return null;
+  // EVERY FIELD THE CARDS AND THE GATE DEREFERENCE, and no more: buildCards
+  // walks each card list, a reversal's evidence, a mechanism's evidence and
+  // steps; the gate walks the unknowns and the felt conversions. A notebook
+  // that fails one of these used to be admitted here and throw a TypeError one
+  // call later - on the script producer's receipt, before any sentence existed.
+  const obj = (v: unknown): v is Loose => !!v && typeof v === "object" && !Array.isArray(v);
+  const ids = (v: unknown) => Array.isArray(v) && v.every((s) => typeof s === "string");
+  const opt = (v: unknown, ok: (v: unknown) => boolean) => v === undefined || ok(v);
+  const card = (v: unknown): v is Loose => obj(v) && typeof v.id === "string";
+  if (!(n.facts as unknown[]).every((f) => card(f) && typeof f.claim === "string")) return null;
+  if (!(n.mechanisms as unknown[]).every((m) => card(m) && opt(m.evidence, ids) && opt(m.steps, (s) => Array.isArray(s) && s.every((st) => obj(st) && opt(st.evidence, ids))))) return null;
+  if (!(n.reversals as unknown[]).every((r) => card(r) && ids(r.evidence))) return null;
+  if (!(n.unknowns as unknown[]).every(card)) return null;
+  if (!opt(n.scaleConversions, (s) => Array.isArray(s) && s.every((c) => obj(c) && typeof c.raw === "string" && typeof c.felt === "string"))) return null;
   return x as Notebook;
 }
