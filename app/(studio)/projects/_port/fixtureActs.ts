@@ -328,7 +328,7 @@ export function reroute(u: Universe, id: string, key: string, now: number, token
 
 export function ackLane(u: Universe, lane: ResourceLane): Result<ActOutcome> {
   const h = u.holds.get(lane);
-  if (h === undefined) return err("not-found", `${lane} is not on hold`);
+  if (h === undefined) return err("refused", `lane ${lane} is not held`);
   u.holds.delete(lane);
   return ok({ jobId: h.jobId, note: `${lane} hold acknowledged` });
 }

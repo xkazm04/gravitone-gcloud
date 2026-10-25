@@ -264,7 +264,7 @@ export function makeRealProduce(deps: RealDeps): ServerProduce {
         const r = ackLane(s, lane, actorOf(who));
         if (!r.ok) return r;
         const first = r.value[0];
-        return first === undefined ? err("refused", `${lane} is not held`) : ok({ jobId: first.jobId, note: `${lane} hold acknowledged` });
+        return first === undefined ? err("refused", `lane ${lane} is not held`) : ok({ jobId: first.jobId, note: `${lane} hold acknowledged` });
       }),
 
     listJobs: () => withStore((s) => s.read((r) => jobsView(r, deps.now()))),

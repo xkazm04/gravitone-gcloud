@@ -112,3 +112,11 @@ describe("a resume takes a paused job back to its queue, and nothing else", () =
     expect([fixtureState(failed), fixtureState(interrupted)]).toEqual(["failed", "interrupted"]);
   });
 });
+
+describe("an acknowledgement is of a lane that holds", () => {
+  it("refuses a lane nothing holds on both sides, in the kernel's words", async () => {
+    const realSaid = await said(real.ackLane({ lane: "cloud.google" }, op));
+    expect(realSaid).toBe("refused: lane cloud.google is not held");
+    expect(await said(fixture.ackLane({ lane: "cloud.google" }, op))).toBe(realSaid);
+  });
+});
