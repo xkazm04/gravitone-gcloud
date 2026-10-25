@@ -40,7 +40,7 @@ import { CompositionList } from "../../_plan/CompositionList.tsx";
 import { useCompose } from "../../_plan/compose.tsx";
 import { outcomeOf, useReceipt } from "../../_plan/receipt.tsx";
 import type { RunsData } from "./load.ts";
-import { canMove, canPause, canRetry } from "./Acts.tsx";
+import { canMove, canPause, canReroute, canRetry } from "./Acts.tsx";
 import { DojoDoors, dojoSpec, type DojoPort } from "./DojoDoors.tsx";
 import { Inspector, type InspectorActs } from "./Inspector.tsx";
 import { mvRegenerateSpec, type MvPort } from "./MvActs.tsx";
@@ -124,7 +124,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
 
   // The selected job's alternatives, read when it is selected (latest wins: a fast J/K walk must
   // not draw one job's options under another).
-  const actId = act?.reroutable === true ? act.id : null;
+  const actId = act !== undefined && canReroute(act, data.holds) ? act.id : null;
   useEffect(() => {
     if (actId === null) return;
     let live = true;
@@ -242,7 +242,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
     if (next !== null) setSel((cur) => ({ ...cur, project: next, job: null }));
   };
 
-  const facts = [...(job === null ? [] : ["job"]), ...(act?.reroutable === true ? ["reroutable"] : []), ...(data.holds.length > 0 ? ["hold"] : [])];
+  const facts = [...(job === null ? [] : ["job"]), ...(act !== undefined && canReroute(act, data.holds) ? ["reroutable"] : []), ...(data.holds.length > 0 ? ["hold"] : [])];
   // Two scopes: the `projects` rows Plan shares, then the `projects.runs` rows only Runs has. The
   // dispatcher runs a row's handler from the scope of the row's own mode, and the page's mode is
   // the scope mounted last - `projects.runs`, so its P shadows Plan's P while a job is selected.
@@ -256,7 +256,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
       project: ({ cap }) => (projects.length === 0 ? false : walkProject(cap === "↓" ? 1 : -1)),
       deselect: () => select(null),
       compose: () => compose.open(),
-      retry: () => (act === undefined || !canRetry(act) ? false : acts.onRetry(undefined)),
+      retry: () => (act === undefined || !canRetry(act, data.holds) ? false : acts.onRetry(undefined)),
       move: ({ index }) => (act === undefined || !canMove(act) ? false : acts.onMove(index === 0 ? "earlier" : "later")),
     },
     { facts },

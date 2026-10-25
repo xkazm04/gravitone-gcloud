@@ -46,14 +46,18 @@ export type JobActsProps = {
   readonly reading: string | null;
   readonly onReroute: (key: string) => void;
   readonly altsRef: RefObject<HTMLDivElement | null>;
+  readonly holds: readonly LaneHoldView[];
 };
 
 /** The job machine's own edge: a planned job has not joined the line, so the kernel refuses its pause. */
 export const canPause = (j: ProduceJob): boolean => jobMachine.can(j.state, "paused");
-export const canRetry = (j: ProduceJob): boolean => j.state === "failed" || j.state === "interrupted";
+/** The job a lane's hold names: both port sides refuse its retry and its re-route until the hold is acknowledged. */
+export const heldFor = (j: ProduceJob, holds: readonly LaneHoldView[]): boolean => holds.some((h) => h.jobId === j.id);
+export const canRetry = (j: ProduceJob, holds: readonly LaneHoldView[] = []): boolean => (j.state === "failed" || j.state === "interrupted") && !heldFor(j, holds);
+export const canReroute = (j: ProduceJob, holds: readonly LaneHoldView[] = []): boolean => j.reroutable && !heldFor(j, holds);
 export const canMove = (j: ProduceJob): boolean => (j.state === "queued" || j.state === "planned") && !j.blocked;
 
-export function JobActs({ job: j, busy, onPause, onResume, onRetry, onMove, retryCeiling, onRetryCeiling, options, optionsError, reading, onReroute, altsRef }: JobActsProps) {
+export function JobActs({ job: j, busy, onPause, onResume, onRetry, onMove, retryCeiling, onRetryCeiling, options, optionsError, reading, onReroute, altsRef, holds }: JobActsProps) {
   const ceiling = parseCeiling(retryCeiling);
   const facts: Fact[] = [
     { term: "model", value: j.model },
@@ -82,7 +86,7 @@ export function JobActs({ job: j, busy, onPause, onResume, onRetry, onMove, retr
         )}
         {canPause(j) && <Button size="sm" label="pause" onPress={onPause} disabled={busy} shortcut={{ mode: "projects.runs", verb: "pause" }} />}
         {j.state === "paused" && <Button size="sm" tone="cyan" label="resume" onPress={onResume} disabled={busy} shortcut={{ mode: "projects.runs", verb: "pause" }} />}
-        {canRetry(j) && (
+        {canRetry(j, holds) && (
           <span className={s.retry}>
             <Button size="sm" tone="amber" label="retry · same route" onPress={() => (ceiling.ok ? onRetry(ceiling.value) : undefined)} disabled={busy || !ceiling.ok} shortcut={{ mode: "projects", verb: "retry" }} />
             <label className={s.ceil}>
@@ -92,7 +96,7 @@ export function JobActs({ job: j, busy, onPause, onResume, onRetry, onMove, retr
           </span>
         )}
       </div>
-      {j.reroutable && (
+      {canReroute(j, holds) && (
         <section className={s.sect}>
           <CapsHeading text="re-route" tally={{ value: options === null ? 0 : options.filter((o) => !o.current).length, label: "options" }} />
           <div ref={altsRef}>

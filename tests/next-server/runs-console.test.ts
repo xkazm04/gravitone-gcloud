@@ -10,8 +10,8 @@ import { describe, expect, it } from "vitest";
 
 import { jobMachine, type JobState } from "@gt/domain/job.machine";
 
-import type { ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
-import { canMove, canPause, canRetry } from "../../app/(studio)/projects/runs/_runs/Acts.tsx";
+import type { LaneHoldView, ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
+import { canMove, canPause, canReroute, canRetry } from "../../app/(studio)/projects/runs/_runs/Acts.tsx";
 
 const job = (over: Partial<ProduceJob> = {}): ProduceJob => ({
   id: "job:part:p1:research",
@@ -49,5 +49,16 @@ describe("1. an act is offered only where the kernel takes it", () => {
   it("a move is offered on a waiting job that is not behind a stuck part", () => {
     expect(jobMachine.states.filter((state) => canMove(job({ state })))).toEqual(["planned", "queued"]);
     expect(canMove(job({ blocked: true }))).toBe(false);
+  });
+
+  // real.ts retryJob and realReroute.ts confirm refuse "<lane> is on hold for this job: acknowledge
+  // the hold first", and fixtureActs.ts retryJob the same: the hold is looked at before the work.
+  it("the job its lane holds for is offered neither a retry nor a re-route until the hold is acknowledged", () => {
+    const crashed = job({ state: "interrupted", reroutable: true });
+    const hold: LaneHoldView = { lane: "seat.text", jobId: crashed.id, title: crashed.title, since: "2026-10-24T09:00:00.000Z" };
+    expect([canRetry(crashed, [hold]), canReroute(crashed, [hold])]).toEqual([false, false]);
+    expect([canRetry(crashed, []), canReroute(crashed, [])]).toEqual([true, true]);
+    const other = { ...hold, jobId: "job:part:p2:research" };
+    expect([canRetry(crashed, [other]), canReroute(crashed, [other])]).toEqual([true, true]);
   });
 });

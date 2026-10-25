@@ -6390,4 +6390,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "j.state === \"queued\" || j.state === \"running\" || j.state === \"planned\"",
     why: "Runs draws a pause button, and P fires, on a planned part the kernel refuses to pause: the operator presses and reads a refusal.",
   },
+  {
+    id: "runs-console-acts-offered-on-held-job",
+    test: "tests/next-server/runs-console.test.ts",
+    file: "app/(studio)/projects/runs/_runs/Acts.tsx",
+    find: "holds.some((h) => h.jobId === j.id)",
+    replace: "false",
+    why: "Runs offers retry and the re-route list on the crashed job its lane holds for, and both port sides refuse each until the hold is acknowledged - a re-route only after its receipt was read.",
+  },
 ];
