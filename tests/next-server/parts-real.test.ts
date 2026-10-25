@@ -34,14 +34,14 @@ afterEach(() => {
 const OP = { kind: "operator", id: "op" } as const;
 const NOW = Date.parse("2026-10-16T09:00:00Z");
 
-function universe(recipe: string, id: string): { store: Store; port: ReturnType<typeof makeRealPart> } {
+function universe(recipe: string, id: string, takeId?: string): { store: Store; port: ReturnType<typeof makeRealPart> } {
   const dir = mkdtempSync(path.join(tmpdir(), "gt-parts-"));
   dirs.push(dir);
   const k = openKernel(path.join(dir, "k.sqlite"));
   if (!k.ok) throw k.error;
   open.push(k.value);
   const store = k.value.store;
-  const c = compose(store, { recipe }, OP, { id });
+  const c = compose(store, { recipe, ...(takeId === undefined ? {} : { takeId }) }, OP, { id });
   if (!c.ok) throw c.error;
   return { store, port: portOn(store, dir) };
 }
@@ -179,9 +179,23 @@ describe("an act whose kind has no producer bound", () => {
     expect(r.ok ? "priced" : { code: r.error.code, message: r.error.message }).toEqual({ code: "unavailable", message: "no producer is bound for a article part yet" });
     const go = await port.act({ projectId: "ex1", key: "article", act: "write-article", token: "0123456789abcdef" });
     expect(go.ok ? "launched" : { code: go.error.code, message: go.error.message }).toEqual(r.ok ? "priced" : { code: r.error.code, message: r.error.message });
-    const album = universe("album-video", "a1");
+    const album = universe("album-video", "a1", "take-salt-lines");
     const words = await album.port.actReceipt({ projectId: "a1", key: "words", act: "write-words" });
     expect(words.ok).toBe(true);
+  });
+});
+
+describe("an act whose kind module says it still needs something", () => {
+  // The view draws write-words blocked ("a track") when the album has no take; the real receipt
+  // and the confirm refuse in the module's words instead of pricing and launching it.
+  it("is refused at the receipt and at the confirm in the module's words", async () => {
+    const { port } = universe("album-video", "a2");
+    const view = await must(port.loadPart({ projectId: "a2", key: "words" }));
+    expect(view.acts.find((a) => a.act === "write-words")?.needs).toEqual(["a track"]);
+    const r = await port.actReceipt({ projectId: "a2", key: "words", act: "write-words" });
+    expect(r.ok ? "priced" : r.error.message).toBe("write words needs a track");
+    const go = await port.act({ projectId: "a2", key: "words", act: "write-words", token: "0123456789abcdef" });
+    expect(go.ok ? "launched" : go.error.message).toBe("write words needs a track");
   });
 });
 

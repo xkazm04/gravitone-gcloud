@@ -17,6 +17,7 @@ import type { Actor } from "@gt/domain/event";
 import type { EditorKind, PartActKind, PartOp, PartReceipt, PartView } from "@gt/domain/partView";
 
 import type { ServerPart } from "./port.ts";
+import { isLaterKind, later } from "./kinds.ts";
 import { actorOfWho, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type Scene } from "./realScene.ts";
 
 // THE REAL PART SIDE (L36) - the PartPort over the kernel's `parts` module: the part's records
@@ -163,10 +164,19 @@ function launchAct(deps: RealDeps, store: Store, projectId: string, key: string,
   const kind = scene.value.kind;
   const bound = boundOf(kind);
   if (!bound.ok) return bound;
+  const needs = moduleNeeds(scene.value, act, target);
+  if (!needs.ok) return needs;
   const ref = { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) };
   const l = launchPartAct(store, ref, bound.value.units, { mode: "dry", now, token, actor });
   if (!l.ok) return l;
   return l.value.kind === "stale" ? ok({ kind: "stale", fresh: partReceiptOf(l.value.fresh, act) }) : ok({ kind: "go", jobId: l.value.jobId, kind_: kind });
+}
+
+/** A later kind's own refusal (the view's `needs`: "write words needs a track"), the one the fixture
+ *  side's receipt gives. The producer's units price the purchase; they do not know what the editor
+ *  still lacks, so both halves ask the module first. */
+function moduleNeeds(scene: Scene, act: PartActKind, target?: string): Result<number> {
+  return isLaterKind(scene.kind) ? later(scene.kind).units(scene.ctx, act, target) : ok(0);
 }
 
 /** The lib receipt in the editor contract's words (its act is this editor's own). */
@@ -190,6 +200,8 @@ function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartAct
   if (!scene.ok) return scene;
   const bound = boundOf(scene.value.kind);
   if (!bound.ok) return bound;
+  const needs = moduleNeeds(scene.value, act, target);
+  if (!needs.ok) return needs;
   const r = partActReceipt(k.value, { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) }, bound.value.units, { mode: "dry", now });
   return r.ok ? ok(partReceiptOf(r.value, act)) : r;
 }
