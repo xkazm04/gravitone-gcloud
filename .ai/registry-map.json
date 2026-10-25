@@ -11304,7 +11304,11 @@
           "revision": 10,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/slots/schema.ts:78 The publications and metric_snapshots ledgers are append-only with no stated horizon or reaper anywhere (the search over the kernel's slots and records modules, lib/publish and workers found none), so metric readings written on a timer grow without bound, against retention-and-partitioning.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
+          "evaluatedRevision": 10
         },
         {
           "subject": "subprocess-lifecycle",

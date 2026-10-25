@@ -6646,42 +6646,54 @@
       "context": "run-records-and-slots",
       "subject": "audit-logging",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-18",
-      "evaluatedTs": "2026-10-18T21:47:20.645Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:10:18.805Z",
+      "worker": "3d61bdfc-dbc3-4060-9fe7-f2682d25f583",
       "techniques": [
         {
-          "technique": "append-only-design",
+          "technique": "retention-and-partitioning",
           "verdict": "deviation",
-          "evidence": "packages/kernel/src/records/schema.ts:93 Project, part, and run entities expose in-place UPDATE mutations rather than maintaining immutable history via append-only revisions."
+          "evidence": "packages/kernel/src/slots/schema.ts:78 An append-only ledger with no age or count horizon at its insert door and no named reaper."
         },
         {
-          "technique": "best-effort-with-accounting",
+          "technique": "append-only-design",
           "verdict": "conformant",
-          "evidence": "packages/kernel/src/slots/outcome.ts:57 Publication records act as fail-closed control records participating directly in the publishing transaction."
+          "evidence": "packages/kernel/src/slots/schema.ts:67 Publications and readings refuse UPDATE and DELETE at the schema, and slots refuse DELETE (cancel is soft). State rows that do mutate (runs, projects) record the change as a new event with from/to, for example launch.ts:277 run.relaunched."
         },
         {
           "technique": "write-chokepoint",
           "verdict": "conformant",
-          "evidence": "packages/kernel/src/records/write.ts:47 All plan mutation actions route ledger event writes through the single projectEvent helper within the mutation transaction."
+          "evidence": "packages/kernel/src/slots/write.ts:38 Every slot INSERT and UPDATE goes through one door that appends its event in the same transaction. A grep shows the record and slot tables are written only from schema.ts, write.ts, outcome.ts and import.ts, so the writers can be listed."
+        },
+        {
+          "technique": "write-path-sanitization",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/write.ts:61 The event carries references (ids, state, channel, rev), not the slot's free-form title, description or tags."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/outcome.ts:50 The publication row doubles as the duplicate guard, so it fails the action (claim exception), and the claim is fenced by a lease (assertFence)."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/outcome.ts:118 The reading's own time (snap.at, stored in metric_snapshots.at) is kept apart from the ledger's recorded `at`."
         },
         {
           "technique": "record-axis-predicate",
           "verdict": "deviation",
-          "evidence": "packages/kernel/src/slots/read.ts:43 Slot reads query current mutable rows without implementing a held_at(T) record-axis predicate to rewind to historical state."
+          "evidence": "packages/kernel/src/slots/read.ts:43 Slot reads query current mutable rows without implementing a held_at(T) record-axis predicate to rewind to historical state.",
+          "carriedFrom": "2026-10-18"
         },
         {
           "technique": "tamper-evidence",
           "verdict": "conformant",
-          "evidence": "packages/kernel/src/records/receipt.ts:112 Static launch receipts generate canonical SHA-256 tokens binding input lines and queue state to prove integrity at confirmation."
+          "evidence": "packages/kernel/src/records/receipt.ts:112 Static launch receipts generate canonical SHA-256 tokens binding input lines and queue state to prove integrity at confirmation.",
+          "carriedFrom": "2026-10-18"
         }
-      ],
-      "withdrawn": {
-        "worker": "c8fd5e99-17a1-4fcd-b394-ad0723cd1421",
-        "state": "deviation",
-        "at": "2026-10-18T21:48:30.149534+00:00",
-        "reason": "reviewer (sonnet): schema.ts:93 is a compare-and-set UPDATE on the mutable projects table, which is operational state and not the audit log. write.ts shows each mutation appending a ledger event in the same transaction, so 'destroys prior state with no append-only record' is not supported. I also could not confirm the"
-      }
+      ]
     },
     "2e702395-189e-4eb9-910c-dc4b76ff6e9a/audit-logging": {
       "context": "ui-ledger-timeline",
