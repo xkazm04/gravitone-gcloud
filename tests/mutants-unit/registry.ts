@@ -1953,8 +1953,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "ui-lanes-own-capacity",
     test: "packages/ui/test/components/runs.test.ts",
     file: "packages/ui/src/components/runs/lanes.ts",
-    find: "cap: LANE_CAPACITY[\"cloud.qwen\"]",
-    replace: "cap: 2",
+    find: "cap: LANE_CAPACITY[l] }",
+    replace: "cap: l === \"cloud.qwen\" ? 2 : LANE_CAPACITY[l] }",
     why: "The Runs row packs two Qwen jobs running where the lease grants one slot, so the day-line shows work that cannot be happening.",
   },
   {
