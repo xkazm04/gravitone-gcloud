@@ -45,12 +45,12 @@ import type { Candidate, RunManifest, StyleDef } from "@/lib/foundry/types";
 import { VERDICT_LOG, VerdictRevConflict, parseVerdictPatch } from "@/lib/foundry/verdictLog";
 
 import { Interleaver, interleavedPort, stripAt } from "./_effects";
-import { keepEnv, probeFoundryDir, stripComments } from "./_helpers";
+import { keepEnv, probeFoundryDir, probeTrainingDir, stripComments } from "./_helpers";
 
 keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH"]);
 const foundryDir = probeFoundryDir();
 
-const TRAINING_ROOT = path.join(process.cwd(), "foundry-out", "training");
+const trainingDir = probeTrainingDir();
 const STRIPS_ROOT = path.join(process.cwd(), "foundry-out", "strips");
 const SECRET = "verdict-patch-probe-secret";
 
@@ -155,7 +155,7 @@ function extractRun(verdicts?: Record<string, unknown>): string {
 /** A cycle awaiting the gate with improvements imp-1 and imp-2. */
 function cycle(verdicts?: Record<string, unknown>): string {
   const id = uid("dojo");
-  const dir = path.join(TRAINING_ROOT, id);
+  const dir = path.join(trainingDir(), id);
   made.push(dir);
   mkdirSync(dir, { recursive: true });
   const imp = (iid: string) => ({
@@ -382,7 +382,7 @@ test("6. dojo: a clear removes the key and logs op 'clear'; strips: a chip outsi
   const d = cycle({ "imp-1": "approve" });
   const res = await patchTrainingVerdicts(d, { clear: ["imp-1"], baseRev: 0, by: "human", surface: "foundry" });
   expect(res.verdicts).toEqual({});
-  const dl = logOf(path.join(TRAINING_ROOT, d));
+  const dl = logOf(path.join(trainingDir(), d));
   expect(dl.map((l) => [l.op, l.key])).toEqual([["clear", "imp-1"]]);
 
   const s = stripRun();
@@ -434,7 +434,7 @@ test("8. [guard] PUT on all four gates writes through the kernel: rev bumps, one
   cases.push(["extract", path.join(EXTRACT_ROOT, e), () => putExtractVerdicts(e, emap as never), async () => (await getExtractRun(e)).rev ?? -1]);
   const d = cycle();
   const dmap = { "imp-1": "approve", "imp-2": "reject" } as const;
-  cases.push(["dojo", path.join(TRAINING_ROOT, d), () => putTrainingVerdicts(d, dmap), async () => (await getCycle(d)).rev ?? -1]);
+  cases.push(["dojo", path.join(trainingDir(), d), () => putTrainingVerdicts(d, dmap), async () => (await getCycle(d)).rev ?? -1]);
   const s = stripRun();
   const smap = { "edu-edu-01--E01": { verdict: "keep", at }, "edu-edu-01--E02": { verdict: "reject", at, chips: ["motion"] } };
   cases.push(["strips", path.join(STRIPS_ROOT, s), () => putStripVerdicts(s, smap), async () => (await getStripRun(s)).rev]);

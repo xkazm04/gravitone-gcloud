@@ -76,12 +76,17 @@ import {
   type VerdictState,
 } from "../verdictLog";
 
-const OUT_ROOT = outPath("training");
+/** The Dojo's store in this process's universe: TRAINING_STORE_DIR (a test's temp root), else
+ *  `<out>/training`. Read per call, as the strips store reads STRIPS_STORE_DIR. */
+export function trainingRoot(): string {
+  const o = process.env.TRAINING_STORE_DIR?.trim();
+  return o ? path.resolve(o) : outPath("training");
+}
 /** The blind gate's picks, beside verdicts.json (lib/foundry/training/blind.ts). */
 const BLIND_FILE = "blind.json";
 
 function cycleDir(id: string): string {
-  return runRoot(OUT_ROOT, id, "cycle");
+  return runRoot(trainingRoot(), id, "cycle");
 }
 
 /** Containment only — the commit must also unlink video files, which are
@@ -117,10 +122,10 @@ const decidedCount = (v: TrainingVerdicts) => Object.values(v).filter((x) => x =
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
 export async function listCycles(): Promise<TrainingCycleSummary[]> {
-  const { items } = await listManifests<CycleManifest, TrainingCycleSummary>(OUT_ROOT, "cycle.json", async (name, m) => {
+  const { items } = await listManifests<CycleManifest, TrainingCycleSummary>(trainingRoot(), "cycle.json", async (name, m) => {
     let v: TrainingVerdicts;
     try {
-      v = await readJson<TrainingVerdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
+      v = await readJson<TrainingVerdicts>(path.join(trainingRoot(), name, "verdicts.json"), {});
     } catch (e) {
       // Listed and named, never a failure of the whole list. Still LISTED: the Library's dojo
       // feed holds a listed cycle whose detail read (getCycle, a 503 here) fails, and would prune

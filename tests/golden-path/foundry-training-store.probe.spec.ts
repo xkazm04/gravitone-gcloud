@@ -19,13 +19,13 @@ import { FoundryError } from "@/lib/foundry/store";
 import { commitCycle, listCycles, readCycle } from "@/lib/foundry/training/store";
 import type { CycleManifest, CycleStatus } from "@/lib/foundry/training/types";
 
-import { probeFoundryDir } from "./_helpers";
+import { probeFoundryDir, probeTrainingDir } from "./_helpers";
 
 const foundryDir = probeFoundryDir();
-const TRAINING_ROOT = path.join(process.cwd(), "foundry-out", "training");
+const trainingDir = probeTrainingDir();
 
 function setupProbeCycle(id: string, status: CycleStatus = "awaiting-gate") {
-  const dir = path.join(TRAINING_ROOT, id);
+  const dir = path.join(trainingDir(), id);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(path.join(dir, "pairs", "imp-1"), { recursive: true });
 
@@ -78,7 +78,7 @@ function setupProbeCycle(id: string, status: CycleStatus = "awaiting-gate") {
 
 test("listCycles: a corrupt cycle.json is skipped with warning, returning valid runs without 500ing", async () => {
   const corruptId = `probe-corrupt-${Date.now().toString(36)}`;
-  const dir = path.join(TRAINING_ROOT, corruptId);
+  const dir = path.join(trainingDir(), corruptId);
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, "cycle.json"), '{"id": "damaged-json', "utf8");
 
@@ -132,7 +132,7 @@ test("a damaged verdicts.json: listCycles lists and names the cycle, the commit 
 
 test("readCycle: malformed cycle.json throws FoundryError with status 503", async () => {
   const corruptId = `probe-corrupt-manifest-${Date.now().toString(36)}`;
-  const dir = path.join(TRAINING_ROOT, corruptId);
+  const dir = path.join(trainingDir(), corruptId);
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, "cycle.json"), '{"id": "damaged-manifest', "utf8");
 
