@@ -44,6 +44,11 @@ export function openFeed({ head, refresh, fail }: Feed): () => void {
   // EventSource reconnects, losslessly. That one error is the plan, not an outage, so it does not
   // reach `fail` - without this the Floor and Runs read stale for a backstop tick every rotation.
   let rotating = false;
+  // Where a NEW EventSource resumes (pageshow after pagehide): the last seq heard, or the head a
+  // reset named - not the first render's head, which would replay everything since it
+  // (realtime-events: resumability from a position). A reconnect of the same source already
+  // resumes by Last-Event-ID.
+  let after = head;
   const soon = (): void => {
     if (timer !== null) return;
     timer = window.setTimeout(() => {
@@ -53,13 +58,19 @@ export function openFeed({ head, refresh, fail }: Feed): () => void {
   };
   const open = (): void => {
     if (closed || es !== null) return;
-    es = new EventSource(`/api/events/stream?after=${head}`);
+    es = new EventSource(`/api/events/stream?after=${after}`);
     es.onmessage = (m: MessageEvent<string>) => {
+      const seq = Number(m.lastEventId);
+      if (Number.isSafeInteger(seq) && seq > after) after = seq;
       // The type is all this needs; a frame that does not carry one is still advice.
       const type = /"type":"([^"]+)"/.exec(m.data)?.[1] ?? "";
       if (!type.startsWith("ingest.")) soon();
     };
-    es.addEventListener("reset", soon);
+    es.addEventListener("reset", (m: MessageEvent<string>) => {
+      const named = /"head":(\d+)/.exec(m.data)?.[1];
+      if (named !== undefined) after = Number(named);
+      soon();
+    });
     es.addEventListener("rotate", () => {
       rotating = true;
     });

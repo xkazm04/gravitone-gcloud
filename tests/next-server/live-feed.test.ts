@@ -36,6 +36,9 @@ class FakeSource {
 }
 
 const windowListeners = new Map<string, (() => void)[]>();
+const fire = (name: string) => {
+  for (const fn of windowListeners.get(name) ?? []) fn();
+};
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -89,5 +92,23 @@ describe("the shell's live feed", () => {
     es.error();
     es.error();
     expect(calls.fail).toBe(2);
+  });
+
+  it("a page restored from the back/forward cache resumes after the last event it heard, not its first render", () => {
+    const { es } = open(10);
+    es.event(11, "job.started");
+    es.event(57, "job.done");
+    fire("pagehide");
+    expect(es.closed).toBe(true);
+    fire("pageshow");
+    expect(FakeSource.made[1]?.url).toBe("/api/events/stream?after=57");
+  });
+
+  it("after a reset, resumes from the head the server named", () => {
+    const { es } = open(900);
+    es.control("reset", { head: 40, after: 900 });
+    fire("pagehide");
+    fire("pageshow");
+    expect(FakeSource.made[1]?.url).toBe("/api/events/stream?after=40");
   });
 });

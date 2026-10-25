@@ -6108,4 +6108,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "rotating = false;",
     why: "Every planned stream rotation (~4 min) reaches the freshness edge as a failure, and the Floor and Runs read stale until the next backstop re-read.",
   },
+  {
+    id: "studio-shell-pageshow-replays-from-first-render",
+    test: "tests/next-server/live-feed.test.ts",
+    file: "app/(studio)/_shell/liveFeed.ts",
+    find: "if (Number.isSafeInteger(seq) && seq > after) after = seq;",
+    replace: "",
+    why: "A page restored from the back/forward cache reopens its stream at the seq it first rendered at and replays every event since, hours of them for a tab left open.",
+  },
 ];
