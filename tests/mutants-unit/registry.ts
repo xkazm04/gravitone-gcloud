@@ -6846,4 +6846,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (false) reject(",
     why: "git exiting 1 with stderr and no diff reads as no change again, so a proposal git could not read lands as an empty patch and a real edit is silently refused.",
   },
+  {
+    id: "producer-cutlog-hand-rolled-head-zero",
+    test: "tests/next-server/trailer-cut-log-readers.test.ts",
+    file: "lib/producers/script.ts",
+    find: "return logFromRecord(written<Parameters<typeof logFromRecord>[0]>(st));",
+    replace: "return written<CutLog>({ origin: st[\"origin\"], originBudget: st[\"originBudget\"], ops: st[\"ops\"] ?? [], head: st[\"head\"] ?? 0 });",
+    why: "The producer reads a stored cut with its own defaults, so a record with ops and no head derives with none of the creator's edits applied and a missing originBudget derives a budget of undefined.",
+  },
+  {
+    id: "real-script-cutlog-hand-rolled-head-zero",
+    test: "tests/next-server/trailer-cut-log-readers.test.ts",
+    file: "app/(studio)/projects/[id]/_part/realScript.ts",
+    find: "const cut: CutLog | null = st === undefined ? null : logFromRecord(written<Parameters<typeof logFromRecord>[0]>(st));",
+    replace: "const cut: CutLog | null = st === undefined ? null : written<CutLog>({ origin: st[\"origin\"], originBudget: st[\"originBudget\"], ops: st[\"ops\"] ?? [], head: st[\"head\"] ?? 0 });",
+    why: "The Script part reads a stored cut with its own defaults, so a record with ops and no head shows the cut with none of the creator's edits applied.",
+  },
 ];
