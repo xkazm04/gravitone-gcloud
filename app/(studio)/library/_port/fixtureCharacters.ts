@@ -1,5 +1,6 @@
 import "server-only";
 
+import { thumbSrc } from "@gt/catalog/presets";
 import { ageBand, buildOf, corePrompt, type CharacterExtras, type CharacterLook } from "@gt/domain/library";
 
 import { fileBlob, type FixtureMedia } from "./fixtureData.ts";
@@ -90,7 +91,7 @@ export type FixtureCharacter = {
   readonly styleIds: readonly string[];
 };
 
-const stillOf = (s: Still): FixtureMedia => fileBlob(`/presets/${s.style}.jpg`, 1080, 1920);
+const stillOf = (s: Still): FixtureMedia => fileBlob(thumbSrc(s.style), 1080, 1920);
 const uniq = <T,>(xs: readonly T[]): T[] => [...new Set(xs)];
 
 /** The six characters, newest still first, a card to a prompt. */

@@ -15,6 +15,7 @@ import "server-only";
 // A few items carry the media trouble the index measures at ingest (an export that does not
 // decode, a plate whose file is gone), so the attention facet has something to find.
 
+import { thumbSrc } from "@gt/catalog/presets";
 import type { z } from "zod";
 
 import { CHIP_GROUPS, normText, POSTER_MIME, techniqueBand, type Attention, type LibraryExtras, type LibraryRow, type LineageNode, type MediaFacts } from "@gt/domain/library";
@@ -152,7 +153,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
   for (const st of STYLES) {
     const f: Record<string, string[]> = { family: [st.family], derivation: [st.derivation], project: PROJECTS.filter((p) => p.style === st.id).map((p) => p.id), run: [pick(RUNS.forge)] };
     for (const [k, v] of Object.entries(st.obs)) f[k] = [v];
-    const hero = st.hero ? fileBlob(`/presets/${st.id}.jpg`) : undefined;
+    const hero = st.hero ? fileBlob(thumbSrc(st.id)) : undefined;
     const b = base("style", st.name, st.hero ? "ratified" : "candidate", st.derivation === "extracted" ? "extract" : "forge", f, date());
     styleItem.set(st.id, b.id);
     const evidence = SCENES.slice(0, st.hero ? 5 : 2).map((scene, i) => ({ run: pick(RUNS.forge), scene, mechanism: pick(MECHANISMS), verdict: i % 4 === 3 ? ("reject" as const) : ("keep" as const), by: "operator" as const }));
@@ -176,7 +177,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
         const deck = r() < 0.5;
         const scene = pick(SCENES);
         const set = deck ? "deck-art" : pick(RUNS.forge);
-        const m = deck ? fileBlob(`/deck-art/${pick(DECK)}.webp`, 1600, 1000) : fileBlob(`/presets/${pick(TRIAL_STYLES)}.jpg`, 1920, 1080);
+        const m = deck ? fileBlob(`/deck-art/${pick(DECK)}.webp`, 1600, 1000) : fileBlob(thumbSrc(pick(TRIAL_STYLES)), 1920, 1080);
         const aspect = deck ? ("3:2" as const) : ("16:9" as const);
         const styles = some(TRIAL_STYLES, 1, 2);
         const f: Record<string, string[]> = { set: [set], scene: [scene], style: styles, aspect: [aspect], run: deck ? [] : [set], project: proj() };
@@ -188,7 +189,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
         const scene = pick(SCENES);
         const missing = r() < 0.006;
         // The style's preset plate, which git tracks (public/trials is gitignored: a fresh clone lacks it).
-        const m = fileBlob(`/presets/${st}.jpg`, 1920, 1080);
+        const m = fileBlob(thumbSrc(st), 1920, 1080);
         const style = styleOf(st);
         const run = pick(station === "forge" ? RUNS.forge : station === "extract" ? RUNS.extract : RUNS.dojo);
         const mechanism = pick(MECHANISMS);

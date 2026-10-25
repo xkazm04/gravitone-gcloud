@@ -9,6 +9,7 @@ import "server-only";
 // (`toneWav`): honest about being a fixture, and enough for Space to play something.
 
 
+import { thumbSrc } from "@gt/catalog/presets";
 import type { MediaLane } from "@gt/domain/lane";
 import { LOAD_BAND, LOAD_STRIP_MS, type LoadResource, type LoadSummary } from "@gt/domain/load";
 import type { PacketMode, PacketSource } from "@gt/domain/source";
@@ -67,7 +68,7 @@ const SCENES = [
   { id: "peak-and-fall", ref: "/deck-art/template-trailer.webp" },
 ];
 
-const forgeItems: SeedItem[] = SCENES.flatMap((sc) => PRESETS.slice(0, 4).map((p) => ({ id: `${sc.id}/${p}`, row: sc.id, url: `/presets/${p}.jpg`, mime: "image/jpeg" })));
+const forgeItems: SeedItem[] = SCENES.flatMap((sc) => PRESETS.slice(0, 4).map((p) => ({ id: `${sc.id}/${p}`, row: sc.id, url: thumbSrc(p), mime: "image/jpeg" })));
 
 // One /scout night (lib/decision/v1/sources/scout.ts): an extracted look's replicas, a found scene's
 // replicas and clip under its keyframe, a finding and a watch line as text cells.
@@ -182,8 +183,8 @@ export function seeds(): readonly Seed[] {
       title: "Dojo cycle 3",
       runId: "cycle-3",
       items: [0, 1, 2].flatMap((i) => [
-        { id: `pair-${i + 1}/base`, row: `pair-${i + 1}`, url: `/presets/${PRESETS[i] ?? "blueprint"}.jpg`, mime: "image/jpeg" },
-        { id: `pair-${i + 1}/improved`, row: `pair-${i + 1}`, url: `/presets/${PRESETS[i + 3] ?? "data-neon"}.jpg`, mime: "image/jpeg" },
+        { id: `pair-${i + 1}/base`, row: `pair-${i + 1}`, url: thumbSrc(PRESETS[i] ?? "blueprint"), mime: "image/jpeg" },
+        { id: `pair-${i + 1}/improved`, row: `pair-${i + 1}`, url: thumbSrc(PRESETS[i + 3] ?? "data-neon"), mime: "image/jpeg" },
       ]),
       imported: [],
       machine: { "pair-1": "a", "pair-2": "b", "pair-3": "a" },
