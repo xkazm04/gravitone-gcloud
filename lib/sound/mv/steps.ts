@@ -134,8 +134,8 @@ export async function runStep(step: MvStep, j: MvJob, eng: MvEngines, landing: (
       if (!img.bytes.byteLength) throw new Error("the still came back empty");
       const rel = jobFileRel(j.id, `still.${STILL_EXT[img.mime] ?? "png"}`);
       const staged = stagingAbs(rel);
-      await writeFile(staged, img.bytes);
       try {
+        await writeFile(staged, img.bytes);
         landing();
       } catch (e) {
         await rm(staged, { force: true }).catch(() => {});

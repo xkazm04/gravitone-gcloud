@@ -7238,4 +7238,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void 0;",
     why: "A landing that never succeeds leaves its staged half in the job folder.",
   },
+  {
+    id: "mv-still-keeps-staged-on-write-failure",
+    test: "tests/next-server/mv-staged-cleanup.test.ts",
+    file: "lib/sound/mv/steps.ts",
+    find: "if (!img.bytes.byteLength) throw new Error(\"the still came back empty\");",
+    replace: "if (!img.bytes.byteLength) throw new Error(\"the still came back empty\"); const rm = async (..._a: unknown[]) => ({ catch: () => undefined });",
+    why: "The still step stops removing its staged file, so a disk-full write leaves a half still beside the job.",
+  },
+  {
+    id: "mv-fetch-audio-keeps-staged-on-write-failure",
+    test: "tests/next-server/mv-staged-cleanup.test.ts",
+    file: "lib/sound/mv/fetchAudio.ts",
+    find: "await rm(staged, { force: true }).catch(() => {});",
+    replace: "void 0;",
+    why: "A take's copy or a clip's download that fails part-way leaves its staged half in the job folder.",
+  },
 ];
