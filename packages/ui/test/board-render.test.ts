@@ -20,7 +20,7 @@ import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
 import { IdeaList } from "../src/components/cull/IdeaList.tsx";
 import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
 import { VariantCard } from "../src/components/cull/VariantCard.tsx";
-import { beatNote, CutReview, seekTo, withNote } from "../src/components/cut/CutReview.tsx";
+import { beatNote, CutReview, seekTo, verdictNote, withNote } from "../src/components/cut/CutReview.tsx";
 import { CommitButton } from "../src/components/desk/Desk.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
 import { BlindPair, canPick, defaultRevealMs, REVEAL_MS } from "../src/components/pair/BlindPair.tsx";
@@ -247,6 +247,22 @@ describe("the cut player follows the focused beat", () => {
 
   test("the player seeks again when its metadata arrives", () => {
     expect(src()).toMatch(/onLoadedMetadata=\{\(\) => seekTo\(player\.current, beats\[focus\]\)\}/);
+  });
+});
+
+describe("a verdict with a beat note still open", () => {
+  const beats = [{ t0: 0 }, { t0: 4.2 }];
+
+  test("the draft in the field rides on the verdict; a blank draft or none changes nothing", () => {
+    expect(verdictNote(beats, {}, 1, "tighter")).toBe("beat 2 (0:04): tighter");
+    expect(verdictNote(beats, { 0: "slow" }, 1, "  tighter ")).toBe("beat 1 (0:00): slow\nbeat 2 (0:04): tighter");
+    expect(verdictNote(beats, { 0: "slow" }, null, "ignored")).toBe("beat 1 (0:00): slow");
+    expect(verdictNote(beats, {}, 1, "  ")).toBeUndefined();
+  });
+
+  test("end() builds its note from the open draft", () => {
+    const code = readFileSync(new URL("../src/components/cut/CutReview.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toMatch(/verdictNote\(beats, notes, editing, text\)/);
   });
 });
 
