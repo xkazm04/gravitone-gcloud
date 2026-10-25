@@ -6894,4 +6894,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "export const LibraryRow = ((f: any) => f)(function LibraryRow(",
     why: "Every held row re-renders on each arrow step in the list view.",
   },
+  {
+    id: "studio-shell-session-initial-callback-reposts",
+    test: "tests/next-server/shell-session-subscribe.test.ts",
+    file: "app/(studio)/_shell/session.ts",
+    find: "let initial = cookieHeld;",
+    replace: "let initial = false;",
+    why: "Every shell mount POSTs /api/session for a cookie the server just verified, and a first visit posts the same token twice.",
+  },
+  {
+    id: "studio-shell-providers-forgets-cookie-held",
+    test: "tests/next-server/shell-session-subscribe.test.ts",
+    file: "app/(studio)/_shell/Providers.tsx",
+    find: "const cookieHeld = identity !== null;",
+    replace: "const cookieHeld = false;",
+    why: "The shell never tells the renewal that its cookie was just verified, so the redundant post on every mount comes back.",
+  },
 ];

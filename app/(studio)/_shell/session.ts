@@ -53,10 +53,24 @@ export async function postSession(token: string): Promise<Result<null>> {
   }
 }
 
-/** Re-post on every rotation; `report` hears a refusal (the shell's toast). Returns the unsubscribe. */
-export function subscribeSessionCookie(report: (message: string) => void): () => void {
+/**
+ * Re-post on every rotation; `report` hears a refusal (the shell's toast). Returns the unsubscribe.
+ *
+ * Firebase calls the listener once on subscribe with the current user. When the layout has just
+ * verified this browser's cookie (`cookieHeld`: it handed the shell an identity), that call carries
+ * the token the server already holds, and posting it is a verified round trip for nothing - on a
+ * first visit it is the second post after the handoff's. Only a rotation posts then. The price: a
+ * token Firebase refreshed while the tab was closed reaches the server at the next rotation, the
+ * cookie living its own token's life until then.
+ */
+export function subscribeSessionCookie(report: (message: string) => void, cookieHeld = false): () => void {
   if (!BRIDGED) return () => undefined;
+  let initial = cookieHeld;
   return onIdTokenChanged(authClient(), (user) => {
+    if (initial) {
+      initial = false;
+      return;
+    }
     if (user === null) return;
     void user
       .getIdToken()
