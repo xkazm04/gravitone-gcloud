@@ -5,7 +5,8 @@ import type { ConsequenceItem } from "@gt/domain/board";
 
 import { CHARACTERS_HEADING, FINDINGS_HEADING, MUSE_CHARACTERS_REL, WATCH_HEADING, findingRelOf, knowledgeState, markerOf, watchlistRelOf } from "../../../foundry/scout/knowledge.ts";
 import { partRunId } from "../../../foundry/scout/parts.ts";
-import type { Candidate, IdeaCandidate, Night, NightId } from "../../../foundry/scout/types.ts";
+import { storyboardVerdict } from "../../../foundry/scout/storyboardKept.ts";
+import type { Candidate, IdeaCandidate, Night, NightCommit, NightId, StoryboardTechnique } from "../../../foundry/scout/types.ts";
 import { parseWingRunId, wingRunId, wingWord, type ScoutWing } from "../../../foundry/scout/wing.ts";
 import { activeWing, withWing } from "../../../foundry/scout/wingScope.ts";
 import { v1Call, type DecisionAdapter } from "../types.ts";
@@ -63,6 +64,7 @@ export const isCharacter = (c: Candidate): c is IdeaCandidate & Required<Pick<Id
 function knowledgeRelOf(c: Candidate): string | undefined {
   if (c.kind === "finding") return findingRelOf(activeWing(), c.template, c.step);
   if (c.kind === "watch") return watchlistRelOf(activeWing());
+  if (c.kind === "storyboard") return c.technique === undefined ? undefined : findingRelOf(activeWing(), c.technique.template, c.technique.step);
   return isCharacter(c) ? MUSE_CHARACTERS_REL : undefined;
 }
 
@@ -82,10 +84,18 @@ export async function knowledgeOf(night: Night): Promise<Result<Record<string, K
   return ok(out);
 }
 
-/** The preview's line for a kept finding, watch line or character. */
+/** The preview's line for a kept finding, watch line, character or storyboard technique. */
 export function knowledgeWrite(root: string, c: Candidate, k: KnowledgeAt, cell: string): ConsequenceItem & { readonly kind: "file" } {
-  const heading = c.kind === "finding" ? FINDINGS_HEADING : c.kind === "watch" ? WATCH_HEADING : CHARACTERS_HEADING;
+  const heading = c.kind === "finding" || c.kind === "storyboard" ? FINDINGS_HEADING : c.kind === "watch" ? WATCH_HEADING : CHARACTERS_HEADING;
   return { kind: "file", target: `${root}/${k.rel}`, candidate: cell, detail: k.holds ? "already holds this line" : `${k.exists ? "" : "new file · "}a line under ${heading}` };
+}
+
+/**
+ * The technique a storyboard files on this commit (spark scout-vision), or undefined: kept as a whole by `record` - this
+ * part's verdicts (lib/foundry/scout/storyboardKept.ts storyboardVerdict) - and carrying one. A dry record keeps nothing.
+ */
+export function keptTechnique(n: Night, record: NightCommit, c: Candidate): StoryboardTechnique | undefined {
+  return c.kind === "storyboard" && c.technique !== undefined && storyboardVerdict({ ...n, committed: record }, c) === "kept" ? c.technique : undefined;
 }
 
 /** The adapter with every entry inside the wing its run id names: read and apply parse it, packet and consequence carry it on the read. */

@@ -7,8 +7,7 @@ import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 import { BlockedUrlError, assertFetchable, type Resolver } from "../../imaging/safeUrl";
 import { developedOf, fromIdeaOf, IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
-import { knowledgeRoot } from "./knowledge";
-import { activeWing } from "./wingScope";
+import { STEP_NAME_RE, STEP_RULE, TEMPLATE_NAME_RE, TEMPLATE_RULE, knowledgeRoot, templateProblem } from "./knowledge";
 import { listNights, mutateNight, mutateNightWith, nextCandidateId, nextSourceId, readNight, resolveInNight } from "./store";
 import {
   CLAIM_MAX,
@@ -224,8 +223,8 @@ async function ideaSource(nightId: NightId, id: string, p: Extract<Planned, { re
 const findingSchema = z
   .object({
     sourceIds: z.array(z.string().regex(SOURCE_ID_RE)).min(1).max(12),
-    template: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, "a template is a knowledge/templates directory name"),
-    step: z.string().regex(/^\d{2}-[a-z][a-z-]*$/, "a step is NN-name (02-frames, 05-cut)"),
+    template: z.string().regex(TEMPLATE_NAME_RE, TEMPLATE_RULE),
+    step: z.string().regex(STEP_NAME_RE, STEP_RULE),
     claim: text(CLAIM_MAX),
     quote: text(QUOTE_MAX),
     /** `<night>/<candidate>` of a finding an earlier night holds, said again here from another source. */
@@ -244,8 +243,8 @@ export async function addFindings(nightId: NightId, raw: unknown, opts: { readon
   const root = opts.knowledge ?? knowledgeRoot();
   for (const [i, f] of parsed.value.entries()) {
     // A muse finding lands in knowledge/scout-muse/techniques.md (knowledge.ts findingRelOf): it serves no template step.
-    const dir = path.join(root, "templates", f.template);
-    if (activeWing() === "scout" && (await stat(dir).catch(() => null))?.isDirectory() !== true) return err("invalid", `finding ${i + 1}: there is no knowledge/templates/${f.template}/`);
+    const nowhere = await templateProblem(f.template, root);
+    if (nowhere !== undefined) return err("invalid", `finding ${i + 1}: ${nowhere}`);
     const missing = f.sourceIds.find((id) => !night.sources.some((s) => s.id === id));
     if (missing !== undefined) return err("invalid", `finding ${i + 1}: night ${nightId} has no source ${missing}`);
     if (f.restates !== undefined) {

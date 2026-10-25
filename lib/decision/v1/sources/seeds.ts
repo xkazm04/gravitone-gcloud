@@ -9,7 +9,7 @@ import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
 import { mergePart, openOf, partRefusal, partRunId, remainderLine, splitPart } from "../../../foundry/scout/parts.ts";
 import { listSeedBatches, mutateSeedBatch, readSeedBatch, seedOf, seedsRoot } from "../../../foundry/scout/seedStore.ts";
-import { seedFacets } from "../../../foundry/scout/seeds.ts";
+import { musicFacets, seedFacets } from "../../../foundry/scout/seeds.ts";
 import type { Seed, SeedBatch, SeedCommit } from "../../../foundry/scout/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { buildConsequence, committedOutcome, decisionMap, mintPacket, runIdOf, v1Call, v1DigestOf, type AdapterRef, type DecisionAdapter, type DecisionsAt, type OpenPlan, type Preview } from "../types.ts";
@@ -19,7 +19,8 @@ import { textRef } from "./scoutPlan.ts";
 // (lib/foundry/scout/seedStore.ts), read through readSeedBatch, decided as ONE matrix cull with a row per
 // seed and ONE words-only cell whose id IS the seed id (`sd-004`), so the desk's ideas list decides it in
 // place. The row is the sentence; the cell's meta its facets (`adult · comedy › sketch · animated comedy
-// sketch · short`), and a child seed's first line under the sentence is the parent it narrows.
+// sketch · short`, a music seed's song after them: `· 92 bpm · nylon guitar, cello · melancholic · instrumental`),
+// and a child seed's first line under the sentence is the parent it narrows.
 //
 // EVERY REJECT NAMES A REASON (@gt/domain/source `seeds`.reasonOnReject): the kernel's commit refuses a
 // reasonless one (packages/kernel/src/decision/core.ts planCommit), and so does this apply - a packet that
@@ -73,7 +74,8 @@ function partOf(v1: SeedsRead): { readonly part: number; readonly seeds: readonl
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
 
-const body = (s: Seed): string => [s.sentence, s.audience, s.genre, s.subgenre, s.type, s.format, s.parent ?? ""].join("\n");
+/** The cell's hashed text. A music seed's song is a line after the rest; a seed without one hashes exactly as it did before the field (a packet minted then keeps its refs). */
+export const body = (s: Seed): string => [s.sentence, s.audience, s.genre, s.subgenre, s.type, s.format, s.parent ?? "", ...(s.music === undefined ? [] : [musicFacets(s.music)])].join("\n");
 
 function wordsOf(v1: SeedsRead, s: Seed): ItemWords {
   const parent = s.parent === undefined ? undefined : seedOf(v1.all, s.parent)?.seed.sentence;

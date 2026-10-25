@@ -15,7 +15,7 @@ import type { ExtractVerdictRecord } from "../../../foundry/extract/types.ts";
 import { leadCell, leadEventsOf, readRestated, verifiedRestates } from "../../../foundry/scout/leadEvents.ts";
 import { leadsFile, queueEvents, readQueue } from "../../../foundry/scout/leads.ts";
 import { processNightLoad } from "../../../foundry/scout/load.ts";
-import { appendCharacter, appendFinding, appendWatch, knowledgeRoot } from "../../../foundry/scout/knowledge.ts";
+import { appendCharacter, appendFinding, appendTechnique, appendWatch, knowledgeRoot } from "../../../foundry/scout/knowledge.ts";
 import { meshRoot, mutateAsset, readAsset, resolveInAsset, withVariant } from "../../../foundry/mesh/store.ts";
 import { deskAbs, deskCellUrl, readDeskNight, saveDeskNight } from "../../../foundry/local-draws/desk.ts";
 import { openOf, remainderLine, splitPart } from "../../../foundry/scout/parts.ts";
@@ -47,7 +47,7 @@ import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookD
 import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, STORYBOARD_VERDICT, build, commitOf, extractDecisions, ideaCell, meshKey, sameOutcome, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
 import { musicOf } from "./scoutMusic.ts";
 import { nightRefusal, partOfBuilt, partWords, settledPart, withPart } from "./scoutPart.ts";
-import { inWing, isCharacter, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta, partOfRun } from "./scoutWing.ts";
+import { inWing, isCharacter, keptTechnique, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta, partOfRun } from "./scoutWing.ts";
 
 // ONE /scout NIGHT AS A PACKET - foundry-out/scout/<night>/night.json
 // (lib/foundry/scout/store.ts) read through readNight, decided as ONE matrix
@@ -70,7 +70,8 @@ import { inWing, isCharacter, knowledgeOf, knowledgeWrite, nightOfRun, packetMet
 //   track    kept clip is the next night's visualizer and a kept visualizer the music ladder's first
 //   visualizer  rung (spark scout-decision-graph): both read that record too, nothing else is written.
 //   storyboard  nothing of its own either (spark scout-storyboards): kept whole, the record makes it the root a
-//            full-video act names (keptStoryboardFor); the preview says so on its words cell.
+//            full-video act names (keptStoryboardFor); the preview says so on its words cell. One that carries
+//            a technique (spark scout-vision) files it as a finding's line in its step's PATTERNS.md, same marker.
 //   leads    what the keeps EARNED for the ai-registry (../../../foundry/scout/
 //            leadEvents.ts) into the lead queue, once by key; the preview names each.
 //   all      every verdict, its reasons and its note into `night.committed`,
@@ -338,6 +339,8 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
       const rejected = mine.some(([, v]) => v === "reject");
       const verdict = kept.has(words) || (mine.some(([, v]) => v === "keep") && !rejected) ? "keep" : rejected ? "reject" : undefined;
       if (verdict !== undefined) parts.writes.push({ ...nightFile, candidate: words, detail: STORYBOARD_VERDICT[verdict] });
+      const k = v1.knowledge[c.id];
+      if (verdict === "keep" && k !== undefined) parts.writes.push(knowledgeWrite(v1.at.knowledge, c, k, words));
     }
   }
   // What the keeps earn, over every part's keeps; a later part names only the leads it adds.
@@ -483,6 +486,10 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
         if (!r.ok) return r;
       } else if (isCharacter(c) && kept.has(ideaCell(c.id))) {
         const r = await v1Call(() => appendCharacter(id, c));
+        if (!r.ok) return r;
+      } else if (c.kind === "storyboard") {
+        const t = keptTechnique(night, record, c);
+        const r = t === undefined ? ok(undefined) : await v1Call(() => appendTechnique(id, c, t));
         if (!r.ok) return r;
       } else if (c.kind === "asset3d" && c.assetId !== undefined) {
         const r = await applyAsset(c.assetId, c.id, record);

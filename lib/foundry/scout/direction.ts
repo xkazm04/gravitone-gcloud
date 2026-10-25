@@ -136,12 +136,14 @@ export async function keptIdea(ref: string, cache: Nights = new Map()): Promise<
 /**
  * Every kept idea some night already develops, with where: a source brought in from it (`<night>/<s-id>`), else a candidate that names it.
  * A STORYBOARD does not develop its idea (spark scout-storyboards): it composes the idea as a video, and the idea's scene, style or
- * asset act stays on "Ideas to develop" beside it - the two rungs are independent.
+ * asset act stays on "Ideas to develop" beside it - the two rungs are independent. A candidate that FAILED develops nothing
+ * (spark scout-vision): its idea is back on the list, while a source brought in from the idea still counts - the idea was
+ * brought in once, and a new act over that source is how it is tried again.
  */
 export function developedOf(nights: readonly Night[]): Map<string, string> {
   const out = new Map<string, string>();
   for (const n of nights) for (const s of n.sources) if (s.fromIdea !== undefined && !out.has(s.fromIdea)) out.set(s.fromIdea, `${n.id}/${s.id}`);
-  for (const n of nights) for (const c of n.candidates) if (c.kind !== "storyboard" && c.fromIdea !== undefined && !out.has(c.fromIdea)) out.set(c.fromIdea, `${n.id}/${c.id}`);
+  for (const n of nights) for (const c of n.candidates) if (c.kind !== "storyboard" && c.status !== "failed" && c.fromIdea !== undefined && !out.has(c.fromIdea)) out.set(c.fromIdea, `${n.id}/${c.id}`);
   return out;
 }
 

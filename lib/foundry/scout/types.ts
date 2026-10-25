@@ -538,8 +538,8 @@ export type StoryboardCandidate = CandidateBase & {
 export type StoryboardTechnique = {
   /** What a director could act on, <= 140 chars. */
   readonly claim: string;
-  /** The verbatim quote or measurement that backs it. */
-  readonly evidence: string;
+  /** The source's words, verbatim. */
+  readonly quote: string;
   /** The public page it was read on. */
   readonly url: string;
   /** `knowledge/templates/<template>/steps/<step>/` - an existing step directory. */

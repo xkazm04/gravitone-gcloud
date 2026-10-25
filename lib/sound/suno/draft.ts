@@ -10,7 +10,8 @@
 //
 // WHAT A DRAFT IS MADE FROM:
 //   a sentence, live   one `suno-propose` turn (./propose.ts `proposeFromSentence`): the model
-//                      decides the words, the form limits are enforced, origin `llm`;
+//                      decides the words, the form limits are enforced, origin `llm`; a sentence
+//                      with `facets` (a scout music seed's prepared song) sends them beside it;
 //   a sentence, dry    NO turn: the sentence stands in as the style line (`sentenceStand`), so a
 //                      dry launch spends nothing anywhere - the same rule the Suno job's own
 //                      dry mode keeps with `standClipRefs` (lib/sound/suno/fakeDriver.ts);
@@ -27,10 +28,10 @@ import { UNGROUPED_LANE } from "@/lib/board/pipeline";
 import { SUNO_MODELS, type SunoFields, type SunoJob, type SunoLane, type SunoProposal } from "@/lib/suno/types";
 
 import { safeId, SoundError } from "../store";
-import { proposeFromSentence, type ReasonFn } from "./propose";
+import { proposeFromSentence, type ReasonFn, type SunoFacets } from "./propose";
 import { clip, INSTRUMENTAL, parseFields, readSuno, STYLE_MAX, TITLE_MAX, withSuno } from "./store";
 
-export type DraftSource = { readonly kind: "sentence"; readonly text: string } | { readonly kind: "fields"; readonly fields: SunoFields };
+export type DraftSource = { readonly kind: "sentence"; readonly text: string; readonly facets?: SunoFacets } | { readonly kind: "fields"; readonly fields: SunoFields };
 
 /** Where a draft with no lane lands: the board's ungrouped row, as a hunt leaf with none does. */
 export const FLOOR_LANE: SunoLane = { axis: "group", value: UNGROUPED_LANE };
@@ -69,7 +70,7 @@ type Drafted = { readonly fields: SunoFields; readonly origin: SunoProposal["ori
 async function draftOf(source: DraftSource, o: { readonly dry: boolean; readonly reason?: ReasonFn; readonly lane: SunoLane }): Promise<Drafted> {
   if (source.kind === "fields") return { fields: parseFields(source.fields), origin: "custom" };
   if (o.dry) return { fields: sentenceStand(source.text), origin: "custom", note: "dry: the sentence as written, no text turn" };
-  const p = await proposeFromSentence(source.text, o.lane, ...(o.reason === undefined ? [] : [o.reason]));
+  const p = await proposeFromSentence(source.text, o.lane, o.reason, source.facets);
   return { fields: p.fields, origin: "llm", ...(p.note === undefined ? {} : { note: p.note }) };
 }
 

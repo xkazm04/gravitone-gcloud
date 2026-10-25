@@ -30,7 +30,7 @@ import { rmSync } from "node:fs";
 
 import { standConcept } from "../../lib/foundry/scout/concept";
 import type { MuseJudge } from "../../lib/foundry/scout/muse";
-import type { Asset3dCandidate, DirectionCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource, Seed, SeedBatch, StoryboardCandidate } from "../../lib/foundry/scout/types";
+import type { Asset3dCandidate, DirectionCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource, Seed, SeedBatch, SeedMusic, StoryboardCandidate } from "../../lib/foundry/scout/types";
 import { DAY, HOUR, NOW, outFile, plate, writeBytes, writeJson } from "./kit";
 
 const PALETTE = ["#1d2b3a", "#e0a458", "#5c8a8a", "#f2e8cf"];
@@ -257,9 +257,10 @@ function museNight(): Night {
 /*
  * Two SEED batches (spark scout-decision-graph), under fixtures-out/scout/seeds/<batch>/batch.json: one the
  * operator committed (two kept, one thrown with its reason and a note), and the next one still open on the Weir,
- * holding a child of a kept seed beside fresh ones.
+ * holding a child of a kept seed beside fresh ones. The first batch's music seed predates the `music` facets (spark
+ * scout-vision) and carries none; the child, a music seed written after them, carries its song.
  */
-const seed = (id: string, sentence: string, genre: string, subgenre: string, type: string, audience: Seed["audience"], format: Seed["format"], parent?: string): Seed => ({
+const seed = (id: string, sentence: string, genre: string, subgenre: string, type: string, audience: Seed["audience"], format: Seed["format"], parent?: string, music?: SeedMusic): Seed => ({
   id,
   sentence,
   genre,
@@ -268,6 +269,7 @@ const seed = (id: string, sentence: string, genre: string, subgenre: string, typ
   audience,
   format,
   ...(parent === undefined ? {} : { parent }),
+  ...(music === undefined ? {} : { music }),
 });
 
 function seedBatches(): SeedBatch[] {
@@ -290,7 +292,7 @@ function seedBatches(): SeedBatch[] {
       createdAt: at(NOW - DAY),
       dry: false,
       seeds: [
-        seed("sd-001", "The same tango, its lyrics stitched into the coats' linings verse by verse.", "music", "tango", "lyric video", "adult", "video", `${first}/sd-001`),
+        seed("sd-001", "The same tango, its lyrics stitched into the coats' linings verse by verse.", "music", "tango", "lyric video", "adult", "video", `${first}/sd-001`, { instruments: ["bandoneon", "upright bass", "violin"], tempo: 118, mood: "wistful", vocals: "female" }),
         seed("sd-002", "Ten ducklings count themselves across a puddle and forget the one counting.", "kids animation", "preschool counting", "animated short", "kids", "short"),
       ],
     },

@@ -2,6 +2,8 @@
 // track on the signed-in browser (both models, ~4 clips), each clip downloaded into the night as
 // `tracks/<c-id>/a<N>.mp3` - the audio tab's cells. Kept, a clip is the next night's visualizer (./visualizer.ts):
 // the song is the clock, and the video starts only once the track is final (registry music-video-production).
+// Only a MUSIC seed (types.ts MUSIC_TYPES) makes a track, and its `music` facets ride into the proposal turn as the
+// layered style it is written from (lib/sound/suno/propose.ts SunoFacets; spark scout-vision).
 //
 // THE JOB IS THE SUNO PRODUCER'S OWN (lib/producers/suno.ts `launchSunoDraft`), not a scout job around it:
 // box.chrome is capacity 1 and shared with the night's idea artboards, and a wrapper job holding the lane while
@@ -30,16 +32,16 @@ import { errorMessage } from "@gt/domain/errors";
 
 import { driveSuno, launchSunoDraft, sunoKernelId, sunoKernelJobs } from "../../producers/suno.ts";
 import { fetchClipBytes, type FetchClipFn } from "../../sound/mv/fetchAudio.ts";
-import { draftJobId } from "../../sound/suno/draft.ts";
+import { draftJobId, type DraftSource } from "../../sound/suno/draft.ts";
 import { FAKE_SUNO_DRIVER, REAL_SUNO, type SunoDriver } from "../../sound/suno/drivers.ts";
-import type { ReasonFn } from "../../sound/suno/propose.ts";
+import type { ReasonFn, SunoFacets } from "../../sound/suno/propose.ts";
 import { readSuno } from "../../sound/suno/store.ts";
 import { reason as routerReason } from "../../text/router.ts";
 import { launchable, Refusal, setCandidate, type ActContext } from "./acts";
 import { listSeedBatches, seedOf } from "./seedStore";
-import { usableSeed } from "./seeds";
+import { isMusicType, usableSeed } from "./seeds";
 import { mutateNight, readNight, resolveInNight } from "./store";
-import { DEFAULT_TRACK_CAP, USE_MAX, cellId, parseCellId, type Night, type NightId, type Seed, type SeedRef, type TrackCandidate, type TrackClip } from "./types";
+import { DEFAULT_TRACK_CAP, MUSIC_TYPES, USE_MAX, cellId, parseCellId, type Night, type NightId, type Seed, type SeedMusic, type SeedRef, type TrackCandidate, type TrackClip } from "./types";
 
 /** What a test hands in place of the Suno browser, the proposal turn and the clip download. */
 export type TrackEngines = {
@@ -88,6 +90,9 @@ export function trackUse(s: Pick<Seed, "format" | "type" | "genre" | "subgenre">
   return u.length <= USE_MAX ? u : `${u.slice(0, USE_MAX - 1)}…`;
 }
 
+/** What the proposal turn writes a music seed's `style` from beside its sentence: the genre and subgenre, then its song. */
+export const trackFacets = (s: Pick<Seed, "genre" | "subgenre">, m: SeedMusic): SunoFacets => ({ genre: s.genre, subgenre: s.subgenre, mood: m.mood, instruments: m.instruments, tempo: m.tempo, vocals: m.vocals });
+
 /** The scout's Suno job id for a candidate: `sj-scout-<night>-<c-id>`, a scout take named by its id. */
 export const scoutSunoJobId = (night: NightId, candidate: string): string => draftJobId(`scout-${night}-${candidate}`);
 /** True for a Suno job (`sj-...`) a scout night launched: its clips are judged on the night's packet. */
@@ -124,6 +129,7 @@ export async function trackAct(ctx: ActContext, id: NightId, seed: SeedRef, engi
   if (!usable.ok) throw new Refusal(usable.error.message);
   const s = seedOf(batches, seed)?.seed;
   if (s === undefined) throw new Refusal(`no seed ${seed}`);
+  if (!isMusicType(s.type)) throw new Refusal(`seed ${seed} is a ${s.type} seed; a track grows only from a music seed (${MUSIC_TYPES.join(", ")})`);
   if (tracksUsed(night) >= trackCapOf(night)) throw new Refusal(`night ${id} made ${tracksUsed(night)} of its ${trackCapOf(night)} track(s); nothing launched`);
   let c = await addTrack(id, (cid) => ({ id: cid, kind: "track", sourceIds: [], status: "pending", sentence: s.sentence, fromSeed: seed, use: trackUse(s), clips: [] }));
   const fail = async (why: string): Promise<never> => {
@@ -131,7 +137,7 @@ export async function trackAct(ctx: ActContext, id: NightId, seed: SeedRef, engi
     throw new Refusal(why);
   };
   const sj = scoutSunoJobId(id, c.id);
-  const source = { kind: "sentence" as const, text: s.sentence };
+  const source: DraftSource = { kind: "sentence", text: s.sentence, ...(s.music === undefined ? {} : { facets: trackFacets(s, s.music) }) };
   const opts = { mode, actor: ctx.actor, dryOnly: ctx.dryOnly, store: ctx.store, reason: seatOnly(engines.reason ?? routerReason) };
   let launched = false;
   try {

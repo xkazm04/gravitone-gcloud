@@ -94,7 +94,8 @@ const USAGE = [
   '  watch <night> --entry "..." --why "..." [--sources s-01]',
   "  close <night> [--stop deadline|budget|target|failure|sources-exhausted|operator]",
   "  status [<night>]",
-  "  seeds new --json <file|-> [--dry]          [{sentence, genre, subgenre, type, audience: kids|family|adult, format: short|video, parent?: <batch>/sd-NNN}]",
+  "  seeds new --json <file|-> [--dry]          [{sentence, genre, subgenre, type, audience: kids|family|adult, format: short|video, parent?: <batch>/sd-NNN, music?}]",
+  "                                             music (required on a music video|lyric video|visualizer seed): {instruments: [..6], tempo: 40-220, mood, vocals: instrumental|female|male|duet|choir}",
   "  seeds status [<batch>]",
   "  track <night> --seed <batch>/sd-NNN [--detach] · track <night> --collect",
   "  visualizer <night> --track <night>/<c-id>/<aN> [--detach] · visualizer <night> --collect",
@@ -254,12 +255,18 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
       const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
       const k = kp.processKernel(kp.storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]));
       try {
-        // The graph's branches and the tracks waiting for a visualizer close the brief (spark scout-decision-graph).
+        // The graph's branches, the backlog (spark scout-vision) and the tracks waiting for a visualizer close the brief (spark scout-decision-graph).
         const { branchesSection, buildGraph } = await import("../lib/foundry/scout/graph.ts");
         const { readSteer } = await import("../lib/foundry/scout/steer.ts");
         const { tracksSection } = await import("../lib/foundry/scout/track.ts");
+        const { backlogOf, backlogSection } = await import("../lib/foundry/scout/backlog.ts");
+        const { listSeedBatches } = await import("../lib/foundry/scout/seedStore.ts");
         const graph = await buildGraph({ ...(k.ok ? { store: k.value.store } : {}), now: now() });
-        const extra = [...branchesSection(graph, await readSteer()), ...tracksSection((await store.readAllNights()).filter((x) => x.id !== n.id))];
+        const steer = await readSteer();
+        const others = (await store.readAllNights()).filter((x) => x.id !== n.id);
+        // The backlog is the scout wing's (a muse night makes no storyboard and takes no seed).
+        const backlog = muse ? [] : backlogSection(backlogOf(others, await listSeedBatches(), steer), others);
+        const extra = [...branchesSection(graph, steer), ...backlog, ...tracksSection(others)];
         fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id, k.ok ? (x) => nightLoad(k.value.store, x, now().getTime()) : undefined, extra), "utf8");
       } finally {
         kp.closeProcessKernel();
@@ -353,7 +360,14 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
         const recent = recentLoad(ctx.store, now().getTime());
         const interrupted = interruptedOf(ctx.store, n);
         const load = { last15: recent.avg, band: recent.band, waiting: recent.waiting, samples: recent.samples };
-        if (json) doc({ ok: true, summary: store.summarise(n), budget: b, ideas, reels, load, interrupted, morning: acts.morning(n, b), night: n });
+        // The backlog and its seed gate (spark scout-vision), over the scout wing whichever wing the night is.
+        const { backlogOf } = await import("../lib/foundry/scout/backlog.ts");
+        const { listSeedBatches } = await import("../lib/foundry/scout/seedStore.ts");
+        const { readSteer } = await import("../lib/foundry/scout/steer.ts");
+        const { withWing } = await import("../lib/foundry/scout/wingScope.ts");
+        const bl = await withWing("scout", async () => backlogOf(await store.readAllNights(), await listSeedBatches(), await readSteer()));
+        const backlog = { waiting: bl.waiting.length, seedsWaiting: bl.seedsWaiting, gated: bl.gated, freshAllowed: bl.freshAllowed };
+        if (json) doc({ ok: true, summary: store.summarise(n), budget: b, ideas, reels, load, interrupted, morning: acts.morning(n, b), backlog, night: n });
         else {
           io.out(`night ${n.id} · ${n.state}${n.stop === undefined ? "" : ` (${n.stop})`} · ${n.dry ? "dry" : "live"} · ${acts.budgetLine(b)} · ideas ${ideas.used}/${ideas.cap} · reels ${reels.used}/${reels.cap}`);
           io.out(recentLine(recent));

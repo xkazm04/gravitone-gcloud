@@ -39,7 +39,7 @@ import { collectStoryboards, keptStoryboardFor, parseStoryboards } from "../../l
 import { storyboardSections } from "../../lib/foundry/scout/storyboardKept.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../../lib/foundry/scout/store.ts";
 import { tasteOf } from "../../lib/foundry/scout/taste.ts";
-import type { Candidate, IdeaCandidate, Night, NightCommit, StoryboardCandidate } from "../../lib/foundry/scout/types.ts";
+import { DEFAULT_STORYBOARD_CAP, type Candidate, type IdeaCandidate, type Night, type NightCommit, type StoryboardCandidate } from "../../lib/foundry/scout/types.ts";
 import { producers } from "../../lib/producers/registry.ts";
 import { checkStoryboard, driveStoryboard, launchStoryboard } from "../../lib/producers/scoutStoryboard.ts";
 
@@ -78,8 +78,8 @@ function seedNight(id: string, o: { dry: boolean; committed: boolean; candidates
 }
 
 beforeAll(() => {
-  // Nine kept ideas (one a portrait, one grown from a seed), one rejected; a dry night's kept idea; an uncommitted night's idea.
-  const ideas = ["c-01", "c-02", "c-03", "c-04", "c-05", "c-06", "c-07", "c-09", "c-10"].map((id) => idea(id, id === "c-02" ? { aspect: "9:16" } : id === "c-03" ? { fromSeed: "2026-09-01/sd-004", use: "short: a cold open", app: "short" } : {}));
+  // Ten kept ideas (one a portrait, one grown from a seed), one rejected; a dry night's kept idea; an uncommitted night's idea.
+  const ideas = ["c-01", "c-02", "c-03", "c-04", "c-05", "c-06", "c-07", "c-09", "c-10", "c-11"].map((id) => idea(id, id === "c-02" ? { aspect: "9:16" } : id === "c-03" ? { fromSeed: "2026-09-01/sd-004", use: "short: a cold open", app: "short" } : {}));
   seedNight(KEPT, { dry: false, committed: true, candidates: [...ideas, idea("c-08")], kept: ideas.map((c) => `${c.id}/board`), rejected: ["c-08/board"] });
   seedNight(DRYN, { dry: true, committed: true, candidates: [idea("c-01")], kept: ["c-01/board"] });
   seedNight(OPEN, { dry: false, committed: false, candidates: [idea("c-01")] });
@@ -192,12 +192,42 @@ describe("the door - each refusal", () => {
   });
 });
 
+describe("the door - a technique (spark scout-vision)", () => {
+  const ref = `${KEPT}/c-01`;
+  const technique = { claim: "Hold the reveal frame twice as long", quote: "the last shot sits for 48 frames", url: "https://example.com/reveal", template: "short-form-clip", step: "02-frames" };
+  const at = (t: Record<string, unknown>): string => {
+    const r = parseStoryboards([brief(ref, { technique: t })]);
+    return r.ok ? "ok" : r.error.message;
+  };
+
+  it("takes a finding's shape, the template and step held to the finding door's rule", () => {
+    expect(at(technique)).toBe("ok");
+    expect(at({ ...technique, step: "frames" })).toBe("storyboard 1: technique.step: a step is NN-name (02-frames, 05-cut)");
+    expect(at({ ...technique, template: "../up" })).toBe("storyboard 1: technique.template: a template is a knowledge/templates directory name");
+    expect(at({ ...technique, url: "ftp://example.com/x" })).toBe("storyboard 1: technique.url: an http(s) page");
+    expect(at({ ...technique, claim: "x".repeat(141) })).toMatch(/^storyboard 1: technique\.claim: /);
+    expect(at({ ...technique, quote: "" })).toMatch(/^storyboard 1: technique\.quote: /);
+    expect(at({ ...technique, evidence: "x" })).toMatch(/^storyboard 1: technique: /);
+  });
+
+  it("the act refuses a template with no knowledge/templates directory before a candidate exists; a good one rides on the candidate", async () => {
+    const night = await open([], DRY);
+    const r = await cli(["storyboard", night, "--json", file([brief(`${KEPT}/c-11`, { technique: { ...technique, template: "no-such-template" } })])]);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain("storyboard 1: technique: there is no knowledge/templates/no-such-template/");
+    expect(await boardsOf(night)).toEqual([]);
+    const ok = await cli(["storyboard", night, "--json", file([brief(`${KEPT}/c-11`, { technique })])]);
+    expect(ok.code, ok.err).toBe(0);
+    expect((await boardsOf(night))[0]?.technique).toEqual(technique);
+  });
+});
+
 describe("a dry night - words only", () => {
   it("writes rendered storyboards with no frame and launches nothing; a second storyboard for the idea is refused", async () => {
     const night = await open([], DRY);
     const r = await cli(["storyboard", night, "--json", file([brief(`${KEPT}/c-01`), brief(`${KEPT}/c-02`)])]);
     expect(r.code, r.err).toBe(0);
-    expect(r.doc).toMatchObject({ ok: true, jobIds: [], dry: true, storyboards: { used: 2, cap: 6 } });
+    expect(r.doc).toMatchObject({ ok: true, jobIds: [], dry: true, storyboards: { used: 2, cap: DEFAULT_STORYBOARD_CAP } });
     expect(r.err).toContain("is dry: 2 storyboard(s) written as words only; no frame is drawn and nothing is launched");
     const [a, b] = await boardsOf(night);
     expect(a).toMatchObject({ id: "c-01", status: "rendered", images: [], fromIdea: `${KEPT}/c-01`, panels: brief("").panels });
@@ -372,6 +402,15 @@ describe("developedOf and the taste brief", () => {
     expect(developedOf([ideas, boards]).has("2026-10-20/c-01")).toBe(false);
     const scene: Candidate = { id: "c-02", kind: "scene", sourceIds: [], status: "rendered", keyframes: [], replicas: [], fromIdea: "2026-10-20/c-01" };
     expect(developedOf([ideas, { ...boards, candidates: [...boards.candidates, scene] }]).get("2026-10-20/c-01")).toBe("2026-10-21/c-02");
+  });
+
+  it("developedOf ignores a failed candidate (spark scout-vision); a source brought in from the idea still develops it", () => {
+    const failed: Candidate = { id: "c-02", kind: "scene", sourceIds: [], status: "failed", error: "replica 1: comfy answered 500", keyframes: [], replicas: [], fromIdea: "2026-10-20/c-01" };
+    const tried = { ...boards, candidates: [...boards.candidates, failed] };
+    expect(developedOf([ideas, tried]).has("2026-10-20/c-01")).toBe(false);
+    expect(tasteOf([tried, ideas])).toContain("- 2026-10-20/c-01 · scene · mystery short · A lantern on the stairs");
+    const brought: Night = { ...tried, sources: [{ id: "s-01", url: "idea:2026-10-20/c-01", kind: "image", title: "A lantern on the stairs", why: "kept idea", found: "idea", rights: "ours", fromIdea: "2026-10-20/c-01", status: "ingested", files: [] }] };
+    expect(developedOf([ideas, brought]).get("2026-10-20/c-01")).toBe("2026-10-21/s-01");
   });
 
   it("lists the kept ideas with no storyboard yet, and the kept storyboards ready for full video", () => {

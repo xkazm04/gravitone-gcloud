@@ -6,6 +6,8 @@
 //                knowledge/templates/<template>/steps/<step>/PATTERNS.md
 //   a watch line one line under `## Proposed by the scout` in
 //                knowledge/scout/watchlist.md
+//   a storyboard's technique (spark scout-vision) the finding's line exactly, under the
+//                same heading in the same PATTERNS.md, marked with the storyboard's id
 //
 // APPEND-ONLY, AND ONCE. Every line ends in a marker,
 // `<!-- scout:<nightId>/<candidateId> -->`; a file that already holds the
@@ -21,11 +23,11 @@
 // option), so a test writes a temp tree and never the checkout's knowledge/.
 // The files are committed to git by the next night's skill run, not here.
 
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { FoundryError, containedIn } from "../runStore";
-import type { CandidateId, FindingCandidate, IdeaCandidate, NightId, WatchCandidate } from "./types";
+import type { CandidateId, FindingCandidate, IdeaCandidate, NightId, StoryboardCandidate, StoryboardTechnique, WatchCandidate } from "./types";
 import { WING_KNOWLEDGE_DIR, type ScoutWing } from "./wing";
 import { activeWing } from "./wingScope";
 
@@ -35,6 +37,23 @@ export const WATCH_HEADING = "## Proposed by the scout";
 const NAME_RE = /^[a-z0-9][a-z0-9._-]{0,80}$/;
 
 export type KnowledgeOptions = { readonly root?: string };
+
+/** A finding's template and step, as every door that takes one spells them (./sources.ts findings, ./storyboard.ts techniques). */
+export const TEMPLATE_NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
+export const TEMPLATE_RULE = "a template is a knowledge/templates directory name";
+export const STEP_NAME_RE = /^\d{2}-[a-z][a-z-]*$/;
+export const STEP_RULE = "a step is NN-name (02-frames, 05-cut)";
+
+/**
+ * Why a finding naming `template` has nowhere to land, or undefined. The scout wing's must name an existing
+ * knowledge/templates/<template>/ directory under `root` (the step's PATTERNS.md is made on a keep); a muse finding
+ * lands in its techniques.md and serves no template step (findingRelOf).
+ */
+export async function templateProblem(template: string, root: string = knowledgeRoot()): Promise<string | undefined> {
+  if (activeWing() !== "scout") return undefined;
+  const dir = path.join(root, "templates", template);
+  return (await stat(dir).catch(() => null))?.isDirectory() === true ? undefined : `there is no knowledge/templates/${template}/`;
+}
 
 /** SCOUT_KNOWLEDGE_DIR, else `<cwd>/knowledge`. Read per call. */
 export function knowledgeRoot(o: KnowledgeOptions = {}): string {
@@ -86,6 +105,18 @@ export function findingLine(night: NightId, c: FindingCandidate, sourceUrl: stri
   const where = [again.length === 0 ? "n=1" : "n=2", `scout ${night}`, ...again, ...(sourceUrl === undefined ? [] : [sourceUrl])].join(", ");
   return `- ${flat(c.claim)} - "${flat(c.quote)}" (${where}) ${markerOf(night, c.id)}`;
 }
+
+/** A storyboard's technique as the finding it is: its claim, its quote, its page as the source. */
+export const techniqueFinding = (c: Pick<StoryboardCandidate, "id">, t: StoryboardTechnique): FindingCandidate => ({
+  id: c.id,
+  kind: "finding",
+  sourceIds: [],
+  status: "rendered",
+  template: t.template,
+  step: t.step,
+  claim: t.claim,
+  quote: t.quote,
+});
 
 export function watchLine(night: NightId, c: WatchCandidate): string {
   return `- ${flat(c.entry)} - ${flat(c.why)} ${markerOf(night, c.id)}`;
@@ -155,6 +186,11 @@ async function appendTo(rel: string, heading: string, line: string, marker: stri
 /** A kept finding into its step's PATTERNS.md (the muse wing: its techniques.md). */
 export function appendFinding(night: NightId, c: FindingCandidate, sourceUrl: string | undefined, o: KnowledgeOptions = {}): Promise<Appended> {
   return appendTo(findingRelOf(activeWing(), c.template, c.step), FINDINGS_HEADING, findingLine(night, c, sourceUrl), markerOf(night, c.id), `# ${c.template} - ${c.step}`, o);
+}
+
+/** A kept storyboard's technique into its step's PATTERNS.md: a finding's line, under the finding's heading, with the storyboard's marker. */
+export function appendTechnique(night: NightId, c: Pick<StoryboardCandidate, "id">, t: StoryboardTechnique, o: KnowledgeOptions = {}): Promise<Appended> {
+  return appendFinding(night, techniqueFinding(c, t), t.url, o);
 }
 
 /** A kept watch line into the active wing's watchlist. */

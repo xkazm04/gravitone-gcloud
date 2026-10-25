@@ -47,6 +47,7 @@ const LOC = path.join(ROOT, "kernel.sqlite");
 const BATCH = "2026-10-20";
 const SEED = `${BATCH}/sd-001`;
 const SENTENCE = "A darksynth instrumental for a night drive through a rain-lit city";
+const SONGS = "2026-10-21";
 
 afterAll(() => {
   closeProcessKernel();
@@ -83,6 +84,17 @@ const seeds = (async () => {
     committed: { at: `${BATCH}T09:00:00.000Z`, by: "operator", kept: ["sd-001", "sd-003"], rejected: ["sd-002"], reasons: { "sd-002": ["generic"] }, notes: {}, dry: false },
   }));
   await pauseBranch(`${BATCH}/sd-003`, "operator");
+  // Spark scout-vision: a kept seed that is not a music seed, and a music seed carrying its song.
+  await createSeedBatch(SONGS, (id) => ({
+    id,
+    createdAt: `${SONGS}T08:00:00.000Z`,
+    dry: false,
+    seeds: [
+      { id: "sd-001", sentence: "A paper boat races the gutter after a storm", genre: "kids animation", subgenre: "adventure", type: "animated short", audience: "kids", format: "short" },
+      { id: "sd-002", sentence: "A slow waltz for an empty ballroom at dawn", genre: "neoclassical", subgenre: "chamber waltz", type: "visualizer", audience: "adult", format: "video", music: { instruments: ["nylon guitar", "cello"], tempo: 92, mood: "melancholic", vocals: "instrumental" } },
+    ],
+    committed: { at: `${SONGS}T09:00:00.000Z`, by: "operator", kept: ["sd-001", "sd-002"], rejected: [], reasons: {}, notes: {}, dry: false },
+  }));
 })();
 
 const trackOf = async (id: string, cid: string): Promise<TrackCandidate> => {
@@ -102,6 +114,30 @@ describe("the track act's doors", () => {
     await trackAct(ctxOf(), n.id, SEED);
     await expect(trackAct(ctxOf(), n.id, SEED)).rejects.toThrow(`night ${n.id} made 1 of its 1 track(s); nothing launched`);
     expect((await readNight(n.id)).candidates).toHaveLength(1);
+  });
+});
+
+describe("only a music seed makes a track (spark scout-vision)", () => {
+  it("refuses a kept seed whose type is not a music type, before anything is written", async () => {
+    await seeds;
+    const n = await night({ dry: true });
+    await expect(trackAct(ctxOf(), n.id, `${SONGS}/sd-001`)).rejects.toThrow(`seed ${SONGS}/sd-001 is a animated short seed; a track grows only from a music seed (music video, lyric video, visualizer)`);
+    expect((await readNight(n.id)).candidates).toEqual([]);
+  });
+
+  it("a music seed's song rides into the proposal turn: layered style words and the vocals fenced on both sides", async () => {
+    await seeds;
+    const n = await night({ dry: false });
+    const asked: TextRequest[] = [];
+    const r = await trackAct(ctxOf({ dryOnly: false }), n.id, `${SONGS}/sd-002`, { driver: FAKE_SUNO_DRIVER, reason: seat(asked), fetchClip: async () => new Uint8Array(1) });
+    expect(r.candidate.fromSeed).toBe(`${SONGS}/sd-002`);
+    expect(asked).toHaveLength(1);
+    // The prompt file is read as checked out (CRLF on a Windows clone): line ends are not what is asserted.
+    const prompt = (asked[0]?.prompt ?? "").replace(/\r\n/g, "\n");
+    expect(prompt).toContain("A slow waltz for an empty ballroom at dawn\n\nThe song is already prepared.");
+    expect(prompt).toContain("- genre and era: neoclassical, chamber waltz\n- mood: melancholic\n- instrumentation: nylon guitar, cello\n- tempo: 92 bpm");
+    expect(prompt).toContain('put "instrumental" in `style`, "[Instrumental]" as `lyrics`, and "vocals, singing" in `exclude`');
+    expect(prompt).not.toContain("{{");
   });
 });
 

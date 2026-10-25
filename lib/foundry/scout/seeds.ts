@@ -9,6 +9,14 @@
 // format), for REPEATING a sentence - another in this batch, or any earlier batch's seed whatever became
 // of it ("done before": a kept one is a branch already, a thrown one is a ban) - compared case- and
 // whitespace-folded, and for a `parent` the seed door refuses (not kept, a dry batch's, under a pause).
+//
+// A MUSIC SEED CARRIES ITS SONG (spark scout-vision): a seed whose type is one of MUSIC_TYPES (the exact string)
+// must give `music` {instruments, tempo, mood, vocals} - the preparation a track's prompt is written from - and any
+// other seed is refused one. Seeds stored before the field read as they are.
+//
+// THE BACKLOG GATE (./backlog.ts): while BACKLOG_GATE or more kept ideas of the scout wing wait for a storyboard,
+// a batch holds at most GATED_FRESH_SEEDS fresh seeds (no parent); child seeds are not limited. A dry batch is
+// gated too. The refusal comes before anything is written.
 
 import { z } from "zod";
 
@@ -16,9 +24,30 @@ import { parseAt } from "@gt/domain/door";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 import { nextPart, partRunId } from "./parts";
+import { backlogOf, freshSeedRefusal } from "./backlog";
 import { ancestryOf, createSeedBatch, listSeedBatches, readSeedBatch, seedOf, seedsPacketId } from "./seedStore";
 import { pausedUnder, readSteer } from "./steer";
-import { GENRE_MAX, MAX_SEED_BATCH, SEED_AUDIENCES, SEED_REF_RE, SEED_SENTENCE_MAX, VIDEO_FORMATS, seedRef, type NightId, type Seed, type SeedBatch, type SeedRef } from "./types";
+import { readAllNights } from "./store";
+import { withWing } from "./wingScope";
+import {
+  GENRE_MAX,
+  MAX_SEED_BATCH,
+  MUSIC_INSTRUMENTS_MAX,
+  MUSIC_TEMPO_MAX,
+  MUSIC_TEMPO_MIN,
+  MUSIC_TYPES,
+  SEED_AUDIENCES,
+  SEED_VOCALS,
+  SEED_REF_RE,
+  SEED_SENTENCE_MAX,
+  VIDEO_FORMATS,
+  seedRef,
+  type NightId,
+  type Seed,
+  type SeedBatch,
+  type SeedMusic,
+  type SeedRef,
+} from "./types";
 
 export type SeedBatchOptions = {
   readonly dry: boolean;
@@ -26,6 +55,9 @@ export type SeedBatchOptions = {
   readonly night?: NightId;
   readonly now?: Date;
 };
+
+/** One instrument, or the mood: a few plain words. */
+export const MUSIC_FACET_MAX = 40;
 
 const line = (max: number) =>
   z
@@ -44,8 +76,20 @@ const seedSchema = z
     audience: z.enum(SEED_AUDIENCES),
     format: z.enum(VIDEO_FORMATS),
     parent: z.string().trim().regex(SEED_REF_RE, "a kept seed's <batch>/sd-NNN").optional(),
+    music: z
+      .object({
+        instruments: z.array(line(MUSIC_FACET_MAX)).min(1).max(MUSIC_INSTRUMENTS_MAX),
+        tempo: z.number().int().min(MUSIC_TEMPO_MIN).max(MUSIC_TEMPO_MAX),
+        mood: line(MUSIC_FACET_MAX),
+        vocals: z.enum(SEED_VOCALS),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
+
+/** True for a seed type that makes a song first (MUSIC_TYPES, the exact string). */
+export const isMusicType = (type: string): boolean => (MUSIC_TYPES as readonly string[]).includes(type);
 
 type Brief = Omit<Seed, "id">;
 
@@ -61,7 +105,7 @@ function verdictOf(b: SeedBatch, id: string): string {
 
 /** The batch as seeds in order, or the first bad one's place and why; nothing is written here. */
 export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[]): Promise<Result<Brief[]>> {
-  if (!Array.isArray(raw)) return err("invalid", "seeds: the input is a JSON array of seeds {sentence, genre, subgenre, type, audience, format, parent?}");
+  if (!Array.isArray(raw)) return err("invalid", "seeds: the input is a JSON array of seeds {sentence, genre, subgenre, type, audience, format, parent?, music?}");
   if (raw.length === 0) return err("invalid", "seeds: the batch holds no seed");
   if (raw.length > MAX_SEED_BATCH) return err("invalid", `seeds: a batch holds at most ${MAX_SEED_BATCH} seeds; this one has ${raw.length}`);
   const earlier = new Map<string, string>();
@@ -78,20 +122,28 @@ export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[]
     if (twin !== undefined) return err("invalid", `${at}: repeats seed ${twin} of this batch`);
     const was = earlier.get(key);
     if (was !== undefined) return err("refused", `${at}: done before - ${was}`);
+    if (isMusicType(s.type) && s.music === undefined) return err("invalid", `${at}: music: a ${s.type} seed gives its song {instruments, tempo, mood, vocals}`);
+    if (!isMusicType(s.type) && s.music !== undefined) return err("invalid", `${at}: music: only a ${MUSIC_TYPES.join(", ")} seed takes music; this one is a ${s.type}`);
     here.set(key, i + 1);
     if (s.parent !== undefined) {
       const p = await usableSeed(s.parent, batches);
       if (!p.ok) return err(p.error.code, `${at}: parent: ${p.error.message}`);
     }
-    out.push({ sentence: s.sentence, genre: s.genre, subgenre: s.subgenre, type: s.type, audience: s.audience, format: s.format, ...(s.parent === undefined ? {} : { parent: s.parent }) });
+    const music: SeedMusic | undefined = s.music === undefined ? undefined : { instruments: s.music.instruments, tempo: s.music.tempo, mood: s.music.mood, vocals: s.music.vocals };
+    out.push({ sentence: s.sentence, genre: s.genre, subgenre: s.subgenre, type: s.type, audience: s.audience, format: s.format, ...(s.parent === undefined ? {} : { parent: s.parent }), ...(music === undefined ? {} : { music }) });
   }
   return ok(out);
 }
 
-/** Validate a batch (`[{sentence, genre, subgenre, type, audience, format, parent?}]`) and write it whole. */
+/** Validate a batch (`[{sentence, genre, subgenre, type, audience, format, parent?, music?}]`), hold it to the backlog gate, and write it whole. */
 export async function addSeedBatch(raw: unknown, o: SeedBatchOptions): Promise<Result<SeedBatch>> {
-  const checked = await checkSeedBatch(raw, await listSeedBatches());
+  const batches = await listSeedBatches();
+  const checked = await checkSeedBatch(raw, batches);
   if (!checked.ok) return checked;
+  // The scout wing's nights hold the ideas the gate counts (seeds are the scout wing's alone).
+  const nights = await withWing("scout", () => readAllNights());
+  const refusal = freshSeedRefusal(backlogOf(nights, batches, await readSteer()), checked.value);
+  if (refusal !== undefined) return err("refused", `seeds: ${refusal}`);
   const now = o.now ?? new Date();
   const seeds: Seed[] = checked.value.map((s, i) => ({ id: `sd-${String(i + 1).padStart(3, "0")}`, ...s }));
   const batch = await createSeedBatch(now.toISOString().slice(0, 10), (id) => ({ id, createdAt: now.toISOString(), ...(o.night === undefined ? {} : { night: o.night }), dry: o.dry, seeds }));
@@ -124,8 +176,15 @@ export async function usableSeed(ref: SeedRef, batches?: readonly SeedBatch[]): 
 
 /* ── the CLI ───────────────────────────────────────────────────────────────── */
 
-/** `kids · comedy › sketch · animated comedy sketch · short`: a seed's facets, as the Board's meta and the brief say them. */
-export const seedFacets = (s: Pick<Seed, "audience" | "genre" | "subgenre" | "type" | "format">): string => `${s.audience} · ${s.genre} › ${s.subgenre} · ${s.type} · ${s.format}`;
+/** `92 bpm · nylon guitar, cello · melancholic · instrumental`: a music seed's song, as its facets end. */
+export const musicFacets = (m: SeedMusic): string => `${m.tempo} bpm · ${m.instruments.join(", ")} · ${m.mood} · ${m.vocals}`;
+
+/**
+ * `kids · comedy › sketch · animated comedy sketch · short`: a seed's facets, as the Board's meta and the brief say them;
+ * a music seed's song follows (`... · short · 92 bpm · nylon guitar, cello · melancholic · instrumental`).
+ */
+export const seedFacets = (s: Pick<Seed, "audience" | "genre" | "subgenre" | "type" | "format" | "music">): string =>
+  `${s.audience} · ${s.genre} › ${s.subgenre} · ${s.type} · ${s.format}${s.music === undefined ? "" : ` · ${musicFacets(s.music)}`}`;
 
 /** A batch's counts: decided seeds by verdict, the rest undecided. */
 export function batchCounts(b: SeedBatch): { readonly seeds: number; readonly kept: number; readonly rejected: number; readonly undecided: number } {

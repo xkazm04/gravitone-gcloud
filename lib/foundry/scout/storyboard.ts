@@ -29,6 +29,12 @@
 //   before the field); every one counts, a failed one too - it held the card. The check and the rows are one
 //   write under the night's lock, so two batches at once cannot both take the last places.
 //
+//   A TECHNIQUE, OPTIONAL (spark scout-vision): `technique` {claim, quote, url, template, step} is the way of
+//   executing the genre the night researched and the panels apply - a finding's shape, its template and step held
+//   to the finding door's rule (./knowledge.ts TEMPLATE_NAME_RE, STEP_NAME_RE, templateProblem). Kept on the Board,
+//   the storyboard files it as one line in that step's PATTERNS.md, exactly as a kept finding is filed
+//   (./knowledge.ts appendTechnique); not kept, nothing is written.
+//
 //   A DRY NIGHT DRAWS NOTHING. Its storyboards are written `rendered` with no frame (`images: []`), so the
 //   Board triages the words alone, and no job is launched - a dry night spends nothing, and a stand-in frame
 //   would be judged as if it were the plan.
@@ -48,15 +54,18 @@ import { driveStoryboard, launchStoryboard } from "../../producers/scoutStoryboa
 import { settledBoard, type StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
 import { launchable, Refusal, type ActContext } from "./acts";
 import { IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
+import { STEP_NAME_RE, STEP_RULE, TEMPLATE_NAME_RE, TEMPLATE_RULE, templateProblem } from "./knowledge";
 import { namesIn } from "./scene";
 import { mutateNight, nextCandidateId, readAllNights, readNight, withCandidate } from "./store";
 import { storyboardOf } from "./storyboardKept";
 import { activeWing } from "./wingScope";
 import {
   AIM_MAX,
+  CLAIM_MAX,
   DEFAULT_STORYBOARD_CAP,
   IDEA_PROMPT_MAX,
   IDEA_TITLE_MAX,
+  QUOTE_MAX,
   STORYBOARD_BULLET_MAX,
   STORYBOARD_BULLETS_MAX,
   STORYBOARD_BULLETS_MIN,
@@ -114,6 +123,17 @@ const briefSchema = z
     panels: z.array(z.string().trim().min(1).max(IDEA_PROMPT_MAX)).min(1).max(STORYBOARD_PANELS_MAX),
     use: line(USE_MAX).optional(),
     aim: line(AIM_MAX).optional(),
+    /** The execution technique the panels apply; filed as a finding when the storyboard is kept. */
+    technique: z
+      .object({
+        claim: line(CLAIM_MAX),
+        quote: z.string().trim().min(1).max(QUOTE_MAX),
+        url: z.string().trim().max(2048).regex(/^https?:\/\/\S+$/i, "an http(s) page"),
+        template: z.string().regex(TEMPLATE_NAME_RE, TEMPLATE_RULE),
+        step: z.string().regex(STEP_NAME_RE, STEP_RULE),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -121,7 +141,7 @@ export type StoryboardBrief = z.output<typeof briefSchema>;
 
 /** The skill's batch as briefs, or the first bad brief's place and reason; nothing is read or written here. */
 export function parseStoryboards(raw: unknown): Result<StoryboardBrief[]> {
-  if (!Array.isArray(raw)) return err("invalid", "storyboard: the input is a JSON array of briefs {fromIdea, title, paragraph, bullets, panels, use?, aim?}");
+  if (!Array.isArray(raw)) return err("invalid", "storyboard: the input is a JSON array of briefs {fromIdea, title, paragraph, bullets, panels, use?, aim?, technique?}");
   if (raw.length === 0) return err("invalid", "storyboard: the batch holds no brief");
   const out: StoryboardBrief[] = [];
   for (const [i, item] of raw.entries()) {
@@ -169,6 +189,10 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   const parsed = parseStoryboards(input);
   if (!parsed.ok) throw new Refusal(parsed.error.message);
   const briefs = parsed.value;
+  for (const [i, b] of briefs.entries()) {
+    const nowhere = b.technique === undefined ? undefined : await templateProblem(b.technique.template);
+    if (nowhere !== undefined) throw new Refusal(`storyboard ${i + 1}: technique: ${nowhere}`);
+  }
   const cache = new Map<NightId, Night | string>();
   const ideas: KeptIdea[] = [];
   for (const [i, b] of briefs.entries()) {
@@ -212,6 +236,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
         ...(aspect === "16:9" ? {} : { aspect }),
         ...use,
         ...(b.aim === undefined ? {} : { aim: b.aim }),
+        ...(b.technique === undefined ? {} : { technique: { claim: b.technique.claim, quote: b.technique.quote, url: b.technique.url, template: b.technique.template, step: b.technique.step } }),
         ...(n.dry ? { images: [] } : {}),
       };
       next = { ...next, candidates: [...next.candidates, c] };

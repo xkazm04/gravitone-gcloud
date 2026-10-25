@@ -32,8 +32,9 @@ import { reasonsOf, reasonVocabulary } from "@gt/domain/source";
 
 import { closeKernel } from "../../lib/kernelStore.ts";
 import { scoutAdapter } from "../../lib/decision/v1/sources/scout.ts";
+import { appendTechnique } from "../../lib/foundry/scout/knowledge.ts";
 import { keptStoryboardFor } from "../../lib/foundry/scout/storyboardKept.ts";
-import type { Candidate, IdeaCandidate, Night, StoryboardCandidate } from "../../lib/foundry/scout/types.ts";
+import type { Candidate, IdeaCandidate, Night, StoryboardCandidate, StoryboardTechnique } from "../../lib/foundry/scout/types.ts";
 import { categoriesOf, categoryOf, runsOf, tabOf, tabsOf, wordsOnly } from "../../packages/ui/src/board/runs.ts";
 import { must, openFlow } from "./decision-v1-harness.ts";
 
@@ -189,5 +190,57 @@ describe("scout adapter - a storyboard is one run, its frames then its words", (
     const night = nightOf(NIGHT);
     expect(night.committed?.reasons["c-10/words"]).toEqual(["story"]);
     expect(keptStoryboardFor([night], IDEA_REF)).toBeNull();
+  });
+});
+
+describe("scout adapter - a kept storyboard files its technique (spark scout-vision)", () => {
+  const TECH = "2026-10-23";
+  const TECH_DRY = "2026-10-24";
+  const technique: StoryboardTechnique = {
+    claim: "Hold the reveal frame twice as long as the chase frames",
+    quote: "the last shot sits for 48 frames against 24 for every cut before it",
+    url: "https://example.com/pacing-a-reveal",
+    template: "short-form-clip",
+    step: "02-frames",
+  };
+  const patterns = path.join(ROOT, "knowledge", "templates", "short-form-clip", "steps", "02-frames", "PATTERNS.md");
+  const LINE = `- Hold the reveal frame twice as long as the chase frames - "the last shot sits for 48 frames against 24 for every cut before it" (n=1, scout ${TECH}, https://example.com/pacing-a-reveal) <!-- scout:${TECH}/c-20 -->`;
+
+  function seedTechnique(): void {
+    seed();
+    writeNight(TECH, false, [board("c-20", { title: "With a technique", images: [], technique }), board("c-21", { title: "Thrown, with a technique", images: [], technique: { ...technique, claim: "A thrown claim" } }), board("c-22", { title: "No technique", images: [] })]);
+    writeNight(TECH_DRY, true, [board("c-20", { title: "Dry, with a technique", technique })]);
+  }
+
+  it("kept: one marked finding line in the step's PATTERNS.md, previewed; rejected and technique-less write nothing; applied twice, still one", async () => {
+    seedTechnique();
+    const flow = await openFlow(scoutAdapter, TECH, blobDir);
+    flow.patch([
+      { candidate: "c-20/words", verdict: "keep" },
+      { candidate: "c-21/words", verdict: "reject", reasons: ["story"] },
+      { candidate: "c-22/words", verdict: "keep" },
+    ]);
+    const p = must(flow.preview()).consequence;
+    expect(p.writes.filter((w) => w.target.endsWith("PATTERNS.md"))).toEqual([{ kind: "file", target: "knowledge/templates/short-form-clip/steps/02-frames/PATTERNS.md", candidate: "c-20/words", detail: "new file · a line under ## Scout findings" }]);
+    must(flow.commit());
+    const claim = flow.claim();
+    must(await scoutAdapter.apply(claim));
+    const text = readFileSync(patterns, "utf8");
+    expect(text).toBe(`# short-form-clip - 02-frames\n\n## Scout findings\n\n${LINE}\n`);
+    // A redelivery is success and writes nothing; the writer itself is a no-op on the marker.
+    must(await scoutAdapter.apply(claim));
+    expect((await appendTechnique(TECH, { id: "c-20" }, technique)).wrote).toBe(false);
+    expect(readFileSync(patterns, "utf8")).toBe(text);
+    expect(text.split(`<!-- scout:${TECH}/`).length - 1).toBe(1);
+  });
+
+  it("a dry night's kept storyboard files nothing", async () => {
+    seedTechnique();
+    const flow = await openFlow(scoutAdapter, TECH_DRY, blobDir);
+    flow.patch([{ candidate: "c-20/words", verdict: "keep" }]);
+    must(flow.commit());
+    must(await scoutAdapter.apply(flow.claim()));
+    expect(nightOf(TECH_DRY).state).toBe("committed");
+    expect(() => readFileSync(patterns, "utf8")).toThrow();
   });
 });
