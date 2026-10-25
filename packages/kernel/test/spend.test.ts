@@ -1,5 +1,8 @@
 import { afterAll, describe, expect, it } from "vitest";
+import { err } from "@gt/domain/errors";
+import type { Effects } from "../src/effects.ts";
 import { eventsMigrations, verify } from "../src/events.ts";
+import { createSettler } from "../src/spend/settler.ts";
 import type { SpendClass } from "../src/spend/core.ts";
 import { book, lapseOwner, release, reservationOf, reserve, settle, stats, spendMigrations, type SettleEntry } from "../src/spend/ledger.ts";
 import type { Store } from "../src/store.ts";
@@ -108,6 +111,32 @@ describe("kernel/spend - reserve -> settle -> book", () => {
     expect(must(s.read((r) => r.get("SELECT count(*) AS n FROM spend_rows")?.["n"]))).toBe(1);
     expect(s.tx((t) => t.run("DELETE FROM spend_rows")).ok).toBe(false);
     expect(s.tx((t) => t.run("UPDATE spend_rows SET amount = 0.01")).ok).toBe(false);
+  });
+});
+
+describe("kernel/spend - a settle the store cannot take now is kept, never dropped (settler.ts)", () => {
+  it("a deferred settle is applied at the head of the next transaction, counted as a late write, booked once", () => {
+    const s = tpl.fresh();
+    hold(s, "r1", 0.3);
+    hold(s, "r2", 0.2);
+    let busy = 1;
+    const fx: Effects = {
+      blob: () => Promise.reject(new Error("no blobs here")),
+      call: (_name, fn) => fn(),
+      tx(_name, fn) {
+        if (busy-- > 0) return err("unavailable", "the store is busy");
+        return s.tx(fn);
+      },
+    };
+    const settler = createSettler(fx);
+    expect(must(settler.settle(imaging, "r1", [served(0.25)]))).toBe("deferred");
+    expect(settler.pending().map((p) => p.id)).toEqual(["r1"]);
+    expect(st(s)).toMatchObject({ spent: 0, held: 0.5 });
+    expect(must(settler.settle(imaging, "r2", [served(0.15)]))).toBe("applied");
+    expect(settler.pending()).toEqual([]);
+    expect(st(s)).toMatchObject({ spent: 0.4, held: 0, rows: 2, counters: { lateWrites: 1, booked: 2 } });
+    expect(must(settler.flush())).toBe(0);
+    expect(must(verify(s)).state).toBe("intact");
   });
 });
 
