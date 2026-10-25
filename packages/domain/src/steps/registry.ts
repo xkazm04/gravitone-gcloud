@@ -50,6 +50,11 @@ export const STEP_RECORDS = {
 } as const;
 
 export type StepKey = keyof typeof STEP_RECORDS;
+
+// Each def is filed under its own key: a def filed under another's would decode that key's rows
+// through the wrong door, and every reader and test would still see a record. tsc holds it.
+const filedUnderItsKey: { readonly [K in StepKey]: StepRecordDef<K, z.ZodType> } = STEP_RECORDS;
+void filedUnderItsKey;
 export type StepData<K extends StepKey> = z.output<(typeof STEP_RECORDS)[K]["schema"]>;
 /** A part's records as a reader holds them: decoded, by key; absent = never written. */
 export type StepRecords = { readonly [K in StepKey]?: StepData<K> };
