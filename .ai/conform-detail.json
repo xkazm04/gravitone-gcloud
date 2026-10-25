@@ -13331,6 +13331,67 @@
         }
       ],
       "registryProposal": "The golden path defers the generic job record to 'a different bundle' but names neither the bundle nor a subject. Repos like this one cite the governing subjects by name in their comments (job-coordination: in-flight-is-a-position, background-jobs: startup-sweeps, admission-queue: drain-and-shutdown). Naming them in the scoping paragraph would let a judge route a job-queue context without reasoning from the discriminator alone."
+    },
+    "d12a6aa7-39d7-464c-b47d-c4a1670d3bbd/embedded-db": {
+      "context": "trailer-structure-engine",
+      "subject": "embedded-db",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:51:35.768Z",
+      "worker": "482986df-c0aa-4131-83e9-cf524a552444",
+      "techniques": [
+        {
+          "technique": "analytical-reads-off-the-serving-store",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 No serving store to read from; its data comes from a static JSON import."
+        },
+        {
+          "technique": "connection-pooling",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/readers.ts:6 Its imports are types and pure helpers only (readers.ts:6-14); it opens no connection."
+        },
+        {
+          "technique": "corruption-class-response",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 No writes to a store, so it has no corruption class to respond to."
+        },
+        {
+          "technique": "db-self-instrumentation",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 No database operations to instrument."
+        },
+        {
+          "technique": "derived-capacity-limits",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 Its thresholds are trailer-craft rule numbers, not entry or transaction limits of a storage engine."
+        },
+        {
+          "technique": "extension-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 No engine, so no extensions to load."
+        },
+        {
+          "technique": "journal-and-durability-modes",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 Nothing is persisted here; the search found no journal or pragma."
+        },
+        {
+          "technique": "quiet-window-maintenance",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 No maintenance passes."
+        },
+        {
+          "technique": "single-writer-holder-discipline",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 Holds no store file."
+        },
+        {
+          "technique": "storage-accounting-and-pruning",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 Stores no rows, so nothing to prune."
+        }
+      ]
     }
   }
 }
