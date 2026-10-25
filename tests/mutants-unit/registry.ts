@@ -7022,4 +7022,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "() => mv.schedule({ track, channel, publishAt }).then((r) => r),",
     why: "A site that chains .then on a Server Action outside the runner brings back the silent rejection for that one press.",
   },
+  {
+    id: "runs-legend-amber-names-only-the-weir",
+    test: "tests/next-server/runs-legend.test.ts",
+    file: "app/(studio)/projects/runs/_runs/legend.ts",
+    find: "const labels = look === \"awaiting\" ? [\"at weir\", ...names] : names;",
+    replace: "const labels = look === \"awaiting\" ? [\"at weir\"] : names;",
+    why: "An interrupted job, whose vendor may have been paid, is drawn amber under a key that says only 'at weir', and the operator decodes the bar wrong.",
+  },
+  {
+    id: "runs-legend-literal-key-back",
+    test: "tests/next-server/runs-legend.test.ts",
+    file: "app/(studio)/projects/runs/_runs/Runs.tsx",
+    find: "const LEGEND = legendOf();",
+    replace: "const LEGEND: readonly { look: string; label: string }[] = [{ look: \"awaiting\", label: \"at weir\" }];",
+    why: "The page draws a hand-written key again, one word per colour, while the colours paint several states.",
+  },
 ];
