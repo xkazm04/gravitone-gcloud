@@ -27,6 +27,14 @@ describe("the schedule a kept verdict carries", () => {
     expect(decodeSchedule("calendar: blog 2026-10-20T09:30:00.000Z extra")).toEqual({ kind: "invalid", error: 'calendar: "2026-10-20T09:30:00.000Z" is not an ISO instant' });
   });
 
+  it("an instant names its zone: a zone-less time would read in the host's zone, so it is refused", () => {
+    // Date.parse reads "2026-10-20T09:30" as LOCAL time: 09:30Z on a UTC box, 07:30Z in Prague.
+    expect(decodeSchedule("calendar: blog 2026-10-20T09:30")).toEqual({ kind: "invalid", error: 'calendar: "2026-10-20T09:30" is not an ISO instant' });
+    expect(decodeSchedule("calendar: blog 2026-10-20T09:30:00.000")).toEqual({ kind: "invalid", error: 'calendar: "2026-10-20T09:30:00.000" is not an ISO instant' });
+    expect(decodeSchedule("calendar: blog 2026-10-20T09:30:00+02:00")).toEqual({ kind: "schedule", schedule: { channel: "blog", publishAt: "2026-10-20T07:30:00.000Z" }, note: null });
+    expect(decodeSchedule("calendar: blog 2026-10-20T09:30Z")).toEqual({ kind: "schedule", schedule: { channel: "blog", publishAt: "2026-10-20T09:30:00.000Z" }, note: null });
+  });
+
   it("proposes the next day at 08:00 UTC, worded as the calendar reads it", () => {
     expect(proposeAt(Date.parse("2026-10-17T21:40:00.000Z"))).toBe("2026-10-18T08:00:00.000Z");
     expect(proposeAt(Date.parse("2026-12-31T07:00:00.000Z"))).toBe("2027-01-01T08:00:00.000Z");
