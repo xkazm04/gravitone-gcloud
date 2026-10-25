@@ -488,4 +488,12 @@ export const MUTANTS: Mutant[] = [
     replace: "(best === null",
     why: "A replica that drew text can score best and become the style's recipe in force, so the catalogue ships a recipe whose best evidence is a vetoed render.",
   },
+  {
+    id: "sound-cli-generate-ignores-dry-only",
+    probe: "sound-generate-door.probe.spec.ts",
+    file: "lib/sound/cli.ts",
+    find: "if (process.env.GRAVITONE_DRY_ONLY === \"1\")",
+    replace: "if (false)",
+    why: "An agent's `sound.mts generate` under GRAVITONE_DRY_ONLY=1 still renders and bills ElevenLabs live, with no receipt.",
+  },
 ];

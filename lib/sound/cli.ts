@@ -120,6 +120,11 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
           nodeId: null,
           title: flag("title") ?? null,
         });
+        // `generate` is the one sound door that bills with no receipt (the kernel's producers
+        // price theirs and go dry under the flag); GRAVITONE_DRY_ONLY=1 forces DRY everywhere,
+        // so here it refuses the render after the request was held to its contract.
+        if (process.env.GRAVITONE_DRY_ONLY === "1")
+          throw new SoundError("GRAVITONE_DRY_ONLY=1: generate renders live on ElevenLabs with no receipt and has no dry stand-in; nothing was sent", 403);
         const take = await generateTake(req);
         if (JSON_OUT) json({ take });
         else {

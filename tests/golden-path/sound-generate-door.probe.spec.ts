@@ -1,0 +1,99 @@
+// LANE - THE SOUND GENERATE DOOR (lib/sound/generate.ts, cli.ts, takes.ts, editPlan.ts), offline
+// and against a temp store.
+//
+// What is pinned is what a request is held to BEFORE the vendor is asked, and what the store
+// does when a write it began cannot finish:
+//
+//   · the agents' CLI `generate` bills ElevenLabs with no receipt, so GRAVITONE_DRY_ONLY=1
+//     refuses it outright - nothing sent, nothing filed;
+//
+// `globalThis.fetch` is REPLACED for every case: the vendor is a canned response, and any
+// other URL fails the test. SOUND_STORE_DIR / SOUND_LEDGER_PATH point at a fresh temp dir per
+// test and the env is restored afterwards (keepEnv).
+
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+import { test, expect } from "@playwright/test";
+
+import { __resetMusicBudget } from "@/lib/music/budget";
+import { runSoundCli } from "@/lib/sound/cli";
+import { readTakes } from "@/lib/sound/store";
+
+import { keepEnv } from "./_helpers";
+
+keepEnv(["SOUND_STORE_DIR", "SOUND_LEDGER_PATH", "ELEVENLABS_API_KEY", "MUSIC_BUDGET_SECONDS_PER_WINDOW", "GRAVITONE_DRY_ONLY"]);
+
+let root = "";
+const realFetch = globalThis.fetch;
+let calls: { url: string; body: unknown }[] = [];
+
+const PLAN = {
+  chunks: [
+    { text: "[Intro]", duration_ms: 5000, positive_styles: ["lo-fi"], negative_styles: [] },
+    { text: "[Drop]", duration_ms: 5000, positive_styles: ["lo-fi"], negative_styles: [] },
+  ],
+};
+
+/** The vendor, canned: a compose answers audio + plan + song id, an effect answers bytes. */
+function elevenlabs(url: string): Response | null {
+  if (!url.startsWith("https://api.elevenlabs.io/")) return null;
+  if (url.endsWith("/v1/sound-generation")) return new Response(new Uint8Array(2000).fill(3), { headers: { "content-type": "audio/mpeg" } });
+  return Response.json({ audio_base_64: Buffer.from(new Uint8Array(3000).fill(5)).toString("base64"), composition_plan: PLAN, song_id: "song-door-1" });
+}
+
+test.beforeEach(() => {
+  root = mkdtempSync(path.join(tmpdir(), "sound-door-"));
+  process.env.SOUND_STORE_DIR = path.join(root, "store");
+  process.env.SOUND_LEDGER_PATH = path.join(root, "ledger.json");
+  process.env.ELEVENLABS_API_KEY = "door-probe-key";
+  delete process.env.MUSIC_BUDGET_SECONDS_PER_WINDOW;
+  delete process.env.GRAVITONE_DRY_ONLY;
+  __resetMusicBudget();
+  calls = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    let body: unknown = null;
+    try {
+      body = typeof init?.body === "string" ? JSON.parse(init.body) : null;
+    } catch {
+      body = init?.body ?? null;
+    }
+    calls.push({ url, body });
+    const r = elevenlabs(url);
+    if (!r) throw new Error(`probe: unexpected network call to ${url}`);
+    return r;
+  }) as typeof fetch;
+});
+
+test.afterEach(() => {
+  globalThis.fetch = realFetch;
+  rmSync(root, { recursive: true, force: true });
+});
+
+async function cli(...argv: string[]): Promise<{ code: number; out: string; err: string }> {
+  const out: string[] = [];
+  const err: string[] = [];
+  const code = await runSoundCli(argv, { root, out: (l) => out.push(l), err: (l) => err.push(l) });
+  return { code, out: out.join("\n"), err: err.join("\n") };
+}
+
+/* ── the CLI's generate under GRAVITONE_DRY_ONLY ─────────────────────────── */
+
+test("cli generate: GRAVITONE_DRY_ONLY=1 refuses the live render - nothing sent, nothing filed", async () => {
+  const argv = ["generate", "--kind", "music", "--prompt", "Warm lo-fi bed, rhodes", "--duration", "10", "--json"];
+  // The instrument sees a send: unset, the same argv reaches the vendor once and files a take.
+  const live = await cli(...argv);
+  expect(live.code, live.out).toBe(0);
+  expect(calls.length).toBe(1);
+  expect((await readTakes()).takes.length).toBe(1);
+
+  process.env.GRAVITONE_DRY_ONLY = "1";
+  const dry = await cli(...argv);
+  console.log(`[sound-door] dry-only generate -> ${dry.code} ${dry.out.slice(0, 120)}`);
+  expect(dry.code).toBe(1);
+  expect((JSON.parse(dry.out) as { error: string }).error).toContain("GRAVITONE_DRY_ONLY");
+  expect(calls.length, "a dry-only generate reached the vendor").toBe(1);
+  expect((await readTakes()).takes.length, "a dry-only generate filed a take").toBe(1);
+});
