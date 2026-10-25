@@ -55,7 +55,7 @@ export const stepDrag = (d: Drag, i: number): Drag => (d.b === i ? d : { a: d.a,
  * aria-hidden - they are the bars' own numbers - and the resting line steps out of sight, not out
  * of the region, while they show.
  */
-export function Readout({ resting, at }: { readonly resting: readonly [string, string]; readonly at: DayCount | undefined }) {
+export function readout(resting: readonly [string, string], at: DayCount | undefined) {
   return (
     <div className={s.read}>
       <div aria-live="polite" className={at === undefined ? undefined : sr.sr}>
@@ -151,7 +151,7 @@ export function TimeStrip({ days, today, nowMs, range, inRange, onRange }: TimeS
     <div className={s.strip} data-component="TimeStrip">
       <div className={s.side}>
         <span className={s.head}>time · utc</span>
-        <Readout resting={resting} at={at} />
+        {readout(resting, at)}
       </div>
       <div className={s.main}>
         <div
