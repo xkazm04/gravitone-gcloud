@@ -90,6 +90,22 @@ test("card case 4: a vendor-reported turn books one row; an unpriced google turn
   expect((await textSpendStats()).counters.booked).toBe(1);
 });
 
+test("a served answer the schema check refuses still books the turn's vendor-reported cost", async () => {
+  // `# DOOR prose`: the engine ran, reported total_cost_usd 0.0019, and answered
+  // in prose where JSON was required. The turn is refused bad-response, and the
+  // bill it ran up is a failed row, not a gap in the ledger.
+  let refused: unknown;
+  await withFakeEngine(loadCassette("engine-door"), async () => {
+    refused = await reason({ prompt: "# DOOR prose\n", turn: "edit-plan", schema: SCHEMA }).catch((e: unknown) => e);
+  });
+  expect((refused as { kind?: string }).kind).toBe("bad-response");
+  const rows = await textSpendRows();
+  expect(rows, "a paid, refused answer booked no row").toHaveLength(1);
+  expect(rows[0]).toMatchObject({ basis: "vendor", amount: 0.0019, outcome: "failed" });
+  expect(rows[0]!.axes).toMatchObject({ turn: "edit-plan", provider: "claude-cli" });
+  expect(rows[0]!.axes.model).not.toBe("unknown");
+});
+
 test("no refusal: far past any imaging-sized ceiling, the next text turn is still served", async () => {
   for (let i = 0; i < 500; i++)
     await bookServedTurn({ turn: "edit-plan", provider: "claude-cli", model: "m", costUsd: 1000, costBasis: "vendor-reported" });

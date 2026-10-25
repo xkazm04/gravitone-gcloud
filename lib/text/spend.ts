@@ -10,8 +10,9 @@
 // `total_cost_usd`). An unpriced or merely estimated turn books NO row and bumps
 // `counters.unpriced`, so a total reads as the lower bound it is — never a $0 row,
 // never an invented number. A failed turn is booked only when its error carries
-// a vendor-reported cost; no adapter attaches one today, so in practice that
-// path is dormant until one does (`detail.costUsd`).
+// a vendor-reported cost (`detail.costUsd`): today that is a served answer the
+// router's schema check refused (router.ts::checkServed) - the engine ran and
+// billed, and the answer was unusable.
 //
 // BOOKING NEVER REACHES THE TURN. It runs at the settle point beside logTurn and
 // swallows its own failure: what reason() and retrieve() return or throw is
@@ -106,11 +107,12 @@ export async function bookFailedTurn(turn: string, err: unknown): Promise<void> 
   try {
     const usd = errorCostUsd(err);
     if (usd === undefined) return;
+    const model = err instanceof TextError ? (err.detail as { model?: unknown } | undefined)?.model : undefined;
     await meter.book({
       usd,
       turn,
       provider: err instanceof TextError ? (err.provider ?? "unknown") : "unknown",
-      model: "unknown",
+      model: typeof model === "string" && model ? model : "unknown",
       outcome: "failed",
       basis: "vendor",
     });

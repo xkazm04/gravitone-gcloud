@@ -412,7 +412,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
         // schema the VENDOR was given, which for Gemini is a translated subset,
         // so a `required` this app depends on can be dropped in translation and
         // enforced away. Re-checking costs microseconds and closes that gap.
-        const json = req.schema ? parseAgainstSchema(id, served.text, req.schema) : undefined;
+        const json = req.schema ? checkServed(id, served, req.schema) : undefined;
 
         return {
           ...served,
@@ -566,7 +566,7 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
         req.schema && !provider.enforcesSchema ? `${req.prompt}\n${schemaInstruction(req.schema)}` : req.prompt;
       try {
         const served = await provider.retrieve({ ...req, prompt }, timeoutMs);
-        const json = req.schema ? parseAgainstSchema(id, served.text, req.schema) : undefined;
+        const json = req.schema ? checkServed(id, served, req.schema) : undefined;
         return {
           ...served,
           json,
@@ -599,6 +599,29 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
       first?.provider,
       { trail: [...trail] },
     );
+  }
+}
+
+/** The schema check on an answer an engine has already SERVED. A refusal here
+ *  comes after the turn ran and billed, so the `bad-response` it throws carries
+ *  the served receipt's cost (`detail.costUsd`/`costBasis`/`model`): spend.ts
+ *  books a vendor-reported one as a failed turn, and a caller summing attempts
+ *  (repair.ts) can see the attempt was paid for. The parse door's own excerpt
+ *  rides along as `detail.excerpt`. */
+function checkServed(id: TextProviderId, served: TextResult, schema: Record<string, unknown>): unknown {
+  try {
+    return parseAgainstSchema(id, served.text, schema);
+  } catch (e) {
+    if (!(e instanceof TextError)) throw e;
+    const p = served.provenance;
+    const err = new TextError(e.message, e.kind, e.provider, {
+      excerpt: e.detail,
+      costUsd: p.costUsd,
+      costBasis: p.costBasis,
+      model: p.model,
+    });
+    err.dispatched = true;
+    throw err;
   }
 }
 
