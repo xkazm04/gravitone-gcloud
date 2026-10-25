@@ -19,7 +19,7 @@ import { jobMachine, type JobState } from "@gt/domain/job.machine";
 import type { LaneHoldView, ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
 import { canMove, canPause, canReroute, canRetry, ceilingFor, JobActs, retryPress } from "../../app/(studio)/projects/runs/_runs/Acts.tsx";
 import { buildRuns, type KernelJobInput } from "../../app/(studio)/projects/runs/_runs/model.ts";
-import { failedOf, floorRunsOf, heldLabel, heldMoney, totalsOf } from "../../app/(studio)/projects/runs/_runs/view.ts";
+import { failedOf, floorRunsOf, heldLabel, heldMoney, projectMeta, totalsOf } from "../../app/(studio)/projects/runs/_runs/view.ts";
 
 const job = (over: Partial<ProduceJob> = {}): ProduceJob => ({
   id: "job:part:p1:research",
@@ -131,5 +131,12 @@ describe("5. the held chip names every unit held", () => {
     expect(heldLabel(heldMoney(m))).toBe("$1.25 · 240 s");
     expect(heldLabel({ usd: 0, audioS: 90 })).toBe("90 s");
     expect(heldLabel({ usd: 3, audioS: 0 })).toBe("$3.00");
+  });
+});
+
+describe("6. a v1 project's row counts its bars in words that agree with the count", () => {
+  it("one job and one slot are singular, others plural", () => {
+    expect(projectMeta({ jobs: 1, slots: 1 })).toBe("1 job · 1 slot");
+    expect(projectMeta({ jobs: 0, slots: 2 })).toBe("0 jobs · 2 slots");
   });
 });

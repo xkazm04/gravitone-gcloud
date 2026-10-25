@@ -6446,4 +6446,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "...(h.audioS > 0 && h.usd === 0 ? [",
     why: "While any dollars are held, the header's held chip drops the audio seconds held beside them, so a Suno reservation in flight is invisible on Runs.",
   },
+  {
+    id: "runs-console-project-meta-plural",
+    test: "tests/next-server/runs-console.test.ts",
+    file: "app/(studio)/projects/runs/_runs/view.ts",
+    find: "${noun}${n === 1 ? \"\" : \"s\"}",
+    replace: "${noun}s",
+    why: "A v1 project with one bar reads \"1 jobs · 1 slots\" in the composition list.",
+  },
 ];

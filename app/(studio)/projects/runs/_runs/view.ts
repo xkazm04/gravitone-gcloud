@@ -147,6 +147,10 @@ export const failedOf = (m: RunsModel): RunJob[] => m.jobs.filter((j) => j.from 
  *  produce jobs no project owns that are not done - so the row reads the same number on both tabs. */
 export const floorRunsOf = (m: RunsModel): number => m.jobs.filter((j) => j.act !== undefined && j.act.projectId === undefined && j.state !== "done").length;
 
+const counted = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
+/** A v1-only project's row in the composition list: its bars, counted. */
+export const projectMeta = (p: { readonly jobs: number; readonly slots: number }): string => `${counted(p.jobs, "job")} · ${counted(p.slots, "slot")}`;
+
 export type Totals = { readonly running: number; readonly waiting: number; readonly weir: number; readonly failed: number };
 
 export function totalsOf(m: RunsModel): Totals {
