@@ -7214,4 +7214,28 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const options = d.projects.map((p) => (false ?",
     why: "The Use-in-project choice stops marking a project that already uses the item, so the operator re-uses it unwarned.",
   },
+  {
+    id: "mv-envelope-bare-rename",
+    test: "tests/next-server/mv-envelope-landing.test.ts",
+    file: "lib/sound/mv/render.ts",
+    find: "await renameRetry(tmp, target, JITTERED_RENAME);",
+    replace: "await (await import(\"node:fs/promises\")).rename(tmp, target);",
+    why: "The analyse step's envelope lands through a bare rename again, so a reader holding envelope.json turns EPERM into a failed job.",
+  },
+  {
+    id: "mv-envelope-shared-staging-name",
+    test: "tests/next-server/mv-envelope-landing.test.ts",
+    file: "lib/sound/mv/render.ts",
+    find: ".${process.pid}.${++stagedN}.partial${ext}",
+    replace: ".partial${ext}",
+    why: "Two writers of one envelope share a staging file again, so one rename finds it gone.",
+  },
+  {
+    id: "mv-envelope-keeps-staged-on-failure",
+    test: "tests/next-server/mv-envelope-landing.test.ts",
+    file: "lib/sound/mv/render.ts",
+    find: "await rm(tmp, { force: true }).catch(() => {});",
+    replace: "void 0;",
+    why: "A landing that never succeeds leaves its staged half in the job folder.",
+  },
 ];
