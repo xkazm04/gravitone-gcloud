@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 155;
+export const UNGUARDED_PROBE_BUDGET = 154;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -503,5 +503,21 @@ export const MUTANTS: Mutant[] = [
     find: "flex:0 1 var(--one-off-w-node);min-width:0;text-align:center;overflow-wrap:anywhere",
     replace: "min-width:var(--one-off-w-node)",
     why: "An UpstreamBreak node holds a fixed minimum width in a non-wrapping rail, so a chain of five or more steps pushes a 360px page sideways.",
+  },
+  {
+    id: "recalibrate-inert-notes-unrefused",
+    probe: "recalibrate-inert-notes.probe.spec.ts",
+    file: "lib/script/recalibrate.ts",
+    find: "for (const n of inertNotes(notes))",
+    replace: "for (const n of [] as Note[])",
+    why: "On the simulated path a move-earlier, move-later or free-text note changes nothing and leaves no refusal, so the creator sees applied input and no reason the bars did not move.",
+  },
+  {
+    id: "article-loop-cli-omits-damaged-line",
+    probe: "articles-loop.probe.spec.ts",
+    file: "pipeline/article.mts",
+    find: "if (report.damaged.length) console.log(",
+    replace: "if (false) console.log(",
+    why: "The loop CLI prints its orphaned runs but not the run directories whose run.json does not parse, so a damaged run is in loop.json only and the operator reading the terminal never sees it.",
   },
 ];

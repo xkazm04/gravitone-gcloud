@@ -19,8 +19,7 @@ import { admitCompose, composePrompt, type ComposeRun } from "@/lib/script/compo
 import { draftOf } from "@/lib/script/draft";
 import { RENDERS } from "@/lib/script/renders";
 import { composeCut } from "@/lib/script/trailer/cut";
-import { derive, newLog, rebase, type CutLog } from "@/lib/script/trailer/ops";
-import type { TrailerCut, WithholdingBudget } from "@/lib/script/trailer/types";
+import { derive, logFromRecord, newLog, rebase, type CutLog } from "@/lib/script/trailer/ops";
 import type { ScriptRender } from "@/lib/script/types";
 import { parseDraft } from "@/lib/script/validate";
 import { BASELINE, type Note, type Version } from "@/lib/script/versions";
@@ -180,11 +179,10 @@ async function scenariosUnit(ctx: StepContext, unit: ActUnit, s: PartSnapshot, f
 
 /* ── landing ──────────────────────────────────────────────────────────────── */
 
-function cutLogOf(s: PartSnapshot): CutLog | null {
+export function cutLogOf(s: PartSnapshot): CutLog | null {
   const st = s.records.get("script-trailer");
   if (st === undefined) return null;
-  if (field(st["origin"]) !== undefined) return written<CutLog>({ origin: st["origin"], originBudget: st["originBudget"], ops: st["ops"] ?? [], head: st["head"] ?? 0 });
-  return newLog(written<TrailerCut>(st["cut"]), written<WithholdingBudget>(st["budget"]));
+  return logFromRecord(written<Parameters<typeof logFromRecord>[0]>(st));
 }
 
 function landScript(job: { readonly id: string }, plan: ActPlan, made: ReadonlyMap<string, EventData>, s: PartSnapshot, f: PartFacts, at: number): Result<Record<string, unknown>> {

@@ -46,6 +46,12 @@ export function inertNotes(notes: Note[]) {
   return notes.filter((n) => n.kind === "custom" || n.kind === "move-earlier" || n.kind === "move-later");
 }
 
+const INERT_WHY: Partial<Record<NoteKind, string>> = {
+  "move-earlier": "the simulated engine does not move a card earlier — nothing moved",
+  "move-later": "the simulated engine does not move a card later — nothing moved",
+  custom: "the simulated engine does not read free-text notes — nothing changed",
+};
+
 const WEIGHTY: NoteKind[] = ["more-focus", "less-focus"];
 
 /* ─────────────────────────── guards 1-3, on the notes ──────────────────────
@@ -133,6 +139,11 @@ export function recalibrate(
   ctx: ScopeCtx,
 ): Version {
   const { refusals, keep: applied, contested } = guardNotes(notes, ctx);
+
+  // A note this engine cannot act on is refused, not shown as applied input with nothing done.
+  // The model path reads these notes itself, so it adds no such refusal.
+  for (const n of inertNotes(notes))
+    refusals.push({ cardId: n.cardId, kind: n.kind, why: INERT_WHY[n.kind] ?? "the simulated engine does not act on this note" });
 
   // GUARD 3's verdict on this path: descope wins, because the mock resolves the
   // conflict itself and removing the card leaves a focus note nothing to act on.

@@ -1,4 +1,4 @@
-// THE REVIEWER ENGINES: which four CLIs a reviewer may run through, and the
+// THE REVIEWER ENGINES: which three CLIs a reviewer may run through, and the
 // per-engine profile each one is spawned with.
 //
 // Split out of cliSeam.ts (the door, which re-exports these) because the reviewer
@@ -8,7 +8,7 @@
 
 import type { AgentTool } from "./cliSeam";
 
-/* ══ Reviewers — four engines, one read-only profile ═════════════════════════
+/* ══ Reviewers — three engines, one read-only profile ═══════════════════════
  *
  * Scope amendment 1: a drafted post is reviewed by models from every provider
  * the operator has a login for, through the local CLIs on those logins. A
