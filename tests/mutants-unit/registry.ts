@@ -7038,4 +7038,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const LEGEND: readonly { look: string; label: string }[] = [{ look: \"awaiting\", label: \"at weir\" }];",
     why: "The page draws a hand-written key again, one word per colour, while the colours paint several states.",
   },
+  {
+    id: "sound-plan-draft-over-ceiling-accepted",
+    test: "tests/next-server/sound-plan-draft-length.test.ts",
+    file: "lib/sound/generate.ts",
+    find: "if (op === \"plan\" && !plan && d > PLAN_DRAFT_MAX_S)",
+    replace: "if (false && d > PLAN_DRAFT_MAX_S)",
+    why: "A plan op drafted from a prompt accepts 600 s, asks the vendor for the ceiling and files a shorter take than the one asked for, with no word said.",
+  },
 ];

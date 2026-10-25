@@ -62,6 +62,12 @@ export const DURATION_BOUNDS: Record<SoundKind, { min: number; max: number }> = 
   sfx: { min: 0.5, max: 30 },
 };
 
+/** The longest a plan drafted from a prompt is asked for (a supplied plan keeps the music
+ *  bound above). The vendor's own draft limit is not stated offline (lib/music/elevenlabs.ts
+ *  validates 3 s..10 min for a whole plan), so a longer request is refused by name rather than
+ *  drafted at this length and filed as a shorter take than the one asked for. */
+export const PLAN_DRAFT_MAX_S = 300;
+
 /** A Score cue's brief, held to the bounds app/api/music/generate/route.ts
  *  holds the same brief to, BEFORE anything is sent — the picture's length is
  *  the length bought, so every scene is bounded and so is their sum. */
@@ -167,6 +173,7 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
 
   const plan = b.plan === null || b.plan === undefined ? null : asWirePlan(b.plan);
   if (b.plan && !plan) throw new SoundError('"plan" is not a composition plan ({ chunks: [...] })', 400);
+  if (op === "plan" && !plan && d > PLAN_DRAFT_MAX_S) throw new SoundError(`a plan drafted from a prompt runs at most ${PLAN_DRAFT_MAX_S}s; "durationS" is ${d}s`, 400);
   if (op === "plan" && !plan && !prompt) throw new SoundError('op "plan" needs a drafted "plan" or a "prompt" to draft one from', 400);
   // A drafted plan IS the length bought (the meter reads it, lib/music requestedSeconds), so the
   // bound is held on the plan, not on a `durationS` the render never reads.
@@ -297,7 +304,7 @@ async function render(req: GenerateRequest): Promise<Rendered> {
     case "plan": {
       const plan =
         (req.plan as WirePlan | null) ??
-        (await draftPlan({ prompt: req.prompt, lengthMs: Math.round(Math.min(req.durationS, 300) * 1000), negativeStyle: req.negative ?? undefined }));
+        (await draftPlan({ prompt: req.prompt, lengthMs: Math.round(req.durationS * 1000), negativeStyle: req.negative ?? undefined }));
       const out = await composeDetailed({ plan, storeForInpainting: true });
       return { b64: out.audio.b64, mime: out.audio.mime, songId: out.songId, plan: out.plan ?? plan, durationS: planMs(plan) / 1000, parentId: null, prompt: req.prompt, link: NO_LINK };
     }
