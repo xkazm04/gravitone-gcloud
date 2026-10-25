@@ -7673,67 +7673,72 @@
       "context": "produce-compose-receipt",
       "subject": "plan-entitlements",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T00:56:15.434Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:13:03.270Z",
+      "worker": "00f50198-d868-46f3-8277-c08d5b7a7dd8",
       "techniques": [
         {
           "technique": "capability-gate-predicates",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/Receipt.tsx:96 Confirmation is blocked by invalid ceiling input; no paid-plan capability predicate was found."
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:96 Confirmation is blocked by invalid ceiling input; no paid-plan capability predicate was found.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "deployment-mode-short-circuit",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/Receipt.tsx:105 Mode denotes dry or live job execution, not whether a deployment sells capabilities."
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:105 Mode denotes dry or live job execution, not whether a deployment sells capabilities.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "entitlement-lifecycle-revocation",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/LaneHold.tsx:45 Acknowledgement addresses an interrupted paid vendor job; no subscription cancellation or recovery lifecycle was found."
+          "evidence": "packages/ui/src/components/produce/LaneHold.tsx:45 Acknowledgement addresses an interrupted paid vendor job; no subscription cancellation or recovery lifecycle was found.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "id-vs-label-split",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/PlanTable.tsx:44 The selected identity belongs to a vendor-model option, not a tenant tier."
+          "evidence": "packages/ui/src/components/produce/PlanTable.tsx:44 The selected identity belongs to a vendor-model option, not a tenant tier.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "inherited-tier-not-cloned-tier",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:51 A choice selects a production route; no customer-specific commercial agreement or inherited tier was found."
+          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:51 A choice selects a production route; no customer-specific commercial agreement or inherited tier was found.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "live-catalog-edit-is-a-lifecycle-event",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/produce.ts:125 Change detection compares individual launch receipts, not catalog edits affecting subscribed tenants."
+          "evidence": "packages/ui/src/components/produce/produce.ts:125 Change detection compares individual launch receipts, not catalog edits affecting subscribed tenants.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "price-book-authority",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/Receipt.tsx:78 Receipt lines display dependency usage costs, which this technique explicitly excludes."
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:78 Receipt lines display dependency usage costs, which this technique explicitly excludes.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "provider-publishes-state-not-decision",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:8 The consumed server preview describes production-route deltas, not operator-defined entitlements served to another product."
+          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:8 The consumed server preview describes production-route deltas, not operator-defined entitlements served to another product.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "subtractive-entitlement",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/produce.ts:132 Removed entries are receipt-line differences; they are not exceptions to inherited tier capabilities."
+          "evidence": "packages/ui/src/components/produce/produce.ts:132 Removed entries are receipt-line differences; they are not exceptions to inherited tier capabilities.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "tier-model-single-source",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/ComposeDialog.tsx:88 The rendered catalog contains composition recipes; no commercial tier catalog was found."
+          "evidence": "packages/ui/src/components/produce/ComposeDialog.tsx:88 The rendered catalog contains composition recipes; no commercial tier catalog was found.",
+          "carriedFrom": "2026-10-19"
         }
-      ],
-      "withdrawn": {
-        "worker": "a87fba3d-c5f1-435b-9093-b39bdf1c12fe",
-        "state": "not-applicable",
-        "at": "2026-10-19T00:56:39.749705+00:00",
-        "reason": "reviewer (sonnet): The anchor produce.ts:51 is optionCost, a per-unit USD calculation, which doesn't show that a plan or tier precondition is absent. Unpriced.tsx:15 even checks for 'subscription' in a reason string, and the seat's evidence never mentions it. The technique anchors (Receipt mode chip, ModelPicker, Lane"
-      }
+      ]
     },
     "e2f6231a-d39f-4d39-9465-0a48436cae92/migrations": {
       "context": "project-step-store",
