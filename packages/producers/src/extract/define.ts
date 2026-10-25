@@ -123,14 +123,14 @@ export function classify(before: ManifestView, after: ManifestView, unit: Unit):
 export function entriesOf(s: Served<unknown>, kind: CallKind, estimate: number): SettleEntry[] {
   const axes = { call: kind, model: s.model };
   const cost = s.costUsd;
-  if (typeof cost === "number" && Number.isFinite(cost) && cost >= 0) {
-    // A zero from a vendor is a missing figure, never a free call (kernel pricing/quote.ts).
-    if (cost === 0) return [{ amount: undefined, outcome: "served", basis: "vendor", axes, reason: `${s.model} reported $0 for a ${kind}` }];
-    return [{ amount: cost, outcome: "served", basis: s.basis === "estimated" ? "estimate" : "vendor", axes }];
-  }
+  if (typeof cost === "number" && Number.isFinite(cost) && cost > 0) return [{ amount: cost, outcome: "served", basis: s.basis === "estimated" ? "estimate" : "vendor", axes }];
+  // A zero or negative figure from a vendor is a MISSING figure, never a free call (kernel
+  // pricing/quote.ts), so it books exactly as an absent one: the estimate the unit was admitted
+  // on, and an unpriced count - the job's ceiling never reads a missing figure as $0.
+  const said = cost === 0 ? "reported $0" : "reported no cost";
   return [
     { amount: estimate, outcome: "served", basis: "estimate", axes },
-    { amount: undefined, outcome: "served", basis: "estimate", axes, reason: `${s.model} reported no cost for a ${kind}; booked at its $${estimate} estimate` },
+    { amount: undefined, outcome: "served", basis: "estimate", axes, reason: `${s.model} ${said} for a ${kind}; booked at its $${estimate} estimate` },
   ];
 }
 

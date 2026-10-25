@@ -193,6 +193,13 @@ describe("entriesOf: what one served call books on the job", () => {
 
   it("an estimated figure keeps its basis, and a zero is a missing figure, not a free call", () => {
     expect(entriesOf({ value: 1, model: "m", costUsd: 0.04, basis: "estimated" }, "generate", 0.04)[0]?.basis).toBe("estimate");
-    expect(entriesOf({ value: 1, model: "m", costUsd: 0 }, "generate", 0.04)).toEqual([{ amount: undefined, outcome: "served", basis: "vendor", axes: { call: "generate", model: "m" }, reason: "m reported $0 for a generate" }]);
+    expect(entriesOf({ value: 1, model: "m", costUsd: 0 }, "generate", 0.04).map((e) => e.amount)).toEqual([0.04, undefined]);
+    expect(entriesOf({ value: 1, model: "m", costUsd: 0 }, "generate", 0.04)[1]?.reason).toBe("m reported $0 for a generate; booked at its $0.04 estimate");
+  });
+
+  it("a zero, a negative and an absent figure are one case - missing - and book alike (kernel pricing/quote.ts)", () => {
+    const amounts = (costUsd: number | undefined) => entriesOf({ value: 1, model: "m", ...(costUsd === undefined ? {} : { costUsd }) }, "generate", 0.04).map((e) => [e.amount, e.basis]);
+    expect(amounts(0)).toEqual(amounts(undefined));
+    expect(amounts(-0.01)).toEqual(amounts(undefined));
   });
 });
