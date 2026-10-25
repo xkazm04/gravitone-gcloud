@@ -2506,6 +2506,14 @@ export const MUTANTS: UnitMutant[] = [
     typecheck: true,
   },
   {
+    id: "part-verdict-look-reads-the-prototype",
+    test: "packages/ui/test/components/part.test.ts",
+    file: "packages/ui/src/components/part/part.ts",
+    find: "Object.hasOwn(VERDICT_LOOK, s)",
+    replace: "s in VERDICT_LOOK",
+    why: "A verdict state spelled like an Object member would be handed a function as its look and drawn with no state, instead of as blocked.",
+  },
+  {
     id: "produce-strips-run-renamed-at-confirm",
     test: "tests/next-server/produce-real.test.ts",
     file: "lib/produce/laneDoors.ts",

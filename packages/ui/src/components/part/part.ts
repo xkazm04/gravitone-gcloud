@@ -9,7 +9,7 @@ import type { Look } from "../status/status.ts";
  *  not a running job), and anything unknown reads as blocked, never as ready (registry
  *  status-vocabulary/status-color-mapping: the fallback is the least approved state). */
 export const VERDICT_LOOK: { readonly [S in VerdictState]: Look } = { empty: "idle", working: "awaiting", ready: "done", blocked: "failed" };
-export const verdictLook = (s: string): Look => (s in VERDICT_LOOK ? VERDICT_LOOK[s as VerdictState] : "failed");
+export const verdictLook = (s: string): Look => (Object.hasOwn(VERDICT_LOOK, s) ? VERDICT_LOOK[s as VerdictState] : "failed");
 
 /** The tab rail's mark per state - a shape, never colour alone (v1 Stepper.tsx's glyphs). */
 export function tabMark(t: Pick<PartTab, "kind" | "verdict" | "editor">): { readonly glyph: string; readonly spoken: string } {

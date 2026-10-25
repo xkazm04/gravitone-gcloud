@@ -26,6 +26,8 @@ describe("verdicts and tabs", () => {
     expect(["empty", "working", "ready", "blocked"].map(verdictLook)).toEqual(["idle", "awaiting", "done", "failed"]);
     expect(verdictLook("done")).toBe("failed");
     expect(verdictLook("")).toBe("failed");
+    // `in` reads the prototype chain: a state spelled like an Object member is still unknown.
+    expect(Object.getOwnPropertyNames(Object.prototype).map(verdictLook).filter((l) => l !== "failed")).toEqual([]);
   });
 
   test("a tab names its state as a shape and a word: gates, the slot and editor-less parts are not editors", () => {
