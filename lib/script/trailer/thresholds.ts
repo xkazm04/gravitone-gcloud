@@ -95,6 +95,33 @@ export const STRUCTURAL_RESETS = readCount("reset.structuralResets", PARAMS.rese
 export const RESETS_TOO_MANY = readCount("reset.tooManyAt", PARAMS.reset.tooManyAt.value);
 export const HOLDS_PER_RESET = readCount("reset.holdsPerReset", PARAMS.reset.holdsPerReset.value);
 
+/** The relations between the counts that the rules' own sentences assume. Each
+ *  count was validated alone (a whole number), so `tooManyAt: 1` loaded cleanly
+ *  and every one-reset cut was told "1 resets ... remove all but one". Exported
+ *  so the regression control can hand it a drifted set. */
+export function countFaults(c: {
+  raisesPerRung: number;
+  structuralResets: number;
+  tooManyAt: number;
+  holdsPerReset: number;
+}): { field: string; why: string }[] {
+  const out: { field: string; why: string }[] = [];
+  if (c.raisesPerRung < 1) out.push({ field: "escalation.raisedVariablesPerRung", why: "is below 1, so no rung could be short of a raised variable" });
+  if (c.holdsPerReset < 1) out.push({ field: "reset.holdsPerReset", why: "is below 1, so every declared silence would hold one thing too many" });
+  if (c.structuralResets < 1) out.push({ field: "reset.structuralResets", why: "is below 1, so a cut with no reset would never be told it has no climax" });
+  if (c.tooManyAt <= c.structuralResets) {
+    out.push({ field: "reset.tooManyAt", why: `${c.tooManyAt} is not above structuralResets (${c.structuralResets}), so the reset a cut needs would read as too many` });
+  }
+  return out;
+}
+
+for (const f of countFaults({
+  raisesPerRung: RAISES_PER_RUNG,
+  structuralResets: STRUCTURAL_RESETS,
+  tooManyAt: RESETS_TOO_MANY,
+  holdsPerReset: HOLDS_PER_RESET,
+})) paramsFault(f.field, f.why);
+
 /** Rules whose findings NEVER contribute to `malformed`, each because its own
  *  doctrine says so. The promise ledger: "As a gate … A system that blocks on it
  *  will block on correct work; report the rows and let a human read them."

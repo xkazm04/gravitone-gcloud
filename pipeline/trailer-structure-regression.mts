@@ -31,6 +31,7 @@ import {
   type StructureReport,
 } from "../lib/script/trailer/structure";
 import { notesFromFindings } from "../lib/script/trailer/notes";
+import { countFaults } from "../lib/script/trailer/thresholds";
 import {
   parseTrailerPlan,
   replayTrailerPlan,
@@ -510,6 +511,30 @@ if (unroutable.length) {
   }
 }
 
+/* ── the counts are checked against each other, not only one by one ─────────
+ * Each count was validated alone, so `reset.tooManyAt: 1` loaded and told every
+ * one-reset cut to "remove all but one". The shipped set has no fault; each
+ * drifted set below has exactly the one it was built to carry. */
+{
+  const shipped = { raisesPerRung: 1, structuralResets: 1, tooManyAt: 3, holdsPerReset: 1 };
+  const drifts: [string, Partial<typeof shipped>][] = [
+    ["reset.tooManyAt", { tooManyAt: 1 }],
+    ["reset.structuralResets", { structuralResets: 0 }],
+    ["escalation.raisedVariablesPerRung", { raisesPerRung: 0 }],
+    ["reset.holdsPerReset", { holdsPerReset: 0 }],
+  ];
+  const missed = drifts.filter(([field, d]) => {
+    const f = countFaults({ ...shipped, ...d });
+    return f.length !== 1 || f[0].field !== field;
+  });
+  if (countFaults(shipped).length || missed.length) {
+    bad++;
+    console.log(`FAIL  seam           · threshold relations: shipped faults=${countFaults(shipped).length}, drifts missed: ${missed.map(([f]) => f).join(", ")}`);
+  } else {
+    console.log(`OK    seam           · threshold relations: the shipped counts agree, and each of ${drifts.length} drifted sets is refused`);
+  }
+}
+
 /* ───────────────────── notes and the edit plan (session 1) ─────────────────── */
 
 const planCheck = (name: string, ok: boolean, why: string) => {
@@ -609,6 +634,6 @@ const planCheck = (name: string, ok: boolean, why: string) => {
 console.log(
   bad
     ? `\n${bad} REGRESSION FAILURE(S)`
-    : `\nall ${CASES.length} cases, 6 invariants, 6 seam checks and the plan cases behave correctly`,
+    : `\nall ${CASES.length} cases, 6 invariants, 7 seam checks and the plan cases behave correctly`,
 );
 process.exit(bad ? 1 : 0);
