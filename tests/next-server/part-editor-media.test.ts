@@ -510,14 +510,14 @@ const MEDIA: readonly [string, (busy: boolean) => ReactElement, readonly string[
     ["revert pass", "rederive", "accept", "accept over human", "discard", "accept row", "revert row", "×", "+ caption", "+ figure", "+ label", "hide"],
   ],
   ["motion", (busy) => MotionEditor({ ...props(motionBoard), view: { data: motionBoard } as never, busy, send: spy.send }) as ReactElement, ["clear"]],
-  ["trailer", (busy) => TrailerEditor({ ...(props(trailerData) as never), busy, send: spy.send }) as ReactElement, ["reset to dealt"]],
+  ["trailer", (busy) => TrailerEditor({ ...props(trailerData), busy, send: spy.send } as never) as ReactElement, ["reset to dealt"]],
 ];
 
 describe("while a write is in flight no media write button reads as pressable", () => {
   for (const [name, run, expected] of MEDIA) {
     it(name, async () => {
       const bs = await writeButtons(() => run(true));
-      expect(bs.map((b) => b.label)).toEqual(expect.arrayContaining(expected));
+      expect(bs.map((b) => b.label)).toEqual(expect.arrayContaining([...expected]));
       expect(bs.filter((b) => !b.disabled).map((b) => b.label)).toEqual([]);
       expect((await writeButtons(() => run(false))).filter((b) => !b.disabled).map((b) => b.label)).toEqual(bs.map((b) => b.label));
     });

@@ -264,7 +264,7 @@ async function rawControls(run: () => ReactElement, view?: string): Promise<{ ti
   const found: { tile?: ReactElement; select?: ReactElement } = {};
   const walk = (node: ReactNode): void => {
     // a view chosen on the editor's own Seg (the document's inspector tabs)
-    for (const seg of view === undefined ? [] : all(node, named("Seg"))) (seg.props as { onChange: (v: string) => void }).onChange(view);
+    if (view !== undefined) for (const seg of all(node, named("Seg"))) (seg.props as { onChange: (v: string) => void }).onChange(view);
     for (const el of all(node, (x, q) => (x.type === "button" && "data-variant" in q) || x.type === "select" || (typeof x.type === "function" && LOCAL.has(x.type.name)))) {
       if (el.type === "button") found.tile ??= el;
       else if (el.type === "select") found.select ??= el;
