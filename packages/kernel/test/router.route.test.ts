@@ -131,6 +131,14 @@ describe("text routing (lib/text/router.ts, kept)", () => {
     expect(refused(route(turn("chit-chat"), LOCAL, facts(["google"])))).toMatchObject({ reason: "misconfigured", code: "invalid" });
   });
 
+  it("a preference outside a one-provider chain is dropped out loud, not silently", () => {
+    const o = routed(route(turn("compose", { steer: { prefer: "claude-cli" } }), HOSTED, facts(["claude-cli", "google"])));
+    expect(o.choice.provider).toBe("google");
+    expect(o.steerDropped).toBe("claude-cli is not in the cloud plan for text reason/compose; the preference was dropped");
+    const own = routed(route(turn("compose", { steer: { prefer: "google" } }), HOSTED, facts(["google"])));
+    expect(own.steerDropped).toBeUndefined();
+  });
+
   it("retrieval is refused policy-forbidden until the operator turns it on", () => {
     const req: RouteRequest = { medium: "text", capability: "retrieve", class: "research", units: 1 };
     expect(whys(refused(route(req, LOCAL, facts(["claude-cli-retrieve"]))))).toEqual(["claude-cli-retrieve:policy-forbidden"]);
