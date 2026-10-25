@@ -9,7 +9,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { admitMove, buildBoard, cellKey, cellOf, checkMove, rowsFor, stackVersions, stageCounts, step, suggestLabel, versionNumber, walk, UNGROUPED_KEY, type ArrangeTake, type Stage } from "../../src/components/audio/arrange.ts";
+import { admitMove, buildBoard, cellKey, cellOf, checkMove, rowsFor, stackVersions, stageCounts, step, suggestLabel, versionNumber, walk, UNGROUPED_KEY, type ArrangeTake, type Row, type Stage } from "../../src/components/audio/arrange.ts";
 import { ArrangeBoard } from "../../src/components/audio/ArrangeBoard.tsx";
 import { EngineList } from "../../src/components/audio/EngineList.tsx";
 import { RoundTrip } from "../../src/components/audio/RoundTrip.tsx";
@@ -215,8 +215,8 @@ describe("the parts draw what the rules say", () => {
     for (const [len, said] of [[0.6, "0.6s"], [4.25, "4.3s"], [125, "2:05"], [null, "–"]] as const) expect(card(len), String(len)).toContain(`<span>${said}</span>`);
   });
   test("a row's head offers only the edits its row may take", () => {
-    const names = (row: { key: string; name: string | null; orphan: boolean }, held: number, first: boolean, last: boolean): string[] =>
-      [...renderToStaticMarkup(h(RowHead, { row, held, first, last, onEdit: none })).matchAll(/aria-label="([^"]*)"/g)].map((m) => m[1] ?? "");
+    const names = (row: Omit<Row, "into">, held: number, first: boolean, last: boolean): string[] =>
+      [...renderToStaticMarkup(h(RowHead, { row: { ...row, into: null }, held, first, last, onEdit: none })).matchAll(/aria-label="([^"]*)"/g)].map((m) => m[1] ?? "");
     expect(names({ key: UNGROUPED_KEY, name: null, orphan: false }, 3, false, true)).toEqual([]);
     expect(names({ key: "g:zeta", name: "zeta", orphan: true }, 1, false, false)).toEqual(["adopt zeta as a row"]);
     expect(names({ key: "g:ambient", name: "ambient", orphan: false }, 0, true, false)).toEqual(["rename ambient", "move ambient down", "delete ambient"]);
