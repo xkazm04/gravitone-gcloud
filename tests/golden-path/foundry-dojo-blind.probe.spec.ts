@@ -117,6 +117,21 @@ test("a claim verdict is refused while a pair is unpicked, and allowed once pick
   }
 });
 
+test("a board verdict the kernel refuses (stale base) leaves the improvement un-anchored", async () => {
+  const id = `probe-blind-refused-${Date.now().toString(36)}`;
+  const { dir } = setup(id, [pair("p1", "challenger")]);
+  try {
+    await patchTrainingVerdicts(id, { baseRev: 0, set: { "imp-1": "approve" }, surface: "board" });
+    const id2 = `${id}-stale`;
+    setup(id2, [pair("p1", "challenger")]);
+    await expect(patchTrainingVerdicts(id2, { baseRev: 7, set: { "imp-1": "approve" }, surface: "board" })).rejects.toThrow();
+    expect((await getCycle(id2)).blind.improvements["imp-1"]?.anchored).toBeFalsy();
+    rmSync(path.join(trainingDir(), id2), { recursive: true, force: true });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("the ledger row carries the blind measurement: A->challenger, B->baseline vs judge challenger twice", async () => {
   const id = `probe-blind-measure-${Date.now().toString(36)}`;
   const { dir, cycle } = setup(id, [pair("p1", "challenger"), pair("p2", "challenger")], { "imp-1": "approve" });

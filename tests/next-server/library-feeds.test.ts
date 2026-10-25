@@ -115,6 +115,24 @@ describe("stripsFeed", () => {
     expect(p.ok && p.value.items.map((i) => i.id)).toEqual(["motion:strips:2026-10-01-edu:c1:poster"]);
   });
 
+  it("holds a run whose run.json cannot be read: named in the report, its items not pruned", async () => {
+    const k = kernel();
+    const blobs = blobStore(path.join(dir, "blobs"));
+    const run = path.join(process.env["STRIPS_STORE_DIR"] ?? "", "2026-10-03-edu");
+    mkdirSync(run, { recursive: true });
+    write(path.join(run, "run.json"), { id: "2026-10-03-edu", at: "2026-10-03T00:00:00.000Z", status: "done", cards: [{ id: "c1", lane: "edu", case: "tides", approach: "diagram", status: "rendered", files: { poster: "poster.png" } }] });
+    write(path.join(run, "verdicts.json"), {});
+    const one = await syncLibrary(k.store, blobs, [stripsFeed], ctx);
+    if (!one.ok) throw one.error;
+    expect(one.value.feeds[0]).toMatchObject({ feed: "strips", items: 1, inserted: 1 });
+    writeFileSync(path.join(run, "run.json"), "{ torn");
+    const two = await syncLibrary(k.store, blobs, [stripsFeed], ctx);
+    if (!two.ok) throw two.error;
+    expect(two.value.feeds[0]).toMatchObject({ feed: "strips", items: 0, pruned: 0, skipped: [{ id: "2026-10-03-edu" }] });
+    const p = queryLibrary(k.store, { limit: 5 });
+    expect(p.ok && p.value.items.map((i) => i.id)).toEqual(["motion:strips:2026-10-03-edu:c1:poster"]);
+  });
+
   it("reads a card's verdict as its state: keep is ratified, reject is rejected, none is unjudged", async () => {
     const run = path.join(process.env["STRIPS_STORE_DIR"] ?? "", "2026-10-02-edu");
     mkdirSync(run, { recursive: true });

@@ -37,6 +37,7 @@ import {
   containedIn,
   foundryFile,
   listManifests,
+  type ManifestWarning,
   readJson,
   readManifestFile,
   runRoot,
@@ -121,8 +122,10 @@ const decidedCount = (v: TrainingVerdicts) => Object.values(v).filter((x) => x =
 
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
-export async function listCycles(): Promise<TrainingCycleSummary[]> {
-  const { items } = await listManifests<CycleManifest, TrainingCycleSummary>(trainingRoot(), "cycle.json", async (name, m) => {
+/** The shelf and the runs it could not read (a run.json that does not parse), so a feed can
+ *  hold those runs instead of pruning them as gone. `listCycles` is the list alone. */
+export async function scanCycles(): Promise<{ items: TrainingCycleSummary[]; warnings: ManifestWarning[] }> {
+  const { items, warnings } = await listManifests<CycleManifest, TrainingCycleSummary>(trainingRoot(), "cycle.json", async (name, m) => {
     let v: TrainingVerdicts;
     try {
       v = await readJson<TrainingVerdicts>(path.join(trainingRoot(), name, "verdicts.json"), {});
@@ -145,7 +148,11 @@ export async function listCycles(): Promise<TrainingCycleSummary[]> {
       decided: decidedCount(v),
     };
   });
-  return items.sort((a, b) => (a.at < b.at ? 1 : -1));
+  return { items: items.sort((a, b) => (a.at < b.at ? 1 : -1)), warnings };
+}
+
+export async function listCycles(): Promise<TrainingCycleSummary[]> {
+  return (await scanCycles()).items;
 }
 
 /** blind.json merged with the seeded A/B map; a cycle with no file reads as untouched. */
@@ -186,28 +193,34 @@ function verdictSpec(id: string): VerdictSpec<CycleManifest, TrainingVerdict | n
 /** The blind gate's one rule for a claim verdict: an approve/reject may only be
  *  saved once every pair is picked blind, or the improvement is anchored. The
  *  Board and the whole-map PUT decide with the media in view, so they are
- *  anchored by construction (`anchor`) rather than refused. */
-async function guardClaims(id: string, claims: Record<string, unknown>, anchor: boolean): Promise<void> {
+ *  anchored by construction (`anchor`) rather than refused. Returns the anchoring
+ *  edits, to be written only AFTER the verdict write they guard succeeds: a write
+ *  the kernel refuses (stale base) must leave the improvement un-anchored. */
+async function guardClaims(id: string, claims: Record<string, unknown>, anchor: boolean): Promise<BlindEdit[]> {
   const decided = Object.entries(claims).filter(([, v]) => v === "approve" || v === "reject");
-  if (!decided.length) return;
+  if (!decided.length) return [];
   const cycle = await readCycle(id);
   const blind = await readBlind(id, cycle);
   const open = cycle.improvements.filter((i) => decided.some(([key]) => key === i.id) && !claimAllowed(i, blind.improvements[i.id]));
-  if (!open.length) return;
+  if (!open.length) return [];
   if (!anchor) throw new FoundryError(`Pick every pair blind (or skip blind) before deciding the claim: ${open.map((i) => i.technique).join(", ")}.`, 409);
-  await patchBlind(id, open.map((i) => ({ imp: i.id, anchored: true })));
+  return open.map((i) => ({ imp: i.id, anchored: true }));
 }
 
 /** PUT: the whole map, written through the kernel as the diff it amounts to. */
 export async function putTrainingVerdicts(id: string, verdicts: TrainingVerdicts): Promise<TrainingVerdicts> {
-  await guardClaims(id, verdicts, true);
-  return (await replaceVerdictMap(verdictSpec(id), verdicts)).verdicts;
+  const anchors = await guardClaims(id, verdicts, true);
+  const saved = (await replaceVerdictMap(verdictSpec(id), verdicts)).verdicts;
+  if (anchors.length) await patchBlind(id, anchors);
+  return saved;
 }
 
 /** PATCH: keyed changes against a revision; 409 on a stale base. */
 export async function patchTrainingVerdicts(id: string, patch: VerdictPatch): Promise<VerdictState<TrainingVerdict | null>> {
-  await guardClaims(id, patch.set ?? {}, patch.surface === "board");
-  return patchVerdictMap(verdictSpec(id), patch);
+  const anchors = await guardClaims(id, patch.set ?? {}, patch.surface === "board");
+  const saved = await patchVerdictMap(verdictSpec(id), patch);
+  if (anchors.length) await patchBlind(id, anchors);
+  return saved;
 }
 
 /** PATCH the blind gate, run-locked like the verdicts and refused once committed. */

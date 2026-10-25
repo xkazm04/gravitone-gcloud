@@ -69,6 +69,7 @@ import {
   containedIn,
   foundryFile,
   listManifests,
+  type ManifestWarning,
   readJson,
   readManifestFile,
   runRoot,
@@ -168,9 +169,11 @@ const isDecided = (v: StripVerdict | undefined): v is StripVerdict => v?.verdict
 
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
-export async function listStripRuns(): Promise<StripRunSummary[]> {
+/** The shelf and the runs it could not read (a run.json that does not parse), so a feed can
+ *  hold those runs instead of pruning them as gone. `listStripRuns` is the list alone. */
+export async function scanStripRuns(): Promise<{ items: StripRunSummary[]; warnings: ManifestWarning[] }> {
   const root = stripsRoot();
-  const { items } = await listManifests<StripRun, StripRunSummary>(root, "run.json", async (name, m) => {
+  const { items, warnings } = await listManifests<StripRun, StripRunSummary>(root, "run.json", async (name, m) => {
     let v: StripVerdicts;
     try {
       v = await readJson<StripVerdicts>(path.join(root, name, "verdicts.json"), {});
@@ -198,7 +201,11 @@ export async function listStripRuns(): Promise<StripRunSummary[]> {
       kept: decided.filter(([, x]) => x.verdict === "keep").length,
     };
   });
-  return items.sort((a, b) => (a.at < b.at ? 1 : -1));
+  return { items: items.sort((a, b) => (a.at < b.at ? 1 : -1)), warnings };
+}
+
+export async function listStripRuns(): Promise<StripRunSummary[]> {
+  return (await scanStripRuns()).items;
 }
 
 export async function getStripRun(id: string): Promise<StripRunDetail & { rev: number }> {

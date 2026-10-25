@@ -30,6 +30,7 @@ import {
   containedIn,
   foundryFile,
   listManifests,
+  type ManifestWarning,
   readJson,
   readManifestFile,
   runRoot,
@@ -97,8 +98,10 @@ async function readVerdicts(id: string): Promise<Verdicts> {
 
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
-export async function listRuns(): Promise<RunSummary[]> {
-  const { items } = await listManifests<RunManifest, RunSummary>(OUT_ROOT, "run.json", async (name, m) => {
+/** The shelf and the runs it could not read (a run.json that does not parse), so a feed can
+ *  hold those runs instead of pruning them as gone. `listRuns` is the list alone. */
+export async function scanRuns(): Promise<{ items: RunSummary[]; warnings: ManifestWarning[] }> {
+  const { items, warnings } = await listManifests<RunManifest, RunSummary>(OUT_ROOT, "run.json", async (name, m) => {
     let v: Verdicts;
     try {
       v = await readJson<Verdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
@@ -121,7 +124,11 @@ export async function listRuns(): Promise<RunSummary[]> {
       kept: Object.values(v).filter((r) => r.verdict === "keep").length,
     };
   });
-  return items.sort((a, b) => (a.created < b.created ? 1 : -1));
+  return { items: items.sort((a, b) => (a.created < b.created ? 1 : -1)), warnings };
+}
+
+export async function listRuns(): Promise<RunSummary[]> {
+  return (await scanRuns()).items;
 }
 
 export async function getRun(id: string): Promise<RunDetail> {

@@ -2,12 +2,17 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { ok } from "@gt/domain/errors";
+import { queryEvents } from "@gt/kernel/events-query";
+import { openKernel } from "@gt/kernel/kernel";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("../../lib/ledger/v1/sources.ts", () => ({ V1_SOURCES: [] }));
 
 import { AUDIO_WEIR_ID, projectSound, soundSource, type SoundShelf } from "../../lib/ledger/v1/sources/sound.ts";
-import type { IngestEvent, ProjectCtx } from "../../lib/ledger/v1/types.ts";
+import { syncV1 } from "../../lib/ledger/v1/sync.ts";
+import type { IngestEvent, ProjectCtx, Source } from "../../lib/ledger/v1/types.ts";
 
 // The sound shelf over a literal takes.json (lib/sound/store.ts readTakes): the
 // facts it projects and their tally counted apart, the one audio triage pile -
@@ -42,7 +47,7 @@ describe("sound projection", () => {
     expect(byType(p.events)).toEqual(p.tally.facts);
     expect(p.tally).toEqual({ records: { "take.unjudged": 1, "take.kept": 1, "take.rejected": 1 }, facts: { "take.create": 3, "verdict.kept": 1, "verdict.rejected": 1 } });
     expect(new Set(p.events.map((e) => e.key)).size).toBe(p.events.length);
-    expect(p.events.find((e) => e.key === "sound:t2:verdict.kept")).toMatchObject({ atSrc: "recorded", occurredAt: "2026-10-15T10:00:00.000Z", lane: "audio" });
+    expect(p.events.find((e) => e.key === "sound:t2:verdict.kept.2026-10-15T10:00:00+00:00")).toMatchObject({ atSrc: "recorded", occurredAt: "2026-10-15T10:00:00.000Z", lane: "audio" });
     expect(p.events.find((e) => e.key === "sound:t3:verdict.rejected")).toMatchObject({ atSrc: "derived", occurredAt: "2026-10-15T12:00:00.000Z" });
     expect(p.events.find((e) => e.key === "sound:t1:create")?.actor).toEqual({ kind: "agent", id: "sound-elevenlabs" });
   });
@@ -64,6 +69,44 @@ describe("sound projection", () => {
 
   it("a shelf with only fixture takes waiting has no pile", () => {
     expect(projectSound(shelf([take("f1", { origin: "fixture" })]), ctx()).weir).toEqual([]);
+  });
+});
+
+describe("sound verdicts over time", () => {
+  /** Sync the shelf as it stands at each step into one in-memory ledger; the last verdict row of take `id`. */
+  async function lastVerdict(steps: Take[], id: string): Promise<{ type: string; appended: number[]; drifted: number[] }> {
+    const k = openKernel(":memory:");
+    if (!k.ok) throw k.error;
+    try {
+      const appended: number[] = [];
+      const drifted: number[] = [];
+      for (const t of steps) {
+        const src: Source<SoundShelf> = { id: "sound", read: async () => ok(shelf([t])), project: projectSound };
+        const r = await syncV1(k.value.store, [src], ctx());
+        if (!r.ok) throw r.error;
+        appended.push(r.value.sources[0]?.appended ?? -1);
+        drifted.push(r.value.sources[0]?.drifted ?? -1);
+      }
+      const q = queryEvents(k.value.store, { type: ["verdict.kept", "verdict.rejected"], limit: 100 });
+      if (!q.ok) throw q.error;
+      const rows = q.value.events.filter((e) => e.subject.id === id).sort((a, b) => (a.occurredAt ?? "").localeCompare(b.occurredAt ?? ""));
+      return { type: rows.at(-1)?.type ?? "none", appended, drifted };
+    } finally {
+      k.value.close();
+    }
+  }
+
+  it("a take judged kept, rejected, then kept again ends the ledger on kept, with no drift", async () => {
+    const judged = (verdict: "kept" | "rejected", at: string) => take("t1", { verdict, judgedAt: at });
+    const out = await lastVerdict([judged("kept", "2026-10-15T10:00:00.000Z"), judged("rejected", "2026-10-15T11:00:00.000Z"), judged("kept", "2026-10-15T12:00:00.000Z")], "t1");
+    expect(out.type).toBe("verdict.kept");
+    expect(out.drifted).toEqual([0, 0, 0]);
+  });
+
+  it("a verdict with no judgedAt keeps one stable key across syncs", async () => {
+    const p1 = projectSound(shelf([take("t1", { verdict: "kept" })]), ctx("2026-10-15T12:00:00.000Z"));
+    const p2 = projectSound(shelf([take("t1", { verdict: "kept" })]), ctx("2026-10-15T12:05:00.000Z"));
+    expect(p1.events.map((e) => e.key)).toEqual(p2.events.map((e) => e.key));
   });
 });
 

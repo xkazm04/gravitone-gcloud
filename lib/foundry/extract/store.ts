@@ -31,6 +31,7 @@ import {
   FoundryError,
   containedIn,
   listManifests,
+  type ManifestWarning,
   readJson,
   readManifestFile,
   runRoot,
@@ -207,8 +208,10 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
 
 /* ── Reads ────────────────────────────────────────────────────────────────── */
 
-export async function listExtractRuns(): Promise<ExtractSummary[]> {
-  const { items } = await listManifests<ExtractManifest, ExtractSummary>(EXTRACT_ROOT, "run.json", async (name, m) => {
+/** The shelf and the runs it could not read (a run.json that does not parse), so a feed can
+ *  hold those runs instead of pruning them as gone. `listExtractRuns` is the list alone. */
+export async function scanExtractRuns(): Promise<{ items: ExtractSummary[]; warnings: ManifestWarning[] }> {
+  const { items, warnings } = await listManifests<ExtractManifest, ExtractSummary>(EXTRACT_ROOT, "run.json", async (name, m) => {
     const v = await readJson<ExtractVerdicts>(path.join(EXTRACT_ROOT, name, "verdicts.json"), {});
     return {
       id: m.id,
@@ -223,7 +226,11 @@ export async function listExtractRuns(): Promise<ExtractSummary[]> {
       ...(m.spend ? { spendUsd: m.spend.usd } : {}),
     };
   });
-  return items.sort((a, b) => (a.created < b.created ? 1 : -1));
+  return { items: items.sort((a, b) => (a.created < b.created ? 1 : -1)), warnings };
+}
+
+export async function listExtractRuns(): Promise<ExtractSummary[]> {
+  return (await scanExtractRuns()).items;
 }
 
 export async function getExtractRun(id: string): Promise<ExtractDetail> {
