@@ -7124,47 +7124,48 @@
       "context": "domain-run-job-steps",
       "subject": "job-coordination",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-18",
-      "evaluatedTs": "2026-10-18T23:04:37.188Z",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:08:46.669Z",
+      "worker": "cfece91a-7af4-487a-83ac-531c6947bf9e",
       "techniques": [
         {
           "technique": "job-state-machines",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/transitions.ts:26 Enforces that state machine transitions are declared and validates transitions through an assert method."
-        },
-        {
-          "technique": "in-flight-is-a-position",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/job.ts:157 Enforces that an interrupted job record must name the running stage and holder so recovery knows what effect was in flight."
-        },
-        {
-          "technique": "lease-renewal",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/job.ts:152 Guarantees that a job holds a lease with monotonic fence and heartbeat TTL timestamps if and only if it is in running state."
-        },
-        {
-          "technique": "step-position-and-resumability",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/steps/record.ts:30 Step outputs are defined with versioned schemas, migration functions, and stable keys to allow explicit step-by-step resumption and migration."
-        },
-        {
-          "technique": "terms-travel-permission-does-not",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/job.ts:116 The job's USD ceiling is explicitly modeled on the job record as frozen terms that travel with the job rather than being looked up live."
+          "evidence": "packages/domain/src/job.machine.ts:31 Closed vocabulary as data with one authority. jobStateSchema is z.enum(jobMachine.states) and transitions.ts assert() refuses undeclared edges."
         },
         {
           "technique": "terminal-state-recovery",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/job.machine.ts:38 Terminal states have an empty transition set so no subsequent transition or retry sweep can rewrite a final verdict."
+          "evidence": "packages/domain/src/job.machine.ts:37 Terminal set is closed (done, cancelled, both []). A crashed job gets its own parked state whose only exits are back through the queue or cancel, and the record requires a typed error or an interruption payload. The domain declares no age policy for paused/failed/interrupted."
+        },
+        {
+          "technique": "in-flight-is-a-position",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.machine.ts:13 At job grain, running means dispatched. An orphaned running job becomes 'interrupted' (unknown outcome, with holder and stage recorded) rather than being re-run, so recovery reads a recorded fact. The disposition is the same for every step: park for the operator."
+        },
+        {
+          "technique": "lease-renewal",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:63 The lease record carries a fencing token, heartbeatAt and ttlS, and the schema requires a lease exactly while running. The renewal loop and expiry-is-loss live in kernel lease-core.ts, outside this context."
+        },
+        {
+          "technique": "liveness-proof-reclaim",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:48 Holder identity is bootId+pid+host, a start token that survives pid reuse. The comment at job.ts:46 says a different host 'is treated as gone', but kernel gone() returns false for a foreign host and leaves it to TTL (see notes)."
+        },
+        {
+          "technique": "terms-travel-permission-does-not",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:115 The ceiling, mode (dry/live with its arm) and steer are written into the record at submission. The comment on mode says a retry must not silently change it."
+        },
+        {
+          "technique": "step-position-and-resumability",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/steps/record.ts:30 Step outputs are defined with versioned schemas, migration functions, and stable keys to allow explicit step-by-step resumption and migration.",
+          "carriedFrom": "2026-10-18"
         }
-      ],
-      "withdrawn": {
-        "worker": "99e8ef43-be2f-440f-a820-ae80ff481c55",
-        "state": "conformant",
-        "at": "2026-10-18T23:06:10.368361+00:00",
-        "reason": "reviewer (sonnet): The technique at packages/domain/src/job.ts:157 only requires an `interruption` record (holder and time) while the job is interrupted, and `interruption.stage` is optional. `interrupted()` in job-core.ts:237 builds the record without a stage when none was in flight. So the claim that the record must"
-      }
+      ]
     },
     "3eb496e8-52aa-446d-bf75-07dc7c891b16/job-coordination": {
       "context": "kernel-python-protocol",

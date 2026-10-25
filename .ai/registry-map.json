@@ -4059,7 +4059,11 @@
           "revision": 17,
           "changedAt": "2026-10-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/domain/src/job.machine.ts:31 The job lifecycle is one closed table: live states (queued, running), held states (paused, failed, interrupted) and terminal states (done, cancelled). The record's superRefine ties each state to its payload (lease while running, error while failed, interruption while interrupted), so recovery and views read one vocabulary instead of scattered flags.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:68f09609d1498e88",
+          "evaluatedRevision": 17
         },
         {
           "subject": "module-design",
