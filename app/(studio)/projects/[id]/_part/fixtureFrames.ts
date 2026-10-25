@@ -5,11 +5,10 @@ import type { BlobRef } from "@gt/domain/blob";
 import { err, ok, type Result } from "@gt/domain/errors";
 import { framesOpLabel, scriptFaceOf, type FramesOp, type PartActKind, type PartActView } from "@gt/domain/partView";
 import { needsPlate } from "@gt/producers/frames/define";
-import { explainerRender, isStalePlate, subjectFor, trailerRender, type Frame, type Plate } from "@/lib/frames/frames";
-import { frameOfUnit, framesFromUnits, unitsFromRender, type PictureUnit } from "@/lib/frames/picture/unit";
+import { explainerRender, isStalePlate, subjectFor, type Frame, type Plate } from "@/lib/frames/frames";
+import { frameOfUnit, framesFromUnits, trailerChain, unitsFromRender, type PictureUnit } from "@/lib/frames/picture/unit";
 import { actionOfUnit } from "@/lib/frames/shotPrompt";
 import { reviewSceneSpecs } from "@/lib/frames/sceneSpec";
-import { RENDERS } from "@/lib/script/renders";
 import { derive } from "@/lib/script/trailer/ops";
 import { acceptProposal, planFromSpecs, revertPass, revertRow, type Checkpoint, type DirectionProposal } from "@/lib/frames/directionPlan";
 
@@ -77,11 +76,7 @@ export function chainOf(ctx: KCtx): Chain | null {
     if (s.cut === null) return null;
     const cut = derive(s.cut).cut;
     const template = recipeById(ctx.project.recipe)?.template ?? "trailer";
-    const render = trailerRender(cut, { template, durationS: ctx.project.targetS ?? 120 });
-    // `unitsFromRender` reads its second argument only on the explainer lane; any render stands
-    // there for a trailer, and the shipped first one is the one that cannot be absent.
-    const fixture = RENDERS[0];
-    return fixture === undefined ? null : { id: render.id, title: render.title, units: unitsFromRender(render, fixture), lane: "trailer" };
+    return { ...trailerChain(cut, { template, durationS: ctx.project.targetS ?? 120 }), lane: "trailer" };
   }
   const adopted = s.candidates.find((c) => c.id === s.adopted);
   if (adopted === undefined) return null;

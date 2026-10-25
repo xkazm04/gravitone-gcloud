@@ -216,6 +216,50 @@ describe("render plates, a trailer's shots", () => {
   });
 });
 
+// A trailer with a composed spine and NO stored frames record: the producer derives the same shot
+// units the editor offers (lib/frames/picture/unit.ts trailerChain), so the act it offers is priced.
+describe("render plates, a trailer's derived shots", () => {
+  const cut = {
+    form: "trailer",
+    id: "cut-tr1",
+    title: "a teaser",
+    rung: "long-cut",
+    lane: "wide-release",
+    movements: [],
+    beats: [
+      { id: "b1", at: "0:00", kind: "cold-open", label: "one light", text: "a light", role: "setup" },
+      { id: "b2", at: "0:16", kind: "rung", label: "closer", text: "closer", role: "rung" },
+      { id: "b3", at: "0:30", kind: "reset", label: "quiet", text: "quiet", role: "reset" },
+      { id: "b4", at: "0:34", kind: "climax", label: "climax", text: "climax", role: "peak" },
+    ],
+  };
+
+  function trailer(id: string): Store {
+    const dir = mkdtempSync(path.join(tmpdir(), "gt-step-frames-"));
+    dirs.push(dir);
+    const k = openKernel(path.join(dir, "k.sqlite"));
+    if (!k.ok) throw k.error;
+    open.push(k.value);
+    const store = k.value.store;
+    must(compose(store, { recipe: "film/trailer" }, OP, { id }));
+    must(writePart(store, { projectId: id, partId: `${id}/script`, baseRev: "current", act: "land", op: { seed: true }, label: "seed", by: { kind: "machine", id: "test" }, next: () => ok({ "script-trailer": { cut, ops: [], head: 0 } }) }));
+    return store;
+  }
+
+  it("the receipt prices one plate per derived shot (not a refusal), and the dry job lands them", async () => {
+    const store = trailer("tr1");
+    const r = must(partActReceipt(store, { projectId: "tr1", partId: "tr1/frames", act: "render-plates" }, framesUnits, { mode: "dry", now: NOW }));
+    expect(r).toMatchObject({ subject: { kind: "part", act: "render-plates" } });
+    const jobId = await confirm(store, "tr1", "render-plates");
+    const run = must(await driveStep(framesProducer, store, jobId, { dryOnly: true }));
+    if (run.outcome !== "done") throw new Error(String(must(get(store, jobId as never)).job.error?.message));
+    expect(run.outcome).toBe("done");
+    const units = framesOf(store, "tr1").units;
+    expect(units.length).toBeGreaterThan(4);
+    expect(units.every((u) => u.plate["state"] === "ready")).toBe(true);
+  });
+});
+
 describe("direct the cut", () => {
   it("a dry pass lands a PROPOSAL and its spend; nothing on the units is applied", async () => {
     const { store } = universe("fd", [unit("u1", "0:00"), unit("u2", "0:05")]);
