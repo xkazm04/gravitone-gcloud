@@ -20,7 +20,9 @@ import { MEASURE_RATE, measureSignal, samplesOf } from "./measure.ts";
 /** Mono f32le PCM of a file at MEASURE_RATE, or the decoder's own words. */
 export type Decode = (file: string) => Promise<Result<Uint8Array>>;
 
-/** Long enough for any take the store accepts (60 MB, lib/sound/takes.ts) at 11 kHz mono f32. */
+/** About 50 minutes of audio at MEASURE_RATE mono f32 (44.1 kB a second). NOT every take the store
+ *  accepts (60 MB, lib/sound/takes.ts): an MP3 under ~165 kbps at that size decodes past it, and
+ *  ffmpeg's maxBuffer refusal is written as that blob's error row rather than measured. */
 const MAX_PCM_BYTES = 128 * 1024 * 1024;
 const TIMEOUT_MS = 120_000;
 
