@@ -1165,6 +1165,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "Every key loses its colon in the JSONL view and the detail's raw record, so what is drawn is no longer the JSON a copy puts on the clipboard.",
   },
   {
+    id: "inventory-loses-a-row",
+    test: "packages/ui/test/components/inventory.test.ts",
+    file: "packages/ui/src/components/INVENTORY.md",
+    find: "| `TimeStrip` (+ `strip.ts`) |",
+    replace: "| `Time Strip` (+ `strip.ts`) |",
+    why: "A shipped component drops out of the map every author is sent to before writing a surface, and the next Ledger screen hand-rolls a second time strip.",
+  },
+  {
     id: "stale-badge-shows-when-live",
     test: "packages/ui/test/components/ledger.test.ts",
     file: "packages/ui/src/components/stalebadge/StaleBadge.tsx",
