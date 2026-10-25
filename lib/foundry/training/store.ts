@@ -37,6 +37,7 @@ import {
   containedIn,
   foundryFile,
   listManifests,
+  type ManifestWarning,
   readJson,
   readManifestFile,
   runRoot,
@@ -121,8 +122,10 @@ const decidedCount = (v: TrainingVerdicts) => Object.values(v).filter((x) => x =
 
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
-export async function listCycles(): Promise<TrainingCycleSummary[]> {
-  const { items } = await listManifests<CycleManifest, TrainingCycleSummary>(trainingRoot(), "cycle.json", async (name, m) => {
+/** The shelf and the runs it could not read (a run.json that does not parse), so a feed can
+ *  hold those runs instead of pruning them as gone. `listCycles` is the list alone. */
+export async function scanCycles(): Promise<{ items: TrainingCycleSummary[]; warnings: ManifestWarning[] }> {
+  const { items, warnings } = await listManifests<CycleManifest, TrainingCycleSummary>(trainingRoot(), "cycle.json", async (name, m) => {
     let v: TrainingVerdicts;
     try {
       v = await readJson<TrainingVerdicts>(path.join(trainingRoot(), name, "verdicts.json"), {});
@@ -145,7 +148,11 @@ export async function listCycles(): Promise<TrainingCycleSummary[]> {
       decided: decidedCount(v),
     };
   });
-  return items.sort((a, b) => (a.at < b.at ? 1 : -1));
+  return { items: items.sort((a, b) => (a.at < b.at ? 1 : -1)), warnings };
+}
+
+export async function listCycles(): Promise<TrainingCycleSummary[]> {
+  return (await scanCycles()).items;
 }
 
 /** blind.json merged with the seeded A/B map; a cycle with no file reads as untouched. */

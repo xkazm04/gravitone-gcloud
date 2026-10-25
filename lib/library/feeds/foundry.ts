@@ -9,11 +9,11 @@ import { errorMessage } from "@gt/domain/errors";
 import type { LibraryState } from "@gt/domain/library";
 import type { StyleFacets } from "@gt/kernel/library/core";
 
-import { foundryFile } from "../../foundry/runStore.ts";
-import { getExtractRun, listExtractRuns, resolveInExtract } from "../../foundry/extract/store.ts";
-import { getCatalogue, getRun, listRuns, resolveInRun } from "../../foundry/store.ts";
-import { getStripRun, listStripRuns, stripRunDir } from "../../foundry/strips/store.ts";
-import { getCycle, listCycles, resolveInCycle } from "../../foundry/training/store.ts";
+import { foundryFile, type ManifestWarning } from "../../foundry/runStore.ts";
+import { getExtractRun, resolveInExtract, scanExtractRuns } from "../../foundry/extract/store.ts";
+import { getCatalogue, getRun, resolveInRun, scanRuns } from "../../foundry/store.ts";
+import { getStripRun, scanStripRuns, stripRunDir } from "../../foundry/strips/store.ts";
+import { getCycle, resolveInCycle, scanCycles } from "../../foundry/training/store.ts";
 import { dayOf, isoOf, mimeOf, words, type Feed, type FeedCtx, type FeedItem, type FeedRead } from "./types.ts";
 
 /** The origins a v1 Library theme arrives with; the importer brought it, not the forge. */
@@ -46,6 +46,15 @@ const withFile = (file: FeedItem["file"]): { file?: NonNullable<FeedItem["file"]
 function newest<T>(all: readonly T[], feed: string, skipped: { id: string; reason: string }[]): readonly T[] {
   if (all.length > RUN_CAP) skipped.push({ id: feed, reason: `${all.length - RUN_CAP} of ${all.length} runs, older than the newest ${RUN_CAP}, are not read` });
   return all.slice(0, RUN_CAP);
+}
+
+/** A run whose run.json would not parse never reaches the feed as a summary: the lister names it in
+ *  `warnings`. It is reported as skipped and its items are held (`prefixes`), not pruned as gone. */
+function unreadable(warnings: readonly ManifestWarning[], prefixes: (id: string) => string[], skipped: { id: string; reason: string }[], held: string[]): void {
+  for (const w of warnings) {
+    skipped.push({ id: w.id, reason: w.reason });
+    held.push(...prefixes(w.id));
+  }
 }
 
 type Aspect = "16:9" | "3:2" | "4:3" | "1:1";
@@ -106,7 +115,9 @@ export const forgeFeed: Feed = {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
     const held: string[] = [];
-    for (const summary of newest(await listRuns(), "forge", skipped)) {
+    const shelf = await scanRuns();
+    unreadable(shelf.warnings, (id) => [`image:forge:${id}:`, `plate:forge:${id}:`], skipped, held);
+    for (const summary of newest(shelf.items, "forge", skipped)) {
       let detail;
       try {
         detail = await getRun(summary.id);
@@ -176,7 +187,9 @@ export const extractFeed: Feed = {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
     const held: string[] = [];
-    for (const summary of newest(await listExtractRuns(), "extract", skipped)) {
+    const shelf = await scanExtractRuns();
+    unreadable(shelf.warnings, (id) => [`image:extract:${id}:`, `plate:extract:${id}:`], skipped, held);
+    for (const summary of newest(shelf.items, "extract", skipped)) {
       let detail;
       try {
         detail = await getExtractRun(summary.id);
@@ -252,7 +265,9 @@ export const dojoFeed: Feed = {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
     const held: string[] = [];
-    for (const summary of newest(await listCycles(), "dojo", skipped)) {
+    const shelf = await scanCycles();
+    unreadable(shelf.warnings, (id) => [`plate:dojo:${id}:`], skipped, held);
+    for (const summary of newest(shelf.items, "dojo", skipped)) {
       let detail;
       try {
         detail = await getCycle(summary.id);
@@ -306,7 +321,9 @@ export const stripsFeed: Feed = {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
     const held: string[] = [];
-    for (const summary of newest(await listStripRuns(), "strips", skipped)) {
+    const shelf = await scanStripRuns();
+    unreadable(shelf.warnings, (id) => [`motion:strips:${id}:`], skipped, held);
+    for (const summary of newest(shelf.items, "strips", skipped)) {
       let detail;
       try {
         detail = await getStripRun(summary.id);
