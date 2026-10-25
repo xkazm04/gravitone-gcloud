@@ -5,6 +5,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import sr from "../../src/components/a11y/SrOnly.module.css";
 import { Button } from "../../src/components/button/Button.tsx";
 import { EventRow, type EventRowProps } from "../../src/components/eventrow/EventRow.tsx";
 import { usd } from "../../src/components/eventrow/usd.ts";
@@ -200,12 +201,15 @@ describe("EventRow", () => {
 
 describe("StaleBadge", () => {
   test("live draws nothing; stale and down draw the word and the coarse age", () => {
-    expect(html(h(StaleBadge, { edge: "live", ageMs: 1000, feed: "ledger feed" }))).toBe("");
+    // Live is the region alone, empty and out of flow: a region mounted WITH its words announces nowhere.
+    expect(html(h(StaleBadge, { edge: "live", ageMs: 1000, feed: "ledger feed" }))).toBe(`<span role="status" class="${sr.sr}"></span>`);
     const stale = html(h(StaleBadge, { edge: "stale", ageMs: 42_000, feed: "ledger feed" }));
     expect(stale).toContain("stale");
     expect(stale).toContain("42 s");
     expect(stale).toContain('aria-label="ledger feed stale, 42 s old"');
     expect(html(h(StaleBadge, { edge: "down", feed: "ledger feed" }))).toContain("offline");
+    // Each edge is the same region, so stale arrives as a change inside one already observed.
+    for (const edge of ["stale", "down"] as const) expect(html(h(StaleBadge, { edge, feed: "ledger feed" }))).toMatch(/^<span role="status">/);
   });
 });
 

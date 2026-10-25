@@ -904,6 +904,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "Pointing at a ghost door chip (adopt a row, add a preferred term) swaps its dashed rim for the 1.91:1 hairline: the placeholder mark vanishes exactly when it is about to be pressed.",
   },
   {
+    id: "ui-stalebadge-region-arrives-with-its-words",
+    test: "packages/ui/test/components/ledger.test.ts",
+    file: "packages/ui/src/components/stalebadge/StaleBadge.tsx",
+    find: "if (edge === \"live\") return <span role=\"status\" className={sr.sr} />;",
+    replace: "if (edge === \"live\") return null;",
+    why: "The status region mounts together with `stale`, so a screen reader never hears the ledger, floor or runs feed go quiet.",
+  },
+  {
     id: "ui-status-job-table-drops-interrupted",
     test: "packages/ui/test/components/status.test.ts",
     file: "packages/ui/src/components/status/status.ts",
@@ -1152,7 +1160,7 @@ export const MUTANTS: UnitMutant[] = [
     id: "stale-badge-shows-when-live",
     test: "packages/ui/test/components/ledger.test.ts",
     file: "packages/ui/src/components/stalebadge/StaleBadge.tsx",
-    find: "if (edge === \"live\") return null;",
+    find: "if (edge === \"live\") return <span role=\"status\" className={sr.sr} />;",
     replace: "",
     why: "A healthy feed wears an amber badge permanently, and a warning that is always on is a warning nobody reads when the feed really stops.",
   },
