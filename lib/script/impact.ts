@@ -24,7 +24,7 @@
 // recorded with a reason, and absence is absence — which for the conclusions is
 // the finding, not an oversight.
 
-import { RENDERS, RENDER_BY_ID } from "@/lib/script/renders";
+import { RENDERS } from "@/lib/script/renders";
 import type { ScriptRender } from "@/lib/script/types";
 
 /** beat mark → the card ids that beat states. */
@@ -159,16 +159,6 @@ export const IMPACT: Record<string, Record<string, Usage>> = Object.fromEntries(
   RENDERS.map((r) => [r.id, usageMapOf(r, ATTRIBUTION[r.id] ?? {})]),
 );
 
-export function usageOf(renderId: string, cardId: string): Usage {
-  return IMPACT[renderId]?.[cardId] ?? { kind: "unused", seconds: 0, beats: [] };
-}
-
-/** Share of the render's runtime spent on this card, 0–1. */
-export function shareOf(renderId: string, cardId: string): number {
-  const d = RENDER_BY_ID[renderId]?.durationS ?? 0;
-  return d ? usageOf(renderId, cardId).seconds / d : 0;
-}
-
 /** Cut records naming a card the notebook no longer has.
  *
  *  Both mid-length renders cut `f-liquidity`, which follow-up round 1 then
@@ -181,21 +171,6 @@ export function orphanedCuts(cardIds: Set<string>) {
     for (const c of r.cutFacts)
       if (!cardIds.has(c.factId)) out.push({ renderId: r.id, factId: c.factId, why: c.why });
   return out;
-}
-
-/** Per-render rollup for a matrix header. */
-export function coverage(renderId: string, cardIds: string[]) {
-  const spoken = cardIds.filter((id) => usageOf(renderId, id).kind === "spoken");
-  const cut = cardIds.filter((id) => usageOf(renderId, id).kind === "cut");
-  const seconds = spoken.reduce((n, id) => n + usageOf(renderId, id).seconds, 0);
-  return {
-    spoken: spoken.length,
-    cut: cut.length,
-    unused: cardIds.length - spoken.length - cut.length,
-    seconds,
-    /** Runtime not attributed to any card — hooks, promises, closes. */
-    unattributedS: Math.max(0, (RENDER_BY_ID[renderId]?.durationS ?? 0) - seconds),
-  };
 }
 
 /** The baseline beat→cards map for one render. The model path re-derives every

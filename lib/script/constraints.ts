@@ -20,7 +20,7 @@
 // A row that still cannot resolve is REPORTED, not dropped — a ledger that
 // quietly renders four rows as three is the same defect wearing a guard clause.
 
-import { NOTEBOOK, UNKNOWN_BY_ID } from "@/lib/notebook/notebook";
+import { NOTEBOOK } from "@/lib/notebook/notebook";
 import { asSource, type NotebookSource } from "@/lib/notebook/source";
 import type { Notebook, Unknown } from "@/lib/notebook/types";
 import type { ScriptDraft, DraftRender } from "@/lib/script/draft";
@@ -28,11 +28,6 @@ import { checkConstraints, probesFor, type GateFinding, type GateSubject } from 
 import { RENDER_BY_ID } from "@/lib/script/renders";
 
 export type ConstraintState = "honoured" | "at-risk" | "not-applicable";
-
-/** What the row means once the notebook's current state is applied.
- *  `superseded` = the render obeys a constraint that has since been lifted. Not
- *  a violation; a render that is now more cautious than the evidence requires. */
-export type EffectiveState = ConstraintState | "superseded";
 
 interface LedgerRow {
   unknownId: string;
@@ -60,58 +55,6 @@ export const CONSTRAINT_LEDGER: Record<string, LedgerRow[]> = {
     { unknownId: "u-yield-causality", state: "not-applicable", how: "no macro claim — the clip is entirely mechanical" },
   ],
 };
-
-export interface ResolvedRow {
-  unknownId: string;
-  unknown: Unknown;
-  state: ConstraintState;
-  effective: EffectiveState;
-  how: string;
-}
-
-export interface ResolvedLedger {
-  rows: ResolvedRow[];
-  /** Rows naming an unknown the notebook no longer has. Surfaced, never hidden:
-   *  it means the render was scored against a rule that has vanished, and the
-   *  score is therefore incomplete. */
-  dangling: string[];
-  atRisk: number;
-  superseded: number;
-}
-
-/** The HAND ledger for one render, as the notebook stands today: typed states,
- *  typed `how`. Superseded by `ledgerFor` below, which derives every state from
- *  the gate; this survives only because the ConstraintLedger panel and
- *  pipeline/drive-script-step.mjs ("the reversal chain still declares its
- *  at-risk row") read it, and moving them is script-phase-A session 2. Measured
- *  2026-10-05: it disagrees with the gate on reversal-chain · u-yield-causality
- *  (typed at-risk; the render was corrected, and the gate passes it). */
-export function handLedgerFor(renderId: string): ResolvedLedger {
-  const raw = CONSTRAINT_LEDGER[renderId] ?? [];
-  const rows: ResolvedRow[] = [];
-  const dangling: string[] = [];
-
-  for (const r of raw) {
-    const unknown = UNKNOWN_BY_ID[r.unknownId];
-    if (!unknown) {
-      dangling.push(r.unknownId);
-      continue;
-    }
-    // A constraint that has been resolved no longer binds. Honouring it is not
-    // a pass any more — it is a render that is out of date with its own
-    // research, which is the thing this ledger is for.
-    const effective: EffectiveState =
-      unknown.resolvedBy && r.state === "honoured" ? "superseded" : r.state;
-    rows.push({ unknownId: r.unknownId, unknown, state: r.state, effective, how: r.how });
-  }
-
-  return {
-    rows,
-    dangling,
-    atRisk: rows.filter((r) => r.effective === "at-risk").length,
-    superseded: rows.filter((r) => r.effective === "superseded").length,
-  };
-}
 
 /* ───────────────────────── the ledger, derived from the gate ────────────────
    script-phase-A. The table above is "a well-designed noun with no verb"
