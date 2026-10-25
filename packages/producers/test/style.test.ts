@@ -4,7 +4,7 @@ import { err, ok } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
 import type { Output } from "@gt/kernel/job-core";
 
-import { defineStyleProducer, stylePlan, type StyleRequest } from "../src/style/define.ts";
+import { defineStyleProducer, stylePlan, styleRequestSchema, type StyleRequest } from "../src/style/define.ts";
 
 // The style producer's plan (the drive itself, over a temp store, is
 // tests/next-server/style-real.test.ts): which steps a request still owes, and that the request
@@ -61,5 +61,12 @@ describe("the request is read outside the drive's transaction", () => {
     expect(() => p.plan(job, done())).toThrow("job carries no style request");
     await p.health?.(job);
     expect(p.plan(job, done()).map((s) => s.name)).toEqual(["palette", "land"]);
+  });
+});
+
+describe("the request a job carries is read through the same rule the act was asked under", () => {
+  it("refuses a trial named twice, as the atelier's act door does: two priced plates the landing would refuse", () => {
+    expect(styleRequestSchema.safeParse(proofs).success).toBe(true);
+    expect(styleRequestSchema.safeParse({ ...proofs, trialIds: ["flywheel", "flywheel"] }).success).toBe(false);
   });
 });

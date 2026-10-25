@@ -47,7 +47,13 @@ export const styleRequestSchema = z.discriminatedUnion("kind", [
       rev: z.number().int().positive(),
       /** The block the receipt priced: every plate must be rendered under it. */
       digest: z.string().min(1),
-      trialIds: z.array(id).min(1).max(5),
+      /** Each trial once, as the atelier's act door (app/(studio)/library/style/_port/schema.ts) refuses
+       *  a repeat: a trial named twice is two priced plates whose landing takes one proof id per trial. */
+      trialIds: z
+        .array(id)
+        .min(1)
+        .max(5)
+        .refine((ts) => new Set(ts).size === ts.length, { message: "each trial is rendered once per receipt" }),
       by: id,
       /** One plate's estimate. */
       estimate: estimateSchema,
