@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 154;
+export const UNGUARDED_PROBE_BUDGET = 153;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -519,5 +519,21 @@ export const MUTANTS: Mutant[] = [
     find: "if (report.damaged.length) console.log(",
     replace: "if (false) console.log(",
     why: "The loop CLI prints its orphaned runs but not the run directories whose run.json does not parse, so a damaged run is in loop.json only and the operator reading the terminal never sees it.",
+  },
+  {
+    id: "estimate-row-drops-served-price-ref",
+    probe: "imaging-billed-attempts.probe.spec.ts",
+    file: "lib/imaging/router.ts",
+    find: "? priceRef(served.provenance.provider, served.provenance.model)",
+    replace: "? undefined",
+    why: "A served estimate row stops naming the price row it was costed with, so after a repricing nobody can tell which rate a window's estimates used.",
+  },
+  {
+    id: "estimate-row-drops-standin-price-ref",
+    probe: "imaging-billed-attempts.probe.spec.ts",
+    file: "lib/imaging/router.ts",
+    find: "price: standInRef(),",
+    replace: "price: undefined,",
+    why: "A failed estimate row books the dearest-rate stand-in without naming the price row, so the window total cannot be reconciled to a rate after the table changes.",
   },
 ];

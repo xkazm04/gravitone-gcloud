@@ -30,6 +30,7 @@ import { ImagingError, presumedBilled } from "@/lib/imaging/errors";
 import { ollamaProvider } from "@/lib/imaging/providers/ollama";
 import { qwenProvider } from "@/lib/imaging/providers/qwen";
 import { billedOnFailure, generate } from "@/lib/imaging/router";
+import { PRICES } from "@/lib/imaging/pricing";
 
 const realFetch = globalThis.fetch;
 
@@ -318,6 +319,31 @@ test("15. qwen rotates SKUs on a 429 or empty content, never on a 400; each SKU 
   const err = await failure(qwenProvider().recognize!(RECOGNIZE));
   expect(err.kind).toBe("failed");
   expect(asked(), "a malformed request was re-sent to the fallback SKUs").toEqual(["qwen3.8-max"]);
+});
+
+test("16. an estimate-basis row names the price row it was costed with (served and failed)", async () => {
+  // A row booked at basis `estimate` must stay explicable after PRICES is
+  // repriced and re-dated: it records provider/model@checked of the row used.
+  const rowOf = (ref: string | undefined) => PRICES.find((p) => `${p.provider}/${p.model}@${p.checked}` === ref);
+
+  stubFetch(() => googleImage());
+  await generate({ prompt: "probe served", aspect: "16:9", count: 1 });
+  let rows = await spendRows();
+  expect(rows).toHaveLength(1);
+  expect(rows[0].basis).toBe("estimate");
+  const served = rowOf(rows[0].price);
+  expect(served, `served estimate row names no PRICES row: ${rows[0].price}`).toBeDefined();
+  expect([served?.provider, served?.model]).toEqual([rows[0].provider, rows[0].model]);
+
+  __resetBudget();
+  stubFetch(() => status(500));
+  await failure(generate({ prompt: "probe 500", aspect: "16:9", count: 1 }));
+  rows = await spendRows();
+  expect(rows).toHaveLength(1);
+  expect(rows[0].outcome).toBe("failed");
+  const standIn = rowOf(rows[0].price);
+  expect(standIn, `failed estimate row names no PRICES row: ${rows[0].price}`).toBeDefined();
+  expect(standIn?.usdPerImage).toBe(rows[0].usd);
 });
 
 test("9. one authority: the router's billing predicate IS errors.ts's presumedBilled", () => {
