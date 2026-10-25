@@ -509,3 +509,16 @@ test("patch: a decide that throws writes nothing and reports a failed trouble", 
   const read = await readStep<{ keep?: string }>("p-throw", "script");
   expect(read.ok && read.data?.keep).toBe("me");
 });
+
+test("issue order: a read issued after a save in the same tick sees the save", async () => {
+  // Twenty keys: the read-your-write claim is about call order, not one lucky run.
+  const misses: string[] = [];
+  for (let i = 0; i < 20; i++) {
+    const k = `p-ryw-${i}`;
+    void saveStep(k, "script", { n: i });
+    const r = await readStep<{ n?: number }>(k, "script");
+    if (!(r.ok && r.data?.n === i)) misses.push(k);
+  }
+  expect(misses).toEqual([]);
+});
+
