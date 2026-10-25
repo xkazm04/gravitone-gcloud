@@ -960,6 +960,14 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<span>{of === undefined",
     why: "Screen readers read the numerals as well as the sentence, so 12/36 is announced as twelve slash thirty-six before the spoken tally.",
   },
+  {
+    id: "ui-signal-errorline-static-says-error",
+    test: "packages/ui/test/components/signal.test.ts",
+    file: "packages/ui/src/components/errorline/ErrorLine.tsx",
+    find: "{!live && <SrOnly text=\"error\" />}",
+    replace: "",
+    why: "A static ErrorLine is a rose wash and an aria-hidden glyph, so a screen reader hears 'takes: ENOENT' as ordinary text with nothing marking it failed.",
+  },
   // ---- @gt/kernel: token (Phase 2, lot 17)
   {
     id: "token-revocation-ignored",

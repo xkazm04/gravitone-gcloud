@@ -113,6 +113,8 @@ describe("SourceTag, ChannelBadge, Ghost, ErrorLine, LedgerLink", () => {
     expect(html(h(ErrorLine, { message: msg }))).not.toContain("role=");
     expect(html(h(ErrorLine, { message: msg, live: true }))).toContain(`role="alert"`);
     expect(html(h(ErrorLine, { message: msg }))).toContain(`<span>${msg}</span>`);
+    expect(html(h(ErrorLine, { message: msg }))).toMatch(/>error<\/span><span>publish/);
+    expect(html(h(ErrorLine, { message: msg, live: true }))).not.toContain(">error</span>");
   });
 
   test("a ledger link names its subject", () => {
