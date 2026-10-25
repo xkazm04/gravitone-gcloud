@@ -12,11 +12,13 @@ import type { ModelOption, ReceiptMode } from "@gt/domain/produce";
 import { KEPT_TAKES, OPTIONS, SEED_INTERRUPTED, SEED_PROJECTS, SEED_RUNNING_ARTICLE, type SeedProject } from "./fixtureData.ts";
 import { schedule, type Item, type Phase, type Placed } from "./schedule.ts";
 
-// THE FIXTURE PRODUCE UNIVERSE - an in-memory studio with the kernel's rules, so the Floor
-// composers, the Plan, Compose and the Runs acts are built and driven before the records module
-// and the worker exist (L28; the real side is a later lot behind ./port.ts). Not a mock that
-// answers yes: what a screen depends on is enforced here the way the contract says the kernel
-// will enforce it (@gt/domain/produce, COMMON decisions 3-7):
+// THE FIXTURE PRODUCE UNIVERSE - an in-memory studio with the kernel's rules. It was written (L28)
+// so the Floor composers, the Plan, Compose and the Runs acts could be built before the records
+// module and the worker existed; they exist now (./real.ts, L35), and the fixture stays for /kit,
+// the fixture lane and GRAVITONE_PRODUCE_SIDE=fixture - so where it and the kernel disagree, the
+// kernel is right (tests/next-server/produce-fixture-parity.test.ts drives both). Not a mock that
+// answers yes: what a screen depends on is enforced here the way the kernel enforces it
+// (@gt/domain/produce, COMMON decisions 3-7):
 //   · every write names its revision; a stale one is `conflict` and writes nothing;
 //   · a launch is a receipt first: its token is a digest of the inputs AND of the queue state
 //     read, and a confirm whose token no longer matches launches nothing and answers the fresh
