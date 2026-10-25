@@ -21,9 +21,10 @@
 //     longer its stack's head because a return was filed, is refused with that sentence;
 //   · generic over the take's shape, so the kit holds the rules without importing v1's store
 //     types; lib/sound's SoundTake satisfies `ArrangeTake` as it stands.
-// The group edits live beside this file (./arrangeGroups.ts).
+// The group edits live beside this file (./arrangeGroups.ts); the row-name folding both share is
+// ./arrangeNames.ts.
 import { err, ok, type Result } from "@gt/domain/errors";
-import { declaredAs } from "./arrangeGroups.ts";
+import { declaredAs } from "./arrangeNames.ts";
 
 export const STAGES = ["pending", "remaster", "edit", "finalized"] as const;
 export type Stage = (typeof STAGES)[number];

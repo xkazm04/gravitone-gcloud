@@ -7,6 +7,9 @@
 // arrangement, and removing it would drop them into "ungrouped" without a word; names are
 // compared case-folded, so "Ambient" and "ambient" are one row.
 import type { ArrangeKind, ArrangeTake, Stack } from "./arrange.ts";
+import { declaredAs, fold } from "./arrangeNames.ts";
+
+export { declaredAs };
 
 export type Groups = { readonly music: readonly string[]; readonly sfx: readonly string[] };
 export type GroupEdit = { readonly ok: true; readonly groups: Groups } | { readonly ok: false; readonly error: string };
@@ -20,9 +23,6 @@ export type GroupOp =
   /** A row the takes carry that the file does not list, or a suggestion, made a declared row. */
   | { readonly op: "adopt"; readonly name: string };
 
-const fold = (s: string): string => s.trim().toLowerCase();
-/** The declared spelling an orphan name folds onto when it differs only in case; else null. */
-export const declaredAs = (declared: readonly string[], name: string): string | null => declared.find((x) => x !== name && fold(x) === fold(name)) ?? null;
 const withKind = (g: Groups, kind: ArrangeKind, list: readonly string[]): Groups => ({ ...g, [kind]: list });
 
 export function addGroup(g: Groups, kind: ArrangeKind, name: string): GroupEdit {
