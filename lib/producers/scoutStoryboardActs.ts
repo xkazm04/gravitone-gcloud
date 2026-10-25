@@ -37,7 +37,7 @@ import { standIdea } from "./scoutIdeaActs.ts";
 // Every night write is fenced against the job's slot first (the scene and ideas acts' `fence`).
 
 /** The frame engine a storyboard draws with: production's is lib/imaging/local/flux2.ts; a test hands a fake. */
-export type StoryboardDraw = (prompt: string, o: { readonly aspect: FluxAspect; readonly seed?: number }) => Promise<{ readonly png: Uint8Array; readonly seed: number }>;
+export type StoryboardDraw = (prompt: string, o: { readonly aspect: FluxAspect; readonly seed?: number; readonly refs?: readonly Uint8Array[]; readonly late?: number }) => Promise<{ readonly png: Uint8Array; readonly seed: number }>;
 /** A trial's clip engine: one LTX clip of a panel still (PNG bytes); production's is lib/imaging/video/comfyLtx.ts. */
 export type StoryboardClip = (still: Uint8Array, prompt: string, o: { readonly aspect: FluxAspect; readonly seed: number }) => Promise<{ readonly bytes: Uint8Array; readonly durationS: number }>;
 export type StoryboardActEngines = { readonly draw: StoryboardDraw; readonly clip?: StoryboardClip };

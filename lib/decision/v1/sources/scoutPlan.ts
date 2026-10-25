@@ -556,6 +556,8 @@ export function build(v1: ScoutV1): Built {
     else if (c.kind === "storyboard") storyboardCells(night, c, v1, out);
     else if (c.kind === "genre" || c.kind === "venture") proposalCell(night, c, out);
     else if (c.kind === "piece") pieceCells(night, c, v1.media, out);
+    // spark scout-vision S3 - WP0 stub: a sheet draws no row until WP3 gives it its cell.
+    else if (c.kind === "sheet") out.losses.push({ candidate: c.id, grade: "dropped", reason: "sheet: no packet row yet" });
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

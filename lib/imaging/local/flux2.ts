@@ -62,7 +62,9 @@ export type FluxDeps = {
   readonly seed?: () => number;
 };
 
-export type FluxRequest = { readonly prompt: string; readonly aspect?: FluxAspect; readonly seed?: number };
+/** `refs` - OUR OWN stills only (a kept character's sheet or portrait, guarded by the caller - spark scout-vision S3),
+ *  admitted `late` (0..1 of the steps; registry reference-admitted-late). Absent: text-to-image as before. */
+export type FluxRequest = { readonly prompt: string; readonly aspect?: FluxAspect; readonly seed?: number; readonly refs?: readonly Uint8Array[]; readonly late?: number };
 
 export type FluxStill = {
   readonly png: Uint8Array;

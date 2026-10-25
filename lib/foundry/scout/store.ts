@@ -43,7 +43,7 @@ import {
   type SourceId,
 } from "./types";
 import { WING_OUT_DIR, type ScoutWing } from "./wing";
-import { activeWing } from "./wingScope";
+import { activeWing, withWing } from "./wingScope";
 
 const NIGHT_FILE = "night.json";
 
@@ -212,6 +212,15 @@ export async function readAllNights(): Promise<Night[]> {
     if (n !== undefined) out.push(n);
   }
   return out;
+}
+
+/**
+ * The muse ARCHIVE (spark scout-vision S3): the muse root's nights, read-only since the wings merged - every new night
+ * is written to the scout root. Their ids COLLIDE with scout nights (2026-10-23 is in both), so a reader keeps the
+ * root beside the night (characters.ts RootedNight) and addresses an archive night as `muse:<night>`.
+ */
+export async function readArchiveNights(): Promise<Night[]> {
+  return withWing("muse", () => readAllNights());
 }
 
 /** Every extract run a night's style candidate launched - the extract Weir leaves them to the night's packet. */

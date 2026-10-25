@@ -102,7 +102,7 @@ export async function buildGraphs(o: GraphOptions = {}): Promise<Record<ScoutWin
 /* ── Nodes ───────────────────────────────────────────────────────────────── */
 
 function stageKind(c: Candidate): { readonly stage: GraphStage; readonly kind: GraphKind } {
-  if (c.kind === "idea") return { stage: "idea", kind: c.target === "stats" ? "reel" : "idea" };
+  if (c.kind === "idea") return { stage: "idea", kind: c.target === "stats" ? "reel" : c.target === "character" ? "character" : "idea" };
   if (c.kind === "visualizer") return { stage: "output", kind: "visualizer" };
   // A genre's piece (spark scout-vision S2): kept, it is the output a published video is made of.
   if (c.kind === "piece") return { stage: "output", kind: "piece" };

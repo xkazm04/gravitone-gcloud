@@ -32,9 +32,25 @@ export const CARD_PERSONALITY_MAX = 200;
 export type CharacterCard = {
   readonly name: string;
   readonly age: number;
+  /** IDENTITY only - what never varies: face, hair, build, skin, one signature garment (restated verbatim when cast). */
   readonly look: string;
+  /** STATE - the line a scene plays her by; never restated as identity. */
   readonly personality: string;
+  /** spark scout-vision S3 - absent on a muse card (read as an original adult). */
+  readonly kind?: CardKind;
+  /** A parody's original, named in words (`the plumber hero of a 1980s platform game`, or its title): parody only. */
+  readonly origin?: string;
+  /** How the character is drawn; an under-18 character must be `stylised`. */
+  readonly render?: CardRender;
+  /** Who the character is for - its seed's audience. Absent on a muse card: adult. */
+  readonly audience?: "kids" | "family" | "adult";
 };
+
+/** An invented character, or a popular fictional one restyled for parody / what-if (spark scout-vision S3). */
+export const CARD_KINDS = ["original", "parody"] as const;
+export type CardKind = (typeof CARD_KINDS)[number];
+export const CARD_RENDERS = ["photoreal", "stylised"] as const;
+export type CardRender = (typeof CARD_RENDERS)[number];
 
 export const JUDGE_ADULT = ["yes", "no", "unsure"] as const;
 export const JUDGE_CLOTHING = ["covered", "revealing", "nude"] as const;

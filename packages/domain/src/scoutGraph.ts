@@ -23,6 +23,8 @@ export const GRAPH_KINDS = [
   "seed",
   // stage idea
   "idea",
+  // spark scout-vision S3: a character idea (target character)
+  "character",
   // stage board (spark scout-storyboards): a kept idea composed as frames + words before any full video
   "storyboard",
   // stage run
@@ -37,6 +39,8 @@ export const GRAPH_KINDS = [
   // spark scout-vision S2: the night's proposals to birth a genre or a venture
   "genre",
   "venture",
+  // spark scout-vision S3: a kept character's reference sheet
+  "sheet",
   // stage output
   "look",
   "clip",

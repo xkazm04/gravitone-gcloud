@@ -54,6 +54,7 @@ type TrackEngines = import("../lib/foundry/scout/track.ts").TrackEngines;
 type VisualizerEngines = import("../lib/foundry/scout/visualizer.ts").VisualizerEngines;
 type StoryboardEngines = import("../lib/foundry/scout/storyboard.ts").StoryboardEngines;
 type PieceEngines = import("../lib/foundry/scout/piece.ts").PieceEngines;
+type SheetEngines = import("../lib/foundry/scout/sheet.ts").SheetEngines;
 
 /** What a test or a rehearsal injects; production passes none. */
 export type CliPorts = {
@@ -76,6 +77,7 @@ export type CliPorts = {
   /** `storyboard`'s Flux frame; a test hands a fake (absent: the scout-storyboard producer on gpu.local). */
   readonly storyboard?: StoryboardEngines;
   readonly piece?: PieceEngines;
+  readonly sheet?: SheetEngines;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
@@ -104,6 +106,7 @@ const USAGE = [
   "  storyboard <night> [--json <briefs|->] [--detach] · storyboard <night> --collect   (a brief with genre: gn-... is a TRIAL)",
   "  propose <night> --json <file|->            [{kind: genre, name, fromStoryboard, look, grammar} | {kind: venture, name, ventureKind: channel|album, frame, basedOn}]",
   "  piece <night> [--genre gn-...] [--detach] · piece <night> --collect",
+  "  sheet <night> [--character <name>] [--detach] · sheet <night> --collect   (a kept character's reference sheet)",
   "  genre list | genre retire <gn-id> · venture list | venture retire <vn-id>",
   "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
@@ -112,7 +115,7 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas, storyboard, lead and seeds new. */
@@ -516,6 +519,26 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
         const r = await pc.pieceAct(ctx, id, genre === undefined ? {} : { genre }, io.ports?.piece ?? {});
         for (const c of r.candidates) say(`  ${c.id} piece ${c.status} · ${c.genre} · from ${c.fromTrial}${c.error === undefined ? "" : ` · ${c.error}`}`);
         if (r.candidates.length === 0) say(`no piece due in night ${id}`);
+        const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
+        if (json) doc({ ok: !failed, night: id, jobIds: r.jobIds, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.dry === true ? { dry: true } : {}), candidates: r.candidates });
+        return failed ? 1 : 0;
+      }
+
+      // A kept character's reference sheet (spark scout-vision S3): local Flux, her kept portrait as a late reference.
+      if (cmd === "sheet") {
+        const id = nightArg();
+        const sh = await import("../lib/foundry/scout/sheet.ts");
+        if (flags.has("collect")) {
+          const got = await sh.collectSheets(id, { store: ctx.store });
+          for (const c of got) say(`${c.id} sheet ${c.status}${c.error === undefined ? "" : ` · ${c.error}`}`);
+          if (got.length === 0) say(`nothing to collect in night ${id}`);
+          if (json) doc({ ok: true, night: id, candidates: got });
+          return 0;
+        }
+        const character = str("character");
+        const r = await sh.sheetAct(ctx, id, character === undefined ? {} : { character }, io.ports?.sheet ?? {});
+        for (const c of r.candidates) say(`  ${c.id} sheet ${c.status} · ${c.name} · from ${c.fromPortrait}${c.error === undefined ? "" : ` · ${c.error}`}`);
+        if (r.candidates.length === 0) say(`no sheet due in night ${id}`);
         const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
         if (json) doc({ ok: !failed, night: id, jobIds: r.jobIds, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.dry === true ? { dry: true } : {}), candidates: r.candidates });
         return failed ? 1 : 0;

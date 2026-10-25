@@ -244,7 +244,7 @@ export type ScoutSource = {
 
 /* ── Candidates ──────────────────────────────────────────────────────────── */
 
-export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer", "storyboard", "piece", "genre", "venture"] as const;
+export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer", "storyboard", "piece", "genre", "venture", "sheet"] as const;
 export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
 
 export const CANDIDATE_STATUSES = ["pending", "rendered", "failed"] as const;
@@ -402,8 +402,12 @@ export type IdeaCandidate = CandidateBase & {
   readonly reel?: ReelFiles;
   /** The still's aspect when it is not the scout wing's 16:9 (a muse portrait is 9:16). Absent: 16:9. */
   readonly aspect?: Aspect;
-  /** A character idea's card (muse wing, target `character`). */
+  /** A character idea's card (target `character`). */
   readonly card?: CharacterCard;
+  /** Kept characters this artboard casts, by name (spark scout-vision S3): each one's identity block leads the prompt. */
+  readonly cast?: readonly string[];
+  /** The web source of the same night a character idea is cited from (`s-NN`) - words only, never its pixels. */
+  readonly source?: SourceId;
   /** The eye's read of the drawn still (muse wing). A still that failed it was deleted; the candidate says why. */
   readonly judge?: MuseJudge;
 };
@@ -540,6 +544,28 @@ export type StoryboardCandidate = CandidateBase & {
   /** A trial's clips, by panel index: one LTX clip of each panel still (`storyboards/c-NN/clip-1.mp4`), null where
    *  that clip failed. Omitted on a plain storyboard and before the clip step ran. Packet cells `c-NN/clip-N`. */
   readonly clips?: readonly (SceneClip | null)[];
+  /** Kept characters it casts, by name (spark scout-vision S3): every panel leads with each one's identity block, and
+   *  a character with a kept sheet rides it as a late-admitted Flux reference. */
+  readonly cast?: readonly string[];
+};
+
+/**
+ * A kept character's REFERENCE SHEET (spark scout-vision S3): one neutral 1:1 still drawn by local Flux with her kept
+ * portrait as a late-admitted reference - rest expression, three-quarter head, even light, plain field, invariant
+ * wardrobe (registry character-identity-continuity / reference-shows-only-invariants). Judged on the Board (cell
+ * `c-NN/sheet`); kept, it is her reference for every Flux frame she is cast in.
+ */
+export type SheetCandidate = CandidateBase & {
+  readonly kind: "sheet";
+  /** The character key (characters.ts characterKey). */
+  readonly character: string;
+  /** The card's name as written. */
+  readonly name: string;
+  /** `<runId>/<c-id>` of the kept portrait it is drawn from (runId `muse:<night>` for an archive night). */
+  readonly fromPortrait: string;
+  /** Night-relative still (`sheets/c-NN.png`), once drawn. */
+  readonly image?: string;
+  readonly seed?: number;
 };
 
 /**
@@ -612,7 +638,8 @@ export type Candidate =
   | StoryboardCandidate
   | PieceCandidate
   | GenreProposalCandidate
-  | VentureProposalCandidate;
+  | VentureProposalCandidate
+  | SheetCandidate;
 
 /**
  * A scout track's Suno job (`sj-scout-<night>-<c-id>`, lib/foundry/scout/track.ts): its clips and the visualizer
@@ -653,6 +680,13 @@ export const SEED_SENTENCE_MAX = 200;
  *  takes, and the ones a new batch must give `music` facets (spark scout-vision). */
 export const MUSIC_TYPES = ["music video", "lyric video", "visualizer"] as const;
 export const SEED_VOCALS = ["instrumental", "female", "male", "duet", "choir"] as const;
+
+/** The seed type that grows characters (spark scout-vision S3): such a seed carries `character`. */
+export const CHARACTER_SEED_TYPE = "character";
+export const CHARACTER_CASTS = ["one", "ensemble", "parody"] as const;
+export type CharacterCast = (typeof CHARACTER_CASTS)[number];
+/** What a character seed is FOR: the application its characters serve, and how many / whose. */
+export type SeedCharacter = { readonly for: UseApp; readonly cast: CharacterCast };
 export type SeedVocals = (typeof SEED_VOCALS)[number];
 export const MUSIC_INSTRUMENTS_MAX = 6;
 export const MUSIC_TEMPO_MIN = 40;
@@ -686,6 +720,8 @@ export type Seed = {
   readonly parent?: SeedRef;
   /** A music seed's song (MUSIC_TYPES): required on a new one, absent on seeds written before 2026-10-25. */
   readonly music?: SeedMusic;
+  /** A character seed's WHY (spark scout-vision S3): required when `type` is CHARACTER_SEED_TYPE, refused otherwise. */
+  readonly character?: SeedCharacter;
   /** The live venture (`vn-...`) the seed is written inside (spark scout-vision S2); omitted for none. */
   readonly venture?: string;
 };
