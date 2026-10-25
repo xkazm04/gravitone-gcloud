@@ -12,28 +12,15 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import { errorMessage } from "@gt/domain/errors";
 import type { LibraryQuery } from "@gt/domain/library";
 import { BLOCK } from "@gt/ui/components/library/library.ts";
 import type { LibraryCard } from "@gt/ui/components/library/LibraryTile.tsx";
 
-import type { ActionResult } from "../../../_server/actionCore.ts";
+import { settle } from "../../../_server/settle.ts";
 import type { LibraryPort } from "../_port/contract.ts";
 
-// EVERY PORT CALL THE LIBRARY MAKES ANSWERS (the rows here, a detail and an act in Library.tsx).
-// A Server Action whose request never comes back (the server restarted, the network dropped, a
-// deploy moved the action) REJECTS rather than answering `ok: false`, and a `.then` with no
-// rejection arm leaves the screen as the press left it: the acts disabled by `busy` for good, a
-// detail "reading" for good, a block's slots empty and never asked for again, because the
-// rejected promise stays the block's answer (async-ui-states action-busy-states). Settled here,
-// a rejection is one more refusal, `unavailable`, which every call site already draws. The Floor
-// (floor/_floor/settle.ts) and the audio hunt (audio/_hunt/settled.ts) carry the same rule.
-export function settle<T>(call: Promise<ActionResult<T>>): Promise<ActionResult<T>> {
-  return call.then(
-    (r) => r,
-    (e: unknown): ActionResult<T> => ({ ok: false, error: { error: `the studio did not answer: ${errorMessage(e)}`, code: "unavailable" } }),
-  );
-}
+// Library.tsx reads the shared rule through here (the rows, a detail and an act all settle).
+export { settle };
 
 export type Blocks = {
   readonly at: (i: number) => LibraryCard | undefined;

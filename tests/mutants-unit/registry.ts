@@ -4190,8 +4190,8 @@ export const MUTANTS: UnitMutant[] = [
   {
     id: "floor-level-rejection-stays-busy",
     test: "tests/next-server/floor-settle.test.ts",
-    file: "app/(studio)/floor/_floor/settle.ts",
-    find: "(e: unknown): ActionResult<T> => ({ ok: false, error: { error: errorMessage(e), code: \"unavailable\" } }),",
+    file: "app/_server/settle.ts",
+    find: "(e: unknown): ActionResult<T> => ({ ok: false, error: { error: `the studio did not answer: ${errorMessage(e)}`, code: \"unavailable\" } }),",
     replace: "(e: unknown): ActionResult<T> => { throw e; },",
     why: "A slot verb or a schedule send whose Server Action rejects leaves the level armed and busy for good: the verb never answers, every later press is refused by the stale ref, and nothing says why until a reload.",
   },
@@ -6113,7 +6113,7 @@ export const MUTANTS: UnitMutant[] = [
   {
     id: "library-settle-rejection-escapes",
     test: "tests/next-server/library-screen.test.ts",
-    file: "app/(studio)/library/_library/blocks.ts",
+    file: "app/_server/settle.ts",
     find: "(e: unknown): ActionResult<T> => ({ ok: false, error: { error: `the studio did not answer: ${errorMessage(e)}`, code: \"unavailable\" } }),",
     replace: "(e: unknown): ActionResult<T> => { throw e; },",
     why: "settle passes a rejection on instead of answering it: a pin whose request dropped leaves the acts disabled by busy until a reload.",
