@@ -6036,4 +6036,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "running: [\"awaiting_gate\", \"blocked\"],",
     why: "The run table forbids the moves a paused or aborted job makes its run take (running -> queued, running -> cancelled), so the table describes a machine runStateOf never runs.",
   },
+  {
+    id: "plate-inline-bytes-case-sensitive",
+    test: "packages/kernel/test/parts.test.ts",
+    file: "packages/domain/src/steps/frames.ts",
+    find: "const INLINE = /^\\s*data:/i;",
+    replace: "const INLINE = /^data:/;",
+    why: "A plate whose src is `DATA:` or ` data:` passes the door a browser still renders as inline bytes, so base64 plates land in the record the frames v3 bump exists to keep them out of.",
+  },
 ];
