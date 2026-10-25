@@ -7,7 +7,9 @@
 // own URLs (#plan, #runs), so this is navigation - `aria-current="page"` - not the ARIA tabs
 // pattern, whose arrow-key roving would need a second keyboard path beside the keymap
 // registry. v1's arrows and Home/End are dropped for that reason; P and R reach the views.
-// A tab that cannot be entered yet is aria-disabled and stays readable.
+// A tab that cannot be entered yet is aria-disabled and stays readable - and reachable: an <a>
+// without an href is not a link and leaves the tab order, so the locked tab keeps role=link and
+// a tab stop, as a disabled Button keeps its own (primitive-level-a11y, honest disablement).
 import { Keycap } from "../keycaps/Keycaps.tsx";
 import { Tally, type TallyProps } from "../tally/Tally.tsx";
 import s from "./TabRail.module.css";
@@ -39,6 +41,8 @@ export function TabRail<V extends string>({ label, mode, tabs, current }: TabRai
           href={t.disabled === true ? undefined : t.href}
           aria-current={t.id === current ? "page" : undefined}
           aria-disabled={t.disabled === true ? true : undefined}
+          role={t.disabled === true ? "link" : undefined}
+          tabIndex={t.disabled === true ? 0 : undefined}
         >
           {t.label}
           {t.tally !== undefined && <Tally {...t.tally} />}

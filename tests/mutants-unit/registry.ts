@@ -829,6 +829,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A Board packet loaded as a page claims to be modal, so assistive technology hides the header and the rest of the page that is drawn and live around it.",
   },
   {
+    id: "ui-controls-locked-tab-leaves-tab-order",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/tabrail/TabRail.tsx",
+    find: "tabIndex={t.disabled === true ? 0 : undefined}",
+    replace: "tabIndex={undefined}",
+    why: "A locked tab is an <a> with no href: it drops out of the tab order, so a keyboard user never learns the view exists or that it is locked.",
+  },
+  {
     id: "ui-controls-seg-presses-every-option",
     test: "packages/ui/test/components/controls.test.ts",
     file: "packages/ui/src/components/seg/Seg.tsx",

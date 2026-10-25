@@ -157,7 +157,8 @@ describe("navigation", () => {
       }),
     );
     expect(t).toMatch(/^<nav[^>]*aria-label="view">/);
-    expect(t).toMatch(/<a class="[^"]*" aria-disabled="true">Plan<kbd[^>]*>P<\/kbd><\/a>/);
+    expect(t).toMatch(/<a class="[^"]*" aria-disabled="true" role="link" tabindex="0">Plan<kbd[^>]*>P<\/kbd><\/a>/);
+    expect((t.match(/tabindex=/g) ?? []).length).toBe(1);
     expect(t).toMatch(/href="#runs" aria-current="page">Runs<kbd[^>]*>R<\/kbd>/);
   });
 
