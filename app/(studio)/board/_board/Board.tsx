@@ -34,9 +34,14 @@ import { Losses } from "./Losses.tsx";
 import { stepTarget } from "./rail.ts";
 import { redriveAndSay, type Redrive } from "./redrive.ts";
 
-/** pagehide: what is still queued leaves with the page (the keepalive route, ../[packet]/keepalive). */
+/** pagehide: what is still queued leaves with the page (the keepalive route, ../[packet]/keepalive).
+ *  The gate hands it chunks under the beacon cap; a refused beacon (it returns false) is sent again
+ *  as a keepalive fetch. */
 function beacon(id: string, rev: number, changes: readonly VerdictChange[]): void {
-  navigator.sendBeacon(`${boardFor(id)}/keepalive`, new Blob([JSON.stringify({ rev, changes })], { type: "application/json" }));
+  const url = `${boardFor(id)}/keepalive`;
+  const body = JSON.stringify({ rev, changes });
+  if (navigator.sendBeacon(url, new Blob([body], { type: "application/json" }))) return;
+  void fetch(url, { method: "POST", body, keepalive: true, headers: { "content-type": "application/json" } }).catch(() => undefined);
 }
 
 /** The keymap mode a packet's desk binds; a decided packet has no desk, only the board's keys. */

@@ -38,6 +38,18 @@ export function beatNote(beats: readonly { readonly t0: number }[], notes: Reado
   return lines.length === 0 ? undefined : lines.join("\n");
 }
 
+/** The note a verdict carries: the attached beat notes, and the draft still open in the field (the buttons can fire from there). */
+export function verdictNote(beats: readonly { readonly t0: number }[], notes: Readonly<Record<number, string>>, editing: number | null, draft: string): string | undefined {
+  return beatNote(beats, editing === null ? notes : withNote(notes, editing, draft));
+}
+
+/** The player follows the focused beat once it has metadata; false when the seek had to wait for it. */
+export function seekTo(v: { readyState: number; currentTime: number } | null, b: { readonly t0: number } | undefined): boolean {
+  if (v === null || b === undefined || v.readyState <= 0) return false;
+  v.currentTime = b.t0;
+  return true;
+}
+
 /** A beat's note after ⏎ on its field: its trimmed words, or - blank - no note (the cull's noteAct reads a blank note the same way). */
 export function withNote(notes: Readonly<Record<number, string>>, beat: number, text: string): Readonly<Record<number, string>> {
   const t = text.trim();
@@ -68,15 +80,13 @@ export function CutReview({ packet, decide, onCommit, busy = false, announce = (
   const [notes, setNotes] = useState<Readonly<Record<number, string>>>({});
 
   useEffect(() => {
-    const v = player.current;
-    const b = beats[focus];
-    if (v !== null && b !== undefined && v.readyState > 0) v.currentTime = b.t0;
+    seekTo(player.current, beats[focus]);
   }, [focus, beats]);
 
   const end = (v: "keep" | "reject") => {
     // A second press while a write or a preview is in flight is the same act again, not a new one.
     if (item === undefined || busy) return;
-    const note = beatNote(beats, notes);
+    const note = verdictNote(beats, notes, editing, text);
     decide([item.id], note === undefined ? { verdict: v, reasons: [] } : { verdict: v, reasons: [], note }, view.title ?? view.id);
     onCommit();
   };
@@ -132,7 +142,7 @@ export function CutReview({ packet, decide, onCommit, busy = false, announce = (
       <div className={s.cut} data-component="CutReview">
         <div>
           <div className={s.player}>
-            {cut !== undefined && <video ref={player} className={s.video} src={cut.video} poster={cut.poster} controls playsInline preload="metadata" />}
+            {cut !== undefined && <video ref={player} className={s.video} src={cut.video} poster={cut.poster} controls playsInline preload="metadata" onLoadedMetadata={() => seekTo(player.current, beats[focus])} />}
           </div>
           <div className={s.kv}>
             {item !== undefined && <Chip label={item.media.mime} casing="lower" />}

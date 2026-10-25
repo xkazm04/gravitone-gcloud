@@ -236,3 +236,20 @@ describe("a closing tab", () => {
     ]);
   });
 });
+
+describe("a closing tab with a large flush", () => {
+  /** What a user agent does: a beacon body past 64 KiB is refused, so nothing of it is delivered. */
+  const delivered = (list: readonly { rev: number; changes: readonly VerdictChange[] }[]): number =>
+    list.reduce((n, b) => n + (new TextEncoder().encode(JSON.stringify({ rev: b.rev, changes: b.changes })).length > 65_536 ? 0 : b.changes.length), 0);
+
+  test("40 noted verdicts all arrive: no single beacon body passes the 64 KiB cap", async () => {
+    beacons.length = 0;
+    const { gate } = setup();
+    await gate.select(PID);
+    for (let i = 0; i < 40; i++) gate.decide(`c${i}`, { verdict: "reject", reasons: [], note: "n".repeat(2000) });
+    gate.flushOnHide();
+    await tick(60);
+    expect(delivered(beacons)).toBe(40);
+    expect(beacons.flatMap((b) => b.changes.map((c) => c.candidate))).toEqual(Array.from({ length: 40 }, (_, i) => `c${i}`));
+  });
+});

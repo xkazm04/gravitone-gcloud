@@ -1,6 +1,7 @@
 // The desks' markup, rendered with react-dom/server: what a tile says aloud, that a blind pair
 // draws no label and no machine pick before the operator's pick, that the commit button names
 // what is still open, and that the consequence panel shows every outward act verbatim.
+import { readFileSync } from "node:fs";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
@@ -19,10 +20,10 @@ import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
 import { IdeaList } from "../src/components/cull/IdeaList.tsx";
 import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
 import { VariantCard } from "../src/components/cull/VariantCard.tsx";
-import { beatNote, CutReview, withNote } from "../src/components/cut/CutReview.tsx";
+import { beatNote, CutReview, seekTo, verdictNote, withNote } from "../src/components/cut/CutReview.tsx";
 import { CommitButton } from "../src/components/desk/Desk.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
-import { BlindPair } from "../src/components/pair/BlindPair.tsx";
+import { BlindPair, canPick, defaultRevealMs, REVEAL_MS } from "../src/components/pair/BlindPair.tsx";
 
 const must = <T>(r: Result<T>): T => {
   if (!r.ok) throw r.error;
@@ -161,6 +162,46 @@ describe("the blind pair", () => {
   });
 });
 
+describe("the blind pair's reveal follows the viewer's motion setting", () => {
+  const withMedia = (matches: boolean, run: () => void) => {
+    const was = (globalThis as { matchMedia?: unknown }).matchMedia;
+    (globalThis as { matchMedia?: unknown }).matchMedia = (q: string) => ({ matches: matches && q.includes("prefers-reduced-motion"), media: q });
+    try {
+      run();
+    } finally {
+      (globalThis as { matchMedia?: unknown }).matchMedia = was;
+    }
+  };
+
+  test("reduced motion reveals for 500 ms, otherwise 1150, and with no media query the full reveal", () => {
+    withMedia(true, () => expect(defaultRevealMs()).toBe(500));
+    withMedia(false, () => expect(defaultRevealMs()).toBe(REVEAL_MS));
+    expect(defaultRevealMs()).toBe(1150);
+  });
+
+  test("the reveal timer reads it when the caller passes no revealMs", () => {
+    const code = readFileSync(new URL("../src/components/pair/BlindPair.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toMatch(/setTimeout\(\(\) => setRevealing\(null\), revealMs \?\? defaultRevealMs\(\)\)/);
+  });
+});
+
+describe("a blind pair's pick during a write", () => {
+  const free = { pair: {}, revealing: null, judged: false, busy: false };
+
+  test("a pick lands on a free pair and is refused mid-reveal, on a judged pair, with no pair, or while a write or commit is in flight", () => {
+    expect(canPick(free)).toBe(true);
+    expect(canPick({ ...free, revealing: "p1" })).toBe(false);
+    expect(canPick({ ...free, judged: true })).toBe(false);
+    expect(canPick({ ...free, pair: undefined })).toBe(false);
+    expect(canPick({ ...free, busy: true })).toBe(false);
+  });
+
+  test("the pick handler asks canPick with the busy flag", () => {
+    const code = readFileSync(new URL("../src/components/pair/BlindPair.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toMatch(/canPick\(\{ pair, revealing, judged: pair\.outcome !== null, busy \}\)/);
+  });
+});
+
 describe("the cut review", () => {
   test("a beat's note is set by its words and taken back by a blank one, as a cull note is", () => {
     const noted = withNote({}, 1, "  tighter  ");
@@ -187,6 +228,41 @@ describe("the cut review", () => {
     const html = review(false);
     expect(html.split('aria-current="true"').length - 1).toBe(1);
     expect(html).toMatch(/aria-current="true"[^>]*><span[^>]*>0:00–0:03<\/span>/);
+  });
+});
+
+describe("the cut player follows the focused beat", () => {
+  const src = () => readFileSync(new URL("../src/components/cut/CutReview.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  test("a video without metadata is not sought; once it has some, the same call seeks to the beat", () => {
+    const v = { readyState: 0, currentTime: 0 };
+    expect(seekTo(v, { t0: 4.2 })).toBe(false);
+    expect(v.currentTime).toBe(0);
+    v.readyState = 1;
+    expect(seekTo(v, { t0: 4.2 })).toBe(true);
+    expect(v.currentTime).toBe(4.2);
+    expect(seekTo(null, { t0: 1 })).toBe(false);
+    expect(seekTo(v, undefined)).toBe(false);
+  });
+
+  test("the player seeks again when its metadata arrives", () => {
+    expect(src()).toMatch(/onLoadedMetadata=\{\(\) => seekTo\(player\.current, beats\[focus\]\)\}/);
+  });
+});
+
+describe("a verdict with a beat note still open", () => {
+  const beats = [{ t0: 0 }, { t0: 4.2 }];
+
+  test("the draft in the field rides on the verdict; a blank draft or none changes nothing", () => {
+    expect(verdictNote(beats, {}, 1, "tighter")).toBe("beat 2 (0:04): tighter");
+    expect(verdictNote(beats, { 0: "slow" }, 1, "  tighter ")).toBe("beat 1 (0:00): slow\nbeat 2 (0:04): tighter");
+    expect(verdictNote(beats, { 0: "slow" }, null, "ignored")).toBe("beat 1 (0:00): slow");
+    expect(verdictNote(beats, {}, 1, "  ")).toBeUndefined();
+  });
+
+  test("end() builds its note from the open draft", () => {
+    const code = readFileSync(new URL("../src/components/cut/CutReview.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toMatch(/verdictNote\(beats, notes, editing, text\)/);
   });
 });
 
