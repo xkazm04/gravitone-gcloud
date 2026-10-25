@@ -512,4 +512,12 @@ export const MUTANTS: Mutant[] = [
     replace: "for (const n of [] as Note[])",
     why: "On the simulated path a move-earlier, move-later or free-text note changes nothing and leaves no refusal, so the creator sees applied input and no reason the bars did not move.",
   },
+  {
+    id: "article-loop-cli-omits-damaged-line",
+    probe: "articles-loop.probe.spec.ts",
+    file: "pipeline/article.mts",
+    find: "if (report.damaged.length) console.log(",
+    replace: "if (false) console.log(",
+    why: "The loop CLI prints its orphaned runs but not the run directories whose run.json does not parse, so a damaged run is in loop.json only and the operator reading the terminal never sees it.",
+  },
 ];

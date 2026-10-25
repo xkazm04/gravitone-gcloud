@@ -1,9 +1,9 @@
 // LANE — THE MULTI-MODEL CRITIQUE (scope amendment 1), offline.
 //
-// lib/agent/cliSeam.ts (four engines, one read-only reviewer profile),
+// lib/agent/cliSeam.ts (three engines, one read-only reviewer profile),
 // lib/articles/critique.ts (the panel, the schema, the record) and the
 // `critique` step of lib/articles/engine.ts, driven end to end with
-// tests/fixtures/articles/stub-agent.mjs standing in for ALL FOUR CLIs through
+// tests/fixtures/articles/stub-agent.mjs standing in for ALL THREE CLIs through
 // the real seam (ARTICLES_AGENT_BIN, ARTICLES_CODEX_BIN,
 // ARTICLES_AGY_BIN). Nothing spends, nothing reaches the network, the real
 // registry is never named. What is pinned:
@@ -87,7 +87,7 @@ async function toGate(text = "the token tax") {
   return driveRun(run.id, deps());
 }
 
-/* ── the seam: four engines ───────────────────────────────────────────── */
+/* ── the seam: three engines ───────────────────────────────────────────── */
 
 const call = { model: "m", effort: "high", cwd: "C:/ws", prompt: "ARTICLE-REVIEW …", timeoutMin: 25 };
 

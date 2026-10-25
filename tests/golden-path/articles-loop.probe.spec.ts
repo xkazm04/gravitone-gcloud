@@ -165,6 +165,15 @@ test("coverage and the loop report name a run whose run.json does not parse", as
   expect(readFileSync(path.join(loopsRoot(), report.id, "events.log"), "utf8")).toMatch(/DAMAGED 2026-10-01-broken/);
 });
 
+test("cli: the loop summary names a run whose run.json does not parse, beside the orphaned line", () => {
+  publication("covered-one", "software-engineering", "token-budgeting", "2026-10-01-token-budgeting");
+  mkdirSync(path.join(box.store, "2026-10-01-broken"), { recursive: true });
+  writeFileSync(path.join(box.store, "2026-10-01-broken", "run.json"), '{"id": "2026-10-01-broken", "topic": ');
+  // The target is already covered, so the loop launches nothing and prints its summary.
+  const out = execSync("npx tsx pipeline/article.mts loop --target 1 --budget-usd 10", { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: process.env });
+  expect(out).toMatch(/damaged \(run\.json does not parse\): 2026-10-01-broken/);
+});
+
 test("loop: refuses to start without a budget or with an unclear target", async () => {
   await expect(runLoop({ target: 2 } as never, deps())).rejects.toMatchObject({ code: "no-budget" });
   await expect(runLoop({ budgetUsd: 0, target: 2 }, deps())).rejects.toMatchObject({ code: "no-budget" });
