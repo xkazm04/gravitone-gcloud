@@ -64,7 +64,7 @@ test("a facet's count is what clicking it yields, and the filter lives in the UR
 test("5,000 items hold one screen of tiles; scrolling far fetches the rows it reaches", async ({ page }) => {
   await open(page);
   expect(await total(page)).toBe(5000);
-  const rendered = async (): Promise<number> => Number(((await page.getByTestId("rendered").innerText()).match(/rendered ([\d,]+)/)?.[1] ?? "0").replace(/,/g, ""));
+  const rendered = async (): Promise<number> => Number(await page.locator("[data-rendered]").first().getAttribute("data-rendered"));
   expect(await rendered()).toBeLessThan(60);
   expect(await listbox(page).locator("[role=option]").count()).toBeLessThan(60);
   await listbox(page).evaluate((el) => (el.scrollTop = el.scrollHeight));

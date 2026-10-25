@@ -7198,4 +7198,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (!muse.ok) return muse; if (false) return ok({ batches: scout.value,",
     why: "An unreadable muse root fails the whole seeds source again, so the scout wing's seed pile leaves the Floor.",
   },
+  {
+    id: "library-head-rendered-chip-returns",
+    test: "tests/next-server/library-toolbar-head.test.ts",
+    file: "app/(studio)/library/_library/Toolbar.tsx",
+    find: "<div className={s.lhead} data-rendered={p.shown}>",
+    replace: "<div className={s.lhead}><Chip label={`rendered ${count(p.shown)} of ${count(p.total)}`} casing=\"lower\" />",
+    why: "The results head narrates the window again: a visible 'rendered N of M' chip, and the live lane's data attribute gone.",
+  },
 ];

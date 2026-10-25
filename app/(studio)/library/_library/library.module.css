@@ -15,7 +15,7 @@
 .crumbs{min-width:0;overflow:hidden;font-size:var(--fs-ui)}
 .q{font:600 var(--fs-micro)/1 var(--mono);color:var(--cyan);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:30ch}
 .sp{flex:1}
-.total,.rendered{flex:none}
+.total{flex:none}
 
 /* ── toolbar ── */
 .tool{flex:none;display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-5);border-bottom:1px solid var(--hair);min-width:0}
@@ -78,5 +78,4 @@
   .tool{flex-wrap:wrap}
   .search{order:-1;flex-basis:100%;max-width:none}
   .lhead{padding:0 var(--sp-3)}
-  .rendered{display:none}
 }
