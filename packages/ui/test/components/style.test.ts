@@ -10,6 +10,7 @@ import type { ProofState, StyleCoverageRow, StyleLockGate, StyleProofView } from
 
 import { LockGate } from "../../src/components/style/LockGate.tsx";
 import { ProofSheet } from "../../src/components/style/ProofSheet.tsx";
+import { EvidenceTable } from "../../src/components/style/StyleFacts.tsx";
 import { proofLook, spendWords, stepProof, trialColumns } from "../../src/components/style/style.ts";
 import { KEYMAP } from "../../src/keymap/bindings.ts";
 import { chordsOf } from "../../src/keymap/chord.ts";
@@ -123,5 +124,18 @@ describe("the sheet and the ratchet, drawn", () => {
     expect(count(gate(blocker, { can: false, blocker, legacySheet: false }))).toBe(1);
     expect(count(gate("operator keeps in 1 of 2 cells", { can: false, blocker, legacySheet: false }))).toBe(1);
     expect(gate("the gate holds — it may lock", { can: true, blocker: null, legacySheet: false })).toContain("data-can-lock");
+  });
+});
+
+describe("the evidence table", () => {
+  const row = (scene: string, verdict: "keep" | "reject", by: "operator" | "agent") => ({ run: "2026-09-01-night", scene, mechanism: "m", verdict, at: "2026-09-01T00:00:00.000Z", by, counts: verdict === "keep" && by === "operator" });
+
+  test("an agent's keep is drawn in the table and marked, never counted in the tallies", () => {
+    const html = renderToStaticMarkup(h(EvidenceTable, { rows: [row("s1", "keep", "operator"), row("s2", "keep", "agent"), row("s3", "reject", "operator")] }));
+    expect(html).toContain("keep 1<");
+    expect(html).toContain("reject 1<");
+    expect(html).toContain("evidence kept 1, rejected 1, undecided 0");
+    expect(html).toContain("an agent&#x27;s verdict: shown, not counted");
+    expect(html.split("<tr").length - 1).toBe(4);
   });
 });

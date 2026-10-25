@@ -39,8 +39,10 @@ export function Palette({ palette }: { readonly palette: readonly PaletteColor[]
 const SHOWN = 8;
 
 export function EvidenceTable({ rows, all = false }: { readonly rows: readonly StyleEvidenceRow[]; readonly all?: boolean }) {
-  const keep = rows.filter((r) => r.verdict === "keep").length;
-  const reject = rows.length - keep;
+  // `counts` is the view's own reading (an operator's keep); an agent's keep stays in the table,
+  // marked, and in neither tally - nor is it a reject.
+  const keep = rows.filter((r) => r.counts).length;
+  const reject = rows.filter((r) => r.verdict === "reject").length;
   const scenes = new Set(rows.map((r) => `${r.run}/${r.scene}`)).size;
   const shown = all ? rows : rows.slice(0, SHOWN);
   return (
