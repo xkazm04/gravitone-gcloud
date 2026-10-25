@@ -2,6 +2,9 @@
 // probe (tests/golden-path/sound-arrange.probe.spec.ts): version stacking by the chain, rows and
 // cells, the move check and the door's judgement against the store as it is now, the keyboard
 // walk, the label suggestion, and the group edits with the takes they carry.
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
@@ -11,7 +14,7 @@ import { ArrangeBoard } from "../../src/components/audio/ArrangeBoard.tsx";
 import { EngineList } from "../../src/components/audio/EngineList.tsx";
 import { RoundTrip } from "../../src/components/audio/RoundTrip.tsx";
 import { TakeCard, type CardTake } from "../../src/components/audio/TakeCard.tsx";
-import { RowFoot, RowHead } from "../../src/components/audio/RowHead.tsx";
+import { abandons, RowFoot, RowHead } from "../../src/components/audio/RowHead.tsx";
 import { applyGroupOp, carriedBy, deleteGroup, moveGroup, renameGroup, seedSuggestions, type Groups } from "../../src/components/audio/arrangeGroups.ts";
 
 type T = ArrangeTake & { readonly verdict: string };
@@ -168,6 +171,24 @@ describe("the rows' edits", () => {
     ]);
     expect(seedSuggestions(stacks, ["ambient"], "music")).toEqual([{ name: "Drone", n: 1 }]);
     expect(carriedBy({ op: "adopt", name: "drone" }, "music", takes, stacks)).toEqual([{ id: "c", group: "drone" }]);
+  });
+});
+
+describe("an open rename", () => {
+  test("Escape, and blur on the name as it was, leave it without an edit; blur on a changed name does not", () => {
+    expect(abandons("Escape", "drone", "ambient")).toBe(true);
+    expect(abandons("blur", " ambient ", "ambient")).toBe(true);
+    expect(abandons("blur", "drone", "ambient")).toBe(false);
+  });
+  test("the rename field routes both exits through it, and the new-row field has neither", () => {
+    const src = readFileSync(path.join(import.meta.dirname, "../../src/components/audio/RowHead.tsx"), "utf8")
+      .split(/\r?\n/)
+      .filter((l) => !/^\s*(\/\/|\/\*|\*)/.test(l))
+      .join("\n");
+    expect(src).toMatch(/onKeyDown=\{[\s\S]*?e\.key !== "Escape"[\s\S]*?onAbandon\(\)/);
+    expect(src).toMatch(/onBlur=\{[\s\S]*?abandons\("blur"/);
+    expect(src).toMatch(/onAbandon=\{\(\) => setRenaming\(false\)\}/);
+    expect(src.match(/onAbandon=/g)).toHaveLength(1);
   });
 });
 
