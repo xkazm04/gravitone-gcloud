@@ -7,12 +7,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@gt/ui/keymap/dispatch", async (orig) => ({ ...(await orig<object>()), useKeys: () => {} }));
+vi.mock("server-only", () => ({}));
 
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 
 import type { Candidate, NotebookBoard, PartOp, PartView, ResearchCard, ResearchData, ScriptData, ScriptDocument, WordsData } from "@gt/domain/partView";
 
 import { AdsBriefEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/AdsBrief.tsx";
+import { ARTICLE_KIND, type ArticleRec } from "../../app/(studio)/projects/[id]/_part/fixtureExplainer.ts";
 import { BeatsEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Beats.tsx";
 import { DocumentEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Document.tsx";
 import { NotebookEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx";
@@ -313,6 +315,22 @@ describe("a variant tile and a note select disarm while a write is in flight", (
       expect((sel.props as Record<string, unknown>)["aria-disabled"]).toBe(busy ? true : undefined);
     });
   }
+});
+
+/* ── the article rail claims only the steps a record evidences ─────────── */
+
+describe("the article part's run steps", () => {
+  const rec = (r: Partial<ArticleRec>): ArticleRec => ({ title: "Road salt", sections: [{ id: "s1", heading: "What it is", body: "Salt lowers the freezing point." }], ...r });
+  const stepsOf = (r: ArticleRec) => ARTICLE_KIND.data({} as never, r).steps;
+
+  it("an imported article (sections, no engine) carries no run steps", () => {
+    expect(stepsOf(rec({}))).toEqual([]);
+  });
+
+  it("a dry landing (engine present) still reports its five", () => {
+    const engine = { provider: "dry", model: "stand-in", usd: null, seconds: 0, mode: "dry" } as const;
+    expect(stepsOf(rec({ engine })).map((x) => `${x.name}:${x.state}`)).toEqual(["research:done", "outline:done", "draft:done", "check:done", "critique:done"]);
+  });
 });
 
 /* ── a card's row says its scope out loud (Notebook.tsx CardRow) ───────── */
