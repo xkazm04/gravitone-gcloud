@@ -15,7 +15,7 @@
 
 import { withBeat, type BeatPatch } from "@/lib/script/trailer/cut";
 import type { TrailerCut } from "@/lib/script/trailer/types";
-import type { StructureReport } from "@/lib/script/trailer/report";
+import { findingKeys, type StructureReport } from "@/lib/script/trailer/report";
 
 export interface TrailerPlanOp {
   beatId: string;
@@ -167,15 +167,15 @@ export interface StructureDelta {
   enforcedAfter: number;
 }
 
-/** Violations compared by `rule/subject` identity, not by count, so a plan that
- *  closes one violation and opens another reads as 1 closed AND 1 opened rather
- *  than as no change. */
+/** Violations compared by `rule/subject` identity (`findingKeys`, so a repeat
+ *  is its own key), not by count, so a plan that closes one violation and opens
+ *  another reads as 1 closed AND 1 opened rather than as no change. */
 export function structureDelta(
   current: Pick<StructureReport, "findings" | "enforced">,
   candidate: Pick<StructureReport, "findings" | "enforced">,
 ): StructureDelta {
   const keys = (r: Pick<StructureReport, "findings">) =>
-    new Set(r.findings.filter((f) => f.verdict === "violation").map((f) => `${f.rule}/${f.subject}`));
+    new Set(findingKeys(r.findings.filter((f) => f.verdict === "violation")));
   const before = keys(current);
   const after = keys(candidate);
   return {

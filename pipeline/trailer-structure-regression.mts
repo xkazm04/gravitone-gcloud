@@ -530,6 +530,21 @@ const planCheck = (name: string, ok: boolean, why: string) => {
     planCheck("opening plan: 1 opened, 0 closed", d.opened.length === 1 && d.opened[0] === "escalation/b4" && d.closed.length === 0, JSON.stringify(d));
   }
 
+  // 4b. two violations sharing a rule and a subject stay two: distinct note ids,
+  //     and a plan that closes one of them reads as 1 closed. Keyed by
+  //     rule/subject alone, 2 notes shared one id and the delta read 0 closed.
+  const twice = withBeat(base, "b6", { resetHolds: ["line", "image"], cueMark: "zz" });
+  const twiceReport = runStructureCheck(twice);
+  const twiceNotes = notesFromFindings(twiceReport, twice);
+  planCheck(
+    "two violations on one rule/subject yield two distinct note ids",
+    twiceNotes.filter((n) => n.beatId === "b6" && n.fromFinding === "reset").length === 2 &&
+      new Set(twiceNotes.map((n) => n.id)).size === twiceNotes.length,
+    JSON.stringify(twiceNotes.map((n) => n.id)),
+  );
+  const oneFixed = structureDelta(twiceReport, runStructureCheck(withBeat(twice, "b6", { resetHolds: ["line"] })));
+  planCheck("closing one of two such violations reads as 1 closed", oneFixed.closed.length === 1 && oneFixed.opened.length === 0, JSON.stringify(oneFixed));
+
   // 5. every wrong-typed value of every declared patch field is refused. The
   //    fields are read off the schema, so a field added there is walked here.
   //    Before the door checked types, 48 of these were accepted and 15 of those
