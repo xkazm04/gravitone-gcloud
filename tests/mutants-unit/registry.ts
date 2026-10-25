@@ -6870,4 +6870,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const cut: CutLog | null = st === undefined ? null : written<CutLog>({ origin: st[\"origin\"], originBudget: st[\"originBudget\"], ops: st[\"ops\"] ?? [], head: st[\"head\"] ?? 0 });",
     why: "The Script part reads a stored cut with its own defaults, so a record with ops and no head shows the cut with none of the creator's edits applied.",
   },
+  {
+    id: "rail-more-target-22px",
+    test: "tests/next-gates/rail-more-target.test.ts",
+    file: "packages/ui/src/components/library/Rail.module.css",
+    find: "align-items:center;min-height:var(--sp-7);",
+    replace: "align-items:center;",
+    why: "The rail's +N more / fewer control is 22px tall again, under the 24px touch target, 2px above the last facet row.",
+  },
 ];
