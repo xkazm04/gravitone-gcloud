@@ -3026,8 +3026,12 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "lib/decision/v1/sources/audio.ts:221 The audio adapter groups takes by two kinds only, music and sfx. A case-insensitive substring search of lib/decision/v1 for tts, speech, transcript, speaker and intelligibility found no hits, so no adapter turns a speech clip into a packet that would need speech-acceptance scoring.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:944f40c9b53212c0",
+          "evaluatedRevision": 2
         },
         {
           "subject": "fleet-orchestration",
@@ -3741,8 +3745,8 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "priorNotApplicable": 3,
+          "state": "unknown"
         },
         {
           "subject": "fleet-orchestration",

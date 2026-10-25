@@ -1,0 +1,112 @@
+{
+  "schema": "conform-run/1",
+  "worker": "185c908d-a2ca-40f3-b673-d61c985fb0a8",
+  "subject": "generated-speech-acceptance",
+  "evaluatedAt": "2026-10-25T03:28:25.231195+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "board-decision-desk",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/board/_port/fixtureData.ts:200 The Board desk only renders music and sound-effect takes. A case-insensitive substring search of app/(studio)/board for tts, speech, transcript, speaker and intelligibility found no hits, so no synthesized speech reaches this surface to be accepted, scored or listened to.",
+      "techniques": [],
+      "absenceTerms": [
+        "tts",
+        "speech",
+        "transcript",
+        "speaker",
+        "intelligibility"
+      ]
+    },
+    {
+      "context": "board-decision-adapters",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "lib/decision/v1/sources/audio.ts:221 The audio adapter groups takes by two kinds only, music and sfx. A case-insensitive substring search of lib/decision/v1 for tts, speech, transcript, speaker and intelligibility found no hits, so no adapter turns a speech clip into a packet that would need speech-acceptance scoring.",
+      "techniques": [],
+      "absenceTerms": [
+        "tts",
+        "speech",
+        "transcript",
+        "speaker",
+        "intelligibility"
+      ]
+    },
+    {
+      "context": "kit-screen-specimens",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/kit/AudioKit.tsx:156 The kit specimens show music and sfx engine operations and takes, with no speech operation. A case-insensitive substring search of app/(studio)/kit for tts, speech, transcript, speaker and intelligibility found no hits, so the screen has no speech to accept.",
+      "techniques": [],
+      "absenceTerms": [
+        "tts",
+        "speech",
+        "transcript",
+        "speaker",
+        "intelligibility"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "generated-speech-acceptance",
+      "context": "domain-decision-board-core",
+      "reason": "withdrawn after review: reviewer (sonnet): packages/domain/src already holds speech acceptance (audio.accept.ts has a \"voice-take\" profile and a spoken-line length check, audio.triage.ts has a \"voice\" kind and thresholds), and source.ts's audio reasons include \"vocal-garble\", so the claim of no speech coverage in that directory is contradict"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-25T03:28:25.231195+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "generated-speech-acceptance"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "board-decision-desk",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T03:28:25.231195+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "generated-speech-acceptance"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "board-decision-adapters",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T03:28:25.231195+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "generated-speech-acceptance"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "domain-decision-board-core",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T03:28:25.231195+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "generated-speech-acceptance"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "kit-screen-specimens",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

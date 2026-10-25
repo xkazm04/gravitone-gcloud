@@ -13226,6 +13226,31 @@
           "evidence": "lib/imaging/video/clips.ts:83 A clip request carries only a motion prompt: no script, narration or word budget passes through this context."
         }
       ]
+    },
+    "8c854c7a-5467-4ddc-80ed-76f19b1f5094/generated-speech-acceptance": {
+      "context": "board-decision-adapters",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:28:25.231Z",
+      "worker": "185c908d-a2ca-40f3-b673-d61c985fb0a8",
+      "techniques": []
+    },
+    "3610b8be-4772-464f-b2f8-dd3a38fef27f/generated-speech-acceptance": {
+      "context": "domain-decision-board-core",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:28:25.231Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "185c908d-a2ca-40f3-b673-d61c985fb0a8",
+        "state": "not-applicable",
+        "at": "2026-10-25T03:29:10.946453+00:00",
+        "reason": "reviewer (sonnet): packages/domain/src already holds speech acceptance (audio.accept.ts has a \"voice-take\" profile and a spoken-line length check, audio.triage.ts has a \"voice\" kind and thresholds), and source.ts's audio reasons include \"vocal-garble\", so the claim of no speech coverage in that directory is contradict"
+      }
     }
   }
 }
