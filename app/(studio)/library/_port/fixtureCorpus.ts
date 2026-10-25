@@ -23,7 +23,7 @@ import type { libraryItemSchema } from "@gt/domain/libraryItem";
 
 import { fixtureCharacters } from "./fixtureCharacters.ts";
 import { fixtureModels } from "./fixtureModels.ts";
-import { BUNDLES, CLIPS, DECK, fileBlob, HUNTS, LESSONS, MECHANISMS, PALETTES, peaksOf, PROJECTS, rng, RUNS, SCENES, SOUND, STYLES, SUBJECTS, TOPICS, TRIAL_STYLES, type FixtureMedia } from "./fixtureData.ts";
+import { BUNDLES, CLIPS, DECK, dataBlob, fileBlob, HUNTS, LESSONS, MECHANISMS, PALETTES, peaksOf, PROJECTS, rng, RUNS, SCENES, SOUND, STYLES, SUBJECTS, TOPICS, TRIAL_STYLES, type FixtureMedia } from "./fixtureData.ts";
 
 type Raw = z.input<typeof libraryItemSchema>;
 
@@ -77,6 +77,8 @@ function hayOf(raw: Raw, meta: string, f: Readonly<Record<string, readonly strin
 const T0 = Date.parse("2025-11-03T00:00:00Z");
 const T1 = Date.parse("2026-10-13T20:00:00Z");
 
+const DARK_PLATE_URL = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'><rect width='100%25' height='100%25' fill='%23040508'/></svg>";
+
 export function buildCorpus(): readonly FixtureRecord[] {
   const r = rng();
   const pick = <T,>(a: readonly T[]): T => a[Math.floor(r() * a.length)] as T;
@@ -93,9 +95,26 @@ export function buildCorpus(): readonly FixtureRecord[] {
   };
   const date = (): string => new Date(T0 + Math.floor(r() * (T1 - T0))).toISOString();
   const proj = (p = 0.14): string[] => (r() < p ? [pick(PROJECTS).id] : []);
+  // A blob has ONE set of facts (media_facts is keyed by sha): the first item to name a file draws
+  // them, and every later item on that file shows the same. The luma is still drawn for each call so
+  // the stream, and so every record, is unchanged.
+  const held = new Map<string, MediaFacts>();
   const facts = (m: FixtureMedia, over: Partial<MediaFacts> = {}): MediaFacts => {
     const luma = 20 + Math.floor(r() * 140);
-    return { sha: m.sha, decodable: true, mime: m.mime, w: m.w, h: m.h, durationS: null, posterSha: null, meanLuma: luma, nearBlack: false, probedAt: "2026-10-16T09:00:00.000Z", error: null, ...over };
+    const made: MediaFacts = { sha: m.sha, decodable: true, mime: m.mime, w: m.w, h: m.h, durationS: null, posterSha: null, meanLuma: luma, nearBlack: false, probedAt: "2026-10-16T09:00:00.000Z", error: null, ...over };
+    const have = held.get(m.sha);
+    if (have !== undefined) return have;
+    held.set(m.sha, made);
+    return made;
+  };
+  // The characters draw nothing from the stream (derive() reads it after them): the file's facts if an
+  // earlier item already named it, else the character's own.
+  const heldFacts = (m: FixtureMedia, meanLuma: number, probedAt: string): MediaFacts => {
+    const made: MediaFacts = { sha: m.sha, decodable: true, mime: m.mime, w: m.w, h: m.h, durationS: null, posterSha: null, meanLuma, nearBlack: false, probedAt, error: null };
+    const have = held.get(m.sha);
+    if (have !== undefined) return have;
+    held.set(m.sha, made);
+    return made;
   };
 
   const out: FixtureRecord[] = [];
@@ -197,15 +216,17 @@ export function buildCorpus(): readonly FixtureRecord[] {
         const f: Record<string, string[]> = { style: [st], family: [style?.family ?? "graphic"], station: [station], mechanism: [mechanism], scene: [scene], run: [run], project: proj(0.2), ...(lesson === undefined ? {} : { lesson: [lesson] }), ...(missing ? { attention: ["missing"] } : {}) };
         for (const [k, v] of Object.entries(style?.obs ?? {})) f[k] = [v];
         const dark = r() < 0.02;
+        // The near-black plate is a picture of its own: facts belong to a blob, so it cannot borrow a preset's.
+        const pm = dark ? { ...dataBlob(DARK_PLATE_URL, "image/svg+xml"), w: 1920, h: 1080 } : m;
         const state = weighted([["ratified", 0.26], ["rejected", 0.3], ["unjudged", 0.44]] as const);
         const b = base("plate", `${style?.name ?? st} · ${lesson === undefined ? words(scene) : words(lesson)}`, state, station, f, date());
         add({
-          raw: { kind, vocabulary: { station, styleId: st, scene, mechanism, ...(lesson === undefined ? {} : { lesson }), ...(station === "extract" ? { role: r() < 0.6 ? ("replica" as const) : ("transfer" as const) } : {}) }, ...b, ...(missing ? {} : { media: { sha256: m.sha, bytes: 210_000, mime: m.mime } }) },
+          raw: { kind, vocabulary: { station, styleId: st, scene, mechanism, ...(lesson === undefined ? {} : { lesson }), ...(station === "extract" ? { role: r() < 0.6 ? ("replica" as const) : ("transfer" as const) } : {}) }, ...b, ...(missing ? {} : { media: { sha256: pm.sha, bytes: 210_000, mime: pm.mime } }) },
           f,
           meta: `${mechanism} · s${100 + Math.floor(r() * 900)}`,
-          extras: { file: { w: m.w, h: m.h, path: m.url }, run: { id: run } },
+          extras: { file: { w: pm.w, h: pm.h, path: pm.url }, run: { id: run } },
           lineage: [runNode(run), self(b.id, "plate"), { role: "style", ref: { kind: "style", id: st }, label: labelOf("style", st), ...(styleItem.has(st) ? { itemId: styleItem.get(st) ?? "" } : {}) }, ...(lesson === undefined ? [] : [{ role: "lesson", ref: { kind: "run" as const, id: run }, label: words(lesson), facet: { group: "lesson", value: lesson } }]), ...projNodes(f["project"] ?? [])],
-          media: missing ? null : facts(m, dark ? { meanLuma: 9, nearBlack: true } : {}),
+          media: missing ? null : facts(pm, dark ? { meanLuma: 9, nearBlack: true } : {}),
           palette: PALETTES[style?.obs.palette_strategy ?? ""] ?? ["#24304a", "#3a2537"],
         });
       } else if (kind === "motion") {
@@ -302,7 +323,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
   for (const c of characters) {
     const b = { ...base("character", c.title, c.state, "scout", c.f, c.at), id: c.id, rights: { use: "publishable" as const } };
     const styles = c.styleIds.map((id): LineageNode => ({ role: "look", ref: { kind: "style", id }, label: labelOf("style", id), ...(styleItem.has(id) ? { itemId: styleItem.get(id) ?? "" } : {}) }));
-    add({ raw: { kind: "character", vocabulary: c.vocabulary, ...b, media: c.media }, f: c.f, meta: c.meta, extras: { character: c.extras }, lineage: [...c.runs.map(runNode), self(c.id, "character"), ...styles], media: { sha: c.facts.sha, decodable: true, mime: c.facts.mime, w: c.facts.w, h: c.facts.h, durationS: null, posterSha: null, meanLuma: 90, nearBlack: false, probedAt: "2026-10-24T09:00:00.000Z", error: null } });
+    add({ raw: { kind: "character", vocabulary: c.vocabulary, ...b, media: c.media }, f: c.f, meta: c.meta, extras: { character: c.extras }, lineage: [...c.runs.map(runNode), self(c.id, "character"), ...styles], media: heldFacts(c.facts, 90, "2026-10-24T09:00:00.000Z") });
   }
   return derive(out, r);
 }
