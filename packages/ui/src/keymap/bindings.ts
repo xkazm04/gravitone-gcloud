@@ -213,6 +213,19 @@ const part: Binding[] = [
   { mode: "part.frames", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], verb: "adopt", does: "adopt take", when: "takes" },
   { mode: "part.frames", keys: ["Esc"], verb: "deselect", does: "deselect", when: "layer" },
 
+  // The editors that share a face with a board but answer a smaller set of its keys get their own
+  // mode, so the legend draws what they answer: the ad's take grid (frames' walk, render and
+  // adopt - no inspector views, layers or directions) and the trailer cut (script's walk and
+  // deselect - no adopt, no inspector views). Named beside `part.`, not under `part.frames` or
+  // `part.script`, because a mode inherits every row of the modes it is nested in.
+  { mode: "part.takes", keys: ["J", "K"], verb: "item", does: "unit", repeat: true },
+  { mode: "part.takes", keys: ["N"], verb: "next-missing", does: "next missing" },
+  { mode: "part.takes", keys: ["⏎"], verb: "render", does: "render", when: "unit" },
+  { mode: "part.takes", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], verb: "adopt", does: "adopt take", when: "takes" },
+
+  { mode: "part.trailer", keys: ["J", "K"], verb: "item", does: "item", repeat: true },
+  { mode: "part.trailer", keys: ["Esc"], verb: "deselect", does: "deselect", when: "item" },
+
   { mode: "part.motion", keys: ["J", "K"], verb: "item", does: "unit", repeat: true },
   { mode: "part.motion", keys: ["⏎"], verb: "direct", does: "direct", when: "plate" },
   { mode: "part.motion", keys: ["⌘⏎"], verb: "accept", does: "accept", when: "proposal" },

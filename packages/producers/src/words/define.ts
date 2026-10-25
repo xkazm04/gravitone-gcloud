@@ -7,9 +7,9 @@ import { definePartAct, refuse, unitOf, type ActPlan, type PartActPorts, type Un
 // `mv-metadata` turn (v1 lib/sound/mv/metadata.ts `writeMetadata`, which the mv worker ran as its
 // `metadata` step). The answer passes v1's own fitter (`fitMetadata`: the YouTube byte limits,
 // the chapters from the analysis) before it is booked. The words record exists since L43
-// (@gt/domain/steps/parts.ts WORDS, whose `written` field is "what the metadata turn wrote"), but
-// the binding's `land` does not write it yet (lib/producers/words.ts), so the answer is still the
-// job's output and the album render reads it from there.
+// (@gt/domain/steps/parts.ts WORDS, whose `written` field is "what the metadata turn wrote"); the
+// binding's `land` writes it (lib/producers/words.ts) and the answer stays the job's output too,
+// where the album render reads it.
 //
 // UNITS: one turn, whatever the recipe's `words` units say (2 in album-video: the prototype's
 // guess of title + description) - v1 writes all three fields in one turn, and paying for two

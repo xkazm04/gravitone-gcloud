@@ -1,14 +1,16 @@
 import { ok, type Result } from "@gt/domain/errors";
+import type { EventData } from "@gt/domain/event";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { Producer } from "@gt/kernel/job-core";
 import { failureOf, meteredCall } from "@gt/producers/research/metered";
 import { madeFree, type ActAsk, type ActPlan } from "@gt/producers/research/partAct";
-import { projectOf } from "@gt/producers/research/partJob";
+import type { PartSnapshot } from "@gt/kernel/parts/driver";
+import { landPart, projectOf } from "@gt/producers/research/partJob";
 import { defineVoice, NO_VOICE_ENGINE, voicePlan, type VoiceLine } from "@gt/producers/voice/define";
 
 import type { ScriptRender } from "@/lib/script/types";
 
-import { asData, partFactsIn, priceOf, text, written, type DriveHooks, type PartFacts } from "./research.ts";
+import { asData, partFactsIn, priceOf, recOf, text, written, type DriveHooks, type PartFacts } from "./research.ts";
 
 // THE VOICE PRODUCER, BOUND (Phase 4 wave C, L37). Lines are the adopted script render's spoken
 // beats (this project's `script-versions` + `script-adopted`); a take per line is one unit and
@@ -18,6 +20,9 @@ import { asData, partFactsIn, priceOf, text, written, type DriveHooks, type Part
 
 /** Spoken pace for a stand-in take's length: 2.5 words a second, the explainer read rate. */
 const WORDS_PER_S = 2.5;
+
+/** A stand-in take's length: the line's words at the read rate, a second at least. */
+export const standInSeconds = (line: string): number => Math.max(1, line.trim().split(/\s+/).length / WORDS_PER_S);
 
 /** A silent mono 16-bit 8 kHz WAV of `seconds`: the stand-in take's bytes. */
 export function silentWav(seconds: number): Uint8Array {
@@ -56,6 +61,27 @@ export function voiceUnits(_s: unknown, f: PartFacts, ask: Pick<ActAsk, "act" | 
   return voicePlan({ lines: linesIn(f.records), engine: ENGINE, dry }, ask.act, priceOf(f.option), ask.target);
 }
 
+/** The VOICE record after the job's takes: each recorded line gains a take (under the job's id, so
+ *  a second run adds beside the first) and, when it had no active one, that take is active. The
+ *  operator's marks, rewrites and every sibling field stay as they were. */
+export function landVoice(jobId: string, plan: ActPlan, made: ReadonlyMap<string, EventData>, s: PartSnapshot, at: number): Result<Record<string, unknown>> {
+  const rec = recOf(s, "voice");
+  const takes: Record<string, unknown> = { ...(rec["takes"] as Record<string, unknown> | undefined) };
+  const byLine: Record<string, { takeIds: string[]; active: string | null }> = {};
+  for (const [k, v] of Object.entries((rec["byLine"] ?? {}) as Record<string, { takeIds: string[]; active: string | null }>)) byLine[k] = { ...v, takeIds: [...v.takeIds] };
+  for (const u of plan.units) {
+    const m = made.get(u.name);
+    const line = text(u.input["id"]);
+    if (m === undefined || line === undefined || m["blob"] === undefined) continue;
+    const id = `${jobId}:${u.name}`;
+    if (Object.hasOwn(takes, id)) continue;
+    takes[id] = { id, label: line, at, seconds: typeof m["seconds"] === "number" ? m["seconds"] : null, mark: null, blob: m["blob"] };
+    const held = byLine[line] ?? { takeIds: [], active: null };
+    byLine[line] = { ...held, takeIds: [...held.takeIds, id], active: held.active ?? id };
+  }
+  return ok({ voice: { ...rec, takes: asData({ takes })["takes"], byLine: asData({ byLine })["byLine"] } });
+}
+
 export function voiceProducer(lane: ResourceLane = "cloud.elevenlabs", hooks: DriveHooks = {}): Producer {
   return defineVoice(lane, {
     async plan(job, ask, ctx) {
@@ -65,7 +91,7 @@ export function voiceProducer(lane: ResourceLane = "cloud.elevenlabs", hooks: Dr
     async perform(job, _plan, unit, ctx) {
       try {
         const line = String(unit.input["text"] ?? "");
-        const seconds = Math.max(1, line.split(/\s+/).length / WORDS_PER_S);
+        const seconds = standInSeconds(line);
         const bytes = await meteredCall(ctx, {
           provider: "voice",
           model: "none",
@@ -81,10 +107,9 @@ export function voiceProducer(lane: ResourceLane = "cloud.elevenlabs", hooks: Dr
         return failureOf(e);
       }
     },
-    // The VOICE record exists (@gt/domain/steps/parts.ts: takes and the active one per line), but this
-    // landing does not write it yet: the takes stay on the job (blobs), where cut reads them.
-    async land() {
-      return ok({ rev: 0, unchanged: true });
+    // The takes land on the VOICE record (@gt/domain/steps/parts.ts) and stay the job's booked blobs.
+    async land(job, plan, made, ctx) {
+      return landPart(ctx, plan.act, (s) => landVoice(job.id, plan, made, s, Date.now()));
     },
     ...(hooks.onSettled === undefined ? {} : { settled: hooks.onSettled }),
   });
