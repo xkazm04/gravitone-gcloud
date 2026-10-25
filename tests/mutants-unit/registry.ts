@@ -813,6 +813,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "Under reduced motion the receipt still rises 20px into place; the fade alone carries the news.",
   },
   {
+    id: "ui-controls-disabled-button-lights-on-hover",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/button/Button.module.css",
+    find: ".btn:not([aria-disabled=true]):hover{",
+    replace: ".btn:hover{",
+    why: "A disabled Button lights its hover wash like a live one, so the pointer reads an unavailable act as pressable.",
+  },
+  {
     id: "ui-controls-seg-presses-every-option",
     test: "packages/ui/test/components/controls.test.ts",
     file: "packages/ui/src/components/seg/Seg.tsx",
@@ -862,6 +870,22 @@ export const MUTANTS: UnitMutant[] = [
     replace: "string extends S ? false : Count<S, []>;",
     why: "Thirteen words joined by line breaks count as one to the type while hintWords counts thirteen: the type and the gate disagree (type-only guard).",
     typecheck: true,
+  },
+  {
+    id: "ui-marks-chip-ghost-rim-sinks",
+    test: "packages/ui/test/components/marks-floor.test.ts",
+    file: "packages/ui/src/components/chip/Chip.module.css",
+    find: ".ghost{border-style:dashed;border-color:color-mix(in srgb,currentColor 65%,transparent)}",
+    replace: ".ghost{border-style:dashed;border-color:color-mix(in srgb,currentColor 40%,transparent)}",
+    why: "A placeholder chip's dashed rim reads about 2:1 on the ink: the fixture/placeholder mark is there and nobody can see it, the 2026-09 Ghost defect in a chip.",
+  },
+  {
+    id: "ui-marks-ghost-card-rim-sinks",
+    test: "packages/ui/test/components/marks-floor.test.ts",
+    file: "packages/ui/src/components/ghost/Ghost.module.css",
+    find: "dashed color-mix(in srgb,var(--faint) 80%,transparent)",
+    replace: "dashed color-mix(in srgb,var(--faint) 50%,transparent)",
+    why: "An empty list's ghost outlines drop under 3:1 on the panels: the shape that replaced a paragraph is invisible again.",
   },
   {
     id: "ui-status-job-table-drops-interrupted",

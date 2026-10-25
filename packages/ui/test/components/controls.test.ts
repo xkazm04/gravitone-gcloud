@@ -59,6 +59,19 @@ describe("Button", () => {
     expect([cancelled, pressed]).toEqual([1, 1]);
   });
 
+  test("a disabled button does not answer the pointer: every hover or press look skips aria-disabled", () => {
+    const css = readFileSync(join(COMPONENTS, "button/Button.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const rules = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].map((m) => ({ sel: (m[1] ?? "").trim(), body: m[2] ?? "" }));
+    const pointer = rules.filter((r) => /:(hover|active)\b/.test(r.sel) && !r.sel.includes("[aria-disabled=true]"));
+    expect(pointer.length).toBeGreaterThan(0);
+    const answered = pointer.filter((r) => {
+      if (r.sel.includes(":not([aria-disabled=true])")) return false;
+      const state = /:(hover|active)\b/.exec(r.sel)?.[1] ?? "";
+      return !rules.some((o) => o.sel.includes("[aria-disabled=true]") && o.sel.includes(`:${state}`));
+    });
+    expect(answered.map((r) => r.sel)).toEqual([]);
+  });
+
   test("a badge is a chip after the label", () => {
     expect(html(h(Button, { label: "Commit packet", badge: { label: "7 undecided" } }))).toMatch(/Commit packet<span[^>]*>7 undecided<\/span>/);
   });
