@@ -496,4 +496,12 @@ export const MUTANTS: Mutant[] = [
     replace: "if (false)",
     why: "An agent's `sound.mts generate` under GRAVITONE_DRY_ONLY=1 still renders and bills ElevenLabs live, with no receipt.",
   },
+  {
+    id: "upstream-break-node-holds-width",
+    probe: "upstream-break-phone.probe.spec.ts",
+    file: "packages/ui/src/components/upstream/UpstreamBreak.module.css",
+    find: "flex:0 1 var(--one-off-w-node);min-width:0;text-align:center;overflow-wrap:anywhere",
+    replace: "min-width:var(--one-off-w-node)",
+    why: "An UpstreamBreak node holds a fixed minimum width in a non-wrapping rail, so a chain of five or more steps pushes a 360px page sideways.",
+  },
 ];

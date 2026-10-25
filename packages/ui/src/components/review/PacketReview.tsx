@@ -22,7 +22,7 @@
 // carries the schedule as the verdict's note. The applier makes the slot from that note in the
 // commit's own apply; nothing is scheduled before the commit, and a schedule changed after the
 // preview is a stale preview like any other decision.
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import type { EditDirective, EditNote as Note } from "@gt/domain/board";
 
@@ -64,6 +64,11 @@ export function keepVerdictOf(schedule: ScheduleIntent | null, notes: string, no
   return { verdict: "keep", reasons: [], note: encodeSchedule({ ...schedule, ...(notes === "" ? {} : { notes }) }).slice(0, noteMax) };
 }
 
+/** The keymap facts a review holds: a draft to annotate, and a calendar slot the approve fills. */
+function reviewFacts(draft: boolean, calendar: boolean): string[] {
+  return [...(draft ? ["draft"] : []), ...(calendar ? ["calendar"] : [])];
+}
+
 export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, busy = false, announce = () => undefined, keys = true, nowMs }: PacketReviewProps) {
   const { view, present } = packet;
   const doc = present.review;
@@ -84,8 +89,14 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
     return first === undefined ? null : { channel: first, publishAt: proposeAt(nowMs ?? Date.now()) };
   });
 
+  // A section the reader walks to is brought into view; the first render is not a walk, and the
+  // query stays inside this review (the kit mounts one far down a page that scrolls inside its body).
+  const root = useRef<HTMLDivElement>(null);
+  const walked = useRef(focus);
   useEffect(() => {
-    document.querySelector(`[data-sec="${focus}"]`)?.scrollIntoView({ block: "nearest" });
+    if (walked.current === focus) return;
+    walked.current = focus;
+    root.current?.querySelector(`[data-sec="${focus}"]`)?.scrollIntoView({ block: "nearest" });
   }, [focus]);
 
   const openNote = (i: number) => {
@@ -146,7 +157,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
       attach,
       "cancel-note": () => setEditing(null),
     },
-    { facts: doc === undefined ? [] : ["draft"], enabled: keys },
+    { facts: reviewFacts(doc !== undefined, channels.length > 0), enabled: keys },
   );
 
   const toggle = (r: string) =>
@@ -160,7 +171,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
       marks={present.oracle !== undefined && <OracleStrip oracle={present.oracle} />}
       foot={
         <>
-          <Keycaps mode="board.review" label="review keys" facts={new Set(doc === undefined ? [] : ["draft"])} />
+          <Keycaps mode="board.review" label="review keys" facts={new Set(reviewFacts(doc !== undefined, channels.length > 0))} />
           <div className={s.ends}>
             <Button label="Reject" tone="rose" shortcut={{ mode: "board.review", verb: "reject" }} onPress={() => verdict("reject")} />
             <Button label={`Edit plan · ${plan.length}`} tone="amber" shortcut={{ mode: "board.review", verb: "send-edit-plan" }} onPress={send} />
@@ -169,7 +180,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
         </>
       }
     >
-      <div className={s.review} data-component="PacketReview">
+      <div ref={root} className={s.review} data-component="PacketReview">
         <div className={s.pageWrap}>
           {doc === undefined ? (
             <article className={s.article}>
