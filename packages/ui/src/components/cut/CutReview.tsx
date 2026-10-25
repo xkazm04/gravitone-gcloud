@@ -123,8 +123,8 @@ export function CutReview({ packet, decide, onCommit, busy = false, announce = (
         <>
           <Keycaps mode="board.cut" label="cut keys" facts={new Set(beats.length > 0 ? ["beats"] : [])} />
           <div className={s.ends}>
-            <Button label="Reject" tone="rose" shortcut={{ mode: "board.cut", verb: "reject" }} onPress={() => end("reject")} />
-            <Button label="Approve" tone="emerald" shortcut={{ mode: "board.cut", verb: "approve" }} onPress={() => end("keep")} />
+            <Button label="Reject" tone="rose" shortcut={{ mode: "board.cut", verb: "reject" }} onPress={() => end("reject")} disabled={busy} />
+            <Button label="Approve" tone="emerald" shortcut={{ mode: "board.cut", verb: "approve" }} onPress={() => end("keep")} disabled={busy} />
           </div>
         </>
       }

@@ -19,7 +19,7 @@ import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
 import { IdeaList } from "../src/components/cull/IdeaList.tsx";
 import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
 import { VariantCard } from "../src/components/cull/VariantCard.tsx";
-import { beatNote, withNote } from "../src/components/cut/CutReview.tsx";
+import { beatNote, CutReview, withNote } from "../src/components/cut/CutReview.tsx";
 import { CommitButton } from "../src/components/desk/Desk.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
 import { BlindPair } from "../src/components/pair/BlindPair.tsx";
@@ -169,6 +169,18 @@ describe("the cut review", () => {
     expect(withNote(noted, 0, "")).toEqual({ 1: "tighter" });
     expect(beatNote([{ t0: 0 }, { t0: 4.2 }], withNote(noted, 1, " "))).toBeUndefined();
     expect(beatNote([{ t0: 0 }, { t0: 4.2 }], noted)).toBe("beat 2 (0:04): tighter");
+  });
+
+  const cut = packet(
+    { source: "step", mode: "packet-review", lane: "video", items: [{ ...img("c", "cut"), media: { sha256: "0".repeat(64), bytes: 1, mime: "video/mp4" } }] },
+    { items: {}, rows: [], cut: { video: "/c.mp4", beats: [{ t0: 0, t1: 3, text: "the record high" }, { t0: 3, t1: 6, text: "half of it gone" }], channels: [] } },
+  );
+  const review = (busy: boolean) => renderToStaticMarkup(h(CutReview, { packet: cut, decide: noop, onCommit: noop, busy, keys: false }));
+
+  test("a verdict in flight draws its buttons disabled, as the proof sheet's do", () => {
+    const disabled = (html: string) => html.split('aria-disabled="true"').length - 1;
+    expect(disabled(review(true))).toBe(2);
+    expect(disabled(review(false))).toBe(0);
   });
 });
 
