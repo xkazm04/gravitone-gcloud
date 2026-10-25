@@ -6,7 +6,7 @@ import { blobStore } from "../src/blob.ts";
 import { liveEffects } from "../src/effects.ts";
 import type { Ending, Producer } from "../src/job-core.ts";
 import { runJob } from "../src/job-run.ts";
-import { enqueue, get, loadJob, pause } from "../src/job.ts";
+import { enqueue, get, loadJob, pause, resume } from "../src/job.ts";
 import { openKernel } from "../src/kernel.ts";
 import { launchProject, planReceipt } from "../src/records/launch.ts";
 import { compose } from "../src/records/write.ts";
@@ -78,6 +78,22 @@ describe("settle", () => {
     const y = settling(producer("box.render", ["a"]).p);
     expect(must(await runJob(w.fx, y.p, "y1", { ...RUN, deadlineMs: 0 })).outcome).toBe("yielded");
     expect(y.told).toEqual([]);
+  });
+
+  it("is not told stopped for a job the operator paused and resumed mid-step: it is queued and will run again", async () => {
+    const w = world();
+    must(enqueue(w.store, { id: "r1", of: { kind: "run", id: "r1" }, producer: "p", lane: "gpu.local" }, operator));
+    const { p, told } = settling(
+      producer("gpu.local", ["a", "b"], () => {
+        must(pause(w.store, jobId("r1"), operator));
+        must(resume(w.store, jobId("r1"), operator));
+        return { kind: "produced", output: {} };
+      }).p,
+    );
+    const r = must(await runJob(w.fx, p, "r1", RUN));
+    expect(must(get(w.store, jobId("r1"))).job.state).toBe("queued");
+    expect(r.outcome).toBe("yielded");
+    expect(told).toEqual([]);
   });
 
   it("a settle that throws is reported on the drive and in the ledger, and the ending stands", async () => {

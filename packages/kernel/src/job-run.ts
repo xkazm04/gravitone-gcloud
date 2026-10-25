@@ -298,7 +298,9 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
           case "claim":
           case "idle":
             releaseIn(t, slot, fence);
-            return { kind: "end", report: withCalls({ outcome: "stopped", job }) };
+            // An operator's pause then resume during the step leaves the job queued: it ends nothing and
+            // will run again, so it is a yield (settle is told only real endings, job-settle.ts).
+            return { kind: "end", report: withCalls({ outcome: job.state === "queued" ? "yielded" : "stopped", job }) };
         }
       });
       if (!decided.ok) return settleError(decided.error);
