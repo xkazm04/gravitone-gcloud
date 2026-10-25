@@ -789,6 +789,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "An aria-disabled submit is still its form's default button: a click on it, or ⏎ in any of the form's fields, submits while the UI says the act is unavailable.",
   },
   {
+    id: "ui-controls-disclosure-toggle-also-pressed",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/toggle/Toggle.tsx",
+    find: "aria-pressed={controls === undefined ? on : undefined}",
+    replace: "aria-pressed={on}",
+    why: "A toggle that opens a drawer announces two states for one fact (pressed and expanded), so the facets, vocabulary and detail drawers read as a toggle button that is also a disclosure.",
+  },
+  {
     id: "ui-controls-seg-presses-every-option",
     test: "packages/ui/test/components/controls.test.ts",
     file: "packages/ui/src/components/seg/Seg.tsx",

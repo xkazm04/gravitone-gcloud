@@ -64,6 +64,14 @@ describe("pressed controls", () => {
     expect(html(h(Toggle, { label: "sfx", on: false, onToggle: noop }))).toContain(`aria-pressed="false"`);
   });
 
+  test("a Toggle that shows a region is a disclosure: expanded, never also pressed", () => {
+    for (const on of [true, false]) {
+      const t = html(h(Toggle, { label: "facets", on, onToggle: noop, controls: "lg-facets" }));
+      expect(t).toContain(`aria-expanded="${on}"`);
+      expect(t).not.toContain("aria-pressed");
+    }
+  });
+
   test("Seg presses exactly its value and names the group", () => {
     const opts = [{ value: "12h", label: "12h" }, { value: "24h", label: "24h" }, { value: "3d", label: "3d" }] as const;
     const s = html(h(Seg<"12h" | "24h" | "3d">, { label: "window", options: opts, value: "24h", onChange: noop }));
