@@ -37,6 +37,8 @@ export type RealStyleDeps = {
   readonly dryOnly: () => boolean;
   /** The vendors; a test hands fakes. Absent: the imaging router (never reached dry). */
   readonly engines?: StyleEngines;
+  /** The job's drive on this process; a test hands one that fails. Absent: the style producer's. */
+  readonly drive?: typeof driveStyleJob;
 };
 
 /** A thrown v1 FoundryError (the export, the catalogue read) as the action's Result. */
@@ -106,16 +108,19 @@ export function makeRealStyle(deps: RealStyleDeps): ServerStyle {
         if (launched.value.kind === "stale") return ok({ kind: "stale", fresh: launched.value.fresh });
         const { jobId, again } = launched.value;
         if (!again) {
-          const drive = driveStyleJob(s.value, jobId, { dryOnly: deps.dryOnly(), ...(deps.engines === undefined ? {} : { engines: deps.engines }) });
+          const drive = (deps.drive ?? driveStyleJob)(s.value, jobId, { dryOnly: deps.dryOnly(), ...(deps.engines === undefined ? {} : { engines: deps.engines }) });
           if (mode === "dry") {
             const r = await drive;
             if (!r.ok) return r;
             if (r.value.outcome === "failed") return err("refused", r.value.job?.error?.message ?? r.value.reason ?? `job ${jobId} failed`);
           } else {
             // A live drive outlives the request: its ending is the job's record, read on the Ledger.
-            void drive.then((r) => {
-              if (!r.ok) console.error(`style job ${jobId}: ${r.error.message}`);
-            });
+            void drive.then(
+              (r) => {
+                if (!r.ok) console.error(`style job ${jobId}: ${r.error.message}`);
+              },
+              (e: unknown) => console.error(`style job ${jobId}: ${e instanceof Error ? e.message : String(e)}`),
+            );
           }
         }
         const v = viewOf(s.value, styleIdOf(act));

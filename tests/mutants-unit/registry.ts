@@ -3850,6 +3850,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "The negative prompt's minus glyph is named on a generic <b>, which ARIA 1.2 prohibits: a screen reader reads the words a style must never show as if they were its recipe.",
   },
   {
+    id: "style-live-drive-rejection-unhandled",
+    test: "tests/next-server/style-real.test.ts",
+    file: "app/(studio)/library/style/_port/real.ts",
+    find: "              (e: unknown) => console.error(`style job ${jobId}: ${e instanceof Error ? e.message : String(e)}`),",
+    replace: "              undefined,",
+    why: "A live style drive that crashes after the act answered 'launched' becomes an unhandledRejection with no job id, so the server log cannot say which render died.",
+  },
+  {
     id: "look-refs-unselected",
     test: "packages/producers/test/frames-look.test.ts",
     file: "packages/producers/src/frames/look.ts",

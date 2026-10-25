@@ -191,6 +191,20 @@ describe("the job renders what was priced, or nothing", () => {
     expect(must(readStyle(s, id)).style.proofs).toEqual([]);
   });
 
+  // A live drive outlives its request: a crash after the answer has no caller left to tell, so the
+  // side reports it (a rejection nobody handles is an unhandledRejection, and the job's id is lost).
+  it("reports a live drive that crashed after the act answered launched", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const crashed = makeRealStyle({ store, now: () => NOW, dryOnly: () => false, engines: NEVER, drive: () => Promise.reject(new Error("the lane's lease was lost")) });
+    const v = await view("painted");
+    const act: StyleAct = { kind: "generate-proofs", styleId: "painted", baseRev: v.rev, trialIds: ["wish-list"] };
+    const rc = must(await crashed.actReceipt({ act, mode: "live" }));
+    expect(must(await crashed.act({ act, mode: "live", token: rc.token }, "op-1")).kind).toBe("launched");
+    await new Promise((done) => setTimeout(done, 0));
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining("the lane's lease was lost"));
+    errors.mockRestore();
+  });
+
   it("books a live plate with what the vendor reported (a fake vendor, never the router)", async () => {
     const s = must(store());
     const v = await view("painted-copy");
