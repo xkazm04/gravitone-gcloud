@@ -47,6 +47,7 @@ import { crownLeaf, inStore as huntInStore } from "../../lib/sound/huntDesk.ts";
 import { HUNT_LANE, huntJobId, huntProducer, huntRunId, launchHuntRender, type RenderLaunch } from "../../lib/sound/huntRender.ts";
 import { stubReason } from "../../lib/sound/huntEngine.ts";
 import { confirmLesson, draftLesson, handDraft, inStore as lessonInStore } from "../../lib/sound/lessons.ts";
+import { readAudioParams } from "../../lib/sound/hunt.ts";
 import { SoundError, soundFailure } from "../../lib/sound/store.ts";
 import type { GenerateRequest, Hunt, HuntNode, SoundTake } from "../../lib/sound/types.ts";
 
@@ -369,5 +370,30 @@ describe("one store failure reads as one code on every door of the desk", () => 
     const src = readFileSync(path.join(process.cwd(), "lib/sound/rubric.ts"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
     expect(src).toContain("soundFailure(e)");
     expect(src).not.toMatch(/e\.status|STATUS_CODE/);
+  });
+});
+
+describe("knowledge/audio/params.json: only an absent file means nothing measured yet", () => {
+  const dir = path.join(ROOT, "knowledge");
+  const put = (text: string) => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "params.json"), text);
+  };
+  it("an absent file is null, a good one is read, a corrupt one is a SoundError that names the file and the regenerating command", async () => {
+    const was = process.env["SOUND_KNOWLEDGE_DIR"];
+    process.env["SOUND_KNOWLEDGE_DIR"] = dir;
+    try {
+      expect(await readAudioParams()).toBeNull();
+      put('{"kinds":{}}');
+      expect(await readAudioParams()).toEqual({ kinds: {} });
+      put("{");
+      const bad = await readAudioParams().then(() => null, (e: unknown) => e);
+      expect(bad).toBeInstanceOf(SoundError);
+      expect((bad as SoundError).message).toContain("params.json");
+      expect((bad as SoundError).message).toContain("pipeline/sound.mts knowledge");
+    } finally {
+      if (was === undefined) delete process.env["SOUND_KNOWLEDGE_DIR"];
+      else process.env["SOUND_KNOWLEDGE_DIR"] = was;
+    }
   });
 });

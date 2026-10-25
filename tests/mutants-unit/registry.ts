@@ -6870,4 +6870,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const cut: CutLog | null = st === undefined ? null : written<CutLog>({ origin: st[\"origin\"], originBudget: st[\"originBudget\"], ops: st[\"ops\"] ?? [], head: st[\"head\"] ?? 0 });",
     why: "The Script part reads a stored cut with its own defaults, so a record with ops and no head shows the cut with none of the creator's edits applied.",
   },
+  {
+    id: "audio-params-corrupt-read-as-unmeasured",
+    test: "tests/next-server/audio-hunt.test.ts",
+    file: "lib/sound/hunt.ts",
+    find: "throw new SoundError(`${path.basename(at)} is not valid JSON - regenerate it: npx tsx pipeline/sound.mts knowledge`, 500);",
+    replace: "return null;",
+    why: "A truncated knowledge/audio/params.json briefs the next hunt as 'nothing measured yet', steering it to explore with no error anywhere.",
+  },
 ];

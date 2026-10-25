@@ -71,14 +71,26 @@ export async function promptFile(name: string): Promise<Record<string, string>> 
   return s;
 }
 
-/** knowledge/audio/params.json, or null when it has not been generated. The
- *  hunt prompt leans on what worked; an absent file is "nothing measured yet",
- *  which the prompt is told to read as permission to explore. */
+/** knowledge/audio/params.json (SOUND_KNOWLEDGE_DIR moves the directory, as `knowledge` in
+ *  cli.ts reads it), or null when it has not been generated. The hunt prompt leans on what
+ *  worked; an ABSENT file is "nothing measured yet", which the prompt is told to read as
+ *  permission to explore. An unreadable or unparseable one is not that: a truncated or
+ *  merge-conflicted generated file would steer every hunt to explore with no error anywhere,
+ *  so it is a SoundError naming the file and the command that regenerates it. */
 export async function readAudioParams(): Promise<AudioParams | null> {
+  const envDir = process.env["SOUND_KNOWLEDGE_DIR"]?.trim();
+  const at = path.join(envDir ? path.resolve(envDir) : path.join(process.cwd(), "knowledge", "audio"), "params.json");
+  let text: string;
   try {
-    return JSON.parse(await readFile(path.join(process.cwd(), "knowledge", "audio", "params.json"), "utf8")) as AudioParams;
+    text = await readFile(at, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw new SoundError(`${path.basename(at)} cannot be read (${(e as Error).message}) - regenerate it: npx tsx pipeline/sound.mts knowledge`, 500);
+  }
+  try {
+    return JSON.parse(text) as AudioParams;
   } catch {
-    return null;
+    throw new SoundError(`${path.basename(at)} is not valid JSON - regenerate it: npx tsx pipeline/sound.mts knowledge`, 500);
   }
 }
 
