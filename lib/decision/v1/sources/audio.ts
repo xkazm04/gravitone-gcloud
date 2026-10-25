@@ -15,6 +15,7 @@ import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { verdictRow } from "../../../sound/ledger.ts";
 import { filePathAbs, ledgerPath, readTakes, SoundError, withStore } from "../../../sound/store.ts";
 import { patchTakeTx } from "../../../sound/takes.ts";
+import { takeFileHref } from "../../../sound/takeHref.ts";
 import { judgingOrder } from "../../../sound/triageOrder.ts";
 import { DEFECTS, type DefectCode, type SoundTake, type TakePatch } from "../../../sound/types.ts";
 import {
@@ -216,7 +217,7 @@ function packet(v1: AudioV1): Result<OpenPlan> {
     // The pile is the UNJUDGED takes: v1 holds no verdict on any of them to import.
     initial: [],
     present: { items: Object.fromEntries(judgeable.map((t) => [t.id, words(t, v1.measures.get(t.id))])), rows, meta: "Sound lab triage" },
-    urls: Object.fromEntries(judgeable.map((t) => [t.id, `/api/sound/takes/${encodeURIComponent(t.id)}/file`])),
+    urls: Object.fromEntries(judgeable.map((t) => [t.id, takeFileHref(t.id)])),
     losses,
   });
 }

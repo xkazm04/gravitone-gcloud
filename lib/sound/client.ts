@@ -12,8 +12,9 @@
 // .test.ts stands that reference in, which is how the L40 defect is held).
 
 import { withAccess } from "@/lib/imagingClient";
+import { takeFileHref } from "./takeHref.ts";
 
 /** The file URL for a take's bytes - usable directly as an <audio src>. An <audio> element cannot
  *  send the Authorization header, so the credential rides through the one client door,
  *  `withAccess` (the file route accepts it). */
-export const takeFileUrl = (id: string) => withAccess(`/api/sound/takes/${encodeURIComponent(id)}/file`);
+export const takeFileUrl = (id: string) => withAccess(takeFileHref(id));

@@ -15,6 +15,7 @@ import { readLedger } from "../../../../lib/sound/store.ts";
 import { readSunoLive } from "../../../../lib/sound/suno/queue.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
 import type { SoundTake } from "../../../../lib/sound/types.ts";
+import { takeFileHref } from "../../../../lib/sound/takeHref.ts";
 import { deriveVocabulary } from "../../../../lib/sound/vocabulary.ts";
 import { SUNO_PHASE_WORD, type SunoJob } from "../../../../lib/suno/types.ts";
 import { REFERENCES } from "./references.ts";
@@ -80,7 +81,7 @@ export function seedTake(t: SoundTake): SeedTake {
     id: t.id,
     title: t.title,
     seed: seedOfTake(t),
-    src: t.file === null ? null : `/api/sound/takes/${encodeURIComponent(t.id)}/file`,
+    src: t.file === null ? null : takeFileHref(t.id),
     peaks: t.peaks ?? [],
     durationS: m?.durationS ?? t.durationS,
     prompt: t.prompt,

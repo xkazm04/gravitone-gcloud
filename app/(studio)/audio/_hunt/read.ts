@@ -8,6 +8,7 @@ import { kernel } from "../../../../lib/kernelStore.ts";
 import { liveBlock, renderInFlight } from "../../../../lib/sound/huntRender.ts";
 import { listLessons } from "../../../../lib/sound/lessons.ts";
 import { readHunts, readTakes } from "../../../../lib/sound/store.ts";
+import { takeFileHref } from "../../../../lib/sound/takeHref.ts";
 import { TECHNIQUES, type Hunt, type HuntNode, type SoundTake } from "../../../../lib/sound/types.ts";
 import { deskEngines } from "../_audio/arrangeRead.ts";
 import type { Kind } from "../_audio/desk.ts";
@@ -75,7 +76,7 @@ function auditionOf(t: SoundTake, m: AudioMeasureRow | undefined): HuntOpenView[
   return {
     id: t.id,
     title: t.title,
-    src: t.file === null ? null : `/api/sound/takes/${encodeURIComponent(t.id)}/file`,
+    src: t.file === null ? null : takeFileHref(t.id),
     peaks: ok && m.peaks.length > 0 ? [...m.peaks] : [...(t.peaks ?? [])],
     lengthS: (ok ? m.durationS : null) ?? t.measured?.durationS ?? t.durationS,
     verdict: t.verdict,

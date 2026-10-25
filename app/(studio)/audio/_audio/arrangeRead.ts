@@ -11,6 +11,7 @@ import { deploymentFacts, serverCapabilities } from "../../../../lib/serverCapab
 import { engineRegistry, engineState, type EngineDef } from "../../../../lib/sound/engines.ts";
 import { readGroups } from "../../../../lib/sound/store.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
+import { takeFileHref } from "../../../../lib/sound/takeHref.ts";
 import type { SoundTake } from "../../../../lib/sound/types.ts";
 import type { Kind } from "./desk.ts";
 import type { Read } from "./read.ts";
@@ -62,7 +63,7 @@ function cardOf(t: SoundTake, m: AudioMeasureRow | undefined): CardTake {
     loop: t.loop,
     terms: { genre: [...t.terms.genre], mood: [...t.terms.mood], instrument: [...t.terms.instrument], sfxCategory: t.terms.sfxCategory },
     verdict: t.verdict,
-    src: t.file === null ? null : `/api/sound/takes/${encodeURIComponent(t.id)}/file`,
+    src: t.file === null ? null : takeFileHref(t.id),
     peaks: ok && m.peaks.length > 0 ? [...m.peaks] : (t.peaks ?? []),
     lengthS: (ok ? m.durationS : null) ?? t.measured?.durationS ?? t.durationS,
     prompt: t.prompt,
