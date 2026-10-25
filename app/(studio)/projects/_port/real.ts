@@ -25,7 +25,7 @@ import type { ServerProduce, Who } from "./port.ts";
 import { slug } from "./names.ts";
 import { composeChoices, composerChoices, keptTakes, registryTopics } from "./realChoices.ts";
 import { LANE_DOORS, mintSuffix, type LaunchContext } from "./realLaunch.ts";
-import { holdsView, jobsView } from "./realRead.ts";
+import { floorRunsOpen, holdsView, jobsView } from "./realRead.ts";
 import { confirmReroute, rerouteReceipt } from "./realReroute.ts";
 
 // THE REAL PRODUCE PORT - the ProducePort over L26's records module, L25's jobs and the
@@ -264,6 +264,7 @@ export function makeRealProduce(deps: RealDeps): ServerProduce {
       }),
 
     listJobs: () => withStore((s) => s.read((r) => jobsView(r, deps.now()))),
+    floorRunsOpen: () => withStore((s) => s.read((r) => floorRunsOpen(r))),
     listHolds: () => withStore((s) => s.read((r) => holdsView(r, () => new Map(jobsView(r, deps.now()).map((j) => [j.id, j.title]))))),
     // The kernel's cancel (job.ts), refused by its machine for a job that already ended.
     cancelJob: ({ jobId: raw }, who) =>

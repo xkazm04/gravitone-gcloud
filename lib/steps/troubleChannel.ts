@@ -11,6 +11,20 @@ import type { StorageTrouble } from "./storageOutcome";
 
 /* ──────────────────────── the one place to learn about it ────────────────── */
 
+/** Tell every listener, each in its own try: one subscriber that throws must not
+ *  reject saveStep (report runs in withStore's catch) nor turn a write that
+ *  committed into a reported failure (resolveTroubleWhere runs in its try). The
+ *  error is logged, not swallowed. */
+function notify(): void {
+  for (const l of [...listeners]) {
+    try {
+      l();
+    } catch (e) {
+      console.error("storage-trouble listener threw", e);
+    }
+  }
+}
+
 let latest: StorageTrouble | null = null;
 const listeners = new Set<() => void>();
 
@@ -30,12 +44,12 @@ export function lastStorageTrouble(): StorageTrouble | null {
 export function clearStorageTrouble(): void {
   if (!latest) return;
   latest = null;
-  listeners.forEach((l) => l());
+  notify();
 }
 
 export function report(t: StorageTrouble): { ok: false; trouble: StorageTrouble } {
   latest = t;
-  listeners.forEach((l) => l());
+  notify();
   return { ok: false, trouble: t };
 }
 
@@ -46,5 +60,5 @@ export function resolveTroubleWhere(resolves: (t: StorageTrouble) => boolean): v
   const t = latest;
   if (!t || !resolves(t)) return;
   latest = null;
-  listeners.forEach((l) => l());
+  notify();
 }

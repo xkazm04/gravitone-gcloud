@@ -12,7 +12,7 @@ import { err, ok } from "@gt/domain/errors";
 
 vi.mock("server-only", () => ({}));
 
-const side = vi.hoisted(() => ({ list: (): unknown => undefined }));
+const side = vi.hoisted(() => ({ list: (): unknown => undefined, open: (): unknown => undefined, jobsRead: 0 }));
 
 vi.mock("../../app/(studio)/projects/_port/wire.ts", () => ({ PRODUCE_PORT: {} }));
 vi.mock("../../app/(studio)/projects/_port/port.ts", () => ({
@@ -20,7 +20,8 @@ vi.mock("../../app/(studio)/projects/_port/port.ts", () => ({
   serverProduce: () => ({
     listProjects: () => side.list(),
     composeChoices: () => ok({ recipes: [], styles: [], takes: [], topics: [] }),
-    listJobs: () => ok([]),
+    floorRunsOpen: () => side.open(),
+    listJobs: () => (side.jobsRead++, ok([])),
     loadPlan: () => err("not-found", "no plan in this stub"),
   }),
 }));
@@ -36,6 +37,8 @@ const render = () => ProjectsPage({ searchParams: Promise.resolve({}) });
 
 beforeEach(() => {
   side.list = () => ok({ projects: [], truncated: false });
+  side.open = () => ok(0);
+  side.jobsRead = 0;
 });
 
 describe("1. a list read that fails is the page's error", () => {
@@ -47,5 +50,14 @@ describe("1. a list read that fails is the page's error", () => {
   it("draws the empty list when the read answers no project", async () => {
     const el = await render();
     expect(el.props).toMatchObject({ list: { projects: [], truncated: false }, floorRuns: 0, composing: false });
+  });
+});
+
+describe("2. the Floor run count is its own read, not a full jobs view", () => {
+  it("draws the count the port answers and reads no job list for it", async () => {
+    side.open = () => ok(3);
+    const el = await render();
+    expect(el.props).toMatchObject({ floorRuns: 3 });
+    expect(side.jobsRead).toBe(0);
   });
 });

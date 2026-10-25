@@ -432,4 +432,14 @@ describe("a plan, launched, and the Runs acts", () => {
     expect((await v(port.loadPlan({ id: album }))).parts.find((x) => x.id === `${album}/render`)).toMatchObject({ chosen: draft.option.key });
     expect(existsSync(path.join(ROOT, "store.sqlite"))).toBe(true);
   });
+
+  it("counts the Floor runs still open without reading a job view, and agrees with the view it replaces", async () => {
+    const all = await v(port.listJobs());
+    const viewCount = all.filter((j) => j.projectId === undefined && j.state !== "done").length;
+    expect(all.some((j) => j.projectId !== undefined), "the store holds project jobs the count must leave out").toBe(true);
+    expect(viewCount, "the store holds open Floor runs").toBeGreaterThan(0);
+    const before = reads.jobsView;
+    expect(await v(port.floorRunsOpen())).toBe(viewCount);
+    expect(reads.jobsView - before).toBe(0);
+  });
 });

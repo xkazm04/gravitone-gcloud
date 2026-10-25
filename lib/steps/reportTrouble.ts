@@ -18,6 +18,9 @@ import { report } from "./troubleChannel";
 export function classify(e: unknown): StorageFailure {
   const name = typeof e === "object" && e !== null ? (e as { name?: string }).name : undefined;
   if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") return "quota";
+  // A blocked site or an opaque origin throws SecurityError on the first touch: @gt/ui's classify
+  // (storage/trouble.ts) says `unavailable` for it, and one rule gets one answer.
+  if (name === "SecurityError") return "unavailable";
   const message = errorMessage(e);
   if (message.includes("another tab")) return "blocked";
   if (message.includes("IndexedDB unavailable")) return "unavailable";

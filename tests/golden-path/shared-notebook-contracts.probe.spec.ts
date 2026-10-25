@@ -133,6 +133,13 @@ test("cards: the steel-man is the only card the board may not descope", () => {
  */
 const UNCLOSED: Record<string, string> = {};
 
+/** `await openDb()` sites and `db.close()` sites in one source: the rule holds per site, so a
+ *  file with seven opens needs seven closes, not one. */
+const opensAndCloses = (src: string): { opens: number; closes: number } => ({
+  opens: (src.match(/await openDb\(\)/g) ?? []).length,
+  closes: (src.match(/db\??\.close\(\)/g) ?? []).length,
+});
+
 /** Every file that opens a database connection, walked off the tree. */
 function dbOpeners(): string[] {
   const out: string[] = [];
@@ -158,10 +165,11 @@ test("connections: every file that opens the database also closes it", () => {
   const openers = dbOpeners();
   expect(openers.length, "the source walk found no opener - it is reading the wrong tree").toBeGreaterThan(2);
 
-  const leaking = openers.filter(
-    (f) => !/db\??\.close\(\)/.test(stripComments(readFileSync(join(ROOT, f), "utf8"))),
-  );
-  console.log(`[db] ${openers.length} opener file(s); ${leaking.length} never close: ${leaking.join(", ") || "none"}`);
+  const leaking = openers.filter((f) => {
+    const { opens, closes } = opensAndCloses(stripComments(readFileSync(join(ROOT, f), "utf8")));
+    return closes < opens;
+  });
+  console.log(`[db] ${openers.length} opener file(s); ${leaking.length} close fewer connections than they open: ${leaking.join(", ") || "none"}`);
 
   const unexplained = leaking.filter((f) => !UNCLOSED[f]);
   expect(
@@ -175,8 +183,9 @@ test("connections: every unclosed exemption still describes a file that leaks", 
     expect(why.length, `${file} is exempted with no reason`).toBeGreaterThan(40);
     const src = stripComments(readFileSync(join(ROOT, file), "utf8"));
     expect(/await openDb\(\)/.test(src), `${file} no longer opens a connection - drop the exemption`).toBe(true);
+    const { opens, closes } = opensAndCloses(src);
     expect(
-      /db\??\.close\(\)/.test(src),
+      closes >= opens,
       `${file} now closes its connection - drop the exemption rather than leaving it claiming a leak`,
     ).toBe(false);
   }
