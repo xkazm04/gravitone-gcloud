@@ -2358,7 +2358,11 @@
           "revision": 4,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/HuntAudition.tsx:3 These components audition and arrange generated music takes through one audio transport; there is no speaking presence, face, rig or speech-timing consumer, and grep for avatar|viseme|lipsync|talking|mouth over packages/ui/src found nothing, so the talking-avatar subject does not govern this context.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:72517c45ca8e4198",
+          "evaluatedRevision": 4
         },
         {
           "subject": "generated-speech-acceptance",

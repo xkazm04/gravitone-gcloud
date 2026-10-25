@@ -12758,6 +12758,16 @@
           "evidence": "packages/producers/src/research/followUp.ts:33 Follow-up questions here are research queries that revise facts, not act-level viewer questions."
         }
       ]
+    },
+    "c909310e-6f47-45b3-b06e-b18cfb3ab27c/talking-avatar": {
+      "context": "audio-hunt-arrange",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:32:19.342Z",
+      "worker": "fb2d2e7b-3df7-4745-a1b0-48fedba0fe24",
+      "techniques": []
     }
   }
 }
