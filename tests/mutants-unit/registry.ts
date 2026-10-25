@@ -7278,4 +7278,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "[...new Set([...proposed])]",
     why: "A lane's rendered prompts vanish from both Suno turns once their proposals are deleted, so a draft repeats what was rendered.",
   },
+  {
+    id: "router-over-budget-leaves-a-router-event",
+    test: "packages/kernel/test/dryrun.test.ts",
+    file: "packages/kernel/src/router/reserve.ts",
+    find: "reason: \"over-budget\", message: r.error.message,",
+    replace: "reason: \"refused-over-budget\", message: r.error.message,",
+    why: "A money stop is recorded under a reason no reader of router.refused knows, so the Ledger cannot say which vendor it blocked.",
+  },
 ];

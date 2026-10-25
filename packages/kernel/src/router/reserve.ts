@@ -97,8 +97,9 @@ export type RouteAndReserveInput = {
  * and why" includes "none, and why" (model-routing: the decision record). A
  * ceiling refusal is a value too (`over-budget`): the spend port's refusal
  * counter and its `spend.refused` event commit with the caller's transaction,
- * and no `router.*` event is written for it. Any other spend error throws and
- * rolls everything back.
+ * and a `router.refused` (reason `over-budget`, naming the provider the route
+ * chose) is written beside it. Any other spend error throws and rolls
+ * everything back.
  */
 export function routeAndReserve(t: Tx, input: RouteAndReserveInput, classes: SpendClasses): RouteReservation {
   const { req, facts, mode, actor, subject } = input;
@@ -114,6 +115,15 @@ export function routeAndReserve(t: Tx, input: RouteAndReserveInput, classes: Spe
     const r = reserve(t, classes[want.spendClass], { id: input.reservationId, amount: want.amount, owner: actor.id });
     if (!r.ok) {
       if (r.error.code !== "budget") throw r.error;
+      // The route WAS decided and the ceiling refused its hold: the record names the provider the
+      // money stopped (spend.refused carries totals, not the routing). `router.refused`, not
+      // `router.routed`: no vendor was claimed, and routed events pair one to one with claims.
+      append(t, {
+        actor,
+        type: "router.refused",
+        subject,
+        data: { medium: req.medium, capability: req.capability, reason: "over-budget", message: r.error.message, provider: out.choice.provider, model: out.choice.model, rung: out.choice.rung, lane: out.choice.lane, trail, mode: mode.kind },
+      });
       return { kind: "over-budget", routed: out, error: r.error };
     }
     hold = r.value;

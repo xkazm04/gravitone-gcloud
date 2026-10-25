@@ -142,7 +142,10 @@ describe("a driver under the dry port", () => {
     const r = renderStill(withDryRun(fxOf(s), live, ACTOR).effects, w, { mode: live, spend: classes(0.01), key: "k1" });
     await expect(r).rejects.toMatchObject({ code: "budget" });
     expect(w.calls).toBe(0);
-    expect(must(s.read((x) => x.all("SELECT type FROM events WHERE type IN ('spend.refused', 'receipt.released') ORDER BY seq")))).toEqual([{ type: "spend.refused" }, { type: "receipt.released" }]);
+    expect(must(s.read((x) => x.all("SELECT type FROM events WHERE type IN ('spend.refused', 'router.refused', 'receipt.released') ORDER BY seq")))).toEqual([{ type: "spend.refused" }, { type: "router.refused" }, { type: "receipt.released" }]);
+    // The money stop names the provider the route chose; spend.refused carries totals only.
+    const refusal = JSON.parse(String(must(s.read((x) => x.get("SELECT data FROM events WHERE type = 'router.refused'")?.["data"]))));
+    expect(refusal).toMatchObject({ reason: "over-budget", provider: "google", model: "gemini-3.1-flash-image", mode: "live" });
     expect(count(s, "SELECT count(*) AS n FROM receipts")).toBe(0);
   });
 });
