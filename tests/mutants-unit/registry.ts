@@ -6526,4 +6526,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (false) {",
     why: "A copy outside a secure context throws a TypeError in the click handler and the operator is told nothing.",
   },
+  {
+    id: "ledger-asc-tail-never-reads-past",
+    test: "tests/next-server/ledger-filter.test.ts",
+    file: "app/(studio)/ledger/_ledger/Ledger.tsx",
+    find: 'if (order !== "asc" || more === null || more.page.capped) return null;',
+    replace: "return null;",
+    why: "An oldest-first Ledger read to its end never draws an act that lands afterwards, and offers no button to fetch it.",
+  },
 ];

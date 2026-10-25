@@ -4,7 +4,7 @@ import type { Event } from "@gt/domain/event";
 
 import { ledgerFor, sourceOf, subjectLink } from "../../app/(studio)/_shell/links.ts";
 import { settled } from "../../app/(studio)/ledger/_ledger/Detail.tsx";
-import { coalescer, rowsOf, withOlder, type Timers } from "../../app/(studio)/ledger/_ledger/Ledger.tsx";
+import { coalescer, pastTail, rowsOf, withOlder, type Timers } from "../../app/(studio)/ledger/_ledger/Ledger.tsx";
 import { EMPTY, identity, matchesPost, parseParams, parseQuery, splitFilter, toSearch, windowOf, type LedgerFilter } from "../../app/(studio)/ledger/_ledger/filter.ts";
 import { backoff, parseFrames } from "../../app/(studio)/ledger/_ledger/sse.ts";
 import { costOf, relative, toneOf, trailOf } from "../../app/(studio)/ledger/_ledger/vocab.ts";
@@ -189,6 +189,32 @@ describe("the rows drawn", () => {
     const more = withOlder(withOlder(null, run(10, 6), page(run(5, 3))), run(10, 6), page(run(2, 1)));
     expect(rowsOf(run(10, 6), more).map((x) => x.seq)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
     expect(rowsOf(run(10, 6), null).map((x) => x.seq)).toEqual([10, 9, 8, 7, 6]);
+  });
+});
+
+describe("arrivals in an oldest-first read", () => {
+  const ev = (seq: number): Event => e({ seq, key: `k${seq}`, occurredAt: `2026-08-26T12:00:${String(seq % 60).padStart(2, "0")}.000Z` });
+  const asc = (lo: number, hi: number): Event[] => Array.from({ length: hi - lo + 1 }, (_, i) => ev(lo + i));
+  const page = (events: Event[], capped: boolean) => ({ events, capped, scanned: events.length, exhausted: !capped, byId: false });
+
+  it("reads past the last drawn row once older has read to the end, and the arrival is drawn", () => {
+    const first = asc(1, 500);
+    const more = withOlder(null, first, page(asc(501, 800), false));
+    const rows = rowsOf(first, more);
+    const cursor = pastTail("asc", more, rows);
+    expect(cursor).toEqual({ t: ev(800).occurredAt, seq: 800 });
+    // The server's answer to that cursor is the act that landed; it is drawn last.
+    const after = withOlder(more, first, page([ev(801)], false));
+    expect(rowsOf(first, after).at(-1)?.seq).toBe(801);
+  });
+
+  it("reads nothing where the first page, a capped tail or the newest-first order already covers it", () => {
+    const first = asc(1, 10);
+    expect(pastTail("asc", null, rowsOf(first, null))).toBeNull();
+    const capped = withOlder(null, first, page(asc(11, 20), true));
+    expect(pastTail("asc", capped, rowsOf(first, capped))).toBeNull();
+    const done = withOlder(null, first, page(asc(11, 20), false));
+    expect(pastTail("desc", done, rowsOf(first, done))).toBeNull();
   });
 });
 

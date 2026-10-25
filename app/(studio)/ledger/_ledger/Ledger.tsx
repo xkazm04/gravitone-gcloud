@@ -74,6 +74,18 @@ export function rowsOf(first: readonly Event[], more: Older | null): readonly Ev
   return [...first, ...more.events.filter((e) => !have.has(e.seq))];
 }
 
+/**
+ * Oldest-first, once "older" has read to the end the tail has no cursor and a refresh redraws
+ * only the first page, so an arrival is in neither. The cursor to read past the last DRAWN row
+ * (the same (t, seq) key the kernel pages by), or null when the order, the first page or a
+ * still-capped tail already covers it.
+ */
+export function pastTail(order: "asc" | "desc", more: Older | null, rows: readonly Event[]): { readonly t: string; readonly seq: number } | null {
+  if (order !== "asc" || more === null || more.page.capped) return null;
+  const last = rows[rows.length - 1];
+  return last === undefined ? null : { t: last.occurredAt ?? last.at, seq: last.seq };
+}
+
 /** How long a burst of arrivals may run before the page redraws (realtime-events: coalescing). */
 const COALESCE_MS = 700;
 const FRESH_MS = 1300;
@@ -138,6 +150,17 @@ export function Ledger(p: LedgerProps) {
     setMore((m) => withOlder(m, p.page.events, r.value));
   }, [tail.cursor, loading, p, toast]);
 
+  // An arrival past an exhausted oldest-first tail: read past the last drawn row.
+  const readPast = useRef<() => void>(() => undefined);
+  readPast.current = () => {
+    const cursor = pastTail(f.order, more, rows);
+    if (cursor === null) return;
+    void settled(p.older({ search: p.search, cursor })).then((r) => {
+      if (!r.ok) return toast(`ledger: ${r.error.error}`);
+      if (r.value.events.length > 0) setMore((m) => withOlder(m, p.page.events, r.value));
+    });
+  };
+
   // ── windowing state: selection and view, kept in the URL without a render ──
   const [sel, setSel] = useState<number | null>(f.ev ?? p.selected?.seq ?? rows[0]?.seq ?? null);
   const [view, setView] = useState(f.view);
@@ -181,6 +204,7 @@ export function Ledger(p: LedgerProps) {
         flush: (arrived) => {
           setFresh(arrived);
           startTransition(() => router.refresh());
+          readPast.current();
         },
         clear: () => setFresh(new Set()),
       }),
