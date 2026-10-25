@@ -522,3 +522,45 @@ test("issue order: a read issued after a save in the same tick sees the save", a
   expect(misses).toEqual([]);
 });
 
+
+// A SUBSCRIBER THAT THROWS IS NOT THE WRITER'S PROBLEM. saveStep never rejects, and a write
+// that landed is not reported as one that failed because a listener threw while being told.
+test("listeners: a throwing trouble listener neither rejects a failed save nor fails a landed one", async () => {
+  const realOpen = indexedDB.open.bind(indexedDB);
+  const quiet = console.error;
+  console.error = () => {};
+  const stop = onStorageTrouble(() => {
+    throw new Error("listener refused");
+  });
+  try {
+    // @ts-expect-error — deliberately replacing the engine entrypoint for one call.
+    indexedDB.open = () => {
+      const req: Record<string, unknown> = { error: new Error("write failed — the engine refused"), result: undefined };
+      queueMicrotask(() => (req.onerror as (() => void) | undefined)?.());
+      return req;
+    };
+    let rejected = false;
+    let failed: Awaited<ReturnType<typeof saveStep>> | undefined;
+    try {
+      failed = await saveStep("p-listener", "script", { n: 1 });
+    } catch {
+      rejected = true;
+    } finally {
+      indexedDB.open = realOpen;
+    }
+    expect(rejected, "a failed save resolves, it does not reject").toBe(false);
+    expect(failed?.ok).toBe(false);
+    expect(lastStorageTrouble()?.projectId).toBe("p-listener");
+    // The next write to the same step lands and clears the trouble: the listener is told, throws,
+    // and the outcome is still the write's.
+    const landed = await saveStep("p-listener", "script", { n: 2 });
+    expect(landed).toEqual({ ok: true });
+    expect(lastStorageTrouble()).toBeNull();
+    const read = await readStep<{ n?: number }>("p-listener", "script");
+    expect(read.ok && read.data?.n).toBe(2);
+  } finally {
+    indexedDB.open = realOpen;
+    console.error = quiet;
+    stop();
+  }
+});
