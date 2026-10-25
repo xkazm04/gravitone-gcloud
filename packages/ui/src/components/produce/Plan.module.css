@@ -16,7 +16,7 @@
 .part{color:var(--ink-bright);font-weight:600}
 .partLink{color:inherit;text-decoration:none}
 .partLink:hover{text-decoration:underline}
-.partLink:focus-visible{outline:1px solid var(--focus-line);outline-offset:2px}
+.partLink:focus-visible{outline:1px solid var(--focus-line);outline-offset:var(--sp-nudge)}
 .dot{display:inline-block;width:calc(var(--size-dot) + 1px);height:calc(var(--size-dot) + 1px);border-radius:50%;margin-right:var(--sp-3);border:var(--stroke-glyph) solid var(--faint);vertical-align:middle}
 .dot.done{background:var(--emerald);border-color:var(--emerald)}
 .dot.running{background:var(--cyan);border-color:var(--cyan)}

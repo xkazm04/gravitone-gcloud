@@ -27,6 +27,7 @@ function Card({ run, card }: { readonly run: string; readonly card: DrawCard }) 
   return (
     <article className={s.card}>
       {card.frame ? (
+        // eslint-disable-next-line @next/next/no-img-element -- a local draw served by its own route; nothing for next/image to optimise
         <img className={s.shot} src={src(run, card.frame)} alt={`${card.title}, ${card.via}, ${card.verdict}`} />
       ) : (
         <p className={s.missing}>{card.notes || card.verdict}</p>
