@@ -19,7 +19,7 @@ import { errorMessage } from "@gt/domain/errors";
 import { generateTake, parseGenerateRequest } from "./generate";
 import { renderParams, renderPatterns } from "./knowledge";
 import { ledgerPath, readLedger, SoundError, storeRoot } from "./store";
-import { listTakes, parseTakeFilter, parseTakePatch, patchTake } from "./takes";
+import { getTake, listTakes, parseTakeFilter, parseTakePatch, patchTake } from "./takes";
 import { RUBRIC, STAGES, type SoundTake } from "./types";
 
 export const USAGE =
@@ -148,6 +148,11 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
               throw new Usage(`--score takes dim=n pairs (dims: ${[...RUBRIC.music, ...RUBRIC.sfx].join(", ")})`);
             ratings[k] = Number(n);
           }
+          // Held to THIS take's rubric: a dimension it does not carry is stored and never read by
+          // the ledger's mean - or, alone, becomes the mean (ledger.ts rubricMean's fallback).
+          const dims = RUBRIC[(await getTake(id)).kind];
+          const off = Object.keys(ratings).filter((k) => !dims.includes(k));
+          if (off.length) throw new Usage(`--score ${off.join(", ")}: not on this take's rubric (${dims.join(", ")})`);
           body.ratings = ratings;
         }
         if (flag("reasons") !== undefined) body.reasons = list("reasons");

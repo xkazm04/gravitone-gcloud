@@ -203,3 +203,21 @@ test("create: an unjudged render is filed while the ledger will not parse - the 
   // A judgement still needs the ledger, and still refuses over it.
   expect((await refusal(() => createTake({ origin: "import", title: "kept", verdict: "kept" }, AUDIO)))?.status).toBe(500);
 });
+
+/* ── the CLI's judge holds a score to the take's rubric ──────────────────── */
+
+test("cli judge: a --score dimension off the take's rubric is usage, and nothing is written", async () => {
+  const { take } = await createTake({ origin: "agent", title: "rain bed", kind: "music" }, AUDIO);
+  // "qualty" is a typo and "event_match" an effect's dimension; on a music take neither is read
+  // by the mean the ledger keeps - alone, it would BE the mean (rubricMean falls back to any number).
+  for (const score of ["qualty=2", "event_match=3", "Melody=8"]) {
+    const r = await cli("judge", take.id, "--verdict", "kept", "--score", score, "--json");
+    console.log(`[sound-door] judge --score ${score} -> ${r.code} ${r.out.slice(0, 110)}`);
+    expect(r.code, `--score ${score}`).toBe(2);
+    expect((JSON.parse(r.out) as { error: string }).error).toContain("melody, instrument_choice, instrument_quality");
+  }
+  expect((await readTakes()).takes[0]).toMatchObject({ verdict: "unjudged", ratings: {} });
+  const fine = await cli("judge", take.id, "--verdict", "kept", "--score", "melody=8,instrument_quality=6", "--json");
+  expect(fine.code).toBe(0);
+  expect((await readTakes()).takes[0].ratings).toEqual({ melody: 8, instrument_quality: 6 });
+});
