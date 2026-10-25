@@ -66,7 +66,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
   }, [tab]);
 
   const reasons = view.reasons;
-  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasonless={d.reasonless} later={d.later} reasons={reasons} {...(d.run === undefined ? {} : { group: d.run.group })} audio={view.lane === "audio"} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
+  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasonless={d.reasonless} later={d.later} reasons={reasons} {...(d.run === undefined ? {} : { group: d.run.group })} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
   const note = d.note;
   const noteField =
     note === undefined ? undefined : <NoteField key={note.cell} label={d.wordsOf(d.cells[note.cell]?.id ?? "").label} value={note.draft} max={note.max} onChange={note.setDraft} onSave={note.save} />;

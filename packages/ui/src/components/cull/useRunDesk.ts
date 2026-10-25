@@ -40,6 +40,7 @@ import type { BoardVerdict } from "../../board/boardGate.ts";
 import { chipThen, clamp, commitGate, cullCells, keepingNote, nextOpen, noteAct, notDoneOf, notDoneWords, runKeyAct, undecidedOf } from "../../board/cull.ts";
 import { itemAct, runAt, runsOf, runVerdictOf, type Run } from "../../board/runs.ts";
 import { useKeys } from "../../keymap/dispatch.ts";
+import { cullFacts } from "./CullFoot.tsx";
 
 export type RunDeskInput = {
   readonly packet: BoardPacket;
@@ -233,7 +234,7 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
       },
       commit,
     },
-    { enabled: keys, facts: noteMax > 0 ? ["notes"] : [] },
+    { enabled: keys, facts: cullFacts(view.reasons) },
   );
 
   const openRun = (i: number) => {

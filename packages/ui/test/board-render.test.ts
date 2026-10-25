@@ -14,6 +14,7 @@ import type { Result } from "@gt/domain/errors";
 
 import type { BoardPacket } from "../src/board/port.ts";
 import { ConsequencePanel } from "../src/components/consequence/ConsequencePanel.tsx";
+import { cullFacts } from "../src/components/cull/CullFoot.tsx";
 import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
 import { IdeaList } from "../src/components/cull/IdeaList.tsx";
 import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
@@ -99,6 +100,18 @@ describe("the matrix cull", () => {
     expect(keysOf(renderToStaticMarkup(h(MatrixCull, { packet: forge, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false })))).toEqual(["2", "3", "4"]);
     const suno = packet({ source: "suno", lane: "audio", items: [img("a", "r")] }, { items: {}, rows: [] });
     expect(renderToStaticMarkup(h(MatrixCull, { packet: suno, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false }))).not.toContain(" reason</span>");
+  });
+
+  test("the legend draws the keys the desk answers: an audio packet draws no Space play and no M spawn MV", () => {
+    // useRunDesk binds no `play` and no `spawn-mv`, and arms its keys with the facts cullFacts names:
+    // the legend reads the same facts, so it cannot draw a key that does nothing.
+    const suno = packet({ source: "suno", lane: "audio", items: [img("a", "r")] }, { items: {}, rows: [] });
+    const html = renderToStaticMarkup(h(MatrixCull, { packet: suno, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false }));
+    expect(html).not.toContain("spawn MV");
+    expect(html).not.toMatch(/<kbd[^>]*>Space<\/kbd>/);
+    expect(html).toMatch(/<kbd[^>]*>1<\/kbd>/);
+    expect(cullFacts({ noteMax: 0 })).toEqual([]);
+    expect(cullFacts({ noteMax: 120 })).toEqual(["notes"]);
   });
 
   test("the mosaic files the run under its category and says how much of it is decided", () => {

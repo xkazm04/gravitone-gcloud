@@ -21,7 +21,6 @@ export type CullFootProps = {
   readonly reasons: Pick<ReasonVocabulary, "list" | "meaning"> & Partial<Pick<ReasonVocabulary, "noteMax" | "by">>;
   /** The group of the run under the cursor (`RowWords.group`): whose order keys 2-4 follow. */
   readonly group?: string;
-  readonly audio?: boolean;
   readonly refusals: number;
   readonly busy: boolean;
   readonly onCommit: () => void;
@@ -30,6 +29,14 @@ export type CullFootProps = {
 /** The reject keys that name a reason for a run of `group`: 2-4, cut to the list (none on a source without reasons). */
 export function reasonKeys(reasons: Pick<ReasonVocabulary, "list">): readonly string[] {
   return REJECT_KEYS.slice(0, reasons.list.length);
+}
+
+/**
+ * The facts the cull's keys are armed with - read by the legend here AND by the desk's dispatcher
+ * (useRunDesk), so the bar never draws a key the desk does not answer: a source that keeps a note draws E.
+ */
+export function cullFacts(reasons: Partial<Pick<ReasonVocabulary, "noteMax">>): readonly string[] {
+  return (reasons.noteMax ?? 0) > 0 ? ["notes"] : [];
 }
 
 /** Each reject key's tip, by cap, over `group`'s order; a reason with no meaning draws a bare cap. */
@@ -43,11 +50,11 @@ export function reasonTips(reasons: Pick<ReasonVocabulary, "list" | "meaning"> &
   );
 }
 
-export function CullFoot({ tally: t, reasonless = 0, later = 0, reasons, group, audio = false, refusals, busy, onCommit }: CullFootProps) {
+export function CullFoot({ tally: t, reasonless = 0, later = 0, reasons, group, refusals, busy, onCommit }: CullFootProps) {
   const waiting = [t.undecided > 0 && later === 0 ? `${t.undecided} undecided` : "", reasonless > 0 ? `${reasonless} need a reason` : ""].filter((x) => x !== "").join(" · ");
   return (
     <>
-      <Keycaps mode="board.cull" label="cull keys" facts={new Set([...(audio ? ["audio"] : []), ...((reasons.noteMax ?? 0) > 0 ? ["notes"] : [])])} only={{ reason: reasonKeys(reasons) }} tips={{ reason: reasonTips(reasons, group) }} />
+      <Keycaps mode="board.cull" label="cull keys" facts={new Set(cullFacts(reasons))} only={{ reason: reasonKeys(reasons) }} tips={{ reason: reasonTips(reasons, group) }} />
       <div className={s.tally}>
         <div className={s.stack}>
           <StackBar kept={t.kept} rejected={t.rejected} undecided={t.undecided} label="packet" />
