@@ -7310,4 +7310,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "true",
     why: "The day check is gone, so an ended introductory rate keeps pricing every later turn.",
   },
+  {
+    id: "cut-review-stacks-on-phone",
+    test: "packages/ui/test/board-desk.test.ts",
+    file: "packages/ui/src/components/cut/Cut.module.css",
+    find: "@media (max-width:900px){.cut{grid-template-columns:minmax(0,1fr)}}",
+    replace: "@media (max-width:900px){.cut{padding:var(--sp-6)}}",
+    why: "The cut review keeps its 300px beats column at phone width, so the player is squeezed to a sliver.",
+  },
 ];
