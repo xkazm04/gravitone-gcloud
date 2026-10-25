@@ -10,7 +10,7 @@ import type { Store } from "@gt/kernel/store";
 
 import { FIXTURE_MODE } from "../../../lib/fixtures/mode.ts";
 import { kernel } from "../../kernelStore.ts";
-import { digest, facts, seg } from "./facts.ts";
+import { digest, facts, liveCtx, seg } from "./facts.ts";
 import { weirPacketId } from "./packet.ts";
 import { V1_SOURCES } from "./sources.ts";
 import type { IngestEvent, LiveHold, LiveJob, LiveSlot, ProjectCtx, Projection, Source, WeirItem } from "./types.ts";
@@ -253,7 +253,7 @@ function withPacketId(w: WeirItem): WeirItem {
 
 /** v1's live work, read now, written nowhere (COMMON decision 4). */
 export async function liveJobs(sources: readonly Source<unknown>[], ctx: ProjectCtx): Promise<LiveRead> {
-  const reads = await readAll(sources, ctx);
+  const reads = await readAll(sources, liveCtx(ctx));
   const jobs: LiveJob[] = [];
   const weir: WeirItem[] = [];
   const slots: LiveSlot[] = [];

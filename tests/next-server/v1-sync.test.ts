@@ -10,7 +10,7 @@ import { queryEvents } from "@gt/kernel/events-query";
 import { claimState } from "@gt/kernel/ingest";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 
-import { facts } from "../../lib/ledger/v1/facts.ts";
+import { facts, liveCtx } from "../../lib/ledger/v1/facts.ts";
 import { BATCH, liveJobs, readAll, reconcile, syncSoon, syncV1, SYNC_CLAIM } from "../../lib/ledger/v1/sync.ts";
 import type { IngestEvent, ProjectCtx, Projection, Source } from "../../lib/ledger/v1/types.ts";
 
@@ -49,6 +49,24 @@ const ofType = (s: ReturnType<typeof store>, type: string) => {
   if (!p.ok) throw p.error;
   return p.value.events;
 };
+
+describe("liveJobs", () => {
+  it("projects no log facts for Runs' render-time read, and the sync still does", async () => {
+    const seen: number[] = [];
+    const src: Source<number> = { ...logs("forge", 4), project: (n, c) => { const p = logs("forge", 4).project(n, c); seen.push(p.events.length); return p; } };
+    await liveJobs([src], ctx());
+    expect(seen).toEqual([0]);
+    await readAll([src], ctx());
+    expect(seen).toEqual([0, 4]);
+  });
+
+  it("a live-only context leaves a record's own facts and its tally alone", () => {
+    const base = logs("forge", 3).project(3, ctx());
+    const live = logs("forge", 3).project(3, liveCtx(ctx()));
+    expect(live.tally).toEqual(base.tally);
+    expect(base.events).toHaveLength(3);
+  });
+});
 
 describe("syncV1", () => {
   it("appends each source's facts once; the second sync appends nothing", async () => {
