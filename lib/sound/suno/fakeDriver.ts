@@ -1,4 +1,4 @@
-// THE FAKE SUNO DRIVER — selected by SUNO_DRIVER=fake (lib/sound/suno/queue.ts
+// THE FAKE SUNO DRIVER — selected by SUNO_DRIVER=fake (lib/sound/suno/drivers.ts
 // `sunoDriver`, still read by the library import) or bound to a drive
 // (lib/producers/suno.ts `sunoProducer({ driver })`). Its clip shape is also the
 // DRY stand-in a dry Suno job continues on (`standClipRefs`). Server-only by use. Deterministic: the five phases in order, a short

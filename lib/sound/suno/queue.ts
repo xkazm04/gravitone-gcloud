@@ -1,6 +1,6 @@
 // THE SUNO QUEUE — the operator's acts on suno.json's records, and the
-// snapshot the Queue column reads. Server-only: it names SUNO_DRIVER and
-// reaches the browser driver.
+// snapshot the Queue column reads. Server-only: it re-exports the driver and
+// reaches the browser driver (./drivers.ts, which reads SUNO_DRIVER).
 //
 // SINCE PHASE 4 (L31) A PROMPT'S RENDER IS A KERNEL JOB on box.chrome. The v1
 // worker that lived here - the `globalThis.__gtSunoWorker` singleton (the
