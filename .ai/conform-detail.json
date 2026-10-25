@@ -8327,42 +8327,39 @@
       "context": "ui-ledger-timeline",
       "subject": "long-form-reading-surface",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T09:39:20.152Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:44:12.584Z",
+      "worker": "2556fdd7-1fce-4891-93e8-dd261d9fae51",
       "techniques": [
         {
-          "technique": "anchor-id-single-assigner",
+          "technique": "scroll-spy-reading-band",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/ledgerlink/LedgerLink.tsx:9 The link consumes a caller-supplied ledger destination and does not derive heading addresses."
+          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:3 The only position UI is a pointer-dragged day range on a bar chart. Nothing tracks which section the reader has scrolled to."
         },
         {
           "technique": "fixed-chrome-offset-budget",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/timestrip/TimeStrip.module.css:2 The strip uses local relative positioning; the context contains no pinned reading panel or anchored-heading clearance."
+          "evidence": "packages/ui/src/components/crumbs/Crumbs.tsx:10 The breadcrumb is an inline nav landmark. None of these components pins itself against a header or reads a header height."
+        },
+        {
+          "technique": "anchor-id-single-assigner",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/jsonl/Json.tsx:3 The JSON views address records by line number in a windowed list. They have no headings and mint no anchor ids."
         },
         {
           "technique": "focus-transfer-on-in-place-navigation",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/crumbs/Crumbs.tsx:18 Breadcrumb actions delegate to callers; these components own no article-content replacement or destination heading."
-        },
-        {
-          "technique": "scroll-spy-reading-band",
-          "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:104 The tracked domain is event dates and selected ranges, not reading position within prose."
+          "evidence": "packages/ui/src/components/crumbs/Crumbs.tsx:18 Breadcrumb actions delegate to callers; these components own no article-content replacement or destination heading.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "server-parsed-once-reused",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/jsonl/Json.tsx:17 This scanner produces JSON syntax-coloring runs, not a document outline, heading addresses or reading metrics."
+          "evidence": "packages/ui/src/components/jsonl/Json.tsx:17 This scanner produces JSON syntax-coloring runs, not a document outline, heading addresses or reading metrics.",
+          "carriedFrom": "2026-10-19"
         }
-      ],
-      "withdrawn": {
-        "worker": "fc8110cb-0e57-4fee-9b83-1e74b6b72741",
-        "state": "not-applicable",
-        "at": "2026-10-19T09:39:58.393689+00:00",
-        "reason": "reviewer (sonnet): The not-applicable's anchor, INVENTORY.md:93, is the JsonLine/JsonBlock table row. It sits outside the context's component files and does not show that a navigable prose document is absent; the technique anchors I opened (LedgerLink.tsx:9, Crumbs.tsx:18, TimeStrip.tsx:104) only show those components"
-      }
+      ]
     },
     "3f11be96-c51f-4098-8472-341c42362e6d/measurement-honesty": {
       "context": "sound-hunt-and-measure",

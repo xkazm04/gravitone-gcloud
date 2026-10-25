@@ -13594,7 +13594,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/jsonl/Json.tsx:1 These are ledger and time shapes: breadcrumbs, header chips, event rows, JSON line/block views, a day-count time strip and a waveform. None of them renders a long document with headings, a contents panel, anchors, a scroll spy or pinned offsets. Searching packages/ui/src/components for IntersectionObserver, scroll-margin, rootMargin and slugify found nothing, and the context's own directories contain no sticky, scrollIntoView, heading or anchor at all.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:ee082e781491937e",
+          "evaluatedRevision": 3
         },
         {
           "subject": "video-assembly",

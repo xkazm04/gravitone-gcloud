@@ -1,0 +1,105 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2556fdd7-1fce-4891-93e8-dd261d9fae51",
+ "subject": "long-form-reading-surface",
+ "evaluatedAt": "2026-10-25T02:44:12.584022+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-writing-research",
+   "subject": "long-form-reading-surface",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:77 The nearest thing to an article here is ArticleEditor, and it shows each section as a digest (heading, word count, one lead paragraph) inside a PartWorkspace whose rail holds the run's steps, not a contents panel. No heading gets an id attribute, nothing links to an anchor, and nothing tracks scroll or pins against fixed chrome. Searching app/(studio)/projects for IntersectionObserver, scroll-margin, rootMargin and slugify found nothing. The only scroll calls are scrollIntoView({block:\"nearest\"}) on a selected item when the keyboard walks to it (Article.tsx:30, Trailer.tsx:110, CutClock.tsx:126). That is list selection, not jumping to an anchor.",
+   "techniques": [
+    {
+     "technique": "anchor-id-single-assigner",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:76 Sections carry an opaque data-section key from the view model. No heading text becomes an id and nothing links to it, so there is no address space for two parts of the code to disagree on."
+    },
+    {
+     "technique": "focus-transfer-on-in-place-navigation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:30 Keys move a selection inside one document that stays mounted. No panel swaps the article content in place, so focus never needs to be handed to a new heading."
+    },
+    {
+     "technique": "server-parsed-once-reused",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:75 The section list arrives already built in ArticleData, and the client never parses article prose. But that list is the content shown, not a contents panel derived from a body, so there is no second derivation that could go stale."
+    }
+   ],
+   "absenceTerms": [
+    "IntersectionObserver",
+    "scroll-margin",
+    "rootMargin",
+    "slugify"
+   ]
+  },
+  {
+   "context": "ui-ledger-timeline",
+   "subject": "long-form-reading-surface",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/jsonl/Json.tsx:1 These are ledger and time shapes: breadcrumbs, header chips, event rows, JSON line/block views, a day-count time strip and a waveform. None of them renders a long document with headings, a contents panel, anchors, a scroll spy or pinned offsets. Searching packages/ui/src/components for IntersectionObserver, scroll-margin, rootMargin and slugify found nothing, and the context's own directories contain no sticky, scrollIntoView, heading or anchor at all.",
+   "techniques": [
+    {
+     "technique": "scroll-spy-reading-band",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:3 The only position UI is a pointer-dragged day range on a bar chart. Nothing tracks which section the reader has scrolled to."
+    },
+    {
+     "technique": "fixed-chrome-offset-budget",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/crumbs/Crumbs.tsx:10 The breadcrumb is an inline nav landmark. None of these components pins itself against a header or reads a header height."
+    },
+    {
+     "technique": "anchor-id-single-assigner",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/jsonl/Json.tsx:3 The JSON views address records by line number in a windowed list. They have no headings and mint no anchor ids."
+    }
+   ],
+   "absenceTerms": [
+    "IntersectionObserver",
+    "scroll-margin",
+    "rootMargin",
+    "slugify"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T02:44:12.584022+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "long-form-reading-surface"
+   ],
+   "techniques": [
+    "anchor-id-single-assigner",
+    "focus-transfer-on-in-place-navigation",
+    "server-parsed-once-reused"
+   ],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T02:44:12.584022+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "long-form-reading-surface"
+   ],
+   "techniques": [
+    "anchor-id-single-assigner",
+    "fixed-chrome-offset-budget",
+    "scroll-spy-reading-band"
+   ],
+   "deviations": 0,
+   "context": "ui-ledger-timeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
