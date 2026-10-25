@@ -6,6 +6,7 @@
 //      half; the cases read the machine rather than a second list, so the two cannot drift
 //      apart unseen (hitl-approval: cosmetic-vs-enforced-threshold-invariant).
 //   2. A retry's ceiling is the one typed for that job, and the button and T send the same one.
+//   3. The header's counts and the inspector's lists count each job once, in the same place.
 
 import { describe, expect, it } from "vitest";
 
@@ -13,6 +14,8 @@ import { jobMachine, type JobState } from "@gt/domain/job.machine";
 
 import type { LaneHoldView, ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
 import { canMove, canPause, canReroute, canRetry, ceilingFor, retryPress } from "../../app/(studio)/projects/runs/_runs/Acts.tsx";
+import { buildRuns, type KernelJobInput } from "../../app/(studio)/projects/runs/_runs/model.ts";
+import { failedOf, totalsOf } from "../../app/(studio)/projects/runs/_runs/view.ts";
 
 const job = (over: Partial<ProduceJob> = {}): ProduceJob => ({
   id: "job:part:p1:research",
@@ -76,5 +79,23 @@ describe("2. a retry sends the ceiling typed for its own job", () => {
     expect(retryPress("12.50")).toEqual({ ceilingUsd: 12.5 });
     expect(retryPress("")).toEqual({ ceilingUsd: undefined });
     expect(retryPress("twelve")).toBeNull();
+  });
+});
+
+const NOW = Date.parse("2026-10-24T12:00:00.000Z");
+const kjob = (state: JobState): KernelJobInput => ({ id: `job:${state}`, title: state, lane: "seat.text", state, progress: { done: 0, total: 1 }, attempt: 1 });
+const model = (states: readonly JobState[]) => buildRuns({ now: NOW, live: { jobs: [], weir: [], slots: [], holds: [], failures: [] }, kernel: states.map(kjob), ledger: [] });
+
+describe("3. the header's counts and the inspector's lists agree", () => {
+  it("an interrupted job is counted with the failed, as the inspector lists it, and not also as waiting", () => {
+    const m = model(["interrupted"]);
+    expect(totalsOf(m)).toEqual({ running: 0, waiting: 0, weir: 0, failed: 1 });
+    expect(failedOf(m).map((j) => j.state)).toEqual(["interrupted"]);
+  });
+
+  it("every open job is counted exactly once across running, waiting and failed", () => {
+    const open: JobState[] = jobMachine.states.filter((s) => s !== "done" && s !== "cancelled");
+    const t = totalsOf(model(open));
+    expect(t.running + t.waiting + t.failed).toBe(open.length);
   });
 });

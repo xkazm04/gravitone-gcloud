@@ -6406,4 +6406,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "c.text",
     why: "A raised retry ceiling typed on one job stays in the field after another job is selected, so the next retry lets a different job spend up to it.",
   },
+  {
+    id: "runs-console-interrupted-counted-twice",
+    test: "tests/next-server/runs-console.test.ts",
+    file: "app/(studio)/projects/runs/_runs/view.ts",
+    find: "new Set([\"queued\", \"planned\", \"paused\"]);",
+    replace: "new Set([\"queued\", \"planned\", \"paused\", \"interrupted\"]);",
+    why: "An interrupted job - one whose vendor may have been paid - is counted in the header as waiting and listed in the inspector as failed, so the two never agree on what needs the operator.",
+  },
 ];

@@ -17,7 +17,9 @@ import type { RunJob, RunWeir, RunsModel } from "./model.ts";
 const STUCK: ReadonlySet<JobState> = new Set(["failed", "interrupted", "cancelled"]);
 /** States that hold a lane now. */
 const HOLDING: ReadonlySet<JobState> = new Set(["running"]);
-const WAITING: ReadonlySet<JobState> = new Set(["queued", "planned", "paused", "interrupted"]);
+/** An interrupted job waits on the operator's look, not on its lane: it is counted with the failed. */
+const WAITING: ReadonlySet<JobState> = new Set(["queued", "planned", "paused"]);
+const NEEDS: ReadonlySet<JobState> = new Set(["failed", "interrupted"]);
 
 /** `14:05` today, `Wed 15 Oct 14:05` otherwise; `≈` when the time is derived. UTC, as the axis is. */
 export function when(t: number, now: number, approx = false): string {
@@ -138,6 +140,9 @@ export function projectsOf(m: RunsModel): { readonly id: string; readonly jobs: 
   return [...ids].sort().map((id) => ({ id, jobs: m.jobs.filter((j) => j.projectId === id).length, slots: m.pins.filter((p) => p.projectId === id).length }));
 }
 
+/** What failed, or was interrupted, and is not the ledger's past: the totals' count and the inspector's list. */
+export const failedOf = (m: RunsModel): RunJob[] => m.jobs.filter((j) => j.from !== "ledger" && NEEDS.has(j.state));
+
 export type Totals = { readonly running: number; readonly waiting: number; readonly weir: number; readonly failed: number };
 
 export function totalsOf(m: RunsModel): Totals {
@@ -146,7 +151,7 @@ export function totalsOf(m: RunsModel): Totals {
     running: live.filter((j) => HOLDING.has(j.state)).length,
     waiting: live.filter((j) => WAITING.has(j.state)).length,
     weir: m.weir.filter((w) => !w.done).length,
-    failed: live.filter((j) => j.state === "failed").length,
+    failed: failedOf(m).length,
   };
 }
 
