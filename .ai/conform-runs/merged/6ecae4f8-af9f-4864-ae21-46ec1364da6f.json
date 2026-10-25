@@ -1,0 +1,73 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6ecae4f8-af9f-4864-ae21-46ec1364da6f",
+ "subject": "feed",
+ "evaluatedAt": "2026-10-25T23:55:25.649962+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "runs-console",
+   "subject": "feed",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:3 Runs is a horizontal day-line: jobs are bars placed by start and end on resource-lane rows, with zoom and a centred NOW, not a newest-first list of occurrences read top-down. A case-insensitive grep of app/(studio)/projects/runs for unseen, lastSeen, markRead, prepend, readPosition, 'new since', 'newest first' and cluster found nothing, so the feed contract (catch-up order, prepend, read anchor, clustering, retention) has no surface here to govern.",
+   "techniques": [
+    {
+     "technique": "reverse-chronology-semantics",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/view.ts:124 The only ordering is the J/K walk, ascending by start with a key tiebreak, so it is total and three-way. Placement is otherwise by x-position on a time axis; there is no newest-first sequence."
+    },
+    {
+     "technique": "live-prepend",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:101 The 'live feed' is SSE advice that triggers a coalesced router.refresh() of the whole model. No rows grow at a top edge, so there is no viewport to hold and no held-arrivals buffer."
+    },
+    {
+     "technique": "event-clustering",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/view.ts:32 Rows are fixed resource lanes, not occurrence rows. A busy producer fills its own lane and cannot drown others."
+    },
+    {
+     "technique": "read-position-and-unseen",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:51 The only reader state is selection and zoom in the URL. There is no 'since you last looked' promise and no badge."
+    },
+    {
+     "technique": "feed-retention",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/model.ts:38 The window is a fixed span around NOW, read from the ledger, which this context does not own or reap. A hit on the LEDGER_CAP cap is stated as truncation (load.ts:487), not drawn as empty."
+    }
+   ],
+   "absenceTerms": [
+    "unseen",
+    "lastSeen",
+    "markRead",
+    "prepend",
+    "readPosition"
+   ],
+   "registryProposal": "The feed golden path draws boundaries against table, triage queue, transcript and audit record, but not against a time-axis/Gantt surface (bars placed on resource rows by start and end). A day-line that follows live work through a module named 'liveFeed' scores high lexically against 'feed' but has none of its contract. Naming the timeline as a neighbour would spare judges this false match."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T23:55:25.649962+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "feed"
+   ],
+   "techniques": [
+    "event-clustering",
+    "feed-retention",
+    "live-prepend",
+    "read-position-and-unseen",
+    "reverse-chronology-semantics"
+   ],
+   "deviations": 0,
+   "context": "runs-console",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
