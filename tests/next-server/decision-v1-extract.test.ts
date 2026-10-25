@@ -134,6 +134,13 @@ describe("extract adapter - the packet (pure)", () => {
     expect(plan.packet.items[0]?.grades).toEqual([{ field: "replica_score", value: 0.8, series: "qwen-vl", calibration: { status: "insufficient", short: "floor", nKeep: 0, nReject: 0 } }]);
   });
 
+  it("a round that drew text is not the replica cell, whatever it scored", () => {
+    const texty = { ...round(2, "rep/haze-2.jpg", 0.95), critique: { has_text: true } as unknown as ReturnType<typeof round>["critique"] };
+    const run = manifest({ styles: [look("haze", ["s01"], { replicas: [{ source: "s01", rounds: [round(1, "rep/haze-1.jpg", 0.8), texty] }] })] });
+    const plan = must(extractAdapter.packet(literal({ run, media: { ...literal().media, "rep/haze-1.jpg": { sha256: SHA, bytes: 5, mime: "image/jpeg" } } })));
+    expect(plan.urls["haze/replica-1"]).toBe(`/api/foundry/file?run=${RUN}&path=rep%2Fhaze-1.jpg&kind=extract`);
+  });
+
   it("v1's per-look verdict lands on every cell; a tag that names a reason becomes one, the rest stay in the note", () => {
     const plan = must(extractAdapter.packet(literal()));
     expect(plan.initial).toEqual([{ candidate: "grain/source", verdict: "reject", reasons: ["style"], note: "tags: muddy\ntoo dark", by: "operator", surface: "v1", at: "2026-10-14T11:00:00.000Z" }]);
@@ -175,6 +182,19 @@ describe("extract adapter - consequence and apply over a temp v1 store", () => {
     // grain was left as imported: v1's record is byte-identical, tags and all.
     expect(v["grain"]).toEqual(VERDICTS["grain"]);
     expect(v["haze"]).toMatchObject({ verdict: "keep", by: "human" });
+  });
+
+  it("a committed look's replica exemplar is the best round that drew no text", async () => {
+    seed();
+    const texty = { ...round(2, "rep/haze-2.jpg", 0.95), critique: { has_text: true } as unknown as ReturnType<typeof round>["critique"] };
+    writeFileSync(path.join(runDir, "run.json"), JSON.stringify(manifest({ styles: [look("haze", ["s01"], { replicas: [{ source: "s01", rounds: [round(1, "rep/haze-1.jpg", 0.8), texty] }] })] })));
+    const flow = await openFlow(extractAdapter, RUN, blobDir);
+    flow.patch([{ candidate: "haze/replica-1", verdict: "keep" }]);
+    must(flow.commit());
+    expect((await flow.deliver())?.result).toBe("applied");
+    const cat = JSON.parse(readFileSync(path.join(catDir, "styles.json"), "utf8")) as { styles: { id: string; exemplars?: { role: string; file: string }[] }[] };
+    const haze = cat.styles.find((x) => x.id === "haze-2");
+    expect(haze?.exemplars?.filter((x) => x.role === "replica").map((x) => x.file)).toEqual(["rep/haze-1.jpg"]);
   });
 
   it("refuses to preview a commit that keeps nothing, in v1's words", async () => {

@@ -61,6 +61,7 @@ import {
   patchVerdictMap,
   readVerdictState,
   replaceVerdictMap,
+  replaceVerdictMapHeld,
   unreadableVerdicts,
   withRunLock,
   type VerdictPatch,
@@ -286,6 +287,7 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     // Undecided candidates that never produced a file cannot be kept or
     // rejected — they are outside the cull either way.
     const withFile = run.candidates.filter((c) => c.status !== "pending" && c.status !== "failed" && !c.deleted);
+    const preVerdicts = new Set(Object.keys(verdicts));
     if (undecidedAs === "reject") {
       for (const c of withFile) if (!verdicts[c.id]) verdicts[c.id] = { verdict: "reject", at };
     }
@@ -311,6 +313,10 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     });
     if (!written.ok) throw new FoundryError(`The commit failed and nothing was deleted: ${written.error.message}`, written.error.code === "refused" ? 409 : 503);
     exportStyles(styles);
+
+    // The auto-rejects are verdicts that delete files, so they go through the verdict kernel (a log
+    // line per key, a revision bump) before the indices name them and before any unlink.
+    if (undecidedAs === "reject" && withFile.some((c) => !preVerdicts.has(c.id))) await replaceVerdictMapHeld(verdictSpec(id), run, verdicts, "commit");
 
     // Then ledger.json. A run's rows are REPLACED, not appended. Indices are
     // written before any file is unlinked, so a failure here leaves the banner

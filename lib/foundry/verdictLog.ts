@@ -172,11 +172,19 @@ async function apply<M, R>(
   const who: VerdictBy = by ?? "human";
   // The log leads: a line whose map write never landed is a decision recorded
   // and not applied, which a reader can see; the reverse is history lost.
-  const lines = changes.map((c) => JSON.stringify({ at, rev, op: c.op, key: c.key, ...(c.op === "set" ? { value: c.value } : {}), by: who, surface } satisfies VerdictLogLine<R>));
+  // A record that names its own decider (a model keep the Board applied on a human's behalf) is
+  // logged as the record says, so the log and verdicts.json never disagree on who decided.
+  const byOf = (c: { op: "set" | "clear"; value?: R }): VerdictBy => {
+    const own = c.op === "set" ? (c.value as { by?: unknown } | undefined)?.by : undefined;
+    return own === "human" || own === "model" ? own : who;
+  };
+  const lines = changes.map((c) => JSON.stringify({ at, rev, op: c.op, key: c.key, ...(c.op === "set" ? { value: c.value } : {}), by: byOf(c), surface } satisfies VerdictLogLine<R>));
   await appendFile(path.join(spec.dir, VERDICT_LOG), lines.join("\n") + "\n", "utf8");
   const fs = foundryFs();
-  await fs.writeJsonAtomic(path.join(spec.dir, VERDICTS_FILE), next);
+  // The revision lands before the map: a death between the two leaves a revision ahead of its map,
+  // which a stale client reads as a 409, where the reverse order let it overwrite a change it never saw.
   await fs.writeJsonAtomic(path.join(spec.dir, VERDICT_REV), { rev });
+  await fs.writeJsonAtomic(path.join(spec.dir, VERDICTS_FILE), next);
   return { rev, verdicts: next };
 }
 

@@ -272,6 +272,19 @@ test("2. extract: two patches on correct revs keep both keys at rev 2, each log 
   ]);
 });
 
+/* ── 2b. the log names the record's own decider ───────────────────────────── */
+
+test("2b. forge: a model keep applied by a human patch is logged by the model, as verdicts.json says; a bare record takes the patch's by", async () => {
+  const id = forgeRun();
+  const dir = path.join(OUT_ROOT, id);
+  await patchVerdicts(id, { set: { [cid(0)]: { verdict: "keep", by: "model" }, [cid(1)]: { verdict: "reject" } }, baseRev: 0, by: "human", surface: "board" });
+  const map = mapOf(dir) as Record<string, { by?: string }>;
+  const log = logOf(dir);
+  console.log(`[verdicts] record by ${map[cid(0)]?.by}/${map[cid(1)]?.by}, log by ${log.map((l) => l.by).join("/")}`);
+  expect(log.map((l) => [l.key, l.by])).toEqual([[cid(0), "model"], [cid(1), "human"]]);
+  for (const l of log) expect(l.by, l.key).toBe(map[l.key]?.by);
+});
+
 /* ── 3. reasons and note survive ──────────────────────────────────────────── */
 
 test("3. extract: a reject keeps its reasons and note, and the log line carries the reasons", async () => {

@@ -39,9 +39,11 @@ export const MISSED_WINDOW_MIN = 60;
  *  export as `video:export:<exportId>` (lib/library/feeds/studio.ts), so a slot names that
  *  item and the export is recoverable from it. A blog slot's item is the article run its
  *  approve opened a PR for. */
+const ARTICLE_PREFIX = "article:";
+
 export const slotItemId = {
   export: (exportId: string): string => `video:export:${exportId}`,
-  article: (runId: string): string => `article:${runId}`,
+  article: (runId: string): string => `${ARTICLE_PREFIX}${runId}`,
 } as const;
 
 /** The v1 export id a slot's item names, or undefined for an item that is not an export. */
@@ -81,5 +83,10 @@ export const slotSchema = z
     if (s.state === "failed" && s.error === undefined) issue("error", "a failed slot says why");
     if (s.error !== undefined && s.state !== "failed" && s.state !== "cancelled") issue("error", "only a failed slot, or one cancelled after failing, carries an error");
     if (s.drift !== undefined && s.state !== "scheduled" && s.state !== "missed") issue("drift", "only a slot waiting to fire can drift");
+    // The channel/item pairing: the publish tick uploads an export, and a blog slot publishes by
+    // its article's pull request, so neither can carry the other's item.
+    const article = s.libraryItemId.startsWith(ARTICLE_PREFIX);
+    if (s.channel === "blog" && !article) issue("libraryItemId", "a blog slot names an article");
+    if (s.channel !== "blog" && exportIdOf(s.libraryItemId) === undefined) issue("libraryItemId", "a video channel slot names an export");
   });
 export type Slot = z.output<typeof slotSchema>;
