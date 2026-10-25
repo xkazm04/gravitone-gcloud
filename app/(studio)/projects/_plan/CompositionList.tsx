@@ -38,7 +38,7 @@ export const planHref = (id: string): string => `/projects/${encodeURIComponent(
 
 function Row({ p, current, nowMs, href }: { readonly p: ProjectSummary; readonly current: boolean; readonly nowMs: number; readonly href: string }) {
   return (
-    <a className={s.prow} href={href} aria-current={current ? "page" : undefined} data-project={p.id}>
+    <Link className={s.prow} href={href} prefetch={false} aria-current={current ? "page" : undefined} data-project={p.id}>
       <span className={s.pic}>
         {p.poster === null ? (
           <FloorGlyph name={recipeMark(p.recipe)} />
@@ -63,7 +63,7 @@ function Row({ p, current, nowMs, href }: { readonly p: ProjectSummary; readonly
         {p.failed > 0 ? <Chip label={String(p.failed)} tone="rose" name={`${p.failed} failed`} /> : p.gates > 0 ? <Chip label={String(p.gates)} tone="amber" name={`${p.gates} at the weir`} /> : null}
         <span className={s.usd}>{costWords({ usd: p.usd })}</span>
       </span>
-    </a>
+    </Link>
   );
 }
 
@@ -120,7 +120,7 @@ export function CompositionList({ list, current, nowMs, onCompose, floorRuns, hr
               v1 <Tally value={others.length} />
             </div>
             {others.map((o) => (
-              <a key={o.id} className={s.prow} href={`/projects/runs?project=${encodeURIComponent(o.id)}`} aria-current={current === o.id ? "page" : undefined}>
+              <Link key={o.id} className={s.prow} href={`/projects/runs?project=${encodeURIComponent(o.id)}`} prefetch={false} aria-current={current === o.id ? "page" : undefined}>
                 <span className={s.pic}>
                   <Glyph name="doc" />
                 </span>
@@ -130,7 +130,7 @@ export function CompositionList({ list, current, nowMs, onCompose, floorRuns, hr
                     <span className={s.mono}>{o.meta}</span>
                   </span>
                 </span>
-              </a>
+              </Link>
             ))}
           </div>
         )}
