@@ -13195,6 +13195,37 @@
         "at": "2026-10-25T03:11:28.718944+00:00",
         "reason": "reviewer (sonnet): The claim that this context has no optional dependency to degrade is contradicted by the code: measures.ts:37-39,145-147, triage.ts:24-25 and schema.ts:58 model an optional Python audio sidecar (NULL columns, 'sidecar unavailable', a missing sidecar writes no row), and the seat's search terms never "
       }
+    },
+    "60361278-9fbe-43c5-add7-454ed78ef0f5/platform-format-adaptation": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "platform-format-adaptation",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:17:16.586Z",
+      "worker": "5eced268-ffcd-49a4-82d1-306bc9e70649",
+      "techniques": [
+        {
+          "technique": "format-as-measured-template",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:54 Canvas sizes carry a measured/assumed grade, and sizes with no evidence are refused (lines 55-56), not filled with a guess."
+        },
+        {
+          "technique": "sound-off-first-design",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/providers/google.ts:64 Captions and numbers are vector-drawn and composited over the generated plate, never rendered by the model, as the 'captions are checkable text, so they are drawn' rule requires. selectors.ts:50 also turns off prompt enhancement because it could add lettering."
+        },
+        {
+          "technique": "derived-short-contract",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/types.ts:1 The video hop animates one still into a 5 or 10 s clip. No parent video is scoped or cut here."
+        },
+        {
+          "technique": "image-led-vs-narration-led",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/clips.ts:83 A clip request carries only a motion prompt: no script, narration or word budget passes through this context."
+        }
+      ]
     }
   }
 }

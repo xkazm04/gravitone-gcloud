@@ -5953,7 +5953,11 @@
           "revision": 3,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:54 The vendor clip canvas table grades each size by provenance: 856×480 is measured, 9:16 is marked assumed, and square and 4:5 are refused at the route instead of guessed. That is the measured-template refusal rule applied to container physics, and the 9:16 request is generated natively tall, not cropped from wide. Only two of the six techniques apply to these vendor adapters.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:14fcb9b8c64f1b8b",
+          "evaluatedRevision": 3
         },
         {
           "subject": "image-prompt-composition",
