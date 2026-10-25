@@ -5965,6 +5965,30 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void prio;",
     why: "Bumping a queued job changes its name and leaves it where it was, so the opened world still waits behind the tiles.",
   },
+  {
+    id: "cosmos-carousel-restyles-hidden-cards",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/carousel.ts",
+    find: "if (!vis && c._vis === false) return;",
+    replace: "void 0;",
+    why: "Every glide frame rewrites five styles on each card of a long carousel, including the ones that are hidden and cannot be seen.",
+  },
+  {
+    id: "cosmos-carousel-searches-chip-each-frame",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/carousel.ts",
+    find: "if (dur === undefined) DUR.set(c, (dur = c.querySelector<HTMLElement>(\".dur\")));",
+    replace: "dur = c.querySelector<HTMLElement>(\".dur\");",
+    why: "Every glide frame searches every card for its duration chip, a node that never changes after the card is built.",
+  },
+  {
+    id: "cosmos-carousel-hidden-never-posed",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/carousel.ts",
+    find: "if (!vis && c._vis === false) return;",
+    replace: "if (!vis) return;",
+    why: "A card that leaves the visible range is never hidden, and one that starts hidden is never set hidden, so faded cards show over the focused one.",
+  },
   // ---- the landing's shell (landing-cosmos-shell): perf, stage, search, keyboard, the first paint
   {
     id: "cosmos-governor-judges-three-frames",

@@ -12,17 +12,22 @@ import { clamp, hash32 } from "./rng";
 import { renderStage } from "./stage";
 import { $, type Card, type Cx } from "./state";
 
+/** a card's duration chip, found once (the node is fixed when the card is built) */
+const DUR = new WeakMap<Card, HTMLElement | null>();
+
 function placeCards(cx: Cx): void {
   const { CAR } = cx;
   const f = Math.round(CAR.pos);
   CAR.cards.forEach((c, i) => {
     const q = cardPose(CAR, cx.g.portrait, i, CAR.pos);
+    const vis = q.o > 0.01;
+    // hidden on the last frame too: its pose was written then and nothing on it is seen
+    if (!vis && c._vis === false) return;
     c.style.transform = `translate3d(${q.x.toFixed(1)}px,${q.y.toFixed(1)}px,0) rotate(${q.rot.toFixed(2)}deg) scale(${q.s.toFixed(4)})`;
     c.style.opacity = q.o.toFixed(3);
     c.style.zIndex = String(q.z);
     c.style.setProperty("--dim", q.dim.toFixed(3));
     c.style.setProperty("--is", (1 / q.s).toFixed(3));
-    const vis = q.o > 0.01;
     if (vis !== c._vis) {
       c._vis = vis;
       c.style.visibility = vis ? "visible" : "hidden";
@@ -30,7 +35,8 @@ function placeCards(cx: Cx): void {
     }
     if (vis && Math.abs(i - CAR.pos) <= 4.6) ensureArt(cx, i);
     c.classList.toggle("focus", i === f);
-    const dur = c.querySelector<HTMLElement>(".dur");
+    let dur = DUR.get(c);
+    if (dur === undefined) DUR.set(c, (dur = c.querySelector<HTMLElement>(".dur")));
     if (dur) dur.style.opacity = q.s > 0.6 ? "1" : "0";
   });
   if (f !== CAR.idx) setFocusIdx(cx, f);

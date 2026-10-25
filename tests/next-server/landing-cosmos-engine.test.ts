@@ -1000,3 +1000,60 @@ describe("worlds.ts: a prewarmed world is promoted when it is opened", () => {
     r.destroy();
   });
 });
+
+
+/* ---------- a glide frame touches only the cards that can be seen (carousel.ts) ---------- */
+describe("carousel.ts: placeCards leaves hidden cards alone", () => {
+  /** 14 cards with a duration chip each; every style write, class toggle and query is counted */
+  async function frames() {
+    const { syncCarousel } = await import("../../app/_landing/cosmos/engine/carousel.ts");
+    const { carMetrics } = await import("../../app/_landing/cosmos/engine/layout.ts");
+    const g = { W: 1280, H: 800, S: 800, DPR: 1, RS: 1, portrait: false };
+    const st = { writes: 0, queries: 0 };
+    const n = 14;
+    const cards = Array.from({ length: n }, () => {
+      const dur = { style: new Proxy({} as Record<string, unknown>, { set: (t, k, v) => (st.writes++, (t[k as string] = v), true) }) };
+      const style = new Proxy({ setProperty: () => void st.writes++ } as Record<string, unknown>, { set: (t, k, v) => (st.writes++, (t[k as string] = v), true) });
+      return {
+        style,
+        tabIndex: 0, setAttribute() {},
+        classList: { toggle: () => void st.writes++ },
+        querySelector: () => (st.queries++, dur),
+      };
+    });
+    // key art on every template: no raster, so the frame is the pose and nothing else
+    const list = cards.map((_c, i) => ({ id: "t" + i, label: "T" + i, type: "film", art: "/a.png" }));
+    const cx = { g, RM: true, els: { typeView: { querySelector: () => null } }, CAR: { ...carMetrics(g, n), pos: 0, target: 0, cards, list, idx: 0, hov: null } };
+    const frame = (pos: number) => {
+      st.writes = st.queries = 0;
+      syncCarousel(cx as never, pos);
+      return { ...st };
+    };
+    return { frame, cards };
+  }
+
+  test("a steady frame queries no chip and writes only to the cards that are visible", async () => {
+    const { frame, cards } = await frames();
+    frame(0); // the first frame poses every card and finds every chip
+    const steady = frame(0);
+    expect(steady.queries, "no card is searched for its chip again").toBe(0);
+    const visible = cards.filter((c) => (c.style as { visibility?: string }).visibility !== "hidden").length;
+    expect(visible, "only the near cards are visible").toBeLessThan(cards.length);
+    // five style writes, a class toggle and the chip's opacity per visible card
+    expect(steady.writes).toBe(visible * 7);
+  });
+
+  test("a card that comes back into view gets its pose, and the frame it turns hidden still writes", async () => {
+    const { frame, cards } = await frames();
+    frame(0);
+    const far = cards[13].style as { opacity?: string; visibility?: string };
+    expect(far.visibility).toBe("hidden");
+    frame(0);
+    const before = far.opacity;
+    frame(10);
+    expect(far.visibility, "glided to").toBe("visible");
+    expect(far.opacity).not.toBe(before);
+    const gone = cards[0].style as { visibility?: string };
+    expect(gone.visibility, "the card left behind is hidden on the frame it leaves").toBe("hidden");
+  });
+});
