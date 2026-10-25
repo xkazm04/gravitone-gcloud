@@ -40,10 +40,11 @@ const num = (v: unknown): number => (typeof v === "number" ? v : 0);
 
 /** The job's spend as the meter has it: settled and booked rows, and unpriced rows, by job id. */
 export function meterOf(r: Reader, jobId: string): JobMeter {
-  const usd = usd6(num(r.get("SELECT total(usd) AS v FROM spend_rows WHERE job_id = ?", jobId)?.["v"]));
-  const noUsd = num(r.get("SELECT count(*) AS v FROM spend_rows WHERE job_id = ? AND usd IS NULL", jobId)?.["v"]);
-  const unpriced = noUsd + num(r.get("SELECT count(*) AS v FROM spend_unpriced WHERE job_id = ?", jobId)?.["v"]);
-  const estimated = num(r.get("SELECT count(*) AS v FROM spend_rows WHERE job_id = ? AND basis = 'estimate'", jobId)?.["v"]) > 0;
+  // One pass over the job's rows (spend_rows_job), one over its unpriced rows: this runs in every step's booking.
+  const rows = r.get("SELECT total(usd) AS usd, total(usd IS NULL) AS no_usd, total(basis = 'estimate') AS est FROM spend_rows WHERE job_id = ?", jobId);
+  const usd = usd6(num(rows?.["usd"]));
+  const unpriced = num(rows?.["no_usd"]) + num(r.get("SELECT count(*) AS v FROM spend_unpriced WHERE job_id = ?", jobId)?.["v"]);
+  const estimated = num(rows?.["est"]) > 0;
   return { usd, unpriced, basis: estimated || unpriced > 0 ? "estimate" : "reported" };
 }
 
