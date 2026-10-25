@@ -7270,4 +7270,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void 0;",
     why: "A take's copy or a clip's download that fails part-way leaves its staged half in the job folder.",
   },
+  {
+    id: "kit-spend-chip-spells-a-figure-usd-never-makes",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/Contract.tsx",
+    find: '<Chip label="spend 24h" value={usd(0)} />',
+    replace: '<Chip label="spend 24h" value="$0.00" />',
+    why: "The kit's header chip spells zero spend `$0.00`, a figure the product's usd() never draws, so the specimen teaches a spelling nothing ships.",
+  },
 ];

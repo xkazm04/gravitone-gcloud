@@ -5,6 +5,7 @@
 
 import { ChannelBadge } from "@gt/ui/components/channel/ChannelBadge.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { usd } from "@gt/ui/components/eventrow/usd.ts";
 import { TONES } from "@gt/ui/components/chip/tone.ts";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Facts } from "@gt/ui/components/facts/Facts.tsx";
@@ -54,7 +55,7 @@ export function SignalSections() {
             <Chip label="fixture" ghost />
             <Chip label="weir clear" tone="emerald" dot />
             <Chip label="lower case" casing="lower" />
-            <Chip label="spend 24h" value="$0.00" />
+            <Chip label="spend 24h" value={usd(0)} />
             <Chip label="ledger" value="+3" href="#signal" name="ledger, 3 new acts" />
           </Row>
         </Spec>
@@ -122,7 +123,7 @@ export function SignalSections() {
         </Spec>
         <Spec names={["Hint"]} source="hint/Hint.tsx">
           <Row>
-            <Chip label="spend 24h" value="$0.00" />
+            <Chip label="spend 24h" value={usd(0)} />
             <Hint text="local GPU runs $0 · article range is the pipeline hint" name="spend" />
           </Row>
         </Spec>

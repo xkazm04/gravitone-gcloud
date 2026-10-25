@@ -44,6 +44,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 
+import { usd } from "@gt/ui/components/eventrow/usd.ts";
 import { BINDINGS } from "@gt/ui/keymap/bindings";
 import { parseSource } from "@gt/ui/tokenSource";
 
@@ -359,5 +360,22 @@ describe("/kit: the ScheduleForm refusal is one its rail could produce", () => {
     expect(named?.publishAt).toBe(m?.[3]);
     expect(SLOT_HOLDS, "a slot that holds nothing cannot refuse a second").toContain(named?.status);
     floor.unmount();
+  });
+});
+
+describe("/kit: the header's spend chip is spelt the way usd() spells it", () => {
+  // The specimen hand-wrote `$0.00`; the header's SpendChip draws usd(0), which is `$0`.
+  test("no `spend 24h` chip on the sheet carries a figure usd() cannot produce", () => {
+    const dir = path.join(process.cwd(), "app", "(studio)", "kit");
+    const shown: string[] = [];
+    for (const f of readdirSync(dir).filter((n) => n.endsWith(".tsx"))) {
+      const src = readFileSync(path.join(dir, f), "utf8");
+      for (const m of src.matchAll(/label="spend 24h"\s+value="([^"]*)"/g)) shown.push(`${f}: ${m[1]}`);
+    }
+    for (const m of words(renderToStaticMarkup(h(SignalSections))).matchAll(/spend 24h\s*(-?\$[\d.]+)/gi)) {
+      const v = m[1] ?? "";
+      if (usd(Number(v.replace("$", ""))) !== v) shown.push(`rendered: ${v}`);
+    }
+    expect(shown).toEqual([]);
   });
 });
