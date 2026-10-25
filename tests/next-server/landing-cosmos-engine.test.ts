@@ -270,7 +270,7 @@ describe("worlds.ts: one prewarm at a time, and a world nobody opened is let go"
       worldPre: null as unknown,
       wplanes: [],
       raster: {
-        run: (_job: unknown, prio: number, tag: string, part?: (i: number, s: unknown) => void) => {
+        paint: (_job: unknown, prio: number, tag: string, part?: (i: number, s: unknown) => void) => {
           runs.push({ prio, tag, part });
           return new Promise(() => {});
         },
@@ -833,5 +833,109 @@ describe("cosmos.css: the first paint stays until there is something to replace 
     const src = readFileSync(path.join(ROOT, "app/_landing/cosmos/engine/intro.ts"), "utf8");
     expect(src).toMatch(/if \(built\) ready\(cx\);/);
     expect(src).toMatch(/if \(!\(await buildScene\(cx, "swap"\)\)\) return false;\r?\n\s*ready\(cx\);/);
+  });
+});
+
+/* ---------- a failed paint is not a dropped one (raster.ts, carousel.ts, worlds.ts) ---------- */
+describe("raster.ts: paint() tells a failed job from a dropped one", () => {
+  test("a job the worker fails is 'failed'; a queued job dropped by its tag, or lost with the raster, is 'dropped'", async () => {
+    withWorker();
+    countingDocument();
+    const log = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const r = new Raster(false);
+    const w = FakeWorker.last!;
+    w.say(HELLO);
+    await r.ready;
+    const failing = r.paint(JOB, 0, "a"),
+      second = r.paint(JOB, 0, "a"),
+      queued = r.paint(JOB, 1, "b"),
+      lost = r.paint(JOB, 2, "c");
+    r.drop("b");
+    expect(await queued).toBe("dropped");
+    w.say({ t: "fail", id: w.posted[0].id, err: "RangeError: canvas too large" });
+    expect(await failing).toBe("failed");
+    r.destroy();
+    expect(await lost).toBe("dropped");
+    expect(await second, "a job painting when the raster went is lost, not failed").toBe("dropped");
+    expect(await r.run(JOB), "run() keeps resolving null for both").toBeNull();
+    log.mockRestore();
+  });
+});
+
+describe("carousel.ts: a card whose art failed is not asked for again", () => {
+  /** a type view of 12 templates without key art, in a raster whose every job ends as `how` */
+  async function glide(how: "failed" | "dropped", frames: number) {
+    const root = shellDom();
+    const { syncCarousel } = await import("../../app/_landing/cosmos/engine/carousel.ts");
+    const { carMetrics } = await import("../../app/_landing/cosmos/engine/layout.ts");
+    const g = { W: 1280, H: 800, S: 800, DPR: 1, RS: 1, portrait: false };
+    const list = Array.from({ length: 12 }, (_x, i) => ({ id: "t" + i, label: "T" + i, type: "film" }));
+    const cards = list.map(() => {
+      const c = kid(root, "button");
+      kid(kid(c, "span"), "canvas").parent!.classes.add("art");
+      return c;
+    });
+    let asked = 0;
+    const cx = {
+      g,
+      tier: "full",
+      RM: true,
+      carTok: 0,
+      life: { dead: false },
+      els: { typeView: kid(root, "section") },
+      CAR: { ...carMetrics(g, list.length), pos: 0, target: 0, cards, list, idx: 0, hov: null, drag: null, snap: 0, moved: false, t: 0 },
+      raster: {
+        run: () => (asked++, Promise.resolve(null)),
+        paint: () => (asked++, Promise.resolve(how)),
+        drop() {},
+      },
+    };
+    for (let i = 0; i < frames; i++) {
+      syncCarousel(cx as never, 0);
+      await tick(1);
+    }
+    return { asked, near: cards.filter((_c, i) => i <= 4).length };
+  }
+
+  test("ten glide frames over a diorama that throws ask the raster once per near card, not once per frame", async () => {
+    const one = await glide("failed", 1);
+    const ten = await glide("failed", 10);
+    expect(one.asked, "the first frame asks for the cards near focus").toBeGreaterThan(0);
+    expect(ten.asked, "and the nine after it ask for nothing").toBe(one.asked);
+  });
+
+  test("a dropped job is still asked for again on the next frame", async () => {
+    const one = await glide("dropped", 1);
+    const ten = await glide("dropped", 10);
+    expect(ten.asked).toBeGreaterThan(one.asked);
+  });
+});
+
+describe("worlds.ts: a world that could not be painted lands empty instead of holding the overview", () => {
+  function worldCx(how: "failed" | "dropped") {
+    fakeDom();
+    return {
+      g: { W: 1280, H: 800, portrait: false, RS: 1, DPR: 1, S: 800 },
+      tier: "full",
+      life: { dead: false, want() {} },
+      els: { world: new FakeEl("div") },
+      worldTok: 0,
+      worldReady: false,
+      worldReadyAt: 0,
+      worldPre: null as unknown,
+      wplanes: [],
+      raster: { run: () => Promise.resolve(null), paint: () => Promise.resolve(how), drop() {}, bump() {} },
+    };
+  }
+  test("a failed world job sets worldReady (tryCover stops polling); a dropped one leaves it unset", async () => {
+    const { buildWorld } = await import("../../app/_landing/cosmos/engine/worlds.ts");
+    const failed = worldCx("failed");
+    buildWorld(failed as never, "type-a");
+    await tick(1);
+    expect(failed.worldReady).toBe(true);
+    const dropped = worldCx("dropped");
+    buildWorld(dropped as never, "type-a");
+    await tick(1);
+    expect(dropped.worldReady).toBe(false);
   });
 });

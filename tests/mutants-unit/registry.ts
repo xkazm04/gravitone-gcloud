@@ -5925,6 +5925,30 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<span class=\"chipx\" aria-label=\"locked\">",
     why: "A screen reader opening a locked family on the landing hears its title and nothing that says it is locked: the lock chip is an icon whose label is dropped.",
   },
+  {
+    id: "cosmos-carousel-retries-failed-art",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/carousel.ts",
+    find: "if (r === \"dropped\") c._q = false;",
+    replace: "c._q = false;",
+    why: "A card whose diorama throws is queued again on every glide frame for as long as the carousel moves, ten raster jobs a second that fail the same way.",
+  },
+  {
+    id: "cosmos-world-failed-never-ready",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/worlds.ts",
+    find: "if (how !== \"failed\" || tok",
+    replace: "if (how === \"painted\" || tok",
+    why: "A world that cannot be painted leaves the overview up behind it and the cover poll re-arming at 10 Hz for as long as the level is open.",
+  },
+  {
+    id: "cosmos-raster-fail-reads-dropped",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/raster.ts",
+    find: "p.res(m.t === \"fail\" ? \"failed\" : \"dropped\");",
+    replace: "p.res(\"dropped\");",
+    why: "The raster says a job that threw was merely dropped, so every caller that retries a dropped job retries the failure too.",
+  },
   // ---- the landing's shell (landing-cosmos-shell): perf, stage, search, keyboard, the first paint
   {
     id: "cosmos-governor-judges-three-frames",

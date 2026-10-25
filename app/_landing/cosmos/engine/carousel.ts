@@ -107,10 +107,11 @@ function ensureArt(cx: Cx, i: number): void {
   if (hit) return show(hit);
   const tok = cx.carTok;
   void cx.raster
-    .run({ rs, layers: [{ w, h, ops: [{ p: "diorama", w, h, id: t.id, parent: t.type, o: null }] }] }, 2 + Math.abs(i - CAR.target), "cards")
+    .paint({ rs, layers: [{ w, h, ops: [{ p: "diorama", w, h, id: t.id, parent: t.type, o: null }] }] }, 2 + Math.abs(i - CAR.target), "cards")
     .then((r) => {
-      if (!r) {
-        c._q = false;
+      if (typeof r === "string") {
+        // dropped: the next glide frame asks again. Failed: it would throw again, every frame
+        if (r === "dropped") c._q = false;
         return;
       }
       artPut(key, r.out[0]);

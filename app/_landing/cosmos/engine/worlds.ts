@@ -67,16 +67,21 @@ const worldKey = (cx: Cx, id: string) => `${id}|${cx.g.W}x${cx.g.H}|${cx.tier}`;
 /** starts painting a world; its layers collect in `parts` and go to whoever listens */
 function paintWorld(cx: Cx, id: string, prio: number, tag: string): NonNullable<Cx["worldPre"]> {
   const wp: NonNullable<Cx["worldPre"]> = { key: worldKey(cx, id), parts: [], on: null, done: false };
-  void cx.raster
-    .run(worldSpec(cx, id).job, prio, tag, (i, srf) => {
+  const ended = cx.raster
+    .paint(worldSpec(cx, id).job, prio, tag, (i, srf) => {
       if (wp.on) wp.on(i, srf);
       else wp.parts[i] = srf;
     })
-    .then(() => {
+    .then((r) => {
       wp.done = true;
+      return typeof r === "string" ? r : "painted";
     });
+  ENDED.set(wp, ended);
   return wp;
 }
+
+/** how each world job ended, for the buildWorld that adopts or starts it */
+const ENDED = new WeakMap<object, Promise<"painted" | "dropped" | "failed">>();
 
 /** paints a world before it is asked for: a pointer resting on a medallion or a
  *  ream, or a family's sheet opening, is the click that usually follows. One at
@@ -148,4 +153,12 @@ export function buildWorld(cx: Cx, id: string, keep = false): void {
   wp.parts.forEach((srf, i) => srf && land(i, srf));
   wp.parts = [];
   wp.on = land;
+  // a world that could not be painted lands empty, on its own colour: left unready it
+  // would hold the overview up behind it for as long as the level stays open
+  void ENDED.get(wp)?.then((how) => {
+    if (how !== "failed" || tok !== cx.worldTok || cx.life.dead || landed >= items.length) return;
+    if (!keep) stack.classList.add("wready");
+    cx.worldReady = true;
+    cx.worldReadyAt = performance.now();
+  });
 }

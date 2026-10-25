@@ -25,12 +25,16 @@ export interface Painted {
   ret: number[];
 }
 
+/** how a job ended: painted, let go (dropped by its tag, or lost with a worker that died, or the
+ *  raster destroyed: asking again may paint it), or it threw (asking again throws again) */
+export type Outcome = Painted | "dropped" | "failed";
+
 interface Pending {
   id: number;
   job: Job;
   prio: number;
   tag: string;
-  res: (p: Painted | null) => void;
+  res: (p: Outcome) => void;
   /** a `parts` job's layers, each as it lands (the final Painted then has none) */
   part?: (i: number, s: Surface) => void;
 }
@@ -157,16 +161,21 @@ export class Raster {
           p.res({ out: m.out, urls: (m.blobs || []).map((b) => URL.createObjectURL(b)), ret: m.ret || [] });
         } else {
           if (m.t === "fail") console.warn("[cosmos raster] the worker could not paint a job:", m.err);
-          p.res(null);
+          p.res(m.t === "fail" ? "failed" : "dropped");
         }
         this.pump();
       };
     });
   }
 
-  /** queues a job; resolves with its surfaces, or null when it was dropped or failed */
+  /** queues a job; resolves with its surfaces, or null when it was dropped or failed
+   *  (`paint` tells those two apart, for a caller that would otherwise ask again and again) */
   run(job: Job, prio = 0, tag = "", part?: (i: number, s: Surface) => void): Promise<Painted | null> {
-    if (this.dead) return Promise.resolve(null);
+    return this.paint(job, prio, tag, part).then((r) => (typeof r === "string" ? null : r));
+  }
+
+  paint(job: Job, prio = 0, tag = "", part?: (i: number, s: Surface) => void): Promise<Outcome> {
+    if (this.dead) return Promise.resolve("dropped");
     return new Promise((res) => {
       const p: Pending = { id: ++this.seq, job, prio, tag, res, part };
       let i = this.q.length;
@@ -180,7 +189,7 @@ export class Raster {
   drop(tag: string): void {
     this.q = this.q.filter((p) => {
       if (p.tag !== tag) return true;
-      p.res(null);
+      p.res("dropped");
       return false;
     });
   }
@@ -231,21 +240,21 @@ export class Raster {
           p.part(out.length - 1, out[out.length - 1]);
           out.length = 0;
         }
-        if (this.dead) p.res(null);
+        if (this.dead) p.res("dropped");
         else if (p.job.png) {
           const blobs = await Promise.all(out.map((c) => new Promise<Blob | null>((r) => c.toBlob(r, "image/png"))));
           p.res({ out: [], urls: blobs.map((b) => (b ? URL.createObjectURL(b) : "")), ret });
         } else p.res({ out, urls: [], ret });
       } catch (err) {
         console.warn("[cosmos raster] the main thread could not paint a job:", err);
-        p.res(null);
+        p.res("failed");
       }
     }
     this.pumping = false;
   }
 
   private failAll(): void {
-    for (const p of this.live.values()) p.res(null);
+    for (const p of this.live.values()) p.res("dropped");
     this.live.clear();
   }
 
@@ -254,7 +263,7 @@ export class Raster {
     this.abortStart?.();
     this.worker?.terminate();
     this.worker = null;
-    for (const p of this.q) p.res(null);
+    for (const p of this.q) p.res("dropped");
     this.q = [];
     this.failAll();
   }
