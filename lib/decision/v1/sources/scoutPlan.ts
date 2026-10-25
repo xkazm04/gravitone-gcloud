@@ -13,7 +13,7 @@ import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
 import { TECHNIQUE_LABEL, type GateResult, type MeshAsset } from "../../../foundry/mesh/types.ts";
 import { patternsRel } from "../../../foundry/scout/knowledge.ts";
 import { mss } from "../../../foundry/scout/track.ts";
-import { CANDIDATE_KINDS, cellId, parseCellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip, type Seed, type StoryboardCandidate, type TrackCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
+import { CANDIDATE_KINDS, cellId, parseCellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type GenreProposalCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip, type Seed, type StoryboardCandidate, type TrackCandidate, type VentureProposalCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
 import { WORDS_PART } from "../../../foundry/scout/storyboardKept.ts";
 import { stillOf } from "../../../foundry/scout/visualizer.ts";
 import { meshFileUrl } from "../../../library/feeds/mesh.ts";
@@ -68,6 +68,10 @@ import { museFacts, scoutFileUrl } from "./scoutWing.ts";
 //            paragraph; the words cell's meta the idea it composes, the frame count, `local · free` and its seed.
 //            A dry or words-only board is the words cell alone; a failed board is a Loss. The cell ids are what
 //            lib/foundry/scout/storyboardKept.ts parses: the words kept, or any cell kept and none rejected.
+//   genre    (spark scout-vision S2) a night's proposal to birth a genre, ONE words cell `c-11/words` under `genres`: its
+//   venture  name the label, the look and grammar (a venture's frame) and the cells it stands on its words. Kept, the
+//            Board's apply births the genre or venture in the kernel (./scout.ts); a piece is still a Loss until WP3.
+//            An idea, a seed or a storyboard made inside a venture names it in its meta (`venture: vn-...`).
 // A text cell's media is the content address of its own words (text/plain):
 // the kernel holds candidates by blob, and the words are the thing judged.
 //
@@ -317,6 +321,9 @@ export const IDEA_TARGET_WORD: Readonly<Record<IdeaTarget, string>> = { scene: "
 export const ideaMeta = (c: Pick<IdeaCandidate, "target" | "anchor" | "genre">): string =>
   `${IDEA_TARGET_WORD[c.target]}${c.genre === undefined ? "" : ` · ${c.genre}`} · ${c.anchor.kind === "free" ? "free" : `${c.anchor.kind}: ${c.anchor.ref}`}`;
 
+/** `venture: vn-...`, for a run made inside a venture. */
+const ventureOf = (c: Pick<Candidate, "venture">): string | undefined => (c.venture === undefined ? undefined : `venture: ${c.venture}`);
+
 /** `seed: <first 40 characters of its sentence>`, for a candidate grown from a seed the store still has. */
 const seedHead = (c: Pick<Candidate, "fromSeed">, seeds: ScoutV1["seeds"]): string | undefined => {
   const s = c.fromSeed === undefined ? undefined : seeds?.[c.fromSeed];
@@ -342,7 +349,7 @@ function ideaCells(night: Night, c: IdeaCandidate, media: ScoutV1["media"], out:
     media: m,
     grades: [],
     url: scoutFileUrl(night.id, c.image),
-    words: { label: c.title, meta: [ideaMeta(c), ...museFacts(c), seedHead(c, seeds)].filter((x) => x !== undefined).join(" · "), prompt: c.prompt },
+    words: { label: c.title, meta: [ideaMeta(c), ...museFacts(c), seedHead(c, seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · "), prompt: c.prompt },
   });
   out.rows.push({ id: c.id, label: c.title, group: "ideas", prompt: c.prompt, ...(c.aim === undefined ? {} : { aim: c.aim }), ...(c.use === undefined ? {} : { use: c.use }) });
 }
@@ -448,9 +455,29 @@ function storyboardCells(night: Night, c: StoryboardCandidate, v1: Pick<ScoutV1,
   const body = storyboardBody(c);
   const framesWord = frames === c.panels.length ? `${frames} frame${frames === 1 ? "" : "s"}` : `${frames} of ${c.panels.length} frames`;
   const idea = v1.ideas?.[c.fromIdea];
-  const meta = [`idea: ${idea === undefined ? c.fromIdea : clip40(idea)}`, framesWord, "local · free", seedHead(c, v1.seeds)].filter((x) => x !== undefined).join(" · ");
+  const meta = [`idea: ${idea === undefined ? c.fromIdea : clip40(idea)}`, framesWord, "local · free", seedHead(c, v1.seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · ");
   out.cells.push({ id: wordsCell(c.id), candidate: c.id, kind: "storyboard", row: c.id, jobId, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words: { label: c.title, meta, prompt: body } });
   out.rows.push({ id: c.id, label: c.title, group: "storyboards", prompt: c.paragraph, ...(c.aim === undefined ? {} : { aim: c.aim }), ...(c.use === undefined ? {} : { use: c.use }) });
+}
+
+/** What a rejected proposal does, as the preview says it; a kept one's line is its birth (bornLine). */
+export const PROPOSAL_REJECTED = "refused: nothing is born, and the reasons ban it";
+
+/** A kept proposal's birth, as the preview says it: `genre deadpan office satire born`. */
+export const bornLine = (c: Pick<GenreProposalCandidate | VentureProposalCandidate, "kind" | "name">): string => `${c.kind} ${c.name} born`;
+
+/** A venture's frame in one line: `a 30 s vertical Short · deadpan for adults · look: painted 3D · gn-a, gn-b`. */
+export const frameWords = (f: VentureProposalCandidate["frame"]): string => `${f.format} · ${f.tone} for ${f.audience} · look: ${f.look}${f.genres.length === 0 ? "" : ` · ${f.genres.join(", ")}`}`;
+
+/** A proposal's one words cell: the name, the look and grammar (a venture's frame), the kept cells it stands on. */
+function proposalCell(night: Night, c: GenreProposalCandidate | VentureProposalCandidate, out: Mutable): void {
+  const shape = c.kind === "genre" ? [`look: ${c.look}`, ...c.grammar.map((g) => `- ${g}`)] : [frameWords(c.frame)];
+  const prompt = [...shape, `based on: ${c.basedOn.join(", ")}`].join("\n");
+  const head = c.kind === "genre" ? `genre · from storyboard ${c.fromStoryboard}` : `${c.ventureKind} venture`;
+  const words: ItemWords = { label: c.name, meta: `${head} · based on ${c.basedOn.length} kept`, prompt };
+  const body = [`${c.kind === "genre" ? "genre" : c.ventureKind} · ${c.name}`, ...shape, ...c.basedOn].join("\n");
+  out.cells.push({ id: wordsCell(c.id), candidate: c.id, kind: c.kind, row: c.id, jobId: `scout:${night.id}`, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words });
+  out.rows.push({ id: c.id, label: `${c.kind === "genre" ? "genre" : c.ventureKind} · ${clip40(c.name)}`, group: "genres", ...(c.use === undefined ? {} : { use: c.use }), ...(c.aim === undefined ? {} : { aim: c.aim }) });
 }
 
 type Mutable = { cells: Cell[]; rows: RowWords[]; initial: InitialDecision[]; losses: Loss[]; runs: Record<string, ExtractV1> };
@@ -474,8 +501,9 @@ export function build(v1: ScoutV1): Built {
     else if (c.kind === "track") trackCells(night, c, v1.media, out, v1.seeds);
     else if (c.kind === "visualizer") visualizerCells(night, c, v1, out);
     else if (c.kind === "storyboard") storyboardCells(night, c, v1, out);
-    // spark scout-vision S2 - WP0 stub: the piece and the two proposals draw no row until WP2/WP3 give them cells.
-    else if (c.kind === "piece" || c.kind === "genre" || c.kind === "venture") out.losses.push({ candidate: c.id, grade: "dropped", reason: `${c.kind}: no packet row yet` });
+    else if (c.kind === "genre" || c.kind === "venture") proposalCell(night, c, out);
+    // spark scout-vision S2 - WP3 gives the piece its cell; until then it draws no row.
+    else if (c.kind === "piece") out.losses.push({ candidate: c.id, grade: "dropped", reason: `${c.kind}: no packet row yet` });
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

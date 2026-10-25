@@ -74,7 +74,13 @@ function label(n: Night, c: Candidate): string {
     case "direction":
       return `"${c.title}" [${c.format} · ${c.genre}]`;
     case "storyboard":
-      return `"${c.title}" [storyboard of ${c.fromIdea} · ${c.panels.length} frame(s)]`;
+      return `"${c.title}" [storyboard of ${c.fromIdea} · ${c.panels.length} frame(s)${c.genre === undefined ? "" : ` · trial of ${c.genre}`}]`;
+    case "genre":
+      return `"${c.name}" [genre from ${c.fromStoryboard}]`;
+    case "venture":
+      return `"${c.name}" [${c.ventureKind} venture]`;
+    case "piece":
+      return `"${c.title}" [piece of ${c.genre}]`;
     default:
       return `${from === "" ? c.id : from}${c.use === undefined ? "" : ` - for ${c.use}`}`;
   }

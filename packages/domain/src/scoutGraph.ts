@@ -92,6 +92,8 @@ export type GraphNode = {
   readonly effort?: GraphEffort;
   /** The scout wing that made it (spark scout-muse): `muse`, or absent for the scout loop's own. */
   readonly wing?: "muse";
+  /** The venture (`vn-...`) it was made inside (spark scout-vision S2): the run's own, or a trial's or piece's genre's. */
+  readonly venture?: string;
 };
 
 export type GraphEdge = { readonly from: string; readonly to: string };

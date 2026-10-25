@@ -275,6 +275,9 @@ type CandidateBase = {
    * run's effort rolls up to a branch. Absent on work from before seeds existed ("before seeds").
    */
   readonly fromSeed?: SeedRef;
+  /** The live venture (`vn-...`) this run is made inside (spark scout-vision S2): set by the idea and storyboard
+   *  doors, which refuse an unknown or retired one. Omitted on work made for no venture. */
+  readonly venture?: string;
 };
 
 /** A still style: an ordinary extract run over this candidate's source pictures/keyframes. */
@@ -683,6 +686,8 @@ export type Seed = {
   readonly parent?: SeedRef;
   /** A music seed's song (MUSIC_TYPES): required on a new one, absent on seeds written before 2026-10-25. */
   readonly music?: SeedMusic;
+  /** The live venture (`vn-...`) the seed is written inside (spark scout-vision S2); omitted for none. */
+  readonly venture?: string;
 };
 
 export type SeedCommit = {

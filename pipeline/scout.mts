@@ -271,7 +271,7 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
         const others = (await store.readAllNights()).filter((x) => x.id !== n.id);
         // The backlog is the scout wing's (a muse night makes no storyboard and takes no seed).
         const backlog = muse ? [] : backlogSection(backlogOf(others, await listSeedBatches(), steer), others);
-        const extra = [...branchesSection(graph, steer), ...backlog, ...tracksSection(others)];
+        const extra = [...branchesSection(graph, steer), ...backlog, ...(muse || !k.ok ? [] : (await import("../lib/foundry/scout/genres.ts")).genreTaste(k.value.store, others)), ...tracksSection(others)];
         fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id, k.ok ? (x) => nightLoad(k.value.store, x, now().getTime()) : undefined, extra), "utf8");
       } finally {
         kp.closeProcessKernel();

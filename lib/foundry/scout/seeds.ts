@@ -22,9 +22,12 @@ import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
+import { VENTURE_ID_RE } from "@gt/domain/genre";
+import type { Store } from "@gt/kernel/store";
 
 import { nextPart, partRunId } from "./parts";
 import { backlogOf, freshSeedRefusal } from "./backlog";
+import { ventureRefusal } from "./genres";
 import { ancestryOf, createSeedBatch, listSeedBatches, readSeedBatch, seedOf, seedsPacketId } from "./seedStore";
 import { pausedUnder, readSteer } from "./steer";
 import { readAllNights } from "./store";
@@ -54,6 +57,8 @@ export type SeedBatchOptions = {
   /** The night writing it at its start; absent for a batch written by day. */
   readonly night?: NightId;
   readonly now?: Date;
+  /** The store a seed's `venture` is read from; the process's when absent (read only when a seed names one). */
+  readonly store?: Store;
 };
 
 /** One instrument, or the mood: a few plain words. */
@@ -85,6 +90,8 @@ const seedSchema = z
       })
       .strict()
       .optional(),
+    /** The live venture the seed is written inside (spark scout-vision S2). */
+    venture: z.string().trim().regex(VENTURE_ID_RE, "a venture id vn-...").optional(),
   })
   .strict();
 
@@ -104,7 +111,7 @@ function verdictOf(b: SeedBatch, id: string): string {
 }
 
 /** The batch as seeds in order, or the first bad one's place and why; nothing is written here. */
-export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[]): Promise<Result<Brief[]>> {
+export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[], o: Pick<SeedBatchOptions, "store"> = {}): Promise<Result<Brief[]>> {
   if (!Array.isArray(raw)) return err("invalid", "seeds: the input is a JSON array of seeds {sentence, genre, subgenre, type, audience, format, parent?, music?}");
   if (raw.length === 0) return err("invalid", "seeds: the batch holds no seed");
   if (raw.length > MAX_SEED_BATCH) return err("invalid", `seeds: a batch holds at most ${MAX_SEED_BATCH} seeds; this one has ${raw.length}`);
@@ -129,8 +136,10 @@ export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[]
       const p = await usableSeed(s.parent, batches);
       if (!p.ok) return err(p.error.code, `${at}: parent: ${p.error.message}`);
     }
+    const unborn = s.venture === undefined ? undefined : ventureRefusal(s.venture, o.store);
+    if (unborn !== undefined) return err("refused", `${at}: venture: ${unborn}`);
     const music: SeedMusic | undefined = s.music === undefined ? undefined : { instruments: s.music.instruments, tempo: s.music.tempo, mood: s.music.mood, vocals: s.music.vocals };
-    out.push({ sentence: s.sentence, genre: s.genre, subgenre: s.subgenre, type: s.type, audience: s.audience, format: s.format, ...(s.parent === undefined ? {} : { parent: s.parent }), ...(music === undefined ? {} : { music }) });
+    out.push({ sentence: s.sentence, genre: s.genre, subgenre: s.subgenre, type: s.type, audience: s.audience, format: s.format, ...(s.parent === undefined ? {} : { parent: s.parent }), ...(music === undefined ? {} : { music }), ...(s.venture === undefined ? {} : { venture: s.venture }) });
   }
   return ok(out);
 }
@@ -138,7 +147,7 @@ export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[]
 /** Validate a batch (`[{sentence, genre, subgenre, type, audience, format, parent?, music?}]`), hold it to the backlog gate, and write it whole. */
 export async function addSeedBatch(raw: unknown, o: SeedBatchOptions): Promise<Result<SeedBatch>> {
   const batches = await listSeedBatches();
-  const checked = await checkSeedBatch(raw, batches);
+  const checked = await checkSeedBatch(raw, batches, o.store === undefined ? {} : { store: o.store });
   if (!checked.ok) return checked;
   // The scout wing's nights hold the ideas the gate counts (seeds are the scout wing's alone).
   const nights = await withWing("scout", () => readAllNights());
@@ -181,10 +190,10 @@ export const musicFacets = (m: SeedMusic): string => `${m.tempo} bpm · ${m.inst
 
 /**
  * `kids · comedy › sketch · animated comedy sketch · short`: a seed's facets, as the Board's meta and the brief say them;
- * a music seed's song follows (`... · short · 92 bpm · nylon guitar, cello · melancholic · instrumental`).
+ * a music seed's song follows (`... · short · 92 bpm · nylon guitar, cello · melancholic · instrumental`), then its venture.
  */
-export const seedFacets = (s: Pick<Seed, "audience" | "genre" | "subgenre" | "type" | "format" | "music">): string =>
-  `${s.audience} · ${s.genre} › ${s.subgenre} · ${s.type} · ${s.format}${s.music === undefined ? "" : ` · ${musicFacets(s.music)}`}`;
+export const seedFacets = (s: Pick<Seed, "audience" | "genre" | "subgenre" | "type" | "format" | "music" | "venture">): string =>
+  `${s.audience} · ${s.genre} › ${s.subgenre} · ${s.type} · ${s.format}${s.music === undefined ? "" : ` · ${musicFacets(s.music)}`}${s.venture === undefined ? "" : ` · venture: ${s.venture}`}`;
 
 /** A batch's counts: decided seeds by verdict, the rest undecided. */
 export function batchCounts(b: SeedBatch): { readonly seeds: number; readonly kept: number; readonly rejected: number; readonly undecided: number } {

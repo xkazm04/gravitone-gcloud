@@ -2,12 +2,14 @@ import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
+import { VENTURE_ID_RE } from "@gt/domain/genre";
 
 import { writeJsonAtomic } from "../runStore.ts";
 import { driveIdeas, launchIdeas, LIVE_IDEA_ENGINES } from "../../producers/scoutIdea.ts";
 import type { IdeaEngines } from "../../producers/scoutIdeaActs.ts";
 import { launchReels, reelFiles, SCOUT_REELS_LANE } from "../../producers/scoutReel.ts";
 import { launchable, Refusal, type ActContext } from "./acts.ts";
+import { ventureRefusal } from "./genres.ts";
 import { ASPECTS, cardSchema, WING_ASPECT, wingRefusal } from "./museDoor.ts";
 import { listSeedBatches } from "./seedStore.ts";
 import { repeatRefusal } from "./ideaRepeat.ts";
@@ -135,13 +137,15 @@ const ideaSchema = z
     aspect: z.enum(ASPECTS).optional(),
     /** A character idea's card (the muse wing's, ./museDoor.ts). */
     card: cardSchema.optional(),
+    /** The live venture the idea is made inside (spark scout-vision S2): ideas in a venture's frame are its variations. */
+    venture: z.string().trim().regex(VENTURE_ID_RE, "a venture id vn-...").optional(),
   })
   .strict()
   .refine((b) => !sameWords(b.aim, b.prompt), { message: "the aim says why the run was chosen; it is not the image prompt", path: ["aim"] })
   .refine((b) => b.target !== "stats" || b.reel !== undefined, { message: "a stats idea carries its reel: {brief, approach}", path: ["reel"] })
   .refine((b) => b.target === "stats" || b.reel === undefined, { message: "only a stats idea carries a reel", path: ["reel"] });
 
-export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use" | "app" | "aim" | "look" | "aspect" | "card"> & { readonly genre: string; readonly reel?: ReelBrief; readonly seed?: SeedRef };
+export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use" | "app" | "aim" | "look" | "aspect" | "card" | "venture"> & { readonly genre: string; readonly reel?: ReelBrief; readonly seed?: SeedRef };
 
 /** The skill's batch as briefs for `wing` (absent: the active one), or the first bad brief's place and reason; nothing is written here. */
 export function parseIdeas(raw: unknown, wing: ScoutWing = activeWing()): Result<IdeaBrief[]> {
@@ -153,10 +157,11 @@ export function parseIdeas(raw: unknown, wing: ScoutWing = activeWing()): Result
     if (!r.ok) return r;
     const b = r.value;
     const refused = wingRefusal(b, wing);
+    if (b.venture !== undefined && wing !== "scout") return err("invalid", `idea ${i + 1}: venture: the ${wing} wing makes nothing for a venture`, { detail: `idea ${i + 1}` });
     if (refused !== null) return err("invalid", `idea ${i + 1}: ${refused.path}: ${refused.message}`, { detail: `idea ${i + 1}` });
     // The candidate holds an aspect only when it is not the scout frame's: every older idea reads 16:9.
     const aspect = b.aspect ?? WING_ASPECT[wing];
-    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, use: `${b.app}: ${b.appTarget}`, app: b.app, aim: b.aim, ...(b.look === undefined ? {} : { look: b.look }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }), ...(b.seed === undefined ? {} : { seed: b.seed }), ...(aspect === "16:9" ? {} : { aspect }), ...(b.card === undefined ? {} : { card: b.card }) });
+    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, use: `${b.app}: ${b.appTarget}`, app: b.app, aim: b.aim, ...(b.look === undefined ? {} : { look: b.look }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }), ...(b.seed === undefined ? {} : { seed: b.seed }), ...(aspect === "16:9" ? {} : { aspect }), ...(b.card === undefined ? {} : { card: b.card }), ...(b.venture === undefined ? {} : { venture: b.venture }) });
   }
   return ok(out);
 }
@@ -228,6 +233,10 @@ export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engin
   const briefs = parsed.value;
   const seeded = await checkIdeaSeeds(briefs);
   if (!seeded.ok) throw new Refusal(seeded.error.message);
+  for (const [i, b] of briefs.entries()) {
+    const unborn = b.venture === undefined ? undefined : ventureRefusal(b.venture, ctx.store);
+    if (unborn !== undefined) throw new Refusal(`idea ${i + 1}: venture: ${unborn}`);
+  }
   const wingNow = activeWing();
   const others = (await readAllNights()).filter((n) => n.id !== id);
   const repeated = repeatRefusal(briefs, [...others, await readNight(id)], wingNow);

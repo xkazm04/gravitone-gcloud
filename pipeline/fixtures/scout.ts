@@ -20,7 +20,8 @@
 // has tiles above its words, and the gate a loss with the vendor's sentence. Each idea tries a genre, and
 // the night proposes one DIRECTION standing on the committed night's kept replica (a words cell in notes).
 // And it composed a STORYBOARD (spark scout-storyboards) from the committed night's kept idea: four local
-// Flux frames, a paragraph and four bullets - the rung a full video must grow from.
+// Flux frames, a paragraph and four bullets - the rung a full video must grow from. The committed night kept a storyboard
+// of its own (spark scout-vision S2), and yesterday's night proposes a GENRE resting on it: a words row under `genres`.
 //
 // THE MUSE WING (spark scout-muse) has its own root, fixtures-out/scout-muse/, and one CLOSED night on the
 // same day as yesterday's scout night - two packets, pkt:scout:<night> and pkt:scout:muse:<night>, one day:
@@ -30,7 +31,7 @@ import { rmSync } from "node:fs";
 
 import { standConcept } from "../../lib/foundry/scout/concept";
 import type { MuseJudge } from "../../lib/foundry/scout/muse";
-import type { Asset3dCandidate, DirectionCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource, Seed, SeedBatch, SeedMusic, StoryboardCandidate } from "../../lib/foundry/scout/types";
+import type { Asset3dCandidate, DirectionCandidate, GenreProposalCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource, Seed, SeedBatch, SeedMusic, StoryboardCandidate } from "../../lib/foundry/scout/types";
 import { DAY, HOUR, NOW, outFile, plate, writeBytes, writeJson } from "./kit";
 
 const PALETTE = ["#1d2b3a", "#e0a458", "#5c8a8a", "#f2e8cf"];
@@ -127,7 +128,7 @@ function direction(id: string, basedOn: readonly string[]): DirectionCandidate {
   };
 }
 
-function storyboard(night: string, id: string, fromIdea: string): StoryboardCandidate {
+function storyboard(night: string, id: string, fromIdea: string, over: Partial<StoryboardCandidate> = {}): StoryboardCandidate {
   const images = [1, 2, 3, 4].map((k) => `storyboards/${id}/panel-${k}.png`);
   for (const f of images) writeBytes(outFile("scout", night, f), plate(`scout:${night}:${f}`, IDEA_PALETTE, 384, 216));
   return {
@@ -155,6 +156,24 @@ function storyboard(night: string, id: string, fromIdea: string): StoryboardCand
     app: "short",
     images,
     seeds: [118, 2307, 4410, 9003],
+    ...over,
+  };
+}
+
+/** The night's proposal to birth a genre from the committed night's kept storyboard (spark scout-vision S2). */
+function genreProposal(id: string, fromStoryboard: string): GenreProposalCandidate {
+  return {
+    id,
+    kind: "genre",
+    sourceIds: [],
+    status: "rendered",
+    name: "Quiet one-light mysteries, painted slate",
+    fromStoryboard,
+    look: "warm amber against cold slate, one held light, deep shadow below",
+    grammar: ["the light moves first", "the chase, one landing a beat", "the last landing goes dark", "the reveal opens outward"],
+    basedOn: [`${fromStoryboard}/words`],
+    use: "short: a slow-reveal mystery Short",
+    aim: "two kept boards share one light and one climb: a genre the nights can trial",
   };
 }
 
@@ -185,6 +204,7 @@ function closedNight(): Night {
       idea(id, "c-08", { title: "Rain on a neon market awning", target: "scene", genre: "title opener", anchor: { kind: "watch", ref: "tag: neon noir" }, prompt: "rain sheeting off a striped market awning under neon signs", use: "genre-video: neon-noir title opener", app: "genre-video", aim: "harden the neon-noir style with a rain scene", status: "failed", error: "leonardo answered 429: generation quota exhausted for this hour" }),
       direction("c-09", [`${dayOf(2 * DAY)}/c-01/replica-1`]),
       storyboard(id, "c-10", `${dayOf(2 * DAY)}/c-03`),
+      genreProposal("c-11", `${dayOf(2 * DAY)}/c-04`),
     ],
     jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-asset:${id}:c-04`, `job:scout-ideas:${id}`, `job:scout-storyboard:${id}:c-10`],
   };
@@ -208,9 +228,10 @@ function committedNight(): Night {
       scene(id, "c-01", s1, false),
       { id: "c-02", kind: "watch", sourceIds: [s1.id], status: "rendered", entry: "site: fixture-gallery.example", why: "one coherent look" },
       idea(id, "c-03", { title: "A lantern that climbs the stairs ahead of a watchman", target: "scene", genre: "animated mystery short", anchor: { kind: "free", ref: "" }, prompt: "rough frame, a watchman on a stairwell, a lantern glowing three steps above him, warm amber against cold slate", use: "short: a slow-reveal mystery Short", app: "short", aim: "see whether one moving light carries a whole short" }),
+      storyboard(id, "c-04", `${dayOf(4 * DAY)}/c-02`, { title: "The candle that walks the cellar first", paragraph: "A cellar keeper follows a candle down the steps; it is always one step lower than his hand, until the last step opens on a flooded vault lit from below." }),
     ],
-    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-ideas:${id}`],
-    committed: { at: at(NOW - DAY - 12 * HOUR), by: "operator", kept: ["c-01/replica-1", "c-03/board"], rejected: ["c-01/replica-2", "c-02/text"], reasons: { "c-02/text": ["generic"] }, notes: {}, dry: false },
+    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-ideas:${id}`, `job:scout-storyboard:${id}:c-04`],
+    committed: { at: at(NOW - DAY - 12 * HOUR), by: "operator", kept: ["c-01/replica-1", "c-03/board", "c-04/words"], rejected: ["c-01/replica-2", "c-02/text"], reasons: { "c-02/text": ["generic"] }, notes: {}, dry: false },
   };
 }
 

@@ -45,6 +45,7 @@ import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
+import { VENTURE_ID_RE } from "@gt/domain/genre";
 import type { Store } from "@gt/kernel/store";
 import { get } from "@gt/kernel/job";
 import { jobIdSchema } from "@gt/domain/ids";
@@ -54,6 +55,7 @@ import { driveStoryboard, launchStoryboard } from "../../producers/scoutStoryboa
 import { settledBoard, type StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
 import { launchable, Refusal, type ActContext } from "./acts";
 import { IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
+import { ventureRefusal } from "./genres";
 import { STEP_NAME_RE, STEP_RULE, TEMPLATE_NAME_RE, TEMPLATE_RULE, templateProblem } from "./knowledge";
 import { namesIn } from "./scene";
 import { mutateNight, nextCandidateId, readAllNights, readNight, withCandidate } from "./store";
@@ -134,6 +136,8 @@ const briefSchema = z
       })
       .strict()
       .optional(),
+    /** The live venture the storyboard is made inside (spark scout-vision S2). */
+    venture: z.string().trim().regex(VENTURE_ID_RE, "a venture id vn-...").optional(),
   })
   .strict();
 
@@ -141,7 +145,7 @@ export type StoryboardBrief = z.output<typeof briefSchema>;
 
 /** The skill's batch as briefs, or the first bad brief's place and reason; nothing is read or written here. */
 export function parseStoryboards(raw: unknown): Result<StoryboardBrief[]> {
-  if (!Array.isArray(raw)) return err("invalid", "storyboard: the input is a JSON array of briefs {fromIdea, title, paragraph, bullets, panels, use?, aim?, technique?}");
+  if (!Array.isArray(raw)) return err("invalid", "storyboard: the input is a JSON array of briefs {fromIdea, title, paragraph, bullets, panels, use?, aim?, technique?, venture?}");
   if (raw.length === 0) return err("invalid", "storyboard: the batch holds no brief");
   const out: StoryboardBrief[] = [];
   for (const [i, item] of raw.entries()) {
@@ -192,6 +196,8 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   for (const [i, b] of briefs.entries()) {
     const nowhere = b.technique === undefined ? undefined : await templateProblem(b.technique.template);
     if (nowhere !== undefined) throw new Refusal(`storyboard ${i + 1}: technique: ${nowhere}`);
+    const unborn = b.venture === undefined ? undefined : ventureRefusal(b.venture, ctx.store);
+    if (unborn !== undefined) throw new Refusal(`storyboard ${i + 1}: venture: ${unborn}`);
   }
   const cache = new Map<NightId, Night | string>();
   const ideas: KeptIdea[] = [];
@@ -237,6 +243,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
         ...use,
         ...(b.aim === undefined ? {} : { aim: b.aim }),
         ...(b.technique === undefined ? {} : { technique: { claim: b.technique.claim, quote: b.technique.quote, url: b.technique.url, template: b.technique.template, step: b.technique.step } }),
+        ...(b.venture === undefined ? {} : { venture: b.venture }),
         ...(n.dry ? { images: [] } : {}),
       };
       next = { ...next, candidates: [...next.candidates, c] };
