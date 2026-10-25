@@ -88,6 +88,22 @@ test("a resolver's NaN or Infinity is unmeasured, never a pass", () => {
   }
 });
 
+// The reset's cue row used one sentence for "no mark" and "no cue", so a reset
+// that named its mark on a cut with no cue was told it named none.
+test("a reset's cue row says which half is missing, the mark or the cue", () => {
+  const marked = minimal();
+  marked.beats = marked.beats.map((b) => (b.kind === "reset" ? { ...b, cueMark: "s3" } : b));
+  const cueRow = (c: TrailerCut) =>
+    runStructureCheck(c).findings.find((f) => f.rule === "reset" && f.beatId === "p4" && f.cites.includes("cue-first"));
+  const named = cueRow(marked);
+  const unnamed = cueRow(minimal());
+  console.log(`[trailer] reset cue row -> marked="${named?.detail.slice(0, 70)}"`);
+  expect(named?.verdict).toBe("unmeasured");
+  expect(named?.detail).toContain(`names cue mark "s3"`);
+  expect(named?.detail).not.toContain("names no cue mark");
+  expect(unnamed?.detail).toContain("names no cue mark and the cut declares no cue");
+});
+
 test("a declared specialty-lane cut is never graded malformed", () => {
   const broken: TrailerCut = { ...minimal(), lane: "specialty" };
   broken.beats = broken.beats.filter((b) => b.kind !== "reset");

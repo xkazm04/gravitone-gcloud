@@ -108,7 +108,9 @@ export function checkReset(cut: TrailerCut): StructureFinding[] {
     if (!cut.cue || !r.cueMark) {
       out.push({
         rule: "reset", subject: r.id, verdict: "unmeasured",
-        detail: `Reset "${r.label}" names no cue mark${cut.cue ? "" : " and the cut declares no cue"}. "Stop on a natural downbeat … the cue's own section boundaries decide where the reset can go." Without the cue this checker is measuring against positions the music does not mark.`,
+        // Three cases, three sentences: a reset that names a mark on a cut with no
+        // cue DID name one, and the old single sentence told its author otherwise.
+        detail: `Reset "${r.label}" ${r.cueMark ? `names cue mark "${r.cueMark}", but the cut declares no cue` : `names no cue mark${cut.cue ? "" : " and the cut declares no cue"}`}. "Stop on a natural downbeat … the cue's own section boundaries decide where the reset can go." Without the cue this checker is measuring against positions the music does not mark.`,
         ...where(r), cites: CITE.cue,
       });
     } else if (!section) {
