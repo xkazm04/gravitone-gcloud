@@ -2522,6 +2522,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A blocked part's second and later reasons would be in the chip's tip for nobody: a sighted operator opening +N would read an empty tip.",
   },
   {
+    id: "rail-ids-collapse-punctuation",
+    test: "packages/ui/test/components/part.test.ts",
+    file: "packages/ui/src/components/part/RailList.tsx",
+    find: "v.replace(/[^A-Za-z0-9]/g, (c) => `_${(c.codePointAt(0) ?? 0).toString(16)}_`);",
+    replace: 'v.replace(/[^A-Za-z0-9]+/g, "-");',
+    why: "Rows whose ids differ only in punctuation would share one DOM id, and the rail's active descendant would name the wrong row to a screen reader.",
+  },
+  {
     id: "produce-strips-run-renamed-at-confirm",
     test: "tests/next-server/produce-real.test.ts",
     file: "lib/produce/laneDoors.ts",

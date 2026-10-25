@@ -153,4 +153,13 @@ describe("markup", () => {
     expect(rows).toBeLessThan(40);
     expect(html).toContain('aria-activedescendant="rail-cards-c0"');
   });
+
+  test("two ids that differ only in punctuation are two DOM ids, and the active one names the picked row", () => {
+    const items = [{ id: "s1:b" }, { id: "s1-b" }, { id: "s1 b" }];
+    const html = renderToStaticMarkup(h(RailList<{ id: string }>, { label: "beats", items, idOf: (x) => x.id, selected: "s1-b", onSelect: noop, row: (x) => x.id }));
+    const ids = [...html.matchAll(/ id="([^"]+)" role="option"/g)].map((m) => m[1]);
+    expect(new Set(ids).size).toBe(3);
+    const active = /aria-activedescendant="([^"]+)"/.exec(html)?.[1];
+    expect(html).toContain(`id="${active}" role="option" aria-selected="true"`);
+  });
 });
