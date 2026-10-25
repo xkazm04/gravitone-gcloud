@@ -939,3 +939,64 @@ describe("worlds.ts: a world that could not be painted lands empty instead of ho
     expect(dropped.worldReady).toBe(false);
   });
 });
+
+
+/* ---------- an opened world does not wait behind the tiles it was prewarmed beside (raster.ts, worlds.ts) ---------- */
+describe("worlds.ts: a prewarmed world is promoted when it is opened", () => {
+  test("its job is the first to start after the two in flight, not behind the family's queued tiles", async () => {
+    withWorker();
+    fakeDom();
+    const { buildWorld, prewarmWorld } = await import("../../app/_landing/cosmos/engine/worlds.ts");
+    const raster = new Raster(false);
+    const w = FakeWorker.last!;
+    w.say(HELLO);
+    await raster.ready;
+    const cx = {
+      g: { W: 1280, H: 800, portrait: false, RS: 1, DPR: 1, S: 800 },
+      tier: "full",
+      life: { dead: false, want() {} },
+      els: { world: new FakeEl("div") },
+      worldTok: 0,
+      worldReady: false,
+      worldReadyAt: 0,
+      worldPre: null as unknown,
+      wplanes: [],
+      raster,
+    };
+    // a family opens: six tiles at 1+k, then the prewarm of its world at 3
+    for (let k = 0; k < 6; k++) void raster.run({ ...JOB, rs: 100 + k }, 1 + k, "lib");
+    prewarmWorld(cx as never, "fam");
+    // a category is clicked before the tiles drain
+    buildWorld(cx as never, "fam");
+    // the worker answers each job as it is sent; the order they were sent in is the order they painted in
+    let answered = 0;
+    while (answered < w.posted.length) {
+      w.say({ t: "done", id: w.posted[answered].id, out: [], ret: [] });
+      answered++;
+    }
+    const order = w.posted.map((m) => (m.job.parts ? "world" : "lib" + (m.job.rs - 100)));
+    expect(order.slice(0, 3), "two tiles were already painting; the world is next").toEqual(["lib0", "lib1", "world"]);
+    expect(order.filter((x) => x === "world")).toHaveLength(1);
+    raster.destroy();
+  });
+
+  test("bump() raises only queued jobs of the tag, keeps their order, and leaves the ones painting alone", async () => {
+    withWorker();
+    countingDocument();
+    const r = new Raster(false);
+    const w = FakeWorker.last!;
+    w.say(HELLO);
+    await r.ready;
+    const mark = (n: number): Job => ({ ...JOB, rs: n });
+    void r.run(mark(1), 0, "a");
+    void r.run(mark(2), 0, "a");
+    void r.run(mark(3), 5, "x");
+    void r.run(mark(4), 4, "slow");
+    void r.run(mark(5), 4, "slow");
+    r.bump("slow", -1, "fast");
+    r.bump("a", -9);
+    for (let n = 0; n < w.posted.length; n++) w.say({ t: "done", id: w.posted[n].id, out: [], ret: [] });
+    expect(w.posted.map((m) => m.job.rs)).toEqual([1, 2, 4, 5, 3]);
+    r.destroy();
+  });
+});

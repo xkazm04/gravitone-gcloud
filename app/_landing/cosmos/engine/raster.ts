@@ -177,12 +177,29 @@ export class Raster {
   paint(job: Job, prio = 0, tag = "", part?: (i: number, s: Surface) => void): Promise<Outcome> {
     if (this.dead) return Promise.resolve("dropped");
     return new Promise((res) => {
-      const p: Pending = { id: ++this.seq, job, prio, tag, res, part };
-      let i = this.q.length;
-      while (i > 0 && this.q[i - 1].prio > prio) i--;
-      this.q.splice(i, 0, p);
+      this.enqueue({ id: ++this.seq, job, prio, tag, res, part });
       this.pump();
     });
+  }
+
+  /** behind every queued job of a lower or equal priority */
+  private enqueue(p: Pending): void {
+    let i = this.q.length;
+    while (i > 0 && this.q[i - 1].prio > p.prio) i--;
+    this.q.splice(i, 0, p);
+  }
+
+  /** raises the queued jobs of `tag` to `prio`, filed under `retag`: a job started early
+   *  for a click that has now come. One already painting is unaffected. */
+  bump(tag: string, prio: number, retag = tag): void {
+    const hit = this.q.filter((p) => p.tag === tag);
+    if (!hit.length) return;
+    this.q = this.q.filter((p) => p.tag !== tag);
+    for (const p of hit) {
+      p.prio = prio;
+      p.tag = retag;
+      this.enqueue(p);
+    }
   }
 
   /** drops every queued job with this tag (jobs already painting finish, and their caller ignores them) */

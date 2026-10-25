@@ -134,8 +134,11 @@ export function buildWorld(cx: Cx, id: string, keep = false): void {
   };
   if (!keep) place();
   let wp = cx.worldPre;
-  if (wp && wp.key === worldKey(cx, id)) cx.worldPre = null;
-  else {
+  if (wp && wp.key === worldKey(cx, id)) {
+    cx.worldPre = null;
+    // it was queued behind the family's tiles at the prewarm's priority; this world is open now
+    cx.raster.bump("prewarm", -1, "world");
+  } else {
     dropPrewarm(cx); // a prewarm for another world is let go before this one paints
     wp = paintWorld(cx, id, -1, "world");
   }

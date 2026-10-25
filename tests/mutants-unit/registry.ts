@@ -5949,6 +5949,22 @@ export const MUTANTS: UnitMutant[] = [
     replace: "p.res(\"dropped\");",
     why: "The raster says a job that threw was merely dropped, so every caller that retries a dropped job retries the failure too.",
   },
+  {
+    id: "cosmos-world-prewarm-keeps-low-priority",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/worlds.ts",
+    find: "cx.raster.bump(\"prewarm\", -1, \"world\");",
+    replace: "void 0;",
+    why: "A category clicked while its family's tiles are still painting waits behind them for the world, because the prewarm it adopted is still queued at the priority of a hover.",
+  },
+  {
+    id: "cosmos-raster-bump-keeps-priority",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/raster.ts",
+    find: "p.prio = prio;",
+    replace: "void prio;",
+    why: "Bumping a queued job changes its name and leaves it where it was, so the opened world still waits behind the tiles.",
+  },
   // ---- the landing's shell (landing-cosmos-shell): perf, stage, search, keyboard, the first paint
   {
     id: "cosmos-governor-judges-three-frames",
