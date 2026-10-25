@@ -1,11 +1,13 @@
 // The Ledger's parts (Phase 2, lot 16): the strip's geometry, the JSON scanner, the money
 // format, and what each new or extended component exposes - rendered with react-dom/server
 // (Vitest runs without a DOM; the strip's drag is driven live in tests/live/ledger).
+import { readFileSync } from "node:fs";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import sr from "../../src/components/a11y/SrOnly.module.css";
+import { count, plural } from "../../src/count.ts";
 import { Button } from "../../src/components/button/Button.tsx";
 import { EventRow, type EventRowProps } from "../../src/components/eventrow/EventRow.tsx";
 import { usd } from "../../src/components/eventrow/usd.ts";
@@ -123,6 +125,15 @@ describe("time strip geometry", () => {
     expect(keyStep({ a: 0, b: 0 }, "ArrowLeft", false, days.length)?.kb).toEqual({ a: 0, b: 0 });
     expect(keyStep(kb, "a", false, days.length)).toBeNull();
     expect(keyStep(kb, "Enter", false, 0)).toBeNull();
+  });
+
+  test("one singular/plural rule: the kit's counts read the shared helper, no private copy", () => {
+    expect([count(1, "item"), count(0, "item"), count(2, "new act")]).toEqual(["1 item", "0 items", "2 new acts"]);
+    expect([plural(1, "plate"), plural(2, "plate")]).toEqual(["plate", "plates"]);
+    const root = new URL("../../src/", import.meta.url);
+    const files = ["components/produce/Composer.tsx", "components/header/HeaderChips.tsx", "components/timestrip/TimeStrip.tsx"];
+    const own = files.filter((f) => /const (count|plural) = /.test(readFileSync(new URL(f, root), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "")));
+    expect(own).toEqual([]);
   });
 
   test("the readout counts one event and one day in the singular", () => {

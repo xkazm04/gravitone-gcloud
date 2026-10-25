@@ -6662,4 +6662,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "data-x=\"0\"",
     why: "The bars group has no tab stop again, so a keyboard user cannot reach the strip at all and ranges stay pointer-only.",
   },
+  {
+    id: "ui-count-returns-plural-for-one",
+    test: "packages/ui/test/components/ledger.test.ts",
+    file: "packages/ui/src/count.ts",
+    find: "(n === 1 ? noun : `${noun}s`)",
+    replace: "`${noun}s`",
+    why: "The shared count rule says `1 items`, so every aria-label, the strip's readout and the composer's unit count read wrong at one.",
+  },
 ];

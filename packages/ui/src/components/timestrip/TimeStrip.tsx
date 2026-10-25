@@ -12,6 +12,7 @@
 
 import { useState, type KeyboardEvent, type PointerEvent } from "react";
 
+import { count } from "../../count.ts";
 import { cx } from "../cx.ts";
 import { vars } from "../vars.ts";
 import { bars as barsOf, dragRange, nowAt, slotAt, ticks, total, type DayCount, type Range } from "./strip.ts";
@@ -35,7 +36,6 @@ export const shortDay = (day: string): string =>
   new Date(`${day}T00:00:00.000Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" });
 
 const span = (from: string, to: string): string => `${shortDay(from)}${to === from ? "" : ` → ${shortDay(to)}`}`;
-const count = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
 /** The readout's two lines when nothing is hovered: the range and its count, else the span. */
 export function restingReadout(days: readonly string[], range: Range | null, inRange: number | undefined): readonly [string, string] {
