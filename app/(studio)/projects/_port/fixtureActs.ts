@@ -320,7 +320,7 @@ export function rerouteOptions(u: Universe, id: string, now: number): Result<rea
   );
 }
 
-export function reroute(u: Universe, id: string, key: string, now: number, token?: string, ceilingUsd?: number): Result<RerouteResult> {
+export function reroute(u: Universe, id: string, key: string, now: number, token?: string, ceilingUsd?: number, by: Actor = OPERATOR): Result<RerouteResult> {
   const j = jobOf(u, id);
   if (!j.ok) return j;
   const job = j.value;
@@ -338,6 +338,8 @@ export function reroute(u: Universe, id: string, key: string, now: number, token
   if (token !== receipt.token) return ok({ kind: "stale", fresh: receipt });
   const held = holdNames(u, job);
   if (held !== null) return err("refused", `${held} is on hold for this job: acknowledge the hold first`);
+  // Kernel records/reroute.ts: only an operator puts a failed or interrupted job back in a queue, by a steer or a successor.
+  if ((job.state === "failed" || job.state === "interrupted") && by.kind !== "operator") return err("refused", `job ${id}: only an operator re-routes a ${job.state} job; ${by.kind} ${by.id} may not`);
   const from = job.option.label;
   job.option = o;
   if (job.state === "failed" || job.state === "interrupted") {

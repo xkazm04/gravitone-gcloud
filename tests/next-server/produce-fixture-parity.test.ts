@@ -143,6 +143,25 @@ describe("what only an operator may do, an agent is refused on both sides", () =
     expect(await said(fixture.retryJob({ jobId: failed }, agent), failed)).toBe(realSaid);
     expect(fixtureState(failed)).toBe("failed");
   });
+
+  it("an agent's re-route of a failed job onto another lane, receipt then confirm", async () => {
+    const { research } = await realFilm();
+    await failReal(research);
+    const option = "research/google/gemini-3.1-pro-preview";
+    const token = async (side: typeof real | typeof fixture, jobId: string, opt: string): Promise<string> => {
+      const r = await side.reroute({ jobId, option: opt }, agent);
+      if (!r.ok || r.value.kind !== "receipt") throw new Error(`expected a receipt, got ${JSON.stringify(r)}`);
+      return r.value.receipt.token;
+    };
+    const realSaid = await said(real.reroute({ jobId: research, option, token: await token(real, research, option) }, agent), research);
+    expect(realSaid).toBe("refused: job <job>: only an operator re-routes a failed job; agent athena may not");
+    const failed = "job:part:the-quiet-tariff:frames";
+    const options = fixture.rerouteOptions({ jobId: failed });
+    const other = options.ok ? options.value.find((o) => !o.current) : undefined;
+    if (other === undefined) throw new Error("the fixture's frames job has no other route");
+    expect(await said(fixture.reroute({ jobId: failed, option: other.option.key, token: await token(fixture, failed, other.option.key) }, agent), failed)).toBe(realSaid);
+    expect(fixtureState(failed)).toBe("failed");
+  });
 });
 
 describe("only a waiting job moves in its lane's line", () => {

@@ -151,6 +151,8 @@ function successorOf(t: Reader, id: string): string {
 export function relaunchIn(t: Tx, input: RouteInput, actor: Actor): RouteMoved {
   const x = resolve(t, input);
   const old = x.job;
+  // A successor puts a failed or interrupted job back in a queue, which only an operator does (job.ts rerouteIn, retry).
+  if ((old.state === "failed" || old.state === "interrupted") && actor.kind !== "operator") throw new AppError("refused", `job ${old.id}: only an operator re-routes a ${old.state} job; ${actor.kind} ${actor.id} may not`);
   const id = successorOf(t, old.id);
   const ord = t.get("SELECT ord FROM jobs WHERE id = ?", old.id)?.["ord"];
   const cancelled = move(old, "cancelled");
