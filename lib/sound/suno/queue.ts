@@ -181,12 +181,12 @@ export async function enqueueHuntLeaves(refs: readonly string[], lane: SunoLane 
  *  is mid-create and its credits are already spent. */
 export async function cancelJob(id: string): Promise<SunoJob> {
   safeId(id);
-  const { jobs } = await readSunoLive();
-  const live = jobs.find((j) => j.id === id);
+  const kernel = sunoKernelJobs();
+  const live = overlaySuno((await readSuno()).jobs, kernel).jobs.find((j) => j.id === id);
   if (!live) throw new SoundError(`no Suno job ${id}`, 404);
   if (live.state === "active") throw new SoundError("rendering now - it lands in triage when Suno finishes", 409);
   if (live.state !== "queued") throw new SoundError(`this job is already ${live.state}`, 409);
-  const k = sunoKernelJobs().get(sunoKernelId(live));
+  const k = kernel.get(sunoKernelId(live));
   if (k !== undefined) cancelSunoJob(k.id, OPERATOR);
   return withSuno((f) => {
     const j = f.jobs.find((x) => x.id === id);
@@ -288,10 +288,10 @@ export async function setSunoQueue(running: boolean): Promise<SunoQueueState> {
   return state;
 }
 
-/** Queued records with no job yet (a v1 crash's included): what Start launches. */
+/** Queued records with no job yet (a v1 crash's included): what Start launches. One kernel read for the overlay and the filter. */
 async function waitingIds(): Promise<string[]> {
   const kernel = sunoKernelJobs();
-  return (await readSunoLive()).jobs.filter((j) => j.state === "queued" && !kernel.has(sunoKernelId(j))).map((j) => j.id);
+  return overlaySuno((await readSuno()).jobs, kernel).jobs.filter((j) => j.state === "queued" && !kernel.has(sunoKernelId(j))).map((j) => j.id);
 }
 
 /** What Start would launch, as a receipt (decision 3): GET /api/sound/suno/run. */
