@@ -156,7 +156,7 @@ describe("stripsFeed", () => {
     }
     const r = await stripsFeed.read(ctx);
     expect(r.skipped).toEqual([{ id: "strips", reason: "1 of 201 runs, older than the newest 200, are not read" }]);
-  });
+  }, 60_000); // writes and reads 201 run dirs: past vitest's 5 s default under a full suite's load
 });
 
 describe("clipsFeed and exportsFeed", () => {
