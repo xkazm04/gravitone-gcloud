@@ -215,7 +215,7 @@ export function patchBlind(id: string, edits: BlindEdit[]): Promise<BlindState> 
       const imp = cycle.improvements.find((i) => i.id === e.imp);
       if (!imp) throw new FoundryError(`No improvement called ${e.imp} in this cycle.`, 400);
       if (e.pair !== undefined) {
-        if (!(imp.pairs ?? []).some((p) => p.id === e.pair)) throw new FoundryError(`No pair called ${e.pair} in ${e.imp}.`, 400);
+        if (!pairsOf(imp).some((p) => p.id === e.pair)) throw new FoundryError(`No pair called ${e.pair} in ${e.imp}.`, 400);
         if (e.pick !== null && e.pick !== "A" && e.pick !== "B" && e.pick !== "tie") throw new FoundryError("A blind pick is A, B or tie.", 400);
       }
       state = applyBlindEdit(state, e);
@@ -225,16 +225,21 @@ export function patchBlind(id: string, edits: BlindEdit[]): Promise<BlindState> 
   });
 }
 
+/** An improvement's pairs. The loop writes them only after judging, so a cycle
+ *  that failed first carries an improvement with none: zero pairs, never a throw. */
+const pairsOf = (imp: Improvement): Improvement["pairs"] => imp.pairs ?? [];
+
 /** Fraction of an improvement's pairs where the chokepoint picked the challenger. */
 function judgePickRate(imp: Improvement): number {
-  if (!imp.pairs.length) return 0;
-  return imp.pairs.filter((p) => p.judge_pick === "challenger").length / imp.pairs.length;
+  const pairs = pairsOf(imp);
+  if (!pairs.length) return 0;
+  return pairs.filter((p) => p.judge_pick === "challenger").length / pairs.length;
 }
 
 /** Fraction of Gemini-judged pairs where Gemini agreed with the chokepoint;
  *  undefined when Gemini judged none. */
 function geminiAgreement(imp: Improvement): number | undefined {
-  const judged = imp.pairs.filter((p) => p.gemini_pick !== undefined);
+  const judged = pairsOf(imp).filter((p) => p.gemini_pick !== undefined);
   if (!judged.length) return undefined;
   return judged.filter((p) => p.gemini_pick === p.judge_pick).length / judged.length;
 }
@@ -266,7 +271,7 @@ function findingsMarkdown(cycle: CycleManifest, verdicts: TrainingVerdicts, deci
   for (const imp of decided) {
     const gem = geminiAgreement(imp);
     rows.push(
-      `- **${imp.technique}** (${imp.id}): human ${verdicts[imp.id] === "approve" ? "approved" : "rejected"}, judge picked the challenger on ${pct(judgePickRate(imp))} of ${imp.pairs.length} pair(s)${gem !== undefined ? `, gemini agreed with the judge on ${pct(gem)}` : ""}.`,
+      `- **${imp.technique}** (${imp.id}): human ${verdicts[imp.id] === "approve" ? "approved" : "rejected"}, judge picked the challenger on ${pct(judgePickRate(imp))} of ${pairsOf(imp).length} pair(s)${gem !== undefined ? `, gemini agreed with the judge on ${pct(gem)}` : ""}.`,
     );
   }
   const undecided = cycle.improvements.filter((i) => !decided.includes(i));
@@ -376,7 +381,7 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
     // commitRun has always counted this way.
     let deleted = 0;
     for (const imp of decided) {
-      for (const pair of imp.pairs) {
+      for (const pair of pairsOf(imp)) {
         for (const ref of [pair.baseline, pair.challenger]) {
           if (ref.deleted) continue;
           for (const rel of mediaFiles(ref)) {

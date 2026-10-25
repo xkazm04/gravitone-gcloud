@@ -277,3 +277,27 @@ test("commitCycle: re-commit after reset replaces ledger row, holding 1 row not 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("commitCycle: a failed cycle whose improvement was never judged (no pairs) commits one ledger row, not a TypeError", async () => {
+  const id = `probe-pairless-${Date.now().toString(36)}`;
+  const { dir } = setupProbeCycle(id, "failed");
+  const file = path.join(dir, "cycle.json");
+  const cycle = JSON.parse(readFileSync(file, "utf8")) as { improvements: { pairs?: unknown }[] };
+  delete cycle.improvements[0].pairs;
+  writeFileSync(file, JSON.stringify(cycle, null, 2), "utf8");
+  writeFileSync(path.join(dir, "verdicts.json"), JSON.stringify({ "imp-1": "reject" }), "utf8");
+  try {
+    let out: string;
+    try {
+      out = `ledger_rows ${(await commitCycle(id)).ledger_rows}`;
+    } catch (e) {
+      out = `threw ${(e as Error).name}`;
+    }
+    console.log(`[training] pairless improvement, reject -> ${out}`);
+    expect(out).toBe("ledger_rows 1");
+    const rows = (JSON.parse(readFileSync(path.join(foundryDir(), "training-ledger.json"), "utf8")) as { rows: { cycle: string; judge_pick_rate?: number }[] }).rows.filter((r) => r.cycle === id);
+    expect(rows).toHaveLength(1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
