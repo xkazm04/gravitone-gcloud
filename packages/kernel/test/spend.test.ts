@@ -3,6 +3,7 @@ import { err } from "@gt/domain/errors";
 import type { Effects } from "../src/effects.ts";
 import { eventsMigrations, verify } from "../src/events.ts";
 import { lapseOpen, type MeterHold } from "../src/spend/meter.ts";
+import { settleBasisOf, type CostBasis } from "../src/pricing/quote.ts";
 import { createSettler } from "../src/spend/settler.ts";
 import type { SpendClass } from "../src/spend/core.ts";
 import { book, lapseOwner, release, reservationOf, reserve, settle, stats, spendMigrations, type SettleEntry } from "../src/spend/ledger.ts";
@@ -19,7 +20,7 @@ afterAll(() => tpl.dispose());
 const HOUR = 3_600_000;
 const imaging: SpendClass = { id: "imaging-usd", unit: "usd", windowMs: HOUR, ceiling: 1 };
 const text: SpendClass = { id: "text-usd", unit: "usd", windowMs: HOUR, ceiling: null };
-const served = (amount: number | undefined, basis = "vendor"): SettleEntry => ({ amount, outcome: "served", basis, axes: { cap: "plate", provider: "leonardo" } });
+const served = (amount: number | undefined, basis: SettleEntry["basis"] = "vendor"): SettleEntry => ({ amount, outcome: "served", basis, axes: { cap: "plate", provider: "leonardo" } });
 
 const st = (s: Store, c = imaging) => must(s.read((r) => stats(r, c)));
 const hold = (s: Store, id: string, amount: number, c = imaging) => must(s.tx((t) => reserve(t, c, { id, amount, owner: "boot-1:4412" })));
@@ -65,7 +66,7 @@ describe("kernel/spend - reserve -> settle -> book", () => {
     const r = hold(s, "t1", 0.1, text);
     expect(!r.ok && r.error.code).toBe("refused");
     must(s.tx((t) => book(t, text, served(0.31), "seat.text")));
-    must(s.tx((t) => book(t, text, served(undefined, "unpriced"), "seat.text")));
+    must(s.tx((t) => book(t, text, served(undefined, "credits"), "seat.text")));
     expect(st(s, text)).toMatchObject({ spent: 0.31, ceiling: null, remaining: null, counters: { booked: 1, unpriced: 1 } });
   });
 
@@ -179,6 +180,28 @@ describe("kernel/spend - a pending settle that can never apply is dropped and co
     expect(counter(s, "droppedWrites")).toBe(1);
     expect(dropped(s)).toEqual(["r1"]);
     expect(st(s)).toMatchObject({ spent: 0, rows: 0 });
+  });
+});
+
+describe("kernel/spend - one basis vocabulary at the ledger door", () => {
+  const srcOf = (s: Store, id: string) => must(s.read((r) => r.get("SELECT cost_src AS src FROM events WHERE type = 'spend.settled' AND subject_id = ?", id)?.["src"]));
+
+  it("a quote's basis books through settleBasisOf: an estimate is the model's figure, a vendor-reported one is real", () => {
+    const s = tpl.fresh();
+    const books: [CostBasis, "model" | "real"][] = [["estimated", "model"], ["vendor-reported", "real"]];
+    for (const [basis, src] of books) {
+      const id = `q-${basis}`;
+      hold(s, id, 0.1);
+      const entry: SettleEntry = { amount: 0.05, outcome: "served", basis: settleBasisOf(basis), axes: {} };
+      must(s.tx((t) => settle(t, imaging, { id, entries: [entry] })));
+      expect(srcOf(s, id)).toBe(src);
+    }
+  });
+
+  it("a quote's own word is not a ledger basis: passing it through is a type error, not a silent real-money booking", () => {
+    // @ts-expect-error "estimated" is the quote's spelling; the ledger's is "estimate" (typecheck is the verifier)
+    const stray: SettleEntry = { amount: 0.05, outcome: "served", basis: "estimated" as CostBasis, axes: {} };
+    expect(stray.amount).toBe(0.05);
   });
 });
 

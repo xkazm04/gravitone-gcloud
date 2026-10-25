@@ -132,7 +132,7 @@ export function stepMeter(fx: Effects, job: Job, step: string, owner: string): S
       const out = await fx.call(`${intent.provider}/${intent.model}`, call);
       if (dry) return ok(out.value);
       const h = hold.value;
-      const entries = out.entries.length > 0 ? out.entries : [{ amount: undefined, outcome: "served" as const, basis: "vendor", axes: {}, reason: `${intent.provider} reported no figure` }];
+      const entries = out.entries.length > 0 ? out.entries : [{ amount: undefined, outcome: "served" as const, basis: "vendor" as const, axes: {}, reason: `${intent.provider} reported no figure` }];
       for (const s of h === undefined ? entries.map((e) => self.book(cls, e)) : [self.settle(h, entries)]) {
         if (!s.ok) return err(s.error.code, `spend: ${intent.provider} answered and its booking failed: ${s.error.message}`, { cause: s.error });
       }

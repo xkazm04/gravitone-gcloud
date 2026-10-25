@@ -4,6 +4,7 @@ import type { Job } from "@gt/domain/job";
 import type { CallIntent } from "@gt/kernel/dryrun";
 import type { MissingStep, Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
 import { assertFence } from "@gt/kernel/lease";
+import { settleBasisOf } from "@gt/kernel/pricing/quote";
 import type { SettleEntry } from "@gt/kernel/spend/ledger";
 import { JOB_USD } from "@gt/kernel/spend/meter";
 import { next, stepName, unitEstimate, unitLabel, type CallEstimates, type CallKind, type ManifestView, type Unit } from "./units.ts";
@@ -123,7 +124,7 @@ export function classify(before: ManifestView, after: ManifestView, unit: Unit):
 export function entriesOf(s: Served<unknown>, kind: CallKind, estimate: number): SettleEntry[] {
   const axes = { call: kind, model: s.model };
   const cost = s.costUsd;
-  if (typeof cost === "number" && Number.isFinite(cost) && cost > 0) return [{ amount: cost, outcome: "served", basis: s.basis === "estimated" ? "estimate" : "vendor", axes }];
+  if (typeof cost === "number" && Number.isFinite(cost) && cost > 0) return [{ amount: cost, outcome: "served", basis: settleBasisOf(s.basis === "estimated" ? "estimated" : "vendor-reported"), axes }];
   // A zero or negative figure from a vendor is a MISSING figure, never a free call (kernel
   // pricing/quote.ts), so it books exactly as an absent one: the estimate the unit was admitted
   // on, and an unpriced count - the job's ceiling never reads a missing figure as $0.

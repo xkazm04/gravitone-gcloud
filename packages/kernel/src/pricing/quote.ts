@@ -1,6 +1,7 @@
 import { parseAt } from "@gt/domain/door";
 import { estimateSchema, type Estimate } from "@gt/domain/estimate";
 import type { Result } from "@gt/domain/errors";
+import type { SettleBasis } from "../spend/ledger.ts";
 import { findRow, PRICE_TABLE, type PriceRow, type PriceUnit } from "./table.ts";
 
 // QUOTING - what a call cost, or will cost, and how anyone knows.
@@ -26,6 +27,18 @@ import { findRow, PRICE_TABLE, type PriceRow, type PriceUnit } from "./table.ts"
 export type Usage = Partial<Record<PriceUnit, number>>;
 
 export type CostBasis = "vendor-reported" | "estimated" | "unpriced";
+
+/** The ledger's word for a quote's basis (spend/ledger.ts `SettleBasis`): the one translation, so "estimated" cannot book as real money. */
+export function settleBasisOf(basis: CostBasis): SettleBasis {
+  switch (basis) {
+    case "vendor-reported":
+      return "vendor";
+    case "estimated":
+      return "estimate";
+    case "unpriced":
+      return "credits";
+  }
+}
 
 export type Quote =
   | { readonly usd: number; readonly basis: "vendor-reported" | "estimated"; readonly note: string }

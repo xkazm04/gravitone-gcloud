@@ -127,12 +127,20 @@ export type Reservation = {
 /** `Result<Reservation>`, with the numbers beside a `budget` refusal. */
 export type ReserveOutcome = { readonly ok: true; readonly value: Reservation } | { readonly ok: false; readonly error: AppError; readonly refusal?: Refusal };
 
+/**
+ * Where a booked figure came from. A CLOSED set: only "estimate" marks a booking as the model's
+ * (the event's `cost.src`, the projection's `meterOf`), so a free-text spelling - the quote's
+ * "estimated" - used to book an estimate as real money. A quote's basis goes through
+ * pricing/quote.ts `settleBasisOf`.
+ */
+export type SettleBasis = "vendor" | "estimate" | "credits" | "seat" | "seat-report";
+
 export type SettleEntry = {
   /** The vendor's figure. Absent, zero, negative or NaN is unpriced: counted, never booked. */
   readonly amount: number | undefined;
   readonly outcome: "served" | "failed";
-  /** Where the figure came from, in the class's words ("vendor", "estimate"). */
-  readonly basis: string;
+  /** Where the figure came from. */
+  readonly basis: SettleBasis;
   readonly axes: Readonly<Record<string, string>>;
   /** The dollar figure, for a class not denominated in dollars (audio seconds); a usd class's amount is its dollars. */
   readonly usd?: number;
