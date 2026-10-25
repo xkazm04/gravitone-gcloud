@@ -1,7 +1,7 @@
 ---
 name: scout
 memory: none
-version: 2.1.0
+version: 2.2.0
 category: Development
 description: The nightly training loop, with a stated purpose - spread genres, prove one at publishable quality, then birth a project - that develops what the operator already approved before it spreads (kept ideas become free local Flux storyboards that apply a researched execution technique; while 20+ kept ideas wait, a seed batch takes children plus at most 20 fresh seeds). It searches the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers), ~100 one-sentence seeds (genre, subgenre, type, audience, format) on their own packet, 20-30 rough idea artboards grown from kept seeds in the operator's Leonardo studio, storyboards of kept ideas (up to five local Flux frames, a paragraph and bullets - the root any full video needs), Suno tracks from kept music seeds and full-song visualizers from kept tracks, and 1-3 directions to confirm - all for YouTube video (Shorts ~30 s, videos up to 5 min) - inside a $15 Gemini night, and leave ONE Board packet pkt:scout:<night> for a few minutes of number keys in the morning (1 keep, 2-4 reject with a reason, 5 reject). Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout seeds [--dry], /scout folder <dir> [extract args], /scout status [<night>].
 argument-hint: "night [--dry] [--until HH:MM] | seeds [--dry] | folder <dir> | status [<night>]"
@@ -120,6 +120,13 @@ The operator's rulings, 2026-10-23, after the first live night and the first ide
   animates our own replica still (the scene producer refuses anything else).
 - **Craft, not content.** A recipe, a finding, a watch line or an asset brief never names a person, a
   title, a studio or a franchise.
+- **Parody is the one exception, and it is words only** (operator, 2026-10-25: "AI parody or whatif content on
+  youtube and tiktok is very popular, we can forge genre of alternatives scenes with popular characters
+  reshaped"). A POPULAR FICTIONAL character may be named - in a parody seed, a parody card's `origin`, and the
+  storyboards that cast it - and restyled in any look. Its reference set is a CARD in craft words (silhouette,
+  costume, palette, signature props), never a found picture: no source pixel reaches a generator, ever. A REAL
+  person is never a character, a parody or a likeness. Parody names never go into a registry lead (the registry is
+  public).
 - **A game asset is drawn from OUR words, never from a found picture.** Its concept is generated from the
   brief; a source never becomes a concept or geometry (`rights: publishable` depends on it).
 - **Game assets: at most `--assets` a night** (default 3 while the 3D engines are being profiled), each a
@@ -164,7 +171,8 @@ the operator's hour; the operator may also type it after a workday. Either way:
 
 `npx tsx pipeline/scout.mts open --live --until 06:30 --json` (a typed `/scout night --dry` drops
 `--live`; `--until` from the argument when given). Note the night id. Then read, in this order:
-`foundry-out/scout/<night>/taste.md` (`## Genre ladder` and `## Ventures` first: every live genre's kept trials
+`foundry-out/scout/<night>/taste.md` (`## Kept characters` and `## Sheets to draw` with them: the cast the
+night may use and the sheets it owes; `## Genre ladder` and `## Ventures` first: every live genre's kept trials
 and next step, every venture's frame - step 2's first work; then `## Backlog`: how many kept ideas wait for a
 storyboard and whether the seed gate is on; then `## Last night's load`: how much of the band last night
 filled and what sat under it - scope tonight to fill that; then what the operator kept and threw, with reasons - **a channel or a
@@ -251,6 +259,14 @@ ladder` says `next: a piece`): the night takes the genre's best kept trial, re-m
 rejected on it, and cuts all of them with their own sound into one 15-30 s video. `piece <night> --collect` before
 closing. Kept, the genre is publishable - and the next night proposes its channel (step 10b).
 
+### 2d. Sheets - a reference for every kept character
+
+`npx tsx pipeline/scout.mts sheet <night> --detach` for every character under `## Sheets to draw` (kept, no kept
+sheet yet): one neutral 1:1 still on local Flux with her kept portrait as a late reference - rest expression,
+three-quarter head, even light, plain field, only the wardrobe that never changes. Judged on the packet; a kept
+sheet is her reference for every Flux frame she is cast in, a rejected one is drawn again with the reason.
+`sheet <night> --collect` before closing.
+
 ### 3. Seeds - children first, fresh ones within the gate
 
 Words only: no job, no spend, allowed on a dry night. ~100 seeds (`seeds new` takes up to 150) - **unless the
@@ -317,6 +333,31 @@ storyboard carries `venture: "vn-..."` (the door refuses an unknown or retired o
      studio or a franchise): the subject, the staging, the look, the light.
 5. One JSON array -> `npx tsx pipeline/scout.mts ideas <night> --json <file>`. One bad brief refuses the
    whole batch with its place and reason: fix it and resend. Do not wait for the drawings.
+
+### 4b. Characters - grown from a kept character seed
+
+The muse wing is merged into this loop (spark scout-vision S3): a character is an output like any other, and it
+has a purpose before it has a face.
+1. **The seed comes first.** A character seed is `{type: "character", ..., character: {for: <app>, cast: one |
+   ensemble | parody}}` - `for` is what the character serves (`dating-sim`, `companion-chat`, `roleplay`,
+   `videogame`, `genre-video`, `short`); a parody seed's sentence names the original in words. A character idea
+   needs a KEPT character seed; its audience and app come from it.
+2. **A character idea** - an `ideas` brief with `target: "character"`, a `card` and a `look` slug: `card: {name,
+   age, look, personality, kind: original|parody, origin?, render: photoreal|stylised}`. `look` holds IDENTITY only
+   (face, hair, build, skin, one signature garment) - it is restated verbatim wherever she is cast; `personality`
+   is the state a scene plays her by. Drawn 9:16 at studio quality Low; the eye clears every still. It may cite a
+   web source of tonight - `source: "s-NN"`, its words only - when a page taught the character.
+3. **The rules follow the audience and the app.** For an adult seed: a stated adult (card age 25+; 50 at most for
+   companion-chat, dating-sim and roleplay, whose cast is conventionally attractive - slim to curvy-fit, no age
+   marks), always SFW. For a kids or family seed: any age, but under 18 is always `render: stylised`, never
+   photoreal, and never cast in adult work. Never nude, never a real person, for anyone.
+4. **Discovery is one-of-one**: every new character idea is a new card in a new look direction (the door refuses a
+   name or look already drawn, kept ones excepted); a kept look is tried on a new character before it is trusted.
+5. **Cast what was kept.** `cast: ["<name>"]` on a storyboard or a trial (her identity block leads every panel, her
+   kept sheet rides as a reference), on a character SCENE idea for an app seed (a 16:9 still of her in one
+   situation, its `use` the use case it develops - a first-meeting card, a morning greeting) or on an idea
+   artboard (identity block only - the studio takes no reference). A character kept with nothing to do yet waits
+   under `## Kept characters` for the idea that needs her.
 
 ### 5a. Game assets - a stated need, launched early
 

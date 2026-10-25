@@ -546,37 +546,41 @@ It never keeps or commits. `pipeline/scout-schedule.ps1` registers the nightly r
 The scheduled run is `claude -p "/scout night --until 06:30"` with its tools fenced to search, read,
 the CLI and committing `knowledge/` and `.ai/registry-leads.jsonl`; logs land in `foundry-out/scout/logs/`.
 
-## Muse
+## Characters (the muse wing, merged)
 
-The loop's second wing (spark `scout-muse`, 2026-10-23; skill `/scout-muse`): an SFW study of how
-fictional adult women are drawn as characters - ultra-photoreal portrait, cinematic still, fashion
-editorial, semi-real painterly, anime/cel, stylised 3D, real-time 3D companion, toon-shaded 3D - crossed
-with character cards as 9:16 posters and 16:9 roleplay-situation scenes. Craft notes:
-`knowledge/scout-muse/techniques.md`.
+Spark scout-vision S3 (2026-10-25) folded the muse wing (spark `scout-muse`, 2026-10-23) into the one loop. **Every
+new night is a scout night.** The four muse nights (`foundry-out/scout-muse/2026-10-23`, `-2`, `-3`, `2026-10-24`) are
+a READ-ONLY ARCHIVE: their ids collide with scout nights, so every reader keys nights by (root, id), an archive night's
+run id is `muse:<night>` forever, and its packets (`pkt:scout:muse:<night>`), files and Library items keep resolving.
+`status --wing muse` lists the archive; any other command under `--wing muse` refuses, naming /scout.
+`store.ts readArchiveNights` / `readRootedNights` are the readers.
 
-- **A wing is a root.** `foundry-out/scout-muse/` (`SCOUT_MUSE_STORE_DIR`) beside `foundry-out/scout/`;
-  every CLI line takes `--wing muse` (`lib/foundry/scout/wing.ts`, the active wing in `wingScope.ts`).
-  Taste, ideas blocked, steer, source dedupe and leads never cross wings. The `/scout` screen switches
-  wings (`/scout?wing=muse`); the Board packet is `pkt:scout:muse:<night>`; a Floor pile reads `muse <night>`.
-- **What the muse wing runs:** doctor, open, add-source, ideas, finding, direction, watch, close, status,
-  style. Ingest, scenes, clips, assets, reels, seeds and music are refused under `--wing muse`.
-- **Ideas** take `target: style | scene | character`, an `aspect` (muse default 9:16; the studio draws only 16:9, 1:1 and 9:16) and, for a character,
-  a `card` `{name, age 25-50, look, personality}`. The door refuses a prompt without `aged NN` (25+), a
-  character prompt whose age is not her card's, and youth or nudity words.
-- **The eye.** After the pixels are held, `lib/foundry/scout/judge.ts` reads adult / apparent age /
-  clothing / real-person / hands (`muse.ts` `judgeFailure`). Not adult, read under 21, nude, or a possible
-  real person: the still is deleted and the candidate fails `judge: <field>`. The eye is local first.
-- **Money.** Studio credits at quality Low (refused over 25 credits a still); `--ideas` default 25, max 50;
-  the night's Gemini ceiling defaults to $2 (only a judge fallback spends it). A refused studio generation
-  is deleted like a delivered one.
-- **Landing.** A kept `style` idea develops through the extract into the SHARED catalogue (either wing may
-  use the look); kept findings land in `knowledge/scout-muse/techniques.md`, kept watch lines in its
-  `watchlist.md`, kept characters in `characters.md` (`appendCharacter`). Muse stills are not Library
-  material through the scout feed; kept characters reach the Library as the `character` kind
-  (`lib/library/feeds/character.ts`), one item per woman, her stills as its looks.
-- **Reasons.** The scout source binds all eleven Board keys, so muse throws ride `craft` (anatomy),
-  `rights` (likeness), `subject` (young, drift - in the note), `style` (plastic - in the note), `generic`.
-- Not scheduled: `pipeline/scout-schedule.ps1` runs `/scout night` only.
+**Where a character comes from.** A character SEED (`type: "character"`, `character: {for: <app>, cast: one |
+ensemble | parody}`, `for` one of the idea apps - `dating-sim`, `companion-chat`, `roleplay`, `videogame`,
+`genre-video`, `short`) - and a character IDEA that grows from a kept one: an `ideas` brief with `target:
+"character"`, a card and a look slug, drawn 9:16 at studio quality Low, cleared by the eye. It may cite a web source of
+the night (`source: "s-NN"`, its words only).
+
+**The card** (`muse.ts CharacterCard`): `{name, age, look, personality, kind?: original|parody, origin?, render?:
+photoreal|stylised, audience?}` - `look` is IDENTITY (face, hair, build, skin, one signature garment), `personality`
+is STATE. Rules (`museDoor.ts briefRefusal` / `characterRefusal`): every brief is SFW (the nudity/sexual word floor
+holds for EVERY idea brief); an adult character is a stated adult (age 25+, at most 50 for companion-chat, dating-sim
+and roleplay), the eye reads 21+; a kids/family character may be any age, but under 18 is `render: stylised` and is
+never cast into adult work; a parody names its `origin` in words - popular fictional characters may be named for
+parody, never a real person, never a source picture. The eye (`judge.ts`) runs on character ideas, cast stills and
+sheets; a parody card adds the clause that a declared fictional character is not a real person.
+
+**Kept characters** (`characters.ts keptCharacters`, over scout + archive): a kept `character` idea grouped by its
+folded name, her newest card and portrait, her newest KEPT sheet. The taste brief carries `## Kept characters`,
+`## Already drawn` (the one-of-one guard over both roots), `## Technique findings` (the archive's techniques.md) and
+`## Sheets to draw`. A keep still appends her line to `knowledge/scout-muse/characters.md`. The Library character
+feed reads the same reader: a character first kept on the archive keeps `character:muse:<name>`, a new one
+`character:<name>`.
+
+| command | what it does |
+|---|---|
+| `sheet <night> [--character <name>] [--detach]` · `sheet <night> --collect` | Her REFERENCE SHEET: for every kept character with no kept sheet and none in flight, one neutral 1:1 still on local Flux - her identity block plus neutral framing (rest expression, three-quarter head, even light, plain grey field, the signature garment only) - with her kept portrait admitted LATE as the reference (`flux2.ts` reference graph ported from `pipeline/vlm-probe/consistency.py`, `REFERENCE_LATE` 0.25 from the probe's measured lane). Producer `scout-sheet`, gpu.local, $0. One cell `c-NN/sheet` in the packet group `sheets` (style, craft, subject); kept = her reference, rejected = drawn again (the reasons in `## Sheets to draw`). |
+| `cast: [<name>]` on a storyboard / trial, a character scene idea, an idea artboard | Each name a kept character (`cast.ts castOf`, at most 3, the audience rule). Every prompt leads with her identity block VERBATIM (`characters.ts castPrompt`; registry identity-split-from-state). On Flux (storyboards, trials) her kept sheet also rides as a late reference through the one guard `castStillOf` (only her own kept portrait or sheet, never a source file or a brief's path); without a kept sheet the panel is identity block only. The studio (scene stills, artboards) takes no reference: identity block only. `namesIn` exempts cast names and parody origins in storyboard panels; scene recipes keep the no-names rule. |
 
 ## Files on disk
 
