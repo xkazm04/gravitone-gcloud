@@ -39,6 +39,7 @@ import {
 } from "@gt/domain/library";
 import { libraryItemSchema, type LibraryItemDetail } from "@gt/domain/libraryItem";
 import { querySchema } from "@gt/kernel/library/clauses";
+import { resolveLineage } from "@gt/kernel/library/detail";
 
 import { buildCorpus, labelOf, type FixtureRecord } from "./fixtureCorpus.ts";
 import { PROJECTS } from "./fixtureData.ts";
@@ -189,7 +190,7 @@ export function fixtureDetail(id: string): Result<LibraryItemDetail> {
   const keys = Object.keys(x.f).filter((key) => !COLUMNS.has(key) && (x.f[key] ?? []).length > 0).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   const vocabulary = keys.map((key) => ({ key, label: groupLabel(key), values: [...(x.f[key] ?? [])].sort().map((value) => ({ value, label: labelOf(key, value) })) }));
   const pinned = (x.f["pin"] ?? []).includes(DEFAULT_PIN);
-  return ok({ item: item.value, row: x.row, vocabulary, lineage: x.lineage, extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", "use-in-project", ...(x.row.kind === "model" ? (["export"] as const) : [])] });
+  return ok({ item: item.value, row: x.row, vocabulary, lineage: resolveLineage(item.value, (other) => universe().byId.get(other)?.raw.title), extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", "use-in-project", ...(x.row.kind === "model" ? (["export"] as const) : [])] });
 }
 
 /** Presentation extras the index does not carry on a row (a take's peaks, a face's palette, a player's address). */

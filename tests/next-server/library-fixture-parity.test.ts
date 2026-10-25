@@ -249,6 +249,48 @@ describe("a detail lists the vocabulary the index lists", () => {
   }
 });
 
+describe("a detail's lineage is what the kernel resolves", () => {
+  // kernel library/detail.ts lineageOf: the record's pointers by role, the item's own title for
+  // THIS, the lesson / bundle / group steps, a link only where the index holds the target.
+  const KINDS = ["image", "plate", "style", "motion", "audio", "video", "doc", "model", "character"] as const;
+  for (const kind of KINDS) {
+    it(kind, () => {
+      const ids = corpus.filter((x) => x.raw.kind === kind).slice(0, 40).map((x) => x.raw.id);
+      const shown = (id: string, side: "fixture" | "real") => {
+        const d = side === "fixture" ? fixtureDetail(id) : libraryDetail(k.store, id);
+        if (!d.ok) throw d.error;
+        return { id, lineage: d.value.lineage };
+      };
+      expect(ids.map((id) => shown(id, "fixture"))).toEqual(ids.map((id) => shown(id, "real")));
+    });
+  }
+});
+
+describe("a detail's media facts are the blob's", () => {
+  // kernel library/detail.ts readFacts: media_facts holds ONE row a sha, so two items on one public
+  // file show one set of facts. The harness loads the first fact it meets per sha.
+  it("over 40 items of every kind", () => {
+    const kinds = ["image", "plate", "style", "motion", "audio", "video", "doc", "model", "character"];
+    const ids = kinds.flatMap((kind) => corpus.filter((x) => x.raw.kind === kind).slice(0, 40).map((x) => x.raw.id));
+    const media = (id: string, side: "fixture" | "real") => {
+      const d = side === "fixture" ? fixtureDetail(id) : libraryDetail(k.store, id);
+      if (!d.ok) throw d.error;
+      return `${id} ${JSON.stringify(d.value.media)}`;
+    };
+    expect(ids.map((id) => media(id, "fixture"))).toEqual(ids.map((id) => media(id, "real")));
+  });
+  it("one blob, one set of facts, over the whole corpus", () => {
+    const bySha = new Map<string, Set<string>>();
+    for (const x of corpus) {
+      if (x.media === null) continue;
+      const set = bySha.get(x.media.sha) ?? new Set<string>();
+      set.add(JSON.stringify(x.media));
+      bySha.set(x.media.sha, set);
+    }
+    expect([...bySha].filter(([, v]) => v.size > 1).map(([sha]) => sha)).toEqual([]);
+  });
+});
+
 describe("a row's cover names the blob and the type the index names", () => {
   // kernel library/query.ts rowOf: an image is its own cover under its own type, a clip its keyframe.
   it("over 40 items of every kind", () => {
