@@ -43,6 +43,7 @@ import { evidenceKey } from "@gt/ui/components/audio/lesson.ts";
 
 import { fileLeafReturn } from "../../app/(studio)/audio/_hunt/leafReturn.ts";
 import { producers } from "../../lib/producers/registry.ts";
+import { crownLeaf } from "../../lib/sound/huntDesk.ts";
 import { HUNT_LANE, huntJobId, huntProducer, huntRunId, launchHuntRender, type RenderLaunch } from "../../lib/sound/huntRender.ts";
 import { confirmLesson, handDraft } from "../../lib/sound/lessons.ts";
 import type { GenerateRequest, Hunt, HuntNode, SoundTake } from "../../lib/sound/types.ts";
@@ -250,6 +251,36 @@ describe("the lesson door", () => {
     expect(lessonsOnDisk()).toEqual([]);
     expect(huntOnDisk("hn-les02")?.lessonId).toBeNull();
     expect(events("lesson.confirmed", "ls-lsop0002")).toBe(0);
+  });
+});
+
+/* ── the crown ──────────────────────────────────────────────────────────── */
+
+/** The fields a take carries for its ledger row (a judged take is written there). */
+const WHOLE: Partial<SoundTake> = { technique: [], negative: null, terms: { genre: ["ambient"], mood: [], instrument: [], sfxCategory: null }, tempoBpm: null, key: null, durationS: 30, loop: null, file: null, peaks: null, measured: null, ratings: {}, reasons: [], note: null, stage: null, group: null, label: null, parentId: null, songId: null, plan: null, createdAt: "2026-10-17T09:00:00.000Z", judgedAt: null, finalizedAt: null };
+
+describe("the crown door", () => {
+  it("a crown keeps an unjudged take in the same write, once per op; a rejected take is never overruled", async () => {
+    seed([heardHunt("hn-crn01", [])], [take("hn-crn01-ta", { ...WHOLE, huntId: "hn-crn01", nodeId: "a" }), take("hn-crn01-tb", { ...WHOLE, huntId: "hn-crn01", nodeId: "b", verdict: "rejected", reasons: ["section-bleed"] })]);
+    const on = must(await crownLeaf(store, { huntId: "hn-crn01", nodeId: "a", takeId: "hn-crn01-ta", on: true, opId: "opcrn001" }, OP, NOW));
+    expect(on).toMatchObject({ winner: true, kept: true, unkept: false, recorded: true });
+    expect(takesOnDisk().find((t) => t.id === "hn-crn01-ta")).toMatchObject({ verdict: "kept", stage: "pending" });
+    expect(huntOnDisk("hn-crn01")?.nodes.find((n) => n.id === "a")?.winner).toBe(true);
+    const again = must(await crownLeaf(store, { huntId: "hn-crn01", nodeId: "a", takeId: "hn-crn01-ta", on: true, opId: "opcrn001" }, OP, NOW));
+    expect(again).toMatchObject({ winner: true, kept: false, recorded: false });
+    expect(events("hunt.crowned", "hn-crn01")).toBe(1);
+    const no = await crownLeaf(store, { huntId: "hn-crn01", nodeId: "b", takeId: "hn-crn01-tb", on: true, opId: "opcrn002" }, OP, NOW);
+    expect(no.ok ? null : no.error.code).toBe("refused");
+    expect(takesOnDisk().find((t) => t.id === "hn-crn01-tb")?.verdict).toBe("rejected");
+    expect(huntOnDisk("hn-crn01")?.nodes.find((n) => n.id === "b")?.winner).toBe(false);
+  });
+
+  it("an uncrown reaches back into the take only while it sits pending", async () => {
+    const off = must(await crownLeaf(store, { huntId: "hn-crn01", nodeId: "a", takeId: "hn-crn01-ta", on: false, opId: "opcrn003" }, OP, NOW));
+    expect(off).toMatchObject({ winner: false, kept: false, unkept: true, recorded: true });
+    expect(takesOnDisk().find((t) => t.id === "hn-crn01-ta")).toMatchObject({ verdict: "unjudged", stage: null });
+    expect(huntOnDisk("hn-crn01")?.nodes.find((n) => n.id === "a")?.winner).toBe(false);
+    expect(events("hunt.uncrowned", "hn-crn01")).toBe(1);
   });
 });
 
