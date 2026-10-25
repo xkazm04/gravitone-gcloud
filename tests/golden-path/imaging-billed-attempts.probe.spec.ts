@@ -29,7 +29,7 @@ import { spendRows, __resetBudget, BUDGET_VAR, WINDOW_VAR, FLOOR_VAR } from "@/l
 import { ImagingError, presumedBilled } from "@/lib/imaging/errors";
 import { ollamaProvider } from "@/lib/imaging/providers/ollama";
 import { qwenProvider } from "@/lib/imaging/providers/qwen";
-import { billedOnFailure, generate } from "@/lib/imaging/router";
+import { billedOnFailure, generate, recognize } from "@/lib/imaging/router";
 import { PRICES } from "@/lib/imaging/pricing";
 
 const realFetch = globalThis.fetch;
@@ -373,6 +373,24 @@ test("17b. [guard] a full batch carries no shortBatch", async () => {
   const out = await generate({ prompt: "probe full", aspect: "16:9", count: 2 });
   expect(out.images).toHaveLength(2);
   expect(out.provenance.shortBatch).toBeUndefined();
+});
+
+test("18. an empty Ollama recognition is not a served judgement and is not re-sent to a billed eye", async () => {
+  // google.ts refuses an empty recognition and qwen rotates on one; the local eye
+  // used to resolve text "" as a green, empty judgement. `bad-response` is not
+  // reroutable, so the empty local read stops here instead of spending on Google.
+  await withLeaseStore(async () => {
+    stubFetch(() => json({ message: { content: "  " } }));
+    const err = await failure(ollamaProvider().recognize!(RECOGNIZE));
+    expect(err.kind).toBe("bad-response");
+    expect(err.reroutable).toBe(false);
+
+    stubFetch((_n, url) => (url.includes("ollama.probe") ? json({ message: { content: "" } }) : googleImage()));
+    const viaRouter = await failure(recognize(RECOGNIZE));
+    expect(viaRouter.kind).toBe("bad-response");
+    expect(count("ollama.probe")).toBe(1);
+    expect(count(INTERACTIONS), "an empty local read was sent to the billed cloud eye").toBe(0);
+  });
 });
 
 test("9. one authority: the router's billing predicate IS errors.ts's presumedBilled", () => {

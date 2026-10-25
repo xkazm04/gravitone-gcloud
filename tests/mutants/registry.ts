@@ -552,4 +552,12 @@ export const MUTANTS: Mutant[] = [
     replace: "const settled = (await Promise.all(calls)).map((value) => ({ status: \"fulfilled\" as const, value }));",
     why: "One refused or failed call in a Google N-candidate batch throws away every paid image the other calls returned, and the router pays a second vendor for N more.",
   },
+  {
+    id: "ollama-empty-recognition-served",
+    probe: "imaging-billed-attempts.probe.spec.ts",
+    file: "lib/imaging/providers/ollama.ts",
+    find: "if (!text) throw new ImagingError(\"Ollama returned an empty recognition.\"",
+    replace: "if (false) throw new ImagingError(\"Ollama returned an empty recognition.\"",
+    why: "The local eye answers empty content and the caller receives a green, empty judgement that nothing grades.",
+  },
 ];
