@@ -13273,6 +13273,32 @@
           "evidence": "packages/ui/src/components/audio/rubric.ts:12 The scoring here is an audio take rubric, not a face-identity instrument."
         }
       ]
+    },
+    "c425f431-c0d1-4f34-b736-1a5d70683ef4/declared-process-graph": {
+      "context": "notebook-contract-validation",
+      "subject": "declared-process-graph",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:18:40.130Z",
+      "worker": "9d88f875-3834-4163-8875-262bdeb767a1",
+      "techniques": [
+        {
+          "technique": "per-kind-field-whitelist",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/graph.ts:32 The graph checks are about card-reference integrity. There are no node kinds that launch processes, so no per-kind field legality applies."
+        },
+        {
+          "technique": "composite-expansion-contract",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/graph.ts:67 The notebook is checked as-is. There are no composite nodes and no expansion stage (zero hits for 'composite')."
+        },
+        {
+          "technique": "bounded-expansion",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:18 The validator reads one parsed model answer and never loads author-chosen sub-documents, so there is no recursion to bound."
+        }
+      ]
     }
   }
 }

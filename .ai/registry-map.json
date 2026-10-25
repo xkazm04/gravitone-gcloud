@@ -9073,7 +9073,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/notebook/graph.ts:78 Here the 'graph half' is a reference graph of research-notebook cards (facts, mechanisms, conclusions), checked for duplicate ids, dangling refs and unlinked conversions. Nothing in it is a topology of long-lived processes joined by named channels. A search of lib/notebook found zero hits for spawn, topology, subscribe and composite, so none of the subject's preconditions hold.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:8bc79a0c5315d2ac",
+          "evaluatedRevision": 1
         },
         {
           "subject": "eval-harness",
