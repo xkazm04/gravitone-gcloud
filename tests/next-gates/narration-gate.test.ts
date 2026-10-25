@@ -58,4 +58,13 @@ describe("check:narration", () => {
   test("a long native title= in @gt/ui fails", () => {
     expect(gate({ "packages/ui/src/e/E.tsx": `<span title="a title attribute long enough to count as prose here" />` }).code).toBe(1);
   });
+  test("an Empty label template of thirteen static words fails; a twelve-word one passes", () => {
+    const over = gate({ "app/(studio)/x/F.tsx": `<Empty label={\`${THIRTEEN} \${n}\`} action={{ label: "clear", onPress: () => go() }} />` });
+    expect(over.code).toBe(1);
+    expect(over.out).toContain("app/(studio)/x/F.tsx");
+    expect(gate({ "app/(studio)/x/F.tsx": `<Empty label={\`${TWELVE} \${n}\`} />` }).code).toBe(0);
+  });
+  test("an Empty label ternary is read by its longest branch", () => {
+    expect(gate({ "app/(studio)/x/G.tsx": `<Empty label={on ? "${THIRTEEN}" : "none"} />` }).code).toBe(1);
+  });
 });

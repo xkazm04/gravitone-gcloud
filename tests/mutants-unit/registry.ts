@@ -7062,4 +7062,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "render: deps.render, now",
     why: "The between-turn check asks for screenshots again: up to nine passes a run each write three full-page PNGs nobody reads.",
   },
+  {
+    id: "narration-ignores-empty-label",
+    test: "tests/next-gates/narration-gate.test.ts",
+    file: "pipeline/check-narration.mjs",
+    find: "const attr = m[1] === \"Hint\" ? \"text\" : \"label\";",
+    replace: "const attr = \"text\";",
+    why: "check:narration stops reading an Empty label, so a template or ternary label past twelve words ships: the type counts only literals.",
+  },
 ];
