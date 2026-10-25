@@ -24,7 +24,11 @@ function token(name: string): string {
 
 function literal(v: string): Rgba {
   const hex = /^#([0-9a-f]{6})$/i.exec(v);
-  if (hex?.[1] !== undefined) return [0, 2, 4].map((i) => parseInt(hex[1]!.slice(i, i + 2), 16)).concat(1) as unknown as Rgba;
+  const h = hex?.[1];
+  if (h !== undefined) {
+    const at = (i: number): number => parseInt(h.slice(i, i + 2), 16);
+    return [at(0), at(2), at(4), 1];
+  }
   const fn = /^rgba?\(([^)]+)\)$/.exec(v);
   if (fn?.[1] === undefined) throw new Error(`not a colour: ${v}`);
   const [r = 0, g = 0, b = 0, a = 1] = fn[1].split(",").map(Number);

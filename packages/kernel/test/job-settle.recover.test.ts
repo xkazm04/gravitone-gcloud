@@ -2,7 +2,9 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { findPython, scratch } from "./helpers.ts";
+import { z } from "zod";
+import { parseJsonAt } from "@gt/domain/door";
+import { findPython, must, scratch } from "./helpers.ts";
 
 // py/job_settle.recover settles the endings nobody settled. Its cost follows what is OWED, not the
 // store's lifetime of finished jobs: with 150 settled endings and 3 owed, the sweep opens one
@@ -23,7 +25,7 @@ describe.skipIf(python === undefined)("python recover cost", () => {
         timeout: 60_000,
       });
       expect(r.status, r.stderr).toBe(0);
-      const got = JSON.parse(r.stdout.trim().split("\n").pop()!) as { settled: number; tx: number };
+      const got = must(parseJsonAt("recover cost report", z.object({ settled: z.number(), tx: z.number() }), r.stdout.trim().split("\n").pop() ?? ""));
       expect(got.settled).toBe(3);
       expect(got.tx).toBeLessThanOrEqual(1 + 3 * 3);
     } finally {

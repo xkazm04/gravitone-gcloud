@@ -161,15 +161,16 @@ describe("what the parts expose", () => {
 
   test("the options are memoized and hand their id to the handlers, so a selection step re-renders only the two it changes", () => {
     const memo = Symbol.for("react.memo");
-    expect((LibraryTile as unknown as { $$typeof: symbol }).$$typeof).toBe(memo);
-    expect((LibraryRow as unknown as { $$typeof: symbol }).$$typeof).toBe(memo);
+    expect(LibraryTile.$$typeof).toBe(memo);
+    expect(LibraryRow.$$typeof).toBe(memo);
     for (const Opt of [LibraryTile, LibraryRow]) {
       const picked: string[] = [];
       const opened: string[] = [];
-      const render = (Opt as unknown as { type: (p: object) => { props: { onClick: () => void; onDoubleClick: () => void } } }).type;
-      const el = render({ card: c, selected: false, domId: "o", onSelect: (id: string) => picked.push(id), onOpen: (id: string) => opened.push(id) });
-      el.props.onClick();
-      el.props.onDoubleClick();
+      const el = Opt.type({ card: c, selected: false, domId: "o", onSelect: (id: string) => void picked.push(id), onOpen: (id: string) => void opened.push(id) });
+      const { onClick, onDoubleClick }: { onClick: unknown; onDoubleClick: unknown } = el.props;
+      if (typeof onClick !== "function" || typeof onDoubleClick !== "function") throw new Error("the option takes no press");
+      onClick();
+      onDoubleClick();
       expect(picked).toEqual([c.id]);
       expect(opened).toEqual([c.id]);
     }
@@ -192,7 +193,7 @@ describe("what the parts expose", () => {
       return out;
     };
     const plate: LibraryCard = { ...c, id: "plate-0004", kind: "plate", chips: ["collage", "collage", "forge"] };
-    const lists = keysUnder((LibraryRow as unknown as { type: (p: object) => unknown }).type({ card: plate, selected: false, domId: "z", onSelect: noop, onOpen: noop }));
+    const lists = keysUnder(LibraryRow.type({ card: plate, selected: false, domId: "z", onSelect: noop, onOpen: noop }));
     const chipKeys = lists.find((l) => l.length === 3);
     expect(chipKeys).toBeDefined();
     expect(new Set(chipKeys).size).toBe(3);

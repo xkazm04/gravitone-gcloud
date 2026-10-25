@@ -20,9 +20,12 @@ vi.mock("react", async (importOriginal) => {
 import { Plate, type PlateProps } from "../../src/components/desk/Plate.tsx";
 
 type El = { readonly type: unknown; readonly props: Readonly<Record<string, unknown>> };
+const isEl = (x: unknown): x is El => typeof x === "object" && x !== null && "props" in x && "type" in x;
 const draw = (p: PlateProps): El => {
   hooks.i = 0;
-  return Plate(p) as unknown as El;
+  const out = Plate(p);
+  if (!isEl(out)) throw new Error("Plate drew no element");
+  return out;
 };
 const fresh = (): void => void (hooks.slots.length = 0);
 

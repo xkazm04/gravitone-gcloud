@@ -62,7 +62,9 @@ function mount(over: Partial<FrameCanvasProps> = {}) {
   let tree: El;
   const render = (): void => {
     hooks.i = 0;
-    tree = FrameCanvas(props) as unknown as El;
+    const out = FrameCanvas(props);
+    if (!isEl(out)) throw new Error("FrameCanvas drew no element");
+    tree = out;
     // The frame's box is 200 x 100 px, so 20 px across is 10% and 10 px down is 10%.
     const box = hooks.slots[0] as { current: unknown };
     box.current = { getBoundingClientRect: () => ({ width: 200, height: 100 }) };

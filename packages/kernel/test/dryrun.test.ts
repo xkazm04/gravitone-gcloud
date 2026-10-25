@@ -1,4 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
+import { z } from "zod";
+import { parseJsonAt } from "@gt/domain/door";
 import { blobStore } from "../src/blob.ts";
 import { armLive, DRY, isDryStop, paid, runModeFrom, withDryRun } from "../src/dryrun.ts";
 import { liveEffects, type Effects } from "../src/effects.ts";
@@ -144,7 +146,7 @@ describe("a driver under the dry port", () => {
     expect(w.calls).toBe(0);
     expect(must(s.read((x) => x.all("SELECT type FROM events WHERE type IN ('spend.refused', 'router.refused', 'receipt.released') ORDER BY seq")))).toEqual([{ type: "spend.refused" }, { type: "router.refused" }, { type: "receipt.released" }]);
     // The money stop names the provider the route chose; spend.refused carries totals only.
-    const refusal = JSON.parse(String(must(s.read((x) => x.get("SELECT data FROM events WHERE type = 'router.refused'")?.["data"]))));
+    const refusal = must(parseJsonAt("router.refused data", z.unknown(), String(must(s.read((x) => x.get("SELECT data FROM events WHERE type = 'router.refused'")?.["data"])))));
     expect(refusal).toMatchObject({ reason: "over-budget", provider: "google", model: "gemini-3.1-flash-image", mode: "live" });
     expect(count(s, "SELECT count(*) AS n FROM receipts")).toBe(0);
   });

@@ -135,7 +135,12 @@ describe("the commit button", () => {
   // document (registry accessibility/keyboard-navigation-models). The button keeps its identity
   // across refusals and restarts the animation by alternating its class instead.
   type Btn = { readonly key: string | null; readonly props: { readonly className: string } };
-  const at = (refusals: number) => CommitButton({ mode: "board.cull", waiting: "3 undecided", refusals, onPress: noop }) as unknown as Btn;
+  const at = (refusals: number): Btn => {
+    const b = CommitButton({ mode: "board.cull", waiting: "3 undecided", refusals, onPress: noop });
+    const className: unknown = b.props.className;
+    if (typeof className !== "string") throw new Error("the commit button wears no class");
+    return { key: b.key, props: { className } };
+  };
 
   test("a refusal replays the shake without remounting the button", () => {
     expect([0, 1, 2, 3].map((n) => at(n).key)).toEqual([null, null, null, null]);

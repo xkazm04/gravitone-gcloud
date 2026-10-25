@@ -3,8 +3,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { PART_OPTIONS, type OptionDecl } from "@gt/catalog/partOptions";
 import { AppError } from "@gt/domain/errors";
-import type { Job } from "@gt/domain/job";
+import { parseAt } from "@gt/domain/door";
+import { jobSchema, type Job } from "@gt/domain/job";
 import type { MissingStep, Producer, StepContext } from "@gt/kernel/job-core";
+import type { StepMeter } from "@gt/kernel/spend/meter";
 import { defineMv, STUDIO_CREDITS, TEXT_TURN } from "../src/mv/producer.ts";
 import { TEXT_SEAT } from "../src/research/facts.ts";
 import { defineSuno, SUNO_CREDITS } from "../src/suno/producer.ts";
@@ -56,7 +58,45 @@ const DOORS: readonly Door[] = [
   },
 ];
 
-const ctx = { job: { id: "job:test" } as Job, meter: { used: () => false } } as unknown as StepContext;
+// The failure doors throw before any port is touched: a stub that is called fails the test loudly.
+const untouched = (port: string) => (): never => {
+  throw new Error(`the failure door touched ${port}`);
+};
+const job = ((): Job => {
+  const j = parseAt("job", jobSchema, {
+    id: "job:test",
+    of: { kind: "run", id: "test" },
+    producer: "mv",
+    lane: "cloud.google",
+    state: "queued",
+    mode: { kind: "dry" },
+    attempt: 1,
+    progress: { done: 0, total: 1 },
+    spend: { usd: 0, unpriced: 0, basis: "reported" },
+    failStreak: 0,
+  });
+  if (!j.ok) throw j.error;
+  return j.value;
+})();
+const meter: StepMeter = {
+  reserve: untouched("meter.reserve"),
+  settle: untouched("meter.settle"),
+  release: untouched("meter.release"),
+  book: untouched("meter.book"),
+  unpriced: untouched("meter.unpriced"),
+  paid: untouched("meter.paid"),
+  used: () => false,
+  open: () => [],
+};
+const ctx: StepContext = {
+  job,
+  fx: { tx: untouched("fx.tx"), blob: untouched("fx.blob"), call: untouched("fx.call") },
+  meter,
+  outputs: new Map(),
+  key: "job:test/1",
+  owner: "test",
+  deadlineMs: Number.MAX_SAFE_INTEGER,
+};
 const stepOf = (name: string): MissingStep => ({ name, estimate: { seconds: 1, usd: 0 } });
 
 function rig(d: Door, boom: () => unknown, failWith?: Error) {

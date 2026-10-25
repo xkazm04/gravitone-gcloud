@@ -2,7 +2,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 
+import { parseJsonAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { Holder, RunMode } from "@gt/domain/job";
@@ -267,7 +269,7 @@ describe("the claim", () => {
     expect(r.ok && r.value.outcomes.map((o) => o.kind)).toEqual(["lost"]);
     expect(stateOf(k, id)).toMatchObject({ state: "failed", error: INTERRUPTED_TEXT });
     const rows = k.store.read((rd) => rd.all("SELECT type, subject_kind, subject_id, data FROM events WHERE type = 'publish.orphan'"));
-    expect(rows.ok && rows.value.map((x) => [x["subject_kind"], x["subject_id"], JSON.parse(String(x["data"]))])).toEqual([["slot", id, { channel: "youtube", platformId: "yt-orphan-9" }]]);
+    expect(rows.ok && rows.value.map((x) => [x["subject_kind"], x["subject_id"], parseJsonAt("publish.orphan data", z.unknown(), String(x["data"]))])).toEqual([["slot", id, ok({ channel: "youtube", platformId: "yt-orphan-9" })]]);
     k.close();
   });
 
