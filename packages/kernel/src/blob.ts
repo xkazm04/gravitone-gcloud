@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { mimeSchema, type BlobRef } from "@gt/domain/blob";
@@ -53,6 +54,13 @@ async function sizeOf(file: string): Promise<number | undefined> {
   }
 }
 
+/** The sha256 of a file on disk, streamed so a media file is never held whole. */
+async function digestOf(file: string): Promise<string> {
+  const h = createHash("sha256");
+  for await (const chunk of createReadStream(file, { highWaterMark: 8 << 20 })) h.update(chunk);
+  return h.digest("hex");
+}
+
 async function renameInto(tmp: string, file: string): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     try {
@@ -85,9 +93,11 @@ export function blobStore(root: string): BlobStore {
       const file = target.value;
       const tmp = path.join(path.dirname(file), `.${path.basename(file)}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`);
       try {
-        // A file of the right size at a content address holds that content: the
-        // only writer of the path is this function, and it renames whole files.
-        if ((await sizeOf(file)) === ref.bytes) return ok(ref);
+        // A file of the right size at a content address is not rewritten - but it
+        // is re-hashed first: bit rot or a hand edit that keeps the length would
+        // otherwise leave a blob `read` reports as damaged damaged for good, with
+        // putting the source bytes again unable to heal it (measured 2026-10-25).
+        if ((await sizeOf(file)) === ref.bytes && (await digestOf(file)) === ref.sha256) return ok(ref);
         await mkdir(path.dirname(file), { recursive: true });
         const fh = await open(tmp, "wx");
         try {
