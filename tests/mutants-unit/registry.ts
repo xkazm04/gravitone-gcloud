@@ -6878,4 +6878,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "",
     why: "A ratified style shows its lock in the grid and not in the list, so switching views loses the one mark that says its block can no longer change.",
   },
+  {
+    id: "asset-library-tile-not-memoized",
+    test: "packages/ui/test/components/library.test.ts",
+    file: "packages/ui/src/components/library/LibraryTile.tsx",
+    find: "export const LibraryTile = memo(function LibraryTile(",
+    replace: "export const LibraryTile = ((f: any) => f)(function LibraryTile(",
+    why: "Every held tile re-renders on each arrow step (about 170 renders per step against a 24-tile window instead of two).",
+  },
+  {
+    id: "asset-library-row-not-memoized",
+    test: "packages/ui/test/components/library.test.ts",
+    file: "packages/ui/src/components/library/LibraryRow.tsx",
+    find: "export const LibraryRow = memo(function LibraryRow(",
+    replace: "export const LibraryRow = ((f: any) => f)(function LibraryRow(",
+    why: "Every held row re-renders on each arrow step in the list view.",
+  },
 ];

@@ -5,7 +5,7 @@
 //
 // An option of the results listbox, like the tile (LibraryTile.tsx says why it is not a tab stop).
 
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 
 import { cx } from "../cx.ts";
 import { Chip } from "../chip/Chip.tsx";
@@ -22,11 +22,12 @@ export type LibraryRowProps = {
   readonly card: LibraryCard;
   readonly selected: boolean;
   readonly domId: string;
-  readonly onSelect: () => void;
-  readonly onOpen: () => void;
+  /** Stable across renders (it takes the id): see LibraryTile. */
+  readonly onSelect: (id: string) => void;
+  readonly onOpen: (id: string) => void;
 };
 
-export function LibraryRow({ card, selected, domId, onSelect, onOpen }: LibraryRowProps) {
+export const LibraryRow = memo(function LibraryRow({ card, selected, domId, onSelect, onOpen }: LibraryRowProps) {
   return (
     <div
       id={domId}
@@ -36,8 +37,8 @@ export function LibraryRow({ card, selected, domId, onSelect, onOpen }: LibraryR
       data-id={card.id}
       data-kind={card.kind}
       className={cx(s.row, selected && s.on)}
-      onClick={onSelect}
-      onDoubleClick={onOpen}
+      onClick={() => onSelect(card.id)}
+      onDoubleClick={() => onOpen(card.id)}
     >
       <span className={s.thumb} aria-hidden="true">
         <FaceView face={card.face} size="row" />
@@ -69,7 +70,7 @@ export function LibraryRow({ card, selected, domId, onSelect, onOpen }: LibraryR
       </span>
     </div>
   );
-}
+});
 
 /** The list's column head: the row's tracks, in caps. Decorative - each row's name says it all. */
 export function LibraryColumns() {

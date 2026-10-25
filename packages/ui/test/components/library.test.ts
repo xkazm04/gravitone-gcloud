@@ -153,6 +153,22 @@ describe("what the parts expose", () => {
     expect(cardName({ ...style, locked: false })).not.toContain("locked");
   });
 
+  test("the options are memoized and hand their id to the handlers, so a selection step re-renders only the two it changes", () => {
+    const memo = Symbol.for("react.memo");
+    expect((LibraryTile as unknown as { $$typeof: symbol }).$$typeof).toBe(memo);
+    expect((LibraryRow as unknown as { $$typeof: symbol }).$$typeof).toBe(memo);
+    for (const Opt of [LibraryTile, LibraryRow]) {
+      const picked: string[] = [];
+      const opened: string[] = [];
+      const render = (Opt as unknown as { type: (p: object) => { props: { onClick: () => void; onDoubleClick: () => void } } }).type;
+      const el = render({ card: c, selected: false, domId: "o", onSelect: (id: string) => picked.push(id), onOpen: (id: string) => opened.push(id) });
+      el.props.onClick();
+      el.props.onDoubleClick();
+      expect(picked).toEqual([c.id]);
+      expect(opened).toEqual([c.id]);
+    }
+  });
+
   test("a locked style wears its lock in the list as the grid does; an unlocked one wears none", () => {
     const style: LibraryCard = { ...c, id: "style-0001", kind: "style", state: "ratified", locked: true, chips: [] };
     const row = (card: LibraryCard): string => html(h(LibraryRow, { card, selected: false, domId: "r", onSelect: noop, onOpen: noop }));
@@ -170,7 +186,7 @@ describe("what the parts expose", () => {
       return out;
     };
     const plate: LibraryCard = { ...c, id: "plate-0004", kind: "plate", chips: ["collage", "collage", "forge"] };
-    const lists = keysUnder(LibraryRow({ card: plate, selected: false, domId: "z", onSelect: noop, onOpen: noop }));
+    const lists = keysUnder((LibraryRow as unknown as { type: (p: object) => unknown }).type({ card: plate, selected: false, domId: "z", onSelect: noop, onOpen: noop }));
     const chipKeys = lists.find((l) => l.length === 3);
     expect(chipKeys).toBeDefined();
     expect(new Set(chipKeys).size).toBe(3);
