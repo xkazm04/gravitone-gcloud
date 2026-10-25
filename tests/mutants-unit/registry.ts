@@ -2059,7 +2059,7 @@ export const MUTANTS: UnitMutant[] = [
     id: "job-run-release-forgotten",
     test: "packages/kernel/test/job.settle.test.ts",
     file: "packages/kernel/src/job-run.ts",
-    find: "            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, { ...gateContext(t, Date.parse(t.at)), ...(pre === undefined ? {} : { preflightOf: pre }) });",
+    find: "            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, { ...gateFacts(Date.parse(t.at)), ...(pre === undefined ? {} : { preflightOf: pre }) });",
     replace: "",
     why: "A part's job finishes and nothing releases the parts that wait for it: every downstream job of a launched plan stays planned forever.",
   },

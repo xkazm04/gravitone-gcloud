@@ -14,7 +14,7 @@ import { jobEvent, loadJob, loadOutputs, putJob } from "./job.ts";
 import { DEFAULT_TTL_S, fenceLoss, gone, type Alive } from "./lease-core.ts";
 import { sleep as sleepMs } from "./sleep.ts";
 import type { SpendClass } from "./spend/core.ts";
-import { gateContext } from "./parts/gates.ts";
+import { gateFacts } from "./parts/gates.ts";
 import { releaseHeldIn } from "./records/write.ts";
 import { lapseOwner } from "./spend/ledger.ts";
 import { lapseOpen, stepMeter } from "./spend/meter.ts";
@@ -288,7 +288,7 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
             // Only a part a plan launched (it names its project) - a bare part job has no plan to move.
             const projectId = job.of.kind === "part" ? job.correlation?.projectId : undefined;
             const pre = opts.preflightOf;
-            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, { ...gateContext(t, Date.parse(t.at)), ...(pre === undefined ? {} : { preflightOf: pre }) });
+            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, { ...gateFacts(Date.parse(t.at)), ...(pre === undefined ? {} : { preflightOf: pre }) });
             return end;
           }
           case "claim":

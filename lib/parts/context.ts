@@ -5,7 +5,7 @@ import { recipeById } from "@gt/catalog/recipes";
 import type { PlanView } from "@gt/domain/produce";
 import type { StepKind } from "@gt/domain/steps/registry";
 import type { PartSnapshot } from "@gt/kernel/parts/driver";
-import { gateContext } from "@gt/kernel/parts/gates";
+import { gateFacts } from "@gt/kernel/parts/gates";
 import { planViewIn } from "@gt/kernel/records/read";
 import type { Reader } from "@gt/kernel/store";
 
@@ -33,7 +33,7 @@ export function disciplineFor(recipeId: string): Discipline {
 }
 
 export function projectRead(r: Reader, projectId: string, now: number): ProjectRead {
-  const plan = planViewIn(r, projectId, gateContext(r, now));
+  const plan = planViewIn(r, projectId, gateFacts(now));
   const recipe = recipeById(plan.project.recipe);
   const targetS = plan.project.runtimeS ?? (recipe?.template === undefined ? null : templateOf(recipe.template).defaultS);
   return { plan, discipline: disciplineFor(plan.project.recipe), targetS, plansVoice: recipe?.parts.some((p) => p.kind === "voice") === true };

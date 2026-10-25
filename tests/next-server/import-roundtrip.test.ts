@@ -8,7 +8,7 @@ import { ok } from "@gt/domain/errors";
 import { blobStore, type BlobStore } from "@gt/kernel/blob";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { readPartIn, writePart } from "@gt/kernel/parts/driver";
-import { gateContext, gateFacts } from "@gt/kernel/parts/gates";
+import { gateFacts } from "@gt/kernel/parts/gates";
 import { launchProject, planReceipt } from "@gt/kernel/records/launch";
 import { planViewIn } from "@gt/kernel/records/read";
 import { compose, setPart } from "@gt/kernel/records/write";
@@ -71,7 +71,7 @@ async function imported(seed: Seeded) {
 }
 
 const plan = (store: Store, id: string) => {
-  const v = store.read((r) => planViewIn(r, id, gateContext(r, NOW)));
+  const v = store.read((r) => planViewIn(r, id, gateFacts(NOW)));
   if (!v.ok) throw v.error;
   return v.value;
 };

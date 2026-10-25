@@ -75,16 +75,11 @@ export function gateFacts(now: number): ReadContext {
   return { now, packetOf: (partId, r) => gatePacketFact(r, partId), slottedOf: (partId, r) => slottedIn(r, partId) };
 }
 
-/** `gateFacts` for a caller already inside a snapshot; the reader comes with each lookup. */
-export function gateContext(_r: Reader, now: number): ReadContext {
-  return gateFacts(now);
-}
-
 /**
  * Release what a gate held: inside ONE transaction, read the gates' packets and move every
  * planned job whose upstream is now ratified to queued (records/write.ts `releaseHeldIn`). Called
  * by the step packet's apply after its commit; idempotent (a released job is no longer planned).
  */
 export function releaseAfterGate(store: Store, projectId: string, actor: Actor, now: number): Result<string[]> {
-  return store.tx((t) => releaseHeldIn(t, projectId, actor, gateContext(t, now)));
+  return store.tx((t) => releaseHeldIn(t, projectId, actor, gateFacts(now)));
 }
