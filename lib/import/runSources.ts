@@ -41,6 +41,9 @@ export type Listed = { readonly runs: readonly V1Run[]; readonly unread: readonl
 
 const job = (x: { job?: string | undefined }) => (x.job === undefined ? {} : { job: x.job });
 const errorOf = (x: { error?: string | undefined }) => (x.error === undefined ? {} : { error: x.error });
+/** The furthest instant a Date holds: `msIso` throws past it, so the sound schemas bound `enqueuedAt` by it
+ *  and a record carrying one is reported unread, never a throw that reads every store as unlistable. */
+const MAX_TIME_MS = 8.64e15;
 const msIso = (ms: number): string => new Date(ms).toISOString();
 
 const forgeSchema = z.object({ id: z.string().min(1), created: z.string(), status: z.string(), plan: z.object({ id: z.string().min(1) }), candidates: z.array(z.unknown()), error: z.string().optional(), job: z.string().optional() });
@@ -63,7 +66,7 @@ const articleSchema = z.object({
   topic: z.object({ kind: z.enum(["subject", "free"]), bundle: z.string().optional(), subject: z.string().optional(), text: z.string(), angle: z.string().optional() }),
   error: z.string().optional(),
 });
-const soundJobSchema = z.object({ id: z.string().min(1), state: z.enum(["queued", "active", "done", "failed", "cancelled"]), enqueuedAt: z.number(), error: z.string().optional(), job: z.string().optional() });
+const soundJobSchema = z.object({ id: z.string().min(1), state: z.enum(["queued", "active", "done", "failed", "cancelled"]), enqueuedAt: z.number().min(-MAX_TIME_MS).max(MAX_TIME_MS), error: z.string().optional(), job: z.string().optional() });
 
 const stateOf = (status: string, done: readonly string[], failed: readonly string[]): V1RunState => (done.includes(status) ? "done" : failed.includes(status) ? "failed" : "live");
 

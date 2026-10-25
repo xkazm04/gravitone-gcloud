@@ -1,14 +1,17 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
 
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { reconcileJobSpend } from "@gt/kernel/spend/projection";
 import type { Store } from "@gt/kernel/store";
 
+import { listV1Runs } from "../../lib/import/runSources.ts";
 import { importRuns, type V1Run } from "../../lib/import/runs.ts";
 import { clearV1, seedV1, v1Archive } from "./import-harness.ts";
 
@@ -80,6 +83,27 @@ describe("v1 runs as Run rows with a terminal job", () => {
     importRuns(s, RUNS, { dry: false, now: 0 });
     const again = importRuns(s, RUNS, { dry: false, now: 0 });
     expect(again.ok && again.value.map((x) => x.outcome)).toEqual(["skipped", "skipped", "skipped", "skipped"]);
+  });
+});
+
+describe("the v1 stores the importer reads", () => {
+  it("reports a record whose instant no Date can hold as unread, and lists every other run of every store", async () => {
+    const dir = temp("gt-import-sources-");
+    const was = process.env["SOUND_STORE_DIR"];
+    process.env["SOUND_STORE_DIR"] = path.join(dir, "sound");
+    try {
+      mkdirSync(path.join(dir, "sound"), { recursive: true });
+      const at = Date.parse("2026-09-04T10:00:00Z");
+      writeFileSync(path.join(dir, "sound", "mv.json"), JSON.stringify({ version: 1, queue: { running: false }, jobs: [{ id: "mj-1", state: "done", enqueuedAt: at }, { id: "mj-2", state: "done", enqueuedAt: 1e20 }], imports: [], progress: {} }));
+      const r = await listV1Runs(["mv"]);
+      if (!r.ok) throw r.error;
+      expect(r.value.runs.map((x) => [x.runId, x.at])).toEqual([[`mv.mj-1.${at}`, "2026-09-04T10:00:00.000Z"]]);
+      expect(r.value.unread).toHaveLength(1);
+      expect(r.value.unread[0]).toMatch(/^mv mj-2: enqueuedAt /);
+    } finally {
+      if (was === undefined) delete process.env["SOUND_STORE_DIR"];
+      else process.env["SOUND_STORE_DIR"] = was;
+    }
   });
 });
 
