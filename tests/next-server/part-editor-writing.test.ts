@@ -255,6 +255,66 @@ describe("while a write is in flight no write button reads as pressable", () => 
   }
 });
 
+/* ── the raw controls that send a write are guarded the same way ──────── */
+
+/** The raw DOM controls (a variant tile, a note select) an editor draws, its sub-components rendered. */
+async function rawControls(run: () => ReactElement, view?: string): Promise<{ tile?: ReactElement; select?: ReactElement }> {
+  const found: { tile?: ReactElement; select?: ReactElement } = {};
+  const walk = (node: ReactNode): void => {
+    // a view chosen on the editor's own Seg (the document's inspector tabs)
+    for (const seg of view === undefined ? [] : all(node, named("Seg"))) (seg.props as { onChange: (v: string) => void }).onChange(view);
+    for (const el of all(node, (x, q) => (x.type === "button" && "data-variant" in q) || x.type === "select" || (typeof x.type === "function" && LOCAL.has(x.type.name)))) {
+      if (el.type === "button") found.tile ??= el;
+      else if (el.type === "select") found.select ??= el;
+      else walk((el.type as (q: unknown) => ReactNode)(el.props));
+    }
+  };
+  await harness(
+    () => {
+      delete found.tile;
+      delete found.select;
+      walk(run());
+      return null;
+    },
+    { settleWhen: "stable" },
+  ).settleUp();
+  return found;
+}
+
+describe("a variant tile and a note select disarm while a write is in flight", () => {
+  const beatBoard = (busy: boolean, sent: PartOp[]): ReactElement => {
+    const v = { id: "v1", kind: "open", connector: null, at: "0:00", label: "cold open", text: "t", rationale: "r", raises: [], spends: 0 } as const;
+    const d: ResearchData = { offers: ["notebook", "beats"], face: "beats", slots: [{ id: "s1", label: "open", role: "open", pick: null, variants: [v] }], picked: 0, spine: { composed: false, moved: false }, origin: "generated" };
+    const p = research(d, busy, sent);
+    return BeatsEditor({ ...p, data: d as never }) as ReactElement;
+  };
+  const noteDoc = (busy: boolean, sent: PartOp[]): ReactElement => {
+    const d: ScriptData = { face: "document", targetS: 60, writtenAgainst: { claims: 0, loadBearing: 0, mechanisms: 0, reversals: 0, kept: 0 }, candidates: [{ ...candidate("k1"), usage: [{ cardId: "c1", title: "c1", use: "spoken", seconds: 4 }] }], adopted: null, rollup: { enforced: 100, blocking: [] }, versions: [version("v1")], notes: [], noteKinds: [{ kind: "more-focus", label: "more focus" }], conflicts: [] } as never;
+    const p = { ...script(d, busy), send: (op: PartOp) => void sent.push(op) };
+    return DocumentEditor({ ...p, data: d as never }) as ReactElement;
+  };
+
+  for (const busy of [true, false]) {
+    it(`a variant tile picks ${busy ? "nothing" : "its variant"} with busy=${busy}`, async () => {
+      const sent: PartOp[] = [];
+      const tile = (await rawControls(() => beatBoard(busy, sent))).tile;
+      if (tile === undefined) throw new Error("no tile");
+      (tile.props as { onClick: () => void }).onClick();
+      expect(sent).toEqual(busy ? [] : [{ op: "pick-beat", slotId: "s1", variantId: "v1" }]);
+      expect((tile.props as Record<string, unknown>)["aria-disabled"]).toBe(busy ? true : undefined);
+    });
+
+    it(`a note select sends ${busy ? "nothing" : "note-add"} with busy=${busy}`, async () => {
+      const sent: PartOp[] = [];
+      const sel = (await rawControls(() => noteDoc(busy, sent), "coverage")).select;
+      if (sel === undefined) throw new Error("no select");
+      (sel.props as { onChange: (e: unknown) => void }).onChange({ currentTarget: { value: "more-focus" } });
+      expect(sent).toEqual(busy ? [] : [{ op: "note-add", cardId: "c1", kind: "more-focus" }]);
+      expect((sel.props as Record<string, unknown>)["aria-disabled"]).toBe(busy ? true : undefined);
+    });
+  }
+});
+
 /* ── a card's row says its scope out loud (Notebook.tsx CardRow) ───────── */
 
 /** The text a node draws, aria-hidden subtrees left out (what a screen reader is handed). */
