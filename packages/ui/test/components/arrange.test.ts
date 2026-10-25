@@ -142,6 +142,23 @@ describe("the rows' edits", () => {
     expect(renameGroup(g, "music", "ambient", " drone ")).toEqual({ ok: true, groups: { music: ["drone", "cinematic"], sfx: [] } });
     expect(deleteGroup(g, "music", "ambient", stackVersions([take("a", { group: "ambient" })]))).toEqual({ ok: false, error: "“ambient” holds 1 card" });
   });
+  test("an orphan spelled in another case than a declared row is adopted by merging into the declared row", () => {
+    const takes = [take("a", { group: "Ambient" }), take("b", { group: "ambient" }), take("c", { group: "ambient", parentId: "b" }), take("d", { group: null, terms: { genre: ["ambient"], mood: [], instrument: [], sfxCategory: null } })];
+    const stacks = stackVersions(takes);
+    const declared = ["Ambient"];
+    const orphan = rowsFor(declared, stacks).find((r) => r.orphan);
+    expect(orphan).toMatchObject({ name: "ambient", orphan: true, into: "Ambient" });
+    const gs: Groups = { music: declared, sfx: [] };
+    const op = { op: "adopt", name: "ambient" } as const;
+    expect(applyGroupOp(gs, "music", op, stacks)).toEqual({ ok: true, groups: gs });
+    expect(carriedBy(op, "music", takes, stacks, declared)).toEqual([
+      { id: "b", group: "Ambient" },
+      { id: "c", group: "Ambient" },
+    ]);
+    // the typed new-row field still refuses the same name
+    expect(applyGroupOp(gs, "music", { op: "add", name: "ambient" }, stacks)).toEqual({ ok: false, error: "“ambient” is already a row" });
+    expect(rowsFor(declared, stackVersions(takes.map((t) => (t.group === "ambient" ? { ...t, group: "Ambient" } : t)))).filter((r) => r.orphan)).toEqual([]);
+  });
   test("a rename carries every take under the old name, older versions too; an adopt files the ungrouped heads that carry it", () => {
     const takes = [take("a", { group: "ambient" }), take("b", { group: "ambient", parentId: "a" }), take("c", { group: null, terms: { genre: ["Drone"], mood: [], instrument: [], sfxCategory: null } })];
     const stacks = stackVersions(takes);

@@ -58,7 +58,7 @@ export function RowHead({ row, held, first, last, onEdit }: RowHeadProps) {
     <div className={s.rowHeadIn}>
       <span className={s.rowName}>{name}</span>
       {row.orphan ? (
-        <Chip label="adopt" casing="lower" tone="amber" ghost name={`adopt ${name} as a row`} onPress={() => onEdit({ op: "add", name })} />
+        <Chip label="adopt" casing="lower" tone="amber" ghost name={`adopt ${name} as a row`} onPress={() => onEdit({ op: row.into === null ? "add" : "adopt", name })} />
       ) : (
         <span className={s.rowActs}>
           <Chip label="rename" casing="lower" name={`rename ${name}`} onPress={() => setRenaming(true)} />
