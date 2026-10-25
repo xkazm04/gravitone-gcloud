@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import type { BlobRef } from "@gt/domain/blob";
+import type { FrameClip } from "@/lib/frames/frames";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 import type { ResourceLane } from "@gt/domain/lane";
@@ -213,7 +214,9 @@ function landMotion(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Part
   const byUnit = new Map([...made.values()].map((m) => [text(m["unitId"]) ?? "", m]));
   const units = u.units.map((x) => {
     const m = byUnit.get(x.id);
-    return m === undefined ? x : { ...x, clip: { ...x.clip, status: "rendered", blob: m["blob"], model: m["model"] } };
+    if (m === undefined) return x;
+    const clip: FrameClip = { ...x.clip, status: "rendered", blob: written<BlobRef>(m["blob"]), model: text(m["model"]) };
+    return { ...x, clip };
   });
   // Motion GROWS the frames record (v1's Motion wrote clip fields into it; @gt/domain/steps GROWS).
   return ok({ frames: { ...recOf(s, "frames"), units: asData({ u: units })["u"], renderId: u.renderId } });

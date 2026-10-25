@@ -21,6 +21,7 @@
 // picture: it is a picture plus what that picture DOES. See `FrameClip` — and
 // read the honesty note on it before drawing anything from it.
 
+import type { BlobRef } from "@gt/domain/blob";
 import type { ClipStatus } from "@/lib/studio/projectTypes";
 
 import { templateOf, type Discipline, type TemplateId } from "@gt/catalog/projects";
@@ -134,6 +135,10 @@ export interface FrameClip {
   motion: string;
   /** One honest sentence when there is one to say. */
   note?: string;
+  /** The rendered clip's bytes: landed by the motion producer, absent until a render. */
+  blob?: BlobRef;
+  /** The model that rendered it (the dry stand-in names itself). */
+  model?: string;
 }
 
 /** A clip nobody has authored yet. Absence, stated. */
