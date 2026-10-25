@@ -23,6 +23,7 @@
 // as a reference - a clip animates OUR replica still, never a source frame
 // (visual-style-locking / style-onboarding-from-sample).
 
+import type { VentureFrame } from "@gt/domain/genre";
 import type { Aspect } from "../../imaging/types";
 import type { CharacterCard, MuseJudge } from "./muse";
 import type { AssetId, ExportProject, MeshBrief } from "../mesh/types";
@@ -243,7 +244,7 @@ export type ScoutSource = {
 
 /* ── Candidates ──────────────────────────────────────────────────────────── */
 
-export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer", "storyboard"] as const;
+export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer", "storyboard", "piece", "genre", "venture"] as const;
 export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
 
 export const CANDIDATE_STATUSES = ["pending", "rendered", "failed"] as const;
@@ -531,6 +532,54 @@ export type StoryboardCandidate = CandidateBase & {
   /** The execution technique the night researched and the panels apply (spark scout-vision); a kept storyboard files
    *  it as a finding. Omitted when the brief names none. */
   readonly technique?: StoryboardTechnique;
+  /** The genre this storyboard is a TRIAL of (spark scout-vision S2): `gn-...`. Omitted on a plain storyboard. */
+  readonly genre?: string;
+  /** A trial's clips, by panel index: one LTX clip of each panel still (`storyboards/c-NN/clip-1.mp4`), null where
+   *  that clip failed. Omitted on a plain storyboard and before the clip step ran. Packet cells `c-NN/clip-N`. */
+  readonly clips?: readonly (SceneClip | null)[];
+};
+
+/**
+ * A genre's PIECE (spark scout-vision S2): the best kept trial rendered in full and cut into one 15-30 s video with
+ * the clips' own LTX audio. Only the clips the operator rejected on that trial are re-made. Packet cell `c-NN/video`;
+ * kept, the genre is publishable.
+ */
+export type PieceCandidate = CandidateBase & {
+  readonly kind: "piece";
+  /** `gn-...` */
+  readonly genre: string;
+  /** `<night>/<c-id>` of the kept trial it renders. */
+  readonly fromTrial: string;
+  readonly title: string;
+  /** The clips in cut order, by panel index; null where a clip could not be made. */
+  readonly clips: readonly (SceneClip | null)[];
+  /** The cut, night-relative (`pieces/c-NN/piece.mp4`); omitted until it is cut. */
+  readonly video?: string;
+  readonly durationS?: number;
+};
+
+/** A night's proposal to birth a GENRE from a kept storyboard; the operator's keep births it (spark scout-vision S2). */
+export type GenreProposalCandidate = CandidateBase & {
+  readonly kind: "genre";
+  /** The genre in plain words: `deadpan office satire, painted 3D`. */
+  readonly name: string;
+  /** `<night>/<c-id>` of the kept storyboard it is born from. */
+  readonly fromStoryboard: string;
+  readonly look: string;
+  /** The beats a video of the genre moves through. */
+  readonly grammar: readonly string[];
+  /** The committed cells it rests on (`<night>/<cell id>`), the storyboard's among them. */
+  readonly basedOn: readonly string[];
+};
+
+/** A night's proposal to birth a VENTURE (a channel from a publishable genre, an album from kept tracks). */
+export type VentureProposalCandidate = CandidateBase & {
+  readonly kind: "venture";
+  readonly name: string;
+  readonly ventureKind: "channel" | "album";
+  readonly frame: VentureFrame;
+  /** The committed cells it rests on: the genre's kept piece for a channel, the kept track clips for an album. */
+  readonly basedOn: readonly string[];
 };
 
 /** A researched way of executing the genre (pacing, shot grammar, a prompt technique) - FindingCandidate's shape, so
@@ -557,7 +606,10 @@ export type Candidate =
   | DirectionCandidate
   | TrackCandidate
   | VisualizerCandidate
-  | StoryboardCandidate;
+  | StoryboardCandidate
+  | PieceCandidate
+  | GenreProposalCandidate
+  | VentureProposalCandidate;
 
 /**
  * A scout track's Suno job (`sj-scout-<night>-<c-id>`, lib/foundry/scout/track.ts): its clips and the visualizer

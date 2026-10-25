@@ -53,6 +53,7 @@ type IdeasEngines = import("../lib/foundry/scout/idea.ts").IdeasEngines;
 type TrackEngines = import("../lib/foundry/scout/track.ts").TrackEngines;
 type VisualizerEngines = import("../lib/foundry/scout/visualizer.ts").VisualizerEngines;
 type StoryboardEngines = import("../lib/foundry/scout/storyboard.ts").StoryboardEngines;
+type PieceEngines = import("../lib/foundry/scout/piece.ts").PieceEngines;
 
 /** What a test or a rehearsal injects; production passes none. */
 export type CliPorts = {
@@ -74,6 +75,7 @@ export type CliPorts = {
   readonly visualizer?: VisualizerEngines;
   /** `storyboard`'s Flux frame; a test hands a fake (absent: the scout-storyboard producer on gpu.local). */
   readonly storyboard?: StoryboardEngines;
+  readonly piece?: PieceEngines;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
@@ -99,7 +101,10 @@ const USAGE = [
   "  seeds status [<batch>]",
   "  track <night> --seed <batch>/sd-NNN [--detach] · track <night> --collect",
   "  visualizer <night> --track <night>/<c-id>/<aN> [--detach] · visualizer <night> --collect",
-  "  storyboard <night> [--json <briefs|->] [--detach] · storyboard <night> --collect",
+  "  storyboard <night> [--json <briefs|->] [--detach] · storyboard <night> --collect   (a brief with genre: gn-... is a TRIAL)",
+  "  propose <night> --json <file|->            [{kind: genre, name, fromStoryboard, look, grammar} | {kind: venture, name, ventureKind: channel|album, frame, basedOn}]",
+  "  piece <night> [--genre gn-...] [--detach] · piece <night> --collect",
+  "  genre list | genre retire <gn-id> · venture list | venture retire <vn-id>",
   "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
 ].join("\n");
@@ -107,7 +112,7 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas, storyboard, lead and seeds new. */
@@ -115,7 +120,7 @@ function parse(argv: readonly string[]): { pos: string[]; flags: Map<string, str
   const pos: string[] = [];
   const flags = new Map<string, string | true>();
   const cmd = argv.find((a) => !a.startsWith("--"));
-  const reads = cmd === "add-source" || cmd === "finding" || cmd === "direction" || cmd === "ideas" || cmd === "lead" || (cmd === "seeds" && argv.includes("new")) || (cmd === "storyboard" && !argv.includes("--collect"));
+  const reads = cmd === "add-source" || cmd === "finding" || cmd === "direction" || cmd === "propose" || cmd === "ideas" || cmd === "lead" || (cmd === "seeds" && argv.includes("new")) || (cmd === "storyboard" && !argv.includes("--collect"));
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] ?? "";
     if (!a.startsWith("--")) {
@@ -314,6 +319,17 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
       return 0;
     }
 
+    // The night's proposals to birth a genre or a venture (spark scout-vision S2): words only, no kernel job.
+    if (cmd === "propose") {
+      const id = nightArg();
+      const { addProposals } = await import("../lib/foundry/scout/propose.ts");
+      const r = await addProposals(id, await input());
+      if (!r.ok) throw new Refused(r.error.message);
+      for (const c of r.value) say(`  + ${c.id} ${c.kind} proposal ${c.status} · ${c.name}`);
+      if (json) doc({ ok: true, night: id, candidates: r.value });
+      return 0;
+    }
+
     // A batch of one-sentence seeds (spark scout-decision-graph): words only, no kernel job.
     if (cmd === "seeds") {
       const { seedsCommand } = await import("../lib/foundry/scout/seeds.ts");
@@ -483,6 +499,35 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
         const n = await store.readNight(id);
         if (json) doc({ ok: !failed, night: id, jobIds: r.jobIds, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.dry === true ? { dry: true } : {}), candidates: r.candidates, storyboards: { used: sb.storyboardsUsed(n), cap: sb.storyboardCapOf(n) } });
         return failed ? 1 : 0;
+      }
+
+      // A genre's piece (spark scout-vision S2): its best kept trial rendered in full and cut.
+      if (cmd === "piece") {
+        const id = nightArg();
+        const pc = await import("../lib/foundry/scout/piece.ts");
+        if (flags.has("collect")) {
+          const got = await pc.collectPieces(id, { store: ctx.store });
+          for (const c of got) say(`${c.id} piece ${c.status}${c.error === undefined ? "" : ` · ${c.error}`}`);
+          if (got.length === 0) say(`nothing to collect in night ${id}`);
+          if (json) doc({ ok: true, night: id, candidates: got });
+          return 0;
+        }
+        const genre = str("genre");
+        const r = await pc.pieceAct(ctx, id, genre === undefined ? {} : { genre }, io.ports?.piece ?? {});
+        for (const c of r.candidates) say(`  ${c.id} piece ${c.status} · ${c.genre} · from ${c.fromTrial}${c.error === undefined ? "" : ` · ${c.error}`}`);
+        if (r.candidates.length === 0) say(`no piece due in night ${id}`);
+        const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
+        if (json) doc({ ok: !failed, night: id, jobIds: r.jobIds, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.dry === true ? { dry: true } : {}), candidates: r.candidates });
+        return failed ? 1 : 0;
+      }
+
+      // The kernel's genre and venture heads: listed, and retired by the operator (spark scout-vision S2).
+      if (cmd === "genre" || cmd === "venture") {
+        const { genresCommand } = await import("../lib/foundry/scout/genres.ts");
+        const r = await genresCommand(cmd, pos.slice(1), { store: ctx.store, actor: ctx.actor });
+        for (const l of r.lines) say(l);
+        if (json) doc(r.doc);
+        return r.code;
       }
 
       // A kept music seed made into a Suno track, and a kept track clip into a visualizer (spark scout-decision-graph).

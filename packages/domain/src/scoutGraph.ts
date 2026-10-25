@@ -34,12 +34,17 @@ export const GRAPH_KINDS = [
   "finding",
   "watch",
   "track",
+  // spark scout-vision S2: the night's proposals to birth a genre or a venture
+  "genre",
+  "venture",
   // stage output
   "look",
   "clip",
   "mesh",
   "knowledge",
   "visualizer",
+  // spark scout-vision S2: a genre's piece - kept, it IS the output
+  "piece",
 ] as const;
 export type GraphKind = (typeof GRAPH_KINDS)[number];
 

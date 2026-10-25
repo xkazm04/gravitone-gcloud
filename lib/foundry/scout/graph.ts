@@ -93,6 +93,8 @@ export async function buildGraphs(o: GraphOptions = {}): Promise<Record<ScoutWin
 function stageKind(c: Candidate): { readonly stage: GraphStage; readonly kind: GraphKind } {
   if (c.kind === "idea") return { stage: "idea", kind: c.target === "stats" ? "reel" : "idea" };
   if (c.kind === "visualizer") return { stage: "output", kind: "visualizer" };
+  // A genre's piece (spark scout-vision S2): kept, it is the output a published video is made of.
+  if (c.kind === "piece") return { stage: "output", kind: "piece" };
   // A kept idea composed as frames + words before any full video (spark scout-storyboards): its own column.
   if (c.kind === "storyboard") return { stage: "board", kind: "storyboard" };
   return { stage: "run", kind: c.kind };
