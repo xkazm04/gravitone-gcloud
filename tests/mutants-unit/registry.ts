@@ -7006,4 +7006,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "type: \"publish.noted\", subject: { kind: \"slot\", id: slot.id }",
     why: "A live upload whose claim was lost before its record leaves no durable word of the platform id: the worker counts a 'lost', the slot reads interrupted, and a re-schedule uploads the same export a second time.",
   },
+  {
+    id: "runs-act-runner-swallows-rejection",
+    test: "tests/next-server/runs-act-runner.test.ts",
+    file: "app/(studio)/projects/runs/_runs/actRunner.ts",
+    find: "onReject(errorMessage(e));",
+    replace: "void e;",
+    why: "A Server Action that rejects (network gone, server down before it answered) shows the operator nothing: the press reads as nothing happened and the console holds an unhandled rejection.",
+  },
+  {
+    id: "runs-send-to-calendar-bare-then-chain",
+    test: "tests/next-server/runs-act-runner.test.ts",
+    file: "app/(studio)/projects/runs/_runs/Runs.tsx",
+    find: "() => mv.schedule({ track, channel, publishAt }),",
+    replace: "() => mv.schedule({ track, channel, publishAt }).then((r) => r),",
+    why: "A site that chains .then on a Server Action outside the runner brings back the silent rejection for that one press.",
+  },
 ];
