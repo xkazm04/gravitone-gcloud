@@ -19,6 +19,7 @@ import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
 import { IdeaList } from "../src/components/cull/IdeaList.tsx";
 import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
 import { VariantCard } from "../src/components/cull/VariantCard.tsx";
+import { beatNote, withNote } from "../src/components/cut/CutReview.tsx";
 import { CommitButton } from "../src/components/desk/Desk.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
 import { BlindPair } from "../src/components/pair/BlindPair.tsx";
@@ -157,6 +158,17 @@ describe("the blind pair", () => {
     expect(html).toContain("machine pick ▒▒ masked");
     expect(html).toContain("Which is lit?");
     expect(html).toContain('aria-label="commit packet, 1 left"');
+  });
+});
+
+describe("the cut review", () => {
+  test("a beat's note is set by its words and taken back by a blank one, as a cull note is", () => {
+    const noted = withNote({}, 1, "  tighter  ");
+    expect(noted).toEqual({ 1: "tighter" });
+    expect(withNote(noted, 1, "   ")).toEqual({});
+    expect(withNote(noted, 0, "")).toEqual({ 1: "tighter" });
+    expect(beatNote([{ t0: 0 }, { t0: 4.2 }], withNote(noted, 1, " "))).toBeUndefined();
+    expect(beatNote([{ t0: 0 }, { t0: 4.2 }], noted)).toBe("beat 2 (0:04): tighter");
   });
 });
 

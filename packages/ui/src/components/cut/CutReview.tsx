@@ -38,6 +38,15 @@ export function beatNote(beats: readonly { readonly t0: number }[], notes: Reado
   return lines.length === 0 ? undefined : lines.join("\n");
 }
 
+/** A beat's note after ⏎ on its field: its trimmed words, or - blank - no note (the cull's noteAct reads a blank note the same way). */
+export function withNote(notes: Readonly<Record<number, string>>, beat: number, text: string): Readonly<Record<number, string>> {
+  const t = text.trim();
+  if (t !== "") return { ...notes, [beat]: t };
+  if (notes[beat] === undefined) return notes;
+  const { [beat]: _was, ...rest } = notes;
+  return rest;
+}
+
 export type CutReviewProps = {
   readonly packet: BoardPacket;
   readonly decide: (ids: readonly string[], v: BoardVerdict | null, label: string) => void;
@@ -73,10 +82,12 @@ export function CutReview({ packet, decide, onCommit, busy = false, announce = (
   };
   const attach = () => {
     if (editing === null) return;
-    const t = text.trim();
-    if (t !== "") setNotes((n) => ({ ...n, [editing]: t }));
+    const had = notes[editing] !== undefined;
+    const next = withNote(notes, editing, text);
+    setNotes(next);
     setEditing(null);
-    announce(`note on beat ${editing + 1}`);
+    if (next[editing] !== undefined) announce(`note on beat ${editing + 1}`);
+    else if (had) announce(`note cleared on beat ${editing + 1}`);
   };
 
   useKeys(
