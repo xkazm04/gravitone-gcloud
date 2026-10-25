@@ -1,6 +1,7 @@
 // SUNO PROPOSE — a lane in, N Suno prompts out; or one prompt in, N riffs out.
 // Server-only: one lib/text turn per call, exactly as lib/sound/hunt.ts drafts
-// a map (reason() with a JSON schema, the prompt read from a file in pipeline/).
+// a map (reason() with a JSON schema, the prompt read from a file in pipeline/
+// through hunt.ts's own promptFile, its slots filled by hunt.ts's one fill).
 //
 // THE PROMPT IS A FILE: pipeline/SUNO-PROPOSE-PROMPT.md, sectioned `shared` +
 // `propose` | `riff`, read per call. A prompt is code; it lives in pipeline/.
@@ -12,14 +13,11 @@
 // form limits are enforced in parseFields), the count (clamped), the lane
 // (the caller's), and the origin (set here).
 
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import { reason as routerReason } from "@/lib/text/router";
 import type { TextRequest, TextResult, TurnClass } from "@/lib/text/types";
 import type { SunoLane, SunoProposal } from "@/lib/suno/types";
 
-import { sectionsOf } from "../hunt";
+import { fill, promptFile } from "../hunt";
 import { safeId, SoundError } from "../store";
 import { addProposals, parseFields, readSuno, STYLE_MAX, TITLE_MAX, type NewProposal } from "./store";
 
@@ -53,19 +51,10 @@ export const PROPOSE_SCHEMA: Record<string, unknown> = {
 };
 
 async function promptSections(): Promise<Record<string, string>> {
-  const at = path.join(process.cwd(), "pipeline", "SUNO-PROPOSE-PROMPT.md");
-  let md: string;
-  try {
-    md = await readFile(at, "utf8");
-  } catch {
-    throw new SoundError(`the prompt file ${path.relative(process.cwd(), at)} is missing — it is part of the code`, 500);
-  }
-  const s = sectionsOf(md);
-  if (!s.shared || !s.propose || !s.riff) throw new SoundError('SUNO-PROPOSE-PROMPT.md needs "shared", "propose" and "riff" sections', 500);
+  const s = await promptFile("SUNO-PROPOSE-PROMPT.md");
+  if (!s.propose || !s.riff) throw new SoundError('SUNO-PROPOSE-PROMPT.md needs "shared", "propose" and "riff" sections', 500);
   return s;
 }
-
-const fill = (tpl: string, slots: Record<string, string>) => tpl.replace(/\{\{([A-Z_]+)\}\}/g, (all, k: string) => (k in slots ? slots[k] : all));
 
 const fieldsText = (p: Pick<SunoProposal, "fields">) =>
   [
