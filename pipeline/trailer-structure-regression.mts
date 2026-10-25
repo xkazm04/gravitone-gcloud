@@ -23,6 +23,8 @@
 // this" into "fine", trains its user to ignore it — and a checker nobody believes
 // is worth less than none.
 
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   runStructureCheck,
   type StructureFinding,
@@ -475,6 +477,39 @@ if (unroutable.length) {
   );
 }
 
+/* ── params.json's `consumed_by` resolves ───────────────────────────────────
+ * The params file says each value's `consumed_by` is "the code that reads this
+ * value". After the Phase 0.4 move 23 of its 24 path claims named
+ * app/_phases/script/trailer/*, which no longer exists, and nothing noticed. So:
+ * every claim that opens with a path names a file that exists, and the symbol
+ * after the path, when there is one, is a word in that file. */
+{
+  const root = fileURLToPath(new URL("..", import.meta.url));
+  const params: unknown = JSON.parse(readFileSync(`${root}knowledge/templates/trailer/steps/01-script/params.json`, "utf8"));
+  const claims: string[] = [];
+  const walk = (v: unknown) => {
+    if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object")
+      for (const [k, x] of Object.entries(v)) {
+        if (k === "consumed_by" && typeof x === "string") claims.push(x);
+        else walk(x);
+      }
+  };
+  walk(params);
+  const PATH_CLAIM = /^((?:app|lib|packages|pipeline)\/[\w./()[\]-]+\.(?:ts|tsx|mts|json))(?:\s+([A-Za-z_]\w*))?/;
+  const pathed = claims.map((c) => PATH_CLAIM.exec(c)).filter((m): m is RegExpExecArray => m !== null);
+  const broken = pathed.filter(([, file, symbol]) => {
+    if (!existsSync(`${root}${file}`)) return true;
+    return symbol !== undefined && !new RegExp(`\\b${symbol}\\b`).test(readFileSync(`${root}${file}`, "utf8"));
+  });
+  if (pathed.length === 0 || broken.length) {
+    bad++;
+    console.log(`FAIL  seam           · params consumed_by: ${pathed.length} path claim(s), ${broken.length} unresolved: ${broken.map((m) => m[0]).join(" | ")}`);
+  } else {
+    console.log(`OK    seam           · params consumed_by: all ${pathed.length} path claims name a file and symbol that exist`);
+  }
+}
+
 /* ───────────────────── notes and the edit plan (session 1) ─────────────────── */
 
 const planCheck = (name: string, ok: boolean, why: string) => {
@@ -574,6 +609,6 @@ const planCheck = (name: string, ok: boolean, why: string) => {
 console.log(
   bad
     ? `\n${bad} REGRESSION FAILURE(S)`
-    : `\nall ${CASES.length} cases, 6 invariants, 5 seam checks and the plan cases behave correctly`,
+    : `\nall ${CASES.length} cases, 6 invariants, 6 seam checks and the plan cases behave correctly`,
 );
 process.exit(bad ? 1 : 0);
