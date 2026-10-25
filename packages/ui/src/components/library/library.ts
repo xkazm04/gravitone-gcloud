@@ -7,7 +7,7 @@
 // (150/206/300), thumbs at 16:10, captions 32/48, list rows 34/40/56, overscan in ROWS; a
 // group's values by count then label, with state and source in their own fixed order; a
 // pressed value drawn even at 0 (it must stay unpressable); seven rows, and "+N more" only
-// when it hides more than two (`vals.length <= LIM + 2` shows them all).
+// when it hides more than two (what is hidden after a pressed value is drawn).
 // Upgraded: the numbers are the generated tokens' (`tokens["w-lib-tile-m"]`), so the CSS and
 // the arithmetic cannot drift a pixel apart (the Ledger's `h-event` rule); and a 50,000-item
 // result is never held whole - the window asks for BLOCKS of rows (`blocksFor`), fetched from
@@ -92,13 +92,15 @@ export type Folded = { readonly shown: readonly FacetValue[]; readonly hidden: n
 /**
  * The fold (library.js `groupHTML`): seven rows, unless the rest is two or fewer, in which case
  * all of them - "+2 more" costs a click to save two lines. A selected value past the seventh is
- * drawn anyway, so a filter is never hidden behind the fold.
+ * drawn anyway, so a filter is never hidden behind the fold; the rule counts what is left
+ * HIDDEN after those are pulled forward, never what exists.
  */
 export function foldValues(values: readonly FacetValue[], expanded: boolean): Folded {
-  const open = expanded || values.length <= FOLD_AT + 2;
-  if (open) return { shown: values, hidden: 0, canFold: values.length > FOLD_AT + 2 };
   const shown = values.filter((v, i) => i < FOLD_AT || v.selected);
-  return { shown, hidden: values.length - shown.length, canFold: false };
+  const hidden = values.length - shown.length;
+  if (hidden <= 2) return { shown: values, hidden: 0, canFold: false };
+  if (expanded) return { shown: values, hidden: 0, canFold: true };
+  return { shown, hidden, canFold: false };
 }
 
 /* ── blocks: what the window needs from the server ───────────────────────── */

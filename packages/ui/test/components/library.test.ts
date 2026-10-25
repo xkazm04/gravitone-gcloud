@@ -69,9 +69,15 @@ describe("the rail's values", () => {
     expect(foldValues(nine, false)).toMatchObject({ hidden: 0, canFold: false });
     const ten = [...nine, fv("v9", 0, true)];
     const f = foldValues(ten, false);
-    expect(f.shown.map((v) => v.value)).toEqual(["v0", "v1", "v2", "v3", "v4", "v5", "v6", "v9"]);
-    expect(f.hidden).toBe(2);
-    expect(foldValues(ten, true)).toMatchObject({ hidden: 0, canFold: true });
+    // A pressed value pulled forward leaves two hidden: the rule says never "+2 more".
+    expect(f.shown.map((v) => v.value)).toEqual(ten.map((v) => v.value));
+    expect(f).toMatchObject({ hidden: 0, canFold: false });
+    expect(foldValues(ten, true)).toMatchObject({ hidden: 0, canFold: false });
+    const twelve = [...nine, fv("v9", 0), fv("v10", 0), fv("v11", 0, true)];
+    const g = foldValues(twelve, false);
+    expect(g.shown.map((v) => v.value)).toEqual(["v0", "v1", "v2", "v3", "v4", "v5", "v6", "v11"]);
+    expect(g).toMatchObject({ hidden: 4, canFold: false });
+    expect(foldValues(twelve, true)).toMatchObject({ hidden: 0, canFold: true });
   });
 
   test("every Library state has its dot on the rail and in a tile, and its segment in the set's bar", () => {
