@@ -130,7 +130,7 @@ describe("staging an archive at the line cap", () => {
     const PROJECTS = 1000;
     const STEPS = 100;
     const ASSETS = 20_000;
-    const projects: Row[] = Array.from({ length: PROJECTS }, (_, i) => ({ id: `p${i}`, uid: "u", title: `Film ${i}`, template: "short-educational-video", targetS: 90, cover: `a${i}`, signedOff: {} }));
+    const projects: Row[] = Array.from({ length: PROJECTS }, (_, i) => ({ id: `p${i}`, uid: "u", title: `Film ${i}`, template: "short-educational-video", targetS: 90, cover: `a${i}`, themeId: "th-none", signedOff: {} }));
     const steps: Row[] = projects.flatMap((p) => Array.from({ length: STEPS }, (_, j) => ({ id: `${String(p["id"])}:k${j}`, projectId: p["id"], phase: "script-mode", data: { mode: "expert" } })));
     const assets: Row[] = Array.from({ length: ASSETS }, (_, i) => ({ id: `a${i}`, uid: "u", path: ["refs"], name: `a${i}`, src: `upload:up${i}`, kind: "image", createdAt: 1 }));
     const uploads: Row[] = Array.from({ length: ASSETS }, (_, i) => ({ id: `up${i}`, blob: { b64: pngB64(i % 200), type: "image/png" }, mime: "image/png", bytes: 11 }));
@@ -141,19 +141,28 @@ describe("staging an archive at the line cap", () => {
       bytes: 0,
       digest: "scale",
     };
+    // A scan is a call to the list's own search: counted per section, so each surface is held alone.
+    const scans: string[] = [];
+    for (const [name, rows] of Object.entries(archive.rows)) {
+      for (const m of ["filter", "find", "some", "findIndex"] as const) {
+        const own = rows[m].bind(rows) as (...a: unknown[]) => unknown;
+        Object.defineProperty(rows, m, { value: (...a: unknown[]) => (scans.push(`${name}.${m}`), own(...a)) });
+      }
+    }
     const u = universe();
     const t0 = performance.now();
     const p = u.store.read((r) => planImport(r, archive));
     const ms = performance.now() - t0;
     if (!p.ok) throw p.error;
     // The same plan as the scanning version staged: the lookups return the same rows.
-    expect(p.value.token).toBe("7dc3b0e91725cb4b604bc50956b7f10bbff3b0395ac0c797c940593d8da69360");
+    expect(p.value.token).toBe("c677326e50374b579c418456574226af9db13d23279dfee5eb25ab41e4d38d70");
     expect(p.value.projects).toHaveLength(PROJECTS);
     expect(p.value.items).toHaveLength(ASSETS);
     expect(p.value.projects.every((x) => x.preview.outcome === "import")).toBe(true);
     // The rows each project names, in archive order: the cover asset, and its upload through it.
     expect(p.value.projects[7]?.record.assets.map((a) => (a as Row)["id"])).toEqual(["a7"]);
     expect(p.value.projects[7]?.record.uploads.map((x) => (x as Row)["id"])).toEqual(["up7"]);
+    expect([...new Set(scans)], "no section is searched by scanning it").toEqual([]);
     expect(ms, "planImport over a capped archive is bounded").toBeLessThan(BOUND_MS);
   }, 30_000);
 });
