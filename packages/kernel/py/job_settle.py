@@ -70,6 +70,11 @@ def recover(jobs, producers):
             why = loss or ("holder-gone" if _gone(lease["holder"], jobs.holder, jobs.alive) else None)
             if why is not None:
                 interrupt(t, job, jobs.holder, why)
+        # Only the endings with no settle after them (`owed`, as one query): the sweep's cost follows
+        # what is owed, not the store's whole history. settle() still re-checks each one it is handed.
         ended = [r[0] for r in t.conn.execute(
-            "SELECT id FROM jobs WHERE state IN ('done', 'failed', 'interrupted') AND json_extract(record, '$.producer') IN (%s) ORDER BY n" % marks, names).fetchall()]
+            "SELECT id FROM jobs WHERE state IN ('done', 'failed', 'interrupted') AND json_extract(record, '$.producer') IN (%s) "
+            "AND (SELECT max(seq) FROM events WHERE subject_id = jobs.id AND type IN ('job.done', 'job.failed', 'job.interrupted')) "
+            "> coalesce((SELECT max(seq) FROM events WHERE subject_id = jobs.id AND type IN ('job.settled', 'job.settle-failed')), 0) "
+            "ORDER BY n" % marks, names).fetchall()]
     return [jid for jid in ended if settle(jobs, jid) is not None]

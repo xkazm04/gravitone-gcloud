@@ -16,12 +16,12 @@ import type { Event } from "@gt/domain/event";
 import { runAction, type ActionResult } from "../../../_server/actionCore.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { principal } from "../../../_server/principal.ts";
-import { parseParams } from "./filter.ts";
+import { parseParams, SEARCH_MAX } from "./filter.ts";
 import { readOne, readPage, readRelated, type Page, type Related } from "./read.ts";
 
 const olderInput = z.object({
   /** The page's own search string: the same filter, read by the same parser. */
-  search: z.string().max(4000),
+  search: z.string().max(SEARCH_MAX),
   cursor: z.object({ t: z.iso.datetime(), seq: z.number().int().positive() }),
 });
 

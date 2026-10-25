@@ -7182,4 +7182,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "!/^\\d+$/.test(p)",
     why: "The runtime digest reads 0:75 as 75 s while the cut's clock refuses it, so the two disagree on the same beat mark.",
   },
+  {
+    id: "kernel-py-recover-rechecks-history",
+    test: "packages/kernel/test/job-settle.recover.test.ts",
+    file: "packages/kernel/py/job_settle.py",
+    find: "\"> coalesce((SELECT max(seq)",
+    replace: "\"> -1 * coalesce((SELECT max(seq)",
+    why: "Python recover() selects every ended job again, so a worker start opens two transactions per finished job in the store's whole history.",
+  },
 ];

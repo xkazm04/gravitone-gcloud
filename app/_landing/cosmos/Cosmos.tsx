@@ -99,13 +99,13 @@ export default function Cosmos() {
         <EnterButton />
       </div>
       <nav id="depth" aria-label="Depth" />
-      <div id="search" role="dialog" aria-label="Search">
+      <div id="search" role="dialog" aria-modal="true" aria-label="Search">
         <div className="slip">
           <div className="inp">
             {SEARCH_ICON}
-            <input id="q" type="text" autoComplete="off" spellCheck={false} aria-label="Search" />
+            <input id="q" type="text" role="combobox" aria-expanded="false" aria-controls="res" aria-autocomplete="list" autoComplete="off" spellCheck={false} aria-label="Search" />
           </div>
-          <ul className="res" id="res" />
+          <ul className="res" id="res" role="listbox" aria-label="Results" />
         </div>
       </div>
       <div id="hero" aria-hidden="true">

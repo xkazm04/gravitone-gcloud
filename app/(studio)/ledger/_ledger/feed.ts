@@ -26,7 +26,7 @@ import { AppError, errorMessage } from "@gt/domain/errors";
 import { useFreshness } from "@gt/ui/freshness/useFreshness";
 import type { FreshView } from "@gt/ui/freshness/core";
 
-import { backoff, parseFrames } from "./sse.ts";
+import { backoff, parseFrames, type Frame } from "./sse.ts";
 
 const seqOnly = object({ seq: number() });
 const STREAM = "/api/events/stream";
@@ -39,6 +39,46 @@ export type FeedHandlers = {
   /** The ledger behind the stream is not the one the page was drawn from. */
   readonly onReset: () => void;
 };
+
+/** What one read's frames did: the cursor and retry hint they moved, the seqs they carried, the
+ *  planned rotation, the acts for the stream to take in order, and a line for every frame the
+ *  door refused (a server that renamed a field would otherwise leave the edge green and the page
+ *  never refreshing). */
+export type FrameRead = {
+  readonly cursor: number;
+  readonly retryMs: number;
+  readonly rotated: boolean;
+  readonly seqs: readonly number[];
+  readonly acts: readonly ("heartbeat" | "reset" | "fail")[];
+  readonly logs: readonly string[];
+};
+
+export function readFrames(frames: readonly Frame[], from: number, hintMs: number): FrameRead {
+  let cursor = from;
+  let retryMs = hintMs;
+  let rotated = false;
+  const seqs: number[] = [];
+  const acts: ("heartbeat" | "reset" | "fail")[] = [];
+  const logs: string[] = [];
+  for (const f of frames) {
+    if (f.kind === "comment") acts.push("heartbeat");
+    else if (f.kind === "retry") retryMs = f.ms;
+    else if (f.kind === "event") {
+      const e = parseJsonAt("ledger feed", seqOnly, f.data);
+      if (e.ok) {
+        cursor = Math.max(cursor, e.value.seq);
+        seqs.push(e.value.seq);
+      } else logs.push(`[ledger feed] event frame refused: ${e.error.message}`);
+    } else if (f.name === "reset") {
+      const r = parseJsonAt("ledger feed reset", object({ head: number() }), f.data);
+      if (r.ok) cursor = r.value.head;
+      else logs.push(`[ledger feed] reset frame refused: ${r.error.message}`);
+      acts.push("reset");
+    } else if (f.name === "rotate") rotated = true;
+    else if (f.name === "fail") acts.push("fail");
+  }
+  return { cursor, retryMs, rotated, seqs, acts, logs };
+}
 
 export type Feed = FreshView<number> & {
   /** The stream has been tried: before that, "never heard" is not news. */
@@ -86,22 +126,16 @@ export function useLedgerFeed(after: number, handlers: FeedHandlers): Feed {
           const { frames, rest } = parseFrames(buffer + chunk.value);
           buffer = rest;
           const now = Date.now();
-          const seqs: number[] = [];
-          for (const f of frames) {
-            if (f.kind === "comment") feed({ kind: "heartbeat", at: now });
-            else if (f.kind === "retry") retryMs = f.ms;
-            else if (f.kind === "event") {
-              const e = parseJsonAt("ledger feed", seqOnly, f.data);
-              if (e.ok) {
-                cursor = Math.max(cursor, e.value.seq);
-                seqs.push(e.value.seq);
-              }
-            } else if (f.name === "reset") {
-              const r = parseJsonAt("ledger feed reset", object({ head: number() }), f.data);
-              if (r.ok) cursor = r.value.head;
-              h.current.onReset();
-            } else if (f.name === "rotate") rotated = true;
-            else if (f.name === "fail") feed({ kind: "fail", at: now });
+          const read = readFrames(frames, cursor, retryMs);
+          const seqs = read.seqs;
+          cursor = read.cursor;
+          retryMs = read.retryMs;
+          rotated = rotated || read.rotated;
+          for (const line of read.logs) console.error(line);
+          for (const act of read.acts) {
+            if (act === "heartbeat") feed({ kind: "heartbeat", at: now });
+            else if (act === "reset") h.current.onReset();
+            else feed({ kind: "fail", at: now });
           }
           if (frames.length > 0) failures = 0;
           // Any frame is contact: the first is the server's `retry:` hint, sent the moment the
