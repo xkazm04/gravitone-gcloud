@@ -63,7 +63,7 @@ export type EventCounts = {
  * minus that facet's own predicate. Paging fields (`limit`, cursors, order)
  * are ignored: a count is over the whole match, never a page of it.
  */
-export function countEvents(store: Store, input: Omit<EventQuery, "limit">): Result<EventCounts> {
+export function countEvents(store: Store, input: Omit<EventQuery, "limit">, only?: readonly FacetCount["facet"][]): Result<EventCounts> {
   const p = parseAt("ledger count", eventQuerySchema, { ...input, limit: 1 });
   if (!p.ok) return p;
   const clauses = clausesOf(p.value);
@@ -71,7 +71,10 @@ export function countEvents(store: Store, input: Omit<EventQuery, "limit">): Res
     const all = whereOf(clauses);
     const totalRow = r.get(`SELECT count(*) AS n FROM events${all.where}`, ...all.params);
     const headRow = r.get("SELECT coalesce(max(seq), 0) AS head FROM events");
-    const facets: FacetCount[] = GROUPS.map((g) => {
+    // `only` names the facets a caller reads (the Ledger strip reads one of seven); the rest are
+    // not counted and not returned. Absent, every facet is.
+    const wanted = only === undefined ? GROUPS : GROUPS.filter((g) => only.includes(g.name));
+    const facets: FacetCount[] = wanted.map((g) => {
       const { where, params } = whereOf(clauses.filter((c) => c.facet !== g.facet));
       const args: Param[] = [...params, TOP + 1];
       // The NULL group is `none`, counted below; left in, it would take one of the TOP + 1 slots

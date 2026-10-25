@@ -135,6 +135,20 @@ describe("countEvents", () => {
     expect(c.head).toBe(all.length);
   });
 
+  it("`only` counts the named facets alone, in 4 statements for one, and they equal the full count's", () => {
+    let stmts = 0;
+    const counted = { ...s, read: (fn) => s.read((r) => fn({ ...r, get: (q, ...p) => (stmts++, r.get(q, ...p)), all: (q, ...p) => (stmts++, r.all(q, ...p)) })) } as Store;
+    const q = { type: ["verdict.keep"] };
+    const full = must(countEvents(counted, q));
+    expect(stmts).toBe(16);
+    stmts = 0;
+    const one = must(countEvents(counted, q, ["actorKind"]));
+    expect(stmts).toBe(4);
+    expect(one.facets.map((f) => f.facet)).toEqual(["actorKind"]);
+    expect(one.facets[0]).toEqual(full.facets.find((f) => f.facet === "actorKind"));
+    expect([one.total, one.head]).toEqual([full.total, full.head]);
+  });
+
   it("says how many rows have no value, and when a facet was cut", () => {
     const c = must(countEvents(s, {}));
     const lane = c.facets.find((f) => f.facet === "lane");
