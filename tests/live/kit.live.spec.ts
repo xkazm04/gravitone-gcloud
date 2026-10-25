@@ -114,7 +114,7 @@ test.describe("/kit", () => {
   test("a Hint opens on hover and Escape dismisses it without moving focus (WCAG 1.4.13)", async ({ page }) => {
     const hint = page.locator('[data-specimen="Hint"]');
     const glyph = hint.getByRole("button", { name: "spend" });
-    const tip = hint.getByRole("tooltip");
+    const tip = hint.locator('[role="tooltip"]');
     // The Runs specimen seeds a selection and focuses that bar once its day-line has measured
     // itself after hydration; wait for that, or it takes the focus this test sets below.
     await page.locator('[data-component="RunsDayline"][data-measured]').first().waitFor();
