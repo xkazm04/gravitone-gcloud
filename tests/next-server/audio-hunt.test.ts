@@ -205,6 +205,18 @@ describe("a hunt's render is a Run the worker carries", () => {
     expect(after.map((n) => n.state)).toEqual(["failed", "failed"]);
     expect(after.every((n) => n.error !== null && n.error.includes(c.jobId))).toBe(true);
   });
+
+  it("a leaf named twice is priced and booked once", async () => {
+    seed([hunt("hn-dup01", [node("a"), node("b", { durationS: 20 })])]);
+    const ask = { huntId: "hn-dup01", leafIds: ["a", "b", "a"], mode: "dry" as const, opId: "opd00001" };
+    const r = must(await launchHuntRender(store, ask, OP, NOW));
+    if (r.kind !== "receipt") throw new Error(r.kind);
+    expect(r.receipt.lines.map((l) => l.label)).toEqual(["Leaf a · 30s", "Leaf b · 20s"]);
+    const c = must(await launchHuntRender(store, { ...ask, token: r.receipt.token }, OP, NOW));
+    expect(c).toMatchObject({ kind: "launched", leaves: ["a", "b"] });
+    const { run } = must(store.read((t) => loadRun(t, huntRunId("hn-dup01", "opd00001"))));
+    expect(run).toMatchObject({ units: 2, input: { leaves: ["a", "b"] } });
+  });
 });
 
 /* ── the lesson door ────────────────────────────────────────────────────── */

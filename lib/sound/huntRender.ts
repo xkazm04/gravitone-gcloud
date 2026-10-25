@@ -174,11 +174,12 @@ export type RenderLaunch =
   | { readonly kind: "stale"; readonly fresh: Receipt }
   | { readonly kind: "launched"; readonly runId: string; readonly jobId: string; readonly leaves: readonly string[] };
 
-/** The leaves a render may take: on the map, a leaf, ElevenLabs, not heard and not in flight. */
+/** The leaves a render may take: on the map, a leaf, ElevenLabs, not heard and not in flight.
+ *  Each once: a leaf named twice would be priced twice and booked once. */
 function leavesOf(hunt: Hunt, ids: readonly string[]): Result<HuntNode[]> {
   const parents = new Set(hunt.nodes.map((n) => n.parentId));
   const out: HuntNode[] = [];
-  for (const id of ids) {
+  for (const id of new Set(ids)) {
     const n = hunt.nodes.find((x) => x.id === id);
     if (n === undefined || parents.has(n.id) || n.prompt === "") return err("invalid", `${id} is not a leaf of this hunt`);
     if (n.provider !== "elevenlabs") return err("refused", `${n.label} is a ${n.provider} leaf: it goes by hand, not through the render`);
