@@ -12768,6 +12768,98 @@
       "evaluatedTs": "2026-10-25T01:32:19.342Z",
       "worker": "fb2d2e7b-3df7-4745-a1b0-48fedba0fe24",
       "techniques": []
+    },
+    "d12a6aa7-39d7-464c-b47d-c4a1670d3bbd/trailer-structure": {
+      "context": "trailer-structure-engine",
+      "subject": "trailer-structure",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:36:18.021Z",
+      "worker": "249ebdf7-c969-4ac3-9bab-27845d18bc5d",
+      "techniques": [
+        {
+          "technique": "concealment-and-its-tells",
+          "verdict": "deviation",
+          "evidence": "lib/script/trailer/report.ts:62 The code states the gap itself. Mislead is routed to the promise ledger (PromiseSource 'assembly'), but the honesty limit and per-shot subtraction are not realized; the report emits one unmeasured row instead."
+        },
+        {
+          "technique": "cue-first-assembly",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/types.ts:373 The cue is a field of the cut, and movements and beats point into it through cueSection and cueMark. composeCut requires a cue (cut.ts:47). Caveat: beats still carry an authored `at` timecode that does not depend on the cue."
+        },
+        {
+          "technique": "withholding-budget",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/types.ts:245 The budget is keyed to the campaign, not the cut. It holds the five named asset kinds, the spend/imply/hold allowances and a trade field for each spend. The model's patch fields (plan.ts:33) cannot touch allowances, so whoever is measured on the cut cannot set the budget."
+        },
+        {
+          "technique": "promise-ledger",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/types.ts:270 Payer is an explicit field and source can be claim, register or assembly. Spend-vs-debt is recorded as spentByTheCut. The ledger is advisory and never a gate, through ADVISORY_RULES read from params (thresholds.ts:105)."
+        },
+        {
+          "technique": "escalation-without-mechanism",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/types.ts:331 The raised variable is an explicit field, as the 'in a tool' rule asks. It is an array so that a rung raising several variables can be expressed and then detected."
+        },
+        {
+          "technique": "dynamic-reset",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/thresholds.ts:94 One structural reset, the too-many threshold and holds-per-reset are read from params. resetHolds is an array (types.ts:345) so that a reset holding two ideas can be detected."
+        },
+        {
+          "technique": "length-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/types.ts:291 The drop order is stored as data in the doctrine's order. Runtimes and per-rung part counts are deliberately not encoded."
+        }
+      ]
+    },
+    "f2d24a0a-da51-4b5b-a694-198122624880/trailer-structure": {
+      "context": "trailer-structure-rules",
+      "subject": "trailer-structure",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:36:18.021Z",
+      "techniques": [
+        {
+          "technique": "escalation-without-mechanism",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/escalation.ts:64 Flags a consecutive repeat of a raised variable (merge rule), and a rung raising more than one variable at line 49. Possible gap: a rung-less spot or platform cut is still a violation at line 29, while the technique exempts the shortest cuts."
+        },
+        {
+          "technique": "dynamic-reset",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/reset.ts:41 Three or more resets is a violation and exactly two is reported unmeasured. The reset's position must be immediately before the peak (line 59). It must land on a cue boundary. Mood-led cuts and cuts that drop the reset are not-engaged."
+        },
+        {
+          "technique": "cue-first-assembly",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/cue.ts:61 A cue with no breath before its peak is rejected. A movement with no cue section is unmeasured, never a pass."
+        },
+        {
+          "technique": "length-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/ladder.ts:64 Drops must form a prefix of the drop order. A short rung with no declared drops is unmeasured, because it may have been trimmed rather than derived."
+        },
+        {
+          "technique": "promise-ledger",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/promises.ts:21 A missing payer is surfaced as incomplete, and the rule stays advisory. Extraction from ignorance and register-level promises are reported unmeasured."
+        },
+        {
+          "technique": "withholding-budget",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/withholding.ts:38 Showing a held or implied asset is a violation, and so is a spend with no recorded trade (line 50). With no budget the verdict is undecided. Campaign drift is reported as outside a single-cut check."
+        }
+      ],
+      "withdrawn": {
+        "worker": "249ebdf7-c969-4ac3-9bab-27845d18bc5d",
+        "state": "conformant",
+        "at": "2026-10-25T01:49:10.777994+00:00",
+        "reason": "reviewer (sonnet): escalation.ts:29 flags any non-moodLed cut with no rung beats as a violation, whatever its rung or droppedParts. The ladder's DROP_ORDER includes 'middle-rungs', so a legitimately derived spot or platform cut would be flagged. The seat's own evidence names this gap, so 'conformant' is contradicted o"
+      }
     }
   }
 }

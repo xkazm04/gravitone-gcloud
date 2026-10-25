@@ -13112,7 +13112,11 @@
           "revision": 3,
           "changedAt": "2026-09-01",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/trailer/report.ts:62 The engine models six of the seven techniques as typed data and checks, but concealment-and-its-tells has only a standing unmeasured row: no TrailerCut carries a signal for the honesty limit (does the cut still convey how the work feels to use), so a cut that hides its experiential product completely gets no finding beyond that row.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:6a687c5a8080a492",
+          "evaluatedRevision": 3
         },
         {
           "subject": "quality-gates",
