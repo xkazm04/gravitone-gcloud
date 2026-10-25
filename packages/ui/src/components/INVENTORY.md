@@ -29,7 +29,7 @@ across pages lives in `tokens.css` and `shell.js`, so that is where the kit come
 | `Panel` | `.panel`, `.panel-head`, `.panel-body`, `.toolbar` | P L G | title + tally; toolbar |
 | `Empty` | `.empty` | F L G | label (<= 12 words by type); one act |
 | `Ghost` | `.ghost-card` | F P | count; spoken label |
-| `Toast` | `.toast`, GT.toast/announce | F P L G | open/closed; always-mounted polite region |
+| `Toast` | `.toast`, GT.toast/announce | F P L G | open/closed; always-mounted polite region; an act's ledger chip (the only part that takes the pointer); rise dropped under reduced motion |
 | `Crumbs` | `[data-component=Crumbs]` | F P L | link/button steps; current place |
 | `Facts` | `.obs` (dl) | F L | term/value rows |
 | `Wave` | GT.Wave | F P L | tone; playhead; empty midline |
@@ -172,7 +172,7 @@ Where this port moved from the prototype:
 
 | Kit name | Replaces (prototype) | Pages | States / variants |
 | --- | --- | --- | --- |
-| `LevelSheet` | tokens.css `[data-component=LevelSheet]`, `.scrim`, `.grab`, `.sheet-bar`, `.sheet-close`, index.html `openLevel` | F | sheet over the Floor (rises; a `sheet` layer in the desk's keymap mode; its close is the caller's) / full page (in flow, no scrim, still on the stack) / specimen |
+| `LevelSheet` | tokens.css `[data-component=LevelSheet]`, `.scrim`, `.grab`, `.sheet-bar`, `.sheet-close`, index.html `openLevel` | F | sheet over the Floor (rises; a `sheet` layer in the desk's keymap mode; its close is the caller's) / fit (hugs its body from the bottom edge: a receipt) / full page (in flow, no scrim, still on the stack) / specimen; no rise under reduced motion |
 | `BoardDesk`, `DeskFrame` | `[data-component=BoardDesk]`, `.desk`, `.desk-top`, `.desk-main`, `.desk-foot` | F | title + mono second line; marks; foot; an overlay (the lens, the consequence) |
 | `PacketRail` | index.html `PacketRail`, `.rail-lane`, `.rail-item` (+ `.done`, `[aria-current]`) | F | grouped by lane (its FloorGlyph mark, open tally) then desk; open (amber mode mark, FloorGlyph), committed (✓), returned (↩); link + client open |
 | `OracleStrip` | index.html `Oracle` | F | pass / fail, summary, digest, fixture |
