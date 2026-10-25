@@ -4,7 +4,7 @@ import type { Producer } from "@gt/kernel/job-core";
 import { definePartAct, refuse, unitOf, type ActPlan, type PartActPorts, type UnitPrice } from "../research/partAct.ts";
 
 // THE MOTION PRODUCER (Phase 4 wave C, L37) - a motion part's acts as kernel jobs (L39's names):
-//   direct-motion  the two recognize passes over a plate (v1 app/_phases/motion/direction.ts: READ,
+//   direct-motion  the two recognize passes over a plate (lib/motion/direction.ts `directMotion`: READ,
 //                  then PROPOSE, then the code-side filter that drops camera moves and
 //                  non-separable elements and DECLINES when nothing can move). v1 ran it as a
 //                  plain fetch with the plate as base64 and no price; here it is a unit per plate,

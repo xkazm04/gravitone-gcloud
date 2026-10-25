@@ -7,7 +7,7 @@ import { definePartAct, refuse, unitOf, type ActPlan, type PartActPorts, type Un
 // names (the editor's contract):
 //   direct-cut          ONE scene-direction turn over the whole cut (v1 POST /api/frames,
 //                       lib/turns/kinds/frames.ts). Its answer lands as a PROPOSAL
-//                       (app/_phases/frames/direction/plan.ts planFromSpecs), never applied: v1
+//                       (lib/frames/directionPlan.ts planFromSpecs), never applied: v1
 //                       applied it wholesale (`applySceneSpecs`) and erased human layers with no
 //                       undo; accepting it is the operator's op, human layers kept;
 //   render-plates       every plate that is empty, refused or behind its subject, one paid image
