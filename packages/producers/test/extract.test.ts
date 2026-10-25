@@ -124,6 +124,14 @@ describe("settleReason: why a critique loop ended", () => {
     expect(settleReason(m, [round({ error: "critique: 500", critique: null, score: null })])).toBe("no-usable-fix");
     expect(usableFix({ recipe_fix: FIX }, FIX.toUpperCase())).toBeNull();
   });
+
+  it("a round that drew text has not arrived at the target, whatever it scored: the loop stays open on its fix", () => {
+    // has_text is the veto (lib/foundry/extract/helpers.ts textVetoed): such a round can never be
+    // the recipe in force, so ending the loop on it would stop with nothing adopted from it.
+    expect(settleReason(m, [round({ score: 1, critique: { recipe_fix: FIX, has_text: true } })])).toBeNull();
+    expect(settleReason(m, [round({ score: 1, critique: { recipe_fix: "short", has_text: true } })])).toBe("no-usable-fix");
+    expect(settleReason(m, [round({ score: 1, critique: { recipe_fix: FIX, has_text: false } })])).toBe("target-met");
+  });
 });
 
 describe("planOf: one step, named by the unit", () => {
