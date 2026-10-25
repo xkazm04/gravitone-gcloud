@@ -179,7 +179,19 @@ const LIVE: SfxEngines = { generateTake: (req) => generateTake(req) };
 const SILENT_MP3 = new Uint8Array([0xff, 0xfb, 0x90, 0x64, ...new Array<number>(413).fill(0)]);
 
 const musicFailure = (e: unknown): StepOutcome =>
-  failureOf(e, (x) => (x instanceof MusicError ? (x.kind === "over-budget" ? "money" : x.kind === "rate-limited" || x.kind === "timeout" || x.kind === "failed" ? "retry" : "fatal") : undefined));
+  failureOf(e, (x) =>
+    x instanceof MusicError
+      ? x.kind === "over-budget"
+        ? "money"
+        : x.kind === "rate-limited" || x.kind === "timeout" || x.kind === "failed"
+          ? "retry"
+          // A store that refused to file a served clip (a lock past its wait, an unreadable ledger) may
+          // answer next time, and generateTake keeps the clip, so the retry does not buy it twice.
+          : "fatal"
+      : x instanceof SoundError && x.status >= 500
+        ? "retry"
+        : undefined,
+  );
 
 async function briefFor(ctx: StepContext, runId: string): Promise<Result<BatchBrief>> {
   const filed = await readBrief(runId);

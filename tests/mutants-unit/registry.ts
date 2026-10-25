@@ -7046,4 +7046,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (false && d > PLAN_DRAFT_MAX_S)",
     why: "A plan op drafted from a prompt accepts 600 s, asks the vendor for the ceiling and files a shorter take than the one asked for, with no word said.",
   },
+  {
+    id: "sound-served-clip-rebought-on-retry",
+    test: "tests/next-server/sound-served-clip-kept.test.ts",
+    file: "lib/sound/generate.ts",
+    find: "r = (await parkedRender(parked)) ?? (await render(req));",
+    replace: "r = await render(req);",
+    why: "A clip the vendor served while the store refused to file it is bought a second time on the retry: the first render is paid for and gone.",
+  },
+  {
+    id: "sound-store-refusal-of-served-clip-is-fatal",
+    test: "tests/next-server/decision-v1-audio-insight.test.ts",
+    file: "lib/sound/sfxJob.ts",
+    find: ": x instanceof SoundError && x.status >= 500",
+    replace: ": x instanceof SoundError && x.status >= 999",
+    why: "A store lock or unreadable ledger on filing a served effect ends the batch job fatal 'internal' instead of a retry that files the kept clip.",
+  },
 ];

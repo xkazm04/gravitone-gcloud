@@ -66,6 +66,7 @@ import { engineRegistry, type EngineDef } from "../../lib/sound/engines.ts";
 import { rubricMean } from "../../lib/sound/ledger.ts";
 import { rateTake } from "../../lib/sound/rubric.ts";
 import { readBrief, sfxProducer } from "../../lib/sound/sfxJob.ts";
+import { SoundError } from "../../lib/sound/store.ts";
 import { createTake } from "../../lib/sound/takes.ts";
 import { RUBRIC, type GenerateRequest, type SoundTake } from "../../lib/sound/types.ts";
 
@@ -315,6 +316,19 @@ describe("the sfx producer", () => {
     expect(rec.drift).toBeUndefined();
     expect(rec.job.unpriced).toBe(2);
     expect(onDisk().filter((t) => t.origin === "lab")).toHaveLength(2);
+  });
+
+  it("a sound store that refuses to file a served clip is a retry, not a fatal: the next try completes the job", async () => {
+    seed([]);
+    const jobId = await launched("bstore0001", { ...sfx, count: 1 }, "live");
+    let tries = 0;
+    const generateTake = async (req: GenerateRequest): Promise<SoundTake> => {
+      if (++tries === 1) throw new SoundError("the sound store is locked and the holder did not release it", 503);
+      return (await createTake({ kind: "sfx", title: req.title ?? "fx", provider: "elevenlabs", op: "sfx", origin: "lab", prompt: req.prompt, loop: req.loop, durationS: req.durationS }, { bytes: new Uint8Array([0xff, 0xfb, 0x90, 0x64, 1, 2]), mime: "audio/mpeg", name: "fx.mp3" })).take;
+    };
+    const report = must(await runJob(fx, sfxProducer("cloud.elevenlabs", { generateTake }), jobId, { dryOnly: false, sleep: () => Promise.resolve() }));
+    expect(report.outcome).toBe("done");
+    expect(tries).toBe(2);
   });
 
   it("the plan is the run id's clips; a run id that names no batch plans one step that fails, nothing rendered", async () => {

@@ -39,6 +39,10 @@
 // on that node (takeIds, state rendered — or failed with the vendor's own
 // sentence), so a hunt reads the same from the lab, the CLI and a reload.
 
+import { createHash } from "node:crypto";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+
 import { errorMessage } from "@gt/domain/errors";
 import { composeDetailed, draftPlan, generateSfx, toWirePlan } from "@/lib/music/elevenlabs";
 import { cueDurationS, cueToPlan } from "@/lib/music/plan";
@@ -46,7 +50,7 @@ import type { CueBrief, CuePicture, WirePlan } from "@/lib/music/types";
 
 import { asWirePlan, buildEditPlan, EDIT_MODES, editSeconds, isGenChunk, planMs } from "./editPlan";
 import { getTake, createTake, NEGATIVE_MAX, termsOf } from "./takes";
-import { SoundError, withStore } from "./store";
+import { SoundError, storeRoot, withStore } from "./store";
 import type { GenerateRequest, SoundKind, SoundTake } from "./types";
 
 const OPS = ["compose", "plan", "section-edit", "sfx", "cue"] as const;
@@ -371,17 +375,53 @@ async function markNode(req: GenerateRequest, takeId: string | null, error: stri
 
 const CUE_TECHNIQUES = ["section-plan-as-the-brief", "sonic-style-vocabulary", "duration-and-tempo-locking"];
 
+/** Where a clip the vendor SERVED waits when the store refuses to file it. The bytes exist only in
+ *  this process until createTake lands them, and a retry would buy the render again, so a refusal
+ *  parks the Rendered here, keyed by the request, and the next identical request files it WITHOUT
+ *  calling the vendor. A parked clip nobody retries stays: it is billed audio, not scratch. */
+const parkedAt = (req: GenerateRequest): string => path.join(storeRoot(), "unfiled", `${createHash("sha256").update(JSON.stringify(req)).digest("hex").slice(0, 32)}.json`);
+
+async function parkedRender(file: string): Promise<Rendered | null> {
+  let raw: string;
+  try {
+    raw = await readFile(file, "utf8");
+  } catch {
+    return null;
+  }
+  try {
+    const v = JSON.parse(raw) as Partial<Rendered>;
+    return typeof v.b64 === "string" && typeof v.mime === "string" && typeof v.durationS === "number" && typeof v.prompt === "string" ? (v as Rendered) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateTake(req: GenerateRequest, now = new Date()): Promise<SoundTake> {
+  const parked = parkedAt(req);
   let r: Rendered;
   try {
-    r = await render(req);
+    r = (await parkedRender(parked)) ?? (await render(req));
   } catch (e) {
     const msg = errorMessage(e);
     await markNode(req, null, msg).catch(() => undefined);
     throw e;
   }
   const bytes = Buffer.from(r.b64, "base64");
-  const { take } = await createTake(
+  let filed: { take: SoundTake };
+  try {
+    filed = await fileTake(req, r, bytes, now);
+  } catch (e) {
+    await mkdir(path.dirname(parked), { recursive: true }).then(() => writeFile(parked, JSON.stringify(r))).catch(() => undefined);
+    if (e instanceof SoundError && e.status < 500) throw e;
+    throw new SoundError(`the sound store refused the clip the vendor served (${errorMessage(e)}); it is kept and filed on the next try without a new render`, 503);
+  }
+  await rm(parked, { force: true }).catch(() => undefined);
+  await markNode(req, filed.take.id, null);
+  return filed.take;
+}
+
+async function fileTake(req: GenerateRequest, r: Rendered, bytes: Buffer, now: Date): Promise<{ take: SoundTake }> {
+  return createTake(
     {
       kind: req.kind,
       title: titleFor(req),
@@ -412,7 +452,5 @@ export async function generateTake(req: GenerateRequest, now = new Date()): Prom
     { bytes, mime: r.mime, name: `${req.op}.mp3` },
     now,
   );
-  await markNode(req, take.id, null);
-  return take;
 }
 
