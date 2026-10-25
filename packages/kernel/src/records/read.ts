@@ -15,7 +15,7 @@ import { digestIn } from "./digest.ts";
 import { modelOptions, unitNounOf } from "./options.ts";
 import { priceLine, placePlan, totalsOf, type PlanLine, type QueueRead } from "./receipt.ts";
 import { etaOf, type SchedItem } from "./schedule.ts";
-import { loadParts, loadProject, quotedSecondsOf, type PartRow } from "./schema.ts";
+import { loadParts, loadProject, quotedSecondsMap, type PartRow } from "./schema.ts";
 
 // THE READS - a project as the Plan draws it, the list as the left column groups it, and the
 // queue state every receipt is computed against. Everything is assembled from the records, the
@@ -75,6 +75,7 @@ export function readQueue(r: Reader, exclude: ReadonlySet<string> = new Set()): 
   const rows = r.all("SELECT id, ord, record FROM jobs WHERE state IN ('queued', 'running') ORDER BY lane, ord, n");
   const others: SchedItem[] = [];
   const seen: unknown[] = [];
+  const quoted = quotedSecondsMap(r, rows.map((row) => String(row["id"])).filter((id) => !exclude.has(id)));
   for (const row of rows) {
     const id = String(row["id"]);
     if (exclude.has(id)) continue;
@@ -85,7 +86,7 @@ export function readQueue(r: Reader, exclude: ReadonlySet<string> = new Set()): 
     others.push({
       key: `job:${id}`,
       lane: job.lane,
-      seconds: quotedSecondsOf(r, id),
+      seconds: quoted.get(id) ?? 0,
       after: [],
       order,
       status: job.state === "running" ? "running" : "pending",

@@ -62,6 +62,11 @@ export async function probeMissing(store: Store, blobs: BlobStore, probe: MediaP
       continue;
     }
     const read = await probe.probe(file.value);
+    if (!read.ok && read.unavailable === true) {
+      // The tool did not run: no row, so the blob is still missing and the next sync probes it again.
+      failed.push(`${w.sha.slice(0, 12)}: ${read.error}`);
+      continue;
+    }
     let posterSha: string | null = null;
     let lumaFrom = file.value;
     if (read.ok && w.mime.startsWith("video/")) {

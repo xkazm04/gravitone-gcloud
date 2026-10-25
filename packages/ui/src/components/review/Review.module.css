@@ -43,3 +43,10 @@
 .calendar{display:flex;flex-direction:column;gap:var(--sp-3)}
 .when{display:flex;align-items:center;gap:var(--sp-3)}
 .utc{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+
+/* A phone, at the part workspace's own 900px: the side column drops under the article instead of leaving it what a 300px column does not take. */
+@media (max-width:900px){
+  .review{grid-template-columns:minmax(0,1fr)}
+  .pageWrap{padding:var(--sp-4) var(--sp-4) var(--sp-page-end)}
+  .side{position:static;border-left:0;border-top:1px solid var(--hair);min-height:auto}
+}

@@ -2,7 +2,7 @@ import { afterAll, afterEach, describe, expect, it } from "vitest";
 import type { Result } from "@gt/domain/errors";
 import { INTERRUPTED_TEXT } from "@gt/domain/slot";
 import { gateFacts } from "../src/parts/gates.ts";
-import { snapshotOf } from "../src/lease.ts";
+import { claimIn, snapshotOf } from "../src/lease.ts";
 import { heartbeatClaim, publishByAct, recordFailure, recordMetric, recordPublication } from "../src/slots/outcome.ts";
 import { getSlot, listPublicationsIn, slottedIn, snapshotsIn } from "../src/slots/read.ts";
 import { claimResource } from "../src/slots/schema.ts";
@@ -105,6 +105,28 @@ describe("a claimant that is gone", () => {
     expect(must(sweep(w.k.store, facts(), { claim: true, holder: ME, alive: () => true })).interrupted).toEqual([]);
     w.setClock(NOW + (2 * CLAIM_TTL_S + 10) * 1000);
     expect(must(sweep(w.k.store, facts(), { claim: true, holder: ME, alive: () => true })).interrupted).toEqual([s.id]);
+  });
+});
+
+describe("a stale claim the sweep cannot take over", () => {
+  it("is skipped and reported; the rest of the pass still lands", () => {
+    const w = fresh();
+    const a = must(createSlot(w.k.store, draft(), OP)).slot;
+    must(sweep(w.k.store, facts(), { claim: true, holder: DEAD, alive: () => true }));
+    // a live waiter in line on slot:<a>: a wait:false take-over has someone ahead of it, so claimIn answers busy
+    const waiter = { ...ME, pid: 4300, bootId: "boot-waiter" };
+    const queued = must(w.k.store.tx((t) => claimIn(t, { resource: claimResource(a.id), holder: waiter, ticket: "t-waiter", ttlS: CLAIM_TTL_S, wait: true }, () => true)));
+    expect(queued.kind).toBe("queued");
+    const b = must(createSlot(w.k.store, draft({ libraryItemId: ITEM_B, at: at(-90) }), OP)).slot;
+    const r = sweep(w.k.store, facts(), { claim: false, holder: ME, alive: aliveBut(DEAD.pid) });
+    expect(r.ok ? null : r.error.message).toBeNull();
+    const report = must(r);
+    expect(report.missed).toEqual([b.id]);
+    expect(report.unfenced).toEqual([a.id]);
+    expect(must(getSlot(w.k.store, a.id)).slot.state).toBe("publishing");
+    expect(must(getSlot(w.k.store, b.id)).slot.state).toBe("missed");
+    // the attempt dropped the stale holder, so the next pass finds the lease free and fails the slot
+    expect(must(sweep(w.k.store, facts(), { claim: false, holder: ME, alive: aliveBut(DEAD.pid) })).interrupted).toEqual([a.id]);
   });
 });
 
