@@ -416,12 +416,26 @@ export function parseDraft(raw: string, ctx: ComposeContext): ComposeOutcome {
         });
       }
 
-    for (const c of cutFacts)
-      if (!known.has(c.factId))
+    for (const c of cutFacts) {
+      if (!known.has(c.factId)) {
         findings.push({
           rule: "cut", renderId: id, verdict: "violation", card: c.factId,
           detail: `${id} declares it cut ${c.factId}, which names no card in the notebook that was sent.`,
         });
+        continue;
+      }
+      // SPOKEN OR CUT, NOT BOTH. impact.ts lets a declared cut win over the
+      // attribution ("if the attribution says otherwise the attribution is
+      // wrong"), so a fact a beat states AND the render cuts was drawn in the
+      // matrix as excluded, 0 s, while the render says it aloud.
+      const speaks = Object.entries(attribution).find(([, ids]) => ids.includes(c.factId))?.[0];
+      if (speaks !== undefined)
+        findings.push({
+          rule: "cut", renderId: id, verdict: "violation", card: c.factId, at: speaks,
+          detail: `${id} declares it cut ${c.factId}, and its beat at ${speaks} rests on it. A fact is spoken or cut, not both.`,
+          quote: beats.find((b) => b.at === speaks)?.text.slice(0, 140),
+        });
+    }
 
     // SHARED, not restated: the gate's own law.
     for (const f of checkConnectors({ id, beats }))

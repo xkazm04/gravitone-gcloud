@@ -195,6 +195,28 @@ test("case 1b: a conclusion the creator never took is out by default, and an unk
   expect(cards.sort()).toEqual(["c-one-time-rerating", "f-nowhere"]);
 });
 
+// A render that declares a fact CUT while a beat of the same render rests on it
+// is two claims about one script. impactOf/usageMapOf lets the cut win, so the
+// matrix drew the card as excluded, 0 s, while the render speaks it - measured
+// before the fix: f-mnav, spoken by rc-own-clock's beat at 2:50, read back by
+// impactOf as `cut`, 0 s, and parseDraft accepted the answer.
+test("case 1c: a fact a render declares cut while one of its beats rests on it is refused, naming both", () => {
+  const raw = JSON.parse(answerOf("compose-ok")) as { renders: { cutFacts: { factId: string; why: string }[] }[] };
+  raw.renders[0]!.cutFacts.push({ factId: "f-mnav", why: "covered elsewhere" });
+  let err: unknown;
+  try {
+    parseDraft(JSON.stringify(raw), ctx());
+  } catch (e) {
+    err = e;
+  }
+  expect(err, "a spoken-and-cut fact was accepted").toBeInstanceOf(DraftError);
+  const cut = (err as DraftError).findings.filter((f) => f.rule === "cut");
+  expect(cut.map((f) => [f.renderId, f.card])).toEqual([["rc-own-clock", "f-mnav"]]);
+  expect(cut[0]!.at, "the finding does not say which beat speaks it").toMatch(/^\d+:\d\d$/);
+  // The control: the cassette's own cut (a fact no beat rests on) still parses.
+  expect(parseDraft(answerOf("compose-ok"), ctx()).kind).toBe("draft");
+});
+
 /* ───────────────────────────── 2 · the connector law ────────────────────── */
 
 test("case 2: AND THEN between two movement beats is a finding from the gate's own connector law", () => {
