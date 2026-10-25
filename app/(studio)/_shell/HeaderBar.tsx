@@ -13,6 +13,10 @@
 //
 // The brand returns to the Floor, as the prototype's did (a door now that the Floor exists).
 //
+// Section links are next/link with prefetch off: a switch is a soft navigation (the shell never
+// unmounts: no second session POST, no stream reopen), and eight sections are not rendered ahead
+// of a click (the Floor walks every v1 store).
+//
 // The current section is DERIVED from the pathname (navigation-model), never held. A section
 // that is not built is a disabled link: focusable, named, aria-disabled, with no href - so it
 // can never be a door to a 404 (primitive-level-a11y honest disablement; Button does the same).
@@ -50,9 +54,9 @@ export function HeaderBar({ devAuth, facts }: { readonly devAuth: boolean; reado
             <Fragment key={x.id}>
               {sep && <span className={s.sep} aria-hidden="true" />}
               {x.built ? (
-                <a href={x.href} aria-current={here === x.id ? "page" : undefined}>
+                <Link href={x.href} prefetch={false} aria-current={here === x.id ? "page" : undefined}>
                   {x.label}
-                </a>
+                </Link>
               ) : (
                 <a role="link" aria-disabled="true" tabIndex={0}>
                   {x.label}
@@ -72,9 +76,9 @@ export function HeaderBar({ devAuth, facts }: { readonly devAuth: boolean; reado
           <SpendSlot facts={facts} />
         </div>
         {kit !== undefined && (
-          <a className={s.kitLink} href={kit.href} aria-current={here === "kit" ? "page" : undefined}>
+          <Link className={s.kitLink} href={kit.href} prefetch={false} aria-current={here === "kit" ? "page" : undefined}>
             {kit.label}
-          </a>
+          </Link>
         )}
         <Button label="Sign out" size="sm" onPress={() => void signOut()} />
       </div>

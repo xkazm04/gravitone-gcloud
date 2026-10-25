@@ -11,13 +11,14 @@ import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Crumbs } from "@gt/ui/components/crumbs/Crumbs.tsx";
 import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
 
+import { SCOUT_PILE_SOURCES } from "../../_shell/facts.ts";
 import type { ScoutHeaderFacts } from "../../_shell/headerFacts.ts";
 import { SpendSlot } from "../../_shell/SpendSlot.tsx";
 import s from "./scout.module.css";
 import { ScoutNext } from "./ScoutNext.tsx";
 
 /** The Board's packets that are the scout's: a night's, either wing's, and a seed batch's. */
-export const isScoutPacket = (p: Pick<PacketSummary, "source">): boolean => p.source === "scout" || p.source === "seeds";
+export const isScoutPacket = (p: Pick<PacketSummary, "source">): boolean => SCOUT_PILE_SOURCES.has(p.source);
 
 /** Where the Runs tab opens a packet (the Board island builds the same address from its `railBase`). */
 export const runFor = (packetId: string): string => `/scout/runs/${encodeURIComponent(packetId)}`;
