@@ -48,6 +48,7 @@ import { ScoreEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Score
 import { ScoreBed } from "../../app/(studio)/projects/[id]/[part]/_edit/ScoreBed.tsx";
 import { ScoreTakes } from "../../app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx";
 import { AdsClipsEditor, AdsTakesEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Takes.tsx";
+import { TrailerEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Trailer.tsx";
 import { VoiceEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Voice.tsx";
 import cut from "../../app/(studio)/projects/[id]/[part]/_edit/Cut.module.css";
 import { harness } from "../golden-path/_studio/hooks.ts";
@@ -120,6 +121,33 @@ describe("the legend draws only the keys the editor answers", () => {
     const keys = registered.find((r) => r.mode === ws.mode);
     expect(ws.facts).toEqual(keys?.facts);
     expect(legend(ws).drawn.map((r) => r.does)).not.toContain("adopt take");
+  });
+
+  it("a shot with takes draws the keys the take grid answers, and no inspector view", async () => {
+    const take = { id: "t1", label: "take 1", blob: "b", costUsd: 0 };
+    const d = { face: "takes", scenario: SCENARIO, scenarioMoved: false, aspect: "16:9", shots: [{ id: "a", durationS: 5, brief: "a coat in rain", super: null, takes: [take], adopted: null }] } as unknown as AdsTakes;
+    const l = legend(await workspaceOf(() => AdsTakesEditor(props(d)) as ReactElement));
+    expect(l.drawn).toEqual(l.live);
+    expect(l.drawn.map((r) => r.does)).toEqual(["unit", "next missing", "render", "adopt take"]);
+  });
+
+  it("the trailer cut draws no adopt or inspector view it does not run", async () => {
+    const beat = { id: "b1", movement: "m1", at: "0:00", kind: "open", connector: null, label: "Cold open", text: "rain", raises: [], spends: [], edited: false };
+    const d = {
+      face: "trailer",
+      targetS: 90,
+      runtimeS: 90,
+      lane: "wide-release",
+      movements: [],
+      beats: [beat],
+      energy: [],
+      structure: { malformed: false, violations: 0, passes: 0, unmeasured: 0, notEngaged: 0, enforced: 100, findings: [] },
+      spineMoved: false,
+      origin: "fixture",
+    };
+    const l = legend(await workspaceOf(() => TrailerEditor(props(d) as never) as ReactElement));
+    expect(l.drawn).toEqual(l.live);
+    expect(l.drawn.map((r) => r.does)).toEqual(["item", "deselect"]);
   });
 
   it("a shot with no still and no clips draws no animate or adopt keys", async () => {

@@ -62,7 +62,7 @@ export function AdsTakesEditor({ frame, send, busy, error, act, data: d }: Edito
   // One fact list for the dispatcher and the legend: the legend drew "takes" for a shot with none.
   const facts = [...(shot === undefined ? [] : ["unit"]), ...((shot?.takes.length ?? 0) > 0 ? ["takes"] : [])];
   useKeys(
-    "part.frames",
+    "part.takes",
     {
       item: ({ index }) => {
         const next = w.next(index === 0 ? 1 : -1);
@@ -86,7 +86,7 @@ export function AdsTakesEditor({ frame, send, busy, error, act, data: d }: Edito
   return (
     <PartWorkspace
       {...frame}
-      mode="part.frames"
+      mode="part.takes"
       facts={facts}
       rail={{
         label: "shots",
@@ -163,7 +163,7 @@ export function AdsTakesEditor({ frame, send, busy, error, act, data: d }: Edito
                 label={shot.takes.length === 0 ? "3 takes" : "3 more takes"}
                 size="sm"
                 tone="cyan"
-                shortcut={{ mode: "part.frames", verb: "render" }}
+                shortcut={{ mode: "part.takes", verb: "render" }}
                 onPress={() => act("image-takes", `takes ${shot.id}`, shot.id)}
               />
             </div>
