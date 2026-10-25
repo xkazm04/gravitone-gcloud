@@ -29,6 +29,13 @@ describe("the studio's in-page navigation tools (athena page bridge)", () => {
       expect(studioPath(p).ok).toBe(false);
     }
     expect(studioPath(42).ok).toBe(false);
+  });
+
+  it("open refuses a dot segment, which the browser resolves out of the section the guard read", () => {
+    // Each passes the section / Board test as written and lands on /api/... once the URL is resolved.
+    for (const p of ["/projects/../api/session", "/projects/%2e%2e/api/session", "/kit/.%2E/api/mcp", "/board/pkt:a:b/../../api/mcp", "/floor/./x", "/ledger/..?ev=1"]) {
+      expect(studioPath(p).ok, p).toBe(false);
+    }
     expect(studioPath(`/floor?${"a".repeat(400)}`).ok).toBe(false);
   });
 

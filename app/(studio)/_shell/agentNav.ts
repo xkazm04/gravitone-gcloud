@@ -64,6 +64,10 @@ export function studioPath(raw: unknown): { readonly ok: true; readonly path: st
   if (raw.length > 300) return { ok: false, reason: "a studio address is at most 300 characters" };
   if (!PATH_RE.test(raw)) return { ok: false, reason: `${raw} is not a studio address: a path on this origin, starting with one /` };
   const pathname = raw.split("?")[0] ?? raw;
+  // The guard reads the address as written and the router goes where the browser RESOLVES it: a dot
+  // segment (`..`, `%2e%2e`, `.`) would let /projects/../api/session pass as Projects and land on an
+  // API route. So the address must already be its own resolution.
+  if (new URL(pathname, "http://studio.invalid").pathname !== pathname) return { ok: false, reason: `${raw} is not a studio address: it holds a dot segment` };
   if (BOARD_RE.test(pathname) || sectionOf(pathname) !== null) return { ok: true, path: raw };
   return { ok: false, reason: `${pathname} is in no studio section (${SECTION_IDS.join(", ")}) and is not a Board packet` };
 }

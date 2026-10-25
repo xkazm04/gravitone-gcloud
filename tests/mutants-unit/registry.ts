@@ -6084,4 +6084,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (!read.ok) Object.assign(read, { ok: true, value: { projects: [], truncated: false } });",
     why: "A projects read the store refused is drawn as an empty list - \"no compositions\" and the v1 import offered - over projects nobody read.",
   },
+  {
+    id: "studio-shell-open-admits-dot-segment",
+    test: "tests/next-server/agent-nav.test.ts",
+    file: "app/(studio)/_shell/agentNav.ts",
+    find: "if (new URL(pathname, \"http://studio.invalid\").pathname !== pathname)",
+    replace: "if (false)",
+    why: "An agent's `open /projects/../api/session` passes the section guard as Projects and the router lands on an API route.",
+  },
 ];
