@@ -21,7 +21,7 @@ import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
-import { CLOCK_ZOOM_OPTIONS, CutClock, useTransport, zoomStep, type ClockLane, type ClockZoom } from "./CutClock.tsx";
+import { CLOCK_ZOOM_OPTIONS, CutClock, useClockT, useTransport, zoomStep, type ClockLane, type ClockStore, type ClockZoom } from "./CutClock.tsx";
 import type { EditorProps, Launch, Send } from "./PartEditor.tsx";
 import { ScoreBed } from "./ScoreBed.tsx";
 import { ScoreField as Field } from "./ScoreField.tsx";
@@ -97,6 +97,11 @@ function CueInspector({ cue, d, send, busy, act }: { readonly cue: CueView; read
       )}
     </>
   );
+}
+
+/** The time on the clock over the total: subscribed, so a playing film re-renders this and nothing around it. */
+function Readout({ clock: c, totalS }: { readonly clock: ClockStore; readonly totalS: number }) {
+  return <span className={s.read}>{`${useClockT(c, clock)} / ${clock(totalS)}`}</span>;
 }
 
 function Spotting(p: P & { readonly data: SpottingData }) {
@@ -228,7 +233,7 @@ function Spotting(p: P & { readonly data: SpottingData }) {
               </div>
             )}
             <div className={s.bar}>
-              <span className={s.read}>{`${clock(tr.t)} / ${clock(d.totalS)}`}</span>
+              <Readout clock={tr.clock} totalS={d.totalS} />
               {d.targetS !== null && <span className={s.mono}>{`target ${clock(d.targetS)}`}</span>}
               <span className={s.mono}>{`${d.scenes.length} scenes`}</span>
               <Button label={tr.playing ? "pause" : "play"} size="sm" shortcut={{ mode: "part.score", verb: "play" }} disabled={d.totalS === 0} onPress={tr.toggle} />
@@ -243,7 +248,7 @@ function Spotting(p: P & { readonly data: SpottingData }) {
                 scenes={d.scenes}
                 lanes={lanes}
                 zoom={Number(zoom)}
-                t={tr.t}
+                clock={tr.clock}
                 selected={sel}
                 marks={d.turn === null ? [] : [{ atS: d.turn.atS, label: d.turn.label }]}
                 onSeek={tr.seek}

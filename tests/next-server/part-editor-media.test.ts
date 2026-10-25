@@ -283,7 +283,7 @@ describe("the transport at the end of the film", () => {
     frames.shift()?.(100);
     const tr = await h.settleUp();
     h.unmount();
-    return { t: tr.t, playing: tr.playing };
+    return { t: tr.at(), playing: tr.playing };
   }
 
   it("play from the end starts again from the top", async () => {
@@ -295,6 +295,31 @@ describe("the transport at the end of the film", () => {
     const r = await atTheEnd((tr) => tr.shuttle(2));
     expect(r).toEqual({ t: 0.2, playing: true });
   });
+});
+
+describe("the transport while the film plays", () => {
+  it("ten display frames of playback do not re-render the editor that owns the transport", async () => {
+    const frames: ((now: number) => void)[] = [];
+    vi.stubGlobal("requestAnimationFrame", (cb: (now: number) => void) => frames.push(cb));
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+    vi.stubGlobal("performance", { now: () => 0 });
+    const FRAMES = 10; // one settle pass per frame is the harness's cost, not the transport's
+    const h = harness(() => useTransport(30));
+    (await h.settleUp()).toggle();
+    await h.settleUp();
+    const before = h.renderRequests();
+    for (let i = 1; i <= FRAMES; i++) {
+      frames.shift()?.((i * 1000) / 60);
+      await h.settleUp();
+    }
+    // Counted at the setter, not by passes: the harness re-renders on every settleUp, a renderer
+    // only when state asks it to.
+    const during = h.renderRequests() - before;
+    console.log(`[transport] ${during} state-driven editor renders over ${FRAMES} frames`);
+    expect((await h.settleUp()).at()).toBeCloseTo(FRAMES / 60, 2);
+    expect(during, "the editor re-rendered on display frames").toBeLessThanOrEqual(1);
+    h.unmount();
+  }, 60_000);
 });
 
 /* ── a key and its button say the same thing ───────────────────────────── */

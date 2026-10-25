@@ -56,6 +56,7 @@ export function harness<T>(run: () => T, options: HarnessOptions = {}) {
   let ei = 0;
   let mi = 0;
   let dirty = false;
+  let requests = 0;
   let queue: (() => void)[] = [];
 
   const dispatcher = {
@@ -69,6 +70,7 @@ export function harness<T>(run: () => T, options: HarnessOptions = {}) {
           if (!Object.is(next, cells[k])) {
             cells[k] = next;
             dirty = true;
+            requests += 1;
           }
         },
       ];
@@ -87,6 +89,7 @@ export function harness<T>(run: () => T, options: HarnessOptions = {}) {
           if (!Object.is(next, cells[k])) {
             cells[k] = next;
             dirty = true;
+            requests += 1;
           }
         },
       ];
@@ -147,6 +150,11 @@ export function harness<T>(run: () => T, options: HarnessOptions = {}) {
       throw new Error(
         "the hook never settled in 40 passes - a render loop, or an effect whose deps change every time",
       );
+    },
+    /** How many state changes asked for a render (a setter whose value moved), however they
+     *  were batched into passes: what a real renderer would have been asked to schedule. */
+    renderRequests(): number {
+      return requests;
     },
     unmount() {
       for (const c of committed) c?.cleanup?.();
