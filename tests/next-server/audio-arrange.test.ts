@@ -156,6 +156,18 @@ describe("the rows", () => {
     expect(ledger(k).filter((e) => e.type === "sound.groups.edited")).toHaveLength(1);
   });
 
+  it("an orphan row in another case than a declared row is adopted by merging its takes into the declared row", async () => {
+    seed([take("a", { group: "Ambient" }), take("b", { group: "ambient" }), take("c", { group: "ambient", parentId: "b" }), take("x", { group: null })], { music: ["Ambient", "drone"], sfx: [] });
+    const r = await editGroups(kernel(), { kind: "music", op: { op: "adopt", name: "ambient" }, opId: "op0020" }, OP, NOW);
+    expect(r.ok && [r.value.groups.music, r.value.carried]).toEqual([["Ambient", "drone"], 2]);
+    expect(onDisk().map((t) => [t.id, t.group])).toEqual([
+      ["a", "Ambient"],
+      ["b", "Ambient"],
+      ["c", "Ambient"],
+      ["x", null],
+    ]);
+  });
+
   it("a held row is not deleted, and the refusal names what holds it", async () => {
     seed([take("a")]);
     const r = await editGroups(kernel(), { kind: "music", op: { op: "delete", name: "ambient" }, opId: "op0006" }, OP, NOW);

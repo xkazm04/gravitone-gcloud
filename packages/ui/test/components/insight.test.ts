@@ -6,7 +6,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { batchBrief, batchProblem, batchSeconds, blankBatch, composeSfxPrompt, priceSeconds } from "../../src/components/audio/batch.ts";
+import { BATCH_LIMITS, batchBrief, batchProblem, batchSeconds, blankBatch, composeSfxPrompt, priceSeconds } from "../../src/components/audio/batch.ts";
 import { BatchForm } from "../../src/components/audio/BatchForm.tsx";
 import { briefCheck, briefWords } from "../../src/components/audio/brief.ts";
 import { BriefDelta } from "../../src/components/audio/BriefDelta.tsx";
@@ -193,6 +193,19 @@ describe("the operator batch", () => {
     expect(batchProblem("sfx", { ...s, count: 2.5 })).toBe("1–6 takes");
     expect(batchProblem("sfx", { ...s, promptInfluence: 1.4 })).toBe("influence 0–1");
     expect(batchProblem("sfx", s)).toBeNull();
+  });
+
+  test("every free-text cap the door holds is named before anything is priced", () => {
+    const m = { ...blankBatch("music"), prompt: "a tune" };
+    expect(batchProblem("music", m)).toBeNull();
+    expect(batchProblem("music", { ...m, prompt: "x".repeat(BATCH_LIMITS.prompt + 1) })).toBe("prompt over 2000 characters");
+    expect(batchProblem("music", { ...m, key: "k".repeat(BATCH_LIMITS.key + 1) })).toBe("key over 40 characters");
+    expect(batchProblem("music", { ...m, key: "k".repeat(BATCH_LIMITS.key) })).toBeNull();
+    for (const field of Object.keys(BATCH_LIMITS) as (keyof typeof BATCH_LIMITS)[]) {
+      const over = "x".repeat(BATCH_LIMITS[field] + 1);
+      const f = field === "prompt" ? { ...m, prompt: over } : { ...m, [field]: over };
+      expect(batchProblem("music", f), field).toBe(`${field} over ${BATCH_LIMITS[field]} characters`);
+    }
   });
 
   test("seconds of audio are priced to the tenth under ten seconds", () => {

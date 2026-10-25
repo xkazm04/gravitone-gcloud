@@ -93,3 +93,13 @@ describe("each island's writes wait through settled", () => {
     expect(src.match(/await door\(/g) ?? []).toEqual([]);
   });
 });
+
+describe("the batch door's caps", () => {
+  it("acts.ts holds no numeric string cap of its own: the form's caps are BATCH_LIMITS", () => {
+    const src = code("_insight/acts.ts");
+    expect(src).not.toMatch(/words\(\d+\)/);
+    expect(src).not.toMatch(/z\.string\(\)\.max\(40\)\.nullable/);
+    expect(src).not.toMatch(/\.min\(40\)\.max\(220\)/);
+    expect(src).toMatch(/words\(BATCH_LIMITS\.prompt\)/);
+  });
+});

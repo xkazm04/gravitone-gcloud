@@ -23,6 +23,7 @@
 //     types; lib/sound's SoundTake satisfies `ArrangeTake` as it stands.
 // The group edits live beside this file (./arrangeGroups.ts).
 import { err, ok, type Result } from "@gt/domain/errors";
+import { declaredAs } from "./arrangeGroups.ts";
 
 export const STAGES = ["pending", "remaster", "edit", "finalized"] as const;
 export type Stage = (typeof STAGES)[number];
@@ -93,7 +94,8 @@ export function versionNumber(s: Stack, id: string): number | null {
 
 /* ── rows and cells ────────────────────────────────────────────────────── */
 
-export type Row = { readonly key: string; readonly name: string | null; readonly orphan: boolean };
+/** `into`: for an orphan spelled in another case than a declared row, that row's spelling. */
+export type Row = { readonly key: string; readonly name: string | null; readonly orphan: boolean; readonly into: string | null };
 
 export const UNGROUPED_KEY = "∅";
 export const rowKey = (name: string | null): string => (name === null ? UNGROUPED_KEY : `g:${name}`);
@@ -104,9 +106,9 @@ export function rowsFor(declared: readonly string[], stacks: readonly Stack[]): 
   const known = new Set(declared);
   const orphans = [...new Set(stacks.flatMap((s) => (s.head.group !== null && !known.has(s.head.group) ? [s.head.group] : [])))].sort((a, b) => a.localeCompare(b));
   return [
-    ...declared.map((name) => ({ key: rowKey(name), name, orphan: false })),
-    ...orphans.map((name) => ({ key: rowKey(name), name, orphan: true })),
-    { key: UNGROUPED_KEY, name: null, orphan: false },
+    ...declared.map((name) => ({ key: rowKey(name), name, orphan: false, into: null })),
+    ...orphans.map((name) => ({ key: rowKey(name), name, orphan: true, into: declaredAs(declared, name) })),
+    { key: UNGROUPED_KEY, name: null, orphan: false, into: null },
   ];
 }
 

@@ -21,6 +21,8 @@ export type GroupOp =
   | { readonly op: "adopt"; readonly name: string };
 
 const fold = (s: string): string => s.trim().toLowerCase();
+/** The declared spelling an orphan name folds onto when it differs only in case; else null. */
+export const declaredAs = (declared: readonly string[], name: string): string | null => declared.find((x) => x !== name && fold(x) === fold(name)) ?? null;
 const withKind = (g: Groups, kind: ArrangeKind, list: readonly string[]): Groups => ({ ...g, [kind]: list });
 
 export function addGroup(g: Groups, kind: ArrangeKind, name: string): GroupEdit {
@@ -60,8 +62,10 @@ export function deleteGroup(g: Groups, kind: ArrangeKind, name: string, stacks: 
 export function applyGroupOp(g: Groups, kind: ArrangeKind, op: GroupOp, stacks: readonly Stack[]): GroupEdit {
   switch (op.op) {
     case "add":
-    case "adopt":
       return addGroup(g, kind, op.name);
+    case "adopt":
+      // An orphan spelled in another case than a declared row is that row: adopting it merges.
+      return declaredAs(g[kind], op.name) === null ? addGroup(g, kind, op.name) : { ok: true, groups: g };
     case "rename":
       return renameGroup(g, kind, op.from, op.to);
     case "move":
@@ -82,10 +86,15 @@ export function matchesSuggestion(s: Stack, name: string, kind: ArrangeKind): bo
 /**
  * The takes an op re-files, by id, with the group each takes: a rename carries EVERY take of the
  * kind under the old name, older versions too, so a stack never straddles two names; an adopt
- * files the ungrouped heads that carry the suggestion.
+ * files the ungrouped heads that carry the suggestion; an adopt of a case variant of a declared
+ * row (`declared`, the file's list before the op) files the takes under that spelling instead.
  */
-export function carriedBy<T extends ArrangeTake>(op: GroupOp, kind: ArrangeKind, takes: readonly T[], stacks: readonly Stack<T>[]): readonly { readonly id: string; readonly group: string }[] {
+export function carriedBy<T extends ArrangeTake>(op: GroupOp, kind: ArrangeKind, takes: readonly T[], stacks: readonly Stack<T>[], declared: readonly string[] = []): readonly { readonly id: string; readonly group: string }[] {
   if (op.op === "rename") return takes.filter((t) => t.kind === kind && t.group === op.from).map((t) => ({ id: t.id, group: op.to.trim() }));
+  if (op.op === "adopt") {
+    const into = declaredAs(declared, op.name);
+    if (into !== null) return takes.filter((t) => t.kind === kind && t.group === op.name).map((t) => ({ id: t.id, group: into }));
+  }
   if (op.op === "adopt") return stacks.filter((s) => matchesSuggestion(s, op.name, kind)).map((s) => ({ id: s.head.id, group: op.name.trim() }));
   return [];
 }

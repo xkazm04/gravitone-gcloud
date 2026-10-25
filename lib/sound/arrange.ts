@@ -110,7 +110,7 @@ export async function editGroups(kernel: Store, input: GroupInput, actor: Actor,
       const stacks = stackVersions(kin.filter((t) => t.verdict === "kept"));
       const edit = applyGroupOp(file.groups, input.kind, input.op, stacks);
       if (!edit.ok) return err("invalid", edit.error);
-      const carried = carriedBy(input.op, input.kind, kin, stacks);
+      const carried = carriedBy(input.op, input.kind, kin, stacks, file.groups[input.kind]);
       file.groups = { music: [...edit.groups.music], sfx: [...edit.groups.sfx] };
       tx.touch("groups");
       for (const c of carried) await patchTakeTx(tx, c.id, { group: c.group }, now);

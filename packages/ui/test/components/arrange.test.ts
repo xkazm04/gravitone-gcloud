@@ -2,16 +2,19 @@
 // probe (tests/golden-path/sound-arrange.probe.spec.ts): version stacking by the chain, rows and
 // cells, the move check and the door's judgement against the store as it is now, the keyboard
 // walk, the label suggestion, and the group edits with the takes they carry.
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { admitMove, buildBoard, cellKey, cellOf, checkMove, rowsFor, stackVersions, stageCounts, step, suggestLabel, versionNumber, walk, UNGROUPED_KEY, type ArrangeTake, type Stage } from "../../src/components/audio/arrange.ts";
+import { admitMove, buildBoard, cellKey, cellOf, checkMove, rowsFor, stackVersions, stageCounts, step, suggestLabel, versionNumber, walk, UNGROUPED_KEY, type ArrangeTake, type Row, type Stage } from "../../src/components/audio/arrange.ts";
 import { ArrangeBoard } from "../../src/components/audio/ArrangeBoard.tsx";
 import { EngineList } from "../../src/components/audio/EngineList.tsx";
 import { RoundTrip } from "../../src/components/audio/RoundTrip.tsx";
 import { TakeCard, type CardTake } from "../../src/components/audio/TakeCard.tsx";
-import { RowFoot, RowHead } from "../../src/components/audio/RowHead.tsx";
+import { abandons, RowFoot, RowHead } from "../../src/components/audio/RowHead.tsx";
 import { applyGroupOp, carriedBy, deleteGroup, moveGroup, renameGroup, seedSuggestions, type Groups } from "../../src/components/audio/arrangeGroups.ts";
 
 type T = ArrangeTake & { readonly verdict: string };
@@ -142,6 +145,23 @@ describe("the rows' edits", () => {
     expect(renameGroup(g, "music", "ambient", " drone ")).toEqual({ ok: true, groups: { music: ["drone", "cinematic"], sfx: [] } });
     expect(deleteGroup(g, "music", "ambient", stackVersions([take("a", { group: "ambient" })]))).toEqual({ ok: false, error: "“ambient” holds 1 card" });
   });
+  test("an orphan spelled in another case than a declared row is adopted by merging into the declared row", () => {
+    const takes = [take("a", { group: "Ambient" }), take("b", { group: "ambient" }), take("c", { group: "ambient", parentId: "b" }), take("d", { group: null, terms: { genre: ["ambient"], mood: [], instrument: [], sfxCategory: null } })];
+    const stacks = stackVersions(takes);
+    const declared = ["Ambient"];
+    const orphan = rowsFor(declared, stacks).find((r) => r.orphan);
+    expect(orphan).toMatchObject({ name: "ambient", orphan: true, into: "Ambient" });
+    const gs: Groups = { music: declared, sfx: [] };
+    const op = { op: "adopt", name: "ambient" } as const;
+    expect(applyGroupOp(gs, "music", op, stacks)).toEqual({ ok: true, groups: gs });
+    expect(carriedBy(op, "music", takes, stacks, declared)).toEqual([
+      { id: "b", group: "Ambient" },
+      { id: "c", group: "Ambient" },
+    ]);
+    // the typed new-row field still refuses the same name
+    expect(applyGroupOp(gs, "music", { op: "add", name: "ambient" }, stacks)).toEqual({ ok: false, error: "“ambient” is already a row" });
+    expect(rowsFor(declared, stackVersions(takes.map((t) => (t.group === "ambient" ? { ...t, group: "Ambient" } : t)))).filter((r) => r.orphan)).toEqual([]);
+  });
   test("a rename carries every take under the old name, older versions too; an adopt files the ungrouped heads that carry it", () => {
     const takes = [take("a", { group: "ambient" }), take("b", { group: "ambient", parentId: "a" }), take("c", { group: null, terms: { genre: ["Drone"], mood: [], instrument: [], sfxCategory: null } })];
     const stacks = stackVersions(takes);
@@ -151,6 +171,24 @@ describe("the rows' edits", () => {
     ]);
     expect(seedSuggestions(stacks, ["ambient"], "music")).toEqual([{ name: "Drone", n: 1 }]);
     expect(carriedBy({ op: "adopt", name: "drone" }, "music", takes, stacks)).toEqual([{ id: "c", group: "drone" }]);
+  });
+});
+
+describe("an open rename", () => {
+  test("Escape, and blur on the name as it was, leave it without an edit; blur on a changed name does not", () => {
+    expect(abandons("Escape", "drone", "ambient")).toBe(true);
+    expect(abandons("blur", " ambient ", "ambient")).toBe(true);
+    expect(abandons("blur", "drone", "ambient")).toBe(false);
+  });
+  test("the rename field routes both exits through it, and the new-row field has neither", () => {
+    const src = readFileSync(path.join(import.meta.dirname, "../../src/components/audio/RowHead.tsx"), "utf8")
+      .split(/\r?\n/)
+      .filter((l) => !/^\s*(\/\/|\/\*|\*)/.test(l))
+      .join("\n");
+    expect(src).toMatch(/onKeyDown=\{[\s\S]*?e\.key !== "Escape"[\s\S]*?onAbandon\(\)/);
+    expect(src).toMatch(/onBlur=\{[\s\S]*?abandons\("blur"/);
+    expect(src).toMatch(/onAbandon=\{\(\) => setRenaming\(false\)\}/);
+    expect(src.match(/onAbandon=/g)).toHaveLength(1);
   });
 });
 
@@ -177,8 +215,8 @@ describe("the parts draw what the rules say", () => {
     for (const [len, said] of [[0.6, "0.6s"], [4.25, "4.3s"], [125, "2:05"], [null, "–"]] as const) expect(card(len), String(len)).toContain(`<span>${said}</span>`);
   });
   test("a row's head offers only the edits its row may take", () => {
-    const names = (row: { key: string; name: string | null; orphan: boolean }, held: number, first: boolean, last: boolean): string[] =>
-      [...renderToStaticMarkup(h(RowHead, { row, held, first, last, onEdit: none })).matchAll(/aria-label="([^"]*)"/g)].map((m) => m[1] ?? "");
+    const names = (row: Omit<Row, "into">, held: number, first: boolean, last: boolean): string[] =>
+      [...renderToStaticMarkup(h(RowHead, { row: { ...row, into: null }, held, first, last, onEdit: none })).matchAll(/aria-label="([^"]*)"/g)].map((m) => m[1] ?? "");
     expect(names({ key: UNGROUPED_KEY, name: null, orphan: false }, 3, false, true)).toEqual([]);
     expect(names({ key: "g:zeta", name: "zeta", orphan: true }, 1, false, false)).toEqual(["adopt zeta as a row"]);
     expect(names({ key: "g:ambient", name: "ambient", orphan: false }, 0, true, false)).toEqual(["rename ambient", "move ambient down", "delete ambient"]);
