@@ -329,3 +329,32 @@ describe("a take-over lapses the dead drive's spend holds too", () => {
     w.store.close();
   });
 });
+
+describe("the heartbeat (lease-renewal)", () => {
+  /** A world whose first heartbeat transaction finds the store busy past its timeout. */
+  function busyOnce(w: World): { fx: World["fx"]; beats: () => number } {
+    let beats = 0;
+    const fx: World["fx"] = { ...w.fx, tx: (name, fn) => (name === "heartbeat" && ++beats === 1 ? { ok: false, error: new AppError("unavailable", "store is held by another writer past 10000 ms") } : w.fx.tx(name, fn)) };
+    return { fx, beats: () => beats };
+  }
+  const slow = (ms: number) => () => new Promise<{ kind: "produced"; output: { made: string } }>((r) => setTimeout(() => r({ kind: "produced", output: { made: "a" } }), ms));
+
+  it("one busy beat misses a renewal and does not stop a healthy drive", async () => {
+    const w = world();
+    queued(w);
+    const { fx, beats } = busyOnce(w);
+    const r = must(await runJob(fx, producer("gpu.local", ["a"], slow(150)).p, "job-1", { ...opts, heartbeatMs: 20 }));
+    expect(beats()).toBeGreaterThan(1);
+    expect(r).toMatchObject({ outcome: "done", job: { state: "done" } });
+    w.store.close();
+  });
+
+  it("a lost fence still stops the drive at its next boundary", async () => {
+    const w = world();
+    queued(w);
+    const fx: World["fx"] = { ...w.fx, tx: (name, fn) => (name === "heartbeat" ? { ok: false, error: new AppError("conflict", "lease gpu.local#1: fence 1 was lost") } : w.fx.tx(name, fn)) };
+    const r = await runJob(fx, producer("gpu.local", ["a"], slow(150)).p, "job-1", { ...opts, heartbeatMs: 20 });
+    expect(r).toMatchObject({ ok: false, error: { code: "conflict" } });
+    w.store.close();
+  });
+});

@@ -211,7 +211,10 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
   const beat = setInterval(() => {
     try {
       const r = fx.tx("heartbeat", (t) => void heartbeatIn(t, slot, fence));
-      if (!r.ok) lost = r.error;
+      // A store busy past its timeout misses THIS beat; the next renews (lease-renewal: ttl/3 exists so that
+      // one missed renewal does not forfeit a live lease). Any other failure is carried; fenced writes
+      // still refuse if the lease did lapse.
+      if (!r.ok && r.error.code !== "unavailable") lost = r.error;
     } catch (e) {
       lost = e;
     }
