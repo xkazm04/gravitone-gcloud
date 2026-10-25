@@ -249,7 +249,7 @@ test("19. leonardo started the generation, then every poll answers 401 -> the gi
     return json({ error: "Invalid authentication token" }, 401);
   });
   const p = leonardoProvider({ sleep: async () => undefined, pollMs: 1, maxPolls: 3 });
-  const err = await failure(p.generate({ prompt: "probe poll 401", aspect: "16:9", count: 1 }));
+  const err = await failure(p.generate!({ prompt: "probe poll 401", aspect: "16:9", count: 1 }));
   expect(err.kind).toBe("timeout");
   expect(err.message, "the polls' own failure was dropped").toMatch(/Invalid authentication token/);
   expect(err.message).toMatch(/last poll failed/);
