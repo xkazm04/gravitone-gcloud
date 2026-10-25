@@ -44,6 +44,7 @@ import {
   loadStep,
   lastStorageTrouble,
   onStorageTrouble,
+  patchStep,
   readStep,
   SCHEMA_VERSION,
   saveStep,
@@ -444,4 +445,67 @@ test("versioning: a written record carries its schema version, alongside savedAt
   expect(out.data?.savedAt, "savedAt is still stamped").toBeGreaterThan(0);
   expect(out.data?.v, "the record names its schema version").toBe(SCHEMA_VERSION);
   console.log(`[dal] written record: v=${out.data?.v}, savedAt=${out.data?.savedAt}`);
+});
+
+// ── The issue-order chain (lib/steps/saveOrder.ts inIssueOrder) ──────────────
+
+const merge = (extra: object) => (stored: unknown) => ({ put: { ...(stored as object), ...extra } });
+
+/** Run `body` with the FIRST indexedDB.open slowed by 20ms (its success handler is held back). A
+ *  save issued first then reaches its transaction after an operation issued second could, so only
+ *  the chain keeps the issue order; without a slow first open the engine happens to be FIFO and
+ *  the chain is never exercised. */
+async function slowFirstOpen<T>(body: () => Promise<T>): Promise<T> {
+  const factory = globalThis.indexedDB;
+  const real = factory.open.bind(factory);
+  let n = 0;
+  factory.open = ((...args: Parameters<IDBFactory["open"]>) => {
+    const req = real(...args);
+    if (n++ === 0) {
+      let held: ((this: IDBOpenDBRequest, ev: Event) => unknown) | null = null;
+      Object.defineProperty(req, "onsuccess", { configurable: true, get: () => null, set: (fn) => void (held = fn) });
+      req.addEventListener("success", (ev) => void setTimeout(() => held?.call(req, ev), 20));
+    }
+    return req;
+  }) as IDBFactory["open"];
+  try {
+    return await body();
+  } finally {
+    delete (factory as unknown as { open?: unknown }).open;
+  }
+}
+
+test("issue order: a patch issued in the same tick as a save merges onto what the save wrote", async () => {
+  const { s, p } = await slowFirstOpen(async () => {
+    const save = saveStep("p-order", "script", { a: 1 });
+    const patch = patchStep("p-order", "script", merge({ b: 2 }));
+    const [s, p] = await Promise.all([save, patch]);
+    return { s, p };
+  });
+  expect(s.ok && p.ok).toBe(true);
+  const read = await readStep<{ a?: number; b?: number }>("p-order", "script");
+  expect(read.ok && { a: read.data?.a, b: read.data?.b }).toEqual({ a: 1, b: 2 });
+});
+
+test("issue order: two patches issued in one tick, behind a save, both land", async () => {
+  const [x, y] = await slowFirstOpen(async () => {
+    void saveStep("p-two", "script", { base: true });
+    return Promise.all([patchStep("p-two", "script", merge({ x: 1 })), patchStep("p-two", "script", merge({ y: 2 }))]);
+  });
+  expect(x).toEqual({ ok: true, wrote: true });
+  expect(y).toEqual({ ok: true, wrote: true });
+  const read = await readStep<{ base?: boolean; x?: number; y?: number }>("p-two", "script");
+  expect(read.ok && { base: read.data?.base, x: read.data?.x, y: read.data?.y }).toEqual({ base: true, x: 1, y: 2 });
+});
+
+test("patch: a decide that throws writes nothing and reports a failed trouble", async () => {
+  await saveStep("p-throw", "script", { keep: "me" });
+  const out = await patchStep("p-throw", "script", () => {
+    throw new Error("decide refused");
+  });
+  expect(out.ok).toBe(false);
+  if (!out.ok) expect(out.trouble.kind).toBe("failed");
+  expect(lastStorageTrouble()?.kind).toBe("failed");
+  const read = await readStep<{ keep?: string }>("p-throw", "script");
+  expect(read.ok && read.data?.keep).toBe("me");
 });
