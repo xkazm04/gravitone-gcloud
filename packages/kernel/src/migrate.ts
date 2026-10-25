@@ -70,6 +70,8 @@ export function stepDigest(step: MigrationStep): string {
 
 type Recorded = { module: string; version: number; digest: string };
 type Failure = z.output<typeof failureRow>;
+/** A standing failure mark: the module and step that failed, when, and the error. */
+export type MigrationMark = Failure;
 type Pending = { module: string; step: MigrationStep; digest: string };
 
 /** The pure half: which steps run, or why none may. */
@@ -121,13 +123,44 @@ function readLedger(store: Store): Result<{ recorded: Recorded[]; failures: Fail
     if (!p.ok) return err("refused", `migrations: the ledger is unreadable: ${p.error.message}`);
     recorded.push(p.value);
   }
+  const failures = parseMarks(rows.value.failures);
+  if (!failures.ok) return failures;
+  return ok({ recorded, failures: failures.value });
+}
+
+function parseMarks(rows: readonly unknown[]): Result<Failure[]> {
   const failures: Failure[] = [];
-  for (const row of rows.value.failures) {
+  for (const row of rows) {
     const p = parseAt("migrations failure mark", failureRow, row);
     if (!p.ok) return err("refused", `migrations: a failure mark is unreadable: ${p.error.message}`);
     failures.push(p.value);
   }
-  return ok({ recorded, failures });
+  return ok(failures);
+}
+
+/** The failure marks standing in the store, read without running anything: the
+ *  operator's view of why every open refuses (`pipeline/kernel.mts migrations status`). */
+export function migrationMarks(store: Store): Result<readonly MigrationMark[]> {
+  const boot = store.tx((t) => t.exec(LEDGER_DDL));
+  if (!boot.ok) return boot;
+  const rows = store.read((r) => r.all("SELECT module, version, at, reason FROM _migration_failures ORDER BY module"));
+  if (!rows.ok) return rows;
+  return parseMarks(rows.value);
+}
+
+/** The newest pre-migration snapshot beside a file store, if one was taken. */
+export function newestSnapshot(store: Store, dir?: string): string | undefined {
+  if (store.location === ":memory:") return undefined;
+  const where = dir ?? path.dirname(store.location);
+  const base = path.basename(store.location);
+  let names: string[];
+  try {
+    names = readdirSync(where).filter((f) => f.startsWith(`${base}.pre-migrate.`)).sort();
+  } catch {
+    return undefined;
+  }
+  const last = names[names.length - 1];
+  return last === undefined ? undefined : path.join(where, last);
 }
 
 /** The snapshot's file name: the store's, the time, and a 12-hex digest of
