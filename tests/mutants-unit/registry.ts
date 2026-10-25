@@ -7294,4 +7294,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const pro0 = process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || \"gemini-3.1-pro-preview\"; const pro = (): string => pro0;",
     why: "The pro model is captured at import again, so a plan-model override set after boot names the old model.",
   },
+  {
+    id: "text-pricing-row-loses-its-end",
+    test: "tests/next-server/text-pricing-dated-rate.test.ts",
+    file: "lib/text/pricing.ts",
+    find: "    validUntil: \"2026-12-31\",",
+    replace: "    ",
+    why: "The 3.8 row carries no end date again, so a turn priced after 2026-12-31 estimates at half the real bill.",
+  },
+  {
+    id: "text-pricing-ended-rate-ignores-day",
+    test: "tests/next-server/text-pricing-dated-rate.test.ts",
+    file: "lib/text/pricing.ts",
+    find: "day <= row.validUntil",
+    replace: "true",
+    why: "The day check is gone, so an ended introductory rate keeps pricing every later turn.",
+  },
 ];
