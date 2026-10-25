@@ -6164,4 +6164,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "(scout)",
     why: "A seed batch's Board packet is in no section, so the header marks nothing current while the Scout's page is open.",
   },
+  {
+    id: "studio-shell-toast-older-clock-closes-newer",
+    test: "tests/next-server/shell-toast.test.ts",
+    file: "app/(studio)/_shell/toast.ts",
+    find: "if (timer !== null) clearTimeout(timer);",
+    replace: "",
+    why: "A receipt shown just before another's clock runs out is closed by the older clock within a moment, before anyone reads it.",
+  },
 ];
