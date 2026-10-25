@@ -14,6 +14,7 @@ import type { StyleCoverageRow, StyleProofView, StyleTrial } from "@gt/domain/st
 
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import { Ghost } from "../ghost/Ghost.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import { trialColumns } from "./style.ts";
@@ -66,8 +67,7 @@ export function TrialMatrix({ trials, coverage, proofs, srcOf, chosen, onChoose,
               <Ghost label={`${c.trial.label}: not rendered under this block`} />
             ) : (
               <button type="button" className={cx(s.face, s[c.face.state])} onClick={onHold === undefined ? undefined : () => onHold(c.face?.id ?? "")} aria-label={`${c.trial.label}: ${c.face.label}, ${c.face.state}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- a content-addressed blob */}
-                <img className={s.plate} src={srcOf(c.face.media)} alt="" loading="lazy" />
+                <Plate className={s.plate} src={srcOf(c.face.media)} alt="" lazy />
               </button>
             )}
             <span className={s.counts}>

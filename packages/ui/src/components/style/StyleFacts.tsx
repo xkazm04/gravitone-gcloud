@@ -13,6 +13,7 @@ import type { StyleEvidenceRow, StyleExemplarView, StyleView } from "@gt/domain/
 
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import { StackBar } from "../stackbar/StackBar.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import s from "./Style.module.css";
@@ -88,8 +89,7 @@ export function PlateStrip({ exemplars, srcOf }: { readonly exemplars: readonly 
     <ul className={s.strip} aria-label="exemplars" data-component="PlateStrip">
       {exemplars.map((x) => (
         <li key={`${x.run}/${x.media.sha256}`} className={cx(s.stripItem, x.abandoned && s.abandoned)}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a content-addressed blob */}
-          <img className={s.plate} src={srcOf(x.media)} alt={`${x.role} from ${x.run}`} loading="lazy" />
+          <Plate className={s.plate} src={srcOf(x.media)} alt={`${x.role} from ${x.run}`} lazy />
           <span className={s.chips}>
             <Chip label={x.role} casing="lower" />
             {x.abandoned && <Chip label={x.settled ?? "abandoned"} tone="amber" casing="lower" ghost />}

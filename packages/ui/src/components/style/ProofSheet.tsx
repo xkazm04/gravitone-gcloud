@@ -19,6 +19,7 @@ import { SrOnly } from "../a11y/SrOnly.tsx";
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import { Field } from "../field/Field.tsx";
 import { PipRow } from "../piprow/PipRow.tsx";
 import { Tally } from "../tally/Tally.tsx";
@@ -94,8 +95,7 @@ export function ProofTile({ proof: p, src, held, onHold, onJudge, noting, onNote
   return (
     <figure className={cx(s.tile, s[p.state], p.lineage === "stale" && s.stale, held && s.held)} data-proof={p.id} data-state={p.state} data-lineage={p.lineage} aria-current={held ? "true" : undefined}>
       <button type="button" className={s.plateBtn} onClick={onHold} aria-label={`hold ${p.label}`}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- a content-addressed blob; nothing for next/image to optimise */}
-        <img className={s.plate} src={src} alt="" loading="lazy" />
+        <Plate className={s.plate} src={src} alt="" lazy />
         <span className={cx(s.mark, s[p.state])} aria-hidden="true">
           <PipRow looks={[proofLook(p)]} label={STATE_WORD[p.state]} />
         </span>
