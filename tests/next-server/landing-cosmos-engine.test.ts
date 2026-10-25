@@ -1132,39 +1132,39 @@ describe("library.ts: hotCat reads the area's box before it writes the hot class
 
 
 /* ---------- opening a template or a category moves the focus onto its stage (nav.ts) ---------- */
-describe("nav.ts: the card or tile that opened a stage is inert, so the stage takes the focus", () => {
-  /** a landing mid-level: every element setLv, renderStage and buildWorld touch, on the shell's DomEl */
-  function openCx(root: DomEl, lv: "type" | "fam") {
-    const base = familyCx(root);
-    const cats = base.SV.list as { id: string; label: string; art: string }[];
-    const tpls = cats.map((c) => ({ ...c, seconds: 30 }));
-    const world = new DomEl("div");
-    world.querySelectorAll = () => [];
-    return Object.assign(base, {
-      els: { ...base.els, typeView: kid(root, "section"), libView: kid(root, "section"), world, banner: kid(root), scene: kid(root) },
-      ST: { lv, type: lv === "type" ? "film" : null, tpl: null, fam: lv === "fam" ? "styles" : null, cat: null, opener: null },
-      SV: { kind: null, idx: 0, list: [] },
-      famSorted: cats,
-      tplByType: new Map([["film", tpls]]),
-      typeById: new Map([["film", { id: "film", label: "Film" }]]),
-      templates: tpls,
-      CAR: { cards: [kid(root, "button"), kid(root, "button"), kid(root, "button")] },
-      gov: null,
-      covered: false,
-      coverT: 0,
-      navTok: 0,
-      worldTok: 0,
-      worldReady: false,
-      worldReadyAt: 0,
-      worldPre: null as unknown,
-      wplanes: [],
-      medalsEl: null,
-      reamsEl: null,
-      life: { dead: false, timeout: () => 0 as never, clear() {}, raf() {}, want() {}, observe: (x: unknown) => x, unobserve() {} },
-      raster: { run: () => new Promise(() => {}), paint: () => new Promise(() => {}), drop() {}, bump() {} },
-    });
-  }
+/** a landing mid-level: every element setLv, renderStage and buildWorld touch, on the shell's DomEl */
+function openCx(root: DomEl, lv: "type" | "fam") {
+  const base = familyCx(root);
+  const cats = base.SV.list as { id: string; label: string; art: string }[];
+  const tpls = cats.map((c) => ({ ...c, seconds: 30 }));
+  const world = new DomEl("div");
+  world.querySelectorAll = () => [];
+  return Object.assign(base, {
+    els: { ...base.els, typeView: kid(root, "section"), libView: kid(root, "section"), world, banner: kid(root), scene: kid(root) },
+    ST: { lv, type: lv === "type" ? "film" : null, tpl: null, fam: lv === "fam" ? "styles" : null, cat: null, opener: null },
+    SV: { kind: null, idx: 0, list: [] },
+    famSorted: cats,
+    tplByType: new Map([["film", tpls]]),
+    typeById: new Map([["film", { id: "film", label: "Film" }]]),
+    templates: tpls,
+    CAR: { cards: [kid(root, "button"), kid(root, "button"), kid(root, "button")] },
+    gov: null,
+    covered: false,
+    coverT: 0,
+    navTok: 0,
+    worldTok: 0,
+    worldReady: false,
+    worldReadyAt: 0,
+    worldPre: null as unknown,
+    wplanes: [],
+    medalsEl: null,
+    reamsEl: null,
+    life: { dead: false, timeout: () => 0 as never, clear() {}, raf() {}, want() {}, observe: (x: unknown) => x, unobserve() {} },
+    raster: { run: () => new Promise(() => {}), paint: () => new Promise(() => {}), drop() {}, bump() {} },
+  });
+}
 
+describe("nav.ts: the card or tile that opened a stage is inert, so the stage takes the focus", () => {
   test("openTpl from a focused card leaves the focus inside #stageView", async () => {
     const root = shellDom();
     stub("performance", performance);
@@ -1197,5 +1197,132 @@ describe("nav.ts: the card or tile that opened a stage is inert, so the stage ta
     const cx = openCx(root, "type");
     focusStage(cx as never);
     expect(DOC.activeElement).toBe(cx.els.stageView);
+  });
+});
+
+
+/* ---------- the browser's Back steps one level (nav.ts) ---------- */
+describe("nav.ts: the platform Back steps back a level instead of leaving the landing", () => {
+  /** a session history that lands each go() asynchronously, as a browser does */
+  class FakeHistory {
+    entries: { state: unknown }[] = [{ state: { __NA: true } }];
+    at = 0;
+    pushes = 0;
+    constructor(private win: { fire: (e: { state: unknown }) => void }) {}
+    get state() {
+      return this.entries[this.at].state;
+    }
+    pushState(state: unknown): void {
+      this.pushes++;
+      // Next's patched pushState carries its own marker into the new entry
+      this.entries.splice(this.at + 1, this.entries.length, { state: { ...(state as object), __NA: true } });
+      this.at++;
+    }
+    go(n: number): void {
+      const to = Math.max(0, Math.min(this.entries.length - 1, this.at + n));
+      queueMicrotask(() => {
+        this.at = to;
+        this.win.fire({ state: this.state });
+      });
+    }
+    back(): void {
+      this.go(-1);
+    }
+  }
+  async function landing() {
+    const root = shellDom();
+    const listeners: ((e: { state: unknown }) => void)[] = [];
+    const win = { fire: (e: { state: unknown }) => listeners.forEach((f) => f(e)), addEventListener: (_t: string, f: never) => listeners.push(f), removeEventListener() {} };
+    const hist = new FakeHistory(win);
+    stub("window", win);
+    stub("history", hist);
+    const nav = await import("../../app/_landing/cosmos/engine/nav.ts");
+    const cx = openCx(root, "type") as unknown as {
+      ST: { lv: string; type: string | null; tpl: string | null; fam: string | null; cat: string | null };
+      els: Record<string, DomEl>;
+      life: Record<string, unknown>;
+      typeById: Map<string, unknown>;
+      tplByType: Map<string, unknown[]>;
+    };
+    Object.assign(cx, { medEls: [], searchOpen: false, cam: {}, hotEl: null, preT: 0, cx: 0 });
+    Object.assign(cx.els, { back: kid(root, "button"), crumbs: kid(root, "nav"), depth: kid(root, "nav") });
+    Object.assign(cx.life, { on: (_t: unknown, type: string, f: never) => (type === "popstate" ? (listeners.push(f), () => {}) : () => {}) });
+    cx.ST.lv = "root";
+    cx.ST.type = null;
+    nav.wireRoot(cx as never);
+    return { nav, cx, hist, root };
+  }
+
+  test("root > type > template: two Backs stay on the landing, the third leaves", async () => {
+    const { nav, cx, hist } = await landing();
+    cx.ST.type = "film";
+    nav.setLv(cx as never, "type");
+    cx.ST.tpl = "a";
+    nav.setLv(cx as never, "tpl");
+    expect(hist.entries.length, "one entry per level opened").toBe(3);
+    let stayed = 0;
+    for (let i = 0; i < 3 && hist.at > 0; i++) {
+      hist.back();
+      await tick(1);
+      if (hist.at > 0 || cx.ST.lv !== "tpl") stayed++;
+    }
+    // the first Back closed the template, the second returned to the overview; at the base entry the page is left
+    expect([stayed, cx.ST.lv, hist.at]).toEqual([2, "root", 0]);
+  });
+
+  test("a level closed from the page takes its entry off the stack, and the pop it causes closes nothing more", async () => {
+    const { nav, cx, hist } = await landing();
+    cx.ST.type = "film";
+    nav.setLv(cx as never, "type");
+    cx.ST.tpl = "a";
+    nav.setLv(cx as never, "tpl");
+    nav.back(cx as never); // the HUD Back
+    await tick(1);
+    expect([cx.ST.lv, hist.at]).toEqual(["type", 1]);
+    hist.back();
+    await tick(1);
+    expect([cx.ST.lv, hist.at]).toEqual(["root", 0]);
+  });
+
+  test("moving sideways from one type to another pushes nothing", async () => {
+    const { nav, cx, hist } = await landing();
+    cx.ST.type = "film";
+    nav.setLv(cx as never, "type");
+    const n = hist.pushes;
+    nav.setLv(cx as never, "type");
+    expect(hist.pushes).toBe(n);
+  });
+
+
+  test("a history jump of two levels closes both", async () => {
+    const { nav, cx, hist } = await landing();
+    cx.ST.type = "film";
+    nav.setLv(cx as never, "type");
+    cx.ST.tpl = "a";
+    nav.setLv(cx as never, "tpl");
+    hist.go(-2);
+    await tick(1);
+    expect([cx.ST.lv, hist.at]).toEqual(["root", 0]);
+  });
+
+  test("another type opened from a template's crumb ends one level deep, with no entry pushed for the trip through the overview", async () => {
+    const { nav, cx, hist } = await landing();
+    Object.assign(cx, {
+      types: [{ id: "film", label: "Film" }, { id: "other", label: "Other" }],
+      L: { med: [{ x: 0, y: 0 }, { x: 10, y: 10 }], cx: 0, cy: 0 },
+      medEls: [new DomEl("button"), new DomEl("button")],
+      carTok: 0,
+    });
+    cx.typeById.set("other", (cx as unknown as { types: { id: string }[] }).types[1] as never);
+    cx.tplByType.set("other", []);
+    Object.assign(cx.life, { sleep: () => Promise.resolve() });
+    (DomEl.prototype as unknown as { addEventListener: () => void }).addEventListener = () => {};
+    cx.ST.type = "film";
+    nav.setLv(cx as never, "type");
+    cx.ST.tpl = "a";
+    nav.setLv(cx as never, "tpl");
+    await nav.navTo(cx as never, { lv: "type", type: "other" });
+    await tick(1);
+    expect([cx.ST.lv, cx.ST.type, hist.at, hist.pushes]).toEqual(["type", "other", 1, 2]);
   });
 });
