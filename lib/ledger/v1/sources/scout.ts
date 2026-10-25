@@ -65,7 +65,9 @@ async function readWing(wing: ScoutWing): Promise<Result<{ nights: Night[]; skip
 async function read(): Promise<Result<ScoutSnapshot>> {
   const [scout, muse] = await Promise.all([readWing("scout"), readWing("muse")]);
   if (!scout.ok) return scout;
-  if (!muse.ok) return muse;
+  // A wing that cannot be listed is a skip, not the source's failure: the scout wing's pile stays on the Floor
+  // while the muse root is unreadable (a listing failing the source is the rule where one root feeds the record, forge.ts).
+  if (!muse.ok) return ok({ nights: scout.value.nights, skipped: [...scout.value.skipped, { id: "muse", reason: muse.error.message }] });
   return ok({ nights: scout.value.nights, muse: muse.value.nights, skipped: [...scout.value.skipped, ...muse.value.skipped] });
 }
 

@@ -27,7 +27,7 @@ import { AudioPrompt } from "@gt/ui/components/audio/AudioPrompt.tsx";
 import { ModelViewer } from "@gt/ui/components/model/ModelViewer.tsx";
 import type { ModelExportProject } from "@gt/domain/library";
 
-import type { ShownDetail } from "../_port/contract.ts";
+import type { Choice, ShownDetail } from "../_port/contract.ts";
 import { ledgerFor } from "../../_shell/links.ts";
 import { CharacterFacts } from "./CharacterDetail.tsx";
 import { ExportRow, ModelFacts } from "./ModelDetail.tsx";
@@ -135,9 +135,20 @@ function Extras({ d, onFacet }: { readonly d: ShownDetail; readonly onFacet: (gr
   return null;
 }
 
+/**
+ * The "Use in project" choices: a project that already uses the item is marked where the choice is made
+ * (marked, not hidden: a second use is the operator's call), and the default is the first project that does not.
+ */
+export function useChoices(d: Pick<ShownDetail, "projects" | "usedBy">): { readonly options: readonly Choice[]; readonly first: string } {
+  const used = new Set(d.usedBy.map((u) => u.value));
+  const options = d.projects.map((p) => (used.has(p.value) ? { value: p.value, label: `${p.label} · in use` } : p));
+  return { options, first: (d.projects.find((p) => !used.has(p.value)) ?? d.projects[0])?.value ?? "" };
+}
+
 export function DetailView({ d, busy, onFacet, onItem, onPin, onUse, onExport }: DetailViewProps) {
   const c = d.card;
-  const [project, setProject] = useState(d.projects[0]?.value ?? "");
+  const choices = useChoices(d);
+  const [project, setProject] = useState(choices.first);
   const audio = c.kind === "audio" ? d.extras.audio : undefined;
   return (
     <>
@@ -190,7 +201,7 @@ export function DetailView({ d, busy, onFacet, onItem, onPin, onUse, onExport }:
           {d.acts.includes("use-in-project") && d.projects.length > 0 && (
             <div className={s.actRow}>
               <span className={s.useSel}>
-                <Select label="Project" value={project} onChange={setProject} options={d.projects} />
+                <Select label="Project" value={project} onChange={setProject} options={choices.options} />
               </span>
               <Button label="Use in project" tone="cyan" disabled={busy || project === ""} onPress={() => onUse(project)} />
             </div>
