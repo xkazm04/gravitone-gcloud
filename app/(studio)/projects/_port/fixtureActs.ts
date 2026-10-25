@@ -215,6 +215,9 @@ export function pauseJob(u: Universe, id: string, now: number): Result<ActOutcom
 export function resumeJob(u: Universe, id: string, now: number): Result<ActOutcome> {
   const j = jobOf(u, id);
   if (!j.ok) return j;
+  // The machine lets failed and interrupted go to queued too, but that edge is the retry's (and an
+  // interruption's is the operator's look first): only a paused job resumes (kernel job.ts `resume`).
+  if (j.value.state !== "paused") return err("refused", `job ${id} is ${j.value.state}; only a paused job resumes`);
   const r = move(j.value, "queued", now, u);
   return r.ok ? ok({ jobId: id, note: "resumed · back to queued" }) : r;
 }

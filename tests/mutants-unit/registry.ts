@@ -6068,4 +6068,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const INLINE = /^data:/;",
     why: "A plate whose src is `DATA:` or ` data:` passes the door a browser still renders as inline bytes, so base64 plates land in the record the frames v3 bump exists to keep them out of.",
   },
+  {
+    id: "produce-fixture-resumes-a-crash",
+    test: "tests/next-server/produce-fixture-parity.test.ts",
+    file: "app/(studio)/projects/_port/fixtureActs.ts",
+    find: "if (j.value.state !== \"paused\") return err(\"refused\", `job ${id} is ${j.value.state}; only a paused job resumes`);",
+    replace: "",
+    why: "The fixture resumes a failed or interrupted job straight to its queue, past the retry and past the hold an interruption leaves, where the kernel refuses anything but a paused job.",
+  },
 ];
