@@ -71,6 +71,11 @@ seed, the sentence its label, its facets the meta (`adult · comedy › office s
 sketch · short`), and a child seed's first line the parent it narrows (`from: <parent sentence>`, cut at
 60). On the Floor an uncommitted live batch is one pile; a dry one opens by its id only.
 
+A music seed (type `music video`, `lyric video` or `visualizer`) carries its song, `music {instruments (1-6),
+tempo (bpm 40-220), mood, vocals: instrumental|female|male|duet|choir}` - required on those types, refused on any
+other, absent on seeds written before 2026-10-25. Its row's meta shows the song; a seed without it hashes exactly
+as before, so older packets keep their cells.
+
 EVERY X NEEDS A REASON. On this packet a reject is not done until it names one of `generic`, `not for us`,
 `audience`, `done before`, `format` (at most two): keys 2-4 reject with the first three and move on; 5
 rejects and stays with the row's reason chips ringed, and a chip click sets the reason and moves on. The commit refuses a reasonless reject - the desk counts it beside
@@ -160,7 +165,7 @@ The song is the clock: a track is made and judged on one night, and its visualiz
 
 | command | what it does |
 |---|---|
-| `track <night> --seed <batch>/sd-NNN [--detach]` | One Suno create (v6 + v6-wild, about 4 clips) from a kept seed's sentence. The seed goes through `usableSeed`, so it must be kept, on a live batch, and outside any paused branch. Refused past the night's `--tracks` cap (default 4, max 8). The Suno producer's own job is the job (`job:run:suno.sj-scout-<night>-<c-id>`, on box.chrome). Each clip lands in `tracks/<c-id>/a<N>.mp3`. |
+| `track <night> --seed <batch>/sd-NNN [--detach]` | One Suno create (v6 + v6-wild, about 4 clips) from a kept seed's sentence and, since 2026-10-25, its `music` facets: the propose prompt's `{{FACETS}}` slot layers genre and era, mood, instruments and tempo in bpm, and states the vocals on both sides (instrumental puts vocals in the exclude line); a seed without facets reads exactly as before. The seed goes through `usableSeed`, so it must be kept, on a live batch, and outside any paused branch, and its type must be a music type (`music video`, `lyric video`, `visualizer`). Refused past the night's `--tracks` cap (default 4, max 8). The Suno producer's own job is the job (`job:run:suno.sj-scout-<night>-<c-id>`, on box.chrome). Each clip lands in `tracks/<c-id>/a<N>.mp3`. |
 | `track <night> --collect` | Collects every pending track whose Suno job is done, for a detached one. |
 | `visualizer <night> --track <night>/<c-id>/<aN> [--detach]` | A full-song visualizer of a track clip that a live night's commit KEPT. Refused for any other clip, for a clip a visualizer already plays, and past `--visualizers` (default 2, max 4). Runs as the mv producer's own job on box.render. The mp4 lands in `visualizers/<c-id>/visualizer.mp4`, with `visualizer - youtube.txt` beside it. |
 | `visualizer <night> --collect` | Collects every pending visualizer whose mv job is done. |
@@ -184,6 +189,21 @@ The song is the clock: a track is made and judged on one night, and its visualiz
 **Doctor.** The `suno` line attaches to the Suno Chrome on 9334 (read-only, never launched). It is a FAIL only for a live doctor with `tracks > 0`. Otherwise it is a note and no browser is asked.
 
 ## What the nights are for
+
+**The ladder (spark scout-vision, 2026-10-25).** Every night climbs one: **spread** genres while no project
+exists; **prove** a kept idea can be executed (a storyboard on local Flux that applies a researched execution
+technique, then trial clips, then an assembled 15-30 s piece kept as "would publish"); and only then a **project**
+born on the Board - a channel from a publishable genre, an album from kept tracks, a game from its asset catalogue.
+The genre and project records, the merge of the muse wing into this one and the game projects' asset needs are
+later stages of the same spark; stage 1 shipped the purpose, the order and the gate below.
+
+**Prove before you spread - the backlog gate.** `backlog.ts` counts the kept `scene`/`style` ideas of live
+committed nights that no storyboard (failed ones aside) composes yet, and the kept, unpaused seeds no idea grows
+from. While `BACKLOG_GATE` (20) or more ideas wait, `seeds new` takes child seeds and at most `GATED_FRESH_SEEDS`
+(20) fresh ones, dry batches included, refused before anything is written. The taste brief's `## Backlog` lists
+the counts, the gate and the 20 oldest waiting ideas; `status --json` carries `backlog`; the `/scout` head draws a
+`backlog` tally and, gated, a `fresh ≤ 20` chip. A failed candidate no longer takes an idea off `## Ideas to
+develop`. Measured on the operator's store at the cut: 47 ideas waiting, 97 seeds with no idea - gated.
 
 The operator's rulings (2026-10-23): every run, idea and direction serves a **YouTube video** - a Short
 (~30 s) or a short video (up to 5 minutes); a style is only the baseline look of such a video, never a
@@ -354,8 +374,14 @@ bounds broken, more than five panels, or a name in the words (`scene.ts namesIn`
 franchise; a capital mid-sentence reads as one). The candidate copies the idea's `fromSeed` and its
 aspect (a portrait idea draws 9:16 frames, any other 16:9).
 
-**The cap.** At most `storyboardCap` a night (`open --storyboards N`, default 6, at most 12; the muse
-wing has none), every storyboard counting, a failed one too; checked under the night's lock.
+**The cap.** At most `storyboardCap` a night (`open --storyboards N`, default 12, at most 20 since 2026-10-25;
+the muse wing has none), every storyboard counting, a failed one too; checked under the night's lock.
+
+**The technique.** A brief may carry `technique {claim, quote, url, template, step}` - the researched way of
+executing the genre its panels apply (claim <= 140, the source's words verbatim, a public page, an existing
+`knowledge/templates/<template>/steps/<step>/` held to the finding door's rule, `templateProblem`). A storyboard
+KEPT on the Board files it as one marked PATTERNS.md line, as a kept finding does; not kept, dry or absent writes
+nothing, and a second apply writes nothing.
 
 **The frames.** One job per storyboard, `job:scout-storyboard:<night>:<c-NN>` (producer `scout-storyboard`,
 `lib/producers/scoutStoryboard.ts`), steps `panel:1..N`, on `gpu.local` naming the `comfy` engine, so it is
