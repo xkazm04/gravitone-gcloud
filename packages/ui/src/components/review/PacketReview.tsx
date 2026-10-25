@@ -56,6 +56,14 @@ export type PacketReviewProps = {
   readonly nowMs?: number;
 };
 
+/** The verdict an approve gives: a scheduled source carries the schedule (and the notes inside it)
+ *  as its note; a source that only keeps a note (a step review) carries the notes themselves; a
+ *  source that keeps none (noteMax 0, a Dojo review) and an approve with nothing attached stay bare. */
+export function keepVerdictOf(schedule: ScheduleIntent | null, notes: string, noteMax: number): BoardVerdict {
+  if (schedule === null) return notes === "" || noteMax <= 0 ? { verdict: "keep", reasons: [] } : { verdict: "keep", reasons: [], note: notes.slice(0, noteMax) };
+  return { verdict: "keep", reasons: [], note: encodeSchedule({ ...schedule, ...(notes === "" ? {} : { notes }) }).slice(0, noteMax) };
+}
+
 export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, busy = false, announce = () => undefined, keys = true, nowMs }: PacketReviewProps) {
   const { view, present } = packet;
   const doc = present.review;
@@ -114,11 +122,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
   };
   const nameOf = (i: number) => view.items[i] === undefined ? "" : (present.items[view.items[i].id]?.label ?? view.items[i].id);
   // The attached notes ride with the approve, as the prototype's decide({notes}) kept them.
-  const keepVerdict = () => {
-    if (schedule === null) return { verdict: "keep" as const, reasons: [] };
-    const notes = plan.map((p) => `§${sectionNo(p.section)} ${p.directive}: ${p.text}`).join("\n");
-    return { verdict: "keep" as const, reasons: [], note: encodeSchedule({ ...schedule, ...(notes === "" ? {} : { notes }) }).slice(0, view.reasons.noteMax) };
-  };
+  const keepVerdict = () => keepVerdictOf(schedule, plan.map((p) => `§${sectionNo(p.section)} ${p.directive}: ${p.text}`).join("\n"), view.reasons.noteMax);
   const send = () => {
     // The same door as a verdict: returning the packet while its commit is in flight races it.
     if (busy) return;
