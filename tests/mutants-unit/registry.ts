@@ -6454,4 +6454,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "${noun}s",
     why: "A v1 project with one bar reads \"1 jobs · 1 slots\" in the composition list.",
   },
+  {
+    id: "hunt-return-upload-has-no-deadline",
+    test: "tests/next-server/audio-hunt-return-client.test.ts",
+    file: "app/(studio)/audio/_hunt/returnClient.ts",
+    find: 'credentials: "same-origin", signal: ctl.signal })',
+    replace: 'credentials: "same-origin" })',
+    why: "A hunt return upload the studio never answers neither resolves nor rejects, so its leaf stays `returning` until a reload and a second drop on it is refused.",
+  },
 ];
