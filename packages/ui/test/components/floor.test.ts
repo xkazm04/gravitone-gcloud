@@ -187,6 +187,13 @@ describe("components", () => {
     expect(html).toContain("sweep-01");
   });
 
+  test("the arrival cascade is capped: pile 30 waits no longer than pile 8", () => {
+    const delay = (index: number) => renderToStaticMarkup(h(Pile, { title: "t", media: "image", mode: "matrix-cull", source: "forge", runId: "r", decided: 0, pending: 1, href: "/b", index })).match(/--d:(\d+)ms/)?.[1];
+    expect(delay(3)).toBe("210");
+    expect(delay(30)).toBe(delay(8));
+    expect(Number(delay(30))).toBeLessThanOrEqual(560);
+  });
+
   test("an article pile is paper with its title; an audio pile is waveforms when its peaks are known", () => {
     expect(renderToStaticMarkup(h(Pile, { title: "Agent budgets", media: "article", mode: "packet-review", source: "articles", runId: "r1", decided: 0, pending: 1, href: "/b" }))).toContain("Agent budgets");
     const audio = { title: "suno", media: "audio", mode: "matrix-cull", source: "suno", runId: "suno/triage", decided: 0, pending: 3, href: "/b" } as const;
