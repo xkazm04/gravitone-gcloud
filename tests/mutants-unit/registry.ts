@@ -6886,4 +6886,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "rgba(255,255,255,.28) 0 2px,transparent 2px 5px",
     why: "The --hatch stripes fall back to .28 alpha: 2.5:1 on a StackBar's track, so undecided reads as empty.",
   },
+  {
+    id: "kit-source-read-throws",
+    test: "tests/next-server/kit-source-unreadable.test.ts",
+    file: "app/(studio)/kit/page.tsx",
+    find: "return err(\"unavailable\", errorMessage(e));",
+    replace: "throw e;",
+    why: "An unreadable tokens/source.json throws out of the kit page again, so /kit is an error boundary with no specimen instead of one ErrorLine.",
+  },
 ];
