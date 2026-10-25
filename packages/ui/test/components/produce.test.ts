@@ -142,6 +142,17 @@ describe("the receipt's changes", () => {
     expect(html).not.toContain("− prj_7f3a");
   });
 
+  test("a confirm's typed ceiling comes back as a receipt read at it: that is the one change, and it is marked", () => {
+    const read = receipt([line("frames", FLUX, 24, 2, 10)]);
+    const fresh = { ...read, ceilingUsd: 20 };
+    const c = receiptChanges(read, fresh);
+    expect([...c.totals]).toEqual(["ceiling"]);
+    expect(changeCount(c)).toBe(1);
+    const html = renderToStaticMarkup(h(Receipt, { receipt: fresh, changes: c, ceiling: "20", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(html).toContain("1 changes since you read it");
+    expect(changeCount(receiptChanges(fresh, { ...fresh, token: "t2" }))).toBe(0);
+  });
+
   test("a figure's source and an unpriced line's kind are what the operator reads, so a move in either is marked", () => {
     const measured = { ...line("frames", FLUX, 24, 2, 10), src: "real" as const };
     const b = receipt([measured, { ...line("score", SUNO, 2, 1, 10), unpricedReason: "billed to the text seat" }], { token: "t2", totals: { ...a.totals, src: "real" } });

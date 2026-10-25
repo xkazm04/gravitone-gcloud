@@ -6534,4 +6534,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "return null;",
     why: "An oldest-first Ledger read to its end never draws an act that lands afterwards, and offers no button to fetch it.",
   },
+  {
+    id: "receipt-ceiling-restate-unmarked",
+    test: "packages/ui/test/components/produce.test.ts",
+    file: "packages/ui/src/components/produce/produce.ts",
+    find: 'if (before.ceilingUsd !== after.ceilingUsd) totals.add("ceiling");',
+    replace: "",
+    why: "A confirm with a typed ceiling is answered with an identical-looking receipt and zero marks, so the operator reads a dropped press.",
+  },
 ];

@@ -120,6 +120,17 @@ describe("launch: a receipt, then a confirm", () => {
     expect(must(readProject(s, "p1", ctx)).project.launched).toBe(false);
   });
 
+  it("a confirm with a ceiling the read did not carry is answered with the receipt read at that ceiling", () => {
+    const s = store();
+    ok(compose(s, { recipe: "article/post", topic: "provider routing" }, OP, { id: "a1" }));
+    const read = must(planReceipt(s, "a1", { mode: "dry" }, ctx));
+    const r = launchProject(s, { id: "a1", baseRev: 1, token: read.token, mode: "dry", ceilingUsd: 20 }, OP, lctx);
+    expect(r).toMatchObject({ ok: false, error: { code: "conflict", detail: "stale-receipt" }, fresh: { ceilingUsd: 20 } });
+    expect(jobCount(s)).toBe(0);
+    const fresh = must(planReceipt(s, "a1", { mode: "dry", ceilingUsd: 20 }, ctx));
+    ok(launchProject(s, { id: "a1", baseRev: 1, token: fresh.token, mode: "dry", ceilingUsd: 20 }, OP, lctx));
+  });
+
   it("launches a receipt over its ceiling - a stop point, not a refusal - with the ceiling on the job", () => {
     const s = store();
     ok(compose(s, { recipe: "article/post", topic: "provider routing" }, OP, { id: "a1" }));
