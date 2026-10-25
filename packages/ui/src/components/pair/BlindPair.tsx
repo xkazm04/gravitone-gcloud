@@ -30,6 +30,11 @@ import s from "./Pair.module.css";
 export const REVEAL_MS = 1150;
 export const REVEAL_REDUCED_MS = 500;
 
+/** A pick lands on an unjudged pair only: not mid-reveal, not already judged, not while the packet's write or commit is in flight. */
+export function canPick(state: { readonly pair: unknown; readonly revealing: string | null; readonly judged: boolean; readonly busy: boolean }): boolean {
+  return state.pair !== undefined && state.revealing === null && !state.judged && !state.busy;
+}
+
 /** The reveal time the viewer's motion setting asks for; the full reveal where there is no media query (server, tests). */
 export function defaultRevealMs(): number {
   const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -81,7 +86,7 @@ export function BlindPair({ packet, onPick, undo, onCommit, busy = false, announ
   }, [revealWords]);
 
   const pick = (outcome: PickOutcome) => {
-    if (pair === undefined || revealing !== null || pair.outcome !== null) return;
+    if (pair === undefined || !canPick({ pair, revealing, judged: pair.outcome !== null, busy })) return;
     setRevealing(pair.row);
     onPick(pair.row, outcome);
   };

@@ -23,7 +23,7 @@ import { VariantCard } from "../src/components/cull/VariantCard.tsx";
 import { beatNote, CutReview, withNote } from "../src/components/cut/CutReview.tsx";
 import { CommitButton } from "../src/components/desk/Desk.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
-import { BlindPair, defaultRevealMs, REVEAL_MS } from "../src/components/pair/BlindPair.tsx";
+import { BlindPair, canPick, defaultRevealMs, REVEAL_MS } from "../src/components/pair/BlindPair.tsx";
 
 const must = <T>(r: Result<T>): T => {
   if (!r.ok) throw r.error;
@@ -182,6 +182,23 @@ describe("the blind pair's reveal follows the viewer's motion setting", () => {
   test("the reveal timer reads it when the caller passes no revealMs", () => {
     const code = readFileSync(new URL("../src/components/pair/BlindPair.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
     expect(code).toMatch(/setTimeout\(\(\) => setRevealing\(null\), revealMs \?\? defaultRevealMs\(\)\)/);
+  });
+});
+
+describe("a blind pair's pick during a write", () => {
+  const free = { pair: {}, revealing: null, judged: false, busy: false };
+
+  test("a pick lands on a free pair and is refused mid-reveal, on a judged pair, with no pair, or while a write or commit is in flight", () => {
+    expect(canPick(free)).toBe(true);
+    expect(canPick({ ...free, revealing: "p1" })).toBe(false);
+    expect(canPick({ ...free, judged: true })).toBe(false);
+    expect(canPick({ ...free, pair: undefined })).toBe(false);
+    expect(canPick({ ...free, busy: true })).toBe(false);
+  });
+
+  test("the pick handler asks canPick with the busy flag", () => {
+    const code = readFileSync(new URL("../src/components/pair/BlindPair.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toMatch(/canPick\(\{ pair, revealing, judged: pair\.outcome !== null, busy \}\)/);
   });
 });
 
