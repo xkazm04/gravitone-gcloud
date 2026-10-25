@@ -2,6 +2,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { err } from "@gt/domain/errors";
 import type { Effects } from "../src/effects.ts";
 import { eventsMigrations, verify } from "../src/events.ts";
+import { lapseOpen, type MeterHold } from "../src/spend/meter.ts";
+import { settleBasisOf, type CostBasis } from "../src/pricing/quote.ts";
 import { createSettler } from "../src/spend/settler.ts";
 import type { SpendClass } from "../src/spend/core.ts";
 import { book, lapseOwner, release, reservationOf, reserve, settle, stats, spendMigrations, type SettleEntry } from "../src/spend/ledger.ts";
@@ -18,7 +20,7 @@ afterAll(() => tpl.dispose());
 const HOUR = 3_600_000;
 const imaging: SpendClass = { id: "imaging-usd", unit: "usd", windowMs: HOUR, ceiling: 1 };
 const text: SpendClass = { id: "text-usd", unit: "usd", windowMs: HOUR, ceiling: null };
-const served = (amount: number | undefined, basis = "vendor"): SettleEntry => ({ amount, outcome: "served", basis, axes: { cap: "plate", provider: "leonardo" } });
+const served = (amount: number | undefined, basis: SettleEntry["basis"] = "vendor"): SettleEntry => ({ amount, outcome: "served", basis, axes: { cap: "plate", provider: "leonardo" } });
 
 const st = (s: Store, c = imaging) => must(s.read((r) => stats(r, c)));
 const hold = (s: Store, id: string, amount: number, c = imaging) => must(s.tx((t) => reserve(t, c, { id, amount, owner: "boot-1:4412" })));
@@ -64,7 +66,7 @@ describe("kernel/spend - reserve -> settle -> book", () => {
     const r = hold(s, "t1", 0.1, text);
     expect(!r.ok && r.error.code).toBe("refused");
     must(s.tx((t) => book(t, text, served(0.31), "seat.text")));
-    must(s.tx((t) => book(t, text, served(undefined, "unpriced"), "seat.text")));
+    must(s.tx((t) => book(t, text, served(undefined, "credits"), "seat.text")));
     expect(st(s, text)).toMatchObject({ spent: 0.31, ceiling: null, remaining: null, counters: { booked: 1, unpriced: 1 } });
   });
 
@@ -137,6 +139,69 @@ describe("kernel/spend - a settle the store cannot take now is kept, never dropp
     expect(st(s)).toMatchObject({ spent: 0.4, held: 0, rows: 2, counters: { lateWrites: 1, booked: 2 } });
     expect(must(settler.flush())).toBe(0);
     expect(must(verify(s)).state).toBe("intact");
+  });
+});
+
+describe("kernel/spend - a pending settle that can never apply is dropped and counted, not left to block the rest", () => {
+  const counter = (s: Store, name: string) => num(must(s.read((r) => r.get("SELECT value FROM spend_counters WHERE class = ? AND name = ?", imaging.id, name)?.["value"])));
+  const num = (v: unknown): number => (typeof v === "number" ? v : 0);
+  const dropped = (s: Store) => must(s.read((r) => r.all("SELECT subject_id FROM events WHERE type = 'spend.dropped' ORDER BY seq"))).map((e) => String(e["subject_id"]));
+
+  it("the settler: r1 deferred, then released by someone else; r2's settle applies and r1 is dropped with a counter and an event", () => {
+    const s = tpl.fresh();
+    hold(s, "r1", 0.3);
+    hold(s, "r2", 0.2);
+    let busy = 1;
+    const fx: Effects = {
+      blob: () => Promise.reject(new Error("no blobs here")),
+      call: (_name, fn) => fn(),
+      tx(_name, fn) {
+        if (busy-- > 0) return err("unavailable", "the store is busy");
+        return s.tx(fn);
+      },
+    };
+    const settler = createSettler(fx);
+    expect(must(settler.settle(imaging, "r1", [served(0.25)]))).toBe("deferred");
+    must(s.tx((t) => release(t, imaging, { id: "r1", by: "operator" })));
+    expect(must(settler.settle(imaging, "r2", [served(0.15)]))).toBe("applied");
+    expect(settler.pending()).toEqual([]);
+    expect(st(s)).toMatchObject({ spent: 0.15, held: 0, rows: 1 });
+    expect(counter(s, "droppedWrites")).toBe(1);
+    expect(dropped(s)).toEqual(["r1"]);
+    expect(must(verify(s)).state).toBe("intact");
+  });
+
+  it("lapseOpen: a pending settle whose hold was released before the booking is counted, not skipped silently", () => {
+    const s = tpl.fresh();
+    hold(s, "r1", 0.3);
+    must(s.tx((t) => release(t, imaging, { id: "r1", by: "operator" })));
+    const open: MeterHold = { id: "r1", cls: imaging, amount: 0.3, dry: false, pending: [served(0.25)] };
+    must(s.tx((t) => lapseOpen(t, [open])));
+    expect(counter(s, "droppedWrites")).toBe(1);
+    expect(dropped(s)).toEqual(["r1"]);
+    expect(st(s)).toMatchObject({ spent: 0, rows: 0 });
+  });
+});
+
+describe("kernel/spend - one basis vocabulary at the ledger door", () => {
+  const srcOf = (s: Store, id: string) => must(s.read((r) => r.get("SELECT cost_src AS src FROM events WHERE type = 'spend.settled' AND subject_id = ?", id)?.["src"]));
+
+  it("a quote's basis books through settleBasisOf: an estimate is the model's figure, a vendor-reported one is real", () => {
+    const s = tpl.fresh();
+    const books: [CostBasis, "model" | "real"][] = [["estimated", "model"], ["vendor-reported", "real"]];
+    for (const [basis, src] of books) {
+      const id = `q-${basis}`;
+      hold(s, id, 0.1);
+      const entry: SettleEntry = { amount: 0.05, outcome: "served", basis: settleBasisOf(basis), axes: {} };
+      must(s.tx((t) => settle(t, imaging, { id, entries: [entry] })));
+      expect(srcOf(s, id)).toBe(src);
+    }
+  });
+
+  it("a quote's own word is not a ledger basis: passing it through is a type error, not a silent real-money booking", () => {
+    // @ts-expect-error "estimated" is the quote's spelling; the ledger's is "estimate" (typecheck is the verifier)
+    const stray: SettleEntry = { amount: 0.05, outcome: "served", basis: "estimated" as CostBasis, axes: {} };
+    expect(stray.amount).toBe(0.05);
   });
 });
 
