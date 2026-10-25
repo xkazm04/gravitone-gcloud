@@ -74,8 +74,9 @@ def runner_of(spec):
             f"gen-spec.json declares stack={stack!r} — a cycle names 'local' or 'google' "
             "explicitly; the wrapper never guesses which bill it is running up.")
     if (stack, media) not in LOCAL and (stack, media) not in GOOGLE:
-        raise SystemExit(f"no runner for stack={stack} media={media} — "
-                         "google video has no lane; see the overlay's video section.")
+        why = (" — google video has no lane; see the overlay's video section."
+               if stack == "google" and media.startswith("video") else ".")
+        raise SystemExit(f"no runner for stack={stack} media={media}{why}")
     return stack, media
 
 

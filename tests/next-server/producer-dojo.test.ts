@@ -114,6 +114,21 @@ describe.skipIf(PYTHON === undefined)("stack purity: a cycle names its bill, or 
     expect(direct.stdout).toContain("never guesses which bill");
   });
 
+  it("a refusal names the actual cause, in both languages: only google video is 'no lane'", () => {
+    const say = (r: ReturnType<typeof runnerOf>) => (r.ok ? "" : r.error.message);
+    const local = say(runnerOf({ stack: "local", media: "audio", pairs: [] }));
+    expect(local).toContain("no runner for stack=local media=audio");
+    expect(local).not.toContain("google video");
+    expect(say(runnerOf({ stack: "google", media: "video", pairs: [] }))).toContain("google video has no lane");
+    const script = ["import sys", "sys.path.insert(0, 'pipeline/foundry')", "import dojo_job", "for spec in ({'stack': 'local', 'media': 'audio'}, {'stack': 'google', 'media': 'video'}):", "    try:", "        dojo_job.runner_of(spec)", "    except SystemExit as e:", "        print('REFUSED', e.code)"].join("\n");
+    const r = py(universe(), ["-c", script]);
+    expect(r.status, r.stderr).toBe(0);
+    const [loc, goog] = r.stdout.trim().split(/\r?\n/);
+    expect(loc).toContain("no runner for stack=local media=audio");
+    expect(loc).not.toContain("google video");
+    expect(goog).toContain("google video has no lane");
+  });
+
   it("the stack decides the lane: local is gpu.local, google is cloud.google", () => {
     expect(runnerOf(LOCAL_IMAGE)).toMatchObject({ ok: true, value: { lane: "gpu.local", media: "image" } });
     expect(runnerOf(SERIAL)).toMatchObject({ ok: true, value: { lane: "gpu.local", media: "video-serial-lanes" } });

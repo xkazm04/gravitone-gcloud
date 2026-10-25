@@ -2272,6 +2272,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "An arm with every PNG on disk is billed to Nano Banana again.",
   },
   {
+    id: "dojo-node-refusal-misnames-cause",
+    test: "tests/next-server/producer-dojo.test.ts",
+    file: "packages/producers/src/dojo/plan.ts",
+    find: "stack === \"google\" && media.startsWith(\"video\")",
+    replace: "true",
+    why: "A local spec with an unknown media is refused with a sentence about google video.",
+  },
+  {
+    id: "dojo-py-refusal-misnames-cause",
+    test: "tests/next-server/producer-dojo.test.ts",
+    file: "pipeline/foundry/dojo_job.py",
+    find: "stack == \"google\" and media.startswith(\"video\")",
+    replace: "True",
+    why: "The Python twin refuses a local spec with an unknown media with a sentence about google video.",
+  },
+  {
     id: "dojo-node-null-engine-is-h3",
     test: "tests/next-server/producer-dojo.test.ts",
     file: "packages/producers/src/dojo/plan.ts",

@@ -67,7 +67,8 @@ export function runnerOf(spec: GenSpecView): Result<Runner> {
   const media = mediaOf(spec);
   const r = RUNNERS[`${stack}/${media}`];
   if (r === undefined || (media !== "image" && media !== "video" && media !== "video-serial-lanes")) {
-    return err("invalid", `no runner for stack=${stack} media=${media} — google video has no lane; see the overlay's video section.`);
+    const why = stack === "google" && media.startsWith("video") ? " — google video has no lane; see the overlay's video section." : ".";
+    return err("invalid", `no runner for stack=${stack} media=${media}${why}`);
   }
   return ok({ stack, media, lane: r.lane, runner: r.runner });
 }
