@@ -41,6 +41,41 @@ export async function post(path: string, body: Blob, fetchImpl: Fetch = fetch): 
 /** One archive on the screen: where it came from, its bytes (sent again on the confirm), its preview. */
 export type Source = { readonly name: string; readonly bytes: Blob; readonly preview: Preview };
 
+/** An account the screen could not preview: its name, v1's (or the route's) code, and the words. */
+export type Refusal = { readonly name: string; readonly code: string; readonly message: string };
+
+/** One account's preview, or what stopped it. */
+export type Previewed = Source | { readonly kind: "refused"; readonly name: string; readonly code: string; readonly message: string } | { readonly kind: "error"; readonly message: string };
+const isSource = (x: Previewed): x is Source => "preview" in x;
+
+/**
+ * The first door's per-account walk. One account the archive reader or the route refuses is a
+ * REFUSED ROW beside the others, never the whole screen: the accounts after it are still read
+ * and previewed, so an operator with one corrupt account can import the rest (registry
+ * import-normalization / review-before-commit: unimportable entities stay visible, with reasons).
+ */
+export async function readAccounts(
+  uids: readonly string[],
+  exportOne: (uid: string) => Promise<Blob>,
+  previewOne: (uid: string, bytes: Blob) => Promise<Previewed>,
+): Promise<{ readonly sources: readonly Source[]; readonly refused: readonly Refusal[] }> {
+  const sources: Source[] = [];
+  const refused: Refusal[] = [];
+  for (const uid of uids) {
+    let bytes: Blob;
+    try {
+      bytes = await exportOne(uid);
+    } catch (e) {
+      refused.push({ name: uid, code: "unreadable", message: errorMessage(e) });
+      continue;
+    }
+    const one = await previewOne(uid, bytes);
+    if (isSource(one)) sources.push(one);
+    else refused.push(one.kind === "refused" ? { name: one.name, code: one.code, message: one.message } : { name: uid, code: "error", message: one.message });
+  }
+  return { sources, refused };
+}
+
 /** What the confirms so far have landed - every source's outcomes, kept across a stale round. */
 export type Landed = { readonly outcomes: readonly ImportOutcome[]; readonly styles: readonly ShelfOutcome[]; readonly items: readonly ShelfOutcome[] };
 export const NOTHING_LANDED: Landed = { outcomes: [], styles: [], items: [] };

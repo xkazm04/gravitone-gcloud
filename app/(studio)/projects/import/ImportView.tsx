@@ -33,7 +33,7 @@ import type { ItemPreview, ThemePreview } from "@/lib/import/shelf";
 import { ArchiveRefused, exportAccount, inspectArchive } from "@/lib/studioArchive";
 import { BY_UID, PROJECTS_STORE, openDb } from "@/lib/studioDb";
 
-import { commitAll, envelopeOf, landedAny, lastDoor, post, type Landed, type Source } from "./answer.ts";
+import { commitAll, envelopeOf, landedAny, lastDoor, post, readAccounts, type Landed, type Refusal, type Source } from "./answer.ts";
 import s from "./Import.module.css";
 
 // `landed`: what earlier confirms of this screen already committed (a stale round, or a later
@@ -41,8 +41,8 @@ import s from "./Import.module.css";
 type Phase =
   | { readonly kind: "reading" }
   | { readonly kind: "refused"; readonly name: string; readonly code: string; readonly message: string }
-  | { readonly kind: "preview"; readonly sources: readonly Source[]; readonly landed?: Landed }
-  | { readonly kind: "committing"; readonly sources: readonly Source[]; readonly landed?: Landed }
+  | { readonly kind: "preview"; readonly sources: readonly Source[]; readonly refused?: readonly Refusal[]; readonly landed?: Landed }
+  | { readonly kind: "committing"; readonly sources: readonly Source[]; readonly refused?: readonly Refusal[]; readonly landed?: Landed }
   | ({ readonly kind: "done" } & Landed)
   | { readonly kind: "error"; readonly message: string; readonly name?: string; readonly landed?: Landed };
 
@@ -94,19 +94,8 @@ async function readThisBrowser(): Promise<Phase> {
   } catch (e) {
     return { kind: "error", message: errorMessage(e) };
   }
-  const sources: Source[] = [];
-  for (const uid of uids) {
-    let bytes: Blob;
-    try {
-      bytes = await new Response(exportAccount(uid)).blob();
-    } catch (e) {
-      return { kind: "error", message: errorMessage(e) };
-    }
-    const one = await previewOf(uid, bytes);
-    if (!isSource(one)) return one;
-    sources.push(one);
-  }
-  return { kind: "preview", sources };
+  const { sources, refused } = await readAccounts(uids, (uid) => new Response(exportAccount(uid)).blob(), previewOf);
+  return { kind: "preview", sources, ...(refused.length > 0 ? { refused } : {}) };
 }
 
 export function ImportView() {
@@ -129,17 +118,18 @@ export function ImportView() {
     doors.open(previewOf(f.name, f).then((one): Phase => (isSource(one) ? { kind: "preview", sources: [one] } : one)));
   };
 
-  const confirm = (sources: readonly Source[], prior?: Landed): void => {
-    setPhase({ kind: "committing", sources, ...(prior === undefined ? {} : { landed: prior }) });
+  const confirm = (sources: readonly Source[], prior?: Landed, refused?: readonly Refusal[]): void => {
+    setPhase({ kind: "committing", sources, ...(refused === undefined ? {} : { refused }), ...(prior === undefined ? {} : { landed: prior }) });
     doors.open(
       commitAll(sources, post, prior).then((c): Phase => {
         if (c.failed !== undefined) return { kind: "error", message: c.failed.message, name: c.failed.name, landed: c.landed };
-        return c.fresh.length > 0 ? { kind: "preview", sources: c.fresh, landed: c.landed } : { kind: "done", ...c.landed };
+        return c.fresh.length > 0 ? { kind: "preview", sources: c.fresh, ...(refused === undefined ? {} : { refused }), landed: c.landed } : { kind: "done", ...c.landed };
       }),
     );
   };
 
   const sources = phase.kind === "preview" || phase.kind === "committing" ? phase.sources : [];
+  const refusedAccounts = phase.kind === "preview" || phase.kind === "committing" ? (phase.refused ?? []) : [];
   const landed = phase.kind === "done" ? phase : phase.kind === "preview" || phase.kind === "committing" || phase.kind === "error" ? phase.landed : undefined;
   const going = sources.flatMap((x) => x.preview.projects).filter((p) => p.outcome === "import");
   const bytes = going.reduce((n, p) => n + p.bytes, 0);
@@ -181,7 +171,14 @@ export function ImportView() {
           <ErrorLine message={phase.message} live />
         </section>
       )}
-      {phase.kind === "preview" && sources.length === 0 && <p className={s.quiet}>no v1 projects in this browser</p>}
+      {phase.kind === "preview" && sources.length === 0 && refusedAccounts.length === 0 && <p className={s.quiet}>no v1 projects in this browser</p>}
+      {refusedAccounts.map((r) => (
+        <section key={r.name} className={s.refused} aria-label="refused" data-account={r.name}>
+          <Chip label="refused" value={r.code} tone="rose" />
+          <span className={s.mono}>{r.name}</span>
+          <ErrorLine message={r.message} />
+        </section>
+      ))}
       {landed !== undefined && landedAny(landed) && <Outcomes landed={landed} />}
 
       {sources.length > 0 && (
@@ -208,7 +205,7 @@ export function ImportView() {
             <Tally value={going.reduce((n, p) => n + p.held, 0)} label="records" />
             {bytes > 0 && <Tally value={mb(bytes)} label="blobs" />}
             {shelfGoing > 0 && <Tally value={shelfGoing} label="shelf" />}
-            <Button label={phase.kind === "committing" ? "Importing…" : `Import ${going.length + shelfGoing}`} tone="emerald" disabled={going.length + shelfGoing === 0 || phase.kind === "committing"} onPress={() => confirm(sources, landed)} />
+            <Button label={phase.kind === "committing" ? "Importing…" : `Import ${going.length + shelfGoing}`} tone="emerald" disabled={going.length + shelfGoing === 0 || phase.kind === "committing"} onPress={() => confirm(sources, landed, refusedAccounts.length > 0 ? refusedAccounts : undefined)} />
           </footer>
         </>
       )}
