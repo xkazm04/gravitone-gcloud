@@ -41,7 +41,10 @@ export interface AuthorInput {
   feedback?: { text: string; sheet?: string; current: string; style?: string };
   /** Round 2: a kept strip and its module from another case. */
   styleRef?: { html: string; style: string };
-  timeoutMin?: number;
+  /** Minutes the turn may take: the run's `authorTimeoutMin` (./cards.ts DEFAULT_OPTIONS says why 75,
+   *  and that a 40-minute cap - this seam's old fallback - killed two cards). Required, so no caller
+   *  inherits a second number. */
+  timeoutMin: number;
   /** The strips pipeline directory (CONTRACT.md, vendor/); default `<cwd>/pipeline/strips`. */
   stripsDir?: string;
   /** Another job's addendum to the contract (a stats reel's REEL.md): files copied into inputs/ beside
@@ -106,7 +109,7 @@ export async function prepareTurn(input: AuthorInput): Promise<StripTurn> {
     model: MODEL,
     effort: input.effort,
     tools: ["Read", "Write", "Edit"],
-    timeoutMin: input.timeoutMin ?? 40,
+    timeoutMin: input.timeoutMin,
     turn: "strip-author",
   };
   return { agent, ws, lane: input.lane, fix: input.feedback !== undefined, before };
