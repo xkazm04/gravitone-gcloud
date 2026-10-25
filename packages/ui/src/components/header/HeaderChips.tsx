@@ -21,6 +21,9 @@ import { Tally } from "../tally/Tally.tsx";
 import { spendParts, type Spend } from "./header.ts";
 import s from "./HeaderChips.module.css";
 
+/** `1 item`, `2 items`: the names below are read aloud. */
+const count = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
+
 const plain = (e: MouseEvent): boolean => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 
 export type NextPile = { readonly title: string; readonly count: number; readonly href: string };
@@ -33,7 +36,7 @@ export function NextButton({ next, onOpen }: { readonly next: NextPile | null; r
       className={s.next}
       href={next.href}
       data-component="NextButton"
-      aria-label={`Open next decision: ${next.title}, ${next.count} items`}
+      aria-label={`Open next decision: ${next.title}, ${count(next.count, "item")}`}
       onClick={(e) => {
         if (onOpen === undefined || !plain(e)) return;
         e.preventDefault();
@@ -77,5 +80,5 @@ export function SpendChip({ spend }: { readonly spend: Spend }) {
 export function LedgerDelta({ delta, href = "/ledger" }: { readonly delta: number; readonly href?: string }) {
   // The Chip's own link form; cyan while there is something new (the prototype lit #hdr-ses
   // cyan as an act landed).
-  return <Chip label="ledger" value={`+${delta}`} tone={delta > 0 ? "cyan" : "neutral"} href={href} name={`ledger, ${delta} new acts since your last visit`} />;
+  return <Chip label="ledger" value={`+${delta}`} tone={delta > 0 ? "cyan" : "neutral"} href={href} name={`ledger, ${count(delta, "new act")} since your last visit`} />;
 }

@@ -155,6 +155,12 @@ describe("header numbers", () => {
     expect(renderToStaticMarkup(h(NextButton, { next: null }))).toContain("weir clear");
     expect(renderToStaticMarkup(h(LedgerDelta, { delta: 7 }))).toContain("+7");
   });
+
+  test("one item and one new act are named in the singular", () => {
+    expect(renderToStaticMarkup(h(NextButton, { next: { title: "forge sweep-01", count: 1, href: "/b" } }))).toContain('aria-label="Open next decision: forge sweep-01, 1 item"');
+    expect(renderToStaticMarkup(h(LedgerDelta, { delta: 1 }))).toContain("ledger, 1 new act since your last visit");
+    expect(renderToStaticMarkup(h(LedgerDelta, { delta: 2 }))).toContain("ledger, 2 new acts since your last visit");
+  });
 });
 
 describe("components", () => {
