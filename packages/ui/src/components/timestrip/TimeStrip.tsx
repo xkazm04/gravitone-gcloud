@@ -31,12 +31,15 @@ export type TimeStripProps = {
 export const shortDay = (day: string): string =>
   new Date(`${day}T00:00:00.000Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" });
 
+const span = (from: string, to: string): string => `${shortDay(from)}${to === from ? "" : ` → ${shortDay(to)}`}`;
+const count = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
+
 /** The readout's two lines when nothing is hovered: the range and its count, else the span. */
 export function restingReadout(days: readonly string[], range: Range | null, inRange: number | undefined): readonly [string, string] {
-  if (range !== null) return [`${shortDay(range.from)}${range.to === range.from ? "" : ` → ${shortDay(range.to)}`}`, inRange === undefined ? "" : `${inRange} events`];
+  if (range !== null) return [span(range.from, range.to), inRange === undefined ? "" : count(inRange, "event")];
   const first = days[0];
   const last = days[days.length - 1];
-  return first === undefined || last === undefined ? ["", ""] : [`${shortDay(first)} → ${shortDay(last)}`, `${days.length} days`];
+  return first === undefined || last === undefined ? ["", ""] : [span(first, last), count(days.length, "day")];
 }
 
 export function TimeStrip({ days, today, nowMs, range, inRange, onRange }: TimeStripProps) {

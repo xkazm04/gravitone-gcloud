@@ -87,6 +87,11 @@ describe("time strip geometry", () => {
     expect(restingReadout(d, { from: "2026-10-02", to: "2026-10-03" }, 41)).toEqual(["02 Oct → 03 Oct", "41 events"]);
     expect(restingReadout(d, null, undefined)).toEqual(["01 Oct → 05 Oct", "5 days"]);
   });
+
+  test("the readout counts one event and one day in the singular", () => {
+    expect(restingReadout(daysBetween("2026-10-01", "2026-10-05"), { from: "2026-10-02", to: "2026-10-02" }, 1)).toEqual(["02 Oct", "1 event"]);
+    expect(restingReadout(["2026-10-01"], null, undefined)).toEqual(["01 Oct", "1 day"]);
+  });
 });
 
 describe("JSON runs", () => {
