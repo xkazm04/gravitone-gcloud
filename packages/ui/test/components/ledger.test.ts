@@ -37,6 +37,16 @@ describe("time strip geometry", () => {
     expect(Math.min(...(b?.segments.map((s) => s.px) ?? []))).toBeGreaterThanOrEqual(1);
   });
 
+  test("a bar's segments stack to the bar's own height: the 1 px floors come out of the largest kind", () => {
+    // The busiest day (56 px) and a quiet one (6 px), each with two minority kinds under 1 px raw.
+    const drawn = bars([day("2026-10-01", 1, 2, 997), day("2026-10-02", 1, 1, 98), day("2026-10-03", 0, 0, 0)], { today: "2026-10-03", range: null });
+    for (const b of drawn) {
+      expect(b.segments.reduce((a, g) => a + g.px, 0)).toBeCloseTo(b.px, 6);
+      for (const g of b.segments) expect(g.px).toBeGreaterThanOrEqual(1);
+    }
+    expect(drawn[0]?.px).toBe(BAR_MAX);
+  });
+
   test("days after today are future; a range dims every day outside it", () => {
     const b = bars([day("2026-10-01", 1, 0, 0), day("2026-10-02", 1, 0, 0), day("2026-10-03", 0, 0, 0)], { today: "2026-10-02", range: { from: "2026-10-02", to: "2026-10-02" } });
     expect(b.map((x) => [x.future, x.inRange, x.dim])).toEqual([

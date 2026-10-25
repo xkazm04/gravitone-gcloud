@@ -62,7 +62,14 @@ export function bars(days: readonly DayCount[], opts: { readonly today: string; 
   return days.map((d) => {
     const n = total(d);
     const px = n === 0 ? 0 : Math.max(MIN_BAR, Math.round((BAR_MAX * Math.sqrt(n)) / Math.sqrt(max)));
-    const segments = STACK.filter((k) => d[k] > 0).map((k) => ({ kind: k, px: Math.max(1, (px * d[k]) / n) }));
+    // Each present kind gets at least 1 px; what those floors add is taken back from the
+    // largest kind, so the stack is exactly `px` tall and a mixed day never outgrows a
+    // single-kind day of the same count.
+    const present = STACK.filter((k) => d[k] > 0);
+    const raw = present.map((k) => Math.max(1, (px * d[k]) / n));
+    const over = raw.reduce((a, b) => a + b, 0) - px;
+    const big = raw.indexOf(Math.max(...raw));
+    const segments = present.map((k, i) => ({ kind: k, px: i === big && over > 0 ? (raw[i] ?? 0) - over : (raw[i] ?? 0) }));
     const inRange = range !== null && d.day >= range.from && d.day <= range.to;
     return { day: d.day, n, px, segments, future: d.day > opts.today, inRange, dim: range !== null && !inRange };
   });
