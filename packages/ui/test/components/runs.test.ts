@@ -276,3 +276,11 @@ test("ResourceSummary names each lane's holding in words and as a meter", () => 
   expect(html).toContain('aria-valuenow="2"');
   expect(html).toContain("Text seat");
 });
+
+test("ResourceSummary's meter stays inside its range when more run than the lane holds; the name keeps the count", () => {
+  // running is counted from the records, not granted by the lease, so it can pass the capacity.
+  const html = renderToStaticMarkup(h(ResourceSummary, { label: "resources", lines: [{ lane: "cloud.qwen", cap: 1, running: 3, waiting: 0 }] }));
+  expect(html).toContain('aria-valuemax="1"');
+  expect(html).toContain('aria-valuenow="1"');
+  expect(html).toContain('aria-label="3 of 1 held"');
+});
