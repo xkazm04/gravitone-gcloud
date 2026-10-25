@@ -199,7 +199,7 @@ test("NOTEBOOK-SCHEMA.md: every unknowns[] property, probe included, is spelled 
       walk(v);
     }
   };
-  walk((NOTEBOOK_SCHEMA.properties as Record<string, { items: unknown }>).unknowns.items);
+  walk((NOTEBOOK_SCHEMA.properties as unknown as Record<string, { items: unknown }>).unknowns.items);
   expect(keys.size, "the schema walk found no properties").toBeGreaterThan(8);
   const snake = (k: string) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
   const missing = [...keys]
