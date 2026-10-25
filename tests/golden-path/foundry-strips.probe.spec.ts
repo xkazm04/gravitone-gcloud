@@ -25,7 +25,8 @@
 // FOUNDRY_DIR's motion-styles, rejected media are gone, every decided strip
 // has a ledger row, findings print n beside every rate, the token fences it.
 
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { test, expect } from "@playwright/test";
@@ -33,18 +34,19 @@ import { test, expect } from "@playwright/test";
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { GET as fileGET } from "@/app/api/foundry/file/route";
 import { triage, type Capture } from "@/lib/foundry/strips/steps";
-import { commitStripRun, listStripRuns, previewStripCommit, putStripVerdicts, stripPageFile } from "@/lib/foundry/strips/store";
+import { commitStripRun, listStripRuns, previewStripCommit, putStripVerdicts, stripPageFile, stripsRoot } from "@/lib/foundry/strips/store";
 import { verdictErrorResponse } from "@/lib/foundry/verdictLog";
 import type { MotionStylesDoc, StripCommitPlan, StripCommitResult, StripsLedgerDoc } from "@/lib/foundry/strips/triage";
 import type { StripCard, StripRun } from "@/lib/foundry/strips/types";
 
 import { keepEnv, probeFoundryDir } from "./_helpers";
 
-keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH"]);
+keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", "STRIPS_STORE_DIR"]);
 const foundryDir = probeFoundryDir();
 
 const SECRET = "strips-probe-secret";
-const ROOT = path.join(process.cwd(), "foundry-out", "strips");
+/** This test's strips store (STRIPS_STORE_DIR, which stripsRoot() reads per call): a temp root. */
+let ROOT = "";
 const AUTH = { authorization: `Bearer ${SECRET}` };
 
 /** A store door's answer as the retired route spoke it: 200 and the value, or the
@@ -72,7 +74,12 @@ function card(id: string, over: Partial<StripCard> = {}): StripCard {
 test.beforeEach(() => {
   process.env[ACCESS_SECRET_VAR] = SECRET;
   delete process.env.NEXT_PUBLIC_DEV_AUTH;
+  ROOT = mkdtempSync(path.join(tmpdir(), "strips-probe-"));
+  process.env.STRIPS_STORE_DIR = ROOT;
   runId = `probe-strips-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
+  // The store these doors drive is never the operator's: the Board, the Ledger and the Library
+  // list every run under foundry-out/strips, a probe's included, while it lives.
+  expect(path.relative(path.join(process.cwd(), "foundry-out"), stripsRoot()).startsWith(".."), `strips store ${stripsRoot()}`).toBe(true);
   const dir = path.join(ROOT, runId);
   const cards = [
     card("edu-edu-01--E01", { gates: { seek: { ok: true, detail: "0 px" }, legibility: { ok: false, detail: "18 px (bar 26)" }, motion: { ok: true, detail: "8/8 s" }, length: { ok: true, detail: "240" } } }),
@@ -111,7 +118,8 @@ test.beforeEach(() => {
 });
 
 test.afterEach(() => {
-  if (runId) rmSync(path.join(ROOT, runId), { recursive: true, force: true });
+  if (ROOT) rmSync(ROOT, { recursive: true, force: true });
+  ROOT = "";
 });
 
 /** The retired PUT's own check came first: no verdicts object is a 400. */
