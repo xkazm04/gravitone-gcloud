@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
+import * as gates from "../src/parts/gates.ts";
 import { gatePacketFact } from "../src/parts/gates.ts";
 import type { Reader, Store } from "../src/store.ts";
 import { MODULES } from "./decision.fixtures.ts";
@@ -30,6 +31,13 @@ function spying(r: Reader, seen: { sql: string; params: unknown[] }[]): Reader {
     all: (sql, ...params) => (seen.push({ sql, params }), r.all(sql, ...params)),
   };
 }
+
+describe("kernel/parts - the gate read context", () => {
+  it("has one spelling, gateFacts(now): no variant takes a reader it never uses", () => {
+    expect("gateContext" in gates).toBe(false);
+    expect(gates.gateFacts(7).now).toBe(7);
+  });
+});
 
 describe("kernel/parts - gatePacketFact", () => {
   it("reads the newest attempt by number, and ignores a sibling gate that shares the prefix", () => {
