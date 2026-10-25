@@ -14,6 +14,8 @@
 // the changes that shipped their pages. Every section is a (studio) route since Phase 6 wave C
 // retired v1's pages, so none is a link out of this world any more.
 
+import { SCOUT_PILE_SOURCES } from "./facts.ts";
+
 export type Section = {
   readonly id: "floor" | "projects" | "runs" | "scout" | "library" | "audio" | "ledger" | "kit";
   readonly label: string;
@@ -38,10 +40,13 @@ export const SECTIONS: readonly Section[] = [
   { id: "kit", label: "Kit", href: "/kit", built: true, group: "system" },
 ];
 
+/** A scout night's or seed batch's packet address: the sources are facts.ts SCOUT_PILE_SOURCES, the one set. */
+const SCOUT_PACKET = new RegExp(`^/board/pkt(:|%3A)(${[...SCOUT_PILE_SOURCES].join("|")})(:|%3A)`);
+
 /** The section a pathname is in: the longest href that prefixes it on a segment boundary. */
 export function sectionOf(pathname: string): Section["id"] | null {
   // A scout night's packet and a seed batch's live on the Board's address, and are the Scout section's pages.
-  if (/^\/board\/pkt(:|%3A)(scout|seeds)(:|%3A)/.test(pathname)) return "scout";
+  if (SCOUT_PACKET.test(pathname)) return "scout";
   let best: Section | null = null;
   for (const s of SECTIONS) {
     const hit = pathname === s.href || pathname.startsWith(`${s.href}/`);

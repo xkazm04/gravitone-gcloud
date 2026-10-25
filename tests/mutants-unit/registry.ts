@@ -6601,9 +6601,9 @@ export const MUTANTS: UnitMutant[] = [
   {
     id: "studio-shell-seed-batch-not-scout",
     test: "tests/next-server/agent-nav.test.ts",
-    file: "app/(studio)/_shell/nav.ts",
-    find: "(scout|seeds)",
-    replace: "(scout)",
+    file: "app/(studio)/_shell/facts.ts",
+    find: "new Set([\"scout\", \"seeds\"])",
+    replace: "new Set([\"scout\"])",
     why: "A seed batch's Board packet is in no section, so the header marks nothing current while the Scout's page is open.",
   },
   {
@@ -7285,5 +7285,21 @@ export const MUTANTS: UnitMutant[] = [
     find: "reason: \"over-budget\", message: r.error.message,",
     replace: "reason: \"refused-over-budget\", message: r.error.message,",
     why: "A money stop is recorded under a reason no reader of router.refused knows, so the Ledger cannot say which vendor it blocked.",
+  },
+  {
+    id: "scout-pile-sources-nav-own-spelling",
+    test: "tests/next-server/scout-pile-sources.test.ts",
+    file: "app/(studio)/_shell/nav.ts",
+    find: "(${[...SCOUT_PILE_SOURCES].join(\"|\")})",
+    replace: "(scout|seeds)",
+    why: "The header's current mark keeps its own list of the scout's sources, so a source added to the one set is not the Scout section in the nav.",
+  },
+  {
+    id: "scout-pile-sources-board-own-spelling",
+    test: "tests/next-server/scout-pile-sources.test.ts",
+    file: "app/(studio)/scout/_scout/ScoutHead.tsx",
+    find: "SCOUT_PILE_SOURCES.has(p.source);",
+    replace: "p.source === \"scout\" || p.source === \"seeds\";",
+    why: "The Scout's Board packets keep their own list of its sources, so a source added to the one set draws as the Scout's NEXT but not on its Runs tab.",
   },
 ];
