@@ -347,11 +347,9 @@ export interface TextRequest extends TextSteer {
    * never walks on to the next rung (that would be a second bill for a turn the
    * caller asked to stop). A cancel surfaces as `TextError` kind `cancelled`.
    *
-   * KNOWN GAP: the cloud adapter (providers/google.ts via lib/text/http.ts) does
-   * not yet abort its in-flight fetch on this signal. A request already sent to
-   * the vendor runs to its own end and its answer is returned; what the caller
-   * does with an answer to a turn it cancelled is the caller's rule (the turn
-   * ledger, lib/turns/runner.ts, refuses to let it overwrite the cancel).
+   * The cloud adapter (providers/google.ts via lib/text/http.ts) aborts its
+   * in-flight fetch on it: `cancelled`, dispatched (the vendor may still bill
+   * what it had started).
    */
   signal?: AbortSignal;
 }

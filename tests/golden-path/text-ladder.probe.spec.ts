@@ -172,6 +172,44 @@ test("refusal: the kind is the engine we MEANT to use, not a hardcoded default",
   console.log(`[ladder] cloud refusal kind -> ${(cloud as TextError).kind}`);
 });
 
+/* ── the cancel ───────────────────────────────────────────────────────────── */
+
+test("cancel: a cloud turn's in-flight request is aborted by the caller's signal, and reads as cancelled", async () => {
+  process.env.TEXT_ENV = "cloud";
+  process.env.GOOGLE_AI_API_KEY = "probe-google-key-0123456789";
+  const real = globalThis.fetch;
+  let sawCallerAbort = false;
+  // A vendor that takes 3s to answer, unless the request's own signal aborts it first.
+  globalThis.fetch = ((_url: unknown, init?: RequestInit) =>
+    new Promise<Response>((resolve, reject) => {
+      const t = setTimeout(
+        () => resolve(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "late" }] } }] }), { status: 200 })),
+        3_000,
+      );
+      init?.signal?.addEventListener("abort", () => {
+        clearTimeout(t);
+        sawCallerAbort = true;
+        reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+      });
+    })) as typeof fetch;
+  const ctl = new AbortController();
+  const started = Date.now();
+  try {
+    setTimeout(() => ctl.abort(), 50);
+    const out = await reason({ turn: "edit-plan", prompt: "x", signal: ctl.signal }).then(
+      () => "served",
+      (e: unknown) => e as TextError,
+    );
+    expect(out, "a cancelled cloud turn ran on and was served").toBeInstanceOf(TextError);
+    expect((out as TextError).kind).toBe("cancelled");
+    expect((out as TextError).dispatched).toBe(true);
+    expect(sawCallerAbort).toBe(true);
+    expect(Date.now() - started).toBeLessThan(2_000);
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
 /* ── the availability oracle ──────────────────────────────────────────────── */
 
 test("engineStatus: reports the same posture and the same blocks the router acts on", async () => {

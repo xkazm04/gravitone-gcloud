@@ -313,6 +313,8 @@ export function googleProvider(): TextProvider {
           headers: { "x-goog-api-key": key },
           body,
           timeoutMs,
+          // The caller's cancel aborts the request in flight (TextRequest.signal).
+          signal: req.signal,
         },
       );
 
