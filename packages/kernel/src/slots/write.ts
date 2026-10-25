@@ -6,7 +6,7 @@ import { slotSchema, type Channel, type Slot, type SlotDrift } from "@gt/domain/
 import { append } from "../events.ts";
 import type { Store, Tx } from "../store.ts";
 import { clashOf, clashText, planCancel, planMove, planPublishNow } from "./core.ts";
-import { listSlotsIn, readSlotIn } from "./read.ts";
+import { instantOf, listSlotsIn, readSlotIn } from "./read.ts";
 import type { SlotRow } from "./schema.ts";
 import { driftOf, type SweepFacts } from "./sweep-core.ts";
 
@@ -91,7 +91,7 @@ export function createSlot(store: Store, draft: SlotDraft, by: Actor, ready?: Re
   const id = draft.id ?? `sl-${randomUUID().slice(0, 8)}`;
   const parsed = parseAt("slot", slotSchema, { ...draft, id, tags: [...draft.tags], state: "scheduled" });
   if (!parsed.ok) return parsed;
-  const slot = parsed.value;
+  const slot = { ...parsed.value, at: instantOf(parsed.value.at) };
   if (ready !== undefined) {
     const drift = driftOf(slot, ready);
     if (drift === "channel_not_wired") return err("conflict", `${slot.channel} is not wired`, { detail: drift });
@@ -128,7 +128,7 @@ export function moveSlot(store: Store, id: string, at: string, by: Actor, when: 
   const iso = parseAt("slot time", slotSchema.shape.at, at);
   if (!iso.ok) return iso;
   return verb(store, id, opts, (t, row) => {
-    const next = unwrap(planMove(row.slot, iso.value, when.now, when.windowMs));
+    const next = unwrap(planMove(row.slot, instantOf(iso.value), when.now, when.windowMs));
     guardClash(t, next);
     return putSlotIn(t, row, next, null, { by, type: "slot.schedule", data: { from: row.slot.at, was: row.slot.state } });
   });

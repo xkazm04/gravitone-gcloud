@@ -23,17 +23,28 @@ export type SlotQuery = {
   readonly states?: readonly SlotState[];
 };
 
+/**
+ * An instant in the one shape the `at` column holds (toISOString's: ms, Z), which is what makes
+ * its TEXT order and its bounds the instant's. The door admits "12:00:00Z" and "12:00:00.5Z"
+ * too, and those sort after "12:00:00.000Z" ('Z' > '.'), so every writer and every bound goes
+ * through this - as the v1 import's `iso` already did. Unparseable text is left for the door.
+ */
+export function instantOf(s: string): string {
+  const t = Date.parse(s);
+  return Number.isNaN(t) ? s : new Date(t).toISOString();
+}
+
 /** The calendar, earliest first (v1 listSlots' order); ties by id so the order is total. */
 export function listSlotsIn(r: Reader, q: SlotQuery = {}): SlotRow[] {
   const where: string[] = [];
   const params: string[] = [];
   if (q.from !== undefined) {
     where.push("at >= ?");
-    params.push(q.from);
+    params.push(instantOf(q.from));
   }
   if (q.to !== undefined) {
     where.push("at < ?");
-    params.push(q.to);
+    params.push(instantOf(q.to));
   }
   if (q.states !== undefined) {
     if (q.states.length === 0) return [];

@@ -51,6 +51,21 @@ describe("creating a slot", () => {
   });
 });
 
+describe("a slot's time is its instant", () => {
+  it("is stored, ordered and bounded the same whatever precision it is written in, as the v1 import writes it", () => {
+    const { k } = fresh();
+    const whole = (iso: string): string => iso.replace(/\.000Z$/, "Z");
+    const a = must(createSlot(k.store, draft({ at: whole(at(30)) }), OP)).slot;
+    const b = must(createSlot(k.store, draft({ libraryItemId: ITEM_B, at: new Date(Date.parse(at(30)) + 500).toISOString() }), OP)).slot;
+    expect(a.at).toBe(at(30));
+    expect(must(listSlots(k.store)).map((r) => r.slot.id)).toEqual([a.id, b.id]);
+    expect(must(moveSlot(k.store, a.id, whole(at(60)), OP, { now: NOW, windowMs: WINDOW_MS })).slot.at).toBe(at(60));
+    // `from` is inclusive and `to` exclusive of the instant, not of its spelling.
+    expect(must(listSlots(k.store, { from: whole(at(60)) })).map((r) => r.slot.id)).toEqual([a.id]);
+    expect(must(listSlots(k.store, { to: whole(at(60)) })).map((r) => r.slot.id)).toEqual([b.id]);
+  });
+});
+
 describe("moving and cancelling", () => {
   it("a move reschedules; cancel is soft and idempotent; a cancelled slot never comes back and frees its item", () => {
     const { k } = fresh();
