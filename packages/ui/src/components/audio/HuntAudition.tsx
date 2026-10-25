@@ -47,6 +47,19 @@ export function carryFrom(linked: boolean, playing: string | null, next: string,
   return linked && playing !== null && playing !== next && Number.isFinite(at) && at > 0 ? at : 0;
 }
 
+/** What a leaf asked for: its length, and the tempo, key and loop when it named them. Drawn on the
+ *  map card and beside each audition take, so the crown is judged against the brief. */
+export function AskedChips({ leaf }: { readonly leaf: HuntLeafView }) {
+  return (
+    <>
+      <Chip label="length" value={lengthOf(leaf.durationS)} casing="lower" />
+      {leaf.tempoBpm !== null && <Chip label="bpm" value={leaf.tempoBpm} casing="lower" />}
+      {leaf.key !== null && <Chip label="key" value={leaf.key} casing="lower" />}
+      {leaf.loop === true && <Chip label="loop" casing="lower" />}
+    </>
+  );
+}
+
 export function HuntAudition({ heard, takes, playing, crowning, onPlay, onCrown }: HuntAuditionProps) {
   return (
     <div className={s.audition} role="group" aria-label="audition">
@@ -69,9 +82,12 @@ export function HuntAudition({ heard, takes, playing, crowning, onPlay, onCrown 
             <span className={s.wave}>
               <Wave peaks={take.peaks} width={200} height={28} tone={leaf.winner ? "emerald" : "cyan"} stretch />
             </span>
+            <div className={s.leafMeta}>
+              <AskedChips leaf={leaf} />
+            </div>
             <div className={s.leafActs}>
               <Chip label={leaf.provider} casing="lower" />
-              <Chip label={take.lengthS === null ? "–" : lengthOf(take.lengthS)} casing="lower" />
+              <Chip label="heard" value={take.lengthS === null ? "–" : lengthOf(take.lengthS)} casing="lower" />
               <Button label={leaf.winner ? "Uncrown" : "Crown"} size="sm" tone={leaf.winner ? "neutral" : "emerald"} disabled={crowning.has(leaf.id) || take.verdict === "rejected"} onPress={() => onCrown(leaf, take.id, !leaf.winner)} />
             </div>
           </div>

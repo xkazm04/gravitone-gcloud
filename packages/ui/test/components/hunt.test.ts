@@ -148,6 +148,28 @@ describe("the audition", () => {
   });
 });
 
+describe("the audition carries the brief", () => {
+  const asked = leaf({ id: "q", state: "rendered", takeIds: ["t-q"], durationS: 30, tempoBpm: 78, key: "D minor", loop: true });
+  const plain = leaf({ id: "p", state: "rendered", takeIds: ["t-p"], durationS: 45 });
+  const html = renderToStaticMarkup(h(HuntAudition, { heard: [asked, plain], takes: { "t-q": take("t-q", { lengthS: 28.4 }), "t-p": take("t-p") }, playing: null, crowning: new Set<string>(), onPlay: () => undefined, onCrown: () => undefined }));
+  const card = (id: string): string => html.split(/(?=<div class="[^"]*" role="group" aria-label=")/).find((part) => part.includes(`aria-label="${id}"`)) ?? "";
+
+  test("each take draws what its leaf asked for beside the length it measured: length, bpm, key, loop", () => {
+    const q = card("q");
+    expect(q).toMatch(/length<b[^>]*>0:30</);
+    expect(q).toMatch(/bpm<b[^>]*>78</);
+    expect(q).toMatch(/key<b[^>]*>D minor</);
+    expect(q).toContain(">loop<");
+    expect(q).toMatch(/heard<b[^>]*>0:28</);
+  });
+
+  test("a leaf that asked for no tempo, key or loop draws only its length", () => {
+    const p = card("p");
+    expect(p).toMatch(/length<b[^>]*>0:45</);
+    expect(p).not.toMatch(/bpm|key<|loop/);
+  });
+});
+
 describe("one playhead (L72)", () => {
   test("a step carries the playing take's second only while linked and only onto another take", () => {
     expect(carryFrom(true, "t-a", "t-b", 12.5)).toBe(12.5);

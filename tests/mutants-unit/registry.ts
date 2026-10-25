@@ -6470,4 +6470,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "t === undefined ? [] : [t];",
     why: "← and → land on a heard take with no bytes, the island does nothing, and the transport can never step past it: every take beyond is walled off from the keys.",
   },
+  {
+    id: "audition-hides-the-asked-brief",
+    test: "packages/ui/test/components/hunt.test.ts",
+    file: "packages/ui/src/components/audio/HuntAudition.tsx",
+    find: "<AskedChips leaf={leaf} />",
+    replace: "{null}",
+    why: "The audition, where the crown is given, draws none of the length, tempo, key or loop the leaf asked for, so a take is crowned without the brief it is meant to answer in sight.",
+  },
 ];
