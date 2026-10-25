@@ -23,7 +23,7 @@ import {
   decisionMap,
   foundryFileUrl,
   instantOr,
-  mediaRef,
+  mediaRefs,
   mintPacket,
   runIdOf,
   sameVerdict,
@@ -82,7 +82,7 @@ async function read(ref: AdapterRef): Promise<Result<StripsV1>> {
   const detail = await v1Call(() => getStripRun(id));
   if (!detail.ok) return detail;
   const { run, verdicts, rev } = detail.value;
-  const media: Record<string, BlobRef> = {};
+  const files: { key: string; abs: string }[] = [];
   for (const c of rendered(run)) {
     const rel = playback(c);
     if (rel === undefined) continue;
@@ -92,10 +92,12 @@ async function read(ref: AdapterRef): Promise<Result<StripsV1>> {
       if (at.error.code === "not-found") continue;
       return at;
     }
-    const ref = await mediaRef(at.value.abs);
-    if (ref.ok) media[c.id] = ref.value;
-    else if (ref.error.code !== "not-found") return ref;
+    files.push({ key: c.id, abs: at.value.abs });
   }
+  // Hashed together, eight at a time, once every path has been resolved.
+  const hashed = await mediaRefs(files);
+  if (!hashed.ok) return hashed;
+  const media: Record<string, BlobRef> = Object.fromEntries(hashed.value);
   const map = await v1Call(() => stripFileStat(id, "verdicts.json"));
   const verdictsAt = map.ok ? await stat(map.value.abs).then((s) => s.mtime.toISOString(), () => instantOr(run.at, new Date(0).toISOString()).at) : instantOr(run.at, new Date(0).toISOString()).at;
   return ok({ run, verdicts, rev, media, verdictsAt });
