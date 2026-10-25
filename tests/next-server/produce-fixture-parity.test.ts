@@ -226,3 +226,36 @@ describe("a composed project's id is its title's slug on both sides", () => {
     expect(await stem(fixture)).toBe(realStem);
   });
 });
+
+describe("a draft's part write is refused for the kernel's reasons, in its words", () => {
+  type Patch = Parameters<typeof real.setPart>[0]["patch"];
+  const cases: readonly (readonly [string, string, Patch])[] = [
+    ["a verdict has no model", "gate:frames", { units: 2 }],
+    ["fixed units", "research", { units: 2 }],
+    ["units out of range", "frames", { units: 999 }],
+    ["an option the kind does not have", "frames", { option: "frames/nobody/nothing" }],
+  ];
+  const write = async (side: typeof real, id: string, sep: string, key: string, patch: Patch, rev?: number): Promise<string> => {
+    const p = side.loadPlan({ id });
+    if (!p.ok) throw p.error;
+    return said(side.setPart({ id, rev: rev ?? p.value.project.rev, partId: `${id}${sep}${key}`, patch }, op), id);
+  };
+
+  it.each(cases)("%s", async (_name, key, patch) => {
+    const c = await real.compose({ recipe: "film/short-form-clip" }, op);
+    if (!c.ok) throw c.error;
+    const realSaid = await write(real, c.value.id, "/", key, patch);
+    expect(realSaid).toMatch(/^(refused|invalid): /);
+    expect((await write(fixture, "untitled-port-strike", ":", key, patch)).replace(/:frames|:research|:gate:frames/g, (m) => `/${m.slice(1)}`)).toBe(realSaid);
+  });
+
+  it("a write on an old revision, and a launched part's", async () => {
+    const c = await real.compose({ recipe: "film/short-form-clip" }, op);
+    if (!c.ok) throw c.error;
+    const stale = await write(real, c.value.id, "/", "frames", { units: 3 }, 99);
+    expect(await write(fixture, "untitled-port-strike", ":", "frames", { units: 3 }, 99)).toBe(stale);
+    const { id } = await realFilm();
+    const launched = await write(real, id, "/", "frames", { units: 3 });
+    expect(await write(fixture, "glass-harbor-trailer", ":", "frames", { units: 3 })).toBe(launched);
+  });
+});

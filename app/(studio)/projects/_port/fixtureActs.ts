@@ -82,14 +82,17 @@ export function launchRun(u: Universe, input: ComposerInput, token: string, now:
 function projectAt(u: Universe, id: string, rev: number): Result<FxProject> {
   const p = u.projects.get(id);
   if (p === undefined) return err("not-found", `no project ${id}`);
-  if (p.rev !== rev) return err("conflict", `the plan moved: it is at rev ${p.rev}, the write named rev ${rev}`, { detail: "stale-rev" });
+  if (p.rev !== rev) return err("conflict", `project ${id} moved on (now at revision ${p.rev}); re-read the plan and send it again`);
   return ok(p);
 }
+
+/** The kernel's words for a write to a launched plan (records/write.ts). */
+const launchedSays = (id: string): string => `project ${id} is launched; a launched plan changes by re-routing its jobs`;
 
 function draftOf(u: Universe, id: string, rev: number): Result<FxProject> {
   const p = projectAt(u, id, rev);
   if (!p.ok) return p;
-  if (p.value.launched) return err("refused", `${p.value.title} is launched; a launched part changes route in Runs`);
+  if (p.value.launched) return err("refused", launchedSays(id));
   return p;
 }
 
@@ -133,14 +136,19 @@ export function compose(u: Universe, input: ComposeInput, now: number): Result<{
 }
 
 export function setPart(u: Universe, id: string, rev: number, partId: string, patch: PartPatch, now: number): Result<FxProject> {
-  const d = draftOf(u, id, rev);
+  // The kernel's order and words (records/write.ts `setPart`): the revision, the part, a launched
+  // part's job, then what the part is and what it may take.
+  const d = projectAt(u, id, rev);
   if (!d.ok) return d;
   const part = d.value.parts.find((x) => x.id === partId);
-  if (part === undefined || !isWorkKind(part.kind)) return err("not-found", `no work part ${partId}`);
-  if (patch.option !== undefined && !optionsOf(part.kind).some((o) => o.key === patch.option)) return err("invalid", `${patch.option} is not an option for ${part.kind}`);
+  if (part === undefined) return err("not-found", `project ${id} has no part ${partId}`);
+  if (d.value.launched && isWorkKind(part.kind) && u.jobs.has(partJobId(part.id))) return err("refused", launchedSays(id));
+  if (!isWorkKind(part.kind)) return err("refused", `part ${part.id} is a ${part.kind}; it has no model or units`);
+  if (patch.option !== undefined && !optionsOf(part.kind).some((o) => o.key === patch.option)) return err("invalid", `${patch.option} is not an option for a ${part.kind} part`);
   if (patch.units !== undefined) {
-    const [lo, hi] = part.unitsRange ?? [part.units, part.units];
-    if (patch.units < lo || patch.units > hi) return err("invalid", `${part.kind} takes ${lo}-${hi} units`);
+    if (part.unitsRange === undefined) return err("refused", `part ${part.id} has fixed units`);
+    const [lo, hi] = part.unitsRange;
+    if (patch.units < lo || patch.units > hi) return err("invalid", `units ${patch.units} is outside ${lo}..${hi} for ${part.kind}`);
     part.units = patch.units;
   }
   if (patch.option !== undefined) part.option = patch.option;
