@@ -18,7 +18,7 @@ import seg from "../../src/components/seg/Seg.module.css";
 import { SourceTag } from "../../src/components/source/SourceTag.tsx";
 import { StaleBadge, type StaleBadgeProps } from "../../src/components/stalebadge/StaleBadge.tsx";
 import { BAR_MAX, bars, daysBetween, dragRange, MIN_BAR, nowAt, slotAt, ticks, type DayCount } from "../../src/components/timestrip/strip.ts";
-import { Readout, restingReadout, stepDrag, type TimeStripProps } from "../../src/components/timestrip/TimeStrip.tsx";
+import { keyStep, Readout, restingReadout, stepDrag, TimeStrip, type TimeStripProps } from "../../src/components/timestrip/TimeStrip.tsx";
 import { Toggle } from "../../src/components/toggle/Toggle.tsx";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
@@ -105,6 +105,24 @@ describe("time strip geometry", () => {
     const rest = renderToStaticMarkup(h(Readout, { resting: ["a", "b"], at: undefined }));
     expect(rest).toContain('aria-live="polite"');
     expect(rest).not.toContain("aria-hidden");
+  });
+
+  test("the strip takes focus and a range is set by keys: move, extend, apply, clear", () => {
+    const days = daysBetween("2026-10-01", "2026-10-10");
+    const strip = renderToStaticMarkup(h(TimeStrip, { days: days.map((day) => ({ day, operator: 1, agent: 0, machine: 0 })), today: "2026-10-10", nowMs: Date.parse("2026-10-10T12:00:00Z"), range: null, onRange: () => undefined }));
+    expect(strip).toMatch(/role="group"[^>]*tabindex="0"|tabindex="0"[^>]*role="group"/);
+    let kb = { a: 0, b: 0 };
+    for (let i = 0; i < 3; i++) kb = keyStep(kb, "ArrowRight", false, days.length)?.kb ?? kb;
+    expect(kb).toEqual({ a: 3, b: 3 });
+    for (let i = 0; i < 2; i++) kb = keyStep(kb, "ArrowRight", true, days.length)?.kb ?? kb;
+    expect(kb).toEqual({ a: 3, b: 5 });
+    const applied = keyStep(kb, "Enter", false, days.length);
+    expect(applied?.write).toBe("apply");
+    expect(dragRange(days, kb.a, kb.b, null)).toEqual({ from: "2026-10-04", to: "2026-10-06" });
+    expect(keyStep(kb, "Escape", false, days.length)).toEqual({ kb: { a: 5, b: 5 }, write: "clear" });
+    expect(keyStep({ a: 0, b: 0 }, "ArrowLeft", false, days.length)?.kb).toEqual({ a: 0, b: 0 });
+    expect(keyStep(kb, "a", false, days.length)).toBeNull();
+    expect(keyStep(kb, "Enter", false, 0)).toBeNull();
   });
 
   test("the readout counts one event and one day in the singular", () => {

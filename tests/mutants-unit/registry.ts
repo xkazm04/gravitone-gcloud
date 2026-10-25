@@ -6646,4 +6646,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<div aria-live=\"polite\">",
     why: "The hovered day's counts sit in the polite live region, so sweeping the pointer across the strip queues one screen-reader announcement per day crossed.",
   },
+  {
+    id: "timestrip-enter-writes-nothing",
+    test: "packages/ui/test/components/ledger.test.ts",
+    file: "packages/ui/src/components/timestrip/TimeStrip.tsx",
+    find: "if (key === \"Enter\") return { kb, write: \"apply\" };",
+    replace: "if (key === \"Enter\") return { kb, write: null };",
+    why: "Enter on the focused strip writes no range, so a keyboard user moves a cursor and can never apply it through the onRange door.",
+  },
+  {
+    id: "timestrip-not-focusable",
+    test: "packages/ui/test/components/ledger.test.ts",
+    file: "packages/ui/src/components/timestrip/TimeStrip.tsx",
+    find: "tabIndex={0}",
+    replace: "data-x=\"0\"",
+    why: "The bars group has no tab stop again, so a keyboard user cannot reach the strip at all and ranges stay pointer-only.",
+  },
 ];
