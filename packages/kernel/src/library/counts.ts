@@ -1,3 +1,4 @@
+import { AppError } from "@gt/domain/errors";
 import {
   FIXED_ORDER,
   groupLabel,
@@ -121,7 +122,7 @@ function fromScope(
   const passed = new Uint8Array(Math.max(1, facetSel.length));
   for (const row of rows) {
     const blob = row["vids"];
-    if (!(blob instanceof Uint8Array)) continue;
+    if (!(blob instanceof Uint8Array)) throw new AppError("internal", `library row ${num(row["seq"])}: vids is not a blob`);
     const view = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
     const n = blob.byteLength >>> 2;
     passed.fill(0);

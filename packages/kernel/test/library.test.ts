@@ -334,3 +334,19 @@ describe("libraryDetail", () => {
     }
   });
 });
+
+describe("a corrupt index row", () => {
+  it("fails a filtered page whole, naming the row, rather than dropping it while the bare rail still counts it", () => {
+    const s = store();
+    must(upsertItems(s, [audio("a1", ["calm"]), audio("a2", ["calm"])], CTX));
+    expect(counts(s, "audio")["mood"]).toEqual({ calm: 2 });
+    expect(page(s, { kind: "audio", facets: { mood: ["calm"] }, limit: 5 }).total).toBe(2);
+    must(s.tx((t) => t.run("UPDATE library_items SET vids = ? WHERE seq = (SELECT seq FROM library_docs WHERE id = ?)", "corrupt", "a2")));
+    const r = queryLibrary(s, { kind: "audio", facets: { mood: ["calm"] }, limit: 5 });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.code).toBe("internal");
+      expect(r.error.message).toMatch(/library row \d+: vids is not a blob/);
+    }
+  });
+});

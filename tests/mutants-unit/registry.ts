@@ -6871,6 +6871,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "The Script part reads a stored cut with its own defaults, so a record with ops and no head shows the cut with none of the creator's edits applied.",
   },
   {
+    id: "library-scope-pass-skips-corrupt-vids",
+    test: "packages/kernel/test/library.test.ts",
+    file: "packages/kernel/src/library/counts.ts",
+    find: "if (!(blob instanceof Uint8Array)) throw new AppError(\"internal\", `library row ${num(row[\"seq\"])}: vids is not a blob`);",
+    replace: "if (!(blob instanceof Uint8Array)) continue;",
+    why: "A row whose vids is not a blob vanishes from the filtered page while the bare rail still counts it, with no error.",
+  },
+  {
     id: "audio-params-corrupt-read-as-unmeasured",
     test: "tests/next-server/audio-hunt.test.ts",
     file: "lib/sound/hunt.ts",
