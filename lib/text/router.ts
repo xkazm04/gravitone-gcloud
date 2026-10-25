@@ -342,6 +342,10 @@ export async function reason(req: TextRequest): Promise<TextResult> {
     /** The first thing that went wrong. It describes the engine we MEANT to
      *  use, which is the honest headline when the whole chain comes up empty. */
     let first: TextError | null = null;
+    /** Did any candidate the walk descended past actually reach its engine (a
+     *  429, a safety refusal)? The refusal at the bottom carries it, so a spend
+     *  meter counts the call (spend.ts::bookFailedTurn). */
+    let reached = false;
 
     for (let i = 0; i < chain.length; i++) {
       const id = chain[i];
@@ -433,6 +437,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
       } catch (e) {
         const err = e instanceof TextError ? e : new TextError(String(e), "failed", id);
         first ??= err;
+        reached ||= err.dispatched;
         trail.push({ provider: id, why: trailReason(err) });
         // Only a reroutable failure walks. Everything else stops here: a
         // minutes-long metered turn is not something to repeat on a hunch, and
@@ -448,7 +453,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
     // because "the model could not be reached" is precisely the sentence that
     // sends an operator to look in the one place the fault is not.
     const why = trail.map((t) => `${t.provider} (${t.why})`).join(", ") || "no candidates were planned";
-    throw noEngine(
+    const refusal = noEngine(
       `No reasoning engine could serve this ${req.turn} turn. Tried: ${why}. ` +
         // `first` describes the engine we MEANT to use, and its message already
         // names that engine's remedy. Appending describePosture() as well
@@ -461,6 +466,8 @@ export async function reason(req: TextRequest): Promise<TextResult> {
       // See errors.ts::noEngine for the measured defect this replaces.
       first?.kind,
     );
+    refusal.dispatched = reached;
+    throw refusal;
   }
 }
 
@@ -528,6 +535,7 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
   async function walk(): Promise<TextResult> {
     const chain = retrievePlanFor(req.turn, env).filter((id) => id !== req.avoid);
     let first: TextError | null = null;
+    let reached = false; // as in reason()
 
     for (let i = 0; i < chain.length; i++) {
       const id = chain[i];
@@ -584,13 +592,14 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
       } catch (e) {
         const err = e instanceof TextError ? e : new TextError(String(e), "failed", id);
         first ??= err;
+        reached ||= err.dispatched;
         trail.push({ provider: id, why: trailReason(err) });
         if (!err.reroutable) throw err;
       }
     }
 
     const why = trail.map((t) => `${t.provider} (${t.why})`).join(", ") || "no candidates were planned";
-    throw new TextError(
+    const refusal = new TextError(
       `No retrieval engine could serve this ${req.turn} turn. Tried: ${why}. ` +
         (first ? first.message : `Nothing may retrieve for a ${req.turn} turn in ${env} posture.`),
       // The engine we meant to use, as in reason(); `unsupported` when the
@@ -599,6 +608,8 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
       first?.provider,
       { trail: [...trail] },
     );
+    refusal.dispatched = reached;
+    throw refusal;
   }
 }
 

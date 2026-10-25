@@ -12,7 +12,12 @@
 // never an invented number. A failed turn is booked only when its error carries
 // a vendor-reported cost (`detail.costUsd`): today that is a served answer the
 // router's schema check refused (router.ts::checkServed) - the engine ran and
-// billed, and the answer was unusable.
+// billed, and the answer was unusable. A failed turn that REACHED an engine
+// (`TextError.dispatched`: a vendor status, a timeout in flight, a process that
+// ran) and reports no cost books an unpriced entry, which bumps
+// `counters.unpriced` like an unpriced served turn: "every call that reached the
+// provider gets a row" (cost-metering, failures are spend), and a failure that
+// never left the machine (no key, no binary, DNS) is not one.
 //
 // BOOKING NEVER REACHES THE TURN. It runs at the settle point beside logTurn and
 // swallows its own failure: what reason() and retrieve() return or throw is
@@ -102,11 +107,12 @@ export async function bookServedTurn(
   }
 }
 
-/** Book a failed turn only if its error reports a vendor cost. Never throws. */
+/** Book a failed turn: its vendor-reported cost, or - when it reached an engine
+ *  and reports none - an unpriced entry. Never throws. */
 export async function bookFailedTurn(turn: string, err: unknown): Promise<void> {
   try {
     const usd = errorCostUsd(err);
-    if (usd === undefined) return;
+    if (usd === undefined && !(err instanceof TextError && err.dispatched)) return;
     const model = err instanceof TextError ? (err.detail as { model?: unknown } | undefined)?.model : undefined;
     await meter.book({
       usd,
@@ -114,7 +120,7 @@ export async function bookFailedTurn(turn: string, err: unknown): Promise<void> 
       provider: err instanceof TextError ? (err.provider ?? "unknown") : "unknown",
       model: typeof model === "string" && model ? model : "unknown",
       outcome: "failed",
-      basis: "vendor",
+      basis: usd === undefined ? "unpriced" : "vendor",
     });
   } catch (e) {
     console.log(`[text] spend booking failed (turn unaffected): ${errorMessage(e)}`);

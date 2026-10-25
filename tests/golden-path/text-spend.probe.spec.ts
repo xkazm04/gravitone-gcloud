@@ -106,6 +106,30 @@ test("a served answer the schema check refuses still books the turn's vendor-rep
   expect(rows[0]!.axes.model).not.toBe("unknown");
 });
 
+test("a failed turn that reached its engine with no cost is counted unpriced; one that never left is not", async () => {
+  process.env.TEXT_ENV = "cloud";
+  // No key: refused at the cheap gate, nothing was sent.
+  await reason({ prompt: "x", turn: "edit-plan" }).catch(() => undefined);
+  expect((await textSpendStats()).counters.unpriced, "a call that never left the machine was counted").toBe(0);
+
+  process.env.GOOGLE_AI_API_KEY = "probe-google-key-0123456789";
+  const real = globalThis.fetch;
+  let status = 500;
+  globalThis.fetch = (async () => new Response("{}", { status })) as typeof fetch;
+  try {
+    // A 500: the vendor answered, the turn stops there.
+    await reason({ prompt: "x", turn: "edit-plan" }).catch(() => undefined);
+    expect((await textSpendStats()).counters.unpriced, "a vendor 500 left no trace in the ledger").toBe(1);
+    // A 429 walks to the bottom of a one-entry chain; the refusal there still reached Google.
+    status = 429;
+    await reason({ prompt: "x", turn: "edit-plan" }).catch(() => undefined);
+    expect((await textSpendStats()).counters.unpriced, "a 429 at the ladder's bottom left no trace").toBe(2);
+  } finally {
+    globalThis.fetch = real;
+  }
+  expect(await textSpendRows(), "an unpriced failure wrote a $ row").toHaveLength(0);
+});
+
 test("no refusal: far past any imaging-sized ceiling, the next text turn is still served", async () => {
   for (let i = 0; i < 500; i++)
     await bookServedTurn({ turn: "edit-plan", provider: "claude-cli", model: "m", costUsd: 1000, costBasis: "vendor-reported" });
