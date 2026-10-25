@@ -57,7 +57,7 @@ export type Seed = {
 };
 
 /** The picture a preset's trial lands as: the preset's tracked picture (the trial plates are not committed). */
-export const presetPlate = (preset: string): string => `/presets/${preset}.jpg`;
+export const presetPlate = (preset: string): string => thumbSrc(preset);
 const trialFile = (preset: string, _trial: string): string => presetPlate(preset);
 const preset = (id: string) => {
   const p = PRESETS.find((x) => x.id === id);
