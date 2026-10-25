@@ -10,7 +10,7 @@ import type { ActOutcome, LaneHoldView, ProduceJob } from "./contract.ts";
 import * as acts from "./fixtureActs.ts";
 import { universe } from "./fixture.ts";
 import { composeChoices, composerChoices, holdsView, jobsView, planView, projectList } from "./fixtureRead.ts";
-import { makeRealProduce } from "./real.ts";
+import { actorOf, makeRealProduce } from "./real.ts";
 
 // THE SEAM: which produce side the Floor composers, the Plan, Compose and the Runs acts answer
 // from. ONE switch, `SIDE`, the Board's shape (../../board/_port/port.ts).
@@ -79,11 +79,11 @@ const fixture: ServerProduce = {
   launchPlan: ({ id, rev, token, ceilingUsd, mode }) => dryOnly(mode, () => acts.launchPlan(u(), id, rev, token, now(), ceilingUsd)),
   pauseJob: ({ jobId }) => acts.pauseJob(u(), jobId, now()),
   resumeJob: ({ jobId }) => acts.resumeJob(u(), jobId, now()),
-  retryJob: ({ jobId, ceilingUsd }) => acts.retryJob(u(), jobId, now(), ceilingUsd),
+  retryJob: ({ jobId, ceilingUsd }, w) => acts.retryJob(u(), jobId, now(), ceilingUsd, actorOf(w)),
   moveJob: ({ jobId, dir }) => acts.moveJob(u(), jobId, dir, now()),
   rerouteOptions: ({ jobId }) => acts.rerouteOptions(u(), jobId, now()),
   reroute: ({ jobId, option, token, ceilingUsd }) => acts.reroute(u(), jobId, option, now(), token, ceilingUsd),
-  ackLane: ({ lane }) => acts.ackLane(u(), lane),
+  ackLane: ({ lane }, w) => acts.ackLane(u(), lane, actorOf(w)),
   listJobs: () => ({ ok: true, value: jobsView(u(), now()) }),
   listHolds: () => ({ ok: true, value: holdsView(u()) }),
   cancelJob: () => err("unavailable", "the fixture universe holds no kernel job to cancel"),

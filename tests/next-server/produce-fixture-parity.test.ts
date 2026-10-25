@@ -120,3 +120,26 @@ describe("an acknowledgement is of a lane that holds", () => {
     expect(await said(fixture.ackLane({ lane: "cloud.google" }, op))).toBe(realSaid);
   });
 });
+
+describe("what only an operator may do, an agent is refused on both sides", () => {
+  const agent = { who: "athena", kind: "agent" } as const;
+
+  it("an agent's acknowledgement of a held lane", async () => {
+    const realSaid = await said(real.ackLane({ lane: "box.chrome" }, agent));
+    expect(realSaid).toBe("refused: lane box.chrome: only an operator acknowledges a held lane; agent athena may not");
+    // The fixture's seeded Suno crash holds box.chrome: the agent's look is refused and the hold stays.
+    expect(await said(fixture.ackLane({ lane: "box.chrome" }, agent))).toBe(realSaid);
+    const holds = fixture.listHolds();
+    expect(holds.ok && holds.value.map((h) => h.lane)).toEqual(["box.chrome"]);
+  });
+
+  it("an agent's retry of a failed job", async () => {
+    const { research } = await realFilm();
+    await failReal(research);
+    const realSaid = await said(real.retryJob({ jobId: research }, agent), research);
+    expect(realSaid).toBe("refused: job <job>: only an operator retries a failed job; agent athena may not");
+    const failed = "job:part:the-quiet-tariff:frames";
+    expect(await said(fixture.retryJob({ jobId: failed }, agent), failed)).toBe(realSaid);
+    expect(fixtureState(failed)).toBe("failed");
+  });
+});

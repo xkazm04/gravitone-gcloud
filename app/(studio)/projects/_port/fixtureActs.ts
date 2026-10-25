@@ -2,6 +2,7 @@ import "server-only";
 
 import { recipeById, type WorkKind } from "@gt/catalog/recipes";
 import { err, ok, type Result } from "@gt/domain/errors";
+import type { Actor } from "@gt/domain/event";
 import { jobMachine, type JobState } from "@gt/domain/job.machine";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { ComposeInput, ComposerInput, LaunchedProject, LaunchedRun, ModelOption, PartPatch, Receipt, ReceiptSubject, RerouteOption } from "@gt/domain/produce";
@@ -224,12 +225,17 @@ export function resumeJob(u: Universe, id: string, now: number): Result<ActOutco
 
 const holdNames = (u: Universe, j: FxJob): ResourceLane | null => (u.holds.get(j.option.lane)?.jobId === j.id ? j.option.lane : null);
 
-export function retryJob(u: Universe, id: string, now: number, ceilingUsd?: number): Result<ActOutcome> {
+/** Who acts: the operator unless the caller names someone else (the MCP door's agent). */
+const OPERATOR: Actor = { kind: "operator", id: "operator" };
+
+export function retryJob(u: Universe, id: string, now: number, ceilingUsd?: number, by: Actor = OPERATOR): Result<ActOutcome> {
   const j = jobOf(u, id);
   if (!j.ok) return j;
-  if (j.value.state !== "failed" && j.value.state !== "interrupted") return err("refused", `${j.value.title} is ${j.value.state}; only failed or interrupted work is retried`);
+  // The real port's order: the hold first (./real.ts), then the kernel's retry (job.ts) - its actor, then its state.
   const held = holdNames(u, j.value);
   if (held !== null) return err("refused", `${held} is on hold for this job: acknowledge the hold first`);
+  if (by.kind !== "operator") return err("refused", `job ${id}: only an operator retries a ${j.value.state} job; ${by.kind} ${by.id} may not`);
+  if (j.value.state !== "failed" && j.value.state !== "interrupted") return err("refused", `job ${id} is ${j.value.state}; only a failed or interrupted job is retried`);
   const r = move(j.value, "queued", now, u);
   if (!r.ok) return r;
   j.value.attempt++;
@@ -326,7 +332,9 @@ export function reroute(u: Universe, id: string, key: string, now: number, token
   return ok({ kind: "done", act: { jobId: id, note: `re-routed · ${from} → ${o.label}` } });
 }
 
-export function ackLane(u: Universe, lane: ResourceLane): Result<ActOutcome> {
+export function ackLane(u: Universe, lane: ResourceLane, by: Actor = OPERATOR): Result<ActOutcome> {
+  // An agent cannot vouch that it looked (kernel job-queue.ts `ackLane`).
+  if (by.kind !== "operator") return err("refused", `lane ${lane}: only an operator acknowledges a held lane; ${by.kind} ${by.id} may not`);
   const h = u.holds.get(lane);
   if (h === undefined) return err("refused", `lane ${lane} is not held`);
   u.holds.delete(lane);

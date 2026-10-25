@@ -61,7 +61,8 @@ export type RealDeps = {
   readonly mint?: () => string;
 };
 
-const actorOf = (w: Who | undefined): Actor => ({ kind: w?.kind ?? "operator", id: w?.who ?? "operator" });
+/** Who acts, as the kernel's events name them: the operator unless the caller names another. */
+export const actorOf = (w: Who | undefined): Actor => ({ kind: w?.kind ?? "operator", id: w?.who ?? "operator" });
 
 /** Run `fn`, keeping a thrown AppError's code (a records read throws not-found for a missing project). */
 function guard<T>(fn: () => Result<T>): Result<T> {
