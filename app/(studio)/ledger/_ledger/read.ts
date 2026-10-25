@@ -211,7 +211,7 @@ export function readStrip(store: Store, f: LedgerFilter, nowMs: number): Result<
     }
     const since = `${day}T00:00:00.000Z`;
     const until = new Date(Date.parse(since) + DAY_MS).toISOString();
-    const c = countEvents(store, { ...kernel, since, until });
+    const c = countEvents(store, { ...kernel, since, until }, ["actorKind"]);
     if (!c.ok) return c;
     const kinds = facet(c.value.facets, "actorKind");
     const n = (k: ActorKind): number => (held !== undefined && !held.includes(k) ? 0 : (kinds.values.find((v) => v.value === k)?.n ?? 0));

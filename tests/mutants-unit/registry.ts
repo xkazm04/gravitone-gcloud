@@ -3735,8 +3735,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "library-fold-hides-two",
     test: "packages/ui/test/components/library.test.ts",
     file: "packages/ui/src/components/library/library.ts",
-    find: "const open = expanded || values.length <= FOLD_AT + 2;",
-    replace: "const open = expanded || values.length <= FOLD_AT;",
+    find: "if (hidden <= 2) return { shown: values, hidden: 0, canFold: false };",
+    replace: "if (hidden <= 0) return { shown: values, hidden: 0, canFold: false };",
     why: "'+2 more' costs a click to save two lines.",
   },
   {
