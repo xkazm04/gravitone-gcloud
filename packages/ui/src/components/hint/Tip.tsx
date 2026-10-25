@@ -11,7 +11,7 @@
 //
 // The text is DATA here (a reason's meaning, @gt/domain/source REASON_MEANING), so the type cannot
 // count it as it counts a Hint's literal; the twelve-word bound is the domain test's (hintWords).
-import { useId, useRef, useState, type FocusEvent, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type FocusEvent, type ReactNode } from "react";
 import { useLayer } from "../../layers/useLayer.ts";
 import { cx } from "../cx.ts";
 import s from "./Hint.module.css";
@@ -32,11 +32,25 @@ export type TipProps = {
   readonly children: (describedBy: string) => ReactNode;
 };
 
+/** The least gap, in px, between an open tip and the edge of the screen. */
+const EDGE = 8;
+
 export function Tip({ text, term, above = false, centered = false, seededOpen = false, children }: TipProps) {
   const id = useId();
   const [open, setOpen] = useState(seededOpen);
   const wrap = useRef<HTMLSpanElement>(null);
   const tip = useRef<HTMLSpanElement>(null);
+  // An open tip is shifted back inside the viewport when its trigger sits near an edge.
+  useLayoutEffect(() => {
+    const el = tip.current;
+    if (el === null) return;
+    el.style.removeProperty("--tip-shift");
+    if (!open) return;
+    const r = el.getBoundingClientRect();
+    const room = document.documentElement.clientWidth - EDGE;
+    const shift = r.left < EDGE ? EDGE - r.left : r.right > room ? room - r.right : 0;
+    if (shift !== 0) el.style.setProperty("--tip-shift", `${shift}px`);
+  }, [open]);
   useLayer(open, { kind: "tooltip", panelRef: tip, anchorRef: wrap, onClose: () => setOpen(false) });
   const onBlur = (e: FocusEvent<HTMLSpanElement>): void => {
     if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget))) setOpen(false);

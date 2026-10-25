@@ -154,3 +154,23 @@ test("a closed tip is out of the accessibility tree and still the glyph's descri
   expect(await page.getByRole("tooltip").count()).toBe(0);
   await b.close();
 });
+
+test("a tip opened by a glyph near the right edge of a phone screen stays inside the viewport", async () => {
+  const b = await chromium.launch();
+  const page = await (await b.newContext({ viewport: { width: 375, height: 700 } })).newPage();
+  await mount(page);
+  // The glyph's left edge sits 40px from the right edge of the 375px screen.
+  await page.evaluate(() => {
+    (document.querySelector("#root > div") as HTMLElement).style.padding = "120px 0 0 320px";
+    (document.querySelector("#outside") as HTMLElement).style.display = "none";
+  });
+  await page.getByRole("button", { name: "About" }).focus();
+  await settle(page);
+  const box = await tip(page).boundingBox();
+  expect(box).not.toBeNull();
+  const edges = { left: box!.x, right: box!.x + box!.width };
+  expect(edges.left).toBeGreaterThanOrEqual(0);
+  expect(edges.right).toBeLessThanOrEqual(375);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  await b.close();
+});
