@@ -176,6 +176,15 @@ describe("containers", () => {
     expect(html(h(Toast, { message: "kept 12", open: true }))).toBe(`<div class="${toast.toast} ${toast.on}" role="status" aria-live="polite">kept 12</div>`);
   });
 
+  test("Toast keys its words by the receipt's seq, so a repeat of the same words is a remount", () => {
+    const keyOf = (seq: number): unknown => {
+      const el = Toast({ message: "kept 12", open: true, seq }) as { props: { children: Array<{ key?: unknown } | false | string> } };
+      const frag = el.props.children[0] as { key?: unknown };
+      return frag.key;
+    };
+    expect(keyOf(1)).not.toBe(keyOf(2));
+  });
+
   test("Panel is a named section with a heading and its tally", () => {
     const p = html(h(Panel, { title: "facets", tally: { value: 688 }, children: "x" }));
     expect(p).toMatch(/^<section[^>]*aria-label="facets"><h2[^>]*>facets<span/);

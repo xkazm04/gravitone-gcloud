@@ -10,7 +10,7 @@
 // The scroller is the LISTBOX (role=listbox, aria-activedescendant): one tab stop, the arrows
 // walk the options through the `library` keymap. Tiles and rows are options, never tab stops.
 
-import { useEffect, useImperativeHandle, type Ref } from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, type Ref } from "react";
 
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { layoutFor, type Density, type View } from "@gt/ui/components/library/library.ts";
@@ -55,6 +55,15 @@ export function Results(p: ResultsProps) {
     p.onShown(shown);
   });
 
+  // The options are memoized on their props, so the two handlers must outlive a render: they take
+  // the id, and reach the caller's current closures through a ref written after each commit.
+  const latest = useRef({ onSelect: p.onSelect, onOpen: p.onOpen });
+  useEffect(() => {
+    latest.current = { onSelect: p.onSelect, onOpen: p.onOpen };
+  });
+  const onSelect = useCallback((id: string) => latest.current.onSelect(id), []);
+  const onOpen = useCallback((id: string) => latest.current.onOpen(id), []);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -75,7 +84,7 @@ export function Results(p: ResultsProps) {
       cells.push(view === "grid" ? <TileSlot key={`slot-${i}`} /> : <div key={`slot-${i}`} className={s.slotRow} aria-hidden="true" />);
       continue;
     }
-    const common = { card: c, selected: c.id === p.sel, domId: domIdOf(i), onSelect: () => p.onSelect(c.id), onOpen: () => p.onOpen(c.id) };
+    const common = { card: c, selected: c.id === p.sel, domId: domIdOf(i), onSelect, onOpen };
     cells.push(view === "grid" ? <LibraryTile key={c.id} {...common} /> : <LibraryRow key={c.id} {...common} />);
   }
 

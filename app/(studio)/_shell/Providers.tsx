@@ -81,7 +81,8 @@ export function Providers({ identity, children }: { readonly identity: string | 
   }, [identity]);
 
   // The cookie follows Firebase's token rotation for as long as the shell is up.
-  useEffect(() => subscribeSessionCookie((m) => showToast(`session not renewed - ${m}`)), []);
+  const cookieHeld = identity !== null;
+  useEffect(() => subscribeSessionCookie((m) => showToast(`session not renewed - ${m}`), cookieHeld), [cookieHeld]);
 
   const signOut = useCallback(async () => {
     const failures: string[] = [];
@@ -115,7 +116,7 @@ export function Providers({ identity, children }: { readonly identity: string | 
   return (
     <ShellContext.Provider value={shell}>
       {children}
-      <Toast message={note.message} open={note.open} ledger={note.ledger} />
+      <Toast message={note.message} open={note.open} ledger={note.ledger} seq={note.seq} />
     </ShellContext.Provider>
   );
 }
