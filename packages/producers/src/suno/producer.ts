@@ -1,3 +1,4 @@
+import { SUNO_CREDITS_REASON } from "@gt/catalog/partOptions";
 import type { Job } from "@gt/domain/job";
 import { vendorHealth, type Health, type MissingStep, type Outputs, type Producer, type StepContext, type StepOutcome } from "@gt/kernel/job-core";
 import { wornFailure } from "../mv/producer.ts";
@@ -41,7 +42,7 @@ export type SunoPorts = {
 };
 
 /** The catalog's words (packages/catalog partOptions SUNO_CREDITS). */
-export const SUNO_CREDITS = "Suno bills subscription credits, not dollars; the driver reads the credits left, never a price";
+export const SUNO_CREDITS = SUNO_CREDITS_REASON;
 
 /** v1 measured none; two clips of about two minutes each, rendered by Suno. */
 const CREATE_SECONDS = 150;

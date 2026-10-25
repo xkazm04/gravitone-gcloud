@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { PART_OPTIONS, type OptionDecl } from "@gt/catalog/partOptions";
 import { AppError } from "@gt/domain/errors";
@@ -136,6 +138,18 @@ describe("the credit sentences agree with the catalog", () => {
     const reasons = unpricedOf(provider);
     expect(reasons.length, `the catalog prices no ${provider} option as unpriced`).toBeGreaterThan(0);
     expect(new Set(reasons)).toEqual(new Set([sentence]));
+  });
+
+  // One literal per sentence: the producers' constants are the catalog's exports, not copies the
+  // parity check above has to keep equal.
+  it.each([
+    ["Suno bills subscription credits, not dollars"],
+    ["Leonardo studio credits from the prepaid plan"],
+  ])("%s... is typed once under packages/*/src", (head) => {
+    const walk = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : e.name.endsWith(".ts") ? [join(d, e.name)] : []));
+    const root = join(import.meta.dirname, "..", "..");
+    const copies = ["catalog", "producers"].flatMap((p) => walk(join(root, p, "src"))).filter((f) => readFileSync(f, "utf8").includes(head));
+    expect(copies.map((f) => f.replace(root, "").split("\\").join("/"))).toEqual(["/catalog/src/partOptions.ts"]);
   });
 
   it("the music video's text turn is the research producers' text seat, word for word", () => {

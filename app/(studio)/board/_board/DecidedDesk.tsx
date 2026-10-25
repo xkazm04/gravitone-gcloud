@@ -17,12 +17,14 @@ import s from "./board.module.css";
 export type DecidedDeskProps = {
   readonly packet: BoardPacket;
   readonly next: PacketSummary | undefined;
+  /** The rail would not read (load.ts): the foot says so, never `weir clear`. */
+  readonly railError?: string;
   readonly onNext: (id: string) => void;
   /** A stuck apply's redrive (dead-letter-design): pending again, a fresh attempt budget. */
   readonly onRedrive?: () => void;
 };
 
-export function DecidedDesk({ packet, next, onNext, onRedrive }: DecidedDeskProps) {
+export function DecidedDesk({ packet, next, railError, onNext, onRedrive }: DecidedDeskProps) {
   const v = packet.view;
   const kept = v.decisions.filter((d) => d.verdict === "keep").length;
   const rejected = v.decisions.filter((d) => d.verdict === "reject").length;
@@ -39,7 +41,7 @@ export function DecidedDesk({ packet, next, onNext, onRedrive }: DecidedDeskProp
           <LedgerLink href={ledgerFor(v.id)} subject={v.title ?? v.id} />
         </>
       }
-      foot={next === undefined ? <Chip label="weir clear" tone="emerald" dot /> : <Button label={`Next · ${next.title ?? next.id}`} tone="amber" shortcut={{ mode: "board", verb: "open-next" }} onPress={() => onNext(next.id)} />}
+      foot={railError !== undefined ? <ErrorLine message={railError} /> : next === undefined ? <Chip label="weir clear" tone="emerald" dot /> : <Button label={`Next · ${next.title ?? next.id}`} tone="amber" shortcut={{ mode: "board", verb: "open-next" }} onPress={() => onNext(next.id)} />}
     >
       <div className={s.decided}>
         <div className={s.kv}>

@@ -14,5 +14,5 @@ import { BOARD_PORT, BOARD_REDRIVE } from "../../../board/_port/wire.ts";
 export default async function BoardSheet({ params }: { readonly params: Promise<{ readonly packet: string }> }) {
   const r = await loadBoard(params);
   if (!r.ok) return <ErrorLine message={`board · ${r.id}: ${r.error.error}`} live />;
-  return <Board id={r.id} initial={r.packet} rail={r.rail} kind="sheet" port={BOARD_PORT} redrive={BOARD_REDRIVE} />;
+  return <Board id={r.id} initial={r.packet} rail={r.rail} {...(r.railError === undefined ? {} : { railError: r.railError })} kind="sheet" port={BOARD_PORT} redrive={BOARD_REDRIVE} />;
 }

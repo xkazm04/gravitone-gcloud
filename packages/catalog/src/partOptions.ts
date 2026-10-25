@@ -73,8 +73,12 @@ const SEAT: UsdDecl = { unpriced: "billed to the operator's text seat; the CLI r
 export const SEAT_UNPRICED_REASONS: readonly string[] = [SEAT.unpriced, STRIPS_SEAT.unpriced];
 
 /** One Suno prompt makes two clips of about two minutes each (prototype model.js estimate.audio). */
-const SUNO_CREDITS: UsdDecl = { unpriced: "Suno bills subscription credits, not dollars; the driver reads the credits left, never a price" };
-const STUDIO_CREDITS: UsdDecl = { unpriced: "Leonardo studio credits from the prepaid plan (71 for one still, read 2026-10-12); no USD per credit is checked" };
+/** The unpriced sentence the Suno producer books on its job (@gt/producers suno SUNO_CREDITS). */
+export const SUNO_CREDITS_REASON = "Suno bills subscription credits, not dollars; the driver reads the credits left, never a price";
+const SUNO_CREDITS: UsdDecl = { unpriced: SUNO_CREDITS_REASON };
+/** The unpriced sentence the music-video producer books for a studio still (@gt/producers mv STUDIO_CREDITS). */
+export const STUDIO_CREDITS_REASON = "Leonardo studio credits from the prepaid plan (71 for one still, read 2026-10-12); no USD per credit is checked";
+const STUDIO_CREDITS: UsdDecl = { unpriced: STUDIO_CREDITS_REASON };
 
 export const PART_OPTIONS: Readonly<Record<WorkKind, KindOptions>> = {
   research: {

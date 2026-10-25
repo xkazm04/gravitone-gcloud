@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { STUDIO_CREDITS_REASON } from "@gt/catalog/partOptions";
 import { parseAt } from "@gt/domain/door";
 import { errorMessage, isAppError } from "@gt/domain/errors";
 import type { Estimate } from "@gt/domain/estimate";
@@ -60,7 +61,7 @@ export type MvPorts = {
 };
 
 /** The catalog's words for a studio still (packages/catalog partOptions STUDIO_CREDITS). */
-export const STUDIO_CREDITS = "Leonardo studio credits from the prepaid plan (71 for one still, read 2026-10-12); no USD per credit is checked";
+export const STUDIO_CREDITS = STUDIO_CREDITS_REASON;
 /** A text turn: priced after the turn when the model reports it, never before. */
 export const TEXT_TURN = "a text turn bills the operator's text seat or a model that reports its cost after the turn; nothing prices it before";
 

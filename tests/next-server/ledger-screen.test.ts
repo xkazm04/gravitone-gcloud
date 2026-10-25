@@ -116,7 +116,7 @@ describe("the list", () => {
         onFocusChange: () => undefined,
       }),
     );
-  const empty = (html: string): string => /role="status"[^>]*>([\s\S]*?)<\/div>/.exec(html)?.[1]?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() ?? "";
+  const empty = (html: string): string => /<div class="[^"]*empty[^"]*">([\s\S]*?)<\/div>/.exec(html)?.[1]?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() ?? "";
 
   it("an empty answer from a text search that stopped early says how far it looked, not that nothing matched", () => {
     expect(empty(list(f({ q: "plate" }), { capped: true, scanned: 5000, exhausted: false }))).toMatch(/^0 in the newest 5000 /);

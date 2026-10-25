@@ -56,6 +56,8 @@ export type BoardProps = {
   readonly id: string;
   readonly initial: BoardPacket;
   readonly rail: readonly PacketSummary[];
+  /** The store's sentence when the rail would not read: the decided desk shows it, not `weir clear`. */
+  readonly railError?: string;
   readonly kind: "sheet" | "full";
   /** The Server Actions (../_port/actions.ts), handed down by the server page: a client module
    *  that imported them would walk the bundler into the port's zod doors. */
@@ -80,7 +82,7 @@ export function Board(props: BoardProps) {
   return <BoardIsland {...props} />;
 }
 
-function BoardIsland({ id, initial, rail, kind, port, redrive, home }: BoardProps) {
+function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }: BoardProps) {
   const router = useRouter();
   const { toast } = useShell();
   const [said, setSaid] = useState("");
@@ -175,6 +177,7 @@ function BoardIsland({ id, initial, rail, kind, port, redrive, home }: BoardProp
       <DecidedDesk
         packet={packet}
         next={nextOpen}
+        {...(railError === undefined ? {} : { railError })}
         onNext={go}
         {...(redrive === undefined
           ? {}

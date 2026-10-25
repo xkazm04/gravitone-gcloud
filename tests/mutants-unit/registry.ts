@@ -7142,4 +7142,28 @@ export const MUTANTS: UnitMutant[] = [
     replace: ": x instanceof SoundError && x.status >= 999",
     why: "A store lock or unreadable ledger on filing a served effect ends the batch job fatal 'internal' instead of a retry that files the kept clip.",
   },
+  {
+    id: "narration-ignores-empty-label",
+    test: "tests/next-gates/narration-gate.test.ts",
+    file: "pipeline/check-narration.mjs",
+    find: "const attr = m[1] === \"Hint\" ? \"text\" : \"label\";",
+    replace: "const attr = \"text\";",
+    why: "check:narration stops reading an Empty label, so a template or ternary label past twelve words ships: the type counts only literals.",
+  },
+  {
+    id: "board-decided-desk-claims-weir-clear-on-rail-failure",
+    test: "tests/next-server/decided-desk.test.ts",
+    file: "app/(studio)/board/_board/DecidedDesk.tsx",
+    find: "foot={railError !== undefined ? <ErrorLine message={railError} /> : next === undefined",
+    replace: "foot={false ? <ErrorLine message={railError ?? \"\"} /> : next === undefined",
+    why: "A rail the store refused to list draws the decided desk's `weir clear` chip: the operator is told nothing is left to decide when the Board could not read it.",
+  },
+  {
+    id: "board-load-drops-rail-error",
+    test: "tests/next-server/decided-desk.test.ts",
+    file: "app/(studio)/board/_board/load.ts",
+    find: "...(list.ok ? {} : { railError:",
+    replace: "...(true ? {} : { railError:",
+    why: "loadBoard stops carrying the rail's failure, so both pages hand the Board an empty rail again and the decided desk reads it as a clear Weir.",
+  },
 ];

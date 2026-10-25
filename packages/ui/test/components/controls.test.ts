@@ -190,9 +190,12 @@ describe("containers", () => {
     expect(p).toMatch(/^<section[^>]*aria-label="facets"><h2[^>]*>facets<span/);
   });
 
-  test("CapsHeading takes a level and a tally, Empty is a status with its act, Facts is a dl", () => {
+  test("CapsHeading takes a level and a tally, Empty is a resting state with its act, never a live region, Facts is a dl", () => {
     expect(html(h(CapsHeading, { text: "after", tally: { value: 3 }, level: 4 }))).toMatch(/^<h4[^>]*>after<span/);
-    expect(html(h(Empty<"no events match">, { label: "no events match", action: { label: "Clear" } }))).toMatch(/^<div[^>]*role="status"><span>no events match<\/span><button/);
+    expect(html(h(Empty<"no events match">, { label: "no events match", action: { label: "Clear" } }))).toMatch(/^<div class="[^"]*"><span>no events match<\/span><button/);
+    // A region mounted with its words in it is never announced (lib/announcer.tsx rule 1), so a
+    // resting empty carries no status role; a filter emptying a list is announced by its owner.
+    expect(html(h(Empty<"no events match">, { label: "no events match" }))).not.toContain("role=");
     expect(html(h(Facts, { facts: [{ term: "model", value: "flux-2" }] }))).toMatch(/^<dl[^>]*><dt[^>]*>model<\/dt><dd[^>]*>flux-2<\/dd><\/dl>$/);
   });
 });
