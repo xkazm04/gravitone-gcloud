@@ -1,3 +1,6 @@
+import { existsSync, readdirSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseAt } from "@gt/domain/door";
 import { jobIdSchema, partIdSchema, runIdSchema } from "@gt/domain/ids";
@@ -27,6 +30,31 @@ describe("a part job names its act", () => {
     const id = partJobId(ask);
     expect(id).toBe("job:part:p:1/frames:render-plate:7:u%3A3%2Fb~2");
     expect(askOf(part(id, "p:1/frames"))).toEqual({ ok: true, value: ask });
+  });
+
+  it("round-trips a target holding the launch mark `~`, which encodeURIComponent leaves bare", () => {
+    for (const target of ["a~b", "take~2", "~"]) {
+      for (const n of [undefined, 3]) {
+        const ask = { partId: "p/score", act: "revise-take", rev: 4, target, ...(n === undefined ? {} : { n }) };
+        expect(askOf(part(partJobId(ask), "p/score"))).toEqual({ ok: true, value: ask });
+      }
+    }
+  });
+
+  it("every act any step's table declares round-trips through the id grammar (the tables walked, not listed)", async () => {
+    const src = path.join(path.dirname(fileURLToPath(import.meta.url)), "../src");
+    const acts: string[] = [];
+    for (const d of readdirSync(src)) {
+      const file = path.join(src, d, "define.ts");
+      if (!existsSync(file)) continue;
+      const mod = (await import(pathToFileURL(file).href)) as Record<string, unknown>;
+      for (const [k, v] of Object.entries(mod)) if (k.endsWith("_ACTS") && Array.isArray(v)) acts.push(...(v as string[]));
+    }
+    expect(acts.length).toBeGreaterThanOrEqual(20);
+    for (const act of acts) {
+      const ask = { partId: "p/x", act, rev: 2, target: "u~1:a/b", n: 2 };
+      expect(askOf(part(partJobId(ask), "p/x"))).toEqual({ ok: true, value: ask });
+    }
   });
 
   it("the Plan's own job carries no act; a job of another part or a run is refused", () => {
