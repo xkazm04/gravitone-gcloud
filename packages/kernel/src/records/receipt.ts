@@ -1,6 +1,6 @@
 import type { ResourceLane } from "@gt/domain/lane";
 import { weakest } from "@gt/domain/plan";
-import type { FigureSource, ModelOption, PlanEstimate, Receipt, ReceiptLine, ReceiptMode, ReceiptSubject, ReceiptTotals } from "@gt/domain/produce";
+import { crossesCeiling, type FigureSource, type ModelOption, type PlanEstimate, type Receipt, type ReceiptLine, type ReceiptMode, type ReceiptSubject, type ReceiptTotals } from "@gt/domain/produce";
 import { canonical, sha256Hex } from "../canonical.ts";
 import { etaOf, schedule, type Placed, type SchedItem } from "./schedule.ts";
 
@@ -157,7 +157,7 @@ export function receiptFor(i: ReceiptInput): Receipt {
     queuePos: first?.queuePos ?? 1,
     etaAt: iso(eta ?? i.now),
     ...(i.ceilingUsd === undefined ? {} : { ceilingUsd: i.ceilingUsd }),
-    overCeiling: i.ceilingUsd !== undefined && exposure > i.ceilingUsd,
+    overCeiling: crossesCeiling(exposure, i.ceilingUsd),
     readAt: iso(i.now),
   };
 }

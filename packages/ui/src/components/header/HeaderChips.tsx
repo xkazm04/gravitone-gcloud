@@ -11,6 +11,7 @@
 //   LedgerDelta a door to the Ledger carrying `+N`.
 
 
+import { count } from "../../count.ts";
 import { Chip } from "../chip/Chip.tsx";
 import { usd } from "../eventrow/usd.ts";
 import { capsFor } from "../keycaps/caps.ts";
@@ -20,9 +21,6 @@ import { SourceTag } from "../source/SourceTag.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import { spendParts, type Spend } from "./header.ts";
 import s from "./HeaderChips.module.css";
-
-/** `1 item`, `2 items`: the names below are read aloud. */
-const count = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
 export type NextPile = { readonly title: string; readonly count: number; readonly href: string };
 

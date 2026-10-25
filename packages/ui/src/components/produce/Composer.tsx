@@ -19,6 +19,7 @@ import type { ReactNode } from "react";
 
 import type { Receipt, ReceiptLine } from "@gt/domain/produce";
 
+import { plural } from "../../count.ts";
 import { FIELD_ATTR } from "../../keymap/target.ts";
 import { cx } from "../cx.ts";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
@@ -37,8 +38,6 @@ export type EstimateProps = {
   readonly noun: string;
   readonly error?: string;
 };
-
-const plural = (n: number, noun: string): string => (n === 1 ? noun : `${noun}s`);
 
 /**
  * The receipt's totals as one line: units · ~time · cost (or `unpriced · <kind>`, its reason

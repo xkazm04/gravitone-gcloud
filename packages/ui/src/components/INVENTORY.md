@@ -89,7 +89,7 @@ Library: LibraryNav (`.kind`), FacetGroup body, LibraryToolbar (`.fchips`), Libr
 
 | Kit name | Replaces (prototype) | Pages | States / variants |
 | --- | --- | --- | --- |
-| `TimeStrip` (+ `strip.ts`) | ledger.js `renderStrip`, `.lg-strip`, `.ts-*` | G | √n bars stacked machine/agent/operator; future days hatched; empty days drawn as measured zero; NOW line; drag sets a range, a click on the whole range clears it; hover readout as a live region |
+| `TimeStrip` (+ `strip.ts`) | ledger.js `renderStrip`, `.lg-strip`, `.ts-*` | G | √n bars stacked machine/agent/operator; future days hatched; empty days drawn as measured zero; NOW line; drag sets a range, a click on the whole range clears it; the resting readout is the live region, the hover line aria-hidden |
 | `EventRow` (+ `usd.ts`) | ledger.js `rowHtml`, `.ev`, `.ty` | G | actor rule and glyph; type tag by tone; subject link; error/note trail; cost with `est`/`ill` mark; `≈` derived time (spoken); the v1 store it came from; selected; fresh |
 | `JsonLine`, `JsonBlock` (+ `highlight.ts`) | ledger.js `lineHtml`, `jsonHi`, `.jl`, `.json` | G | one line with its number (fixed height, windowed); one pretty record; runs, never HTML |
 | `StaleBadge` | v1 `signal/StaleBadge.tsx` | G | nothing when live; amber `stale 42 s` / `offline 9 min` from the freshness view |

@@ -16,7 +16,7 @@
 
 import type { ResourceLane } from "@gt/domain/lane";
 import { weakest } from "@gt/domain/plan";
-import type { ModelOption, Receipt, ReceiptLine, ReceiptMode, ReceiptSubject } from "@gt/domain/produce";
+import { crossesCeiling, type ModelOption, type Receipt, type ReceiptLine, type ReceiptMode, type ReceiptSubject } from "@gt/domain/produce";
 
 const MIN = 60_000;
 /** How wide an operator act is drawn: a verdict 20 min, a slot 10 (studio.js `schedule`). */
@@ -214,7 +214,7 @@ export function receiptOf(r: ReceiptInput): Receipt {
     queuePos: r.lines[0]?.queuePos ?? 1,
     etaAt: new Date(eta).toISOString(),
     ...(r.ceilingUsd === undefined ? {} : { ceilingUsd: r.ceilingUsd }),
-    overCeiling: r.ceilingUsd !== undefined && top > r.ceilingUsd + 1e-9,
+    overCeiling: crossesCeiling(top, r.ceilingUsd),
     readAt: new Date(r.now).toISOString(),
   };
 }

@@ -9,7 +9,7 @@
 // Upgraded from the prototype: a sub-cent spend never reads `$0` (status-vocabulary/number-
 // formatting: sub-unit spend rendering as zero), and an unpriced figure is never a dollar sign.
 
-import type { ModelOption, PlanPart, Receipt, ReceiptLine, WorkPlanPart } from "@gt/domain/produce";
+import { crossesCeiling, type ModelOption, type PlanPart, type Receipt, type ReceiptLine, type WorkPlanPart } from "@gt/domain/produce";
 
 /** Seconds as the prototype's compact duration: `38m`, `1h 04m`, `3d`. Under a minute is `<1m`. */
 export function fmtDur(seconds: number): string {
@@ -198,7 +198,7 @@ export function parseCeiling(text: string): { readonly ok: true; readonly value:
 export function mayStopAtCeiling(r: Pick<Receipt, "totals">, ceiling: number | undefined): boolean {
   if (ceiling === undefined) return false;
   const top = r.totals.usdRange?.[1] ?? r.totals.usd;
-  return top > ceiling + 1e-9;
+  return crossesCeiling(top, ceiling);
 }
 
 /**
