@@ -2190,7 +2190,11 @@
           "revision": 3,
           "changedAt": "2026-08-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/ReferenceList.tsx:1 The only \"reference\" here is an audio track scored on tempo and key, not a character image. A search of packages/ui/src/components/audio for camera, portrait, embedding, likeness, focal and image found nothing. The words that did hit (\"characters\" as a string length in lesson.ts, \"one-shot\" sfx, \"facet\") have nothing to do with visual identity, so this context never conditions a recurring character across shots.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:1b3e132bebd8dcc9",
+          "evaluatedRevision": 3
         },
         {
           "subject": "music-prompt-composition",
