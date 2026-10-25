@@ -189,6 +189,24 @@ describe("a failure lands on the slot, verbatim, and the tick goes on", () => {
     k.close();
   });
 
+  it("an adapter's optional methods that throw are caught too: a throwing clean-up keeps the publication and the tick goes on", async () => {
+    const { k, deps } = world(stub({ forget: () => Promise.reject(new Error("EPERM: sessions/sl.json is locked")) }));
+    const a = slot(k, { at: at(-6) });
+    const b = slot(k, { item: "video:export:other", at: at(-5) });
+    const r = await publishTick(deps, new Date(NOW));
+    expect(r.ok && r.value.outcomes.map((o) => [o.slotId, o.kind, o.kind === "published" ? o.kept : undefined])).toEqual([
+      [a, "published", "EPERM: sessions/sl.json is locked"],
+      [b, "published", "EPERM: sessions/sl.json is locked"],
+    ]);
+    const m = world(stub({ stats: () => Promise.reject(new Error("videos.list (statistics) failed: 500")) }), live());
+    slot(m.k);
+    await publishTick(m.deps, new Date(NOW));
+    const read = await refreshMetrics(m.deps, new Date(NOW));
+    expect(read.ok ? "ok" : [read.error.code, read.error.message]).toEqual(["unavailable", "videos.list (statistics) failed: 500"]);
+    k.close();
+    m.k.close();
+  });
+
   it("a channel with no adapter is refused in v1's words", async () => {
     const { k, deps } = world(stub());
     const r = createSlot(k.store, { libraryItemId: ITEM, channel: "tiktok", at: at(-5), title: "A cut", description: "", tags: [] }, OP);

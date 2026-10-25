@@ -119,9 +119,16 @@ export async function publishClaimed(deps: PublishDeps, claimed: ClaimedSlot, pe
     return fail(`${errorMessage(e)}${what}`);
   }
   if (out.kind !== "published" || a.forget === undefined) return out;
-  // After the commit and outside the catch: the publication stands whatever the clean-up says.
-  const forgot = await a.forget(slot.id);
-  return forgot.ok ? out : { ...out, kept: forgot.error.message };
+  // After the commit and outside the send's catch: the publication stands whatever the clean-up
+  // says - and a clean-up that THROWS says it too, rather than escaping the tick (./adapter.ts).
+  let kept: string | undefined;
+  try {
+    const forgot = await a.forget(slot.id);
+    if (!forgot.ok) kept = forgot.error.message;
+  } catch (e) {
+    kept = errorMessage(e);
+  }
+  return kept === undefined ? out : { ...out, kept };
 }
 
 async function send(
