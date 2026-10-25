@@ -44,4 +44,4 @@ export function closeKernel(): void {
 }
 
 /** Where a store's blobs live: beside its file (an in-memory store uses the fixtures' out dir). */
-export const blobRootOf = (store: Store): string => (store.location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(store.location), "blobs"));
+export const blobRootOf = (store: Pick<Store, "location">): string => (store.location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(store.location), "blobs"));
