@@ -8091,42 +8091,37 @@
       "context": "imaging-vendor-providers-and-video",
       "subject": "agent-browser-control",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T01:39:42.293Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:51:08.440Z",
+      "worker": "86485527-955b-4d7f-9145-39ea0e061614",
       "techniques": [
         {
           "technique": "references-over-selectors",
-          "verdict": "deviation",
-          "evidence": "lib/imaging/studio/selectors.ts:81 Maintains hardcoded DOM selectors in a static lookup table instead of generating runtime accessibility references with external locators."
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/selectors.ts:81 Selectors are written by a human after a dated recon, not by an agent reading a text dump, so the agent-naming problem never comes up."
         },
         {
           "technique": "persistent-browser-daemon",
-          "verdict": "deviation",
-          "evidence": "lib/imaging/studio/browser.ts:28 Connects to a hardcoded CDP port instead of discovering a managed workspace daemon via an atomic owner-only state file."
-        },
-        {
-          "technique": "effect-classed-commands",
-          "verdict": "deviation",
-          "evidence": "lib/imaging/providers/leonardoStudio.ts:45 Exposes ad-hoc driver methods without declaring an effect-classed command registry distinguishing reads, writes, and meta operations."
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/browser.ts:80 It attaches to the operator's own Chrome profile over CDP. The process does not own or serve a browser daemon, and no agent command loop calls it."
         },
         {
           "technique": "agent-actionable-errors",
-          "verdict": "deviation",
-          "evidence": "lib/imaging/studio/driver.ts:261 Throws descriptive failure strings without providing the literal next command or action class required for autonomous recovery."
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/driver.ts:30 Errors go to the imaging router and the operator, not to an agent choosing its next browser command."
+        },
+        {
+          "technique": "effect-classed-commands",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/driver.ts:174 There is no agent command registry to classify. The nearest thing is a wire guard on the vendor's GraphQL mutations, which is spend safety, not command classes."
         },
         {
           "technique": "socket-scoped-surface",
           "verdict": "not-applicable",
-          "evidence": "lib/imaging/studio/browser.ts:43 The browser automation is strictly loopback-bound with no remote forwarding tunnel or remote agent surface."
+          "evidence": "lib/imaging/studio/browser.ts:47 Nothing exposes a listener to remote agents, and there is no tunnel."
         }
-      ],
-      "withdrawn": {
-        "worker": "e3a297a2-615c-47d1-8e70-2ce7cdfa4aa7",
-        "state": "deviation",
-        "at": "2026-10-19T01:40:02.387531+00:00",
-        "reason": "reviewer (sonnet): The hardcoded-selector table at selectors.ts:81 is real, but the other technique claims don't hold. browser.ts uses a default CDP endpoint that LEONARDO_STUDIO_CDP overrides, so the port isn't hardcoded. driver.ts:261 throws StudioError with a typed class ('failed' or 'signed-out'), which contradict"
-      }
+      ]
     },
     "d6ef2aee-128a-4430-80a9-de42991c6316/browser-credential-boundary": {
       "context": "ui-status-provenance",
