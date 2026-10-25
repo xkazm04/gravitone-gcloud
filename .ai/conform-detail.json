@@ -12643,6 +12643,27 @@
           "evidence": "packages/domain/src/partView.frames.ts:44 The only per-layer evidence flag is a missing citation. FactOption carries confidence (line 102), but no layer or tally field marks a figure bound to a low or medium fact. The off-context binder (app/(studio)/projects/[id]/_part/fixtureFrames.ts:160) checks only that the id exists, not its grade."
         }
       ]
+    },
+    "13ee868d-574a-4147-b72e-11339db0250d/media-playback": {
+      "context": "bound-producers",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:15:38.728Z",
+      "techniques": [
+        {
+          "technique": "timeline-scheduling",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/cut.ts:26 The cut is compiled and exported offline as a file job, not scheduled against a live playback clock. video-assembly is the governing subject here, not media-playback."
+        }
+      ],
+      "withdrawn": {
+        "worker": "e8ab1a70-284b-4ea1-96a2-edcf352aa562",
+        "state": "not-applicable",
+        "at": "2026-10-25T01:16:04.171981+00:00",
+        "reason": "reviewer (sonnet): The anchor lib/producers/registry.ts:6 is an import line (`import type { Job }`), so it does not show that playback is absent; the verdict also rests on an rg that came back empty, and the lib/producers/cut.ts anchor shows only that the cut is exported offline, not that nothing in the directory play"
+      }
     }
   }
 }
