@@ -171,7 +171,7 @@ function ShelfBody({ lane, shelf }: { readonly lane: FloorLane; readonly shelf: 
         {proven.length > 0 && (
           <ShelfGrid>
             {proven.map((st) => (
-              <ShelfStyle key={st.id} name={st.name} />
+              <ShelfStyle key={st.id} name={st.name} {...(st.plate === undefined ? {} : { plate: st.plate })} />
             ))}
           </ShelfGrid>
         )}

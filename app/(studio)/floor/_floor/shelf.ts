@@ -1,9 +1,11 @@
 import "server-only";
 
 import { errorMessage } from "@gt/domain/errors";
+import { styleCovers } from "@gt/kernel/library/detail";
 import { getCatalogue } from "../../../../lib/foundry/store.ts";
 import { articlesRoot, readArticles } from "../../../../lib/ledger/v1/sources/articles.ts";
 import { FIXTURE_MODE } from "../../../../lib/fixtures/mode.ts";
+import { kernel } from "../../../../lib/kernelStore.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
 import { serverProduce, type ServerProduce } from "../../projects/_port/port.ts";
 import { ledgerFor } from "../../_shell/links.ts";
@@ -13,7 +15,8 @@ import { ledgerFor } from "../../_shell/links.ts";
 //
 //   image    proven styles in pipeline/foundry/styles.json (lib/foundry/store.ts getCatalogue).
 //            v1 has no "locked" state - a style is a candidate until a commit proves it - so the
-//            shelf is the proven ones, and the candidates are a count beside them.
+//            shelf is the proven ones, and the candidates are a count beside them. Each carries its
+//            cover plate when the Library holds one for it (kernel `styleCovers`, the Library's rule).
 //   article  landed posts: runs whose status is `landed` (the PR into ai-registry was opened),
 //            read through the ledger projection's reader so the fixture universe reads the
 //            fixture store (lib/ledger/v1/sources/roots.ts says why v1's own reader cannot).
@@ -28,7 +31,8 @@ import { ledgerFor } from "../../_shell/links.ts";
 
 export type Read<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: string };
 
-export type ShelfStyleRow = { readonly id: string; readonly name: string; readonly family: string };
+/** `plate`: the address of the style's cover plate (the Library's rule, kernel `styleCovers`); absent = it has none. */
+export type ShelfStyleRow = { readonly id: string; readonly name: string; readonly family: string; readonly plate?: string };
 export type ShelfPost = { readonly id: string; readonly title: string; readonly href: string; readonly pr?: string };
 export type ShelfProject = { readonly id: string; readonly title: string; readonly recipe: string; readonly href: string };
 export type ShelfTake = { readonly id: string; readonly title: string; readonly kind: string; readonly durationS?: number; readonly peaks: readonly number[] };
@@ -57,10 +61,26 @@ export function downsample(peaks: readonly number[], n: number): number[] {
   return out;
 }
 
+/** One cover plate address per style that has one. A kernel that cannot be read gives none: the tile keeps its ground. */
+export function stylePlates(ids: readonly string[]): ReadonlyMap<string, string> {
+  const out = new Map<string, string>();
+  const k = kernel();
+  if (!k.ok || ids.length === 0) return out;
+  const covers = styleCovers(k.value.store, ids);
+  if (!covers.ok) return out;
+  for (const [id, c] of covers.value) if (c.blobSha !== null && c.mime !== null) out.set(id, `/api/blob/${c.blobSha}?type=${encodeURIComponent(c.mime)}`);
+  return out;
+}
+
 async function styles(): Promise<Shelf["styles"]> {
   try {
     const c = await getCatalogue();
-    const proven = c.styles.filter((s) => s.status === "proven").map((s) => ({ id: s.id, name: s.name, family: s.family }));
+    const heads = c.styles.filter((s) => s.status === "proven");
+    const plates = stylePlates(heads.map((s) => s.id));
+    const proven = heads.map((s) => {
+      const plate = plates.get(s.id);
+      return { id: s.id, name: s.name, family: s.family, ...(plate === undefined ? {} : { plate }) };
+    });
     return { ok: true, value: { proven, candidates: c.styles.length - proven.length } };
   } catch (e) {
     return { ok: false, error: `styles: ${errorMessage(e)}` };
