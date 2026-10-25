@@ -145,6 +145,18 @@ describe("pruneFeed", () => {
     expect(page(s, { limit: 10 }).items.map((i) => i.id).sort()).toEqual(["a1", "p1"]);
     expect(page(s, { q: "p2", limit: 10 }).total).toBe(0);
   });
+  it("drops the vocabulary no surviving item carries, and keeps what one does", () => {
+    const s = store();
+    const values = () => must(s.read((r) => r.all("SELECT grp, value FROM library_values WHERE grp NOT IN ('pin', 'project') ORDER BY grp, value"))).map((x) => `${String(x["grp"])}:${String(x["value"])}`);
+    must(upsertItems(s, [plate("p1"), audio("a1", ["tense", "dark"]), audio("a2", ["warm"])], CTX));
+    expect(values()).toContain("mood:warm");
+    must(pruneFeed(s, "test", new Set(["p1", "a1"])));
+    expect(values()).not.toContain("mood:warm");
+    expect(values()).toContain("mood:tense");
+    expect(page(s, { facets: { mood: ["tense"] }, limit: 5 }).items.map((i) => i.id)).toEqual(["a1"]);
+    must(pruneFeed(s, "test", new Set()));
+    expect(values()).toEqual([]);
+  });
 });
 
 describe("media facts", () => {

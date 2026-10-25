@@ -138,6 +138,15 @@ export function pruneFeed(store: Store, feed: string, keep: ReadonlySet<string>)
       t.run("DELETE FROM library_items WHERE seq = ?", r["seq"] ?? null);
       n++;
     }
+    // The vocabulary follows the items: a value no facet row and no item column carries
+    // is dropped in the same transaction (live items' packed vids reference only live
+    // values). The operator's marks (pin, project) keep theirs: a pruned item that
+    // returns gets its mark facets back without a value row being minted.
+    if (n > 0) {
+      t.run(
+        "DELETE FROM library_values WHERE grp NOT IN ('pin', 'project') AND NOT EXISTS (SELECT 1 FROM library_facets f WHERE f.grp = library_values.grp AND f.value = library_values.value) AND (grp, value) NOT IN (SELECT grp, value FROM library_counts WHERE grp IN ('state', 'origin', 'source') UNION SELECT 'kind', kind FROM library_counts)",
+      );
+    }
     return n;
   });
 }
