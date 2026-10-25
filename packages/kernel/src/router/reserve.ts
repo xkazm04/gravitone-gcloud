@@ -95,7 +95,10 @@ export type RouteAndReserveInput = {
  * Decide and hold, in `t`. A refusal is a VALUE, recorded as `router.refused`
  * and committed with the caller's transaction: "which model served this call,
  * and why" includes "none, and why" (model-routing: the decision record). A
- * budget refusal from the spend port throws and rolls everything back.
+ * ceiling refusal is a value too (`over-budget`): the spend port's refusal
+ * counter and its `spend.refused` event commit with the caller's transaction,
+ * and no `router.*` event is written for it. Any other spend error throws and
+ * rolls everything back.
  */
 export function routeAndReserve(t: Tx, input: RouteAndReserveInput, classes: SpendClasses): RouteReservation {
   const { req, facts, mode, actor, subject } = input;
