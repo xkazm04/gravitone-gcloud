@@ -7877,52 +7877,48 @@
       "context": "ui-controls-shell",
       "subject": "accessibility",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T01:24:56.300Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:32:39.639Z",
+      "worker": "609656eb-2b77-4fb9-aeda-4ae17cdd4c5f",
       "techniques": [
         {
-          "technique": "a11y-verification",
+          "technique": "live-region-architecture",
           "verdict": "deviation",
-          "evidence": "packages/ui/test/components/controls.test.ts:130 This Toast check asserts static live-region markup, leaving announcement timing, bursts and repeated-message delivery unobserved."
-        },
-        {
-          "technique": "hidden-but-mounted-inertness",
-          "verdict": "deviation",
-          "evidence": "packages/ui/src/components/sheet/LevelSheet.tsx:58 The ordinary sheet initially mounts translated offscreen until requestAnimationFrame sets risen, with no inert boundary; its focus effect already targets the mounted section."
+          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 The region is mounted before any news (role=status at :21), which is good. But there is no keyed remount or clear-then-set, so a repeat is a no-op. The shell's scheduler (app/(studio)/_shell/toast.ts showToast) also replaces the open receipt rather than queueing it, so in a burst only the last write is heard."
         },
         {
           "technique": "keyboard-navigation-models",
           "verdict": "deviation",
-          "evidence": "packages/ui/src/components/field/Field.module.css:5 The field removes the focus outline and substitutes a border tint; this selector also outranks the shared :focus-visible outline."
-        },
-        {
-          "technique": "live-region-architecture",
-          "verdict": "deviation",
-          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 Toast owns a separate live region and renders the message directly; the shell receipt store replaces the current message without a drain queue or repeat mutation."
+          "evidence": "packages/ui/src/components/field/Field.module.css:5 Field, Select and Search remove the app-wide 2px focus outline (this unlayered module beats @layer base) and replace it with a 1px border at .55 alpha, a weaker indicator than the one removed. app/globals.css says to tint the border as well as the outline, not instead of it. The focus-ring probe only walks app/ and components/, so it never checks packages/ui."
         },
         {
           "technique": "name-and-description-wiring",
           "verdict": "deviation",
-          "evidence": "packages/ui/src/components/toggle/Toggle.tsx:34 The override replaces the visible label without preserving it: the ledger Toolbar passes visible '{ } jsonl' with accessible name 'agent view, JSON Lines'."
+          "evidence": "packages/ui/src/components/toggle/Toggle.tsx:34 The free-form `name` replaces the visible label instead of starting with it. Call sites set label \"live\" with name \"arm live, now dry\", and label X with name \"mechanism X\", so the spoken name differs from the drawn word (label-in-name) and the live one also writes state into the name next to aria-pressed. Field.tsx:26 (required aria-label) and Button's required `label` are conformant."
+        },
+        {
+          "technique": "hidden-but-mounted-inertness",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/fold/Fold.tsx:56 Fold renders its body only after the first open, then hides it with the `hidden` attribute, which closes the visual and accessibility channels together from one condition. When closed, the Toast holds no text and does not mount its ledger link."
+        },
+        {
+          "technique": "primitive-level-a11y",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/button/Button.tsx:63 Native button, a/select/input everywhere; label required; aria-pressed on Toggle and Seg; disabled is honest (it stays in the tab order). Caveat: a disabled `submit` Button still submits its form when activated, because aria-disabled does not block native submission, so every form's onSubmit has to re-check busy itself (HuntShelf.tsx:38, ScheduleForm.tsx:103)."
+        },
+        {
+          "technique": "a11y-verification",
+          "verdict": "deviation",
+          "evidence": "packages/ui/test/components/controls.test.ts:130 The primitive tests regex-match SSR markup for attributes (role, aria-pressed, aria-live) instead of querying computed names by role or the sequence of announcements. Nothing announces the same text twice, so the repeat-silence defect passes. This is the attribute-as-proxy trap the gate-sees-target law names."
         },
         {
           "technique": "preference-respect",
           "verdict": "deviation",
-          "evidence": "packages/ui/src/components/button/Button.module.css:3 The button combines a fixed pixel-token height with nonwrapping text, preventing its container from growing and reflowing with enlarged text."
-        },
-        {
-          "technique": "primitive-level-a11y",
-          "verdict": "deviation",
-          "evidence": "packages/ui/src/components/button/Button.tsx:64 Disabled removes only the click callback; with submit=true the native button still submits its form because aria-disabled does not cancel default activation."
+          "evidence": "packages/ui/src/components/button/Button.module.css:3 The button combines a fixed pixel-token height with nonwrapping text, preventing its container from growing and reflowing with enlarged text.",
+          "carriedFrom": "2026-10-19"
         }
-      ],
-      "withdrawn": {
-        "worker": "dc8dbf29-2572-4da5-94dd-b0a6451fd770",
-        "state": "deviation",
-        "at": "2026-10-19T01:25:24.174250+00:00",
-        "reason": "reviewer (sonnet): The deviation anchors on Toast.tsx:22, and Toast.tsx and LevelSheet.tsx are not among this context's files. The claim that the shell receipt store replaces the message with no drain queue or repeat mutation could not be confirmed: Toast.tsx is the only non-test file that mentions Toast, and I found "
-      }
+      ]
     },
     "5414e8ac-5105-43f0-a153-088e12501c9d/accessibility": {
       "context": "ui-marks-and-text",

@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "609656eb-2b77-4fb9-aeda-4ae17cdd4c5f",
+ "subject": "accessibility",
+ "evaluatedAt": "2026-10-25T03:32:39.639488+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ui-controls-shell",
+   "subject": "accessibility",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/ui/src/components/toast/Toast.tsx:22 The region is always mounted, but its text is written straight into it with no node keyed to each announcement, so the same receipt shown twice in a row (e.g. a retried act that fails the same way) makes no DOM change and is not spoken the second time; a correct shell scheduler still could not force a remount through this primitive.",
+   "techniques": [
+    {
+     "technique": "live-region-architecture",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/toast/Toast.tsx:22 The region is mounted before any news (role=status at :21), which is good. But there is no keyed remount or clear-then-set, so a repeat is a no-op. The shell's scheduler (app/(studio)/_shell/toast.ts showToast) also replaces the open receipt rather than queueing it, so in a burst only the last write is heard."
+    },
+    {
+     "technique": "keyboard-navigation-models",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/field/Field.module.css:5 Field, Select and Search remove the app-wide 2px focus outline (this unlayered module beats @layer base) and replace it with a 1px border at .55 alpha, a weaker indicator than the one removed. app/globals.css says to tint the border as well as the outline, not instead of it. The focus-ring probe only walks app/ and components/, so it never checks packages/ui."
+    },
+    {
+     "technique": "name-and-description-wiring",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/toggle/Toggle.tsx:34 The free-form `name` replaces the visible label instead of starting with it. Call sites set label \"live\" with name \"arm live, now dry\", and label X with name \"mechanism X\", so the spoken name differs from the drawn word (label-in-name) and the live one also writes state into the name next to aria-pressed. Field.tsx:26 (required aria-label) and Button's required `label` are conformant."
+    },
+    {
+     "technique": "hidden-but-mounted-inertness",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/fold/Fold.tsx:56 Fold renders its body only after the first open, then hides it with the `hidden` attribute, which closes the visual and accessibility channels together from one condition. When closed, the Toast holds no text and does not mount its ledger link."
+    },
+    {
+     "technique": "primitive-level-a11y",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/button/Button.tsx:63 Native button, a/select/input everywhere; label required; aria-pressed on Toggle and Seg; disabled is honest (it stays in the tab order). Caveat: a disabled `submit` Button still submits its form when activated, because aria-disabled does not block native submission, so every form's onSubmit has to re-check busy itself (HuntShelf.tsx:38, ScheduleForm.tsx:103)."
+    },
+    {
+     "technique": "a11y-verification",
+     "verdict": "deviation",
+     "evidence": "packages/ui/test/components/controls.test.ts:130 The primitive tests regex-match SSR markup for attributes (role, aria-pressed, aria-live) instead of querying computed names by role or the sequence of announcements. Nothing announces the same text twice, so the repeat-silence defect passes. This is the attribute-as-proxy trap the gate-sees-target law names."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T03:32:39.639488+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "accessibility"
+   ],
+   "techniques": [
+    "a11y-verification",
+    "hidden-but-mounted-inertness",
+    "keyboard-navigation-models",
+    "live-region-architecture",
+    "name-and-description-wiring",
+    "primitive-level-a11y"
+   ],
+   "deviations": 1,
+   "context": "ui-controls-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
