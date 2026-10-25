@@ -6702,4 +6702,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: ']',
     why: "The composer's technique rail omits the fifth sfx technique, so the tag is dropped from every brief the form sends.",
   },
+  {
+    id: "article-diff-refused-read-passes-as-empty",
+    test: "tests/next-server/article-diff-files.test.ts",
+    file: "lib/articles/diffFiles.ts",
+    find: "if (code === 1 && !String(stdout).trim() && String(stderr).trim()) reject(",
+    replace: "if (false) reject(",
+    why: "git exiting 1 with stderr and no diff reads as no change again, so a proposal git could not read lands as an empty patch and a real edit is silently refused.",
+  },
 ];
