@@ -186,28 +186,34 @@ function verdictSpec(id: string): VerdictSpec<CycleManifest, TrainingVerdict | n
 /** The blind gate's one rule for a claim verdict: an approve/reject may only be
  *  saved once every pair is picked blind, or the improvement is anchored. The
  *  Board and the whole-map PUT decide with the media in view, so they are
- *  anchored by construction (`anchor`) rather than refused. */
-async function guardClaims(id: string, claims: Record<string, unknown>, anchor: boolean): Promise<void> {
+ *  anchored by construction (`anchor`) rather than refused. Returns the anchoring
+ *  edits, to be written only AFTER the verdict write they guard succeeds: a write
+ *  the kernel refuses (stale base) must leave the improvement un-anchored. */
+async function guardClaims(id: string, claims: Record<string, unknown>, anchor: boolean): Promise<BlindEdit[]> {
   const decided = Object.entries(claims).filter(([, v]) => v === "approve" || v === "reject");
-  if (!decided.length) return;
+  if (!decided.length) return [];
   const cycle = await readCycle(id);
   const blind = await readBlind(id, cycle);
   const open = cycle.improvements.filter((i) => decided.some(([key]) => key === i.id) && !claimAllowed(i, blind.improvements[i.id]));
-  if (!open.length) return;
+  if (!open.length) return [];
   if (!anchor) throw new FoundryError(`Pick every pair blind (or skip blind) before deciding the claim: ${open.map((i) => i.technique).join(", ")}.`, 409);
-  await patchBlind(id, open.map((i) => ({ imp: i.id, anchored: true })));
+  return open.map((i) => ({ imp: i.id, anchored: true }));
 }
 
 /** PUT: the whole map, written through the kernel as the diff it amounts to. */
 export async function putTrainingVerdicts(id: string, verdicts: TrainingVerdicts): Promise<TrainingVerdicts> {
-  await guardClaims(id, verdicts, true);
-  return (await replaceVerdictMap(verdictSpec(id), verdicts)).verdicts;
+  const anchors = await guardClaims(id, verdicts, true);
+  const saved = (await replaceVerdictMap(verdictSpec(id), verdicts)).verdicts;
+  if (anchors.length) await patchBlind(id, anchors);
+  return saved;
 }
 
 /** PATCH: keyed changes against a revision; 409 on a stale base. */
 export async function patchTrainingVerdicts(id: string, patch: VerdictPatch): Promise<VerdictState<TrainingVerdict | null>> {
-  await guardClaims(id, patch.set ?? {}, patch.surface === "board");
-  return patchVerdictMap(verdictSpec(id), patch);
+  const anchors = await guardClaims(id, patch.set ?? {}, patch.surface === "board");
+  const saved = await patchVerdictMap(verdictSpec(id), patch);
+  if (anchors.length) await patchBlind(id, anchors);
+  return saved;
 }
 
 /** PATCH the blind gate, run-locked like the verdicts and refused once committed. */
