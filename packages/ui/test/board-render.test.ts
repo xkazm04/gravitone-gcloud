@@ -219,6 +219,19 @@ describe("the consequence panel", () => {
     const html = renderToStaticMarkup(h(ConsequencePanel, { consequence: c, refreshed: true, busy: false, onConfirm: noop, onCancel: noop, specimen: true }));
     expect(html).toContain("moved · fresh preview");
   });
+
+  test("a preview that failed to read says why, and no longer says it is reading", () => {
+    const html = renderToStaticMarkup(h(ConsequencePanel, { consequence: null, refreshed: false, busy: false, error: "could not prepare the commit plan", onConfirm: noop, onCancel: noop, specimen: true }));
+    expect(html).toContain("could not prepare the commit plan");
+    expect(html).not.toContain("reading the consequence");
+    expect(html).not.toContain('aria-busy="true"');
+  });
+
+  test("a preview still reading says so", () => {
+    const html = renderToStaticMarkup(h(ConsequencePanel, { consequence: null, refreshed: false, busy: true, onConfirm: noop, onCancel: noop, specimen: true }));
+    expect(html).toContain("reading the consequence");
+    expect(html).toContain('aria-busy="true"');
+  });
 });
 
 describe("the packet rail", () => {

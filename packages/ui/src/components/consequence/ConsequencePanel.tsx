@@ -78,10 +78,13 @@ export function ConsequencePanel({ consequence: c, refreshed, busy, error, onCon
           )}
           {refreshed && <Chip label="moved · fresh preview" tone="amber" dot />}
         </div>
+        {/* A preview that failed to read is not still reading: its ErrorLine below says why. */}
         {c === null ? (
-          <div className={s.wait} aria-busy="true">
-            <Chip label="reading the consequence" ghost />
-          </div>
+          error === undefined && (
+            <div className={s.wait} aria-busy="true">
+              <Chip label="reading the consequence" ghost />
+            </div>
+          )
         ) : (
           <div className={s.body}>
             <Block title="leaves this machine" rows={c.outward.map((o) => o.sentence)} tone="amber" />
