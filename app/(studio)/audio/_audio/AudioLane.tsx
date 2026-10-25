@@ -36,6 +36,7 @@ import { Select } from "@gt/ui/components/field/Field.tsx";
 
 import { outcomeOf, useReceipt } from "../../projects/_plan/receipt.tsx";
 import { useShell } from "../../_shell/Providers.tsx";
+import { copyText } from "../../_shell/clipboard.ts";
 import type { AudioView, SeedTake } from "./read.ts";
 import type { setHand, sunoConfirm, sunoReceipt } from "./actions.ts";
 import s from "./audio.module.css";
@@ -119,10 +120,7 @@ export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly vi
   };
 
   const copy = (text: string): void => {
-    void navigator.clipboard.writeText(text).then(
-      () => toast("prompt copied"),
-      (e: unknown) => toast(`clipboard refused: ${errorMessage(e)}`),
-    );
+    void copyText(text).then((r) => toast(r.ok ? "prompt copied" : `clipboard refused: ${r.error}`));
   };
 
   const seedFrom = (id: string): void => {

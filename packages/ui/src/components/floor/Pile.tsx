@@ -48,6 +48,10 @@ export type PileProps = {
   readonly peaks?: readonly (readonly number[])[];
 };
 
+// The arrival cascade staggers 70 ms per pile and stops at the eighth, so the last pile of a long
+// lane is visible within ~1.3 s instead of 70N + 700 ms.
+const CASCADE_CAP = 8;
+
 export function pileName({ title, decided, pending, mode }: Pick<PileProps, "title" | "decided" | "pending" | "mode">): string {
   return `${title}, ${decided + pending} items, ${pending} pending, ${MODE_NAME[mode]}`;
 }
@@ -61,7 +65,7 @@ export function Pile(props: PileProps) {
       data-component="Pile"
       data-next={next ? "" : undefined}
       href={href}
-      style={vars({ "--d": `${index * 70}ms` })}
+      style={vars({ "--d": `${Math.min(index, CASCADE_CAP) * 70}ms` })}
       aria-label={`${next ? "next: " : ""}${pileName(props)}`}
       onClick={(e) => {
         if (onOpen === undefined || !plainClick(e)) return;

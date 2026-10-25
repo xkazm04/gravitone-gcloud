@@ -21,7 +21,6 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import { errorMessage } from "@gt/domain/errors";
 import type { Event } from "@gt/domain/event";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 import type { Range } from "@gt/ui/components/timestrip/strip.ts";
@@ -29,6 +28,7 @@ import { TimeStrip } from "@gt/ui/components/timestrip/TimeStrip.tsx";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
 import { useShell } from "../../_shell/Providers.tsx";
+import { copyText } from "../../_shell/clipboard.ts";
 import { subjectLink } from "../../_shell/links.ts";
 import { Detail, settled } from "./Detail.tsx";
 import { Facets as FacetRail } from "./Facets.tsx";
@@ -74,9 +74,61 @@ export function rowsOf(first: readonly Event[], more: Older | null): readonly Ev
   return [...first, ...more.events.filter((e) => !have.has(e.seq))];
 }
 
+/**
+ * Oldest-first, once "older" has read to the end the tail has no cursor and a refresh redraws
+ * only the first page, so an arrival is in neither. The cursor to read past the last DRAWN row
+ * (the same (t, seq) key the kernel pages by), or null when the order, the first page or a
+ * still-capped tail already covers it.
+ */
+export function pastTail(order: "asc" | "desc", more: Older | null, rows: readonly Event[]): { readonly t: string; readonly seq: number } | null {
+  if (order !== "asc" || more === null || more.page.capped) return null;
+  const last = rows[rows.length - 1];
+  return last === undefined ? null : { t: last.occurredAt ?? last.at, seq: last.seq };
+}
+
 /** How long a burst of arrivals may run before the page redraws (realtime-events: coalescing). */
 const COALESCE_MS = 700;
 const FRESH_MS = 1300;
+
+/** The timer pair the coalescer runs on; the page passes window's, a test passes a fake clock. */
+export type Timers = { readonly set: (fn: () => void, ms: number) => number; readonly clear: (handle: number) => void };
+
+/**
+ * Arrivals coalesce into one redraw per COALESCE_MS, and each redraw's flash lasts FRESH_MS from
+ * ITS redraw. One flash timer is held and replaced per burst: an earlier burst's clear used to
+ * fire inside a later burst's flash and empty it early, and outlived the unmount.
+ */
+export function coalescer(timers: Timers, on: { readonly flush: (arrived: ReadonlySet<number>) => void; readonly clear: () => void }) {
+  let pending: number[] = [];
+  let wait: number | undefined;
+  let flash: number | undefined;
+  return {
+    push(seqs: readonly number[]): void {
+      pending.push(...seqs);
+      if (wait !== undefined) return;
+      wait = timers.set(() => {
+        wait = undefined;
+        const arrived = new Set(pending);
+        pending = [];
+        on.flush(arrived);
+        if (flash !== undefined) timers.clear(flash);
+        flash = timers.set(() => {
+          flash = undefined;
+          on.clear();
+        }, FRESH_MS);
+      }, COALESCE_MS);
+    },
+    dispose(): void {
+      if (wait !== undefined) timers.clear(wait);
+      if (flash !== undefined) timers.clear(flash);
+      wait = undefined;
+      flash = undefined;
+      pending = [];
+    },
+  };
+}
+
+const WINDOW_TIMERS: Timers = { set: (fn, ms) => window.setTimeout(fn, ms), clear: (h) => window.clearTimeout(h) };
 
 export function Ledger(p: LedgerProps) {
   const router = useRouter();
@@ -97,6 +149,17 @@ export function Ledger(p: LedgerProps) {
     if (!r.ok) return toast(`ledger: ${r.error.error}`);
     setMore((m) => withOlder(m, p.page.events, r.value));
   }, [tail.cursor, loading, p, toast]);
+
+  // An arrival past an exhausted oldest-first tail: read past the last drawn row.
+  const readPast = useRef<() => void>(() => undefined);
+  readPast.current = () => {
+    const cursor = pastTail(f.order, more, rows);
+    if (cursor === null) return;
+    void settled(p.older({ search: p.search, cursor })).then((r) => {
+      if (!r.ok) return toast(`ledger: ${r.error.error}`);
+      if (r.value.events.length > 0) setMore((m) => withOlder(m, p.page.events, r.value));
+    });
+  };
 
   // ── windowing state: selection and view, kept in the URL without a render ──
   const [sel, setSel] = useState<number | null>(f.ev ?? p.selected?.seq ?? rows[0]?.seq ?? null);
@@ -135,23 +198,23 @@ export function Ledger(p: LedgerProps) {
 
   // ── live: coalesced refresh, arrivals flash once drawn ──
   const [fresh, setFresh] = useState<ReadonlySet<number>>(new Set());
-  const pending = useRef<number[]>([]);
-  const timer = useRef<number | undefined>(undefined);
+  const burst = useMemo(
+    () =>
+      coalescer(WINDOW_TIMERS, {
+        flush: (arrived) => {
+          setFresh(arrived);
+          startTransition(() => router.refresh());
+          readPast.current();
+        },
+        clear: () => setFresh(new Set()),
+      }),
+    [router],
+  );
   const live = useLedgerFeed(p.facets.head, {
-    onEvents: (seqs) => {
-      pending.current.push(...seqs);
-      if (timer.current !== undefined) return;
-      timer.current = window.setTimeout(() => {
-        timer.current = undefined;
-        const arrived = new Set(pending.current.splice(0));
-        setFresh(arrived);
-        startTransition(() => router.refresh());
-        window.setTimeout(() => setFresh(new Set()), FRESH_MS);
-      }, COALESCE_MS);
-    },
+    onEvents: (seqs) => burst.push(seqs),
     onReset: () => startTransition(() => router.refresh()),
   });
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  useEffect(() => () => burst.dispose(), [burst]);
 
   // ── keys: the `ledger` mode of the one keymap (bindings.ts) ──
   const list = useRef<ListHandle | null>(null);
@@ -191,10 +254,7 @@ export function Ledger(p: LedgerProps) {
   );
 
   const copy = (text: string, done: string): void => {
-    navigator.clipboard.writeText(text).then(
-      () => toast(done),
-      (e: unknown) => toast(`copy refused - ${errorMessage(e)}`),
-    );
+    void copyText(text).then((r) => toast(r.ok ? done : `copy refused - ${r.error}`));
   };
 
   // Hydrated: the keys and the controls answer from here on. Live probes wait on this

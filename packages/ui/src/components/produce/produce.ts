@@ -98,7 +98,7 @@ export const isWork = (p: PlanPart): p is WorkPlanPart => p.kind !== "gate" && p
 /* ── the receipt ──────────────────────────────────────────────────────────── */
 
 export type LineField = "lane" | "model" | "units" | "seconds" | "cost" | "src" | "queuePos" | "start";
-export type TotalField = "seconds" | "cost" | "src" | "queuePos" | "etaAt" | "mode";
+export type TotalField = "seconds" | "cost" | "src" | "queuePos" | "etaAt" | "mode" | "ceiling";
 
 export type ReceiptChanges = {
   readonly lines: ReadonlyMap<string, ReadonlySet<LineField>>;
@@ -158,6 +158,10 @@ export function receiptChanges(before: Receipt, after: Receipt): ReceiptChanges 
   if (before.queuePos !== after.queuePos) totals.add("queuePos");
   if (before.etaAt !== after.etaAt) totals.add("etaAt");
   if (before.mode !== after.mode) totals.add("mode");
+  // The token binds the ceiling a confirm carries, and the sheet reads its receipt without one: a
+  // confirm with a typed ceiling is answered with the receipt read AT that ceiling, which differs
+  // in nothing else. Without this mark that re-show counted zero changes and read as a dropped press.
+  if (before.ceilingUsd !== after.ceilingUsd) totals.add("ceiling");
   return {
     lines,
     added: [...now.keys()].filter((k) => !was.has(k)),

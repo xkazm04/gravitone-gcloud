@@ -4,7 +4,7 @@ import type { Event } from "@gt/domain/event";
 
 import { ledgerFor, sourceOf, subjectLink } from "../../app/(studio)/_shell/links.ts";
 import { settled } from "../../app/(studio)/ledger/_ledger/Detail.tsx";
-import { rowsOf, withOlder } from "../../app/(studio)/ledger/_ledger/Ledger.tsx";
+import { coalescer, pastTail, rowsOf, withOlder, type Timers } from "../../app/(studio)/ledger/_ledger/Ledger.tsx";
 import { EMPTY, identity, matchesPost, parseParams, parseQuery, splitFilter, toSearch, windowOf, type LedgerFilter } from "../../app/(studio)/ledger/_ledger/filter.ts";
 import { backoff, parseFrames } from "../../app/(studio)/ledger/_ledger/sse.ts";
 import { costOf, relative, toneOf, trailOf } from "../../app/(studio)/ledger/_ledger/vocab.ts";
@@ -192,6 +192,32 @@ describe("the rows drawn", () => {
   });
 });
 
+describe("arrivals in an oldest-first read", () => {
+  const ev = (seq: number): Event => e({ seq, key: `k${seq}`, occurredAt: `2026-08-26T12:00:${String(seq % 60).padStart(2, "0")}.000Z` });
+  const asc = (lo: number, hi: number): Event[] => Array.from({ length: hi - lo + 1 }, (_, i) => ev(lo + i));
+  const page = (events: Event[], capped: boolean) => ({ events, capped, scanned: events.length, exhausted: !capped, byId: false });
+
+  it("reads past the last drawn row once older has read to the end, and the arrival is drawn", () => {
+    const first = asc(1, 500);
+    const more = withOlder(null, first, page(asc(501, 800), false));
+    const rows = rowsOf(first, more);
+    const cursor = pastTail("asc", more, rows);
+    expect(cursor).toEqual({ t: ev(800).occurredAt, seq: 800 });
+    // The server's answer to that cursor is the act that landed; it is drawn last.
+    const after = withOlder(more, first, page([ev(801)], false));
+    expect(rowsOf(first, after).at(-1)?.seq).toBe(801);
+  });
+
+  it("reads nothing where the first page, a capped tail or the newest-first order already covers it", () => {
+    const first = asc(1, 10);
+    expect(pastTail("asc", null, rowsOf(first, null))).toBeNull();
+    const capped = withOlder(null, first, page(asc(11, 20), true));
+    expect(pastTail("asc", capped, rowsOf(first, capped))).toBeNull();
+    const done = withOlder(null, first, page(asc(11, 20), false));
+    expect(pastTail("desc", done, rowsOf(first, done))).toBeNull();
+  });
+});
+
 describe("the page's two reads after render", () => {
   it("a Server Action that rejects answers as a refusal with its words, never as a rejection", async () => {
     // A request that never came back (a dropped connection, a redeploy) REJECTS; it does not
@@ -200,5 +226,69 @@ describe("the page's two reads after render", () => {
     expect(r).toEqual({ ok: false, error: { error: "Failed to fetch", code: "unavailable" } });
     const fine = await settled(Promise.resolve({ ok: true as const, value: 3 }));
     expect(fine).toEqual({ ok: true, value: 3 });
+  });
+});
+
+describe("the live flash", () => {
+  // A hand-driven clock: handles are ids, advance() fires what is due in order.
+  const clock = () => {
+    let now = 0;
+    let id = 0;
+    const live = new Map<number, { at: number; fn: () => void }>();
+    const timers: Timers = {
+      set: (fn, ms) => {
+        live.set(++id, { at: now + ms, fn });
+        return id;
+      },
+      clear: (h) => void live.delete(h),
+    };
+    const advance = (to: number): void => {
+      for (;;) {
+        const due = [...live.entries()].filter(([, v]) => v.at <= to).sort((a, b) => a[1].at - b[1].at)[0];
+        if (due === undefined) break;
+        live.delete(due[0]);
+        now = due[1].at;
+        due[1].fn();
+      }
+      now = to;
+    };
+    return { timers, advance, pending: () => live.size, at: () => now };
+  };
+
+  it("a second burst's flash lasts its full 1300 ms, not what is left of the first burst's", () => {
+    const c = clock();
+    let fresh = new Set<number>();
+    let freshSince = -1;
+    let freshUntil = -1;
+    const b = coalescer(c.timers, {
+      flush: (a) => {
+        fresh = new Set(a);
+        freshSince = c.at();
+      },
+      clear: () => {
+        fresh = new Set();
+        freshUntil = c.at();
+      },
+    });
+    b.push([1]);
+    c.advance(1000);
+    b.push([2]);
+    c.advance(1999);
+    expect([...fresh]).toEqual([2]); // the first burst's clear would have fired at 2000
+    c.advance(2001);
+    expect([...fresh]).toEqual([2]); // burst B flashes until 1700 + 1300
+    c.advance(3000);
+    expect(fresh.size).toBe(0);
+    expect(freshUntil - freshSince).toBe(1300);
+  });
+
+  it("unmounting clears the wait and the flash", () => {
+    const c = clock();
+    const b = coalescer(c.timers, { flush: () => undefined, clear: () => undefined });
+    b.push([1]);
+    c.advance(700);
+    expect(c.pending()).toBe(1);
+    b.dispose();
+    expect(c.pending()).toBe(0);
   });
 });

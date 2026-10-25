@@ -30,6 +30,7 @@ import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
 import { useShell } from "../../_shell/Providers.tsx";
+import { copyText } from "../../_shell/clipboard.ts";
 import { can, engineById } from "../../../../lib/sound/engines.ts";
 import type { editRows, moveCard } from "./arrangeActs.ts";
 import type { ArrangeView } from "./arrangeRead.ts";
@@ -300,7 +301,7 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
             next={next}
             download={h.src === null ? null : { href: h.src, name: h.fileName ?? h.title }}
             busy={uploading.has(h.id)}
-            onCopyPrompt={h.prompt.trim() === "" ? null : () => void navigator.clipboard.writeText(h.prompt).then(() => toast("prompt copied"), (e: unknown) => setRefusal(`clipboard refused: ${errorMessage(e)}`))}
+            onCopyPrompt={h.prompt.trim() === "" ? null : () => void copyText(h.prompt).then((r) => (r.ok ? toast("prompt copied") : setRefusal(`clipboard refused: ${r.error}`)))}
             onFile={(file, to) => {
               if (to === "finalized" && (h.label ?? "").trim() === "") setAsk({ id: h.id, to: { stage: "finalized", group: h.group }, file });
               else void upload(stack, file, to, to === "finalized" ? (h.label ?? undefined) : undefined);
