@@ -90,6 +90,10 @@ function receiptOf(act: StyleAct, b: Basis, mode: ReceiptMode, now: number): Rec
   };
 }
 
+/** A plate's id names the receipt that made it, as the real producer's does (`pr-<token tail>-<trial>`,
+ *  lib/producers/style.ts), so an id never repeats after an undecided plate leaves the sheet. */
+const plateId = (token: string, trialId: string): string => `pr-${token.slice(0, 12)}-${trialId}`;
+
 const styleIdOf = (act: StyleAct): string => (act.kind === "adopt" ? act.fromStyleId : act.styleId);
 
 async function basis(act: StyleAct, mode: ReceiptMode, media: Media): Promise<Result<Basis>> {
@@ -107,7 +111,7 @@ export async function actReceipt(act: StyleAct, mode: ReceiptMode, now: number, 
   return b.ok ? ok(receiptOf(act, b.value, mode, now)) : b;
 }
 
-async function landed(act: StyleAct, b: Basis, at: string, media: Media): Promise<Result<Style>> {
+async function landed(act: StyleAct, b: Basis, at: string, token: string, media: Media): Promise<Result<Style>> {
   const s = b.style;
   if (act.kind === "adopt") {
     const palette = (ADOPT_REPLY[s.id] ?? []).map((c) => ({ ...c }));
@@ -124,13 +128,11 @@ async function landed(act: StyleAct, b: Basis, at: string, media: Media): Promis
   if (s.block === undefined) return err("refused", `${s.name} has no block yet`);
   const d = blockDigest(s.block);
   const made = [];
-  let n = s.proofs.length;
   for (const id of act.trialIds) {
     const t = STYLE_TRIALS.find((x) => x.id === id);
     const m = await media(presetPlate(DRY_GRID[s.id] ?? "newsprint-cutout"));
     if (!m.ok) return m;
-    n += 1;
-    made.push({ id: `pr-${s.id}-${n}`, label: `${t?.label ?? id} · dry stand-in`, media: m.value, state: "pending" as const, trialId: id, blockDigest: d, provider: "dry-run", model: IMAGE.model, costUsd: 0, at });
+    made.push({ id: plateId(token, id), label: `${t?.label ?? id} · dry stand-in`, media: m.value, state: "pending" as const, trialId: id, blockDigest: d, provider: "dry-run", model: IMAGE.model, costUsd: 0, at });
   }
   return door({ ...s, proofs: [...s.proofs, ...made] });
 }
@@ -141,7 +143,7 @@ export async function confirmAct(act: StyleAct, mode: ReceiptMode, token: string
   const fresh = receiptOf(act, b.value, mode, now);
   if (fresh.token !== token) return ok({ kind: "stale", fresh });
   const at = new Date(now).toISOString();
-  const next = await landed(act, b.value, at, media);
+  const next = await landed(act, b.value, at, token, media);
   if (!next.ok) return next;
   const done = land(b.value.style.id, b.value.rev, next.value, at);
   return done.ok ? ok({ kind: "launched", jobId: done.value.jobId, view: done.value.view }) : done;

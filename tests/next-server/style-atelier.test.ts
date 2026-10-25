@@ -166,6 +166,18 @@ describe("acts: a receipt, then a confirm", () => {
     expect(rc.ok ? null : rc.error.message).toBeNull();
   });
 
+  it("names a render's plates afresh after an undecided plate left the sheet", async () => {
+    const v = await view("chalk-argument");
+    const first = await run({ kind: "generate-proofs", styleId: v.id, baseRev: v.rev, trialIds: ["peak-and-fall", "wish-list"] });
+    const gone = first.proofs[0];
+    if (gone === undefined) throw new Error("a plate was rendered");
+    expect((await op("chalk-argument", { kind: "remove-proof", proofId: gone.id })).kind).toBe("applied");
+    const after = await view("chalk-argument");
+    const again = await run({ kind: "generate-proofs", styleId: after.id, baseRev: after.rev, trialIds: ["flywheel"] });
+    expect(again.proofs.map((p) => p.trialId)).toEqual(["wish-list", "flywheel"]);
+    expect(new Set(again.proofs.map((p) => p.id)).size).toBe(2);
+  });
+
   it("refuses to adopt a candidate (v1's 409, kept)", async () => {
     const rc = await actReceipt({ kind: "adopt", fromStyleId: "soft-backlit-bokeh" }, "dry", NOW, media);
     expect(rc.ok ? null : rc.error.message).toContain("only a proven style is adopted");

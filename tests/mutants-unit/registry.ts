@@ -3794,6 +3794,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "The fixture atelier offers a render the view says has room for and then refuses its receipt, because it counts approvals under an earlier block that the real side and the view do not.",
   },
   {
+    id: "style-fixture-plate-id-by-count",
+    test: "tests/next-server/style-atelier.test.ts",
+    file: "app/(studio)/library/style/_port/fixtureActs.ts",
+    find: "made.push({ id: plateId(token, id),",
+    replace: "made.push({ id: `pr-${s.id}-${s.proofs.length + made.length + 1}`,",
+    why: "A render after an undecided plate was removed mints an id the sheet already holds, and the door refuses the whole landing: the fixture atelier's render fails where the real side's lands.",
+  },
+  {
     id: "look-refs-unselected",
     test: "packages/producers/test/frames-look.test.ts",
     file: "packages/producers/src/frames/look.ts",
