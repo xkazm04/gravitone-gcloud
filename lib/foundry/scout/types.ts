@@ -26,7 +26,7 @@
 import type { VentureFrame } from "@gt/domain/genre";
 import type { Aspect } from "../../imaging/types";
 import type { CharacterCard, MuseJudge } from "./muse";
-import type { AssetId, ExportProject, MeshBrief } from "../mesh/types";
+import type { AssetId, MeshBrief, ServedProject } from "../mesh/types";
 
 /* ── Ids and limits ──────────────────────────────────────────────────────── */
 
@@ -367,14 +367,18 @@ export type WatchCandidate = CandidateBase & {
  * What a game asset is FOR (operator, 2026-10-23, after rejecting every asset of the first 3D nights for having no
  * stated use: "we cannot create assets without purpose ... either to create new type of project, or helping
  * existing"): an existing game project it helps (the export targets, lib/foundry/mesh/types.ts EXPORT_PROJECTS),
- * or a new kind of project it would open. Absent on assets briefed before the field.
+ * or a new kind of project it would open. Absent on assets briefed before the field. A RETIRED project (mage-arena,
+ * spark scout-vision S4) is never briefed again but still reads on an old night's candidate.
  */
-export type AssetServes = { readonly project: ExportProject } | { readonly newProject: string };
+export type AssetServes = { readonly project: ServedProject } | { readonly newProject: string };
 
 export type Asset3dCandidate = CandidateBase & {
   readonly kind: "asset3d";
   readonly brief: MeshBrief;
   readonly serves?: AssetServes;
+  /** The project's need it answers (`need-<slug>`, POF's asset-needs/<project>.json, spark scout-vision S4): set on
+   *  every brief for an existing project since S4, absent on newProject briefs and older ones. */
+  readonly need?: string;
   /** Night-relative concept images, OURS (`assets/c-05/concept-1.png`), in the request's order. */
   readonly concepts: readonly string[];
   /** The mesh asset the hand-off wrote (lib/foundry/mesh/store.ts), once it did. */

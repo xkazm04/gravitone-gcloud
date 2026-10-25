@@ -312,13 +312,14 @@ function assetCells(night: Night, c: Asset3dCandidate, read: AssetRead | undefin
 }
 
 /**
- * A game asset's purpose as its row states it: the project first - `for pof` or `new project: <kind>` - then what
- * it is for there. Absent when the asset was briefed before either field (2026-10-23: the first 3D nights' rows
- * showed no purpose at all, and the operator rejected every one of them for it).
+ * A game asset's purpose as its row states it: the project first - `for bp` or `new project: <kind>` - then the
+ * game's need it answers (`need <id>`, spark scout-vision S4), then what it is for there. Absent when the asset was
+ * briefed before any of them (2026-10-23: the first 3D nights' rows showed no purpose at all, and the operator
+ * rejected every one of them for it). An old brief for a retired project (mage-arena) still reads `for mage-arena`.
  */
-export function assetUse(a: Pick<Asset3dCandidate, "use" | "serves">): string | undefined {
+export function assetUse(a: Pick<Asset3dCandidate, "use" | "serves" | "need">): string | undefined {
   const project = a.serves === undefined ? undefined : "project" in a.serves ? `for ${a.serves.project}` : `new project: ${a.serves.newProject}`;
-  const parts = [project, a.use].filter((x): x is string => x !== undefined && x !== "");
+  const parts = [project, a.need === undefined ? undefined : `need ${a.need}`, a.use].filter((x): x is string => x !== undefined && x !== "");
   return parts.length === 0 ? undefined : parts.join(" · ");
 }
 

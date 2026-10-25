@@ -5,6 +5,7 @@ import { readAsset } from "../mesh/store.ts";
 import type { MeshAsset } from "../mesh/types.ts";
 import { budgetLine, launchable, money, overBudget, Refusal, setCandidate, worstOf, type ActContext } from "./acts.ts";
 import { parseBrief } from "./concept.ts";
+import { readNeeds, withNeed, type NeedsRead } from "./needs.ts";
 import { mutateNight, nextCandidateId, readNight } from "./store.ts";
 import { DEFAULT_ASSET_CAP, type Asset3dCandidate, type Night, type NightId } from "./types.ts";
 
@@ -14,7 +15,11 @@ import { DEFAULT_ASSET_CAP, type Asset3dCandidate, type Night, type NightId } fr
 // that draws its concepts (lib/producers/scoutAsset.ts). The night's rules are the other
 // launches' (./acts.ts): refused when the night is not open or past its deadline, refused when
 // the receipt's worst case is over what the night has left, the job's ceiling that remainder -
-// and one of its own:
+// and two of its own:
+//
+//   THE GAME'S NEED (spark scout-vision S4). A brief for an existing project names one open need of
+//   that project's fresh asset-needs file (./needs.ts) and takes its budget; an unreadable or stale
+//   file refuses every project brief for that project. A newProject brief has no file to answer to.
 //
 //   THE ASSET CAP. A night briefs at most `assetCap` assets (DEFAULT_ASSET_CAP while the engines
 //   are being profiled). An asset counts once it may reach the GPU: pending, or handed off to a
@@ -34,10 +39,12 @@ export const assetsUsed = (n: Pick<Night, "candidates">): number => n.candidates
 
 export const assetCapOf = (n: Pick<Night, "assetCap">): number => n.assetCap ?? DEFAULT_ASSET_CAP;
 
-export async function assetAct(ctx: ActContext, id: NightId, raw: unknown, engines: Partial<AssetEngines> = {}): Promise<AssetResult> {
-  const parsed = parseBrief(raw);
+export async function assetAct(ctx: ActContext, id: NightId, raw: unknown, engines: Partial<AssetEngines> = {}, needsOf: (project: string) => Promise<NeedsRead> = (p) => readNeeds(p, ctx.now === undefined ? {} : { now: ctx.now() })): Promise<AssetResult> {
+  const door = parseBrief(raw);
+  if (!door.ok) throw new Refusal(door.error.message);
+  const parsed = "project" in door.value.serves ? withNeed(door.value, await needsOf(door.value.serves.project)) : door;
   if (!parsed.ok) throw new Refusal(parsed.error.message);
-  const { brief, use, serves } = parsed.value;
+  const { brief, use, serves, need } = parsed.value;
   const techniques = techniquesFor(brief.class, parsed.value.techniques, brief.rig !== undefined);
   if (!techniques.ok) throw new Refusal(techniques.error.message);
   const { night, mode } = await launchable(ctx, id);
@@ -52,7 +59,7 @@ export async function assetAct(ctx: ActContext, id: NightId, raw: unknown, engin
       full = `night ${id} has briefed ${used} of its ${assetCapOf(n)} game assets; "${brief.subject}" was not launched`;
       return n;
     }
-    made = { id: nextCandidateId(n), kind: "asset3d", sourceIds: [], status: "pending", brief, concepts: [], use, serves };
+    made = { id: nextCandidateId(n), kind: "asset3d", sourceIds: [], status: "pending", brief, concepts: [], use, serves, ...(need === undefined ? {} : { need }) };
     return { ...n, candidates: [...n.candidates, made] };
   });
   if (full !== undefined) throw new Refusal(full);

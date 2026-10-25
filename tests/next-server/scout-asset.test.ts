@@ -20,11 +20,13 @@ const ROOT = vi.hoisted(() => {
   process.env["EXTRACT_STORE_DIR"] = path.join(dir, "extract");
   process.env["MESH_STORE_DIR"] = path.join(dir, "mesh");
   process.env["GRAVITONE_STORE_PATH"] = path.join(dir, "kernel.sqlite");
+  // POF's root (spark scout-vision S4): the act reads <root>/asset-needs/<project>.json; written below, never ../pof.
+  process.env["EXPORT_ROOT_POF"] = path.join(dir, "pof");
   return dir;
 });
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { inflateSync } from "node:zlib";
 
@@ -107,7 +109,16 @@ function brief(name: string, body: unknown): string {
 }
 
 // Every brief states what it is for and the project it serves (operator, 2026-10-23: "we cannot create assets without purpose").
-const FOR = { use: "the starting party of a co-op dungeon crawler", serves: { project: "pof" } };
+// A new kind of project answers to no game's needs file; a brief for an existing game names its need (spark scout-vision S4).
+const FOR = { use: "the starting party of a co-op dungeon crawler", serves: { newProject: "a co-op dungeon crawler" } };
+const PIN = { class: "prop", subject: "amber survey pin with a paper tag", use: "a pin on the light table", serves: { project: "bp" }, need: "need-amber-pins-with-tags" };
+
+/** bp's needs (pipeline/fixtures/asset-needs-bp.json) under the test's POF root, generated now so they are fresh. */
+function bpNeeds(generatedAt = new Date().toISOString()): void {
+  const fixture = JSON.parse(readFileSync(path.join(import.meta.dirname, "..", "..", "pipeline", "fixtures", "asset-needs-bp.json"), "utf8")) as Record<string, unknown>;
+  mkdirSync(path.join(ROOT, "pof", "asset-needs"), { recursive: true });
+  writeFileSync(path.join(ROOT, "pof", "asset-needs", "bp.json"), JSON.stringify({ ...fixture, generatedAt }));
+}
 const HERO = { class: "character", subject: "hooded archer, leather jerkin, quiver", style: "flat leather browns", ...FOR };
 const AXE = { class: "weapon", kind: "axe", subject: "bearded battle axe, iron head, wrapped haft", ...FOR };
 const CRATE = { class: "prop", subject: "supply crate, banded planks", ...FOR };
@@ -148,10 +159,12 @@ describe("the brief and its concepts", () => {
     expect(why({ ...CRATE, serves: { project: "skyrim" } })).toMatch(/^asset brief: serves: /);
     const fresh = parseBrief({ ...CRATE, serves: { newProject: "a cozy farming sim" } });
     expect(fresh.ok && fresh.value.serves).toEqual({ newProject: "a cozy farming sim" });
-    expect(parseBrief(CRATE).ok && (parseBrief(CRATE) as { value: { serves: unknown; use: string } }).value).toMatchObject({ serves: { project: "pof" }, use: "the starting party of a co-op dungeon crawler" });
+    expect(parseBrief(CRATE).ok && (parseBrief(CRATE) as { value: { serves: unknown; use: string } }).value).toMatchObject({ serves: { newProject: "a co-op dungeon crawler" }, use: "the starting party of a co-op dungeon crawler" });
   });
 
   it("the 3D row states the purpose: the project first, then what it is for there", () => {
+    expect(assetUse({ use: "a pin on the light table", serves: { project: "bp" }, need: "need-amber-pins-with-tags" })).toBe("for bp · need need-amber-pins-with-tags · a pin on the light table");
+    // An old night's brief for the retired mage-arena still reads (spark scout-vision S4).
     expect(assetUse({ use: "the forge set dressing", serves: { project: "mage-arena" } })).toBe("for mage-arena · the forge set dressing");
     expect(assetUse({ use: "a hero roster", serves: { newProject: "a cozy farming sim" } })).toBe("new project: a cozy farming sim · a hero roster");
     expect(assetUse({ use: "an older brief's use" })).toBe("an older brief's use");
@@ -299,6 +312,31 @@ describe("refusals", () => {
     const r = await cli(["asset", night, "--brief", brief("bad", { class: "weapon", subject: "longsword", techniques: ["M1"], ...FOR })]);
     expect(r.code).toBe(1);
     expect(r.err).toMatch(/M1 touches up a weapon's T1 mesh/);
+    expect((await readNight(night)).candidates).toEqual([]);
+  });
+});
+
+describe("a brief for an existing game answers one of its needs (spark scout-vision S4)", () => {
+  it("a bp brief naming an open need launches with the need's budget, and the candidate carries the need", async () => {
+    bpNeeds();
+    const night = String((await cli(["open", "--json"])).doc["night"]);
+    const r = await cli(["asset", night, "--brief", brief("pin", PIN), "--json"]);
+    expect(r.code, r.err).toBe(0);
+    const c = await candidateOf(night, "c-01");
+    expect(c).toMatchObject({ need: "need-amber-pins-with-tags", serves: { project: "bp" }, brief: { class: "prop", budgetTris: 500 } });
+    expect((await readAsset(c.assetId ?? "")).brief.budgetTris).toBe(500);
+  });
+
+  it("a bp brief with no need, a stale needs file, mage-arena or pof launch nothing, each with its reason", async () => {
+    const night = String((await cli(["open", "--json"])).doc["night"]);
+    const { need: _n, ...noNeed } = PIN;
+    bpNeeds();
+    expect((await cli(["asset", night, "--brief", brief("no-need", noNeed)])).err).toMatch(/^asset brief: serves bp names a need: need: "<id>", one of need-amber-pins-with-tags, need-lamp-agent/);
+    bpNeeds("2026-01-01T00:00:00.000Z");
+    expect((await cli(["asset", night, "--brief", brief("stale", PIN)])).err).toMatch(/^asset brief: serves bp: bp's asset needs are \d+ days old \(generated 2026-01-01, stale past 7\); run `npx tsx scripts\/asset-needs.ts bp` in pof/);
+    expect((await cli(["asset", night, "--brief", brief("arena", { ...PIN, serves: { project: "mage-arena" } })])).err).toBe("asset brief: serves: mage-arena is developed on another device; gravitone no longer briefs for it (spark scout-vision S4)");
+    const { need: _p, ...pof } = { ...PIN, serves: { project: "pof" } };
+    expect((await cli(["asset", night, "--brief", brief("pof", pof)])).err).toMatch(/^asset brief: serves pof: pof has no game content to measure - pof has no asset-needs file at /);
     expect((await readNight(night)).candidates).toEqual([]);
   });
 });

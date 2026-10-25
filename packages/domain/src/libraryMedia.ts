@@ -20,8 +20,9 @@ export type ModelClass = (typeof MODEL_CLASSES)[number];
 export const MODEL_TECHNIQUES = ["T1", "T2", "M1", "M2"] as const;
 export type ModelTechnique = (typeof MODEL_TECHNIQUES)[number];
 
-/** The game projects a model is handed to (the `export` act), each by its own adapter. */
-export const MODEL_EXPORT_PROJECTS = ["pof", "mage-arena", "bp"] as const;
+/** The game projects a model is handed to (the `export` act), each by its own adapter. mage-arena left the set in
+ *  spark scout-vision S4 (developed on another device); lib/foundry/mesh/export.ts refuses it. */
+export const MODEL_EXPORT_PROJECTS = ["pof", "bp"] as const;
 export type ModelExportProject = (typeof MODEL_EXPORT_PROJECTS)[number];
 
 /** A triangle count as its facet band (PoF's presets: prop 10k, weapon 15k, character 40k). */
