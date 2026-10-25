@@ -1,12 +1,14 @@
 import { filmDefaults, planParts, recipeById, type PlannedPart } from "@gt/catalog/recipes";
 import { TEMPLATES, type TemplateId } from "@gt/catalog/projects";
+import { parseAt } from "@gt/domain/door";
+import { composeInputSchema } from "@gt/domain/produce.schema";
 import { isStepKind, type StepKind } from "@gt/domain/steps/registry";
 import { canonical, sha256Hex } from "@gt/kernel/canonical";
 import type { Reader } from "@gt/kernel/store";
 
 import { isoOfMs, uploadOf, type Archive, type Row } from "./archive.ts";
 import { markOriginal, type Sink, type StagedBlob } from "./bytes.ts";
-import { publicFile, stageItems, stageThemes, type ItemPreview, type PublicFile, type StagedItem, type StagedTheme, type ThemePreview } from "./shelf.ts";
+import { indexOfArchive, publicFile, rowsNamed, stageItems, stageThemes, type ItemPreview, type PublicFile, type StagedItem, type StagedTheme, type ThemePreview } from "./shelf.ts";
 import { stageStep, type Loss, type StagedStep } from "./steps.ts";
 
 // A v1 PROJECT, STAGED (Phase 4 wave D, L42) - what importing it WOULD create, read before
@@ -129,21 +131,22 @@ function stageProject(archive: Archive, row: Row, exists: (id: string) => boolea
   if (recipe === undefined) return refused(row, `no recipe for template ${template}`);
   const owners = new Set<StepKind>(recipe.parts.map((p) => p.kind).filter((k): k is StepKind => isStepKind(k)));
   const sink: Sink = new Map();
-  const mine = archive.rows.steps.filter((s) => s["projectId"] === v1Id);
+  const ix = indexOfArchive(archive);
+  const mine = ix.stepsOf.get(v1Id) ?? [];
   const steps = mine.map((s) => stageStep(s, owners, sink));
   const losses: Loss[] = steps.flatMap((s) => (s.loss === undefined ? [] : [s.loss]));
 
   const themeId = typeof row["themeId"] === "string" ? row["themeId"] : undefined;
-  const themeRow = themeId === undefined ? undefined : archive.rows.themes.find((t) => t["id"] === themeId);
+  const themeRow = themeId === undefined ? undefined : ix.themeById.get(themeId);
   if (themeId !== undefined && themeRow === undefined) losses.push({ entity: "theme", grade: "dropped", reason: `theme ${themeId} is not in the archive` });
   const theme = themeId === undefined ? undefined : themes.get(themeId);
   const styled = themeRow !== undefined && theme !== undefined && theme.outcome !== "refuse";
   if (theme?.outcome === "refuse") losses.push({ entity: "theme", grade: "dropped", reason: `theme ${theme.name} is not a style the store takes: ${theme.reason ?? "refused"}` });
 
   const named = strings([row, mine], new Set());
-  const assets = archive.rows.assets.filter((a) => named.has(String(a["id"])));
+  const assets = rowsNamed(ix.assetsById, named);
   const uploadIds = new Set(assets.map((a) => uploadOf(a["src"])).filter((x): x is string => x !== null));
-  const uploads = archive.rows.uploads.filter((u) => uploadIds.has(String(u["id"])));
+  const uploads = rowsNamed(ix.uploadsById, uploadIds);
   const record: ImportRecord = {
     kind: "gravitone-v1-import",
     v: IMPORT_VERSION,
@@ -180,10 +183,15 @@ function stageProject(archive: Archive, row: Row, exists: (id: string) => boolea
   const blobs = [...sink.values()];
   const id = kernelIdOf(v1Id);
   const styleId = styled ? theme.id : undefined;
+  const title = String(row["title"] ?? "").trim() || "Untitled film";
+  // The creation door, at staging: what commit's land() hands compose, so an input the door refuses
+  // (a target whose units are no integer, say) is refused here with its sentence, not promised as import.
+  const door = parseAt("compose", composeInputSchema, { recipe: recipe.id, title: title.slice(0, 200), ...(styleId === undefined ? {} : { styleId }), units });
+  if (!door.ok) return refused(row, door.error.message);
   const preview: ProjectPreview = {
     v1Id,
     id,
-    title: String(row["title"] ?? "").trim() || "Untitled film",
+    title,
     recipe: recipe.id,
     outcome: exists(id) ? "skip" : "import",
     ...(exists(id) ? { reason: `already imported as ${id}` } : {}),

@@ -10,8 +10,8 @@
 // `frames` row through `framesV1ToV2`, drops the shadow, and hands the result to
 // @gt/domain's FRAMES door (v3, packages/domain/src/steps/frames.ts). It is
 // pure and in memory; v1 ran it at its own read seam (`decodeRecord`, retired
-// with app/_phases), and `parseFramesRecord` below is that v1 v2 door, kept for
-// the probe that pins the walk (tests/golden-path/picture-unit.probe.spec.ts).
+// with app/_phases); the probe that pins the walk (tests/golden-path/picture-unit.probe.spec.ts)
+// asserts through the importer's path, so there is one door for the record, @gt/domain's.
 //
 // `withClips` — the hand migration `frames.ts` used to run inline at the read,
 // "because there is no migration seam to hang this off" — is folded in here,
@@ -38,10 +38,10 @@
 
 import { RENDER_BY_ID } from "@/lib/script/renders";
 import type { ScriptRender } from "@/lib/script/types";
-import { isPlainObject, malformed, type RecordRefusal } from "@/lib/steps/recordRegistry";
 import { emptyClip, type Frame } from "@/lib/frames/frames";
-import type { FramesStepData } from "@/lib/frames/stepData";
-import { framesFromUnits, unitsFromFrames, type PictureUnit } from "@/lib/frames/picture/unit";
+import { unitsFromFrames, type PictureUnit } from "@/lib/frames/picture/unit";
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** The length of the chain a stored `renderId` names, when it names a shipped
  *  explainer render — the number `durationOf` closes the last beat with. An id
@@ -62,8 +62,8 @@ function framesIn(raw: Record<string, unknown>): Frame[] {
   return (list as Frame[]).map(withClip);
 }
 
-/** v1 → v2. Pure; throws on a v1 object it cannot read, which the registry
- *  turns into a `malformed` refusal (and so into no write). */
+/** v1 → v2. Pure; throws on a v1 object it cannot read, which the importer
+ *  (lib/import/steps.ts lift) turns into a data-only loss. */
 export function framesV1ToV2(raw: Record<string, unknown>): Record<string, unknown> {
   const frames = framesIn(raw);
   const renderId = typeof raw.renderId === "string" ? raw.renderId : "";
@@ -86,23 +86,4 @@ function shotsRiding(units: unknown, renderId: string): PictureUnit[] {
       Array.isArray(u.elements) &&
       Array.isArray(u.texts),
   );
-}
-
-/** A v2 object → the record. Units are the authority; the shadow is rebuilt
- *  from them, so a reader of the record cannot be handed two cuts that
- *  disagree. */
-export function parseFramesRecord(raw: Record<string, unknown>): FramesStepData | RecordRefusal {
-  if (typeof raw.renderId !== "string") return malformed("frames.renderId is not a string");
-  if (!Array.isArray(raw.units)) return malformed("frames.units is not a list");
-  for (const [i, u] of raw.units.entries())
-    if (
-      !isPlainObject(u) ||
-      typeof u.id !== "string" ||
-      !isPlainObject(u.plate) ||
-      !Array.isArray(u.elements) ||
-      !Array.isArray(u.texts)
-    )
-      return malformed(`frames.units[${i}] is not a picture unit`);
-  const units = (raw.units as PictureUnit[]).map((u) => (u.clip ? u : { ...u, clip: emptyClip() }));
-  return { ...raw, renderId: raw.renderId, units, frames: framesFromUnits(units) } as FramesStepData;
 }

@@ -6846,4 +6846,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (false) reject(",
     why: "git exiting 1 with stderr and no diff reads as no change again, so a proposal git could not read lands as an empty patch and a real edit is silently refused.",
   },
+  {
+    id: "article-dry-stand-in-from-cwd",
+    test: "tests/next-server/article-dry-agent-root.test.ts",
+    file: "lib/articles/dryAgent.ts",
+    find: 'const starts = [typeof __dirname === "string" ? __dirname : undefined, entry === undefined ? undefined : path.dirname(entry), process.cwd()];',
+    replace: 'const starts = [process.cwd()];',
+    why: "A dry article job in a process started outside the repository root spawns a stand-in path that does not exist and fails every turn.",
+  },
 ];
