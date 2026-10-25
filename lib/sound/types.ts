@@ -74,7 +74,7 @@ export const TECHNIQUES: Record<SoundKind, readonly string[]> = {
     "reference-track-anchoring",
     "lyrics-for-singability",
   ],
-  sfx: ["single-sentence", "envelope-first-briefing", "layered-element-assembly", "loop-seam-acceptance", "picture-as-timing-brief"],
+  sfx: ["single-sentence", "envelope-first-briefing", "layered-element-assembly", "loop-seam-acceptance", "picture-as-timing-brief", "trailer-punctuation-grammar"],
 };
 
 export interface SoundTerms {

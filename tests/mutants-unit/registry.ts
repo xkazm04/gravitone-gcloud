@@ -6686,4 +6686,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "`${noun}s`",
     why: "The shared count rule says `1 items`, so every aria-label, the strip's readout and the composer's unit count read wrong at one.",
   },
+  {
+    id: "sfx-techniques-drop-trailer-punctuation",
+    test: "tests/next-server/sound-techniques-registry.test.ts",
+    file: "lib/sound/types.ts",
+    find: ', "trailer-punctuation-grammar"]',
+    replace: ']',
+    why: "A brief tagged trailer-punctuation-grammar loses the tag in batchBrief, so the ledger never learns along a technique the registry names.",
+  },
+  {
+    id: "ui-sfx-techniques-drop-trailer-punctuation",
+    test: "tests/next-server/sound-techniques-registry.test.ts",
+    file: "packages/ui/src/components/audio/batch.ts",
+    find: ', "trailer-punctuation-grammar"]',
+    replace: ']',
+    why: "The composer's technique rail omits the fifth sfx technique, so the tag is dropped from every brief the form sends.",
+  },
 ];
