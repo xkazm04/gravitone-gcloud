@@ -30,6 +30,8 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import type { Browser } from "playwright";
+
 import type { PostMeta } from "./types";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -298,12 +300,17 @@ export function svgSize(svg: string): { w: number; h: number } {
   return { w, h };
 }
 
+/** Starts the browser the PNG renders run in. A parameter so a probe can make it fail. */
+export type LaunchBrowser = () => Promise<Browser>;
+
+const launchChromium: LaunchBrowser = async () => (await import("playwright")).chromium.launch();
+
 /** Render each SVG to a PNG of exactly its drawing, PNG_WIDTH wide. The page is
  *  the SVG's own size and the device scale makes up the width: a viewport wider
  *  than the SVG's width attribute left it in the top-left corner of a blank
  *  canvas, which Medium then showed cropped and small (2026-10-16). Returns the
  *  PNG names written; an SVG that will not render is named in `failed`. */
-export async function renderFigurePngs(svgDir: string, pngDir: string): Promise<{ written: string[]; failed: string[] }> {
+export async function renderFigurePngs(svgDir: string, pngDir: string, launch: LaunchBrowser = launchChromium): Promise<{ written: string[]; failed: string[] }> {
   let names: string[] = [];
   try {
     names = (await readdir(svgDir)).filter((n) => /\.svg$/i.test(n)).sort();
@@ -312,8 +319,14 @@ export async function renderFigurePngs(svgDir: string, pngDir: string): Promise<
   }
   if (!names.length) return { written: [], failed: [] };
   await mkdir(pngDir, { recursive: true });
-  const { chromium } = await import("playwright");
-  const browser = await chromium.launch();
+  // A box with no browser fails every figure by name, the way one figure that will not render
+  // does: the landing rests on the registry gates, not on a PNG the registry copy does not carry.
+  let browser: Browser;
+  try {
+    browser = await launch();
+  } catch {
+    return { written: [], failed: names };
+  }
   const written: string[] = [];
   const failed: string[] = [];
   try {
@@ -357,11 +370,15 @@ a{color:inherit}
 }
 
 /** Render each table to `<pngDir>/<table.name>`, PNG_WIDTH wide. */
-export async function renderTablePngs(tables: StoryTable[], pngDir: string): Promise<{ written: string[]; failed: string[] }> {
+export async function renderTablePngs(tables: StoryTable[], pngDir: string, launch: LaunchBrowser = launchChromium): Promise<{ written: string[]; failed: string[] }> {
   if (!tables.length) return { written: [], failed: [] };
   await mkdir(pngDir, { recursive: true });
-  const { chromium } = await import("playwright");
-  const browser = await chromium.launch();
+  let browser: Browser;
+  try {
+    browser = await launch();
+  } catch {
+    return { written: [], failed: tables.map((t) => t.name) };
+  }
   const written: string[] = [];
   const failed: string[] = [];
   try {

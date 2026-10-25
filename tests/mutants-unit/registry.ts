@@ -6894,4 +6894,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "throw e;",
     why: "An unreadable tokens/source.json throws out of the kit page again, so /kit is an error boundary with no specimen instead of one ErrorLine.",
   },
+  {
+    id: "article-medium-figures-launch-throws",
+    test: "tests/next-server/article-medium-launch.test.ts",
+    file: "lib/articles/mediumPackage.ts",
+    find: "return { written: [], failed: names };",
+    replace: "throw new Error(\"launch\");",
+    why: "A box with no Playwright browser throws out of the figure render, so a human-approved landing goes to failed on a PNG the registry copy does not even carry.",
+  },
+  {
+    id: "article-medium-tables-launch-throws",
+    test: "tests/next-server/article-medium-launch.test.ts",
+    file: "lib/articles/mediumPackage.ts",
+    find: "return { written: [], failed: tables.map((t) => t.name) };",
+    replace: "throw new Error(\"launch\");",
+    why: "A box with no Playwright browser throws out of the table render, so a human-approved landing goes to failed on a PNG the registry copy does not even carry.",
+  },
 ];
