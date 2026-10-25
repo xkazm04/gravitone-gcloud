@@ -272,7 +272,7 @@ describe("a muse night's ideas job", () => {
     expect(kept.map((c) => [c.status, c.aspect, c.judge])).toEqual([["rendered", undefined, undefined]]);
     expect(existsSync(path.join(ROOT, "scout-muse", night, "ideas", "c-03.png"))).toBe(true);
     expect(existsSync(path.join(ROOT, "scout", night, "ideas", "c-03.png"))).toBe(false);
-  });
+  }, 60_000); // a night's ideas job: ~1 s alone, past vitest's 5 s default under the pre-push gate's load
 
   it("live on the fake studio: drawn 9:16 at quality low; a failing or unread still is never written, its candidate failed `judge: ...`", async () => {
     const seen: GenerateRequest[] = [];
@@ -317,5 +317,5 @@ describe("a muse night's ideas job", () => {
       expect(existsSync(resolveInNight(night, "ideas/c-02.png"))).toBe(false);
       expect(existsSync(resolveInNight(night, "ideas/c-03.png"))).toBe(false);
     });
-  });
+  }, 60_000); // a night's ideas job: ~1 s alone, past vitest's 5 s default under the pre-push gate's load
 });
