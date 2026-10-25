@@ -482,3 +482,16 @@ test("byDim: every card a reasoned research-ok notebook deals sits in some colum
   // The fixture has no untagged card, so it gains no eighth column.
   expect(scopeSummary(buildCards(fixtureSource()), {}, fixtureSource()).byDim).toHaveLength(DIMENSIONS.length);
 });
+
+// ------------------------------------- Fact.source is what the door accepts: optional
+
+test("Fact.source: a door-accepted notebook carries sources[] only, and the type says so", () => {
+  const ok = (loadCassette("research-ok").turns[0]! as CassetteTurn).resultJson as Record<string, unknown>;
+  const nb = parseNotebook(structuredClone(ok), "harbour dredging costs");
+  const without = nb.facts.filter((f) => f.source === undefined).length;
+  console.log(`[fact.source] ${without} of ${nb.facts.length} accepted facts carry no source string`);
+  expect(without).toBe(nb.facts.length);
+  // Compiled by `npm run typecheck`: with `source: string` this directive is unused (TS2578).
+  // @ts-expect-error source is optional, so reading through it unguarded is a type error
+  expect(() => nb.facts[0]!.source.length).toThrow();
+});
