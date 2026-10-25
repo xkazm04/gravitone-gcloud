@@ -17,7 +17,7 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { __resetMusicBudget } from "@/lib/music/budget";
+import { __resetMusicBudget, currentMusicSeconds } from "@/lib/music/budget";
 import { runSoundCli } from "@/lib/sound/cli";
 import { buildEditPlan, editSeconds } from "@/lib/sound/editPlan";
 import { generateTake, parseGenerateRequest } from "@/lib/sound/generate";
@@ -263,4 +263,16 @@ test("generate plan: a drafted plan's own length is held to the music bound, and
   const take = await generateTake(parseGenerateRequest(genReq({ op: "plan", prompt: "", durationS: 10, plan: PLAN })));
   expect(take.durationS).toBe(10);
   expect(calls.length).toBe(1);
+});
+
+/* ── what a section edit is metered at ───────────────────────────────────── */
+
+test("section edit: the meter books the whole edit plan, kept ranges included - editSeconds is the guard, not the charge", async () => {
+  const source = await generateTake(parseGenerateRequest(genReq()));
+  const before = await currentMusicSeconds();
+  await generateTake(parseGenerateRequest(genReq({ op: "section-edit", prompt: "", sourceTakeId: source.id, editModes: ["keep", "high"] })));
+  const booked = (await currentMusicSeconds()) - before;
+  console.log(`[sound-door] edit ["keep","high"] over a 10 s plan -> booked ${booked}s; editSeconds ${editSeconds(PLAN, ["keep", "high"])}s`);
+  expect(editSeconds(PLAN, ["keep", "high"])).toBe(5);
+  expect(booked).toBe(10);
 });

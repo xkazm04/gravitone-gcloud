@@ -68,8 +68,10 @@ export function buildEditPlan(source: WirePlan, songId: string, modes: readonly 
   return { chunks };
 }
 
-/** Seconds of NEW audio an edit asks for — what the meter is charged with.
- *  Kept sections are references, so they cost nothing to keep. */
+/** Seconds of NEW audio an edit asks for - the guard that refuses an edit with nothing to
+ *  render (generate.ts). It is NOT what the meter books: lib/music requestedSeconds meters the
+ *  whole edit plan, kept ranges included (sound-generate-door.probe pins it: 10 s booked for
+ *  5 s regenerated), erring high as a money guard does. */
 export function editSeconds(source: WirePlan, modes: readonly string[]): number {
   const gen = source.chunks.filter(isGenChunk);
   return gen.reduce((n, c, i) => n + (modeOf(modes[i]) === "keep" ? 0 : c.duration_ms), 0) / 1000;
