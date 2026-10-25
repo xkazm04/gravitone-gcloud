@@ -31,27 +31,28 @@
 // NO VENDOR, NO SPAWN, NO SPEND: every case forces a posture in which the local
 // transport is blocked BEFORE its probe would spawn anything, and leaves the
 // Google key unset so its adapter is refused at the cheap gate.
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { test, expect } from "@playwright/test";
 
 import { TextError } from "@/lib/text/errors";
 import { orderFor, planFor, reason, engineStatus } from "@/lib/text/router";
 import type { TurnClass } from "@/lib/text/types";
 
-import { keepEnv } from "./_helpers";
+import { keepEnv, stripComments } from "./_helpers";
 
-const REAL_TURNS: TurnClass[] = [
-  "edit-plan",
-  "scene-direction",
-  "style-synthesis",
-  "sound-hunt",
-  "sound-lesson",
-  "suno-propose",
-  "suno-riff",
-  "mv-treatment",
-  "mv-metadata",
-  "ad-ideas",
-  "ad-scenarios",
-];
+/** Every production turn class, walked off lib/text/types.ts's TurnClass union
+ *  (comments stripped) rather than listed here: a hand list stood at 11 of the
+ *  14 while `compose`, `research` and `repair` went unpinned. `probe` is the
+ *  one class with its own plan, asserted below. */
+const TURN_UNION = /export type TurnClass =([^;]+);/.exec(stripComments(readFileSync(resolve("lib/text/types.ts"), "utf8")))?.[1] ?? "";
+const REAL_TURNS = [...TURN_UNION.matchAll(/"([a-z-]+)"/g)].map((m) => m[1] as TurnClass).filter((t) => t !== "probe");
+
+test("plan: the turn walk read the union", () => {
+  expect(REAL_TURNS.length, "TurnClass was not read from lib/text/types.ts").toBeGreaterThanOrEqual(14);
+  expect(REAL_TURNS).toEqual(expect.arrayContaining(["compose", "research", "repair"]));
+});
 
 keepEnv(["TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY"]);
 
