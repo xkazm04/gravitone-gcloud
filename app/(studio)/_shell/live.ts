@@ -6,10 +6,11 @@ import { liveProofPiles } from "../../../lib/decision/v1/sources/proof.ts";
 import { liveSpendPiles } from "../../../lib/decision/v1/sources/spend.ts";
 import { liveNow, type LiveRead } from "../../../lib/ledger/v1/sync.ts";
 
-// v1's live work, read ONCE per request. The header (on every studio page) and the Floor both
-// need it, and liveNow walks every v1 store (lib/ledger/v1/sources.ts); React's request cache
-// makes the second caller in the same render take the first one's read, so the header's NEXT
-// and the Floor's piles are computed from the same bytes.
+// v1's live work, read ONCE per request. Its readers are the Scout header (its NEXT,
+// ./headerFacts.ts scoutHeaderFacts), the Floor and the Board's weir; the studio header on every
+// page no longer reads it (2026-10-24). liveNow walks every v1 store (lib/ledger/v1/sources.ts),
+// and React's request cache makes a second caller in the same render take the first one's read,
+// so two readers in one render compute from the same bytes.
 //
 // The Style table's proof piles (Phase 5, L56) join the v1 piles here: a style's pending proofs
 // live in the kernel store, not in a v1 store the ledger projects, so they are read beside

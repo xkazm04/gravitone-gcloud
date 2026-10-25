@@ -11,8 +11,8 @@
 // exist yet must not be a destination: a 404 behind a nav entry is the "hidden entry with a
 // reachable destination" app-shell entitlement-gating forbids, from the other side. The
 // Floor (Phase 3, `/floor`, plan §8.6) and the Ledger (Phase 2) flipped to `built: true` in
-// the changes that shipped their pages. Projects and Library are v1's routes until their phases
-// replace them, and are links out of this world until then.
+// the changes that shipped their pages. Every section is a (studio) route since Phase 6 wave C
+// retired v1's pages, so none is a link out of this world any more.
 
 export type Section = {
   readonly id: "floor" | "projects" | "runs" | "scout" | "library" | "audio" | "ledger" | "kit";
