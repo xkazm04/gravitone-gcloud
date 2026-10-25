@@ -19,7 +19,7 @@ import { jobMachine, type JobState } from "@gt/domain/job.machine";
 import type { LaneHoldView, ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
 import { canMove, canPause, canReroute, canRetry, ceilingFor, JobActs, retryPress } from "../../app/(studio)/projects/runs/_runs/Acts.tsx";
 import { buildRuns, type KernelJobInput } from "../../app/(studio)/projects/runs/_runs/model.ts";
-import { failedOf, floorRunsOf, totalsOf } from "../../app/(studio)/projects/runs/_runs/view.ts";
+import { failedOf, floorRunsOf, heldLabel, heldMoney, totalsOf } from "../../app/(studio)/projects/runs/_runs/view.ts";
 
 const job = (over: Partial<ProduceJob> = {}): ProduceJob => ({
   id: "job:part:p1:research",
@@ -121,5 +121,15 @@ describe("4. a refusal is drawn as an error", () => {
     const words = "seat.text: no other route prices this part";
     const props = { job: job({ state: "failed", reroutable: true }), busy: false, onPause: () => undefined, onResume: () => undefined, onRetry: () => undefined, onMove: () => undefined, retryCeiling: "", onRetryCeiling: () => undefined, options: null, optionsError: words, reading: null, onReroute: () => undefined, altsRef: { current: null }, holds: [] };
     expect(renderToStaticMarkup(h(JobActs, props))).toContain(renderToStaticMarkup(h(ErrorLine, { message: words })));
+  });
+});
+
+describe("5. the held chip names every unit held", () => {
+  it("dollars and audio seconds held at once are both on the chip", () => {
+    const hold = (amount: number, unit: "usd" | "audio-s") => ({ source: "spend", id: `${unit}-${amount}`, spendClass: unit === "usd" ? "gemini" : "suno", amount, unit, owner: "alive" as const });
+    const m = buildRuns({ now: NOW, live: { jobs: [], weir: [], slots: [], holds: [hold(1.25, "usd"), hold(240, "audio-s")], failures: [] }, kernel: [], ledger: [] });
+    expect(heldLabel(heldMoney(m))).toBe("$1.25 · 240 s");
+    expect(heldLabel({ usd: 0, audioS: 90 })).toBe("90 s");
+    expect(heldLabel({ usd: 3, audioS: 0 })).toBe("$3.00");
   });
 });

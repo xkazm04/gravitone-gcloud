@@ -177,3 +177,9 @@ export function heldMoney(m: RunsModel): { readonly usd: number; readonly audioS
   }
   return { usd, audioS, n: m.holds.length };
 }
+
+/** The held chip's figure: every unit that holds something, so audio seconds are not hidden behind dollars. */
+export function heldLabel(h: { readonly usd: number; readonly audioS: number }): string {
+  const parts = [...(h.usd > 0 ? [`$${h.usd.toFixed(2)}`] : []), ...(h.audioS > 0 ? [`${Math.round(h.audioS)} s`] : [])];
+  return parts.length === 0 ? "$0.00" : parts.join(" · ");
+}

@@ -45,7 +45,7 @@ import { DojoDoors, dojoSpec, type DojoPort } from "./DojoDoors.tsx";
 import { Inspector, type InspectorActs } from "./Inspector.tsx";
 import { mvRegenerateSpec, type MvPort } from "./MvActs.tsx";
 import { BACKSTOP_MS, openFeed } from "./liveFeed.ts";
-import { barsOf, blockedOf, depsOf, floorRunsOf, heldMoney, litOf, pinsOf, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
+import { barsOf, blockedOf, depsOf, floorRunsOf, heldLabel, heldMoney, litOf, pinsOf, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
 import s from "./Runs.module.css";
 
 export type Selection = { readonly job: string | null; readonly project: string | null; readonly zoom: Zoom };
@@ -331,7 +331,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
               <Chip label={String(totals.waiting)} value="waiting" name={`${totals.waiting} waiting`} />
               <Chip label={String(totals.weir)} value="at the weir" tone="amber" name={`${totals.weir} at the weir`} />
               <Chip label={String(totals.failed)} value="failed" tone="rose" name={`${totals.failed} failed`} />
-              {money.n > 0 && <Chip label={money.usd > 0 ? `$${money.usd.toFixed(2)}` : `${Math.round(money.audioS)} s`} value="held" tone="violet" name={`${money.n} open spend holds`} />}
+              {money.n > 0 && <Chip label={heldLabel(money)} value="held" tone="violet" name={`${money.n} open spend holds`} />}
             </div>
           </div>
         </div>

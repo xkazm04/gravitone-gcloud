@@ -6438,4 +6438,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<span>{optionsError}</span>",
     why: "The port's refusal to list a job's re-route options is drawn as faint metadata under the heading, so the operator reads an empty list instead of an error.",
   },
+  {
+    id: "runs-console-held-chip-hides-audio",
+    test: "tests/next-server/runs-console.test.ts",
+    file: "app/(studio)/projects/runs/_runs/view.ts",
+    find: "...(h.audioS > 0 ? [",
+    replace: "...(h.audioS > 0 && h.usd === 0 ? [",
+    why: "While any dollars are held, the header's held chip drops the audio seconds held beside them, so a Suno reservation in flight is invisible on Runs.",
+  },
 ];
