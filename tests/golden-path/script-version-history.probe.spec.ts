@@ -18,7 +18,7 @@
 import { test, expect } from "@playwright/test";
 
 import { acceptInto, restoreAs, resumeStaged, stagedOf } from "@/lib/script/history";
-import { BASELINE, engineRunWith, receiptOf, type Note, type Version } from "@/lib/script/versions";
+import { BASELINE, engineRunWith, overrideFrom, overrideLineOf, receiptOf, type Note, type Version } from "@/lib/script/versions";
 import { IMPACT } from "@/lib/script/impact";
 import { recalibrate, recalibrateFromPlan } from "@/lib/script/recalibrate";
 import { chainOf } from "@/lib/script/chainBase";
@@ -108,3 +108,24 @@ test("case 7: history only grows — accepting a restore appends it and truncate
   expect(out[0].override).toEqual(override);
 });
 
+
+// THE OVERRIDE RECEIPT (versions.ts GateOverride), which nothing pinned: the
+// Part's accept-over-gate writes `overrideFrom(gate, at)` onto the version and
+// the version list draws `overrideLineOf(v)`. Its stated rules are "FROZEN AT
+// THE CLICK, never recomputed" and a stamp that is "UTC and fixed-width, not
+// localised". Measured before this case, over the 26 golden specs that import
+// lib/script: two seeded breaks of those rules - aliasing the rollup's blocking
+// list, a local-time stamp - survived every one of them.
+test("case 8: an override receipt is frozen at the click, stamped in UTC, and absent without an override", () => {
+  const gate = { byRender: {}, violations: 1, unmeasured: 0, enforced: 40, blocked: true, blocking: ["reversal-chain"] };
+  const at = Date.UTC(2026, 9, 25, 7, 5);
+  const o = overrideFrom(gate, at);
+  gate.blocking.push("adjudication");
+  gate.violations = 3;
+  expect(o, "the receipt moved with the rollup after the click").toEqual({ at, violations: 1, blocking: ["reversal-chain"], enforced: 40 });
+  expect(overrideLineOf({ ...v4, override: o })).toBe(
+    "accepted over the gate — 1 blocking finding on reversal-chain, 40% of the gate enforced · overridden 2026-10-25 07:05 UTC",
+  );
+  expect(overrideLineOf({ ...v4, override: { ...o, violations: 2, blocking: ["a", "b"] } })).toContain("2 blocking findings on a, b");
+  expect(overrideLineOf(v4), "a version with no override carries no receipt line").toBeNull();
+});
