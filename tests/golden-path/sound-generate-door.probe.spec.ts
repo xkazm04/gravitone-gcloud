@@ -5,7 +5,13 @@
 // does when a write it began cannot finish:
 //
 //   · the agents' CLI `generate` bills ElevenLabs with no receipt, so GRAVITONE_DRY_ONLY=1
-//     refuses it outright - nothing sent, nothing filed;
+//     refuses it outright - nothing sent, nothing filed; a --tempo or --score it cannot read is
+//     usage, never a take filed without it;
+//   · a section edit's mode words, a drafted plan's own length, and the prompt WITH its negative
+//     tail are held before the vendor; the meter books a whole edit plan (editSeconds is a guard);
+//   · a take the contract refuses writes no audio file, and an unjudged one does not read the
+//     ledger; a groups file missing a kind reads it at its defaults; the lesson cap is CLAIM_MAX;
+//     an effect clip's title is never empty.
 //
 // `globalThis.fetch` is REPLACED for every case: the vendor is a canned response, and any
 // other URL fails the test. SOUND_STORE_DIR / SOUND_LEDGER_PATH point at a fresh temp dir per
