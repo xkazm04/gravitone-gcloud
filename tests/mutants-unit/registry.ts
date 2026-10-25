@@ -3826,6 +3826,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "Two first requests at once each seed the fixture world, and the slower loop writes every style back at rev 1 over an op the faster one already landed - an edit the atelier answered `applied` silently vanishes.",
   },
   {
+    id: "style-live-receipt-on-dry-process",
+    test: "tests/next-server/style-real.test.ts",
+    file: "app/(studio)/library/style/_port/real.ts",
+    find: "        if (mode === \"live\" && deps.dryOnly()) return err(",
+    replace: "        if (false) return err(",
+    why: "A dry-only process draws a live price the operator cannot confirm, so the atelier shows a spend that the meter will then refuse - the contract says a live read there is refused.",
+  },
+  {
     id: "look-refs-unselected",
     test: "packages/producers/test/frames-look.test.ts",
     file: "packages/producers/src/frames/look.ts",

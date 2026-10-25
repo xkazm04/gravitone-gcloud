@@ -88,6 +88,8 @@ export function makeRealStyle(deps: RealStyleDeps): ServerStyle {
       }),
     actReceipt: ({ act, mode }: { readonly act: StyleAct; readonly mode: ReceiptMode }) =>
       guarded(async (): Promise<Result<Receipt>> => {
+        // ./contract.ts and the produce port's real side: no live price is drawn where nothing live may run.
+        if (mode === "live" && deps.dryOnly()) return err("refused", "this process runs dry only (GRAVITONE_DRY_ONLY=1); a live receipt cannot be read here");
         const s = await ready(deps);
         if (!s.ok) return s;
         const kept = act.kind === "adopt" ? await keptPlateOf(act.fromStyleId) : true;

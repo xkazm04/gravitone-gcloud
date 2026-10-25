@@ -158,10 +158,15 @@ describe("the real atelier, adopt to locked, dry", () => {
     expect(calls).toEqual({ generate: 0, recognize: 0 });
   });
 
-  it("refuses a live confirm where the process runs dry only, in the meter's words", async () => {
+  // The port's contract (./contract.ts) and the produce port's real side: a live read on a
+  // dry-only process is refused before any price is drawn; the confirm is refused by the meter.
+  it("refuses a live receipt where the process runs dry only, and a live confirm in the meter's words", async () => {
     const v = await view("painted");
     const act: StyleAct = { kind: "generate-proofs", styleId: "painted", baseRev: v.rev, trialIds: ["flywheel"] };
-    const rc = must(await side.actReceipt({ act, mode: "live" }));
+    const read = await side.actReceipt({ act, mode: "live" });
+    expect(read.ok ? null : read.error.code).toBe("refused");
+    const s = must(store());
+    const rc = must(styleActReceipt(s, act, { mode: "live", now: NOW }));
     const r = await side.act({ act, mode: "live", token: rc.token }, "op-1");
     expect(r.ok ? null : r.error.code).toBe("refused");
     expect((await view("painted")).proofs.some((p) => p.trialId === "flywheel")).toBe(false);
