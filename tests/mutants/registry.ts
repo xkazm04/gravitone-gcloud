@@ -504,4 +504,12 @@ export const MUTANTS: Mutant[] = [
     replace: "min-width:var(--one-off-w-node)",
     why: "An UpstreamBreak node holds a fixed minimum width in a non-wrapping rail, so a chain of five or more steps pushes a 360px page sideways.",
   },
+  {
+    id: "recalibrate-inert-notes-unrefused",
+    probe: "recalibrate-inert-notes.probe.spec.ts",
+    file: "lib/script/recalibrate.ts",
+    find: "for (const n of inertNotes(notes))",
+    replace: "for (const n of [] as Note[])",
+    why: "On the simulated path a move-earlier, move-later or free-text note changes nothing and leaves no refusal, so the creator sees applied input and no reason the bars did not move.",
+  },
 ];
