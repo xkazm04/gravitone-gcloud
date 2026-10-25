@@ -1,3 +1,5 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -120,5 +122,23 @@ describe("the Library's real side", () => {
     expect(used.detail.usedBy.map((u) => u.value)).toEqual(["p-harbor"]);
     const gone = lib.act("image:still", { act: "use-in-project", projectId: "p-gone" }, {});
     expect(gone.ok ? null : gone.error.code).toBe("not-found");
+  });
+
+  it("the detail's Use-in-project choice marks a project already using the item and defaults to one that is not", async () => {
+    const { lib } = setup();
+    const d = must(lib.detail("image:still", {}));
+    const used = must(lib.act("image:still", { act: "use-in-project", projectId: "p-harbor" }, {})).detail;
+    const { DetailView } = await import("../../app/(studio)/library/_library/DetailView.tsx");
+    const noop = (): void => undefined;
+    const draw = (x: typeof d): string => renderToStaticMarkup(createElement(DetailView, { d: x, busy: false, onFacet: noop, onItem: noop, onPin: noop, onUse: noop, onExport: noop }));
+    const two = { ...used, projects: [{ value: "p-harbor", label: "Harbor film" }, { value: "p-new", label: "New film" }] };
+    const html = draw(two);
+    expect(html).toMatch(/<option value="p-harbor"[^>]*>Harbor film · in use<\/option>/);
+    expect(html).toMatch(/<option value="p-new"[^>]*>New film<\/option>/);
+    expect(html).toMatch(/<option value="p-new" selected=""/);
+    // Nothing uses it yet: no mark, the first project is the default.
+    const fresh = draw({ ...d, projects: two.projects });
+    expect(fresh).not.toContain("in use");
+    expect(fresh).toMatch(/<option value="p-harbor" selected=""/);
   });
 });

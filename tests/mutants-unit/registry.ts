@@ -7206,4 +7206,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<div className={s.lhead}><Chip label={`rendered ${count(p.shown)} of ${count(p.total)}`} casing=\"lower\" />",
     why: "The results head narrates the window again: a visible 'rendered N of M' chip, and the live lane's data attribute gone.",
   },
+  {
+    id: "library-use-choice-ignores-used-by",
+    test: "tests/next-server/library-real.test.ts",
+    file: "app/(studio)/library/_library/DetailView.tsx",
+    find: "const options = d.projects.map((p) => (used.has(p.value) ?",
+    replace: "const options = d.projects.map((p) => (false ?",
+    why: "The Use-in-project choice stops marking a project that already uses the item, so the operator re-uses it unwarned.",
+  },
 ];
