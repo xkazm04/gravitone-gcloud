@@ -65,6 +65,7 @@ import { claudeCliRetrieveProvider } from "./providers/claudeCliRetrieve";
 import { googleProvider } from "./providers/google";
 import type {
   LadderRung,
+  ProbeResult,
   RerouteStep,
   TextProvider,
   TextProviderId,
@@ -598,10 +599,19 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
       }
     }
 
-    const why = trail.map((t) => `${t.provider} (${t.why})`).join(", ") || "no candidates were planned";
+    // A plan the caller's `avoid` emptied is not an empty plan: name the
+    // candidate it ruled out (reason()'s no-alternative says the same).
+    const avoided = req.avoid !== undefined && retrievePlanFor(req.turn, env).includes(req.avoid) ? req.avoid : undefined;
+    const why =
+      trail.map((t) => `${t.provider} (${t.why})`).join(", ") ||
+      (avoided ? `none (${avoided} was ruled out by the caller)` : "no candidates were planned");
     const refusal = new TextError(
       `No retrieval engine could serve this ${req.turn} turn. Tried: ${why}. ` +
-        (first ? first.message : `Nothing may retrieve for a ${req.turn} turn in ${env} posture.`),
+        (first
+          ? first.message
+          : avoided
+            ? `${avoided} is the only engine planned to retrieve a ${req.turn} turn in ${env} posture, and the caller ruled it out.`
+            : `Nothing may retrieve for a ${req.turn} turn in ${env} posture.`),
       // The engine we meant to use, as in reason(); `unsupported` when the
       // plan named nobody, which is the cloud posture today.
       first?.kind ?? "unsupported",
@@ -677,6 +687,8 @@ function trailReason(e: TextError): RerouteStep["why"] {
     case "rate-limited":
     case "timeout":
     case "bad-response":
+    case "invalid-request":
+    case "unsupported":
     case "cancelled":
       return e.kind;
     default:
@@ -706,6 +718,7 @@ export async function engineStatus(turn: TurnClass = "edit-plan"): Promise<{
   const env = currentTextEnv();
   const candidates: { provider: TextProviderId; ok: boolean; detail: string }[] = [];
   let serving: TextProviderId | null = null;
+  const probed = new Map<TextProviderId, Promise<ProbeResult>>();
 
   // The retrieval candidates first, because when one is open it is what a run
   // of this turn would use (/api/research tries it before reasoning). Off, it is
@@ -722,7 +735,11 @@ export async function engineStatus(turn: TurnClass = "edit-plan"): Promise<{
       candidates.push({ provider: id, ok: false, detail: blockError(id, blocked).message });
       continue;
     }
-    const p = await PROVIDERS[id]().probe();
+    // One probe per BINARY: the retrieval rung's probe IS the reasoning
+    // adapter's (claudeCliRetrieve.ts), so two candidates would spawn
+    // `claude --version` twice for one answer.
+    const key = id === "claude-cli-retrieve" ? "claude-cli" : id;
+    const p = await (probed.get(key) ?? probed.set(key, PROVIDERS[id]().probe()).get(key)!);
     candidates.push({ provider: id, ok: p.ok, detail: p.detail });
     if (p.ok && !serving) serving = id;
   }

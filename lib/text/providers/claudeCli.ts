@@ -129,7 +129,12 @@ export function claudeCliProvider(): TextProvider {
           },
         };
       } catch (e) {
-        if (e instanceof CliError) throw cliTextError(e);
+        if (e instanceof CliError)
+          throw cliTextError(
+            e,
+            "claude-cli",
+            e.costUsd !== undefined ? { costUsd: e.costUsd, costBasis: "vendor-reported", model: MODEL } : undefined,
+          );
         throw e;
       }
     },

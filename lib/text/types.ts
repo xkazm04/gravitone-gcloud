@@ -289,6 +289,9 @@ export interface RerouteStep {
     | "not-logged-in"
     /** It was called and it failed. */
     | "failed"
+    /** Refused before dispatch (a prompt past the adapter's cap): nothing was
+     *  sent and nothing was billed, so it must not read as an engine fault. */
+    | "invalid-request"
     | "refused"
     | "rate-limited"
     | "timeout"

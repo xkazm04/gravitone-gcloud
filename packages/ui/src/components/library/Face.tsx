@@ -1,3 +1,5 @@
+"use client";
+
 // What a Library item shows in place of itself (library.js `face`, `vface`): the picture when
 // there is one, else a face drawn from the item's own data - never a blank tile. The prototype's
 // rule for media that cannot show itself ("a designed face, drawn from the item's own data") is
@@ -12,6 +14,8 @@
 // Faces are chosen on the server (the port's presentation): which picture leads an item - a
 // poster, a keyframe, a style's best plate - is a query over its media facts (plan §6 Phase 5,
 // "cover choice ... are queries"), so a near-black render never arrives here as a cover.
+
+import { useState } from "react";
 
 import { cx } from "../cx.ts";
 import { vars } from "../vars.ts";
@@ -34,15 +38,50 @@ export type FaceSize = "row" | "tile" | "preview";
 
 const wash = (p: Palette | undefined) => (p === undefined ? undefined : vars({ "--a": p[0], "--b": p[1] }));
 
+/** The designed face a picture that would not load is replaced by: the empty ink ground a failed
+ *  <img> leaves is indistinguishable from one still arriving, so the failure is drawn. `name`
+ *  carries the item's own title where the caller has one. */
+function UnreadableFace({ size, name = "" }: { readonly size: FaceSize; readonly name?: string }) {
+  return (
+    <span className={cx(s.designed, s[size])} data-face="unreadable">
+      <span className={s.lead}>media</span>
+      <span className={s.name}>unreadable</span>
+      <span className={s.tail}>{name}</span>
+    </span>
+  );
+}
+
+/** A picture with a failure path: a 404 or an undecodable blob becomes the unreadable face. The
+ *  error is kept per url, so a different url is tried afresh; the ref catches a failure that
+ *  landed before this handler was attached. */
+function Picture({ url, size, alt }: { readonly url: string; readonly size: FaceSize; readonly alt: string }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (failed === url) return <UnreadableFace size={size} name={alt} />;
+  return (
+    // A plain <img>: a library item is shown as its own bytes, at the size the grid gives it
+    // (the Board's `Plate` exemption from next/image, for the same reason).
+    // eslint-disable-next-line @next/next/no-img-element -- see above: an item is its own bytes, at the grid's size
+    <img
+      className={s.img}
+      src={url}
+      alt={alt}
+      loading={size === "preview" ? "eager" : "lazy"}
+      decoding="async"
+      draggable={false}
+      onError={() => setFailed(url)}
+      ref={(el) => {
+        if (el !== null && el.complete && el.naturalWidth === 0 && el.getAttribute("src") !== "") setFailed(url);
+      }}
+    />
+  );
+}
+
 /** The face, filling its box. `alt` names a picture in the preview; tiles and rows are named by their option. */
 export function FaceView({ face, size, alt = "" }: { readonly face: Face; readonly size: FaceSize; readonly alt?: string }) {
   switch (face.kind) {
     case "image":
     case "poster":
-      // A plain <img>: a library item is shown as its own bytes, at the size the grid gives it
-      // (the Board's `Plate` exemption from next/image, for the same reason).
-      // eslint-disable-next-line @next/next/no-img-element -- see above: an item is its own bytes, at the grid's size
-      return <img className={s.img} src={face.url} alt={alt} loading={size === "preview" ? "eager" : "lazy"} decoding="async" draggable={false} />;
+      return <Picture url={face.url} size={size} alt={alt} />;
     case "wave":
       return (
         <span className={cx(s.wave, s[size])}>

@@ -222,13 +222,21 @@ test("size cap: the prompt as SENT is held to it, schema instruction included", 
   }) as typeof fetch;
   // `oneOf` keeps this schema off native enforcement, so its instruction is appended.
   const schema = { type: "object", required: ["a"], properties: { a: { oneOf: [{ type: "number" }, { type: "string" }] } } };
+  const lines: string[] = [];
+  const realErr = console.error;
+  console.error = (...a: unknown[]) => void lines.push(a.join(" "));
   try {
     const out = await reason({ turn: "edit-plan", prompt: "x".repeat(900_000 - 10), schema }).catch((e: unknown) => e);
     expect(sent, "a prompt past the cap once its schema was appended went on the wire").toBe(0);
     expect((out as TextError).kind).toBe("invalid-request");
   } finally {
+    console.error = realErr;
     globalThis.fetch = real;
   }
+  // The descent record names the refusal as what it was, not as an engine fault.
+  const line = lines.find((l) => l.includes("kind=invalid-request")) ?? "";
+  expect(line, "no refusal line was logged").toContain("tried=google:");
+  expect(line).toContain("tried=google:invalid-request");
 });
 
 /* ── the availability oracle ──────────────────────────────────────────────── */
