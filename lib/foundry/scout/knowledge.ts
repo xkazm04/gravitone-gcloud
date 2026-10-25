@@ -22,6 +22,12 @@
 // The root is injectable (SCOUT_KNOWLEDGE_DIR, read per call, or the `root`
 // option), so a test writes a temp tree and never the checkout's knowledge/.
 // The files are committed to git by the next night's skill run, not here.
+//
+// ONE LOOP (spark scout-vision S3). Every new night is a scout night, so its findings and watch lines land in the scout
+// homes above, whatever its candidates are of. A kept CHARACTER - keyed on the candidate's own target and card, never on a
+// wing - still appends to knowledge/scout-muse/characters.md (the path is unchanged). The muse ARCHIVE's packets (all
+// committed) decode inside the muse scope, where a redelivered line keeps landing where it first did: its techniques.md
+// and its watchlist, read by the taste brief and the registry digest as legacy.
 
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -45,9 +51,9 @@ export const STEP_NAME_RE = /^\d{2}-[a-z][a-z-]*$/;
 export const STEP_RULE = "a step is NN-name (02-frames, 05-cut)";
 
 /**
- * Why a finding naming `template` has nowhere to land, or undefined. The scout wing's must name an existing
- * knowledge/templates/<template>/ directory under `root` (the step's PATTERNS.md is made on a keep); a muse finding
- * lands in its techniques.md and serves no template step (findingRelOf).
+ * Why a finding naming `template` has nowhere to land, or undefined. A night's finding must name an existing
+ * knowledge/templates/<template>/ directory under `root` (the step's PATTERNS.md is made on a keep); a finding of the muse
+ * archive landed in its techniques.md and serves no template step (findingRelOf).
  */
 export async function templateProblem(template: string, root: string = knowledgeRoot()): Promise<string | undefined> {
   if (activeWing() !== "scout") return undefined;
@@ -72,15 +78,15 @@ export function patternsRel(template: string, step: string): string {
 
 export const WATCHLIST_REL = "scout/watchlist.md";
 
-/** A wing's watchlist (spark scout-muse): `scout/watchlist.md`, `scout-muse/watchlist.md`. */
+/** A root's watchlist: `scout/watchlist.md`; the muse archive's `scout-muse/watchlist.md` (legacy, read by the registry digest). */
 export const watchlistRelOf = (wing: ScoutWing): string => `${WING_KNOWLEDGE_DIR[wing]}/watchlist.md`;
 
-/** The muse wing's craft notes and kept characters (knowledge/scout-muse/). */
+/** The kept characters (every keep appends here) and the muse archive's craft notes (legacy, read by the taste brief). */
 export const MUSE_TECHNIQUES_REL = "scout-muse/techniques.md";
 export const MUSE_CHARACTERS_REL = "scout-muse/characters.md";
 export const CHARACTERS_HEADING = "## Kept characters";
 
-/** Where a kept finding lands: the scout wing's step PATTERNS.md; the muse wing's techniques.md (it serves no template step). */
+/** Where a kept finding lands: its step's PATTERNS.md; under the archive's scope, techniques.md (it serves no template step). */
 export function findingRelOf(wing: ScoutWing, template: string, step: string): string {
   return wing === "scout" ? patternsRel(template, step) : MUSE_TECHNIQUES_REL;
 }
@@ -183,7 +189,7 @@ async function appendTo(rel: string, heading: string, line: string, marker: stri
   return { file, rel, wrote: next !== null, created: before === null };
 }
 
-/** A kept finding into its step's PATTERNS.md (the muse wing: its techniques.md). */
+/** A kept finding into its step's PATTERNS.md (an archive packet's: techniques.md). */
 export function appendFinding(night: NightId, c: FindingCandidate, sourceUrl: string | undefined, o: KnowledgeOptions = {}): Promise<Appended> {
   return appendTo(findingRelOf(activeWing(), c.template, c.step), FINDINGS_HEADING, findingLine(night, c, sourceUrl), markerOf(night, c.id), `# ${c.template} - ${c.step}`, o);
 }
@@ -193,7 +199,7 @@ export function appendTechnique(night: NightId, c: Pick<StoryboardCandidate, "id
   return appendFinding(night, techniqueFinding(c, t), t.url, o);
 }
 
-/** A kept watch line into the active wing's watchlist. */
+/** A kept watch line into knowledge/scout/watchlist.md (an archive packet's: the muse watchlist). */
 export function appendWatch(night: NightId, c: WatchCandidate, o: KnowledgeOptions = {}): Promise<Appended> {
   return appendTo(watchlistRelOf(activeWing()), WATCH_HEADING, watchLine(night, c), markerOf(night, c.id), "# Scout watchlist", o);
 }
@@ -204,7 +210,7 @@ export function characterLine(night: NightId, c: Pick<IdeaCandidate, "id" | "car
   return `- **${flat(c.card.name)}**, aged ${c.card.age} - ${sentence(c.card.look)} Plays: ${sentence(c.card.personality)} ${markerOf(night, c.id)}`;
 }
 
-/** A kept character idea (muse wing) into knowledge/scout-muse/characters.md. */
+/** A kept character idea - of any night, keyed on its target and card - into knowledge/scout-muse/characters.md. */
 export function appendCharacter(night: NightId, c: Pick<IdeaCandidate, "id" | "card">, o: KnowledgeOptions = {}): Promise<Appended> {
   return appendTo(MUSE_CHARACTERS_REL, CHARACTERS_HEADING, characterLine(night, c), markerOf(night, c.id), "# Muse characters", o);
 }

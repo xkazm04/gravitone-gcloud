@@ -1,15 +1,13 @@
 import type { LoadResource, LoadSummary } from "@gt/domain/load";
 
 import { developedOf } from "./direction";
-import { alreadyDrawn } from "./ideaRepeat";
 import { ancestryOf, listSeedBatches, seedOf } from "./seedStore";
 import { seedFacets } from "./seeds";
 import { EMPTY_STEER, pausedUnder, readSteer } from "./steer";
-import { listNights, readAllNights, readNight } from "./store";
+import { listNights, readNight, readRootedNights } from "./store";
 import { storyboardSections } from "./storyboardKept";
-import { museSections } from "./tasteMuse";
+import { characterSections } from "./tasteMuse";
 import { CANDIDATE_KINDS, SEED_AUDIENCES, parseCellId, seedRef, type Candidate, type CandidateKind, type IdeaCandidate, type Night, type SeedBatch, type Steer } from "./types";
-import { activeWing } from "./wingScope";
 
 // THE TASTE BRIEF - the operator's last verdicts, written into each new night as
 // taste.md for the skill to read before it searches (spark media-training-loop:
@@ -378,8 +376,9 @@ export function tasteOf(nights: readonly Night[], last?: NightLoad, o: TasteOpti
  * too: their sources say which kept ideas are already developed. `loadOf` reads a night's load (./load.ts nightLoad over the
  * caller's store); the newest closed or committed night it finds samples for, among the last TASTE_NIGHTS such, opens the brief.
  * The seed batches and the steer are read too (a steer mid-write reads as empty: the brief is advice); `extra` is
- * TasteOptions.extra. Every read is the active wing's root; the muse wing's brief opens its extra with its kept
- * characters and technique findings (./tasteMuse.ts).
+ * TasteOptions.extra. The nights are the scout root's (every new night is a scout night, spark scout-vision S3); the extra
+ * opens with the character sections, read over the scout nights AND the muse archive (./tasteMuse.ts), then the caller's
+ * own (the branches, the backlog, the genre ladder, the sheets to draw...).
  */
 export async function tasteBrief(except?: string, loadOf?: (n: Night) => LoadSummary | undefined, extra?: readonly string[]): Promise<string> {
   const nights: Night[] = [];
@@ -400,7 +399,7 @@ export async function tasteBrief(except?: string, loadOf?: (n: Night) => LoadSum
     }
   }
   const seeds: TasteSeeds = { batches: await listSeedBatches(), steer: await readSteer().catch(() => EMPTY_STEER) };
-  // Every night on disk, the open and the uncommitted too: a card thrown last night is a name the next author must not draw again.
-  const all = [...(activeWing() === "muse" ? [...(await museSections()), ...alreadyDrawn(await readAllNights())] : []), ...(extra ?? [])];
-  return tasteOf(nights, last, { seeds, ...(all.length === 0 ? {} : { extra: all }) });
+  // Every night of both roots, the open and the uncommitted too: a card thrown last night is a name the next author must not draw again.
+  const all = [...(await characterSections(await readRootedNights())), ...(extra ?? [])];
+  return tasteOf(nights, last, { seeds, extra: all });
 }

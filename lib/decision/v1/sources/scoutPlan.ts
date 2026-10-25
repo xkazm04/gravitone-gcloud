@@ -13,7 +13,7 @@ import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
 import { TECHNIQUE_LABEL, type GateResult, type MeshAsset } from "../../../foundry/mesh/types.ts";
 import { patternsRel } from "../../../foundry/scout/knowledge.ts";
 import { mss } from "../../../foundry/scout/track.ts";
-import { CANDIDATE_KINDS, cellId, parseCellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type GenreProposalCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type PieceCandidate, type SceneCandidate, type SceneClip, type Seed, type StoryboardCandidate, type TrackCandidate, type VentureProposalCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
+import { CANDIDATE_KINDS, cellId, parseCellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type GenreProposalCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type PieceCandidate, type SceneCandidate, type SceneClip, type Seed, type SheetCandidate, type StoryboardCandidate, type TrackCandidate, type VentureProposalCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
 import { WORDS_PART } from "../../../foundry/scout/storyboardKept.ts";
 import { stillOf } from "../../../foundry/scout/visualizer.ts";
 import { meshFileUrl } from "../../../library/feeds/mesh.ts";
@@ -77,6 +77,12 @@ import { museFacts, scoutFileUrl } from "./scoutWing.ts";
 //            label; a dry or not-yet-cut piece is that cell as words. Kept, the genre is publishable (derived, nothing
 //            written) and its `genre-publishable` registry lead queues (./scout.ts).
 //            An idea, a seed or a storyboard made inside a venture names it in its meta (`venture: vn-...`).
+//   sheet    (spark scout-vision S3) a kept character's reference sheet, ONE image cell `c-07/sheet` under `sheets` (the
+//            images tab): her name the label, the portrait it is drawn from its meta. A dry sheet is that cell as words.
+//            Kept, it is her reference (derived by lib/foundry/scout/characters.ts keptCharacters, nothing written);
+//            rejected, she is due a sheet again (lib/foundry/scout/sheet.ts sheetsDue).
+//            A cast idea or storyboard names its cast in its meta (`cast: Ilse Marrow, ...`), a character idea cited
+//            from a web source its source (`source: s-03`).
 // A text cell's media is the content address of its own words (text/plain):
 // the kernel holds candidates by blob, and the words are the thing judged.
 //
@@ -329,6 +335,11 @@ export const ideaMeta = (c: Pick<IdeaCandidate, "target" | "anchor" | "genre">):
 /** `venture: vn-...`, for a run made inside a venture. */
 const ventureOf = (c: Pick<Candidate, "venture">): string | undefined => (c.venture === undefined ? undefined : `venture: ${c.venture}`);
 
+/** `cast: Ilse Marrow, Ivo Brand`, for an idea or a storyboard that casts kept characters (spark scout-vision S3). */
+export const castOfMeta = (c: { readonly cast?: readonly string[] }): string | undefined => (c.cast === undefined || c.cast.length === 0 ? undefined : `cast: ${c.cast.join(", ")}`);
+/** `source: s-03`, for a character idea cited from a web source of its night. */
+const sourceOfMeta = (c: Pick<IdeaCandidate, "source">): string | undefined => (c.source === undefined ? undefined : `source: ${c.source}`);
+
 /** `seed: <first 40 characters of its sentence>`, for a candidate grown from a seed the store still has. */
 const seedHead = (c: Pick<Candidate, "fromSeed">, seeds: ScoutV1["seeds"]): string | undefined => {
   const s = c.fromSeed === undefined ? undefined : seeds?.[c.fromSeed];
@@ -354,7 +365,7 @@ function ideaCells(night: Night, c: IdeaCandidate, media: ScoutV1["media"], out:
     media: m,
     grades: [],
     url: scoutFileUrl(night.id, c.image),
-    words: { label: c.title, meta: [ideaMeta(c), ...museFacts(c), seedHead(c, seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · "), prompt: c.prompt },
+    words: { label: c.title, meta: [ideaMeta(c), ...museFacts(c), castOfMeta(c), sourceOfMeta(c), seedHead(c, seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · "), prompt: c.prompt },
   });
   out.rows.push({ id: c.id, label: c.title, group: "ideas", prompt: c.prompt, ...(c.aim === undefined ? {} : { aim: c.aim }), ...(c.use === undefined ? {} : { use: c.use }) });
 }
@@ -475,7 +486,7 @@ function storyboardCells(night: Night, c: StoryboardCandidate, v1: Pick<ScoutV1,
   const framesWord = frames === c.panels.length ? `${frames} frame${frames === 1 ? "" : "s"}` : `${frames} of ${c.panels.length} frames`;
   const idea = v1.ideas?.[c.fromIdea];
   const trial = c.genre === undefined ? undefined : `trial: ${c.genre}${c.clips === undefined ? "" : ` · ${clips} of ${c.panels.length} clips`}`;
-  const meta = [`idea: ${idea === undefined ? c.fromIdea : clip40(idea)}`, framesWord, trial, "local · free", seedHead(c, v1.seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · ");
+  const meta = [`idea: ${idea === undefined ? c.fromIdea : clip40(idea)}`, framesWord, trial, castOfMeta(c), "local · free", seedHead(c, v1.seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · ");
   out.cells.push({ id: wordsCell(c.id), candidate: c.id, kind: "storyboard", row: c.id, jobId, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words: { label: c.title, meta, prompt: body } });
   out.rows.push({ id: c.id, label: c.title, group: "storyboards", prompt: c.paragraph, ...(c.aim === undefined ? {} : { aim: c.aim }), ...(c.use === undefined ? {} : { use: c.use }) });
 }
@@ -511,6 +522,36 @@ function pieceCells(night: Night, c: PieceCandidate, media: ScoutV1["media"], ou
   // A clip that could not be made names itself in `error` (`clip N: ...`), beside the cut.
   if (c.error !== undefined) out.losses.push({ candidate: c.id, grade: "approximate", reason: c.error });
   out.rows.push({ id: c.id, label: clip40(c.title), group: "pieces", ...(c.use === undefined ? {} : { use: c.use }), ...(c.aim === undefined ? {} : { aim: c.aim }) });
+}
+
+/** A sheet's one cell (`c-07/sheet`): its verdict is hers (lib/foundry/scout/sheet.ts SHEET_PART). */
+export const sheetCellOf = (candidate: CandidateId): string => cellId(candidate, "sheet");
+
+/** What a sheet's verdict does, as the preview says it. */
+export const sheetVerdictLine = (c: Pick<SheetCandidate, "name">, verdict: "keep" | "reject"): string => (verdict === "keep" ? `${c.name}'s reference for every frame she is cast in` : `refused: ${c.name} is due a sheet again`);
+
+/** `reference sheet · from muse:2026-10-24/c-03 · local · free`. */
+const sheetMeta = (c: SheetCandidate): string => ["reference sheet", `from ${c.fromPortrait}`, "local · free"].join(" · ");
+
+function sheetCells(night: Night, c: SheetCandidate, media: ScoutV1["media"], out: Mutable): void {
+  if (c.status === "failed") {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
+    return;
+  }
+  const jobId = c.jobId ?? `scout:${night.id}`;
+  const m = c.image === undefined ? undefined : media[c.image];
+  if (c.image !== undefined && m === undefined) {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: `${c.image} is not on disk` });
+    return;
+  }
+  const words: ItemWords = { label: c.name, meta: sheetMeta(c) };
+  if (c.image !== undefined && m !== undefined) out.cells.push({ id: sheetCellOf(c.id), candidate: c.id, kind: "sheet", row: c.id, jobId, media: m, grades: [], url: scoutFileUrl(night.id, c.image), words });
+  else {
+    // A dry sheet: its words alone, under the same cell id (the verdict is hers either way).
+    const body = [`sheet · ${c.name}`, `from ${c.fromPortrait}`].join("\n");
+    out.cells.push({ id: sheetCellOf(c.id), candidate: c.id, kind: "sheet", row: c.id, jobId, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words: { ...words, prompt: body } });
+  }
+  out.rows.push({ id: c.id, label: clip40(c.name), group: "sheets" });
 }
 
 /** What a rejected proposal does, as the preview says it; a kept one's line is its birth (bornLine). */
@@ -556,8 +597,7 @@ export function build(v1: ScoutV1): Built {
     else if (c.kind === "storyboard") storyboardCells(night, c, v1, out);
     else if (c.kind === "genre" || c.kind === "venture") proposalCell(night, c, out);
     else if (c.kind === "piece") pieceCells(night, c, v1.media, out);
-    // spark scout-vision S3 - WP0 stub: a sheet draws no row until WP3 gives it its cell.
-    else if (c.kind === "sheet") out.losses.push({ candidate: c.id, grade: "dropped", reason: "sheet: no packet row yet" });
+    else if (c.kind === "sheet") sheetCells(night, c, v1.media, out);
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

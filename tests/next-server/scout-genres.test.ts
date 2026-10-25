@@ -245,8 +245,8 @@ describe("the venture field", () => {
     expect(parseStoryboards([{ ...sb, venture: "vn-desk" }])).toMatchObject({ ok: true, value: [{ venture: "vn-desk" }] });
     expect(parseStoryboards([{ ...sb, venture: "desk" }])).toMatchObject({ ok: false, error: { message: expect.stringContaining("a venture id vn-...") } });
     const idea = { title: "t", target: "scene", genre: "g", prompt: "a lantern on a stair", anchor: { kind: "free", ref: "" }, app: "short", appTarget: "a cold open", aim: "see whether one light carries it" };
-    expect(parseIdeas([{ ...idea, venture: "vn-desk" }], "scout")).toMatchObject({ ok: true, value: [{ venture: "vn-desk" }] });
-    expect(parseIdeas([idea], "scout")).toMatchObject({ ok: true, value: [expect.not.objectContaining({ venture: expect.anything() })] });
+    expect(parseIdeas([{ ...idea, venture: "vn-desk" }])).toMatchObject({ ok: true, value: [{ venture: "vn-desk" }] });
+    expect(parseIdeas([idea])).toMatchObject({ ok: true, value: [expect.not.objectContaining({ venture: expect.anything() })] });
   });
 });
 

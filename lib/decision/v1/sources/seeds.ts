@@ -9,7 +9,7 @@ import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
 import { mergePart, openOf, partRefusal, partRunId, remainderLine, splitPart } from "../../../foundry/scout/parts.ts";
 import { listSeedBatches, mutateSeedBatch, readSeedBatch, seedOf, seedsRoot } from "../../../foundry/scout/seedStore.ts";
-import { musicFacets, seedFacets } from "../../../foundry/scout/seeds.ts";
+import { characterFacets, musicFacets, seedFacets } from "../../../foundry/scout/seeds.ts";
 import type { Seed, SeedBatch, SeedCommit } from "../../../foundry/scout/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { buildConsequence, committedOutcome, decisionMap, mintPacket, runIdOf, v1Call, v1DigestOf, type AdapterRef, type DecisionAdapter, type DecisionsAt, type OpenPlan, type Preview } from "../types.ts";
@@ -74,8 +74,8 @@ function partOf(v1: SeedsRead): { readonly part: number; readonly seeds: readonl
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
 
-/** The cell's hashed text. A music seed's song is a line after the rest; a seed without one hashes exactly as it did before the field (a packet minted then keeps its refs). */
-export const body = (s: Seed): string => [s.sentence, s.audience, s.genre, s.subgenre, s.type, s.format, s.parent ?? "", ...(s.music === undefined ? [] : [musicFacets(s.music)])].join("\n");
+/** The cell's hashed text. A music seed's song and a character seed's app and cast are lines after the rest; a seed without them hashes exactly as it did before the fields (a packet minted then keeps its refs). */
+export const body = (s: Seed): string => [s.sentence, s.audience, s.genre, s.subgenre, s.type, s.format, s.parent ?? "", ...(s.music === undefined ? [] : [musicFacets(s.music)]), ...(s.character === undefined ? [] : [characterFacets(s.character)])].join("\n");
 
 function wordsOf(v1: SeedsRead, s: Seed): ItemWords {
   const parent = s.parent === undefined ? undefined : seedOf(v1.all, s.parent)?.seed.sentence;

@@ -1,10 +1,11 @@
-// THE KEPT MUSE CHARACTERS IN THE LIBRARY (spark scout-use-aim): the character feed reads the muse
-// wing's nights and shelves one `character` item per woman - her cards grouped by name across nights,
-// her newest kept still the item's media, every look she was kept in on the item, the core prompt
-// built from the newest. A night that is dry, uncommitted or whose cell was not kept shelves nothing;
-// a look from before the wire fields has no `look`, `genre` or `app` and the keys are absent, not
-// null; the catalogue style a look became rides the look only when the chain joins. Every root is a
-// temp directory; the catalogue is a stand-in.
+// THE KEPT CHARACTERS IN THE LIBRARY (spark scout-use-aim; both roots since spark scout-vision S3): the character feed
+// reads the scout nights and the muse ARCHIVE's and shelves one `character` item per character key - her cards grouped
+// by folded name across nights and roots, her newest kept still the item's media, every look she was kept in on the
+// item, the core prompt built from the newest. One first kept on the archive keeps `character:muse:<name>`; one first
+// kept on a scout night is `character:<name>`; colliding night ids stay two nights. A night that is dry, uncommitted
+// or whose cell was not kept shelves nothing; a look from before the wire fields has no `look`, `genre` or `app` and
+// the keys are absent, not null; the catalogue style a look became rides the look only when the chain joins. Every
+// root is a temp directory; the catalogue is a stand-in.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -32,6 +33,7 @@ import { queryLibrary } from "@gt/kernel/library/query";
 import { upsertItems } from "@gt/kernel/library/write";
 
 import { characterFeed, characterItemId, shelveCharacters } from "../../lib/library/feeds/character.ts";
+import type { RootedNight } from "../../lib/foundry/scout/characters.ts";
 import type { Candidate, IdeaCandidate, Night } from "../../lib/foundry/scout/types.ts";
 
 const CARD = { name: "Sofia", age: 29, look: "olive skin, long dark wavy hair, slim build, an emerald silk scarf", personality: "a warm, impulsive travel photographer" };
@@ -58,8 +60,10 @@ function night(id: string, candidates: readonly Candidate[], kept: readonly stri
   };
 }
 
-const resolve = (n: string, rel: string): string => path.join("/muse", n, rel);
-const shelve = (nights: readonly Night[], styles: ReadonlyMap<string, string> = new Map()) => shelveCharacters(nights, styles, resolve, "real");
+const resolve = (root: RootedNight["root"], n: string, rel: string): string => path.join(root === "archive" ? "/muse" : "/scout", n, rel);
+const archived = (nights: readonly Night[]): RootedNight[] => nights.map((night) => ({ root: "archive", night }));
+/** The archive's nights (every character before the merge was the muse wing's). */
+const shelve = (nights: readonly Night[], styles: ReadonlyMap<string, string> = new Map()) => shelveCharacters(archived(nights), styles, resolve, "real");
 
 describe("the grouping", () => {
   const older = night("2026-10-23-2", [idea("c-02", { look: undefined, genre: undefined, app: undefined, card: { ...CARD, name: "SOFIA" } }), idea("c-03", { card: { ...CARD, name: "Hana", age: 31, look: "a sleek black bob, slender build" }, prompt: "Anime cel. Hana, aged 31, a sleek black bob, slender build. At a desk." })], ["c-02/board", "c-03/board"]);
@@ -69,7 +73,7 @@ describe("the grouping", () => {
     const r = shelve([older, newer]);
     expect(r.skipped).toEqual([]);
     expect(r.items.map((i) => i.item.id).sort()).toEqual(["character:muse:hana", "character:muse:sofia"]);
-    const sofia = r.items.find((i) => i.item.id === characterItemId("Sofia"));
+    const sofia = r.items.find((i) => i.item.id === characterItemId("Sofia", "archive"));
     expect(sofia?.item.title).toBe("Sofia");
     const looks = sofia?.extras.character?.looks ?? [];
     expect(looks.map((l) => [l.night, l.cell, l.look])).toEqual([["2026-10-24", "c-05/board", "gouache-portrait"], ["2026-10-23-2", "c-02/board", undefined]]);
@@ -129,12 +133,37 @@ describe("what does not shelve", () => {
     const n = night("2026-10-24", [idea("c-01", { card: undefined }), idea("c-02", { image: undefined, card: { ...CARD, name: "Hana" } })], ["c-01/board", "c-02/board"]);
     const r = shelve([n]);
     expect(r.items).toEqual([]);
-    expect(r.skipped.map((s) => s.id)).toEqual(["2026-10-24/c-01", "2026-10-24/c-02"]);
+    expect(r.skipped.map((s) => s.id)).toEqual(["muse:2026-10-24/c-01", "muse:2026-10-24/c-02"]);
   });
   it("a newest still whose file escapes the night is reported and the woman is not shelved on an older one's file", () => {
-    const r = shelveCharacters([night("2026-10-24", [idea("c-01")], ["c-01/board"])], new Map(), () => { throw new Error("outside the night"); }, "real");
+    const r = shelveCharacters(archived([night("2026-10-24", [idea("c-01")], ["c-01/board"])]), new Map(), () => { throw new Error("outside the night"); }, "real");
     expect(r.items).toEqual([]);
-    expect(r.skipped).toEqual([{ id: "2026-10-24/c-01", reason: "ideas/c-01.png: outside the night" }]);
+    expect(r.skipped).toEqual([{ id: "muse:2026-10-24/c-01", reason: "ideas/c-01.png: outside the night" }]);
+  });
+});
+
+describe("both roots", () => {
+  const archive = night("2026-10-24", [idea("c-01", { prompt: prompt("Risograph print.") })], ["c-01/board"]);
+  // The scout night of the SAME id: Sofia kept again (a new look), and a new character kept for the first time.
+  const scout = night("2026-10-24", [idea("c-01", { look: "ink-wash", card: { ...CARD, name: "sofia " } }), idea("c-02", { card: { ...CARD, name: "Ines Roca", age: 41 } })], ["c-01/board", "c-02/board"], { committed: { at: "2026-10-26T08:00:00.000Z", by: "operator", kept: ["c-01/board", "c-02/board"], rejected: [], reasons: {}, notes: {}, dry: false } });
+  const both: RootedNight[] = [{ root: "scout", night: scout }, { root: "archive", night: archive }];
+
+  it("is one item per character key: first kept on the archive keeps character:muse:<name>, a new one is character:<name>", () => {
+    const r = shelveCharacters(both, new Map(), resolve, "real");
+    expect(r.skipped).toEqual([]);
+    expect(r.items.map((i) => i.item.id)).toEqual(["character:muse:sofia", "character:ines-roca"]);
+    expect(characterItemId("Ines Roca", "scout")).toBe("character:ines-roca");
+  });
+
+  it("keeps colliding night ids apart: each still is served by its own root's run, the newest (scout) is the media", () => {
+    const sofia = shelveCharacters(both, new Map(), resolve, "real").items[0];
+    expect(sofia?.extras.character?.looks.map((l) => [l.night, l.look, l.image])).toEqual([
+      ["2026-10-24", "ink-wash", "/api/foundry/file?kind=scout&run=2026-10-24&path=ideas%2Fc-01.png"],
+      ["2026-10-24", "risograph-two-colour", "/api/foundry/file?kind=scout&run=muse%3A2026-10-24&path=ideas%2Fc-01.png"],
+    ]);
+    expect(sofia?.file?.abs).toBe(path.join("/scout", "2026-10-24", "ideas/c-01.png"));
+    expect(sofia?.item.collections).toEqual([{ kind: "run", id: "2026-10-24" }, { kind: "run", id: "muse:2026-10-24" }]);
+    expect(shelveCharacters([...both].reverse(), new Map(), resolve, "real").items).toEqual(shelveCharacters(both, new Map(), resolve, "real").items);
   });
 });
 
@@ -169,15 +198,16 @@ describe("the feed", () => {
     writeNight("scout-muse", night("2026-10-23-2", [idea("c-02")], ["c-02/board"]));
     writeNight("scout-muse", night("2026-10-24", [{ id: "c-01", kind: "style", sourceIds: [], status: "rendered", fromIdea: "2026-10-23-2/c-02", extractRunId: "extract-run-7" }], [], { state: "closed" }));
     writeNight("scout-muse", night("2026-10-25", [idea("c-01", { card: { ...CARD, name: "Dry One" } })], ["c-01/board"], { dry: true }));
-    // The scout wing holds a kept character idea too: the feed never reads that root.
-    writeNight("scout", night("2026-10-24", [idea("c-01", { card: { ...CARD, name: "Wrong Wing" } })], ["c-01/board"]));
+    // The scout root holds a kept character on a night of a colliding id: since the merge the feed reads it too.
+    writeNight("scout", night("2026-10-24", [idea("c-01", { card: { ...CARD, name: "Ines Roca" } })], ["c-01/board"]));
   });
   afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
-  it("reads the muse root only, joins the catalogue's style by its extract run, and writes items the Library takes", async () => {
+  it("reads both roots, joins the catalogue's style by its extract run, and writes items the Library takes", async () => {
     const r = await characterFeed.read({ universe: "fixture" });
     expect(r.skipped).toEqual([]);
-    expect(r.items.map((i) => i.item.id)).toEqual(["character:muse:sofia"]);
+    expect(r.items.map((i) => i.item.id)).toEqual(["character:muse:sofia", "character:ines-roca"]);
+    expect(r.items[1]?.file?.abs).toBe(path.join(ROOT, "scout", "2026-10-24", "ideas", "c-01.png"));
     const only = r.items[0];
     expect(only?.item.source).toBe("fixture");
     expect(only?.extras.character?.looks[0]?.styleId).toBe("paper-relief");
@@ -190,7 +220,7 @@ describe("the feed", () => {
       const up = upsertItems(k.value.store, r.items.map((i) => ({ item: i.item, meta: i.meta, extras: i.extras, feed: "character" })), { styleOf: () => undefined });
       expect(up.ok).toBe(true);
       const page = queryLibrary(k.value.store, { kind: "character", limit: 10 });
-      expect(page.ok && page.value.items.map((x) => x.title)).toEqual(["Sofia"]);
+      expect(page.ok && page.value.items.map((x) => x.title).sort()).toEqual(["Ines Roca", "Sofia"]);
     } finally {
       k.value.close();
     }

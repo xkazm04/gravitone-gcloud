@@ -1,6 +1,7 @@
-// AN UNREADABLE MUSE ROOT DOES NOT HIDE THE SCOUT WING (ledger scout + seeds sources): the muse root is a FILE,
-// so its listing throws ENOTDIR; the scout wing's night and seed batch still project their Weir piles and the
-// muse failure is a skipped entry. The scout wing failing still fails the source.
+// AN UNREADABLE MUSE ARCHIVE DOES NOT HIDE THE SCOUT ROOT (ledger scout + seeds sources; the archive since spark
+// scout-vision S3): the archive root is a FILE, so its listing throws ENOTDIR; the scout night and seed batch still
+// project their Weir piles and the archive failure is a skipped entry. A MISSING archive root reads as no nights, not
+// even a skip. The scout root failing still fails the source.
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -44,8 +45,8 @@ beforeAll(() => {
 });
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
-describe("the muse root cannot be listed", () => {
-  it("scout source: the scout night keeps its Weir pile, the muse wing is a skip", async () => {
+describe("the muse archive cannot be listed", () => {
+  it("scout source: the scout night keeps its Weir pile, the archive is a skip", async () => {
     const snap = await scoutSource.read();
     expect(snap.ok).toBe(true);
     if (!snap.ok) return;
@@ -54,7 +55,7 @@ describe("the muse root cannot be listed", () => {
     expect(p.skipped.map((s) => s.id)).toEqual(["muse"]);
   });
 
-  it("seeds source: the scout batch keeps its Weir pile, the muse wing is a skip", async () => {
+  it("seeds source: the scout batch keeps its Weir pile, the archive is a skip", async () => {
     process.env["SCOUT_MUSE_STORE_DIR"] = path.join(ROOT, "scout-muse-seeds-file");
     const snap = await seedsSource.read();
     expect(snap.ok).toBe(true);
@@ -62,5 +63,18 @@ describe("the muse root cannot be listed", () => {
     const p = projectSeeds(snap.value, ctx);
     expect(p.weir.map((w) => w.id)).toEqual(["2026-10-24-1"]);
     expect(p.skipped.map((s) => s.id)).toEqual(["muse"]);
+  });
+});
+
+describe("the muse archive is missing", () => {
+  it("both sources read the scout root alone, with no skip and no archive rows", async () => {
+    process.env["SCOUT_MUSE_STORE_DIR"] = path.join(ROOT, "no-archive-here");
+    const scout = await scoutSource.read();
+    if (!scout.ok) throw scout.error;
+    const p = projectScout(scout.value, ctx);
+    expect([p.weir.map((w) => w.id), p.skipped, (scout.value.muse ?? []).length]).toEqual([[DAY], [], 0]);
+    const seeds = await seedsSource.read();
+    if (!seeds.ok) throw seeds.error;
+    expect(projectSeeds(seeds.value, ctx).skipped).toEqual([]);
   });
 });

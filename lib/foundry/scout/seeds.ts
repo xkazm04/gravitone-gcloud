@@ -14,6 +14,10 @@
 // must give `music` {instruments, tempo, mood, vocals} - the preparation a track's prompt is written from - and any
 // other seed is refused one. Seeds stored before the field read as they are.
 //
+// A CHARACTER SEED SAYS WHAT ITS CHARACTERS ARE FOR (spark scout-vision S3): a seed of type CHARACTER_SEED_TYPE must give
+// `character` {for: one of USE_APPS, cast: one|ensemble|parody}, and any other seed is refused one (the music rule's
+// shape). A character idea grows only from such a seed, kept - its audience and app are the card's rules (./museDoor.ts).
+//
 // THE BACKLOG GATE (./backlog.ts): while BACKLOG_GATE or more kept ideas of the scout wing wait for a storyboard,
 // a batch holds at most GATED_FRESH_SEEDS fresh seeds (no parent); child seeds are not limited. A dry batch is
 // gated too. The refusal comes before anything is written.
@@ -33,6 +37,8 @@ import { pausedUnder, readSteer } from "./steer";
 import { readAllNights } from "./store";
 import { withWing } from "./wingScope";
 import {
+  CHARACTER_CASTS,
+  CHARACTER_SEED_TYPE,
   GENRE_MAX,
   MAX_SEED_BATCH,
   MUSIC_INSTRUMENTS_MAX,
@@ -43,11 +49,13 @@ import {
   SEED_VOCALS,
   SEED_REF_RE,
   SEED_SENTENCE_MAX,
+  USE_APPS,
   VIDEO_FORMATS,
   seedRef,
   type NightId,
   type Seed,
   type SeedBatch,
+  type SeedCharacter,
   type SeedMusic,
   type SeedRef,
 } from "./types";
@@ -90,6 +98,8 @@ const seedSchema = z
       })
       .strict()
       .optional(),
+    /** A character seed's app and cast (spark scout-vision S3): required on type CHARACTER_SEED_TYPE, refused on any other. */
+    character: z.object({ for: z.enum(USE_APPS), cast: z.enum(CHARACTER_CASTS) }).strict().optional(),
     /** The live venture the seed is written inside (spark scout-vision S2). */
     venture: z.string().trim().regex(VENTURE_ID_RE, "a venture id vn-...").optional(),
   })
@@ -112,7 +122,7 @@ function verdictOf(b: SeedBatch, id: string): string {
 
 /** The batch as seeds in order, or the first bad one's place and why; nothing is written here. */
 export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[], o: Pick<SeedBatchOptions, "store"> = {}): Promise<Result<Brief[]>> {
-  if (!Array.isArray(raw)) return err("invalid", "seeds: the input is a JSON array of seeds {sentence, genre, subgenre, type, audience, format, parent?, music?}");
+  if (!Array.isArray(raw)) return err("invalid", "seeds: the input is a JSON array of seeds {sentence, genre, subgenre, type, audience, format, parent?, music?, character?}");
   if (raw.length === 0) return err("invalid", "seeds: the batch holds no seed");
   if (raw.length > MAX_SEED_BATCH) return err("invalid", `seeds: a batch holds at most ${MAX_SEED_BATCH} seeds; this one has ${raw.length}`);
   const earlier = new Map<string, string>();
@@ -131,6 +141,8 @@ export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[]
     if (was !== undefined) return err("refused", `${at}: done before - ${was}`);
     if (isMusicType(s.type) && s.music === undefined) return err("invalid", `${at}: music: a ${s.type} seed gives its song {instruments, tempo, mood, vocals}`);
     if (!isMusicType(s.type) && s.music !== undefined) return err("invalid", `${at}: music: only a ${MUSIC_TYPES.join(", ")} seed takes music; this one is a ${s.type}`);
+    if (s.type === CHARACTER_SEED_TYPE && s.character === undefined) return err("invalid", `${at}: character: a ${CHARACTER_SEED_TYPE} seed gives what its characters are for {for, cast}`);
+    if (s.type !== CHARACTER_SEED_TYPE && s.character !== undefined) return err("invalid", `${at}: character: only a ${CHARACTER_SEED_TYPE} seed takes character; this one is a ${s.type}`);
     here.set(key, i + 1);
     if (s.parent !== undefined) {
       const p = await usableSeed(s.parent, batches);
@@ -139,7 +151,8 @@ export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[]
     const unborn = s.venture === undefined ? undefined : ventureRefusal(s.venture, o.store);
     if (unborn !== undefined) return err("refused", `${at}: venture: ${unborn}`);
     const music: SeedMusic | undefined = s.music === undefined ? undefined : { instruments: s.music.instruments, tempo: s.music.tempo, mood: s.music.mood, vocals: s.music.vocals };
-    out.push({ sentence: s.sentence, genre: s.genre, subgenre: s.subgenre, type: s.type, audience: s.audience, format: s.format, ...(s.parent === undefined ? {} : { parent: s.parent }), ...(music === undefined ? {} : { music }), ...(s.venture === undefined ? {} : { venture: s.venture }) });
+    const character: SeedCharacter | undefined = s.character === undefined ? undefined : { for: s.character.for, cast: s.character.cast };
+    out.push({ sentence: s.sentence, genre: s.genre, subgenre: s.subgenre, type: s.type, audience: s.audience, format: s.format, ...(s.parent === undefined ? {} : { parent: s.parent }), ...(music === undefined ? {} : { music }), ...(character === undefined ? {} : { character }), ...(s.venture === undefined ? {} : { venture: s.venture }) });
   }
   return ok(out);
 }
@@ -188,12 +201,16 @@ export async function usableSeed(ref: SeedRef, batches?: readonly SeedBatch[]): 
 /** `92 bpm · nylon guitar, cello · melancholic · instrumental`: a music seed's song, as its facets end. */
 export const musicFacets = (m: SeedMusic): string => `${m.tempo} bpm · ${m.instruments.join(", ")} · ${m.mood} · ${m.vocals}`;
 
+/** `for dating-sim · cast one`: a character seed's app and cast, as its facets end. */
+export const characterFacets = (c: SeedCharacter): string => `for ${c.for} · cast ${c.cast}`;
+
 /**
  * `kids · comedy › sketch · animated comedy sketch · short`: a seed's facets, as the Board's meta and the brief say them;
- * a music seed's song follows (`... · short · 92 bpm · nylon guitar, cello · melancholic · instrumental`), then its venture.
+ * a music seed's song follows (`... · short · 92 bpm · nylon guitar, cello · melancholic · instrumental`), a character
+ * seed's app and cast (`... · character · short · for dating-sim · cast one`), then its venture.
  */
-export const seedFacets = (s: Pick<Seed, "audience" | "genre" | "subgenre" | "type" | "format" | "music" | "venture">): string =>
-  `${s.audience} · ${s.genre} › ${s.subgenre} · ${s.type} · ${s.format}${s.music === undefined ? "" : ` · ${musicFacets(s.music)}`}${s.venture === undefined ? "" : ` · venture: ${s.venture}`}`;
+export const seedFacets = (s: Pick<Seed, "audience" | "genre" | "subgenre" | "type" | "format" | "music" | "character" | "venture">): string =>
+  `${s.audience} · ${s.genre} › ${s.subgenre} · ${s.type} · ${s.format}${s.music === undefined ? "" : ` · ${musicFacets(s.music)}`}${s.character === undefined ? "" : ` · ${characterFacets(s.character)}`}${s.venture === undefined ? "" : ` · venture: ${s.venture}`}`;
 
 /** A batch's counts: decided seeds by verdict, the rest undecided. */
 export function batchCounts(b: SeedBatch): { readonly seeds: number; readonly kept: number; readonly rejected: number; readonly undecided: number } {

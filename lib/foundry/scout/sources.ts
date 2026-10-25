@@ -8,7 +8,7 @@ import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { BlockedUrlError, assertFetchable, type Resolver } from "../../imaging/safeUrl";
 import { developedOf, fromIdeaOf, IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
 import { STEP_NAME_RE, STEP_RULE, TEMPLATE_NAME_RE, TEMPLATE_RULE, knowledgeRoot, templateProblem } from "./knowledge";
-import { listNights, mutateNight, mutateNightWith, nextCandidateId, nextSourceId, readNight, resolveInNight } from "./store";
+import { listNights, mutateNight, mutateNightWith, nextCandidateId, nextSourceId, readArchiveNights, readNight, resolveInNight } from "./store";
 import {
   CLAIM_MAX,
   MAX_SOURCES_PER_NIGHT,
@@ -22,6 +22,8 @@ import {
   type ScoutSource,
   type WatchCandidate,
 } from "./types";
+import { wingRunId } from "./wing";
+import { activeWing } from "./wingScope";
 
 // WHAT THE SKILL ADDS TO A NIGHT, AT ONE DOOR - sources it found, findings it
 // wrote, watchlist lines it proposes. The skill is a reader with a web browser;
@@ -93,7 +95,8 @@ export function urlKey(raw: string): string {
 }
 
 /** Every URL key earlier nights made a candidate from - failed ones included, a launch was tried - with
- *  where. A night whose manifest cannot be read is skipped. */
+ *  where. A night whose manifest cannot be read is skipped. The muse ARCHIVE's nights count too (spark scout-vision S3:
+ *  one loop), named by their run id `muse:<night>/s-NN` - their ids collide with scout nights. */
 export async function seenElsewhere(except: NightId): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   for (const s of await listNights()) {
@@ -105,6 +108,11 @@ export async function seenElsewhere(except: NightId): Promise<Map<string, string
     } catch {
       /* unreadable: it cannot vouch for or against a URL */
     }
+  }
+  if (activeWing() !== "scout") return out;
+  for (const n of await readArchiveNights()) {
+    const used = new Set(n.candidates.flatMap((c) => c.sourceIds));
+    for (const src of n.sources) if (used.has(src.id) && !out.has(urlKey(src.url))) out.set(urlKey(src.url), `${wingRunId("muse", n.id)}/${src.id}`);
   }
   return out;
 }

@@ -1,9 +1,9 @@
-// TWO WINGS, TWO ROOTS (spark scout-muse WP1): under withWing("muse") every scout read and write lands in
-// the muse root, and outside a scope - or under withWing("scout") - in the scout root, as before the wings.
-// Each cross-night rule is read per wing here: the nights, the taste brief (and the muse brief's two
-// knowledge sections), the seed batches and the rule they put in force, the steer, a source's dedupe, the
-// registry digest's watchlist, the doctor's blocking lines. Both roots, the knowledge tree and the kernel
-// store are temp paths; no vendor, no kernel job.
+// TWO ROOTS, ONE LOOP (spark scout-muse WP1; merged by spark scout-vision S3): under withWing("muse") every scout read
+// lands in the muse root - since the merge a read-only ARCHIVE - and outside a scope, or under withWing("scout"), in the
+// scout root, where every new night is written. Read here: the nights per root; the ONE taste brief (the scout nights'
+// verdicts, and the character sections over both roots); a source's dedupe across both; the seed batches and the steer
+// (the scout root's); the registry digest over both watchlists; the doctor's one night type; and the CLI, which takes
+// --wing muse for `status` only. Both roots, the knowledge tree and the kernel store are temp paths; no vendor, no job.
 
 import { afterAll, describe, expect, it, vi } from "vitest";
 
@@ -25,6 +25,7 @@ const ROOT = vi.hoisted(() => {
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { MERGED_WING, runCli } from "../../pipeline/scout.mts";
 import { morning } from "../../lib/foundry/scout/acts.ts";
 import type { NightBudget } from "../../lib/foundry/scout/budget.ts";
 import { blocking, doctor, type DoctorInput } from "../../lib/foundry/scout/doctor.ts";
@@ -132,7 +133,7 @@ describe("the wing's root", () => {
   });
 });
 
-describe("nights, taste and dedupe per wing", () => {
+describe("nights per root, one taste brief, dedupe across both", () => {
   let scout: Night;
   let muse: Night;
 
@@ -151,42 +152,55 @@ describe("nights, taste and dedupe per wing", () => {
     expect((await readAllNights()).map((n) => n.sources[0]?.title)).toEqual(["scoutonly source"]);
   });
 
-  it("each wing's taste brief holds its own verdicts and never the other's", async () => {
-    const s = await withWing("scout", () => tasteBrief());
-    const m = await withWing("muse", () => tasteBrief());
+  it("the one brief holds the scout nights' verdicts; the archive's nights are never read as verdicts", async () => {
+    const s = await tasteBrief();
     expect(s).toContain('"scoutonly blocked idea"');
     expect(s).toContain("scoutonly note");
     expect(s).not.toContain("museonly");
-    expect(m).toContain('"museonly blocked idea"');
-    expect(m).toContain("museonly note");
-    expect(m).not.toContain("scoutonly");
-    expect(await tasteBrief()).toBe(s);
+    expect(await withWing("scout", () => tasteBrief())).toBe(s);
   });
 
-  it("the muse brief carries its kept characters and technique findings, `none yet` while the files are absent; the scout brief has neither", async () => {
-    const empty = await withWing("muse", () => tasteBrief());
-    expect(empty).toContain("## Kept characters\n\n- none yet\n\n## Technique findings\n\n- none yet\n");
-    const card = `- **Mara Voss**, aged 34 - silver bob, green coat. Plays: dry wit. <!-- scout:${DAY}/c-01 -->`;
+  it("the one brief carries the character sections over both roots: kept characters (keptCharacters), technique findings (techniques.md, legacy), already drawn; `none yet` while empty", async () => {
+    const empty = await tasteBrief();
+    expect(empty).toContain("## Kept characters\n\n- none yet\n\n## Technique findings\n\n- none yet\n\n## Already drawn\n\n- none yet\n");
+    // A kept character on the archive (c-01, with her card and still) and a new one kept on the scout night of the SAME id.
+    const mara = { name: "Mara Voss", age: 34, look: "silver bob, green coat", personality: "dry wit" };
+    const ines = { name: "Ines Roca", age: 41, look: "cropped grey hair, oilskin jacket", personality: "patient", kind: "original" as const, audience: "adult" as const, render: "stylised" as const };
+    await withWing("muse", () => mutateNight(DAY, (x) => ({ ...x, candidates: x.candidates.map((c) => (c.id === "c-01" && c.kind === "idea" ? { ...c, card: mara, image: "ideas/c-01.png" } : c)) })));
+    await mutateNight(DAY, (x) => ({ ...x, candidates: x.candidates.map((c) => (c.id === "c-01" && c.kind === "idea" ? { ...c, card: ines, image: "ideas/c-01.png" } : c)) }));
     const found = `- rim light reads older than flat light - "a rim adds a decade" (n=1, scout ${DAY}) <!-- scout:${DAY}/c-03 -->`;
     mkdirSync(path.join(KNOWLEDGE, "scout-muse"), { recursive: true });
-    writeFileSync(path.join(KNOWLEDGE, "scout-muse", "characters.md"), `# Muse characters\n\nIntro.\n\n## Kept characters\n\n${card}\n`, "utf8");
+    // characters.md is the keep's file, not the brief's source: a line only there is not a kept character.
+    writeFileSync(path.join(KNOWLEDGE, "scout-muse", "characters.md"), `# Muse characters\n\n## Kept characters\n\n- **Only In The File**, aged 30 - x. Plays: y.\n`, "utf8");
     writeFileSync(path.join(KNOWLEDGE, "scout-muse", "techniques.md"), `# Muse techniques\n\n## The line\n\n- not this\n\n## Scout findings\n\n${found}\n\n## Later\n\n- nor this\n`, "utf8");
-    const m = await withWing("muse", () => tasteBrief());
-    expect(m).toContain(`## Kept characters\n\n${card}\n\n${MUSE_FINDINGS_HEADING}\n\n${found}\n`);
-    expect(m).not.toContain("not this");
-    expect(m).not.toContain("nor this");
-    const s = await withWing("scout", () => tasteBrief());
-    expect(s).not.toContain("## Kept characters");
-    expect(s).not.toContain(MUSE_FINDINGS_HEADING);
+    const s = await tasteBrief();
+    expect(s).toContain(
+      [
+        "## Kept characters",
+        "",
+        `- Mara Voss, aged 34 - silver bob, green coat · adult · original · no sheet yet · last kept muse:${DAY}/c-01`,
+        `- Ines Roca, aged 41 - cropped grey hair, oilskin jacket · adult · original · stylised · no sheet yet · last kept ${DAY}/c-01`,
+        "",
+        MUSE_FINDINGS_HEADING,
+        "",
+        found,
+        "",
+        "## Already drawn",
+      ].join("\n"),
+    );
+    expect(s).not.toContain("Only In The File");
+    expect(s).not.toContain("not this");
+    expect(s).not.toContain("nor this");
+    expect(s.match(/- (Mara Voss|Ines Roca) \(/g)?.sort()).toEqual(["- Ines Roca (", "- Mara Voss ("]);
   });
 
-  it("seenElsewhere dedupes a URL only inside the wing that scouted it", async () => {
+  it("seenElsewhere dedupes a URL across the scout root and the archive (named by its run id); the archive's own scope sees only itself", async () => {
     const scoutKey = urlKey("https://youtu.be/scoutonly");
     const museKey = urlKey("https://youtu.be/museonly");
-    const s = await withWing("scout", () => seenElsewhere("2099-01-01"));
+    const s = await seenElsewhere("2099-01-01");
     const m = await withWing("muse", () => seenElsewhere("2099-01-01"));
     expect(s.get(scoutKey)).toBe(`${DAY}/s-01`);
-    expect(s.has(museKey)).toBe(false);
+    expect(s.get(museKey)).toBe(`muse:${DAY}/s-01`);
     expect(m.get(museKey)).toBe(`${DAY}/s-01`);
     expect(m.has(scoutKey)).toBe(false);
   });
@@ -215,8 +229,8 @@ describe("seeds and the steer per wing", () => {
   });
 });
 
-describe("the registry digest reads the active wing's watchlist", () => {
-  it("a muse night's directions are the muse watchlist's, a scout night's the scout one's", async () => {
+describe("the registry digest reads both watchlists", () => {
+  it("tonight's directions are the scout watchlist's and the muse archive's, whatever the scope", async () => {
     const repo = path.join(ROOT, "repo");
     const registry = path.join(ROOT, "registry");
     const put = (file: string, text: string): void => {
@@ -230,14 +244,14 @@ describe("the registry digest reads the active wing's watchlist", () => {
       path.join(registry, "knowledge", "media-generation", "index.json"),
       JSON.stringify({ subjects: { quokka: { status: "forged", file, techniques: [{ slug: "parade", use_when: ["quokka parade choreography"] }] }, zygomatic: { status: "forged", file, techniques: [{ slug: "glow", use_when: ["zygomatic cheekbone glow"] }] } } }),
     );
-    const s = await withWing("scout", () => registryDigest({ repoDir: repo, registryDir: registry }));
+    const s = await registryDigest({ repoDir: repo, registryDir: registry });
     const m = await withWing("muse", () => registryDigest({ repoDir: repo, registryDir: registry }));
-    expect(s.subjects).toEqual(["quokka"]);
-    expect(m.subjects).toEqual(["zygomatic"]);
+    expect([...s.subjects].sort()).toEqual(["quokka", "zygomatic"]);
+    expect(m.subjects).toEqual(s.subjects);
   });
 });
 
-describe("the doctor per wing", () => {
+describe("the doctor, one night type", () => {
   const T = Date.parse(`${DAY}T22:00:00.000Z`);
   const spawnFails = async (): Promise<SpawnResult> => ({ ok: false, error: "not found" });
   const input = (root: string): DoctorInput => ({
@@ -258,22 +272,64 @@ describe("the doctor per wing", () => {
     suno: async () => ({ ok: false, reason: "no browser" }),
   });
 
-  it("a live scout night is blocked by its binaries, its clip engine and Suno; a muse night reads them as notes", async () => {
+  it("a live night is blocked by its binaries, its clip engine and Suno, in any scope: there is no stills-only night", async () => {
     const s = blocking(await doctor(input(rootOf("scout")))).map((c) => c.name);
     expect(s).toEqual(expect.arrayContaining(["yt-dlp", "ffmpeg", "ffprobe", "comfyui", "suno"]));
-    const checks = await withWing("muse", () => doctor(input(rootOf("muse"))));
-    expect(blocking(checks)).toEqual([]);
-    for (const name of ["yt-dlp", "ffmpeg", "ffprobe", "comfyui", "suno"]) expect(checks.find((c) => c.name === name)?.needed, name).toBe(false);
-    expect(checks.find((c) => c.name === "suno")?.found).toBe("not asked: a muse night makes no track");
-    expect(checks.find((c) => c.name === "studio")).toMatchObject({ ok: true, needed: false });
+    const m = blocking(await withWing("muse", () => doctor(input(rootOf("scout"))))).map((c) => c.name);
+    expect(m).toEqual(s);
   });
 
-  it("a night folder that cannot be written names the wing's own env var", async () => {
+  it("a night folder that cannot be written names SCOUT_STORE_DIR", async () => {
     const blocked = path.join(ROOT, "a-file");
     writeFileSync(blocked, "x", "utf8");
-    const m = await doctor({ ...input(path.join(blocked, "under")), wing: "muse" });
-    expect(m.find((c) => c.name === "nights")?.remedy).toMatch(/set SCOUT_MUSE_STORE_DIR$/);
-    const s = await doctor({ ...input(path.join(blocked, "under")), wing: "scout" });
+    const s = await doctor(input(path.join(blocked, "under")));
     expect(s.find((c) => c.name === "nights")?.remedy).toMatch(/set SCOUT_STORE_DIR$/);
+  });
+});
+
+describe("the CLI: one night type, the archive by status only", () => {
+  const cli = async (argv: string[]): Promise<{ code: number; out: string[]; err: string[] }> => {
+    const out: string[] = [];
+    const err: string[] = [];
+    const code = await runCli(argv, { env: { GRAVITONE_DRY_ONLY: "1" }, out: (x) => out.push(x), err: (x) => err.push(x) });
+    return { code, out, err };
+  };
+
+  it("refuses every command but status under --wing muse, naming /scout, and writes nothing in either root", async () => {
+    const before = [await listNights(), await withWing("muse", listNights)];
+    for (const argv of [["--wing", "muse", "open"], ["open", "--wing", "muse", "--json"], ["--wing", "muse", "ideas", DAY, "--json", "-"], ["--wing", "muse", "close", DAY], ["--wing", "muse", "doctor"], ["--wing", "muse"]]) {
+      const r = await cli(argv);
+      expect([r.code, r.err], argv.join(" ")).toEqual([3, [MERGED_WING]]);
+      expect(r.out).toEqual([]);
+    }
+    expect(MERGED_WING).toBe("the muse wing is merged into /scout (spark scout-vision S3); its nights are an archive - status --wing muse lists them");
+    expect([await listNights(), await withWing("muse", listNights)]).toEqual(before);
+    expect((await cli(["--wing", "nope", "status"])).code).toBe(2);
+  });
+
+  it("status --wing muse lists the archive's nights by run id, read-only; status alone lists the scout root's", async () => {
+    const archive = await cli(["--wing", "muse", "status"]);
+    expect(archive.code, archive.err.join("\n")).toBe(0);
+    expect(archive.out.map((l) => l.split(" ")[0])).toEqual([`muse:${DAY}`]);
+    const json = await cli(["status", "--wing", "muse", "--json"]);
+    expect(JSON.parse(json.out.join("\n"))).toMatchObject({ ok: true, archive: true, nights: [{ id: DAY }] });
+    const scout = await cli(["status", "--json"]);
+    const doc = JSON.parse(scout.out.join("\n")) as Record<string, unknown>;
+    expect(doc["archive"]).toBeUndefined();
+    expect((doc["nights"] as { id: string }[]).map((n) => n.id)).toEqual([DAY]);
+    const one = await cli(["--wing", "muse", "status", DAY]);
+    expect(one.code, one.err.join("\n")).toBe(0);
+    expect(one.out[0]).toMatch(new RegExp(`^archive night muse:${DAY} · committed`));
+  });
+
+  it("open (with or without --wing scout) opens a scout night with every cap, never one in the archive", async () => {
+    const r = await cli(["open", "--wing", "scout", "--json"]);
+    expect(r.code, r.err.join("\n")).toBe(0);
+    const doc = JSON.parse(r.out.join("\n")) as Record<string, unknown>;
+    expect(doc).toMatchObject({ ok: true, ceilingUsd: 15, dry: true });
+    expect(doc["clipCap"]).toBeGreaterThan(0);
+    expect(doc["reelCap"]).toBeGreaterThan(0);
+    expect((await listNights()).map((n) => n.id)).toContain(doc["night"]);
+    expect((await withWing("muse", listNights)).map((n) => n.id)).toEqual([DAY]);
   });
 });

@@ -49,11 +49,12 @@ describe("byVenture", () => {
 });
 
 describe("the fixture view", () => {
-  it("carries one venture, and some of the scout wing's nodes - none of the muse wing's - produce for it", async () => {
+  it("carries one venture, and one graph whose scout nodes - none of its archive nodes - produce for it", async () => {
     const r = await fixtureScout.view();
     if (!r.ok) throw r.error;
     expect(r.value.ventures).toEqual([{ id: "vn-quiet-desk", name: "Quiet Desk" }]);
-    expect(r.value.graphs.scout.nodes.filter((n) => n.venture === "vn-quiet-desk").length).toBeGreaterThan(0);
-    expect(r.value.graphs.muse.nodes.some((n) => n.venture !== undefined)).toBe(false);
+    expect(r.value.graph.nodes.filter((n) => n.venture === "vn-quiet-desk").length).toBeGreaterThan(0);
+    expect(r.value.graph.nodes.filter((n) => n.archive === true).length).toBeGreaterThan(0);
+    expect(r.value.graph.nodes.some((n) => n.archive === true && n.venture !== undefined)).toBe(false);
   });
 });

@@ -85,7 +85,7 @@ describe("seeds new - the batch's door", () => {
       expect(r.code).toBe(1);
       return r.err;
     };
-    expect(await said({ sentence: "x" })).toBe("seeds: the input is a JSON array of seeds {sentence, genre, subgenre, type, audience, format, parent?, music?}");
+    expect(await said({ sentence: "x" })).toBe("seeds: the input is a JSON array of seeds {sentence, genre, subgenre, type, audience, format, parent?, music?, character?}");
     expect(await said([])).toBe("seeds: the batch holds no seed");
     expect(await said(Array.from({ length: MAX_SEED_BATCH + 1 }, (_, i) => brief(`seed number ${i}`)))).toBe(`seeds: a batch holds at most ${MAX_SEED_BATCH} seeds; this one has ${MAX_SEED_BATCH + 1}`);
     expect(await said([brief("ok one"), brief("two\nlines")])).toBe("seed 2: sentence: one line");

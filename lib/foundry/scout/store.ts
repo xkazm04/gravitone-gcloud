@@ -42,6 +42,7 @@ import {
   type NightSummary,
   type SourceId,
 } from "./types";
+import type { RootedNight } from "./characters";
 import { WING_OUT_DIR, type ScoutWing } from "./wing";
 import { activeWing, withWing } from "./wingScope";
 
@@ -221,6 +222,15 @@ export async function readAllNights(): Promise<Night[]> {
  */
 export async function readArchiveNights(): Promise<Night[]> {
   return withWing("muse", () => readAllNights());
+}
+
+/**
+ * Every night a reader joins since the merge (spark scout-vision S3): the scout root's, then the archive's, each with its
+ * root beside it - never merged by id. A missing root reads as no nights (listNights).
+ */
+export async function readRootedNights(): Promise<RootedNight[]> {
+  const [scout, archive] = await Promise.all([withWing("scout", () => readAllNights()), readArchiveNights()]);
+  return [...scout.map((night) => ({ root: "scout" as const, night })), ...archive.map((night) => ({ root: "archive" as const, night }))];
 }
 
 /** Every extract run a night's style candidate launched - the extract Weir leaves them to the night's packet. */

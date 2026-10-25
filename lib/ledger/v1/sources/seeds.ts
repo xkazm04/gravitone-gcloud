@@ -22,16 +22,16 @@ import type { IngestEvent, ProjectCtx, Projection, Source, WeirItem } from "../t
 // batch is decided and leaves the Weir; a dry one still opens on the Board by its id, as a dry night does
 // (./scout.ts), and the Floor does not offer it.
 //
-// EVERY WING'S ROOT (spark scout-muse), each read in its own scope. The muse wing draws no seeds (its CLI has no
-// seeds command), so its root holds none; were one there, its events would be keyed `muse:<batch>` and carry
+// THE SCOUT ROOT AND THE MUSE ARCHIVE (spark scout-vision S3), each read in its own scope. The archive never drew a
+// seed and is read-only now, so it holds none; were one there, its events would be keyed `muse:<batch>` and carry
 // `wing: "muse"`, and it would make no pile - the seeds packet (lib/decision/v1/sources/seeds.ts) is the scout
-// wing's alone.
+// root's alone.
 //
 // IN PARTS (spark scout-storyboards, lib/foundry/scout/parts.ts): a batch committed with seeds left undecided is still
 // open, and its ONE pile is the remainder `<batch>:<n>`, pending the seeds still open. Part 1 is the `commit` fact,
 // part n `commit.<n>` at its own instant.
 
-/** `batches` are the scout wing's; `muse` the muse wing's (absent in a snapshot taken before the wings). */
+/** `batches` are the scout root's; `muse` the archive's (absent in a snapshot taken before the wings). */
 export type SeedsSnapshot = { readonly batches: readonly SeedBatch[]; readonly muse?: readonly SeedBatch[]; readonly skipped?: readonly { readonly id: string; readonly reason: string }[] };
 
 export const SEEDS_READ_CAP = 120;
@@ -41,8 +41,8 @@ const OPERATOR: Actor = { kind: "operator", id: "operator" };
 const AGENT: Actor = { kind: "agent", id: "scout-cull-model" };
 const HREF = "/floor?lane=image";
 
-// Each wing is listed on its own: the scout wing failing fails the source, the muse wing failing is a skip, so an
-// unreadable muse root does not take the scout wing's seed pile off the Floor.
+// Each root is listed on its own: the scout root failing fails the source, the archive failing is a skip, so an
+// unreadable archive does not take the scout seed pile off the Floor.
 async function readWing(w: ScoutWing): Promise<Result<SeedBatch[]>> {
   return withWing(w, async () => {
     try {

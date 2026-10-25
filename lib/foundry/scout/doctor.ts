@@ -15,8 +15,6 @@ import { SUNO_CDP_PORT, type SunoDriverHealth } from "../../suno/types";
 import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
 import { REGISTRY_REMEDY, resolveRegistry, techniqueCount } from "./registry";
 import { WING_STORE_ENV } from "./store";
-import type { ScoutWing } from "./wing";
-import { activeWing } from "./wingScope";
 
 // THE BOX PREFLIGHT for a /scout night - read-only, nothing spent, nothing
 // installed. One line per check; a failing line carries its remedy, and the
@@ -42,9 +40,9 @@ import { activeWing } from "./wingScope";
 // Playwright would launch, never by launching it. The Suno browser (spark scout-decision-graph) is needed
 // only by a live night that makes tracks - the night's track cap handed in as `tracks`; otherwise its line
 // is a note and no browser is attached to.
-// The MUSE wing (spark scout-muse) draws studio stills only - it runs no ingest, clip, asset or track - so
-// its binaries, its clip engine and its Suno line are notes whatever the night; the studio line is as above.
-// (This preflight has no TRELLIS or Blender line for either wing: a game asset's mesh job meets those on
+// ONE NIGHT TYPE (spark scout-vision S3): the muse wing folded into the scout loop, so there is no stills-only preflight -
+// a night's character ideas are drawn on the studio line above, like every other idea.
+// (This preflight has no TRELLIS or Blender line: a game asset's mesh job meets those on
 // the worker, lib/foundry/mesh.) The STORYBOARDS' Flux files (spark scout-storyboards) are read off the same
 // ComfyUI once it answers, as a note: a missing file fails those storyboards' frames with ComfyUI's own
 // sentence, and the night goes on.
@@ -115,8 +113,6 @@ export type DoctorInput = {
   readonly suno?: () => Promise<SunoDriverHealth>;
   /** The night's track cap (`--tracks`): a live night with tracks to make needs Suno. Absent: the Suno line is a note. */
   readonly tracks?: number;
-  /** The wing the night is opened in (default the active one, ./wingScope.ts). */
-  readonly wing?: ScoutWing;
 };
 
 const PROBES: Readonly<Record<(typeof NIGHT_KEYS)[number], (key: string, f?: KeyFetch) => Promise<KeyProbe>>> = {
@@ -271,16 +267,11 @@ async function workerCheck(input: DoctorInput): Promise<Check> {
   return { name: "worker", ok: false, found: `no worker heartbeat in ${ageMin} min`, remedy, needed };
 }
 
-/** What the muse wing never runs is a note there: the check stays, the night is not blocked by it. */
-const noteIn = (stillsOnly: boolean, c: Check): Check => (stillsOnly && c.needed ? { ...c, needed: false } : c);
-
 export async function doctor(input: DoctorInput): Promise<Check[]> {
   const spawn = input.spawn ?? realSpawn;
   const bins = binsFrom(input.env);
-  const wing = input.wing ?? activeWing();
-  const stillsOnly = wing === "muse";
   const out: Check[] = [];
-  for (const k of ["ytdlp", "ffmpeg", "ffprobe"] as const) out.push(noteIn(stillsOnly, await binary(spawn, bins, k)));
+  for (const k of ["ytdlp", "ffmpeg", "ffprobe"] as const) out.push(await binary(spawn, bins, k));
   for (const key of NIGHT_KEYS) {
     const value = input.env[key]?.trim() ?? "";
     if (value === "") {
@@ -297,15 +288,14 @@ export async function doctor(input: DoctorInput): Promise<Check[]> {
   const storeDir = input.storePath === ":memory:" ? null : await writable(path.dirname(input.storePath));
   out.push({ name: "store", ok: storeDir === null, found: input.storePath, needed: true, ...(storeDir === null ? {} : { remedy: `the store's folder cannot be written (${storeDir}); set GRAVITONE_STORE_PATH` }) });
   const nights = await writable(input.scoutRoot);
-  out.push({ name: "nights", ok: nights === null, found: input.scoutRoot, needed: true, ...(nights === null ? {} : { remedy: `the night folder cannot be written (${nights}); set ${WING_STORE_ENV[wing]}` }) });
+  out.push({ name: "nights", ok: nights === null, found: input.scoutRoot, needed: true, ...(nights === null ? {} : { remedy: `the night folder cannot be written (${nights}); set ${WING_STORE_ENV.scout}` }) });
   out.push(await workerCheck(input));
   const pinned = input.env["GRAVITONE_DRY_ONLY"] === "1";
   out.push({ name: "GRAVITONE_DRY_ONLY", ok: !pinned, found: pinned ? "1 (this shell runs dry only)" : "unset", needed: !input.dry, ...(pinned ? { remedy: "unset GRAVITONE_DRY_ONLY for a live night, or open the night without --live" } : {}) });
-  out.push(...(await comfyChecks(input)).map((c) => noteIn(stillsOnly, c)));
+  out.push(...(await comfyChecks(input)));
   out.push(await registryCheck(input));
   out.push(await studioCheck(input));
-  // A muse night makes no track, so the Suno browser is never attached to for it.
-  out.push(stillsOnly ? { name: "suno", ok: false, found: `not asked: a ${wing} night makes no track`, needed: false } : await sunoCheck(input));
+  out.push(await sunoCheck(input));
   out.push(await chromiumCheck(input));
   return out;
 }

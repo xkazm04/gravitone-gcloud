@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 
-import type { GraphNode, ScoutGraph } from "@gt/domain/scoutGraph";
+import { isArchiveNode, type GraphNode, type ScoutGraph } from "@gt/domain/scoutGraph";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
@@ -74,7 +74,7 @@ export function NodePanel({ graph, node, port, onView, onClose }: NodePanelProps
           <EntryPill entry={GRAPH_LOOK[node.state]} />
           {node.paused === true && <EntryPill entry={{ look: "paused", label: "paused" }} />}
           {node.effort?.shared === true && <Chip label="shared" casing="lower" ghost />}
-          {node.wing === "muse" && <Chip label="muse" casing="lower" />}
+          {isArchiveNode(node) && <Chip label="archive" casing="lower" />}
         </div>
         <Facts facts={factsOf(node)} />
         {from.length > 0 && (

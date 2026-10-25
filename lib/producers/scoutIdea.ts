@@ -19,6 +19,7 @@ import { TABLES } from "@gt/kernel/router/tables";
 import type { Reader, Store } from "@gt/kernel/store";
 import { defineScoutIdeas, IDEAS_REQUEST, parseIdeasRequest, SCOUT_IDEAS, STUDIO_CREDIT, type IdeasRequest } from "@gt/producers/scout-ideas/define";
 
+import { drawsSomeone } from "../foundry/scout/museDoor.ts";
 import { mutateNight, readNightNow, withCandidate } from "../foundry/scout/store.ts";
 import { wingRunId, type ScoutWing } from "../foundry/scout/wing.ts";
 import { activeWing, withWing } from "../foundry/scout/wingScope.ts";
@@ -50,9 +51,9 @@ import { ideaActs, type IdeaEngines } from "./scoutIdeaActs.ts";
 export type IdeasTarget = {
   readonly nightId: NightId;
   readonly candidateIds: readonly CandidateId[];
-  /** The wing whose night it is; absent: the active one (lib/foundry/scout/wingScope.ts). */
+  /** The wing whose night it is; absent: the active one (lib/foundry/scout/wingScope.ts). Every new night is the scout wing's. */
   readonly wing?: ScoutWing;
-  /** The studio quality every still of the batch is drawn at; absent: the studio's default. */
+  /** The studio quality every still of the batch is drawn at (legacy: each idea's own rides on its ask); absent: per idea. */
   readonly quality?: "low" | "medium";
 };
 
@@ -132,7 +133,8 @@ function readIn(r: Reader, t: IdeasTarget, o: ReadAsk): Result<{ readonly receip
   if (!ideas.ok) return ideas;
   const option = ideaOption();
   if (!option.ok) return option;
-  const asks = ideas.value.map((c) => ({ candidateId: c.id, prompt: c.prompt, ...(c.aspect === undefined || c.aspect === "16:9" ? {} : { aspect: c.aspect }) }));
+  // A character, or an idea that casts one, draws at the studio's low quality (the muse look); the rest at its default.
+  const asks = ideas.value.map((c) => ({ candidateId: c.id, prompt: c.prompt, ...(c.aspect === undefined || c.aspect === "16:9" ? {} : { aspect: c.aspect }), ...(drawsSomeone(c) ? { quality: "low" as const } : {}) }));
   // The key names the batch AT its prompts: a prompt that changed since the receipt is a different line.
   const at = `ideas:${night.value.id}/${t.candidateIds[0] ?? ""}@${createHash("sha256").update(asks.map((a) => `${a.candidateId}\n${a.prompt}`).join("\n")).digest("hex").slice(0, 12)}`;
   const line: PlanLine = { key: `${at}/idea`, label: `idea · ${asks.length} artboard(s)`, lane: SCOUT_IDEAS_LANE, units: asks.length, option: option.value, after: [], order: 0, status: "pending" };

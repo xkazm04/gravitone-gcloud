@@ -227,7 +227,7 @@ export async function launchStoryboard(store: Store, target: StoryboardTarget, o
 
 export const LIVE_STORYBOARD_ENGINES: StoryboardActEngines = {
   draw: async (prompt, o) => {
-    const r = await drawFlux({ prompt, aspect: o.aspect, ...(o.seed === undefined ? {} : { seed: o.seed }) });
+    const r = await drawFlux({ prompt, aspect: o.aspect, ...(o.seed === undefined ? {} : { seed: o.seed }), ...(o.refs === undefined ? {} : { refs: o.refs }), ...(o.late === undefined ? {} : { late: o.late }) });
     return { png: r.png, seed: r.seed };
   },
   clip: ltxClip,

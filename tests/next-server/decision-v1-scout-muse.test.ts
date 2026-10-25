@@ -1,9 +1,11 @@
-// A MUSE NIGHT ON THE BOARD (spark scout-muse WP3) - lib/decision/v1/sources/scout.ts over the muse wing's root:
-// `muse:<night>` reads the muse night, never the scout night of the same day, and mints pkt:scout:muse:<night>
-// titled `muse <night>`; an idea cell's meta carries the card and the judge's read; the file route's run is the
-// run id. A kept character's card lands in scout-muse/characters.md, a kept watch line in the muse watchlist, a
-// kept finding in techniques.md - and a run id naming no wing is refused at read and at apply. Every store is a
-// temp directory set below.
+// A MUSE ARCHIVE NIGHT ON THE BOARD (spark scout-muse WP3; the archive since spark scout-vision S3 merged the wings) -
+// lib/decision/v1/sources/scout.ts over the muse root: `muse:<night>` reads the archive night, never the scout night of
+// the same day, and mints pkt:scout:muse:<night> titled `muse <night>`; an idea cell's meta carries the card and the
+// judge's read; the file route's run is the run id, and app/api/foundry/file still serves the archive's file by it. A
+// kept character's card lands in scout-muse/characters.md, a kept watch line in the muse watchlist, a kept finding in
+// techniques.md - and a run id naming no wing is refused at read and at apply. After the merge a character kept on a
+// SCOUT night (a bare run id) lands in the same characters.md: the hook keys on the candidate, not a wing. Every store
+// is a temp directory set below.
 
 import { afterAll, describe, expect, it, vi } from "vitest";
 
@@ -29,6 +31,8 @@ const ROOT = vi.hoisted(() => {
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { ACCESS_SECRET_VAR } from "../../lib/apiAuth.ts";
+import { GET as foundryFile } from "../../app/api/foundry/file/route.ts";
 import { closeKernel } from "../../lib/kernelStore.ts";
 import { scoutAdapter } from "../../lib/decision/v1/sources/scout.ts";
 import type { MuseJudge } from "../../lib/foundry/scout/muse.ts";
@@ -79,8 +83,8 @@ function seed(): void {
 const nightOf = (root: string): Night => JSON.parse(readFileSync(path.join(out, root, NIGHT, "night.json"), "utf8")) as Night;
 const knowledge = (rel: string): string => readFileSync(path.join(ROOT, "knowledge", rel), "utf8");
 
-describe("scout adapter - a muse night", () => {
-  it("reads muse:<night> from the muse root and mints pkt:scout:muse:<night>; the bare night stays the scout wing's", async () => {
+describe("scout adapter - a muse archive night", () => {
+  it("still opens muse:<night> from the archive and mints pkt:scout:muse:<night>; the bare night is the scout root's", async () => {
     seed();
     const flow = await openFlow(scoutAdapter, `muse:${NIGHT}`, blobDir);
     const { packet, present, urls } = flow.plan;
@@ -146,5 +150,41 @@ describe("scout adapter - a muse night", () => {
     // The same claim under a run id that names no wing is refused before anything is read.
     const bogus = await scoutAdapter.apply({ ...claim, packet: { ...claim.packet, runId: `bogus:${NIGHT}` } as typeof claim.packet });
     expect(bogus.ok).toBe(false);
+  });
+});
+
+describe("after the merge", () => {
+  it("the file route still serves an archive file by `muse:<night>`, and the bare night's from the scout root", async () => {
+    seed();
+    const saved = process.env[ACCESS_SECRET_VAR];
+    process.env[ACCESS_SECRET_VAR] = "right";
+    try {
+      const get = (run: string, rel: string) => foundryFile(new Request(`http://127.0.0.1:3255/api/foundry/file?${new URLSearchParams({ run, path: rel, kind: "scout" }).toString()}`, { headers: { authorization: "Bearer right" } }));
+      const archive = await get(`muse:${NIGHT}`, "ideas/c-03.png");
+      expect(archive.status).toBe(200);
+      expect(await archive.text()).toBe("png scout-muse c-03");
+      const scout = await get(NIGHT, "ideas/c-01.png");
+      expect(await scout.text()).toBe("png scout c-01");
+      expect((await get(NIGHT, "ideas/c-03.png")).status).toBe(404);
+      expect((await get(`bogus:${NIGHT}`, "ideas/c-03.png")).status).toBe(404);
+    } finally {
+      if (saved === undefined) delete process.env[ACCESS_SECRET_VAR];
+      else process.env[ACCESS_SECRET_VAR] = saved;
+    }
+  });
+
+  it("a character kept on a scout night (a bare run id) appends to scout-muse/characters.md; the archive's night is untouched", async () => {
+    seed();
+    rmSync(path.join(out, "scout"), { recursive: true, force: true });
+    seedNight("scout", [idea("c-01", { title: "Ines Roca, lighthouse keeper", target: "character", card: { ...CARD, name: "Ines Roca", audience: "adult", kind: "original" }, aspect: "9:16" })]);
+    const flow = await openFlow(scoutAdapter, NIGHT, blobDir);
+    expect(flow.plan.packet.id).toBe(`pkt:scout:${NIGHT}`);
+    flow.patch([{ candidate: "c-01/board", verdict: "keep" }]);
+    expect(must(flow.preview()).consequence.writes).toContainEqual({ kind: "file", target: "knowledge/scout-muse/characters.md", candidate: "c-01/board", detail: "new file · a line under ## Kept characters" });
+    must(flow.commit());
+    must(await scoutAdapter.apply(flow.claim()));
+    expect(knowledge("scout-muse/characters.md")).toContain(`- **Ines Roca**, aged 34 - auburn bob, freckles, green wool coat. Plays: dry wit, never in a hurry. <!-- scout:${NIGHT}/c-01 -->`);
+    expect(nightOf("scout").state).toBe("committed");
+    expect(nightOf("scout-muse").state).toBe("closed");
   });
 });

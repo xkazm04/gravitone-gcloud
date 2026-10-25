@@ -1,7 +1,7 @@
-// The ACTIVE wing (spark scout-muse), per async call chain. The CLI runs its whole dispatch inside
-// `withWing(--wing)`; a Board or ledger read runs each wing's work inside `withWing(w)`; a kernel job
-// for a muse night runs its steps inside the wing its request names. Outside any scope the wing is
-// `scout`, so every caller written before the wings existed keeps reading the scout root.
+// The ACTIVE wing (spark scout-muse), per async call chain. Since the merge (spark scout-vision S3) the muse
+// scope is the read-only ARCHIVE's: `status --wing muse`, a Board read or apply of a `muse:` packet, the file
+// route, the ledger, the graph and the Library each read it inside `withWing("muse")`. Outside any scope the
+// wing is `scout`, where every new night is written.
 //
 // AsyncLocalStorage, not a module variable: the Next server answers two Board requests at once, and
 // a global would let one request's wing leak into the other's reads.

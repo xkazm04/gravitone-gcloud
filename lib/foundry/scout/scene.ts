@@ -151,15 +151,21 @@ export function denylistOf(sources: readonly Pick<ScoutSource, "title" | "channe
  * word that does not start a sentence (the prompt asks for lower case everywhere else). A
  * deterministic check, so it misses a name that opens a sentence and is not in the title - the
  * prompt's rule 2 is the other half.
+ *
+ * `allow` (spark scout-vision S3) - the names a storyboard panel may carry: its cast's names and their declared parody
+ * origins. A capital mid-sentence whose every capitalised part is a word of one of them passes; anything else still
+ * refuses. A scene recipe passes [] - it names nobody.
  */
-export function namesIn(fields: readonly string[], deny: readonly string[]): string[] {
+export function namesIn(fields: readonly string[], deny: readonly string[], allow: readonly string[]): string[] {
   const denied = new Set(deny);
+  const allowed = new Set(allow.flatMap((a) => words(a)).flatMap((w) => w.split(/['’-]/)).map((p) => p.toLowerCase()));
+  const declared = (w: string): boolean => allowed.size > 0 && w.split(/['’-]/).every((p) => !/^\p{Lu}/u.test(p) || allowed.has(p.toLowerCase()));
   const found = new Set<string>();
   for (const f of fields) {
     for (const sentence of f.split(/(?<=[.!?;:])\s+/)) {
       words(sentence).forEach((w, i) => {
         if (w.split(/['’-]/).some((p) => denied.has(p.toLowerCase()))) found.add(`"${w}" (the source's title or channel)`);
-        else if (i > 0 && /^\p{Lu}/u.test(w) && !ALLOWED_CAPS.has(w)) found.add(`"${w}" (a capital mid-sentence)`);
+        else if (i > 0 && /^\p{Lu}/u.test(w) && !ALLOWED_CAPS.has(w) && !declared(w)) found.add(`"${w}" (a capital mid-sentence)`);
       });
     }
   }
@@ -241,7 +247,7 @@ export function draftOf(raw: unknown, deny: readonly string[]): Result<SceneDraf
   const d = parseAt("scene recipe", draftSchema, raw);
   if (!d.ok) return d;
   const v = d.value;
-  const names = namesIn([v.camera, v.motion, v.composition, v.lighting, v.rhythm, v.prompt, ...v.palette.map((p) => p.colour)], deny);
+  const names = namesIn([v.camera, v.motion, v.composition, v.lighting, v.rhythm, v.prompt, ...v.palette.map((p) => p.colour)], deny, []);
   if (names.length > 0) return err("refused", `the scene recipe names ${names.join(", ")}: craft, not content`);
   return ok(v);
 }

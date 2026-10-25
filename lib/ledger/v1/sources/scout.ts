@@ -29,16 +29,20 @@ import type { IngestEvent, ProjectCtx, Projection, Source, WeirItem } from "../t
 // decided and leaves the Weir, as a committed extract run does. A dry night's
 // packet still opens on the Board by its id; the Floor does not offer it.
 //
-// BOTH WINGS (spark scout-muse): each wing's root is read inside its own scope.
-// A muse night's record id, subject and run id are its RUN ID `muse:<night>` -
-// the same day's scout night is a different record - its events' data carry
-// `wing: "muse"`, and its pile is `muse <night>`, opening pkt:scout:muse:<night>.
+// THE SCOUT ROOT AND THE MUSE ARCHIVE, ONE SOURCE (spark scout-vision S3; the two
+// wings of spark scout-muse merged). Every new night is the scout root's; the four
+// muse nights are a read-only archive, read inside the muse scope. An archive night's
+// record id, subject and run id are its RUN ID `muse:<night>` forever - the same
+// day's scout night is a different record - its events' data carry `wing: "muse"`,
+// and were it ever a pile it would be `muse <night>`, opening pkt:scout:muse:<night>.
+// An archive root that is missing reads as no nights; one that cannot be listed is a
+// skip, never the source's failure.
 //
 // IN PARTS (spark scout-storyboards, lib/foundry/scout/parts.ts): a night committed with cells left undecided stays
 // `closed`, and its ONE pile is the remainder - `<run>:<n>`, pending the cells still open - never the base again.
 // Part 1 is the `commit` fact (key unchanged); part n is `commit.<n>`, at its own instant.
 
-/** `nights` are the scout wing's; `muse` the muse wing's (absent in a snapshot taken before the wings). */
+/** `nights` are the scout root's; `muse` the archive's (absent in a snapshot taken before the wings). */
 export type ScoutSnapshot = { readonly nights: readonly Night[]; readonly muse?: readonly Night[]; readonly skipped: readonly { readonly id: string; readonly reason: string }[] };
 
 export const SCOUT_READ_CAP = 120;
@@ -48,7 +52,7 @@ const OPERATOR: Actor = { kind: "operator", id: "operator" };
 const AGENT: Actor = { kind: "agent", id: "scout-cull-model" };
 const HREF = "/floor?lane=image";
 
-/** One wing's nights; a skipped night named by its run id. */
+/** One root's nights (`muse`: the archive); a skipped night named by its run id. */
 async function readWing(wing: ScoutWing): Promise<Result<{ nights: Night[]; skipped: { id: string; reason: string }[] }>> {
   return withWing(wing, async () => {
     let ids: string[];
@@ -65,8 +69,8 @@ async function readWing(wing: ScoutWing): Promise<Result<{ nights: Night[]; skip
 async function read(): Promise<Result<ScoutSnapshot>> {
   const [scout, muse] = await Promise.all([readWing("scout"), readWing("muse")]);
   if (!scout.ok) return scout;
-  // A wing that cannot be listed is a skip, not the source's failure: the scout wing's pile stays on the Floor
-  // while the muse root is unreadable (a listing failing the source is the rule where one root feeds the record, forge.ts).
+  // An archive that cannot be listed is a skip, not the source's failure: the scout piles stay on the Floor
+  // while the archive is unreadable (a listing failing the source is the rule where one root feeds the record, forge.ts).
   if (!muse.ok) return ok({ nights: scout.value.nights, skipped: [...scout.value.skipped, { id: "muse", reason: muse.error.message }] });
   return ok({ nights: scout.value.nights, muse: muse.value.nights, skipped: [...scout.value.skipped, ...muse.value.skipped] });
 }

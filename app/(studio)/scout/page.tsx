@@ -5,14 +5,13 @@
 //
 // A Server Component: the graph is built here, on the server, where the stores are (./_port, the fixture or the
 // scout store with the kernel's effort), and handed to one client island (./_scout/Scout.tsx) with the Server
-// Actions that write the steer. A read that fails renders the store's own sentence. `?wing=muse` opens on the muse
-// wing's graph (spark scout-muse); anything else is the scout wing's.
+// Actions that write the steer. A read that fails renders the store's own sentence. One graph since the muse wing merged
+// (spark scout-vision S3): its archive nights are nodes in it, and an old `?wing=muse` link lands on the same graph.
 import type { Metadata } from "next";
 import { connection } from "next/server";
 
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
-import { isWing } from "../../../lib/foundry/scout/wing.ts";
 import { scoutHeaderFacts } from "../_shell/headerFacts.ts";
 import { serverScout } from "./_port/port.ts";
 import { SCOUT_PORT } from "./_port/wire.ts";
@@ -23,11 +22,9 @@ import { serverBoard } from "../board/_port/port.ts";
 
 export const metadata: Metadata = { title: "Gravitone · Scout" };
 
-type Search = Promise<Readonly<Record<string, string | string[] | undefined>>>;
-
-export default async function ScoutPage({ searchParams }: { readonly searchParams: Search }) {
+export default async function ScoutPage() {
   await connection();
-  const [q, view, packets, facts] = await Promise.all([searchParams, serverScout().view(), serverBoard().listPackets(), scoutHeaderFacts()]);
+  const [view, packets, facts] = await Promise.all([serverScout().view(), serverBoard().listPackets(), scoutHeaderFacts()]);
   const undecided = packets.ok ? packets.value.packets.filter((p) => isScoutPacket(p) && p.state === "open").length : 0;
   const backlog = view.ok ? view.value.backlog : undefined;
   const head = <ScoutHead current="graph" undecided={undecided} facts={facts} {...(backlog === undefined ? {} : { backlog })} />;
@@ -39,11 +36,10 @@ export default async function ScoutPage({ searchParams }: { readonly searchParam
       </div>
     );
   }
-  const asked = Array.isArray(q["wing"]) ? q["wing"][0] : q["wing"];
   return (
     <div className={s.page}>
       {head}
-      <Scout initial={view.value} port={SCOUT_PORT} wing={isWing(asked) ? asked : "scout"} />
+      <Scout initial={view.value} port={SCOUT_PORT} />
     </div>
   );
 }

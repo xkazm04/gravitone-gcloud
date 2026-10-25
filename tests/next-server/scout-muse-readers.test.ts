@@ -1,7 +1,8 @@
-// THE READERS SEE BOTH WINGS (spark scout-muse WP3): the decision graph is built once per wing and a muse night
-// never appears in the scout graph; the ledger's scout and seeds sources read every wing's root, a muse night's
-// events keyed and tagged by its run id with distinct Weir titles; the Library's scout feed stays the scout
-// wing's. Two temp roots, the same day in each.
+// THE READERS SEE THE SCOUT ROOT AND THE MUSE ARCHIVE (spark scout-muse WP3; one graph since spark scout-vision S3):
+// the decision graph is ONE graph over both, the archive's nodes keyed by their run id so a colliding night id never
+// merges two nights, marked `archive` and decided on pkt:scout:muse:<night>; the ledger's scout and seeds sources read
+// both roots as one source, an archive night's events keyed and tagged by its run id with distinct Weir titles; the
+// Library's scout feed stays the scout root's. Two temp roots, the same day in each.
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -22,7 +23,7 @@ const ROOT = vi.hoisted(() => {
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { buildGraphs, graphOf } from "../../lib/foundry/scout/graph.ts";
+import { buildGraph, graphOf } from "../../lib/foundry/scout/graph.ts";
 import { withWing } from "../../lib/foundry/scout/wingScope.ts";
 import type { Candidate, Night } from "../../lib/foundry/scout/types.ts";
 import { weirPacketId } from "../../lib/ledger/v1/packet.ts";
@@ -66,29 +67,39 @@ beforeAll(() => {
 });
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
-describe("the decision graph, one per wing", () => {
-  it("builds each wing's graph from its own root; a muse node is tagged and decided on pkt:scout:muse:<night>", async () => {
-    const g = await buildGraphs({ now: new Date("2026-10-25T00:00:00.000Z") });
-    expect(g.scout.nights).toBe(1);
-    expect(g.scout.nodes.map((n) => n.label)).toEqual(["Lantern-lit stairwell"]);
-    expect(g.scout.nodes.every((n) => n.wing === undefined && n.packet === `pkt:scout:${DAY}`)).toBe(true);
-    expect(g.scout.open.night?.packet).toBe(`pkt:scout:${DAY}`);
+describe("the decision graph, one over both roots", () => {
+  it("draws the scout nights and the archive in one graph; colliding night ids stay two nights; an archive node is marked and decided on pkt:scout:muse:<night>", async () => {
+    const g = await buildGraph({ now: new Date("2026-10-25T00:00:00.000Z") });
+    expect(g.nights).toBe(3);
+    const scout = g.nodes.filter((n) => n.archive !== true);
+    expect(scout.map((n) => [n.id, n.label])).toEqual([[`cand:${DAY}/c-01`, "Lantern-lit stairwell"]]);
+    expect(scout.every((n) => n.wing === undefined && n.packet === `pkt:scout:${DAY}`)).toBe(true);
+    // The open night is the scout root's: an archive night is never the next morning's.
+    expect(g.open.night).toEqual({ packet: `pkt:scout:${DAY}`, undecided: 1 });
 
-    expect(g.muse.nights).toBe(2);
-    expect(g.muse.nodes.filter((n) => n.kind === "idea").map((n) => n.label).sort()).toEqual(["A tango in an empty ballroom", "Gouache harbour portrait", "Mara Venn, cartographer"]);
-    expect(g.muse.nodes.every((n) => n.wing === "muse" && n.packet.startsWith("pkt:scout:muse:"))).toBe(true);
-    expect(g.muse.open.night).toEqual({ packet: `pkt:scout:muse:${DAY}`, undecided: 2 });
-    expect(g.muse.nodes.find((n) => n.label === "Gouache harbour portrait")?.state).toBe("kept");
+    const archive = g.nodes.filter((n) => n.archive === true);
+    expect(archive.filter((n) => n.kind === "idea").map((n) => n.label).sort()).toEqual(["A tango in an empty ballroom", "Gouache harbour portrait", "Mara Venn, cartographer"]);
+    expect(archive.every((n) => n.packet.startsWith("pkt:scout:muse:") && n.id.startsWith("cand:muse:") && n.wing === undefined)).toBe(true);
+    // The same day's c-01 is in both roots: two nodes, never merged.
+    expect(g.nodes.filter((n) => n.id.endsWith(`${DAY}/c-01`)).map((n) => [n.id, n.label])).toEqual([[`cand:${DAY}/c-01`, "Lantern-lit stairwell"], [`cand:muse:${DAY}/c-01`, "Mara Venn, cartographer"]]);
+    expect(archive.find((n) => n.label === "Gouache harbour portrait")?.state).toBe("kept");
+    expect(new Set(g.nodes.map((n) => n.id)).size).toBe(g.nodes.length);
   });
 
-  it("the pure builder without a wing is the scout wing's, as every caller before the wings", () => {
+  it("an archive ref is read in the archive: a fromIdea of an archive night links the archive's node, never the scout night of the same id", () => {
+    const grown: Candidate = { id: "c-03", kind: "style", sourceIds: [], status: "rendered", fromIdea: `${DAY}/c-01` };
+    const g = graphOf({ nights: SCOUT_NIGHTS, archive: [night(DAY, [idea("c-01", "Mara Venn, cartographer"), grown])], batches: [], steer: { paused: [], history: [] }, now: new Date() });
+    expect(g.edges).toEqual([{ from: `cand:muse:${DAY}/c-01`, to: `cand:muse:${DAY}/c-03` }]);
+  });
+
+  it("the pure builder without an archive draws the scout nights only, unmarked", () => {
     const g = graphOf({ nights: MUSE_NIGHTS, batches: [], steer: { paused: [], history: [] }, now: new Date() });
-    expect(g.nodes.every((n) => n.wing === undefined && !n.packet.includes("muse"))).toBe(true);
+    expect(g.nodes.every((n) => n.archive === undefined && n.wing === undefined && !n.packet.includes("muse"))).toBe(true);
   });
 });
 
-describe("the ledger, both wings", () => {
-  it("reads every wing's nights; the same day in two wings is two records, two piles, two packets", async () => {
+describe("the ledger, the scout root and the archive as one source", () => {
+  it("reads both roots; the same day in the two is two records, two piles, two packets", async () => {
     const snap = await scoutSource.read();
     if (!snap.ok) throw snap.error;
     expect(snap.value.nights.map((n) => n.id)).toEqual([DAY]);
@@ -108,7 +119,7 @@ describe("the ledger, both wings", () => {
     expect(p.tally.facts).toEqual({ "run.start": 3, "run.status": 3, "run.end": 3, commit: 1 });
   });
 
-  it("the seeds source reads every wing's root (the muse wing holds none)", async () => {
+  it("the seeds source reads both roots (the archive holds none)", async () => {
     const snap = await seedsSource.read();
     if (!snap.ok) throw snap.error;
     expect(snap.value).toEqual({ batches: [], muse: [] });

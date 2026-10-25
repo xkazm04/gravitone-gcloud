@@ -12,6 +12,7 @@ import type { StoryboardPorts, StoryboardRequest } from "@gt/producers/scout-sto
 
 import { FLUX_MODEL, type FluxAspect } from "../imaging/local/flux2.ts";
 import { LTX_MODEL } from "../imaging/video/comfyLtx.ts";
+import { castRefs, CAST_LATE } from "../foundry/scout/cast.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
 import { CLIP_SECONDS, type CandidateId, type Night, type SceneClip, type StoryboardCandidate } from "../foundry/scout/types.ts";
 import { standIdea } from "./scoutIdeaActs.ts";
@@ -26,6 +27,10 @@ import { standIdea } from "./scoutIdeaActs.ts";
 //          job declares it to the meter and is answered by a stand-in picture, so it never reaches the card.
 //          A frame the engine refused leaves its index null and its sentence in `error` (`panel N: ...`);
 //          the step is booked and the storyboard goes on.
+//          A CAST storyboard (spark scout-vision S3): its panels already lead with the cast's identity blocks (compiled
+//          at the door, lib/foundry/scout/characters.ts castPrompt); each member's KEPT sheet rides the frame as a reference
+//          admitted late (CAST_LATE), read through the one guard (cast.ts castStillOf via castRefs). A member with no
+//          kept sheet adds none; a sheet the guard refuses fails that panel with its sentence - never drawn without it.
 //   clip   a TRIAL's (spark scout-vision S2), after every panel: one LTX clip of panel N's own still (the guard,
 //          `panelStillOf`), the panel's prompt its motion line and the launch-chosen seed, written to
 //          storyboards/<c-NN>/clip-N.mp4 and recorded at its index in `clips` (ltx-local, $0). A panel that drew
@@ -113,16 +118,21 @@ async function panelAct(e: StoryboardActEngines, req: StoryboardRequest, k: numb
   const of = req.panels.length;
   let got: { readonly png: Uint8Array; readonly seed: number; readonly model: string };
   try {
+    // The cast's kept sheets, through the guard: none for a plain storyboard or a cast with no kept sheet.
+    const cast = await castRefs(c.cast ?? []);
+    if (!cast.ok) throw cast.error;
+    const refs = cast.value.refs.length === 0 ? {} : { refs: cast.value.refs, late: CAST_LATE };
+    const draw = () => e.draw(ask.prompt, { aspect: req.aspect, seed: ask.seed, ...refs });
     got =
       ctx.job.mode.kind === "live"
-        ? { ...(await e.draw(ask.prompt, { aspect: req.aspect, seed: ask.seed })), model: FLUX_MODEL }
+        ? { ...(await draw()), model: FLUX_MODEL }
         : await meteredCall<{ png: Uint8Array; seed: number; model: string }>(ctx, {
             provider: "comfyui",
             model: FLUX_MODEL,
-            payload: { prompt: ask.prompt, aspect: req.aspect, seed: ask.seed },
+            payload: { prompt: ask.prompt, aspect: req.aspect, seed: ask.seed, ...(cast.value.from.length === 0 ? {} : { refs: cast.value.from, late: CAST_LATE }) },
             estimate: req.estimates.panel,
             stand: () => ({ png: new Uint8Array(standIdea(k)), seed: ask.seed, model: "dry stand-in" }),
-            live: async () => ({ value: { ...(await e.draw(ask.prompt, { aspect: req.aspect, seed: ask.seed })), model: FLUX_MODEL }, unpriced: "free: a local model" }),
+            live: async () => ({ value: { ...(await draw()), model: FLUX_MODEL }, unpriced: "free: a local model" }),
           });
   } catch (x) {
     const why = errorMessage(x);

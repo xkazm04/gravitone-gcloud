@@ -3,16 +3,26 @@
 // no websocket, no Python: four plain requests, each bounded by its own timeout, the whole draw by one cap.
 //
 //   1. GET  /system_stats   reachable, or refused with a sentence before anything is queued;
+//   1b. POST /upload/image  each reference still (spark scout-vision S3), named by its bytes (comfyLtx.ts's rule);
 //   2. POST /prompt         the graph below, our prompt, size and seed set, under our own client id;
 //   3. GET  /history/{id}   every 3 s until it is there, capped at 15 min (another session's prompts
 //                           may run ahead of ours; that wait counts against the cap);
 //   4. GET  /view           the PNG SaveImage wrote.
 //
-// THE GRAPH is pipeline/vlm-probe/consistency.py `flux_workflow()` ported node for node, text-to-image only:
-// no LoadImage, no VAEEncode, no ReferenceLatent. A storyboard's frames are drawn from OUR words alone - the
-// idea's artboard is read as words, never handed in as a reference latent (operator, 2026-10-24: the frames
-// are a plan, not the final video's baseline). 20 steps, euler, guidance 4.0, the Python's own numbers;
-// 1280x720 for 16:9 (flux_still.py `W, H`), 720x1280 for 9:16.
+// THE GRAPH is pipeline/vlm-probe/consistency.py `flux_workflow()` ported node for node. With no reference it is
+// text-to-image only: no LoadImage, no VAEEncode, no ReferenceLatent - the idea's artboard is read as words, never
+// handed in as a reference latent (operator, 2026-10-24: the frames are a plan, not the final video's baseline).
+// 20 steps, euler, guidance 4.0, the Python's own numbers; 1280x720 for 16:9 (flux_still.py `W, H`), 720x1280 for
+// 9:16, 1024x1024 for 1:1 (a reference sheet).
+//
+// WITH REFERENCES (spark scout-vision S3: a kept character's portrait for her sheet, her kept sheet for a cast frame
+// - OUR stills only, each passed by lib/foundry/scout/cast.ts `castStillOf`): each one LoadImage -> VAEEncode ->
+// ReferenceLatent, chained between CLIPTextEncode and FluxGuidance (the probe's order: guidance first silently drops
+// the references), and ADMITTED LATE - the text has the denoise to itself until `late`, then the reference joins
+// (ConditioningSetTimestepRange x2 + ConditioningCombine). Registry character-identity-continuity /
+// reference-admitted-late: composition is decided early and identity late; a reference at full strength replaces the
+// shot (the probe measured a look distance of 0.0002, the camera ignored). The value is frozen per model and tuned by
+// trials, never chosen per call: REFERENCE_LATE.
 //
 // A SHARED SERVICE, TREATED AS ONE (lib/foundry/mesh/comfy.ts, docs/resources.md): this client never POSTs
 // /free - another tenant's models stay loaded - and never restarts anything. At the cap ours, and only ours,
@@ -22,7 +32,7 @@
 // A COMFYUI ERROR IS KEPT VERBATIM (comfyLtx.ts's rule): the node's class, its id and its exception text, or
 // the /prompt validator's node errors. Errors are AppError `unavailable` (the box's), `invalid` (refused here).
 
-import { randomInt, randomUUID } from "node:crypto";
+import { createHash, randomInt, randomUUID } from "node:crypto";
 
 import { AppError } from "@gt/domain/errors";
 
@@ -36,9 +46,19 @@ export const FLUX_FILES = [
   { cls: "VAELoader", input: "vae_name", file: "flux2-vae.safetensors" },
 ] as const;
 export const FLUX_STEPS = 20;
-export const FLUX_ASPECTS = ["16:9", "9:16"] as const;
+export const FLUX_ASPECTS = ["16:9", "9:16", "1:1"] as const;
 export type FluxAspect = (typeof FLUX_ASPECTS)[number];
-export const FLUX_SIZE: Readonly<Record<FluxAspect, { readonly width: number; readonly height: number }>> = { "16:9": { width: 1280, height: 720 }, "9:16": { width: 720, height: 1280 } };
+export const FLUX_SIZE: Readonly<Record<FluxAspect, { readonly width: number; readonly height: number }>> = { "16:9": { width: 1280, height: 720 }, "9:16": { width: 720, height: 1280 }, "1:1": { width: 1024, height: 1024 } };
+/**
+ * Where a reference joins the denoise, 0..1, for flux2-dev-fp8 (registry reference-admitted-late: frozen per model,
+ * tuned by trials). 0.25 is the probe's measured operating point (pipeline/vlm-probe/CONSISTENCY-FINDINGS.md, lane
+ * `reference-face-e25`: worst identity 0.371 against a real-film floor of 0.364, the camera obeyed; 0 overrides the
+ * camera, 0.45 loosens identity to 0.577). The probe's CLI default, 0.0, is the always-on lane it measured as a slideshow.
+ */
+export const REFERENCE_LATE = 0.25;
+/** The references one frame takes: a cast's kept sheets (lib/foundry/scout/cast.ts CAST_MAX). */
+export const FLUX_REFS_MAX = 3;
+const MAX_REF_BYTES = 16 * 1024 * 1024;
 /** The seed range ComfyUI's RandomNoise takes and a JSON number holds exactly. */
 export const FLUX_SEED_MAX = 2 ** 48 - 1;
 const SAVE = "13";
@@ -47,6 +67,7 @@ const CAP_MS = 15 * 60_000;
 const LOST_POLLS = 6;
 const MAX_IMAGE_BYTES = 64 * 1024 * 1024;
 const PROMPT_MAX = 2_000;
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47];
 
 export type FluxFetch = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -123,11 +144,14 @@ export async function missingFluxModels(deps: Pick<FluxDeps, "fetch" | "base"> =
 
 /* ── The graph ───────────────────────────────────────────────────────────── */
 
-/** consistency.py `flux_workflow(prompt, seed, refs=(), width, height, steps=20, prefix)`, its node ids kept. */
-export function fluxGraph(v: { readonly prompt: string; readonly seed: number; readonly width: number; readonly height: number; readonly steps?: number; readonly prefix: string }): Graph {
+/**
+ * consistency.py `flux_workflow(prompt, seed, refs=(), width, height, steps=20, prefix, late=0.0)`, its node ids kept:
+ * `refs` are the uploaded names LoadImage takes, `late` (0..1) where they join. No refs: the text-only graph.
+ */
+export function fluxGraph(v: { readonly prompt: string; readonly seed: number; readonly width: number; readonly height: number; readonly steps?: number; readonly prefix: string; readonly refs?: readonly string[]; readonly late?: number }): Graph {
   const [unet, clip, vae] = FLUX_FILES;
   const steps = v.steps ?? FLUX_STEPS;
-  return {
+  const g: Graph = {
     "1": { class_type: unet.cls, inputs: { unet_name: unet.file, weight_dtype: "default" } },
     "2": { class_type: clip.cls, inputs: { clip_name: clip.file, type: "flux2", device: "default" } },
     "3": { class_type: vae.cls, inputs: { vae_name: vae.file } },
@@ -136,22 +160,62 @@ export function fluxGraph(v: { readonly prompt: string; readonly seed: number; r
     "7": { class_type: "Flux2Scheduler", inputs: { steps, width: v.width, height: v.height } },
     "8": { class_type: "KSamplerSelect", inputs: { sampler_name: "euler" } },
     "9": { class_type: "RandomNoise", inputs: { noise_seed: v.seed } },
-    "5": { class_type: "FluxGuidance", inputs: { conditioning: ["4", 0], guidance: 4.0 } },
-    "10": { class_type: "BasicGuider", inputs: { model: ["1", 0], conditioning: ["5", 0] } },
-    "11": { class_type: "SamplerCustomAdvanced", inputs: { noise: ["9", 0], guider: ["10", 0], sampler: ["8", 0], sigmas: ["7", 0], latent_image: ["6", 0] } },
-    "12": { class_type: "VAEDecode", inputs: { samples: ["11", 0], vae: ["3", 0] } },
-    [SAVE]: { class_type: "SaveImage", inputs: { images: ["12", 0], filename_prefix: v.prefix } },
   };
+  let cond: [string, number] = ["4", 0];
+  const refs = v.refs ?? [];
+  refs.forEach((name, i) => {
+    const [load, enc, ref] = [`20${i}`, `21${i}`, `22${i}`];
+    g[load] = { class_type: "LoadImage", inputs: { image: name } };
+    g[enc] = { class_type: "VAEEncode", inputs: { pixels: [load, 0], vae: ["3", 0] } };
+    g[ref] = { class_type: "ReferenceLatent", inputs: { conditioning: cond, latent: [enc, 0] } };
+    cond = [ref, 0];
+  });
+  if (refs.length > 0 && v.late !== undefined && v.late > 0) {
+    // The text alone until `late`, then the referenced conditioning: composition first, identity after.
+    g["30"] = { class_type: "ConditioningSetTimestepRange", inputs: { conditioning: ["4", 0], start: 0.0, end: v.late } };
+    g["31"] = { class_type: "ConditioningSetTimestepRange", inputs: { conditioning: cond, start: v.late, end: 1.0 } };
+    g["32"] = { class_type: "ConditioningCombine", inputs: { conditioning_1: ["30", 0], conditioning_2: ["31", 0] } };
+    cond = ["32", 0];
+  }
+  g["5"] = { class_type: "FluxGuidance", inputs: { conditioning: cond, guidance: 4.0 } };
+  g["10"] = { class_type: "BasicGuider", inputs: { model: ["1", 0], conditioning: ["5", 0] } };
+  g["11"] = { class_type: "SamplerCustomAdvanced", inputs: { noise: ["9", 0], guider: ["10", 0], sampler: ["8", 0], sigmas: ["7", 0], latent_image: ["6", 0] } };
+  g["12"] = { class_type: "VAEDecode", inputs: { samples: ["11", 0], vae: ["3", 0] } };
+  g[SAVE] = { class_type: "SaveImage", inputs: { images: ["12", 0], filename_prefix: v.prefix } };
+  return g;
 }
 
-function checkRequest(r: FluxRequest): { readonly aspect: FluxAspect; readonly prompt: string } {
+function checkRequest(r: FluxRequest): { readonly aspect: FluxAspect; readonly prompt: string; readonly refs: readonly Uint8Array[]; readonly late: number } {
   const prompt = r.prompt.trim();
   if (prompt === "") throw new AppError("invalid", "a Flux frame needs a prompt");
   if (prompt.length > PROMPT_MAX) throw new AppError("invalid", `a Flux prompt is at most ${PROMPT_MAX} characters, got ${prompt.length}`);
   const aspect = r.aspect ?? "16:9";
   if (!FLUX_ASPECTS.includes(aspect)) throw new AppError("invalid", `a Flux frame is ${FLUX_ASPECTS.join(" or ")}, got ${String(aspect)}`);
   if (r.seed !== undefined && (!Number.isInteger(r.seed) || r.seed < 0 || r.seed > FLUX_SEED_MAX)) throw new AppError("invalid", `a Flux seed is a whole number from 0 to ${FLUX_SEED_MAX}, got ${r.seed}`);
-  return { aspect, prompt };
+  const refs = r.refs ?? [];
+  if (refs.length > FLUX_REFS_MAX) throw new AppError("invalid", `a Flux frame takes at most ${FLUX_REFS_MAX} reference stills, got ${refs.length}`);
+  for (const [i, b] of refs.entries()) {
+    if (b.byteLength === 0 || b.byteLength > MAX_REF_BYTES) throw new AppError("invalid", `reference ${i + 1} is ${b.byteLength} bytes; a reference is 1 byte to ${MAX_REF_BYTES / 1024 ** 2} MB`);
+    if (!PNG_MAGIC.every((x, k) => b[k] === x)) throw new AppError("invalid", `reference ${i + 1} is not a PNG`);
+  }
+  const late = r.late ?? REFERENCE_LATE;
+  if (!Number.isFinite(late) || late < 0 || late >= 1) throw new AppError("invalid", `a reference joins at 0 to under 1 of the denoise, got ${late}`);
+  return { aspect, prompt, refs, late };
+}
+
+type Upload = { name?: string; subfolder?: string };
+
+/** One reference still onto the box, named by its bytes (comfyLtx.ts's rule): a retry uploads the same name. */
+async function upload(c: Ctx, bytes: Uint8Array): Promise<string> {
+  const sha = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+  const form = new FormData();
+  form.append("image", new Blob([new Uint8Array(bytes)], { type: "image/png" }), `ref-${sha}.png`);
+  form.append("type", "input");
+  form.append("subfolder", "gravitone");
+  form.append("overwrite", "true");
+  const up = await json<Upload>(c, "/upload/image", { method: "POST", body: form, ms: 120_000 });
+  if (typeof up.name !== "string" || up.name === "") throw unavailable(`ComfyUI took a reference still but named no file: ${short(JSON.stringify(up))}`);
+  return up.subfolder ? `${up.subfolder}/${up.name}` : up.name;
 }
 
 /* ── The draw ────────────────────────────────────────────────────────────── */
@@ -206,11 +270,9 @@ async function withdraw(c: Ctx, id: string): Promise<string> {
   return "in neither queue";
 }
 
-const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47];
-
 /** One frame from one prompt: reachable, queue, wait, fetch. The seed is the request's, else a random one, and is returned. */
 export async function drawFlux(req: FluxRequest, deps: FluxDeps = {}): Promise<FluxStill> {
-  const { aspect, prompt } = checkRequest(req);
+  const { aspect, prompt, refs, late } = checkRequest(req);
   const { width, height } = FLUX_SIZE[aspect];
   const seed = req.seed ?? (deps.seed ?? (() => randomInt(0, 2 ** 47)))();
   const c: Ctx = { f: deps.fetch ?? fetch, base: deps.base ?? fluxBase() };
@@ -220,7 +282,9 @@ export async function drawFlux(req: FluxRequest, deps: FluxDeps = {}): Promise<F
   await json<unknown>(c, "/system_stats", { method: "GET", ms: 10_000 }).catch((e: unknown) => {
     throw unavailable(`ComfyUI is not reachable at ${c.base}, so no Flux frame was drawn (${e instanceof Error ? e.message : String(e)})`);
   });
-  const graph = fluxGraph({ prompt, seed, width, height, prefix: `gravitone/flux2-${seed}` });
+  const names: string[] = [];
+  for (const b of refs) names.push(await upload(c, b));
+  const graph = fluxGraph({ prompt, seed, width, height, prefix: `gravitone/flux2-${seed}`, ...(names.length === 0 ? {} : { refs: names, late }) });
   const sent = await call(c, "/prompt", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt: graph, client_id: `gravitone-${randomUUID()}` }), ms: 30_000 });
   const sentText = await sent.text();
   if (!sent.ok) throw unavailable(refusalOf(sent.status, sentText));

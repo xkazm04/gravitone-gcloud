@@ -73,7 +73,7 @@ export type GraphEffort = {
 };
 
 export type GraphNode = {
-  /** `seed:<batch>/sd-NNN`, `cand:<night>/<c-id>`, or `out:<night>/<c-id>`. */
+  /** `seed:<batch>/sd-NNN`, `cand:<night>/<c-id>`, or `out:<night>/<c-id>`; an archive node's night is `muse:<night>`. */
   readonly id: string;
   readonly stage: GraphStage;
   readonly kind: GraphKind;
@@ -94,11 +94,17 @@ export type GraphNode = {
   /** The seed ref a run grows from, when it has one - what the steer's pause and the groups key on. */
   readonly seed?: string;
   readonly effort?: GraphEffort;
-  /** The scout wing that made it (spark scout-muse): `muse`, or absent for the scout loop's own. */
+  /** Set on a node of the muse ARCHIVE (spark scout-vision S3: the four muse nights, read-only since the wings merged). */
+  readonly archive?: true;
+  /** LEGACY (spark scout-muse, before the merge): `muse` marked a muse wing's node. No builder writes it now; a reader
+   *  takes it as `archive` (isArchiveNode). */
   readonly wing?: "muse";
   /** The venture (`vn-...`) it was made inside (spark scout-vision S2): the run's own, or a trial's or piece's genre's. */
   readonly venture?: string;
 };
+
+/** A node of the muse archive: the marker, or the legacy `wing: "muse"` an older graph carries. */
+export const isArchiveNode = (n: Pick<GraphNode, "archive" | "wing">): boolean => n.archive === true || n.wing === "muse";
 
 export type GraphEdge = { readonly from: string; readonly to: string };
 

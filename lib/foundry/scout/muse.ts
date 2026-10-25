@@ -70,11 +70,17 @@ export type MuseJudge = {
   readonly notes: string;
 };
 
-/** The first field that fails the line, or null when the still clears it. `hands` is a taste, never a gate. */
-export function judgeFailure(j: MuseJudge): string | null {
-  if (j.adult !== "yes") return `adult ${j.adult}`;
-  if (j.apparentAge === null) return "apparent age unread";
-  if (j.apparentAge < MUSE_MIN_APPARENT_AGE) return `apparent age ${j.apparentAge}`;
+/**
+ * The first field that fails the line, or null when the still clears it. `hands` is a taste, never a gate.
+ * `minors: true` (spark scout-vision S3) is a kids/family character's still: she may be a child, so the adult read
+ * and the apparent-age floor do not apply - nudity and a real person's likeness fail it all the same.
+ */
+export function judgeFailure(j: MuseJudge, o: { readonly minors?: boolean } = {}): string | null {
+  if (o.minors !== true) {
+    if (j.adult !== "yes") return `adult ${j.adult}`;
+    if (j.apparentAge === null) return "apparent age unread";
+    if (j.apparentAge < MUSE_MIN_APPARENT_AGE) return `apparent age ${j.apparentAge}`;
+  }
   if (j.clothing === "nude") return "clothing nude";
   if (j.realPerson !== "no") return `real person ${j.realPerson}`;
   return null;

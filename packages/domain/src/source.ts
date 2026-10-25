@@ -133,6 +133,8 @@ export const SOURCES = {
       genres: ["generic", "use case", "story"],
       // spark scout-vision S2: a genre's piece, its best kept trial cut whole.
       pieces: ["story", "craft", "motion"],
+      // spark scout-vision S3: a kept character's reference sheet, one neutral still.
+      sheets: ["style", "craft", "subject"],
     },
   },
   // A batch of one-sentence SEEDS (spark scout-decision-graph): genre, subgenre, type of content,

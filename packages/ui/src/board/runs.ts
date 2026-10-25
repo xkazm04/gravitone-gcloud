@@ -35,9 +35,10 @@ export function runsOf(cells: readonly Cell[], rows: readonly RowWords[]): Run[]
  * scout-decision-graph) - are words, filed in that tab under their own name. `storyboards` - a kept idea's
  * frames and its words, one run judged whole (spark scout-storyboards) - has a tab of its own. `genres` - a night's
  * proposals to birth a genre or a venture, words (spark scout-vision S2) - sit with the ideas; `pieces` - a genre's
- * cut video - with the videos.
+ * cut video - with the videos; `sheets` - a kept character's reference sheet, one still (spark scout-vision S3) - with
+ * the images.
  */
-export const CATEGORIES = ["art styles", "videos", "pieces", "music", "3d", "ideas", "storyboards", "genres", "seeds", "notes", "sources", "other"] as const;
+export const CATEGORIES = ["art styles", "sheets", "videos", "pieces", "music", "3d", "ideas", "storyboards", "genres", "seeds", "notes", "sources", "other"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 const isCategory = (g: string): g is Category => (CATEGORIES as readonly string[]).includes(g);
@@ -71,6 +72,7 @@ export type Tab = (typeof TABS)[number];
 
 const TAB_OF: Readonly<Record<Category, Tab>> = {
   "art styles": "images",
+  sheets: "images",
   "3d": "images",
   other: "images",
   videos: "videos",

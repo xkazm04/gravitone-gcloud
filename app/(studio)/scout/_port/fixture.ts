@@ -26,10 +26,11 @@ const world = (() => {
 })();
 let steer: Steer = fixtureSteer(world.batches);
 
-// The muse wing's own root: no seeds, an empty steer; its graph never moves, as nothing on the screen writes it.
-const muse = (() => {
+// The muse ARCHIVE (spark scout-vision S3): its nights drawn in the same graph, read-only, their ids colliding with the
+// universe's own nights on purpose - the builder keeps them apart.
+const archive = (() => {
   const nights = fixtureMuse();
-  return graphOf({ wing: "muse", nights, batches: [], steer: { paused: [], history: [] }, effort: fixtureEffort(nights), now: FIXTURE_NOW });
+  return { archive: nights, archiveEffort: fixtureEffort(nights) };
 })();
 
 // One venture (spark scout-vision S2), so the venture filter draws in fixture mode: the nodes of the first genre band
@@ -43,7 +44,7 @@ function withVenture(g: ScoutGraph): ScoutGraph {
 }
 
 const view = (): ScoutView => ({
-  graphs: { scout: withVenture(graphOf({ nights: world.nights, batches: world.batches, steer, effort: world.effort, now: FIXTURE_NOW })), muse },
+  graph: withVenture(graphOf({ nights: world.nights, batches: world.batches, steer, effort: world.effort, ...archive, now: FIXTURE_NOW })),
   ...(steer.split === undefined ? {} : { split: steer.split }),
   backlog: FIXTURE_BACKLOG,
   ventures: [FIXTURE_VENTURE],

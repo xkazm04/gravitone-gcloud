@@ -142,7 +142,7 @@ describe("the recipe door", () => {
 
   it("keeps the title's common words usable and builds the denylist from the rest", () => {
     expect(deny.sort()).toEqual(["chase", "harbour", "moonfall", "pictures"]);
-    expect(namesIn(["rain on the quay. Harbour lights."], deny)).toEqual(['"Harbour" (the source\'s title or channel)']);
+    expect(namesIn(["rain on the quay. Harbour lights."], deny, [])).toEqual(['"Harbour" (the source\'s title or channel)']);
   });
 
   it("passes its own dry stand-in", () => {
@@ -210,16 +210,16 @@ describe("the denylist keeps craft words (2026-10-22 dry campaign)", () => {
     ]);
     for (const w of ["frame", "painting", "oner", "open", "access", "public", "domain", "gorge"]) expect(deny, w).not.toContain(w);
     expect(deny).toContain("spielberg");
-    expect(namesIn(["hard warm key from frame left, an open doorway, painted flats"], deny)).toEqual([]);
-    expect(namesIn(["a Spielberg-style push-in"], deny)).not.toEqual([]);
+    expect(namesIn(["hard warm key from frame left, an open doorway, painted flats"], deny, [])).toEqual([]);
+    expect(namesIn(["a Spielberg-style push-in"], deny, [])).not.toEqual([]);
   });
 });
 
 describe("the denylist keeps short craft words (2026-10-22 live rehearsal)", () => {
   it("'How I Lit This Moody Brand Video' bans no lighting word, and still bans a name", () => {
     const deny = denylistOf([{ title: "How I Lit This Moody Brand Video | Cinematography Breakdown", channel: "Matt Aitia" }]);
-    expect(namesIn(["a moody, low-key frame lit by one practical"], deny)).toEqual([]);
+    expect(namesIn(["a moody, low-key frame lit by one practical"], deny, [])).toEqual([]);
     expect(deny).toContain("aitia");
-    expect(namesIn(["an Aitia-style setup"], deny)).not.toEqual([]);
+    expect(namesIn(["an Aitia-style setup"], deny, [])).not.toEqual([]);
   });
 });

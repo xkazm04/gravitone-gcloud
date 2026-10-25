@@ -15,8 +15,11 @@ import { ImagingError } from "../imaging/errors.ts";
 import { studioCreditsOf } from "../imaging/providers/leonardoStudio.ts";
 import { recognize as LIVE_RECOGNIZE } from "../imaging/router.ts";
 import type { GeneratedImages, GenerateRequest, ImageRef, Recognition, RecognizeRequest } from "../imaging/types.ts";
+import { keptNamed, rootedNights } from "../foundry/scout/cast.ts";
+import { keptCharacters, type KeptCharacter } from "../foundry/scout/characters.ts";
 import { judgeStill, STAND_JUDGE } from "../foundry/scout/judge.ts";
-import { judgeFailure, type MuseJudge } from "../foundry/scout/muse.ts";
+import { judgeFailure, type CharacterCard, type MuseJudge } from "../foundry/scout/muse.ts";
+import { audienceOf, drawsSomeone } from "../foundry/scout/museDoor.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
 import type { CandidateId, IdeaCandidate } from "../foundry/scout/types.ts";
 import { DEFAULT_WING } from "../foundry/scout/wing.ts";
@@ -35,12 +38,14 @@ import { imageFailure } from "./frames.ts";
 //
 // Every night write is fenced against the job's slot first (the scene and asset acts' `fence`).
 //
-// A MUSE REQUEST (spark scout-muse) runs every act inside its wing, so each read and write lands in
-// the muse root, draws at the request's studio quality and the idea's aspect, and puts each still
-// before the eye (lib/foundry/scout/judge.ts) while it is still only in memory: a still that fails
-// the line, or that the eye could not read, is never written to the night - the candidate fails
-// `judge: <field>` and holds the read when there was one. The eye is a declared call like the
-// studio's, so a dry job books a would-call and judges its stand-in as STAND_JUDGE.
+// A STILL THAT DRAWS SOMEONE - a character idea, or an idea that casts kept characters (spark scout-vision S3;
+// keyed on the candidate, never on a wing) - goes before the eye (lib/foundry/scout/judge.ts) while it is still
+// only in memory: a still that fails the line, or that the eye could not read, is never written to the night - the
+// candidate fails `judge: <field>` and holds the read when there was one. A kids or family character is not held to
+// the adult read; nudity and a real person's likeness fail every still. The eye is a declared call like the
+// studio's, so a dry job books a would-call and judges its stand-in as STAND_JUDGE. Each still draws at its own
+// studio quality and aspect (the request's ask). A legacy muse-wing request still runs every act inside its wing,
+// so a job of an archive night resumes in the muse root.
 
 export type IdeaEngines = {
   readonly generate: (req: GenerateRequest) => Promise<GeneratedImages>;
@@ -127,7 +132,8 @@ async function ideaAct(e: IdeaEngines, req: IdeasRequest, k: number, ctx: StepCo
   // A drive that died between the picture and the booking: the picture is the idea's.
   if (c.status === "rendered" && c.image !== undefined) return madePaid(data({ idea: c.id, file: c.image, held: true }), ctx);
 
-  const gen: GenerateRequest = { prompt: ask.prompt, aspect: ask.aspect ?? "16:9", count: 1, prefer: "leonardo-studio", ...(req.quality === undefined ? {} : { quality: req.quality }) };
+  const quality = ask.quality ?? req.quality;
+  const gen: GenerateRequest = { prompt: ask.prompt, aspect: ask.aspect ?? "16:9", count: 1, prefer: "leonardo-studio", ...(quality === undefined ? {} : { quality }) };
   let got: { images: ImageRef[]; provenance?: GeneratedImages["provenance"] };
   try {
     got = await meteredCall<{ images: ImageRef[]; provenance?: GeneratedImages["provenance"] }>(ctx, {
@@ -167,10 +173,12 @@ async function ideaAct(e: IdeaEngines, req: IdeasRequest, k: number, ctx: StepCo
     return madePaid(data({ idea: c.id, failed: why }), ctx);
   }
   let judge: MuseJudge | undefined;
-  if (req.wing === "muse") {
-    const read = await judgeStill(img, { recognize: (r) => meteredEye(e, req, r, ctx) });
+  // The eye keys on the candidate - a character, or an idea that casts someone - never on the request's wing.
+  if (drawsSomeone(c)) {
+    const line = await eyeLine(c);
+    const read = await judgeStill(img, { recognize: (r) => meteredEye(e, req, r, ctx) }, { parody: line.parody });
     fence(ctx);
-    const why = read.ok ? judgeFailure(read.value) : `unavailable - ${read.error.message}`;
+    const why = read.ok ? judgeFailure(read.value, { minors: line.minors }) : `unavailable - ${read.error.message}`;
     if (why !== null) {
       const failure = `judge: ${why}`;
       await writeIdeas(req, ctx.job.id, [c.id], (x) => ({ ...failed(failure)(x), ...(read.ok ? { judge: read.value } : {}) }));
@@ -188,6 +196,20 @@ async function ideaAct(e: IdeaEngines, req: IdeasRequest, k: number, ctx: StepCo
   });
   const p = got.provenance;
   return madePaid(data({ idea: c.id, file: rel, dry: p === undefined, ...(p === undefined ? {} : { provider: p.provider, model: p.model, ...(p.cleanup === undefined ? {} : { cleanup: p.cleanup }) }), ...(judge === undefined ? {} : { judge }) }), ctx);
+}
+
+/**
+ * The line a drawn someone is held to, from the cards she is drawn by - a character's own, a cast's kept ones (either
+ * root): a declared parody adds the eye's fictional-character clause, and only when EVERY card is a kids or family
+ * character does the adult read stand down (a cast name no longer kept reads as adult - the cautious side).
+ */
+async function eyeLine(c: IdeaCandidate): Promise<{ readonly parody: boolean; readonly minors: boolean }> {
+  const cast = c.cast ?? [];
+  const kept: readonly KeptCharacter[] = cast.length === 0 ? [] : keptCharacters(await rootedNights());
+  const cards: Pick<CharacterCard, "kind" | "audience">[] = c.card === undefined ? [] : [c.card];
+  // A name no longer kept carries no audience, so it reads as adult.
+  for (const name of cast) cards.push(keptNamed(kept, name)?.card ?? {});
+  return { parody: cards.some((x) => x.kind === "parody"), minors: cards.length > 0 && cards.every((x) => audienceOf(x) !== "adult") };
 }
 
 /** One read by the eye, declared to the step's meter: a dry job answers with STAND_JUDGE and asks no eye. */

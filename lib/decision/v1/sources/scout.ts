@@ -49,7 +49,7 @@ import {
   type Preview,
 } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
-import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, PROPOSAL_REJECTED, STORYBOARD_VERDICT, bornLine, build, commitOf, extractDecisions, ideaCell, meshKey, pieceCell, pieceVerdictLine, sameOutcome, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, PROPOSAL_REJECTED, STORYBOARD_VERDICT, bornLine, build, commitOf, extractDecisions, ideaCell, meshKey, pieceCell, pieceVerdictLine, sameOutcome, sheetCellOf, sheetVerdictLine, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
 import { musicOf } from "./scoutMusic.ts";
 import { nightRefusal, partOfBuilt, partWords, settledPart, withPart } from "./scoutPart.ts";
 import { inWing, isCharacter, keptTechnique, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta, partOfRun } from "./scoutWing.ts";
@@ -211,9 +211,9 @@ async function read(ref: AdapterRef, storeOf: () => Result<Store>): Promise<Resu
           return fromV1(e);
         }
       }
-    } else if (c.kind === "track" || c.kind === "visualizer" || c.kind === "storyboard" || c.kind === "piece") {
+    } else if (c.kind === "track" || c.kind === "visualizer" || c.kind === "storyboard" || c.kind === "piece" || c.kind === "sheet") {
       // Every cell file must be listed here, or media misses it: a storyboard's frames and a trial's clips too (a failed
-      // panel or clip is null), and a piece's cut.
+      // panel or clip is null), a piece's cut, and a character's reference sheet (spark scout-vision S3).
       const own =
         c.kind === "track"
           ? c.clips.map((x) => x.path)
@@ -221,7 +221,9 @@ async function read(ref: AdapterRef, storeOf: () => Result<Store>): Promise<Resu
             ? [...(c.images ?? []).map((f) => f ?? undefined), ...(c.clips ?? []).map((x) => x?.path)]
             : c.kind === "piece"
               ? [c.video]
-              : [c.video, c.still];
+              : c.kind === "sheet"
+                ? [c.image]
+                : [c.video, c.still];
       try {
         for (const f of own) if (f !== undefined) files.push({ key: f, abs: locate(f) });
       } catch (e) {
@@ -410,6 +412,11 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
       const cell = pieceCell(c.id);
       const d = byCell.get(cell)?.verdict;
       if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: pieceVerdictLine(c, d) });
+    } else if (c.kind === "sheet") {
+      // Kept, it is her reference - derived from this record (characters.ts keptCharacters), nothing else written.
+      const cell = sheetCellOf(c.id);
+      const d = byCell.get(cell)?.verdict;
+      if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: sheetVerdictLine(c, d) });
     }
   }
   // What the keeps earn, over every part's keeps; a later part names only the leads it adds.

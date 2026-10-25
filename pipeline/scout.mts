@@ -1,7 +1,9 @@
 // SCOUT - the night's CLI (spark media-training-loop). The /scout skill drives it;
 // an operator may type any line of it. Docs: docs/scout.md.
 //
-//   Every command takes [--wing scout|muse] (spark scout-muse): the root it reads and writes; absent: scout.
+//   ONE NIGHT TYPE (spark scout-vision S3): every night is a scout night. The muse wing folded in; its four nights
+//   are a read-only archive that only `status --wing muse [<night>]` lists - any other command under --wing muse
+//   is refused (exit 3), naming /scout. `--wing scout` is accepted and changes nothing.
 //   npx tsx pipeline/scout.mts doctor [--dry] [--json]
 //   npx tsx pipeline/scout.mts open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas 25] [--reels 6] [--until HH:MM] [--live] [--json]
 //   npx tsx pipeline/scout.mts add-source <night> --json <file|->
@@ -30,7 +32,7 @@
 //
 // --json: one JSON document on stdout, progress on stderr. Under add-source, finding,
 // direction, ideas and lead, `--json <file|->` names the INPUT, and the output is JSON as well.
-// EXIT 0 done · 1 failed or refused · 2 usage. Never touches foundry-out/ when
+// EXIT 0 done · 1 failed or refused · 2 usage · 3 refused under --wing muse. Never touches foundry-out/ when
 // GRAVITONE_STORE_PATH and SCOUT_STORE_DIR point elsewhere.
 
 import { USE_MAX } from "../lib/foundry/scout/types.ts";
@@ -41,8 +43,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { errorMessage } from "@gt/domain/errors";
 
-import { MUSE_DEFAULT_CEILING_USD, MUSE_DEFAULT_IDEA_CAP, MUSE_MAX_IDEA_CAP } from "../lib/foundry/scout/muse.ts";
-import { DEFAULT_WING, SCOUT_WINGS, isWing, type ScoutWing } from "../lib/foundry/scout/wing.ts";
+import { DEFAULT_WING, SCOUT_WINGS, isWing } from "../lib/foundry/scout/wing.ts";
 import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, DEFAULT_TARGET, DEFAULT_STORYBOARD_CAP, DEFAULT_TRACK_CAP, DEFAULT_VISUALIZER_CAP, MAX_IDEA_CAP, MAX_REEL_CAP, MAX_STORYBOARD_CAP, MAX_TRACK_CAP, MAX_VISUALIZER_CAP } from "../lib/foundry/scout/types.ts";
 
 type IngestDeps = import("../lib/foundry/scout/ingest.ts").IngestDeps;
@@ -151,10 +152,13 @@ export function deadlineOf(hhmm: string, now: Date): string {
   return d.toISOString();
 }
 
-/** What the muse wing runs (spark scout-muse): no ingest, clips, assets, reels, seeds, music or leads in v1. */
-const MUSE_COMMANDS = new Set(["doctor", "open", "add-source", "ideas", "finding", "direction", "watch", "close", "status", "style"]);
+/** What any command but `status` answers under `--wing muse` (spark scout-vision S3). */
+export const MERGED_WING = "the muse wing is merged into /scout (spark scout-vision S3); its nights are an archive - status --wing muse lists them";
 
-/** `--wing <scout|muse>` picks the root every command reads and writes (lib/foundry/scout/wing.ts); absent: scout. */
+/**
+ * `--wing muse` reads the muse ARCHIVE (lib/foundry/scout/store.ts readArchiveNights) and only `status` takes it; absent or
+ * `scout`, every command runs on the scout root, where every new night is opened.
+ */
 export async function runCli(argv: readonly string[], io: Io): Promise<number> {
   const at = argv.indexOf("--wing");
   const w = at < 0 ? DEFAULT_WING : argv[at + 1];
@@ -162,17 +166,18 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
     io.err(`--wing is one of ${SCOUT_WINGS.join(", ")}, got "${w ?? ""}"`);
     return 2;
   }
-  const cmd = argv.find((a, i) => !a.startsWith("--") && (at < 0 || i !== at + 1));
-  if (w !== DEFAULT_WING && cmd !== undefined && !MUSE_COMMANDS.has(cmd)) {
-    io.err(`${cmd} is not in the ${w} wing (it runs ${[...MUSE_COMMANDS].join(", ")})`);
+  const rest = argv.filter((_, i) => at < 0 || (i !== at && i !== at + 1));
+  if (w === DEFAULT_WING) return runScout(rest, io, false);
+  if (rest.find((a) => !a.startsWith("--")) !== "status") {
+    io.err(MERGED_WING);
     return 3;
   }
   const { withWing } = await import("../lib/foundry/scout/wingScope.ts");
-  return withWing(w, () => runInWing(argv.filter((_, i) => at < 0 || (i !== at && i !== at + 1)), io, w));
+  return withWing("muse", () => runScout(rest, io, true));
 }
 
-async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Promise<number> {
-  const muse = wing !== DEFAULT_WING;
+/** `archive`: a `status` of the muse archive, read-only (runCli admits nothing else under it). */
+async function runScout(argv: readonly string[], io: Io, archive: boolean): Promise<number> {
   const { pos, flags } = parse(argv);
   const cmd = pos[0];
   const json = flags.has("json");
@@ -243,9 +248,8 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
     if (cmd === "open") {
       if (flags.has("live") && dryOnly) throw new Refused("GRAVITONE_DRY_ONLY=1 pins this shell dry: a live night is refused here (open without --live for a dry one)");
       const until = str("until");
-      const maxIdeas = muse ? MUSE_MAX_IDEA_CAP : MAX_IDEA_CAP;
-      const ideaCap = num("ideas", muse ? MUSE_DEFAULT_IDEA_CAP : DEFAULT_IDEA_CAP);
-      if (!Number.isInteger(ideaCap) || ideaCap > maxIdeas) throw new Usage(`--ideas is a whole number from 1 to ${maxIdeas}, got ${ideaCap}`);
+      const ideaCap = num("ideas", DEFAULT_IDEA_CAP);
+      if (!Number.isInteger(ideaCap) || ideaCap > MAX_IDEA_CAP) throw new Usage(`--ideas is a whole number from 1 to ${MAX_IDEA_CAP}, got ${ideaCap}`);
       const reelCap = num("reels", DEFAULT_REEL_CAP);
       if (!Number.isInteger(reelCap) || reelCap > MAX_REEL_CAP) throw new Usage(`--reels is a whole number from 1 to ${MAX_REEL_CAP}, got ${reelCap}`);
       const trackCap = num("tracks", DEFAULT_TRACK_CAP);
@@ -255,8 +259,8 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
       const storyboardCap = num("storyboards", DEFAULT_STORYBOARD_CAP);
       if (!Number.isInteger(storyboardCap) || storyboardCap < 0 || storyboardCap > MAX_STORYBOARD_CAP) throw new Usage(`--storyboards is a whole number from 0 to ${MAX_STORYBOARD_CAP}, got ${storyboardCap}`);
       const { tasteBrief } = await import("../lib/foundry/scout/taste.ts");
-      // A muse night draws stills only: no clips, assets, reels, tracks or visualizers, whatever the flags say.
-      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", muse ? MUSE_DEFAULT_CEILING_USD : DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: muse ? 0 : Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: muse ? 0 : Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, reelCap: muse ? 0 : reelCap, trackCap: muse ? 0 : trackCap, visualizerCap: muse ? 0 : visualizerCap, storyboardCap: muse ? 0 : storyboardCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
+      // One night type (spark scout-vision S3): a character idea's 9:16 and studio quality are the ideas door's, not the night's.
+      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, reelCap, trackCap, visualizerCap, storyboardCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
       // Last night's load opens the brief (lib/foundry/scout/load.ts): the samples are the kernel store's.
       const kp = await import("@gt/kernel/process");
       const { nightLoad } = await import("../lib/foundry/scout/load.ts");
@@ -272,9 +276,13 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
         const graph = await buildGraph({ ...(k.ok ? { store: k.value.store } : {}), now: now() });
         const steer = await readSteer();
         const others = (await store.readAllNights()).filter((x) => x.id !== n.id);
-        // The backlog is the scout wing's (a muse night makes no storyboard and takes no seed).
-        const backlog = muse ? [] : backlogSection(backlogOf(others, await listSeedBatches(), steer), others);
-        const extra = [...branchesSection(graph, steer), ...backlog, ...(muse || !k.ok ? [] : (await import("../lib/foundry/scout/genres.ts")).genreTaste(k.value.store, others)), ...tracksSection(others)];
+        const backlog = backlogSection(backlogOf(others, await listSeedBatches(), steer), others);
+        // The extra sections, in order (spark scout-vision S3 adds `## Sheets to draw`: kept characters owed a reference sheet).
+        const rooted = await store.readRootedNights();
+        const { sheetsToDraw } = await import("../lib/foundry/scout/sheet.ts");
+        const { keptCharacters } = await import("../lib/foundry/scout/characters.ts");
+        const sheets = sheetsToDraw(rooted, keptCharacters(rooted));
+        const extra = [...branchesSection(graph, steer), ...backlog, ...(!k.ok ? [] : (await import("../lib/foundry/scout/genres.ts")).genreTaste(k.value.store, others)), ...sheets, ...tracksSection(others)];
         fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id, k.ok ? (x) => nightLoad(k.value.store, x, now().getTime()) : undefined, extra), "utf8");
       } finally {
         kp.closeProcessKernel();
@@ -284,7 +292,7 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
       fs.writeFileSync(path.join(store.nightDir(n.id), "registry.md"), (await registryDigest()).text, "utf8");
       if (json) doc({ ok: true, night: n.id, dry: n.dry, ceilingUsd: n.ceilingUsd, target: n.target, clipCap: n.clipCap, assetCap: n.assetCap, ideaCap: n.ideaCap, reelCap: n.reelCap, ...(n.deadline === undefined ? {} : { deadline: n.deadline }), taste: path.join(store.nightDir(n.id), "taste.md"), registry: path.join(store.nightDir(n.id), "registry.md") });
       else io.out(n.id);
-      say(`${muse ? `${wing} ` : ""}night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap} · assets ${n.assetCap ?? DEFAULT_ASSET_CAP} · ideas ${n.ideaCap ?? DEFAULT_IDEA_CAP} · reels ${n.reelCap ?? DEFAULT_REEL_CAP}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
+      say(`night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap} · assets ${n.assetCap ?? DEFAULT_ASSET_CAP} · ideas ${n.ideaCap ?? DEFAULT_IDEA_CAP} · reels ${n.reelCap ?? DEFAULT_REEL_CAP}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
       return 0;
     }
 
@@ -364,9 +372,11 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
         const id = pos[1];
         if (id === undefined) {
           const nights = await store.listNights();
-          if (json) doc({ ok: true, nights });
+          // The archive's nights are named by their run id: their ids collide with scout nights.
+          const named = (x: string): string => (archive ? `muse:${x}`.padEnd(18) : x.padEnd(13));
+          if (json) doc({ ok: true, ...(archive ? { archive: true } : {}), nights });
           else if (nights.length === 0) io.out(`no nights under ${store.scoutRoot()}`);
-          else for (const n of nights) io.out(`${n.id.padEnd(13)} ${n.state.padEnd(9)} ${(n.stop ?? "").padEnd(17)} ${n.dry ? "dry " : "live"}  ${n.rendered} rendered · ${n.failed} failed · ${n.pending} pending · ${n.sources} sources`);
+          else for (const n of nights) io.out(`${named(n.id)} ${n.state.padEnd(9)} ${(n.stop ?? "").padEnd(17)} ${n.dry ? "dry " : "live"}  ${n.rendered} rendered · ${n.failed} failed · ${n.pending} pending · ${n.sources} sources`);
           return 0;
         }
         const n = await store.readNight(id);
@@ -379,16 +389,16 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
         const recent = recentLoad(ctx.store, now().getTime());
         const interrupted = interruptedOf(ctx.store, n);
         const load = { last15: recent.avg, band: recent.band, waiting: recent.waiting, samples: recent.samples };
-        // The backlog and its seed gate (spark scout-vision), over the scout wing whichever wing the night is.
+        // The backlog and its seed gate (spark scout-vision), over the scout root even for an archive night.
         const { backlogOf } = await import("../lib/foundry/scout/backlog.ts");
         const { listSeedBatches } = await import("../lib/foundry/scout/seedStore.ts");
         const { readSteer } = await import("../lib/foundry/scout/steer.ts");
         const { withWing } = await import("../lib/foundry/scout/wingScope.ts");
         const bl = await withWing("scout", async () => backlogOf(await store.readAllNights(), await listSeedBatches(), await readSteer()));
         const backlog = { waiting: bl.waiting.length, seedsWaiting: bl.seedsWaiting, gated: bl.gated, freshAllowed: bl.freshAllowed };
-        if (json) doc({ ok: true, summary: store.summarise(n), budget: b, ideas, reels, load, interrupted, morning: acts.morning(n, b), backlog, night: n });
+        if (json) doc({ ok: true, ...(archive ? { archive: true } : {}), summary: store.summarise(n), budget: b, ideas, reels, load, interrupted, morning: acts.morning(n, b), backlog, night: n });
         else {
-          io.out(`night ${n.id} · ${n.state}${n.stop === undefined ? "" : ` (${n.stop})`} · ${n.dry ? "dry" : "live"} · ${acts.budgetLine(b)} · ideas ${ideas.used}/${ideas.cap} · reels ${reels.used}/${reels.cap}`);
+          io.out(`${archive ? "archive night muse:" : "night "}${n.id} · ${n.state}${n.stop === undefined ? "" : ` (${n.stop})`} · ${n.dry ? "dry" : "live"} · ${acts.budgetLine(b)} · ideas ${ideas.used}/${ideas.cap} · reels ${reels.used}/${reels.cap}`);
           io.out(recentLine(recent));
           const waiting = waitingLine(recent);
           if (waiting !== undefined) io.out(waiting);
