@@ -7457,38 +7457,37 @@
       "context": "notebook-contract-validation",
       "subject": "error-handling",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T00:35:35.055Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:47:25.569Z",
+      "worker": "a640b5be-1d38-4e10-b821-4edd0369e9f5",
       "techniques": [
-        {
-          "technique": "consumer-decides-error-shape",
-          "verdict": "deviation",
-          "evidence": "lib/notebook/corpus.ts:54 Corpus evaluation must parse message text with regexes because findings lack a closed enumeration for consumers to branch on."
-        },
         {
           "technique": "structured-propagation",
           "verdict": "deviation",
-          "evidence": "lib/notebook/failure.ts:19 NotebookFinding represents rules as unconstrained string prose rather than typed error categories."
+          "evidence": "lib/notebook/graph.ts:72 The typed `GraphIssue.kind` from cards.ts is written into the prose `rule` and never kept as a field. This is the 'failures the system mints itself' loss the technique names."
+        },
+        {
+          "technique": "consumer-decides-error-shape",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/corpus.ts:55 `NotebookFinding` carries `path`/`rule`/`observed` but no rule id. Its one branching consumer (the corpus probe and gate) has to recover the kind, and shape-rule identity, by matching prose."
         },
         {
           "technique": "parse-failure-keeps-identity",
           "verdict": "conformant",
-          "evidence": "lib/notebook/corpus.ts:110 measureCorpus isolates decode failures to individual corpus items identified by path while continuing to read remaining files."
+          "evidence": "lib/notebook/failure.ts:18 A model answer is one document, so it is refused whole and every finding names its position as a JSON path. The draft is kept for repair."
         },
         {
           "technique": "swallowed-error-prevention",
           "verdict": "conformant",
-          "evidence": "lib/notebook/dialect.ts:288 Unrecognized dialect keys are counted and reported in unmapped rather than silently swallowed during translation."
+          "evidence": "lib/notebook/corpus.ts:100 The catch is narrow: only the expected refusal becomes a verdict, and anything else is rethrown. Minor: `sameAddress` in retrieval.ts:150 uses a bare `catch {}` for URL normalisation without saying it drops the error on purpose."
+        },
+        {
+          "technique": "error-doors",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/shape.ts:162 A caught compile failure becomes a path-addressed finding that reaches the refusal, not a silent skip."
         }
-      ],
-      "registryProposal": "When validation frameworks express constraints as path-addressed rules, omitting machine-readable error codes forces downstream consumers into regex prose matching to classify failures.",
-      "withdrawn": {
-        "worker": "d6f6baed-f800-461c-aba4-54e6cb0d5b27",
-        "state": "deviation",
-        "at": "2026-10-19T00:37:36.273263+00:00",
-        "reason": "reviewer (sonnet): The deviation is anchored on lib/notebook/corpus.ts (ruleOf, measureCorpus), which is not among the context's files. validate.ts imports failure.ts but nothing in the context calls corpus.ts, so the verdict describes a consumer outside the context. The cited lines are accurate: ruleOf does regex-nor"
-      }
+      ]
     },
     "b412ea73-0dc3-4362-93c4-2a9b913f9a61/import-normalization": {
       "context": "v1-import-and-archive",
@@ -12543,6 +12542,47 @@
           "technique": "rendered-string-extraction",
           "verdict": "deviation",
           "evidence": "app/_landing/cosmos/engine/reams.ts:48 A code-literal accessible name, assembled from fragments, is not extracted by the gate or declared out of scope."
+        }
+      ]
+    },
+    "3610b8be-4772-464f-b2f8-dd3a38fef27f/error-handling": {
+      "context": "domain-decision-board-core",
+      "subject": "error-handling",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:47:25.569Z",
+      "worker": "a640b5be-1d38-4e10-b821-4edd0369e9f5",
+      "techniques": [
+        {
+          "technique": "structured-propagation",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/door.ts:68 The validation failure's category-specific data (the field and the other issues) is stringified at the boundary. Only issues[0] survives, as prose."
+        },
+        {
+          "technique": "reclassification-is-not-repair",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/errors.ts:20 `internal` is both the impossible class and the catch-all. That gives up the zero-rate detector the technique relies on: any unrecognised foreign failure lands in `internal` too."
+        },
+        {
+          "technique": "taxonomy-design",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/errors.ts:2 Closed union of 8 codes, each justified by the consumer that branches on it. Transience is stated only in comments, not as data, and there is no retry-interval field."
+        },
+        {
+          "technique": "exit-contract-is-a-taxonomy-projection",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/errors.ts:85 The external HTTP code is an exhaustive Record keyed by the taxonomy, beside its declaration. A new code without a status does not compile."
+        },
+        {
+          "technique": "consumer-decides-error-shape",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/errors.ts:63 The published package hands out a closed, branchable code (with an `isAppError` brand that works across module copies), not an opaque aggregate."
+        },
+        {
+          "technique": "swallowed-error-prevention",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/door.ts:82 The only JSON.parse catch turns into a classified Result and keeps `cause`."
         }
       ]
     }

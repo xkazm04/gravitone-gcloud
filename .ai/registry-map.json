@@ -3693,7 +3693,11 @@
           "revision": 17,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/door.ts:52 The schema door keeps only the first zod issue and writes its field path into the message string. `detail` holds the door name, not the field. The forms that errors.ts says 'show field-level detail' can only get the failing field by parsing prose, and all other issues are lost.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:d811928687fd4faf",
+          "evaluatedRevision": 17
         },
         {
           "subject": "eval-harness",
@@ -9049,7 +9053,11 @@
           "revision": 17,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/notebook/corpus.ts:102 The corpus gate groups and snapshots refusals by rule keys it builds from message text with regexes (`ruleOf`), even though graph findings had a typed `GraphIssueKind` when they were created. Rewording any rule therefore changes approved verdicts, and one cause can split across several wordings.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:d811928687fd4faf",
+          "evaluatedRevision": 17
         },
         {
           "subject": "agent-runtime-assembly",
