@@ -1,0 +1,64 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4ae89907-f122-4906-a517-8d71161ad9f5",
+ "subject": "short-form-narrative-structure",
+ "evaluatedAt": "2026-10-25T01:28:58.748031+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "research-producers",
+   "subject": "short-form-narrative-structure",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/producers/src/research/define.ts:17 This context is kernel-job plumbing for research acts (notebook turn, follow-up allowlist door, ads ideas, metered spend) and ffprobe media facts. It produces no beat list, connector, hook, reversal or close. A case-insensitive search of packages/producers/src/research and packages/producers/src/media-facts for therefore, and then, reframe, reversal and scqa found no hits, and define.ts:9 notes that no engine writes the beat board yet.",
+   "techniques": [
+    {
+     "technique": "but-therefore-beat-linking",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/research/define.ts:9 The beats face is dealt free, with no engine and no connector data in this context."
+    },
+    {
+     "technique": "question-stack-architecture",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/research/followUp.ts:33 Follow-up questions here are research queries that revise facts, not act-level viewer questions."
+    }
+   ],
+   "absenceTerms": [
+    "therefore",
+    "reframe",
+    "reversal",
+    "scqa"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "short-form-narrative-structure",
+   "context": "trailer-structure-engine",
+   "reason": "conformant with fewer than two techniques shown realized"
+  },
+  {
+   "subject": "short-form-narrative-structure",
+   "context": "trailer-structure-rules",
+   "reason": "conformant with fewer than two techniques shown realized"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:28:58.748031+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "short-form-narrative-structure"
+   ],
+   "techniques": [
+    "but-therefore-beat-linking",
+    "question-stack-architecture"
+   ],
+   "deviations": 0,
+   "context": "research-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

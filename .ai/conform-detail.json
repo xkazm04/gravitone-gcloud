@@ -12737,6 +12737,27 @@
           "evidence": "lib/imaging/video/leonardo.ts:203 No edit or cut placement happens in this context."
         }
       ]
+    },
+    "5195e631-ab0c-4f12-930b-8c0da09fcd3d/short-form-narrative-structure": {
+      "context": "research-producers",
+      "subject": "short-form-narrative-structure",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:28:58.748Z",
+      "worker": "4ae89907-f122-4906-a517-8d71161ad9f5",
+      "techniques": [
+        {
+          "technique": "but-therefore-beat-linking",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/research/define.ts:9 The beats face is dealt free, with no engine and no connector data in this context."
+        },
+        {
+          "technique": "question-stack-architecture",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/research/followUp.ts:33 Follow-up questions here are research queries that revise facts, not act-level viewer questions."
+        }
+      ]
     }
   }
 }

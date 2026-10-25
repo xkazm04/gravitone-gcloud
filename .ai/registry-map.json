@@ -10939,7 +10939,11 @@
           "revision": 2,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/research/define.ts:17 This context is kernel-job plumbing for research acts (notebook turn, follow-up allowlist door, ads ideas, metered spend) and ffprobe media facts. It produces no beat list, connector, hook, reversal or close. A case-insensitive search of packages/producers/src/research and packages/producers/src/media-facts for therefore, and then, reframe, reversal and scqa found no hits, and define.ts:9 notes that no engine writes the beat board yet.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:dd5bc32ae4e71fbb",
+          "evaluatedRevision": 2
         },
         {
           "subject": "production-pipeline-phasing",
