@@ -198,6 +198,9 @@ export async function repairTurn(input: RepairInput, deps: RepairDeps = { reason
   let current: NotebookFinding[] = [...input.findings];
   let guardRefusals: NotebookFinding[] = [];
   const turns: TextProvenance[] = [];
+  /** What each attempt the router refused as `bad-response` cost: it ran and
+   *  billed, and has no provenance. `undefined` = the error reported none. */
+  const refusedCosts: (number | undefined)[] = [];
 
   for (let attempt = 1; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
     guardRefusals = [];
@@ -213,6 +216,8 @@ export async function repairTurn(input: RepairInput, deps: RepairDeps = { reason
       // It answered with something that is not even an object of the schema's
       // shape: a spent attempt. Anything else is an outage and propagates.
       if (e instanceof TextError && e.kind === "bad-response") {
+        const d = e.detail as { costUsd?: unknown } | undefined;
+        refusedCosts.push(typeof d?.costUsd === "number" && Number.isFinite(d.costUsd) ? d.costUsd : undefined);
         guardRefusals = [{ path: "", rule: `the repair answer was unusable: ${e.message}`, observed: "bad-response" }];
         continue;
       }
@@ -237,7 +242,7 @@ export async function repairTurn(input: RepairInput, deps: RepairDeps = { reason
         attempts: attempt,
         provenance: served.provenance,
         turns,
-        costUsd: totalCost(turns),
+        costUsd: totalCost(turns, refusedCosts),
       };
     base = candidate;
     current = still;
@@ -249,13 +254,16 @@ export async function repairTurn(input: RepairInput, deps: RepairDeps = { reason
     draft: base,
     attempts: MAX_REPAIR_ATTEMPTS,
     turns,
-    costUsd: totalCost(turns),
+    costUsd: totalCost(turns, refusedCosts),
   };
 }
 
-/** The sum of the turns' cost, or `undefined` when any turn was unpriced (or
- *  there was no turn): an unpriced turn is unknown, never free. */
-function totalCost(turns: readonly TextProvenance[]): number | undefined {
-  if (!turns.length || turns.some((t) => t.costUsd === undefined)) return undefined;
-  return turns.reduce((n, t) => n + (t.costUsd ?? 0), 0);
+/** The sum of every attempt's cost - served turns and refused ones - or
+ *  `undefined` when any of them was unpriced (or there was no attempt): an
+ *  unpriced turn is unknown, never free, and a total that skipped a refused
+ *  attempt would read as the whole bill. */
+function totalCost(turns: readonly TextProvenance[], refused: readonly (number | undefined)[]): number | undefined {
+  const all = [...turns.map((t) => t.costUsd), ...refused];
+  if (!all.length || all.some((c) => c === undefined)) return undefined;
+  return all.reduce<number>((n, c) => n + (c ?? 0), 0);
 }

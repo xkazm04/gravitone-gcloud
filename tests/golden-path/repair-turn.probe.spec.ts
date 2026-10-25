@@ -11,6 +11,7 @@
 import { test, expect } from "@playwright/test";
 
 import { NOTEBOOK_SCHEMA, NotebookError, notebookFindings, parseNotebook, type NotebookFinding } from "@/lib/notebook/validate";
+import { TextError } from "@/lib/text/errors";
 import { changedPaths, guardRepair, MAX_REPAIR_ATTEMPTS, pathTokens, repairTurn } from "@/lib/text/repair";
 import { planFor } from "@/lib/text/router";
 import type { TextProvenance, TextRequest, TextResult } from "@/lib/text/types";
@@ -284,6 +285,30 @@ test("a refused repair is not built on: the next attempt starts from the draft, 
   expect(out.attempts).toBe(2);
   // Both prompts carry the ORIGINAL object, not the meddled one.
   for (const c of provider.calls) expect(c.prompt).not.toContain("A different question entirely?");
+});
+
+test("an attempt the router refused as bad-response is part of the bill: its cost is summed, or the total is unknown", async () => {
+  const draft = missingStrength();
+  const refusing = (costUsd?: number) => {
+    let n = 0;
+    return async (): Promise<TextResult> => {
+      if (n++ === 0)
+        throw new TextError("claude-cli was asked for JSON and answered with prose.", "bad-response", "claude-cli", {
+          costUsd,
+          costBasis: costUsd === undefined ? "unpriced" : "vendor-reported",
+        });
+      const json = valid();
+      return { text: JSON.stringify(json), json, provenance: prov(0.2) };
+    };
+  };
+
+  const paid = await repairTurn({ draft, findings: findingsOf(draft), schema: SCHEMA }, { reason: refusing(0.3) });
+  expect(paid.outcome).toBe("repaired");
+  expect(paid.attempts).toBe(2);
+  expect(paid.costUsd, "the refused attempt's 0.3 is missing from the bill").toBeCloseTo(0.5, 10);
+
+  const unknown = await repairTurn({ draft, findings: findingsOf(draft), schema: SCHEMA }, { reason: refusing(undefined) });
+  expect(unknown.costUsd, "an unpriced refused attempt was read as free").toBeUndefined();
 });
 
 /* ── the guards on their own ──────────────────────────────────────────────── */
