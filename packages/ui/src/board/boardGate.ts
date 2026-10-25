@@ -29,6 +29,33 @@ export type BoardVerdict = { readonly verdict: "keep" | "reject"; readonly reaso
 
 export type Beacon = (id: string, rev: number, changes: readonly VerdictChange[]) => void;
 
+/** A user agent refuses a beacon whose queued data passes 64 KiB; a chunk's body stays under this. */
+export const BEACON_CAP_BYTES = 60_000;
+const encoder = new TextEncoder();
+
+/**
+ * A flush split so that each chunk's `{rev, changes}` body fits one beacon, order kept. The keepalive
+ * route applies each chunk on the packet's current revision, so the chunks are independent writes.
+ */
+export function beaconChunks(rev: number, changes: readonly VerdictChange[], cap: number = BEACON_CAP_BYTES): VerdictChange[][] {
+  const head = encoder.encode(JSON.stringify({ rev, changes: [] })).length;
+  const chunks: VerdictChange[][] = [];
+  let cur: VerdictChange[] = [];
+  let size = head;
+  for (const c of changes) {
+    const n = encoder.encode(JSON.stringify(c)).length + 1;
+    if (cur.length > 0 && size + n > cap) {
+      chunks.push(cur);
+      cur = [];
+      size = head;
+    }
+    cur.push(c);
+    size += n;
+  }
+  if (cur.length > 0) chunks.push(cur);
+  return chunks;
+}
+
 export type BoardGate = {
   readonly gatePort: GatePort<BoardPacket, BoardVerdict, Consequence, CommitReceipt>;
   /** A blind pair's answer: one act, one revision. */
@@ -95,7 +122,8 @@ export function createBoardGate(port: BoardPort, beacon: Beacon, mintTicket: () 
       await revised(id, (baseRev) => port.patch({ id, baseRev, changes: list }));
     },
     keepalive(id, changes) {
-      beacon(id, revs.get(id) ?? 0, [...changes].map(([k, v]) => toChange(k, v)));
+      const rev = revs.get(id) ?? 0;
+      for (const chunk of beaconChunks(rev, [...changes].map(([k, v]) => toChange(k, v)))) beacon(id, rev, chunk);
     },
     stateOf: (v) => ({ verdict: v?.verdict ?? null, reasons: v?.reasons ?? [], note: v?.note ?? null }),
     async previewCommit(id) {
