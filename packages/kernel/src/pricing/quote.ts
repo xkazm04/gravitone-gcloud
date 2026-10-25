@@ -45,6 +45,11 @@ export type QuoteInput = {
 
 const unpriced = (note: string): Quote => ({ usd: null, basis: "unpriced", note });
 
+/** The `YYYY-MM-DD` a quote prices for, or undefined. A dated rate is compared
+ *  as text, so an epoch-ms string ("1801...") sorts before every expiry and
+ *  would keep an introductory rate pricing after it ended. */
+const dayOf = (on: string): string | undefined => (/^\d{4}-\d{2}-\d{2}/.test(on) ? on.slice(0, 10) : undefined);
+
 function billed(usage: Usage): [PriceUnit, number][] {
   const out: [PriceUnit, number][] = [];
   for (const [unit, n] of Object.entries(usage) as [PriceUnit, number | undefined][]) {
@@ -71,7 +76,8 @@ export function quote(q: QuoteInput, table: readonly PriceRow[] = PRICE_TABLE): 
   }
   const units = billed(q.usage);
   if (units.length === 0) return unpriced(`no usage is known for ${q.provider}/${q.model} before the call, so there is nothing to multiply`);
-  const day = q.on.slice(0, 10);
+  const day = dayOf(q.on);
+  if (day === undefined) return unpriced(`the quote's day "${q.on}" is not an ISO date, so no dated rate can be checked against it`);
   let usd = 0;
   const parts: string[] = [];
   for (const [unit, n] of units) {
@@ -101,11 +107,12 @@ export function toEstimate(q: Quote, seconds: number): Result<Estimate> {
  * guess, a ledger may not. Undefined when no row of that unit has a figure.
  */
 export function dearestRate(unit: PriceUnit, on: string, table: readonly PriceRow[] = PRICE_TABLE): { row: PriceRow; usdPerUnit: number } | undefined {
-  const day = on.slice(0, 10);
+  // A day that cannot be read retires no rate: the gate errs high, so every priced row competes.
+  const day = dayOf(on);
   let best: { row: PriceRow; usdPerUnit: number } | undefined;
   for (const row of table) {
     if (row.unit !== unit || row.usd === undefined) continue;
-    if (row.validUntil !== undefined && day > row.validUntil) continue;
+    if (row.validUntil !== undefined && day !== undefined && day > row.validUntil) continue;
     const perUnit = row.usd / row.per;
     if (best === undefined || perUnit > best.usdPerUnit) best = { row, usdPerUnit: perUnit };
   }
