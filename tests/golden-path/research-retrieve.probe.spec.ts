@@ -430,3 +430,16 @@ test("retrieve flag off: the run is today's run — the reasoning door, searched
     expect(argv).not.toContain("stream-json");
   });
 });
+
+test("retrieve avoid: ruling out the only retrieval engine is named as such, and stays fallback-compatible", async () => {
+  process.env.TEXT_RETRIEVE = "1";
+  await withFakeEngine(RECORDED, async (engine) => {
+    const err = (await retrieve({ prompt: "# RETRIEVE avoid\n", turn: "research", avoid: "claude-cli-retrieve" }).catch((e: unknown) => e)) as TextError;
+    expect(err).toBeInstanceOf(TextError);
+    // research.ts falls back to reason() on `unsupported`: the kind is the contract.
+    expect(err.kind).toBe("unsupported");
+    expect(err.message, "the refusal does not name the candidate the caller ruled out").toContain("claude-cli-retrieve");
+    expect(err.message).not.toMatch(/no candidates were planned/);
+    expect(engine.turns(), "an avoided rung was spawned").toHaveLength(0);
+  });
+});
