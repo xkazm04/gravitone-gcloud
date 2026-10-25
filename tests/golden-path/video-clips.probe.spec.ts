@@ -23,7 +23,7 @@
 // adapter does it against a stubbed global fetch and a resolver that never asks
 // DNS, with a placeholder key that is not a credential.
 
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -167,6 +167,15 @@ test("store: a minted id round-trips a record and an mp4; patches serialise", as
   writeFileSync(clipRecordPath(id), "{ half a rec");
   await expect(readClipRecord(id)).rejects.toThrow(/not a readable clip record/);
   expect((await listClipRecords()).unreadable).toBe(1);
+});
+
+test("store: a write whose rename never succeeds leaves no .tmp behind", async () => {
+  // A directory squatting on the target name makes the rename fail for good (EPERM on
+  // Windows after its retries, EISDIR elsewhere) - no seam into the retry needed.
+  const id = mintClipId();
+  mkdirSync(clipRecordPath(id), { recursive: true });
+  await expect(writeClipRecord({ clipId: id } as ClipRecord)).rejects.toThrow();
+  expect(readdirSync(dir).filter((n) => n.endsWith(".tmp")), "an orphan tmp survived the failed rename").toEqual([]);
 });
 
 test("store: an id the store did not mint names no path", async () => {
