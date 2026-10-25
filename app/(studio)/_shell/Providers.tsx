@@ -115,7 +115,7 @@ export function Providers({ identity, children }: { readonly identity: string | 
   return (
     <ShellContext.Provider value={shell}>
       {children}
-      <Toast message={note.message} open={note.open} ledger={note.ledger} />
+      <Toast message={note.message} open={note.open} ledger={note.ledger} seq={note.seq} />
     </ShellContext.Provider>
   );
 }

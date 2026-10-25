@@ -6854,4 +6854,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: 'const starts = [process.cwd()];',
     why: "A dry article job in a process started outside the repository root spawns a stand-in path that does not exist and fails every turn.",
   },
+  {
+    id: "studio-shell-toast-repeat-same-seq",
+    test: "tests/next-server/shell-toast.test.ts",
+    file: "app/(studio)/_shell/toast.ts",
+    find: "seq: current.seq + 1",
+    replace: "seq: current.seq",
+    why: "An identical receipt inside its window carries the old seq, so the region's text is unchanged and a screen reader is not told twice.",
+  },
+  {
+    id: "ui-controls-toast-text-not-keyed-by-seq",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/toast/Toast.tsx",
+    find: "<Fragment key={seq}>",
+    replace: "<Fragment>",
+    why: "The receipt's words are not remounted per receipt, so a repeat is no DOM mutation and the live region stays silent.",
+  },
 ];

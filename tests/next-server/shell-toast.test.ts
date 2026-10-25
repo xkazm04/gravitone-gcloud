@@ -17,9 +17,9 @@ afterEach(() => {
 describe("the shell's toast queue", () => {
   it("shows a receipt, then closes it after TOAST_MS keeping its words", () => {
     showToast("queued 3 jobs");
-    expect(receipt()).toEqual({ message: "queued 3 jobs", open: true });
+    expect(receipt()).toMatchObject({ message: "queued 3 jobs", open: true });
     vi.advanceTimersByTime(TOAST_MS);
-    expect(receipt()).toEqual({ message: "queued 3 jobs", open: false });
+    expect(receipt()).toMatchObject({ message: "queued 3 jobs", open: false });
   });
 
   it("a newer receipt replaces the older and restarts the clock", () => {
@@ -29,9 +29,18 @@ describe("the shell's toast queue", () => {
     vi.advanceTimersByTime(200);
     // The first receipt's clock must not close the second one early.
     expect(receipt().open).toBe(true);
-    expect(receipt()).toEqual({ message: "second", open: true, ledger: { href: "/ledger?q=job_9", subject: "job_9" } });
+    expect(receipt()).toMatchObject({ message: "second", open: true, ledger: { href: "/ledger?q=job_9", subject: "job_9" } });
     vi.advanceTimersByTime(TOAST_MS);
-    expect(receipt()).toEqual({ message: "second", open: false });
+    expect(receipt()).toMatchObject({ message: "second", open: false });
+  });
+
+  it("an identical receipt repeated inside its window is a new receipt (distinct seq)", () => {
+    showToast("kept 12");
+    const first = receipt().seq;
+    vi.advanceTimersByTime(1000);
+    showToast("kept 12");
+    expect(receipt().seq).not.toBe(first);
+    expect(new Set([first, receipt().seq]).size).toBe(2);
   });
 
   it("tells every subscriber, and stops telling one that left", () => {
@@ -45,6 +54,6 @@ describe("the shell's toast queue", () => {
   });
 
   it("the server snapshot is closed", () => {
-    expect(noReceipt()).toEqual({ message: "", open: false });
+    expect(noReceipt()).toEqual({ message: "", open: false, seq: 0 });
   });
 });
