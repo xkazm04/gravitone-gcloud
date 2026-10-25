@@ -2272,6 +2272,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "An arm with every PNG on disk is billed to Nano Banana again.",
   },
   {
+    id: "gate-lib-ratify-rule-forked",
+    test: "tests/next-server/parts-gates-cull.test.ts",
+    file: "lib/parts/gates.ts",
+    find: "= cullRatifies;",
+    replace: "= (r, id) => cullRatifies(r, id) && [1].every((n) => n === 1);",
+    why: "The lib grows its own copy of the cull ratify rule beside the kernel's, and the two drift.",
+  },
+  {
+    id: "gate-lib-attempt-lookup-scans",
+    test: "tests/next-server/parts-gates-cull.test.ts",
+    file: "lib/parts/gates.ts",
+    find: "const best = latestGatePacket(r, gatePartId);",
+    replace: "const best = (r.all(\"SELECT id FROM packets WHERE substr(id, 1, 9) = ?\", \"pkt:step:\"), latestGatePacket(r, gatePartId));",
+    why: "The lib's attempt lookup scans every packet ever opened once per gate part per plan read.",
+  },
+  {
     id: "dojo-google-short-answer-discarded",
     test: "tests/next-server/producer-dojo.test.ts",
     file: "packages/producers/src/dojo/define.ts",
@@ -3270,7 +3286,7 @@ export const MUTANTS: UnitMutant[] = [
   {
     id: "gate-cull-with-a-reject-ratifies",
     test: "tests/next-server/parts-gates-cull.test.ts",
-    file: "lib/parts/gates.ts",
+    file: "packages/kernel/src/parts/gates.ts",
     find: "return rows.size > 0 && [...rows.values()].every((n) => n === 1);",
     replace: "return rows.size > 0;",
     why: "A frames cull that rejected a plate ratifies the gate and releases Motion over a plate that is owed a re-render.",

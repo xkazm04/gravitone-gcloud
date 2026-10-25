@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
@@ -19,7 +19,7 @@ import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { readPart, writePart } from "@gt/kernel/parts/driver";
 import { launchProject, planReceipt } from "@gt/kernel/records/launch";
 import { compose } from "@gt/kernel/records/write";
-import type { Store } from "@gt/kernel/store";
+import type { Reader, Store } from "@gt/kernel/store";
 
 import { applyEffects } from "../../lib/decision/v1/applier.ts";
 import { projectRead, verdictInput } from "../../lib/parts/context.ts";
@@ -177,5 +177,33 @@ describe("the score gate is a pick", () => {
     const spots = must(readPart(store, { projectId: "p1", partId: "p1/score" })).records.get("score")?.["spots"];
     expect(Array.isArray(spots) ? spots[0] : null).toMatchObject({ id: "c1", activeTakeId: "t2" });
     expect(must(store.read((r) => latestAttempt(r, "p1/gate:score")))).toMatchObject({ state: "ratified" });
+  });
+});
+
+describe("one rule, one query: the lib's gate lookups are the kernel's", () => {
+  const strip = (src: string): string => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const src = (...p: string[]): string => strip(readFileSync(path.join(import.meta.dirname, "..", "..", ...p), "utf8"));
+
+  it("the cull ratify rule has one body across lib/parts/gates.ts and the kernel's, not two", () => {
+    const both = [src("lib", "parts", "gates.ts"), src("packages", "kernel", "src", "parts", "gates.ts")];
+    const bodies = both.reduce((n, s) => n + (s.match(/\.every\(\(n\) => n === 1\)/g) ?? []).length, 0);
+    expect(bodies, "bodies of the ratify rule").toBe(1);
+  });
+
+  it("latestAttempt finds the gate's packets by an index seek, never a scan of every packet", async () => {
+    const { store } = await launched();
+    const base = "pkt:step:p1/gate:cut";
+    must(store.tx((t) => {
+      for (const [id, state] of [[base, "returned"], [`${base}#2`, "open"], ["pkt:forge:run-1", "open"]] as const) t.run("INSERT INTO packets (id, mode, state, rev, body, opened_at) VALUES (?, 'packet-review', ?, 0, '{}', ?)", id, state, t.at);
+    }));
+    const seen: { sql: string; params: unknown[] }[] = [];
+    const spy = (r: Reader): Reader => ({ at: r.at, get: (sql, ...params) => (seen.push({ sql, params }), r.get(sql, ...params)), all: (sql, ...params) => (seen.push({ sql, params }), r.all(sql, ...params)) });
+    expect(must(store.read((r) => latestAttempt(spy(r), "p1/gate:cut")))).toMatchObject({ attempt: 2, state: "open" });
+    const onPackets = seen.filter((q) => /\bFROM packets\b/.test(q.sql));
+    expect(onPackets.length, "the read touched the packet table").toBeGreaterThan(0);
+    for (const q of onPackets) {
+      const plan = must(store.read((r) => r.all(`EXPLAIN QUERY PLAN ${q.sql}`, ...(q.params as never[])).map((x) => String(x["detail"]))));
+      expect(plan.filter((d) => /^SCAN packets\b/.test(d)), plan.join(" | ")).toEqual([]);
+    }
   });
 });
