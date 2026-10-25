@@ -143,6 +143,10 @@ export function projectsOf(m: RunsModel): { readonly id: string; readonly jobs: 
 /** What failed, or was interrupted, and is not the ledger's past: the totals' count and the inspector's list. */
 export const failedOf = (m: RunsModel): RunJob[] => m.jobs.filter((j) => j.from !== "ledger" && NEEDS.has(j.state));
 
+/** The "All lanes" row's floor runs, by the rule Plan counts them with (projects/page.tsx): the
+ *  produce jobs no project owns that are not done - so the row reads the same number on both tabs. */
+export const floorRunsOf = (m: RunsModel): number => m.jobs.filter((j) => j.act !== undefined && j.act.projectId === undefined && j.state !== "done").length;
+
 export type Totals = { readonly running: number; readonly waiting: number; readonly weir: number; readonly failed: number };
 
 export function totalsOf(m: RunsModel): Totals {

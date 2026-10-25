@@ -45,7 +45,7 @@ import { DojoDoors, dojoSpec, type DojoPort } from "./DojoDoors.tsx";
 import { Inspector, type InspectorActs } from "./Inspector.tsx";
 import { mvRegenerateSpec, type MvPort } from "./MvActs.tsx";
 import { BACKSTOP_MS, openFeed } from "./liveFeed.ts";
-import { barsOf, blockedOf, depsOf, heldMoney, litOf, pinsOf, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
+import { barsOf, blockedOf, depsOf, floorRunsOf, heldMoney, litOf, pinsOf, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
 import s from "./Runs.module.css";
 
 export type Selection = { readonly job: string | null; readonly project: string | null; readonly zoom: Zoom };
@@ -303,7 +303,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
         current={sel.project}
         nowMs={m.now}
         onCompose={compose.open}
-        floorRuns={m.jobs.filter((j) => j.projectId === undefined && j.from !== "ledger").length}
+        floorRuns={floorRunsOf(m)}
         hrefOf={runsHref}
         others={projects.filter((p) => !produceIds.has(p.id)).map((p) => ({ id: p.id, meta: `${p.jobs} jobs · ${p.slots} slots` }))}
       />

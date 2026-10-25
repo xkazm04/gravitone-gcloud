@@ -6414,4 +6414,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "new Set([\"queued\", \"planned\", \"paused\", \"interrupted\"]);",
     why: "An interrupted job - one whose vendor may have been paid - is counted in the header as waiting and listed in the inspector as failed, so the two never agree on what needs the operator.",
   },
+  {
+    id: "runs-console-floor-runs-not-plans-rule",
+    test: "tests/next-server/runs-console.test.ts",
+    file: "app/(studio)/projects/runs/_runs/view.ts",
+    find: "j.act !== undefined && j.act.projectId === undefined",
+    replace: "j.projectId === undefined",
+    why: "The All lanes row reads one count of floor runs on Plan and another on Runs: Runs counts v1's live work, kernel jobs no producer serves and finished runs.",
+  },
 ];

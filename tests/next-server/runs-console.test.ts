@@ -15,7 +15,7 @@ import { jobMachine, type JobState } from "@gt/domain/job.machine";
 import type { LaneHoldView, ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
 import { canMove, canPause, canReroute, canRetry, ceilingFor, retryPress } from "../../app/(studio)/projects/runs/_runs/Acts.tsx";
 import { buildRuns, type KernelJobInput } from "../../app/(studio)/projects/runs/_runs/model.ts";
-import { failedOf, totalsOf } from "../../app/(studio)/projects/runs/_runs/view.ts";
+import { failedOf, floorRunsOf, totalsOf } from "../../app/(studio)/projects/runs/_runs/view.ts";
 
 const job = (over: Partial<ProduceJob> = {}): ProduceJob => ({
   id: "job:part:p1:research",
@@ -97,5 +97,17 @@ describe("3. the header's counts and the inspector's lists agree", () => {
     const open: JobState[] = jobMachine.states.filter((s) => s !== "done" && s !== "cancelled");
     const t = totalsOf(model(open));
     expect(t.running + t.waiting + t.failed).toBe(open.length);
+  });
+});
+
+describe("3b. the All lanes row counts floor runs as Plan does", () => {
+  it("only the produce jobs no project owns that are not done, whatever else the day-line draws", () => {
+    const produce = [job({ id: "job:run:a", state: "done" }), job({ id: "job:run:b", state: "queued" }), job({ id: "job:part:p1:x", state: "queued", projectId: "p1" })];
+    const live = { source: "forge", id: "f1", title: "forge f1", lane: "gpu.local", media: "image", state: "running", href: "/floor?lane=image" } as const;
+    const m = buildRuns({ now: NOW, live: { jobs: [live], weir: [], slots: [], holds: [], failures: [] }, kernel: [kjob("queued")], ledger: [], produce });
+    // projects/page.tsx: jobs.filter((j) => j.projectId === undefined && j.state !== "done").length
+    const plan = produce.filter((j) => j.projectId === undefined && j.state !== "done").length;
+    expect(floorRunsOf(m)).toBe(plan);
+    expect(plan).toBe(1);
   });
 });
