@@ -3,7 +3,7 @@
 // prototype's fourth mark (amber "PR"): since Phase 6 (owner ruling 2026-10-17) it is a slot
 // channel like the others, whose slot "publishes" as the article approve's pull request to
 // ai-registry rather than an upload.
-import { CHANNELS, type Channel } from "@gt/domain/slot";
+import type { Channel } from "@gt/domain/slot";
 import { SrOnly } from "../a11y/SrOnly.tsx";
 import { cx } from "../cx.ts";
 import s from "./ChannelBadge.module.css";
@@ -13,10 +13,12 @@ export type BadgeChannel = Channel;
 const MARK: { readonly [C in BadgeChannel]: string } = { youtube: "YT", tiktok: "TT", instagram: "IG", blog: "PR" };
 
 /**
- * The marks in drawing order - the domain's own CHANNELS, never a second list (a channel added
- * there has a MARK by type and a badge by this); a v1 channel id that is not one of them has none.
+ * The marks in drawing order; a v1 channel id that is not one of them has no badge. A copy of
+ * @gt/domain/slot `CHANNELS` by necessity: slot.ts loads zod, and this is client code
+ * (tests/next-gates/client-closure). signal.test.ts pins the two equal, so a channel added there
+ * fails a test here rather than drawing behind the neutral mark.
  */
-export const BADGE_CHANNELS: readonly BadgeChannel[] = CHANNELS;
+export const BADGE_CHANNELS: readonly BadgeChannel[] = ["youtube", "tiktok", "instagram", "blog"];
 
 export function isBadgeChannel(id: string): id is BadgeChannel {
   return (BADGE_CHANNELS as readonly string[]).includes(id);

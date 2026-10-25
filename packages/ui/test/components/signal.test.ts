@@ -98,8 +98,8 @@ describe("SourceTag, ChannelBadge, Ghost, ErrorLine, LedgerLink", () => {
     expect(c).toContain(">youtube</span>");
   });
 
-  test("the badge channels are the domain's CHANNELS, not a second hand list", () => {
-    expect(BADGE_CHANNELS).toBe(CHANNELS);
+  test("the badge channels are the domain's CHANNELS, member for member and in order", () => {
+    expect(BADGE_CHANNELS).toEqual(CHANNELS);
   });
 
   test("a ghost draws its outlines hidden and speaks its label", () => {
