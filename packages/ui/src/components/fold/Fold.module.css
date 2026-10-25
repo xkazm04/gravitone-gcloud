@@ -7,3 +7,4 @@
 .active{margin-left:auto;color:var(--cyan);background:var(--cyan-a);border-radius:var(--r-xs);padding:var(--sp-hair) var(--sp-tight);letter-spacing:0}
 .total{margin-left:auto;color:var(--faint);letter-spacing:0;font-weight:500}
 .active+.total{margin-left:var(--sp-2)}
+@media (prefers-reduced-motion: reduce){.chev{transition:none}}

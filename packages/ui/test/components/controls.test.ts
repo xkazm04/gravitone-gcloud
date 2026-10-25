@@ -1,5 +1,7 @@
 // Controls and containers: the state each exposes to assistive technology, the class each
 // variant maps to, and what renders when.
+import { readdirSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
@@ -19,6 +21,10 @@ import { Panel } from "../../src/components/panel/Panel.tsx";
 import { CapsHeading } from "../../src/components/heading/CapsHeading.tsx";
 import { Empty } from "../../src/components/empty/Empty.tsx";
 import { Facts } from "../../src/components/facts/Facts.tsx";
+
+const COMPONENTS = resolve(import.meta.dirname, "../../src/components");
+/** The controls-and-shell directories (context-map `ui-controls-shell`). */
+const SHELL_DIRS = ["button", "toggle", "seg", "field", "tabrail", "fold", "panel", "toast", "sheet"] as const;
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
 const noop = (): void => {};
@@ -163,5 +169,37 @@ describe("containers", () => {
     expect(html(h(CapsHeading, { text: "after", tally: { value: 3 }, level: 4 }))).toMatch(/^<h4[^>]*>after<span/);
     expect(html(h(Empty<"no events match">, { label: "no events match", action: { label: "Clear" } }))).toMatch(/^<div[^>]*role="status"><span>no events match<\/span><button/);
     expect(html(h(Facts, { facts: [{ term: "model", value: "flux-2" }] }))).toMatch(/^<dl[^>]*><dt[^>]*>model<\/dt><dd[^>]*>flux-2<\/dd><\/dl>$/);
+  });
+});
+
+describe("reduced motion", () => {
+  // A module MOVES when a transition carries transform (or `all` over a transform rule) or it
+  // runs an animation; each such module holds a prefers-reduced-motion block. Walked off the
+  // directories, so a new stylesheet in them is read without editing this list.
+  const sheets = SHELL_DIRS.flatMap((d) =>
+    readdirSync(join(COMPONENTS, d))
+      .filter((f) => f.endsWith(".module.css"))
+      .map((f) => ({ file: `${d}/${f}`, css: readFileSync(join(COMPONENTS, d, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "") })),
+  );
+  const moves = (css: string): boolean =>
+    /transition:[^;}]*\btransform\b/.test(css) ||
+    (/transition:[^;}]*\ball\b/.test(css) && /(^|[;{])\s*transform:/.test(css)) ||
+    /animation:\s*(?!none)[a-z]/.test(css);
+
+  test("the walk read the shell's stylesheets", () => {
+    expect(sheets.length).toBeGreaterThanOrEqual(SHELL_DIRS.length);
+  });
+
+  test("every shell stylesheet that moves stops moving under prefers-reduced-motion", () => {
+    const moving = sheets.filter((s) => moves(s.css));
+    expect(moving.map((s) => s.file)).toEqual(expect.arrayContaining(["sheet/LevelSheet.module.css", "toast/Toast.module.css"]));
+    expect(moving.filter((s) => !/@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/.test(s.css)).map((s) => s.file)).toEqual([]);
+  });
+
+  test("the receipt keeps its fade when the rise is dropped (feedback replaced, not removed)", () => {
+    const css = sheets.find((s) => s.file === "toast/Toast.module.css")?.css ?? "";
+    const reduce = /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)\s*\{([\s\S]*)\}\s*$/.exec(css.trim())?.[1] ?? "";
+    expect(reduce).toMatch(/transition:\s*opacity/);
+    expect(reduce).not.toMatch(/transition:[^;}]*transform/);
   });
 });

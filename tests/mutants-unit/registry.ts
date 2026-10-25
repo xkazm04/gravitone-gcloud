@@ -797,6 +797,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "A toggle that opens a drawer announces two states for one fact (pressed and expanded), so the facets, vocabulary and detail drawers read as a toggle button that is also a disclosure.",
   },
   {
+    id: "ui-controls-sheet-rises-under-reduced-motion",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/sheet/LevelSheet.module.css",
+    find: "@media (prefers-reduced-motion: reduce){.sheet{transition:none}}",
+    replace: "@media (min-width: 1px){.sheet{transition:none}} .x{}",
+    why: "The level sheet travels the height of the screen in .34s for an operator who asked the system for no non-essential motion.",
+  },
+  {
+    id: "ui-controls-receipt-rises-under-reduced-motion",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/toast/Toast.module.css",
+    find: "@media (prefers-reduced-motion: reduce){.toast{transform:translate(-50%,0);transition:opacity var(--dur) var(--ease)}}",
+    replace: "@media (prefers-reduced-motion: reduce){.toast{transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease)}}",
+    why: "Under reduced motion the receipt still rises 20px into place; the fade alone carries the news.",
+  },
+  {
     id: "ui-controls-seg-presses-every-option",
     test: "packages/ui/test/components/controls.test.ts",
     file: "packages/ui/src/components/seg/Seg.tsx",
