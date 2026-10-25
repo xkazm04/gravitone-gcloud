@@ -1,7 +1,7 @@
 // The Board's left rail (prototype index.html `PacketRail`): every packet, grouped by media
 // lane (with the Floor's lane mark) and then by desk, the open ones amber with their mode's
 // mark (the Floor's own, floor/FloorGlyph.tsx), the decided ones dim
-// with a tick or a cross. Each row is a link to its packet's own address, so a middle-click
+// with a tick (committed) or a return mark (returned). Each row is a link to its packet's own address, so a middle-click
 // opens it full page and a plain click moves the sheet (`onOpen`, the caller's router).
 import type { MouseEvent } from "react";
 
