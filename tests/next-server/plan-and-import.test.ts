@@ -9,12 +9,16 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+import Link from "next/link";
+import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
+import { CompositionList } from "../../app/(studio)/projects/_plan/CompositionList.tsx";
 import { onOpen, settledOutcome } from "../../app/(studio)/projects/_plan/receipt.tsx";
 import { clock } from "../../app/(studio)/projects/_plan/shelf.ts";
 import { titleGate } from "../../app/(studio)/projects/_plan/title.ts";
 import { commitAll, lastDoor, post, type Answer, type Source } from "../../app/(studio)/projects/import/answer.ts";
+import { harness } from "../golden-path/_studio/hooks.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const PROJECTS = path.join(ROOT, "app", "(studio)", "projects");
@@ -242,5 +246,41 @@ describe("the receipt flow - an answer lands on the sheet as it now reads", () =
     const src = code("_plan/receipt.tsx");
     expect(src.match(/setSt\(\{\s*\.\.\.(st|rest)\b/g) ?? []).toEqual([]);
     expect((src.match(/setSt\(onOpen\(/g) ?? []).length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe("a row of the composition list is a client navigation", () => {
+  // Plan's up/down keys router.push between projects; a mouse click on a plain `<a>` reloaded the
+  // studio document instead - the shell re-evaluated, the event stream reconnected, every island
+  // remounted. Every row kind (All lanes, a project, a v1 thread) is a next/link; the per-project
+  // ones have prefetch off so a long list does not render a plan per row as it scrolls.
+  const project = { id: "p1", rev: 1, title: "Salt", recipe: "explainer", state: "draft", group: "plans", pips: [], etaAt: null, gates: 0, failed: 0, usd: 0, unpriced: 0, updatedAt: "", poster: null, runtimeS: null, targetS: null, text: "salt" };
+
+  it("no row draws a plain anchor, and the per-project links have prefetch off", async () => {
+    const props = { list: { projects: [project], truncated: false }, current: null, nowMs: 0, onCompose: () => {}, floorRuns: 0, others: [{ id: "legacy", meta: "v1" }] } as never;
+    const rows: ReactElement[] = [];
+    const walk = (node: ReactNode): void => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!isValidElement(node)) return;
+      const p = node.props as Record<string, unknown>;
+      if (node.type === "a" && "href" in p) rows.push(node);
+      else if (node.type === Link) rows.push(node);
+      else if (typeof node.type === "function" && node.type.name === "Row") return walk((node.type as (q: unknown) => ReactNode)(p));
+      for (const v of Object.values(p)) {
+        if (isValidElement(v) || Array.isArray(v)) walk(v as ReactNode);
+        else if (v !== null && typeof v === "object" && "children" in v) walk((v as { children: ReactNode }).children);
+      }
+    };
+    await harness(
+      () => {
+        rows.length = 0;
+        walk(CompositionList(props));
+        return null;
+      },
+      { settleWhen: "stable" },
+    ).settleUp();
+    expect(rows.map((r) => (r.type === "a" ? "a" : "Link"))).toEqual(["Link", "Link", "Link"]);
+    // All lanes is one static route; the project and v1 rows are a page per row.
+    expect(rows.slice(1).map((r) => (r.props as { prefetch?: boolean }).prefetch)).toEqual([false, false]);
   });
 });
