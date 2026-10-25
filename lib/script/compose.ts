@@ -1,9 +1,10 @@
 // THE COMPOSE TURN'S HALVES - lifted out of app/api/script/route.ts (Phase 4 wave C, L37) so the
 // script producer runs the SAME turn as a kernel job step: one prompt assembly, one door over the
-// answer, two callers (the route, which still answers HTTP, and lib/producers/script.ts). Before
-// the lift the whole assembly was inline in the route and nothing else could call it - which is
-// why the script step never wrote a script (INVENTORY §2: "/api/script (turn compose) has no
-// caller"). The route's header still explains every rule below; nothing here changed meaning.
+// answer. The route retired at the cutover (Phase 6 L70), so lib/producers/script.ts is the one
+// caller (scriptUnits on the receipt, composeUnit on the turn). Before the lift the whole assembly
+// was inline in the route and nothing else could call it - which is why the script step never
+// wrote a script (INVENTORY §2: "/api/script (turn compose) has no caller"). The rules are
+// explained where they are held: lib/script/validate.ts's header and parseDraft.
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";

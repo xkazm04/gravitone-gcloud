@@ -1,4 +1,4 @@
-// COMPOSE — what /api/script's engine returns, and the laws it is held to.
+// COMPOSE — what the compose turn's engine returns, and the laws it is held to.
 //
 // Until this file nothing in the app WROTE a script. The three renders Step 2
 // shows were transcribed from a 2026-08-11 terminal run (script/renders.ts),
@@ -27,8 +27,12 @@
 // which one was quietly dropped read as a complete answer.
 //
 // What it does NOT do: judge the prose. The constraint probes, qualifier
-// survival and traceability are the gate's (script/gate.ts), and the route
-// runs it on every candidate that clears this file.
+// survival and traceability are the gate's (script/gate.ts). The producer does
+// NOT run it at compose time (lib/producers/script.ts composeUnit lands the
+// draft as parsed); the Part's script view gates each candidate when it is
+// read, against the dealt notebook (app/(studio)/projects/[id]/_part/
+// scriptView.ts). gateDraft is the compose-time entry, and only the compose
+// probe calls it.
 //
 // Server-safe by construction: nothing here, and nothing it imports, is
 // `"use client"`. That is why the template ranges are restated below instead
@@ -102,9 +106,9 @@ export function templateBand(template: string, targetS: number): { min: number; 
   return { min: Math.max(range[0], Math.ceil(targetS - tol)), max: Math.min(range[1], Math.floor(targetS + tol)) };
 }
 
-/** No render meets the project's clock. The band-aware form of ScriptStep's
- *  `runtimeMismatch` (ScriptStep.tsx, which compares fixture durations for
- *  equality) — stage 3 of script-phase-B swaps it in. */
+/** No render meets the project's clock: none runs inside the template band
+ *  for `targetS`. ScriptStep.tsx, which compared fixture durations for
+ *  equality, retired with the studio; only the compose probe calls this. */
 export function runtimeMismatch(
   renders: readonly { durationS: number }[],
   template: string,
@@ -138,9 +142,10 @@ export function qualifyingEngines(
 /* ──────────────────────────────── the scope ──────────────────────────────── */
 
 /** Which card ids exist in this notebook, and which of them the creator kept.
- *  The rule is research/scope.ts::stateOf's (that module is `"use client"`):
- *  an explicit decision wins, else conclusions are OUT until taken and every
- *  other card is kept. */
+ *  The rule is research/scope.ts::stateOf's - an explicit decision wins, else
+ *  conclusions are OUT until taken and every other card is kept - restated
+ *  over `ScopeRecord`, which reads a decision loosely (only `descoped`). The
+ *  restatement is no longer forced: scope.ts carries no "use client" now. */
 export function cardsInScope(source: NotebookSource, scope: ScopeRecord): { known: Set<string>; kept: Set<string> } {
   const known = new Set<string>();
   const kept = new Set<string>();

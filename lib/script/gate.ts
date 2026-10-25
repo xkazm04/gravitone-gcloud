@@ -532,7 +532,7 @@ export function runGate(
     filedOrAdmitted?: ReadonlySet<string>;
     /** The notebook's own felt conversions. Absent = the fixture's, which is
      *  right only for the fixture notebook — a composed render is gated against
-     *  the notebook it was written from (`/api/script`). */
+     *  the notebook it was written from (`gateDraft`, `source`). */
     scaleConversions?: readonly ScaleConversion[];
     /** Run the connector law (`checkConnectors`). Opt-in so the fixture chains'
      *  pinned figures (pipeline/gate-regression.mts, the script probes) do not
@@ -617,8 +617,9 @@ export function gateChains(
 }
 
 /* ──────────────── the gate over a composed draft (server-safe) ──────────────
-   /api/script's entry, and the reason the opts above grew `scaleConversions`
-   and `connectors`. Every rule reads the notebook the renders were WRITTEN
+   The compose-time entry (v1's /api/script ran it on every candidate; the
+   route retired, and today only the compose probe calls it), and the reason
+   the opts above grew `scaleConversions` and `connectors`. Every rule reads the notebook the renders were WRITTEN
    FROM — its facts, its unknowns, its felt conversions, its conclusions —
    rather than the fixture each default names, and the connector law runs.
    Probes resolve as everywhere else (`probesFor`): the draft's own, else the

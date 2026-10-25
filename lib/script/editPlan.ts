@@ -100,8 +100,10 @@ export function editPlanSchema(draft: { renders: readonly { id: string }[] }) {
   } as const;
 }
 
-/** The fixture renders' schema. A shim for the route and the cassettes until
- *  the route reads the project's draft (script-phase-A, session 2). */
+/** The fixture renders' schema: what the recalibrate turn hands the engine
+ *  (lib/turns/kinds/recalibrate.ts) and what its cassettes are keyed to. The
+ *  producer still recalibrates only the three fixture renders (lib/producers/
+ *  script.ts, "KEPT v1 LIMIT"), so a composed draft's schema is not sent yet. */
 export const EDIT_PLAN_SCHEMA = editPlanSchema({ renders: RENDERS });
 
 /** One edit's declared properties and their types - the same for every draft
