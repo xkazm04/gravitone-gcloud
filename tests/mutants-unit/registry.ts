@@ -6518,4 +6518,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "        flash = timers.set(",
     why: "An earlier burst's flash timer fires inside a later burst's flash and empties it after 300 ms of 1300.",
   },
+  {
+    id: "copy-text-bare-clipboard",
+    test: "tests/next-server/clipboard.test.ts",
+    file: "app/(studio)/_shell/clipboard.ts",
+    find: "if (clipboard === undefined || typeof clipboard.writeText !== \"function\") {",
+    replace: "if (false) {",
+    why: "A copy outside a secure context throws a TypeError in the click handler and the operator is told nothing.",
+  },
 ];

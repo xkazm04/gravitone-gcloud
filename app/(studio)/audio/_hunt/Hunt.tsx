@@ -16,7 +16,6 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { errorMessage } from "@gt/domain/errors";
 import { carryFrom, HuntAudition, stepTake } from "@gt/ui/components/audio/HuntAudition.tsx";
 import { HuntMap, type PickMods } from "@gt/ui/components/audio/HuntMap.tsx";
 import { HuntRenderBar } from "@gt/ui/components/audio/HuntRenderBar.tsx";
@@ -32,6 +31,7 @@ import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import { useShell } from "../../_shell/Providers.tsx";
+import { copyText } from "../../_shell/clipboard.ts";
 import { outcomeOf, useReceipt } from "../../projects/_plan/receipt.tsx";
 import { useTransport } from "../_audio/useTransport.ts";
 import type { confirmLessonAct } from "../_lessons/acts.ts";
@@ -194,7 +194,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
         onCrown={crown}
         returning={returning}
         onReturn={fileBack}
-        onCopy={(text) => void navigator.clipboard.writeText(text).then(() => toast("prompt copied"), (e: unknown) => toast(`clipboard refused: ${errorMessage(e)}`))}
+        onCopy={(text) => void copyText(text).then((r) => toast(r.ok ? "prompt copied" : `clipboard refused: ${r.error}`))}
       />
       <HuntRenderBar plan={plan} picked={sel.ids.length} busy={flow.reading || hunt.inFlight} liveBlock={view.liveBlock} onRender={render} onClear={() => setSel(EMPTY_SELECTION)} />
       {heard.length > 0 && (

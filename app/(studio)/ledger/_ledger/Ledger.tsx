@@ -21,7 +21,6 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import { errorMessage } from "@gt/domain/errors";
 import type { Event } from "@gt/domain/event";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 import type { Range } from "@gt/ui/components/timestrip/strip.ts";
@@ -29,6 +28,7 @@ import { TimeStrip } from "@gt/ui/components/timestrip/TimeStrip.tsx";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
 import { useShell } from "../../_shell/Providers.tsx";
+import { copyText } from "../../_shell/clipboard.ts";
 import { subjectLink } from "../../_shell/links.ts";
 import { Detail, settled } from "./Detail.tsx";
 import { Facets as FacetRail } from "./Facets.tsx";
@@ -230,10 +230,7 @@ export function Ledger(p: LedgerProps) {
   );
 
   const copy = (text: string, done: string): void => {
-    navigator.clipboard.writeText(text).then(
-      () => toast(done),
-      (e: unknown) => toast(`copy refused - ${errorMessage(e)}`),
-    );
+    void copyText(text).then((r) => toast(r.ok ? done : `copy refused - ${r.error}`));
   };
 
   // Hydrated: the keys and the controls answer from here on. Live probes wait on this
