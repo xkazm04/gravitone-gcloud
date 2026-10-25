@@ -17,10 +17,13 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { CLAIM_MAX } from "@gt/ui/components/audio/lesson.ts";
+
 import { __resetMusicBudget, currentMusicSeconds } from "@/lib/music/budget";
 import { runSoundCli } from "@/lib/sound/cli";
 import { buildEditPlan, editSeconds } from "@/lib/sound/editPlan";
 import { generateTake, parseGenerateRequest } from "@/lib/sound/generate";
+import { parseLessonInput } from "@/lib/sound/ledger";
 import { readTakes, SoundError } from "@/lib/sound/store";
 import { createTake } from "@/lib/sound/takes";
 
@@ -275,4 +278,12 @@ test("section edit: the meter books the whole edit plan, kept ranges included - 
   console.log(`[sound-door] edit ["keep","high"] over a 10 s plan -> booked ${booked}s; editSeconds ${editSeconds(PLAN, ["keep", "high"])}s`);
   expect(editSeconds(PLAN, ["keep", "high"])).toBe(5);
   expect(booked).toBe(10);
+});
+
+/* ── the lesson door's claim cap is the composer's ───────────────────────── */
+
+test("lesson: the claim the server keeps is capped where the composer caps it (lesson.ts CLAIM_MAX)", () => {
+  const at = (n: number) => () => parseLessonInput({ kind: "music", claim: "w".repeat(n) });
+  expect(at(CLAIM_MAX)).not.toThrow();
+  expect(at(CLAIM_MAX + 1)).toThrow(String(CLAIM_MAX));
 });
