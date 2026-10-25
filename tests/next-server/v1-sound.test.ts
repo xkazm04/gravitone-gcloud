@@ -89,7 +89,7 @@ describe("sound verdicts over time", () => {
       }
       const q = queryEvents(k.value.store, { type: ["verdict.kept", "verdict.rejected"], limit: 100 });
       if (!q.ok) throw q.error;
-      const rows = q.value.events.filter((e) => e.subject.id === id).sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+      const rows = q.value.events.filter((e) => e.subject.id === id).sort((a, b) => (a.occurredAt ?? "").localeCompare(b.occurredAt ?? ""));
       return { type: rows.at(-1)?.type ?? "none", appended, drifted };
     } finally {
       k.value.close();
