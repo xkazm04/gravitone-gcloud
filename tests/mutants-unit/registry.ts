@@ -6998,4 +6998,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const html = page;",
     why: "A comment that says `never Math.random()` fails the strip and spends a fix round on the author's seat for a violation the page does not have.",
   },
+  {
+    id: "publish-lost-after-upload-leaves-no-orphan-event",
+    test: "packages/producers/test/publish.test.ts",
+    file: "packages/producers/src/publish/publish.ts",
+    find: "type: \"publish.orphan\", subject: { kind: \"slot\", id: slot.id }",
+    replace: "type: \"publish.noted\", subject: { kind: \"slot\", id: slot.id }",
+    why: "A live upload whose claim was lost before its record leaves no durable word of the platform id: the worker counts a 'lost', the slot reads interrupted, and a re-schedule uploads the same export a second time.",
+  },
 ];
