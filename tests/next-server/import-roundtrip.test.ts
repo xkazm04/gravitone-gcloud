@@ -15,13 +15,13 @@ import { compose, setPart } from "@gt/kernel/records/write";
 import type { Store } from "@gt/kernel/store";
 
 import { inspectArchive } from "../../lib/studioArchive.ts";
-import { readArchive, rowLine, type Archive } from "../../lib/import/archive.ts";
+import { ARCHIVE_KIND, MANIFEST_KIND, readArchive, rowLine, type Archive, type Row } from "../../lib/import/archive.ts";
 import { commitImport } from "../../lib/import/commit.ts";
 import { exportProjects } from "../../lib/import/export.ts";
 import { kernelIdOf, planImport } from "../../lib/import/project.ts";
 import { putProject } from "../../lib/projects.ts";
 import { THEMES_STORE } from "../../lib/studioDb.ts";
-import { clearV1, dataUrl, putRows, putStep, seedV1, SHELF, v1Archive, type Seeded } from "./import-harness.ts";
+import { clearV1, dataUrl, putRows, pngB64, putStep, seedV1, SHELF, v1Archive, type Seeded } from "./import-harness.ts";
 
 // THE IMPORT, END TO END (Phase 4 wave D, L42): an archive v1 wrote (its own exportAccount over
 // its own IndexedDB) -> the preview -> the confirm -> kernel Projects whose Plan opens with the
@@ -42,6 +42,9 @@ beforeEach(async () => {
   await clearV1();
 });
 
+// Measured 2026-10-25 on the 1000 x 100 x 20,000 archive below: 5.2 s with a scan per project and per
+// asset, 1.4 s indexed; the bound sits between them.
+const BOUND_MS = 3000;
 const OP = { kind: "operator", id: "op" } as const;
 const NOW = Date.parse("2026-10-16T09:00:00Z");
 
@@ -120,6 +123,39 @@ describe("preview, then confirm", () => {
     const outcomes = second.ok && second.value.kind === "done" ? second.value.outcomes.map((o) => [o.outcome, o.reason]).sort() : [];
     expect(outcomes).toEqual([seed.film, seed.ad, seed.album, seed.empty].map((p) => ["skipped", `already imported as ${kernelIdOf(p.id)}`]).sort());
   });
+});
+
+describe("staging an archive at the line cap", () => {
+  it("indexes steps, themes, assets and uploads once, not once per project and per asset", () => {
+    const PROJECTS = 1000;
+    const STEPS = 100;
+    const ASSETS = 20_000;
+    const projects: Row[] = Array.from({ length: PROJECTS }, (_, i) => ({ id: `p${i}`, uid: "u", title: `Film ${i}`, template: "short-educational-video", targetS: 90, cover: `a${i}`, signedOff: {} }));
+    const steps: Row[] = projects.flatMap((p) => Array.from({ length: STEPS }, (_, j) => ({ id: `${String(p["id"])}:k${j}`, projectId: p["id"], phase: "script-mode", data: { mode: "expert" } })));
+    const assets: Row[] = Array.from({ length: ASSETS }, (_, i) => ({ id: `a${i}`, uid: "u", path: ["refs"], name: `a${i}`, src: `upload:up${i}`, kind: "image", createdAt: 1 }));
+    const uploads: Row[] = Array.from({ length: ASSETS }, (_, i) => ({ id: `up${i}`, blob: { b64: pngB64(i % 200), type: "image/png" }, mime: "image/png", bytes: 11 }));
+    const archive: Archive = {
+      header: { kind: ARCHIVE_KIND, format: 1, dbVersion: 5, exportedAt: 1, from: "test", scope: "account" },
+      manifest: { kind: MANIFEST_KIND, counts: { projects: PROJECTS, steps: steps.length, themes: 0, assets: ASSETS, uploads: ASSETS }, sha256: { projects: "", steps: "", themes: "", assets: "", uploads: "" } },
+      rows: { projects, steps, themes: [], assets, uploads },
+      bytes: 0,
+      digest: "scale",
+    };
+    const u = universe();
+    const t0 = performance.now();
+    const p = u.store.read((r) => planImport(r, archive));
+    const ms = performance.now() - t0;
+    if (!p.ok) throw p.error;
+    // The same plan as the scanning version staged: the lookups return the same rows.
+    expect(p.value.token).toBe("7dc3b0e91725cb4b604bc50956b7f10bbff3b0395ac0c797c940593d8da69360");
+    expect(p.value.projects).toHaveLength(PROJECTS);
+    expect(p.value.items).toHaveLength(ASSETS);
+    expect(p.value.projects.every((x) => x.preview.outcome === "import")).toBe(true);
+    // The rows each project names, in archive order: the cover asset, and its upload through it.
+    expect(p.value.projects[7]?.record.assets.map((a) => (a as Row)["id"])).toEqual(["a7"]);
+    expect(p.value.projects[7]?.record.uploads.map((x) => (x as Row)["id"])).toEqual(["up7"]);
+    expect(ms, "planImport over a capped archive is bounded").toBeLessThan(BOUND_MS);
+  }, 30_000);
 });
 
 describe("what the import will not take, and says so", () => {

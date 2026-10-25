@@ -141,6 +141,66 @@ function stageTheme(r: Reader, row: Row): StagedTheme {
   return { preview: { ...base, missing, outcome: "import" }, draft: drafted.value, blobs: [...sink.values()] };
 }
 
+/**
+ * The archive's rows by key, built ONCE per archive (staging looks a theme, an upload, a project's
+ * steps and the assets a project names up per project and per asset; a scan each is
+ * projects x steps and assets x uploads at the archive's line cap). `find` semantics are kept: the
+ * first row of an id wins; lists keep archive order, and `at` is a row's position in its section.
+ */
+export type ArchiveIndex = {
+  readonly stepsOf: ReadonlyMap<string, readonly Row[]>;
+  readonly themeById: ReadonlyMap<string, Row>;
+  readonly uploadById: ReadonlyMap<string, Row>;
+  readonly assetsById: ReadonlyMap<string, readonly { readonly at: number; readonly row: Row }[]>;
+  readonly uploadsById: ReadonlyMap<string, readonly { readonly at: number; readonly row: Row }[]>;
+};
+
+const built = new WeakMap<Archive, ArchiveIndex>();
+
+export function indexOfArchive(archive: Archive): ArchiveIndex {
+  const had = built.get(archive);
+  if (had !== undefined) return had;
+  const stepsOf = new Map<string, Row[]>();
+  for (const s of archive.rows.steps) {
+    const k = s["projectId"];
+    if (typeof k !== "string") continue;
+    const list = stepsOf.get(k);
+    if (list === undefined) stepsOf.set(k, [s]);
+    else list.push(s);
+  }
+  const firstById = (rows: readonly Row[]): Map<string, Row> => {
+    const m = new Map<string, Row>();
+    for (const r of rows) {
+      const id = r["id"];
+      if (typeof id === "string" && !m.has(id)) m.set(id, r);
+    }
+    return m;
+  };
+  const allById = (rows: readonly Row[]): Map<string, { at: number; row: Row }[]> => {
+    const m = new Map<string, { at: number; row: Row }[]>();
+    rows.forEach((row, at) => {
+      const k = String(row["id"]);
+      const list = m.get(k);
+      if (list === undefined) m.set(k, [{ at, row }]);
+      else list.push({ at, row });
+    });
+    return m;
+  };
+  const ix: ArchiveIndex = { stepsOf, themeById: firstById(archive.rows.themes), uploadById: firstById(archive.rows.uploads), assetsById: allById(archive.rows.assets), uploadsById: allById(archive.rows.uploads) };
+  built.set(archive, ix);
+  return ix;
+}
+
+/** The rows of `by` whose id (as a string) is in `ids`, in archive order. */
+export function rowsNamed(by: ArchiveIndex["assetsById"], ids: ReadonlySet<string>): Row[] {
+  const hit: { at: number; row: Row }[] = [];
+  for (const id of ids) {
+    const list = by.get(id);
+    if (list !== undefined) hit.push(...list);
+  }
+  return hit.sort((a, b) => a.at - b.at).map((h) => h.row);
+}
+
 /** v1 AudioMeta's verdict in the Library's state words. */
 const AUDIO_STATE: Readonly<Record<string, "ratified" | "rejected" | "unjudged">> = { kept: "ratified", proven: "ratified", rejected: "rejected" };
 
@@ -150,14 +210,14 @@ function bytesOf(a: Row, archive: Archive, sink: Sink, pub: PublicFile): Bytes |
   const src = typeof a["src"] === "string" ? a["src"] : "";
   const up = uploadOf(src);
   if (up !== null) {
-    const u = archive.rows.uploads.find((x) => x["id"] === up);
+    const u = indexOfArchive(archive).uploadById.get(up);
     const blob = u === undefined ? undefined : u["blob"];
     if (!isObj(blob) || typeof blob["b64"] !== "string") return `its upload ${up} is not in the archive`;
     return { ref: stage(sink, b64(blob["b64"]), typeof blob["type"] === "string" ? blob["type"] : "application/octet-stream"), origin: "upload" };
   }
   if (src.startsWith("proof:")) {
     const [themeId, proofId] = src.slice(6).split("/");
-    const theme = archive.rows.themes.find((t) => t["id"] === themeId);
+    const theme = themeId === undefined ? undefined : indexOfArchive(archive).themeById.get(themeId);
     const proof = theme !== undefined && Array.isArray(theme["proofs"]) ? theme["proofs"].find((p) => isObj(p) && p["id"] === proofId) : undefined;
     if (!isObj(proof) || typeof proof["base64"] !== "string" || proof["base64"] === "") return `its proof ${proofId ?? "?"} is not in theme ${themeId ?? "?"} in the archive`;
     return { ref: stage(sink, b64(proof["base64"]), typeof proof["mime"] === "string" ? proof["mime"] : "image/png"), origin: "proof" };
