@@ -6124,4 +6124,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "",
     why: "A page restored from the back/forward cache reopens its stream at the seq it first rendered at and replays every event since, hours of them for a tab left open.",
   },
+  {
+    id: "studio-shell-session-refusal-envelope-shown",
+    test: "tests/next-server/shell-session-post.test.ts",
+    file: "app/(studio)/_shell/session.ts",
+    find: "return e.ok ? e.value.error : body;",
+    replace: "return body;",
+    why: "The handoff's error line and the renewal toast show the session door's JSON envelope instead of its sentence.",
+  },
 ];
