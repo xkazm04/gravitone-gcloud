@@ -64,6 +64,11 @@ export function keepVerdictOf(schedule: ScheduleIntent | null, notes: string, no
   return { verdict: "keep", reasons: [], note: encodeSchedule({ ...schedule, ...(notes === "" ? {} : { notes }) }).slice(0, noteMax) };
 }
 
+/** The keymap facts a review holds: a draft to annotate, and a calendar slot the approve fills. */
+function reviewFacts(draft: boolean, calendar: boolean): string[] {
+  return [...(draft ? ["draft"] : []), ...(calendar ? ["calendar"] : [])];
+}
+
 export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, busy = false, announce = () => undefined, keys = true, nowMs }: PacketReviewProps) {
   const { view, present } = packet;
   const doc = present.review;
@@ -146,7 +151,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
       attach,
       "cancel-note": () => setEditing(null),
     },
-    { facts: doc === undefined ? [] : ["draft"], enabled: keys },
+    { facts: reviewFacts(doc !== undefined, channels.length > 0), enabled: keys },
   );
 
   const toggle = (r: string) =>
@@ -160,7 +165,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
       marks={present.oracle !== undefined && <OracleStrip oracle={present.oracle} />}
       foot={
         <>
-          <Keycaps mode="board.review" label="review keys" facts={new Set(doc === undefined ? [] : ["draft"])} />
+          <Keycaps mode="board.review" label="review keys" facts={new Set(reviewFacts(doc !== undefined, channels.length > 0))} />
           <div className={s.ends}>
             <Button label="Reject" tone="rose" shortcut={{ mode: "board.review", verb: "reject" }} onPress={() => verdict("reject")} />
             <Button label={`Edit plan · ${plan.length}`} tone="amber" shortcut={{ mode: "board.review", verb: "send-edit-plan" }} onPress={send} />
