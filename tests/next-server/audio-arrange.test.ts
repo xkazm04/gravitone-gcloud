@@ -187,4 +187,18 @@ describe("the Suno round trip", () => {
     expect(nolabel.ok ? null : nolabel.error.message).toBe("a finalized take needs a library label");
     expect(onDisk()).toHaveLength(1);
   });
+
+  it("two returns raced onto one head file one version; the other is refused as stale, nothing forked", async () => {
+    seed([take("a", { stage: "remaster", group: "drone" })]);
+    const k = kernel();
+    // Two tabs (or two machines' drops) answer the same card at once, under different ops.
+    const [x, y] = await Promise.all([
+      fileReturn(k, { headId: "a", stage: "edit", opId: "op0011", file: wav }, OP, NOW),
+      fileReturn(k, { headId: "a", stage: "edit", opId: "op0012", file: wav }, OP, NOW),
+    ]);
+    const outcomes = [x, y].map((r) => (r.ok ? `v${r.value.version}` : r.error.code)).sort();
+    expect(outcomes).toEqual(["conflict", "v2"]);
+    expect(onDisk().filter((t) => t.parentId === "a")).toHaveLength(1);
+    expect(ledger(k).filter((e) => e.type === "take.returned")).toHaveLength(1);
+  });
 });
