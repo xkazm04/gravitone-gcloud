@@ -139,3 +139,16 @@ describe("the evidence table", () => {
     expect(html.split("<tr").length - 1).toBe(4);
   });
 });
+
+describe("the ratchet, locked", () => {
+  const COVERED: readonly StyleCoverageRow[] = [{ problem: "quantity", trialIds: ["peak-and-fall"], approved: 1, rejected: 0, covered: true }];
+  const locked = (why: string) =>
+    renderToStaticMarkup(h(LockGate, { status: "locked", why, keptCells: 3, provenKeeps: 2, coverage: COVERED, lockProblems: 1, lock: { can: false, blocker: null, legacySheet: false, lockedAt: "2026-08-20T11:30:00.000Z", lockedBy: "operator" } }));
+
+  test("the lock's date and hand are drawn once: the why says them when it carries them", () => {
+    // The sentence styleView's `why` writes for a lock (packages/domain/src/styleView.ts).
+    const why = "locked 2026-08-20 by operator — the block is frozen; duplicate to change the look";
+    expect(locked(why).split("2026-08-20").length - 1).toBe(1);
+    expect(locked("locked — projects build on this block").split("2026-08-20").length - 1).toBe(1);
+  });
+});
