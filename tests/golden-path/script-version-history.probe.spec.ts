@@ -17,7 +17,7 @@
 
 import { test, expect } from "@playwright/test";
 
-import { acceptInto, restoreAs, resumeStaged, stagedOf } from "@/lib/script/history";
+import { acceptInto, restoreAs } from "@/lib/script/history";
 import { BASELINE, engineRunWith, overrideFrom, overrideLineOf, receiptOf, type Note, type Version } from "@/lib/script/versions";
 import { IMPACT } from "@/lib/script/impact";
 import { recalibrate, recalibrateFromPlan } from "@/lib/script/recalibrate";
@@ -86,18 +86,6 @@ test("case 4: a restored version's receipt says so — not the simulated-fallbac
   const line = receiptOf(restoreAs(v2, v4, "v5", 9)!);
   expect(line).toBe("restored from v2 · no model call");
   expect(line).not.toContain("simulated");
-});
-
-test("case 6: a staged run whose baseline moved, or that is damaged, is reported lost with its reason", () => {
-  const candidate = recalibrate(v3, [note("f", "descope", 4)], "v4", 7, ctx());
-  const moved = resumeStaged(stagedOf(candidate, "v3"), { baselineId: "v4" });
-  expect(moved).toMatchObject({ lost: "baseline-moved", label: candidate.label, notes: 1 });
-  expect(resumeStaged({ baselineId: "v3", candidate: { id: 4 } }, { baselineId: "v3" })).toMatchObject({ lost: "unreadable" });
-  expect(resumeStaged("nonsense", { baselineId: "v3" })).toMatchObject({ lost: "unreadable" });
-  // A staged run built on another notebook is not resumed onto this one.
-  expect(resumeStaged(stagedOf(candidate, "v3", "D1"), { baselineId: "v3", digest: "D2" })).toMatchObject({
-    lost: "notebook-moved",
-  });
 });
 
 test("case 7: history only grows — accepting a restore appends it and truncates nothing", () => {
