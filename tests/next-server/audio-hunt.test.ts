@@ -43,10 +43,11 @@ import { evidenceKey } from "@gt/ui/components/audio/lesson.ts";
 
 import { fileLeafReturn } from "../../app/(studio)/audio/_hunt/leafReturn.ts";
 import { producers } from "../../lib/producers/registry.ts";
-import { crownLeaf } from "../../lib/sound/huntDesk.ts";
+import { crownLeaf, inStore as huntInStore } from "../../lib/sound/huntDesk.ts";
 import { HUNT_LANE, huntJobId, huntProducer, huntRunId, launchHuntRender, type RenderLaunch } from "../../lib/sound/huntRender.ts";
 import { stubReason } from "../../lib/sound/huntEngine.ts";
-import { confirmLesson, draftLesson, handDraft } from "../../lib/sound/lessons.ts";
+import { confirmLesson, draftLesson, handDraft, inStore as lessonInStore } from "../../lib/sound/lessons.ts";
+import { SoundError, soundFailure } from "../../lib/sound/store.ts";
 import type { GenerateRequest, Hunt, HuntNode, SoundTake } from "../../lib/sound/types.ts";
 
 const SOUND = path.join(ROOT, "sound");
@@ -339,5 +340,34 @@ describe("a Suno leaf takes its file back", () => {
     const br = await fileLeafReturn(store, { huntId: "hn-ret01", nodeId: "br", opId: "opret003", file: WAV }, OP, NOW);
     expect(br.ok ? null : br.error.code).toBe("refused");
     expect(takesOnDisk().map((t) => t.id)).toEqual(["hr-opret001"]);
+  });
+});
+
+describe("one store failure reads as one code on every door of the desk", () => {
+  const INPUTS: readonly [string, () => unknown, string][] = [
+    ["400", () => new SoundError("bad", 400), "invalid"],
+    ["404", () => new SoundError("gone", 404), "not-found"],
+    ["409", () => new SoundError("moved", 409), "conflict"],
+    ["500", () => new SoundError("corrupt", 500), "internal"],
+    ["503", () => new SoundError("busy", 503), "unavailable"],
+    ["a non-SoundError", () => new Error("EIO"), "internal"],
+  ];
+  for (const [name, make, code] of INPUTS) {
+    it(`${name} is ${code} at the crown door, the lesson door and the shared reading`, async () => {
+      const door = async <T,>(inStore: (fn: () => Promise<Result<T>>) => Promise<Result<T>>): Promise<string | null> => {
+        const r = await inStore(async () => {
+          throw make();
+        });
+        return r.ok ? null : r.error.code;
+      };
+      const shared = soundFailure(make());
+      expect([await door(huntInStore), await door(lessonInStore), shared.ok ? null : shared.error.code]).toEqual([code, code, code]);
+    });
+  }
+
+  it("the rubric door keeps no table of its own", () => {
+    const src = readFileSync(path.join(process.cwd(), "lib/sound/rubric.ts"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(src).toContain("soundFailure(e)");
+    expect(src).not.toMatch(/e\.status|STATUS_CODE/);
   });
 });

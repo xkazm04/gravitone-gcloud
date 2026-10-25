@@ -2,7 +2,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { MetricSnapshot, Publication } from "@gt/domain/publication";
 import type { Channel } from "@gt/domain/slot";
 import type { SlotState } from "@gt/domain/slot.machine";
-import type { Reader, Store } from "../store.ts";
+import type { Param, Reader, Store } from "../store.ts";
 import { readPublicationRow, readSlotRow, readSnapshotRow, SLOT_COLUMNS, type SlotRow } from "./schema.ts";
 
 // THE CALENDAR, READ - and only read. v1's `listSlots` swept before it answered (a GET that
@@ -24,6 +24,8 @@ export type SlotQuery = {
   /** One item on one channel - the clash check's question, so it never reads the whole calendar. */
   readonly item?: string;
   readonly channel?: Channel;
+  /** The earliest `limit` rows (the order below), so a caller that wants one never decodes the calendar. */
+  readonly limit?: number;
 };
 
 /**
@@ -40,7 +42,7 @@ export function instantOf(s: string): string {
 /** The calendar, earliest first (v1 listSlots' order); ties by id so the order is total. */
 export function listSlotsIn(r: Reader, q: SlotQuery = {}): SlotRow[] {
   const where: string[] = [];
-  const params: string[] = [];
+  const params: Param[] = [];
   if (q.from !== undefined) {
     where.push("at >= ?");
     params.push(instantOf(q.from));
@@ -62,7 +64,9 @@ export function listSlotsIn(r: Reader, q: SlotQuery = {}): SlotRow[] {
     where.push(`state IN (${q.states.map(() => "?").join(", ")})`);
     params.push(...q.states);
   }
-  const sql = `SELECT ${SLOT_COLUMNS} FROM slots${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY at, id`;
+  const limit = q.limit === undefined ? "" : " LIMIT ?";
+  if (q.limit !== undefined) params.push(q.limit);
+  const sql = `SELECT ${SLOT_COLUMNS} FROM slots${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY at, id${limit}`;
   return r.all(sql, ...params).map(readSlotRow);
 }
 

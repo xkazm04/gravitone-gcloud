@@ -198,6 +198,27 @@ describe("the read side", () => {
     expect(syncSoon(s, [slow], ctx())).toMatchObject({ ok: true, value: { started: false } });
   });
 
+  it("syncSoon closes its claim with the error when a sync throws past its own report", async () => {
+    const s = store();
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      // A projection whose events are not a list: appendAll throws outside readOne's net.
+      const crashing: Source<number> = { ...logs("forge", 1), project: () => ({ events: null as unknown as IngestEvent[], live: [], weir: [], tally: { records: {}, facts: {} }, skipped: [] }) };
+      expect(syncSoon(s, [crashing], ctx())).toEqual({ ok: true, value: { started: true } });
+      await vi.waitFor(() => {
+        const c = claimState(s, SYNC_CLAIM);
+        expect(c.ok && c.value?.finished_at).toBeTruthy();
+      });
+      const c = claimState(s, SYNC_CLAIM);
+      if (!c.ok || c.value === null) throw new Error("no claim");
+      expect(JSON.parse(c.value.report ?? "null")).toMatchObject({ error: expect.any(String) });
+      // Closed to the interval, not left to the TTL: the next asker is told to wait, not that it won.
+      expect(syncSoon(s, [logs("forge", 1)], ctx())).toMatchObject({ ok: true, value: { started: false } });
+    } finally {
+      quiet.mockRestore();
+    }
+  });
+
   it("liveJobs gathers every source's live work and piles, and names a source it could not read", async () => {
     const live: Source<number> = {
       ...logs("forge", 0),

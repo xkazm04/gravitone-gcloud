@@ -30,6 +30,8 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { err, errorMessage, type AppErrorCode, type Result } from "@gt/domain/errors";
+
 import { acquireLock as acquireDiskLock } from "../diskTx";
 import { outPath, soundLedgerFile } from "../fixtures/roots";
 import { renameRetry, type RetryOptions } from "../renameRetry";
@@ -45,6 +47,18 @@ export class SoundError extends Error {
     this.name = "SoundError";
     this.status = status;
   }
+}
+
+const CODE_OF_STATUS: Readonly<Record<number, AppErrorCode>> = { 400: "invalid", 403: "refused", 404: "not-found", 409: "conflict", 502: "unavailable", 503: "unavailable" };
+
+/**
+ * The one reading of a thrown store failure, for every door on the audio desk: a SoundError by its
+ * status (409 is a `conflict` - the code whose HTTP status is 409 - and the store's 500, the
+ * corrupt-file refusal, is `internal`), anything else `internal` with the cause kept.
+ */
+export function soundFailure<T = never>(e: unknown): Result<T> {
+  if (e instanceof SoundError) return err(CODE_OF_STATUS[e.status] ?? "internal", e.message);
+  return err("internal", errorMessage(e), { cause: e });
 }
 
 export function storeRoot(): string {
