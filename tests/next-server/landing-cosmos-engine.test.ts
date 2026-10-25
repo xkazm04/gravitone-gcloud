@@ -812,6 +812,80 @@ describe("keyboard.ts: an input method's keys are its own", () => {
   });
 });
 
+describe("search slip: the active result is announced and the focus stays in the slip", () => {
+  //  12. #search said role=dialog and kept no focus in it; its results were buttons whose .sel
+  //      was a class and nothing else. A screen reader heard the typed query and none of the
+  //      results, and Tab walked out of the slip into the HUD behind the scrim. The input is the
+  //      combobox (aria-expanded, aria-activedescendant naming the option Enter will pick), the
+  //      results are options with ids and aria-selected, and Tab stays on the input.
+  async function slip() {
+    const root = shellDom();
+    stub("window", {});
+    const { wireKeyboard } = await import("../../app/_landing/cosmos/engine/keyboard.ts");
+    const { openSearch, renderRes } = await import("../../app/_landing/cosmos/engine/search.ts");
+    let onKey: ((e: unknown) => void) | null = null;
+    const els = { search: kid(root), q: kid(root, "input"), res: kid(root, "ul"), searchBtn: kid(root, "button"), banner: kid(root) };
+    const hit = (id: string) => ({ k: "fam", id, label: id, sub: "", col: "", l: id });
+    const cx = {
+      root,
+      els,
+      introOn: false,
+      searchOpen: false,
+      searchFrom: null,
+      SIDX: [],
+      sres: [] as unknown[],
+      sel: 0,
+      ST: { lv: "root" },
+      famById: new Map(),
+      types: [],
+      library: [],
+      templates: [],
+      typeById: new Map(),
+      life: { on: (_t: unknown, _type: string, fn: (e: unknown) => void) => ((onKey = fn), () => {}) },
+    };
+    wireKeyboard(cx as never);
+    openSearch(cx as never);
+    cx.sres = [hit("alpha"), hit("beta"), hit("gamma")];
+    cx.sel = 0;
+    renderRes(cx as never);
+    let prevented = 0;
+    const press = (key: string, shiftKey = false) => onKey!({ key, shiftKey, isComposing: false, keyCode: 0, target: els.q, preventDefault: () => void prevented++ });
+    const options = () => els.res.querySelectorAll("button");
+    return { cx, els, press, options, prevented: () => prevented };
+  }
+
+  test("the input names the option Enter will pick, and only that option is selected", async () => {
+    const { els, press, options } = await slip();
+    press("ArrowDown");
+    press("ArrowDown");
+    const opts = options();
+    expect(opts.map((o) => o.getAttribute("role"))).toEqual(["option", "option", "option"]);
+    const active = els.q.getAttribute("aria-activedescendant");
+    expect(active, "the combobox points at an option").not.toBeNull();
+    expect(opts.findIndex((o) => o.getAttribute("id") === active)).toBe(2);
+    expect(opts.map((o) => o.getAttribute("aria-selected"))).toEqual(["false", "false", "true"]);
+    expect(els.q.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  test("with no results the combobox is collapsed and points at nothing", async () => {
+    const { cx, els } = await slip();
+    const { renderRes } = await import("../../app/_landing/cosmos/engine/search.ts");
+    cx.sres = [];
+    renderRes(cx as never);
+    expect(els.q.getAttribute("aria-expanded")).toBe("false");
+    expect(els.q.getAttribute("aria-activedescendant")).toBeNull();
+  });
+
+  test("Tab and Shift+Tab stay on the input while the slip is open", async () => {
+    const { els, press, prevented } = await slip();
+    els.q.focus();
+    press("Tab");
+    press("Tab", true);
+    expect(prevented(), "both Tabs were taken").toBe(2);
+    expect(DOC.activeElement).toBe(els.q);
+  });
+});
+
 describe("cosmos.css: the first paint stays until there is something to replace it", () => {
   //  11. boot() catches a scene build that throws (intro.ts) and goes on: the intro's timers still
   //      add `booted`, and `.pc.booted .sky0{visibility:hidden}` then took away the dusk sky that

@@ -36,6 +36,10 @@ export function wireKeyboard(cx: Cx): void {
       } else if (e.key === "Enter") {
         e.preventDefault();
         if (cx.sres[cx.sel]) pickRes(cx, cx.sres[cx.sel]);
+      } else if (e.key === "Tab") {
+        // the slip is modal: its input is the one stop, the arrows walk the results
+        e.preventDefault();
+        cx.els.q.focus();
       }
       return;
     }

@@ -37,12 +37,26 @@ export function runSearch(cx: Cx, q: string): SearchEntry[] {
   return out.slice(0, 8).map((x) => x[3]);
 }
 
+/** the combobox's side of the highlight: the input names the option Enter will pick, and the
+ *  options carry aria-selected, because focus never leaves the input (.sel is only the look) */
+function syncActive(cx: Cx): void {
+  const { q, res } = cx.els;
+  const opts = [...res.querySelectorAll("button")];
+  opts.forEach((o, j) => o.setAttribute("aria-selected", String(j === cx.sel)));
+  q.setAttribute("aria-expanded", String(opts.length > 0));
+  if (opts.length > 0 && opts[cx.sel]) q.setAttribute("aria-activedescendant", opts[cx.sel].getAttribute("id") ?? "");
+  else q.removeAttribute("aria-activedescendant");
+}
+
 export function renderRes(cx: Cx): void {
   const ul = cx.els.res;
   ul.innerHTML = "";
   cx.sres.forEach((e, i) => {
     const li = el("li", "", ul),
       b = el("button", i === cx.sel ? "sel" : "", li);
+    li.setAttribute("role", "presentation");
+    b.setAttribute("role", "option");
+    b.setAttribute("id", "res-" + i);
     b.type = "button";
     const dot = el("i", "", b);
     dot.style.background = e.col;
@@ -53,9 +67,11 @@ export function renderRes(cx: Cx): void {
       if (cx.sel !== i) {
         cx.sel = i;
         [...ul.querySelectorAll("button")].forEach((x, j) => x.classList.toggle("sel", j === i));
+        syncActive(cx);
       }
     };
   });
+  syncActive(cx);
 }
 
 export function openSearch(cx: Cx): void {
@@ -80,6 +96,8 @@ export function closeSearch(cx: Cx, refocus = true): void {
   if (!cx.searchOpen) return;
   cx.searchOpen = false;
   cx.els.search.classList.remove("on");
+  cx.els.q.setAttribute("aria-expanded", "false");
+  cx.els.q.removeAttribute("aria-activedescendant");
   const to = cx.searchFrom?.isConnected ? cx.searchFrom : cx.els.searchBtn;
   cx.searchFrom = null;
   if (refocus) to.focus({ preventScroll: true });
