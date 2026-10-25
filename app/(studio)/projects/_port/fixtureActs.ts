@@ -11,6 +11,7 @@ import type { ActOutcome, Confirmed, RerouteResult } from "./contract.ts";
 import { CANDIDATE_STYLES, KEPT_TAKES, PROVEN_STYLES, SUBJECTS, SWEEP_PLATES_PER_STYLE, SWEEP_STYLES, TOPICS } from "./fixtureData.ts";
 import { isWorkKind, optionOf, optionsOf, partJobId, partsOf, placeAll, tokenOf, type FxJob, type FxProject, type Universe } from "./fixture.ts";
 import { costOf } from "./fixtureRead.ts";
+import { firstSentence, slug } from "./names.ts";
 import { lineOf, receiptOf, type Item } from "./schedule.ts";
 
 // THE FIXTURE'S WRITES - receipts, confirms and the Runs acts, over the universe in ./fixture.ts.
@@ -24,11 +25,6 @@ const NEW = "__receipt";
 /* ── the Floor composers ──────────────────────────────────────────────────── */
 
 type RunSpec = { readonly kind: WorkKind; readonly units: number; readonly label: string; readonly title: string; readonly option: ModelOption };
-
-const firstSentence = (text: string, fallback: string): string => {
-  const t = text.trim().split(/(?<=[.!?…])\s/)[0]?.trim() ?? "";
-  return t === "" ? fallback : t.length > 80 ? `${t.slice(0, 79)}…` : t;
-};
 
 /** What a composer's input runs as: a single-producer recipe's one part (@gt/catalog/recipes). */
 export function runSpec(input: ComposerInput): Result<RunSpec> {
@@ -82,8 +78,6 @@ export function launchRun(u: Universe, input: ComposerInput, token: string, now:
 }
 
 /* ── projects ─────────────────────────────────────────────────────────────── */
-
-const slug = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
 
 function projectAt(u: Universe, id: string, rev: number): Result<FxProject> {
   const p = u.projects.get(id);

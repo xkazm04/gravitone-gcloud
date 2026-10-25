@@ -212,3 +212,17 @@ describe("a composed project is titled and keeps its picks by the kernel's rule"
     }
   });
 });
+
+describe("a composed project's id is its title's slug on both sides", () => {
+  it("cuts a long title at 40 without leaving a dash before the suffix", async () => {
+    const title = `${"a".repeat(39)} b`;
+    const stem = async (side: typeof real): Promise<string> => {
+      const c = await side.compose({ recipe: "film/short-form-clip", title }, op);
+      if (!c.ok) throw c.error;
+      return c.value.id.replace(/-[^-]*$/, "");
+    };
+    const realStem = await stem(real);
+    expect(realStem).toBe("a".repeat(39));
+    expect(await stem(fixture)).toBe(realStem);
+  });
+});

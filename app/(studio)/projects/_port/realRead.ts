@@ -17,6 +17,7 @@ import { loadParts, loadProject, type PartRow } from "@gt/kernel/records/schema"
 import type { Reader } from "@gt/kernel/store";
 
 import type { LaneHoldView, ProduceJob } from "./contract.ts";
+import { firstSentence } from "./names.ts";
 
 // THE REAL SIDE'S READS - the kernel's jobs as Runs draws and acts on them, and the lanes a
 // crash holds. Every figure is derived at read from the records (a part's option and units, a
@@ -37,12 +38,6 @@ const dayOf = (now: number): string => new Date(now).toISOString().slice(0, 10);
 
 /** The media lane of a job no Run row describes: the producer's own (records/runplan.ts NATIVE). */
 const MEDIA_OF: Readonly<Record<string, MediaLane>> = { extract: "image", forge: "image", dojo: "image", article: "article", mv: "video", strips: "video", suno: "audio" };
-
-/** The first sentence of a composer's text: a Floor run's name, as the fixture and the prototype drew it. */
-export function firstSentence(text: string, fallback: string): string {
-  const t = text.trim().split(/(?<=[.!?…])\s/)[0]?.trim() ?? "";
-  return t === "" ? fallback : t.length > 80 ? `${t.slice(0, 79)}…` : t;
-}
 
 type Times = { start?: number; end?: number };
 

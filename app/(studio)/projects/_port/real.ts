@@ -22,6 +22,7 @@ import type { Store } from "@gt/kernel/store";
 
 import type { Confirmed } from "./contract.ts";
 import type { ServerProduce, Who } from "./port.ts";
+import { slug } from "./names.ts";
 import { composeChoices, composerChoices, keptTakes, registryTopics } from "./realChoices.ts";
 import { LANE_DOORS, mintSuffix, type LaunchContext } from "./realLaunch.ts";
 import { holdsView, jobsView } from "./realRead.ts";
@@ -78,14 +79,6 @@ function guard<T>(fn: () => Result<T>): Result<T> {
 function outcome<T, U>(o: { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: AppError }, then: (v: T) => Result<U>): Result<U> {
   return o.ok ? then(o.value) : { ok: false, error: o.error };
 }
-
-const slug = (s: string): string =>
-  s
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40)
-    .replace(/-+$/g, "") || "project";
 
 export function makeRealProduce(deps: RealDeps): ServerProduce {
   const cwd = deps.cwd ?? (() => process.cwd());
