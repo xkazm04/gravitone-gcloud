@@ -6942,4 +6942,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "",
     why: "The handoff never starts watching for the refreshed request's outcome, so a dropped cookie is again a blank screen.",
   },
+  {
+    id: "library-scope-pass-skips-corrupt-vids",
+    test: "packages/kernel/test/library.test.ts",
+    file: "packages/kernel/src/library/counts.ts",
+    find: "if (!(blob instanceof Uint8Array)) throw new AppError(\"internal\", `library row ${num(row[\"seq\"])}: vids is not a blob`);",
+    replace: "if (!(blob instanceof Uint8Array)) continue;",
+    why: "A row whose vids is not a blob vanishes from the filtered page while the bare rail still counts it, with no error.",
+  },
+  {
+    id: "audio-params-corrupt-read-as-unmeasured",
+    test: "tests/next-server/audio-hunt.test.ts",
+    file: "lib/sound/hunt.ts",
+    find: "throw new SoundError(`${path.basename(at)} is not valid JSON - regenerate it: npx tsx pipeline/sound.mts knowledge`, 500);",
+    replace: "return null;",
+    why: "A truncated knowledge/audio/params.json briefs the next hunt as 'nothing measured yet', steering it to explore with no error anywhere.",
+  },
 ];
