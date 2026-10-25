@@ -19,6 +19,9 @@ import { asData, partFactsIn, priceOf, text, written, type DriveHooks, type Part
 /** Spoken pace for a stand-in take's length: 2.5 words a second, the explainer read rate. */
 const WORDS_PER_S = 2.5;
 
+/** A stand-in take's length: the line's words at the read rate, a second at least. */
+export const standInSeconds = (line: string): number => Math.max(1, line.trim().split(/\s+/).length / WORDS_PER_S);
+
 /** A silent mono 16-bit 8 kHz WAV of `seconds`: the stand-in take's bytes. */
 export function silentWav(seconds: number): Uint8Array {
   const samples = Math.max(1, Math.round(seconds * 8000));
@@ -65,7 +68,7 @@ export function voiceProducer(lane: ResourceLane = "cloud.elevenlabs", hooks: Dr
     async perform(job, _plan, unit, ctx) {
       try {
         const line = String(unit.input["text"] ?? "");
-        const seconds = Math.max(1, line.split(/\s+/).length / WORDS_PER_S);
+        const seconds = standInSeconds(line);
         const bytes = await meteredCall(ctx, {
           provider: "voice",
           model: "none",

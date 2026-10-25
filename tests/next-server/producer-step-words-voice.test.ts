@@ -27,7 +27,7 @@ import type { Store } from "@gt/kernel/store";
 
 import { driveStep, launchPartAct, partActReceipt, type UnitsFn } from "../../lib/producers/research.ts";
 import { NO_VOICE_ENGINE } from "../../packages/producers/src/voice/define.ts";
-import { voiceUnits } from "../../lib/producers/voice.ts";
+import { standInSeconds, voiceUnits } from "../../lib/producers/voice.ts";
 import { wordsProducer, wordsUnits } from "../../lib/producers/words.ts";
 
 const dirs: string[] = [SOUND];
@@ -92,5 +92,12 @@ describe("explainer voice", () => {
     expect(dry.ok ? "" : dry.error.message).toBe("record lines needs an adopted script with spoken beats");
     // The live refusal (no engine) is held on literal inputs in packages/producers/test/steps.test.ts.
     expect(NO_VOICE_ENGINE).toContain("no speech engine");
+  });
+
+  // The explainer recipe has no script part to adopt lines from, so no driven record-line job can
+  // be composed; the stand-in's length is held on the function perform calls.
+  it("sizes a stand-in take by the words on the line, not the whitespace around them", () => {
+    expect(standInSeconds("  two words  ")).toBe(1);
+    expect(standInSeconds("\tone two three four five six\n")).toBeCloseTo(2.4);
   });
 });
