@@ -45,10 +45,10 @@ import { StrengthHead, StrengthTable } from "@gt/ui/components/audio/Strengths.t
 import { inert } from "./ContractHooks.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
 
-/** One second of silence as a WAV data URL: a source the browser can open, so the play control is real. */
+/** A quarter second of silence as a WAV data URL: a source the browser can open, so the play control is real. */
 function silentWav(): string {
   const rate = 8000;
-  const n = rate;
+  const n = rate / 4;
   const b = new Uint8Array(44 + n);
   const v = new DataView(b.buffer);
   const str = (o: number, x: string): void => {
