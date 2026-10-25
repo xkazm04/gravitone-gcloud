@@ -1,7 +1,7 @@
 ---
 name: scout
 memory: none
-version: 2.2.0
+version: 2.3.0
 category: Development
 description: The nightly training loop, with a stated purpose - spread genres, prove one at publishable quality, then birth a project - that develops what the operator already approved before it spreads (kept ideas become free local Flux storyboards that apply a researched execution technique; while 20+ kept ideas wait, a seed batch takes children plus at most 20 fresh seeds). It searches the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers), ~100 one-sentence seeds (genre, subgenre, type, audience, format) on their own packet, 20-30 rough idea artboards grown from kept seeds in the operator's Leonardo studio, storyboards of kept ideas (up to five local Flux frames, a paragraph and bullets - the root any full video needs), Suno tracks from kept music seeds and full-song visualizers from kept tracks, and 1-3 directions to confirm - all for YouTube video (Shorts ~30 s, videos up to 5 min) - inside a $15 Gemini night, and leave ONE Board packet pkt:scout:<night> for a few minutes of number keys in the morning (1 keep, 2-4 reject with a reason, 5 reject). Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout seeds [--dry], /scout folder <dir> [extract args], /scout status [<night>].
 argument-hint: "night [--dry] [--until HH:MM] | seeds [--dry] | folder <dir> | status [<night>]"
@@ -364,13 +364,19 @@ has a purpose before it has a face.
 The meshes run for minutes on the card and in Blender, admitted by the worker while the rest goes on, so a
 brief is LAUNCHED early when the GPU is idle - but only when it answers a stated need of a project (item 3):
 
-1. **What exists.** `npx tsx pipeline/mesh.mts status --json` - every asset with its class, techniques,
-   verdicts (the Library's 3D models shelf shows the same, faceted by class and technique). The taste's
-   `## Game assets` block says which technique the operator keeps per class and the reasons a variant
-   was thrown (`topology`, `texture`, `rig`, `scale`).
-2. **Choose up to `assetCap` briefs** from that gap and the watchlist: a class the shelf lacks, a
-   technique the taste has not settled (T1 budget generation against T2 game-camera design for a hero),
-   a weapon kind not yet made. Ground each in the registry's game-production knowledge before writing it -
+1. **What the game needs** (spark scout-vision S4). The taste's `## Asset needs` lists, per game, the OPEN needs
+   POF exported from the game's own files (`../pof/asset-needs/<project>.json`, written by `npx tsx
+   scripts/asset-needs.ts <project>` in pof): a roster entry with no model (`missing`) or an asset the game's own
+   scorecard rates low (`scored-low`), each with its id, subject, the game's budget and the game's words for why.
+   **A game asset answers one of those needs, or it is not briefed.** Today the onboarded game is **bp**; pof has
+   no game content to measure (its UE project is gone) and refuses; **mage-arena is developed on another device -
+   gravitone no longer briefs for it.** A needs file missing or older than 7 days refuses bp briefs - say so in
+   the summary, do not work around it.
+2. **What exists here.** `npx tsx pipeline/mesh.mts status --json` - every asset with its class, techniques,
+   verdicts. The taste's `## Game assets` block says which technique the operator keeps per class and the reasons
+   a variant was thrown (`topology`, `texture`, `rig`, `scale`). Choose up to `assetCap` briefs from the open needs
+   (priority 1 first), and only then a `newProject` brief for a kind of project none exists for. Ground each in the
+   registry's game-production knowledge before writing it -
    `../ai-registry/knowledge/game-production/asset-production/geometry/asset-class-poly-budgeting/`
    (the class budget is an instruction the generator spends, not a ceiling),
    `.../sourcing-economics/image-to-3d-input-gating/` (one subject, plain ground, whole in frame,
@@ -379,12 +385,14 @@ brief is LAUNCHED early when the GPU is idle - but only when it answers a stated
    for a character (a silhouette that reads, limbs clear of the body, nothing held, no capes or strands
    the rig cannot drive).
 3. **Write each brief** to a scratch file and launch it:
-   `{"class": "character|weapon|prop", "subject": "<craft words: what it is, materials, silhouette, palette>", "use": "<what it is for in that project>", "serves": {"project": "pof|mage-arena|bp"} | {"newProject": "<the kind of project it opens>"}, "style": "<optional>", "kind": "<weapon: sword|mace|axe|staff>"}`
+   `{"class": "character|weapon|prop", "subject": "<craft words: what it is, materials, silhouette, palette>", "use": "<what it is for in that project>", "serves": {"project": "bp"} | {"newProject": "<the kind of project it opens>"}, "need": "<need id - required for a project>", "style": "<optional>", "kind": "<weapon: sword|mace|axe|staff>"}`
    -> `npx tsx pipeline/scout.mts asset <night> --brief <file> --json`. **Every asset has a purpose**
    (operator, 2026-10-23, rejecting every asset of the first 3D nights for having none: "we cannot create assets
    without purpose"): it HELPS an existing game project (`serves.project`) or OPENS a new kind of project
    (`serves.newProject`, in plain words - "a cozy farming sim"), and `use` says what it is for there ("the
-   starting party's ranged hero"). The door refuses a brief without both; the 3D row leads with them. Leave `techniques` to the class
+   starting party's ranged hero"). For a game the brief names the `need` it answers (its class must be the need's;
+   its budget becomes the GAME's budget for that need, not gravitone's class budget). The door refuses a brief
+   without them; the 3D row leads with the need. Leave `techniques` to the class
    default unless the taste asks a question one technique answers. One subject per brief - "a quiver"
    is a prop of its own, never part of a character's brief.
 4. Read the answer: a variant written `failed` by the input gate carries its codes - that brief's

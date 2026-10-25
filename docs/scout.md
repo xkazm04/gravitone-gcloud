@@ -42,7 +42,7 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 | `ingest <night> [--source s-NN] [--retry] [--detach]` | launches the `scout-ingest` job over the pending sources and drives it here; `--retry` first puts the failed sources in scope back to pending | no |
 | `style <night> --sources s-01,s-03 --use "<content>" [--slug x] [--seed <batch>/sd-NNN] [--detach]` | an ordinary extract run (`launchExtract`, a gallery of those sources' pictures and keyframes) as one style candidate; its run id and job id go on the candidate | yes |
 | `scene <night> --source s-NN --use "<content>" [--frames k-012.jpg] [--seed <batch>/sd-NNN] [--detach]` | a scene candidate read from the chosen keyframe (default the first; ingest keeps one frame per cut, so neighbouring keyframes are different shots), launched through `launchScene` (`lib/producers/scoutScene.ts`) with a clip while the night's clip cap allows | yes |
-| `asset <night> --brief <file\|-> [--seed <batch>/sd-NNN] [--detach]` | one game asset from `{class, subject, use, serves: {project: pof|mage-arena|bp} | {newProject}, style?, kind?, techniques?, fromIdea?}` - `use` and `serves` required: an asset helps an existing game or opens a new kind of project, and its 3D row leads with both: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
+| `asset <night> --brief <file\|-> [--seed <batch>/sd-NNN] [--detach]` | one game asset from `{class, subject, use, serves: {project: bp} | {newProject}, need?, style?, kind?, techniques?, fromIdea?}` - `use` and `serves` required: an asset helps an existing game or opens a new kind of project, and its 3D row leads with both; a game brief names the `need` it answers (`## Game asset needs`) and takes the game's own budget for it: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
 | `ideas <night> --json <file\|-> [--detach]` | `[{title, target: scene\|style\|asset3d\|stats, genre, prompt, anchor: {kind: watch\|gap\|free, ref}, seed?, use?, reel?}]` (`genre` required, <= 80 chars; `seed` required once any live batch kept a seed - the candidate's `fromSeed`), one `idea` candidate each. Scene, style and 3d-asset ideas are ONE `scout-ideas` job drawing a rough artboard each in the Leonardo studio (driven here unless `--detach`); stats ideas carry `reel` and are ONE `scout-reels` job on the Claude seat, always queued for the worker (below, "A stats reel"). One bad brief refuses the batch with its place; a batch over `ideaCap` or `reelCap` writes nothing | studio credits, the seat |
 | `direction <night> --json <file\|->` | `{title, format: short\|video, genre, style, tone, audience, premise, basedOn: [<night>/<cell id>], use?}`: one `direction` candidate, words, rendered at once. Every `basedOn` entry must be a cell a LIVE night kept; the refusal names the entry and why | no |
 | `seeds new --json <file\|-> [--dry]` | `[{sentence, genre, subgenre, type, audience: kids\|family\|adult, format: short\|video, parent?: <batch>/sd-NNN}]`, 1..150 seeds written whole as `seeds/<batch>/batch.json` and decided on `/board/pkt:seeds:<batch>` (below, "Seeds"). One bad seed refuses the batch with its place: a facet over its bound or on two lines, a sentence any batch already holds (case- and whitespace-folded), a `parent` the seed door refuses | no |
@@ -545,6 +545,25 @@ It never keeps or commits. `pipeline/scout-schedule.ps1` registers the nightly r
 `-Print` shows it, `-Install -At 22:30` registers it, `-Remove` takes it away; the operator installs it.
 The scheduled run is `claude -p "/scout night --until 06:30"` with its tools fenced to search, read,
 the CLI and committing `knowledge/` and `.ai/registry-leads.jsonl`; logs land in `foundry-out/scout/logs/`.
+
+## Game asset needs
+
+Spark scout-vision S4 (2026-10-26). A game asset answers a need the GAME states, at the game's own budget, or it is
+not briefed. POF writes one tracked file per onboarded game - `npx tsx scripts/asset-needs.ts <project>` in pof ->
+`../pof/asset-needs/<project>.json`, contract `asset-needs/1` (pof's `docs/asset-needs.md`): the inventory (each
+asset's class, tris by the game's own rule, budget, gates, and the game's own 0-3 score where its scorecard names
+it) and the NEEDS - `scored-low` (below the game's pass threshold) and `missing` (a roster entry with no model) -
+each with the game's words for why, its evidence line, a priority and, when the game states one, its budget. A need
+with a `gravitoneClass` is briefable.
+
+`lib/foundry/scout/needs.ts readNeeds` reads it (root `EXPORT_ROOT_POF`, else `../pof`); a file missing, malformed or
+older than 7 days reads as unreadable with the command that refreshes it. The taste brief carries `## Asset needs`.
+The asset door: a `serves: {project: "bp"}` brief must name an OPEN briefable `need` of a fresh file, in the need's
+class; its `budgetTris` becomes the need's; the candidate and its 3D row carry the need. **Onboarded: bp** (first file
+2026-10-26: 18 assets, 7 needs, all scored-low - the lamp agent, pins and furniture briefable). **pof** is refused -
+its UE project is gone, nothing to measure. **mage-arena is retired as a target** (operator, 2026-10-25: developed on
+another device): the door refuses it, the Library's export offers pof and bp only, old candidates that served it
+still read.
 
 ## Characters (the muse wing, merged)
 

@@ -98,6 +98,7 @@ path.e.fade{opacity:.08}
   <ol>
     <li><b>The ladder.</b> Spread genres while no project exists; prove a kept idea can be executed (storyboard &rarr; trial clips &rarr; piece); a project (channel, album, game) is born on the Board only after that.</li>
     <li><b>S1 shipped: prove before you spread.</b> While 20+ kept scene/style ideas have no storyboard, a seed batch takes children plus at most 20 fresh (47 waiting at the cut). Storyboards: default 12, max 20, each applying a researched technique a keep files into PATTERNS.md. Music seeds carry instruments, tempo, mood, vocals; the Suno prompt is written from them.</li>
+    <li><b>S4 shipped: game asset needs.</b> POF writes asset-needs/bp.json from bp's own files (18 assets, 7 needs, all scored low); a game brief must name an open need and takes the game's budget. mage-arena retired as a target (developed on another device).</li>
     <li><b>S3 shipped: one loop, characters.</b> The muse wing is merged: new nights are scout nights, the 4 muse nights a read-only archive. Characters grow from kept character seeds (card rules by audience and app; parody names in words, never a real person, never a source picture), get a judged reference sheet, and are cast into storyboards and trials (identity block + sheet as a late Flux reference), scene stills and artboards (identity block).</li>
     <li><b>S2 shipped: genres and ventures.</b> A genre is born when you keep a proposal resting on a kept storyboard; up to 2 trials a night per live genre (every panel clipped), 4 kept trials make a piece (best trial, rejected clips re-made, cut with LTX audio); a kept piece makes it publishable and opens a channel proposal. Ventures: channel, album (game in S4). Library kinds + a /scout venture filter. <b>Next:</b> <b>S3</b> muse merged into scout as one character creator (named fictional characters in words, never real people, never source pixels); <b>S4</b> POF <code>asset-needs.json</code>; <b>S5</b> stats reel real data.</li>
   </ol>
@@ -337,10 +338,10 @@ const N = [
   use:"A kept stats reel's next step: real data researched and rendered in full.",
   aim:"Give the data-explainer genre a path to a published video.", gate:"Planned.", reject:null, teaches:"-",
   question:"Is the real story as good as the illustrative one?", src:"spark scout-vision, operator 2026-10-25"},
- {id:"needs", lane:"scout", col:4, row:6, title:"Game asset needs (S4)", sub:"POF asset-needs.json per game", step:"S4", plan:true,
+ {id:"needs", lane:"scout", col:4, row:6, title:"Game asset needs", sub:"POF asset-needs/<game>.json - bp onboarded", step:"5a",
   use:"POF reads a game's manifests, scores each asset against its class and peers, and lists what is missing.",
   aim:"Every asset brief answers a need: 'no arena gate yet', 'character X is low poly next to the other main characters'.",
-  gate:"Planned; built in POF, read by gravitone from a static file.", reject:null, teaches:"-",
+  gate:"POF writes the file from the game's own manifests and scorecard (npx tsx scripts/asset-needs.ts bp); fresher than 7 days, or game briefs refuse. mage-arena retired (another device); pof refused (no UE content).", reject:null, teaches:"-",
   question:"Which need does this asset close, and how much does it raise the score?", src:"spark scout-vision wave 2 (POF seam)"},
  // ---------- muse
  {id:"mres", lane:"muse", col:2, row:12, title:"Character seed", sub:"type character: for an app, one / ensemble / parody", step:"3",
@@ -427,7 +428,7 @@ const E = [
  ["project","yt","nb","channel publish"],
  ["reel","realdata","nb","kept reel"],
  ["realdata","yt","nb","publish"],
- ["needs","asset","nb","a stated need"],
+ ["needs","asset","need","need id + game budget"],
  ["video","yt","nb","publish"],
  ["asset","game","need","serves.project"],
  ["style","catalog","need","kept look"],
