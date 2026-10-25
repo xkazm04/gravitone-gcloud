@@ -199,3 +199,16 @@ test("a booking failure does not fail the turn", async () => {
     expect(out.json).toEqual({ ok: true });
   });
 });
+
+test("an is_error envelope the engine reported a cost for books that cost as a failed row", async () => {
+  // `# DOOR is_error`: the run ended error_during_execution and the envelope
+  // carries total_cost_usd 0.0004. The seat did the work; the ledger holds it.
+  let refused: unknown;
+  await withFakeEngine(loadCassette("engine-door"), async () => {
+    refused = await reason({ prompt: "# DOOR is_error\n", turn: "edit-plan", schema: SCHEMA }).catch((e: unknown) => e);
+  });
+  expect((refused as { kind?: string }).kind).toBe("failed");
+  const rows = await textSpendRows();
+  expect(rows, "an errored run's reported cost booked no vendor row").toHaveLength(1);
+  expect(rows[0]).toMatchObject({ basis: "vendor", amount: 0.0004, outcome: "failed" });
+});
