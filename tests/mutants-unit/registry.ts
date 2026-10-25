@@ -7286,4 +7286,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "key={c.label}",
     why: "A trail whose two steps share a name gives React two siblings with one key, and a trail change may reuse the wrong step's DOM.",
   },
+  {
+    id: "ui-keycaps-tipped-cap-loses-its-role",
+    test: "packages/ui/test/components/keycaps.test.ts",
+    file: "packages/ui/src/components/keycaps/Keycaps.tsx",
+    find: '<kbd className={s.cap} role="term" tabIndex={0} aria-describedby={id}>',
+    replace: "<kbd className={s.cap} tabIndex={0} aria-describedby={id}>",
+    why: "A reason key cap takes focus as a bare kbd, so a screen reader lands on an element with no role (WCAG 4.1.2).",
+  },
 ];
