@@ -1,7 +1,7 @@
 ---
 name: scout
 memory: none
-version: 2.0.0
+version: 2.1.0
 category: Development
 description: The nightly training loop, with a stated purpose - spread genres, prove one at publishable quality, then birth a project - that develops what the operator already approved before it spreads (kept ideas become free local Flux storyboards that apply a researched execution technique; while 20+ kept ideas wait, a seed batch takes children plus at most 20 fresh seeds). It searches the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers), ~100 one-sentence seeds (genre, subgenre, type, audience, format) on their own packet, 20-30 rough idea artboards grown from kept seeds in the operator's Leonardo studio, storyboards of kept ideas (up to five local Flux frames, a paragraph and bullets - the root any full video needs), Suno tracks from kept music seeds and full-song visualizers from kept tracks, and 1-3 directions to confirm - all for YouTube video (Shorts ~30 s, videos up to 5 min) - inside a $15 Gemini night, and leave ONE Board packet pkt:scout:<night> for a few minutes of number keys in the morning (1 keep, 2-4 reject with a reason, 5 reject). Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout seeds [--dry], /scout folder <dir> [extract args], /scout status [<night>].
 argument-hint: "night [--dry] [--until HH:MM] | seeds [--dry] | folder <dir> | status [<night>]"
@@ -31,7 +31,15 @@ small amount of research and lot of generity"):
    publishable genre, an album from kept tracks, a game from its asset catalogue. From then on a night balances
    content for its projects (reused looks and characters inside the project's frame) against new genres.
 
-**Where the ladder stands today (2026-10-25): no projects, no genre record yet** - the night spreads and proves.
+**How the ladder is held (spark scout-vision S2).** A GENRE is a kernel head born when the operator keeps a
+night's `genre` proposal resting on a kept storyboard; every live genre gets up to 2 TRIALS a night (storyboards of
+kept ideas in that genre, every panel clipped on LTX); 4 kept trials make a PIECE due (the best trial rendered in
+full and cut); a kept piece makes the genre publishable. A VENTURE (a channel, an album; a game in S4) is born when
+the operator keeps a `venture` proposal. `## Genre ladder` and `## Ventures` in the taste brief say where each one
+stands and what it needs next. The night never births anything: it proposes, the operator's keep births.
+
+**Where the ladder stands today (2026-10-25): no venture, no genre yet** - the night spreads and proves, and
+proposes the first genre as soon as a storyboard is kept.
 **The balance is not yours to choose freely: prove before you spread.** `## Backlog` in the taste brief lists every
 kept idea still waiting for a storyboard. While 20 or more wait, the seeds door takes child seeds and at most 20
 fresh ones; the hours go to step 2 first.
@@ -156,8 +164,9 @@ the operator's hour; the operator may also type it after a workday. Either way:
 
 `npx tsx pipeline/scout.mts open --live --until 06:30 --json` (a typed `/scout night --dry` drops
 `--live`; `--until` from the argument when given). Note the night id. Then read, in this order:
-`foundry-out/scout/<night>/taste.md` (`## Backlog` first: how many kept ideas wait for a storyboard and
-whether the seed gate is on - step 2's work list; then `## Last night's load`: how much of the band last night
+`foundry-out/scout/<night>/taste.md` (`## Genre ladder` and `## Ventures` first: every live genre's kept trials
+and next step, every venture's frame - step 2's first work; then `## Backlog`: how many kept ideas wait for a
+storyboard and whether the seed gate is on; then `## Last night's load`: how much of the band last night
 filled and what sat under it - scope tonight to fill that; then what the operator kept and threw, with reasons - **a channel or a
 kind of look rejected twice is not searched again, and a use under "refused as a use" is not proposed
 again** unless the night has a new reason it now serves; `## Directions confirmed` are the lanes the
@@ -179,6 +188,15 @@ and recipes - a look already there is not a find).
 The night proves before it spreads (`## The vision`). Read `## Backlog` in the taste brief first: every kept idea
 still waiting for a storyboard, oldest first. This step takes the night's first hours and the box's free local
 lanes (Flux and LTX on ComfyUI, the Claude seat for research); seeds and new ideas come after it.
+
+### 2a0. Genre trials - first, from the same cap
+
+For every LIVE genre under `## Genre ladder` (perfecting or piece due), up to 2 trials tonight: a storyboard brief
+(step 2a's shape) of a kept idea that fits the genre, carrying `genre: "gn-..."`. Write its panels in the genre's
+look and move them through its grammar (the beats `## Genre ladder` lists); the research step applies as for any
+storyboard. The door refuses a trial past the genre's 2 slots, or for a genre that is retired or already
+publishable. Every panel of a trial is clipped on LTX after its frames (the job does it; ~100 s a clip), so a trial
+is a rough cut the operator judges whole. Trials come out of `storyboardCap` before the backlog gets any.
 
 ### 2a. Storyboards - compose the kept ideas, applying a researched technique
 
@@ -225,6 +243,13 @@ Every `## Ideas to develop` line of the taste brief, before tonight's own finds:
    <its file>`, `style` -> `style --sources <that s-NN>`, `asset3d` -> an `asset` brief carrying
    `"fromIdea": "<night>/<c-id>"`. The candidate carries `fromIdea`, and the idea leaves the list (a
 candidate that FAILS does not take it off: it comes back the next night).
+
+### 2c. Pieces - a genre that earned one
+
+`npx tsx pipeline/scout.mts piece <night> --detach` for every genre whose piece is due (4 kept trials; `## Genre
+ladder` says `next: a piece`): the night takes the genre's best kept trial, re-makes only the clips the operator
+rejected on it, and cuts all of them with their own sound into one 15-30 s video. `piece <night> --collect` before
+closing. Kept, the genre is publishable - and the next night proposes its channel (step 10b).
 
 ### 3. Seeds - children first, fresh ones within the gate
 
@@ -274,7 +299,11 @@ is another line on the backlog the night has not yet proven.
 3. **Grow them from kept seeds.** Every `## Seeds to develop` line that `needs: ideas` gets 1-2 ideas
    first; the rest of the cap goes to kept seeds by the split's targets, mostly inside confirmed
    directions, a third still exploring. Spread the genres (above) when no seed is kept yet.
-4. **Each idea** - `{title, target, genre, seed, app, appTarget, aim, anchor, prompt}` (`seed: <batch>/sd-NNN` - required
+**Ventures come first once one exists.** Every live venture under `## Ventures` gets ideas inside its frame
+(its tone, audience, format, look; its genres' grammar) before the spread takes the rest; such an idea, seed or
+storyboard carries `venture: "vn-..."` (the door refuses an unknown or retired one).
+
+4. **Each idea** - `{title, target, genre, seed, venture?, app, appTarget, aim, anchor, prompt}` (`seed: <batch>/sd-NNN` - required
    once any seed is kept; the door refuses an unkept or paused one):
    - `title` - the idea as a headline (<= 90 chars): what the video IS, not a technique;
    - `target` - what a keep builds next night: `scene` (a shot with a clip), `style` (the video's look),
@@ -473,6 +502,21 @@ audience, premise, basedOn}`:
 `npx tsx pipeline/scout.mts direction <night> --json <file>`. A direction under `## Directions refused` is
 never proposed again; a confirmed one is not re-proposed - work inside it.
 
+### 10b. Proposals - a genre, a venture
+
+The night proposes; the operator's keep births. `npx tsx pipeline/scout.mts propose <night> --json <file>`, one
+array, one bad brief refuses the batch:
+- **A genre** - `{kind: "genre", name, fromStoryboard: "<night>/<c-id>", look, grammar: [beats], use?, aim?}` when
+  a KEPT storyboard (not a trial of an existing genre) shows a format worth repeating: name it in plain words
+  (`deadpan office satire, painted 3D`), the look in words, the grammar as the 3-8 beats its videos move through
+  (from the storyboard's bullets). One proposal per storyboard; never a name a live genre already holds.
+- **A channel venture** - `{kind: "venture", name, ventureKind: "channel", frame: {tone, audience, format, look,
+  genres: ["gn-..."]}, basedOn: ["<night>/<c-id>/video", ...]}` the night after a genre turns publishable: its kept
+  piece's cell in `basedOn`, the frame what every later video of the channel keeps.
+- **An album venture** - `ventureKind: "album"` when at least 4 kept track clips of music seeds share a genre
+  (`basedOn` those clip cells); the frame's look is the sound in words.
+A rejected proposal with its reason is a ban: never the same name or storyboard again.
+
 ### 11. Stop
 
 Collect the music first (step 9.3). Stop launching at the first of: the deadline, a refused launch for money, ~20 rendered rows, three
@@ -489,7 +533,7 @@ Append to `.vault/Scout/nights.md` (create it): the date, the night id, the pack
 `/board/pkt:scout:<night>`, counts by kind, Gemini settled and held USD and the uncapped line, the stop
 reason, `leads: N filed, M queued` (step 0, and `leads --json`), `seeds: batch <id> · N (C children,
 F fresh) · /board/pkt:seeds:<batch>`, `ideas: N drawn across G genres from S seeds, K kept ideas developed`,
-`storyboards: N composed (F frames)`, `music: N tracks, V visualizers`, `directions: N proposed`, and at most three
+`storyboards: N composed (F frames, T trials across G genres)`, `pieces: N cut`, `proposals: N genres, V ventures`, `music: N tracks, V visualizers`, `directions: N proposed`, and at most three
 lines of what the night could not do (a source that refused, a doctor line). No narration of your process.
 
 ## /scout seeds [--dry]

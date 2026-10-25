@@ -190,12 +190,13 @@ The song is the clock: a track is made and judged on one night, and its visualiz
 
 ## What the nights are for
 
-**The ladder (spark scout-vision, 2026-10-25).** Every night climbs one: **spread** genres while no project
+**The ladder (spark scout-vision, 2026-10-25).** Every night climbs one: **spread** genres while no venture
 exists; **prove** a kept idea can be executed (a storyboard on local Flux that applies a researched execution
-technique, then trial clips, then an assembled 15-30 s piece kept as "would publish"); and only then a **project**
-born on the Board - a channel from a publishable genre, an album from kept tracks, a game from its asset catalogue.
-The genre and project records, the merge of the muse wing into this one and the game projects' asset needs are
-later stages of the same spark; stage 1 shipped the purpose, the order and the gate below.
+technique, then a genre's trials with every panel clipped, then a 15-30 s piece kept as "would publish"); and only
+then a **venture** born on the Board - a channel from a publishable genre, an album from kept tracks, a game from its
+asset catalogue (S4). Stage 1 shipped the purpose, the order and the gate below; stage 2 the genres and ventures
+(`## Genres and ventures`); the merge of the muse wing (S3), the game asset needs (S4) and a stats reel's real data
+(S5) are later stages of the same spark.
 
 **Prove before you spread - the backlog gate.** `backlog.ts` counts the kept `scene`/`style` ideas of live
 committed nights that no storyboard (failed ones aside) composes yet, and the kept, unpaused seeds no idea grows
@@ -410,6 +411,30 @@ storyboard) and `## Ready for full video` (kept storyboards, with their idea, ti
 storyboard does not take its idea off `## Ideas to develop`: the idea's scene, style or asset act is
 independent of it. On the graph a storyboard sits in its own `board` column between idea and run, linked
 from its idea; a kept one leaves no output node (nothing real exists until the video is made).
+
+## Genres and ventures
+
+Spark scout-vision S2. **The kernel holds the heads, the nights hold the evidence.** The kernel module `ventures`
+(`packages/kernel/src/ventures/`) keeps `genres` and `ventures` - who was born from which kept proposal, which genre
+produces for which channel, who was retired - and an append-only `venture_ops` log; events `genre.born`,
+`venture.born`, `genre.retired`, `venture.retired`. What a genre has PROVEN is derived from the nights on read
+(`lib/foundry/scout/genres.ts`): its kept trials (storyboards carrying its id, kept by the storyboard rule on live
+committed nights) and its newest piece's verdict. State (`@gt/domain/genre` `genreStateOf`): **perfecting** ->
+**piece-due** (4 kept trials) -> **publishable** (piece kept); **retired** by the operator's act.
+
+| command | what it does |
+|---|---|
+| `propose <night> --json <file\|->` | Words-only proposals, one bad brief refuses the batch. A **genre** `{kind: "genre", name, fromStoryboard, look, grammar, use?, aim?}` stands on a storyboard KEPT on a live committed night (one proposal per storyboard; a live genre's name refused). A **venture** `{kind: "venture", name, ventureKind: "channel"\|"album", frame: {tone, audience, format, look, genres}, basedOn}`: a channel names publishable genres with their kept piece cell in `basedOn`; an album stands on 4 kept track clips of music seeds; `game` waits for S4. Rows in the packet group `genres` (reasons generic, use case, story); a KEPT proposal births the head from the Board's apply (idempotent on the proposal ref), a rejected one births nothing. |
+| `storyboard <night> --json` with `genre: "gn-..."` | A **trial**: up to 2 per live genre a night, reserved first from `storyboardCap`; the door refuses a retired or publishable genre or a trial past its slots, naming the numbers. The job clips every drawn panel on LTX after the frames (`storyboards/c-NN/clip-N.mp4`, `clips[]` by panel, null where a clip failed - that panel's alone); clip cells `c-NN/clip-N` sit in the trial's run. |
+| `piece <night> [--genre gn-...] [--detach]` · `piece <night> --collect` | For every piece-due genre (or one): its best kept trial (most kept clips, ties to the newest) rendered in full - only the clips the operator rejected or that failed are re-made, the kept ones copied - and cut with their own audio into `pieces/c-NN/piece.mp4` (producer `scout-piece`, gpu.local, $0). A row in `pieces` (story, craft, motion); kept, the genre is publishable and the `genre-publishable` registry lead queues once. A dry night writes the piece as words. |
+| `genre list \| retire <gn-id>` · `venture list \| retire <vn-id>` | The heads with their derived state; retiring is the operator's act (an agent actor is refused) and terminal. |
+
+Ideas, seeds and storyboards carry an optional `venture: "vn-..."` (refused when unknown or retired). The taste
+brief carries `## Genre ladder` (live genres, kept trials n/4, next step) and `## Ventures` (live frames); `## Genres`
+stays the idea genres the operator kept and threw. The Library has kinds `genre` and `venture` (facets `ladder`,
+`venture`, `type`) with their own detail pages; /scout draws a venture filter above the bands once a venture exists.
+Trials and pieces load the GPU: ~10 trials x (Flux frames + ~4 LTX clips) is about 2.5 GPU hours a night at five
+live genres, governed by the worker's admission and the 60-80% load band.
 
 ## The morning
 

@@ -98,7 +98,7 @@ path.e.fade{opacity:.08}
   <ol>
     <li><b>The ladder.</b> Spread genres while no project exists; prove a kept idea can be executed (storyboard &rarr; trial clips &rarr; piece); a project (channel, album, game) is born on the Board only after that.</li>
     <li><b>S1 shipped: prove before you spread.</b> While 20+ kept scene/style ideas have no storyboard, a seed batch takes children plus at most 20 fresh (47 waiting at the cut). Storyboards: default 12, max 20, each applying a researched technique a keep files into PATTERNS.md. Music seeds carry instruments, tempo, mood, vocals; the Suno prompt is written from them.</li>
-    <li><b>S2</b> genre record (trials = storyboard + local clips, 4 kept &rarr; piece) and project record born from a publishable genre, kept tracks or a POF onboarding. <b>S3</b> muse merged into scout: one character creator fed by artboards or web sources; named fictional characters allowed in words (parody / what-if), never real people, never source pixels. <b>S4</b> POF writes <code>asset-needs.json</code> per game (inventory, peer score, needs); asset briefs answer a need. <b>S5</b> a kept stats reel gets real data and a full render.</li>
+    <li><b>S2 shipped: genres and ventures.</b> A genre is born when you keep a proposal resting on a kept storyboard; up to 2 trials a night per live genre (every panel clipped), 4 kept trials make a piece (best trial, rejected clips re-made, cut with LTX audio); a kept piece makes it publishable and opens a channel proposal. Ventures: channel, album (game in S4). Library kinds + a /scout venture filter. <b>Next:</b> <b>S3</b> muse merged into scout as one character creator (named fictional characters in words, never real people, never source pixels); <b>S4</b> POF <code>asset-needs.json</code>; <b>S5</b> stats reel real data.</li>
   </ol>
 </details>
 <details class="finds">
@@ -278,14 +278,13 @@ const N = [
   src:"SKILL.md scout 4.4"},
 
  // ---------- scout: results / end
- {id:"video", lane:"scout", col:5, row:4, title:"Full video", sub:"from a kept storyboard", step:"none", nb:true,
+ {id:"video", lane:"scout", col:5, row:4, title:"Piece", sub:"a genre's best trial rendered in full and cut", step:"2c",
   use:"The Short (~30 s) or video (up to 5 min) the storyboard describes.",
   aim:"The point of the whole loop.",
-  gate:"Gate exists (keptStoryboardFor) but no act in the CLI builds it: 'a storyboard's full video is later work'.",
+  gate:"4 kept trials of a genre: its best kept trial, only the rejected clips re-made, cut with their own audio (scout-piece producer).",
   reject:null,
   teaches:"-",
-  question:"What is the first full video to build, and from which kept storyboard?",
-  flag:"Not built. This is the missing link between kept ideas and a published video.",
+  question:"Would you publish this cut as it stands?",
   src:"lib/foundry/scout/storyboardKept.ts; graph.ts header; SKILL.md 'What NOT to do'"},
 
  {id:"catalog", lane:"shared", col:5, row:10, title:"Style catalogue", sub:"pipeline/foundry/styles.json (Library)", step:"-",
@@ -318,20 +317,20 @@ const N = [
   src:"SKILL.md scout 'What the night is for'"},
 
  // ---------- planned (scout-vision S2-S5)
- {id:"genre", lane:"scout", col:5, row:5, title:"Genre (S2)", sub:"use x look x grammar, perfected on trials", step:"S2", plan:true,
-  use:"A candidate format proven on trials: storyboards of kept ideas in the genre plus 1-2 local clips of their beats.",
+ {id:"genre", lane:"scout", col:5, row:5, title:"Genre", sub:"use x look x grammar, perfected on trials", step:"2a0, 10b",
+  use:"A format proven on trials: storyboards of kept ideas in the genre, every panel clipped on LTX, up to 2 a night.",
   aim:"Turn 'we kept some ideas' into 'we can execute this format'. 4 kept trials lead to an assembled 15-30 s piece; keeping the piece makes the genre publishable.",
-  gate:"Planned. Born by the operator on a kept run; state derived from evidence (perfecting -> publishable -> varying).",
-  reject:{list:[["story","The frames do not add up to a video worth making."],["motion","The movement is wrong: drift, jitter, or an unmotivated camera."],["use case","Serves no video worth making; later nights steer away."]], note:"Trial reasons revise the genre's recipe for the next night."},
+  gate:"Born when the operator keeps a night's genre proposal resting on a kept storyboard. State derived from the nights: perfecting -> piece-due -> publishable; retired by act.",
+  reject:{list:[["story","The frames do not add up to a video worth making."],["motion","The movement is wrong: drift, jitter, or an unmotivated camera."],["use case","Serves no video worth making; later nights steer away."]], note:"Trials are storyboards: their reasons land in the taste brief like any storyboard's, and steer the next trials."},
   teaches:"Which formats the loop can actually execute.",
   question:"Would you publish the piece? That keep is the only proof a genre has.",
   src:"spark scout-vision wave 2; genre-forge design 2026-10-22"},
- {id:"project", lane:"scout", col:6, row:5, title:"Project (S2)", sub:"channel, album or game", step:"S2", plan:true,
+ {id:"project", lane:"scout", col:6, row:5, title:"Venture", sub:"channel, album or game", step:"10b",
   use:"The frame later nights work inside: tone, look, characters, audience. Born from a publishable genre (channel), kept tracks (album) or a POF onboarding (game).",
   aim:"Balance content for existing projects (reused looks and characters) against new genres.",
-  gate:"Planned. Only the operator births one, on the Board, from proven quality.",
+  gate:"Born when the operator keeps a venture proposal: a channel from a publishable genre's kept piece, an album from 4 kept music clips; a game in S4.",
   reject:null, teaches:"-",
-  question:"Which project does tonight's work serve, and does it fit its frame?",
+  question:"Which venture does tonight's work serve, and does it fit its frame?",
   src:"spark scout-vision wave 1-2"},
  {id:"realdata", lane:"scout", col:4, row:8, title:"Reel real data (S5)", sub:"researched dataset + full render", step:"S5", plan:true,
   use:"A kept stats reel's next step: real data researched and rendered in full.",
@@ -410,14 +409,13 @@ const E = [
  ["idea","asset","need","kept 3D idea"],
  ["idea","reel","need","target stats"],
  ["idea","story","need","needs a KEPT idea"],
- ["story","video","nb","kept storyboard"],
- ["story","genre","nb","trial"],
- ["scene","genre","nb","trial clip"],
- ["genre","video","nb","piece"],
- ["genre","project","nb","publishable"],
- ["track","project","nb","album"],
+ ["story","genre","need","proposal kept"],
+ ["genre","story","back","trials"],
+ ["genre","video","need","4 kept trials"],
+ ["video","project","need","piece kept"],
+ ["track","project","need","4 kept clips"],
  ["game","project","nb","onboarding"],
- ["project","yt","nb","channel"],
+ ["project","yt","nb","channel publish"],
  ["reel","realdata","nb","kept reel"],
  ["realdata","yt","nb","publish"],
  ["needs","asset","nb","a stated need"],
