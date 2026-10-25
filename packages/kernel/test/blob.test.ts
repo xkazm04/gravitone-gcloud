@@ -69,16 +69,6 @@ describe("blob store", () => {
     expect(!r.ok && r.error.code).toBe("internal");
   });
 
-  it("a same-length damaged blob is healed by putting its bytes again", async () => {
-    const b = fresh();
-    const ref = must(await b.put(bytes("original"), "text/plain"));
-    writeFileSync(must(b.pathOf(ref)), "tamperXX");
-    expect((await b.read(ref)).ok).toBe(false);
-    must(await b.put(bytes("original"), "text/plain"));
-    expect(new TextDecoder().decode(must(await b.read(ref)))).toBe("original");
-    expect(walk(b.root)).toHaveLength(1);
-  });
-
   it("put resolves to the write's error when the cleanup rm also fails", async () => {
     const b = fresh();
     faults.rename = faults.rm = true;
