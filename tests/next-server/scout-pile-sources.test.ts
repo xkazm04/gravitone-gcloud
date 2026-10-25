@@ -11,6 +11,7 @@ vi.mock("../../app/(studio)/_shell/facts.ts", async (orig) => ({
   SCOUT_PILE_SOURCES: new Set(["scout", "seeds", "scout-reels"]),
 }));
 
+import type { PacketSummary } from "@gt/domain/board";
 import { SCOUT_PILE_SOURCES } from "../../app/(studio)/_shell/facts.ts";
 import { sectionOf } from "../../app/(studio)/_shell/nav.ts";
 import { isScoutPacket } from "../../app/(studio)/scout/_scout/ScoutHead.tsx";
@@ -22,6 +23,6 @@ describe("the scout's pile sources", () => {
     const want = SCOUT_PILE_SOURCES.has(source);
     expect(sectionOf(`/board/pkt:${source}:r1`) === "scout", "nav").toBe(want);
     expect(sectionOf(`/board/pkt%3A${source}%3Ar1`) === "scout", "nav, encoded").toBe(want);
-    expect(isScoutPacket({ source }), "Board packets").toBe(want);
+    expect(isScoutPacket({ source: source as PacketSummary["source"] }), "Board packets").toBe(want);
   });
 });
