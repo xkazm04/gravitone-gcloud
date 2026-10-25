@@ -3802,6 +3802,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A render after an undecided plate was removed mints an id the sheet already holds, and the door refuses the whole landing: the fixture atelier's render fails where the real side's lands.",
   },
   {
+    id: "style-fixture-confirm-runs-twice",
+    test: "tests/next-server/style-atelier.test.ts",
+    file: "app/(studio)/library/style/_port/fixtureActs.ts",
+    find: "  if (landedJob(jobId)) {",
+    replace: "  if (false) {",
+    why: "A second confirm of one receipt on the fixture side answers a fresh receipt instead of the job, so one more Enter renders the set again - the real side's one-confirm-one-job rule is not what the fixture lane photographs.",
+  },
+  {
     id: "look-refs-unselected",
     test: "packages/producers/test/frames-look.test.ts",
     file: "packages/producers/src/frames/look.ts",

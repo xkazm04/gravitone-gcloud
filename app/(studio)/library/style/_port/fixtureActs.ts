@@ -8,9 +8,9 @@ import type { StyleAct, StyleActOutcome } from "@gt/domain/styleView";
 import { quote } from "@gt/kernel/pricing/quote";
 
 import { recipeSlots } from "../../../../../lib/foundry/adopt.ts";
-import { actRefusal } from "../../../../../lib/producers/styleLaunch.ts";
+import { actRefusal, styleJobId } from "../../../../../lib/producers/styleLaunch.ts";
 import { digest } from "../../../projects/[id]/_part/hash.ts";
-import { door, land, recOf, type Media } from "./fixture.ts";
+import { door, land, landedJob, loadStyle, recOf, type Media } from "./fixture.ts";
 import { ADOPT_REPLY, ADOPT_SEEDS, DRY_GRID, presetPlate } from "./fixtureData.ts";
 
 // A STYLE ACT IS A RECEIPT, THEN A CONFIRM (Phase 4 COMMON decision 3) - the two acts that call
@@ -138,6 +138,13 @@ async function landed(act: StyleAct, b: Basis, at: string, token: string, media:
 }
 
 export async function confirmAct(act: StyleAct, mode: ReceiptMode, token: string, now: number, media: Media): Promise<Result<StyleActOutcome>> {
+  // The real side's job id (lib/producers/styleLaunch.ts): a second confirm of one token - a double
+  // Enter, a retried request - answers the job the first made and renders nothing more.
+  const jobId = styleJobId(styleIdOf(act), token);
+  if (landedJob(jobId)) {
+    const v = await loadStyle(styleIdOf(act), media);
+    return v.ok ? ok({ kind: "launched", jobId, view: v.value }) : v;
+  }
   const b = await basis(act, mode, media);
   if (!b.ok) return b;
   const fresh = receiptOf(act, b.value, mode, now);
@@ -145,6 +152,6 @@ export async function confirmAct(act: StyleAct, mode: ReceiptMode, token: string
   const at = new Date(now).toISOString();
   const next = await landed(act, b.value, at, token, media);
   if (!next.ok) return next;
-  const done = land(b.value.style.id, b.value.rev, next.value, at);
+  const done = land(b.value.style.id, b.value.rev, next.value, at, jobId);
   return done.ok ? ok({ kind: "launched", jobId: done.value.jobId, view: done.value.view }) : done;
 }

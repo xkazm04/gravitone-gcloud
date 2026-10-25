@@ -36,17 +36,18 @@ export function door<T extends Parameters<typeof withStatus>[0]>(draft: T): Resu
 }
 
 type Rec = { rev: number; style: Style; at: string };
-type World = { readonly styles: Map<string, Rec>; seq: number; seeded: boolean };
+/** `jobs`: the job ids acts have landed as (one confirm, one job - a second confirm finds it). */
+type World = { readonly styles: Map<string, Rec>; readonly jobs: Set<string>; seeded: boolean };
 
 declare global {
   var __gtStyleFixture: World | undefined;
 }
 
-const world = (): World => (globalThis.__gtStyleFixture ??= { styles: new Map(), seq: 0, seeded: false });
+const world = (): World => (globalThis.__gtStyleFixture ??= { styles: new Map(), jobs: new Set(), seeded: false });
 
 /** Start the style universe over (the live lane's reset, beside `resetProduce`). */
 export function resetStyles(): void {
-  globalThis.__gtStyleFixture = { styles: new Map(), seq: 0, seeded: false };
+  globalThis.__gtStyleFixture = { styles: new Map(), jobs: new Set(), seeded: false };
 }
 
 async function recordOf(seed: Seed, media: Media): Promise<Result<Style>> {
@@ -135,8 +136,11 @@ export async function recOf(id: string, media: Media): Promise<Result<{ readonly
   return r === undefined ? err("not-found", `no style ${id}`) : ok({ rev: r.rev, style: r.style });
 }
 
-/** An act's landing: one write through the door at the rev the act was priced against. */
-export function land(id: string, rev: number, next: Style, at: string): Result<{ readonly view: StyleView; readonly jobId: string }> {
+/** Whether an act's job has landed already (its confirm is answered by that job, not run again). */
+export const landedJob = (jobId: string): boolean => world().jobs.has(jobId);
+
+/** An act's landing as job `jobId`: one write through the door at the rev the act was priced against. */
+export function land(id: string, rev: number, next: Style, at: string, jobId: string): Result<{ readonly view: StyleView; readonly jobId: string }> {
   const w = world();
   const r = w.styles.get(id);
   if (r === undefined) return err("not-found", `no style ${id}`);
@@ -144,6 +148,6 @@ export function land(id: string, rev: number, next: Style, at: string): Result<{
   r.style = next;
   r.rev += 1;
   r.at = at;
-  w.seq += 1;
-  return ok({ view: viewOfRec(r), jobId: `job:style-${id}-${w.seq}` });
+  w.jobs.add(jobId);
+  return ok({ view: viewOfRec(r), jobId });
 }

@@ -19,6 +19,7 @@ import type { StyleAct, StyleOp, StyleOpOutcome, StyleView } from "@gt/domain/st
 import { loadStyle, opStyle, resetStyles, type Media } from "../../app/(studio)/library/style/_port/fixture.ts";
 import { actReceipt, confirmAct } from "../../app/(studio)/library/style/_port/fixtureActs.ts";
 import { ADOPT_SEEDS, DRY_GRID, SEEDS, presetPlate } from "../../app/(studio)/library/style/_port/fixtureData.ts";
+import { styleJobId } from "../../lib/producers/styleLaunch.ts";
 
 const media: Media = async (file): Promise<Result<BlobRef>> => ok({ sha256: createHash("sha256").update(file).digest("hex"), bytes: file.length, mime: "image/jpeg" });
 const NOW = Date.parse("2026-10-16T12:00:00.000Z");
@@ -176,6 +177,20 @@ describe("acts: a receipt, then a confirm", () => {
     const again = await run({ kind: "generate-proofs", styleId: after.id, baseRev: after.rev, trialIds: ["flywheel"] });
     expect(again.proofs.map((p) => p.trialId)).toEqual(["wish-list", "flywheel"]);
     expect(new Set(again.proofs.map((p) => p.id)).size).toBe(2);
+  });
+
+  // lib/producers/styleLaunch.ts: one confirm, one job - a second confirm of one token finds it.
+  it("answers a second confirm of one receipt with the job the first made, and renders nothing more", async () => {
+    const v = await view("chalk-argument");
+    const act: StyleAct = { kind: "generate-proofs", styleId: v.id, baseRev: v.rev, trialIds: ["flywheel"] };
+    const rc = await actReceipt(act, "dry", NOW, media);
+    if (!rc.ok) throw rc.error;
+    const first = await confirmAct(act, "dry", rc.value.token, NOW, media);
+    const second = await confirmAct(act, "dry", rc.value.token, NOW, media);
+    if (!first.ok || first.value.kind !== "launched") throw new Error("the first confirm launched");
+    expect(first.value.jobId).toBe(styleJobId(v.id, rc.value.token));
+    expect(second.ok && second.value).toMatchObject({ kind: "launched", jobId: first.value.jobId, view: { rev: first.value.view.rev } });
+    expect((await view("chalk-argument")).proofs).toHaveLength(1);
   });
 
   it("refuses to adopt a candidate (v1's 409, kept)", async () => {
