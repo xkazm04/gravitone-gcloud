@@ -361,6 +361,8 @@
 .pc.portrait .pc-enter{padding:0 18px 0 20px}
 /* a phone: "Sign in with Google" is ~280 px with the search button, and the wordmark ends at ~167 px, so the pill sat over it by 53-104 px (360-412 wide); the G mark keeps the name, the button's aria-label keeps all of it */
 @media (max-width:479px){.pc .pc-enter-long{display:none}}
+/* the smallest phones (320 px): the wordmark ends at ~167 px and the search button plus the pill began at 129, so they met by 38 px; a smaller wordmark and a tighter pill clear it */
+@media (max-width:339px){.pc{--fs-wm:20px}.pc .pc-enter,.pc.portrait .pc-enter{padding:0 12px;gap:6px}}
 @media (prefers-reduced-motion:reduce){
   .pc .sway,.pc .drift,.pc .pulse,.pc .med .bob{animation:none!important}
   .pc .pp,.pc .med,.pc .ream,.pc #world,.pc .view,.pc .lsheet,.pc #banner,.pc .sv-side{transition-duration:.15s!important;transition-delay:0s!important}
