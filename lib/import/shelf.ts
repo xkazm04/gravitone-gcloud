@@ -79,7 +79,15 @@ const PUBLIC_MIME: Readonly<Record<string, string>> = { ".png": "image/png", ".j
 export const publicFile: PublicFile = (src) => {
   if (!src.startsWith("/") || src.startsWith("//")) return null;
   const root = path.resolve(process.cwd(), "public");
-  const abs = path.resolve(root, `.${decodeURI(src.split(/[?#]/)[0] ?? "")}`);
+  let decoded: string;
+  try {
+    decoded = decodeURI(src.split(/[?#]/)[0] ?? "");
+  } catch {
+    // A `%` that is not an escape (a v1 asset named "50%.jpg", its src kept unescaped): no file
+    // here, and never a URIError that fails the whole preview.
+    return null;
+  }
+  const abs = path.resolve(root, `.${decoded}`);
   const mime = PUBLIC_MIME[path.extname(abs).toLowerCase()];
   if (mime === undefined || !abs.startsWith(root + path.sep)) return null;
   try {
