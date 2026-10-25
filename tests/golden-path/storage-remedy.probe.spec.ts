@@ -19,6 +19,7 @@ import { test, expect } from "@playwright/test";
 
 import { clearStorageTrouble, lastStorageTrouble, noteStorageOk, reportStorageTrouble, reportTaskTrouble } from "@/lib/steps";
 
+import { classify as classifyUi } from "@gt/ui/storage/trouble";
 import { stripComments } from "./_helpers";
 
 const quotaError = () => Object.assign(new Error("The quota has been exceeded."), { name: "QuotaExceededError" });
@@ -42,6 +43,14 @@ test("case 6: stepStore's noteStorageOk clears only a storage trouble of the sam
   const task = reportTaskTrouble("a background task", new Error("fetch dropped"));
   noteStorageOk(task.op, task.projectId, task.phase);
   expect(lastStorageTrouble()).toBe(task);
+});
+
+test("case 6d: v1's classify names every recognised storage error what @gt/ui's does", () => {
+  const named = (name: string) => Object.assign(new Error(name), { name });
+  for (const name of ["QuotaExceededError", "NS_ERROR_DOM_QUOTA_REACHED", "SecurityError", "UnknownError"]) {
+    reportStorageTrouble("write", "p1", "script", named(name));
+    expect(lastStorageTrouble()?.kind, name).toBe(classifyUi(named(name)));
+  }
 });
 
 test("case 6b (critic): an asset-blob quota is not cleared by a small step record saving elsewhere", () => {
