@@ -1,6 +1,6 @@
 // THE STRIP WIRE TYPES — shared by the pipeline that authors and renders
-// code-rendered strips (pipeline/strips/*, Node) and the /foundry Strips tab
-// (client). Nothing here imports Node.
+// code-rendered strips (pipeline/strips/*, the strip job) and the app's readers
+// (the Board's strips packet, the Ledger, the Library feed). Nothing here imports Node.
 //
 // A strip is an 8-second clip whose every frame is computed by an LLM-written
 // page (`strip.html` exposing `window.renderFrameAt(i)`), captured headless and

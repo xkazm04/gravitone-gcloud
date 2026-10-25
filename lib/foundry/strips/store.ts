@@ -4,7 +4,7 @@
 // plus one directory per card: strip.html, style.json, strip.mp4, strip.webm,
 // poster.jpg, sheet.png, meta.json — lib/foundry/strips/types.ts draws the
 // tree). This module is the app's only way to read them and the only way the
-// /foundry Strips triage mutates them. Two things per run are the app's to
+// Board's strips packet (lib/decision/v1/sources/strips.ts) mutates them. Two things per run are the app's to
 // write: verdicts.json, and on commit the deletions, findings.md and
 // run.json's status flip. Everything else is the pipeline's.
 //
@@ -31,8 +31,9 @@
 // Path safety: run ids pass RUN_ID_RE (runStore.ts); every run-relative path
 // is resolved and held inside its run directory before it is read, served or
 // unlinked; a card's files are resolved inside that card's own directory.
-// strip.html is LLM-written code and is never served by the file route — only
-// by GET /api/foundry/strips/<id>/page, under a sandbox CSP.
+// strip.html is LLM-written code and no route serves it: the file route
+// refuses .html, and the page route that served it under a sandbox CSP retired
+// with the Strips tab (Phase 6 wave C, L70).
 //
 // WHERE THE RUNS LIVE (Phase 4, L33): `stripsRoot()`, the universe's own
 // `<foundry-out | fixtures-out>/strips` (lib/fixtures/roots.ts outPath), or
@@ -219,7 +220,8 @@ export async function stripFileStat(id: string, rel: string): Promise<{ abs: str
   }
 }
 
-/** The authored page of one card, for the sandboxed page route only. */
+/** The authored page of one card, held inside its card directory. No route serves it since
+ *  the sandboxed page route retired; foundry-strips.probe pins its containment. */
 export async function stripPageFile(id: string, cardId: string): Promise<string> {
   const run = await readStripRun(id);
   const card = run.cards.find((c) => c.id === cardId);

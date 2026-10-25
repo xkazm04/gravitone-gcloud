@@ -8,7 +8,7 @@
 //   lint      the frame-purity lint (./lint.ts) - a failure is the card's `lint-failed`
 //   render    the headless capture and its four gates (pipeline/strips/render.mts)
 //   asset     one supporting image per approach, cached on disk under _assets/ (v1's cache)
-//   triage    replica discrimination, then the run handed to the Strips tab
+//   triage    replica discrimination, then the run handed to the Board's strips packet
 //
 // EVERY WRITE IS FENCED: `io.stillHeld()` is asked before run.json is written, so a driver
 // whose slot was taken over writes nothing (kernel lease). A write also marks the run
