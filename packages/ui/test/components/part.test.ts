@@ -105,8 +105,9 @@ describe("markup", () => {
     const html = renderToStaticMarkup(h(VerdictChip, { verdict: v }));
     expect(html).toContain('data-verdict="blocked"');
     expect(html).toContain("2 gate violation(s)");
-    expect(html).toContain("+1");
-    expect(html).toContain("; 5:00 against a 2:00 clock");
+    // The rest are a Tip on the +N, so a sighted operator reads them on hover or focus too, and
+    // the tip stays mounted inside the status, so it is spoken with it.
+    expect(html).toMatch(/<span[^>]*tabindex="0"[^>]*aria-describedby="([^"]+)"[^>]*>\+1<\/span><span role="tooltip" id="\1"[^>]*>5:00 against a 2:00 clock<\/span>/);
   });
 
   test("part tabs link editors, mark the current one, and leave gates, the slot and editor-less parts unlinked", () => {

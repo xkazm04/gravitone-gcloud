@@ -2514,6 +2514,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A verdict state spelled like an Object member would be handed a function as its look and drawn with no state, instead of as blocked.",
   },
   {
+    id: "verdict-chip-rest-unreadable",
+    test: "packages/ui/test/components/part.test.ts",
+    file: "packages/ui/src/components/part/VerdictChip.tsx",
+    find: '<Tip text={rest.map((c) => c.text).join(" · ")}>',
+    replace: '<Tip text="">',
+    why: "A blocked part's second and later reasons would be in the chip's tip for nobody: a sighted operator opening +N would read an empty tip.",
+  },
+  {
     id: "produce-strips-run-renamed-at-confirm",
     test: "tests/next-server/produce-real.test.ts",
     file: "lib/produce/laneDoors.ts",
