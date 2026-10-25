@@ -7302,4 +7302,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "p.source === \"scout\" || p.source === \"seeds\";",
     why: "The Scout's Board packets keep their own list of its sources, so a source added to the one set draws as the Scout's NEXT but not on its Runs tab.",
   },
+  {
+    id: "style-atelier-title-names-the-id",
+    test: "tests/next-server/style-atelier-title.test.ts",
+    file: "app/(studio)/library/style/[id]/page.tsx",
+    find: "view.ok ? view.value.name : id",
+    replace: "id",
+    why: "The atelier's tab and history read the URL id, so a duplicate and its source are told apart by `blueprint-copy`, not by the names the operator gave them.",
+  },
 ];
