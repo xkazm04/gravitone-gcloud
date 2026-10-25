@@ -80,7 +80,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
     if (t.src !== null) transport.toggle(t.id, t.src);
   };
   const step = (by: -1 | 1): void => {
-    const id = stepTake(heard, transport.playing, by);
+    const id = stepTake(heard, transport.playing, by, hunt.takes);
     const t = id === undefined ? undefined : hunt.takes[id];
     if (t !== undefined && t.src !== null) transport.toggle(t.id, t.src, carryFrom(linked, transport.playing, t.id, transport.position()));
   };

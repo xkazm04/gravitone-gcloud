@@ -124,12 +124,49 @@ describe("the audition", () => {
     expect(headTake(heard[1] ?? leaf({ id: "z" }))).toBe("t-b");
   });
 
+  const takes = { "t-a": take("t-a"), "t-b": take("t-b") };
+
   test("← and → step through the heard takes in board order, wrapping", () => {
-    expect(stepTake(heard, null, 1)).toBe("t-a");
-    expect(stepTake(heard, null, -1)).toBe("t-b");
-    expect(stepTake(heard, "t-a", 1)).toBe("t-b");
-    expect(stepTake(heard, "t-b", 1)).toBe("t-a");
-    expect(stepTake([], null, 1)).toBeUndefined();
+    expect(stepTake(heard, null, 1, takes)).toBe("t-a");
+    expect(stepTake(heard, null, -1, takes)).toBe("t-b");
+    expect(stepTake(heard, "t-a", 1, takes)).toBe("t-b");
+    expect(stepTake(heard, "t-b", 1, takes)).toBe("t-a");
+    expect(stepTake([], null, 1, takes)).toBeUndefined();
+  });
+
+  test("a step passes over a take that cannot play, in both directions", () => {
+    const three = buildTree([...MAP, leaf({ id: "e", parentId: "br", state: "rendered", takeIds: ["t-e"] })]).leaves.filter((l) => l.state === "rendered");
+    const takes = { "t-a": take("t-a", { src: null }), "t-b": take("t-b"), "t-e": take("t-e") };
+    expect(stepTake(three, "t-b", 1, takes)).toBe("t-e");
+    expect(stepTake(three, "t-e", 1, takes)).toBe("t-b");
+    expect(stepTake(three, "t-b", -1, takes)).toBe("t-e");
+    expect(stepTake(three, null, 1, takes)).toBe("t-b");
+    expect(stepTake(three, null, -1, takes)).toBe("t-e");
+    const gone = { "t-b": take("t-b") };
+    expect(stepTake(heard, "t-b", 1, gone)).toBe("t-b");
+    expect(stepTake(heard, null, 1, { "t-a": take("t-a", { src: null }) })).toBeUndefined();
+  });
+});
+
+describe("the audition carries the brief", () => {
+  const asked = leaf({ id: "q", state: "rendered", takeIds: ["t-q"], durationS: 30, tempoBpm: 78, key: "D minor", loop: true });
+  const plain = leaf({ id: "p", state: "rendered", takeIds: ["t-p"], durationS: 45 });
+  const html = renderToStaticMarkup(h(HuntAudition, { heard: [asked, plain], takes: { "t-q": take("t-q", { lengthS: 28.4 }), "t-p": take("t-p") }, playing: null, crowning: new Set<string>(), onPlay: () => undefined, onCrown: () => undefined }));
+  const card = (id: string): string => html.split(/(?=<div class="[^"]*" role="group" aria-label=")/).find((part) => part.includes(`aria-label="${id}"`)) ?? "";
+
+  test("each take draws what its leaf asked for beside the length it measured: length, bpm, key, loop", () => {
+    const q = card("q");
+    expect(q).toMatch(/length<b[^>]*>0:30</);
+    expect(q).toMatch(/bpm<b[^>]*>78</);
+    expect(q).toMatch(/key<b[^>]*>D minor</);
+    expect(q).toContain(">loop<");
+    expect(q).toMatch(/heard<b[^>]*>0:28</);
+  });
+
+  test("a leaf that asked for no tempo, key or loop draws only its length", () => {
+    const p = card("p");
+    expect(p).toMatch(/length<b[^>]*>0:45</);
+    expect(p).not.toMatch(/bpm|key<|loop/);
   });
 });
 

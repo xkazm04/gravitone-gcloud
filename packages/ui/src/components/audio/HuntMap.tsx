@@ -18,6 +18,7 @@ import { cx } from "../cx.ts";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { Wave } from "../wave/Wave.tsx";
 import { PlayMark } from "./AudioPreview.tsx";
+import { AskedChips } from "./HuntAudition.tsx";
 import { buildTree, headTake, lengthOf, type AuditionTake, type HuntLeafView, type Reach, type Selection } from "./hunt.ts";
 import s from "./Hunt.module.css";
 
@@ -105,10 +106,7 @@ function Leaf({ leaf, p }: { readonly leaf: HuntLeafView; readonly p: HuntMapPro
       <div className={s.leafMeta}>
         <Chip label={st.label} tone={st.tone} />
         <Chip label={leaf.provider} casing="lower" />
-        <Chip label="length" value={lengthOf(leaf.durationS)} casing="lower" />
-        {leaf.tempoBpm !== null && <Chip label="bpm" value={leaf.tempoBpm} casing="lower" />}
-        {leaf.key !== null && <Chip label="key" value={leaf.key} casing="lower" />}
-        {leaf.loop === true && <Chip label="loop" casing="lower" />}
+        <AskedChips leaf={leaf} />
         {leaf.technique.map((t) => (
           <Chip key={t} label={t} tone="violet" casing="lower" ghost />
         ))}

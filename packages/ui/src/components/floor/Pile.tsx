@@ -17,10 +17,10 @@
 // itself (a client navigation the Board sheet intercepts) while modified clicks keep the
 // browser's own meaning.
 
-import type { MouseEvent } from "react";
 import type { MediaLane } from "@gt/domain/lane";
 
 import { cx } from "../cx.ts";
+import { plainClick } from "../link/plain.ts";
 import { Tally } from "../tally/Tally.tsx";
 import { vars } from "../vars.ts";
 import { Wave } from "../wave/Wave.tsx";
@@ -48,8 +48,6 @@ export type PileProps = {
   readonly peaks?: readonly (readonly number[])[];
 };
 
-const plain = (e: MouseEvent): boolean => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
-
 export function pileName({ title, decided, pending, mode }: Pick<PileProps, "title" | "decided" | "pending" | "mode">): string {
   return `${title}, ${decided + pending} items, ${pending} pending, ${MODE_NAME[mode]}`;
 }
@@ -66,7 +64,7 @@ export function Pile(props: PileProps) {
       style={vars({ "--d": `${index * 70}ms` })}
       aria-label={`${next ? "next: " : ""}${pileName(props)}`}
       onClick={(e) => {
-        if (onOpen === undefined || !plain(e)) return;
+        if (onOpen === undefined || !plainClick(e)) return;
         e.preventDefault();
         onOpen(href);
       }}
