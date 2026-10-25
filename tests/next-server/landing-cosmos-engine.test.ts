@@ -1260,14 +1260,14 @@ describe("nav.ts: the platform Back steps back a level instead of leaving the la
     cx.ST.tpl = "a";
     nav.setLv(cx as never, "tpl");
     expect(hist.entries.length, "one entry per level opened").toBe(3);
-    let stayed = 0;
-    for (let i = 0; i < 3 && hist.at > 0; i++) {
+    const seen: string[] = [];
+    while (hist.at > 0) {
       hist.back();
       await tick(1);
-      if (hist.at > 0 || cx.ST.lv !== "tpl") stayed++;
+      seen.push(cx.ST.lv);
     }
     // the first Back closed the template, the second returned to the overview; at the base entry the page is left
-    expect([stayed, cx.ST.lv, hist.at]).toEqual([2, "root", 0]);
+    expect([seen, hist.at]).toEqual([["type", "root"], 0]);
   });
 
   test("a level closed from the page takes its entry off the stack, and the pop it causes closes nothing more", async () => {
