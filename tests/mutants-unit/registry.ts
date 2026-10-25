@@ -5989,6 +5989,14 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (!vis) return;",
     why: "A card that leaves the visible range is never hidden, and one that starts hidden is never set hidden, so faded cards show over the focused one.",
   },
+  {
+    id: "cosmos-library-hover-reads-rect-after-writes",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/library.ts",
+    find: "area.classList.add(\"hasHot\");",
+    replace: "area.classList.add(\"hasHot\"); area.getBoundingClientRect();",
+    why: "Every hover on a category tile forces a synchronous layout for the area's box ahead of the banner's own, two layouts on the hover where one is needed.",
+  },
   // ---- the landing's shell (landing-cosmos-shell): perf, stage, search, keyboard, the first paint
   {
     id: "cosmos-governor-judges-three-frames",

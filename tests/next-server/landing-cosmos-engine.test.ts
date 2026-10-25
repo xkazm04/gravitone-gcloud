@@ -1057,3 +1057,75 @@ describe("carousel.ts: placeCards leaves hidden cards alone", () => {
     expect(gone.visibility, "the card left behind is hidden on the frame it leaves").toBe("hidden");
   });
 });
+
+
+/* ---------- a category hover forces one layout (library.ts) ---------- */
+describe("library.ts: hotCat reads the area's box before it writes the hot classes", () => {
+  const LAY = { dirty: false, layouts: 0 };
+  const read = () => {
+    if (LAY.dirty) LAY.layouts++;
+    LAY.dirty = false;
+  };
+  /** a DomEl whose style, class and box reads are counted the way a browser's layout is */
+  class LEl extends DomEl {
+    constructor(tag: string) {
+      super(tag);
+      this.style = new Proxy(this.style, {
+        set: (t, k, v) => ((LAY.dirty = true), (t[k as string] = v), true),
+        get: (t, k) => (k === "setProperty" ? () => void (LAY.dirty = true) : t[k as string]),
+      });
+      for (const m of ["add", "remove", "toggle"] as const) {
+        const f = this.classList[m] as (...a: never[]) => unknown;
+        this.classList[m] = ((...a: never[]) => ((LAY.dirty = true), f(...a))) as never;
+      }
+    }
+    get parentElement() {
+      return this.parent;
+    }
+    getBoundingClientRect() {
+      read();
+      return super.getBoundingClientRect();
+    }
+    get offsetWidth(): number {
+      read();
+      return 0;
+    }
+    get offsetHeight(): number {
+      read();
+      return 0;
+    }
+  }
+
+  test("hovering a tile from rest forces the one layout showBanner needs, not two", async () => {
+    const root = shellDom();
+    const was = DOC.createElement;
+    DOC.createElement = (t: string) => new LEl(t);
+    try {
+      const { rebuildLib } = await import("../../app/_landing/cosmos/engine/library.ts");
+      const cats = ["a", "b", "c"].map((id) => ({ id, label: "Category " + id, items: 3, art: `/presets/${id}.png` }));
+      const fam = { id: "styles", label: "Styles", status: "live" as const, categories: cats };
+      const banner = new LEl("div");
+      for (const c of ["bn-name", "bn-meta", "bn-front", "bn-back"]) banner.appendChild(new LEl("div")).classes.add(c);
+      const cx = {
+        root,
+        els: { libView: root.appendChild(new LEl("section")), banner },
+        g: { W: 1280, H: 800, S: 800, DPR: 1, RS: 1, portrait: false },
+        tier: "full",
+        ST: { lv: "fam", type: null, tpl: null, fam: "styles", cat: null },
+        famById: new Map([["styles", fam]]),
+        famSorted: [],
+        libTok: 0,
+        raster: { drop() {}, run: () => new Promise(() => {}) },
+      };
+      rebuildLib(cx as never, "styles");
+      const tile = cx.els.libView.querySelector(".cat") as unknown as { onpointerenter: () => void };
+      expect(tile, "the sheet drew its tiles").toBeTruthy();
+      LAY.dirty = false; // a frame has run since the build: the layout is clean
+      LAY.layouts = 0;
+      tile.onpointerenter();
+      expect(LAY.layouts).toBe(1);
+    } finally {
+      DOC.createElement = was;
+    }
+  });
+});

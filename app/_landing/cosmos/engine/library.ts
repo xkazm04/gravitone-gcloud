@@ -138,11 +138,13 @@ function hotCat(cx: Cx, b: HTMLElement, c: GalaxyCategory, n: number | null, on:
     return;
   }
   if (cx.ST.lv !== "fam") return;
-  b.classList.add("hot");
-  area.classList.add("hasHot");
+  // the rect is read before the class writes: read after them it forces a layout of its own,
+  // ahead of the one showBanner's name write forces (the hot classes only filter and lift tiles)
   const ar = area.getBoundingClientRect(),
     fam = cx.ST.fam!,
     P = palette(fam);
+  b.classList.add("hot");
+  area.classList.add("hasHot");
   showBanner(cx, {
     name: c.label,
     meta: n ? `<span class="mi">${ICON.stack}${fmtN(n)}</span>` : cx.famById.get(fam)!.status === "locked" ? `<span class="mi">${ICON.lock}</span>` : "",
