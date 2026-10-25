@@ -251,6 +251,26 @@ describe("the claim", () => {
     k.close();
   });
 
+  it("a live upload whose claim was lost before its record leaves a durable event naming the platform id", async () => {
+    const adapter = stub({
+      upload: () => {
+        // The upload completes, and only then does another process judge this claimant dead.
+        const other = sweep(k.store, { now: NOW, windowMs: 3_600_000, wired: new Set(["youtube"]), itemExists: () => true }, { claim: false, holder: OTHER, alive: () => false });
+        if (!other.ok) throw other.error;
+        return Promise.resolve(ok({ platformId: "yt-orphan-9" }));
+      },
+    });
+    const w = world(adapter, live());
+    const k = w.k;
+    const id = slot(k);
+    const r = await publishTick(w.deps, new Date(NOW));
+    expect(r.ok && r.value.outcomes.map((o) => o.kind)).toEqual(["lost"]);
+    expect(stateOf(k, id)).toMatchObject({ state: "failed", error: INTERRUPTED_TEXT });
+    const rows = k.store.read((rd) => rd.all("SELECT type, subject_kind, subject_id, data FROM events WHERE type = 'publish.orphan'"));
+    expect(rows.ok && rows.value.map((x) => [x["subject_kind"], x["subject_id"], JSON.parse(String(x["data"]))])).toEqual([["slot", id, { channel: "youtube", platformId: "yt-orphan-9" }]]);
+    k.close();
+  });
+
   it("a stop between claims fails the claims it had not started, in words, and starts none of them", async () => {
     const calls = { plan: 0, upload: 0 };
     const ac = new AbortController();

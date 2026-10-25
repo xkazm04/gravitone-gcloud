@@ -44,20 +44,15 @@ import { canMove, canPause, canReroute, canRetry, ceilingFor, retryPress, type T
 import { DojoDoors, dojoSpec, type DojoPort } from "./DojoDoors.tsx";
 import { Inspector, type InspectorActs } from "./Inspector.tsx";
 import { mvRegenerateSpec, type MvPort } from "./MvActs.tsx";
+import { settled } from "./actRunner.ts";
+import { legendOf } from "./legend.ts";
 import { BACKSTOP_MS, openFeed } from "./liveFeed.ts";
 import { barsOf, blockedOf, depsOf, floorRunsOf, heldLabel, heldMoney, litOf, pinsOf, projectMeta, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
 import s from "./Runs.module.css";
 
 export type Selection = { readonly job: string | null; readonly project: string | null; readonly zoom: Zoom };
 
-const LEGEND: readonly { readonly look: string; readonly label: string }[] = [
-  { look: "running", label: "running" },
-  { look: "idle", label: "queued" },
-  { look: "awaiting", label: "at weir" },
-  { look: "failed", label: "failed" },
-  { look: "paused", label: "paused" },
-  { look: "done", label: "done" },
-];
+const LEGEND = legendOf();
 
 function urlOf(sel: Selection): string {
   const q = new URLSearchParams();
@@ -128,9 +123,15 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
   useEffect(() => {
     if (actId === null) return;
     let live = true;
-    void port.rerouteOptions({ jobId: actId }).then((r) => {
-      if (live) setAlts(r.ok ? { job: actId, options: r.value } : { job: actId, options: null, error: r.error.error });
-    });
+    void settled(
+      () => port.rerouteOptions({ jobId: actId }),
+      (r) => {
+        if (live) setAlts(r.ok ? { job: actId, options: r.value } : { job: actId, options: null, error: r.error.error });
+      },
+      (message) => {
+        if (live) setAlts({ job: actId, options: null, error: message });
+      },
+    );
     return () => {
       live = false;
     };
@@ -142,16 +143,19 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
     if (inflight.current) return false;
     inflight.current = true;
     setBusy(true);
-    void call()
-      .then((r) => {
+    void settled(
+      call,
+      (r) => {
         if (r.ok) toast(r.value.note, { href: `/ledger?q=${encodeURIComponent(r.value.jobId)}`, subject: r.value.jobId });
         else toast(r.error.error);
         if (r.ok) router.refresh();
-      })
-      .finally(() => {
+      },
+      (message) => toast(message),
+      () => {
         inflight.current = false;
         setBusy(false);
-      });
+      },
+    );
   };
   const reroute = (key: string): void => {
     if (act === undefined) return;
@@ -216,11 +220,15 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
               ),
             // A send answers with the slot's own level, not a job's ledger.
             onSchedule: (track, channel, publishAt) =>
-              void mv.schedule({ track, channel, publishAt }).then((r) => {
-                if (!r.ok) return toast(r.error.error);
-                toast(`${track} · ${channel} · ${r.value.at.slice(0, 16).replace("T", " ")} UTC`, { href: `/floor?slot=${encodeURIComponent(r.value.slotId)}`, subject: r.value.slotId });
-                router.refresh();
-              }),
+              void settled(
+                () => mv.schedule({ track, channel, publishAt }),
+                (r) => {
+                  if (!r.ok) return toast(r.error.error);
+                  toast(`${track} · ${channel} · ${r.value.at.slice(0, 16).replace("T", " ")} UTC`, { href: `/floor?slot=${encodeURIComponent(r.value.slotId)}`, subject: r.value.slotId });
+                  router.refresh();
+                },
+                (message) => toast(message),
+              ),
           },
         }),
   };
