@@ -6076,4 +6076,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "",
     why: "The fixture resumes a failed or interrupted job straight to its queue, past the retry and past the hold an interruption leaves, where the kernel refuses anything but a paused job.",
   },
+  {
+    id: "projects-page-refused-list-drawn-empty",
+    test: "tests/next-server/projects-page.test.ts",
+    file: "app/(studio)/projects/page.tsx",
+    find: "if (!read.ok) throw read.error;",
+    replace: "if (!read.ok) Object.assign(read, { ok: true, value: { projects: [], truncated: false } });",
+    why: "A projects read the store refused is drawn as an empty list - \"no compositions\" and the v1 import offered - over projects nobody read.",
+  },
 ];

@@ -23,7 +23,10 @@ export default async function ProjectsPage({ searchParams }: { readonly searchPa
   const composing = q["compose"] === "1";
   const port = serverProduce();
   const read = port.listProjects();
-  const list = read.ok ? read.value : { projects: [], truncated: false };
+  // A list that could not be read is the page's error, as a plan that could not be read is below:
+  // drawn as an empty list it said "no compositions" and offered the v1 import over projects nobody read.
+  if (!read.ok) throw read.error;
+  const list = read.value;
   const choices = port.composeChoices();
   const jobs = port.listJobs();
   const floorRuns = jobs.ok ? jobs.value.filter((j) => j.projectId === undefined && j.state !== "done").length : 0;
