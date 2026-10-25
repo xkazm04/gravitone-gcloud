@@ -20,7 +20,7 @@ import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
 import { IdeaList } from "../src/components/cull/IdeaList.tsx";
 import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
 import { VariantCard } from "../src/components/cull/VariantCard.tsx";
-import { beatNote, CutReview, withNote } from "../src/components/cut/CutReview.tsx";
+import { beatNote, CutReview, seekTo, withNote } from "../src/components/cut/CutReview.tsx";
 import { CommitButton } from "../src/components/desk/Desk.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
 import { BlindPair, canPick, defaultRevealMs, REVEAL_MS } from "../src/components/pair/BlindPair.tsx";
@@ -228,6 +228,25 @@ describe("the cut review", () => {
     const html = review(false);
     expect(html.split('aria-current="true"').length - 1).toBe(1);
     expect(html).toMatch(/aria-current="true"[^>]*><span[^>]*>0:00–0:03<\/span>/);
+  });
+});
+
+describe("the cut player follows the focused beat", () => {
+  const src = () => readFileSync(new URL("../src/components/cut/CutReview.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  test("a video without metadata is not sought; once it has some, the same call seeks to the beat", () => {
+    const v = { readyState: 0, currentTime: 0 };
+    expect(seekTo(v, { t0: 4.2 })).toBe(false);
+    expect(v.currentTime).toBe(0);
+    v.readyState = 1;
+    expect(seekTo(v, { t0: 4.2 })).toBe(true);
+    expect(v.currentTime).toBe(4.2);
+    expect(seekTo(null, { t0: 1 })).toBe(false);
+    expect(seekTo(v, undefined)).toBe(false);
+  });
+
+  test("the player seeks again when its metadata arrives", () => {
+    expect(src()).toMatch(/onLoadedMetadata=\{\(\) => seekTo\(player\.current, beats\[focus\]\)\}/);
   });
 });
 
