@@ -21,7 +21,8 @@ import { sleep } from "../../sleep";
 import { ImagingError, invalidRequest } from "../errors";
 import { keyFor } from "../env";
 import { fetchImageBase64, requestJson } from "../http";
-import { logCleanupFailure } from "../log";
+import { logCleanupFailure, scrub } from "../log";
+import { errorMessage } from "@gt/domain/errors";
 import { priceCall } from "../pricing";
 import { USD_PER_CREDIT } from "../video/pricing";
 import {
@@ -105,7 +106,16 @@ interface PollResponse {
   };
 }
 
-export function leonardoProvider(): ImagingProvider {
+/** A probe's seam: the router builds the provider bare and gets the real clock. */
+export interface LeonardoOptions {
+  readonly sleep?: (ms: number) => Promise<void>;
+  readonly pollMs?: number;
+  readonly maxPolls?: number;
+}
+
+export function leonardoProvider(o: LeonardoOptions = {}): ImagingProvider {
+  const poll = (id: string, headers: Record<string, string>) =>
+    pollGeneration(id, headers, o.sleep ?? sleep, o.pollMs ?? POLL_INTERVAL_MS, o.maxPolls ?? MAX_POLLS);
   return {
     id: "leonardo",
     // Generation only. Leonardo's editing surface is background removal
@@ -208,9 +218,18 @@ export function leonardoProvider(): ImagingProvider {
   };
 }
 
-async function poll(id: string, headers: Record<string, string>): Promise<string[]> {
-  for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
-    await sleep(POLL_INTERVAL_MS);
+async function pollGeneration(
+  id: string,
+  headers: Record<string, string>,
+  wait: (ms: number) => Promise<void>,
+  pollMs: number,
+  maxPolls: number,
+): Promise<string[]> {
+  // The last poll that errored, kept for the give-up: polls that all failed (a
+  // key revoked mid-render) must not read as a vendor that was only slow.
+  let lastPollError: string | null = null;
+  for (let attempt = 0; attempt < maxPolls; attempt++) {
+    await wait(pollMs);
 
     // A single bad poll is not a failed generation — the reference client
     // skips transient errors rather than aborting, and so do we.
@@ -220,7 +239,10 @@ async function poll(id: string, headers: Record<string, string>): Promise<string
         headers,
         attempts: 1,
       });
-    } catch {
+      lastPollError = null;
+    } catch (e) {
+      const said = e instanceof ImagingError && e.detail !== undefined ? ` ${typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail)}` : "";
+      lastPollError = scrub(`${errorMessage(e)}${said}`).slice(0, 300);
       continue;
     }
 
@@ -257,7 +279,7 @@ async function poll(id: string, headers: Record<string, string>): Promise<string
     }
   }
   throw new ImagingError(
-    `Leonardo did not finish within ${(MAX_POLLS * POLL_INTERVAL_MS) / 1000}s.`,
+    `Leonardo did not finish within ${(maxPolls * pollMs) / 1000}s.${lastPollError === null ? "" : ` The last poll failed: ${lastPollError}`}`,
     "timeout",
     "leonardo",
   );
