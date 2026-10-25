@@ -104,6 +104,20 @@ test("a reset's cue row says which half is missing, the mark or the cue", () => 
   expect(unnamed?.detail).toContain("names no cue mark and the cut declares no cue");
 });
 
+// A stored record reaches the checker through a cast (`written<TrailerCut>`), so a
+// role the union no longer has arrives at runtime. checkSpine indexed LEGAL_KINDS
+// with it and threw "Cannot read properties of undefined (reading 'includes')".
+test("a movement whose role the spine does not rank is a graph violation, not a throw", () => {
+  const cut = minimal();
+  cut.movements = cut.movements.map((m) => (m.id === "m4" ? { ...m, role: "bridge" as never } : m));
+  const r = runStructureCheck(cut);
+  const v = rows(r, "graph", "violation").filter((f) => f.subject === "m4");
+  console.log(`[trailer] unranked role -> graph violations on m4=${v.length}`);
+  expect(v).toHaveLength(1);
+  expect(v[0].detail).toContain(`"bridge"`);
+  expect(r.malformed).toBe(true);
+});
+
 test("a declared specialty-lane cut is never graded malformed", () => {
   const broken: TrailerCut = { ...minimal(), lane: "specialty" };
   broken.beats = broken.beats.filter((b) => b.kind !== "reset");
