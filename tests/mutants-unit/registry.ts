@@ -6910,4 +6910,28 @@ export const MUTANTS: UnitMutant[] = [
     replace: "throw new Error(\"launch\");",
     why: "A box with no Playwright browser throws out of the table render, so a human-approved landing goes to failed on a PNG the registry copy does not even carry.",
   },
+  {
+    id: "article-check-always-shoots",
+    test: "tests/next-server/article-check-between-turns.test.ts",
+    file: "lib/articles/checksRendered.ts",
+    find: "const shoot = opts.screenshots !== false;",
+    replace: "const shoot = true;",
+    why: "The rendered check takes its three full-page screenshots whatever it is told, so every between-turn pass writes PNGs the check step deletes.",
+  },
+  {
+    id: "article-run-check-drops-screenshots-option",
+    test: "tests/next-server/article-check-between-turns.test.ts",
+    file: "lib/articles/checksReport.ts",
+    find: "{ screenshots: opts.screenshots !== false }",
+    replace: "{ screenshots: true }",
+    why: "runCheck stops passing the screenshots option on, so a caller that asks for none still gets three PNGs.",
+  },
+  {
+    id: "article-check-loop-shoots",
+    test: "tests/next-server/article-check-between-turns.test.ts",
+    file: "lib/articles/checkLoop.ts",
+    find: "render: deps.render, screenshots: false, now",
+    replace: "render: deps.render, now",
+    why: "The between-turn check asks for screenshots again: up to nine passes a run each write three full-page PNGs nobody reads.",
+  },
 ];
