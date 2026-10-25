@@ -132,6 +132,14 @@ describe("money", () => {
     [47, "$47"],
     [-0.5, "-$0.50"],
   ])("%s reads %s", (n, s) => expect(usd(n)).toBe(s));
+
+  test("a figure is spelled by its cents: one amount has one spelling either side of $1 and $10", () => {
+    expect(usd(9.996)).toBe(usd(10));
+    expect(usd(0.996)).toBe(usd(1));
+    expect(usd(0.004)).toBe(usd(0));
+    expect(usd(-0.004)).toBe(usd(0));
+    for (const n of [0.004, 0.005, 0.994, 0.999, 1.004, 9.994, 9.995, 9.999, 10.004, 47.5, -9.999]) expect(usd(n)).toBe(usd(Math.round(n * 100) / 100));
+  });
 });
 
 const row = (over: Partial<EventRowProps> = {}): EventRowProps => ({
