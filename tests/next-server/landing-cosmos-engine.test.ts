@@ -270,7 +270,7 @@ describe("worlds.ts: one prewarm at a time, and a world nobody opened is let go"
       worldPre: null as unknown,
       wplanes: [],
       raster: {
-        run: (_job: unknown, prio: number, tag: string, part?: (i: number, s: unknown) => void) => {
+        paint: (_job: unknown, prio: number, tag: string, part?: (i: number, s: unknown) => void) => {
           runs.push({ prio, tag, part });
           return new Promise(() => {});
         },
@@ -833,5 +833,496 @@ describe("cosmos.css: the first paint stays until there is something to replace 
     const src = readFileSync(path.join(ROOT, "app/_landing/cosmos/engine/intro.ts"), "utf8");
     expect(src).toMatch(/if \(built\) ready\(cx\);/);
     expect(src).toMatch(/if \(!\(await buildScene\(cx, "swap"\)\)\) return false;\r?\n\s*ready\(cx\);/);
+  });
+});
+
+/* ---------- a failed paint is not a dropped one (raster.ts, carousel.ts, worlds.ts) ---------- */
+describe("raster.ts: paint() tells a failed job from a dropped one", () => {
+  test("a job the worker fails is 'failed'; a queued job dropped by its tag, or lost with the raster, is 'dropped'", async () => {
+    withWorker();
+    countingDocument();
+    const log = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const r = new Raster(false);
+    const w = FakeWorker.last!;
+    w.say(HELLO);
+    await r.ready;
+    const failing = r.paint(JOB, 0, "a"),
+      second = r.paint(JOB, 0, "a"),
+      queued = r.paint(JOB, 1, "b"),
+      lost = r.paint(JOB, 2, "c");
+    r.drop("b");
+    expect(await queued).toBe("dropped");
+    w.say({ t: "fail", id: w.posted[0].id, err: "RangeError: canvas too large" });
+    expect(await failing).toBe("failed");
+    r.destroy();
+    expect(await lost).toBe("dropped");
+    expect(await second, "a job painting when the raster went is lost, not failed").toBe("dropped");
+    expect(await r.run(JOB), "run() keeps resolving null for both").toBeNull();
+    log.mockRestore();
+  });
+});
+
+describe("carousel.ts: a card whose art failed is not asked for again", () => {
+  /** a type view of 12 templates without key art, in a raster whose every job ends as `how` */
+  async function glide(how: "failed" | "dropped", frames: number) {
+    const root = shellDom();
+    const { syncCarousel } = await import("../../app/_landing/cosmos/engine/carousel.ts");
+    const { carMetrics } = await import("../../app/_landing/cosmos/engine/layout.ts");
+    const g = { W: 1280, H: 800, S: 800, DPR: 1, RS: 1, portrait: false };
+    const list = Array.from({ length: 12 }, (_x, i) => ({ id: "t" + i, label: "T" + i, type: "film" }));
+    const cards = list.map(() => {
+      const c = kid(root, "button");
+      kid(kid(c, "span"), "canvas").parent!.classes.add("art");
+      return c;
+    });
+    let asked = 0;
+    const cx = {
+      g,
+      tier: "full",
+      RM: true,
+      carTok: 0,
+      life: { dead: false },
+      els: { typeView: kid(root, "section") },
+      CAR: { ...carMetrics(g, list.length), pos: 0, target: 0, cards, list, idx: 0, hov: null, drag: null, snap: 0, moved: false, t: 0 },
+      raster: {
+        run: () => (asked++, Promise.resolve(null)),
+        paint: () => (asked++, Promise.resolve(how)),
+        drop() {},
+      },
+    };
+    for (let i = 0; i < frames; i++) {
+      syncCarousel(cx as never, 0);
+      await tick(1);
+    }
+    return { asked, near: cards.filter((_c, i) => i <= 4).length };
+  }
+
+  test("ten glide frames over a diorama that throws ask the raster once per near card, not once per frame", async () => {
+    const one = await glide("failed", 1);
+    const ten = await glide("failed", 10);
+    expect(one.asked, "the first frame asks for the cards near focus").toBeGreaterThan(0);
+    expect(ten.asked, "and the nine after it ask for nothing").toBe(one.asked);
+  });
+
+  test("a dropped job is still asked for again on the next frame", async () => {
+    const one = await glide("dropped", 1);
+    const ten = await glide("dropped", 10);
+    expect(ten.asked).toBeGreaterThan(one.asked);
+  });
+});
+
+describe("worlds.ts: a world that could not be painted lands empty instead of holding the overview", () => {
+  function worldCx(how: "failed" | "dropped") {
+    fakeDom();
+    return {
+      g: { W: 1280, H: 800, portrait: false, RS: 1, DPR: 1, S: 800 },
+      tier: "full",
+      life: { dead: false, want() {} },
+      els: { world: new FakeEl("div") },
+      worldTok: 0,
+      worldReady: false,
+      worldReadyAt: 0,
+      worldPre: null as unknown,
+      wplanes: [],
+      raster: { run: () => Promise.resolve(null), paint: () => Promise.resolve(how), drop() {}, bump() {} },
+    };
+  }
+  test("a failed world job sets worldReady (tryCover stops polling); a dropped one leaves it unset", async () => {
+    const { buildWorld } = await import("../../app/_landing/cosmos/engine/worlds.ts");
+    const failed = worldCx("failed");
+    buildWorld(failed as never, "type-a");
+    await tick(1);
+    expect(failed.worldReady).toBe(true);
+    const dropped = worldCx("dropped");
+    buildWorld(dropped as never, "type-a");
+    await tick(1);
+    expect(dropped.worldReady).toBe(false);
+  });
+});
+
+
+/* ---------- an opened world does not wait behind the tiles it was prewarmed beside (raster.ts, worlds.ts) ---------- */
+describe("worlds.ts: a prewarmed world is promoted when it is opened", () => {
+  test("its job is the first to start after the two in flight, not behind the family's queued tiles", async () => {
+    withWorker();
+    fakeDom();
+    const { buildWorld, prewarmWorld } = await import("../../app/_landing/cosmos/engine/worlds.ts");
+    const raster = new Raster(false);
+    const w = FakeWorker.last!;
+    w.say(HELLO);
+    await raster.ready;
+    const cx = {
+      g: { W: 1280, H: 800, portrait: false, RS: 1, DPR: 1, S: 800 },
+      tier: "full",
+      life: { dead: false, want() {} },
+      els: { world: new FakeEl("div") },
+      worldTok: 0,
+      worldReady: false,
+      worldReadyAt: 0,
+      worldPre: null as unknown,
+      wplanes: [],
+      raster,
+    };
+    // a family opens: six tiles at 1+k, then the prewarm of its world at 3
+    for (let k = 0; k < 6; k++) void raster.run({ ...JOB, rs: 100 + k }, 1 + k, "lib");
+    prewarmWorld(cx as never, "fam");
+    // a category is clicked before the tiles drain
+    buildWorld(cx as never, "fam");
+    // the worker answers each job as it is sent; the order they were sent in is the order they painted in
+    let answered = 0;
+    while (answered < w.posted.length) {
+      w.say({ t: "done", id: w.posted[answered].id, out: [], ret: [] });
+      answered++;
+    }
+    const order = w.posted.map((m) => (m.job.parts ? "world" : "lib" + (m.job.rs - 100)));
+    expect(order.slice(0, 3), "two tiles were already painting; the world is next").toEqual(["lib0", "lib1", "world"]);
+    expect(order.filter((x) => x === "world")).toHaveLength(1);
+    raster.destroy();
+  });
+
+  test("bump() raises only queued jobs of the tag, keeps their order, and leaves the ones painting alone", async () => {
+    withWorker();
+    countingDocument();
+    const r = new Raster(false);
+    const w = FakeWorker.last!;
+    w.say(HELLO);
+    await r.ready;
+    const mark = (n: number): Job => ({ ...JOB, rs: n });
+    void r.run(mark(1), 0, "a");
+    void r.run(mark(2), 0, "a");
+    void r.run(mark(3), 5, "x");
+    void r.run(mark(4), 4, "slow");
+    void r.run(mark(5), 4, "slow");
+    r.bump("slow", -1, "fast");
+    r.bump("a", -9);
+    for (let n = 0; n < w.posted.length; n++) w.say({ t: "done", id: w.posted[n].id, out: [], ret: [] });
+    expect(w.posted.map((m) => m.job.rs)).toEqual([1, 2, 4, 5, 3]);
+    r.destroy();
+  });
+});
+
+
+/* ---------- a glide frame touches only the cards that can be seen (carousel.ts) ---------- */
+describe("carousel.ts: placeCards leaves hidden cards alone", () => {
+  /** 14 cards with a duration chip each; every style write, class toggle and query is counted */
+  async function frames() {
+    const { syncCarousel } = await import("../../app/_landing/cosmos/engine/carousel.ts");
+    const { carMetrics } = await import("../../app/_landing/cosmos/engine/layout.ts");
+    const g = { W: 1280, H: 800, S: 800, DPR: 1, RS: 1, portrait: false };
+    const st = { writes: 0, queries: 0 };
+    const n = 14;
+    const cards = Array.from({ length: n }, () => {
+      const dur = { style: new Proxy({} as Record<string, unknown>, { set: (t, k, v) => (st.writes++, (t[k as string] = v), true) }) };
+      const style = new Proxy({ setProperty: () => void st.writes++ } as Record<string, unknown>, { set: (t, k, v) => (st.writes++, (t[k as string] = v), true) });
+      return {
+        style,
+        tabIndex: 0, setAttribute() {},
+        classList: { toggle: () => void st.writes++ },
+        querySelector: () => (st.queries++, dur),
+      };
+    });
+    // key art on every template: no raster, so the frame is the pose and nothing else
+    const list = cards.map((_c, i) => ({ id: "t" + i, label: "T" + i, type: "film", art: "/a.png" }));
+    const cx = { g, RM: true, els: { typeView: { querySelector: () => null } }, CAR: { ...carMetrics(g, n), pos: 0, target: 0, cards, list, idx: 0, hov: null } };
+    const frame = (pos: number) => {
+      st.writes = st.queries = 0;
+      syncCarousel(cx as never, pos);
+      return { ...st };
+    };
+    return { frame, cards };
+  }
+
+  test("a steady frame queries no chip and writes only to the cards that are visible", async () => {
+    const { frame, cards } = await frames();
+    frame(0); // the first frame poses every card and finds every chip
+    const steady = frame(0);
+    expect(steady.queries, "no card is searched for its chip again").toBe(0);
+    const visible = cards.filter((c) => (c.style as { visibility?: string }).visibility !== "hidden").length;
+    expect(visible, "only the near cards are visible").toBeLessThan(cards.length);
+    // five style writes, a class toggle and the chip's opacity per visible card
+    expect(steady.writes).toBe(visible * 7);
+  });
+
+  test("a card that comes back into view gets its pose, and the frame it turns hidden still writes", async () => {
+    const { frame, cards } = await frames();
+    frame(0);
+    const far = cards[13].style as { opacity?: string; visibility?: string };
+    expect(far.visibility).toBe("hidden");
+    frame(0);
+    const before = far.opacity;
+    frame(10);
+    expect(far.visibility, "glided to").toBe("visible");
+    expect(far.opacity).not.toBe(before);
+    const gone = cards[0].style as { visibility?: string };
+    expect(gone.visibility, "the card left behind is hidden on the frame it leaves").toBe("hidden");
+  });
+});
+
+
+/* ---------- a category hover forces one layout (library.ts) ---------- */
+describe("library.ts: hotCat reads the area's box before it writes the hot classes", () => {
+  const LAY = { dirty: false, layouts: 0 };
+  const read = () => {
+    if (LAY.dirty) LAY.layouts++;
+    LAY.dirty = false;
+  };
+  /** a DomEl whose style, class and box reads are counted the way a browser's layout is */
+  class LEl extends DomEl {
+    constructor(tag: string) {
+      super(tag);
+      this.style = new Proxy(this.style, {
+        set: (t, k, v) => ((LAY.dirty = true), (t[k as string] = v), true),
+        get: (t, k) => (k === "setProperty" ? () => void (LAY.dirty = true) : t[k as string]),
+      });
+      for (const m of ["add", "remove", "toggle"] as const) {
+        const f = this.classList[m] as (...a: never[]) => unknown;
+        this.classList[m] = ((...a: never[]) => ((LAY.dirty = true), f(...a))) as never;
+      }
+    }
+    get parentElement() {
+      return this.parent;
+    }
+    getBoundingClientRect() {
+      read();
+      return super.getBoundingClientRect();
+    }
+    get offsetWidth(): number {
+      read();
+      return 0;
+    }
+    get offsetHeight(): number {
+      read();
+      return 0;
+    }
+  }
+
+  test("hovering a tile from rest forces the one layout showBanner needs, not two", async () => {
+    const root = shellDom();
+    const was = DOC.createElement;
+    DOC.createElement = (t: string) => new LEl(t);
+    try {
+      const { rebuildLib } = await import("../../app/_landing/cosmos/engine/library.ts");
+      const cats = ["a", "b", "c"].map((id) => ({ id, label: "Category " + id, items: 3, art: `/presets/${id}.png` }));
+      const fam = { id: "styles", label: "Styles", status: "live" as const, categories: cats };
+      const banner = new LEl("div");
+      for (const c of ["bn-name", "bn-meta", "bn-front", "bn-back"]) banner.appendChild(new LEl("div")).classes.add(c);
+      const cx = {
+        root,
+        els: { libView: root.appendChild(new LEl("section")), banner },
+        g: { W: 1280, H: 800, S: 800, DPR: 1, RS: 1, portrait: false },
+        tier: "full",
+        ST: { lv: "fam", type: null, tpl: null, fam: "styles", cat: null },
+        famById: new Map([["styles", fam]]),
+        famSorted: [],
+        libTok: 0,
+        raster: { drop() {}, run: () => new Promise(() => {}) },
+      };
+      rebuildLib(cx as never, "styles");
+      const tile = cx.els.libView.querySelector(".cat") as unknown as { onpointerenter: () => void };
+      expect(tile, "the sheet drew its tiles").toBeTruthy();
+      LAY.dirty = false; // a frame has run since the build: the layout is clean
+      LAY.layouts = 0;
+      tile.onpointerenter();
+      expect(LAY.layouts).toBe(1);
+    } finally {
+      DOC.createElement = was;
+    }
+  });
+});
+
+
+/* ---------- opening a template or a category moves the focus onto its stage (nav.ts) ---------- */
+/** a landing mid-level: every element setLv, renderStage and buildWorld touch, on the shell's DomEl */
+function openCx(root: DomEl, lv: "type" | "fam") {
+  const base = familyCx(root);
+  const cats = base.SV.list as { id: string; label: string; art: string }[];
+  const tpls = cats.map((c) => ({ ...c, seconds: 30 }));
+  const world = new DomEl("div");
+  world.querySelectorAll = () => [];
+  return Object.assign(base, {
+    els: { ...base.els, typeView: kid(root, "section"), libView: kid(root, "section"), world, banner: kid(root), scene: kid(root) },
+    ST: { lv, type: lv === "type" ? "film" : null, tpl: null, fam: lv === "fam" ? "styles" : null, cat: null, opener: null },
+    SV: { kind: null, idx: 0, list: [] },
+    famSorted: cats,
+    tplByType: new Map([["film", tpls]]),
+    typeById: new Map([["film", { id: "film", label: "Film" }]]),
+    templates: tpls,
+    CAR: { cards: [kid(root, "button"), kid(root, "button"), kid(root, "button")] },
+    gov: null,
+    covered: false,
+    coverT: 0,
+    navTok: 0,
+    worldTok: 0,
+    worldReady: false,
+    worldReadyAt: 0,
+    worldPre: null as unknown,
+    wplanes: [],
+    medalsEl: null,
+    reamsEl: null,
+    life: { dead: false, timeout: () => 0 as never, clear() {}, raf() {}, want() {}, observe: (x: unknown) => x, unobserve() {} },
+    raster: { run: () => new Promise(() => {}), paint: () => new Promise(() => {}), drop() {}, bump() {} },
+  });
+}
+
+describe("nav.ts: the card or tile that opened a stage is inert, so the stage takes the focus", () => {
+  test("openTpl from a focused card leaves the focus inside #stageView", async () => {
+    const root = shellDom();
+    stub("performance", performance);
+    const { openTpl } = await import("../../app/_landing/cosmos/engine/carousel.ts");
+    const cx = openCx(root, "type");
+    (cx.CAR.cards[1] as DomEl).focus();
+    openTpl(cx as never, 1);
+    expect(cx.els.stageView.inert).toBe(false);
+    expect(cx.els.stageView.contains(DOC.activeElement)).toBe(true);
+    expect(DOC.activeElement!.getAttribute("aria-label")).toBe("Previous: Category a");
+  });
+
+  test("openCat from a focused tile leaves the focus inside #stageView", async () => {
+    const root = shellDom();
+    stub("performance", performance);
+    const { openCat } = await import("../../app/_landing/cosmos/engine/library.ts");
+    const cx = openCx(root, "fam");
+    const tile = kid(cx.els.libView, "button");
+    tile.classes.add("cat");
+    tile.dataset.k = "0";
+    tile.focus();
+    openCat(cx as never, 0);
+    expect(cx.els.stageView.contains(DOC.activeElement)).toBe(true);
+    expect(DOC.activeElement!.getAttribute("aria-label"), "the first item has no Previous: Next takes it").toBe("Next: Category b");
+  });
+
+  test("a stage with nothing to step to takes the focus itself", async () => {
+    const root = shellDom();
+    const { focusStage } = await import("../../app/_landing/cosmos/engine/nav.ts");
+    const cx = openCx(root, "type");
+    focusStage(cx as never);
+    expect(DOC.activeElement).toBe(cx.els.stageView);
+  });
+});
+
+
+/* ---------- the browser's Back steps one level (nav.ts) ---------- */
+describe("nav.ts: the platform Back steps back a level instead of leaving the landing", () => {
+  /** a session history that lands each go() asynchronously, as a browser does */
+  class FakeHistory {
+    entries: { state: unknown }[] = [{ state: { __NA: true } }];
+    at = 0;
+    pushes = 0;
+    constructor(private win: { fire: (e: { state: unknown }) => void }) {}
+    get state() {
+      return this.entries[this.at].state;
+    }
+    pushState(state: unknown): void {
+      this.pushes++;
+      // Next's patched pushState carries its own marker into the new entry
+      this.entries.splice(this.at + 1, this.entries.length, { state: { ...(state as object), __NA: true } });
+      this.at++;
+    }
+    go(n: number): void {
+      const to = Math.max(0, Math.min(this.entries.length - 1, this.at + n));
+      queueMicrotask(() => {
+        this.at = to;
+        this.win.fire({ state: this.state });
+      });
+    }
+    back(): void {
+      this.go(-1);
+    }
+  }
+  async function landing() {
+    const root = shellDom();
+    const listeners: ((e: { state: unknown }) => void)[] = [];
+    const win = { fire: (e: { state: unknown }) => listeners.forEach((f) => f(e)), addEventListener: (_t: string, f: never) => listeners.push(f), removeEventListener() {} };
+    const hist = new FakeHistory(win);
+    stub("window", win);
+    stub("history", hist);
+    const nav = await import("../../app/_landing/cosmos/engine/nav.ts");
+    const cx = openCx(root, "type") as unknown as {
+      ST: { lv: string; type: string | null; tpl: string | null; fam: string | null; cat: string | null };
+      els: Record<string, DomEl>;
+      life: Record<string, unknown>;
+      typeById: Map<string, unknown>;
+      tplByType: Map<string, unknown[]>;
+    };
+    Object.assign(cx, { medEls: [], searchOpen: false, cam: {}, hotEl: null, preT: 0, cx: 0 });
+    Object.assign(cx.els, { back: kid(root, "button"), crumbs: kid(root, "nav"), depth: kid(root, "nav") });
+    Object.assign(cx.life, { on: (_t: unknown, type: string, f: never) => (type === "popstate" ? (listeners.push(f), () => {}) : () => {}) });
+    cx.ST.lv = "root";
+    cx.ST.type = null;
+    nav.wireRoot(cx as never);
+    return { nav, cx, hist, root };
+  }
+
+  test("root > type > template: two Backs stay on the landing, the third leaves", async () => {
+    const { nav, cx, hist } = await landing();
+    cx.ST.type = "film";
+    nav.setLv(cx as never, "type");
+    cx.ST.tpl = "a";
+    nav.setLv(cx as never, "tpl");
+    expect(hist.entries.length, "one entry per level opened").toBe(3);
+    const seen: string[] = [];
+    while (hist.at > 0) {
+      hist.back();
+      await tick(1);
+      seen.push(cx.ST.lv);
+    }
+    // the first Back closed the template, the second returned to the overview; at the base entry the page is left
+    expect([seen, hist.at]).toEqual([["type", "root"], 0]);
+  });
+
+  test("a level closed from the page takes its entry off the stack, and the pop it causes closes nothing more", async () => {
+    const { nav, cx, hist } = await landing();
+    cx.ST.type = "film";
+    nav.setLv(cx as never, "type");
+    cx.ST.tpl = "a";
+    nav.setLv(cx as never, "tpl");
+    nav.back(cx as never); // the HUD Back
+    await tick(1);
+    expect([cx.ST.lv, hist.at]).toEqual(["type", 1]);
+    hist.back();
+    await tick(1);
+    expect([cx.ST.lv, hist.at]).toEqual(["root", 0]);
+  });
+
+  test("moving sideways from one type to another pushes nothing", async () => {
+    const { nav, cx, hist } = await landing();
+    cx.ST.type = "film";
+    nav.setLv(cx as never, "type");
+    const n = hist.pushes;
+    nav.setLv(cx as never, "type");
+    expect(hist.pushes).toBe(n);
+  });
+
+
+  test("a history jump of two levels closes both", async () => {
+    const { nav, cx, hist } = await landing();
+    cx.ST.type = "film";
+    nav.setLv(cx as never, "type");
+    cx.ST.tpl = "a";
+    nav.setLv(cx as never, "tpl");
+    hist.go(-2);
+    await tick(1);
+    expect([cx.ST.lv, hist.at]).toEqual(["root", 0]);
+  });
+
+  test("another type opened from a template's crumb ends one level deep, with no entry pushed for the trip through the overview", async () => {
+    const { nav, cx, hist } = await landing();
+    Object.assign(cx, {
+      types: [{ id: "film", label: "Film" }, { id: "other", label: "Other" }],
+      L: { med: [{ x: 0, y: 0 }, { x: 10, y: 10 }], cx: 0, cy: 0 },
+      medEls: [new DomEl("button"), new DomEl("button")],
+      carTok: 0,
+    });
+    cx.typeById.set("other", (cx as unknown as { types: { id: string }[] }).types[1] as never);
+    cx.tplByType.set("other", []);
+    Object.assign(cx.life, { sleep: () => Promise.resolve() });
+    (DomEl.prototype as unknown as { addEventListener: () => void }).addEventListener = () => {};
+    cx.ST.type = "film";
+    nav.setLv(cx as never, "type");
+    cx.ST.tpl = "a";
+    nav.setLv(cx as never, "tpl");
+    await nav.navTo(cx as never, { lv: "type", type: "other" });
+    await tick(1);
+    expect([cx.ST.lv, cx.ST.type, hist.at, hist.pushes]).toEqual(["type", "other", 1, 2]);
   });
 });

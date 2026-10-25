@@ -34,10 +34,60 @@ function tryCover(cx: Cx): void {
   else cx.coverT = cx.life.timeout(() => tryCover(cx), 100);
 }
 
+/* ---------- the browser's Back ----------
+ * The level stack lives in cx.ST, so the platform Back used to leave the landing from any
+ * depth. Each level deeper pushes one same-URL entry ({ pcDepth }); Back (popstate) steps the
+ * stack up to that entry's depth; a level closed from the page (the HUD Back, a crumb, Esc)
+ * takes its entries off with history.go (the popstate that causes finds the stack already at
+ * that depth and closes nothing more). Next's app router patches pushState to carry its own
+ * state into ours, and answers the popstate with a same-URL restore, which leaves this page's
+ * component where it is. */
+interface Hist {
+  /** the entries this page has pushed above its own, as the browser has them */
+  depth: number;
+  /** the browser moved first: setLv records the depth and pushes nothing */
+  popping: boolean;
+  /** resetInstant's trip through the root, which a level opened next undoes */
+  quiet: boolean;
+}
+const HIST = new WeakMap<Cx, Hist>();
+const histOf = (cx: Cx): Hist => {
+  let h = HIST.get(cx);
+  if (!h) HIST.set(cx, (h = { depth: 0, popping: false, quiet: false }));
+  return h;
+};
+
+function syncHistory(cx: Cx, depth: number): void {
+  const h = histOf(cx);
+  if (h.quiet || typeof history === "undefined") return;
+  if (h.popping) h.depth = depth;
+  else if (depth > h.depth) while (h.depth < depth) history.pushState({ pcDepth: ++h.depth }, "");
+  else if (depth < h.depth) {
+    const n = h.depth - depth;
+    h.depth = depth;
+    history.go(-n);
+  }
+}
+
+function onPopState(cx: Cx, state: { pcDepth?: number } | null): void {
+  const h = histOf(cx);
+  const to = state?.pcDepth ?? 0,
+    at = levelOf[cx.ST.lv];
+  h.popping = true;
+  try {
+    if (to === 0 && at > 0) void navTo(cx, { lv: "root" });
+    else if (to < at) back(cx);
+  } finally {
+    h.popping = false;
+  }
+  h.depth = to;
+}
+
 export function setLv(cx: Cx, lv: Level): void {
   const { root, els } = cx;
   const was = cx.ST.lv;
   cx.ST.lv = lv;
+  syncHistory(cx, levelOf[lv]);
   if (was !== lv) cx.gov?.kick("level", 2000);
   const covering = lv === "type" || lv === "tpl" || lv === "cat";
   cx.life.clear(cx.coverT);
@@ -53,6 +103,18 @@ export function setLv(cx: Cx, lv: Level): void {
   els.stageView.inert = !(lv === "tpl" || lv === "cat");
   els.libView.inert = lv !== "fam";
   renderNav(cx);
+}
+
+/** a template or category has just opened: the card or tile that opened it is inert now, so
+ *  the focus goes to the stage's first control (or the stage itself when it has none) */
+export function focusStage(cx: Cx): void {
+  const v = cx.els.stageView;
+  const b = [...v.querySelectorAll<HTMLButtonElement>(".sv-nav button")].find((x) => !x.disabled);
+  if (b) b.focus({ preventScroll: true });
+  else {
+    v.tabIndex = -1;
+    v.focus({ preventScroll: true });
+  }
 }
 
 export function renderNav(cx: Cx): void {
@@ -112,7 +174,10 @@ export function renderNav(cx: Cx): void {
 function resetInstant(cx: Cx): void {
   cx.root.classList.add("skip");
   cx.ST.type = cx.ST.tpl = cx.ST.fam = cx.ST.cat = null;
+  const h = histOf(cx);
+  h.quiet = true;
   setLv(cx, "root");
+  h.quiet = false;
   hideBanner(cx);
   cx.medEls.forEach((b) => b.classList.remove("chosen"));
   cx.life.raf(() => cx.life.raf(() => cx.root.classList.remove("skip")));
@@ -239,6 +304,7 @@ function hotOff(cx: Cx, b: HTMLElement): void {
 export function wireRoot(cx: Cx): void {
   const host = cx.els.scene,
     { life, cam } = cx;
+  life.on(window, "popstate", (e: PopStateEvent) => onPopState(cx, e.state));
   const target = (e: Event) => (e.target as Element | null)?.closest?.<HTMLElement>(".med,.ream") ?? null;
   life.on(host, "pointerover", (e) => {
     const b = target(e);
