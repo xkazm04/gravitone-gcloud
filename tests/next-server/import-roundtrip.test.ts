@@ -153,6 +153,23 @@ describe("what the import will not take, and says so", () => {
     expect(p.value.projects.map((x) => x.preview.outcome)).toEqual(["import", "import", "import", "import"]);
   });
 
+  it("previews a project exactly as the commit lands it: a target the creation door refuses is refused at the preview", async () => {
+    const seed = await seedV1("uid-a");
+    await putProject({ ...seed.film, targetS: 1e300 });
+    const u = universe();
+    const archive = read(await v1Archive(seed.uid));
+    const p = u.store.read((r) => planImport(r, archive));
+    if (!p.ok) throw p.error;
+    const film = p.value.projects.find((x) => x.preview.v1Id === seed.film.id)?.preview;
+    const done = await commitImport({ ...u, actor: OP }, archive, p.value.token);
+    if (!done.ok) throw done.error;
+    const landed = done.value.kind === "done" ? done.value.outcomes.find((o) => o.v1Id === seed.film.id) : undefined;
+    // The preview's outcome is the commit's: both import, or both refuse with the door's sentence.
+    expect({ preview: film?.outcome, landed: landed?.outcome }).toEqual({ preview: "refuse", landed: "refused" });
+    expect(film?.reason).toBeDefined();
+    expect(landed?.reason).toBe(film?.reason);
+  });
+
   it("reads a v1 instant no Date can hold as unreadable: a reported loss, never a failed preview or a refused commit", async () => {
     const seed = await seedV1("uid-a");
     // 1e20 ms is JSON v1 can write and past what a Date holds (8.64e15): toISOString throws on it.

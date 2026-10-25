@@ -1,5 +1,7 @@
 import { filmDefaults, planParts, recipeById, type PlannedPart } from "@gt/catalog/recipes";
 import { TEMPLATES, type TemplateId } from "@gt/catalog/projects";
+import { parseAt } from "@gt/domain/door";
+import { composeInputSchema } from "@gt/domain/produce.schema";
 import { isStepKind, type StepKind } from "@gt/domain/steps/registry";
 import { canonical, sha256Hex } from "@gt/kernel/canonical";
 import type { Reader } from "@gt/kernel/store";
@@ -180,10 +182,15 @@ function stageProject(archive: Archive, row: Row, exists: (id: string) => boolea
   const blobs = [...sink.values()];
   const id = kernelIdOf(v1Id);
   const styleId = styled ? theme.id : undefined;
+  const title = String(row["title"] ?? "").trim() || "Untitled film";
+  // The creation door, at staging: what commit's land() hands compose, so an input the door refuses
+  // (a target whose units are no integer, say) is refused here with its sentence, not promised as import.
+  const door = parseAt("compose", composeInputSchema, { recipe: recipe.id, title: title.slice(0, 200), ...(styleId === undefined ? {} : { styleId }), units });
+  if (!door.ok) return refused(row, door.error.message);
   const preview: ProjectPreview = {
     v1Id,
     id,
-    title: String(row["title"] ?? "").trim() || "Untitled film",
+    title,
     recipe: recipe.id,
     outcome: exists(id) ? "skip" : "import",
     ...(exists(id) ? { reason: `already imported as ${id}` } : {}),
