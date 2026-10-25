@@ -297,12 +297,11 @@ export async function createTake(
     const verdict = pick(VERDICTS, meta.verdict) ?? "unjudged";
     const title =
       str(meta.title, 200) ?? (file?.name ? path.basename(file.name, path.extname(file.name)).slice(0, 200) : null) ?? "untitled take";
-    let fileRec: SoundTake["file"] = null;
-    if (hasBytes) {
-      const ext = AUDIO_EXT[mime!] ?? (path.extname(file!.name).toLowerCase() || ".bin");
-      const rel = await writeBytesAtomic(path.join("files", `${safeId(id)}${ext}`), file!.bytes);
-      fileRec = { path: rel, mime: mime!, bytes: file!.bytes.byteLength };
-    }
+    // The bytes are written LAST (below), once every rule that can refuse the take has spoken:
+    // written first, a refused rating, stage or an unreadable ledger left an audio file in
+    // files/ that no take names, one per attempt.
+    const fileAt = hasBytes ? path.join("files", `${safeId(id)}${AUDIO_EXT[mime!] ?? (path.extname(file!.name).toLowerCase() || ".bin")}`) : null;
+    const fileRec: SoundTake["file"] = fileAt === null ? null : { path: fileAt.split(path.sep).join("/"), mime: mime!, bytes: file!.bytes.byteLength };
     const take: SoundTake = {
       id,
       kind,
@@ -357,6 +356,7 @@ export async function createTake(
     store.takes.push(take);
     tx.touch("takes");
     await syncVerdict(tx, take);
+    if (fileAt !== null) await writeBytesAtomic(fileAt, file!.bytes);
     return { take, created: true };
   });
 }

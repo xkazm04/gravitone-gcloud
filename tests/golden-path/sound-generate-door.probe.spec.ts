@@ -11,7 +11,7 @@
 // other URL fails the test. SOUND_STORE_DIR / SOUND_LEDGER_PATH point at a fresh temp dir per
 // test and the env is restored afterwards (keepEnv).
 
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -22,6 +22,7 @@ import { runSoundCli } from "@/lib/sound/cli";
 import { buildEditPlan, editSeconds } from "@/lib/sound/editPlan";
 import { generateTake, parseGenerateRequest } from "@/lib/sound/generate";
 import { readTakes, SoundError } from "@/lib/sound/store";
+import { createTake } from "@/lib/sound/takes";
 
 import { keepEnv } from "./_helpers";
 
@@ -152,4 +153,38 @@ test("section edit: a mode that is not one is refused before the vendor, and the
   const ok = await generateTake(parseGenerateRequest(genReq({ op: "section-edit", prompt: "", sourceTakeId: source.id, editModes: ["keep", "high"] })));
   expect(ok.parentId).toBe(source.id);
   expect(calls.length).toBe(2);
+});
+
+/* ── a take the store refuses leaves nothing behind ──────────────────────── */
+
+const AUDIO = { bytes: new Uint8Array(4096).map((_, i) => (i * 7) % 251), mime: "audio/mpeg", name: "take.mp3" };
+const filesOnDisk = (): string[] => {
+  const dir = path.join(process.env.SOUND_STORE_DIR!, "files");
+  return existsSync(dir) ? readdirSync(dir) : [];
+};
+
+test("create: a take the contract refuses writes no audio file - a rating, a stage, an unreadable ledger", async () => {
+  const cases: [string, () => Promise<unknown>][] = [
+    ["a rating past 10", () => createTake({ origin: "import", title: "loud", ratings: { melody: 11 } }, AUDIO)],
+    ["a stage on a rejected take", () => createTake({ origin: "import", title: "cut", verdict: "rejected", stage: "edit" }, AUDIO)],
+    [
+      "a kept take over a ledger that will not parse",
+      async () => {
+        writeFileSync(process.env.SOUND_LEDGER_PATH!, "<<<<<<< HEAD\n{", "utf8");
+        return createTake({ origin: "import", title: "kept", verdict: "kept" }, AUDIO);
+      },
+    ],
+  ];
+  for (const [what, run] of cases) {
+    const r = await refusal(run);
+    console.log(`[sound-door] ${what} -> ${r?.status} ${r?.message.slice(0, 70)}; files ${filesOnDisk().length}`);
+    expect(r, `${what} was not refused`).not.toBeNull();
+    expect(filesOnDisk(), `${what} left its audio in the store`).toEqual([]);
+  }
+  expect((await readTakes()).takes).toEqual([]);
+  // The same bytes on a take the contract accepts are filed where the take says.
+  rmSync(process.env.SOUND_LEDGER_PATH!, { force: true });
+  const { take } = await createTake({ origin: "import", title: "fine", ratings: { melody: 7 } }, AUDIO);
+  expect(filesOnDisk()).toEqual([path.basename(take.file!.path)]);
+  expect(take.file!.path).toBe(`files/${take.id}.mp3`);
 });
