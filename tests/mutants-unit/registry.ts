@@ -7270,4 +7270,28 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void 0;",
     why: "A take's copy or a clip's download that fails part-way leaves its staged half in the job folder.",
   },
+  {
+    id: "google-text-base-read-at-load",
+    test: "tests/next-server/text-google-env-per-call.test.ts",
+    file: "lib/text/providers/google.ts",
+    find: "const base = (): string => process.env.GOOGLE_TEXT_BASE_URL?.trim() || \"https://generativelanguage.googleapis.com/v1beta\";",
+    replace: "const base0 = process.env.GOOGLE_TEXT_BASE_URL?.trim() || \"https://generativelanguage.googleapis.com/v1beta\"; const base = (): string => base0;",
+    why: "The base URL is captured at import again, so an override set after boot is ignored until restart.",
+  },
+  {
+    id: "google-text-flash-model-read-at-load",
+    test: "tests/next-server/text-google-env-per-call.test.ts",
+    file: "lib/text/providers/google.ts",
+    find: "const flash = (): string => process.env.GOOGLE_TEXT_MODEL?.trim() || \"gemini-3.6-flash\";",
+    replace: "const flash0 = process.env.GOOGLE_TEXT_MODEL?.trim() || \"gemini-3.6-flash\"; const flash = (): string => flash0;",
+    why: "The flash model is captured at import again, so a model override set after boot names the old model.",
+  },
+  {
+    id: "google-text-pro-model-read-at-load",
+    test: "tests/next-server/text-google-env-per-call.test.ts",
+    file: "lib/text/providers/google.ts",
+    find: "const pro = (): string => process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || \"gemini-3.1-pro-preview\";",
+    replace: "const pro0 = process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || \"gemini-3.1-pro-preview\"; const pro = (): string => pro0;",
+    why: "The pro model is captured at import again, so a plan-model override set after boot names the old model.",
+  },
 ];
