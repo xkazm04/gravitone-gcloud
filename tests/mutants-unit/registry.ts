@@ -888,6 +888,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "An empty list's ghost outlines drop under 3:1 on the panels: the shape that replaced a paragraph is invisible again.",
   },
   {
+    id: "ui-marks-ghost-door-hover-hairline",
+    test: "packages/ui/test/components/marks-floor.test.ts",
+    file: "packages/ui/src/components/chip/Chip.module.css",
+    find: ".ghost.door:hover{border-color:color-mix(in srgb,currentColor 65%,transparent)}",
+    replace: "",
+    why: "Pointing at a ghost door chip (adopt a row, add a preferred term) swaps its dashed rim for the 1.91:1 hairline: the placeholder mark vanishes exactly when it is about to be pressed.",
+  },
+  {
     id: "ui-status-job-table-drops-interrupted",
     test: "packages/ui/test/components/status.test.ts",
     file: "packages/ui/src/components/status/status.ts",

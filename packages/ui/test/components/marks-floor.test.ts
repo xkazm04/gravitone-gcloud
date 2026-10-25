@@ -100,6 +100,16 @@ describe("a dashed rim holds the mark floor on every ground", () => {
     expect(low).toEqual([]);
   });
 
+  test("Chip ghost that is a door, under the pointer (the hover rule must not swap the rim for a hairline)", () => {
+    const hover = must(chip, ".door:hover");
+    // The rim on hover is the most specific rule that sets one for a ghost door; else the door's.
+    const own = rule(chip, ".ghost.door:hover") ?? rule(chip, ".door.ghost:hover");
+    const rim = own?.["border-color"] ?? hover["border-color"]!;
+    const text = hover["color"] ?? textOf("neutral");
+    const low = GROUNDS.map((g) => [g, ratio(colour(rim, colour(text, [0, 0, 0, 1])), ground(g))] as const).filter(([, r]) => r < MARK_FLOOR);
+    expect(low).toEqual([]);
+  });
+
   test("Ghost card outline", () => {
     const border = must(read("components/ghost/Ghost.module.css"), ".card")["border"]!;
     const rim = /dashed\s+(.+)$/.exec(border)?.[1];

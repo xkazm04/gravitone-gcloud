@@ -15,3 +15,6 @@
 .dot{width:var(--size-dot);height:var(--size-dot);border-radius:50%;background:currentColor}
 .door{cursor:pointer}
 .door:hover{border-color:var(--hair-3);color:var(--ink-bright)}
+/* A ghost door keeps its mark under the pointer: .door:hover outranks .ghost, and its hair-3 rim
+   read 1.91:1 on the ink. The same mix, from the hover's brighter text. */
+.ghost.door:hover{border-color:color-mix(in srgb,currentColor 65%,transparent)}
