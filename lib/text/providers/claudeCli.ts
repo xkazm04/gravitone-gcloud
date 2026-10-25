@@ -41,8 +41,16 @@ const KIND_OF: Record<CliError["kind"], TextErrorKind> = {
   failed: "failed",
 };
 
-function asTextError(e: CliError): TextError {
-  const err = new TextError(e.message, KIND_OF[e.kind], "claude-cli");
+/** A CliError in the shared taxonomy, for either door on the local seat. ONE
+ *  copy of the kind map and the dispatched rule: the retrieval rung
+ *  (claudeCliRetrieve.ts) is the same binary and the same evidence. `detail`
+ *  is what a door knows beyond the message (a cost its run reported). */
+export function cliTextError(
+  e: CliError,
+  provider: "claude-cli" | "claude-cli-retrieve" = "claude-cli",
+  detail?: unknown,
+): TextError {
+  const err = new TextError(e.message, KIND_OF[e.kind], provider, detail);
   // A process that ran and exited non-zero, or one we killed mid-run, reached
   // the engine — the operator's seat may well have been charged for the work.
   // A missing binary never did. Evidence, not inference, exactly as
@@ -121,7 +129,7 @@ export function claudeCliProvider(): TextProvider {
           },
         };
       } catch (e) {
-        if (e instanceof CliError) throw asTextError(e);
+        if (e instanceof CliError) throw cliTextError(e);
         throw e;
       }
     },

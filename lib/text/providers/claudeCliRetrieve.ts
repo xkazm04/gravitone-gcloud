@@ -53,9 +53,9 @@ import { StringDecoder } from "node:string_decoder";
 
 import { CliError, spawnTurn, USES_SHELL, type RunOptions } from "../../claudeCli";
 import { MODEL } from "../../model";
-import { TextError, unsupported, type TextErrorKind } from "../errors";
+import { unsupported } from "../errors";
 import type { ProbeResult, SourceReceipt, TextProvider, TextRequest, TextResult } from "../types";
-import { claudeCliProvider } from "./claudeCli";
+import { claudeCliProvider, cliTextError } from "./claudeCli";
 
 /** The whole allow-list. A tuple, so a probe can assert the exact set. */
 export const RETRIEVE_TOOLS = ["WebSearch", "WebFetch"] as const;
@@ -282,22 +282,6 @@ export function runClaudeRetrieve(prompt: string, opts: RunOptions = {}): Promis
 
 /* ─────────────────────────────── the adapter ─────────────────────────────── */
 
-const KIND_OF: Record<CliError["kind"], TextErrorKind> = {
-  "not-installed": "not-installed",
-  "not-logged-in": "not-logged-in",
-  timeout: "timeout",
-  cancelled: "cancelled",
-  failed: "failed",
-};
-
-function asTextError(e: CliError): TextError {
-  const err = new TextError(e.message, KIND_OF[e.kind], "claude-cli-retrieve");
-  // Same evidence rule as providers/claudeCli.ts: a process that ran reached
-  // the engine and may have been billed; a missing binary never did.
-  err.dispatched = e.kind === "failed" || e.kind === "timeout" || (e.kind === "cancelled" && e.spawned);
-  return err;
-}
-
 export function claudeCliRetrieveProvider(): TextProvider {
   return {
     id: "claude-cli-retrieve",
@@ -344,7 +328,8 @@ export function claudeCliRetrieveProvider(): TextProvider {
           },
         };
       } catch (e) {
-        if (e instanceof CliError) throw asTextError(e);
+        // The reasoning door's mapping and evidence rule, not a copy of them.
+        if (e instanceof CliError) throw cliTextError(e, "claude-cli-retrieve");
         throw e;
       }
     },
