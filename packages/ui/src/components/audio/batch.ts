@@ -39,7 +39,7 @@ export type BatchForm = {
 /** v1 lib/sound/types.ts TECHNIQUES, per kind: the axis lessons are learned along. */
 export const TECHNIQUES: { readonly [K in BatchKind]: readonly string[] } = {
   music: ["single-sentence", "tag-list", "section-plan-as-the-brief", "sonic-style-vocabulary", "negative-styles", "duration-and-tempo-locking", "reference-track-anchoring", "lyrics-for-singability"],
-  sfx: ["single-sentence", "envelope-first-briefing", "layered-element-assembly", "loop-seam-acceptance", "picture-as-timing-brief"],
+  sfx: ["single-sentence", "envelope-first-briefing", "layered-element-assembly", "loop-seam-acceptance", "picture-as-timing-brief", "trailer-punctuation-grammar"],
 };
 
 export const blankBatch = (kind: BatchKind): BatchForm => ({
