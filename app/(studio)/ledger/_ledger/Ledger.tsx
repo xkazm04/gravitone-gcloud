@@ -78,6 +78,46 @@ export function rowsOf(first: readonly Event[], more: Older | null): readonly Ev
 const COALESCE_MS = 700;
 const FRESH_MS = 1300;
 
+/** The timer pair the coalescer runs on; the page passes window's, a test passes a fake clock. */
+export type Timers = { readonly set: (fn: () => void, ms: number) => number; readonly clear: (handle: number) => void };
+
+/**
+ * Arrivals coalesce into one redraw per COALESCE_MS, and each redraw's flash lasts FRESH_MS from
+ * ITS redraw. One flash timer is held and replaced per burst: an earlier burst's clear used to
+ * fire inside a later burst's flash and empty it early, and outlived the unmount.
+ */
+export function coalescer(timers: Timers, on: { readonly flush: (arrived: ReadonlySet<number>) => void; readonly clear: () => void }) {
+  let pending: number[] = [];
+  let wait: number | undefined;
+  let flash: number | undefined;
+  return {
+    push(seqs: readonly number[]): void {
+      pending.push(...seqs);
+      if (wait !== undefined) return;
+      wait = timers.set(() => {
+        wait = undefined;
+        const arrived = new Set(pending);
+        pending = [];
+        on.flush(arrived);
+        if (flash !== undefined) timers.clear(flash);
+        flash = timers.set(() => {
+          flash = undefined;
+          on.clear();
+        }, FRESH_MS);
+      }, COALESCE_MS);
+    },
+    dispose(): void {
+      if (wait !== undefined) timers.clear(wait);
+      if (flash !== undefined) timers.clear(flash);
+      wait = undefined;
+      flash = undefined;
+      pending = [];
+    },
+  };
+}
+
+const WINDOW_TIMERS: Timers = { set: (fn, ms) => window.setTimeout(fn, ms), clear: (h) => window.clearTimeout(h) };
+
 export function Ledger(p: LedgerProps) {
   const router = useRouter();
   const { toast } = useShell();
@@ -135,23 +175,22 @@ export function Ledger(p: LedgerProps) {
 
   // ── live: coalesced refresh, arrivals flash once drawn ──
   const [fresh, setFresh] = useState<ReadonlySet<number>>(new Set());
-  const pending = useRef<number[]>([]);
-  const timer = useRef<number | undefined>(undefined);
+  const burst = useMemo(
+    () =>
+      coalescer(WINDOW_TIMERS, {
+        flush: (arrived) => {
+          setFresh(arrived);
+          startTransition(() => router.refresh());
+        },
+        clear: () => setFresh(new Set()),
+      }),
+    [router],
+  );
   const live = useLedgerFeed(p.facets.head, {
-    onEvents: (seqs) => {
-      pending.current.push(...seqs);
-      if (timer.current !== undefined) return;
-      timer.current = window.setTimeout(() => {
-        timer.current = undefined;
-        const arrived = new Set(pending.current.splice(0));
-        setFresh(arrived);
-        startTransition(() => router.refresh());
-        window.setTimeout(() => setFresh(new Set()), FRESH_MS);
-      }, COALESCE_MS);
-    },
+    onEvents: (seqs) => burst.push(seqs),
     onReset: () => startTransition(() => router.refresh()),
   });
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  useEffect(() => () => burst.dispose(), [burst]);
 
   // ── keys: the `ledger` mode of the one keymap (bindings.ts) ──
   const list = useRef<ListHandle | null>(null);

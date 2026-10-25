@@ -6510,4 +6510,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: 'const plainClick = (e: { button: number; metaKey: boolean; ctrlKey: boolean }) => e.button === 0 && !e.metaKey && !e.ctrlKey;',
     why: "The link carries a private copy of the plain-click rule again, so a modifier added to the shared rule never reaches it.",
   },
+  {
+    id: "ledger-flash-earlier-clear-survives",
+    test: "tests/next-server/ledger-filter.test.ts",
+    file: "app/(studio)/ledger/_ledger/Ledger.tsx",
+    find: "        if (flash !== undefined) timers.clear(flash);\n        flash = timers.set(",
+    replace: "        flash = timers.set(",
+    why: "An earlier burst's flash timer fires inside a later burst's flash and empties it after 300 ms of 1300.",
+  },
 ];
