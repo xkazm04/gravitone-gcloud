@@ -37,6 +37,22 @@ describe("Button", () => {
     expect(d).not.toContain("href");
   });
 
+  test("a disabled submit refuses its form: the press is cancelled, so neither a click nor ⏎ in a field submits", () => {
+    // aria-disabled keeps the button in the tab order, which also keeps it the form's default
+    // button; ⏎ in a field fires a click at it. Only a cancelled click stops the submission.
+    let pressed = 0;
+    let cancelled = 0;
+    const click = (el: ReturnType<typeof Button>): void => {
+      const on = (el.props as { onClick?: (e: { preventDefault: () => void }) => void }).onClick;
+      on?.({ preventDefault: () => (cancelled += 1) });
+    };
+    click(Button({ label: "rename", submit: true, disabled: true, onPress: () => (pressed += 1) }));
+    expect(cancelled).toBe(1);
+    expect(pressed).toBe(0);
+    click(Button({ label: "rename", submit: true, onPress: () => (pressed += 1) }));
+    expect([cancelled, pressed]).toEqual([1, 1]);
+  });
+
   test("a badge is a chip after the label", () => {
     expect(html(h(Button, { label: "Commit packet", badge: { label: "7 undecided" } }))).toMatch(/Commit packet<span[^>]*>7 undecided<\/span>/);
   });

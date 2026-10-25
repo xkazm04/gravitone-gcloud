@@ -781,6 +781,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A disabled Button with an href renders as a live link, so a press the UI declared unavailable still navigates.",
   },
   {
+    id: "ui-controls-disabled-submit-submits",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/button/Button.tsx",
+    find: "onClick={disabled ? refuse : onPress}",
+    replace: "onClick={disabled ? undefined : onPress}",
+    why: "An aria-disabled submit is still its form's default button: a click on it, or ⏎ in any of the form's fields, submits while the UI says the act is unavailable.",
+  },
+  {
     id: "ui-controls-seg-presses-every-option",
     test: "packages/ui/test/components/controls.test.ts",
     file: "packages/ui/src/components/seg/Seg.tsx",

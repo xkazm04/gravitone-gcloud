@@ -8,7 +8,9 @@
 // Disabled is aria-disabled, never `disabled`: the button stays in the tab order with its
 // name, reads as unavailable, and ignores the press (primitive-level-a11y, honest
 // disablement). The prototype set `disabled`, which removed the control from the keyboard
-// path along with any reason it carried.
+// path along with any reason it carried. A disabled press is CANCELLED, not merely unheard:
+// an aria-disabled submit is still its form's default button, and both its click and a ⏎ in
+// one of the form's fields (which the browser turns into a click on it) would submit.
 import { Chip, type ChipProps } from "../chip/Chip.tsx";
 import type { Tone } from "../chip/tone.ts";
 import { cx } from "../cx.ts";
@@ -16,6 +18,8 @@ import { Glyph, type GlyphName } from "../glyph/Glyph.tsx";
 import { Keycap } from "../keycaps/Keycaps.tsx";
 import { Tally, type TallyProps } from "../tally/Tally.tsx";
 import s from "./Button.module.css";
+
+const refuse = (e: { preventDefault: () => void }): void => e.preventDefault();
 
 export type ButtonProps = {
   readonly label: string;
@@ -61,7 +65,7 @@ export function Button({ label, tone = "neutral", size = "md", shortcut, glyph, 
       type={submit ? "submit" : "button"}
       className={cls}
       aria-disabled={disabled ? true : undefined}
-      onClick={disabled ? undefined : onPress}
+      onClick={disabled ? refuse : onPress}
     >
       {body}
     </button>
