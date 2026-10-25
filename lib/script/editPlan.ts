@@ -104,6 +104,12 @@ export function editPlanSchema(draft: { renders: readonly { id: string }[] }) {
  *  the route reads the project's draft (script-phase-A, session 2). */
 export const EDIT_PLAN_SCHEMA = editPlanSchema({ renders: RENDERS });
 
+/** One edit's declared properties and their types - the same for every draft
+ *  (only `renderId`'s enum varies), so parseEditPlan walks THIS rather than a
+ *  hand list that a new property could slip past. `renderId` and `op` are
+ *  checked against their enums separately. */
+const EDIT_PLAN_ITEM: Readonly<Record<string, { readonly type: string }>> = EDIT_PLAN_SCHEMA.properties.edits.items.properties;
+
 /* ------------------------------------------------------------ application */
 
 const toS = (m: string) => {
@@ -376,8 +382,9 @@ export function parseEditPlan(
   };
 
   const edits: Edit[] = o.edits.map((raw, i) => {
-    const e = raw as Record<string, unknown>;
     const where = `edits[${i}]`;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new PlanError(`${where} is not an edit object.`);
+    const e = raw as Record<string, unknown>;
     if (typeof e.renderId !== "string" || !renderIds.has(e.renderId))
       throw new PlanError(`${where} names a render that does not exist: ${String(e.renderId)}`);
     if (typeof e.op !== "string" || !ops.has(e.op as EditOp))
@@ -405,6 +412,23 @@ export function parseEditPlan(
         `${where} is an insert whose connector is ${e.connector === undefined ? "missing" : `"${String(e.connector)}"`}. ` +
           `Name the relation to the beat before it: BUT or THEREFORE. If the only honest connector is AND THEN, the beat is a list item, not a link.`,
       );
+    // EVERY DECLARED TYPE, read off the schema the engine was handed. Only
+    // `cards` and the marks were ever type-checked, so a retime whose seconds
+    // arrived as "9" retimed nothing, a label of 42 reached the beat, and a
+    // rewrite whose text was 42 passed here and threw a TypeError out of the
+    // gate the applied chain is run through. A property the plan leaves out is
+    // absent; one it sends is the declared type or the plan fails. `integer` is
+    // held as "a finite number": `holds` rounds a fraction where it enters.
+    for (const [k, p] of Object.entries(EDIT_PLAN_ITEM)) {
+      const v = e[k];
+      if (v === undefined) continue;
+      const fits =
+        p.type === "string" ? typeof v === "string"
+        : p.type === "integer" ? typeof v === "number" && Number.isFinite(v)
+        : Array.isArray(v) && v.every((x) => typeof x === "string");
+      if (!fits) throw new PlanError(`${where} has a \`${k}\` that is not ${p.type === "array" ? "a list of ids" : `a${p.type === "integer" ? "n" : ""} ${p.type}`}: ${JSON.stringify(v)}.`);
+    }
+    if (op === "retime" && e.seconds === undefined) throw new PlanError(`${where} is a retime with no \`seconds\`, so it would change nothing.`);
 
     // A MARK THAT NAMES NO BEAT FAILS THE PLAN, because the alternative is that
     // it fails silently. `applyEdits` resolves marks with `findIndex`, and -1
@@ -435,9 +459,17 @@ export function parseEditPlan(
     return e as unknown as Edit;
   });
 
+  // The model's own refusals are shown as its word, so they are held to their
+  // shape like everything else: absent reads as none, anything else is a list of
+  // {note, why} strings or the plan fails. `"x"` used to become [] in silence.
+  if (o.refusals !== undefined) {
+    const ok = Array.isArray(o.refusals) && o.refusals.every((r) => !!r && typeof r === "object" && typeof (r as Record<string, unknown>).note === "string" && typeof (r as Record<string, unknown>).why === "string");
+    if (!ok) throw new PlanError("The plan's `refusals` is not a list of {note, why}.");
+  }
+
   return {
     edits,
-    refusals: Array.isArray(o.refusals) ? (o.refusals as EditPlan["refusals"]) : [],
+    refusals: (o.refusals as EditPlan["refusals"] | undefined) ?? [],
     summary: o.summary,
   };
 }
