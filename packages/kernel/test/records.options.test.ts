@@ -132,6 +132,11 @@ describe("receipt", () => {
     expect(tokenOf({ ...base, lines, ceilingUsd: 5 })).not.toBe(t);
     const swapped = lines.map((l) => (l.key === "frames" ? { ...l, option: opt("frames", "google") } : l));
     expect(tokenOf({ ...base, lines: swapped })).not.toBe(t);
+    // The band is part of the quote: its top is what the ceiling mark is read against.
+    const a = opt("article", "articles");
+    const article = (o: ModelOption): PlanLine[] => [{ key: "article", label: "article", lane: "seat.text", units: 1, option: o, after: [], order: 1, status: "pending" }];
+    const banded = tokenOf({ ...base, lines: article(a) });
+    expect(tokenOf({ ...base, lines: article({ ...a, usdRangePerUnit: [47, 120] }) })).not.toBe(banded);
   });
 
   it("is over its ceiling against the top of a band, not its middle", () => {

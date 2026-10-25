@@ -107,7 +107,9 @@ export function tokenOf(i: Pick<ReceiptInput, "subject" | "lines" | "queue" | "m
     key: l.key,
     after: l.after,
     units: l.units,
-    option: l.option === undefined ? null : { key: l.option.key, lane: l.option.lane, s: l.option.secondsPerUnit, usd: l.option.usdPerUnit, src: l.option.src },
+    // The band rides with the price: its top is what the ceiling mark reads (receiptFor `exposure`),
+    // so a band that moved under an unchanged middle is a quote the operator did not see.
+    option: l.option === undefined ? null : { key: l.option.key, lane: l.option.lane, s: l.option.secondsPerUnit, usd: l.option.usdPerUnit, band: l.option.usdRangePerUnit ?? null, src: l.option.src },
   }));
   return sha256Hex(canonical({ subject: i.subject, lines, queue: i.queue.digest, mode: i.mode, ceilingUsd: i.ceilingUsd ?? null }));
 }
