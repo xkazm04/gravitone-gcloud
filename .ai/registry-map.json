@@ -5505,7 +5505,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:154 The shot→prompt compiler phrases camera stance as attitude and composes shot size, placement, screen direction and lit-dark subject recipes from typed shot fields, and the shot derivation enforces size jumps and one axis, so the prompts a trailer shot list proposes are directed rather than the eye-level training mean.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "evidence-bound-visuals",
@@ -7203,7 +7207,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:1 The landing cosmos is a code-painted paper diorama whose 'camera' is pointer- and wheel-driven CSS parallax over canvas planes, with no generation model, prompt or shot brief anywhere. I searched the engine directory for prompt, generat, genre, lens and close-up and found zero hits, so the subject's precondition (directing generated shots) does not hold.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "repository-landing-document",

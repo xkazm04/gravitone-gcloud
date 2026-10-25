@@ -12481,6 +12481,54 @@
       "evaluatedTs": "2026-10-24T23:40:40.621Z",
       "worker": "98a1fd3a-150a-42ee-956b-1419b36bc263",
       "techniques": []
+    },
+    "158d061e-feaa-4660-a1d3-6e8774b1f152/cinematic-language": {
+      "context": "frames-picture-composition",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:24:39.031Z",
+      "worker": "5c30671c-f7cf-4a4b-8f99-28f1af44621d",
+      "techniques": [
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:154 ANGLE_PHRASE states angle as meaning plus headroom consequence (dojo camera-attitude cycle); SIZE_PHRASE and PLACEMENT_PHRASE (crosshair/thirds/diagonal) cover size and framing. Caveat: shots.ts:332 never seeds angle, so derived shots get size and recipe stance only."
+        },
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:111 Recipes name one in-world source and what stays dark, written as described effects with no equipment terms (comment at 106-109 cites the what-stays-dark dojo); peak:ECU and reset:EWS do the same."
+        },
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shots.ts:251 Size picks require at least 2 steps between consecutive shots (avoids the stutter cut), setup ladders open on EWS (establishing), SEQUENCE_DIRECTION at shots.ts:242 fixes the axis with neutral shots at reset/tail, and shotReview checks size-jump and unmediated flips."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/shotPrompt.ts:204 This context writes text-to-image prompts for plates; a move is passed through only when a person writes one, and the clip itself is directed in the motion step, outside this context."
+        }
+      ],
+      "registryProposal": "lens-effect-language lists 'sharp-everywhere default (no depth-of-field clause)' as a failure, but the golden path says to leave dials that do not matter for the beat at neutral. The standard should say whether an unstated depth of field counts as neutral or as the failure."
+    },
+    "076622f1-4906-4cdc-9a76-307df47fdd14/cinematic-language": {
+      "context": "landing-cosmos-scenes",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:24:39.031Z",
+      "worker": "5c30671c-f7cf-4a4b-8f99-28f1af44621d",
+      "techniques": [
+        {
+          "technique": "movement-motivation",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:1 Camera motion is interactive parallax from user input, not a briefed move for a generator."
+        }
+      ]
     }
   }
 }
