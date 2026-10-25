@@ -123,7 +123,7 @@ export function CutFinish({ frame, send, busy, error, act, data: d }: EditorProp
             {d.checks.map((c) => (
               <div key={c.id} className={s.check} role="listitem" data-check={c.id}>
                 <span className={s.checkLabel}>{c.label}</span>
-                <span className={s.checkVal}>{c.value}</span>
+                <span className={s.checkVal}>{`${c.value} / ${c.target}`}</span>
                 <span className={cx(s.v, s[c.verdict])}>{c.verdict}</span>
                 {c.deny !== undefined && <p className={cx(s.deny, s.checkDeny)}>{c.deny}</p>}
               </div>

@@ -187,7 +187,7 @@ function adFinish(ctx: KCtx, c: CutRec): AdFinishData {
       const e = latest(a);
       return { aspect: a, on: b.finish.aspects.includes(a), px: AD_ASPECT_PX[a], export: e === null ? null : exportView(e) };
     }),
-    checks: checks.map((x) => ({ id: x.id, label: x.label, value: x.value, verdict: x.verdict, blocking: x.blocks === true, ...(x.deny === undefined ? {} : { deny: x.deny }) })),
+    checks: checks.map((x) => ({ id: x.id, label: x.label, value: x.value, target: x.target, verdict: x.verdict, blocking: x.blocks === true, ...(x.deny === undefined ? {} : { deny: x.deny }) })),
     runtimeS: b.rows.reduce((t, r) => t + (r.trimS ?? r.spec.durationS), 0) + b.finish.endCard.holdS,
     targetS: ctx.project.targetS,
   };

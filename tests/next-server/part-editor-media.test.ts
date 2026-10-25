@@ -93,6 +93,15 @@ function legend(ws: { mode: string; facts: readonly string[] }): { drawn: KeyRow
 
 const SCENARIO = { id: "s1", title: "Rain shell" };
 
+/** Every string a JSX subtree draws, in order (no component is expanded: the check rows are plain elements). */
+function textsOf(node: ReactNode): string[] {
+  if (node === null || node === undefined || typeof node === "boolean") return [];
+  if (typeof node === "string" || typeof node === "number") return [String(node)];
+  if (Array.isArray(node)) return node.flatMap(textsOf);
+  return textsOf((node as ReactElement<{ children?: ReactNode }>).props?.children);
+}
+
+
 describe("the legend draws only the keys the editor answers", () => {
   it("the ad's finish draws no transport it does not run", async () => {
     const d: AdFinishData = {
@@ -107,6 +116,26 @@ describe("the legend draws only the keys the editor answers", () => {
     };
     const l = legend(await workspaceOf(() => CutFinish(props(d)) as ReactElement));
     expect(l.drawn).toEqual(l.live);
+  });
+
+  it("the ad's finish checks each draw their value against their target", async () => {
+    const check = (id: string, label: string, value: string, target: string) => ({ id, label, value, target, verdict: "pass" as const, blocking: false });
+    const d: AdFinishData = {
+      face: "finish",
+      scenario: SCENARIO,
+      shots: [],
+      endCard: { cta: "Pack one", line: "", holdS: 2 },
+      aspects: [],
+      checks: [check("runtime", "runtime", "11s", "6-20s"), check("loudness", "loudness", "-13.2 LUFS", "-14 LUFS")],
+      runtimeS: 11,
+      targetS: 15,
+    };
+    const h = harness(() => CutFinish(props(d)) as ReactElement, { settleWhen: "stable" });
+    const el = (await h.settleUp()) as ReactElement<{ inspector: { children: ReactNode } }>;
+    const rows = textsOf(el.props.inspector.children);
+    console.log(`[finish checks] ${rows.join(" | ")}`);
+    expect(rows).toContain("-13.2 LUFS / -14 LUFS");
+    expect(rows).toContain("11s / 6-20s");
   });
 
   it("the ad's bed draws no transport, cue walk or zoom it does not run", async () => {
