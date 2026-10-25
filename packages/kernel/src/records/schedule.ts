@@ -120,13 +120,14 @@ export function schedule(input: ScheduleInput): Map<string, Placed> {
   return out;
 }
 
-/** 1 + the live items on the same lane that start no later than this one (running slots count). */
-function queuePos(it: SchedItem, p: { start: number }, items: readonly SchedItem[], placed: ReadonlyMap<string, { start: number; end: number }>, now: number): number {
+/** 1 + the live items on the same lane that start no later than this one (running slots count).
+ *  A stuck item, and one blocked behind it, is drawn from now but holds no slot: never ahead. */
+function queuePos(it: SchedItem, p: { start: number }, items: readonly SchedItem[], placed: ReadonlyMap<string, { start: number; end: number; blocked: boolean; stuck: boolean }>, now: number): number {
   let ahead = 0;
   for (const x of items) {
     if (x.key === it.key || x.lane !== it.lane || x.status === "done") continue;
     const q = placed.get(x.key);
-    if (q === undefined || q.end <= now) continue;
+    if (q === undefined || q.end <= now || q.stuck || q.blocked) continue;
     if (q.start < p.start || (q.start === p.start && (x.order < it.order || (x.order === it.order && x.key < it.key)))) ahead++;
   }
   return ahead + 1;

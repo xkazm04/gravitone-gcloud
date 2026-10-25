@@ -100,6 +100,8 @@ describe("schedule", () => {
     const s = schedule({ items: [item("frames", "gpu.local", 600, [], { status: "stuck" }), item("motion", "gpu.local", 600, ["frames"]), item("x", "gpu.local", 60, [], { order: 5 })], capacity: LANE_CAPACITY, now: NOW });
     expect(s.get("motion")?.blocked).toBe(true);
     expect(s.get("x")?.start).toBe(NOW);
+    // Neither the stuck item nor the one blocked behind it holds a slot, so neither is ahead of x.
+    expect(s.get("x")?.queuePos).toBe(1);
   });
 });
 
