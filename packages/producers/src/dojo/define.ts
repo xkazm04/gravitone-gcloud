@@ -124,8 +124,12 @@ export function defineDojoGoogle(ports: DojoGooglePorts): Producer {
         } catch (e) {
           return failureOf(e);
         }
-        if (served.value.length !== count) return { kind: "vendor-failure", message: `generate ${key}: ${served.model} returned ${served.value.length} of ${count} image(s)` };
         stillHeld(ctx);
+        if (served.value.length !== count) {
+          // Paid for and kept (v1's never-re-spend rule); a retry of the step would buy all `count` again, so a human decides.
+          if (served.value.length > 0) await ports.writeImages(cycleId, key, served.value);
+          return { kind: "fatal", code: "unavailable", message: `generate ${key}: ${served.model} returned ${served.value.length} of ${count} image(s)` };
+        }
         await ports.writeImages(cycleId, key, served.value);
         return { kind: "produced", output: { key, images: count, model: served.model } };
       }

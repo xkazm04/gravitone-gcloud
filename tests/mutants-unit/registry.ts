@@ -2272,6 +2272,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "An arm with every PNG on disk is billed to Nano Banana again.",
   },
   {
+    id: "dojo-google-short-answer-discarded",
+    test: "tests/next-server/producer-dojo.test.ts",
+    file: "packages/producers/src/dojo/define.ts",
+    find: "if (served.value.length > 0) await ports.writeImages(cycleId, key, served.value);",
+    replace: "void 0;",
+    why: "A short google answer is paid for and thrown away.",
+  },
+  {
+    id: "dojo-google-short-answer-retried",
+    test: "tests/next-server/producer-dojo.test.ts",
+    file: "packages/producers/src/dojo/define.ts",
+    find: "return { kind: \"fatal\", code: \"unavailable\", message: `generate ${key}:",
+    replace: "return { kind: \"vendor-failure\", message: `generate ${key}:",
+    why: "The breaker re-buys the whole arm on every retry of a short answer.",
+  },
+  {
     id: "dojo-google-failed-call-unbooked",
     test: "tests/next-server/producer-dojo.test.ts",
     file: "packages/producers/src/dojo/define.ts",

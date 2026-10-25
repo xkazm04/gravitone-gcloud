@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -237,7 +237,7 @@ const hostB: Holder = { bootId: "boot-b", pid: 502, host: "box" };
 const RUN = { holder: hostA, alive: () => true, sleep: async () => {} } as const;
 
 type Fake = { calls: string[]; ports: DojoGooglePorts };
-function fakeGoogle(root: string, script: { readonly generateUsd?: number; readonly unpricedReadback?: boolean; readonly overBudget?: boolean; readonly throwGenerate?: string } = {}): Fake {
+function fakeGoogle(root: string, script: { readonly generateUsd?: number; readonly unpricedReadback?: boolean; readonly overBudget?: boolean; readonly throwGenerate?: string; readonly shortBy?: number } = {}): Fake {
   const calls: string[] = [];
   const disk = dojoGooglePorts(root);
   const ports: DojoGooglePorts = {
@@ -246,7 +246,7 @@ function fakeGoogle(root: string, script: { readonly generateUsd?: number; reado
       calls.push(`generate:${prompt}`);
       if (script.overBudget === true) throw new AppError("budget", "The imaging spend ceiling for this window is reached.");
       if (script.throwGenerate !== undefined) throw new Error(script.throwGenerate);
-      return { value: Array.from({ length: count }, () => PNG.toString("base64")), model: "google/fake-pixels", costUsd: script.generateUsd ?? 0.09 };
+      return { value: Array.from({ length: count - (script.shortBy ?? 0) }, () => PNG.toString("base64")), model: "google/fake-pixels", costUsd: script.generateUsd ?? 0.09 };
     },
     async recognize(): Promise<Served<unknown>> {
       calls.push("recognize");
@@ -336,6 +336,23 @@ describe("a google cycle as a job, every call metered", () => {
     const why = k.store.read((t) => t.all("SELECT reason FROM spend_unpriced WHERE job_id = ?", id));
     expect(why.ok && why.value.every((row) => String(row["reason"]).includes("socket hang up"))).toBe(true);
     expect(k.store.read((t) => assertReconciled(t, id)).ok).toBe(true);
+    k.close();
+  });
+
+  it("a short generate keeps what it paid for and stops for a human: the breaker never re-buys the arm", async () => {
+    const u = universe();
+    const dir = cycle(u, "gs", { ...GOOGLE, repeats: 3 });
+    const k = kernelOf(u);
+    const id = await launchGoogle(k, u, "gs", "live");
+    const fake = fakeGoogle(u.training, { shortBy: 1 });
+    const r = await driveDojo(k.store, u.store, id, { ...RUN, producer: defineDojoGoogle(fake.ports) });
+    expect(r.ok).toBe(true);
+    const job = jobOf(k, id);
+    expect(job.state).toBe("failed");
+    expect(job.error?.message).toContain("returned 2 of 3");
+    expect(fake.calls.filter((c) => c.startsWith("generate:")), "generate calls until the job ends").toHaveLength(1);
+    const kept = ["r1", "r2", "r3"].map((r) => existsSync(path.join(dir, "pairs", `g1--baseline--${r}.png`)));
+    expect(kept, "images kept").toEqual([true, true, false]);
     k.close();
   });
 
