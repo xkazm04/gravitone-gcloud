@@ -213,7 +213,6 @@ function jobOf(u: Universe, id: string): Result<FxJob> {
 
 function move(j: FxJob, to: JobState, now: number, u: Universe): Result<FxJob> {
   if (!jobMachine.can(j.state, to)) return err("refused", `${j.title} is ${j.state}; it cannot go ${to}`);
-  j.prev = j.state;
   j.state = to;
   const p = j.projectId === undefined ? undefined : u.projects.get(j.projectId);
   if (p !== undefined) p.updatedAt = now;

@@ -76,7 +76,6 @@ export type FxJob = {
   option: ModelOption;
   units: number;
   state: JobState;
-  prev?: JobState;
   order: number;
   attempt: number;
   startedAt?: number;
