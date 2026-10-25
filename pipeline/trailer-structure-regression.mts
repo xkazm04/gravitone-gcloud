@@ -1,18 +1,20 @@
 // REGRESSION CONTROL for the trailer structural checker
-// (app/_phases/script/trailer/structure.ts).
+// (lib/script/trailer/structure.ts and its rules/).
 //
 // Run:  npx tsx pipeline/trailer-structure-regression.mts
 //
 // Shaped like `gate-regression.mts`: a line per case, a count at the end, a
-// non-zero exit if anything is broken. There is no test framework in this repo
-// and this is not the place to introduce one (`integration-imaging.mts:8`).
+// non-zero exit if anything is broken. It runs as `npm run check:trailer-structure`,
+// in `verify` and in CI (.github/workflows/gates.yml); the Playwright probe
+// `tests/golden-path/trailer-structure-honesty.probe.spec.ts` pins a subset under
+// `npm test`.
 //
 // WHY THIS FILE EXISTS, and what it is a control ON.
 //
-// `app/_phases/script/renders.ts:46-58` hand-types a `checks` array onto each
+// `lib/script/renders.ts` hand-types a `checks` array onto each
 // render — eleven sentences a human wrote ABOUT the chain. One of them reads
 // "but/therefore between adjacent beats, no AND THEN · pass". Nothing computed
-// that. `../app/_phases/script/gate.ts` was built to end exactly that pattern for
+// that. `lib/script/gate.ts` was built to end exactly that pattern for
 // the EPISTEMIC layer (forbidden figures, dropped qualifiers, causal upgrades) and
 // its six checks cover none of the beat chain's SHAPE.
 //

@@ -1,14 +1,13 @@
 // QUALITY-GATE HONESTY for the trailer structural checker (dynamic).
 //
 // Sibling of `gate-vacuous-pass.probe.spec.ts`, and here for the reason that file
-// names: a check that examined nothing must not count as enforcement. This lane is
-// where it matters, because `docs/knowledge-library-field-report.md:61` records
-// that every `pipeline/*.mts` driver in this repo "run[s] only by hand" — so the
-// full 22-case control at `pipeline/trailer-structure-regression.mts` protects
-// nothing between runs, while THIS file runs under `npm test`.
+// names: a check that examined nothing must not count as enforcement. The full
+// 22-case control is `pipeline/trailer-structure-regression.mts` (run by
+// `check:trailer-structure`, in `verify` and in CI); this file is the subset that
+// runs under `npm test`.
 //
 // So this probe pins the four properties that, if they ever silently flipped,
-// would turn `app/_phases/script/trailer/structure.ts` back into the thing it
+// would turn `lib/script/trailer/structure.ts` back into the thing it
 // replaces: an array of sentences that says `pass` about things nobody measured.
 //
 //   1. A magnitude rule with no resolver is `unmeasured`, never `pass`.
@@ -16,7 +15,7 @@
 //   3. The standing "does this cut work" row is always present, so `enforced`
 //      can never reach 100.
 //   4. `AND THEN` trips — the one rule this repo already held in prose
-//      (`app/_phases/script/types.ts:24`) and could not execute.
+//      (`lib/script/types.ts`, `Beat.connector`) and could not execute.
 import { test, expect } from "@playwright/test";
 import { runStructureCheck } from "@/lib/script/trailer/structure";
 import type { TrailerBeat, TrailerCut } from "@/lib/script/trailer/types";
