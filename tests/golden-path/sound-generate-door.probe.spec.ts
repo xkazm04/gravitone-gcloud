@@ -221,3 +221,22 @@ test("cli judge: a --score dimension off the take's rubric is usage, and nothing
   expect(fine.code).toBe(0);
   expect((await readTakes()).takes[0].ratings).toEqual({ melody: 8, instrument_quality: 6 });
 });
+
+/* ── what is sent is held to the bounds, and the take files what was sent ── */
+
+test("generate: the text sent with its negative tail is held to 4100, and a negative to what the take files", async () => {
+  // 4000 characters of prompt pass the prompt's own bound; the "No …" tail takes it past 4100.
+  const long = genReq({ prompt: `${"warm rhodes bed ".repeat(250)}`.trim(), negative: Array.from({ length: 30 }, (_, i) => `voice${i}`).join(", ") });
+  const over = await refusal(() => generateTake(parseGenerateRequest(long)));
+  console.log(`[sound-door] prompt+tail -> ${JSON.stringify(over)}; vendor calls ${calls.length}`);
+  expect(over?.status).toBe(400);
+  expect(calls.length, "a prompt past the vendor's bound was sent").toBe(0);
+  // A negative longer than the take files (2000) would be sent whole and kept cut.
+  const neg = await refusal(() => generateTake(parseGenerateRequest(genReq({ negative: Array.from({ length: 300 }, (_, i) => `noise${i}`).join(", ") }))));
+  expect(neg?.status).toBe(400);
+  expect(calls.length).toBe(0);
+  // In bounds, the take keeps the negative it sent.
+  const take = await generateTake(parseGenerateRequest(genReq({ negative: "vocals, choir" })));
+  expect(take.negative).toBe("vocals, choir");
+  expect((calls[0].body as { prompt: string }).prompt.endsWith("No vocals, no choir.")).toBe(true);
+});

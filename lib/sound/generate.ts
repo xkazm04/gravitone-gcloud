@@ -45,12 +45,15 @@ import { cueDurationS, cueToPlan } from "@/lib/music/plan";
 import type { CueBrief, CuePicture, WirePlan } from "@/lib/music/types";
 
 import { asWirePlan, buildEditPlan, EDIT_MODES, editSeconds, isGenChunk, planMs } from "./editPlan";
-import { getTake, createTake, termsOf } from "./takes";
+import { getTake, createTake, NEGATIVE_MAX, termsOf } from "./takes";
 import { SoundError, withStore } from "./store";
 import type { GenerateRequest, SoundKind, SoundTake } from "./types";
 
 const OPS = ["compose", "plan", "section-edit", "sfx", "cue"] as const;
 const ORIGINS = ["agent", "lab", "hunt", "score", "library"] as const;
+
+/** The longest text a compose or an effect sends (the prompt with its negative tail). */
+const PROMPT_MAX = 4100;
 
 /** The vendor's windows, restated as the bounds a request is held to BEFORE
  *  anything is sent (lib/music/elevenlabs.ts states them for the wire). */
@@ -145,7 +148,17 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
 
   const prompt = typeof b.prompt === "string" ? b.prompt.trim() : "";
   if (op !== "section-edit" && op !== "plan" && op !== "cue" && !prompt) throw new SoundError('"prompt" is required', 400);
-  if (prompt.length > 4100) throw new SoundError('"prompt" is over 4100 characters', 400);
+  if (prompt.length > PROMPT_MAX) throw new SoundError(`"prompt" is over ${PROMPT_MAX} characters`, 400);
+  const negative = (typeof b.negative === "string" && b.negative.trim()) || null;
+  // The take files at most NEGATIVE_MAX of a negative (takes.ts); one longer would be sent whole
+  // and kept cut, so the ledger would learn from a negative that was not the one sent.
+  if (negative !== null && negative.length > NEGATIVE_MAX) throw new SoundError(`"negative" is over ${NEGATIVE_MAX} characters`, 400);
+  // A compose and an effect send the negative as a "No …" tail (withNegative), so the bound is
+  // on the text the vendor receives, not on the prompt alone.
+  if (op === "compose" || op === "sfx") {
+    const sent = withNegative(prompt, negative).length;
+    if (sent > PROMPT_MAX) throw new SoundError(`"prompt" with its "No …" tail is ${sent} characters; the vendor takes ${PROMPT_MAX}`, 400);
+  }
 
   const d = typeof b.durationS === "number" && Number.isFinite(b.durationS) ? b.durationS : NaN;
   const bounds = DURATION_BOUNDS[kind];
@@ -185,7 +198,7 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
     provider: "elevenlabs",
     op,
     prompt,
-    negative: strOrNull(b.negative),
+    negative,
     durationS: cue ? cueDurationS(cue.picture) : Number.isFinite(d) ? d : 0,
     loop: typeof b.loop === "boolean" ? b.loop : null,
     promptInfluence,

@@ -207,6 +207,9 @@ function applyRules(t: SoundTake, prev: SoundTake | null, now: string): void {
   } else t.finalizedAt = null;
 }
 
+/** The longest negative a take files - and so the longest generate.ts sends. */
+export const NEGATIVE_MAX = 2000;
+
 /* ── create ───────────────────────────────────────────────────────────────── */
 
 const AUDIO_EXT: Record<string, string> = {
@@ -311,7 +314,7 @@ export async function createTake(
       origin,
       technique: strs(meta.technique, 20),
       prompt: str(meta.prompt, 8000) ?? "",
-      negative: str(meta.negative, 2000),
+      negative: str(meta.negative, NEGATIVE_MAX),
       terms,
       tempoBpm: num(meta.tempoBpm),
       key: str(meta.key, 40),
