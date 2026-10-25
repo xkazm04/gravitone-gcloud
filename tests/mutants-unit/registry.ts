@@ -5183,8 +5183,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "l72-hunt-run-with-no-leaves",
     test: "packages/domain/test/plan.test.ts",
     file: "packages/domain/src/produce.schema.ts",
-    find: "leaves: z.array(soundId).min(1).max(48)",
-    replace: "leaves: z.array(soundId).max(48)",
+    find: "leaves: z.array(soundId).min(1).max(HUNT_RENDER_MAX)",
+    replace: "leaves: z.array(soundId).max(HUNT_RENDER_MAX)",
     why: "A hunt Run that names no leaves passes the door: a paid job is enqueued with nothing to render.",
   },
   {

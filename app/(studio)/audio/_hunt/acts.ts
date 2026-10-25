@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Receipt } from "@gt/domain/produce";
-import { receiptModeSchema } from "@gt/domain/produce.schema";
+import { HUNT_RENDER_MAX, receiptModeSchema } from "@gt/domain/produce.schema";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
 import { action } from "../../../_server/action.ts";
@@ -33,7 +33,7 @@ const kind = z.enum(["music", "sfx"]);
 
 
 const draftInput = z.object({ kind, idea: z.string().trim().min(1, "a hunt needs an idea: the problem to solve, in your words").max(2000), opId }).strict();
-const renderInput = z.object({ huntId: id, leafIds: z.array(id).min(1).max(48), mode: receiptModeSchema, opId, token: z.string().min(8).max(200).optional() }).strict();
+const renderInput = z.object({ huntId: id, leafIds: z.array(id).min(1).max(HUNT_RENDER_MAX), mode: receiptModeSchema, opId, token: z.string().min(8).max(200).optional() }).strict();
 const crownInput = z.object({ huntId: id, nodeId: id, takeId: id, on: z.boolean(), opId }).strict();
 const lessonInput = z.object({ huntId: id, engine: z.boolean() }).strict();
 

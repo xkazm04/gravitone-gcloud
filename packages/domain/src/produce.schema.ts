@@ -38,6 +38,8 @@ export const composerEstimateSchema = composers(z.string().max(4000)) satisfies 
  */
 const ref = z.string().trim().min(1).max(400);
 const soundId = z.string().regex(/^[A-Za-z0-9_-]{1,80}$/, "a sound-store id is letters, digits, _ and -");
+/** The most leaves one hunt render asks for (the desk's render ask): the run input and the desk's own door both read it. */
+export const HUNT_RENDER_MAX = 48;
 const knob = (max: number) => z.number().int().positive().max(max);
 export const producerRunInputSchema = z.union([
   z
@@ -60,7 +62,7 @@ export const producerRunInputSchema = z.union([
   z.object({ producer: z.literal("forge"), plan: ref }).strict(),
   z.object({ producer: z.literal("dojo"), cycle: ref }).strict(),
   // The sound store's id grammar (lib/sound/store.ts), and at most the desk's render ask (48).
-  z.object({ producer: z.literal("hunt"), hunt: soundId, kind: z.enum(["music", "sfx"]), leaves: z.array(soundId).min(1).max(48) }).strict(),
+  z.object({ producer: z.literal("hunt"), hunt: soundId, kind: z.enum(["music", "sfx"]), leaves: z.array(soundId).min(1).max(HUNT_RENDER_MAX) }).strict(),
 ]);
 
 export const NATIVE_PRODUCERS = ["extract", "article", "mv", "suno", "strips", "forge", "dojo", "hunt"] as const satisfies readonly NativeProducer[];

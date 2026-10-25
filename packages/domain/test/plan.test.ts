@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs";
 import type { z } from "zod";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { partStatesOf, runStateOf, weakest, type PartFacts } from "../src/plan.ts";
-import { composeInputSchema, composerInputSchema, NATIVE_PRODUCERS, partPatchSchema, producerRunInputSchema, runInputSchema } from "../src/produce.schema.ts";
+import { composeInputSchema, composerInputSchema, HUNT_RENDER_MAX, NATIVE_PRODUCERS, partPatchSchema, producerRunInputSchema, runInputSchema } from "../src/produce.schema.ts";
 import type { ComposeInput, PartPatch, ProducerRunInput } from "../src/produce.ts";
 import { PRODUCERS } from "../src/run.ts";
 import { accept, refuse } from "./_records.ts";
@@ -142,5 +143,17 @@ describe("produce doors", () => {
     const patch: PartPatch = accept(partPatchSchema, { units: 12 });
     expect(patch.units).toBe(12);
     refuse(partPatchSchema, {}, "option, units");
+  });
+});
+
+describe("the hunt render cap", () => {
+  const leaves = (n: number): string[] => Array.from({ length: n }, (_, i) => `n${i}`);
+  it("is one constant: the run input holds it and the desk's render door imports it", () => {
+    accept(producerRunInputSchema, { producer: "hunt", hunt: "hn-a1b2c3", kind: "music", leaves: leaves(HUNT_RENDER_MAX) });
+    refuse(producerRunInputSchema, { producer: "hunt", hunt: "hn-a1b2c3", kind: "music", leaves: leaves(HUNT_RENDER_MAX + 1) }, "Invalid input");
+    const door = readFileSync(new URL("../../../app/(studio)/audio/_hunt/acts.ts", import.meta.url), "utf8").replace(/\/\/.*$/gm, "");
+    expect(door).toMatch(/leafIds: z\.array\(id\)\.min\(1\)\.max\(HUNT_RENDER_MAX\)/);
+    expect(door).not.toMatch(/\.max\(48\)/);
+    expect(readFileSync(new URL("../src/produce.schema.ts", import.meta.url), "utf8").replace(/\/\/.*$/gm, "")).not.toMatch(/leaves: z\.array\(soundId\)\.min\(1\)\.max\(48\)/);
   });
 });

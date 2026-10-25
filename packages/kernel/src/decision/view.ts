@@ -11,7 +11,8 @@ import type { Reader } from "../store.ts";
 import { applyStatus, applyStatusOf } from "./apply.ts";
 import { returnedPlan } from "./commit.ts";
 import { pairOutcomes, planUndo } from "./core.ts";
-import { currentDecisions, head, items, must, pairsOf, readPacket, revealPicks, rows } from "./read.ts";
+import { head, items, must, pairsOf, readPacket, revealPicks, rows } from "./read.ts";
+import { toDecision, type DecisionRow } from "./schema.ts";
 
 // THE BOARD'S READS - the two shapes the UI is built against (Phase 3's
 // BoardPort: `loadPacket -> PacketView`, `listPackets -> PacketSummary[]`),
@@ -35,7 +36,10 @@ export function readPacketView(r: Reader, packetId: string, opts: ViewOptions): 
   const h = head(r, packetId);
   const p = readPacket(r, packetId);
   const all = rows(r, packetId);
-  const decisions = currentDecisions(r, packetId).decisions;
+  // currentDecisions' own fold over the one rows() read above (head and rows are not asked twice).
+  const newest = new Map<string, DecisionRow>();
+  for (const d of all) newest.set(d.candidate_id, d);
+  const decisions = [...newest.values()].map((d) => must(toDecision(d)));
   const decided = decisions.filter((d) => d.verdict !== null).length;
   const pairs: PairView[] = [];
   if (p.mode === "blind-pair") {

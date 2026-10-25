@@ -3,7 +3,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { candidateSchema, shownGrades, type Grade } from "../src/candidate.ts";
 import { decisionKey, decisionSchema } from "../src/decision.ts";
 import { candidateIdSchema, packetIdSchema } from "../src/ids.ts";
-import { packetSchema } from "../src/packet.ts";
+import { packetSchema, type Packet } from "../src/packet.ts";
 import { checkVerdict, SOURCES, type PacketSource } from "../src/source.ts";
 import { accept, AT, forgeCandidate, refuse } from "./_records.ts";
 
@@ -115,5 +115,14 @@ describe("decision", () => {
     const longest = Math.max(...Object.values(SOURCES).map((s) => s.noteMax));
     refuse(decisionSchema, { ...keep, verdict: "reject", reasons: Array.from({ length: widest + 1 }, (_, i) => `r${i}`) }, "reasons");
     refuse(decisionSchema, { ...keep, note: "n".repeat(longest + 1) }, "note");
+  });
+});
+
+describe("the Packet type", () => {
+  it("is the door's absent-key shape: an optional key is absent, never an explicit undefined", () => {
+    // @ts-expect-error title?: string, not string | undefined (the door drops undefined keys)
+    const bad: Pick<Packet, "title"> = { title: undefined };
+    expect(bad.title).toBeUndefined();
+    expectTypeOf<Packet>().toHaveProperty("title");
   });
 });

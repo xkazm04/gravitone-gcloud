@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { candidateSchema } from "./candidate.ts";
+import type { Parsed } from "./door.ts";
 import { packetIdSchema, partIdSchema, runIdSchema } from "./ids.ts";
 import { mediaLaneSchema } from "./lane.ts";
 import { packetMachine } from "./packet.machine.ts";
@@ -50,4 +51,4 @@ export const packetSchema = z
     if (p.source === "step" && p.partId === undefined) issue("partId", "a step packet names the part it gates");
     if (p.state === "returned" && p.mode !== "packet-review") issue("state", "only a packet review is sent back for another turn");
   });
-export type Packet = z.output<typeof packetSchema>;
+export type Packet = Parsed<z.output<typeof packetSchema>>;
