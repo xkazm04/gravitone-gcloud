@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { PART_OPTIONS } from "@gt/catalog/partOptions";
 import { WORK_KINDS } from "@gt/catalog/recipes";
 import { LANE_CAPACITY, RESOURCE_LANES } from "@gt/domain/lane";
-import type { ModelOption } from "@gt/domain/produce";
+import { crossesCeiling, type ModelOption } from "@gt/domain/produce";
 import { launchOf, modelOptions } from "../src/records/options.ts";
 import { priceLine, receiptFor, rerouteDelta, tokenOf, type PlanLine, type QueueRead } from "../src/records/receipt.ts";
 import { schedule, type SchedItem } from "../src/records/schedule.ts";
@@ -144,6 +145,15 @@ describe("receipt", () => {
     const article = (o: ModelOption): PlanLine[] => [{ key: "article", label: "article", lane: "seat.text", units: 1, option: o, after: [], order: 1, status: "pending" }];
     const banded = tokenOf({ ...base, lines: article(a) });
     expect(tokenOf({ ...base, lines: article({ ...a, usdRangePerUnit: [47, 120] }) })).not.toBe(banded);
+  });
+
+  it("reads the one crossing rule: float noise at the ceiling is not a crossing, and no second spelling remains", () => {
+    expect(crossesCeiling(0.1 + 0.2, 0.3)).toBe(false);
+    expect(crossesCeiling(0.31, 0.3)).toBe(true);
+    expect(crossesCeiling(99, undefined)).toBe(false);
+    const code = (p: string): string => readFileSync(new URL(p, import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    const spellings = ["../src/records/receipt.ts", "../../../app/(studio)/projects/_port/schedule.ts", "../../ui/src/components/produce/produce.ts"].filter((p) => /[>]\s*[\w.]*[cC]eiling\w*(?!\w)|\+\s*1e-9/.test(code(p)));
+    expect(spellings).toEqual([]);
   });
 
   it("is over its ceiling against the top of a band, not its middle", () => {

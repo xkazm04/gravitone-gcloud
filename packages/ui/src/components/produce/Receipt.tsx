@@ -92,7 +92,9 @@ function Line({ l, marks, added, nowMs }: { readonly l: ReceiptLine; readonly ma
 
 export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, onConfirm, busy, error, nowMs }: ReceiptProps) {
   const parsed = parseCeiling(ceiling);
-  const over = parsed.ok && mayStopAtCeiling(r, parsed.value);
+  // At the ceiling the receipt was read at, the mark IS the server's verdict (the one the launch
+  // event records); at any other typed value it is the same rule on the typed text.
+  const over = parsed.ok && (parsed.value !== undefined && parsed.value === r.ceilingUsd ? r.overCeiling : mayStopAtCeiling(r, parsed.value));
   const blocked = !parsed.ok;
   const worst = r.totals.usdRange?.[1] ?? r.totals.usd;
   const moved = changeCount(changes);

@@ -6622,4 +6622,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "",
     why: "A confirm with a typed ceiling is answered with an identical-looking receipt and zero marks, so the operator reads a dropped press.",
   },
+  {
+    id: "receipt-ceiling-second-spelling",
+    test: "packages/kernel/test/records.options.test.ts",
+    file: "packages/kernel/src/records/receipt.ts",
+    find: "overCeiling: crossesCeiling(exposure, i.ceilingUsd),",
+    replace: "overCeiling: i.ceilingUsd !== undefined && exposure > i.ceilingUsd,",
+    why: "The kernel's recorded overCeiling and the screen's may-stop mark are two comparisons again, so the receipt can mark a crossing the launch event does not record.",
+  },
 ];

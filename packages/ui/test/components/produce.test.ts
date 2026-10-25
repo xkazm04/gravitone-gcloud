@@ -235,6 +235,14 @@ describe("markup", () => {
     expect(html.match(/\(changed\)/g)?.length).toBe(3 + 5);
   });
 
+  test("at the ceiling the receipt was read at, the mark is the server's overCeiling, not a second computation", () => {
+    const cheap = receipt([line("frames", NANO, 1, 1, 0)], { ceilingUsd: 20, overCeiling: true });
+    const marked = renderToStaticMarkup(h(Receipt, { receipt: cheap, ceiling: "20", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(marked).toContain("may stop at ceiling");
+    const typedElsewhere = renderToStaticMarkup(h(Receipt, { receipt: cheap, ceiling: "30", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(typedElsewhere).not.toContain("may stop at ceiling");
+  });
+
   test("a ceiling under the worst case is a stop point: the confirm stays armed and the receipt says may stop", () => {
     const banded = receipt([line("article", ARTICLE, 1, 1, 0)], { totals: { seconds: 1, usd: 69.5, usdRange: [47, 92], unpriced: 0, src: "model" } });
     const over = renderToStaticMarkup(h(Receipt, { receipt: banded, ceiling: "80", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));

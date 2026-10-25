@@ -115,6 +115,14 @@ export type Receipt = {
   readonly readAt: string;
 };
 
+/**
+ * THE ONE RULE for a worst case crossing a ceiling: the kernel's `overCeiling`, the fixture
+ * schedule and the Receipt's "may stop at ceiling" mark all read it, so the mark the screen shows
+ * and the verdict the launch event records cannot be two comparisons. The epsilon absorbs float
+ * noise from summed unit prices; no ceiling crosses nothing.
+ */
+export const crossesCeiling = (worst: number, ceiling: number | undefined): boolean => ceiling !== undefined && worst > ceiling + 1e-9;
+
 /** A stale confirm: nothing launched, and the receipt as it reads now. */
 export type StaleReceipt = { readonly kind: "stale"; readonly fresh: Receipt };
 
