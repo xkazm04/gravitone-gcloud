@@ -3877,7 +3877,7 @@ export const MUTANTS: UnitMutant[] = [
   },
   {
     id: "style-theme-import-drops-the-grandfather",
-    test: "packages/kernel/test/styles.test.ts",
+    test: "packages/kernel/test/styles.v1.test.ts",
     file: "packages/kernel/src/styles/v1theme.ts",
     find: "{ lock: { at: iso(t.lockedAt), by: \"v1\", grandfathered: true as const } }",
     replace: "{}",
@@ -3901,11 +3901,19 @@ export const MUTANTS: UnitMutant[] = [
   },
   {
     id: "style-grandfather-rewritable",
-    test: "packages/kernel/test/styles.test.ts",
+    test: "packages/kernel/test/styles.v1.test.ts",
     file: "packages/domain/src/style.ratchet.ts",
     find: " || after.lock.grandfathered !== before.lock.grandfathered",
     replace: "",
     why: "A write can strip or forge the grandfather mark on a lock, so the record no longer says which gate a locked style passed.",
+  },
+  {
+    id: "style-v1-catalogue-second-entry-overwrites",
+    test: "packages/kernel/test/styles.v1.test.ts",
+    file: "packages/kernel/src/styles/v1.ts",
+    find: "    if (held !== undefined) return void refused.push(",
+    replace: "    if (held !== undefined && false) return void refused.push(",
+    why: "A styles.json naming one id twice imports both entries, so the dry run plans one write and the run lands another: the second silently replaces the first.",
   },
   {
     id: "import-shelf-token-omits-shelf",
