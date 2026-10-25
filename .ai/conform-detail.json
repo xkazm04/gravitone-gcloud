@@ -13085,6 +13085,64 @@
           "evidence": "lib/foundry/extract/engine.ts:7 The unit and request ceilings here bound the host's own step machine on Cloud Run, not foreign guest work, so the technique's guest-work precondition does not hold."
         }
       ]
+    },
+    "158d061e-feaa-4660-a1d3-6e8774b1f152/music-prompt-composition": {
+      "context": "frames-picture-composition",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:58:05.560Z",
+      "worker": "1e4223a0-1a21-48b4-8be9-85d01283ab67",
+      "techniques": [
+        {
+          "technique": "section-plan-as-the-brief",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:5 the only generated artifact here is an image plate; there is no music brief"
+        },
+        {
+          "technique": "sonic-style-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:5 no music style directives; searching lib/frames for music, suno, bpm and tempo found nothing"
+        },
+        {
+          "technique": "lyrics-for-singability",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:7 the texts here are drawn captions and labels, not sung lyrics"
+        },
+        {
+          "technique": "duration-and-tempo-locking",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:5 no cue brief and no tempo; searching for bpm and tempo found nothing"
+        },
+        {
+          "technique": "reference-track-anchoring",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:5 no reference track; searching for music, suno and melody found nothing"
+        }
+      ]
+    },
+    "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867/music-prompt-composition": {
+      "context": "audio-composer-briefs",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:58:05.560Z",
+      "worker": "1e4223a0-1a21-48b4-8be9-85d01283ab67",
+      "techniques": [
+        {
+          "technique": "section-plan-as-the-brief",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/batch.ts:87 The music brief is a single prose string. batch.ts:41 also offers \"section-plan-as-the-brief\" as a technique tag the operator can claim, but the form has no structure that could realise it. The Seed type in recipe.ts has no sections or durations."
+        },
+        {
+          "technique": "duration-and-tempo-locking",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/brief.ts:80 Length and tempo are checked against the delivered take as a measured gate. `unmeasured` is kept apart from `held`. There is no picture-cue bar math, and none is needed because nothing here is briefed against picture."
+        }
+      ],
+      "registryProposal": "section-plan-as-the-brief lets a short prose prompt stand when the purpose is exploring identity. This context's batch lane runs N identical briefs to measure provider variance and keep-rates per term, which is a learning lab, not a production piece. The technique should say whether a variance or vocabulary measurement lane counts as exploration, and whether such a lane may claim the technique as a tag (batch.ts:41) when it cannot express a plan."
     }
   }
 }

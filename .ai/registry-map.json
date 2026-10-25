@@ -2206,7 +2206,11 @@
           "revision": 1,
           "changedAt": "2026-08-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/batch.ts:87 A music batch brief (10 to 300 s, so full pieces) is one free-text prompt, and the composer's Seed has no section unit either. There is no ordered list of sections, each with its own duration, style and lyric or instrumental marking, so a take can only be accepted or regenerated whole, never edited by section.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2d8975c2a51e5157",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"
@@ -5621,7 +5625,11 @@
           "revision": 1,
           "changedAt": "2026-08-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/frames/frames.ts:1 The context models composed pictures (plate, vector elements, texts) and briefs image plates only; a case-insensitive search of lib/frames/ (including picture/) for music, suno, bpm, lyric, tempo, instrumental and melody found zero hits, so no music brief is written here and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2d8975c2a51e5157",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"

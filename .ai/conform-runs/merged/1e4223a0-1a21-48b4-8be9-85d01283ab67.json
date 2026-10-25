@@ -1,0 +1,107 @@
+{
+ "schema": "conform-run/1",
+ "worker": "1e4223a0-1a21-48b4-8be9-85d01283ab67",
+ "subject": "music-prompt-composition",
+ "evaluatedAt": "2026-10-25T02:58:05.560093+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "frames-picture-composition",
+   "subject": "music-prompt-composition",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/frames/frames.ts:1 The context models composed pictures (plate, vector elements, texts) and briefs image plates only; a case-insensitive search of lib/frames/ (including picture/) for music, suno, bpm, lyric, tempo, instrumental and melody found zero hits, so no music brief is written here and the subject's precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "section-plan-as-the-brief",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/frames.ts:5 the only generated artifact here is an image plate; there is no music brief"
+    },
+    {
+     "technique": "sonic-style-vocabulary",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/frames.ts:5 no music style directives; searching lib/frames for music, suno, bpm and tempo found nothing"
+    },
+    {
+     "technique": "lyrics-for-singability",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/frames.ts:7 the texts here are drawn captions and labels, not sung lyrics"
+    },
+    {
+     "technique": "duration-and-tempo-locking",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/frames.ts:5 no cue brief and no tempo; searching for bpm and tempo found nothing"
+    },
+    {
+     "technique": "reference-track-anchoring",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/frames.ts:5 no reference track; searching for music, suno and melody found nothing"
+    }
+   ],
+   "absenceTerms": [
+    "music",
+    "suno",
+    "bpm",
+    "lyric",
+    "tempo"
+   ]
+  },
+  {
+   "context": "audio-composer-briefs",
+   "subject": "music-prompt-composition",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/ui/src/components/audio/batch.ts:87 A music batch brief (10 to 300 s, so full pieces) is one free-text prompt, and the composer's Seed has no section unit either. There is no ordered list of sections, each with its own duration, style and lyric or instrumental marking, so a take can only be accepted or regenerated whole, never edited by section.",
+   "techniques": [
+    {
+     "technique": "section-plan-as-the-brief",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/audio/batch.ts:87 The music brief is a single prose string. batch.ts:41 also offers \"section-plan-as-the-brief\" as a technique tag the operator can claim, but the form has no structure that could realise it. The Seed type in recipe.ts has no sections or durations."
+    },
+    {
+     "technique": "duration-and-tempo-locking",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/audio/brief.ts:80 Length and tempo are checked against the delivered take as a measured gate. `unmeasured` is kept apart from `held`. There is no picture-cue bar math, and none is needed because nothing here is briefed against picture."
+    }
+   ],
+   "registryProposal": "section-plan-as-the-brief lets a short prose prompt stand when the purpose is exploring identity. This context's batch lane runs N identical briefs to measure provider variance and keep-rates per term, which is a learning lab, not a production piece. The technique should say whether a variance or vocabulary measurement lane counts as exploration, and whether such a lane may claim the technique as a tag (batch.ts:41) when it cannot express a plan."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T02:58:05.560093+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "music-prompt-composition"
+   ],
+   "techniques": [
+    "duration-and-tempo-locking",
+    "lyrics-for-singability",
+    "reference-track-anchoring",
+    "section-plan-as-the-brief",
+    "sonic-style-vocabulary"
+   ],
+   "deviations": 0,
+   "context": "frames-picture-composition",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T02:58:05.560093+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "music-prompt-composition"
+   ],
+   "techniques": [
+    "duration-and-tempo-locking",
+    "section-plan-as-the-brief"
+   ],
+   "deviations": 1,
+   "context": "audio-composer-briefs",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
