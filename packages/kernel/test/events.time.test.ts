@@ -140,7 +140,7 @@ describe("countEvents", () => {
     const counted = { ...s, read: (fn) => s.read((r) => fn({ ...r, get: (q, ...p) => (stmts++, r.get(q, ...p)), all: (q, ...p) => (stmts++, r.all(q, ...p)) })) } as Store;
     const q = { type: ["verdict.keep"] };
     const full = must(countEvents(counted, q));
-    expect(stmts).toBe(16);
+    expect(stmts).toBe(14);
     stmts = 0;
     const one = must(countEvents(counted, q, ["actorKind"]));
     expect(stmts).toBe(4);
