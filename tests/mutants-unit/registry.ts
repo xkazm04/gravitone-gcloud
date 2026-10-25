@@ -7294,4 +7294,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<kbd className={s.cap} tabIndex={0} aria-describedby={id}>",
     why: "A reason key cap takes focus as a bare kbd, so a screen reader lands on an element with no role (WCAG 4.1.2).",
   },
+  {
+    id: "import-export-drops-kernel-rename",
+    test: "tests/next-server/import-roundtrip.test.ts",
+    file: "lib/import/export.ts",
+    find: "const title = p.title === was ? {} : { title: p.title };",
+    replace: "const title = {};",
+    why: "An imported project renamed in the kernel goes back to v1 under its old title, and the operator's rename is lost on the trip.",
+  },
+  {
+    id: "import-export-drops-kernel-runtime",
+    test: "tests/next-server/import-roundtrip.test.ts",
+    file: "lib/import/export.ts",
+    find: "const targetS = p.runtimeS === undefined || p.runtimeS === target ? {} : { targetS: p.runtimeS };",
+    replace: "const targetS = {};",
+    why: "An imported project whose runtime changed in the kernel goes back to v1 with its old target length.",
+  },
 ];

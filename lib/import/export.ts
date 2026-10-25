@@ -27,7 +27,8 @@ import { inlineRecord, restoreOriginal, type ReadBytes } from "./bytes.ts";
 // again, frames v3 -> v2 with the `frames` shadow rebuilt from the units (v1's
 // lib/frames/picture/unit.ts `framesFromUnits`, the function v1's own reader rebuilds it with),
 // frames-alts v2 -> v1. v1 reads both (its doors are loose; its parser walks v1/v2), so either
-// way the browser gets its work back. Records the import carried as data only (a key no part
+// way the browser gets its work back. An imported project's own row is v1's original except its title and
+// `targetS`, which follow the kernel when they were edited since the import (withKernelEdits). Records the import carried as data only (a key no part
 // holds) go back verbatim. A project the kernel composed itself (no import record) is written in
 // v1's project shape when its recipe is a film of a v1 template; an album or explainer has none.
 
@@ -112,6 +113,19 @@ function v1ProjectOf(p: Read, uid: string): Result<Row> {
   });
 }
 
+/** An imported project's v1 row with the two fields the kernel owns since the import. The import
+ *  wrote the kernel's title and runtime FROM the row (project.ts: a trimmed title, `Untitled film`
+ *  when empty, 200 chars; `targetS` when positive, else the template's default), so a kernel value
+ *  that is not what the row would give has been edited since - a rename, a new length - and goes
+ *  back; one that is, leaves v1's row as it was, byte for byte. */
+function withKernelEdits(row: Row, p: Read): Row {
+  const was = (String(row["title"] ?? "").trim() || "Untitled film").slice(0, 200);
+  const target = typeof row["targetS"] === "number" && row["targetS"] > 0 ? row["targetS"] : TEMPLATES.find((t) => t.id === row["template"])?.defaultS ?? 120;
+  const title = p.title === was ? {} : { title: p.title };
+  const targetS = p.runtimeS === undefined || p.runtimeS === target ? {} : { targetS: p.runtimeS };
+  return { ...row, ...title, ...targetS };
+}
+
 async function rowsOf(p: Read, blobs: BlobStore, uid: string, into: Record<Section, Row[]>): Promise<Result<string>> {
   const read = reader(blobs);
   if (p.imported === undefined) {
@@ -135,7 +149,7 @@ async function rowsOf(p: Read, blobs: BlobStore, uid: string, into: Record<Secti
     if (!isObj(v)) throw new AppError("internal", `export: a restored row of ${p.projectId} is not an object`);
     return v;
   };
-  into.projects.push(await restored(rec.value.project));
+  into.projects.push(withKernelEdits(await restored(rec.value.project), p));
   const held = p.imported.held;
   const seen = new Set<string>();
   const steps: Row[] = [];
