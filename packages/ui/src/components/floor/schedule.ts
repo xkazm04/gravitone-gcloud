@@ -23,6 +23,7 @@
 //   · `blog` is a channel the form cannot pick: its slot is made by the article approve on the
 //     Board and goes out as that approve's pull request (owner ruling 4), never by this form.
 
+import { wordsCount } from "@gt/domain/partView.album";
 import { SLOT_HOLDS } from "@gt/domain/slot.machine";
 
 import type { RailSlot } from "./calendar.ts";
@@ -112,8 +113,6 @@ export const DESCRIPTION_MAX = 5000;
 /** Tags, counted as YouTube counts them: every comma, and the quotes a tag with a space carries. */
 export const TAGS_MAX = 500;
 
-const UTF8 = new TextEncoder();
-const tagChars = (tags: readonly string[]): number => tags.reduce((n, t) => n + t.length + (t.includes(" ") ? 2 : 0), 0) + Math.max(0, tags.length - 1);
 
 /**
  * The rest of snippetProblem, which the upload applies at the slot's HOUR: a description over
@@ -127,8 +126,8 @@ function youtubeBlocked(title: string, description: string, tags: readonly strin
   if (/[<>]/.test(title)) out.push({ field: "title", words: "title holds < or >" });
   if (/[<>]/.test(description)) out.push({ field: "description", words: "description holds < or >" });
   // Past 5000 characters the length rule below has already said so.
-  if (description.length <= DESCRIPTION_MAX && UTF8.encode(description).length > DESCRIPTION_MAX) out.push({ field: "description", words: `description over ${DESCRIPTION_MAX} bytes` });
-  if (tagChars(tags) > TAGS_MAX) out.push({ field: "tags", words: `tags over ${TAGS_MAX}` });
+  if (description.length <= DESCRIPTION_MAX && wordsCount.description(description) > DESCRIPTION_MAX) out.push({ field: "description", words: `description over ${DESCRIPTION_MAX} bytes` });
+  if (wordsCount.tags(tags) > TAGS_MAX) out.push({ field: "tags", words: `tags over ${TAGS_MAX}` });
   return out;
 }
 

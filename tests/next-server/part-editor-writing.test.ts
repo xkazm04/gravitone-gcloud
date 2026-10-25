@@ -314,3 +314,44 @@ describe("an op whose round trip fails", () => {
     expect((await pick()).error).toBe("the studio did not answer: Failed to fetch");
   });
 });
+
+/* ── a blur that lands while another write is in flight ───────────────── */
+
+// The island declines a write while another is in flight (PartEditor `write`). Tabbing from one
+// field to the next lands the second blur inside the first one's round trip: the field must hold
+// it and send it once the trip ends, not show the typed text as saved and drop it.
+describe("a field blurred while a write is in flight", () => {
+  async function blurredBusy(el: ReactElement, commitProp: "commit" | "onCommit", draft: string): Promise<{ whileBusy: unknown[]; afterIdle: unknown[]; afterMore: unknown[] }> {
+    const sent: unknown[] = [];
+    let busy = true;
+    const record = (v: unknown): void => void sent.push(v);
+    const h = harness(() => (el.type as (q: unknown) => ReactElement)({ ...(el.props as object), busy, [commitProp]: record }));
+    const box = all(await h.settleUp(), (_, q) => typeof q.onBlur === "function")[0];
+    (box?.props as { onChange: (e: unknown) => void }).onChange({ currentTarget: { value: draft } });
+    const after = all(await h.settleUp(), (_, q) => typeof q.onBlur === "function")[0];
+    (after?.props as { onBlur: () => void }).onBlur();
+    await h.settleUp();
+    const whileBusy = [...sent];
+    busy = false;
+    await h.settleUp();
+    const afterIdle = [...sent];
+    await h.settleUp();
+    return { whileBusy, afterIdle, afterMore: [...sent] };
+  }
+
+  it("a words field holds the commit and sends the draft once when the write ends", async () => {
+    const p = { view: { data: words() } as PartView<"words">, frame, send: () => {}, busy: true, error: null, act: () => {} } satisfies EditorProps<PartView<"words">>;
+    const el = all(WordsEditor(p) as ReactElement, named("Counted")).find((c) => (c.props as { label: string }).label === "title");
+    if (el === undefined) throw new Error("no title field");
+    expect(await blurredBusy(el, "commit", "Salt lines")).toEqual({ whileBusy: [], afterIdle: ["Salt lines"], afterMore: ["Salt lines"] });
+  }, 30_000);
+
+  it("a brief field holds the commit and sends the draft once when the write ends", async () => {
+    const d: ResearchData = { offers: ["notebook"], face: "ads", brief: { product: "coat", audience: "", proposition: "", tone: "", mustInclude: [], cta: "", platform: "" }, missing: [], ideas: [], picked: null, briefChanged: false };
+    const p = { view: undefined as never, frame, send: () => {}, busy: true, error: null, act: () => {} } satisfies EditorProps<never>;
+    const ws = (await harness(() => AdsBriefEditor({ ...p, data: d as never }), { settleWhen: "stable" }).settleUp()) as ReactElement;
+    const el = all(ws, named("BriefField")).find((c) => (c.props as { label: string }).label === "audience");
+    if (el === undefined) throw new Error("no audience field");
+    expect(await blurredBusy(el, "onCommit", "runners")).toEqual({ whileBusy: [], afterIdle: ["runners"], afterMore: ["runners"] });
+  }, 30_000);
+});

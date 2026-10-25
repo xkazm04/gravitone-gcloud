@@ -3439,7 +3439,7 @@ export const MUTANTS: UnitMutant[] = [
     id: "l40-words-title-limit",
     test: "tests/next-server/parts-finish.test.ts",
     file: "app/(studio)/projects/[id]/_part/fixtureAlbum.ts",
-    find: "if (w.title.length > WORDS_LIMITS.title)",
+    find: "if (title > WORDS_LIMITS.title)",
     replace: "if (false)",
     why: "A 101-character title would read READY and reach the platform, which truncates or refuses it.",
   },
@@ -6113,9 +6113,9 @@ export const MUTANTS: UnitMutant[] = [
   {
     id: "words-description-counted-in-utf16",
     test: "tests/next-server/part-editor-writing.test.ts",
-    file: "app/(studio)/projects/[id]/[part]/_edit/Words.tsx",
-    find: "description: (v: string): number => BYTES.encode(v).length,",
-    replace: "description: (v: string): number => v.length,",
+    file: "packages/domain/src/partView.album.ts",
+    find: "description: (description: string): number => UTF8.encode(description).length,",
+    replace: "description: (description: string): number => description.length,",
     why: "A description in an accented language reads 3000 / 5000 in the editor and is refused by YouTube's 5000-byte limit at the upload.",
   },
   {

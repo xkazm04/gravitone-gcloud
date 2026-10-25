@@ -27,6 +27,8 @@ import { createReadStream } from "node:fs";
 import { open, readFile, stat } from "node:fs/promises";
 import { basename, extname } from "node:path";
 
+import { WORDS_LIMITS, wordsCount } from "@gt/domain/partView.album";
+
 import type { TokenProvider } from "./oauth";
 
 export type PublishMode = "dry" | "live";
@@ -182,12 +184,11 @@ export function assertPrivate(privacyStatus: string | undefined): "private" {
 export function snippetProblem(s: { title: string; description: string; tags?: string[] }): string | null {
   const bad = /[<>]/;
   if (!s.title.trim()) return "title is empty";
-  if ([...s.title].length > 100) return "title exceeds 100 characters";
+  if (wordsCount.title(s.title) > WORDS_LIMITS.title) return "title exceeds 100 characters";
   if (bad.test(s.title) || bad.test(s.description)) return "title/description may not contain '<' or '>'";
-  if (Buffer.byteLength(s.description, "utf8") > 5000) return "description exceeds 5000 bytes";
+  if (wordsCount.description(s.description) > WORDS_LIMITS.description) return "description exceeds 5000 bytes";
   const tags = s.tags ?? [];
-  const tagChars = tags.reduce((n, t) => n + t.length + (t.includes(" ") ? 2 : 0), 0) + Math.max(0, tags.length - 1);
-  if (tagChars > 500) return "tags exceed 500 characters";
+  if (wordsCount.tags(tags) > WORDS_LIMITS.tags) return "tags exceed 500 characters";
   return null;
 }
 
