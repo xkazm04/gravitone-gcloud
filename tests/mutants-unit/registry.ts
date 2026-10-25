@@ -7166,4 +7166,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "...(true ? {} : { railError:",
     why: "loadBoard stops carrying the rail's failure, so both pages hand the Board an empty rail again and the decided desk reads it as a clear Weir.",
   },
+  {
+    id: "trailer-atseconds-accepts-0-75",
+    test: "tests/next-server/trailer-timecode-twin.test.ts",
+    file: "lib/script/trailer/types.ts",
+    find: "i === 0 ? !/^\\d+$/.test(p) : !/^[0-5]\\d$/.test(p)",
+    replace: "!/^\\d+$/.test(p)",
+    why: "A mistyped 0:75 beat mark parses as 75 s instead of null, so the shot lane and script view place it at 1:15 without a word.",
+  },
+  {
+    id: "kernel-secondsat-accepts-0-75",
+    test: "tests/next-server/trailer-timecode-twin.test.ts",
+    file: "packages/kernel/src/records/digest.ts",
+    find: "i === 0 ? !/^\\d+$/.test(p) : !/^[0-5]\\d$/.test(p)",
+    replace: "!/^\\d+$/.test(p)",
+    why: "The runtime digest reads 0:75 as 75 s while the cut's clock refuses it, so the two disagree on the same beat mark.",
+  },
 ];

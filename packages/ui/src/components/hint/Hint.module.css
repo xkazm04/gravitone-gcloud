@@ -1,16 +1,18 @@
-/* tokens.css .hint. The tip stays in the DOM while hidden, so aria-describedby reads it.
+/* tokens.css .hint. The tip stays in the DOM while hidden, so aria-describedby reads it; `visibility`
+   (not opacity alone) keeps the closed tip out of browse mode, and a hidden node an aria-describedby
+   names is still that control's description. `--tip-shift` is Tip.tsx's clamp to the viewport.
    Open is `data-open`, set by Hint.tsx from pointer and focus, so Escape can close a tip the
    pointer is still over (WCAG 1.4.13); the prototype's :hover reveal could not be dismissed. */
 .hint{position:relative;display:inline-flex}
 .glyph{width:var(--size-glyph-btn);height:var(--size-glyph-btn);border-radius:50%;border:1px solid var(--hair-3);font:700 var(--fs-micro)/1 var(--mono);color:var(--muted)}
-.tip{position:absolute;z-index:var(--z-tooltip);top:calc(100% + var(--sp-2));left:50%;transform:translateX(-50%);width:max-content;--one-off-measure:260px;max-width:var(--one-off-measure);padding:var(--sp-snug) var(--sp-4);border-radius:var(--r-control);background:var(--ink-4);border:1px solid var(--hair-2);font-size:var(--fs-control-sm);color:var(--ink-bright);opacity:0;pointer-events:none;transition:opacity var(--dur-fast)}
+.tip{position:absolute;z-index:var(--z-tooltip);top:calc(100% + var(--sp-2));left:50%;transform:translateX(calc(-50% + var(--tip-shift)));width:max-content;--tip-shift:0px;--one-off-measure:260px;max-width:var(--one-off-measure);padding:var(--sp-snug) var(--sp-4);border-radius:var(--r-control);background:var(--ink-4);border:1px solid var(--hair-2);font-size:var(--fs-control-sm);color:var(--ink-bright);opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-fast),visibility var(--dur-fast)}
 /* The bridge: the gap between glyph and tip is part of the tip, so the pointer can cross it. */
 .tip::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:calc(var(--sp-2) + 1px)}
-.hint[data-open]>.tip{opacity:1;pointer-events:auto}
+.hint[data-open]>.tip{opacity:1;visibility:visible;pointer-events:auto}
 /* A tip on a bar at the foot of the screen opens above it (Tip `above`); the bridge flips with it. */
 .above>.tip{top:auto;bottom:calc(100% + var(--sp-2))}
 .above>.tip::before{bottom:auto;top:100%}
 /* A Tip starts at its trigger's left edge unless centred (the Hint's glyph). */
-.start>.tip{left:0;transform:none}
+.start>.tip{left:0;transform:translateX(var(--tip-shift))}
 /* What a bare trigger stands for (a key cap's reason), before its meaning. */
 .term{font-weight:700}
