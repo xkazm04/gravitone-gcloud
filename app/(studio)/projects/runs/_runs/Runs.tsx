@@ -40,7 +40,7 @@ import { CompositionList } from "../../_plan/CompositionList.tsx";
 import { useCompose } from "../../_plan/compose.tsx";
 import { outcomeOf, useReceipt } from "../../_plan/receipt.tsx";
 import type { RunsData } from "./load.ts";
-import { canMove, canPause, canReroute, canRetry } from "./Acts.tsx";
+import { canMove, canPause, canReroute, canRetry, ceilingFor, retryPress, type TypedCeiling } from "./Acts.tsx";
 import { DojoDoors, dojoSpec, type DojoPort } from "./DojoDoors.tsx";
 import { Inspector, type InspectorActs } from "./Inspector.tsx";
 import { mvRegenerateSpec, type MvPort } from "./MvActs.tsx";
@@ -78,7 +78,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
   const compose = useCompose(port, data.choices);
   const [busy, setBusy] = useState(false);
   const inflight = useRef(false);
-  const [retryCeiling, setRetryCeiling] = useState("");
+  const [ceiling, setCeiling] = useState<TypedCeiling>({ job: null, text: "" });
   const [alts, setAlts] = useState<{ readonly job: string; readonly options: readonly RerouteOption[] | null; readonly error?: string } | null>(null);
   const altsRef = useRef<HTMLDivElement | null>(null);
   const [sel, setSel] = useState<Selection>(initial);
@@ -186,8 +186,8 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
     onResume: () => withAct((jobId) => port.resumeJob({ jobId })),
     onRetry: (ceilingUsd) => withAct((jobId) => port.retryJob({ jobId, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) })),
     onMove: (dir) => withAct((jobId) => port.moveJob({ jobId, dir })),
-    retryCeiling,
-    onRetryCeiling: setRetryCeiling,
+    retryCeiling: ceilingFor(ceiling, act?.id ?? null),
+    onRetryCeiling: (text) => setCeiling({ job: act?.id ?? null, text }),
     options: alts !== null && alts.job === actId ? alts.options : null,
     ...(alts !== null && alts.job === actId && alts.error !== undefined ? { optionsError: alts.error } : {}),
     reading: flow.reading ? "reading" : null,
@@ -256,7 +256,11 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
       project: ({ cap }) => (projects.length === 0 ? false : walkProject(cap === "↓" ? 1 : -1)),
       deselect: () => select(null),
       compose: () => compose.open(),
-      retry: () => (act === undefined || !canRetry(act, data.holds) ? false : acts.onRetry(undefined)),
+      retry: () => {
+        const press = retryPress(acts.retryCeiling);
+        if (act === undefined || !canRetry(act, data.holds) || press === null) return false;
+        acts.onRetry(press.ceilingUsd);
+      },
       move: ({ index }) => (act === undefined || !canMove(act) ? false : acts.onMove(index === 0 ? "earlier" : "later")),
     },
     { facts },

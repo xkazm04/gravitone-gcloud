@@ -6398,4 +6398,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "false",
     why: "Runs offers retry and the re-route list on the crashed job its lane holds for, and both port sides refuse each until the hold is acknowledged - a re-route only after its receipt was read.",
   },
+  {
+    id: "runs-console-retry-ceiling-carried",
+    test: "tests/next-server/runs-console.test.ts",
+    file: "app/(studio)/projects/runs/_runs/Acts.tsx",
+    find: "(c.job !== null && c.job === jobId ? c.text : \"\")",
+    replace: "c.text",
+    why: "A raised retry ceiling typed on one job stays in the field after another job is selected, so the next retry lets a different job spend up to it.",
+  },
 ];

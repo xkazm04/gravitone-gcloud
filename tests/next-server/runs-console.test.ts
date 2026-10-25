@@ -5,13 +5,14 @@
 //      cosmetic half of each rule and the job machine (@gt/domain/job.machine) is the enforced
 //      half; the cases read the machine rather than a second list, so the two cannot drift
 //      apart unseen (hitl-approval: cosmetic-vs-enforced-threshold-invariant).
+//   2. A retry's ceiling is the one typed for that job, and the button and T send the same one.
 
 import { describe, expect, it } from "vitest";
 
 import { jobMachine, type JobState } from "@gt/domain/job.machine";
 
 import type { LaneHoldView, ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
-import { canMove, canPause, canReroute, canRetry } from "../../app/(studio)/projects/runs/_runs/Acts.tsx";
+import { canMove, canPause, canReroute, canRetry, ceilingFor, retryPress } from "../../app/(studio)/projects/runs/_runs/Acts.tsx";
 
 const job = (over: Partial<ProduceJob> = {}): ProduceJob => ({
   id: "job:part:p1:research",
@@ -60,5 +61,20 @@ describe("1. an act is offered only where the kernel takes it", () => {
     expect([canRetry(crashed, []), canReroute(crashed, [])]).toEqual([true, true]);
     const other = { ...hold, jobId: "job:part:p2:research" };
     expect([canRetry(crashed, [other]), canReroute(crashed, [other])]).toEqual([true, true]);
+  });
+});
+
+describe("2. a retry sends the ceiling typed for its own job", () => {
+  it("a ceiling typed on one job is not carried to the next one selected", () => {
+    const typed = { job: "job:a", text: "40" };
+    expect(ceilingFor(typed, "job:a")).toBe("40");
+    expect(ceilingFor(typed, "job:b")).toBe("");
+    expect(ceilingFor({ job: null, text: "40" }, null)).toBe("");
+  });
+
+  it("a press sends the typed ceiling, nothing for an empty field, and no retry while it does not parse", () => {
+    expect(retryPress("12.50")).toEqual({ ceilingUsd: 12.5 });
+    expect(retryPress("")).toEqual({ ceilingUsd: undefined });
+    expect(retryPress("twelve")).toBeNull();
   });
 });

@@ -57,8 +57,17 @@ export const canRetry = (j: ProduceJob, holds: readonly LaneHoldView[] = []): bo
 export const canReroute = (j: ProduceJob, holds: readonly LaneHoldView[] = []): boolean => j.reroutable && !heldFor(j, holds);
 export const canMove = (j: ProduceJob): boolean => (j.state === "queued" || j.state === "planned") && !j.blocked;
 
+/** A retry ceiling, typed for one job: it raises what that job may spend, so it is never carried to another. */
+export type TypedCeiling = { readonly job: string | null; readonly text: string };
+export const ceilingFor = (c: TypedCeiling, jobId: string | null): string => (c.job !== null && c.job === jobId ? c.text : "");
+/** What a retry sends, from the button and from T alike: the typed ceiling, or nothing at all while it does not parse. */
+export function retryPress(text: string): { readonly ceilingUsd: number | undefined } | null {
+  const c = parseCeiling(text);
+  return c.ok ? { ceilingUsd: c.value } : null;
+}
+
 export function JobActs({ job: j, busy, onPause, onResume, onRetry, onMove, retryCeiling, onRetryCeiling, options, optionsError, reading, onReroute, altsRef, holds }: JobActsProps) {
-  const ceiling = parseCeiling(retryCeiling);
+  const press = retryPress(retryCeiling);
   const facts: Fact[] = [
     { term: "model", value: j.model },
     { term: "units", value: `${j.units} ${j.units === 1 ? j.noun : `${j.noun}s`}` },
@@ -88,10 +97,10 @@ export function JobActs({ job: j, busy, onPause, onResume, onRetry, onMove, retr
         {j.state === "paused" && <Button size="sm" tone="cyan" label="resume" onPress={onResume} disabled={busy} shortcut={{ mode: "projects.runs", verb: "pause" }} />}
         {canRetry(j, holds) && (
           <span className={s.retry}>
-            <Button size="sm" tone="amber" label="retry · same route" onPress={() => (ceiling.ok ? onRetry(ceiling.value) : undefined)} disabled={busy || !ceiling.ok} shortcut={{ mode: "projects", verb: "retry" }} />
+            <Button size="sm" tone="amber" label="retry · same route" onPress={() => (press === null ? undefined : onRetry(press.ceilingUsd))} disabled={busy || press === null} shortcut={{ mode: "projects", verb: "retry" }} />
             <label className={s.ceil}>
               <span>ceiling $</span>
-              <input className={s.ceilIn} inputMode="decimal" aria-label="retry ceiling in dollars" aria-invalid={ceiling.ok ? undefined : true} placeholder="none" value={retryCeiling} onChange={(e) => onRetryCeiling(e.currentTarget.value)} />
+              <input className={s.ceilIn} inputMode="decimal" aria-label="retry ceiling in dollars" aria-invalid={press === null ? true : undefined} placeholder="none" value={retryCeiling} onChange={(e) => onRetryCeiling(e.currentTarget.value)} />
             </label>
           </span>
         )}
