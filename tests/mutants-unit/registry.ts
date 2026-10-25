@@ -3786,6 +3786,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "An adopt that wrote nothing (no plate on disk) toasts 'launched' and the operator never sees why.",
   },
   {
+    id: "style-fixture-window-counts-stale",
+    test: "tests/next-server/style-atelier.test.ts",
+    file: "app/(studio)/library/style/_port/fixtureActs.ts",
+    find: "const refusal = (act: StyleAct, b: Basis): string | null => actRefusal(act, b.style, ADOPT_REPLY[b.style.id] !== undefined);",
+    replace: "const refusal = (act: StyleAct, b: Basis): string | null => (act.kind === \"generate-proofs\" && b.style.proofs.filter((p) => p.state === \"approved\").length >= 14 ? \"the reference window is full\" : actRefusal(act, b.style, ADOPT_REPLY[b.style.id] !== undefined));",
+    why: "The fixture atelier offers a render the view says has room for and then refuses its receipt, because it counts approvals under an earlier block that the real side and the view do not.",
+  },
+  {
     id: "look-refs-unselected",
     test: "packages/producers/test/frames-look.test.ts",
     file: "packages/producers/src/frames/look.ts",

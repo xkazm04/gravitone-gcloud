@@ -149,6 +149,23 @@ describe("acts: a receipt, then a confirm", () => {
     expect((await view("chalk-argument")).proofs).toEqual([]);
   });
 
+  // The real side's rule (lib/producers/styleLaunch.ts actRefusal) and the view's `sheet.full`:
+  // an approval rendered under an earlier block is not in the reference window.
+  it("counts the reference window as the view does: a stale approval leaves room", async () => {
+    const trials = STYLE_TRIALS.map((t) => t.id);
+    for (const ids of [trials, trials, trials.slice(0, 2)]) {
+      const v = await view("newsprint-cutout");
+      await run({ kind: "generate-proofs", styleId: v.id, baseRev: v.rev, trialIds: ids });
+    }
+    const pending = (await view("newsprint-cutout")).proofs.filter((p) => p.state === "pending" && p.id !== "pr-nc-booking");
+    for (const p of pending.slice(0, 11)) expect((await op("newsprint-cutout", { kind: "judge-proof", proofId: p.id, state: "approved" })).kind).toBe("applied");
+    const v = await view("newsprint-cutout");
+    expect(v.proofs.filter((p) => p.state === "approved").length).toBe(14);
+    expect(v.sheet.full).toBe(false);
+    const rc = await actReceipt({ kind: "generate-proofs", styleId: v.id, baseRev: v.rev, trialIds: ["flywheel"] }, "dry", NOW, media);
+    expect(rc.ok ? null : rc.error.message).toBeNull();
+  });
+
   it("refuses to adopt a candidate (v1's 409, kept)", async () => {
     const rc = await actReceipt({ kind: "adopt", fromStyleId: "soft-backlit-bokeh" }, "dry", NOW, media);
     expect(rc.ok ? null : rc.error.message).toContain("only a proven style is adopted");

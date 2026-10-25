@@ -8,6 +8,7 @@ import type { StyleAct, StyleActOutcome } from "@gt/domain/styleView";
 import { quote } from "@gt/kernel/pricing/quote";
 
 import { recipeSlots } from "../../../../../lib/foundry/adopt.ts";
+import { actRefusal } from "../../../../../lib/producers/styleLaunch.ts";
 import { digest } from "../../../projects/[id]/_part/hash.ts";
 import { door, land, recOf, type Media } from "./fixture.ts";
 import { ADOPT_REPLY, ADOPT_SEEDS, DRY_GRID, presetPlate } from "./fixtureData.ts";
@@ -56,19 +57,9 @@ function line(key: string, label: string, p: { readonly provider: string; readon
   };
 }
 
-function refusal(act: StyleAct, b: Basis): string | null {
-  if (act.kind === "adopt") {
-    if (b.style.block !== undefined) return `${b.style.name} already has a look — duplicate it to start another`;
-    if (b.style.status !== "proven") return `${b.style.name} is a ${b.style.status}; only a proven style is adopted`;
-    return ADOPT_REPLY[b.style.id] === undefined ? `${b.style.name} has no kept plate to read a palette from` : null;
-  }
-  if (b.style.block === undefined) return `${b.style.name} has no block yet — adopt it or write its four slots first`;
-  const unknown = act.trialIds.filter((t) => !STYLE_TRIALS.some((x) => x.id === t));
-  if (unknown.length > 0) return `no trial ${unknown.join(", ")}`;
-  const approved = b.style.proofs.filter((p) => p.state === "approved").length;
-  if (approved >= 14) return "the reference window is full — reject an approval to make room";
-  return null;
-}
+/** Why the act cannot run, in the real side's words and by its rule (the reference window counts
+ *  approvals still sent, as the view's `sheet.full` does); kept = a recorded palette reply. */
+const refusal = (act: StyleAct, b: Basis): string | null => actRefusal(act, b.style, ADOPT_REPLY[b.style.id] !== undefined);
 
 function receiptOf(act: StyleAct, b: Basis, mode: ReceiptMode, now: number): Receipt {
   const lines: ReceiptLine[] = [];
