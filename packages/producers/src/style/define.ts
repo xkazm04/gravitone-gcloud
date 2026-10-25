@@ -115,6 +115,8 @@ export type StylePorts = {
  * `health` - which the driver asks before every claim, outside any transaction - reads it, and
  * `plan`, called inside the claim's transaction, takes it from there. A request that cannot be
  * read is not a sick vendor (an unhealthy job would wait forever); the plan fails the job with it.
+ * The worker's producer outlives every job, so a request is let go when its job ends (`settle`):
+ * a later drive of the same job asks `health` first and reads it again.
  */
 export function defineStyleProducer(lane: ResourceLane, ports: StylePorts): Producer {
   const known = new Map<string, Result<StyleRequest>>();
@@ -137,6 +139,9 @@ export function defineStyleProducer(lane: ResourceLane, ports: StylePorts): Prod
       if (req === undefined) throw new AppError("internal", `style job ${job.id} was planned before its request was read`);
       if (!req.ok) throw req.error;
       return stylePlan(req.value, outputs);
+    },
+    async settle(job) {
+      known.delete(job.id);
     },
     async perform(step, ctx) {
       const req = requestOf(ctx.job);

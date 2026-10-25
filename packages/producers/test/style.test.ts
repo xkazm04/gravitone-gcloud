@@ -70,3 +70,24 @@ describe("the request a job carries is read through the same rule the act was as
     expect(styleRequestSchema.safeParse({ ...proofs, trialIds: ["flywheel", "flywheel"] }).success).toBe(false);
   });
 });
+
+describe("the request is kept only while its job can still be driven", () => {
+  it("an ended job lets its request go (the worker's producer outlives every job), and a re-drive reads it again", async () => {
+    let reads = 0;
+    const p = defineStyleProducer("cloud.google", {
+      request: () => {
+        reads++;
+        return ok(proofs);
+      },
+      palette: async () => ({ kind: "fatal", code: "internal", message: "unused" }),
+      plate: async () => ({ kind: "fatal", code: "internal", message: "unused" }),
+      land: async () => ({ kind: "fatal", code: "internal", message: "unused" }),
+    });
+    await p.health?.(job);
+    await p.settle?.(job, "done");
+    expect(() => p.plan(job, done())).toThrow("planned before its request was read");
+    await p.health?.(job);
+    expect(reads).toBe(2);
+    expect(p.plan(job, done()).map((s) => s.name)).toEqual(["proof:peak-and-fall", "proof:flywheel", "land"]);
+  });
+});
