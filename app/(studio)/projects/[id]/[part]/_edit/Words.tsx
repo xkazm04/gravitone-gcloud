@@ -4,7 +4,7 @@
 // each counted against its limit as the platform counts it. The mv-metadata turn writes a draft
 // (the header's act, priced); every edit after it is an op, and the draft's own text stays on
 // the record so an edited field shows as edited. RAIL: the track the words are about.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { WORDS_LIMITS, type PartView, type WordsData } from "@gt/domain/partView";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
@@ -34,16 +34,26 @@ const COUNT = {
   },
 } as const;
 
-function Counted({ label, value, limit, count: measure, area = false, commit }: { readonly label: string; readonly value: string; readonly limit: number; readonly count: (v: string) => number; readonly area?: boolean; readonly commit: (v: string) => void }) {
+function Counted({ label, value, limit, count: measure, area = false, busy, commit }: { readonly label: string; readonly value: string; readonly limit: number; readonly count: (v: string) => number; readonly area?: boolean; readonly busy: boolean; readonly commit: (v: string) => void }) {
   const [v, setV] = useState(value);
   const [base, setBase] = useState(value);
   if (base !== value) {
     setBase(value);
     setV(value);
   }
+  // The island declines a write while another is in flight (PartEditor `write`): a blur that lands
+  // inside a round trip is held and sent when the trip ends, not shown as saved and dropped.
+  const held = useRef(false);
   const done = (): void => {
-    if (v !== value) commit(v);
+    if (v === value) return;
+    if (busy) held.current = true;
+    else commit(v);
   };
+  useEffect(() => {
+    if (!held.current || busy) return;
+    held.current = false;
+    if (v !== value) commit(v);
+  }, [busy, v, value, commit]);
   const n = measure(v);
   const count = <span className={cx(s.count, n > limit && s.over)}>{`${n} / ${limit}`}</span>;
   return (
@@ -61,7 +71,7 @@ function Counted({ label, value, limit, count: measure, area = false, commit }: 
   );
 }
 
-export function WordsEditor({ frame, send, error, view }: EditorProps<PartView<"words">>) {
+export function WordsEditor({ frame, send, busy, error, view }: EditorProps<PartView<"words">>) {
   const d: WordsData = view.data;
   const e = d.engine;
   // A respelling of the same list (spaces, a trailing comma) is no edit: the kind refuses an
@@ -102,9 +112,9 @@ export function WordsEditor({ frame, send, error, view }: EditorProps<PartView<"
               </div>
             )}
             <div className={s.form}>
-              <Counted label="title" value={d.title} limit={WORDS_LIMITS.title} count={COUNT.title} commit={(value) => send({ op: "words-field", field: "title", value })} />
-              <Counted label="description" value={d.description} limit={WORDS_LIMITS.description} count={COUNT.description} area commit={(value) => send({ op: "words-field", field: "description", value })} />
-              <Counted label="tags · comma separated" value={d.tags.join(", ")} limit={WORDS_LIMITS.tags} count={COUNT.tags} commit={commitTags} />
+              <Counted label="title" value={d.title} limit={WORDS_LIMITS.title} count={COUNT.title} busy={busy} commit={(value) => send({ op: "words-field", field: "title", value })} />
+              <Counted label="description" value={d.description} limit={WORDS_LIMITS.description} count={COUNT.description} area busy={busy} commit={(value) => send({ op: "words-field", field: "description", value })} />
+              <Counted label="tags · comma separated" value={d.tags.join(", ")} limit={WORDS_LIMITS.tags} count={COUNT.tags} busy={busy} commit={commitTags} />
               <div className={s.row}>
                 {d.tags.map((t) => (
                   <Chip key={t} label={t} casing="lower" />
