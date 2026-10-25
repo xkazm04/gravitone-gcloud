@@ -18,7 +18,7 @@
 //     stages it onto the version it creates, so a guessed figure would be
 //     PERSISTED beside a creator's work as though it were fact.
 //
-// So the cloud rows are deliberately unpriced and say so out loud, on the wire
+// So the in-service cloud rows are deliberately unpriced and say so out loud, on the wire
 // (`costBasis: "unpriced"`) and in the log (`cost=unpriced`, never `cost=$0`).
 // An unpriced call is UNPRICED, not free. Filling these in is a one-line edit
 // per row plus a `checked` date — which is the whole reason the shape is here
@@ -57,7 +57,8 @@ interface TextModelPrice {
 /**
  * The table. One row per model this app can actually reach.
  *
- * Every row is currently unpriced, and each says why in its own words rather
+ * Every row in service is unpriced (gemini-3.8-flash, priced from the vendor's
+ * own announcement, is not in service), and each says why in its own words rather
  * than sharing one apologetic footnote — because the reasons differ, and the
  * work needed to fix each one differs with them.
  */
