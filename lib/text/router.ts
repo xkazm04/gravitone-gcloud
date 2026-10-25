@@ -677,6 +677,8 @@ function trailReason(e: TextError): RerouteStep["why"] {
     case "rate-limited":
     case "timeout":
     case "bad-response":
+    case "invalid-request":
+    case "unsupported":
     case "cancelled":
       return e.kind;
     default:
