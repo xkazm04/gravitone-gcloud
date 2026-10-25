@@ -36,18 +36,20 @@ export function door<T extends Parameters<typeof withStatus>[0]>(draft: T): Resu
 }
 
 type Rec = { rev: number; style: Style; at: string };
-/** `jobs`: the job ids acts have landed as (one confirm, one job - a second confirm finds it). */
-type World = { readonly styles: Map<string, Rec>; readonly jobs: Set<string>; seeded: boolean };
+/** `jobs`: the job ids acts have landed as (one confirm, one job - a second confirm finds it).
+ *  `seeding`: the one seeding in flight or done, shared by every first request (null: not begun,
+ *  or failed and to be tried again). */
+type World = { readonly styles: Map<string, Rec>; readonly jobs: Set<string>; seeding: Promise<Result<void>> | null };
 
 declare global {
   var __gtStyleFixture: World | undefined;
 }
 
-const world = (): World => (globalThis.__gtStyleFixture ??= { styles: new Map(), jobs: new Set(), seeded: false });
+const world = (): World => (globalThis.__gtStyleFixture ??= { styles: new Map(), jobs: new Set(), seeding: null });
 
 /** Start the style universe over (the live lane's reset, beside `resetProduce`). */
 export function resetStyles(): void {
-  globalThis.__gtStyleFixture = { styles: new Map(), jobs: new Set(), seeded: false };
+  globalThis.__gtStyleFixture = { styles: new Map(), jobs: new Set(), seeding: null };
 }
 
 async function recordOf(seed: Seed, media: Media): Promise<Result<Style>> {
@@ -78,16 +80,24 @@ async function recordOf(seed: Seed, media: Media): Promise<Result<Style>> {
   });
 }
 
-async function seeded(media: Media): Promise<Result<World>> {
-  const w = world();
-  if (w.seeded) return ok(w);
+async function seedInto(w: World, media: Media): Promise<Result<void>> {
   for (const seed of SEEDS) {
     const r = await recordOf(seed, media);
     if (!r.ok) return err(r.error.code, `fixture seed ${seed.id}: ${r.error.message}`);
     w.styles.set(seed.id, { rev: 1, style: r.value, at: seed.lock?.at ?? seed.proofs.at(-1)?.at ?? "2026-08-27T07:13:28.768Z" });
   }
-  w.seeded = true;
-  return ok(w);
+  return ok(undefined);
+}
+
+// Two first requests at once (the page's read beside an action) await ONE seeding: a second loop
+// would write every seed back at rev 1 over an op the first had already landed.
+async function seeded(media: Media): Promise<Result<World>> {
+  const w = world();
+  const seeding = (w.seeding ??= seedInto(w, media));
+  const r = await seeding;
+  if (r.ok) return ok(w);
+  if (w.seeding === seeding) w.seeding = null;
+  return r;
 }
 
 const viewOfRec = (r: Rec): StyleView => styleView(r.style, r.rev, r.at);

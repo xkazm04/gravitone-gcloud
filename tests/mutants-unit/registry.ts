@@ -3818,6 +3818,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "An act's landing on the fixture side may unlock a locked style or demote it, where the real driver refuses the same write - the one-way ratchet holds on one write path of two.",
   },
   {
+    id: "style-fixture-seeds-per-request",
+    test: "tests/next-server/style-atelier.test.ts",
+    file: "app/(studio)/library/style/_port/fixture.ts",
+    find: "  const seeding = (w.seeding ??= seedInto(w, media));",
+    replace: "  const seeding = seedInto(w, media);",
+    why: "Two first requests at once each seed the fixture world, and the slower loop writes every style back at rev 1 over an op the faster one already landed - an edit the atelier answered `applied` silently vanishes.",
+  },
+  {
     id: "look-refs-unselected",
     test: "packages/producers/test/frames-look.test.ts",
     file: "packages/producers/src/frames/look.ts",

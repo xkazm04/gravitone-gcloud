@@ -84,6 +84,15 @@ describe("the seeded universe reads through the one ratchet", () => {
   });
 });
 
+// Two first requests at once (a page read beside an action) seed the world once, not twice.
+it("keeps an op that landed while a second first read was still seeding", async () => {
+  const slow: Media = (file) => new Promise((done) => setTimeout(() => void media(file).then(done), 0));
+  const renamed = opStyle({ styleId: "soft-backlit-bokeh", baseRev: 1, op: { kind: "rename", name: "Bokeh, renamed" } }, who, slow);
+  const read = loadStyle("chalk-argument", slow);
+  expect((await renamed).ok && (await read).ok).toBe(true);
+  expect(await view("soft-backlit-bokeh")).toMatchObject({ name: "Bokeh, renamed", rev: 2 });
+});
+
 describe("an op at a rev", () => {
   it("answers conflict with the truth for a stale rev, and writes nothing", async () => {
     const before = await view("newsprint-cutout");
