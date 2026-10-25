@@ -346,6 +346,35 @@ test("16. an estimate-basis row names the price row it was costed with (served a
   expect(standIn?.usdPerImage).toBe(rows[0].usd);
 });
 
+test("17. google count 3, one call refused or 500 -> the 2 paid images are kept and the provenance names the loss", async () => {
+  const refused = () => json({ status: "failed", error: { message: "blocked by safety" } });
+  stubFetch((n) => (n === 2 ? refused() : googleImage()));
+  const out = await generate({ prompt: "probe batch", aspect: "16:9", count: 3 });
+  expect(count(INTERACTIONS)).toBe(3);
+  expect(out.images, "a refusal on one call discarded the images the others returned").toHaveLength(2);
+  expect(out.provenance.shortBatch).toEqual({ asked: 3, returned: 2, refused: 1, failed: 0 });
+  expect(out.provenance.reroutedFrom?.map((r) => r.provider) ?? [], "a short batch was re-routed to a second vendor").not.toContain("google");
+
+  __resetBudget();
+  stubFetch((n) => (n === 3 ? status(500) : googleImage()));
+  const out2 = await generate({ prompt: "probe batch 500", aspect: "16:9", count: 3 });
+  expect(out2.images).toHaveLength(2);
+  expect(out2.provenance.shortBatch).toEqual({ asked: 3, returned: 2, refused: 0, failed: 1 });
+
+  // The whole batch refused is still a refusal, not an empty success.
+  __resetBudget();
+  stubFetch(() => refused());
+  await failure(generate({ prompt: "probe all refused", aspect: "16:9", count: 3 }));
+  expect(count(INTERACTIONS), "the refused batch was re-sent").toBe(3);
+});
+
+test("17b. [guard] a full batch carries no shortBatch", async () => {
+  stubFetch(() => googleImage());
+  const out = await generate({ prompt: "probe full", aspect: "16:9", count: 2 });
+  expect(out.images).toHaveLength(2);
+  expect(out.provenance.shortBatch).toBeUndefined();
+});
+
 test("9. one authority: the router's billing predicate IS errors.ts's presumedBilled", () => {
   expect(billedOnFailure).toBe(presumedBilled);
 });

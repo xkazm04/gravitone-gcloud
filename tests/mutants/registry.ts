@@ -544,4 +544,12 @@ export const MUTANTS: Mutant[] = [
     replace: "import type { CostBasis, ProviderId } from \"./types\";\nexport const PRICING_READS_ENV = process.env.GOOGLE_AI_API_KEY;",
     why: "The price table starts reading process.env, so a public price route would tell a caller which keys this deployment holds, and no test fails because the only walk over it ran for an emptied list.",
   },
+  {
+    id: "google-batch-drops-paid-images-on-one-refusal",
+    probe: "imaging-billed-attempts.probe.spec.ts",
+    file: "lib/imaging/providers/google.ts",
+    find: "const settled = await Promise.allSettled(calls);",
+    replace: "const settled = (await Promise.all(calls)).map((value) => ({ status: \"fulfilled\" as const, value }));",
+    why: "One refused or failed call in a Google N-candidate batch throws away every paid image the other calls returned, and the router pays a second vendor for N more.",
+  },
 ];
