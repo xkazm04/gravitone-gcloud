@@ -58,11 +58,11 @@ const iso = (s: string): string | undefined => {
 };
 
 /** Why `run` is not imported, or null when it is. */
-function skipOf(r: Reader, run: V1Run): string | null {
+function skipOf(r: Reader, run: V1Run, served: ReadonlySet<string>): string | null {
   if (run.state === "live") return "still working in v1; its producer launches it as a job from there";
   if (run.job !== undefined) return `already on the job system (${run.job})`;
   if (r.get("SELECT 1 AS x FROM runs WHERE id = ?", run.runId) !== undefined) return "a Run row already serves this id";
-  if (r.get("SELECT 1 AS x FROM jobs WHERE json_extract(record, '$.of.id') = ?", run.runId) !== undefined) return "a job already serves this id";
+  if (served.has(run.runId)) return "a job already serves this id";
   if (iso(run.at) === undefined) return `v1's creation instant ${run.at} is unreadable`;
   return null;
 }
@@ -112,8 +112,13 @@ function land(t: Tx, run: V1Run, now: number): void {
  */
 export function importRuns(store: Store, runs: readonly V1Run[], opts: { readonly dry: boolean; readonly now: number }): Result<RunOutcome[]> {
   const out: RunOutcome[] = [];
+  // The ids the jobs already serve, read once: jobs carries no index on `of.id`, so a per-run lookup is a scan of the table. A run
+  // imported below is caught by its Run row, so the set need not follow the writes of this pass.
+  const read = store.read((r) => new Set(r.all("SELECT DISTINCT json_extract(record, '$.of.id') AS id FROM jobs").map((x) => x["id"]).filter((id): id is string => typeof id === "string")));
+  if (!read.ok) return read;
+  const served = read.value;
   for (const run of runs) {
-    const skip = store.read((r) => skipOf(r, run));
+    const skip = store.read((r) => skipOf(r, run, served));
     if (!skip.ok) return skip;
     if (skip.value !== null) {
       out.push({ source: run.source, runId: run.runId, outcome: "skipped", state: run.state, reason: skip.value });
