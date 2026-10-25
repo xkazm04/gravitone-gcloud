@@ -59,6 +59,8 @@ export async function postJson<T>(
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), timeoutMs);
+    /** A status arrived: whatever breaks after this, the vendor took the call. */
+    let answered = false;
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -66,6 +68,7 @@ export async function postJson<T>(
         body: JSON.stringify(body),
         signal: ctl.signal,
       });
+      answered = true;
 
       const text = await res.text();
       if (!res.ok) {
@@ -117,6 +120,13 @@ export async function postJson<T>(
         // finished the work and will bill for it; our clock ran out, not theirs.
         last.dispatched = true;
         throw last;
+      } else if (answered) {
+        // The vendor answered and the BODY broke mid-read (a reset, a truncated
+        // stream). It took the request and ran it, so this is dispatched like
+        // any other answered failure - lib/imaging/http.ts's rule, same words.
+        const err = new TextError(`${provider} answered, but its response could not be read.`, "failed", provider, String(e));
+        err.dispatched = true;
+        throw err;
       } else {
         // NOT dispatched: the transport refused to connect — DNS, TLS, an
         // unreachable host — so nothing reached a vendor and nothing can have

@@ -10,6 +10,8 @@ import { test, expect } from "@playwright/test";
 
 import { SPEND_CLASSES } from "@/lib/spend/classes";
 import { createMeter } from "@/lib/spend/meter";
+import { TextError } from "@/lib/text/errors";
+import { postJson } from "@/lib/text/http";
 import { reason } from "@/lib/text/router";
 import {
   __resetTextSpend,
@@ -128,6 +130,28 @@ test("a failed turn that reached its engine with no cost is counted unpriced; on
     globalThis.fetch = real;
   }
   expect(await textSpendRows(), "an unpriced failure wrote a $ row").toHaveLength(0);
+});
+
+test("a vendor answer whose body breaks mid-read is a dispatched failure, not 'could not be reached'", async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(
+      new ReadableStream({
+        start(c) {
+          c.enqueue(new TextEncoder().encode('{"candidates":'));
+          c.error(new TypeError("terminated"));
+        },
+      }),
+      { status: 200 },
+    )) as typeof fetch;
+  try {
+    const e = (await postJson("google", "https://vendor.invalid/x", { body: {}, timeoutMs: 30_000 }).catch((x: unknown) => x)) as TextError;
+    expect(e).toBeInstanceOf(TextError);
+    expect(e.message).not.toMatch(/could not be reached/);
+    expect(e.dispatched, "an answered call was booked as never sent").toBe(true);
+  } finally {
+    globalThis.fetch = real;
+  }
 });
 
 test("no refusal: far past any imaging-sized ceiling, the next text turn is still served", async () => {
