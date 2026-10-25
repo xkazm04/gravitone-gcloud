@@ -6702,4 +6702,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: ']',
     why: "The composer's technique rail omits the fifth sfx technique, so the tag is dropped from every brief the form sends.",
   },
+  {
+    id: "article-dry-stand-in-from-cwd",
+    test: "tests/next-server/article-dry-agent-root.test.ts",
+    file: "lib/articles/dryAgent.ts",
+    find: 'const near = path.join(path.dirname(fileURLToPath(import.meta.url)), "dryStandIn.mjs");',
+    replace: 'const near = path.join(process.cwd(), "lib", "articles", "dryStandIn.mjs");',
+    why: "A dry article job in a process started outside the repository root spawns a stand-in path that does not exist and fails every turn.",
+  },
 ];

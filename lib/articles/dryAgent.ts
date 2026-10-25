@@ -22,6 +22,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { agentArgs, assertIsolatedWorkspace, MIN_TIMEOUT_MIN } from "@/lib/agent/agentArgs";
 import type { AgentResult, ReviewerCall, RunAgentInput } from "@/lib/agent/cliSeam";
@@ -31,10 +32,26 @@ import { reviewerEnv } from "@/lib/agent/reviewerEnv";
 import { REVIEW_WORKSPACE } from "@/lib/agent/reviewerEngines";
 import { seatOnlyEnv } from "@/lib/claudeCli";
 
-/** The stand-in's argv prefix. Never a real CLI: the default is lib/articles/dryStandIn.mjs. */
-export function dryAgentBin(env: Record<string, string | undefined> = process.env, root: string = process.cwd()): string[] {
+/**
+ * The stand-in beside this module. A bundler may place the module where `import.meta.url` names no
+ * real file (the check below says so); the working directory is then the last resort, which is the
+ * repository root only for a process started there.
+ */
+function standInPath(root?: string): string {
+  if (root !== undefined) return path.join(root, "lib", "articles", "dryStandIn.mjs");
+  try {
+    const near = path.join(path.dirname(fileURLToPath(import.meta.url)), "dryStandIn.mjs");
+    if (existsSync(near)) return near;
+  } catch {
+    // not a file: URL under this bundler; fall through
+  }
+  return path.join(process.cwd(), "lib", "articles", "dryStandIn.mjs");
+}
+
+/** The stand-in's argv prefix. Never a real CLI: the default is lib/articles/dryStandIn.mjs, found from this module, not from the cwd. */
+export function dryAgentBin(env: Record<string, string | undefined> = process.env, root?: string): string[] {
   const o = env["ARTICLES_DRY_AGENT_BIN"]?.trim();
-  if (!o) return [process.execPath, path.join(root, "lib", "articles", "dryStandIn.mjs")];
+  if (!o) return [process.execPath, standInPath(root)];
   return o.split("|").map((s) => (s === "node" ? process.execPath : existsSync(path.resolve(s)) ? path.resolve(s) : s));
 }
 
