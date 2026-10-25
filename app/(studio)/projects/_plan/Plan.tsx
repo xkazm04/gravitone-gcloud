@@ -14,7 +14,7 @@
 // Launch is a receipt and a confirm (../_plan/receipt.tsx), never the press itself.
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { PartPatch, PlanView, ProjectList } from "@gt/domain/produce";
 import { isEditorKind } from "@gt/domain/partView";
@@ -162,19 +162,12 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
 
   const rows = ordered(list);
   const work = view.parts.filter(isWork);
-  // THE PLAN ROW LINK (Phase 4 wave C, L38): a part with an editor opens it - the row on a click
-  // that is not on one of its own controls, the selected row on E. PlanRow is L28's @gt/ui
-  // component and draws no anchor (asked: an `href` per row there retires this delegation).
+  // THE PLAN ROW LINK (Phase 4 wave C, L38): a part with an editor links to it from its title in
+  // the plan (PlanTable `hrefOf`), and the selected row opens it on E.
   const editorHref = (partId: string): string | null => {
     const part = view.parts.find((x) => x.id === partId);
     if (part === undefined || !isEditorKind(part.kind)) return null;
     return `/projects/${encodeURIComponent(p.id)}/${encodeURIComponent(part.id.slice(p.id.length + 1))}`;
-  };
-  const openRow = (e: MouseEvent<HTMLDivElement>): void => {
-    if (!(e.target instanceof Element) || e.target.closest("select,input,button,a") !== null) return;
-    const id = e.target.closest("tr[data-part]")?.getAttribute("data-part");
-    const to = id === null || id === undefined ? null : editorHref(id);
-    if (to !== null) router.push(to);
   };
   const selHref = sel === null ? null : editorHref(sel);
   const walk = (dir: 1 | -1): void => {
@@ -260,9 +253,9 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
           </div>
         </div>
         <div className={s.plan} data-component="PlanBreakdown">
-          <div className={s.planMain} onClick={openRow}>
+          <div className={s.planMain}>
             {err !== null && <ErrorLine message={err} live />}
-            <PlanTable parts={view.parts} selectedId={sel} draft={draft} nowMs={nowMs} onModel={(id, option) => patch(id, { option })} onUnits={(id, units) => patch(id, { units })} />
+            <PlanTable parts={view.parts} selectedId={sel} hrefOf={editorHref} draft={draft} nowMs={nowMs} onModel={(id, option) => patch(id, { option })} onUnits={(id, units) => patch(id, { units })} />
           </div>
           <PlanSummary view={view} nowMs={nowMs} busy={flow.reading} onLaunch={() => void launch()} onDiscard={discard} />
         </div>

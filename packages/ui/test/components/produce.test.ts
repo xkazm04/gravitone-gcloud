@@ -283,6 +283,18 @@ describe("markup", () => {
     expect(launched).not.toContain('type="number"');
   });
 
+  test("a part with an editor is a link in the plan: every editor row carries one anchor, a gate or slot none", () => {
+    const parts: PlanPart[] = [
+      { id: "f", label: "frames", after: [], state: "draft", kind: "frames", units: 24, unitNoun: "plate", unitsRange: [1, 200], options: [FLUX, NANO], chosen: FLUX.key, estimate: { seconds: 2304, usd: 0, src: "model" } },
+      { id: "g", label: "verdict · frames", after: ["f"], state: "draft", kind: "gate", judges: "f", verdict: "matrix-cull" },
+      { id: "s", label: "slot", after: ["g"], state: "draft", kind: "slot" },
+    ];
+    const html = renderToStaticMarkup(h(PlanTable, { parts, selectedId: null, draft: true, nowMs: NOW, onModel: noop, onUnits: noop, hrefOf: (id: string) => (id === "f" ? "/projects/p/f" : null) }));
+    expect(html.match(/<a /g)?.length).toBe(1);
+    expect(html).toMatch(/<a [^>]*href="\/projects\/p\/f"[^>]*>frames<\/a>/);
+    expect(html).toContain("◆ frames<");
+  });
+
   test("the re-route list draws the current route dashed and unchoosable, the rest with their deltas", () => {
     const options: RerouteOption[] = [
       { option: FLUX, current: true, dEtaS: 0, dUsd: 0, queuePos: 2 },
