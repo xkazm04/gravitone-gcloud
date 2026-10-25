@@ -96,9 +96,17 @@ export const MAX_TRACK_CAP = 8;
 export const DEFAULT_VISUALIZER_CAP = 2;
 export const MAX_VISUALIZER_CAP = 4;
 
-/** Storyboards a night draws from kept ideas (spark scout-storyboards): up to five local Flux stills each, ~8 GPU min. */
-export const DEFAULT_STORYBOARD_CAP = 6;
-export const MAX_STORYBOARD_CAP = 12;
+/** Storyboards a night draws from kept ideas (spark scout-storyboards): up to five local Flux stills each, ~8 GPU min.
+ *  Raised 2026-10-25 (spark scout-vision, the operator: "raise max to 20") - storyboards are the free local work the
+ *  night develops its backlog with. */
+export const DEFAULT_STORYBOARD_CAP = 12;
+export const MAX_STORYBOARD_CAP = 20;
+
+/** THE BACKLOG GATE (spark scout-vision). While BACKLOG_GATE or more kept ideas wait for their next step
+ *  (./backlog.ts backlogOf), a seed batch takes its child seeds and at most GATED_FRESH_SEEDS fresh ones: the night
+ *  proves what was approved before it spreads further. */
+export const BACKLOG_GATE = 20;
+export const GATED_FRESH_SEEDS = 20;
 /** A storyboard's frames: at most five stills, the operator's number. */
 export const STORYBOARD_PANELS_MAX = 5;
 export const STORYBOARD_PARAGRAPH_MAX = 480;
@@ -520,6 +528,23 @@ export type StoryboardCandidate = CandidateBase & {
   readonly images?: readonly (string | null)[];
   /** The Flux seed each panel drew with, by panel index. */
   readonly seeds?: readonly number[];
+  /** The execution technique the night researched and the panels apply (spark scout-vision); a kept storyboard files
+   *  it as a finding. Omitted when the brief names none. */
+  readonly technique?: StoryboardTechnique;
+};
+
+/** A researched way of executing the genre (pacing, shot grammar, a prompt technique) - FindingCandidate's shape, so
+ *  a keep lands in the same PATTERNS.md step a finding would. */
+export type StoryboardTechnique = {
+  /** What a director could act on, <= 140 chars. */
+  readonly claim: string;
+  /** The verbatim quote or measurement that backs it. */
+  readonly evidence: string;
+  /** The public page it was read on. */
+  readonly url: string;
+  /** `knowledge/templates/<template>/steps/<step>/` - an existing step directory. */
+  readonly template: string;
+  readonly step: string;
 };
 
 export type Candidate =
@@ -568,6 +593,27 @@ export const seedRef = (batch: SeedBatchId, seed: SeedId): SeedRef => `${batch}/
 export const SEED_AUDIENCES = ["kids", "family", "adult"] as const;
 export type SeedAudience = (typeof SEED_AUDIENCES)[number];
 export const SEED_SENTENCE_MAX = 200;
+
+/** The seed types that make a song first (a track, then a visualizer or a music clip): the only seeds the track door
+ *  takes, and the ones a new batch must give `music` facets (spark scout-vision). */
+export const MUSIC_TYPES = ["music video", "lyric video", "visualizer"] as const;
+export const SEED_VOCALS = ["instrumental", "female", "male", "duet", "choir"] as const;
+export type SeedVocals = (typeof SEED_VOCALS)[number];
+export const MUSIC_INSTRUMENTS_MAX = 6;
+export const MUSIC_TEMPO_MIN = 40;
+export const MUSIC_TEMPO_MAX = 220;
+
+/** What a track's prompt is written from beside the sentence: the song's preparation step, as the idea artboard is
+ *  the video lane's. */
+export type SeedMusic = {
+  /** 1..MUSIC_INSTRUMENTS_MAX instruments, plain words (`nylon guitar`, `808 bass`). */
+  readonly instruments: readonly string[];
+  /** Beats per minute, MUSIC_TEMPO_MIN..MUSIC_TEMPO_MAX. */
+  readonly tempo: number;
+  /** One or two words (`melancholic`, `driving`). */
+  readonly mood: string;
+  readonly vocals: SeedVocals;
+};
 export const DEFAULT_SEED_BATCH = 100;
 export const MAX_SEED_BATCH = 150;
 
@@ -583,6 +629,8 @@ export type Seed = {
   readonly format: VideoFormat;
   /** The kept seed this one narrows (a child seed); absent on a fresh one. */
   readonly parent?: SeedRef;
+  /** A music seed's song (MUSIC_TYPES): required on a new one, absent on seeds written before 2026-10-25. */
+  readonly music?: SeedMusic;
 };
 
 export type SeedCommit = {
