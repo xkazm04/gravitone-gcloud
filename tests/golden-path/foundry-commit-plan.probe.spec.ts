@@ -30,7 +30,7 @@ import { OUT_ROOT, resolveInRun, FoundryError, commitRun, previewCommit, putVerd
 import type { Candidate, LedgerRow, RunManifest, StyleDef, Verdicts } from "@/lib/foundry/types";
 import { deriveForgeCommit, planForgeCommit } from "@/lib/foundry/commitPlan";
 
-import { keepEnv, probeFoundryDir } from "./_helpers";
+import { keepEnv, probeFoundryDir, stripComments } from "./_helpers";
 
 const ENV_KEYS = [ACCESS_SECRET_VAR] as const;
 keepEnv(ENV_KEYS);
@@ -506,7 +506,7 @@ test("Case 11: commitRun writes the rows the plan projected (minus the stamp) an
   }
 
   // One rule site: the plan's three rules are not spelled again in commitRun (comments stripped).
-  const src = readFileSync(path.join(process.cwd(), "lib", "foundry", "store.ts"), "utf8").replace(/\/\*[^]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  const src = stripComments(readFileSync(path.join(process.cwd(), "lib", "foundry", "store.ts"), "utf8"));
   const body = src.slice(src.indexOf("export async function commitRun"));
   expect(body, "the withFile filter").not.toMatch(/status !== "pending"/);
   expect(body, "the auto-reject").not.toMatch(/verdict: "reject", at/);
