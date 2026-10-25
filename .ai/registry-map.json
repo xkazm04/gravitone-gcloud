@@ -5977,7 +5977,11 @@
           "revision": 2,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/imaging/video/leonardo.ts:203 These are generic still and image-to-video vendor adapters (5/10 s silent clips from a key image, plus a still provider the MV engine calls). Nothing here plans against a locked song, and a search of lib/imaging/{providers,studio,video} for phrase, segment, tempo, downbeat and lip sync found no hits, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2d32bc9195341316",
+          "evaluatedRevision": 2
         },
         {
           "subject": "model-call-outcome-integrity",
@@ -8704,7 +8708,11 @@
           "revision": 2,
           "changedAt": "2026-10-07",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/sound/mv/types.ts:12 The pipeline deliberately produces rung 1 of the form ladder (one still, particles and low-band light rendered per frame from the audio envelope), so it makes no sync claim it cannot back; the map it needs is the energy layer, which it has, and segment, coverage and cut-rate rules collapse except for the beat-pulse flash cap, which it implements.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2d32bc9195341316",
+          "evaluatedRevision": 2
         },
         {
           "subject": "video-assembly",

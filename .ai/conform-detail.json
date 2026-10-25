@@ -12664,6 +12664,79 @@
         "at": "2026-10-25T01:16:04.171981+00:00",
         "reason": "reviewer (sonnet): The anchor lib/producers/registry.ts:6 is an import line (`import type { Job }`), so it does not show that playback is absent; the verdict also rests on an rg that came back empty, and the lib/producers/cut.ts anchor shows only that the cut is exported offline, not that nothing in the directory play"
       }
+    },
+    "30a879d3-b06e-4530-a9fa-051ee66769dd/music-video-production": {
+      "context": "music-video-pipeline",
+      "subject": "music-video-production",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:21:43.119Z",
+      "worker": "4cf930fc-e9b1-473c-b229-11df116dde16",
+      "techniques": [
+        {
+          "technique": "form-follows-what-the-track-gives",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/types.ts:12 Lowest rung chosen on purpose, with no performance claim. The visualizer's motion depends only on frame index (compositor.ts:6), as the rung-one clause requires."
+        },
+        {
+          "technique": "track-map-before-treatment",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/render.ts:149 The analysis runs before the treatment (MV_PHASES analysing->treating). It keeps tempo candidates with their octave siblings, an energy shape, and section boundaries found by Foote novelty rather than energy, flagged as unconfirmed (sections.ts:23). No bar grid or voice map, which the 'when not to use' clause calls ceremony for a visualizer that reacts frame by frame."
+        },
+        {
+          "technique": "cut-rate-follows-the-section",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/compositor.ts:155 There are no cuts (one still). The beat-driven brightness pulse is capped at 3 flashes per second (WCAG 2.3.1) in one pass over the whole track before rendering, as the flash decision rule asks. It counts crossings of the drive band, not rendered luminance."
+        },
+        {
+          "technique": "segment-on-the-master-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/mv/compositor.ts:6 A visualizer rendered per frame from the audio has no generated segments; its timing is exact by construction ('when not to use')."
+        },
+        {
+          "technique": "coverage-across-the-phrase",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/mv/metadata.ts:37 One still, no setups or angles. The technique states that a visualizer has no setups."
+        }
+      ],
+      "registryProposal": "cut-rate-follows-the-section and form-follows-what-the-track-gives say to count a beat-pulsed brightness effect's flashes against the 3/s ceiling, but they do not say where to count. This tree counts threshold crossings on the drive signal, before a gain (bloomIntensity, applied as several additive passes above 1) is applied downstream. The standard could require the count on rendered frame luminance, or on the drive only when no gain follows it."
+    },
+    "60361278-9fbe-43c5-add7-454ed78ef0f5/music-video-production": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "music-video-production",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:21:43.119Z",
+      "worker": "4cf930fc-e9b1-473c-b229-11df116dde16",
+      "techniques": [
+        {
+          "technique": "segment-on-the-master-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/types.ts:32 Clip lengths are a vendor duration list. No master in-point, offset or handle exists because no song clock reaches this hop."
+        },
+        {
+          "technique": "coverage-across-the-phrase",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/types.ts:44 Each request is one camera move from one image. Phrase coverage would be a caller's job, and no caller here passes a conditioning slice."
+        },
+        {
+          "technique": "form-follows-what-the-track-gives",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/leonardo.ts:205 No audio goes in or comes out, so no form decision is made here."
+        },
+        {
+          "technique": "track-map-before-treatment",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/providers/leonardoStudio.ts:5 The studio provider only serves the still. The track map lives in lib/sound/mv, not here."
+        },
+        {
+          "technique": "cut-rate-follows-the-section",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/leonardo.ts:203 No edit or cut placement happens in this context."
+        }
+      ]
     }
   }
 }
