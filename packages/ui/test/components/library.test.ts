@@ -12,6 +12,7 @@ import { describe, expect, test } from "vitest";
 import { DetailFacets, DetailPanel } from "../../src/components/library/DetailPanel.tsx";
 import { backStep, blocksFor, BLOCK, foldValues, layoutFor, orderValues, SIZES, stepTo, tileBox, type FacetValue } from "../../src/components/library/library.ts";
 import { LibraryRow } from "../../src/components/library/LibraryRow.tsx";
+import rowCss from "../../src/components/library/LibraryRow.module.css";
 import { cardName, LibraryTile, type LibraryCard } from "../../src/components/library/LibraryTile.tsx";
 import { KINDS, LibraryGlyph } from "../../src/components/library/LibraryGlyph.tsx";
 import { Lineage } from "../../src/components/library/Lineage.tsx";
@@ -150,6 +151,13 @@ describe("what the parts expose", () => {
     const style: LibraryCard = { ...c, id: "style-0001", kind: "style", state: "ratified", locked: true, chips: [] };
     expect(cardName(style)).toBe("Peak and Fall · ad spot 8, style, ratified, locked, media unreadable");
     expect(cardName({ ...style, locked: false })).not.toContain("locked");
+  });
+
+  test("a locked style wears its lock in the list as the grid does; an unlocked one wears none", () => {
+    const style: LibraryCard = { ...c, id: "style-0001", kind: "style", state: "ratified", locked: true, chips: [] };
+    const row = (card: LibraryCard): string => html(h(LibraryRow, { card, selected: false, domId: "r", onSelect: noop, onOpen: noop }));
+    expect(row(style)).toContain(`class="${rowCss.lock}"`);
+    expect(row({ ...style, locked: false })).not.toContain(rowCss.lock);
   });
 
   test("a row's facet chips keep distinct keys when two groups share a label (plate: family collage, render_mode collage)", () => {

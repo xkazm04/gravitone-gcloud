@@ -6870,4 +6870,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<Fragment>",
     why: "The receipt's words are not remounted per receipt, so a repeat is no DOM mutation and the live region stays silent.",
   },
+  {
+    id: "asset-library-row-lock-dropped",
+    test: "packages/ui/test/components/library.test.ts",
+    file: "packages/ui/src/components/library/LibraryRow.tsx",
+    find: "{card.locked === true && <FloorGlyph name=\"lock\" className={s.lock} />}",
+    replace: "",
+    why: "A ratified style shows its lock in the grid and not in the list, so switching views loses the one mark that says its block can no longer change.",
+  },
 ];

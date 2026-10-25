@@ -11,6 +11,7 @@ import { cx } from "../cx.ts";
 import { Chip } from "../chip/Chip.tsx";
 import { SourceTag } from "../source/SourceTag.tsx";
 import { StatusPill } from "../status/StatusPill.tsx";
+import { FloorGlyph } from "../floor/FloorGlyph.tsx";
 import { FaceView } from "./Face.tsx";
 import { LibraryGlyph, kindShort } from "./LibraryGlyph.tsx";
 import type { Density } from "./library.ts";
@@ -43,6 +44,7 @@ export function LibraryRow({ card, selected, domId, onSelect, onOpen }: LibraryR
       </span>
       <span className={s.name}>
         <span className={s.title}>{card.title}</span>
+        {card.locked === true && <FloorGlyph name="lock" className={s.lock} />}
         {card.attention !== undefined && <Chip label={ATTENTION_LABEL[card.attention]} tone="rose" casing="lower" />}
       </span>
       <span className={s.kind} aria-hidden="true">
