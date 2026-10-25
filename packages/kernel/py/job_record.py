@@ -89,6 +89,27 @@ def beat_once(conn, clock, slot, fence):
     return True
 
 
+def heartbeat_loop(path, clock, slot, fence, every_s, stop, lost):
+    """The body of a run's heartbeat thread (job.py `start_heartbeat`): its own connection, a beat
+    every `every_s` until `stop` is set. Whatever ends the renewing - a lost slot, or a connection
+    the thread cannot open - is handed to `lost`, so the run's next call raises instead of writing
+    on while nothing renews its slot."""
+    try:
+        conn = connect(path)
+    except Exception as e:  # noqa: BLE001 - handed to the run, never swallowed
+        lost(LeaseLost("the heartbeat on %s could not open the store: %s" % (slot, e)))
+        return
+    try:
+        while not stop.wait(every_s):
+            try:
+                beat_once(conn, clock, slot, fence)  # busy misses one beat; a loss raises
+            except LeaseLost as e:
+                lost(e)
+                return
+    finally:
+        conn.close()
+
+
 def lane_slots(lane):
     return ["%s#%d" % (lane, i + 1) for i in range(LANE_CAPACITY[lane])]
 

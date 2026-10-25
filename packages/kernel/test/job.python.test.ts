@@ -262,13 +262,15 @@ describe.skipIf(python === undefined)("spec/job.json: Node and Python drive jobs
 // can meet the store, measured from Python with the thread's own beats counted:
 //   - busy (`database is locked`): one beat missed is what the ttl/3 cadence is for; the thread
 //     beats again, and the run never hears of it;
-//   - anything else (`disk I/O error`): the slot can no longer be renewed, so the run's next call
-//     raises - the loss reaches the work loop, as Node's beat carries a throw (job-run.ts).
+//   - anything else (`disk I/O error`, or a connection the thread cannot open): the slot can no
+//     longer be renewed, so the run's next call raises - the loss reaches the work loop, as Node's
+//     beat carries a throw (job-run.ts).
 // A thread that died on either one stopped renewing while the run went on writing, unwarned.
 describe.skipIf(python === undefined)("the Python heartbeat meets a store error", () => {
   const cases = [
     { name: "a busy store misses one beat and the thread keeps renewing", error: "database is locked", expect: "BEATING" },
     { name: "any other store error stops the run at its next call", error: "disk I/O error", expect: "STOPPED" },
+    { name: "a store the thread cannot open stops the run at its next call", error: "unable to open database file", expect: "STOPPED", onConnect: true },
   ] as const;
   for (const [n, c] of cases.entries()) {
     it(c.name, () => {
@@ -288,9 +290,10 @@ describe.skipIf(python === undefined)("the Python heartbeat meets a store error"
         `    if ${c.expect === "BEATING" ? "len(calls) == 1" : "True"}:`,
         `        raise sqlite3.OperationalError(${JSON.stringify(c.error)})`,
         "    return real(*a)",
-        "job.heartbeat_in = job_record.heartbeat_in = flaky",
+        ...("onConnect" in c ? [] : ["job.heartbeat_in = job_record.heartbeat_in = flaky"]),
         `jobs = job.Jobs(${JSON.stringify(db)})`,
         "run = jobs.claim('hb', dry_only=True)",
+        ...("onConnect" in c ? ["def refuse(*a):", `    raise sqlite3.OperationalError(${JSON.stringify(c.error)})`, "job.connect = job_record.connect = refuse"] : []),
         "run.start_heartbeat(every_s=0.02)",
         "time.sleep(1.0)",
         "alive = run._beat[1].is_alive()",
