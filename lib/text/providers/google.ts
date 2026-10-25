@@ -273,13 +273,6 @@ export function googleProvider(): TextProvider {
       const key = keyFor("google");
       const model = MODEL_FOR_TURN[req.turn];
 
-      if (req.prompt.length > MAX_PROMPT_CHARS)
-        throw invalidRequest(
-          "google",
-          `This prompt is ${req.prompt.length} characters, past the ${MAX_PROMPT_CHARS} this adapter ` +
-            `will send inline. Nothing was dispatched and nothing was billed.`,
-        );
-
       // The schema decision, made once and reported honestly. See the header:
       // a translated-and-weakened schema reported as `native` would be a claim
       // of enforcement that did not happen.
@@ -287,6 +280,15 @@ export function googleProvider(): TextProvider {
       const enforcement: SchemaEnforcement = !req.schema ? "none" : native ? "native" : "prompted";
       const prompt =
         req.schema && !native ? `${req.prompt}\n${schemaInstruction(req.schema)}` : req.prompt;
+
+      // The ceiling holds the prompt AS SENT: a schema this rung could not
+      // enforce natively has just been appended to it.
+      if (prompt.length > MAX_PROMPT_CHARS)
+        throw invalidRequest(
+          "google",
+          `This prompt is ${prompt.length} characters, past the ${MAX_PROMPT_CHARS} this adapter ` +
+            `will send inline. Nothing was dispatched and nothing was billed.`,
+        );
 
       const body: Record<string, unknown> = {
         contents: [{ role: "user", parts: [{ text: prompt }] }],

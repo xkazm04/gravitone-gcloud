@@ -210,6 +210,26 @@ test("cancel: a cloud turn's in-flight request is aborted by the caller's signal
   }
 });
 
+test("size cap: the prompt as SENT is held to it, schema instruction included", async () => {
+  process.env.TEXT_ENV = "cloud";
+  process.env.GOOGLE_AI_API_KEY = "probe-google-key-0123456789";
+  const real = globalThis.fetch;
+  let sent = 0;
+  globalThis.fetch = (async () => {
+    sent++;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"a":1}' }] } }] }), { status: 200 });
+  }) as typeof fetch;
+  // `oneOf` keeps this schema off native enforcement, so its instruction is appended.
+  const schema = { type: "object", required: ["a"], properties: { a: { oneOf: [{ type: "number" }, { type: "string" }] } } };
+  try {
+    const out = await reason({ turn: "edit-plan", prompt: "x".repeat(900_000 - 10), schema }).catch((e: unknown) => e);
+    expect(sent, "a prompt past the cap once its schema was appended went on the wire").toBe(0);
+    expect((out as TextError).kind).toBe("invalid-request");
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
 /* ── the availability oracle ──────────────────────────────────────────────── */
 
 test("engineStatus: reports the same posture and the same blocks the router acts on", async () => {
