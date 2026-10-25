@@ -143,3 +143,14 @@ describe("what only an operator may do, an agent is refused on both sides", () =
     expect(fixtureState(failed)).toBe("failed");
   });
 });
+
+describe("only a waiting job moves in its lane's line", () => {
+  it("refuses a job out of the line in the kernel's words on both sides, not as the line's end", async () => {
+    const { research } = await realFilm();
+    await failReal(research);
+    const realSaid = await said(real.moveJob({ jobId: research, dir: "earlier" }, op), research);
+    expect(realSaid).toBe("refused: job <job> is failed; only a waiting job (queued or planned) moves in the line");
+    const failed = "job:part:the-quiet-tariff:frames";
+    expect(await said(fixture.moveJob({ jobId: failed, dir: "earlier" }, op), failed)).toBe(realSaid);
+  });
+});

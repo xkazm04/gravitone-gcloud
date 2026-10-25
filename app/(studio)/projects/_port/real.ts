@@ -242,10 +242,12 @@ export function makeRealProduce(deps: RealDeps): ServerProduce {
         const line = s.read((r) => r.all("SELECT id FROM jobs WHERE lane = ? AND state IN ('queued', 'planned') ORDER BY ord, n", before.value.lane).map((x) => String(x["id"])));
         if (!line.ok) return line;
         const at = line.value.indexOf(raw);
-        const other = line.value[dir === "earlier" ? at - 1 : at + 1];
-        if (at < 0 || other === undefined) return err("refused", "end of the lane queue");
+        const other = at < 0 ? undefined : line.value[dir === "earlier" ? at - 1 : at + 1];
+        if (at >= 0 && other === undefined) return err("refused", "end of the lane queue");
+        // A job out of the line (running, paused, failed) is the kernel's move to refuse, in its words.
         const r = move(s, id.value, dir, actorOf(who));
         if (!r.ok) return r;
+        if (other === undefined) return err("internal", `job ${raw} moved with no neighbour in its line`);
         const otherId = jobId(other);
         const o = otherId.ok ? jobOf(s, otherId.value) : otherId;
         const name = o.ok ? titleOf(o.value) : other;
