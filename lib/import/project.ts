@@ -4,7 +4,7 @@ import { isStepKind, type StepKind } from "@gt/domain/steps/registry";
 import { canonical, sha256Hex } from "@gt/kernel/canonical";
 import type { Reader } from "@gt/kernel/store";
 
-import { uploadOf, type Archive, type Row } from "./archive.ts";
+import { isoOfMs, uploadOf, type Archive, type Row } from "./archive.ts";
 import { markOriginal, type Sink, type StagedBlob } from "./bytes.ts";
 import { publicFile, stageItems, stageThemes, type ItemPreview, type PublicFile, type StagedItem, type StagedTheme, type ThemePreview } from "./shelf.ts";
 import { stageStep, type Loss, type StagedStep } from "./steps.ts";
@@ -114,8 +114,6 @@ function strings(v: unknown, out: Set<string>): Set<string> {
   return out;
 }
 
-const iso = (ms: unknown): string | undefined => (typeof ms === "number" && Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : undefined);
-
 function refused(row: Row, reason: string): StagedProject {
   const v1Id = String(row["id"]);
   const preview: ProjectPreview = { v1Id, id: kernelIdOf(v1Id), title: String(row["title"] ?? v1Id), recipe: "", outcome: "refuse", reason, launched: false, parts: 0, held: 0, done: [], ratified: [], blobs: 0, bytes: 0, losses: [] };
@@ -169,8 +167,11 @@ function stageProject(archive: Archive, row: Row, exists: (id: string) => boolea
   const signedOff = isObj(row["signedOff"]) ? row["signedOff"] : {};
   const signed = new Map<string, string>();
   for (const [step, at] of Object.entries(signedOff)) {
-    const when = iso(at);
-    if (when === undefined) continue;
+    const when = isoOfMs(at);
+    if (when === undefined) {
+      losses.push({ entity: `sign-off ${step}`, grade: "dropped", reason: `v1's sign-off instant ${String(at)} is unreadable` });
+      continue;
+    }
     const gate = parts.find((p) => p.kind === "gate" && p.judges === step);
     if (gate !== undefined && done.includes(step)) signed.set(gate.key, when);
     else if (done.includes(step)) losses.push({ entity: `sign-off ${step}`, grade: "approximate", reason: `${step} has no gate in ${recipe.id}; its done part carries the sign-off` });

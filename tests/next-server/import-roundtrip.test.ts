@@ -20,7 +20,8 @@ import { commitImport } from "../../lib/import/commit.ts";
 import { exportProjects } from "../../lib/import/export.ts";
 import { kernelIdOf, planImport } from "../../lib/import/project.ts";
 import { putProject } from "../../lib/projects.ts";
-import { clearV1, dataUrl, putStep, seedV1, v1Archive, type Seeded } from "./import-harness.ts";
+import { THEMES_STORE } from "../../lib/studioDb.ts";
+import { clearV1, dataUrl, putRows, putStep, seedV1, SHELF, v1Archive, type Seeded } from "./import-harness.ts";
 
 // THE IMPORT, END TO END (Phase 4 wave D, L42): an archive v1 wrote (its own exportAccount over
 // its own IndexedDB) -> the preview -> the confirm -> kernel Projects whose Plan opens with the
@@ -150,6 +151,23 @@ describe("what the import will not take, and says so", () => {
     // The other six records are still held (frames-alts keeps the frames part done).
     expect(film?.held).toBe(6);
     expect(p.value.projects.map((x) => x.preview.outcome)).toEqual(["import", "import", "import", "import"]);
+  });
+
+  it("reads a v1 instant no Date can hold as unreadable: a reported loss, never a failed preview or a refused commit", async () => {
+    const seed = await seedV1("uid-a");
+    // 1e20 ms is JSON v1 can write and past what a Date holds (8.64e15): toISOString throws on it.
+    await putProject({ ...seed.film, createdAt: 1e20, signedOff: { research: seed.signedAt, frames: 1e20 } });
+    await putRows(THEMES_STORE, [{ id: SHELF.untitled, uid: seed.uid, name: "Untitled style", origin: "scratch", block: {}, elements: [], proofs: [], createdAt: 1e20, updatedAt: 1e20 }]);
+    const { store, plan: p, done } = await imported(seed);
+    const film = p.projects.find((x) => x.preview.v1Id === seed.film.id)?.preview;
+    expect(film?.outcome).toBe("import");
+    expect(film?.ratified).toEqual([]);
+    expect(film?.losses).toEqual(expect.arrayContaining([{ entity: "sign-off frames", grade: "dropped", reason: "v1's sign-off instant 100000000000000000000 is unreadable" }]));
+    expect(p.themes.find((t) => t.preview.v1Id === SHELF.untitled)?.preview.name).toBe("Brief style");
+    // The preview's promise is the commit's: imported, its event at the import's own clock.
+    expect(done.kind === "done" && done.outcomes.find((o) => o.v1Id === seed.film.id)?.outcome).toBe("imported");
+    const ev = store.read((r) => r.get("SELECT at_src FROM events WHERE type = 'project.imported' AND subject_id = ?", kernelIdOf(seed.film.id)));
+    expect(ev).toEqual(ok({ at_src: null }));
   });
 });
 

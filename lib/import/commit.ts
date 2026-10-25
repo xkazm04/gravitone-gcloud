@@ -24,7 +24,7 @@ import type { NotPromise, Store, Tx } from "@gt/kernel/store";
 import { listStylesIn } from "@gt/kernel/styles/driver";
 import { importV1ThemeIn } from "@gt/kernel/styles/v1theme";
 
-import type { Archive } from "./archive.ts";
+import { isoOfMs, type Archive } from "./archive.ts";
 import type { StagedBlob } from "./bytes.ts";
 import { planImport, type ImportPlan, type ProjectPreview, type StagedProject } from "./project.ts";
 import type { ItemPreview, PublicFile, ThemePreview } from "./shelf.ts";
@@ -174,7 +174,7 @@ function land(t: Tx, location: string, s: StagedProject, put: Put, actor: Actor)
     must(commit(t, { ...author, packetId: packet.id, ticket: `v1-import:${p.v1Id}:${gateKey}`, token: consequenceToken(currentDecisions(t, packet.id).decisions, v1Digest), v1Digest }));
   }
   const held = Object.fromEntries([...projectRecords(t, p.id).records].map(([k, v]) => [k, digestOf(v)]));
-  const created = typeof s.row["createdAt"] === "number" && s.row["createdAt"] > 0 ? new Date(s.row["createdAt"]).toISOString() : undefined;
+  const created = isoOfMs(s.row["createdAt"]);
   append(t, {
     actor,
     type: "project.imported",

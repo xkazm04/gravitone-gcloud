@@ -11,7 +11,7 @@ import { withStatus } from "@gt/kernel/styles/core";
 import { admit, readStyleIn } from "@gt/kernel/styles/driver";
 import { draftFromV1Theme, themeStyleId, type ThemeDraft } from "@gt/kernel/styles/v1theme";
 
-import { uploadOf, type Archive, type Row } from "./archive.ts";
+import { isoOfMs, uploadOf, type Archive, type Row } from "./archive.ts";
 import { dataUrl, stage, type Sink, type StagedBlob } from "./bytes.ts";
 import type { Outcome } from "./project.ts";
 
@@ -92,7 +92,6 @@ export const publicFile: PublicFile = (src) => {
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown): string | undefined => (typeof v === "string" && v.trim() !== "" ? v.trim() : undefined);
 const strs = (v: unknown): string[] => (Array.isArray(v) ? v.flatMap((x) => (str(x) === undefined ? [] : [String(x).trim()])) : []);
-const iso = (ms: unknown): string | undefined => (typeof ms === "number" && Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : undefined);
 const b64 = (s: string): Uint8Array => new Uint8Array(Buffer.from(s, "base64"));
 
 /** v1's `UNTITLED`: the name its retired "From a brief" button stamped on every style. */
@@ -108,7 +107,7 @@ export function themeName(row: Row): { readonly name: string; readonly named: bo
   if (preset !== undefined) return { name: preset, named: true };
   const foundry = str(row["foundryStyleId"]);
   if (foundry !== undefined) return { name: foundry.replace(/[-_]+/g, " "), named: true };
-  const day = iso(row["createdAt"])?.slice(0, 10);
+  const day = isoOfMs(row["createdAt"])?.slice(0, 10);
   return { name: `${ORIGIN_NAME[String(row["origin"])] ?? "Style"}${day === undefined ? "" : ` ${day}`}`, named: true };
 }
 
@@ -175,7 +174,7 @@ function stageAsset(r: Reader, a: Row, archive: Archive, projects: ReadonlyMap<s
   if (typeof bytes === "string" && kind === "image") return { preview: { ...base, outcome: "refuse", reason: bytes }, blobs: [] };
   const folder = strs(a["path"]);
   const collections = [...(folder.length > 0 ? [{ kind: "pin" as const, id: folder.join("/") }] : []), ...(projects.get(v1Id) ?? []).map((p) => ({ kind: "project" as const, id: p }))];
-  const at = iso(a["createdAt"]);
+  const at = isoOfMs(a["createdAt"]);
   const proofTheme = typeof bytes !== "string" && bytes.origin === "proof" ? String(a["src"]).slice(6).split("/")[0] : undefined;
   const styleId = proofTheme === undefined ? undefined : themeStyleId(proofTheme);
   const shared = {
