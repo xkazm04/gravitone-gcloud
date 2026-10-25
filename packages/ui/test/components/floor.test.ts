@@ -255,4 +255,25 @@ describe("components", () => {
     expect(html).toContain('aria-label="Calendar, October 2026"');
     expect(html).toContain("Tue 20 Oct, 5 slots");
   });
+
+  test("a day names each bad state by its own word: a missed slot is not a failed one", () => {
+    const html = renderToStaticMarkup(
+      h(MonthCalendar, {
+        slots: [slot("m", "2026-10-02T08:00:00.000Z", "missed"), slot("f", "2026-10-03T08:00:00.000Z", "failed"), slot("a", "2026-10-04T08:00:00.000Z", "failed"), slot("b", "2026-10-04T09:00:00.000Z", "missed")],
+        nowMs: NOW,
+        month: { y: 2026, m: 9 },
+        day: null,
+        channelsOff: new Set<string>(),
+        onMonth: () => undefined,
+        onToday: () => undefined,
+        onDay: () => undefined,
+        onChannel: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+    expect(html).toContain("Fri 2 Oct, 1 slot, 1 missed\"");
+    expect(html).toContain("Sat 3 Oct, 1 slot, 1 failed\"");
+    expect(html).toContain("Sun 4 Oct, 2 slots, 1 failed, 1 missed\"");
+    expect(html).not.toContain("Fri 2 Oct, 1 slot, 1 failed");
+  });
 });

@@ -148,6 +148,9 @@ export function MonthCalendar(p: MonthCalendarProps) {
             {cells.map((c) => {
               const list = days.get(c.key) ?? [];
               const fails = list.filter(isBad).length;
+              // Missed is not failed: no platform refused it, the tick never fired it. Each state under its own word.
+              const tally = [["failed", list.filter((x) => x.status === "failed").length], ["missed", list.filter((x) => x.status === "missed").length]] as const;
+              const said = tally.filter(([, n]) => n > 0).map(([w, n]) => `${n} ${w}`);
               const more = list.length - MAX_PER_DAY;
               return (
                 <div
@@ -156,13 +159,13 @@ export function MonthCalendar(p: MonthCalendarProps) {
                   data-day={c.key}
                   tabIndex={day === c.key || (day === null && c.key === today) ? 0 : -1}
                   aria-selected={day === c.key}
-                  aria-label={`${dayLabel(c.key)}, ${list.length} ${list.length === 1 ? "slot" : "slots"}${fails > 0 ? `, ${fails} failed` : ""}`}
+                  aria-label={`${dayLabel(c.key)}, ${list.length} ${list.length === 1 ? "slot" : "slots"}${said.length > 0 ? `, ${said.join(", ")}` : ""}`}
                   className={cx(s.day, c.out && s.out, c.key < today && s.past, c.key === today && s.today, day === c.key && s.sel, fails > 0 && s.hasFail)}
                   onClick={() => onDay(day === c.key ? null : c.key)}
                 >
                   <span className={s.dayHead} aria-hidden="true">
                     <span className={s.dn}>{c.date}</span>
-                    {fails > 0 && <span className={s.fail}>{fails} failed</span>}
+                    {fails > 0 && <span className={s.fail}>{said.join(" · ")}</span>}
                     {list.length > 0 && <span className={s.count}>{list.length}</span>}
                   </span>
                   <span className={s.list}>

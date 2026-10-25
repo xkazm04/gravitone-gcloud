@@ -32,3 +32,9 @@
 @keyframes shake{25%{transform:translateX(calc(-1 * var(--sp-tight)))}75%{transform:translateX(var(--sp-tight))}}
 @keyframes shake-again{25%{transform:translateX(calc(-1 * var(--sp-tight)))}75%{transform:translateX(var(--sp-tight))}}
 @media (prefers-reduced-motion: reduce){.refuse,.refuse.again{animation:none}}
+/* A phone, at the part workspace's own 900px: the rail is a bounded strip above the desk, not 268px of a 390px page. */
+@media (max-width:900px){
+  .board{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .rail{border-right:0;border-bottom:1px solid var(--hair);max-height:22vh}
+  .foot{max-height:26vh;overflow:auto;flex-wrap:wrap;padding:var(--sp-3) var(--sp-4)}
+}
