@@ -142,8 +142,9 @@ test("the source's dimensions and tags decide the columns, not the market table"
   expect(untaggedIds(src)).toContain("f-now");
 
   const s = scopeSummary(cards, {}, src);
-  expect(s.byDim.map((d) => d.id), "byDim reads the source's columns").toEqual(["law"]);
+  expect(s.byDim.map((d) => d.id), "byDim reads the source's columns, and the untagged bucket when a card is in it").toEqual(["law", UNTAGGED_DIMENSION_ID]);
   expect(s.byDim[0].total).toBe(1);
+  expect(s.byDim[1].total).toBe(untaggedIds(src).length);
 });
 
 test("two different notebooks do not share a digest", () => {
@@ -465,4 +466,19 @@ test("stage 4 (case 7, widened - C1 closing case 12): the files reading any fixt
   expect(found.length).toBeLessThanOrEqual(PINNED_CONSTANT_IMPORTERS);
   // Named, so a swap (one leaves, another arrives) cannot hide inside the count.
   expect(found).toEqual(EXPECTED_IMPORTERS);
+});
+
+// ------------------------------------- scopeSummary.byDim files every dealt card
+
+test("byDim: every card a reasoned research-ok notebook deals sits in some column", () => {
+  const ok = (loadCassette("research-ok").turns[0]! as CassetteTurn).resultJson as Record<string, unknown>;
+  const src = sourceOf(parseNotebook(structuredClone(ok), "harbour dredging costs"), { kind: "reasoned" });
+  const cards = buildCards(src);
+  const s = scopeSummary(cards, {}, src);
+  const filed = s.byDim.reduce((n, d) => n + d.total, 0);
+  console.log(`[byDim] ${filed} of ${cards.length} cards in a column; columns ${s.byDim.map((d) => `${d.id}:${d.total}`).join(" ")}`);
+  expect(filed).toBe(cards.length);
+  expect(s.byDim.reduce((n, d) => n + d.kept, 0)).toBe(s.kept);
+  // The fixture has no untagged card, so it gains no eighth column.
+  expect(scopeSummary(buildCards(fixtureSource()), {}, fixtureSource()).byDim).toHaveLength(DIMENSIONS.length);
 });
