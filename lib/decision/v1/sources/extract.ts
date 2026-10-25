@@ -13,6 +13,7 @@ import type { InitialDecision } from "@gt/kernel/decision/driver";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
 import { planExtractCommit } from "../../../foundry/commitPlan.ts";
+import { exemplarRound } from "../../../foundry/extract/helpers.ts";
 import { commitExtractRun, EXTRACT_ROOT, getExtractRun, patchExtractVerdicts, previewExtractCommit, resolveInExtract } from "../../../foundry/extract/store.ts";
 import type { ExtractManifest, ExtractVerdictRecord, ExtractVerdicts, ExtractedStyle } from "../../../foundry/extract/types.ts";
 import { readStyleDefs } from "../../../foundry/catalogue.ts";
@@ -83,16 +84,11 @@ export type ExtractV1 = {
 /** One image a look produced, as a packet cell. */
 type Cell = { readonly id: string; readonly look: string; readonly file: string; readonly role: "replica" | "transfer" | "source"; readonly score: number | null; readonly label: string; readonly prompt?: string };
 
-/** The best round of a replica: the highest-scoring one with a file (commitExtractRun's own pick). */
-function bestRound(r: ExtractedStyle["replicas"][number]) {
-  return [...r.rounds].filter((x) => x.file).sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
-}
-
 /** A look's cells. A look that drew nothing shows its first gallery source, disclosed. */
 function cellsOf(run: ExtractManifest, s: ExtractedStyle): Cell[] {
   const out: Cell[] = [];
   s.replicas.forEach((r, i) => {
-    const best = bestRound(r);
+    const best = exemplarRound(r.rounds);
     if (best?.file) out.push({ id: `${s.id}/replica-${i + 1}`, look: s.id, file: best.file, role: "replica", score: best.score, label: `replica of ${r.source}`, prompt: best.prompt });
   });
   s.transfers.forEach((t, i) => {

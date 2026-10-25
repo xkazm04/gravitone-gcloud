@@ -26,6 +26,13 @@ export function bestRound(st: ExtractedStyle): ReplicaRound | null {
   return best;
 }
 
+/** The round a replica is read by: the highest-scoring one with a file that drew no text.
+ *  The exemplar a commit files and the cell the Board shows are this one pick; a vetoed
+ *  round is evidence of nothing, so a replica whose every round drew text has none. */
+export function exemplarRound(rounds: readonly ReplicaRound[]): ReplicaRound | undefined {
+  return rounds.filter((x) => x.file && !textVetoed(x)).sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
+}
+
 /** Mean score of every unvetoed round generated with this exact recipe, or null. */
 export function scoreOf(st: ExtractedStyle, recipe: string): number | null {
   const xs: number[] = [];

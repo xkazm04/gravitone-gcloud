@@ -43,6 +43,7 @@ import { blobRootOf } from "../../kernelProcess.ts";
 import type { BlobRef } from "@gt/domain/blob";
 import { DEFAULT_CALL_ESTIMATE_USD, newManifest, settleReason } from "./engine";
 import type { EngineIO } from "./engine";
+import { exemplarRound } from "./helpers";
 import { imageDims, imageFormat, nearestAspect } from "./imageDims";
 import { slugify } from "./vocabulary";
 import { exportStyles, extractRoot, OPERATOR, readStyleDefs, styleStore } from "../catalogue";
@@ -421,7 +422,7 @@ export async function commitExtractRun(
         if (src) exemplars.push(...(await exemplarOf(src.file, "source")));
       }
       for (const r of s.replicas) {
-        const best = [...r.rounds].filter((x) => x.file).sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
+        const best = exemplarRound(r.rounds);
         // The settle reason travels with the exemplar. Without it a replica the
         // loop GAVE UP on enters the catalogue as evidence the recipe works,
         // indistinguishable from one that hit the target.
