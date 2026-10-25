@@ -240,3 +240,27 @@ test("generate: the text sent with its negative tail is held to 4100, and a nega
   expect(take.negative).toBe("vocals, choir");
   expect((calls[0].body as { prompt: string }).prompt.endsWith("No vocals, no choir.")).toBe(true);
 });
+
+/* ── a drafted plan is held to the length bound its render buys ─────────── */
+
+test("generate plan: a drafted plan's own length is held to the music bound, and every section has one", async () => {
+  const chunk = (ms: number) => ({ text: "[Section]", duration_ms: ms, positive_styles: ["lo-fi"], negative_styles: [] });
+  // The operator's window is wide here, so the bound under test is the vendor's, not the budget's.
+  process.env.MUSIC_BUDGET_SECONDS_PER_WINDOW = "100000";
+  __resetMusicBudget();
+  // durationS is in bounds; the plan - what is actually rendered and metered - is not.
+  const cases: [string, unknown][] = [
+    ["700 s of plan", { chunks: [chunk(400_000), chunk(300_000)] }],
+    ["a section of no length", { chunks: [chunk(5000), chunk(0)] }],
+    ["a negative section", { chunks: [chunk(605_000), chunk(-600_000)] }],
+  ];
+  for (const [what, plan] of cases) {
+    const r = await refusal(() => generateTake(parseGenerateRequest(genReq({ op: "plan", prompt: "", durationS: 10, plan }))));
+    console.log(`[sound-door] plan: ${what} -> ${JSON.stringify(r)}`);
+    expect(r?.status, what).toBe(400);
+  }
+  expect(calls.length, "an out-of-bounds plan was sent").toBe(0);
+  const take = await generateTake(parseGenerateRequest(genReq({ op: "plan", prompt: "", durationS: 10, plan: PLAN })));
+  expect(take.durationS).toBe(10);
+  expect(calls.length).toBe(1);
+});

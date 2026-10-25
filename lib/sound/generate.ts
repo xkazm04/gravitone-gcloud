@@ -168,6 +168,13 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
   const plan = b.plan === null || b.plan === undefined ? null : asWirePlan(b.plan);
   if (b.plan && !plan) throw new SoundError('"plan" is not a composition plan ({ chunks: [...] })', 400);
   if (op === "plan" && !plan && !prompt) throw new SoundError('op "plan" needs a drafted "plan" or a "prompt" to draft one from', 400);
+  // A drafted plan IS the length bought (the meter reads it, lib/music requestedSeconds), so the
+  // bound is held on the plan, not on a `durationS` the render never reads.
+  if (op === "plan" && plan) {
+    if (plan.chunks.filter(isGenChunk).some((c) => !(c.duration_ms > 0))) throw new SoundError('every "plan" section needs a positive duration_ms', 400);
+    const planS = planMs(plan) / 1000;
+    if (planS < bounds.min || planS > bounds.max) throw new SoundError(`the plan totals ${planS}s; a ${kind} plan renders ${bounds.min}..${bounds.max}s`, 400);
+  }
 
   const sourceTakeId = typeof b.sourceTakeId === "string" && b.sourceTakeId ? b.sourceTakeId : null;
   const editModes = Array.isArray(b.editModes) ? b.editModes.filter((x): x is string => typeof x === "string") : null;
