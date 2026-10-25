@@ -505,8 +505,12 @@ test("check item: quorum in every round and every blocker factual answered", () 
   expect(critiqueCheckItem(detail())).toMatchObject({ id: "critique", status: "pass", value: "r1 2/0; 1 blocker factual" });
   expect(critiqueCheckItem(detail({ dispositions: [] }))).toMatchObject({ status: "fail", detail: ["round 1: blocker factual a/f1 has no disposition with a reason"] });
   const short = detail();
-  short.rounds[0].receipts[1].outcome = "unavailable";
+  short.rounds[0].reviews.pop();
   expect(critiqueCheckItem(short)).toMatchObject({ status: "fail", detail: [expect.stringMatching(/round 1: 1 of 0 reviewers completed/)] });
+  // A crash after a review file landed but before its receipt: the round closed on the reviews.
+  const crashed = detail();
+  crashed.rounds[0].receipts.pop();
+  expect(critiqueCheckItem(crashed)).toMatchObject({ status: "pass", value: "r1 2/0; 1 blocker factual" });
   expect(critiqueCheckItem(undefined)).toMatchObject({ status: "fail", value: "no critique record" });
 });
 

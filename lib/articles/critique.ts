@@ -368,7 +368,9 @@ export function critiqueCheckItem(detail: CritiqueDetail | undefined): CheckItem
   if (!detail || !detail.rounds.length) return { ...base, status: "fail", value: "no critique record", expected };
   const problems: string[] = [];
   const perRound = detail.rounds.map((r) => {
-    const done = r.receipts.filter((x) => x.outcome === "completed").length;
+    // The round closed on review files (critiqueReviews.ts reviewRound), so the check counts the
+    // same artefact: a crash between a review and its receipt must not fail a quorum the step passed.
+    const done = r.reviews.length;
     if (done < detail.minCompleted) problems.push(`round ${r.round}: ${done} of ${detail.reviewers.length} reviewers completed`);
     return `r${r.round} ${done}/${detail.reviewers.length}`;
   });
