@@ -178,6 +178,30 @@ test("approve lands: branch pushed, publication written, approved patch applied,
   expect(readFileSync(path.join(runDir(run.id), "medium", "tags.txt"), "utf8").trim().split("\n")).toHaveLength(5);
 });
 
+test("a landing retried after gh pr create failed reuses the pushed branch and opens its PR", async () => {
+  test.slow();
+  process.env.STUB_GH_LOG = path.join(box.dir, "gh.log");
+  const run = await toGate();
+  await approveRun(run.id, ["p1"]);
+  process.env.STUB_GH_FAIL = "1";
+  const failed = await driveRun(run.id, deps());
+  expect(failed.status).toBe("failed");
+  expect(failed.error).toContain("gh pr create failed; the branch article/a-stub-post-about-tokens is pushed");
+  const branch = failed.landing?.branch;
+  expect(branch).toBe("article/a-stub-post-about-tokens");
+  delete process.env.STUB_GH_FAIL;
+  await resumeRun(run.id);
+  const landed = await driveRun(run.id, deps());
+  expect(landed.status, landed.error).toBe("landed");
+  expect(landed.landing).toMatchObject({ branch, commit: failed.landing?.commit, prUrl: "https://example.invalid/xkazm04/ai-registry/pull/1" });
+  expect(landed.landing?.worktree, "the kept worktree is removed").toBeUndefined();
+  expect(existsSync(failed.landing!.worktree!), "the failed attempt's worktree is gone").toBe(false);
+  expect(git(box.origin, "for-each-ref", "--format=%(refname)", "refs/heads/article/").trim().split("\n"), "one approved post, one pushed branch").toEqual([`refs/heads/${branch}`]);
+  const calls = readFileSync(path.join(box.dir, "gh.log"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+  expect(calls).toHaveLength(2);
+  expect(calls[1][calls[1].indexOf("--head") + 1]).toBe(branch);
+});
+
 test("a gate failure leaves the branch local: nothing pushed, no PR, status failed with the gate output", async () => {
   // Landing drives git worktree/push/gate children: 18-26 s idle, past the 120 s
   // describe budget under saturating load. Inherent work, so a longer budget.

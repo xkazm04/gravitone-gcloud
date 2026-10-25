@@ -520,4 +520,12 @@ export const MUTANTS: Mutant[] = [
     replace: "if (false) console.log(",
     why: "The loop CLI prints its orphaned runs but not the run directories whose run.json does not parse, so a damaged run is in loop.json only and the operator reading the terminal never sees it.",
   },
+  {
+    id: "article-landing-retry-pushes-second-branch",
+    probe: "articles-engine.probe.spec.ts",
+    file: "lib/articles/registryWrite.ts",
+    find: "if (prev?.commit && prev.branch && prev.slug && (await pushedAt(registry, prev.branch, prev.commit))) {",
+    replace: "if (false) {",
+    why: "A landing retried after gh pr create failed re-runs from scratch: freeName skips the pushed branch and pushes article/<slug>-2, orphaning the first on the registry's remote.",
+  },
 ];

@@ -234,6 +234,12 @@ async function baseRef(registry: string): Promise<string> {
   throw new ArticleError("the registry's remote has no main or master branch to start from", 502, "no-base-branch");
 }
 
+/** Whether `origin` holds `branch` at exactly `commit`. */
+async function pushedAt(registry: string, branch: string, commit: string): Promise<boolean> {
+  const r = await run(["git", "ls-remote", "--heads", "origin", branch], registry);
+  return r.code === 0 && r.stdout.split(/\s+/)[0] === commit;
+}
+
 async function freeName(registry: string, base: string, exists: (candidate: string) => Promise<boolean>): Promise<string> {
   for (let i = 1; i < 100; i++) {
     const c = i === 1 ? base : `${base}-${i}`;
@@ -276,6 +282,54 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
   const fetched = await run(["git", "fetch", "origin"], registry, 180_000);
   if (fetched.code !== 0) throw new LandingError(`git fetch failed in ${registry}: ${tail(fetched.stderr, 400)}`, "fetch-failed", { slug: "", branch: "", gates: [] }, fetched.stderr);
   const base = await baseRef(registry);
+
+  const patchLines = diffs.map(({ patch }) => `- ${patch.id} (${patch.kind}) ${patch.target}: ${patch.rationale}`);
+  // Step 6's tail, a closure so the retry of a landing whose PR failed can take it alone.
+  const openPr = async (landing: ArticleLanding, log: string[]): Promise<ArticleLanding> => {
+    // gh runs where the branch was built while that worktree stands; a retry whose worktree is gone
+    // runs it in the registry, which holds the same pushed branch.
+    const cwd = landing.worktree && existsSync(landing.worktree) ? landing.worktree : registry;
+    const checkRows = Object.entries(check?.dimensions ?? {}).map(([d, v]) => `| ${d} | ${v} |`);
+    const body = [
+      `Publication \`publications/${landing.slug}/\` from article run \`${art.id}\`.`,
+      "",
+      `- Topic: ${art.topic.kind === "subject" ? `${art.topic.bundle}/${art.topic.subject}` : art.topic.text}`,
+      `- Standard: ${art.standard.recipe} ${art.standard.version ?? ""} (${art.standard.bundle})`,
+      `- Sources: ${sources.length}, primary ${sources.filter((s) => s.primary).length}, counter ${sources.filter((s) => s.counter).length}`,
+      ...(critique
+        ? [
+            `- Critique: ${critique.block.rounds} round${critique.block.rounds === 1 ? "" : "s"}, decision ${critique.block.decision}; reviewers ${critique.block.reviewers.map((r) => `${r.id} (${r.engine} ${r.model}) ${r.outcome}`).join(", ")}`,
+            `- Findings: ${critique.block.findings.total} (accepted ${critique.block.findings.accepted}, rejected ${critique.block.findings.rejected}, deferred ${critique.block.findings.deferred}) — publications/${landing.slug}/critique/`,
+          ]
+        : []),
+      "",
+      ...(checkRows.length ? ["| dimension | deterministic check |", "|---|---|", ...checkRows, ""] : []),
+      ...(check?.notMeasured.length ? [`Not measured by the check (the human's judgement): ${check.notMeasured.join(", ")}.`, ""] : []),
+      ...(art.trial && trial ? trialPrBlock({ ref: art.trial, prereg: trial.prereg, verdict: trial.verdict, governsHere: trial.governsHere }) : []),
+      ...(patchLines.length ? ["Approved registry patches:", ...patchLines, ""] : []),
+      `Gates run: ${landing.gates.map((g) => `${g.lane}${g.mode === "write" ? " --write" : ""}`).join(", ")}.`,
+    ].join("\n");
+    const pr = await run([...ghArgv(), "pr", "create", "--base", base.replace(/^origin\//, ""), "--head", landing.branch, "--title", `publications(${landing.slug}): ${meta.title}`, "--body", body], cwd, 120_000);
+    if (pr.code !== 0) throw new LandingError(`gh pr create failed; the branch ${landing.branch} is pushed: ${tail(pr.stderr || pr.stdout, 400)}`, "pr-failed", landing, pr.stdout + pr.stderr);
+    const url = /https?:\/\/\S+/.exec(pr.stdout);
+    if (url) landing.prUrl = url[0];
+
+    // success: the worktree has done its job
+    if (landing.worktree) {
+      const removed = await run(["git", "worktree", "remove", "--force", landing.worktree], registry);
+      if (removed.code === 0 || !existsSync(landing.worktree)) delete landing.worktree;
+    }
+    if (log.length) await writeFile(path.join(runDir, "landing.log"), log.join("\n\n"), "utf8");
+    return landing;
+  };
+
+  // A landing whose `gh pr create` failed left its branch pushed (run.landing records it). The retry
+  // opens the PR from that branch: freeName would skip it as taken and push a second one, orphaning
+  // the first on the remote.
+  const prev = art.landing;
+  if (prev?.commit && prev.branch && prev.slug && (await pushedAt(registry, prev.branch, prev.commit))) {
+    return openPr({ ...prev, gates: [...prev.gates] }, []);
+  }
 
   // 2. slug, branch, worktree
   const slug = await freeName(registry, slugify(meta.title, 60) || slugify(art.topic.text, 60) || art.id, async (c) => {
@@ -364,7 +418,6 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
 
   const staged = await run(["git", "add", "-A"], worktree);
   if (staged.code !== 0) throw new LandingError(`git add failed: ${tail(staged.stderr, 400)}`, "commit-failed", landing, staged.stderr);
-  const patchLines = diffs.map(({ patch }) => `- ${patch.id} (${patch.kind}) ${patch.target}: ${patch.rationale}`);
   const message = [
     `publications(${slug}): ${meta.title}`,
     "",
@@ -381,34 +434,5 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
   const pushed = await run(["git", "push", "-u", "origin", branch], worktree, 180_000);
   if (pushed.code !== 0) throw new LandingError(`git push failed; the commit stays on the local branch ${branch}: ${tail(pushed.stderr, 400)}`, "push-failed", landing, pushed.stderr);
 
-  const checkRows = Object.entries(check?.dimensions ?? {}).map(([d, v]) => `| ${d} | ${v} |`);
-  const body = [
-    `Publication \`publications/${slug}/\` from article run \`${art.id}\`.`,
-    "",
-    `- Topic: ${art.topic.kind === "subject" ? `${art.topic.bundle}/${art.topic.subject}` : art.topic.text}`,
-    `- Standard: ${art.standard.recipe} ${art.standard.version ?? ""} (${art.standard.bundle})`,
-    `- Sources: ${sources.length}, primary ${sources.filter((s) => s.primary).length}, counter ${sources.filter((s) => s.counter).length}`,
-    ...(critique
-      ? [
-          `- Critique: ${critique.block.rounds} round${critique.block.rounds === 1 ? "" : "s"}, decision ${critique.block.decision}; reviewers ${critique.block.reviewers.map((r) => `${r.id} (${r.engine} ${r.model}) ${r.outcome}`).join(", ")}`,
-          `- Findings: ${critique.block.findings.total} (accepted ${critique.block.findings.accepted}, rejected ${critique.block.findings.rejected}, deferred ${critique.block.findings.deferred}) — publications/${slug}/critique/`,
-        ]
-      : []),
-    "",
-    ...(checkRows.length ? ["| dimension | deterministic check |", "|---|---|", ...checkRows, ""] : []),
-    ...(check?.notMeasured.length ? [`Not measured by the check (the human's judgement): ${check.notMeasured.join(", ")}.`, ""] : []),
-    ...(art.trial && trial ? trialPrBlock({ ref: art.trial, prereg: trial.prereg, verdict: trial.verdict, governsHere: trial.governsHere }) : []),
-    ...(patchLines.length ? ["Approved registry patches:", ...patchLines, ""] : []),
-    `Gates run: ${landing.gates.map((g) => `${g.lane}${g.mode === "write" ? " --write" : ""}`).join(", ")}.`,
-  ].join("\n");
-  const pr = await run([...ghArgv(), "pr", "create", "--base", base.replace(/^origin\//, ""), "--head", branch, "--title", `publications(${slug}): ${meta.title}`, "--body", body], worktree, 120_000);
-  if (pr.code !== 0) throw new LandingError(`gh pr create failed; the branch ${branch} is pushed: ${tail(pr.stderr || pr.stdout, 400)}`, "pr-failed", landing, pr.stdout + pr.stderr);
-  const url = /https?:\/\/\S+/.exec(pr.stdout);
-  if (url) landing.prUrl = url[0];
-
-  // success: the worktree has done its job
-  const removed = await run(["git", "worktree", "remove", "--force", worktree], registry);
-  if (removed.code === 0) delete landing.worktree;
-  await writeFile(path.join(runDir, "landing.log"), log.join("\n\n"), "utf8");
-  return landing;
+  return openPr(landing, log);
 }
