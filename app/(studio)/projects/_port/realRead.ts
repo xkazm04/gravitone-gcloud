@@ -222,11 +222,14 @@ export function jobsView(r: Reader, now: number, cap = JOBS_CAP): ProduceJob[] {
   });
 }
 
-/** Every held lane: the oldest hold names the job (as Runs names it) and the stage that may have spent. */
-export function holdsView(r: Reader, titles: ReadonlyMap<string, string> = new Map()): LaneHoldView[] {
+/** Every held lane: the oldest hold names the job (as Runs names it) and the stage that may have spent.
+ *  The names are asked for only once a lane holds: most reads find none, and naming is a jobs read. */
+export function holdsView(r: Reader, titlesOf: () => ReadonlyMap<string, string> = () => new Map()): LaneHoldView[] {
+  let titles: ReadonlyMap<string, string> | undefined;
   return RESOURCE_LANES.flatMap((lane): LaneHoldView[] => {
     const h = laneHold(r, lane);
     if (h === undefined) return [];
+    titles ??= titlesOf();
     let title = titles.get(h.jobId);
     if (title === undefined) {
       // A hold older than the newest JOBS_CAP jobs: read its job alone.

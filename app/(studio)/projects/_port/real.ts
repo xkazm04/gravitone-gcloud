@@ -271,7 +271,7 @@ export function makeRealProduce(deps: RealDeps): ServerProduce {
       }),
 
     listJobs: () => withStore((s) => s.read((r) => jobsView(r, deps.now()))),
-    listHolds: () => withStore((s) => s.read((r) => holdsView(r, new Map(jobsView(r, deps.now()).map((j) => [j.id, j.title]))))),
+    listHolds: () => withStore((s) => s.read((r) => holdsView(r, () => new Map(jobsView(r, deps.now()).map((j) => [j.id, j.title]))))),
     // The kernel's cancel (job.ts), refused by its machine for a job that already ended.
     cancelJob: ({ jobId: raw }, who) =>
       withStore((s) => {
