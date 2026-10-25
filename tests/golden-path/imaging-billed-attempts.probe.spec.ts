@@ -29,7 +29,8 @@ import { spendRows, __resetBudget, BUDGET_VAR, WINDOW_VAR, FLOOR_VAR } from "@/l
 import { ImagingError, presumedBilled } from "@/lib/imaging/errors";
 import { ollamaProvider } from "@/lib/imaging/providers/ollama";
 import { qwenProvider } from "@/lib/imaging/providers/qwen";
-import { billedOnFailure, generate } from "@/lib/imaging/router";
+import { billedOnFailure, generate, recognize } from "@/lib/imaging/router";
+import { PRICES } from "@/lib/imaging/pricing";
 
 const realFetch = globalThis.fetch;
 
@@ -318,6 +319,78 @@ test("15. qwen rotates SKUs on a 429 or empty content, never on a 400; each SKU 
   const err = await failure(qwenProvider().recognize!(RECOGNIZE));
   expect(err.kind).toBe("failed");
   expect(asked(), "a malformed request was re-sent to the fallback SKUs").toEqual(["qwen3.8-max"]);
+});
+
+test("16. an estimate-basis row names the price row it was costed with (served and failed)", async () => {
+  // A row booked at basis `estimate` must stay explicable after PRICES is
+  // repriced and re-dated: it records provider/model@checked of the row used.
+  const rowOf = (ref: string | undefined) => PRICES.find((p) => `${p.provider}/${p.model}@${p.checked}` === ref);
+
+  stubFetch(() => googleImage());
+  await generate({ prompt: "probe served", aspect: "16:9", count: 1 });
+  let rows = await spendRows();
+  expect(rows).toHaveLength(1);
+  expect(rows[0].basis).toBe("estimate");
+  const served = rowOf(rows[0].price);
+  expect(served, `served estimate row names no PRICES row: ${rows[0].price}`).toBeDefined();
+  expect([served?.provider, served?.model]).toEqual([rows[0].provider, rows[0].model]);
+
+  __resetBudget();
+  stubFetch(() => status(500));
+  await failure(generate({ prompt: "probe 500", aspect: "16:9", count: 1 }));
+  rows = await spendRows();
+  expect(rows).toHaveLength(1);
+  expect(rows[0].outcome).toBe("failed");
+  const standIn = rowOf(rows[0].price);
+  expect(standIn, `failed estimate row names no PRICES row: ${rows[0].price}`).toBeDefined();
+  expect(standIn?.usdPerImage).toBe(rows[0].usd);
+});
+
+test("17. google count 3, one call refused or 500 -> the 2 paid images are kept and the provenance names the loss", async () => {
+  const refused = () => json({ status: "failed", error: { message: "blocked by safety" } });
+  stubFetch((n) => (n === 2 ? refused() : googleImage()));
+  const out = await generate({ prompt: "probe batch", aspect: "16:9", count: 3 });
+  expect(count(INTERACTIONS)).toBe(3);
+  expect(out.images, "a refusal on one call discarded the images the others returned").toHaveLength(2);
+  expect(out.provenance.shortBatch).toEqual({ asked: 3, returned: 2, refused: 1, failed: 0 });
+  expect(out.provenance.reroutedFrom?.map((r) => r.provider) ?? [], "a short batch was re-routed to a second vendor").not.toContain("google");
+
+  __resetBudget();
+  stubFetch((n) => (n === 3 ? status(500) : googleImage()));
+  const out2 = await generate({ prompt: "probe batch 500", aspect: "16:9", count: 3 });
+  expect(out2.images).toHaveLength(2);
+  expect(out2.provenance.shortBatch).toEqual({ asked: 3, returned: 2, refused: 0, failed: 1 });
+
+  // The whole batch refused is still a refusal, not an empty success.
+  __resetBudget();
+  stubFetch(() => refused());
+  await failure(generate({ prompt: "probe all refused", aspect: "16:9", count: 3 }));
+  expect(count(INTERACTIONS), "the refused batch was re-sent").toBe(3);
+});
+
+test("17b. [guard] a full batch carries no shortBatch", async () => {
+  stubFetch(() => googleImage());
+  const out = await generate({ prompt: "probe full", aspect: "16:9", count: 2 });
+  expect(out.images).toHaveLength(2);
+  expect(out.provenance.shortBatch).toBeUndefined();
+});
+
+test("18. an empty Ollama recognition is not a served judgement and is not re-sent to a billed eye", async () => {
+  // google.ts refuses an empty recognition and qwen rotates on one; the local eye
+  // used to resolve text "" as a green, empty judgement. `bad-response` is not
+  // reroutable, so the empty local read stops here instead of spending on Google.
+  await withLeaseStore(async () => {
+    stubFetch(() => json({ message: { content: "  " } }));
+    const err = await failure(ollamaProvider().recognize!(RECOGNIZE));
+    expect(err.kind).toBe("bad-response");
+    expect(err.reroutable).toBe(false);
+
+    stubFetch((_n, url) => (url.includes("ollama.probe") ? json({ message: { content: "" } }) : googleImage()));
+    const viaRouter = await failure(recognize(RECOGNIZE));
+    expect(viaRouter.kind).toBe("bad-response");
+    expect(count("ollama.probe")).toBe(1);
+    expect(count(INTERACTIONS), "an empty local read was sent to the billed cloud eye").toBe(0);
+  });
 });
 
 test("9. one authority: the router's billing predicate IS errors.ts's presumedBilled", () => {

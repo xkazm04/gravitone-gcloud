@@ -7062,4 +7062,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "render: deps.render, now",
     why: "The between-turn check asks for screenshots again: up to nine passes a run each write three full-page PNGs nobody reads.",
   },
+  {
+    id: "kernel-cli-clear-does-not-clear",
+    test: "tests/next-server/kernel-cli.test.ts",
+    file: "pipeline/kernel.mts",
+    find: "const cleared = clearMigrationFailure(store, module ?? \"\");",
+    replace: "const cleared = { ok: true as const, value: true };",
+    why: "The operator's `migrations clear` reports success and leaves the mark standing, so every open of the store still refuses and the only remedy is SQL against the live file.",
+  },
+  {
+    id: "kernel-cli-status-hides-marks",
+    test: "tests/next-server/kernel-cli.test.ts",
+    file: "pipeline/kernel.mts",
+    find: "const marks = migrationMarks(store);",
+    replace: "const marks = { ok: true as const, value: [] as never[] };",
+    why: "`migrations status` reports a refused store as healthy, so the operator is never told which step failed or where its restore point is.",
+  },
 ];

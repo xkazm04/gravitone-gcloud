@@ -32,6 +32,7 @@ import {
   settle,
   type Hold,
 } from "./budget";
+import { estimateRef, priceRef } from "./pricing";
 import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
 import { logCall } from "./log";
 import { agyProvider } from "./providers/agy";
@@ -297,6 +298,7 @@ async function run<T extends { provenance: Provenance }>(
    */
   const standInUsd = (): number | undefined =>
     cap === "recognize" ? undefined : estimatePendingUsd(pendingImages);
+  const standInRef = (): string | undefined => (cap === "recognize" ? undefined : estimateRef());
   /** The request's CURRENT hold, or undefined once a billed failure has spent it
    *  and no later vendor has been called yet. `finally` releases whichever one
    *  this is when the request ends. */
@@ -417,6 +419,14 @@ async function run<T extends { provenance: Provenance }>(
           // built entirely of estimates read as an invoice. Telling those two
           // apart is the whole reason SpendBasis exists.
           basis: served.provenance.costBasis === "vendor-reported" ? "vendor" : "estimate",
+          // Which table row the estimate stands on: the served model's own row
+          // when the call carried a figure, else the stand-in's dearest row.
+          price:
+            served.provenance.costBasis === "vendor-reported"
+              ? undefined
+              : served.provenance.costUsd !== undefined
+                ? priceRef(served.provenance.provider, served.provenance.model)
+                : standInRef(),
         });
         // Settled, so the hold is gone: `finally` has nothing left to release,
         // and asking it to would cost one more ledger transaction per call.
@@ -463,6 +473,7 @@ async function run<T extends { provenance: Provenance }>(
             // and `undefined` where that rate is the wrong UNIT, which books
             // nothing rather than inventing a number (see standInUsd).
             basis: "estimate",
+            price: standInRef(),
           });
           // Spent. A later vendor in this request reserves its own (above).
           hold = undefined;

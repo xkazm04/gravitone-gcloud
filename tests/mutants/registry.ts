@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 153;
+export const UNGUARDED_PROBE_BUDGET = 152;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -527,5 +527,45 @@ export const MUTANTS: Mutant[] = [
     find: "if (prev?.commit && prev.branch && prev.slug && (await pushedAt(registry, prev.branch, prev.commit))) {",
     replace: "if (false) {",
     why: "A landing retried after gh pr create failed re-runs from scratch: freeName skips the pushed branch and pushes article/<slug>-2, orphaning the first on the registry's remote.",
+  },
+  {
+    id: "estimate-row-drops-served-price-ref",
+    probe: "imaging-billed-attempts.probe.spec.ts",
+    file: "lib/imaging/router.ts",
+    find: "? priceRef(served.provenance.provider, served.provenance.model)",
+    replace: "? undefined",
+    why: "A served estimate row stops naming the price row it was costed with, so after a repricing nobody can tell which rate a window's estimates used.",
+  },
+  {
+    id: "estimate-row-drops-standin-price-ref",
+    probe: "imaging-billed-attempts.probe.spec.ts",
+    file: "lib/imaging/router.ts",
+    find: "price: standInRef(),",
+    replace: "price: undefined,",
+    why: "A failed estimate row books the dearest-rate stand-in without naming the price row, so the window total cannot be reconciled to a rate after the table changes.",
+  },
+  {
+    id: "pricing-reads-env-unguarded",
+    probe: "imaging-auth.probe.spec.ts",
+    file: "lib/imaging/pricing.ts",
+    find: "import type { CostBasis, ProviderId } from \"./types\";",
+    replace: "import type { CostBasis, ProviderId } from \"./types\";\nexport const PRICING_READS_ENV = process.env.GOOGLE_AI_API_KEY;",
+    why: "The price table starts reading process.env, so a public price route would tell a caller which keys this deployment holds, and no test fails because the only walk over it ran for an emptied list.",
+  },
+  {
+    id: "google-batch-drops-paid-images-on-one-refusal",
+    probe: "imaging-billed-attempts.probe.spec.ts",
+    file: "lib/imaging/providers/google.ts",
+    find: "const settled = await Promise.allSettled(calls);",
+    replace: "const settled = (await Promise.all(calls)).map((value) => ({ status: \"fulfilled\" as const, value }));",
+    why: "One refused or failed call in a Google N-candidate batch throws away every paid image the other calls returned, and the router pays a second vendor for N more.",
+  },
+  {
+    id: "ollama-empty-recognition-served",
+    probe: "imaging-billed-attempts.probe.spec.ts",
+    file: "lib/imaging/providers/ollama.ts",
+    find: "if (!text) throw new ImagingError(\"Ollama returned an empty recognition.\"",
+    replace: "if (false) throw new ImagingError(\"Ollama returned an empty recognition.\"",
+    why: "The local eye answers empty content and the caller receives a green, empty judgement that nothing grades.",
   },
 ];

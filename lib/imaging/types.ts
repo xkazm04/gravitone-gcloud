@@ -191,6 +191,10 @@ export interface Provenance {
    *  Absent on the ordinary single-hop call — its PRESENCE is the re-route,
    *  which is how "why is this plate from Leonardo?" stays answerable later. */
   reroutedFrom?: RerouteStep[];
+  /** Present iff a multi-candidate call returned fewer images than it asked for:
+   *  the candidates the vendor refused or failed on, while the others were kept.
+   *  Absent on a full batch, so its presence IS the short batch. */
+  shortBatch?: { asked: number; returned: number; refused: number; failed: number };
 }
 
 export interface GeneratedImages {

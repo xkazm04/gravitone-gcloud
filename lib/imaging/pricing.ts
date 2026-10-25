@@ -237,7 +237,17 @@ const rowFor = (provider: ProviderId, model: string): ModelPrice | undefined =>
   PRICES.find((p) => p.provider === provider && p.model === model);
 
 /**
- * What did this call cost, and how do we know?
+ * The identity of the price row a figure was costed with: `provider/model@checked`.
+ * A spend row booked at basis `estimate` carries it, so a window's estimates stay
+ * reconcilable to a rate after this table is repriced and re-dated. Undefined when
+ * the table declares no row for the pair.
+ */
+export function priceRef(provider: ProviderId, model: string): string | undefined {
+  const row = rowFor(provider, model);
+  return row && `${row.provider}/${row.model}@${row.checked}`;
+}
+
+/** What did this call cost, and how do we know?
  *
  * A vendor's own figure always wins — `vendorUsd` short-circuits the table, so
  * a rate that drifts out of date here can never overwrite a receipt. Everything
@@ -331,6 +341,23 @@ export interface PriceTable {
   prices: PublicPrice[];
 }
 
+const pricedPerImage = (): (ModelPrice & { usdPerImage: number })[] =>
+  PRICES.filter(
+    (p): p is ModelPrice & { usdPerImage: number } =>
+      p.bills === "per-image" && p.usdPerImage !== undefined,
+  );
+
+const dearestPerImage = (priced: (ModelPrice & { usdPerImage: number })[]) =>
+  priced.reduce((a, b) => (b.usdPerImage > a.usdPerImage ? b : a));
+
+/** The `priceRef` of the row `estimatePerImage` stands on, when there is one. */
+export function estimateRef(): string | undefined {
+  const priced = pricedPerImage();
+  if (!priced.length) return undefined;
+  const d = dearestPerImage(priced);
+  return `${d.provider}/${d.model}@${d.checked}`;
+}
+
 /**
  * The pre-click estimate: the DEAREST declared per-image rate.
  *
@@ -345,10 +372,7 @@ export interface PriceTable {
  * price, never $0.00.
  */
 export function estimatePerImage(): PriceQuote {
-  const priced = PRICES.filter(
-    (p): p is ModelPrice & { usdPerImage: number } =>
-      p.bills === "per-image" && p.usdPerImage !== undefined,
-  );
+  const priced = pricedPerImage();
   if (!priced.length)
     return {
       basis: "unpriced",
@@ -357,7 +381,7 @@ export function estimatePerImage(): PriceQuote {
         "before the call. The vendor's own figure, when it sends one, still arrives with the result.",
     };
 
-  const dearest = priced.reduce((a, b) => (b.usdPerImage > a.usdPerImage ? b : a));
+  const dearest = dearestPerImage(priced);
   return {
     usd: dearest.usdPerImage,
     basis: "estimated",

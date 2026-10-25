@@ -121,6 +121,10 @@ async function recognizeOnCard(req: RecognizeRequest, host: string, started: num
   }
 
   const text = res.message?.content?.trim() ?? "";
+  // An empty answer is never a judgement (google.ts refuses one, qwen.ts rotates
+  // on one). `bad-response`, not `refused`: it is not reroutable, so an empty
+  // free local read does not become a billed cloud call.
+  if (!text) throw new ImagingError("Ollama returned an empty recognition.", "bad-response", "ollama");
   const json = req.schema ? parseAgainstSchema("ollama", text, req.schema) : undefined;
 
   const price = priceCall({ provider: "ollama", model: MODEL });
