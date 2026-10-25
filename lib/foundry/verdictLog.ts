@@ -181,8 +181,10 @@ async function apply<M, R>(
   const lines = changes.map((c) => JSON.stringify({ at, rev, op: c.op, key: c.key, ...(c.op === "set" ? { value: c.value } : {}), by: byOf(c), surface } satisfies VerdictLogLine<R>));
   await appendFile(path.join(spec.dir, VERDICT_LOG), lines.join("\n") + "\n", "utf8");
   const fs = foundryFs();
-  await fs.writeJsonAtomic(path.join(spec.dir, VERDICTS_FILE), next);
+  // The revision lands before the map: a death between the two leaves a revision ahead of its map,
+  // which a stale client reads as a 409, where the reverse order let it overwrite a change it never saw.
   await fs.writeJsonAtomic(path.join(spec.dir, VERDICT_REV), { rev });
+  await fs.writeJsonAtomic(path.join(spec.dir, VERDICTS_FILE), next);
   return { rev, verdicts: next };
 }
 
