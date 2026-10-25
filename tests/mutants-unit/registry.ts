@@ -6638,4 +6638,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "({ a: d.a, b: i })",
     why: "Every pointermove inside one day slot hands setState a fresh object, so the 98-day strip re-renders its bars and ticks at pointer rate for a drag that changed nothing.",
   },
+  {
+    id: "timestrip-hover-in-live-region",
+    test: "packages/ui/test/components/ledger.test.ts",
+    file: "packages/ui/src/components/timestrip/TimeStrip.tsx",
+    find: "<div aria-hidden=\"true\">",
+    replace: "<div aria-live=\"polite\">",
+    why: "The hovered day's counts sit in the polite live region, so sweeping the pointer across the strip queues one screen-reader announcement per day crossed.",
+  },
 ];

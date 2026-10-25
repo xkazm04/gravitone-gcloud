@@ -18,7 +18,7 @@ import seg from "../../src/components/seg/Seg.module.css";
 import { SourceTag } from "../../src/components/source/SourceTag.tsx";
 import { StaleBadge, type StaleBadgeProps } from "../../src/components/stalebadge/StaleBadge.tsx";
 import { BAR_MAX, bars, daysBetween, dragRange, MIN_BAR, nowAt, slotAt, ticks, type DayCount } from "../../src/components/timestrip/strip.ts";
-import { restingReadout, stepDrag, type TimeStripProps } from "../../src/components/timestrip/TimeStrip.tsx";
+import { Readout, restingReadout, stepDrag, type TimeStripProps } from "../../src/components/timestrip/TimeStrip.tsx";
 import { Toggle } from "../../src/components/toggle/Toggle.tsx";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
@@ -94,6 +94,17 @@ describe("time strip geometry", () => {
     expect(stepDrag(d, 4)).toBe(d);
     expect(stepDrag(d, 5)).toEqual({ a: 2, b: 5 });
     expect(stepDrag(d, 5)).not.toBe(d);
+  });
+
+  test("a hovered day is drawn outside the live region: the range is the only thing announced", () => {
+    const html = renderToStaticMarkup(h(Readout, { resting: ["02 Oct → 03 Oct", "41 events"], at: { day: "2026-10-02", operator: 1, agent: 2, machine: 3 } }));
+    const live = /<div[^>]*aria-live="polite"[^>]*>([\s\S]*?)<\/div>/.exec(html);
+    expect(live?.[1]).toContain("41 events");
+    expect(live?.[1]).not.toContain("02 Oct · 6 ev");
+    expect(html).toMatch(/<div aria-hidden="true"><b>02 Oct · 6 ev<\/b>/);
+    const rest = renderToStaticMarkup(h(Readout, { resting: ["a", "b"], at: undefined }));
+    expect(rest).toContain('aria-live="polite"');
+    expect(rest).not.toContain("aria-hidden");
   });
 
   test("the readout counts one event and one day in the singular", () => {

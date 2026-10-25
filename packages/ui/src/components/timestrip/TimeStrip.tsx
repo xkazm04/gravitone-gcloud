@@ -5,9 +5,9 @@
 // draws it and turns a pointer into a range.
 //
 // The readout beside the bars is the strip's only text: the hovered day's counts by actor,
-// else the selected range and how many events it holds, else the span drawn. It is a live
-// region, so a keyboard user who sets a range through the URL hears the same sentence a
-// pointer user reads. The range itself is the caller's state (the URL's from/to), never
+// else the selected range and how many events it holds, else the span drawn. The resting
+// sentence is the live region, so a keyboard user who sets a range through the URL hears the
+// same sentence a pointer user reads; the hover line is never announced. The range itself is the caller's state (the URL's from/to), never
 // this component's: a drag reports `{from, to}` or null and the caller decides.
 
 import { useState, type PointerEvent } from "react";
@@ -15,6 +15,7 @@ import { useState, type PointerEvent } from "react";
 import { cx } from "../cx.ts";
 import { vars } from "../vars.ts";
 import { bars as barsOf, dragRange, nowAt, slotAt, ticks, total, type DayCount, type Range } from "./strip.ts";
+import sr from "../a11y/SrOnly.module.css";
 import s from "./TimeStrip.module.css";
 
 type Drag = { readonly a: number; readonly b: number };
@@ -47,6 +48,31 @@ export function restingReadout(days: readonly string[], range: Range | null, inR
 /** The drag after the pointer reaches slot `i`: the SAME object while the slot is unchanged, so
  *  setState bails out and a drag renders once per slot crossed, not once per pointermove. */
 export const stepDrag = (d: Drag, i: number): Drag => (d.b === i ? d : { a: d.a, b: i });
+
+/**
+ * The readout column. The live region holds only the resting sentence (the range and its count),
+ * so a range set through the URL is announced once; the hovered day's counts are drawn beside it,
+ * aria-hidden - they are the bars' own numbers - and the resting line steps out of sight, not out
+ * of the region, while they show.
+ */
+export function Readout({ resting, at }: { readonly resting: readonly [string, string]; readonly at: DayCount | undefined }) {
+  return (
+    <div className={s.read}>
+      <div aria-live="polite" className={at === undefined ? undefined : sr.sr}>
+        <b>{resting[0]}</b>
+        <br />
+        {resting[1]}
+      </div>
+      {at !== undefined && (
+        <div aria-hidden="true">
+          <b>{`${shortDay(at.day)} · ${total(at)} ev`}</b>
+          <br />
+          <span className={s.operator}>{at.operator} op</span> · <span className={s.agent}>{at.agent} ag</span> · <span className={s.machine}>{at.machine} mc</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function TimeStrip({ days, today, nowMs, range, inRange, onRange }: TimeStripProps) {
   const [hover, setHover] = useState<number | null>(null);
@@ -89,22 +115,7 @@ export function TimeStrip({ days, today, nowMs, range, inRange, onRange }: TimeS
     <div className={s.strip} data-component="TimeStrip">
       <div className={s.side}>
         <span className={s.head}>time · utc</span>
-        <div className={s.read} aria-live="polite">
-          {at === undefined ? (
-            <>
-              <b>{resting[0]}</b>
-              <br />
-              {resting[1]}
-            </>
-          ) : (
-            <>
-              <b>{`${shortDay(at.day)} · ${total(at)} ev`}</b>
-              <br />
-              <span className={s.operator}>{at.operator} op</span> · <span className={s.agent}>{at.agent} ag</span> ·{" "}
-              <span className={s.machine}>{at.machine} mc</span>
-            </>
-          )}
-        </div>
+        <Readout resting={resting} at={at} />
       </div>
       <div className={s.main}>
         <div
