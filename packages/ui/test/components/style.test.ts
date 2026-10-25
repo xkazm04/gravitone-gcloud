@@ -11,6 +11,7 @@ import type { ProofState, StyleCoverageRow, StyleLockGate, StyleProofView } from
 import { LockGate } from "../../src/components/style/LockGate.tsx";
 import { ProofSheet } from "../../src/components/style/ProofSheet.tsx";
 import { EvidenceTable } from "../../src/components/style/StyleFacts.tsx";
+import { TrialMatrix } from "../../src/components/style/TrialMatrix.tsx";
 import { proofLook, spendWords, stepProof, trialColumns } from "../../src/components/style/style.ts";
 import { KEYMAP } from "../../src/keymap/bindings.ts";
 import { chordsOf } from "../../src/keymap/chord.ts";
@@ -150,5 +151,18 @@ describe("the ratchet, locked", () => {
     const why = "locked 2026-08-20 by operator — the block is frozen; duplicate to change the look";
     expect(locked(why).split("2026-08-20").length - 1).toBe(1);
     expect(locked("locked — projects build on this block").split("2026-08-20").length - 1).toBe(1);
+  });
+});
+
+describe("the trial matrix, drawn", () => {
+  const COVERAGE: readonly StyleCoverageRow[] = [{ problem: "quantity", trialIds: ["peak-and-fall"], approved: 1, rejected: 0, covered: true }];
+  const matrix = (onHold?: (id: string) => void) =>
+    renderToStaticMarkup(h(TrialMatrix, { trials: STYLE_TRIALS, coverage: COVERAGE, proofs: [proof("a", "peak-and-fall", "approved")], srcOf: () => "/a.jpg", ...(onHold === undefined ? {} : { onHold }) }));
+
+  test("a face is a button only where pressing it holds the proof, as a head is only where it chooses", () => {
+    const buttons = (html: string) => html.split("<button").length - 1;
+    expect(buttons(matrix())).toBe(0);
+    expect(matrix()).toContain('role="img" aria-label="the fall: a, approved"');
+    expect(buttons(matrix(noop))).toBe(1);
   });
 });

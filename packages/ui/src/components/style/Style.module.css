@@ -43,6 +43,7 @@
 .face{display:block;padding:0;border:1px solid var(--hair-2);border-radius:var(--r-sm);overflow:hidden;aspect-ratio:16/9;background:var(--ink-3);cursor:pointer}
 .face.approved{border-color:color-mix(in srgb,var(--emerald) 55%,transparent)}
 .face.rejected{border-color:color-mix(in srgb,var(--rose) 55%,transparent)}
+.still{cursor:default}
 .face:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
 .counts{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
 

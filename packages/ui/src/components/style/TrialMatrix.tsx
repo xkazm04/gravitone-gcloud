@@ -65,8 +65,13 @@ export function TrialMatrix({ trials, coverage, proofs, srcOf, chosen, onChoose,
           <div key={c.trial.id} role="cell" className={s.mcell}>
             {c.face === null ? (
               <Ghost label={`${c.trial.label}: not rendered under this block`} />
+            ) : onHold === undefined ? (
+              // Nothing to hold: the face is a picture, not a control (as a head is only a button where it chooses).
+              <span className={cx(s.face, s.still, s[c.face.state])} role="img" aria-label={`${c.trial.label}: ${c.face.label}, ${c.face.state}`}>
+                <Plate className={s.plate} src={srcOf(c.face.media)} alt="" lazy />
+              </span>
             ) : (
-              <button type="button" className={cx(s.face, s[c.face.state])} onClick={onHold === undefined ? undefined : () => onHold(c.face?.id ?? "")} aria-label={`${c.trial.label}: ${c.face.label}, ${c.face.state}`}>
+              <button type="button" className={cx(s.face, s[c.face.state])} onClick={() => onHold(c.face?.id ?? "")} aria-label={`${c.trial.label}: ${c.face.label}, ${c.face.state}`}>
                 <Plate className={s.plate} src={srcOf(c.face.media)} alt="" lazy />
               </button>
             )}
