@@ -23,7 +23,7 @@ import { packetParam } from "../_port/param.ts";
 import { serverBoard, SIDE } from "../_port/port.ts";
 
 export type BoardLoad =
-  | { readonly ok: true; readonly id: string; readonly packet: BoardPacket; readonly rail: readonly PacketSummary[] }
+  | { readonly ok: true; readonly id: string; readonly packet: BoardPacket; readonly rail: readonly PacketSummary[]; readonly railError?: string }
   | { readonly ok: false; readonly id: string; readonly error: ErrorEnvelope };
 
 /** Start a sweep of due v1 applies if one is due; its outcome reaches the page on the next read. */
@@ -43,7 +43,8 @@ export async function loadBoard(params: Promise<{ readonly packet: string }>): P
   if (!packet.ok) return { ok: false, id, error: publicError(packet.error, "board load") };
   if (packet.value.view.id !== id) redirect(boardFor(packet.value.view.id));
   const list = await board.listPackets();
-  // The desk still draws without its rail, but an empty rail reads as a clear Weir: say why it is empty.
+  // The desk still draws without its rail, but an empty rail reads as a clear Weir: say why it is empty
+  // (railError reaches the decided desk's foot, which would otherwise claim `weir clear`).
   if (!list.ok) console.error(`[board] rail: ${list.error.message}`);
-  return { ok: true, id, packet: packet.value, rail: list.ok ? list.value.packets : [] };
+  return { ok: true, id, packet: packet.value, rail: list.ok ? list.value.packets : [], ...(list.ok ? {} : { railError: `board rail: ${publicError(list.error, "board rail").error}` }) };
 }
