@@ -92,6 +92,32 @@ describe("the toolbar", () => {
     expect(bar(f({ q: "plate" }))).toContain('aria-label="text search examined the newest 5000 events"');
     expect(bar(f({ q: "plate", order: "asc" }))).toContain('aria-label="text search examined the oldest 5000 events"');
   });
+
+  it("draws one figure for the cost chip and its accessible name", () => {
+    // 0.015 is a half cent that toFixed(2) takes down and usd() takes up.
+    const row = { data: {}, cost: { usd: 0.015, src: "model" } } as never;
+    const html = renderToStaticMarkup(
+      h(Toolbar, {
+        filter: f(),
+        facets: counts(),
+        rows: [row],
+        capped: false,
+        scanned: 1,
+        exhausted: true,
+        ignored: [],
+        live: { edge: "live", since: 0, armed: false },
+        view: "table",
+        facetsOpen: false,
+        onFacets: () => undefined,
+        onApply: () => undefined,
+        onView: () => undefined,
+        onRows: () => undefined,
+      }),
+    );
+    const chip = /aria-label="cost of loaded events (\$[\d.]+)"/.exec(html)?.[1];
+    expect(chip).toBe("$0.02");
+    expect(/<b class="[^"]*value[^"]*">([^<]*)<\/b>/.exec(html)?.[1]).toBe(chip);
+  });
 });
 
 describe("the list", () => {
