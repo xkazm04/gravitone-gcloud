@@ -154,3 +154,33 @@ describe("only a waiting job moves in its lane's line", () => {
     expect(await said(fixture.moveJob({ jobId: failed, dir: "earlier" }, op), failed)).toBe(realSaid);
   });
 });
+
+describe("a rename is a project's, launched or not, and the same words write nothing", () => {
+  const revOf = (side: typeof real, id: string): number => {
+    const p = side.loadPlan({ id });
+    if (!p.ok) throw p.error;
+    return p.value.project.rev;
+  };
+  const rename = async (side: typeof real, id: string, title: string): Promise<{ said: string; moved: number }> => {
+    const rev = revOf(side, id);
+    const s = await said(side.rename({ id, rev, title }, op));
+    return { said: s, moved: revOf(side, id) - rev };
+  };
+
+  it("renames a launched plan on both sides", async () => {
+    const { id } = await realFilm();
+    const realSaid = await rename(real, id, "The harbour, renamed");
+    expect(realSaid).toEqual({ said: "ok", moved: 1 });
+    expect(await rename(fixture, "glass-harbor-trailer", "The harbour, renamed")).toEqual(realSaid);
+  });
+
+  it("answers its own title unchanged, at the revision it was read at", async () => {
+    const c = await real.compose({ recipe: "film/short-form-clip" }, op);
+    if (!c.ok) throw c.error;
+    const p = real.loadPlan({ id: c.value.id });
+    if (!p.ok) throw p.error;
+    const realSaid = await rename(real, c.value.id, p.value.project.title);
+    expect(realSaid).toEqual({ said: "ok", moved: 0 });
+    expect(await rename(fixture, "untitled-port-strike", "Untitled — the port strike")).toEqual(realSaid);
+  });
+});

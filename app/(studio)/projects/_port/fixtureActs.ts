@@ -85,12 +85,18 @@ export function launchRun(u: Universe, input: ComposerInput, token: string, now:
 
 const slug = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
 
-function draftOf(u: Universe, id: string, rev: number): Result<FxProject> {
+function projectAt(u: Universe, id: string, rev: number): Result<FxProject> {
   const p = u.projects.get(id);
   if (p === undefined) return err("not-found", `no project ${id}`);
   if (p.rev !== rev) return err("conflict", `the plan moved: it is at rev ${p.rev}, the write named rev ${rev}`, { detail: "stale-rev" });
-  if (p.launched) return err("refused", `${p.title} is launched; a launched part changes route in Runs`);
   return ok(p);
+}
+
+function draftOf(u: Universe, id: string, rev: number): Result<FxProject> {
+  const p = projectAt(u, id, rev);
+  if (!p.ok) return p;
+  if (p.value.launched) return err("refused", `${p.value.title} is launched; a launched part changes route in Runs`);
+  return p;
 }
 
 const touch = (p: FxProject, now: number): void => {
@@ -139,11 +145,16 @@ export function setPart(u: Universe, id: string, rev: number, partId: string, pa
 }
 
 export function rename(u: Universe, id: string, rev: number, title: string, now: number): Result<FxProject> {
-  const d = draftOf(u, id, rev);
+  // A title is the project's, not its plan's: a launched one is renamed too, and its own words
+  // write nothing (kernel records/write.ts `rename`).
+  const d = projectAt(u, id, rev);
   if (!d.ok) return d;
-  d.value.title = title;
+  const t = title.trim();
+  if (t.length === 0 || t.length > 200) return err("invalid", "a title is 1..200 characters");
+  if (t === d.value.title) return d;
+  d.value.title = t;
   touch(d.value, now);
-  return ok(d.value);
+  return d;
 }
 
 export function discard(u: Universe, id: string, rev: number): Result<{ readonly id: string }> {
