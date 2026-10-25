@@ -37,7 +37,9 @@ import {
   type FramesRender,
   type FrameText,
   type Plate,
+  trailerRender,
 } from "@/lib/frames/frames";
+import type { TrailerCut } from "@/lib/script/trailer/types";
 import { beatSeconds, shotsFromBeats, type Shot, type ShotSourceBeat } from "@/lib/frames/shots";
 
 /** What a unit is a picture OF. A beat holds one picture; a shot is one of the
@@ -247,6 +249,13 @@ function trailerUnits(source: FramesRender): PictureUnit[] {
     }
   });
   return out;
+}
+
+/** A trailer cut's chain and its units: the ONE derivation the fixture port and the frames
+ *  producer both read, so the act a view offers is the act the producer prices. */
+export function trailerChain(cut: TrailerCut, opts: { template: string; durationS: number }): { id: string; title: string; units: PictureUnit[] } {
+  const render = trailerRender(cut, opts);
+  return { id: render.id, title: render.title, units: trailerUnits(render) };
 }
 
 /** A beat unit as the Frames step draws it. The inverse of `unitsFromFrames`. */

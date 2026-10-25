@@ -16,6 +16,7 @@ import { get } from "@gt/kernel/job";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { readPart, writePart } from "@gt/kernel/parts/driver";
 import { compose } from "@gt/kernel/records/write";
+import { closeProcessKernel } from "@gt/kernel/process";
 import type { Store } from "@gt/kernel/store";
 
 import { LIVE_MOTION, motionProducer, motionUnits, type MotionEngines } from "../../lib/producers/motion.ts";
@@ -119,5 +120,22 @@ describe("render clip", () => {
     const { store } = await universe("m5", [""]);
     const r = partActReceipt(store, { projectId: "m5", partId: "m5/motion", act: "render-clip", target: "u1" }, motionUnits, { mode: "dry", now: NOW });
     expect(r.ok ? "" : r.error.message).toBe("u1 has no accepted motion");
+  });
+});
+
+describe("a part job reads the blobs of the store it runs on", () => {
+  it("no injected blob store, the process store another: direction reads the plate the job's store holds", async () => {
+    const { store } = await universe("m6", ["", ""]);
+    const other = path.join(mkdtempSync(path.join(tmpdir(), "gt-step-motion-proc-")), "proc.sqlite");
+    dirs.push(path.dirname(other));
+    vi.stubEnv("GRAVITONE_STORE_PATH", other);
+    try {
+      const run = must(await driveStep((lane, hooks) => motionProducer(lane, hooks), store, await act(store, "m6", "direct-motion"), { dryOnly: true }));
+      expect(run.outcome).toBe("done");
+      expect(Object.keys((records(store, "m6").get("motion-direction") as { byFrame: Record<string, unknown> }).byFrame)).toEqual(["u1", "u2"]);
+    } finally {
+      closeProcessKernel();
+      vi.unstubAllEnvs();
+    }
   });
 });

@@ -1,8 +1,10 @@
+import { recipeById } from "@gt/catalog/recipes";
 import type { BlobRef } from "@gt/domain/blob";
 import { blobStore, type BlobStore } from "@gt/kernel/blob";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 import type { ResourceLane } from "@gt/domain/lane";
+import { scriptFaceOf } from "@gt/domain/partView";
 import type { Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
 import type { PartSnapshot } from "@gt/kernel/parts/driver";
 import { capBatch, defineFrames, framesPlan, type FramesView } from "@gt/producers/frames/define";
@@ -16,7 +18,8 @@ import { addDirectionSpend } from "@/lib/frames/direction";
 import { planFromSpecs } from "@/lib/frames/directionPlan";
 import { landDirection } from "@/lib/frames/direction";
 import { explainerRender, subjectFor, type Frame, type Plate } from "@/lib/frames/frames";
-import { frameOfUnit, framesFromUnits, unitsFromRender, type PictureUnit } from "@/lib/frames/picture/unit";
+import { frameOfUnit, framesFromUnits, trailerChain, unitsFromRender, type PictureUnit } from "@/lib/frames/picture/unit";
+import { actionOfUnit } from "@/lib/frames/shotPrompt";
 import { SCENE_SCHEMA } from "@/lib/frames/sceneSpec";
 import { budgetQuote, earliestExpiry } from "@/lib/imaging/budgetForecast";
 import { ImagingError } from "@/lib/imaging/errors";
@@ -24,11 +27,12 @@ import { generate, recognize } from "@/lib/imaging/router";
 import type { GenerateRequest, GeneratedImages, ImageRef } from "@/lib/imaging/types";
 import type { Fact } from "@/lib/notebook/types";
 import type { ScriptRender } from "@/lib/script/types";
+import type { TrailerCut } from "@/lib/script/trailer/types";
 import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
 import type { TextRequest } from "@/lib/text/types";
 import { FRAMES_SPEC, type FramesResult } from "@/lib/turns/kinds/frames";
 
-import { activeSourceOf, adTemplateOf, asData, blobRootOf, engineView, field, meteredText, must, partFacts, priceOf, recOf, stepKernel, TEXT_SEAT, text, textFailure, written, enginesOf, type DriveHooks, type Engines, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
+import { activeSourceOf, adTemplateOf, asData, engineView, field, jobBlobRoot, meteredText, must, partFacts, priceOf, recOf, TEXT_SEAT, text, textFailure, written, enginesOf, type DriveHooks, type Engines, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
 
 // THE FRAMES PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/frames's ports over
 // v1's engines: the imaging router (`generate`: a plate, an alternative, an ads take), the
@@ -106,8 +110,8 @@ export async function lookImages(look: ProjectLook, blobs: () => BlobStore): Pro
   return out;
 }
 
-/** The kernel's own blob store, opened only when a reference is actually read. */
-export const kernelBlobs = (): BlobStore => blobStore(blobRootOf(stepKernel().store));
+/** The blobs of the store the job runs on (research.ts `jobBlobRoot`), opened only when a reference is actually read. */
+export const jobBlobs = (ctx: StepContext): BlobStore => blobStore(jobBlobRoot(ctx));
 
 /** What an image call is drawn under: the look's block in the prompt, its references attached. */
 export type Drawn = { readonly look: ProjectLook; readonly images: readonly ImageRef[] };
@@ -130,11 +134,24 @@ function adoptedOf(s: PartSnapshot): ScriptRender | undefined {
   return id === undefined || !Array.isArray(cands) ? undefined : written<ScriptRender[]>(cands).find((c) => c.id === id);
 }
 
-/** The picture units: the record's, else derived from the adopted explainer chain (v1 useFrames
- *  derived them on load; the trailer lane's shots come from its own record). */
-export function unitsOf(s: PartSnapshot): { units: PictureUnit[]; renderId: string } | null {
+const isTrailerFace = (s: PartSnapshot, f: PartFacts): boolean => scriptFaceOf(f.discipline, recOf(s, "research-beats")["mode"] === "facts" ? "notebook" : "beats") === "trailer";
+
+/** A trailer's units: its composed spine's shots, by the same chain derivation the fixture port
+ *  reads (lib/frames/picture/unit.ts `trailerChain`). null before a spine is composed. */
+function trailerUnitsOf(s: PartSnapshot, f: PartFacts): { units: PictureUnit[]; renderId: string } | null {
+  const cut = field(recOf(s, "script-trailer")["cut"]);
+  if (cut === undefined) return null;
+  const chain = trailerChain(written<TrailerCut>(cut), { template: recipeById(f.plan.project.recipe)?.template ?? "trailer", durationS: f.targetS ?? 120 });
+  return { units: chain.units, renderId: chain.id };
+}
+
+/** The picture units: the record's, else derived from the chain Script adopted - a trailer's
+ *  composed spine (its shots), or the adopted explainer candidate (v1 useFrames derived them on
+ *  load). `f` is the project's facts; without it only the explainer chain can be derived. */
+export function unitsOf(s: PartSnapshot, f?: PartFacts): { units: PictureUnit[]; renderId: string } | null {
   const rec = s.records.get("frames");
   if (rec !== undefined && Array.isArray(rec["units"])) return { units: written<PictureUnit[]>(rec["units"]), renderId: text(rec["renderId"]) ?? "" };
+  if (f !== undefined && isTrailerFace(s, f)) return trailerUnitsOf(s, f);
   const adopted = adoptedOf(s);
   return adopted === undefined ? null : { units: unitsFromRender(explainerRender(adopted), adopted), renderId: adopted.id };
 }
@@ -159,11 +176,13 @@ export function framesView(s: PartSnapshot, f: PartFacts): FramesView {
     const shots = sc === undefined ? {} : adsShotsFor(s, sc.id);
     return { face: "ads", units: [], shots: (sc?.shots ?? []).map((x) => ({ id: x.id, takes: Array.isArray(shots[x.id]?.["imageTakes"]) ? (shots[x.id]?.["imageTakes"] as unknown[]).length : 0 })) };
   }
-  const u = unitsOf(s);
+  const u = unitsOf(s, f);
   return { face: "picture", units: (u?.units ?? []).map((x) => ({ id: x.id, plate: x.plate.state, stale: isStale(x.plate) })), shots: [] };
 }
 
 function framesUnitsOf(s: PartSnapshot, f: PartFacts, ask: Pick<ActAsk, "act" | "target">): Result<ActPlan> {
+  // The direction pass reads BEAT units; a trailer's shot units (derived by `unitsOf`) are not its input.
+  if (ask.act === "direct-cut" && f.discipline !== "ads" && !(unitsOf(s, f)?.units ?? []).some((x) => x.kind === "beat")) return err("refused", "direct the cut needs picture units");
   const plan = framesPlan(framesView(s, f), { act: ask.act, ...(ask.target === undefined ? {} : { target: ask.target }) }, { image: priceOf(f.option), turn: TURN_PRICE });
   // Every frames act is drawn (or directed) under the project's look: the receipt names it.
   return plan.ok ? ok({ ...plan.value, about: lookWords(f.look) }) : plan;
@@ -225,29 +244,29 @@ async function imageUnit(ctx: StepContext, unit: ActUnit, req: GenerateRequest, 
 }
 
 function plateRequest(u: PictureUnit, look: ProjectLook): { req: GenerateRequest; subject: string } {
-  const subject = u.plate.subject?.trim() || subjectFor(frameOfUnit(u));
+  const subject = u.plate.subject?.trim() || actionOfUnit(u) || subjectFor(frameOfUnit(u));
   return { subject, req: { prompt: compilePrompt(look.block, subject), negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1 } };
 }
 
-async function performFrames(ctx: StepContext, unit: ActUnit, eng: ImagingEngines, blobs: () => BlobStore, turns: Engines): Promise<StepOutcome> {
+async function performFrames(ctx: StepContext, unit: ActUnit, eng: ImagingEngines, blobs: (ctx: StepContext) => BlobStore, turns: Engines): Promise<StepOutcome> {
   const s = must(partSnapshot(ctx));
   // The look is read at the unit, from the store as it is now: a lock is frozen, so a locked
   // style draws exactly what the receipt named; an unlocked one draws its current block.
   const f = must(partFacts(ctx));
   if (unit.name === "direction") return directionUnit(ctx, unit, s, f, turns);
-  const drawn: Drawn = { look: f.look, images: await lookImages(f.look, blobs) };
+  const drawn: Drawn = { look: f.look, images: await lookImages(f.look, () => blobs(ctx)) };
   if (unit.name.startsWith("take:")) {
     const shot = pickedScenario(s)?.shots.find((x) => x.id === unit.input["shotId"]);
     if (shot === undefined) return { kind: "fatal", code: "refused", message: `shot ${String(unit.input["shotId"])} is not in the picked scenario` };
     return imageUnit(ctx, unit, { prompt: compilePrompt(f.look.block, shot.image), negativePrompt: NEGATIVE_PROMPT, aspect: AD_NATIVE_ASPECT[adTemplateOf(f.plan.project.recipe)], count: 1 }, eng, drawn, { shotId: shot.id });
   }
-  const u = unitsOf(s)?.units.find((x) => x.id === unit.input["unitId"]);
+  const u = unitsOf(s, f)?.units.find((x) => x.id === unit.input["unitId"]);
   if (u === undefined) return { kind: "fatal", code: "refused", message: `no unit ${String(unit.input["unitId"])}` };
   const { req, subject } = plateRequest(u, f.look);
   return imageUnit(ctx, unit, req, eng, drawn, { unitId: u.id, subject });
 }
 
-function landFrames(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: PartSnapshot, at: number): Result<Record<string, unknown>> {
+function landFrames(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: PartSnapshot, at: number, f?: PartFacts): Result<Record<string, unknown>> {
   if (plan.act === "image-takes") {
     const sc = pickedScenario(s);
     if (sc === undefined) return err("refused", "image takes need a picked scenario");
@@ -262,7 +281,7 @@ function landFrames(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Part
     }
     return ok({ "ads-shots": { scenarioId: sc.id, shots } });
   }
-  const u = unitsOf(s);
+  const u = unitsOf(s, f);
   if (u === null) return err("refused", "no picture units");
   const rec = s.records.get("frames") ?? {};
   if (plan.act === "direct-cut") {
@@ -304,8 +323,8 @@ function landFrames(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Part
   return ok({ frames: { ...rec, units: asData({ u: units })["u"], renderId: u.renderId } });
 }
 
-/** `blobs`: where the look's references are read (default: the kernel's own, opened lazily). */
-export function framesProducer(lane: ResourceLane = "cloud.google", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING, blobs: () => BlobStore = kernelBlobs): Producer {
+/** `blobs`: where the look's references are read (default: the blobs of the store the job runs on, opened lazily). */
+export function framesProducer(lane: ResourceLane = "cloud.google", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING, blobs: (ctx: StepContext) => BlobStore = jobBlobs): Producer {
   // The direction turn's engine: the drive's own when it hands one (a test's fake vendor), else the router.
   const turns = enginesOf(hooks);
   return defineFrames(lane, {
@@ -331,7 +350,8 @@ export function framesProducer(lane: ResourceLane = "cloud.google", hooks: Drive
       }
     },
     async land(_job, plan, made, ctx) {
-      return landPart(ctx, plan.act, (s) => landFrames(plan, made, s, Date.now()));
+      const f = partFacts(ctx);
+      return landPart(ctx, plan.act, (s) => landFrames(plan, made, s, Date.now(), f.ok ? f.value : undefined));
     },
     ...(hooks.onSettled === undefined ? {} : { settled: hooks.onSettled }),
   });

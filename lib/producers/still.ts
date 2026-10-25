@@ -2,14 +2,14 @@ import { ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 import type { BlobStore } from "@gt/kernel/blob";
 import type { ResourceLane } from "@gt/domain/lane";
-import type { Producer } from "@gt/kernel/job-core";
+import type { Producer, StepContext } from "@gt/kernel/job-core";
 import { lookWords } from "@gt/producers/frames/look";
 import { landPart } from "@gt/producers/research/partJob";
 import { defineStill, stillPlan } from "@gt/producers/still/define";
 
 import { NEGATIVE_PROMPT, compilePrompt } from "@/lib/stylePrompt";
 
-import { imageFailure, kernelBlobs, LIVE_IMAGING, lookImages, meteredImages, putImage, type ImagingEngines } from "./frames.ts";
+import { imageFailure, jobBlobs, LIVE_IMAGING, lookImages, meteredImages, putImage, type ImagingEngines } from "./frames.ts";
 import { asData, must, partFacts, priceOf, recOf, written, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
 import { madeFree, madePaid, type ActPlan } from "@gt/producers/research/partAct";
 import type { PartSnapshot } from "@gt/kernel/parts/driver";
@@ -53,7 +53,7 @@ export function landStill(jobId: string, plan: ActPlan, made: ReadonlyMap<string
   return ok({ still: { ...rec, takes: asData({ takes: [...held, ...added] })["takes"] } });
 }
 
-export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING, blobs: () => BlobStore = kernelBlobs): Producer {
+export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING, blobs: (ctx: StepContext) => BlobStore = jobBlobs): Producer {
   return defineStill(lane, {
     // Held at the release, not failed by the worker, while its act waits on a human act (L45).
     preflight: preflightFrom(stillUnits),
@@ -65,7 +65,7 @@ export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHoo
       try {
         const { look } = must(partFacts(ctx));
         const prompt = compilePrompt(look.block, String(unit.input["prompt"] ?? ""));
-        const references = await lookImages(look, blobs);
+        const references = await lookImages(look, () => blobs(ctx));
         const got = await meteredImages(ctx, unit, { prompt, negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1, ...(references.length === 0 ? {} : { references }) }, engines, look.refs);
         const img = got.images[0];
         if (img === undefined) return { kind: "vendor-failure", message: "the imaging router answered with no image" };

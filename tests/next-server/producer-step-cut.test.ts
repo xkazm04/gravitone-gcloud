@@ -20,7 +20,7 @@ const ROOT = vi.hoisted(() => {
   return dir;
 });
 
-import { rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import path from "node:path";
 
 import type { BlobRef } from "@gt/domain/blob";
@@ -37,7 +37,7 @@ import type { CutDocument } from "../../lib/cut/cutDocument.ts";
 import type { CutExportResult } from "../../lib/cutExport.ts";
 import { partVerdict } from "../../lib/parts/verdict.ts";
 import { cutProducer, cutUnits, type CutEngines } from "../../lib/producers/cut.ts";
-import { blobRootOf, driveStep, launchPartAct, partActReceipt } from "../../lib/producers/research.ts";
+import { blobRootOf, driveStep, effectsOf, jobBlobRoot, launchPartAct, partActReceipt } from "../../lib/producers/research.ts";
 
 const OP = { kind: "operator", id: "op" } as const;
 const NOW = Date.parse("2026-10-16T09:00:00Z");
@@ -141,5 +141,36 @@ describe("cut acts are jobs with receipts", () => {
     const snap = must(readPart(store(), { projectId: "a1", partId: "a1/cut" }));
     expect(partVerdict("cut", { projectId: "a1", title: "a1", discipline: "ads", targetS: 15, plansVoice: false, records: snap.records })).toMatchObject({ state: "ready", codes: [{ code: "exported" }] });
     expect(must(list(store())).filter((j) => j.of.id === "a1/cut").map((j) => [j.producer, j.lane, j.state])).toEqual([["cut", "box.render", "done"]]);
+  });
+});
+
+describe("a part job reads the blobs of the store it runs on", () => {
+  it("driven over a handed store while the process store is another: the plates it landed reach the call", async () => {
+    // The job's store B sits in its own directory; GRAVITONE_STORE_PATH (the process store) is ROOT/k.sqlite.
+    const dir = mkdtempSync(path.join(ROOT, "job-"));
+    const k = openKernel(path.join(dir, "k.sqlite"));
+    if (!k.ok) throw k.error;
+    try {
+      const b = k.value.store;
+      expect(jobBlobRoot({ fx: effectsOf(b) })).toBe(blobRootOf(b));
+      expect(blobRootOf(b)).not.toBe(blobRootOf(store()));
+      must(compose(b, { recipe: "film/trailer" }, OP, { id: "j1" }));
+      const blob = must(await blobStore(blobRootOf(b)).put(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 9, 8, 7, 6]), "image/png"));
+      must(writePart(b, { projectId: "j1", partId: "j1/frames", baseRev: "current", act: "land", op: { seed: "frames" }, label: "seed", by: { kind: "machine", id: "seed" }, next: () => ok({ frames: { units: [unit("u1", 0, 10, blob)], renderId: "r" } }) }));
+      let sent: CutDocument | undefined;
+      const exportCut = async (doc: CutDocument): Promise<{ result: CutExportResult; bytes: Uint8Array }> => {
+        sent = doc;
+        return { result: { id: "11111111-2222-3333-4444-555555555556", encoder: "libx264", width: 1920, height: 1080, fps: 25, durationS: doc.totalS, drawn: "plates", unreachable: [], sidecar: { projectId: "j1", kind: "cut-animatic", document: "x", totalS: doc.totalS, finish: [], gaps: { picture: 0, audio: 0 } }, wallMs: 1, sizeBytes: 3 }, bytes: new Uint8Array([0, 0, 1]) };
+      };
+      const r = must(partActReceipt(b, ref("j1", "export-animatic"), cutUnits, { mode: "live", now: NOW }));
+      const l = must(launchPartAct(b, ref("j1", "export-animatic"), cutUnits, { mode: "live", now: NOW, token: r.token, actor: OP, dryOnly: false }));
+      if (l.kind !== "launched") throw new Error("stale");
+      const report = must(await driveStep((lane, h) => cutProducer(lane, h, { exportCut }), b, l.jobId, { dryOnly: false }));
+      expect(report.outcome).toBe("done");
+      const still = sent?.picture.find((p) => p.kind === "still");
+      expect(still?.kind === "still" ? still.layers.plate.startsWith("data:image/png;base64,") : false).toBe(true);
+    } finally {
+      k.value.close();
+    }
   });
 });

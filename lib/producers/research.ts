@@ -69,6 +69,15 @@ export { blobRootOf };
 
 export const effectsOf = (store: Store): Effects => liveEffects(store, blobStore(blobRootOf(store)));
 
+/** The blob root of the store THIS job runs on: the file its own effects write beside (SQLite's
+ *  `database_list`), so a part job driven over a store it was handed reads the plates it landed.
+ *  An in-memory store has no file; it keeps the process's root, as `blobRootOf` does. */
+export function jobBlobRoot(ctx: Pick<StepContext, "fx">): string {
+  const at = ctx.fx.tx("blob.root", (t) => t.all("PRAGMA database_list").find((r) => r["name"] === "main")?.["file"]);
+  const file = at.ok && typeof at.value === "string" ? at.value : "";
+  return file === "" ? blobRootOf(stepKernel().store) : path.join(path.dirname(file), "blobs");
+}
+
 export function stepKernel(): StepKernel {
   const k = processKernel(storeLocation(OUT_DIRNAME));
   if (!k.ok) throw k.error;

@@ -24,7 +24,7 @@ import {
   recordSpend,
   __resetBudget,
 } from "@/lib/imaging/budget";
-import { budgetQuote } from "@/lib/imaging/budgetForecast";
+import { budgetQuote, earliestExpiry } from "@/lib/imaging/budgetForecast";
 import { ImagingError } from "@/lib/imaging/errors";
 import { errorResponse } from "@/lib/imaging/api";
 import { budgetHandler } from "@/lib/imaging/handlers";
@@ -142,6 +142,25 @@ test("6. errorResponse(new ImagingError('budget', ...)) has HTTP status 402, cod
   expect(typeof json.retryAt).toBe("number");
   expect(typeof res.headers.get("retry-after")).toBe("string");
   expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+});
+
+test("10. the 402's Retry-After and budgetQuote's resumeAt are one answer: the moment the refused image fits", async () => {
+  process.env[BUDGET_VAR] = "1.00";
+  process.env[WINDOW_VAR] = "60000";
+  const T = 1_000_000;
+  // $0.001 ages out at T+1s, $0.989 at T+59s; one image is $0.045, so it fits at T+59s, not T+1s.
+  await book(0.001, T - 59_000);
+  await book(0.989, T - 1_000);
+
+  const quote = await budgetQuote({ images: 1, now: T });
+  expect(quote.verdict).toBe("blocked");
+  expect(quote.resumeAt).toBe(T + 59_000);
+
+  const res = errorResponse(new ImagingError("budget", "over-budget"), T);
+  expect(res.status).toBe(402);
+  expect(((await res.json()) as Record<string, unknown>)["retryAt"]).toBe(T + 59_000);
+  expect(res.headers.get("retry-after")).toBe("59");
+  expect(earliestExpiry(T)).toBe(T + 59_000);
 });
 
 test("8. budgetHandler answers the window and the quote, and asking it spends nothing", async () => {
