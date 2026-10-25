@@ -46,7 +46,7 @@ MEDIA = "video-serial-lanes"
 
 
 def engine_of(p, arm):
-    return p[arm].get("engine", "wan")
+    return p[arm].get("engine") or "wan"
 
 
 def order(spec):

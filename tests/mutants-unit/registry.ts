@@ -2272,6 +2272,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "An arm with every PNG on disk is billed to Nano Banana again.",
   },
   {
+    id: "dojo-node-null-engine-is-h3",
+    test: "tests/next-server/producer-dojo.test.ts",
+    file: "packages/producers/src/dojo/plan.ts",
+    find: "(u.engine || \"wan\") === \"wan\"",
+    replace: "(u.engine ?? \"wan\") === \"wan\"",
+    why: "Node plans an empty-engine arm as H3 while the Python runner renders it as wan; the receipt names an order the card does not run.",
+  },
+  {
+    id: "dojo-py-null-engine-is-h3",
+    test: "tests/next-server/producer-dojo.test.ts",
+    file: "pipeline/foundry/dojo_video_h3.py",
+    find: "return p[arm].get(\"engine\") or \"wan\"",
+    replace: "return p[arm].get(\"engine\", \"wan\")",
+    why: "A null engine renders with the H3 workflow and pays its ~70 min first load, against the plan's order.",
+  },
+  {
     id: "forge-receipt-counts-only-the-next-drive",
     test: "packages/producers/test/forge-dojo.test.ts",
     file: "packages/producers/src/forge/plan.ts",

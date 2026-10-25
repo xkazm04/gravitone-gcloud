@@ -85,7 +85,7 @@ export function dojoLocalSteps(units: readonly LocalUnit[], booked: ReadonlySet<
 /** The local runners' render order (dojo_video_h3.py `order`: every wan clip, then every H3 one). */
 export function localOrder(spec: GenSpecView, media: DojoMedia): { readonly pair: string; readonly arm: ArmName }[] {
   const units = (spec.pairs ?? []).flatMap((p) => ARMS.map((arm) => ({ pair: p.id, arm, engine: p[arm]?.engine })));
-  const ordered = media === "video-serial-lanes" ? [...units.filter((u) => (u.engine ?? "wan") === "wan"), ...units.filter((u) => (u.engine ?? "wan") !== "wan")] : units;
+  const ordered = media === "video-serial-lanes" ? [...units.filter((u) => (u.engine || "wan") === "wan"), ...units.filter((u) => (u.engine || "wan") !== "wan")] : units;
   return ordered.map(({ pair, arm }) => ({ pair, arm }));
 }
 

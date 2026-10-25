@@ -14,7 +14,7 @@ import { retry } from "@gt/kernel/job";
 import type { Kernel } from "@gt/kernel/kernel";
 import { assertReconciled, reconcileJobSpend } from "@gt/kernel/spend/projection";
 import { defineDojoGoogle, type DojoGooglePorts } from "@gt/producers/dojo/define";
-import { dojoLocalSteps, runnerOf } from "@gt/producers/dojo/plan";
+import { dojoLocalSteps, localOrder, runnerOf } from "@gt/producers/dojo/plan";
 import type { Served } from "@gt/producers/extract/define";
 
 import { dojoGooglePorts, driveDojo, effectsFor, launchDojo } from "../../lib/producers/dojo.ts";
@@ -74,6 +74,22 @@ describe.skipIf(PYTHON === undefined)("the local plan is one function in two lan
     const got = parseJsonAt("python plans", z.array(z.array(z.string())), r.stdout.trim());
     if (!got.ok) throw got.error;
     expect(got.value).toEqual(cases.value.cases.map((c) => c.expect));
+  });
+});
+
+describe.skipIf(PYTHON === undefined)("the serial-lane render order is one rule in two languages", () => {
+  // An arm whose engine is null or "" is the default engine (wan) on both sides: the plan's units are "in the runner's own render order".
+  const spec = { stack: "local", media: "video", pairs: [{ id: "p1", baseline: { prompt: "a", engine: null }, challenger: { prompt: "b", engine: "h3-ref2va" } }, { id: "p2", baseline: { prompt: "c", engine: "" }, challenger: { prompt: "d", engine: "wan" } }] };
+  const want = ["p1--baseline", "p2--baseline", "p2--challenger", "p1--challenger"];
+
+  it("Node's localOrder and Python's dojo_video_h3.order agree on a null or empty engine", () => {
+    expect(localOrder(spec, "video-serial-lanes").map((u) => `${u.pair}--${u.arm}`)).toEqual(want);
+    const script = ["import json, sys", "sys.path.insert(0, 'pipeline/foundry')", "import dojo_video_h3", `spec = json.loads(${JSON.stringify(JSON.stringify(spec))})`, "print(json.dumps([p['id'] + '--' + a for p, a in dojo_video_h3.order(spec)]))"].join("\n");
+    const r = py(universe(), ["-c", script]);
+    expect(r.status, r.stderr).toBe(0);
+    const got = parseJsonAt("python order", z.array(z.string()), r.stdout.trim());
+    if (!got.ok) throw got.error;
+    expect(got.value).toEqual(want);
   });
 });
 
