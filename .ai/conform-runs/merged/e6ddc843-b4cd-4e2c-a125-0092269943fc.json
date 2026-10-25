@@ -1,0 +1,65 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e6ddc843-b4cd-4e2c-a125-0092269943fc",
+ "subject": "design-tokens",
+ "evaluatedAt": "2026-10-25T23:36:06.031762+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "kit-design-system-specimens",
+   "subject": "design-tokens",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/kit/kit.module.css:58 The kit's motion specimens hard-code .9s, .35s and .4s, none of which is on the ladder (dur-fast .15s, dur .3s, dur-slow .6s), and the file that presents the design system as shipped also styles its own layout from primitive-tier tokens, so the specimen page itself drifts from the vocabulary it displays.",
+   "techniques": [
+    {
+     "technique": "motion-tokens",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/kit/kit.module.css:58 .35s sits between the dur (.3s) and dur-slow (.6s) steps, the in-between value the technique names as a vocabulary violation. Lines 57/59/60 inline .9s/.9s/.4s the same way. On top of that, Motion.tsx:29 clears its state on onAnimationEnd, while the blanket reduced-motion rule (world.css, animation:none) collapses motion to exactly zero, which is the completion-event breakage the technique warns about."
+    },
+    {
+     "technique": "token-enforcement",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/kit/kit.module.css:57 check-tokens walks app/(studio) and lints this file, but tokenLint.ts only polices colour literals, px literals and unknown var() names. A raw duration (and the em PAGE MEASUREs at lines 17/22) passes green even though a duration ladder exists. Primitive-tier references are not policed either."
+    },
+    {
+     "technique": "token-taxonomy",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/kit/kit.module.css:12 source.json tags --cyan, --ink-bright, --hair, --faint, --sp-*, --r-sm and --fs-* as tier 'primitive'. The kit's layout CSS consumes them directly throughout, the skipped-layer anti-pattern, and --cyan is also a hue-named token."
+    },
+    {
+     "technique": "cross-language-token-parity",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/kit/page.tsx:46 The page reads the authority (packages/ui/tokens/source.json, line 43) rather than a hand-listed copy, and surfaces any group it does not draw as an ErrorLine (set membership). Specimens paint through var(--name) (Tokens.tsx:41), so what is shown is the generated stylesheet's resolved value. Motion.tsx uses a completion event rather than a timed wait."
+    },
+    {
+     "technique": "theme-architecture",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/Tokens.tsx:41 There is one binding set (each source.json token has a single value; prefers-color-scheme/data-theme have no hits in app/(studio) or packages/ui). The kit paints roles through var() without asking which theme it is in."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T23:36:06.031762+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "design-tokens"
+   ],
+   "techniques": [
+    "cross-language-token-parity",
+    "motion-tokens",
+    "theme-architecture",
+    "token-enforcement",
+    "token-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "kit-design-system-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
