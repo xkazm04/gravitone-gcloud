@@ -11,7 +11,7 @@
 // other URL fails the test. SOUND_STORE_DIR / SOUND_LEDGER_PATH point at a fresh temp dir per
 // test and the env is restored afterwards (keepEnv).
 
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -187,4 +187,19 @@ test("create: a take the contract refuses writes no audio file - a rating, a sta
   const { take } = await createTake({ origin: "import", title: "fine", ratings: { melody: 7 } }, AUDIO);
   expect(filesOnDisk()).toEqual([path.basename(take.file!.path)]);
   expect(take.file!.path).toBe(`files/${take.id}.mp3`);
+});
+
+test("create: an unjudged render is filed while the ledger will not parse - the ledger is left as it was", async () => {
+  const conflicted = "<<<<<<< HEAD\n{";
+  writeFileSync(process.env.SOUND_LEDGER_PATH!, conflicted, "utf8");
+  // The vendor has already rendered (and billed) when the take is filed; an unjudged take has no
+  // ledger row to write, so the ledger's state is not the take's to refuse on.
+  const r = await refusal(() => generateTake(parseGenerateRequest(genReq())));
+  console.log(`[sound-door] unjudged render over an unreadable ledger -> ${JSON.stringify(r)}; vendor calls ${calls.length}`);
+  expect(r).toBeNull();
+  expect(calls.length).toBe(1);
+  expect((await readTakes()).takes.map((t) => t.verdict)).toEqual(["unjudged"]);
+  expect(readFileSync(process.env.SOUND_LEDGER_PATH!, "utf8")).toBe(conflicted);
+  // A judgement still needs the ledger, and still refuses over it.
+  expect((await refusal(() => createTake({ origin: "import", title: "kept", verdict: "kept" }, AUDIO)))?.status).toBe(500);
 });

@@ -14,7 +14,7 @@
 
 import path from "node:path";
 
-import { syncVerdict } from "./ledger";
+import { syncVerdict, verdictRow } from "./ledger";
 import { mintId, readTakes, removeFile, safeId, SoundError, withStore, writeBytesAtomic, ID_RE, type StoreTx } from "./store";
 import {
   DEFECTS,
@@ -355,7 +355,10 @@ export async function createTake(
     if (take.finalizedAt && iso(meta.finalizedAt)) take.finalizedAt = iso(meta.finalizedAt);
     store.takes.push(take);
     tx.touch("takes");
-    await syncVerdict(tx, take);
+    // A new take with no judgement has no ledger row to write, so it does not read the ledger:
+    // a ledger.json that will not parse (a merge conflict in the tracked file) must not refuse
+    // an unjudged render the vendor already billed. A judged one still reads it and refuses.
+    if (verdictRow(take) !== null) await syncVerdict(tx, take);
     if (fileAt !== null) await writeBytesAtomic(fileAt, file!.bytes);
     return { take, created: true };
   });
