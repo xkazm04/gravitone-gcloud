@@ -17,6 +17,7 @@ import { useState } from "react";
 
 import { SEND_REFS } from "@gt/domain/style.ratchet";
 import type { StyleOp, StyleView } from "@gt/domain/styleView";
+import { SrOnly } from "@gt/ui/components/a11y/SrOnly.tsx";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
@@ -88,7 +89,8 @@ export function Dossier({ view, busy, send }: { readonly view: StyleView; readon
       <p className={s.recipe}>{view.recipe}</p>
       {view.negative !== "" && (
         <p className={s.negative}>
-          <b aria-label="never">−</b> {view.negative}
+          <b aria-hidden="true">−</b>
+          <SrOnly text="never" /> {view.negative}
         </p>
       )}
       {obs.length > 0 && (

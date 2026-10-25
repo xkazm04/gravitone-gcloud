@@ -6,6 +6,8 @@
 // that adopt -> generate (dry) -> judge -> lock runs end to end.
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,6 +23,7 @@ import { actReceipt, confirmAct } from "../../app/(studio)/library/style/_port/f
 import { ADOPT_SEEDS, DRY_GRID, SEEDS, presetPlate } from "../../app/(studio)/library/style/_port/fixtureData.ts";
 import { styleActSchema } from "../../app/(studio)/library/style/_port/schema.ts";
 import { styleJobId } from "../../lib/producers/styleLaunch.ts";
+import { stripComments } from "../golden-path/_pure.ts";
 
 const media: Media = async (file): Promise<Result<BlobRef>> => ok({ sha256: createHash("sha256").update(file).digest("hex"), bytes: file.length, mime: "image/jpeg" });
 const NOW = Date.parse("2026-10-16T12:00:00.000Z");
@@ -60,6 +63,25 @@ it("names only committed pictures, for every seed and every dry render it can la
     ...Object.values(DRY_GRID).flatMap((grid) => STYLE_TRIALS.map(() => presetPlate(grid))),
   ];
   expect(files.filter((f) => !tracked.has(`public${f}`))).toEqual([]);
+});
+
+// ARIA 1.2 prohibits naming a generic (b, i, span, div, p with no role): a screen reader drops the
+// label, so a glyph named that way says nothing (tests/next-server/landing-cosmos-engine.test.ts).
+it("names no generic element of the atelier with an aria-label", () => {
+  const dir = path.join(process.cwd(), "app/(studio)/library/style/[id]/_atelier");
+  const files = readdirSync(dir).filter((f) => f.endsWith(".tsx"));
+  expect(files.length, "the walk read the atelier's components").toBeGreaterThanOrEqual(2);
+  const bad: string[] = [];
+  let tags = 0;
+  for (const f of files) {
+    const src = stripComments(readFileSync(path.join(dir, f), "utf8"));
+    for (const m of src.matchAll(/<(b|i|span|div|p|strong|em)\b[^>]*>/g)) {
+      tags++;
+      if (/\baria-label=/.test(m[0]) && !/\brole=/.test(m[0])) bad.push(`${f}: ${m[0]}`);
+    }
+  }
+  expect(tags, "the walk found the atelier's plain elements").toBeGreaterThan(3);
+  expect(bad).toEqual([]);
 });
 
 describe("the seeded universe reads through the one ratchet", () => {

@@ -3842,6 +3842,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A render naming one trial twice is priced and rendered as two plates, then its landing is refused for a repeated plate id - paid for, nothing on the sheet.",
   },
   {
+    id: "style-dossier-names-a-generic",
+    test: "tests/next-server/style-atelier.test.ts",
+    file: "app/(studio)/library/style/[id]/_atelier/Dossier.tsx",
+    find: "<b aria-hidden=\"true\">−</b>",
+    replace: "<b aria-label=\"never\">−</b>",
+    why: "The negative prompt's minus glyph is named on a generic <b>, which ARIA 1.2 prohibits: a screen reader reads the words a style must never show as if they were its recipe.",
+  },
+  {
     id: "look-refs-unselected",
     test: "packages/producers/test/frames-look.test.ts",
     file: "packages/producers/src/frames/look.ts",
