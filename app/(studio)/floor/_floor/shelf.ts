@@ -5,6 +5,7 @@ import { getCatalogue } from "../../../../lib/foundry/store.ts";
 import { articlesRoot, readArticles } from "../../../../lib/ledger/v1/sources/articles.ts";
 import { FIXTURE_MODE } from "../../../../lib/fixtures/mode.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
+import { serverProduce, type ServerProduce } from "../../projects/_port/port.ts";
 import { ledgerFor } from "../../_shell/links.ts";
 
 // THE LIBRARY / PROJECTS COLUMN - what each lane has ratified that the SERVER can read today,
@@ -18,9 +19,10 @@ import { ledgerFor } from "../../_shell/links.ts";
 //            fixture store (lib/ledger/v1/sources/roots.ts says why v1's own reader cannot).
 //   audio    kept takes (lib/sound/takes.ts listTakes, verdict `kept`), fixture takes only in
 //            the fixture universe, as v1's own filter rule has it.
-//   video    PROJECTS. The kernel has held them since Phase 4 (the produce port's listProjects,
-//            ../../projects/_port), but this column does not read them yet: it draws its head
-//            and a door to /projects, and no count - a count it did not read would be a false claim.
+//   video    PROJECTS, read through the produce port's listProjects (../../projects/_port): the
+//            fixture's on the fixture side, the kernel's own on the real one. The port bounds the
+//            read (`truncated`); the shelf carries SHELF_ROWS of it and the head's count is the
+//            projects the read returned.
 //
 // Each read fails on its own: one unreadable store is a line in that shelf, not a blank floor.
 
@@ -28,12 +30,14 @@ export type Read<T> = { readonly ok: true; readonly value: T } | { readonly ok: 
 
 export type ShelfStyleRow = { readonly id: string; readonly name: string; readonly family: string };
 export type ShelfPost = { readonly id: string; readonly title: string; readonly href: string; readonly pr?: string };
+export type ShelfProject = { readonly id: string; readonly title: string; readonly recipe: string; readonly href: string };
 export type ShelfTake = { readonly id: string; readonly title: string; readonly kind: string; readonly durationS?: number; readonly peaks: readonly number[] };
 
 export type Shelf = {
   readonly styles: Read<{ readonly proven: readonly ShelfStyleRow[]; readonly candidates: number }>;
   readonly posts: Read<readonly ShelfPost[]>;
   readonly takes: Read<{ readonly kept: readonly ShelfTake[]; readonly total: number }>;
+  readonly projects: Read<{ readonly rows: readonly ShelfProject[]; readonly total: number }>;
 };
 
 /** Rows a shelf carries to the page; the head's count is always the whole. */
@@ -104,7 +108,18 @@ async function takes(): Promise<Shelf["takes"]> {
   }
 }
 
+export function projects(port: Pick<ServerProduce, "listProjects"> = serverProduce()): Shelf["projects"] {
+  try {
+    const r = port.listProjects();
+    if (!r.ok) return { ok: false, error: `projects: ${r.error.message}` };
+    const all = r.value.projects;
+    return { ok: true, value: { total: all.length, rows: all.slice(0, SHELF_ROWS).map((p) => ({ id: p.id, title: p.title, recipe: p.recipe, href: `/projects/${encodeURIComponent(p.id)}` })) } };
+  } catch (e) {
+    return { ok: false, error: `projects: ${errorMessage(e)}` };
+  }
+}
+
 export async function readShelf(): Promise<Shelf> {
   const [s, p, t] = await Promise.all([styles(), posts(), takes()]);
-  return { styles: s, posts: p, takes: t };
+  return { styles: s, posts: p, takes: t, projects: projects() };
 }
