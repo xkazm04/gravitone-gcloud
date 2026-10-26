@@ -218,6 +218,15 @@ ideation's bans) and `## Genres`.
 
 ## The money
 
+- **Stills come from the studio pool** (spark scout-vision S6; operator, 2026-10-26: "Leonardo studio still has
+  plenty of credits"). Style replicas and transfers, scene replicas and asset concepts draw in the Leonardo
+  studio at Low (8 credits, unpriced) by default; `SCOUT_REPLICA_GENERATOR=leonardo-flare|comfy-flux2` moves them.
+  Studio jobs wait on box.chrome, Flux on gpu.local, Flare on cloud.leonardo (lib/foundry/scout/stillEngine.ts);
+  a scene whose clip renders locally runs on gpu.local either way. One studio tab at a time across processes
+  (`foundry-out/leonardo-studio.lock`, stale after 5 min). The studio holds no seed and no 4:5 (drawn 9:16); a
+  prompt past 1500 characters is cut at a sentence. The doctor reads the API pool (apiSubscriptionTokens +
+  apiPaidTokens) and the studio balance apart.
+
 - **The night's ceiling** (`--ceiling`, default $15, the operator's standing grant for this loop) is a
   promise, not a stop point. `lib/foundry/scout/budget.ts` reads it from the kernel's own records over
   `night.jobs`:
@@ -355,9 +364,25 @@ Per idea it authors the strip (`ideas/<c-NN>/strip.html`), lints it, and renders
 `ideas/<c-NN>.png`, the idea's tile; a failed turn fails that idea with its sentence, and the batch goes on.
 
 **In the packet** a stats idea is one tile in the ideas tab like an artboard, its meta `stats reel ·
-<anchor>`. `K` records the keep (`develops next night as a stats reel`); developing it - the real data
-researched into a fixture, the block swapped, the full 240-frame render with its gates - is not built yet.
-`X` blocks it. Both land in `night.committed` with their reasons.
+<anchor>`. `K` makes its real data due; `X` blocks it. Both land in `night.committed` with their reasons.
+
+### Real data, then the full cut (spark scout-vision S5)
+
+The operator, 2026-10-26: "Do not stick with public datasets, we often need one wiki table, an article, or
+derived data from 'what if' fantasy scenarios." Two acts on the same scout-reels job, each approved before the next:
+
+- **`reel <night> --json`** `[{fromIdea, source: {kind: table|article|what-if, title, url?, quote?, premise?}, data,
+  cut}]` - a kept stats idea re-authored as an 8 s strip on real data keeping the beats in `cut` (1-12). A table or
+  article needs its https url, an article its words verbatim (<= 400), a what-if its premise (<= 400). The source
+  line reads `Source: <title>` or `What if: <premise> (fiction)`. Refused: an idea not kept on a live committed
+  night, not stats, or already holding a live real reel (lib/foundry/scout/reel.ts, reelDoor.ts). Cell `c-NN/reel`,
+  the images tab, group `reels`; files under `reels/<c-NN>/`.
+- **`reel-cut <night> --json`** `[{fromReel, seconds: 30-120}]` - a kept reel (taste `## Reels to cut`) re-authored
+  at seconds * 30 frames (CONTRACT.md `window.STRIP.frames`; 240 stays the default) and rendered to mp4. Cell
+  `c-NN/video`, the videos tab, group `reel cuts`; files under `cuts/<c-NN>/`. A cut's receipt uses an unmeasured
+  0.5 s per rendered frame until a real cut is timed.
+
+Reels and cuts count toward the night's `reelCap` with its stats ideas. `reel <night> --collect` settles detached ones.
 
 ## Storyboards
 
@@ -479,6 +504,32 @@ look for the remainder, its decided looks written as verdicts only and imported 
 union: taste, the graph (a candidate with a cell in `open` is open, and points at the remainder), the
 Library, a kept seed (usable from the part that kept it). The ledger records `commit` for part 1 and
 `commit.<n>` for each later part.
+
+## The plan queue and the night-fill (spark scout-vision S6)
+
+The night of 2026-10-25 ended hours before its `until` while the box idled. The seat now writes the night's
+remaining work as a queue and ends its turn with the night open:
+
+- **`plan <night> --json`** `[{kind: storyboards|ideas|extract|scenes|assets|sheets|reels|draft, payload, why}]` -
+  each payload validated by its door's own parser, appended to `<night>/plan.json` as `pl-NN`, nothing spent.
+  Refused on a night that is not open, has no `until`, or is past it (lib/foundry/scout/plan.ts, planDoors.ts).
+- **The `night-fill` timer** (worker, every 5 min, lib/foundry/scout/nightFill.ts): for the newest open scout
+  night with a plan and a future `until`, when every resource of the last 15 minutes of load samples averages
+  under 60% (no samples: no launch), it launches the oldest queued item whose lane has nothing queued or running,
+  through the same door the CLI calls, in the night's mode, detached. One launch a tick; a door's refusal is
+  `refused`, any other error `failed`, neither retried. At `until` the rest become `expired` and the timer runs
+  the same close as `close --stop deadline`.
+- **`draft` items** `{title, prompt}` run the `draft` text turn - local Ollama (`qwen3.8:27b`, $0) first, the
+  claude CLI behind it, never Gemini - and write `<night>/drafts/<pl-NN>.md`; the next taste brief lists them
+  under `## Drafts from the night`. Never a candidate. They wait for gpu.local (the model shares the card with
+  ComfyUI). `pipeline/ollama-up.ps1` starts the daemon; the night schedule and the worker service call it and
+  set `OLLAMA_HOST` when it answers. The doctor's `ollama` line is a note.
+
+**gpu.local no longer starves on one held head** (packages/kernel/src/resources/starve.ts): a head admission has
+held for `GPU_SKIP_AHEAD_MS` (10 min) lets the next queued job that admission passes go first
+(`job.skipped-ahead`); a gpu.local head held on commit charge for `COMFY_UNLOAD_AFTER_MS` (15 min), with no
+gpu.local job running and ComfyUI's own queue empty, unloads ComfyUI's models once per held episode via `/free`
+(`resource.freed`).
 
 ## The load
 

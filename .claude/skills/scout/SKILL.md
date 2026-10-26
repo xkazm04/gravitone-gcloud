@@ -1,9 +1,9 @@
 ---
 name: scout
 memory: none
-version: 2.3.0
+version: 2.4.0
 category: Development
-description: The nightly training loop, with a stated purpose - spread genres, prove one at publishable quality, then birth a project - that develops what the operator already approved before it spreads (kept ideas become free local Flux storyboards that apply a researched execution technique; while 20+ kept ideas wait, a seed batch takes children plus at most 20 fresh seeds). It searches the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers), ~100 one-sentence seeds (genre, subgenre, type, audience, format) on their own packet, 20-30 rough idea artboards grown from kept seeds in the operator's Leonardo studio, storyboards of kept ideas (up to five local Flux frames, a paragraph and bullets - the root any full video needs), Suno tracks from kept music seeds and full-song visualizers from kept tracks, and 1-3 directions to confirm - all for YouTube video (Shorts ~30 s, videos up to 5 min) - inside a $15 Gemini night, and leave ONE Board packet pkt:scout:<night> for a few minutes of number keys in the morning (1 keep, 2-4 reject with a reason, 5 reject). Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout seeds [--dry], /scout folder <dir> [extract args], /scout status [<night>].
+description: The nightly training loop, with a stated purpose - spread genres, prove one at publishable quality, then birth a project - that develops what the operator already approved before it spreads (kept ideas become free local Flux storyboards that apply a researched execution technique; while 20+ kept ideas wait, a seed batch takes children plus at most 20 fresh seeds). It searches the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with studio replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers), ~100 one-sentence seeds (genre, subgenre, type, audience, format) on their own packet, 20-30 rough idea artboards grown from kept seeds in the operator's Leonardo studio, storyboards of kept ideas (up to five local Flux frames, a paragraph and bullets - the root any full video needs), Suno tracks from kept music seeds and full-song visualizers from kept tracks, and 1-3 directions to confirm - all for YouTube video (Shorts ~30 s, videos up to 5 min) - inside a $15 Gemini night, and leave ONE Board packet pkt:scout:<night> for a few minutes of number keys in the morning (1 keep, 2-4 reject with a reason, 5 reject). Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout seeds [--dry], /scout folder <dir> [extract args], /scout status [<night>].
 argument-hint: "night [--dry] [--until HH:MM] | seeds [--dry] | folder <dir> | status [<night>]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, WebSearch, WebFetch, Monitor
 ---
@@ -105,8 +105,13 @@ The operator's rulings, 2026-10-23, after the first live night and the first ide
 
 ## The money and the rights (read before every night)
 
-- **$15 per night; clips are local and free** - stills are Leonardo GPT Image 2.5 Flare at LOW (~$0.015 each),
-  clips LTX-2.5 on this box's ComfyUI (~100 s each, $0, `--clips` caps GPU minutes, default 2). ComfyUI's
+- **$15 per night; stills come from the studio pool, clips are local and free** - stills (style replicas and
+  transfers, scene replicas, asset concepts) are drawn in the operator's Leonardo studio at Low (8 credits each,
+  unpriced, one browser tab at a time; operator, 2026-10-26: "Leonardo studio still has plenty of credits ... we
+  should stick with it in future too"). The API pool is empty; `SCOUT_REPLICA_GENERATOR=leonardo-flare` or
+  `comfy-flux2` switches the generator, never on your own. The studio holds no seed and no 4:5 (a 4:5 source draws
+  9:16). Clips are
+  LTX-2.5 on this box's ComfyUI (~100 s each, $0, `--clips` caps GPU minutes, default 2). ComfyUI's
   queue is shared with any other session's jobs - a busy card stretches the night, it does not fail it.
   The operator's standing grant for this loop
   (2026-10-22). The night's ceiling is enforced by the CLI per launch; never raise `--ceiling`, `--clips`,
@@ -130,7 +135,7 @@ The operator's rulings, 2026-10-23, after the first live night and the first ide
 - **A game asset is drawn from OUR words, never from a found picture.** Its concept is generated from the
   brief; a source never becomes a concept or geometry (`rights: publishable` depends on it).
 - **Game assets: at most `--assets` a night** (default 3 while the 3D engines are being profiled), each a
-  few cents of Flare concepts; the mesh and the finish are local and free, admitted by the worker by
+  few studio concepts at Low; the mesh and the finish are local and free, admitted by the worker by
   measured memory and GPU - never raise the cap, never start ComfyUI or Blender yourself.
 
 ## /scout night
@@ -190,6 +195,26 @@ that thing; its ranking is by words, so read a technique's file before calling i
 where the registry is thin; `registry: none` means no registry resolved and changes nothing else),
 `knowledge/scout/watchlist.md`, and what the Library already holds (`pipeline/foundry/styles.json`: names
 and recipes - a look already there is not a find).
+
+### 1b. The plan queue - the night runs until `--until`, not until your turn ends
+
+The seat's turn is shorter than the night (2026-10-25: the night ended hours early while the box sat idle and
+the local models waited). So the night's work is two waves: what you launch yourself in steps 2-10, and a
+QUEUE the worker launches after you are gone. `npx tsx pipeline/scout.mts plan <night> --json <file>` takes
+`[{kind, payload, why}]`: `kind` one of `storyboards | ideas | extract | scenes | assets | sheets | reels | draft`,
+`payload` exactly what that door takes (validated now, nothing spent), `why` the rung it serves. The worker's
+`night-fill` timer launches the oldest queued item whose lane is idle whenever the box has sat under 60% for 15
+minutes, one per 5-minute tick, until `--until` - then it expires what is left and closes the night itself
+(`--stop deadline`). A door's cap still refuses (the item is `refused`, never retried); the queue never raises a
+cap. Write the queue as you go - every batch a step below would launch beyond the first, and the storyboards,
+sheets and trials the GPU lane could not take tonight - and size it from `## Last night's load`: an idle box
+last night is a short queue tonight.
+
+`draft` items (`{title, prompt}`) run on the box's local model (Ollama, the `draft` text task; the seat
+only if Ollama is down) and write `drafts/<pl-NN>.md` in the night: child-seed variations of a kept branch, a
+storyboard paragraph to test, a research digest of a genre's execution. They are material for the next night,
+listed under `## Drafts from the night` - never a candidate, never on the Board. Read them as a stranger's
+notes: a draft is not a verdict.
 
 ### 2. Develop first - what the operator already approved
 
@@ -403,9 +428,8 @@ brief is LAUNCHED early when the GPU is idle - but only when it answers a stated
 
 Each stats idea is authored as a full 8 s strip in code on the Claude seat (~15 min an idea), queued for
 the worker while discovery goes on, so brief them right after the assets. Up to `reelCap` a night
-(`open --reels`, default 6; `status --json` -> `reels` says how many are left). Never raise it. A kept reel's next
-step is its real data and full render, a later stage of spark scout-vision; until that act exists a kept reel
-waits, and the night's reels explore the data-explainer genre (rung 1).
+(`open --reels`, default 6; `status --json` -> `reels` says how many are left). Never raise it. A kept reel idea's
+next step is step 5c: its real data, then its full cut.
 
 1. **The topic passes the gates first** -
    `../ai-registry/knowledge/media-generation/narrative-craft/data-video-virality/data-video-virality.md`
@@ -436,8 +460,28 @@ waits, and the night's reels explore the data-explainer genre (rung 1).
    always queued, never driven here; its tile (frame 120) reaches the packet's ideas tab when the
    worker has authored it. Do not wait for it.
 
-`K` on a reel idea records the keep - its real data and full render come on a later night (not built
-yet); `X` blocks it. Either verdict and its reasons land in `night.committed`.
+`K` on a reel idea makes its real data due (step 5c); `X` blocks it. Either verdict and its reasons land in
+`night.committed`.
+
+### 5c. Real data for kept reels, then the full cut
+
+The operator, 2026-10-26: "Do not stick with public datasets, we often need one wiki table, an article, or
+derived data from 'what if' fantasy scenarios. We are not doing academic research but entertaining video content
+with educative flavor." Two acts, each approved before the next:
+
+1. **A kept stats idea -> an 8 s strip on real data** (`reel`). Find ONE source that carries the story: a
+   table on a public page (a wiki table is fine), an article whose numbers you quote, or a WHAT-IF premise
+   whose numbers you derive and label fiction. Keep the idea's approach; put the numbers in the brief's shape;
+   `cut` lists the 1-12 beats the 8 s keeps (the overtakes, the crash, the comeback). `npx tsx pipeline/scout.mts
+   reel <night> --json <file>` takes `[{fromIdea: "<night>/<c-id>", source: {kind: table|article|what-if, title,
+   url?, quote?, premise?}, data, cut}]` - a table or article needs its https url, an article its words verbatim,
+   a what-if its premise. The strip's source line then reads `Source: <title>` or `What if: <premise> (fiction)`.
+   It counts against `reelCap`. A what-if is a premise played straight, never a claim about the real world.
+2. **A kept real reel -> the full cut** (`reel-cut`), from `## Reels to cut` in the taste brief: `[{fromReel:
+   "<night>/<c-id>", seconds}]`, 30-120 s, sized by how many beats the data really holds (a race of 20 dated
+   accelerators earns 60-90 s; five earn 30). The strip is re-authored at that length and rendered to mp4.
+
+Both are queued, never driven here; `reel <night> --collect` brings detached ones in.
 
 ### 6. Discover - your judgement, the night's quality
 
@@ -576,13 +620,19 @@ reason must say which it was (2026-10-22 rehearsal: a night closed at 15 rows by
 `sources-exhausted`).
 `npx tsx pipeline/scout.mts close <night> [--stop <reason>]` - it prints the packet id and the counts.
 
+**With a plan queue and time left, do not close.** End your turn after step 12 with the night open: the worker's
+`night-fill` timer drains the queue and closes the night at `--until`. Close it yourself only for a reason that
+ends the night now - a refused launch for money, three consecutive failures, nothing left worth studying - and
+only after the queue is empty or no longer worth running.
+
 ### 12. The night summary - for the operator, not about yourself
 
 Append to `.vault/Scout/nights.md` (create it): the date, the night id, the packet link
 `/board/pkt:scout:<night>`, counts by kind, Gemini settled and held USD and the uncapped line, the stop
 reason, `leads: N filed, M queued` (step 0, and `leads --json`), `seeds: batch <id> · N (C children,
 F fresh) · /board/pkt:seeds:<batch>`, `ideas: N drawn across G genres from S seeds, K kept ideas developed`,
-`storyboards: N composed (F frames, T trials across G genres)`, `pieces: N cut`, `proposals: N genres, V ventures`, `music: N tracks, V visualizers`, `directions: N proposed`, and at most three
+`storyboards: N composed (F frames, T trials across G genres)`, `pieces: N cut`, `plan: N queued (K kinds)`,
+`reels: N on real data, C cut`, `proposals: N genres, V ventures`, `music: N tracks, V visualizers`, `directions: N proposed`, and at most three
 lines of what the night could not do (a source that refused, a doctor line). No narration of your process.
 
 ## /scout seeds [--dry]
@@ -617,8 +667,8 @@ interrupted job ids.
 - Do not edit `night.json`, `styles.json` or a PATTERNS.md by hand.
 - Do not push. Do not stage anything in step 0 but `knowledge/` and `.ai/registry-leads.jsonl`.
 - Do not re-read a source the doctor or the ingest refused through another tool.
-- Do not research a stats idea's real data on the night that proposes it, and never send a brief that is
-  not `illustrative: true`.
+- Do not research a stats idea's real data on the night that proposes it, and never send an ideas-door brief
+  that is not `illustrative: true`: real data goes through `reel`, for a KEPT idea only.
 - **Do not run a full-video act for an idea without a kept storyboard** - the idea must be under
   `## Ready for full video` in the taste brief (lib/foundry/scout/storyboard.ts `keptStoryboardFor`), and
   the act names that storyboard. A scene clip is not a full video and stays ungated.

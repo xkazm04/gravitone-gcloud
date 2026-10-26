@@ -214,3 +214,6 @@ run 3's clusters + run 2's rows are complementary evidence over the same gallery
   the suno line unless `--tracks` > 0 is accepted. The paused music seeds keep their doors shut, so the night ran on the
   default cap with the doctor's one expected FAIL. Argues pipeline/scout.mts `num` accepting 0 for caps (tracks, visualizers)
   and the doctor skipping suno at tracks 0.
+- 2026-10-26 (spark scout-vision S6): stills are studio-first now, but `.env.local` still carried
+  `SCOUT_REPLICA_GENERATOR=comfy-flux2` from the night the API pool ran dry (line 199 above). That line overrides
+  the new default: remove it (or set `leonardo-studio`) for studio-first; leave it only to keep scenes on local Flux.
