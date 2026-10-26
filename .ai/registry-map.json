@@ -7331,7 +7331,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_landing/cosmos/engine/sceneSpec.ts:59 The overview declares seven infinite sway sheets, a drifting cloud bank, a pulsing lamp and a bob on every medallion. The surface has no visible stop control, the ambient travel is far past the budget, and the reduced-motion flag the scripted loops read is a snapshot taken at boot.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "video-assembly",

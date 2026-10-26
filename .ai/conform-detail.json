@@ -13479,6 +13479,73 @@
           "evidence": "packages/producers/src/publish/metrics.ts:19 This context only appends lifetime snapshots. Deltas, and any decision to announce a change, live in @gt/domain/publication, which is outside this context."
         }
       ]
+    },
+    "076622f1-4906-4cdc-9a76-307df47fdd14/motion": {
+      "context": "landing-cosmos-scenes",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:21:25.143Z",
+      "worker": "a4455aff-70b2-4aba-aa34-609242138654",
+      "techniques": [
+        {
+          "technique": "unprompted-motion-lifecycle",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/sceneSpec.ts:59 The sway loops (46-124 s periods, infinite alternate per cosmos.css:78) start on their own and run indefinitely. A search of app/_landing for pause/stop/aria-pressed found no visible, operable stop; only the OS preference and machine pauses (hidden tab, off-screen) suspend them. The pointer parallax is value-driven with clamped travel, so it is exempt."
+        },
+        {
+          "technique": "taste-budgets",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/sceneSpec.ts:28 The ambient drift travels ±4% of viewport width (about ±77 px at 1920), and the sway rotates large discs by up to about 4.9 deg, against a bound of a few pixels. About 9 ambient instances plus one bob per medallion run at once (more than fit on one hand). The medal bob (±3-4 px) and the 900 ms stagger cap are within budget."
+        },
+        {
+          "technique": "reduced-motion-mechanics",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:32 cx.RM comes from perf.ts:99 matchMedia(...).matches, read once in index.ts:104, and no change listener exists. A preference turned on mid-session stops the CSS loops through the live media query, but the scripted parallax and carousel glide keep their boot-time copy. The fallbacks themselves are well designed: loops go still, transitions collapse to .15s rather than to zero, and the carousel snaps."
+        },
+        {
+          "technique": "loop-pause-governance",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:53 wirePause merges hidden-tab and off-screen into one root .paused class, but only CSS reads it. The scripted camera loop re-derives visibility from document.hidden itself and ignores the off-screen decider. setLook/frameReq also restart frames while paused, which contradicts the header's claim that the frame loop stops. There is no user-stop decider."
+        },
+        {
+          "technique": "performance-discipline",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:20 Frame values are written straight to element style (transform/opacity) outside React, on one shared rAF loop (life.ts Life.want/tick) that idles when no step wants a frame. The timestep is clamped per step (camera.ts:29, carousel.ts:41)."
+        },
+        {
+          "technique": "engine-selection",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/life.ts:14 Ambient and fire-and-forget motion runs on platform keyframes and transitions. The one owned scripted loop carries the retargetable, input-steered gestures (parallax, drag, carousel glide). No third-party animation library with a global switch is involved."
+        },
+        {
+          "technique": "gesture-decomposition",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:41 The camera is split into independent tracks: pointer look (approach k=.085), drag offset (decay .9, held while dragging) and wheel dolly (decays only after 800 ms idle). Each has its own curve and its own input axis."
+        },
+        {
+          "technique": "one-shot-guarding",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/scene.ts:133 A rebuild (resize or tier change) marks the planes and medallions .in before the new stack is connected (scene.ts:136), so the entrance does not replay. The boot mount is the only cause of the entrance, which works as a structural reset; the header states it (scene.ts:20-23)."
+        },
+        {
+          "technique": "content-bearing-degradation",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/scene.ts:98 A raster job that fails or is dropped resolves null (raster.ts run/drainMain catch), so Promise.all still settles and the plane is revealed rather than left armed. The hidden start state applies only to JS-built nodes, and the reduced-motion boot path calls showAll."
+        },
+        {
+          "technique": "continuity-across-change",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/carousel.ts:323 Opening a template passes the card face's rect so the stage art FLIPs out of the card (one identity). Carousel cards stay mounted and only their transform changes. Caveat: the reduced form in stage.ts:109 keeps the match with a .01s tween rather than withdrawing the identity, which is outside this context."
+        },
+        {
+          "technique": "preset-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/cosmos.css:4 The landing's motion is declared bespoke private choreography (taken from the contest design, not the kit), which the technique allows outside the shared vocabulary. Its taste numbers (e.g. medalLayer.ts:19 stagger 55/900) are inline rather than named constants."
+        }
+      ],
+      "registryProposal": "reduced-motion-mechanics could name the split-liveness case directly: a CSS media query that stays live alongside a scripted flag sampled once yields a half-reduced surface after a mid-session toggle, and each half looks correct on its own."
     }
   }
 }
