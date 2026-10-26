@@ -16,13 +16,13 @@ import { IDEA_TITLE_MAX, type NightId } from "./types.ts";
 // lib/text/router.ts). A draft is NEVER a candidate and never on the Board: it is raw material the next night's
 // seat reads (the taste brief's `## Drafts from the night`, ./tasteDrafts.ts) and may build on or drop.
 //
-// THE LANE. lane.capacity.ts has no local-text lane; the model shares the card with ComfyUI, so a draft waits for
-// gpu.local to be idle (below).
+// THE LANE. lane.capacity.ts has no local-text lane, so a draft waits for `seat.text` (its Claude fallback's lane, four
+// slots). Not gpu.local: on 2026-10-26 the GPU lane held ~36 queued Flux jobs all night, so a draft queued there would
+// never have run; and the card had room - ComfyUI read 59 of 110 GB VRAM free with Flux loaded, qwen3.8:27b is 17 GB.
+// Measure that night's load before narrowing this again.
 
 export const DRAFT_TURN: TurnClass = "draft";
-// Director, S6 integration: qwen3.8:27b is 17 GB of VRAM, and loaded beside a
-// ComfyUI render it would starve both; the night-fill launches only onto an idle lane, so this keeps them apart.
-export const DRAFT_LANE: ResourceLane = "gpu.local";
+export const DRAFT_LANE: ResourceLane = "seat.text";
 /** A draft's prompt: room for a brief and its context, not a corpus. */
 export const DRAFT_PROMPT_MAX = 8_000;
 /** How long one draft may take before the tick gives up on it (a 27B model on this box, a long answer). */
