@@ -36,9 +36,10 @@ export function runsOf(cells: readonly Cell[], rows: readonly RowWords[]): Run[]
  * frames and its words, one run judged whole (spark scout-storyboards) - has a tab of its own. `genres` - a night's
  * proposals to birth a genre or a venture, words (spark scout-vision S2) - sit with the ideas; `pieces` - a genre's
  * cut video - with the videos; `sheets` - a kept character's reference sheet, one still (spark scout-vision S3) - with
- * the images.
+ * the images; `reels` - a kept stats idea's 8 s strip on real data, its frame 120 (spark scout-vision S5) - with the
+ * images, and `reel cuts` - a kept reel cut in full - with the videos.
  */
-export const CATEGORIES = ["art styles", "sheets", "videos", "pieces", "music", "3d", "ideas", "storyboards", "genres", "seeds", "notes", "sources", "other"] as const;
+export const CATEGORIES = ["art styles", "sheets", "reels", "videos", "pieces", "reel cuts", "music", "3d", "ideas", "storyboards", "genres", "seeds", "notes", "sources", "other"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 const isCategory = (g: string): g is Category => (CATEGORIES as readonly string[]).includes(g);
@@ -73,10 +74,12 @@ export type Tab = (typeof TABS)[number];
 const TAB_OF: Readonly<Record<Category, Tab>> = {
   "art styles": "images",
   sheets: "images",
+  reels: "images",
   "3d": "images",
   other: "images",
   videos: "videos",
   pieces: "videos",
+  "reel cuts": "videos",
   music: "audio",
   ideas: "ideas",
   storyboards: "storyboards",

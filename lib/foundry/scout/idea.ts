@@ -238,8 +238,8 @@ export const ideasUsed = (n: Pick<Night, "candidates">): number => n.candidates.
 
 export const ideaCapOf = (n: Pick<Night, "ideaCap">): number => n.ideaCap ?? DEFAULT_IDEA_CAP;
 
-/** Stats ideas the night holds, whatever became of them. */
-export const reelsUsed = (n: Pick<Night, "candidates">): number => n.candidates.filter((c) => c.kind === "idea" && isReel(c)).length;
+/** Stats ideas the night holds, whatever became of them - and its real reels and their cuts (spark scout-vision S5: one cap). */
+export const reelsUsed = (n: Pick<Night, "candidates">): number => n.candidates.filter((c) => (c.kind === "idea" && isReel(c)) || c.kind === "reel" || c.kind === "reel-cut").length;
 
 export const reelCapOf = (n: Pick<Night, "reelCap">): number => n.reelCap ?? DEFAULT_REEL_CAP;
 

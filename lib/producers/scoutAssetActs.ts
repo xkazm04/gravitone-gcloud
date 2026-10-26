@@ -13,6 +13,7 @@ import { meteredCall } from "@gt/producers/research/metered";
 import type { AssetPorts, AssetRequest } from "@gt/producers/scout-asset/define";
 
 import { ImagingError } from "../imaging/errors.ts";
+import { studioShaped } from "../imaging/studio/still.ts";
 import type { GeneratedImages, GenerateRequest, ImageRef } from "../imaging/types.ts";
 import { admitsMesh, inputGate, type Decode } from "../foundry/mesh/inputGate.ts";
 import { assetDir, createAsset, resolveInAsset } from "../foundry/mesh/store.ts";
@@ -20,7 +21,8 @@ import { TECHNIQUES, type GateResult, type MeshAsset, type MeshVariant, type Tec
 import { readAssetNow } from "../foundry/mesh/variant.ts";
 import { FoundryError } from "../foundry/runStore.ts";
 import { assetConceptName, assetIdFor, conceptFile, conceptIndexOf, standConcept } from "../foundry/scout/concept.ts";
-import { REPLICA_NEGATIVE, replicaGenerator } from "../foundry/scout/scene.ts";
+import { REPLICA_NEGATIVE } from "../foundry/scout/scene.ts";
+import { generatorOnLane } from "../foundry/scout/stillEngine.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
 import type { Asset3dCandidate, Night } from "../foundry/scout/types.ts";
 import { imageFailure } from "./frames.ts";
@@ -84,12 +86,13 @@ async function conceptAct(e: AssetEngines, req: AssetRequest, k: number, ctx: St
   const { c } = await load(req);
   const ask = req.concepts[k - 1];
   if (ask === undefined) return fatal("internal", `${c.id} has no concept ${k} on its request`);
-  const gen: GenerateRequest = { prompt: ask.prompt, negativePrompt: CONCEPT_NEGATIVE, aspect: ask.aspect, count: 1, prefer: replicaGenerator(), seed: k };
+  // The engine is the lane's (stillEngine.ts `generatorOnLane`), shaped for the studio when it draws (Low, a radio's aspect, a prompt that fits).
+  const gen: GenerateRequest = studioShaped({ prompt: ask.prompt, negativePrompt: CONCEPT_NEGATIVE, aspect: ask.aspect, count: 1, prefer: generatorOnLane(ctx.job.lane), seed: k });
   const got = await meteredCall<{ images: ImageRef[]; provenance?: GeneratedImages["provenance"] }>(ctx, {
     provider: "imaging-router",
     model: "generate",
     // No `references`: a concept is drawn from the brief's words alone.
-    payload: { prompt: gen.prompt, negativePrompt: gen.negativePrompt, aspect: gen.aspect, count: gen.count, prefer: gen.prefer, seed: gen.seed },
+    payload: { prompt: gen.prompt, negativePrompt: gen.negativePrompt, aspect: gen.aspect, count: gen.count, prefer: gen.prefer, seed: gen.seed, ...(gen.quality === undefined ? {} : { quality: gen.quality }) },
     estimate: req.estimates.concept,
     stand: () => ({ images: [{ base64: standConcept(c.brief.class, ask.design).toString("base64"), mime: "image/png" }] }),
     live: async () => {

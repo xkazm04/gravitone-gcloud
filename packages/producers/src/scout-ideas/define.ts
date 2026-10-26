@@ -40,6 +40,11 @@ export const ideaStep = (k: number): string => `idea:${k}`;
 /** What a studio step costs instead of dollars (kernel job-core `MissingStep.credit`). */
 export const STUDIO_CREDIT = "studio credits, prepaid";
 
+/** A step's `credit` when its estimate is a studio still's (unpriced for STUDIO_CREDIT), else nothing: any
+ *  other unpriced estimate still stops under a ceiling (kernel job-core `next`). */
+export const studioCredit = (e: { readonly usd: number | null; readonly unpricedReason?: string }): { readonly credit?: string } =>
+  e.usd === null && e.unpricedReason === STUDIO_CREDIT ? { credit: STUDIO_CREDIT } : {};
+
 const id = z.string().min(1).max(200);
 
 /** The most ideas one scout-wing request draws (lib/foundry/scout/types.ts MAX_IDEA_CAP). */

@@ -401,5 +401,7 @@ export async function tasteBrief(except?: string, loadOf?: (n: Night) => LoadSum
   const seeds: TasteSeeds = { batches: await listSeedBatches(), steer: await readSteer().catch(() => EMPTY_STEER) };
   // Every night of both roots, the open and the uncommitted too: a card thrown last night is a name the next author must not draw again.
   const all = [...(await characterSections(await readRootedNights())), ...(extra ?? [])];
+  all.push(...(await (await import("./tasteDrafts")).draftsSection(nights)));
+  all.push(...(await import("./reelTaste")).reelsToCut(nights));
   return tasteOf(nights, last, { seeds, extra: all });
 }

@@ -24,7 +24,8 @@ function sentence(body: string, status: number): string {
   return `HTTP ${status}`;
 }
 
-async function probe(fetchFn: KeyFetch, url: string, headers: Record<string, string>, key: string, okWord: (body: string) => string): Promise<KeyProbe> {
+/** One read-only GET with the key in a header; `okWord` reads an accepted body (studio/balance.ts reads the API pool with it). */
+export async function probeWith(fetchFn: KeyFetch, url: string, headers: Record<string, string>, key: string, okWord: (body: string) => string): Promise<KeyProbe> {
   try {
     const res = await fetchFn(url, { method: "GET", headers, signal: AbortSignal.timeout(15_000) });
     const body = await res.text();
@@ -37,12 +38,12 @@ async function probe(fetchFn: KeyFetch, url: string, headers: Record<string, str
 
 /** GOOGLE_AI_API_KEY against the Gemini model list. */
 export function probeGoogle(key: string, fetchFn: KeyFetch = fetch as unknown as KeyFetch): Promise<KeyProbe> {
-  return probe(fetchFn, "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1", { "x-goog-api-key": key }, key, () => "accepted (model list)");
+  return probeWith(fetchFn, "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1", { "x-goog-api-key": key }, key, () => "accepted (model list)");
 }
 
 /** LEONARDO_API_KEY against the account it belongs to. */
 export function probeLeonardo(key: string, fetchFn: KeyFetch = fetch as unknown as KeyFetch): Promise<KeyProbe> {
-  return probe(fetchFn, "https://cloud.leonardo.ai/api/rest/v1/me", { authorization: `Bearer ${key}`, accept: "application/json" }, key, (body) => {
+  return probeWith(fetchFn, "https://cloud.leonardo.ai/api/rest/v1/me", { authorization: `Bearer ${key}`, accept: "application/json" }, key, (body) => {
     try {
       const u = (JSON.parse(body) as { user_details?: Record<string, unknown>[] }).user_details?.[0] ?? {};
       const credits = Object.entries(u)

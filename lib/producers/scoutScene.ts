@@ -20,18 +20,19 @@ import type { Reader, Store } from "@gt/kernel/store";
 import { DEFAULT_CALL_ESTIMATE_USD } from "@gt/producers/extract/units";
 import { defineScoutScene, parseSceneRequest, SCENE_REQUEST, SCOUT_SCENE, type SceneRequest } from "@gt/producers/scout-scene/define";
 
-import { PRICES } from "../imaging/pricing.ts";
 import { generate, recognize } from "../imaging/router.ts";
 import { LTX_DEFAULTS, LTX_MODEL, renderLtxClip } from "../imaging/video/comfyLtx.ts";
 import { gateHoldUsd } from "../imaging/video/pricing.ts";
 import { kernel } from "../kernelProcess.ts";
 import { FoundryError } from "../foundry/runStore.ts";
 import { pickFrames, SCENE_REPLICAS } from "../foundry/scout/scene.ts";
+import { replicaGenerator, stillLane, type ReplicaGenerator } from "../foundry/scout/stillEngine.ts";
 import { mutateNight, readNightNow, withCandidate } from "../foundry/scout/store.ts";
 import { CLIP_SECONDS, type CandidateId, type Night, type NightId, type SceneCandidate } from "../foundry/scout/types.ts";
 import { checkCandidate, CLIP_ENGINES, sceneActs, type ClipEngine, type SceneEngines } from "./scoutSceneActs.ts";
 import { effectsFor } from "./extract.ts";
 import { LIVE_MOTION, type ClipRequest, type RenderedClip } from "./motion.ts";
+import { scoutStillOption } from "./scoutStillOption.ts";
 
 // THE SCOUT SCENE PRODUCER, BOUND (spark media-training-loop WP2) - a scene candidate's acts as
 // one kernel job (packages/producers/src/scout-scene/define.ts says why one job and which lane):
@@ -45,9 +46,11 @@ import { LIVE_MOTION, type ClipRequest, type RenderedClip } from "./motion.ts";
 //   read-scene       one recognize per keyframe (3-5). gemini-3.6-flash is UNPRICED in the kernel
 //                    table (its per-token rate is unread); a call is admitted at extract's $0.002
 //                    pre-call estimate and booked at what the router reports.
-//   replicate-scene  two GPT Image 2.5 Flare stills on Leonardo (lib/foundry/scout/scene.ts
-//                    `replicaRequest` prefers `leonardo-flare`), LOW, at lib/imaging/pricing.ts's
-//                    per-image fallback ($0.01542, 6 credits); the API's reported credits win.
+//   replicate-scene  two stills by the night's still engine (lib/foundry/scout/stillEngine.ts,
+//                    SCOUT_REPLICA_GENERATOR), priced by it (./scoutStillOption.ts): the Leonardo
+//                    studio at Low by default, UNPRICED (prepaid studio credits, 8 a still); Flare at
+//                    lib/imaging/pricing.ts's per-image fallback ($0.01542, 6 credits; the API's
+//                    reported credits win); local Flux 2 free.
 //   render-clip      by `SCOUT_CLIP_ENGINE` (operator, 2026-10-22: video on a LOCAL model, tagged free):
 //                    `ltx-local` (the default) - LTX-2.5 distilled through the ComfyUI on this box
 //                    (lib/imaging/video/comfyLtx.ts), $0, no spend row, and the whole job waits on
@@ -63,9 +66,13 @@ import { LIVE_MOTION, type ClipRequest, type RenderedClip } from "./motion.ts";
 // ONE JOB, ITS LANE THE SCARCE HALF'S. A local clip makes the card the scarce thing, so the
 // scene's reads and stills run under the gpu.local slot too - a minute or two of cloud calls
 // while the card idles, against splitting a candidate into two jobs that the night, the budget
-// and the Board would all have to learn to pair. The lane names the engine: the clip act renders
-// locally on gpu.local and on Leonardo anywhere else, so the request carries no second field to
-// drift from it.
+// and the Board would all have to learn to pair. Without one, the stills are the scarce half and
+// the job waits on their engine's lane (stillEngine.ts `stillLane`): box.chrome for the studio,
+// gpu.local for local Flux (admitted by the comfy profile, never drawn from a cloud lane),
+// cloud.leonardo for Flare. Studio stills inside a gpu.local job share the tab through the studio
+// lock (lib/imaging/studio/lock.ts). The lane names the engines: the clip act renders locally on
+// gpu.local and on Leonardo anywhere else, and the still act reads the lane first, so the request
+// carries no second field to drift from it.
 
 export type SceneTarget = { readonly nightId: NightId; readonly candidateId: CandidateId };
 
@@ -81,6 +88,8 @@ export type LaunchSceneOptions = {
   readonly dryOnly: boolean;
   /** Absent: `SCOUT_CLIP_ENGINE` (default `ltx-local`). */
   readonly clipEngine?: ClipEngine;
+  /** Absent: `SCOUT_REPLICA_GENERATOR` (default `leonardo-studio`). */
+  readonly generator?: ReplicaGenerator;
   readonly now?: number;
 };
 
@@ -105,12 +114,13 @@ export function clipEngineFrom(env: Readonly<Record<string, string | undefined>>
  * Every lane a scene job can wait on: the worker binds the producer on each. cloud.google stays
  * bound for a scene enqueued before the stills moved to Leonardo (2026-10-22); nothing new goes there.
  */
-export const SCOUT_SCENE_LANES: readonly ResourceLane[] = ["cloud.google", "cloud.leonardo", "gpu.local"];
+export const SCOUT_SCENE_LANES: readonly ResourceLane[] = ["cloud.google", "cloud.leonardo", "gpu.local", "box.chrome"];
 /**
- * The lane of the scarce half: the card for a local clip; otherwise Leonardo's, whose Flare stills
- * (and a hosted clip) outweigh the Gemini reads by an order of magnitude.
+ * The lane of the scarce half: the card for a local clip; otherwise the stills' engine's
+ * (stillEngine.ts `stillLane`), whose stills (and a hosted clip) outweigh the Gemini reads.
  */
-export const sceneLane = (clip: boolean, engine: ClipEngine = "ltx-local"): ResourceLane => (clip && engine === "ltx-local" ? "gpu.local" : "cloud.leonardo");
+export const sceneLane = (clip: boolean, engine: ClipEngine = "ltx-local", generator: ReplicaGenerator = replicaGenerator()): ResourceLane =>
+  clip && engine === "ltx-local" ? "gpu.local" : stillLane(generator);
 
 const READ_SECONDS = 20;
 const CLIP_WAIT_SECONDS = 180;
@@ -131,28 +141,6 @@ function readOption(lane: ResourceLane): ModelOption {
     src: "illustrative",
     basis: { seconds: { src: "illustrative", note: "assumed: one recognize call, extract's 20 s" }, usd: { src: "illustrative", note } },
   };
-}
-
-/** Seconds one Flare still takes: the 2026-10-22 smoke's 15 s, with a poll's slack. */
-const STILL_SECONDS = 20;
-
-/** A replica still on GPT Image 2.5 Flare: the router's `leonardo-flare` row, priced at its per-image fallback. */
-function stillOption(lane: ResourceLane): Result<ModelOption> {
-  const model = TABLES.image.candidates.find((c) => c.provider === "leonardo-flare")?.models["generate"];
-  const price = PRICES.find((p) => p.provider === "leonardo-flare" && p.model === model)?.usdPerImage;
-  if (model === undefined || price === undefined) return err("internal", "the router table or the price table has no leonardo-flare row to price a replica still with");
-  const note = `the per-image fallback (6 credits at USD_PER_CREDIT 0.00257); measured 15 s / 6 credits at LOW 1376x768, 2026-10-22 smoke; the API's reported credits replace it when booked`;
-  return ok({
-    key: `scout-scene/leonardo-flare/${model}`,
-    lane,
-    provider: "leonardo-flare",
-    model,
-    label: "replica still",
-    secondsPerUnit: STILL_SECONDS,
-    usdPerUnit: price,
-    src: "illustrative",
-    basis: { seconds: { src: "illustrative", note: "one LOW still, measured 15 s on 2026-10-22, with a poll's slack" }, usd: { src: "illustrative", note } },
-  });
 }
 
 function clipOption(lane: ResourceLane, engine: ClipEngine): ModelOption {
@@ -194,7 +182,7 @@ const estimateOf = (o: ModelOption): SceneRequest["estimates"]["read"] =>
 
 type Unsigned = Omit<SceneRequest, "by">;
 type Read = { readonly receipt: Receipt; readonly request: Unsigned; readonly lane: ResourceLane };
-type ReadAsk = { readonly mode: ReceiptMode; readonly clip: boolean; readonly engine: ClipEngine; readonly ceilingUsd: number; readonly now: number };
+type ReadAsk = { readonly mode: ReceiptMode; readonly clip: boolean; readonly engine: ClipEngine; readonly generator: ReplicaGenerator; readonly ceilingUsd: number; readonly now: number };
 
 function nightOf(id: NightId): Result<Night> {
   try {
@@ -212,9 +200,13 @@ function readIn(r: Reader, t: SceneTarget, o: ReadAsk): Result<Read> {
   const c = checkCandidate(night.value, t.candidateId, o.mode);
   if (!c.ok) return c;
   const keyframes = pickFrames(c.value.keyframes);
-  const lane = sceneLane(o.clip, o.engine);
+  // A hosted clip runs off the card and local Flux runs on it: no one lane holds both (the clip act reads
+  // gpu.local as LTX), so the pair is refused rather than rendered on an engine the receipt did not price.
+  if (o.clip && o.engine === "hailuo" && o.generator === "comfy-flux2")
+    return err("refused", `scene ${night.value.id}/${c.value.id}: comfy-flux2 replicas and a hailuo clip share no lane; set SCOUT_CLIP_ENGINE=ltx-local or SCOUT_REPLICA_GENERATOR to a Leonardo engine`);
+  const lane = sceneLane(o.clip, o.engine, o.generator);
   const read = readOption(lane);
-  const still = stillOption(lane);
+  const still = scoutStillOption("scout-scene", "replica still", lane, o.generator);
   if (!still.ok) return still;
   const clip = clipOption(lane, o.engine);
   // The key names the candidate AT its keyframes: a candidate whose keyframes moved since the
@@ -290,7 +282,7 @@ export async function launchScene(store: Store, target: SceneTarget, opts: Launc
   if (held !== undefined && !FINISHED.has(held.state)) return ok({ kind: "existing", jobId: held.id, state: held.state });
   const engine = opts.clipEngine === undefined ? clipEngineFrom() : ok(opts.clipEngine);
   if (!engine.ok) return engine;
-  const ask: ReadAsk = { mode: opts.mode, clip: opts.clip, engine: engine.value, ceilingUsd: opts.ceilingUsd, now };
+  const ask: ReadAsk = { mode: opts.mode, clip: opts.clip, engine: engine.value, generator: opts.generator ?? replicaGenerator(), ceilingUsd: opts.ceilingUsd, now };
   const first = store.read((r) => readIn(r, target, ask));
   if (!first.ok) return first;
   if (!first.value.ok) return first.value;

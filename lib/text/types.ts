@@ -27,7 +27,7 @@
 
 /** Every text provider this app knows how to reach. A closed union so a typo is
  *  a type error rather than a silent skip in the plan table. */
-export const TEXT_PROVIDER_IDS = ["claude-cli", "google", "claude-cli-retrieve"] as const;
+export const TEXT_PROVIDER_IDS = ["claude-cli", "google", "claude-cli-retrieve", "ollama"] as const;
 export type TextProviderId = (typeof TEXT_PROVIDER_IDS)[number];
 
 /**
@@ -208,6 +208,11 @@ export interface SourceReceipt {
  *                        it into `research` or `edit-plan` could not say how much
  *                        a validator costs. Flash-class: it edits a given object,
  *                        it does not author one.
+ *   · `draft`            lib/foundry/scout (the night-fill's `draft` items) — a
+ *                        prompt in, a markdown draft out that is never a
+ *                        candidate and never on the Board. The one turn the
+ *                        local Ollama model answers first (spark scout-vision
+ *                        S6): a draft is worth writing only because it is free.
  */
 export type TurnClass =
   | "edit-plan"
@@ -224,6 +229,7 @@ export type TurnClass =
   | "ad-ideas"
   | "ad-scenarios"
   | "repair"
+  | "draft"
   | "probe";
 
 /**
@@ -234,8 +240,10 @@ export type TurnClass =
  *   · `cloud-api` a metered HTTP endpoint. The prompt crossed the network to a
  *     vendor, which is a fact a creator working on unpublished material is
  *     entitled to see.
+ *   · `local-daemon` an HTTP daemon on this machine (Ollama), billed to nobody.
+ *     The prompt crossed a socket, not the host's edge.
  */
-export type TextTransport = "local-subprocess" | "cloud-api";
+export type TextTransport = "local-subprocess" | "cloud-api" | "local-daemon";
 
 /**
  * WHICH RUNG OF THE FALLBACK LADDER SERVED.

@@ -50,6 +50,8 @@ import {
 } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
 import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, PROPOSAL_REJECTED, STORYBOARD_VERDICT, bornLine, build, commitOf, extractDecisions, ideaCell, meshKey, pieceCell, pieceVerdictLine, sameOutcome, sheetCellOf, sheetVerdictLine, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { reelCutVerdictLine, reelVerdictLine } from "./scoutReelCells.ts";
+import { reelCell, reelCutCell } from "../../../foundry/scout/reelTaste.ts";
 import { musicOf } from "./scoutMusic.ts";
 import { nightRefusal, partOfBuilt, partWords, settledPart, withPart } from "./scoutPart.ts";
 import { inWing, isCharacter, keptTechnique, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta, partOfRun } from "./scoutWing.ts";
@@ -211,7 +213,7 @@ async function read(ref: AdapterRef, storeOf: () => Result<Store>): Promise<Resu
           return fromV1(e);
         }
       }
-    } else if (c.kind === "track" || c.kind === "visualizer" || c.kind === "storyboard" || c.kind === "piece" || c.kind === "sheet") {
+    } else if (c.kind === "track" || c.kind === "visualizer" || c.kind === "storyboard" || c.kind === "piece" || c.kind === "sheet" || c.kind === "reel" || c.kind === "reel-cut") {
       // Every cell file must be listed here, or media misses it: a storyboard's frames and a trial's clips too (a failed
       // panel or clip is null), a piece's cut, and a character's reference sheet (spark scout-vision S3).
       const own =
@@ -221,8 +223,10 @@ async function read(ref: AdapterRef, storeOf: () => Result<Store>): Promise<Resu
             ? [...(c.images ?? []).map((f) => f ?? undefined), ...(c.clips ?? []).map((x) => x?.path)]
             : c.kind === "piece"
               ? [c.video]
-              : c.kind === "sheet"
+              : c.kind === "sheet" || c.kind === "reel"
                 ? [c.image]
+                : c.kind === "reel-cut"
+                  ? [c.video]
                 : [c.video, c.still];
       try {
         for (const f of own) if (f !== undefined) files.push({ key: f, abs: locate(f) });
@@ -417,6 +421,11 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
       const cell = sheetCellOf(c.id);
       const d = byCell.get(cell)?.verdict;
       if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: sheetVerdictLine(c, d) });
+    } else if (c.kind === "reel" || c.kind === "reel-cut") {
+      // Kept, a reel makes its full cut due (taste `## Reels to cut`) and a cut is the output - derived from this record.
+      const cell = c.kind === "reel" ? reelCell(c.id) : reelCutCell(c.id);
+      const d = byCell.get(cell)?.verdict;
+      if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: c.kind === "reel" ? reelVerdictLine(d) : reelCutVerdictLine(d) });
     }
   }
   // What the keeps earn, over every part's keeps; a later part names only the leads it adds.

@@ -74,6 +74,10 @@ export const KEY_VAR: Record<TextProviderId, string | null> = {
   // separate id because it is a separate door (providers/claudeCliRetrieve.ts),
   // not because it holds a different credential.
   "claude-cli-retrieve": null,
+  // A local daemon: the "key" is its address, as lib/imaging/env.ts has it for
+  // the same Ollama. Set = this machine opted in; unset = the router steps over
+  // it with a no-key trail entry, which is right on a box that runs no daemon.
+  ollama: "OLLAMA_HOST",
 };
 
 /**

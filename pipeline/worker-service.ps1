@@ -43,6 +43,19 @@ function Invoke-Worker {
   $out = Join-Path $logs ("{0}.out.log" -f $stamp)
   $err = Join-Path $logs ("{0}.err.log" -f $stamp)
   Set-Location $repo
+  # The local eye and the night's drafts read OLLAMA_HOST (spark scout-vision S6). Unset, both route past the
+  # daemon - the eye fell to Gemini a whole night with Ollama installed (2026-10-26 digest). It defaults to the local
+  # daemon ONLY when that answers now: a set host with nothing behind it would fail a call before each re-route.
+  # Read once, at start: a daemon started later (pipeline/ollama-up.ps1) reaches this worker on its next start.
+  $ollama = "http://127.0.0.1:11434"
+  # Start the daemon first (Director, S6 integration): the worker reads the host once, so a daemon the night script
+  # starts later would never reach it.
+  try { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo "pipeline\ollama-up.ps1") | Out-Null } catch {}
+  if (-not $env:OLLAMA_HOST) {
+    try { Invoke-RestMethod -Uri "$ollama/api/tags" -TimeoutSec 3 | Out-Null; $env:OLLAMA_HOST = $ollama } catch {}
+  }
+  $ollamaNote = if ($env:OLLAMA_HOST) { "OLLAMA_HOST=$env:OLLAMA_HOST" } else { "OLLAMA_HOST unset (no daemon answered at $ollama)" }
+  Add-Content -Path $log -Encoding utf8 -Value ("[worker-service] {0} {1}" -f (Get-Date -Format "s"), $ollamaNote)
   Add-Content -Path $log -Encoding utf8 -Value ("[worker-service] {0} starting node workers/runner.mts in {1} (output {2})" -f (Get-Date -Format "s"), $repo, (Split-Path -Leaf $out))
   # Start-Process, not a native call: under 5.1 a native command's stderr through 2>&1 becomes error records,
   # which $ErrorActionPreference = Stop turns into a throw on the worker's first stderr line - and a cmd /c line

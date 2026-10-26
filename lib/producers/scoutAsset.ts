@@ -6,7 +6,7 @@ import type { Actor } from "@gt/domain/event";
 import { jobIdSchema } from "@gt/domain/ids";
 import type { Job } from "@gt/domain/job";
 import { LANE_CAPACITY, type ResourceLane } from "@gt/domain/lane";
-import type { ModelOption, Receipt, ReceiptMode } from "@gt/domain/produce";
+import type { Receipt, ReceiptMode } from "@gt/domain/produce";
 import { armLive, dryOnlyFrom, DRY } from "@gt/kernel/dryrun";
 import { append } from "@gt/kernel/events";
 import { queryEvents } from "@gt/kernel/events-query";
@@ -15,34 +15,36 @@ import type { Producer } from "@gt/kernel/job-core";
 import { runJob, type RunReport } from "@gt/kernel/job-run";
 import { readQueue } from "@gt/kernel/records/read";
 import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
-import { TABLES } from "@gt/kernel/router/tables";
 import type { Reader, Store } from "@gt/kernel/store";
 import { ASSET_REQUEST, defineScoutAsset, parseAssetRequest, SCOUT_ASSET, type AssetRequest } from "@gt/producers/scout-asset/define";
 
 import { conceptsFor } from "../foundry/scout/concept.ts";
+import { replicaGenerator, stillLane, type ReplicaGenerator } from "../foundry/scout/stillEngine.ts";
 import { readNightNow, mutateNight, withCandidate } from "../foundry/scout/store.ts";
 import type { Asset3dCandidate, CandidateId, Night, NightId } from "../foundry/scout/types.ts";
 import type { Technique } from "../foundry/mesh/types.ts";
 import { FoundryError } from "../foundry/runStore.ts";
-import { PRICES } from "../imaging/pricing.ts";
 import { generate } from "../imaging/router.ts";
 import { kernel } from "../kernelProcess.ts";
 import { assetActs, type AssetEngines } from "./scoutAssetActs.ts";
 import { effectsFor } from "./extract.ts";
+import { scoutStillOption } from "./scoutStillOption.ts";
 
 // THE SCOUT ASSET PRODUCER, BOUND (spark game-3d-assets WP4) - a night's `asset3d` candidate's
 // cloud half as one kernel job (packages/producers/src/scout-asset/define.ts says which steps and
 // why the hand-off is one). This file is the launch - receipt, then confirm - and the binding;
 // the acts are ./scoutAssetActs.ts, the prompts and the brief's door lib/foundry/scout/concept.ts.
 //
-// WHAT AN ASSET COSTS ON ITS RECEIPT: one line, `concept`, a GPT Image 2.5 Flare still per concept
-// (one, or two for a character whose T2 is asked) at lib/imaging/pricing.ts's per-image fallback -
-// the scene producer's replica price, the same vendor row (`leonardo-flare`, prefer-only in the
-// router, so a Flare refusal is the candidate's sentence and never a quiet second vendor's bill).
+// WHAT AN ASSET COSTS ON ITS RECEIPT: one line, `concept`, one still per concept (one, or two for a
+// character whose T2 is asked) by the night's still engine (lib/foundry/scout/stillEngine.ts,
+// SCOUT_REPLICA_GENERATOR), priced by it (./scoutStillOption.ts) - the scene replica's line: the
+// Leonardo studio at Low by default, unpriced (prepaid studio credits); Flare at its per-image
+// fallback; local Flux 2 free. Each is prefer-only in the router, so a refusal is the candidate's
+// sentence and never a quiet second vendor's bill.
 // The hand-off and everything after it - TRELLIS.2 through ComfyUI, the Blender finish - run on
 // this box and cost $0; they are the mesh store's jobs, admitted by resources, not by money.
 //
-// ONE JOB PER CANDIDATE AT A TIME, on cloud.leonardo: `job:scout-asset:<night>:<c-NN>`, `~2` after a
+// ONE JOB PER CANDIDATE AT A TIME, on its concepts' engine's lane (box.chrome, gpu.local or cloud.leonardo): `job:scout-asset:<night>:<c-NN>`, `~2` after a
 // failed one. night.json names it on the candidate and on `night.jobs` once the job exists.
 
 export type AssetTarget = { readonly nightId: NightId; readonly candidateId: CandidateId };
@@ -57,6 +59,8 @@ export type LaunchAssetOptions = {
   /** Absent: answer with the receipt and launch nothing. */
   readonly token?: string;
   readonly dryOnly: boolean;
+  /** Absent: `SCOUT_REPLICA_GENERATOR` (default `leonardo-studio`). */
+  readonly generator?: ReplicaGenerator;
   readonly now?: number;
 };
 
@@ -67,28 +71,10 @@ export type AssetLaunch =
   /** The candidate already has a job that is not finished: that job, never a second. */
   | { readonly kind: "existing"; readonly jobId: string; readonly state: Job["state"] };
 
+/** The lane an asset enqueued before S6 waits on, and Flare's (the concepts were Flare's alone until then). */
 export const SCOUT_ASSET_LANE: ResourceLane = "cloud.leonardo";
-
-/** Seconds one Flare still takes: the scene producer's measured 15 s, with a poll's slack. */
-const STILL_SECONDS = 20;
-
-function conceptOption(): Result<ModelOption> {
-  const model = TABLES.image.candidates.find((c) => c.provider === "leonardo-flare")?.models["generate"];
-  const price = PRICES.find((p) => p.provider === "leonardo-flare" && p.model === model)?.usdPerImage;
-  if (model === undefined || price === undefined) return err("internal", "the router table or the price table has no leonardo-flare row to price a concept with");
-  const note = "the per-image fallback (6 credits at USD_PER_CREDIT 0.00257), the scene replica's price; the API's reported credits replace it when booked";
-  return ok({
-    key: `scout-asset/leonardo-flare/${model}`,
-    lane: SCOUT_ASSET_LANE,
-    provider: "leonardo-flare",
-    model,
-    label: "concept still",
-    secondsPerUnit: STILL_SECONDS,
-    usdPerUnit: price,
-    src: "illustrative",
-    basis: { seconds: { src: "illustrative", note: "one LOW still, measured 15 s on 2026-10-22, with a poll's slack" }, usd: { src: "illustrative", note } },
-  });
-}
+/** Every lane an asset job can wait on - its concepts' engine's (stillEngine.ts `stillLane`): the worker binds the producer on each. */
+export const SCOUT_ASSET_LANES: readonly ResourceLane[] = ["cloud.leonardo", "box.chrome", "gpu.local"];
 
 /* ── The candidate a launch may price ─────────────────────────────────────── */
 
@@ -115,23 +101,24 @@ function nightOf(id: NightId): Result<Night> {
 /* ── The receipt ──────────────────────────────────────────────────────────── */
 
 type Unsigned = Omit<AssetRequest, "by">;
-type ReadAsk = { readonly mode: ReceiptMode; readonly ceilingUsd: number; readonly techniques: readonly Technique[]; readonly now: number };
+type ReadAsk = { readonly mode: ReceiptMode; readonly ceilingUsd: number; readonly techniques: readonly Technique[]; readonly generator: ReplicaGenerator; readonly now: number };
 
-function readIn(r: Reader, t: AssetTarget, o: ReadAsk): Result<{ readonly receipt: Receipt; readonly request: Unsigned }> {
+function readIn(r: Reader, t: AssetTarget, o: ReadAsk): Result<{ readonly receipt: Receipt; readonly request: Unsigned; readonly lane: ResourceLane }> {
   const night = nightOf(t.nightId);
   if (!night.ok) return night;
   const c = checkAssetCandidate(night.value, t.candidateId, o.mode);
   if (!c.ok) return c;
-  const option = conceptOption();
+  const lane = stillLane(o.generator);
+  const option = scoutStillOption("scout-asset", "concept still", lane, o.generator);
   if (!option.ok) return option;
   const concepts = conceptsFor(c.value.brief, o.techniques);
   // The key names the candidate AT its prompts: a brief that changed since the receipt is a different line.
   const at = `asset:${night.value.id}/${c.value.id}@${createHash("sha256").update(concepts.map((x) => x.prompt).join("\n")).digest("hex").slice(0, 12)}`;
-  const line: PlanLine = { key: `${at}/concept`, label: `concept · ${concepts.length} still(s)`, lane: SCOUT_ASSET_LANE, units: concepts.length, option: option.value, after: [], order: 0, status: "pending" };
+  const line: PlanLine = { key: `${at}/concept`, label: `concept · ${concepts.length} still(s)`, lane, units: concepts.length, option: option.value, after: [], order: 0, status: "pending" };
   const receipt = receiptFor({ subject: { kind: "run", lane: "image" }, lines: [line], plan: [line], queue: readQueue(r), capacity: LANE_CAPACITY, now: o.now, mode: o.mode, ceilingUsd: o.ceilingUsd });
   const p = option.value;
   const estimate = p.usdPerUnit === null ? { seconds: p.secondsPerUnit, usd: null, unpricedReason: p.unpricedReason ?? "unpriced" } : { seconds: p.secondsPerUnit, usd: p.usdPerUnit };
-  return ok({ receipt, request: { nightId: night.value.id, candidateId: c.value.id, concepts, techniques: [...o.techniques], estimates: { concept: estimate } } });
+  return ok({ receipt, request: { nightId: night.value.id, candidateId: c.value.id, concepts, techniques: [...o.techniques], estimates: { concept: estimate } }, lane });
 }
 
 /* ── Jobs of a candidate ──────────────────────────────────────────────────── */
@@ -168,7 +155,7 @@ export async function launchAsset(store: Store, target: AssetTarget, opts: Launc
   const prior = jobsOf(store, target);
   const held = prior.at(-1);
   if (held !== undefined && !FINISHED.has(held.state)) return ok({ kind: "existing", jobId: held.id, state: held.state });
-  const ask: ReadAsk = { mode: opts.mode, ceilingUsd: opts.ceilingUsd, techniques: opts.techniques, now };
+  const ask: ReadAsk = { mode: opts.mode, ceilingUsd: opts.ceilingUsd, techniques: opts.techniques, generator: opts.generator ?? replicaGenerator(), now };
   const first = store.read((r) => readIn(r, target, ask));
   if (!first.ok) return first;
   if (!first.value.ok) return first.value;
@@ -182,7 +169,7 @@ export async function launchAsset(store: Store, target: AssetTarget, opts: Launc
     if (read.value.receipt.token !== token) return ok({ kind: "stale", fresh: read.value.receipt });
     const mode = opts.mode === "dry" ? ok(DRY) : armLive(opts.actor, t.at, `asset receipt ${token.slice(0, 12)} confirmed`, { dryOnly: opts.dryOnly });
     if (!mode.ok) return mode;
-    enqueueIn(t, { id: jobId, of: { kind: "run", id: `scout:${target.nightId}/${target.candidateId}` }, producer: SCOUT_ASSET, lane: SCOUT_ASSET_LANE, mode: mode.value, ceilingUsd: opts.ceilingUsd }, opts.actor);
+    enqueueIn(t, { id: jobId, of: { kind: "run", id: `scout:${target.nightId}/${target.candidateId}` }, producer: SCOUT_ASSET, lane: read.value.lane, mode: mode.value, ceilingUsd: opts.ceilingUsd }, opts.actor);
     append(t, { actor: opts.actor, type: ASSET_REQUEST, subject: { kind: "job", id: jobId }, data: { ...read.value.request, by: opts.actor.id } });
     return ok({ kind: "launched", jobId, receipt: read.value.receipt });
   });
@@ -216,19 +203,25 @@ const processStore = (): Result<Store> => {
   return k.ok ? ok(k.value.store) : k;
 };
 
-export function scoutAssetProducer(o: { readonly store?: () => Result<Store>; readonly engines?: AssetEngines } = {}): Producer {
+/** The producer on one lane (absent: cloud.leonardo); the worker carries one per SCOUT_ASSET_LANES entry (lib/producers/registry.ts). */
+export function scoutAssetProducer(o: { readonly lane?: ResourceLane; readonly store?: () => Result<Store>; readonly engines?: AssetEngines } = {}): Producer {
   const store = o.store ?? processStore;
-  return defineScoutAsset(SCOUT_ASSET_LANE, {
+  const lane = o.lane ?? SCOUT_ASSET_LANE;
+  const p = defineScoutAsset(lane, {
     request: (job) => {
       const s = store();
       return s.ok ? assetRequestOf(s.value, job.id) : s;
     },
     ...assetActs(o.engines ?? LIVE_ASSET_ENGINES, store),
   });
+  // Concepts on the card are Flux 2 through ComfyUI: the job names the `comfy` engine so the worker
+  // ADMITS it by that engine's profile against the machine's load, like a storyboard's frames.
+  return lane === "gpu.local" ? { ...p, engine: "comfy" } : p;
 }
 
 /** Drive one asset job on this process (pipeline/scout.mts after a launch, a test): the worker's rules. */
 export function driveAsset(store: Store, location: string, jobId: string, o: { readonly dryOnly?: boolean; readonly engines?: AssetEngines } = {}): Promise<Result<RunReport>> {
-  const producer = scoutAssetProducer({ store: () => ok(store), ...(o.engines === undefined ? {} : { engines: o.engines }) });
+  const lane = jobOf(store, jobId)?.lane ?? SCOUT_ASSET_LANE;
+  const producer = scoutAssetProducer({ lane, store: () => ok(store), ...(o.engines === undefined ? {} : { engines: o.engines }) });
   return runJob(effectsFor(store, location), producer, jobId, { dryOnly: o.dryOnly ?? dryOnlyFrom(process.env) });
 }

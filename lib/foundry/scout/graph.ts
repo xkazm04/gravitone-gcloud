@@ -106,7 +106,7 @@ function stageKind(c: Candidate): { readonly stage: GraphStage; readonly kind: G
   if (c.kind === "idea") return { stage: "idea", kind: c.target === "stats" ? "reel" : c.target === "character" ? "character" : "idea" };
   if (c.kind === "visualizer") return { stage: "output", kind: "visualizer" };
   // A genre's piece (spark scout-vision S2): kept, it is the output a published video is made of.
-  if (c.kind === "piece") return { stage: "output", kind: "piece" };
+  if (c.kind === "piece" || c.kind === "reel-cut") return { stage: "output", kind: c.kind };
   // A kept idea composed as frames + words before any full video (spark scout-storyboards): its own column.
   if (c.kind === "storyboard") return { stage: "board", kind: "storyboard" };
   return { stage: "run", kind: c.kind };
@@ -248,14 +248,14 @@ export function graphOf(input: GraphInput): ScoutGraph {
       nodes.push({ id, ...stageKind(c), label, state, ...branch, ...(effort === undefined ? {} : { effort }), ...(venture === undefined ? {} : { venture }) });
 
       if (c.fromIdea !== undefined) links.push({ from: cand(c.fromIdea), to: id });
-      else if (c.fromSeed !== undefined && c.kind !== "visualizer") links.push({ from: `seed:${c.fromSeed}`, to: id });
+      else if (c.fromSeed !== undefined && c.kind !== "visualizer" && c.kind !== "reel-cut") links.push({ from: `seed:${c.fromSeed}`, to: id });
       if (c.kind === "direction" || c.kind === "genre" || c.kind === "venture") for (const ref of c.basedOn) {
         const from = cellNode(ref, inArchive);
         if (from !== undefined) links.push({ from, to: id });
       }
       if (c.kind === "finding" && c.restates !== undefined) links.push({ from: cand(c.restates), to: id });
       if (c.kind === "genre") links.push({ from: cand(c.fromStoryboard), to: id });
-      if (c.kind === "piece") links.push({ from: cand(c.fromTrial), to: id });
+      if (c.kind === "piece" || c.kind === "reel-cut") links.push({ from: cand(c.kind === "piece" ? c.fromTrial : c.fromReel), to: id });
       if (c.kind === "visualizer") {
         const [night, cid] = c.track.split("/");
         links.push({ from: cand(`${night ?? ""}/${cid ?? ""}`), to: id });

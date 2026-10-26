@@ -24,6 +24,7 @@ import path from "node:path";
 
 import { estimatePerImage } from "@/lib/imaging/pricing";
 import { generate, recognize } from "@/lib/imaging/router";
+import { studioShaped } from "@/lib/imaging/studio/still";
 import type { ImageRef } from "@/lib/imaging/types";
 import { reason } from "@/lib/text/router";
 
@@ -284,9 +285,10 @@ function liveIOBase(id: string): EngineIO {
     },
     async generate(prompt, negativePrompt, aspect, seed) {
       // The run's own steer, read off its manifest at the call (options.generator):
-      // absent, the router's plan decides; the served vendor lands on `engines` either way.
+      // absent, the router's plan decides; the served vendor lands on `engines` either way. A run that
+      // names the studio is drawn at Low, a 4:5 replica as 9:16, its prompt cut to the box (studio/still.ts).
       const prefer = readManifestNow(id).options.generator;
-      const g = await generate({ prompt, negativePrompt, aspect, count: 1, seed, ...(prefer === undefined ? {} : { prefer }) });
+      const g = await generate(studioShaped({ prompt, negativePrompt, aspect, count: 1, seed, ...(prefer === undefined ? {} : { prefer }) }));
       return { value: g.images[0], model: `${g.provenance.provider}/${g.provenance.model}`, costUsd: g.provenance.costUsd, basis: g.provenance.costBasis };
     },
     async reason(prompt, schema) {

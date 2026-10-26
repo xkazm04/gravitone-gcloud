@@ -23,6 +23,7 @@ const { processSignals, runWorker } = await import("./worker.ts");
 const { producers } = await import("../lib/producers/registry.ts");
 const { publishDeps, publishTimers } = await import("../lib/producers/publish.ts");
 const { loadSampleTimer } = await import("../lib/producers/loadSample.ts");
+const { nightFillTimer } = await import("../lib/producers/nightFill.ts");
 const { machineAdmission } = await import("../lib/resources/probe.ts");
 
 process.exitCode = await runWorker(process.argv.slice(2), producers(), {
@@ -31,10 +32,11 @@ process.exitCode = await runWorker(process.argv.slice(2), producers(), {
   env: process.env,
   onSignal: processSignals,
   // The publish tick and the metrics refresh (Phase 6, L62), and the box's load a minute at a time
-  // (spark night-load-band), over the store the worker opened.
+  // (spark night-load-band), and a /scout night's plan queue filled while the box idles (spark scout-vision S6),
+  // over the store the worker opened.
   timers: (store) => {
     const deps = publishDeps({ store });
-    return deps.ok ? { ok: true, value: [...publishTimers(deps.value), loadSampleTimer({ store })] } : deps;
+    return deps.ok ? { ok: true, value: [...publishTimers(deps.value), loadSampleTimer({ store }), nightFillTimer({ store, env: process.env })] } : deps;
   },
   // Engine work admitted by the box's measured load (spark game-3d-assets WP1); --no-admission skips it.
   admission: () => machineAdmission(),

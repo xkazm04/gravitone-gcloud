@@ -350,7 +350,7 @@ describe("doctor, the studio", () => {
   it("reads ok when the studio is ready, and a note - never a failure - with its reason when not", async () => {
     expect(await studioLine(async () => ({ ok: true }))).toEqual({ line: "ok   studio              leonardo studio signed in, with credits", blocked: false });
     const down = await studioLine(async () => ({ ok: false, reason: "leonardo studio browser not running" }));
-    expect(down.line).toMatch(/^note studio +leonardo studio browser not running -> the night's idea artboards are drawn there: set LEONARDO_STUDIO_CDP/);
+    expect(down.line).toMatch(/^note studio +leonardo studio browser not running -> the night's stills are drawn there by default \(SCOUT_REPLICA_GENERATOR\): set LEONARDO_STUDIO_CDP/);
     expect(down.blocked).toBe(false);
   });
 

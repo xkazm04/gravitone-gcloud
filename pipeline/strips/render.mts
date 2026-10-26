@@ -54,7 +54,7 @@ export interface RenderResult {
   error?: string;
 }
 
-async function openStrip(browser: Browser, htmlPath: string, lane: StripLane): Promise<Page> {
+async function openStrip(browser: Browser, htmlPath: string, lane: StripLane, frames?: number): Promise<Page> {
   const { width, height } = STRIP_SIZE[lane];
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   await page.route("**/*", (route) => {
@@ -81,10 +81,13 @@ async function openStrip(browser: Browser, htmlPath: string, lane: StripLane): P
     },
     READY_TIMEOUT_MS,
   );
-  const dims = await page.evaluate(() => (window as unknown as { STRIP?: { width: number; height: number } }).STRIP);
+  const dims = await page.evaluate(() => (window as unknown as { STRIP?: { width: number; height: number; frames?: number } }).STRIP);
   if (!dims || dims.width !== width || dims.height !== height) {
     throw new Error(`window.STRIP is ${JSON.stringify(dims)}, the ${lane} lane is ${width}x${height}`);
   }
+  // A full render holds the page to its count; a page that says none is the contract's 240 (lib/foundry/strips/lint.ts
+  // stripFramesRule reads it the same way). One cold frame (renderFrame) asks for no count.
+  if (frames !== undefined && (dims.frames ?? STRIP_FRAMES) !== frames) throw new Error(`window.STRIP.frames is ${dims.frames ?? "undeclared"}, this render takes ${frames}`);
   if (pageErrors.length) throw new Error(`page error at load: ${pageErrors[0]}`);
   return page;
 }
@@ -246,8 +249,16 @@ async function imageLab(browser: Browser) {
 
 const ff = (args: string[]) => run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], { maxBuffer: 1 << 26 });
 
-export async function renderStrip(opts: { browser: Browser; htmlPath: string; outDir: string; lane: StripLane }): Promise<RenderResult> {
+/**
+ * `frames` is the brief's (spark scout-vision S5: a full reel runs 30 s - 2 min); absent, STRIP_FRAMES - every strip
+ * of the 8 s contract renders exactly as it did. The gates scale with it: motion is judged over its own seconds and
+ * the contact sheet spaces its twelve frames over the whole length.
+ */
+export async function renderStrip(opts: { browser: Browser; htmlPath: string; outDir: string; lane: StripLane; frames?: number }): Promise<RenderResult> {
   const { browser, htmlPath, outDir, lane } = opts;
+  const frames = opts.frames ?? STRIP_FRAMES;
+  const seconds = Math.round(frames / STRIP_FPS);
+  const sheetEvery = Math.max(1, Math.floor(frames / 12));
   const t0 = Date.now();
   const work = await makeWorkDir("strip-");
   const framesDir = path.join(work, "frames");
@@ -258,16 +269,16 @@ export async function renderStrip(opts: { browser: Browser; htmlPath: string; ou
   let cold: Page | undefined;
   try {
     // 1. Sequential capture, measuring text on the way past.
-    page = await openStrip(browser, htmlPath, lane);
+    page = await openStrip(browser, htmlPath, lane, frames);
     const legibility: Awaited<ReturnType<typeof measureText>>[] = [];
-    for (let i = 0; i < STRIP_FRAMES; i++) {
+    for (let i = 0; i < frames; i++) {
       await drawFrame(page, i);
       await writeFile(fname(i), await shot(page));
       if (LEGIBILITY_FRAMES.includes(i)) legibility.push(await measureText(page));
     }
 
     // 2. Seek gate: a fresh page, entered cold and out of order.
-    cold = await openStrip(browser, htmlPath, lane);
+    cold = await openStrip(browser, htmlPath, lane, frames);
     const lab = await imageLab(browser);
     const seekDiffs: number[] = [];
     for (const i of SEEK_FRAMES) {
@@ -276,7 +287,7 @@ export async function renderStrip(opts: { browser: Browser; htmlPath: string; ou
     }
 
     // 3. Motion gate: samples every half second.
-    const sampleIdx = Array.from({ length: STRIP_FRAMES / 15 }, (_, k) => k * 15).concat(STRIP_FRAMES - 1);
+    const sampleIdx = Array.from({ length: Math.floor(frames / 15) }, (_, k) => k * 15).concat(frames - 1);
     const mo = await lab.motion(await Promise.all(sampleIdx.map((i) => readFile(fname(i)))));
     await lab.close();
 
@@ -295,7 +306,7 @@ export async function renderStrip(opts: { browser: Browser; htmlPath: string; ou
     const cell = lane === "edu" ? "480:-2" : "270:-2";
     await ff([
       "-framerate", String(STRIP_FPS), "-i", path.join(framesDir, "f%06d.png"),
-      "-vf", `select='not(mod(n\\,20))',scale=${cell},tile=4x3:padding=6:color=0x111111`,
+      "-vf", `select='not(mod(n\\,${sheetEvery}))',scale=${cell},tile=4x3:padding=6:color=0x111111`,
       "-frames:v", "1", "-update", "1", path.join(outDir, "sheet.png"),
     ]);
     await copyFile(fname(0), path.join(outDir, "frame0.png")).catch(() => {});
@@ -323,9 +334,9 @@ export async function renderStrip(opts: { browser: Browser; htmlPath: string; ou
             },
       motion: {
         ok: activeSeconds >= 3 && darkest > 2,
-        detail: `motion in ${activeSeconds}/8 s (bar 3); darkest sample luma ${darkest.toFixed(1)}`,
+        detail: `motion in ${activeSeconds}/${seconds} s (bar 3); darkest sample luma ${darkest.toFixed(1)}`,
       },
-      length: { ok: true, detail: `${STRIP_FRAMES} frames at ${STRIP_FPS} fps` },
+      length: { ok: true, detail: `${frames} frames at ${STRIP_FPS} fps` },
     };
     return { ok: true, gates, files: { mp4: "strip.mp4", webm: "strip.webm", poster: "poster.jpg", sheet: "sheet.png" }, renderMs: Date.now() - t0 };
   } catch (e) {

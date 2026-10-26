@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import os from "node:os";
 import { MACHINE_MARKS, type MachineLoad, type MachineProfile } from "@gt/domain/resource";
+import { comfyFree } from "./comfyFree.ts";
 
 // THE MACHINE PROBE - what admission reads the box by (spark game-3d-assets WP1;
 // @gt/domain/resource says what each reading is charged against and why).
@@ -233,9 +234,19 @@ export function machineProfile(totals: MachineTotals, env: ProbePorts["env"] = p
  * after that probe). Before the first reading the profile is all zeros - every job that costs
  * memory waits - and a memory total nobody could read stays 0, its readings absent, so such a job
  * waits as `unread`, said on the worker's stderr, rather than running blind.
+ *
+ * The held-head clocks (spark scout-vision S6; packages/kernel/src/resources/starve.ts) come from
+ * the environment beside the marks: GPU_SKIP_AHEAD_MS and COMFY_UNLOAD_AFTER_MS, each unset or not
+ * a positive whole number leaving the kernel's default (10 and 15 minutes). `free` is the unload the
+ * gate asks for - ComfyUI's `POST /free` at COMFY_URL unless a caller binds another.
  */
-export function machineAdmission(ports: ProbePorts = nodePorts): { probe(): Promise<MachineLoad>; readonly machine: MachineProfile } {
+export function machineAdmission(
+  ports: ProbePorts = nodePorts,
+  free: () => Promise<void> = comfyFree(ports.env),
+): { probe(): Promise<MachineLoad>; readonly machine: MachineProfile; readonly skipAheadMs?: number; readonly unloadAfterMs?: number; free(): Promise<void> } {
   const p = machineProbe(ports);
+  const skipAheadMs = msFrom(ports.env, "GPU_SKIP_AHEAD_MS");
+  const unloadAfterMs = msFrom(ports.env, "COMFY_UNLOAD_AFTER_MS");
   let machine: MachineProfile | undefined;
   const unknown: MachineProfile = { commitLimitGb: 0, vramTotalGb: 0, cores: 0, ...MACHINE_MARKS };
   return {
@@ -247,5 +258,15 @@ export function machineAdmission(ports: ProbePorts = nodePorts): { probe(): Prom
     get machine() {
       return machine ?? unknown;
     },
+    ...(skipAheadMs === undefined ? {} : { skipAheadMs }),
+    ...(unloadAfterMs === undefined ? {} : { unloadAfterMs }),
+    free,
   };
+}
+
+/** A whole number of milliseconds from the environment, or undefined when it is unset or not one. */
+function msFrom(env: ProbePorts["env"], name: string): number | undefined {
+  const raw = env[name];
+  const v = raw === undefined ? Number.NaN : Number(raw);
+  return Number.isInteger(v) && v > 0 ? v : undefined;
 }

@@ -24,9 +24,11 @@ describe("comfy-flux2 provider", () => {
 });
 
 describe("replicaGenerator", () => {
-  it("is Flare unless the env names comfy-flux2", () => {
-    expect(replicaGenerator({})).toBe("leonardo-flare");
-    expect(replicaGenerator({ SCOUT_REPLICA_GENERATOR: "something-else" })).toBe("leonardo-flare");
+  it("is the studio unless the env names Flare or comfy-flux2", () => {
+    expect(replicaGenerator({})).toBe("leonardo-studio");
+    expect(replicaGenerator({ SCOUT_REPLICA_GENERATOR: "something-else" })).toBe("leonardo-studio");
+    expect(replicaGenerator({ SCOUT_REPLICA_GENERATOR: " leonardo-studio " })).toBe("leonardo-studio");
+    expect(replicaGenerator({ SCOUT_REPLICA_GENERATOR: "leonardo-flare" })).toBe("leonardo-flare");
     expect(replicaGenerator({ SCOUT_REPLICA_GENERATOR: "comfy-flux2" })).toBe("comfy-flux2");
   });
 

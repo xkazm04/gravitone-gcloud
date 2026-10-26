@@ -144,14 +144,15 @@ export async function standInTurn(t: StripTurn): Promise<AgentResult> {
 /**
  * The stand-in page. With `data` (a stats reel's dry turn) it also holds the numbers in the one
  * `<script id="strip-data">` block and reads it, so the reel's data rule (./lint.ts stripDataRule)
- * passes on a dry job as it must on a real one; without, it is the strips page byte for byte.
+ * passes on a dry job as it must on a real one; without, it is the strips page byte for byte. With `frames`
+ * other than the contract's 240 (a full reel's cut, spark scout-vision S5) it declares that count.
  */
-export function standInPage(lane: StripLane, data?: unknown): string {
+export function standInPage(lane: StripLane, data?: unknown, frames?: number): string {
   const [w, h] = lane === "edu" ? [1920, 1080] : [1080, 1920];
   const block = data === undefined ? "" : `<script id="strip-data" type="application/json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
   const read = data === undefined ? "" : `window.STRIP_DATA = JSON.parse(document.getElementById("strip-data").textContent);\n`;
   return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#f4f1ea}#t{font:600 64px sans-serif;position:absolute;left:10%;top:40%;transition:none}</style></head><body><div id="t">dry stand-in</div>${block}<script>
-${read}window.STRIP = { width: ${w}, height: ${h} };
+${read}window.STRIP = { width: ${w}, height: ${h}${frames === undefined || frames === 240 ? "" : `, frames: ${frames}`} };
 window.renderFrameAt = function (i) { document.getElementById("t").style.opacity = String(0.3 + 0.7 * (i % 60) / 60); };
 window.STRIP_READY = true;
 addEventListener("message", function (e) { if (e.data && e.data.type === "strip-frame") window.renderFrameAt(e.data.i); });

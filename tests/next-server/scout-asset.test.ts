@@ -342,10 +342,17 @@ describe("a brief for an existing game answers one of its needs (spark scout-vis
 });
 
 describe("engines the worker admits by", () => {
-  it("a scene on the card names the comfy engine (its clip is LTX through ComfyUI); on Leonardo's lane, and an asset's concepts, name none", () => {
+  it("a scene on the card names the comfy engine (its clip is LTX through ComfyUI); on Leonardo's lane and the studio's, none", () => {
     expect(scoutSceneProducer("gpu.local").engine).toBe("comfy");
     expect(scoutSceneProducer("cloud.leonardo").engine).toBeUndefined();
-    expect(scoutAssetProducer().engine).toBeUndefined();
+    expect(scoutSceneProducer("box.chrome").engine).toBeUndefined();
+  });
+
+  it("an asset's concepts on the card (local Flux) name the comfy engine; on the studio's lane or Flare's, none (spark scout-vision S6)", () => {
     expect(scoutAssetProducer().lane).toBe("cloud.leonardo");
+    expect(scoutAssetProducer().engine).toBeUndefined();
+    expect(scoutAssetProducer({ lane: "box.chrome" })).toMatchObject({ lane: "box.chrome" });
+    expect(scoutAssetProducer({ lane: "box.chrome" }).engine).toBeUndefined();
+    expect(scoutAssetProducer({ lane: "gpu.local" })).toMatchObject({ lane: "gpu.local", engine: "comfy" });
   });
 });

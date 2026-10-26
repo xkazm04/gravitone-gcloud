@@ -19,7 +19,8 @@ import type { Reader } from "@gt/kernel/store";
 // thirty-second loop that announced itself would bury the ledger in "still here".
 
 // `load-sample` (spark night-load-band): the box's load, one reading a minute, for a night's band.
-export const TIMER_NAMES = ["publish-tick", "metrics-refresh", "load-sample"] as const;
+// `night-fill` (spark scout-vision S6): the night's plan queue launched while the box sits under the band.
+export const TIMER_NAMES = ["publish-tick", "metrics-refresh", "load-sample", "night-fill"] as const;
 export type TimerName = (typeof TIMER_NAMES)[number];
 
 export type TimerSpec = {
@@ -39,6 +40,10 @@ export const METRICS_REFRESH: TimerSpec = { name: "metrics-refresh", everyMs: 6 
 /** One reading of the box a minute (a night's summary counts a waiting job one cadence per sample). A probe
  *  takes ~1 s; past half a cadence it is hung, not slow. First at ~5 s, after the publish tick's boot. */
 export const LOAD_SAMPLE: TimerSpec = { name: "load-sample", everyMs: LOAD_SAMPLE_MS, deadlineMs: 30_000, firstDelayMs: 5_000 };
+/** A /scout night's plan queue: one launch a tick at most, so five minutes is the slowest a band-low box refills. A
+ *  draft item is written inside the tick (a local model's turn, minutes); past ten it is hung. First at ~90 s, once the
+ *  sampler has a reading or two. */
+export const NIGHT_FILL: TimerSpec = { name: "night-fill", everyMs: 5 * 60_000, deadlineMs: 10 * 60_000, firstDelayMs: 90_000 };
 
 /** A stretch a timer was not ticking: from its last heartbeat to the tick that noticed. */
 export type Gap = { readonly from: string; readonly to: string };

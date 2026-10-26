@@ -97,7 +97,19 @@ export function pickWork(looks: readonly LaneLook[], carries: (producer: string,
 /** A refused pick and why; the head stays at the front of its line and is asked again next look. */
 export type Waiting = { readonly pick: Pick; readonly verdict: Extract<Admission, { ok: false }> };
 
-export type Admitted = { readonly admitted: readonly Pick[]; readonly waiting: readonly Waiting[]; readonly tight: boolean };
+/** A job admitted in place of its lane's held head: `over` is the head's id. */
+export type SkippedAhead = { readonly pick: Pick; readonly over: string };
+
+export type Admitted = { readonly admitted: readonly Pick[]; readonly waiting: readonly Waiting[]; readonly tight: boolean; readonly skipped: readonly SkippedAhead[] };
+
+// SKIP-AHEAD (spark scout-vision S6; ./resources/starve.ts says when and why). `behind` names, for
+// a lane whose head has been held long enough, the queued jobs behind that head in line order. The
+// head is always asked first; only when admission refuses it is the line behind it walked, and the
+// first job `admit` passes takes the head's place for this look - one per lane, as a look picks one
+// per lane. A job behind that admission refuses is not a head: it waits silently, says nothing to
+// the ledger, and is not a `waiting` entry. Every candidate that names an engine is asked through the
+// same `admit` against the same set and the same hysteresis, so a skip can never start a job
+// admission would refuse; one that names none passes untouched, as it would at the head.
 
 export function admitPicks(
   picks: readonly Pick[],
@@ -108,25 +120,46 @@ export function admitPicks(
   machine: MachineProfile,
   tight: boolean,
   base: Baseline = {},
+  behind: ReadonlyMap<ResourceLane, readonly Pick[]> = new Map(),
 ): Admitted {
   const admitted: Pick[] = [];
   const waiting: Waiting[] = [];
+  const skipped: SkippedAhead[] = [];
   const set: Costed[] = [...running];
   let state = tight;
+  const costed = (engine: string): Costed => {
+    const cost = costs.get(engine);
+    return cost === undefined ? { engine } : { engine, cost };
+  };
   for (const pick of picks) {
     const engine = engineOf(pick);
     if (engine === undefined) {
       admitted.push(pick);
       continue;
     }
-    const cost = costs.get(engine);
-    const job: Costed = cost === undefined ? { engine } : { engine, cost };
+    const job = costed(engine);
     const v = admit(job, set, load, machine, state, base);
     state = v.tight;
     if (v.ok) {
       admitted.push(pick);
       set.push(job);
-    } else waiting.push({ pick, verdict: v });
+      continue;
+    }
+    waiting.push({ pick, verdict: v });
+    for (const next of behind.get(pick.lane) ?? []) {
+      if (next.lane !== pick.lane || next.jobId === pick.jobId) continue;
+      const e = engineOf(next);
+      const other = e === undefined ? undefined : costed(e);
+      if (other !== undefined) {
+        const w = admit(other, set, load, machine, state, base);
+        state = w.tight;
+        if (!w.ok) continue;
+        set.push(other);
+      }
+      admitted.push(next);
+      skipped.push({ pick: next, over: pick.jobId });
+      break;
+    }
   }
-  return { admitted, waiting, tight: state };
+  return { admitted, waiting, tight: state, skipped };
 }

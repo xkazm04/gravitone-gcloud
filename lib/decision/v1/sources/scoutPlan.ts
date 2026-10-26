@@ -20,6 +20,7 @@ import { meshFileUrl } from "../../../library/feeds/mesh.ts";
 import { decisionMap, type Loss } from "../types.ts";
 import { extractAdapter, planLooks, type ExtractV1 } from "./extract.ts";
 import { lookBrief, sceneBrief } from "./scoutBrief.ts";
+import { reelCells } from "./scoutReelCells.ts";
 import { museFacts, scoutFileUrl } from "./scoutWing.ts";
 
 // THE SCOUT PACKET'S CELLS, PURE - what lib/decision/v1/sources/scout.ts opens,
@@ -83,6 +84,8 @@ import { museFacts, scoutFileUrl } from "./scoutWing.ts";
 //            rejected, she is due a sheet again (lib/foundry/scout/sheet.ts sheetsDue).
 //            A cast idea or storyboard names its cast in its meta (`cast: Ilse Marrow, ...`), a character idea cited
 //            from a web source its source (`source: s-03`).
+//   reel     (spark scout-vision S5) a kept stats idea on real data, ONE image cell `c-NN/reel` under `reels`; a full cut,
+//   reel-cut ONE video cell `c-NN/video` under `reel cuts` (./scoutReelCells.ts).
 // A text cell's media is the content address of its own words (text/plain):
 // the kernel holds candidates by blob, and the words are the thing judged.
 //
@@ -599,6 +602,7 @@ export function build(v1: ScoutV1): Built {
     else if (c.kind === "genre" || c.kind === "venture") proposalCell(night, c, out);
     else if (c.kind === "piece") pieceCells(night, c, v1.media, out);
     else if (c.kind === "sheet") sheetCells(night, c, v1.media, out);
+    else if (c.kind === "reel" || c.kind === "reel-cut") reelCells(night, c, v1.media, out);
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

@@ -26,7 +26,9 @@ import { z } from "zod";
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 
+import { studioShaped } from "../../imaging/studio/still";
 import type { GenerateRequest } from "../../imaging/types";
+import { replicaGenerator, type ReplicaGenerator } from "./stillEngine";
 import { SHOT_SIZES, type Night, type SceneCandidate, type SceneRecipe, type ScoutSource } from "./types";
 
 /* ── Limits ──────────────────────────────────────────────────────────────── */
@@ -272,23 +274,18 @@ export function recipeOf(raw: unknown, ctx: { readonly deny: readonly string[]; 
 
 /* ── Replicas and the clip ───────────────────────────────────────────────── */
 
-/** The imaging vendor a replica still asks for: GPT Image 2.5 Flare, LOW (operator, 2026-10-22). It is
- *  prefer-only in the router, so naming it is the whole chain: a Flare refusal is the candidate's sentence,
- *  never a quiet Nano Banana bill. The readback stays on Google (scoutSceneActs.ts `prefer: "google"`). */
-export const REPLICA_GENERATOR = "leonardo-flare" as const;
-/** The engines a replica or a concept may be drawn by: Flare over the API, or Flux 2 on this box's ComfyUI. */
-export const REPLICA_GENERATORS = [REPLICA_GENERATOR, "comfy-flux2"] as const;
-/**
- * The replica and concept generator for this process (operator, 2026-10-25, the API pool empty until its
- * renewal): `SCOUT_REPLICA_GENERATOR=comfy-flux2` draws them on the local Flux model at $0; absent or any
- * other value, Flare as before.
- */
-export const replicaGenerator = (env: Readonly<Record<string, string | undefined>> = process.env): (typeof REPLICA_GENERATORS)[number] =>
-  env["SCOUT_REPLICA_GENERATOR"]?.trim() === "comfy-flux2" ? "comfy-flux2" : REPLICA_GENERATOR;
+// The engine a replica still is drawn by - the Leonardo studio at Low by default, Flare or local Flux 2 by
+// SCOUT_REPLICA_GENERATOR - and the lane its job waits on are ./stillEngine.ts's; re-exported here, where
+// the replica's callers have always found them. Each is prefer-only in the router, so naming it is the whole
+// chain. The readback stays on Google (scoutSceneActs.ts `prefer: "google"`).
+export { REPLICA_GENERATOR, REPLICA_GENERATORS, replicaGenerator, stillLane, type ReplicaGenerator } from "./stillEngine";
 
-/** A replica still: the recipe's prompt verbatim, and NO reference image - the source never conditions it. */
-export function replicaRequest(recipe: SceneRecipe, k: number): GenerateRequest {
-  return { prompt: recipe.prompt, negativePrompt: REPLICA_NEGATIVE, aspect: "16:9", count: 1, prefer: replicaGenerator(), seed: k };
+/**
+ * A replica still: the recipe's prompt verbatim (cut to the studio's box when the studio draws it), and
+ * NO reference image - the source never conditions it.
+ */
+export function replicaRequest(recipe: SceneRecipe, k: number, generator: ReplicaGenerator = replicaGenerator()): GenerateRequest {
+  return studioShaped({ prompt: recipe.prompt, negativePrompt: REPLICA_NEGATIVE, aspect: "16:9", count: 1, prefer: generator, seed: k });
 }
 
 const EXT: Readonly<Record<string, string>> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };

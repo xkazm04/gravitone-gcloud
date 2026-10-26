@@ -244,7 +244,7 @@ export type ScoutSource = {
 
 /* ── Candidates ──────────────────────────────────────────────────────────── */
 
-export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer", "storyboard", "piece", "genre", "venture", "sheet"] as const;
+export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer", "storyboard", "piece", "genre", "venture", "sheet", "reel", "reel-cut"] as const;
 export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
 
 export const CANDIDATE_STATUSES = ["pending", "rendered", "failed"] as const;
@@ -444,6 +444,25 @@ export type ReelBrief = {
   };
 };
 
+/**
+ * Where a REAL reel's numbers come from (spark scout-vision S5, operator 2026-10-26: "Do not stick with public datasets,
+ * we often need one wiki table, an article, or derived data from 'what if' fantasy scenarios"). A table or an article is
+ * cited by its https page (an article by its words, verbatim, too); a what-if is a premise, labelled fiction on screen.
+ */
+export const REEL_SOURCE_KINDS = ["table", "article", "what-if"] as const;
+export type ReelSourceKind = (typeof REEL_SOURCE_KINDS)[number];
+
+export type ReelSource = {
+  readonly kind: ReelSourceKind;
+  readonly title: string;
+  /** https; required on table and article. */
+  readonly url?: string;
+  /** The page's words verbatim (<= 400); required on article. */
+  readonly quote?: string;
+  /** The what-if premise (<= 400); required on what-if, labelled fiction on screen. */
+  readonly premise?: string;
+};
+
 /** Where a stats idea's files live, night-relative. */
 export type ReelFiles = {
   readonly brief: string;
@@ -554,6 +573,45 @@ export type StoryboardCandidate = CandidateBase & {
 };
 
 /**
+ * A kept stats idea ON REAL DATA (spark scout-vision S5): the idea's own approach and brief shape, its numbers replaced
+ * by data from a cited `source`, authored as an 8 s strip that keeps only the beats in `cut`. The approval unit: one
+ * image cell `c-NN/reel` (its strip's frame 120). Kept, a full reel is due (`reel-cut`). Counts toward the night's reelCap.
+ */
+export type ReelCandidate = CandidateBase & {
+  readonly kind: "reel";
+  /** `<night>/<c-id>` of the kept stats idea - required. */
+  readonly fromIdea: string;
+  readonly title: string;
+  readonly source: ReelSource;
+  /** The beats the 8 s strip keeps, in order (1..12). */
+  readonly cut: readonly string[];
+  /** Night-relative, under `reels/<c-id>/`; `strip` once the author turn wrote one that passed the lint. */
+  readonly files: ReelFiles;
+  /** Night-relative tile (`reels/c-NN.png`): the strip's frame 120, once drawn. */
+  readonly image?: string;
+};
+
+/**
+ * A kept real reel CUT IN FULL (spark scout-vision S5): the strip re-authored at `seconds` * 30 frames from the kept
+ * reel's strip and data, rendered to mp4. One video cell `c-NN/video`. Counts toward the night's reelCap.
+ */
+export type ReelCutCandidate = CandidateBase & {
+  readonly kind: "reel-cut";
+  /** `<night>/<c-id>` of the kept reel it cuts - required. */
+  readonly fromReel: string;
+  readonly title: string;
+  readonly source: ReelSource;
+  readonly seconds: number;
+  /** seconds * 30: the strip's window.STRIP.frames. */
+  readonly frames: number;
+  /** Night-relative, under `cuts/<c-id>/`. */
+  readonly files: ReelFiles;
+  /** Night-relative mp4 (`cuts/c-NN/strip.mp4`) and its poster, once rendered. */
+  readonly video?: string;
+  readonly image?: string;
+};
+
+/**
  * A kept character's REFERENCE SHEET (spark scout-vision S3): one neutral 1:1 still drawn by local Flux with her kept
  * portrait as a late-admitted reference - rest expression, three-quarter head, even light, plain field, invariant
  * wardrobe (registry character-identity-continuity / reference-shows-only-invariants). Judged on the Board (cell
@@ -643,7 +701,9 @@ export type Candidate =
   | PieceCandidate
   | GenreProposalCandidate
   | VentureProposalCandidate
-  | SheetCandidate;
+  | SheetCandidate
+  | ReelCandidate
+  | ReelCutCandidate;
 
 /**
  * A scout track's Suno job (`sj-scout-<night>-<c-id>`, lib/foundry/scout/track.ts): its clips and the visualizer

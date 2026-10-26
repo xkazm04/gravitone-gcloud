@@ -94,7 +94,7 @@ describe("doctor, the local clip engine", () => {
     const google = checks.find((c) => c.name === "GOOGLE_AI_API_KEY");
     expect(google).toMatchObject({ ok: false, needed: true });
     expect(google?.found).toBe("set but refused · 400: API key not valid: [redacted]");
-    expect(checks.find((c) => c.name === "LEONARDO_API_KEY")?.found).toBe("set · accepted · 150 credits on the account");
+    expect(checks.find((c) => c.name === "LEONARDO_API_KEY")?.found).toBe("set · accepted · API pool 30 credits");
     const dry = await doctor(input({ dry: true, env: { ...ENV, GOOGLE_AI_API_KEY: secret }, fetch: comfy().f, keyFetch: refused }));
     expect(dry.find((c) => c.name === "GOOGLE_AI_API_KEY")).toMatchObject({ ok: true, found: "set", needed: false });
   });

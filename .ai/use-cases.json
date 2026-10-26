@@ -105,6 +105,16 @@
       "owner": "gravity"
     },
     {
+      "key": "text.draft",
+      "name": "Draft a night's markdown on the local model",
+      "description": "A night-fill draft item's prompt in, one markdown draft out (foundry-out/scout/<night>/drafts/), never a candidate and never on the Board; served by the local Ollama model first (qwen3.8:27b, $0) and the claude CLI behind it, never a metered key.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/foundry/scout/plan.ts -> lib/text/router.ts::reason() (DRAFT_TURN)",
+      "expected_models": ["qwen3.8:27b", "claude-opus-5"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.research",
       "name": "Research a subject for a project part",
       "description": "A research turn: a prompt and optional schema in, a sourced answer out; served by the retrieval rung when TEXT_RETRIEVE=1 and by the reasoning door otherwise, plus the follow-up questions on an active research document.",

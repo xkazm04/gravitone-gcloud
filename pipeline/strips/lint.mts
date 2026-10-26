@@ -3,7 +3,7 @@
 
 import { lintStrip } from "../../lib/foundry/strips/lint.ts";
 
-export { formatLint, lintStrip, type LintFinding } from "../../lib/foundry/strips/lint.ts";
+export { formatLint, lintStrip, stripFramesRule, type LintFinding, type LintOptions } from "../../lib/foundry/strips/lint.ts";
 
 // Self-test: `npx tsx pipeline/strips/lint.mts --selftest`
 if (process.argv.includes("--selftest")) {
@@ -13,9 +13,12 @@ if (process.argv.includes("--selftest")) {
   const g = lintStrip(good);
   const want = ["randomness: Math.random (use a seeded PRNG)", "scheduler: requestAnimationFrame", "network: fetch", "network: external src/href", "time: running CSS transition"];
   const missing = want.filter((w) => !b.includes(w));
-  if (missing.length || g.length) {
-    console.error("lint selftest FAILED", { missing, falsePositives: g });
+  // The frame count is the brief's (spark scout-vision S5): 240 by default, a full cut's own when it says so.
+  const long = good.replace("<script>", "<script>window.STRIP={width:1080,height:1920,fps:30,frames:900};");
+  const frames = [lintStrip(good).length === 0, lintStrip(long, { frames: 900 }).length === 0, lintStrip(long).length === 1, lintStrip(good, { frames: 900 }).length === 1];
+  if (missing.length || g.length || frames.includes(false)) {
+    console.error("lint selftest FAILED", { missing, falsePositives: g, frames });
     process.exit(1);
   }
-  console.log(`lint selftest ok: ${b.length} findings on the planted page, 0 on the clean page`);
+  console.log(`lint selftest ok: ${b.length} findings on the planted page, 0 on the clean page, the frame count followed`);
 }

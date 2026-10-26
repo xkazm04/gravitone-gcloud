@@ -19,6 +19,7 @@ import type { Store } from "@gt/kernel/store";
 import type { ProfilePorts } from "@gt/producers/profile/define";
 
 import { driveProfile, launchProfile } from "../../lib/producers/profile.ts";
+import { comfyFree } from "../../lib/resources/comfyFree.ts";
 import { busyBetween, machineAdmission, machineProbe, machineProfile, parseCim, parseQueue, parseSmi, type ProbePorts } from "../../lib/resources/probe.ts";
 
 const DIR = mkdtempSync(path.join(tmpdir(), "gt-resources-"));
@@ -123,6 +124,35 @@ describe("machineProbe", () => {
     expect(profile).toEqual({ commitLimitGb: 101.89, vramTotalGb: 64, cores: 20, memHigh: 0.8, memLow: 0.8, cpuHigh: 0.9 });
     expect(unread).toEqual([]);
     expect(machineProfile({ cores: 4 }, {}).unread).toEqual(["commit", "vram"]);
+  });
+});
+
+describe("the held-head clocks and the ComfyUI unload (spark scout-vision S6)", () => {
+  it("reads GPU_SKIP_AHEAD_MS and COMFY_UNLOAD_AFTER_MS beside the marks; unset or not a whole number leaves the kernel's default", () => {
+    const set = machineAdmission(fakePorts({ env: { GPU_SKIP_AHEAD_MS: "120000", COMFY_UNLOAD_AFTER_MS: "300000" } }), async () => {});
+    expect([set.skipAheadMs, set.unloadAfterMs]).toEqual([120_000, 300_000]);
+    const bad = machineAdmission(fakePorts({ env: { GPU_SKIP_AHEAD_MS: "ten", COMFY_UNLOAD_AFTER_MS: "-5" } }), async () => {});
+    expect([bad.skipAheadMs, bad.unloadAfterMs]).toEqual([undefined, undefined]);
+  });
+
+  it("POSTs /free with unload_models and free_memory at COMFY_URL, and refuses while a prompt is queued or the answer is not 2xx", async () => {
+    const posts: [string, unknown][] = [];
+    let queue: unknown = { queue_running: [], queue_pending: [] };
+    let status: number | undefined = 200;
+    const free = comfyFree({ COMFY_URL: "http://comfy.test:9000/" }, {
+      getJson: async () => queue,
+      postJson: async (url, body) => (posts.push([url, body]), status),
+    });
+    await free();
+    expect(posts).toEqual([["http://comfy.test:9000/free", { unload_models: true, free_memory: true }]]);
+    queue = { queue_running: [[1]], queue_pending: [] };
+    await expect(free()).rejects.toThrow(/1 prompt\(s\) queued/);
+    queue = undefined;
+    await expect(free()).rejects.toThrow(/did not answer/);
+    queue = { queue_running: [], queue_pending: [] };
+    status = 500;
+    await expect(free()).rejects.toThrow(/answered \/free with 500/);
+    expect(posts).toHaveLength(2);
   });
 });
 

@@ -6,12 +6,16 @@ import { DatabaseSync } from "node:sqlite";
 
 import { timerResource } from "@gt/producers/publish/timers";
 
-import { probeGoogle, probeLeonardo, type KeyFetch, type KeyProbe } from "../../imaging/keyProbe";
+import { probeGoogle, type KeyFetch, type KeyProbe } from "../../imaging/keyProbe";
 import { missingFluxModels } from "../../imaging/local/flux2";
 import { leonardoStudioHealth } from "../../imaging/providers/leonardoStudio";
+import { probeLeonardoApiPool, studioBalanceCheck } from "../../imaging/studio/balance";
+import type { StudioRecon } from "../../imaging/studio/driver";
 import type { StudioHealth } from "../../imaging/studio/types";
 import { comfyBase, comfyStats, missingModels, type ComfyFetch } from "../../imaging/video/comfyLtx";
 import { SUNO_CDP_PORT, type SunoDriverHealth } from "../../suno/types";
+import type { OllamaFetch } from "../../text/providers/ollama";
+import { ollamaCheck } from "./doctorOllama";
 import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
 import { REGISTRY_REMEDY, resolveRegistry, techniqueCount } from "./registry";
 import { WING_STORE_ENV } from "./store";
@@ -45,7 +49,8 @@ import { WING_STORE_ENV } from "./store";
 // (This preflight has no TRELLIS or Blender line: a game asset's mesh job meets those on
 // the worker, lib/foundry/mesh.) The STORYBOARDS' Flux files (spark scout-storyboards) are read off the same
 // ComfyUI once it answers, as a note: a missing file fails those storyboards' frames with ComfyUI's own
-// sentence, and the night goes on.
+// sentence, and the night goes on. The local Ollama model (spark scout-vision S6) is a note too
+// (./doctorOllama.ts): without it a draft is the CLI's and the eye is Gemini's - money, not a step.
 
 export type Check = {
   readonly name: string;
@@ -113,11 +118,15 @@ export type DoctorInput = {
   readonly suno?: () => Promise<SunoDriverHealth>;
   /** The night's track cap (`--tracks`): a live night with tracks to make needs Suno. Absent: the Suno line is a note. */
   readonly tracks?: number;
+  /** The Ollama daemon's HTTP API at OLLAMA_HOST (default the global fetch); a test hands a fake. */
+  readonly ollamaFetch?: OllamaFetch;
+  /** The studio's read-only recon for its balance (default driver.ts `studioRecon` under the studio lock); a test hands a fake. */
+  readonly studioRecon?: () => Promise<Pick<StudioRecon, "signedIn" | "balance">>;
 };
 
 const PROBES: Readonly<Record<(typeof NIGHT_KEYS)[number], (key: string, f?: KeyFetch) => Promise<KeyProbe>>> = {
   GOOGLE_AI_API_KEY: probeGoogle,
-  LEONARDO_API_KEY: probeLeonardo,
+  LEONARDO_API_KEY: probeLeonardoApiPool,
 };
 
 /** What starts ComfyUI on this box (`COMFY_START` moves it): the remedy when it is down. */
@@ -175,7 +184,7 @@ async function registryCheck(input: DoctorInput): Promise<Check> {
 async function studioCheck(input: DoctorInput): Promise<Check> {
   const h = await (input.studio ?? leonardoStudioHealth)().catch((e: unknown): StudioHealth => ({ ok: false, reason: e instanceof Error ? e.message : String(e) }));
   if (h.ok) return { name: "studio", ok: true, found: "leonardo studio signed in, with credits", needed: false };
-  return { name: "studio", ok: false, found: h.reason ?? "leonardo studio is not ready", remedy: "the night's idea artboards are drawn there: set LEONARDO_STUDIO_CDP and sign its Chrome profile in once (.claude/skills/music-video/SKILL.md)", needed: false };
+  return { name: "studio", ok: false, found: h.reason ?? "leonardo studio is not ready", remedy: "the night's stills are drawn there by default (SCOUT_REPLICA_GENERATOR): set LEONARDO_STUDIO_CDP and sign its Chrome profile in once (.claude/skills/music-video/SKILL.md)", needed: false };
 }
 
 /** The Suno browser on its own port: attached read-only (its sign-in cookie), never launched. */
@@ -295,8 +304,10 @@ export async function doctor(input: DoctorInput): Promise<Check[]> {
   out.push(...(await comfyChecks(input)));
   out.push(await registryCheck(input));
   out.push(await studioCheck(input));
+  out.push(await studioBalanceCheck({ env: input.env, dry: input.dry, ...(input.studioRecon === undefined ? {} : { recon: input.studioRecon }) }));
   out.push(await sunoCheck(input));
   out.push(await chromiumCheck(input));
+  out.push(await ollamaCheck(input.env, input.ollamaFetch));
   return out;
 }
 

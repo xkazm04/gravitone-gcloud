@@ -30,11 +30,39 @@ as it can be executed.
 
 ## The brief is illustrative
 
-`inputs/brief.json` carries `illustrative: true`. Its numbers are plausible,
-not real. So:
+When `inputs/brief.json` carries `illustrative: true`, its numbers are
+plausible, not real. So:
 
 - The always-on source line reads exactly `illustrative data`.
 - The title and the hook must not claim the numbers are real.
+
+## The brief is real
+
+When `inputs/brief.json` carries `source` instead, this reel was kept and
+its numbers now come from that source: a table, an article, or a what-if.
+This is entertaining video with an educative flavour, not a paper.
+
+- The always-on source line reads exactly `brief.source.name`. It is
+  `Source: <title>` for a table or an article, and
+  `What if: <premise> (fiction)` for a what-if.
+- For a table or an article, the title and the hook may claim the numbers
+  are real, and only what the numbers show. For a what-if they may not:
+  the numbers are a premise played out, and the screen says so.
+- The approach and the brief's shape are the ones the kept idea was judged
+  on. Keep them; only the numbers changed.
+- `brief.cut` lists the beats this strip keeps, in order. Show those beats
+  and nothing else: they are what the operator approves before a full reel
+  is made.
+
+## The full cut
+
+When `inputs/brief.json` carries `frames`, this is the full reel of a kept
+strip: `frames` frames at 30 fps (`brief.seconds` seconds), and
+`window.STRIP.frames` says that number. `inputs/style-reference/` holds
+the kept 8 s strip: re-create its look and its module faithfully, at this
+length. The beats in `brief.cut` were the approved 8 s; the full cut tells
+the whole of the data, those beats among them, and plans its time from the
+data so denser periods get more frames.
 
 ## Make a data video worth watching
 

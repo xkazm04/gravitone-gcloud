@@ -49,6 +49,8 @@ export const GRAPH_KINDS = [
   "visualizer",
   // spark scout-vision S2: a genre's piece - kept, it IS the output
   "piece",
+  // spark scout-vision S5: a kept real reel cut in full - kept, it IS the output
+  "reel-cut",
 ] as const;
 export type GraphKind = (typeof GRAPH_KINDS)[number];
 

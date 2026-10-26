@@ -49,13 +49,16 @@ import { requestJson } from "../http";
 import { logCleanupFailure } from "../log";
 import { priceCall } from "../pricing";
 import { fakeStudioDelete, fakeStudioGenerate, fakeStudioHealth } from "../studio/fake";
+import { withStudioLock } from "../studio/lock";
+import { STUDIO_MAX_PROMPT_CHARS } from "../studio/still";
 import { StudioError, type StudioHealth, type StudioRun } from "../studio/types";
 import type { Aspect, GenerateRequest, GeneratedImages, ImagingProvider, Provenance } from "../types";
 
 export { FAKE_LEONARDO_STUDIO, resetFakeLeonardoStudio } from "../studio/fake";
 
-/** Same ceiling the API adapter enforces; the studio box is the same model's. */
-const MAX_PROMPT_CHARS = 1500;
+/** Same ceiling the API adapter enforces; the studio box is the same model's (studio/still.ts fits a
+ *  scout still to it before the call, so this refusal is the last word, not the usual one). */
+const MAX_PROMPT_CHARS = STUDIO_MAX_PROMPT_CHARS;
 
 /** LEONARDO_STUDIO_DRIVER=fake selects the fake (no browser, no spend). */
 export const studioDriverIsFake = (): boolean => process.env.LEONARDO_STUDIO_DRIVER?.trim() === "fake";
@@ -87,9 +90,10 @@ export async function deleteStudioGeneration(generationId: string): Promise<void
 
 /** The real driver is imported lazily: the router imports this file for every
  *  image call in the app, and only a call that names the studio should load
- *  Playwright to make it. */
+ *  Playwright to make it. A generate holds the studio lock (studio/lock.ts):
+ *  one tab at a time across every process on this box. */
 const REAL: StudioDriver = {
-  generate: async (prompt, aspect, quality) => (await import("../studio/driver")).studioGenerate(prompt, aspect, quality),
+  generate: (prompt, aspect, quality) => withStudioLock(async () => (await import("../studio/driver")).studioGenerate(prompt, aspect, quality)),
   health: async () => (await import("../studio/driver")).studioHealth(),
   remove: deleteStudioGeneration,
 };

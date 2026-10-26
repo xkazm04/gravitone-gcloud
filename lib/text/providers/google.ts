@@ -151,6 +151,9 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], () => string> = {
   // Flash: a repair edits the listed paths of an object it is handed; the
   // judgement was spent on the turn that produced the draft.
   repair: flash,
+  // No plan row sends a draft here (router.ts PLAN); the entry keeps this table
+  // total, and a `prefer: "google"` is dropped because google is not planned.
+  draft: flash,
   probe: flash,
 };
 
