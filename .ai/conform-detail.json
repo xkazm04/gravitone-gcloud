@@ -9798,48 +9798,42 @@
       "context": "ui-ledger-timeline",
       "subject": "time-travel-replay",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-23",
-      "evaluatedTs": "2026-10-23T21:12:02.093Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:45:00.789Z",
+      "worker": "02ed6000-8256-4627-b768-042e82d278d4",
       "techniques": [
         {
           "technique": "timeline-derivation",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/timestrip/strip.ts:14 The only replay wording drops the locally replayed session segment; bars are day counts, not a playable ordering of raw records."
+          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:3 The day buckets are a static map of the whole record, not a playable timeline with a moving now."
         },
         {
           "technique": "transport-and-time-mapping",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/wave/Wave.tsx:13 The only playhead is a unitless audio-peak fraction that dims bars; there is no record-time map, speed, or dead-air marker."
-        },
-        {
-          "technique": "accrual-overlays",
-          "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/header/header.ts:8 Header spend is a settled window sum with no playhead, so there is no clocked accrual to fold or reconcile."
-        },
-        {
-          "technique": "estimate-labeling",
-          "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:27 Inferred time is a static row flag (drawn as ≈, with est/ill on cost); nothing plays the row, so labels have no playback to survive."
+          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:11 The drag is a range brush for filtering. There is no play/pause/seek/speed transport and no replay clock."
         },
         {
           "technique": "renderer-reuse",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/jsonl/Json.tsx:4 JSON is a fixed-height windowed list of settled records; these files have no replay feed and no second renderer."
+          "evidence": "packages/ui/src/components/timestrip/strip.ts:14 The one replayed feed the prototype had was removed, so there is no replay feed to share or fork a renderer for."
         },
         {
           "technique": "scrub-performance",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:11 A drag commits a date-range filter, not a fold-at-t seek, so keyframes and prefix sums have no scrub to accelerate."
+          "evidence": "packages/ui/src/components/wave/Wave.tsx:13 This playhead is an audio take's position (media-playback), not a fold over run records, so keyframes and prefix sums do not come into it."
+        },
+        {
+          "technique": "accrual-overlays",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/header/header.ts:8 Spend is a settled sum over a time window that is never re-accrued against a replay position."
+        },
+        {
+          "technique": "estimate-labeling",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:68 Derived times are marked on each datum in a static list, which is sound on its own terms, but nothing is played back, so the rule for keeping the label visible during playback has nothing to govern."
         }
-      ],
-      "registryProposal": "The golden path already excludes a settled spatial map and points transport grammar at media-playback, but the six use_when lines never say the precondition is an agent-run replay clock, so a day-histogram brush and an audio peak playhead look like a broken replay.",
-      "withdrawn": {
-        "worker": "e981cf5b-a2d5-402c-b254-e0a848a73a1e",
-        "state": "not-applicable",
-        "at": "2026-10-23T21:12:30.838444+00:00",
-        "reason": "reviewer (sonnet): The anchor (timestrip/TimeStrip.tsx) and the techniques at timestrip/strip.ts and wave/Wave.tsx are not among the context's listed files (crumbs, header, eventrow, ledgerlink, jsonl), and Wave is an audio component. I confirmed the comments as written, but I could not confirm that the timestrip and "
-      }
+      ]
     },
     "d067e4e3-6739-4666-9103-06dac7f825ac/agent-memory": {
       "context": "library-projection-feeds",

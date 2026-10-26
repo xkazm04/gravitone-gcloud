@@ -13754,7 +13754,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:3 This context's only time-based shapes are TimeStrip, a settled per-day histogram whose drag sets a {from,to} filter range (the 'settled-record view' the golden path puts outside replay), and Wave, an audio take's peak strip (media-playback). A search of the seven component dirs for the subject's terms found no hit for scrub/seek/rewind. 'replay' appears only in a comment saying the prototype's replayed session segment was dropped, and 'playhead' only as the audio playhead, so no completed run is re-presented under a viewer-owned clock.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:798a88c318279127",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"

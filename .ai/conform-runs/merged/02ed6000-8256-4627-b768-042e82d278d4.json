@@ -1,0 +1,76 @@
+{
+ "schema": "conform-run/1",
+ "worker": "02ed6000-8256-4627-b768-042e82d278d4",
+ "subject": "time-travel-replay",
+ "evaluatedAt": "2026-10-26T00:45:00.789084+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ui-ledger-timeline",
+   "subject": "time-travel-replay",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:3 This context's only time-based shapes are TimeStrip, a settled per-day histogram whose drag sets a {from,to} filter range (the 'settled-record view' the golden path puts outside replay), and Wave, an audio take's peak strip (media-playback). A search of the seven component dirs for the subject's terms found no hit for scrub/seek/rewind. 'replay' appears only in a comment saying the prototype's replayed session segment was dropped, and 'playhead' only as the audio playhead, so no completed run is re-presented under a viewer-owned clock.",
+   "techniques": [
+    {
+     "technique": "timeline-derivation",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:3 The day buckets are a static map of the whole record, not a playable timeline with a moving now."
+    },
+    {
+     "technique": "transport-and-time-mapping",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:11 The drag is a range brush for filtering. There is no play/pause/seek/speed transport and no replay clock."
+    },
+    {
+     "technique": "renderer-reuse",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/timestrip/strip.ts:14 The one replayed feed the prototype had was removed, so there is no replay feed to share or fork a renderer for."
+    },
+    {
+     "technique": "scrub-performance",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/wave/Wave.tsx:13 This playhead is an audio take's position (media-playback), not a fold over run records, so keyframes and prefix sums do not come into it."
+    },
+    {
+     "technique": "accrual-overlays",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/header/header.ts:8 Spend is a settled sum over a time window that is never re-accrued against a replay position."
+    },
+    {
+     "technique": "estimate-labeling",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:68 Derived times are marked on each datum in a static list, which is sound on its own terms, but nothing is played back, so the rule for keeping the label visible during playback has nothing to govern."
+    }
+   ],
+   "absenceTerms": [
+    "scrub",
+    "seek",
+    "rewind"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-26T00:45:00.789084+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "time-travel-replay"
+   ],
+   "techniques": [
+    "accrual-overlays",
+    "estimate-labeling",
+    "renderer-reuse",
+    "scrub-performance",
+    "timeline-derivation",
+    "transport-and-time-mapping"
+   ],
+   "deviations": 0,
+   "context": "ui-ledger-timeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
