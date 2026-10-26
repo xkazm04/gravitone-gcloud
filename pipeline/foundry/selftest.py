@@ -904,7 +904,8 @@ def test_every_third_party_import_is_declared_in_requirements():
     # Read off the DIRECTORY, not the git index: that folder is put on sys.path by its path, so
     # what is importable from it is what is in it - a door added this session (styles.py, Phase 5)
     # is importable before it is committed, and the guard must not call its importer undeclared.
-    pipeline_local |= {p.stem for p in (root / "packages" / "kernel" / "py").glob("*.py")}
+    kernel_py = {p.stem for p in (root / "packages" / "kernel" / "py").glob("*.py")}
+    pipeline_local |= kernel_py
 
     blender_host = {"bpy", "bmesh", "mathutils"}
 
@@ -914,6 +915,9 @@ def test_every_third_party_import_is_declared_in_requirements():
             fp = root / f
             sibs = {p.stem for p in fp.parent.glob("*.py")} | {p.name for p in fp.parent.iterdir() if p.is_dir()}
             local = sibs | (pipeline_local if f.startswith("pipeline/") else set())
+            # a script under packages/kernel/test puts that same folder on sys.path itself (recover_cost.py)
+            if f.startswith("packages/kernel/test/"):
+                local |= kernel_py
             tree = ast.parse(fp.read_text(encoding="utf-8"), filename=f)
             for node in ast.walk(tree):
                 mods = ([a.name for a in node.names] if isinstance(node, ast.Import)
