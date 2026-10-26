@@ -207,3 +207,10 @@ run 3's clusters + run 2's rows are complementary evidence over the same gallery
 - With Flux (~53 GB) and LTX loaded, the commit charge sits above the admission mark (95 GB of 112) and the worker holds
   every gpu.local job, while physical RAM is ~50%. One night should not mix many storyboards and clips; run boards, unload,
   then clips. Argues a look at packages/kernel admission (commit vs resident) - not a cap change.
+
+## 2026-10-25 night (scout 2.3.0)
+
+- The skill's music pause says `open --tracks 0`, but the CLI's `num()` refuses 0 ("--tracks needs a positive number"), and `doctor` FAILs
+  the suno line unless `--tracks` > 0 is accepted. The paused music seeds keep their doors shut, so the night ran on the
+  default cap with the doctor's one expected FAIL. Argues pipeline/scout.mts `num` accepting 0 for caps (tracks, visualizers)
+  and the doctor skipping suno at tracks 0.
