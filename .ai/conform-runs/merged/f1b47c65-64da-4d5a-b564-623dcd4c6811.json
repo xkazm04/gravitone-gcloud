@@ -1,0 +1,54 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f1b47c65-64da-4d5a-b564-623dcd4c6811",
+ "subject": "trust-base",
+ "evaluatedAt": "2026-10-26T00:48:25.554297+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "library-port",
+   "subject": "trust-base",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/library/_port/fixtureCorpus.ts:97 This hand-written type assertion narrows a plain string facet to the Attention union. It is sound only because lines 179 and 248 of the same file write the literals \"missing\" and \"unreadable\", which match ATTENTION in packages/domain/src/library.ts:38, and neither the cast nor those writes say so, so an edit that adds a third attention value would keep compiling while the row carries a value the type rules out.",
+   "techniques": [
+    {
+     "technique": "soundness-argument-names-its-dependencies",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/fixtureCorpus.ts:97 Three `as` assertions in this file (lines 66, 76 and 97) override what the checker infers. Each depends on a fact stated somewhere else: a non-empty array at lines 66 and 76, and writes that use only ATTENTION literals at line 97. No site names its dependency, and the depended-on sites (lines 179 and 248) have no note saying the cast relies on them."
+    },
+    {
+     "technique": "leaf-spec-states-what-callers-read",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/port.ts:44 No body is exempted from checking. Both sides implement the ServerLibrary contract and the TS checker checks them against it in full, so there is no trusted leaf whose spec could be weaker or stronger than its body."
+    },
+    {
+     "technique": "assumptions-are-build-errors",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/port.ts:30 The only environmental fact read here is a runtime side switch with a safe default. No proof or type-level argument depends on a platform fact such as word size or endianness."
+    }
+   ],
+   "registryProposal": "In TypeScript the members this subject would count are mostly `as` assertions, non-null `!` and `any` flow. The golden path names `any` through census-counts-unmarked-members, but no technique states the rule for `as` assertions directly. A short note in soundness-argument-names-its-dependencies saying that a TS `as` narrowing of a wider type is a member, and that a type guard is the removal, would make the subject usable on TS trees."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-26T00:48:25.554297+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "trust-base"
+   ],
+   "techniques": [
+    "assumptions-are-build-errors",
+    "leaf-spec-states-what-callers-read",
+    "soundness-argument-names-its-dependencies"
+   ],
+   "deviations": 1,
+   "context": "library-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
