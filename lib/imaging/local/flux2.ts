@@ -68,6 +68,14 @@ const LOST_POLLS = 6;
 const MAX_IMAGE_BYTES = 64 * 1024 * 1024;
 const PROMPT_MAX = 2_000;
 const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47];
+/** A reference's kind by its bytes: ComfyUI's LoadImage reads all three, and a studio portrait is often a JPEG or WebP
+ *  (2026-10-25: every character sheet failed "reference 1 is not a PNG" on a kept studio portrait). */
+function refKind(b: Uint8Array): { readonly ext: string; readonly mime: string } | null {
+  if (PNG_MAGIC.every((x, k) => b[k] === x)) return { ext: "png", mime: "image/png" };
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { ext: "jpg", mime: "image/jpeg" };
+  if (String.fromCharCode(...b.subarray(0, 4)) === "RIFF" && String.fromCharCode(...b.subarray(8, 12)) === "WEBP") return { ext: "webp", mime: "image/webp" };
+  return null;
+}
 
 export type FluxFetch = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -196,7 +204,7 @@ function checkRequest(r: FluxRequest): { readonly aspect: FluxAspect; readonly p
   if (refs.length > FLUX_REFS_MAX) throw new AppError("invalid", `a Flux frame takes at most ${FLUX_REFS_MAX} reference stills, got ${refs.length}`);
   for (const [i, b] of refs.entries()) {
     if (b.byteLength === 0 || b.byteLength > MAX_REF_BYTES) throw new AppError("invalid", `reference ${i + 1} is ${b.byteLength} bytes; a reference is 1 byte to ${MAX_REF_BYTES / 1024 ** 2} MB`);
-    if (!PNG_MAGIC.every((x, k) => b[k] === x)) throw new AppError("invalid", `reference ${i + 1} is not a PNG`);
+    if (refKind(b) === null) throw new AppError("invalid", `reference ${i + 1} is not a PNG, JPEG or WebP`);
   }
   const late = r.late ?? REFERENCE_LATE;
   if (!Number.isFinite(late) || late < 0 || late >= 1) throw new AppError("invalid", `a reference joins at 0 to under 1 of the denoise, got ${late}`);
@@ -209,7 +217,8 @@ type Upload = { name?: string; subfolder?: string };
 async function upload(c: Ctx, bytes: Uint8Array): Promise<string> {
   const sha = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
   const form = new FormData();
-  form.append("image", new Blob([new Uint8Array(bytes)], { type: "image/png" }), `ref-${sha}.png`);
+  const kind = refKind(bytes) ?? { ext: "png", mime: "image/png" };
+  form.append("image", new Blob([new Uint8Array(bytes)], { type: kind.mime }), `ref-${sha}.${kind.ext}`);
   form.append("type", "input");
   form.append("subfolder", "gravitone");
   form.append("overwrite", "true");
