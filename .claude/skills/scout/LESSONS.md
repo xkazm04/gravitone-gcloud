@@ -217,3 +217,18 @@ run 3's clusters + run 2's rows are complementary evidence over the same gallery
 - 2026-10-26 (spark scout-vision S6): stills are studio-first now, but `.env.local` still carried
   `SCOUT_REPLICA_GENERATOR=comfy-flux2` from the night the API pool ran dry (line 199 above). That line overrides
   the new default: remove it (or set `leonardo-studio`) for studio-first; leave it only to keep scenes on local Flux.
+- 2026-10-26 (measurement night, operator: "measure clearly how efficient is our resource balancing"):
+  - **A worker restart mid-night interrupts every job on a paid lane and HOLDS that lane** until an operator acks it
+    (packages/kernel/src/job-queue.ts holdLaneIn). Three style runs on cloud.google sat held behind one restart, and
+    seat.text had been held since 2026-10-24 by an interrupted reels job - no reel or draft ran for two nights. Preflight
+    should read the lane holds; never restart the worker while cloud.* or seat.text jobs run.
+  - **Commit charge, not RAM or GPU, is the binding resource.** ComfyUI with Flux resident holds ~56 GB of commit (RAM
+    working set ~2 GB), Ollama's qwen3.8:27b ~26 GB while loaded (the style runs' vision recognize loads it), the rest of
+    the box ~39 GB, against a 119-125 GB limit - commit sat at 96-123 GB with 20 GB of physical RAM free. ComfyUI `/free`
+    releases RAM, not commit (so S6's unload-on-hold does not lift a commit hold); only a ComfyUI restart did (95 -> 43 GB).
+  - **Admission deadlocked gpu.local twice**: the hysteresis held until commit < 75%, unreachable while ComfyUI is
+    resident; then the 6.6 GB ComfyUI job charge landed on a reading that already holds ComfyUI's peak (101.8 vs 101.0 GB).
+    Tonight ran on MACHINE_MEM_HIGH=0.9 / MACHINE_MEM_LOW=0.9 in .env.local (revert after). The lasting fix is a
+    resident-aware charge for comfy jobs (lib/resources/profiles + packages/domain/src/resource.ts admit).
+  - **The night-fill's band test is all-resources**: with the GPU at 96% it launched nothing all night, while CPU sat at
+    ~20% and the 12 queued Ollama drafts (CPU/unified-memory work) waited. A per-lane or per-resource test would fill it.
