@@ -1,0 +1,72 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ce08eadc-47f3-4ae9-9c05-b3a88d7e3db1",
+ "subject": "sync-replication",
+ "evaluatedAt": "2026-10-26T00:40:03.673726+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-v1-projection-core",
+   "subject": "sync-replication",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/ledger/v1/sync.ts:31 The v1\u2192ledger projection runs only when an operator runs it or when the Floor, Ledger or Runs pages call freshLedger(). There is no periodic tick, and the agents' door (app/api/ledger/route.ts reads the ledger and never calls freshLedger) can serve a ledger that has been stale for as long as nobody opened a page, so how stale it can get has no limit.",
+   "techniques": [
+    {
+     "technique": "topology-declaration",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/types.ts:12 One-way mirror from v1 stores into the append-only kernel ledger, with the direction stated. The engine is generic over the V1_SOURCES list (lib/ledger/v1/sources.ts), and local drift is reported, not overwritten."
+    },
+    {
+     "technique": "change-tracking-and-cursors",
+     "verdict": "deviation",
+     "evidence": "lib/ledger/v1/sync.ts:31 No cursor: each pass re-reads the full snapshot and appends idempotently by key, in bounded 200-event transactions, and keeps read failures separate from empty passes, which is sound. But the periodic tick that should set the floor was rejected on purpose, so liveness depends on page renders acting as the wake signal."
+    },
+    {
+     "technique": "conflict-detection-and-policy",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sync.ts:138 A held key that comes back with different content is compared by content identity (kernel appendOnce `same`). The held fact stands, which is the append-only policy, and the drift is counted in the report as its own outcome instead of being overwritten or dropped."
+    },
+    {
+     "technique": "sync-observability",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sync.ts:167 Each source gets its own outcome with the error class and verbatim text, a consecutive-failure streak, and last_ok_at kept separate from last_error_at in ingest_sources. A failing source does not stop the others (readOne never throws)."
+    },
+    {
+     "technique": "tombstone-propagation",
+     "verdict": "not-applicable",
+     "evidence": "lib/ledger/v1/sync.ts:206 The receiving side is an append-only event history, so keeping facts whose v1 record is gone is the purpose. Live work is read at render time and never stored, so a deleted v1 record cannot come back as a stored ghost."
+    },
+    {
+     "technique": "in-flight-is-per-connection",
+     "verdict": "not-applicable",
+     "evidence": "lib/ledger/v1/sync.ts:133 Delivery is an in-process SQLite transaction. There is no socket outbox or connection-level retransmit queue."
+    }
+   ],
+   "registryProposal": "change-tracking-and-cursors treats the periodic tick as mandatory. It does not cover demand-driven freshness, where every reader triggers the sync under a single-flight claim. That design is only safe when every reader goes through the trigger, and the technique could say so: list the readers and require that each one triggers the sync or carries a staleness bound. Without that rule, a design that skips the tick looks deliberate and still leaves a door (here an agents' API route) with no freshness limit."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-26T00:40:03.673726+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "sync-replication"
+   ],
+   "techniques": [
+    "change-tracking-and-cursors",
+    "conflict-detection-and-policy",
+    "in-flight-is-per-connection",
+    "sync-observability",
+    "tombstone-propagation",
+    "topology-declaration"
+   ],
+   "deviations": 1,
+   "context": "ledger-v1-projection-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

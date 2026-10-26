@@ -7907,7 +7907,11 @@
           "revision": 10,
           "changedAt": "2026-10-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:31 The v1→ledger projection runs only when an operator runs it or when the Floor, Ledger or Runs pages call freshLedger(). There is no periodic tick, and the agents' door (app/api/ledger/route.ts reads the ledger and never calls freshLedger) can serve a ledger that has been stale for as long as nobody opened a page, so how stale it can get has no limit.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:2d5b609198b79d34",
+          "evaluatedRevision": 10
         },
         {
           "subject": "supply-chain",

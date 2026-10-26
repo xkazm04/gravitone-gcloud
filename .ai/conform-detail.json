@@ -9750,52 +9750,49 @@
       "context": "ledger-v1-projection-core",
       "subject": "sync-replication",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-22",
-      "evaluatedTs": "2026-10-22T21:48:52.286Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:40:03.673Z",
+      "worker": "ce08eadc-47f3-4ae9-9c05-b3a88d7e3db1",
       "techniques": [
+        {
+          "technique": "topology-declaration",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/types.ts:12 One-way mirror from v1 stores into the append-only kernel ledger, with the direction stated. The engine is generic over the V1_SOURCES list (lib/ledger/v1/sources.ts), and local drift is reported, not overwritten."
+        },
         {
           "technique": "change-tracking-and-cursors",
           "verdict": "deviation",
-          "evidence": "lib/ledger/v1/sync.ts:152 The sync loop reads and projects entire source snapshots on every pass instead of maintaining durable per-stream cursors that advance after settlement."
+          "evidence": "lib/ledger/v1/sync.ts:31 No cursor: each pass re-reads the full snapshot and appends idempotently by key, in bounded 200-event transactions, and keeps read failures separate from empty passes, which is sound. But the periodic tick that should set the floor was rejected on purpose, so liveness depends on page renders acting as the wake signal."
         },
         {
           "technique": "conflict-detection-and-policy",
-          "verdict": "deviation",
-          "evidence": "lib/ledger/v1/sync.ts:138 When existing keys return with altered content, the sync only counts them as drifted and discards the new payload without parking or preserving the conflict."
-        },
-        {
-          "technique": "in-flight-is-per-connection",
-          "verdict": "not-applicable",
-          "evidence": "lib/ledger/v1/types.ts:156 Sources are read directly in-process and written to local SQLite rather than pushed across remote socket connections with retransmission queues."
-        },
-        {
-          "technique": "projection-security",
           "verdict": "conformant",
-          "evidence": "lib/ledger/v1/facts.ts:65 Outbound events are projected through a single factory that allowlists fields and tags each event with the data universe boundary."
+          "evidence": "lib/ledger/v1/sync.ts:138 A held key that comes back with different content is compared by content identity (kernel appendOnce `same`). The held fact stands, which is the append-only policy, and the drift is counted in the report as its own outcome instead of being overwritten or dropped."
         },
         {
           "technique": "sync-observability",
           "verdict": "conformant",
-          "evidence": "lib/ledger/v1/sync.ts:167 Per-stream failures are isolated and tracked in health records with failure streaks and verbatim error messages without aborting sibling streams."
+          "evidence": "lib/ledger/v1/sync.ts:167 Each source gets its own outcome with the error class and verbatim text, a consecutive-failure streak, and last_ok_at kept separate from last_error_at in ingest_sources. A failing source does not stop the others (readOne never throws)."
         },
         {
           "technique": "tombstone-propagation",
-          "verdict": "deviation",
-          "evidence": "lib/ledger/v1/sync.ts:231 The projection sync only appends events and omits tombstone propagation, causing the replica to retain deleted source history indefinitely."
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sync.ts:206 The receiving side is an append-only event history, so keeping facts whose v1 record is gone is the purpose. Live work is read at render time and never stored, so a deleted v1 record cannot come back as a stored ghost."
         },
         {
-          "technique": "topology-declaration",
+          "technique": "in-flight-is-per-connection",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sync.ts:133 Delivery is an in-process SQLite transaction. There is no socket outbox or connection-level retransmit queue."
+        },
+        {
+          "technique": "projection-security",
           "verdict": "conformant",
-          "evidence": "lib/ledger/v1/sources.ts:23 Mirrored streams are declared in an enumerable registry of read-only projection sources that lack write methods back to the source stores."
+          "evidence": "lib/ledger/v1/facts.ts:65 Outbound events are projected through a single factory that allowlists fields and tags each event with the data universe boundary.",
+          "carriedFrom": "2026-10-22"
         }
       ],
-      "withdrawn": {
-        "worker": "97fa5cb7-e4ae-4d06-8e3a-1f5bc52fed98",
-        "state": "deviation",
-        "at": "2026-10-22T21:49:26.928740+00:00",
-        "reason": "reviewer (sonnet): The facts.ts:65 anchor does not allowlist fields (make() spreads f.data and extra and only adds src), and the 'omits tombstone propagation' claim has no anchor (grep finds no tombstone, delete or cursor code). The context is also a one-way idempotent append-only ingest, not replication, so the 'no d"
-      }
+      "registryProposal": "change-tracking-and-cursors treats the periodic tick as mandatory. It does not cover demand-driven freshness, where every reader triggers the sync under a single-flight claim. That design is only safe when every reader goes through the trigger, and the technique could say so: list the readers and require that each one triggers the sync or carries a staleness bound. Without that rule, a design that skips the tick looks deliberate and still leaves a door (here an agents' API route) with no freshness limit."
     },
     "2e702395-189e-4eb9-910c-dc4b76ff6e9a/time-travel-replay": {
       "context": "ui-ledger-timeline",
