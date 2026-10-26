@@ -1,0 +1,83 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3fb6af6d-6c62-4e6b-9a6f-44688d34955e",
+ "subject": "measurement-honesty",
+ "evaluatedAt": "2026-10-26T00:10:19.589344+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "publish-producers",
+   "subject": "measurement-honesty",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/producers/src/publish/standing.ts:30 The channel standing is folded over at most WINDOW=200 ledger rows. When no success falls inside that window, failuresSinceSuccess is a floor and lastSuccessAt=null cannot tell \"never succeeded\" from \"succeeded before the window\". Standing has no field marking the truncation, so consumers print the floor as a total (e.g. pipeline/publish.mts:167 prints \"N failure(s) since\").",
+   "techniques": [
+    {
+     "technique": "lower-bound-disclosure",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/publish/standing.ts:30 The bound is stated only in the doc comment on line 29 (\"or since the window began\"). The value that travels carries no truncated or at-least marker, so the floor reaches readers looking like a census."
+    },
+    {
+     "technique": "unmeasurable-vs-zero",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/metrics.ts:31 Fields the platform cannot report are null, never 0, and the mechanism is named on lines 28-29. Dry publications get no snapshot instead of a row of zeros (lines 14-15). lib/publish/youtube.ts fetchStats also returns null for withheld ids."
+    },
+    {
+     "technique": "renormalize-over-present",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/adapter.ts:36 Absence survives the adapter seam as null and is persisted unchanged through recordMetric (step 1: preserve absence at every hop). Totals are computed outside this context."
+    },
+    {
+     "technique": "incomplete-not-verdict",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/metrics.ts:63 A failed platform read returns the error rather than a refreshed count. Dry mode and no-live cases return refreshed:0 with the reason in words (lines 40-46), not a measured zero."
+    },
+    {
+     "technique": "co-published-numbers-must-reconcile",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/metrics.ts:68 The withheld count is incremented in the same loop iteration as refreshed, so the note's \"N returned no statistics\" can never be larger than the refreshed figure printed beside it."
+    },
+    {
+     "technique": "speed-figure-names-its-endpoints",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/timers.ts:38 The downtime gap is named for the events the instrument can actually see (last heartbeat to the noticing tick) and carries both endpoints as from/to. It makes no claim about when the outage really began."
+    },
+    {
+     "technique": "minimum-sample-floors",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/publish/standing.ts:43 Standing produces counts, not rates. The technique explicitly exempts counts, so no floor is owed."
+    },
+    {
+     "technique": "noise-band-and-hysteresis",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/publish/metrics.ts:19 This context only appends lifetime snapshots. Deltas, and any decision to announce a change, live in @gt/domain/publication, which is outside this context."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-26T00:10:19.589344+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "measurement-honesty"
+   ],
+   "techniques": [
+    "co-published-numbers-must-reconcile",
+    "incomplete-not-verdict",
+    "lower-bound-disclosure",
+    "minimum-sample-floors",
+    "noise-band-and-hysteresis",
+    "renormalize-over-present",
+    "speed-figure-names-its-endpoints",
+    "unmeasurable-vs-zero"
+   ],
+   "deviations": 1,
+   "context": "publish-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
