@@ -1,0 +1,73 @@
+{
+ "schema": "conform-run/1",
+ "worker": "727bac66-4fc5-453e-b8b4-977bf1e22668",
+ "subject": "public-claim-provenance",
+ "evaluatedAt": "2026-10-26T00:29:48.972003+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ui-status-provenance",
+   "subject": "public-claim-provenance",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/layout.tsx:1 These @gt/ui state/origin primitives render only inside the authenticated (studio) operator shell. The public landing (app/page.tsx renders only Cosmos; app/_landing imports none of Tally/SourceTag/StackBar/PipRow/StatusPill/Provenance/ChannelBadge), and a case-insensitive grep of the context's eleven component directories for roadmap|marketing|landing|public|seed found zero hits, so no outward claim surface with an unverifying reader exists here.",
+   "techniques": [
+    {
+     "technique": "derived-numerator-authored-denominator",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/tally/Tally.tsx:15 Tally draws a ratio but authors neither half; both come from the caller, on operator screens, not a public progress fraction."
+    },
+    {
+     "technique": "presentation-invariants-on-derived-values",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/stackbar/StackBar.tsx:20 Empty pile is guarded at its one computation and spoken/drawn values read the same props, but there is no hand-authored target against a live count. Tally has no value<=of check, which would matter only on a public surface."
+    },
+    {
+     "technique": "degraded-never-claims-live",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/status/status.ts:151 Closed status vocabulary, defined once, degrading toward attention. This is operator job/run state, not a public request-time counter with a liveness badge."
+    },
+    {
+     "technique": "no-data-source-labelled-inline",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/source/SourceTag.tsx:14 SourceTag is an inline provenance label the reader can see (real/model/illustrative/fixture/derived), but it qualifies operator-facing figures, not hand-typed public claims."
+    },
+    {
+     "technique": "promise-only-what-ships",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:87 The confirm panel renders the adapter's own sentences about what the commit will do, word for word. It is an operator HITL dialog, not a public success panel promising a follow-up."
+    }
+   ],
+   "absenceTerms": [
+    "roadmap",
+    "marketing",
+    "landing",
+    "public",
+    "seed"
+   ],
+   "registryProposal": "Scope note: the subject restricts itself to public surfaces, yet operator tools with a fixture/real produce-side switch show the same seeded-vs-derived problem (fixture values in the same typography as real ones). A pointer stating whether that case belongs to measurement-honesty or to this subject's degraded-never-claims-live would help seats sort internal SourceTag-style provenance chips."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-26T00:29:48.972003+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "public-claim-provenance"
+   ],
+   "techniques": [
+    "degraded-never-claims-live",
+    "derived-numerator-authored-denominator",
+    "no-data-source-labelled-inline",
+    "presentation-invariants-on-derived-values",
+    "promise-only-what-ships"
+   ],
+   "deviations": 0,
+   "context": "ui-status-provenance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
