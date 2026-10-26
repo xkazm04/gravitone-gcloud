@@ -13536,6 +13536,32 @@
         }
       ],
       "registryProposal": "reduced-motion-mechanics could name the split-liveness case directly: a CSS media query that stays live alongside a scripted flag sampled once yields a half-reduced surface after a mid-session toggle, and each half looks correct on its own."
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/vendored-patch-stack": {
+      "context": "ui-status-provenance",
+      "subject": "vendored-patch-stack",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:56:21.174Z",
+      "techniques": [
+        {
+          "technique": "one-reset-authority",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:6 The code is first-party, carried over from the project's own v1. No vendored checkout exists, so nothing needs a reset."
+        },
+        {
+          "technique": "patch-set-authority",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:8 Divergence from v1 is recorded as plain source edits with the reason in a comment. There is no patch set and no patched tree, so neither can be the authority."
+        }
+      ],
+      "withdrawn": {
+        "worker": "cbf0ba28-14dc-4d86-b6dc-c7bd82834767",
+        "state": "not-applicable",
+        "at": "2026-10-26T01:00:34.523751+00:00",
+        "reason": "reviewer (sonnet): The anchors in UpstreamBreak.tsx (lines 1, 6, 8) are header comments about a failed pipeline step and what was kept from v1, so they do not show that no vendored tree or patch set exists. That file is also not among the context's listed files (status, tally, piprow, stackbar, facts, facet). I did no"
+      }
     }
   }
 }
