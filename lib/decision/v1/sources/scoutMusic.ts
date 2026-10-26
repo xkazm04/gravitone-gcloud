@@ -42,13 +42,14 @@ export async function musicOf(night: Night): Promise<Result<Pick<ScoutV1, "seeds
   }
   const ideas: Record<string, string> = {};
   for (const c of night.candidates) {
-    if (c.kind !== "storyboard") continue;
-    const at = c.fromIdea.lastIndexOf("/");
+    if (c.kind !== "storyboard" || c.fromIdea === undefined) continue;
+    const ref = c.fromIdea;
+    const at = ref.lastIndexOf("/");
     if (at <= 0) continue;
-    const from = c.fromIdea.slice(0, at);
+    const from = ref.slice(0, at);
     if (!nights.has(from)) nights.set(from, await readNight(from).catch(() => undefined));
-    const idea = nights.get(from)?.candidates.find((x) => x.id === c.fromIdea.slice(at + 1) && x.kind === "idea");
-    if (idea?.kind === "idea") ideas[c.fromIdea] = idea.title;
+    const idea = nights.get(from)?.candidates.find((x) => x.id === ref.slice(at + 1) && x.kind === "idea");
+    if (idea?.kind === "idea") ideas[ref] = idea.title;
   }
   return ok({ seeds, tracks, ideas });
 }

@@ -546,8 +546,10 @@ export type VisualizerCandidate = CandidateBase & {
  */
 export type StoryboardCandidate = CandidateBase & {
   readonly kind: "storyboard";
-  /** `<night>/<c-id>` of the kept idea it composes - required. */
-  readonly fromIdea: string;
+  /** `<night>/<c-id>` of the kept idea it composes. Exactly one of `fromIdea` and `fromEpisode` is present. */
+  readonly fromIdea?: string;
+  /** The channel episode it storyboards (spark project-baseline): `F1-03`. */
+  readonly fromEpisode?: string;
   readonly title: string;
   readonly paragraph: string;
   readonly bullets: readonly string[];
@@ -579,8 +581,10 @@ export type StoryboardCandidate = CandidateBase & {
  */
 export type ReelCandidate = CandidateBase & {
   readonly kind: "reel";
-  /** `<night>/<c-id>` of the kept stats idea - required. */
-  readonly fromIdea: string;
+  /** `<night>/<c-id>` of the kept stats idea. Exactly one of `fromIdea` and `fromEpisode` is present. */
+  readonly fromIdea?: string;
+  /** The data-channel episode it makes (spark project-baseline): `D1-03`. */
+  readonly fromEpisode?: string;
   readonly title: string;
   readonly source: ReelSource;
   /** The beats the 8 s strip keeps, in order (1..12). */

@@ -111,6 +111,8 @@ const USAGE = [
   "  genre list | genre retire <gn-id> · venture list | venture retire <vn-id>",
   "  plan <night> --json <file|->              [{kind: storyboards|ideas|extract|scenes|assets|sheets|reels|draft, payload, why}]   (the night-fill queue)",
   "  reel <night> --json <file|-> [--detach] · reel <night> --collect   [{fromIdea, source: {kind: table|article|what-if, title, url?, quote?, premise?}, data, cut}]",
+  "  channel list | channel show <id>             (the channels the night serves; spark project-baseline)",
+  "  episodes import --outlines <file> --report <file> · episodes due",
   "  reel-cut <night> --json <file|-> [--detach]   [{fromReel: <night>/<c-id>, seconds: 30-120}]   (a kept real reel, cut in full)",
   "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
@@ -119,7 +121,7 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet", "plan", "reel", "reel-cut"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet", "plan", "reel", "reel-cut", "channel", "episodes"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas, storyboard, lead and seeds new. */
@@ -561,6 +563,41 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
       }
 
       // The night's plan queue (spark scout-vision S6): the worker's night-fill timer launches it while the box idles.
+      // The channels and their episodes (spark project-baseline): the night serves accepted outlines only.
+      if (cmd === "channel" || cmd === "episodes") {
+        const ch = await import("../lib/foundry/scout/channels.ts");
+        const sub = pos[1];
+        if (cmd === "channel" && sub === "list") {
+          const all = await ch.readChannels();
+          for (const f of all) say(`${f.channel.id} ${f.channel.name} · ${f.episodes.length} episode(s)`);
+          if (json) doc({ ok: true, channels: all.map((f) => ({ ...f.channel, episodes: f.episodes.length })) });
+          return 0;
+        }
+        if (cmd === "channel" && sub === "show" && pos[2] !== undefined) {
+          const f = await ch.readChannel(pos[2]);
+          for (const e of f.episodes) say(`${e.id} ${e.state} · ${e.title}`);
+          if (json) doc({ ok: true, ...f });
+          return 0;
+        }
+        if (cmd === "episodes" && sub === "import") {
+          const o = str("outlines"), r = str("report");
+          if (o === undefined || r === undefined) throw new Usage("episodes import --outlines <file> --report <file>");
+          const { readFile } = await import("node:fs/promises");
+          const res = await ch.importEpisodes({ outlines: JSON.parse(await readFile(o, "utf8")), report: await readFile(r, "utf8") });
+          say(`imported ${res.imported.length} · skipped ${res.skipped.length}`);
+          for (const s of res.skipped) say(`  ${s.id}: ${s.why}`);
+          if (json) doc({ ok: true, ...res });
+          return 0;
+        }
+        if (cmd === "episodes" && sub === "due") {
+          const due = await ch.episodesDue();
+          for (const d of due) say(`${d.channel.id} ${d.channel.name} · ${d.episodes.length} due`);
+          if (json) doc({ ok: true, due: due.map((d) => ({ channel: d.channel.id, episodes: d.episodes.map((e) => e.id) })) });
+          return 0;
+        }
+        throw new Usage("channel list | channel show <id> | episodes import --outlines <file> --report <file> | episodes due");
+      }
+
       if (cmd === "plan") {
         const id = nightArg();
         const pl = await import("../lib/foundry/scout/plan.ts");
