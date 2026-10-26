@@ -10,6 +10,28 @@ that packet's commit admits anything into the Library or `knowledge/`.
 
 The skill reads and writes words; the CLI and the kernel do everything that spends or writes files.
 
+## The channel baseline (spark project-baseline, 2026-10-26)
+
+The nights stopped spreading across genres and serve six CHANNELS the operator designed in session (D1 Came From
+Nowhere, D2 The What-If Machine - real-data reels; F1 While It Works, F2 Across the Centuries - impossible-camera
+documentary storyboards; S1 It Builds Itself - spec ads; K1 Small Night Stories - bedtime shorts). Adult comedy is cut
+until the operator brings reference videos. What follows the sections below about seeds, idea artboards, genres,
+ventures, characters and music describes the spread era and is archived (`.claude/skills/scout/ARCHIVE-2.4.0.md`).
+
+- **Channels and episodes** live in `foundry-out/scout-channels/<id>.json` (`SCOUT_CHANNELS_DIR`; a shell that moves
+  `SCOUT_STORE_DIR` gets one beside it). An episode is a premise and a five-beat outline decided in session; only an
+  accepted outline is imported (`episodes import --outlines <file> --report <file>`), and moves outline-kept ->
+  in-production -> made -> kept | thrown as its night's candidate is launched, rendered and judged on the packet
+  (lib/foundry/scout/channels.ts, episodeMoves.ts). `channel list`, `channel show <id>`, `episodes due`.
+- **The night's doors take episodes**: `storyboard` takes `{fromEpisode, title, paragraph, bullets, panels}` for a
+  storyboard channel (one panel per beat; use/aim default from the channel); `reel` takes `{fromEpisode, brief,
+  approach, source, data, cut}` for a data channel. The taste brief opens with `## Episodes due`.
+- **The archive**: new nights live in `foundry-out/scout-nights/`; `foundry-out/scout/` is the read-only pre-baseline
+  archive (`SCOUT_PREBASELINE_STORE_DIR`), read under the same night ids - its packets still open and commit on the
+  Board, and kept characters, Library styles and knowledge stay. A new night on an archived date is `<date>-2`. On a
+  new night `seeds new`, `ideas`, `propose`, `add-source` from an idea, `storyboard` from an idea and the steer refuse:
+  "archived: the scout now serves channels (spark project-baseline); this door reopens only when the operator says so".
+
 ## The night
 
 ```
