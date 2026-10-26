@@ -109,6 +109,9 @@ const USAGE = [
   "  piece <night> [--genre gn-...] [--detach] · piece <night> --collect",
   "  sheet <night> [--character <name>] [--detach] · sheet <night> --collect   (a kept character's reference sheet)",
   "  genre list | genre retire <gn-id> · venture list | venture retire <vn-id>",
+  "  plan <night> --json <file|->              [{kind: storyboards|ideas|extract|scenes|assets|sheets|reels|draft, payload, why}]   (the night-fill queue)",
+  "  reel <night> --json <file|-> [--detach] · reel <night> --collect   [{fromIdea, source: {kind: table|article|what-if, title, url?, quote?, premise?}, data, cut}]",
+  "  reel-cut <night> --json <file|-> [--detach]   [{fromReel: <night>/<c-id>, seconds: 30-120}]   (a kept real reel, cut in full)",
   "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
 ].join("\n");
@@ -116,7 +119,7 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet", "plan", "reel", "reel-cut"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas, storyboard, lead and seeds new. */
@@ -124,7 +127,7 @@ function parse(argv: readonly string[]): { pos: string[]; flags: Map<string, str
   const pos: string[] = [];
   const flags = new Map<string, string | true>();
   const cmd = argv.find((a) => !a.startsWith("--"));
-  const reads = cmd === "add-source" || cmd === "finding" || cmd === "direction" || cmd === "propose" || cmd === "ideas" || cmd === "lead" || (cmd === "seeds" && argv.includes("new")) || (cmd === "storyboard" && !argv.includes("--collect"));
+  const reads = cmd === "add-source" || cmd === "finding" || cmd === "direction" || cmd === "propose" || cmd === "ideas" || cmd === "lead" || (cmd === "seeds" && argv.includes("new")) || (cmd === "storyboard" && !argv.includes("--collect")) || cmd === "plan" || ((cmd === "reel" || cmd === "reel-cut") && !argv.includes("--collect"));
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] ?? "";
     if (!a.startsWith("--")) {
@@ -552,6 +555,34 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
         const r = await sh.sheetAct(ctx, id, character === undefined ? {} : { character }, io.ports?.sheet ?? {});
         for (const c of r.candidates) say(`  ${c.id} sheet ${c.status} · ${c.name} · from ${c.fromPortrait}${c.error === undefined ? "" : ` · ${c.error}`}`);
         if (r.candidates.length === 0) say(`no sheet due in night ${id}`);
+        const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
+        if (json) doc({ ok: !failed, night: id, jobIds: r.jobIds, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.dry === true ? { dry: true } : {}), candidates: r.candidates });
+        return failed ? 1 : 0;
+      }
+
+      // The night's plan queue (spark scout-vision S6): the worker's night-fill timer launches it while the box idles.
+      if (cmd === "plan") {
+        const id = nightArg();
+        const pl = await import("../lib/foundry/scout/plan.ts");
+        const r = await pl.planAct(ctx, id, await input());
+        for (const it of r.items) say(`  ${it.id} ${it.kind} ${it.state} · ${it.why}`);
+        if (json) doc({ ok: true, night: id, items: r.items });
+        return 0;
+      }
+
+      // A kept stats idea on real data, and a kept real reel cut in full (spark scout-vision S5).
+      if (cmd === "reel" || cmd === "reel-cut") {
+        const id = nightArg();
+        const rl = await import("../lib/foundry/scout/reel.ts");
+        if (flags.has("collect")) {
+          const got = await rl.collectReels(id);
+          for (const c of got) say(`${c.id} ${cmd} ${c.status}${c.error === undefined ? "" : ` · ${c.error}`}`);
+          if (got.length === 0) say(`nothing to collect in night ${id}`);
+          if (json) doc({ ok: true, night: id, candidates: got });
+          return 0;
+        }
+        const r = cmd === "reel" ? await rl.reelAct(ctx, id, await input()) : await rl.reelCutAct(ctx, id, await input());
+        for (const c of r.candidates) say(`  ${c.id} ${cmd} ${c.status}${c.error === undefined ? "" : ` · ${c.error}`}`);
         const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
         if (json) doc({ ok: !failed, night: id, jobIds: r.jobIds, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.dry === true ? { dry: true } : {}), candidates: r.candidates });
         return failed ? 1 : 0;
