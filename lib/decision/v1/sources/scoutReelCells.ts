@@ -57,7 +57,7 @@ export function reelCells(night: Night, c: ReelCandidate | ReelCutCandidate, med
   const use = c.use === undefined ? {} : { use: c.use };
   const aim = c.aim === undefined ? {} : { aim: c.aim };
   if (c.kind === "reel") {
-    const meta = [line, `idea ${c.fromIdea}`, `${c.cut.length} beat${c.cut.length === 1 ? "" : "s"}`].join(" · ");
+    const meta = [line, c.fromEpisode !== undefined ? `episode: ${c.fromEpisode}` : `idea ${c.fromIdea ?? "-"}`, `${c.cut.length} beat${c.cut.length === 1 ? "" : "s"}`].join(" · ");
     cell(night, c, c.image, media, out, reelCell(c.id), meta, [`reel · ${c.title}`, line, ...c.cut.map((b) => `- ${b}`)]);
     out.rows.push({ id: c.id, label: clip40(c.title), group: "reels", prompt: c.cut.join(" / "), ...use, ...aim });
     return;

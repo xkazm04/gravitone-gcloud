@@ -1,4 +1,4 @@
-// A SCOUT WING (spark scout-muse): a ROOT of nights, `scout` (foundry-out/scout) or `muse`
+// A SCOUT WING (spark scout-muse): a ROOT of nights, `scout` (foundry-out/scout-nights) or `muse`
 // (foundry-out/scout-muse). Absent anywhere means `scout`: every record written before the wings existed is
 // the scout wing's.
 //
@@ -19,8 +19,12 @@ export const DEFAULT_WING: ScoutWing = "scout";
 
 export const isWing = (s: unknown): s is ScoutWing => typeof s === "string" && (SCOUT_WINGS as readonly string[]).includes(s);
 
-/** The wing's folder under the out dir (`foundry-out/scout`, `foundry-out/scout-muse`). */
-export const WING_OUT_DIR: Readonly<Record<ScoutWing, string>> = { scout: "scout", muse: "scout-muse" };
+/**
+ * The wing's folder under the out dir (`foundry-out/scout-nights`, `foundry-out/scout-muse`). The scout wing's moved
+ * from `scout` to `scout-nights` at the baseline (spark project-baseline, 2026-10-26): `foundry-out/scout` is the
+ * PRE-BASELINE archive now, read beside the new root under the same bare night ids (store.ts preBaselineRoot).
+ */
+export const WING_OUT_DIR: Readonly<Record<ScoutWing, string>> = { scout: "scout-nights", muse: "scout-muse" };
 /** The wing's folder under `knowledge/` (watchlist; muse also techniques.md and characters.md). */
 export const WING_KNOWLEDGE_DIR: Readonly<Record<ScoutWing, string>> = { scout: "scout", muse: "scout-muse" };
 

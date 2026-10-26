@@ -8,6 +8,7 @@ import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { BlockedUrlError, assertFetchable, type Resolver } from "../../imaging/safeUrl";
 import { developedOf, fromIdeaOf, IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
 import { STEP_NAME_RE, STEP_RULE, TEMPLATE_NAME_RE, TEMPLATE_RULE, knowledgeRoot, templateProblem } from "./knowledge";
+import { archivedDoor } from "./baseline";
 import { listNights, mutateNight, mutateNightWith, nextCandidateId, nextSourceId, readArchiveNights, readNight, resolveInNight } from "./store";
 import {
   CLAIM_MAX,
@@ -47,6 +48,7 @@ import { activeWing } from "./wingScope";
 //     before anything is written: an idea that night did not keep, a dry night's, and one any night
 //     already develops (./direction.ts) - a kept idea is developed once. The idea's `fromSeed` is copied
 //     onto the source, so every candidate made over it carries the seed too (spark scout-decision-graph).
+//     SHUT on a new night since the baseline (spark project-baseline, ./baseline.ts ARCHIVED_DOOR).
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 
@@ -146,6 +148,8 @@ export async function addSources(nightId: NightId, raw: unknown, opts: { readonl
     if (!p.ok) return p;
     items.push(p.value);
   }
+  const shut = items.some((s) => "fromIdea" in s) ? archivedDoor(nightId) : undefined;
+  if (shut !== undefined) return err("refused", shut);
   const developed = items.some((s) => "fromIdea" in s) ? developedOf(await allNights()) : new Map<string, string>();
   const seen = await seenElsewhere(nightId);
   const skipped: Skipped[] = [];

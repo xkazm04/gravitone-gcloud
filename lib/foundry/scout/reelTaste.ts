@@ -45,7 +45,7 @@ export function reelsToCut(nights: readonly Night[]): string[] {
       if (c.kind !== "reel" || cellVerdict(n, reelCell(c.id)) !== "kept") continue;
       const ref = `${n.id}/${c.id}`;
       if (reelCutOf(nights, ref) !== undefined) continue;
-      due.push(`- ${ref} · ${c.title} · ${sourceLine(c.source)} · from ${c.fromIdea}`, `  cut: ${c.cut.join(" / ")}`);
+      due.push(`- ${ref} · ${c.title} · ${sourceLine(c.source)} · from ${c.fromIdea ?? `episode ${c.fromEpisode ?? "-"}`}`, `  cut: ${c.cut.join(" / ")}`);
     }
   }
   return ["## Reels to cut", "", ...(due.length === 0 ? ["- none"] : due), ""];

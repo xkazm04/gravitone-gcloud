@@ -22,6 +22,12 @@
 //   never handed to the model as a reference. The candidate copies the idea's `fromSeed`, and its aspect: a
 //   portrait idea (9:16, 4:5) draws 9:16 frames, any other 16:9.
 //
+//   OR A CHANNEL EPISODE (spark project-baseline): `fromEpisode: "F1-03"` in place of `fromIdea` - exactly one of the
+//   two. The episode must be `outline-kept` in the channel store and no night may hold a live storyboard of it
+//   (./storyboardEpisode.ts); the seat writes the panels from its beats, the channel lends `use` and `aim` when the brief
+//   leaves them out, and it is drawn 16:9. Its state follows the candidate (./episodeMoves.ts): in production at the
+//   launch, back to outline-kept when the storyboard fails, made when it renders, kept or thrown by the packet's verdict.
+//
 //   ONE STORYBOARD PER IDEA. A brief for an idea some night already holds a storyboard for is refused, unless
 //   that one failed (a failed storyboard drew nothing to judge).
 //
@@ -60,6 +66,7 @@ import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
+import { EPISODE_ID_RE } from "@gt/domain/channel";
 import { GENRE_ID_RE, TRIALS_PER_GENRE, VENTURE_ID_RE } from "@gt/domain/genre";
 import type { Store } from "@gt/kernel/store";
 import { get } from "@gt/kernel/job";
@@ -69,14 +76,17 @@ import { kernel } from "../../kernelProcess.ts";
 import { driveStoryboard, launchStoryboard } from "../../producers/scoutStoryboard.ts";
 import { settledBoard, type StoryboardClip, type StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
 import { launchable, Refusal, type ActContext } from "./acts";
+import { archivedFromIdea } from "./baseline";
 import { castAllow, castLine, castOf, CAST_MAX, CAST_PROMPT_MAX, rootedNights } from "./cast";
 import { castPrompt, keptCharacters, type KeptCharacter } from "./characters";
 import { IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
+import { followEpisodes } from "./episodeMoves";
 import { genreViews, headsOf, takesTrials, trialSlots, trialsOn, ventureRefusal, type GenreView } from "./genres";
 import { STEP_NAME_RE, STEP_RULE, TEMPLATE_NAME_RE, TEMPLATE_RULE, templateProblem } from "./knowledge";
 import { namesIn } from "./scene";
 import { listSeedBatches, seedOf } from "./seedStore";
 import { mutateNight, nextCandidateId, readAllNights, readNight, withCandidate } from "./store";
+import { dueEpisode, episodeBoardOf, episodeUseAim, type EpisodeHeld } from "./storyboardEpisode";
 import { storyboardOf } from "./storyboardKept";
 import { activeWing } from "./wingScope";
 import {
@@ -134,8 +144,10 @@ const line = (max: number) =>
 
 const briefSchema = z
   .object({
-    /** `<night>/<c-id>` of the kept idea it composes. */
-    fromIdea: z.string().trim().regex(IDEA_REF_RE, "a kept idea's <night>/<c-id>"),
+    /** `<night>/<c-id>` of the kept idea it composes - or, in its place, `fromEpisode`. */
+    fromIdea: z.string().trim().regex(IDEA_REF_RE, "a kept idea's <night>/<c-id>").optional(),
+    /** The channel episode it storyboards (spark project-baseline), `F1-03`. */
+    fromEpisode: z.string().trim().regex(EPISODE_ID_RE, "a channel episode's id (F1-03)").optional(),
     title: line(IDEA_TITLE_MAX),
     /** The vision, one short paragraph. */
     paragraph: z.string().trim().min(1).max(STORYBOARD_PARAGRAPH_MAX),
@@ -163,7 +175,8 @@ const briefSchema = z
     /** Kept characters it casts, by name (spark scout-vision S3): each panel leads with their identity blocks. */
     cast: z.array(line(80)).min(1).max(CAST_MAX).optional(),
   })
-  .strict();
+  .strict()
+  .refine((b) => (b.fromIdea === undefined) !== (b.fromEpisode === undefined), { message: "a brief names exactly one of fromIdea (a kept idea) and fromEpisode (a channel episode)", path: ["fromEpisode"] });
 
 export type StoryboardBrief = z.output<typeof briefSchema>;
 
@@ -172,7 +185,7 @@ export type StoryboardBrief = z.output<typeof briefSchema>;
  * kept characters) only widens the panels' name rule to a brief's cast and their parody origins.
  */
 export function parseStoryboards(raw: unknown, kept: readonly KeptCharacter[] = []): Result<StoryboardBrief[]> {
-  if (!Array.isArray(raw)) return err("invalid", "storyboard: the input is a JSON array of briefs {fromIdea, title, paragraph, bullets, panels, use?, aim?, technique?, venture?, genre?, cast?}");
+  if (!Array.isArray(raw)) return err("invalid", "storyboard: the input is a JSON array of briefs {fromIdea | fromEpisode, title, paragraph, bullets, panels, use?, aim?, technique?, venture?, genre?, cast?}");
   if (raw.length === 0) return err("invalid", "storyboard: the batch holds no brief");
   const out: StoryboardBrief[] = [];
   for (const [i, item] of raw.entries()) {
@@ -184,7 +197,11 @@ export function parseStoryboards(raw: unknown, kept: readonly KeptCharacter[] = 
     // the operator only and follow the idea door's rule (the skill writes them, docs/scout.md holds it to that).
     const names = namesIn(b.panels, [], castAllow(b.cast ?? [], kept));
     if (names.length > 0) return err("refused", `${at}: the panels name ${names.join(", ")}: craft, not content (no person, studio or franchise)`);
-    const twice = out.findIndex((x) => x.fromIdea === b.fromIdea && x.genre === b.genre);
+    if (b.fromEpisode !== undefined) {
+      const again = out.findIndex((x) => x.fromEpisode === b.fromEpisode);
+      if (again >= 0) return err("invalid", `${at}: fromEpisode: ${b.fromEpisode} is storyboard ${again + 1}'s too; one storyboard per episode`);
+    }
+    const twice = b.fromIdea === undefined ? -1 : out.findIndex((x) => x.fromIdea === b.fromIdea && x.genre === b.genre);
     if (twice >= 0) return err("invalid", `${at}: fromIdea: ${b.fromIdea} is storyboard ${twice + 1}'s too; one ${b.genre === undefined ? "storyboard" : `trial of ${b.genre}`} per idea`);
     out.push(b);
   }
@@ -201,8 +218,12 @@ function trialOf(nights: readonly Night[], ref: string, genre: string): { readon
 }
 
 /** Why a brief cannot be written over `nights`, or undefined: one plain storyboard per idea, one trial per idea per genre. */
-function heldFor(nights: readonly Night[], b: Pick<StoryboardBrief, "fromIdea" | "genre">, place: number): string | undefined {
-  const ref = b.fromIdea;
+function heldFor(nights: readonly Night[], b: Pick<StoryboardBrief, "fromIdea" | "fromEpisode" | "genre">, place: number): string | undefined {
+  if (b.fromEpisode !== undefined) {
+    const had = episodeBoardOf(nights, b.fromEpisode);
+    return had === undefined ? undefined : `storyboard ${place}: episode ${b.fromEpisode} already has storyboard ${had.night}/${had.candidate.id} (${had.candidate.status}); one storyboard per episode, unless that one failed`;
+  }
+  const ref = b.fromIdea ?? "";
   if (b.genre !== undefined) {
     const had = trialOf(nights, ref, b.genre);
     return had === undefined ? undefined : `storyboard ${place}: idea ${ref} already has trial ${had.night}/${had.candidate.id} of ${b.genre} (${had.candidate.status}); one trial per idea per genre, unless that one failed`;
@@ -264,6 +285,8 @@ async function failPending(id: NightId, cid: CandidateId, why: string): Promise<
 /** The `storyboard` act: briefs (JSON, one per kept idea) through the door, each drawn as one gpu.local job. */
 export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown, engines: StoryboardEngines = {}): Promise<StoryboardResult> {
   if (activeWing() !== "scout") throw new Refusal(`the ${activeWing()} wing draws no storyboard`);
+  const shut = archivedFromIdea(id, input); // a kept idea's storyboard is the spread's (spark project-baseline); an episode's is not
+  if (shut !== undefined) throw new Refusal(shut);
   // The kept characters are read only for a batch that casts: a plain batch never touches the archive.
   const casts = Array.isArray(input) && input.some((x) => typeof x === "object" && x !== null && "cast" in x);
   const kept = casts ? keptCharacters(await rootedNights()) : [];
@@ -277,8 +300,17 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
     if (unborn !== undefined) throw new Refusal(`storyboard ${i + 1}: venture: ${unborn}`);
   }
   const cache = new Map<NightId, Night | string>();
-  const ideas: KeptIdea[] = [];
+  const ideas: (KeptIdea | undefined)[] = [];
+  const episodes: (EpisodeHeld | undefined)[] = [];
   for (const [i, b] of briefs.entries()) {
+    const held = b.fromEpisode === undefined ? undefined : await dueEpisode(`storyboard ${i + 1}`, b.fromEpisode);
+    // A data channel's episode is made as a real-data reel, never as Flux frames (the reel door refuses the mirror case).
+    if (held !== undefined && held.channel.medium !== "storyboard") throw new Refusal(`storyboard ${i + 1}: fromEpisode: ${held.episode.id} is channel ${held.channel.id}'s, made as a ${held.channel.medium}; only a storyboard channel's episode is storyboarded`);
+    episodes.push(held);
+    if (b.fromIdea === undefined) {
+      ideas.push(undefined);
+      continue;
+    }
     const k = await keptIdea(b.fromIdea, cache);
     if (!k.ok) throw new Refusal(`storyboard ${i + 1}: fromIdea: ${k.error.message}`);
     ideas.push(k.value);
@@ -307,15 +339,18 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
     made = [];
     for (const [i, b] of briefs.entries()) {
       const idea = ideas[i]?.idea;
+      const lent = episodes[i] === undefined ? undefined : episodeUseAim(episodes[i], b);
       const aspect = boardAspect(idea?.aspect);
       const cast = casted[i];
-      const use = b.use !== undefined ? { use: b.use } : { ...(idea?.use === undefined ? {} : { use: idea.use }), ...(idea?.app === undefined ? {} : { app: idea.app }) };
+      const aim = lent?.aim ?? b.aim;
+      const use = lent !== undefined ? { use: lent.use } : b.use !== undefined ? { use: b.use } : { ...(idea?.use === undefined ? {} : { use: idea.use }), ...(idea?.app === undefined ? {} : { app: idea.app }) };
       const c: StoryboardCandidate = {
         id: nextCandidateId(next),
         kind: "storyboard",
         sourceIds: [],
         status: n.dry ? "rendered" : "pending",
-        fromIdea: b.fromIdea,
+        ...(b.fromIdea === undefined ? {} : { fromIdea: b.fromIdea }),
+        ...(b.fromEpisode === undefined ? {} : { fromEpisode: b.fromEpisode }),
         ...(idea?.fromSeed === undefined ? {} : { fromSeed: idea.fromSeed }),
         title: b.title,
         paragraph: b.paragraph,
@@ -323,7 +358,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
         panels: cast?.panels ?? b.panels,
         ...(aspect === "16:9" ? {} : { aspect }),
         ...use,
-        ...(b.aim === undefined ? {} : { aim: b.aim }),
+        ...(aim === undefined ? {} : { aim }),
         ...(b.technique === undefined ? {} : { technique: { claim: b.technique.claim, quote: b.technique.quote, url: b.technique.url, template: b.technique.template, step: b.technique.step } }),
         ...(b.venture === undefined ? {} : { venture: b.venture }),
         ...(b.genre === undefined ? {} : { genre: b.genre }),
@@ -338,6 +373,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   if (full !== undefined) throw new Refusal(full);
   if (made.length === 0) throw new Error(`night ${id}: the storyboard candidates were not written`);
   const cids = made.map((c) => c.id);
+  await followEpisodes(id, cids);
   made.forEach((c, i) => {
     const cast = casted[i];
     if (cast !== undefined) ctx.say(`${c.id} cast: ${castLine(cast.members)}`);
@@ -372,6 +408,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
     ctx.say(`launched ${c.id} as ${r1.value.jobId}`);
     jobIds.push(r1.value.jobId);
   }
+  if (refused.length > 0) await followEpisodes(id, cids);
   if (refused.length > 0) throw new Refusal([...refused, ...jobIds.map((j) => `${j} launched`)].join("; "));
   if (ctx.detach) return { candidates: await batchOf(id, cids), jobIds, outcome: "detached" };
 
@@ -381,6 +418,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
     const o = d.ok ? d.value.outcome : d.error.message;
     if (outcome === "done" && o !== "done") outcome = o;
   }
+  await followEpisodes(id, cids);
   return { candidates: await batchOf(id, cids), jobIds, outcome };
 }
 
@@ -391,7 +429,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
  * the panel's own words. Refused - nothing written - when a member is not kept, breaks the audience rule (the work's
  * audience is its idea's seed's), or a compiled panel is past what Flux takes.
  */
-async function castPanels(briefs: readonly StoryboardBrief[], ideas: readonly KeptIdea[], kept: readonly KeptCharacter[]): Promise<({ readonly members: readonly KeptCharacter[]; readonly panels: readonly string[] } | undefined)[]> {
+async function castPanels(briefs: readonly StoryboardBrief[], ideas: readonly (KeptIdea | undefined)[], kept: readonly KeptCharacter[]): Promise<({ readonly members: readonly KeptCharacter[]; readonly panels: readonly string[] } | undefined)[]> {
   if (!briefs.some((b) => b.cast !== undefined)) return briefs.map(() => undefined);
   const batches = await listSeedBatches();
   return briefs.map((b, i) => {
@@ -442,5 +480,6 @@ export async function collectStoryboards(id: NightId, o: { readonly store?: Stor
       return next === null ? m : withCandidate(m, next);
     });
   }
+  await followEpisodes(id, out);
   return batchOf(id, out);
 }

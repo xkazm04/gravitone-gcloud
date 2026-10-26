@@ -15,6 +15,7 @@ const ROOT = vi.hoisted(() => {
   const path = process.getBuiltinModule("node:path");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gt-scout-wing-"));
   process.env["SCOUT_STORE_DIR"] = path.join(dir, "scout");
+  process.env["SCOUT_CHANNELS_DIR"] = path.join(dir, "scout-channels");
   process.env["SCOUT_MUSE_STORE_DIR"] = path.join(dir, "muse");
   process.env["SCOUT_KNOWLEDGE_DIR"] = path.join(dir, "knowledge");
   process.env["GRAVITONE_STORE_PATH"] = path.join(dir, "kernel.sqlite");

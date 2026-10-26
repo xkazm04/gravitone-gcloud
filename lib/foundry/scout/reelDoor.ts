@@ -2,7 +2,8 @@ import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
-import type { ReelBriefIn } from "@gt/producers/scout-reels/define";
+import { EPISODE_ID_RE } from "@gt/domain/channel";
+import { reelApproachSchema, reelBriefSchema, type ReelApproachIn, type ReelBriefIn } from "@gt/producers/scout-reels/define";
 
 import { IDEA_REF_RE } from "./direction";
 import { sourceLine } from "./reelTaste";
@@ -69,18 +70,68 @@ const reelAskSchema = z
   .strict()
   .refine((a) => Buffer.byteLength(JSON.stringify(a.data), "utf8") <= REAL_DATA_MAX, { message: `a reel's data is at most ${REAL_DATA_MAX / 1000} KB of JSON`, path: ["data"] });
 
-export type ReelAsk = { readonly fromIdea: string; readonly source: ReelSource; readonly data: unknown; readonly cut: readonly string[] };
+/** A kept stats idea on real data: the idea lends its brief's shape and its approach. */
+export type IdeaReelAsk = { readonly fromIdea: string; readonly source: ReelSource; readonly data: unknown; readonly cut: readonly string[] };
 
-/** `[{fromIdea, source, data, cut}]`: the batch, or the first bad entry's place and why. One idea at most once. */
+// A CHANNEL EPISODE ON REAL DATA (spark project-baseline): an episode has no kept idea to inherit from, so the ask
+// carries what the idea would have lent - the brief's shape {case, title, hook, unit, kind, steps?} and the approach the
+// seat writes - and both are held here to the reels producer's own schemas (reelBriefSchema, reelApproachSchema): the
+// brief is composed real (its numbers `data`, its source line, its cut) and must pass whole.
+const episodeAskSchema = z
+  .object({
+    fromEpisode: z.string().trim().regex(EPISODE_ID_RE, "a channel episode's id (D1-04)"),
+    brief: z.object({ case: z.unknown(), title: z.unknown(), hook: z.unknown(), unit: z.unknown(), kind: z.unknown(), steps: z.unknown().optional() }).strict(),
+    approach: z.unknown(),
+    source: reelSourceSchema,
+    data: z.unknown().refine((v) => v !== undefined && v !== null, { message: "the real numbers, in the brief's shape" }),
+    cut: z.array(text(CUT_BEAT_MAX)).min(1, "the beats the 8 s strip keeps: at least one").max(CUT_BEATS_MAX),
+  })
+  .strict()
+  .refine((a) => Buffer.byteLength(JSON.stringify(a.data), "utf8") <= REAL_DATA_MAX, { message: `a reel's data is at most ${REAL_DATA_MAX / 1000} KB of JSON`, path: ["data"] });
+
+/** A channel episode on real data: its brief already real, its approach the seat's. */
+export type EpisodeReelAsk = { readonly fromEpisode: string; readonly brief: ReelBriefIn; readonly approach: ReelApproachIn; readonly source: ReelSource; readonly data: unknown; readonly cut: readonly string[] };
+
+export type ReelAsk = IdeaReelAsk | EpisodeReelAsk;
+
+/** What an ask makes: `<night>/<c-id>` of its idea, or its episode's id. */
+export const askRef = (a: ReelAsk): string => ("fromEpisode" in a ? a.fromEpisode : a.fromIdea);
+
+function episodeAsk(at: string, x: unknown): Result<EpisodeReelAsk> {
+  const p = parseAt(at, episodeAskSchema, x);
+  if (!p.ok) return p;
+  const source = p.value.source as ReelSource;
+  const brief = parseAt(`${at}: brief`, reelBriefSchema, { ...p.value.brief, data: p.value.data, source: briefSource(source), cut: p.value.cut });
+  if (!brief.ok) return brief;
+  const approach = parseAt(`${at}: approach`, reelApproachSchema, p.value.approach);
+  if (!approach.ok) return approach;
+  return ok({ fromEpisode: p.value.fromEpisode, brief: brief.value, approach: approach.value, source, data: p.value.data, cut: p.value.cut });
+}
+
+/**
+ * `[{fromIdea, source, data, cut} | {fromEpisode, brief, approach, source, data, cut}]`: the batch, or the first bad
+ * entry's place and why. One idea, or one episode, at most once.
+ */
 export function parseReelAsks(raw: unknown): Result<ReelAsk[]> {
-  if (!Array.isArray(raw) || raw.length === 0) return err("invalid", "reel: the input is a JSON array of [{fromIdea, source: {kind: table|article|what-if, title, url?, quote?, premise?}, data, cut}]");
+  if (!Array.isArray(raw) || raw.length === 0) return err("invalid", "reel: the input is a JSON array of [{fromIdea | fromEpisode, brief? (an episode's), approach? (an episode's), source: {kind: table|article|what-if, title, url?, quote?, premise?}, data, cut}]");
   if (raw.length > MAX_REEL_CAP) return err("invalid", `reel: at most ${MAX_REEL_CAP} reels a batch, got ${raw.length}`);
   const out: ReelAsk[] = [];
   for (const [i, x] of raw.entries()) {
-    const p = parseAt(`reel ${i + 1}`, reelAskSchema, x);
-    if (!p.ok) return p;
-    if (out.some((o) => o.fromIdea === p.value.fromIdea)) return err("invalid", `reel ${i + 1}: ${p.value.fromIdea} is already in this batch`);
-    out.push({ fromIdea: p.value.fromIdea, source: p.value.source as ReelSource, data: p.value.data, cut: p.value.cut });
+    const at = `reel ${i + 1}`;
+    const named = typeof x === "object" && x !== null ? x : {};
+    if (("fromIdea" in named) === ("fromEpisode" in named)) return err("invalid", `${at}: an ask names exactly one of fromIdea (a kept stats idea) and fromEpisode (a reel channel's episode)`);
+    let ask: ReelAsk;
+    if ("fromEpisode" in named) {
+      const e = episodeAsk(at, x);
+      if (!e.ok) return e;
+      ask = e.value;
+    } else {
+      const p = parseAt(at, reelAskSchema, x);
+      if (!p.ok) return p;
+      ask = { fromIdea: p.value.fromIdea, source: p.value.source as ReelSource, data: p.value.data, cut: p.value.cut };
+    }
+    if (out.some((o) => askRef(o) === askRef(ask))) return err("invalid", `${at}: ${askRef(ask)} is already in this batch`);
+    out.push(ask);
   }
   return ok(out);
 }
@@ -114,7 +165,7 @@ export function briefSource(s: ReelSource): NonNullable<ReelBriefIn["source"]> {
 }
 
 /** The real brief: the kept idea's shape, its numbers replaced whole, its source line and its cut. */
-export function realBrief(idea: ReelBriefIn, ask: ReelAsk): ReelBriefIn {
+export function realBrief(idea: ReelBriefIn, ask: Pick<IdeaReelAsk, "source" | "data" | "cut">): ReelBriefIn {
   const { illustrative: _i, data: _d, source: _s, cut: _c, frames: _f, seconds: _x, ...shape } = idea;
   return { ...shape, data: ask.data as ReelBriefIn["data"], source: briefSource(ask.source), cut: [...ask.cut] };
 }

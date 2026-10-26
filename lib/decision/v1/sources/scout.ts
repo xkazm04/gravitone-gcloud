@@ -22,8 +22,9 @@ import { processNightLoad } from "../../../foundry/scout/load.ts";
 import { appendCharacter, appendFinding, appendTechnique, appendWatch, knowledgeRoot } from "../../../foundry/scout/knowledge.ts";
 import { meshRoot, mutateAsset, readAsset, resolveInAsset, withVariant } from "../../../foundry/mesh/store.ts";
 import { deskAbs, deskCellUrl, readDeskNight, saveDeskNight } from "../../../foundry/local-draws/desk.ts";
+import { followNight } from "../../../foundry/scout/episodeMoves.ts";
 import { openOf, remainderLine, splitPart } from "../../../foundry/scout/parts.ts";
-import { mutateNight, nightDir, readNight, resolveInNight, scoutRoot } from "../../../foundry/scout/store.ts";
+import { mutateNight, nightDir, nightRoot, readNight, resolveInNight } from "../../../foundry/scout/store.ts";
 import type { GenreProposalCandidate, Night, NightId, VentureProposalCandidate } from "../../../foundry/scout/types.ts";
 import { wingRunId, type ScoutWing } from "../../../foundry/scout/wing.ts";
 import { activeWing } from "../../../foundry/scout/wingScope.ts";
@@ -245,7 +246,7 @@ async function read(ref: AdapterRef, storeOf: () => Result<Store>): Promise<Resu
   if (!music.ok) return music;
   const genres = genresFor(night, storeOf);
   if (!genres.ok) return genres;
-  return ok({ ...(genres.value === undefined ? {} : { genres: genres.value }), ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...(part === 1 ? {} : { part }), ...music.value, wing, night, styles, assets, media: Object.fromEntries(media.value), knowledge: knowledge.value, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
+  return ok({ ...(genres.value === undefined ? {} : { genres: genres.value }), ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...(part === 1 ? {} : { part }), ...music.value, wing, night, styles, assets, media: Object.fromEntries(media.value), knowledge: knowledge.value, at: { scout: rel(nightRoot(night.id)), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
@@ -549,6 +550,8 @@ async function apply(claim: ApplyClaim, storeOf: () => Result<Store>): Promise<R
 
   const settled = (n: Night): Result<void> | undefined => settledPart(id, n.committed, record, part);
   const before = settled(night);
+  // A redelivery of a part already merged still walks the episodes: a crash between the record and the moves is made up here.
+  if (before?.ok === true) await followNight(night);
   if (before !== undefined) return before;
   if (night.state === "open") return err("conflict", `scout night ${id}: The night is still running.`);
 
@@ -599,6 +602,8 @@ async function apply(claim: ApplyClaim, storeOf: () => Result<Store>): Promise<R
   // `committed` only once nothing is left open.
   const after = await v1Call(() => mutateNight(id, (n) => withPart(n, record, part)));
   if (!after.ok) return after;
+  // The verdict ends a channel episode's candidate: kept, or thrown (lib/foundry/scout/episodeMoves.ts; never fails the commit).
+  await followNight(after.value);
   return settled(after.value) ?? err("internal", `scout night ${id}: the commit record did not land in ${nightDir(id)}`);
 }
 

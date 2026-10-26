@@ -1,5 +1,6 @@
 import type { LoadResource, LoadSummary } from "@gt/domain/load";
 
+import { archivedDoor, dropArchivedSections } from "./baseline";
 import { developedOf } from "./direction";
 import { ancestryOf, listSeedBatches, seedOf } from "./seedStore";
 import { seedFacets } from "./seeds";
@@ -72,7 +73,7 @@ function label(n: Night, c: Candidate): string {
     case "direction":
       return `"${c.title}" [${c.format} · ${c.genre}]`;
     case "storyboard":
-      return `"${c.title}" [storyboard of ${c.fromIdea} · ${c.panels.length} frame(s)${c.genre === undefined ? "" : ` · trial of ${c.genre}`}]`;
+      return `"${c.title}" [storyboard of ${c.fromIdea ?? `episode ${c.fromEpisode ?? "-"}`} · ${c.panels.length} frame(s)${c.genre === undefined ? "" : ` · trial of ${c.genre}`}]`;
     case "genre":
       return `"${c.name}" [genre from ${c.fromStoryboard}]`;
     case "venture":
@@ -403,5 +404,7 @@ export async function tasteBrief(except?: string, loadOf?: (n: Night) => LoadSum
   const all = [...(await characterSections(await readRootedNights())), ...(extra ?? [])];
   all.push(...(await (await import("./tasteDrafts")).draftsSection(nights)));
   all.push(...(await import("./reelTaste")).reelsToCut(nights));
-  return tasteOf(nights, last, { seeds, extra: all });
+  // On a new night (spark project-baseline, ./baseline.ts) the spread's sections are dropped by heading, the caller's too.
+  const brief = await (await import("./tasteEpisodes")).episodesFirst(tasteOf(nights, last, { seeds, extra: all }));
+  return archivedDoor(except) === undefined ? brief : dropArchivedSections(brief.split("\n")).join("\n");
 }

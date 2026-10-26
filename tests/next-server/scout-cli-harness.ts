@@ -10,6 +10,7 @@ import path from "node:path";
 
 export const ROOT = mkdtempSync(path.join(os.tmpdir(), "gt-scout-"));
 process.env["SCOUT_STORE_DIR"] = path.join(ROOT, "scout");
+process.env["SCOUT_CHANNELS_DIR"] = path.join(ROOT, "scout-channels");
 process.env["EXTRACT_STORE_DIR"] = path.join(ROOT, "extract");
 process.env["FOUNDRY_DIR"] = path.join(ROOT, "catalogue");
 process.env["GRAVITONE_STORE_PATH"] = path.join(ROOT, "kernel.sqlite");

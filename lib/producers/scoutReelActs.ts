@@ -20,6 +20,7 @@ import { collectTurn, prepareTurn, standInPage, standInTurn, type StripTurn } fr
 import { DEFAULT_OPTIONS, DEFAULT_SELECTION } from "../foundry/strips/cards.ts";
 import { formatLint, lintStrip, stripDataRule } from "../foundry/strips/lint.ts";
 import type { Approach, MotionGrammar, StripLane, StripMedium, SupportAsset } from "../foundry/strips/types.ts";
+import { followEpisodes } from "../foundry/scout/episodeMoves.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
 import { REEL_DATA_ID, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, type ReelFiles } from "../foundry/scout/types.ts";
 import { standIdea } from "./scoutIdeaActs.ts";
@@ -121,6 +122,8 @@ async function writeIdeas(req: ReelsRequest, jobId: string, which: readonly stri
     }
     return m.jobs.includes(jobId) ? m : { ...m, jobs: [...m.jobs, jobId] };
   });
+  // A channel episode's reel moves its episode: made, or back to outline-kept (lib/foundry/scout/episodeMoves.ts).
+  await followEpisodes(req.nightId, which);
 }
 
 const failed = (why: string) => (c: ReelHolder): ReelHolder => ({ ...c, status: "failed", error: why });

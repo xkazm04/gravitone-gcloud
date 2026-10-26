@@ -1,5 +1,5 @@
 // THE SCOUT NIGHT STORE - server only. One directory per night under the
-// active wing's root, foundry-out/scout/<nightId>/ or foundry-out/scout-muse/<nightId>/
+// active wing's root, foundry-out/scout-nights/<nightId>/ or foundry-out/scout-muse/<nightId>/
 // (SCOUT_STORE_DIR, SCOUT_MUSE_STORE_DIR redirect them, read per call, so a test
 // or a rehearsal never writes the checkout's):
 //
@@ -16,9 +16,16 @@
 // the CLI write the same manifest from different processes, and the run lock
 // (../verdictLog withRunLock - a lock FILE, so it holds across processes)
 // turns their read-modify-writes into a queue instead of a lost update.
+//
+// THE PRE-BASELINE ARCHIVE (spark project-baseline, 2026-10-26): the scout stopped spreading and serves
+// channels. The old root, foundry-out/scout/, was neither moved nor emptied: it is a second root of the
+// scout wing, read beside the new one under the same BARE night ids (so pkt:scout:2026-10-24 opens, commits
+// and serves its files as before), and new nights open only in the new root, never on a date the archive
+// holds (`2026-10-24-2`). Its seed batches, the steer and the lead queue stay in it (homeRoot). The muse
+// archive (readArchiveNights) is the other precedent and keeps its own `muse:` ids.
 
 import { mkdir, readdir, stat } from "node:fs/promises";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { outPath } from "../../fixtures/roots";
@@ -60,14 +67,66 @@ export function scoutRoot(): string {
  *  and must not spell an env var's name (check:bundle). */
 export const WING_STORE_ENV: Readonly<Record<ScoutWing, string>> = { scout: "SCOUT_STORE_DIR", muse: "SCOUT_MUSE_STORE_DIR" };
 
-/** A wing's root: its env var (SCOUT_STORE_DIR, SCOUT_MUSE_STORE_DIR), else `<out>/scout`, `<out>/scout-muse`. */
+/** A wing's root: its env var (SCOUT_STORE_DIR, SCOUT_MUSE_STORE_DIR), else `<out>/scout-nights`, `<out>/scout-muse`. */
 export function rootOf(wing: ScoutWing): string {
   return process.env[WING_STORE_ENV[wing]]?.trim() || outPath(WING_OUT_DIR[wing]);
 }
 
+/** The env var that moves the pre-baseline archive (tests and rehearsals point it at a temp dir). */
+export const PRE_BASELINE_ENV = "SCOUT_PREBASELINE_STORE_DIR";
+
+/**
+ * The PRE-BASELINE archive's root: its env var, else `<out>/scout` - unless the nights root itself is redirected
+ * (SCOUT_STORE_DIR set, the var unset), where there is none: a test's or a rehearsal's world never reads the
+ * checkout's archive, and its doors stay as they were before the baseline. Undefined also means the baseline is off.
+ */
+export function preBaselineRoot(): string | undefined {
+  const env = process.env[PRE_BASELINE_ENV]?.trim();
+  if (env) return env;
+  return process.env[WING_STORE_ENV.scout]?.trim() ? undefined : outPath("scout");
+}
+
+/** The scout's files that are no night's (steer.json, seeds/, leads.json): the pre-baseline root's, kept where they were. */
+export function homeRoot(): string {
+  return (activeWing() === "scout" ? preBaselineRoot() : undefined) ?? scoutRoot();
+}
+
+/** True when `id` is a night of the pre-baseline archive (scout wing only; the new root wins a tie it never has). */
+export function isPreBaselineNight(id: NightId): boolean {
+  const archive = activeWing() === "scout" ? preBaselineRoot() : undefined;
+  return archive !== undefined && NIGHT_ID_RE.test(id) && !existsSync(path.join(scoutRoot(), id)) && existsSync(path.join(archive, id));
+}
+
+/** True when the baseline is on and `id` (absent: any new night) is not an archived night: the old doors are shut there. */
+export function onBaseline(id?: NightId): boolean {
+  return activeWing() === "scout" && preBaselineRoot() !== undefined && (id === undefined || !isPreBaselineNight(id));
+}
+
+/** The root directory a night sits in: the archive's for a pre-baseline night, else the active wing's. */
+export function nightRoot(id: NightId): string {
+  const archive = isPreBaselineNight(id) ? preBaselineRoot() : undefined;
+  return archive ?? scoutRoot();
+}
+
 export function nightDir(id: NightId): string {
   if (!NIGHT_ID_RE.test(id)) throw new FoundryError(`That is not a night id: ${id}.`, 400);
-  return path.join(scoutRoot(), id);
+  return path.join(nightRoot(id), id);
+}
+
+/** The roots `listNights` walks: the active wing's, then (scout wing, baseline on) the pre-baseline archive. */
+function nightRoots(): string[] {
+  const archive = activeWing() === "scout" ? preBaselineRoot() : undefined;
+  return archive === undefined || path.resolve(archive) === path.resolve(scoutRoot()) ? [scoutRoot()] : [scoutRoot(), archive];
+}
+
+/** Every night id under one root; a missing root is none. */
+async function idsUnder(root: string): Promise<string[]> {
+  try {
+    return (await readdir(root)).filter((x) => NIGHT_ID_RE.test(x));
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw e;
+  }
 }
 
 /** An absolute path inside the night, refused when `rel` climbs out of it. */
@@ -105,8 +164,11 @@ export async function createNight(o: NightOptions): Promise<Night> {
   const day = o.day ?? now.toISOString().slice(0, 10);
   const root = scoutRoot();
   await mkdir(root, { recursive: true });
+  // Ids are unique across both roots: a date the pre-baseline archive holds is taken (its packets keep their ids).
+  const archive = nightRoots()[1];
   for (let i = 0; i < 50; i++) {
     const id = i === 0 ? day : `${day}-${i + 1}`;
+    if (archive !== undefined && existsSync(path.join(archive, id))) continue;
     try {
       await mkdir(path.join(root, id));
     } catch (e) {
@@ -185,19 +247,20 @@ export function summarise(n: Night): NightSummary {
   };
 }
 
-/** Every night on disk, newest first. A night whose manifest cannot be read is skipped, never fatal to the list. */
+/**
+ * Every night on disk, newest first: the scout wing's spans the new root and the pre-baseline archive (ids are unique
+ * across them; the new root wins a tie). A night whose manifest cannot be read is skipped, never fatal to the list.
+ */
 export async function listNights(): Promise<NightSummary[]> {
-  let names: string[];
-  try {
-    names = await readdir(scoutRoot());
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw e;
-  }
   const out: NightSummary[] = [];
-  for (const id of names.filter((x) => NIGHT_ID_RE.test(x))) {
-    const n = await readManifestFile<Night>(path.join(scoutRoot(), id, NIGHT_FILE), id, "night");
-    if (n) out.push(summarise(n));
+  const seen = new Set<string>();
+  for (const root of nightRoots()) {
+    for (const id of await idsUnder(root)) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const n = await readManifestFile<Night>(path.join(root, id, NIGHT_FILE), id, "night");
+      if (n) out.push(summarise(n));
+    }
   }
   return out.sort((a, b) => (a.startedAt < b.startedAt ? 1 : a.startedAt > b.startedAt ? -1 : 0));
 }
@@ -235,17 +298,12 @@ export async function readRootedNights(): Promise<RootedNight[]> {
 
 /** Every extract run a night's style candidate launched - the extract Weir leaves them to the night's packet. */
 export async function scoutExtractRunIds(): Promise<Set<string>> {
-  let names: string[];
-  try {
-    names = await readdir(scoutRoot());
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return new Set();
-    throw e;
-  }
   const ids = new Set<string>();
-  for (const id of names.filter((x) => NIGHT_ID_RE.test(x))) {
-    const n = await readManifestFile<Night>(path.join(scoutRoot(), id, NIGHT_FILE), id, "night");
-    if (n) for (const c of n.candidates) if (c.kind === "style" && c.extractRunId !== undefined) ids.add(c.extractRunId);
+  for (const root of nightRoots()) {
+    for (const id of await idsUnder(root)) {
+      const n = await readManifestFile<Night>(path.join(root, id, NIGHT_FILE), id, "night");
+      if (n) for (const c of n.candidates) if (c.kind === "style" && c.extractRunId !== undefined) ids.add(c.extractRunId);
+    }
   }
   return ids;
 }

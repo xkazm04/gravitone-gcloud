@@ -515,7 +515,7 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
           return 0;
         }
         const r = await sb.storyboardAct(ctx, id, await input(), io.ports?.storyboard ?? {});
-        for (const c of r.candidates) say(`  ${c.id} storyboard ${c.status} · ${c.fromIdea} · ${(c.images ?? []).filter((f) => f !== null).length}/${c.panels.length} frame(s)${c.error === undefined ? "" : ` · ${c.error}`}`);
+        for (const c of r.candidates) say(`  ${c.id} storyboard ${c.status} · ${c.fromIdea ?? `episode ${c.fromEpisode ?? "-"}`} · ${(c.images ?? []).filter((f) => f !== null).length}/${c.panels.length} frame(s)${c.error === undefined ? "" : ` · ${c.error}`}`);
         const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
         const n = await store.readNight(id);
         if (json) doc({ ok: !failed, night: id, jobIds: r.jobIds, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.dry === true ? { dry: true } : {}), candidates: r.candidates, storyboards: { used: sb.storyboardsUsed(n), cap: sb.storyboardCapOf(n) } });

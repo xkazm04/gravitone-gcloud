@@ -26,6 +26,7 @@ import { ALBUM_TRACKS, BORN_VENTURE_KINDS, GENRE_ID_RE, VENTURE_KINDS, type Genr
 import type { Store } from "@gt/kernel/store";
 
 import { IDEA_REF_RE, splitRef } from "./direction";
+import { archivedDoor } from "./baseline";
 import { genreViews, headsOf, pieceCellRef, storeOrProcess } from "./genres";
 import { listSeedBatches, seedOf } from "./seedStore";
 import { foldSentence, isMusicType } from "./seeds";
@@ -231,6 +232,8 @@ export function parseProposals(raw: unknown): Result<Brief[]> {
  */
 export async function addProposals(id: NightId, raw: unknown, o: { readonly store?: Store } = {}): Promise<Result<readonly Proposal[]>> {
   if (activeWing() !== "scout") return err("refused", `the ${activeWing()} wing proposes no genre or venture`);
+  const shut = archivedDoor(id);
+  if (shut !== undefined) return err("refused", shut);
   const parsed = parseProposals(raw);
   if (!parsed.ok) return parsed;
   const night = await readNight(id);

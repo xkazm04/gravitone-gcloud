@@ -16,7 +16,9 @@ import { launchable, Refusal, type ActContext } from "./acts";
 import { keptIdea, splitRef } from "./direction";
 import { storeOrProcess } from "./genres";
 import { reelCapOf, reelsUsed } from "./idea";
-import { cutBrief, parseCutAsks, parseReelAsks, realBrief, REEL_CUT_SECONDS, type CutAsk, type ReelAsk } from "./reelDoor";
+import { followEpisodes } from "./episodeMoves";
+import { askRef, cutBrief, parseCutAsks, parseReelAsks, realBrief, REEL_CUT_SECONDS, type CutAsk, type EpisodeReelAsk, type ReelAsk } from "./reelDoor";
+import { dueEpisode, episodeReelOf, episodeUseAim } from "./storyboardEpisode";
 import { cellVerdict, realReelOf, reelCell, reelCutOf } from "./reelTaste";
 import { mutateNight, nextCandidateId, readAllNights, readNight, resolveInNight, withCandidate } from "./store";
 import type { CandidateId, Night, NightId, ReelCandidate, ReelCutCandidate } from "./types";
@@ -35,6 +37,10 @@ import { activeWing } from "./wingScope";
 //                                    REFUSED, naming the entry, before anything is written: an idea that is not kept on a
 //                                    live committed night (./direction.ts keptIdea), that is not a stats idea, or that
 //                                    already has a live (not failed) real reel on any night.
+//                                    OR A CHANNEL EPISODE (spark project-baseline): {fromEpisode, brief, approach, source,
+//                                    data, cut} - a reel channel's episode, outline-kept, with no live reel on any night;
+//                                    it has no idea to inherit from, so the ask carries the brief's shape and the approach
+//                                    (./reelDoor.ts). Its state follows the candidate (./episodeMoves.ts).
 //   `scout reel-cut <night> --json`  [{fromReel, seconds}] -> one `reel-cut` candidate each: the kept reel's strip
 //                                    re-authored at seconds * 30 frames from its strip (the style reference) and its
 //                                    data, rendered to mp4. REFUSED: a reel that is not kept (cell `c-NN/reel` on a live
@@ -70,6 +76,7 @@ async function failPending(id: NightId, cids: readonly CandidateId[], why: strin
     for (const c of n.candidates) if (ids.has(c.id) && isHeld(c) && c.status === "pending") m = withCandidate(m, { ...c, status: "failed", error: why });
     return m;
   });
+  await followEpisodes(id, cids);
 }
 
 /** The cap a batch would cross, in the night's numbers, or undefined. */
@@ -118,19 +125,36 @@ async function launchAndDrive(ctx: ActContext, id: NightId, cids: readonly Candi
   const dry = mode === "dry" ? { dry: true } : {};
   if (ctx.detach) return { candidates: say(await batchOf(id, cids)), jobIds: [jobId], outcome: "detached", ...dry };
   const d = await driveReels(ctx.store, ctx.location, jobId, { dryOnly: ctx.dryOnly, ...(o.engines === undefined ? {} : { engines: o.engines }) });
+  await followEpisodes(id, cids);
   return { candidates: say(await batchOf(id, cids)), jobIds: [jobId], outcome: d.ok ? d.value.outcome : d.error.message, ...dry };
 }
 
-/** `scout reel <night> --json`: [{fromIdea, source, data, cut}] -> `reel` candidates (8 s strips on real data). */
+/** What the candidate inherits from where it came from: a kept idea's seed, use, app, aim and venture, or a channel's use and aim. */
+type Lent = Partial<Pick<ReelCandidate, "fromSeed" | "use" | "app" | "aim" | "venture">>;
+
+/** A channel episode's ask, planned: a reel channel's, outline-kept, with no live reel on any night (./storyboardEpisode.ts). */
+async function episodePlan(at: string, ask: EpisodeReelAsk, nights: readonly Night[]): Promise<{ readonly ask: ReelAsk; readonly brief: ReelBriefIn; readonly approach: ReelApproachIn; readonly lent: Lent }> {
+  const held = await dueEpisode(at, ask.fromEpisode);
+  if (held.channel.medium !== "reel") throw new Refusal(`${at}: fromEpisode: ${ask.fromEpisode} is channel ${held.channel.id}'s, made as a ${held.channel.medium}; only a reel channel's episode is a reel`);
+  const had = episodeReelOf(nights, ask.fromEpisode);
+  if (had !== undefined) throw new Refusal(`${at}: episode ${ask.fromEpisode} already has its reel ${had.night}/${had.candidate.id} (${had.candidate.status})`);
+  return { ask, brief: ask.brief, approach: ask.approach, lent: episodeUseAim(held, {}) };
+}
+
+/** `scout reel <night> --json`: [{fromIdea | fromEpisode, ...}] -> `reel` candidates (8 s strips on real data). */
 export async function reelAct(ctx: ActContext, id: NightId, input: unknown, o: ReelActEngines = {}): Promise<ReelResult> {
   if (activeWing() !== "scout") throw new Refusal(`the ${activeWing()} wing makes no reel; a reel is a scout night's`);
   const asks = parseReelAsks(input);
   if (!asks.ok) throw new Refusal(asks.error.message);
   const nights = await readAllNights();
   const cache = new Map<NightId, Night | string>();
-  const planned: { readonly ask: ReelAsk; readonly brief: ReelBriefIn; readonly approach: ReelApproachIn; readonly idea: Awaited<ReturnType<typeof keptIdea>> & { ok: true } }[] = [];
+  const planned: { readonly ask: ReelAsk; readonly brief: ReelBriefIn; readonly approach: ReelApproachIn; readonly lent: Lent }[] = [];
   for (const [i, ask] of asks.value.entries()) {
     const at = `reel ${i + 1}`;
+    if ("fromEpisode" in ask) {
+      planned.push(await episodePlan(at, ask, nights));
+      continue;
+    }
     const k = await keptIdea(ask.fromIdea, cache);
     if (!k.ok) throw new Refusal(`${at}: ${k.error.message}`);
     const idea = k.value.idea;
@@ -142,7 +166,7 @@ export async function reelAct(ctx: ActContext, id: NightId, input: unknown, o: R
     if ("why" in b) throw new Refusal(`${at}: the kept idea's brief: ${b.why}`);
     const a = await approachAt(k.value.night.id, files.approach);
     if ("why" in a) throw new Refusal(`${at}: the kept idea's approach: ${a.why}`);
-    planned.push({ ask, brief: realBrief(b.brief, ask), approach: a.approach, idea: k });
+    planned.push({ ask, brief: realBrief(b.brief, ask), approach: a.approach, lent: { ...(idea.fromSeed === undefined ? {} : { fromSeed: idea.fromSeed }), ...(idea.use === undefined ? {} : { use: idea.use }), ...(idea.app === undefined ? {} : { app: idea.app }), ...(idea.aim === undefined ? {} : { aim: idea.aim }), ...(idea.venture === undefined ? {} : { venture: idea.venture }) } });
   }
   const { mode } = await launchable(ctx, id);
 
@@ -150,30 +174,25 @@ export async function reelAct(ctx: ActContext, id: NightId, input: unknown, o: R
   let full: string | undefined;
   await mutateNight(id, (n) => {
     full = over(n, planned.length);
-    const raced = planned.find((p) => realReelOf([n], p.ask.fromIdea) !== undefined);
-    if (full === undefined && raced !== undefined) full = `${raced.ask.fromIdea} was given a real reel while this batch was checked`;
+    const raced = planned.find((p) => ("fromEpisode" in p.ask ? episodeReelOf([n], p.ask.fromEpisode) : realReelOf([n], p.ask.fromIdea)) !== undefined);
+    if (full === undefined && raced !== undefined) full = `${askRef(raced.ask)} was given a real reel while this batch was checked`;
     if (full !== undefined) return n;
     let next = n;
     made = [];
-    for (const { ask, brief, idea } of planned) {
+    for (const { ask, brief, lent } of planned) {
       const cid = nextCandidateId(next);
       const f = realReelFiles(cid);
-      const from = idea.value.idea;
       const c: ReelCandidate = {
         id: cid,
         kind: "reel",
         sourceIds: [],
         status: "pending",
-        fromIdea: ask.fromIdea,
+        ...("fromEpisode" in ask ? { fromEpisode: ask.fromEpisode } : { fromIdea: ask.fromIdea }),
         title: brief.title,
         source: ask.source,
         cut: [...ask.cut],
         files: { brief: f.brief, approach: f.approach },
-        ...(from.fromSeed === undefined ? {} : { fromSeed: from.fromSeed }),
-        ...(from.use === undefined ? {} : { use: from.use }),
-        ...(from.app === undefined ? {} : { app: from.app }),
-        ...(from.aim === undefined ? {} : { aim: from.aim }),
-        ...(from.venture === undefined ? {} : { venture: from.venture }),
+        ...lent,
       };
       next = { ...next, candidates: [...next.candidates, c] };
       made.push(c);
@@ -182,6 +201,7 @@ export async function reelAct(ctx: ActContext, id: NightId, input: unknown, o: R
   });
   if (full !== undefined) throw new Refusal(full);
   const cids = made.map((c) => c.id);
+  await followEpisodes(id, cids);
   try {
     for (const [k, c] of made.entries()) {
       const p = planned[k];
@@ -313,5 +333,6 @@ export async function collectReels(id: NightId, o: { readonly store?: Store } = 
       return now === undefined || now.status !== "pending" ? m : withCandidate(m, { ...now, status: "failed", error: why });
     });
   }
+  await followEpisodes(id, waiting.map((c) => c.id));
   return say(await batchOf(id, waiting.map((c) => c.id)));
 }

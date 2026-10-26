@@ -9,6 +9,7 @@ import { driveIdeas, launchIdeas, LIVE_IDEA_ENGINES } from "../../producers/scou
 import type { IdeaEngines } from "../../producers/scoutIdeaActs.ts";
 import { launchReels, reelFiles, SCOUT_REELS_LANE } from "../../producers/scoutReel.ts";
 import { launchable, Refusal, type ActContext } from "./acts.ts";
+import { archivedDoor } from "./baseline.ts";
 import { ventureRefusal } from "./genres.ts";
 import { CAST_MAX, castOf, rootedNights } from "./cast.ts";
 import { castPrompt, keptCharacters, type KeptCharacter } from "./characters.ts";
@@ -275,6 +276,8 @@ async function failPending(id: NightId, cids: readonly CandidateId[], why: strin
 type Launched = { readonly jobId: string } | { readonly why: string };
 
 export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engines: IdeasEngines = {}): Promise<IdeasResult> {
+  const shut = archivedDoor(id);
+  if (shut !== undefined) throw new Refusal(shut);
   const parsed = parseIdeas(raw);
   if (!parsed.ok) throw new Refusal(parsed.error.message);
   const batches = await listSeedBatches();

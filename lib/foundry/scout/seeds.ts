@@ -31,6 +31,7 @@ import type { Store } from "@gt/kernel/store";
 
 import { nextPart, partRunId } from "./parts";
 import { backlogOf, freshSeedRefusal } from "./backlog";
+import { archivedDoor } from "./baseline";
 import { ventureRefusal } from "./genres";
 import { ancestryOf, createSeedBatch, listSeedBatches, readSeedBatch, seedOf, seedsPacketId } from "./seedStore";
 import { pausedUnder, readSteer } from "./steer";
@@ -159,6 +160,8 @@ export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[]
 
 /** Validate a batch (`[{sentence, genre, subgenre, type, audience, format, parent?, music?}]`), hold it to the backlog gate, and write it whole. */
 export async function addSeedBatch(raw: unknown, o: SeedBatchOptions): Promise<Result<SeedBatch>> {
+  const shut = archivedDoor();
+  if (shut !== undefined) return err("refused", shut);
   const batches = await listSeedBatches();
   const checked = await checkSeedBatch(raw, batches, o.store === undefined ? {} : { store: o.store });
   if (!checked.ok) return checked;

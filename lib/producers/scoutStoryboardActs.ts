@@ -13,6 +13,7 @@ import type { StoryboardPorts, StoryboardRequest } from "@gt/producers/scout-sto
 import { FLUX_MODEL, type FluxAspect } from "../imaging/local/flux2.ts";
 import { LTX_MODEL } from "../imaging/video/comfyLtx.ts";
 import { castRefs, CAST_LATE } from "../foundry/scout/cast.ts";
+import { followEpisodes } from "../foundry/scout/episodeMoves.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
 import { CLIP_SECONDS, type CandidateId, type Night, type SceneClip, type StoryboardCandidate } from "../foundry/scout/types.ts";
 import { standIdea } from "./scoutIdeaActs.ts";
@@ -238,6 +239,8 @@ async function ended(req: StoryboardRequest, job: Job, ending: string): Promise<
     const m = withCandidate(n, next);
     return m.jobs.includes(job.id) ? m : { ...m, jobs: [...m.jobs, job.id] };
   });
+  // A channel episode's storyboard moves its episode: made, or back to outline-kept (lib/foundry/scout/episodeMoves.ts).
+  await followEpisodes(req.nightId, [req.candidateId]);
 }
 
 /** A thrown act: a night write that lost its slot, a disk that refused the file - the job's, never a panel's or a clip's. */
