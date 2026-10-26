@@ -13392,6 +13392,42 @@
           "evidence": "lib/script/trailer/thresholds.ts:7 Stores no rows, so nothing to prune."
         }
       ]
+    },
+    "cc39e764-df6c-4508-a8a9-e13944674461/generated-output-grading": {
+      "context": "style-trials-cull",
+      "subject": "generated-output-grading",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:59:17.554Z",
+      "techniques": [
+        {
+          "technique": "trial-matrix-design",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/TrialMatrix.tsx:9 Five distinct trial problems per style. Each column counts the spread of verdicts (approved/rejected/undecided/earlier), stale plates are counted apart and never shown as the face, and unrendered cells show 'not rendered under this block' (line 66). LockGate also requires lockProblems covered before a lock."
+        },
+        {
+          "technique": "two-grader-disagreement-rule",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/pair/BlindPair.tsx:163 The human judges blind (the machine's pick is withheld by the server until the human has judged), then machine-vs-human disagreement is shown per pair as its own 'differs' outcome instead of being averaged. The agreement Tally (line 170) counts only comparable pairs (agree of compared), and 'machine not comparable' is a separate state. This is the human-calibration layer the technique and the golden path describe."
+        },
+        {
+          "technique": "vision-model-grading-schema",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/cull/MatrixCull.tsx:83 Only the provenance clause is visible in this context. The cull desk shows which grader series (model@digest) made the packet's grades whenever it differs from the series the calibration was measured on. StyleFacts.tsx:72 also marks an agent's verdict as 'shown, not counted'. The schema's field design lives server-side and was not judged here."
+        },
+        {
+          "technique": "cross-provider-flip-analysis",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/style/TrialMatrix.tsx:1 The matrix shows one style against its trial problems. No surface in this context runs the same grid on two generators and diffs it, so there is nothing for a flip analysis to read. Each proof does record provider · model (ProofSheet.tsx:113)."
+        }
+      ],
+      "withdrawn": {
+        "worker": "82298d28-0b8e-4d8c-8a25-d67cc2006ab3",
+        "state": "conformant",
+        "at": "2026-10-26T00:00:20.253942+00:00",
+        "reason": "reviewer (sonnet): The conformant verdict leans on pair/BlindPair.tsx (blind judging, 'differs' outcome, agreement Tally), which is not one of this context's files, and I could not confirm in the context that the server withholds the machine's pick; the same technique's flip-analysis anchor (TrialMatrix.tsx:1) is a no"
+      }
     }
   }
 }
