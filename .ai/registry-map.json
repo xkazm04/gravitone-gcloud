@@ -11448,7 +11448,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/records/schedule.ts:4 The context's 'slots' are pure lane-schedule computations and calendar publishing records over the kernel store, and a case-insensitive grep of packages/kernel/src/records and packages/kernel/src/slots for child_process, spawn, execFile, SIGTERM and SIGKILL found nothing, so no child process is spawned, supervised or reaped here and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:bad19520d32fbc43",
+          "evaluatedRevision": 15
         },
         {
           "subject": "agent-runtime-assembly",
