@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { PacketSummary } from "@gt/domain/board";
 import { createBoardGate, verdictsOfView, type BoardVerdict } from "@gt/ui/board/boardGate";
-import type { BoardPacket, BoardPort, PortResult, VerdictChange } from "@gt/ui/board/port";
+import type { BoardPacket, BoardPort, VerdictChange } from "@gt/ui/board/port";
 import { useGate } from "@gt/ui/board/useGate";
 import { SrOnly } from "@gt/ui/components/a11y/SrOnly.tsx";
 import { MatrixCull } from "@gt/ui/components/cull/MatrixCull.tsx";
@@ -31,10 +31,17 @@ import { useShell } from "../../_shell/Providers.tsx";
 import { CommitLayer, useCommitFlow } from "./commitFlow.tsx";
 import { DecidedDesk } from "./DecidedDesk.tsx";
 import { Losses } from "./Losses.tsx";
+import { stepTarget } from "./rail.ts";
+import { redriveAndSay, type Redrive } from "./redrive.ts";
 
-/** pagehide: what is still queued leaves with the page (the keepalive route, ../[packet]/keepalive). */
+/** pagehide: what is still queued leaves with the page (the keepalive route, ../[packet]/keepalive).
+ *  The gate hands it chunks under the beacon cap; a refused beacon (it returns false) is sent again
+ *  as a keepalive fetch. */
 function beacon(id: string, rev: number, changes: readonly VerdictChange[]): void {
-  navigator.sendBeacon(`${boardFor(id)}/keepalive`, new Blob([JSON.stringify({ rev, changes })], { type: "application/json" }));
+  const url = `${boardFor(id)}/keepalive`;
+  const body = JSON.stringify({ rev, changes });
+  if (navigator.sendBeacon(url, new Blob([body], { type: "application/json" }))) return;
+  void fetch(url, { method: "POST", body, keepalive: true, headers: { "content-type": "application/json" } }).catch(() => undefined);
 }
 
 /** The keymap mode a packet's desk binds; a decided packet has no desk, only the board's keys. */
@@ -49,12 +56,17 @@ export type BoardProps = {
   readonly id: string;
   readonly initial: BoardPacket;
   readonly rail: readonly PacketSummary[];
+  /** The store's sentence when the rail would not read: the decided desk shows it, not `weir clear`. */
+  readonly railError?: string;
   readonly kind: "sheet" | "full";
   /** The Server Actions (../_port/actions.ts), handed down by the server page: a client module
    *  that imported them would walk the bundler into the port's zod doors. */
   readonly port: BoardPort;
   /** The decided desk's way back from a stuck v1 apply (../_port/actions.ts `redrive`). */
-  readonly redrive?: (input: { readonly id: string }) => Promise<PortResult<{ readonly id: string }>>;
+  readonly redrive?: Redrive;
+  /** A host page that draws the desk in its own route (/scout's Runs tab): the place the sheet's way out and
+   *  its only crumb name, and the address of each rail row. The caller passes the rail already narrowed. */
+  readonly home?: { readonly label: string; readonly href: string; readonly railBase: string };
 };
 
 /**
@@ -70,7 +82,7 @@ export function Board(props: BoardProps) {
   return <BoardIsland {...props} />;
 }
 
-function BoardIsland({ id, initial, rail, kind, port, redrive }: BoardProps) {
+function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }: BoardProps) {
   const router = useRouter();
   const { toast } = useShell();
   const [said, setSaid] = useState("");
@@ -97,6 +109,7 @@ function BoardIsland({ id, initial, rail, kind, port, redrive }: BoardProps) {
   }, [gate, id, router]);
   const flow = useCommitFlow(gate, { onDone: refresh, toast, announce });
 
+  const hrefOf = useCallback((to: string) => (home === undefined ? boardFor(to) : `${home.railBase}/${encodeURIComponent(to)}`), [home]);
   const open = useMemo(() => rail.filter((p) => p.state === "open"), [rail]);
   // On the sheet, another packet is a soft replace (intercepted again, the Floor stays under
   // it). On the full page a soft navigation would be intercepted too and stack a sheet over the
@@ -104,15 +117,13 @@ function BoardIsland({ id, initial, rail, kind, port, redrive }: BoardProps) {
   const go = useCallback(
     (to: string) => {
       if (kind === "sheet") router.replace(boardFor(to), { scroll: false });
-      else window.location.assign(boardFor(to));
+      else window.location.assign(hrefOf(to));
     },
-    [kind, router],
+    [kind, router, hrefOf],
   );
   const step = (dir: 1 | -1) => {
-    const list = open.length > 0 ? open : rail;
-    const i = list.findIndex((p) => p.id === id);
-    const to = list[(i + dir + list.length) % list.length];
-    if (to !== undefined && to.id !== id) go(to.id);
+    const to = stepTarget(rail, id, dir);
+    if (to !== undefined) go(to);
   };
   const nextOpen = open.find((p) => p.id !== id);
   useKeys(
@@ -166,15 +177,12 @@ function BoardIsland({ id, initial, rail, kind, port, redrive }: BoardProps) {
       <DecidedDesk
         packet={packet}
         next={nextOpen}
+        {...(railError === undefined ? {} : { railError })}
         onNext={go}
         {...(redrive === undefined
           ? {}
           : {
-              onRedrive: () =>
-                void redrive({ id }).then((r) => {
-                  toast(r.ok ? "v1 apply · redriven" : r.error.error);
-                  refresh();
-                }),
+              onRedrive: () => void redriveAndSay(redrive, id, toast, refresh),
             })}
       />
     ) : packet.view.mode === "matrix-cull" ? (
@@ -188,21 +196,25 @@ function BoardIsland({ id, initial, rail, kind, port, redrive }: BoardProps) {
     );
 
   const lane = packet.view.lane;
-  const close = () => (kind === "sheet" ? router.back() : router.push("/floor"));
+  const close = () => (kind === "sheet" ? router.back() : router.push(home?.href ?? "/floor"));
   return (
     <LevelSheet
-      trail={[
-        { label: "Floor", onPress: close },
-        { label: "Board", onPress: () => go(nextOpen?.id ?? id) },
-        { label: `${lane.slice(0, 1).toUpperCase()}${lane.slice(1)}`, onPress: () => router.push(`/floor?lane=${lane}`) },
-      ]}
+      trail={
+        home === undefined
+          ? [
+              { label: "Floor", onPress: close },
+              { label: "Board", onPress: () => go(nextOpen?.id ?? id) },
+              { label: `${lane.slice(0, 1).toUpperCase()}${lane.slice(1)}`, onPress: () => router.push(`/floor?lane=${lane}`) },
+            ]
+          : [{ label: home.label, onPress: close }]
+      }
       here={packet.view.title ?? packet.view.id}
       mode={deskMode(packet)}
-      back="Floor"
+      back={home?.label ?? "Floor"}
       onClose={close}
       full={kind === "full"}
     >
-      <BoardDesk rail={<PacketRail packets={rail} current={id} hrefOf={boardFor} onOpen={go} />}>
+      <BoardDesk rail={<PacketRail packets={rail} current={id} hrefOf={hrefOf} onOpen={go} />}>
         {packet.view.state === "open" && packet.present.losses !== undefined && <Losses losses={packet.present.losses} />}
         {desk}
         {flow.open && <CommitLayer flow={flow} />}

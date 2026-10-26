@@ -20,15 +20,18 @@
 //     window and is never a claim on its own - the publish takes the claim and releases it.
 //   · UTC throughout, as the rest of the calendar (./calendar.ts says why); v1 was local.
 
-import type { RailSlot } from "./calendar.ts";
+import { SLOT_MOVABLE } from "@gt/domain/slot.machine";
+
+import { count } from "../tally/count.ts";
+import { clock, type RailSlot } from "./calendar.ts";
 
 const HOUR_MS = 3_600_000;
 const pad = (n: number): string => String(n).padStart(2, "0");
 
-type Status = RailSlot["status"];
 type Movable = Pick<RailSlot, "status">;
 
-const OPEN: readonly Status[] = ["scheduled", "missed", "failed"];
+/** The machine's own list (v1 RESCHEDULABLE and CANCELLABLE), the one the engine's verbs check. */
+const OPEN = SLOT_MOVABLE;
 export const canMove = (s: Movable): boolean => OPEN.includes(s.status);
 export const canCancel = (s: Movable): boolean => OPEN.includes(s.status);
 /**
@@ -79,9 +82,7 @@ export const DRIFT_WORDS: Readonly<Record<NonNullable<RailSlot["drift"]>, string
 export function missedWords(s: Pick<RailSlot, "missedAt">): string | null {
   if (s.missedAt === undefined) return null;
   const t = Date.parse(s.missedAt);
-  if (Number.isNaN(t)) return null;
-  const d = new Date(t);
-  return `missed ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+  return Number.isNaN(t) ? null : `missed ${clock(t)} UTC`;
 }
 
 /* ── the publish chain the error broke ───────────────────────────────────── */
@@ -92,22 +93,24 @@ export const PUBLISH_CHAIN = ["scheduled", "auth", "upload", "live"] as const;
  * Which node of PUBLISH_CHAIN a channel's sentence broke at (prototype SlotDetail `brkAt`): a
  * credential sentence at auth; quota, insert, upload, an interruption or a refused container
  * at upload; anything else is drawn as failing at the last step, where the platform answered.
+ * The adapter's own refusals before any request (lib/publish/youtube.ts snippetProblem, an
+ * empty file; lib/producers/publish.ts plan: not an export, an export gone; no adapter) never
+ * reached the platform, so they break at upload, not live.
  * The sentence is drawn verbatim beside it; this only places the mark.
  */
 export function breakOf(error: string): number {
   if (/token|oauth|access|credential|unauthori[sz]ed|forbidden/i.test(error)) return 1;
+  if (/exceed|may not contain|is empty|not an export|no longer exists|no publishing adapter/i.test(error)) return 2;
   if (/quota|insert|upload|interrupted|format|container|codec/i.test(error)) return 2;
   return 3;
 }
 
 /* ── metrics: null is unmeasured, a sum over gaps is a floor ─────────────── */
 
-const NUM = new Intl.NumberFormat("en-US");
-
 /** A measured figure: "—" when never measured, "≥ N" when some parts were not, else N. */
 export function figure(value: number | null, lowerBound = false): string {
   if (value === null || !Number.isFinite(value)) return "—";
-  return lowerBound ? `≥ ${NUM.format(value)}` : NUM.format(value);
+  return lowerBound ? `≥ ${count(value)}` : count(value);
 }
 
 /** Seconds as m:ss (h:mm:ss past an hour); "—" when unmeasured. */
@@ -122,5 +125,5 @@ export function duration(s: number | null): string {
 /** A signed change: "+3", "−2", "0"; "—" when unmeasured. */
 export function signed(n: number | null): string {
   if (n === null || !Number.isFinite(n)) return "—";
-  return n > 0 ? `+${NUM.format(n)}` : n < 0 ? `−${NUM.format(-n)}` : "0";
+  return n > 0 ? `+${count(n)}` : n < 0 ? `−${count(-n)}` : "0";
 }

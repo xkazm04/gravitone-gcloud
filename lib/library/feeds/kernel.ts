@@ -21,7 +21,9 @@ import { isoOf, type Feed, type FeedItem, type FeedRead } from "./types.ts";
 // Audio is left to the takes feed (a take's audio enters the sound store, where its measured
 // length lives - an audio item without a length is not an item the Library can draw).
 
-/** The most blobs one sync reads from the kernel (bounded-enumeration: say the bound). */
+/** The most blob REFS one sync reads from the kernel (bounded-enumeration: say the bound). A ref,
+ *  not a blob: a plate in its part record and in the job output that landed it is two. The scan has
+ *  no order, so the refs past the cap are the same ones every sync, not a queue that drains. */
 export const KERNEL_BLOB_CAP = 5000;
 
 const REFS = `
@@ -44,7 +46,7 @@ export const kernelFeed: Feed = {
     if (ctx.store === undefined) return { items: [], skipped: [{ id: "kernel", reason: "no kernel store in this sync" }] };
     const rows = ctx.store.read((r) => r.all(REFS, KERNEL_BLOB_CAP + 1));
     if (!rows.ok) throw rows.error;
-    const skipped: { id: string; reason: string }[] = rows.value.length > KERNEL_BLOB_CAP ? [{ id: "kernel", reason: `more than ${KERNEL_BLOB_CAP} blob refs; the newest beyond the cap wait for the next sync` }] : [];
+    const skipped: { id: string; reason: string }[] = rows.value.length > KERNEL_BLOB_CAP ? [{ id: "kernel", reason: `more than ${KERNEL_BLOB_CAP} blob refs; the refs past the cap are not read` }] : [];
     const bySha = new Map<string, Found>();
     for (const row of rows.value.slice(0, KERNEL_BLOB_CAP)) {
       const sha = String(row["sha"]);

@@ -10,10 +10,12 @@ import { MEDIA_LANES } from "@gt/domain/lane";
 import { BADGE_CHANNELS, ChannelBadge, isBadgeChannel } from "../../src/components/channel/ChannelBadge.tsx";
 import { byDay, clock, dayLabel, monthCells, moveDay, nextRows, railOf, shiftMonth, type RailSlot } from "../../src/components/floor/calendar.ts";
 import { FLOOR_LANES, isFloorLane, laneAt, laneRows, modeOf, progressShare } from "../../src/components/floor/floor.ts";
+import { CalendarColumn } from "../../src/components/floor/CalendarColumn.tsx";
 import { Lane } from "../../src/components/floor/Lane.tsx";
 import { MonthCalendar, MAX_PER_DAY } from "../../src/components/floor/MonthCalendar.tsx";
 import { Pile } from "../../src/components/floor/Pile.tsx";
 import { RunRow } from "../../src/components/floor/RunRow.tsx";
+import { ShelfCell, ShelfRow, ShelfStyle } from "../../src/components/floor/ShelfCell.tsx";
 import { SlotRow } from "../../src/components/floor/SlotRow.tsx";
 import { ledgerDelta, spendParts } from "../../src/components/header/header.ts";
 import { LedgerDelta, NextButton, SpendChip } from "../../src/components/header/HeaderChips.tsx";
@@ -108,6 +110,16 @@ describe("the rail", () => {
     expect(rows).toEqual(["2026-10-15", "overdue", "NOW", "soon", "2026-10-16", "later"]);
     expect(nextRows(railOf([slot("a", "2026-10-16T10:00:00.000Z", "scheduled")], NOW))[0]).toEqual({ kind: "now" });
   });
+
+  test("the column draws Next with NOW after the overdue, and Published counted in full though six are drawn", () => {
+    const many = Array.from({ length: 8 }, (_, i) => slot(`pub${i}`, new Date(Date.UTC(2026, 9, 10 + i % 4, 6 + i)).toISOString(), "published"));
+    const html = renderToStaticMarkup(h(CalendarColumn, { rail: railOf([...slots, ...many], NOW), nowMs: NOW, open: false, onOpen: () => undefined, slotHref: (id: string) => `/floor?slot=${id}` }));
+    const order = [...html.matchAll(/data-slot="([^"]+)"|data-now=""/g)].map((m) => m[1] ?? "NOW");
+    expect(order.slice(0, 4)).toEqual(["overdue", "NOW", "soon", "later"]);
+    expect(html).toContain("NOW 09:12 UTC");
+    expect(order.filter((id) => id === "out" || id.startsWith("pub"))).toHaveLength(6);
+    expect(html).toMatch(/Published <span[^>]*><span aria-hidden="true">9</);
+  });
 });
 
 describe("header numbers", () => {
@@ -143,6 +155,12 @@ describe("header numbers", () => {
     expect(renderToStaticMarkup(h(NextButton, { next: null }))).toContain("weir clear");
     expect(renderToStaticMarkup(h(LedgerDelta, { delta: 7 }))).toContain("+7");
   });
+
+  test("one item and one new act are named in the singular", () => {
+    expect(renderToStaticMarkup(h(NextButton, { next: { title: "forge sweep-01", count: 1, href: "/b" } }))).toContain('aria-label="Open next decision: forge sweep-01, 1 item"');
+    expect(renderToStaticMarkup(h(LedgerDelta, { delta: 1 }))).toContain("ledger, 1 new act since your last visit");
+    expect(renderToStaticMarkup(h(LedgerDelta, { delta: 2 }))).toContain("ledger, 2 new acts since your last visit");
+  });
 });
 
 describe("components", () => {
@@ -152,9 +170,13 @@ describe("components", () => {
     expect(html).toContain('aria-label="Audio lane"');
     expect(html).toContain(">3</kbd>");
     expect(html).toContain('aria-label="focus Audio lane"');
+    expect(html).toContain('aria-pressed="false"');
+    // A toggle keeps its name and lets aria-pressed carry the state (registry accessibility,
+    // name-and-description-wiring): a name that rewrites itself reads as a second control.
     const focused = renderToStaticMarkup(h(Lane, { lane, state: "focused", onFocus: () => undefined, foundry: null, weir: null, shelf: null }));
-    expect(focused).toContain('aria-label="show all lanes"');
+    expect(focused).toContain('aria-label="focus Audio lane"');
     expect(focused).toContain('aria-pressed="true"');
+    expect(focused).not.toContain("show all lanes");
   });
 
   test("a pile links its packet, says its size and desk, and the NEXT one says so", () => {
@@ -165,9 +187,22 @@ describe("components", () => {
     expect(html).toContain("sweep-01");
   });
 
-  test("an article pile is paper with its title; an audio pile is waveforms", () => {
+  test("the arrival cascade is capped: pile 30 waits no longer than pile 8", () => {
+    const delay = (index: number) => renderToStaticMarkup(h(Pile, { title: "t", media: "image", mode: "matrix-cull", source: "forge", runId: "r", decided: 0, pending: 1, href: "/b", index })).match(/--d:(\d+)ms/)?.[1];
+    expect(delay(3)).toBe("210");
+    expect(delay(30)).toBe(delay(8));
+    expect(Number(delay(30))).toBeLessThanOrEqual(560);
+  });
+
+  test("an article pile is paper with its title; an audio pile is waveforms when its peaks are known", () => {
     expect(renderToStaticMarkup(h(Pile, { title: "Agent budgets", media: "article", mode: "packet-review", source: "articles", runId: "r1", decided: 0, pending: 1, href: "/b" }))).toContain("Agent budgets");
-    expect(renderToStaticMarkup(h(Pile, { title: "suno", media: "audio", mode: "matrix-cull", source: "suno", runId: "suno/triage", decided: 0, pending: 3, href: "/b" })).match(/<svg/g)?.length).toBe(4);
+    const audio = { title: "suno", media: "audio", mode: "matrix-cull", source: "suno", runId: "suno/triage", decided: 0, pending: 3, href: "/b" } as const;
+    expect(renderToStaticMarkup(h(Pile, { ...audio, peaks: [[0.2, 0.8], [0.5], [0.1, 0.4]] })).match(/<svg/g)?.length).toBe(4);
+    // No peaks (the Floor's Weir read carries none): the pile's own data, never three blank strips.
+    const bare = renderToStaticMarkup(h(Pile, audio));
+    expect(bare.match(/<svg/g)?.length).toBe(1);
+    expect(bare).toContain(">suno/triage<");
+    expect(renderToStaticMarkup(h(Pile, { ...audio, peaks: [[], [], []] })).match(/<svg/g)?.length).toBe(1);
   });
 
   test("a run row draws its state in the job vocabulary and v1's error verbatim", () => {
@@ -176,6 +211,25 @@ describe("components", () => {
     expect(html).toContain("3/20");
     expect(html).toContain("replicate");
     expect(html).toContain("lease lost: holder pid 4410 gone");
+  });
+
+  test("a shelf's door names its shelf, its chevron unspoken; an empty shelf is its head alone", () => {
+    const door = renderToStaticMarkup(h(ShelfCell, { title: "Library · styles", href: "/library", tallies: [{ value: 0, label: "proven" }] }));
+    expect(door).toMatch(/<a [^>]*href="\/library"[^>]*>Library · styles <span aria-hidden="true">›<\/span><\/a>/);
+    expect(door).toContain("proven");
+    const plain = renderToStaticMarkup(h(ShelfCell, { title: "Library · posts" }));
+    expect(plain).not.toContain("<a ");
+    expect(plain).not.toContain("›");
+    expect(renderToStaticMarkup(h(ShelfStyle, { name: "ghibli", href: "/library?s=g" }))).toMatch(/<a [^>]*data-component="ShelfStyle"[^>]*>[\s\S]*ghibli/);
+    expect(renderToStaticMarkup(h(ShelfRow, { lead: null, title: "rain", fact: "0:42" }))).toContain("rain<span");
+  });
+
+  test("a style tile draws its plate with the style's name as the alt; without one it keeps the ground", () => {
+    const withPlate = renderToStaticMarkup(h(ShelfStyle, { name: "ghibli", plate: "/api/blob/abc?type=image%2Fpng" }));
+    expect(withPlate).toMatch(/<img [^>]*src="\/api\/blob\/abc\?type=image%2Fpng"[^>]*alt="ghibli"|<img [^>]*alt="ghibli"[^>]*src="\/api\/blob\/abc/);
+    const bare = renderToStaticMarkup(h(ShelfStyle, { name: "ghibli" }));
+    expect(bare).not.toContain("<img");
+    expect(bare).toContain("ghibli");
   });
 
   test("a failed slot shows its error verbatim; an unknown channel speaks its id", () => {
@@ -200,5 +254,26 @@ describe("components", () => {
     expect(html).toContain(`+${busy.length - MAX_PER_DAY}`);
     expect(html).toContain('aria-label="Calendar, October 2026"');
     expect(html).toContain("Tue 20 Oct, 5 slots");
+  });
+
+  test("a day names each bad state by its own word: a missed slot is not a failed one", () => {
+    const html = renderToStaticMarkup(
+      h(MonthCalendar, {
+        slots: [slot("m", "2026-10-02T08:00:00.000Z", "missed"), slot("f", "2026-10-03T08:00:00.000Z", "failed"), slot("a", "2026-10-04T08:00:00.000Z", "failed"), slot("b", "2026-10-04T09:00:00.000Z", "missed")],
+        nowMs: NOW,
+        month: { y: 2026, m: 9 },
+        day: null,
+        channelsOff: new Set<string>(),
+        onMonth: () => undefined,
+        onToday: () => undefined,
+        onDay: () => undefined,
+        onChannel: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+    expect(html).toContain("Fri 2 Oct, 1 slot, 1 missed\"");
+    expect(html).toContain("Sat 3 Oct, 1 slot, 1 failed\"");
+    expect(html).toContain("Sun 4 Oct, 2 slots, 1 failed, 1 missed\"");
+    expect(html).not.toContain("Fri 2 Oct, 1 slot, 1 failed");
   });
 });

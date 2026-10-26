@@ -16,7 +16,10 @@
 // resolves both postures itself (resolveSession), and a post would be refused as malformed.
 
 import { onIdTokenChanged } from "firebase/auth";
+// zod/mini, not classic zod: this file is in the shell's client bundle (see @gt/domain/door).
+import { object, string } from "zod/mini";
 
+import { parseJsonAt } from "@gt/domain/door";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { DEV_AUTH } from "@/lib/devAuth";
 import { authClient, firebaseReady } from "@/lib/firebase";
@@ -24,6 +27,15 @@ import { LOCAL_MODE } from "@/lib/localMode";
 
 /** True where a Firebase session exists to bridge at all. */
 export const BRIDGED = firebaseReady && !DEV_AUTH && !LOCAL_MODE;
+
+/** A refusal's body: app/_server/http.ts `envelope` - the sentence is `error`. */
+const REFUSAL = object({ error: string() });
+
+/** The server's sentence out of its envelope, else the body as it came (a proxy's page, a bare text). */
+function refusalWords(body: string): string {
+  const e = parseJsonAt("session refusal", REFUSAL, body);
+  return e.ok ? e.value.error : body;
+}
 
 /** Hand the server the current ID token. The refusal is the server's own words. */
 export async function postSession(token: string): Promise<Result<null>> {
@@ -35,16 +47,30 @@ export async function postSession(token: string): Promise<Result<null>> {
     });
     if (r.ok) return ok(null);
     const code = r.status === 401 ? "unauthenticated" : r.status === 403 ? "refused" : "unavailable";
-    return err(code, `session answered ${r.status}: ${await r.text()}`);
+    return err(code, `session answered ${r.status}: ${refusalWords(await r.text())}`);
   } catch (cause) {
     return err("unavailable", "session unreachable", { cause });
   }
 }
 
-/** Re-post on every rotation; `report` hears a refusal (the shell's toast). Returns the unsubscribe. */
-export function subscribeSessionCookie(report: (message: string) => void): () => void {
+/**
+ * Re-post on every rotation; `report` hears a refusal (the shell's toast). Returns the unsubscribe.
+ *
+ * Firebase calls the listener once on subscribe with the current user. When the layout has just
+ * verified this browser's cookie (`cookieHeld`: it handed the shell an identity), that call carries
+ * the token the server already holds, and posting it is a verified round trip for nothing - on a
+ * first visit it is the second post after the handoff's. Only a rotation posts then. The price: a
+ * token Firebase refreshed while the tab was closed reaches the server at the next rotation, the
+ * cookie living its own token's life until then.
+ */
+export function subscribeSessionCookie(report: (message: string) => void, cookieHeld = false): () => void {
   if (!BRIDGED) return () => undefined;
+  let initial = cookieHeld;
   return onIdTokenChanged(authClient(), (user) => {
+    if (initial) {
+      initial = false;
+      return;
+    }
     if (user === null) return;
     void user
       .getIdToken()

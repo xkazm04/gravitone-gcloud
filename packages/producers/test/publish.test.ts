@@ -2,7 +2,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 
+import { parseJsonAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { Holder, RunMode } from "@gt/domain/job";
@@ -19,6 +21,7 @@ import type { ChannelAdapter, PublishPlan, UploadHooks } from "../src/publish/ad
 import { publishMode } from "../src/publish/mode.ts";
 import { refreshMetrics } from "../src/publish/metrics.ts";
 import { STOPPED_TEXT } from "../src/publish/publish.ts";
+import { standingIn } from "../src/publish/standing.ts";
 import { publishSlotNow, publishTick, type TickDeps } from "../src/publish/tick.ts";
 
 // THE PUBLISH STEP over a real kernel on a scratch file, with a stub channel (the YouTube binding
@@ -188,6 +191,24 @@ describe("a failure lands on the slot, verbatim, and the tick goes on", () => {
     k.close();
   });
 
+  it("an adapter's optional methods that throw are caught too: a throwing clean-up keeps the publication and the tick goes on", async () => {
+    const { k, deps } = world(stub({ forget: () => Promise.reject(new Error("EPERM: sessions/sl.json is locked")) }));
+    const a = slot(k, { at: at(-6) });
+    const b = slot(k, { item: "video:export:other", at: at(-5) });
+    const r = await publishTick(deps, new Date(NOW));
+    expect(r.ok && r.value.outcomes.map((o) => [o.slotId, o.kind, o.kind === "published" ? o.kept : undefined])).toEqual([
+      [a, "published", "EPERM: sessions/sl.json is locked"],
+      [b, "published", "EPERM: sessions/sl.json is locked"],
+    ]);
+    const m = world(stub({ stats: () => Promise.reject(new Error("videos.list (statistics) failed: 500")) }), live());
+    slot(m.k);
+    await publishTick(m.deps, new Date(NOW));
+    const read = await refreshMetrics(m.deps, new Date(NOW));
+    expect(read.ok ? "ok" : [read.error.code, read.error.message]).toEqual(["unavailable", "videos.list (statistics) failed: 500"]);
+    k.close();
+    m.k.close();
+  });
+
   it("a channel with no adapter is refused in v1's words", async () => {
     const { k, deps } = world(stub());
     const r = createSlot(k.store, { libraryItemId: ITEM, channel: "tiktok", at: at(-5), title: "A cut", description: "", tags: [] }, OP);
@@ -229,6 +250,26 @@ describe("the claim", () => {
     expect(stateOf(k, id)).toMatchObject({ state: "failed", error: INTERRUPTED_TEXT });
     const pubs = k.store.read((rd) => listPublicationsIn(rd));
     expect(pubs.ok && pubs.value).toEqual([]);
+    k.close();
+  });
+
+  it("a live upload whose claim was lost before its record leaves a durable event naming the platform id", async () => {
+    const adapter = stub({
+      upload: () => {
+        // The upload completes, and only then does another process judge this claimant dead.
+        const other = sweep(k.store, { now: NOW, windowMs: 3_600_000, wired: new Set(["youtube"]), itemExists: () => true }, { claim: false, holder: OTHER, alive: () => false });
+        if (!other.ok) throw other.error;
+        return Promise.resolve(ok({ platformId: "yt-orphan-9" }));
+      },
+    });
+    const w = world(adapter, live());
+    const k = w.k;
+    const id = slot(k);
+    const r = await publishTick(w.deps, new Date(NOW));
+    expect(r.ok && r.value.outcomes.map((o) => o.kind)).toEqual(["lost"]);
+    expect(stateOf(k, id)).toMatchObject({ state: "failed", error: INTERRUPTED_TEXT });
+    const rows = k.store.read((rd) => rd.all("SELECT type, subject_kind, subject_id, data FROM events WHERE type = 'publish.orphan'"));
+    expect(rows.ok && rows.value.map((x) => [x["subject_kind"], x["subject_id"], parseJsonAt("publish.orphan data", z.unknown(), String(x["data"]))])).toEqual([["slot", id, ok({ channel: "youtube", platformId: "yt-orphan-9" })]]);
     k.close();
   });
 
@@ -290,6 +331,34 @@ describe("the metrics pull", () => {
     expect(liveRead.ok && liveRead.value).toEqual({ refreshed: 1, note: null });
     expect(reads).toBe(1);
     w.k.close();
+  });
+});
+
+describe("the channel's standing, from the ledger the publish writes", () => {
+  it("a dry rehearsal is no attempt at the channel: it neither goes out nor clears a live failure", async () => {
+    const failing = world(stub({ upload: () => Promise.resolve(err("unauthenticated", "token request failed: invalid_grant")) }), live());
+    slot(failing.k);
+    await publishTick(failing.deps, new Date(NOW));
+    slot(failing.k, { item: "video:export:rehearsal" });
+    const dry = await publishTick({ ...failing.deps, mode: DRY }, new Date(NOW));
+    expect(dry.ok && dry.value.outcomes.map((o) => o.kind)).toEqual(["published"]);
+    const s = failing.k.store.read((rd) => standingIn(rd, "youtube"));
+    expect(s.ok && s.value).toEqual({ channel: "youtube", attempts: 1, lastAttemptAt: at(0), lastSuccessAt: null, lastError: "token request failed: invalid_grant", failuresSinceSuccess: 1 });
+    // A live upload that lands is the channel working again.
+    slot(failing.k, { item: "video:export:live-again" });
+    await publishTick({ ...failing.deps, adapters: new Map<Channel, ChannelAdapter>([["youtube", stub()]]) }, new Date(NOW));
+    const back = failing.k.store.read((rd) => standingIn(rd, "youtube"));
+    expect(back.ok && back.value).toMatchObject({ attempts: 2, lastSuccessAt: at(0), failuresSinceSuccess: 0 });
+    failing.k.close();
+  });
+
+  it("a channel only ever rehearsed has never gone out", async () => {
+    const { k, deps } = world(stub());
+    slot(k);
+    await publishTick(deps, new Date(NOW));
+    const s = k.store.read((rd) => standingIn(rd, "youtube"));
+    expect(s.ok && s.value).toEqual({ channel: "youtube", attempts: 0, lastAttemptAt: null, lastSuccessAt: null, lastError: null, failuresSinceSuccess: 0 });
+    k.close();
   });
 });
 

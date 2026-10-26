@@ -14,7 +14,7 @@ import { jobEvent, loadJob, loadOutputs, putJob } from "./job.ts";
 import { DEFAULT_TTL_S, fenceLoss, gone, type Alive } from "./lease-core.ts";
 import { sleep as sleepMs } from "./sleep.ts";
 import type { SpendClass } from "./spend/core.ts";
-import { gateContext } from "./parts/gates.ts";
+import { gateFacts } from "./parts/gates.ts";
 import { releaseHeldIn } from "./records/write.ts";
 import { lapseOwner } from "./spend/ledger.ts";
 import { lapseOpen, stepMeter } from "./spend/meter.ts";
@@ -62,6 +62,8 @@ import type { Reader, Tx } from "./store.ts";
 // `interrupted` when the fence was lost - in which case its outcome is as
 // unknown as a crash's. Only a throw that is not an Error passes untouched:
 // that is the crash harness ending the process, which no real code can catch.
+// The one exception is a store that refuses the recording write as well: the
+// job stays running until recovery, and the returned error says so.
 //
 // THE DEADLINE ADMITS, IT DOES NOT BOUND (job-coordination:
 // no-wall-clock-in-the-advance-contract). It is checked between steps only; a
@@ -89,6 +91,8 @@ export type RunOptions = {
   /** The producers' preflights, by job (the worker's map): a part whose act waits on a human act
    *  stays planned at the release instead of being released into a certain failure (L45). */
   readonly preflightOf?: (job: Job, r: Reader) => string | undefined;
+  /** The classes whose holds a dead drive leaves behind: lapsed when this drive interrupts an orphan (take-over, fence loss), as `recover` does. */
+  readonly spendClasses?: readonly SpendClass[];
 };
 
 export type RunReport = {
@@ -109,8 +113,10 @@ export const defaultBackoff = (streak: number, random: () => number = Math.rando
 export const spendOwner = (h: Holder): string => `${h.host}/${h.pid}/${h.bootId}`;
 
 /** Interrupt one orphaned running job, naming its holder and the step in flight; a paid lane holds. */
-function interrupt(t: Tx, job: Job, by: Holder, why: string): Job {
+function interrupt(t: Tx, job: Job, by: Holder, why: string, classes: readonly SpendClass[] = []): Job {
   const holder = job.lease?.holder ?? by;
+  // The dead drive's holds: the vendor may have been paid, so they keep counting (job-core.ts: every dead drive).
+  for (const cls of classes) lapseOwner(t, cls, spendOwner(holder));
   // The record is re-projected from the meter: a step that settled and then
   // died before its booking still shows its spend on the interrupted job.
   const out = { ...interrupted(job, holder, t.at), spend: meterOf(t, job.id) };
@@ -177,7 +183,7 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
       }
       let heldNow = false;
       for (const orphan of runningOn(t, job.lane, slot)) {
-        if ((orphan.lease?.fence ?? 0) < c.lease.fence) heldNow = interrupt(t, orphan, holder, "lane-taken-over").state === "interrupted" && laneHold(t, job.lane) !== undefined;
+        if ((orphan.lease?.fence ?? 0) < c.lease.fence) heldNow = interrupt(t, orphan, holder, "lane-taken-over", opts.spendClasses).state === "interrupted" && laneHold(t, job.lane) !== undefined;
       }
       if (heldNow) {
         // The take-over found a paid step that died unbooked: the lane holds, and this claim gives the slot back.
@@ -205,7 +211,10 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
   const beat = setInterval(() => {
     try {
       const r = fx.tx("heartbeat", (t) => void heartbeatIn(t, slot, fence));
-      if (!r.ok) lost = r.error;
+      // A store busy past its timeout misses THIS beat; the next renews (lease-renewal: ttl/3 exists so that
+      // one missed renewal does not forfeit a live lease). Any other failure is carried; fenced writes
+      // still refuse if the lease did lapse.
+      if (!r.ok && r.error.code !== "unavailable") lost = r.error;
     } catch (e) {
       lost = e;
     }
@@ -221,14 +230,17 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
       const { job } = loadJob(t, jobId);
       if (job.state !== "running" || job.lease?.fence !== fence || job.slot !== slot) return undefined;
       const loss = fenceLoss(snapshotOf(t, slot).row, fence, Date.parse(t.at));
-      if (loss !== undefined) return interrupt(t, job, holder, `fence-lost: ${loss}`);
+      if (loss !== undefined) return interrupt(t, job, holder, `fence-lost: ${loss}`, opts.spendClasses);
       const out = failed(job, e.code, e.message);
       putJob(t, out);
       jobEvent(t, actor, out, "job.failed", { code: e.code, message: e.message });
       releaseIn(t, slot, fence);
       return out;
     });
-    if (!r.ok) return { ok: false, error: e };
+    // The one way a throw DOES leave a job running: the store refused the write that would have
+    // ended it. Said with both sentences, so the caller does not read the job as failed; recovery
+    // names it once the slot's fence lapses.
+    if (!r.ok) return { ok: false, error: new AppError(e.code, `${e.message}; the job was left running - recording its end failed too: ${r.error.message}`, { cause: r.error, ...(e.detail === undefined ? {} : { detail: e.detail }) }) };
     return { ok: false, error: e };
   };
 
@@ -283,13 +295,15 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
             // Only a part a plan launched (it names its project) - a bare part job has no plan to move.
             const projectId = job.of.kind === "part" ? job.correlation?.projectId : undefined;
             const pre = opts.preflightOf;
-            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, { ...gateContext(t, Date.parse(t.at)), ...(pre === undefined ? {} : { preflightOf: pre }) });
+            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, { ...gateFacts(Date.parse(t.at)), ...(pre === undefined ? {} : { preflightOf: pre }) });
             return end;
           }
           case "claim":
           case "idle":
             releaseIn(t, slot, fence);
-            return { kind: "end", report: withCalls({ outcome: "stopped", job }) };
+            // An operator's pause then resume during the step leaves the job queued: it ends nothing and
+            // will run again, so it is a yield (settle is told only real endings, job-settle.ts).
+            return { kind: "end", report: withCalls({ outcome: job.state === "queued" ? "yielded" : "stopped", job }) };
         }
       });
       if (!decided.ok) return settleError(decided.error);
@@ -373,9 +387,7 @@ export function recover(fx: Effects, opts: { holder?: Holder; alive?: Alive; spe
       const loss = fenceLoss(snapshotOf(t, job.slot).row, lease.fence, Date.parse(t.at));
       const why = loss ?? (gone(lease.holder, me, alive) ? "holder-gone" : undefined);
       if (why === undefined) continue;
-      // The dead drive's holds: the vendor may have been paid, so they keep counting.
-      for (const cls of opts.spendClasses ?? []) lapseOwner(t, cls, spendOwner(lease.holder));
-      out.push(interrupt(t, job, me, why));
+      out.push(interrupt(t, job, me, why, opts.spendClasses));
     }
     return out;
   });

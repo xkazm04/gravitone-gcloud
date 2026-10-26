@@ -15,5 +15,5 @@ export const metadata: Metadata = { title: "Gravitone · Board" };
 export default async function BoardPage({ params }: { readonly params: Promise<{ readonly packet: string }> }) {
   const r = await loadBoard(params);
   if (!r.ok) return <ErrorLine message={`board · ${r.id}: ${r.error.error}`} live />;
-  return <Board id={r.id} initial={r.packet} rail={r.rail} kind="full" port={BOARD_PORT} redrive={BOARD_REDRIVE} />;
+  return <Board id={r.id} initial={r.packet} rail={r.rail} {...(r.railError === undefined ? {} : { railError: r.railError })} kind="full" port={BOARD_PORT} redrive={BOARD_REDRIVE} />;
 }

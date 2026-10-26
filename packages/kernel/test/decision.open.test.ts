@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
+import { REASON_MEANING } from "@gt/domain/source";
 import { canonical } from "../src/canonical.ts";
 import { calibrationMigrations } from "../src/calibration/series.ts";
 import { decisionMigrations } from "../src/decision/schema.ts";
@@ -108,7 +109,7 @@ describe("kernel/decision - the Board's reads", () => {
     must(s.tx((t) => openPacket(t, { packet: { ...cull(), title: "lotr cavalry sweep" }, initial: imported }, agent)));
     const v = must(s.read((r) => readPacketView(r, P, { mediaUrl })));
     expect([v.source, v.mode, v.state, v.rev, v.title, v.undecided, v.canUndo]).toEqual(["forge", "matrix-cull", "open", 1, "lotr cavalry sweep", 4, false]);
-    expect(v.reasons).toEqual({ list: ["style", "subject", "text", "craft"], max: 4, noteMax: 2000 });
+    expect(v.reasons).toEqual({ list: ["style", "subject", "text", "craft"], max: 4, noteMax: 2000, meaning: REASON_MEANING.forge });
     expect(v.items[0]?.url).toMatch(/^\/api\/blob\/[0-9a-f]{64}$/);
     expect(v.decisions).toHaveLength(2);
     expect(v.pairs).toEqual([]);

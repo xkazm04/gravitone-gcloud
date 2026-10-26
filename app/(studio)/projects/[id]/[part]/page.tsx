@@ -1,7 +1,7 @@
 // /projects/[id]/[part] - a part's EDITOR (STEPS-DESIGN §1-§2; Phase 4 wave C, L38), reached from
 // the project's Plan row. The route key is the recipe part's key (`research`, `script`); a key
-// the project does not plan, or a part kind with no editor yet (frames until its lot lands, a
-// gate, the slot) is a 404 - never an empty editor and never another project's data (v1's
+// the project does not plan, or a part kind with no editor (one outside EDITOR_KINDS: a gate,
+// the slot) is a 404 - never an empty editor and never another project's data (v1's
 // "Glass Harbor shows Bitcoin": an editor fell back to the fixture when its own record was
 // missing). A Server Component: the view is read here through the part port and handed to one
 // client island with the port's actions.

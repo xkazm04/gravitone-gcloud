@@ -72,3 +72,8 @@ those impressions into machine-readable authority, which
 into the library is worse than a gap, because the gap is fixable and the estimate is invisible."*
 
 It gets written when a second source supplies real numbers.
+
+## Scout findings
+
+- Plan a music video as three scenes, each covered by two locked-off and one handheld performance angle across close, medium and wide. - "I tend to come up with three scenes that I want to have for the video at each scene I'll usually tend to shoot two tripod performance scenes and then a handheld performance scene" (n=1, scout 2026-10-23-3, https://www.youtube.com/watch?v=kqmhFqyh644) <!-- scout:2026-10-23-3/c-37 -->
+- Hold title cards on screen to the film's cutting pace: a rapidly cut film gets cards that flash just long enough to read. - "The way he shot it and cut it was very, very rapid. So, I shot the titles. They were just simple on in the middle of the screen, but they came in for a very short time." (n=1, scout 2026-10-23-3, https://www.youtube.com/watch?v=Ggw8Gqi4-Z0) <!-- scout:2026-10-23-3/c-38 -->

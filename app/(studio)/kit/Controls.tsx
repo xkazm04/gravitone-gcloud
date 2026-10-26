@@ -1,9 +1,9 @@
 "use client";
 
-// THE CONTROLS, live (kit.js "Controls"). These take callbacks, so this is the sheet's one
-// client island: each specimen holds its own state and does what it shows - a toggle
-// toggles, a fold folds, a facet counts - because a control drawn in a state it cannot
-// leave is a picture of a control.
+// THE CONTROLS, live (kit.js "Controls"). These take callbacks, so this file is a client
+// island (as is every kit file whose specimens hold state): each specimen holds its own state
+// and does what it shows - a toggle toggles, a fold folds, a facet counts - because a control
+// drawn in a state it cannot leave is a picture of a control.
 //
 // Not drawn from kit.js: the forced `hover-demo` and `focus-demo` buttons. They painted a
 // state onto a button through a class the kit page owned; @gt/ui's Button takes no class
@@ -53,7 +53,15 @@ export function ControlSections() {
   const [query, setQuery] = useState("");
   const [model, setModel] = useState<(typeof MODELS)[number]["value"]>("flux");
   const [facets, setFacets] = useState<ReadonlySet<string>>(new Set(["music"]));
+  const [rails, setRails] = useState<ReadonlySet<string>>(new Set());
   const [folded, setFolded] = useState(true);
+  const press = (set: typeof setFacets, label: string, next: boolean): void =>
+    set((s) => {
+      const n = new Set(s);
+      if (next) n.add(label);
+      else n.delete(label);
+      return n;
+    });
 
   return (
     <>
@@ -122,18 +130,19 @@ export function ControlSections() {
                 count={f.count}
                 mark="check"
                 pressed={facets.has(f.label)}
-                onToggle={(next) =>
-                  setFacets((s) => {
-                    const n = new Set(s);
-                    if (next) n.add(f.label);
-                    else n.delete(f.label);
-                    return n;
-                  })
-                }
+                onToggle={(next) => press(setFacets, f.label, next)}
               />
             ))}
             {KINDS.map((f) => (
-              <FacetRow key={`rail-${f.label}`} label={f.label} count={f.count} share={f.share} mark="rail" pressed={false} onToggle={() => undefined} />
+              <FacetRow
+                key={`rail-${f.label}`}
+                label={f.label}
+                count={f.count}
+                share={f.share}
+                mark="rail"
+                pressed={rails.has(f.label)}
+                onToggle={(next) => press(setRails, f.label, next)}
+              />
             ))}
           </div>
         </Spec>

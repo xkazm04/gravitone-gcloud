@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Event } from "@gt/domain/event";
+import { ok } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
 import { queryEvents } from "@gt/kernel/events-query";
 import { list } from "@gt/kernel/job";
@@ -20,8 +21,8 @@ import { buildRuns, spanAround, type KernelJobInput, type RunsModel } from "./mo
 // What it reads, each bounded:
 //   v1 live work   liveNow() walks every registered source (lib/ledger/v1/sources.ts); each
 //                  adapter bounds its own fan-out (its READ_CAP, facts.ts readEach width 8);
-//   kernel jobs    @gt/kernel/job list(): at most KERNEL_CAP, newest last (Phase 4 adds the
-//                  rows; list() itself has no limit yet - reported, not worked around here);
+//   kernel jobs    @gt/kernel/job list(): the last KERNEL_CAP in queue order (ord, n), and a
+//                  problem naming how many were left out (list() itself has no limit yet);
 //   ledger past    one time-ordered page of run.start/run.end/commit in the window (at most
 //                  LEDGER_CAP), plus the starts of runs that ended inside it but began before
 //                  it, by subject id, at most 200 ids a query.
@@ -78,6 +79,9 @@ export async function loadRuns(now: number = Date.now()): Promise<RunsData> {
   const jobs: KernelJobInput[] = [];
   let head = 0;
 
+  const port = serverProduce();
+  const pj = port.listJobs();
+
   const k = kernel();
   if (!k.ok) problems.push({ source: "kernel", error: k.error.message });
   else {
@@ -96,14 +100,23 @@ export async function loadRuns(now: number = Date.now()): Promise<RunsData> {
         else ledger.push(...more.value.events);
       }
     }
-    const kj = list(store);
+    // On the real side the produce read is the same jobs table, and buildRuns drops every kernel row
+    // it owns: when it answered for every job (as many as the table holds), the kernel read would
+    // be thrown away whole, so it is not made. Short of that (a table past JOBS_CAP, or a row the
+    // produce read did not place) the kernel read stands, whole.
+    const held = SIDE === "real" && pj.ok ? store.read((r) => r.get("SELECT count(*) AS n FROM jobs")) : undefined;
+    const answered = pj.ok ? pj.value.length : -1;
+    const covered = held !== undefined && held.ok && held.value !== undefined && Number(held.value["n"]) === answered && answered <= KERNEL_CAP;
+    const kj = covered ? ok<Job[]>([]) : list(store);
     if (!kj.ok) problems.push({ source: "kernel jobs", error: kj.error.message });
-    else jobs.push(...kj.value.slice(-KERNEL_CAP).map(kernelInput));
+    else {
+      const over = kj.value.length - KERNEL_CAP;
+      if (over > 0) problems.push({ source: "kernel jobs", error: `more than ${KERNEL_CAP} kernel jobs; the first ${over} in queue order are not drawn` });
+      jobs.push(...kj.value.slice(-KERNEL_CAP).map(kernelInput));
+    }
   }
 
-  const port = serverProduce();
   const produced: ProduceJob[] = [];
-  const pj = port.listJobs();
   if (pj.ok) produced.push(...pj.value);
   else problems.push({ source: "produce", error: pj.error.message });
   const holds = port.listHolds();

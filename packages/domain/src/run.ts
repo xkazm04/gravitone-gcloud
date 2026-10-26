@@ -10,7 +10,7 @@ import { runMachine } from "./run.machine.ts";
 // what the Foundry column lists and what a Weir pile points back to. The machine underneath it is
 // its one Job (`job:run:<id>`); a Run's state is what the Floor shows, in the design's words
 // (docs/next/prototype/app/model.js: draft | running | awaiting_gate | ratified | blocked), and
-// like a Part's it is DERIVED from the job at read (packages/kernel/src/records/state.ts), never
+// like a Part's it is DERIVED from the job (./plan.ts runStateOf; a Part's is read in kernel records/read.ts), never
 // written - so the stored record carries no state and no queue position (a position is computed,
 // COMMON decision 5). A Project's Part is NOT a Run: it is a part row with its own job.
 
@@ -56,6 +56,15 @@ export const PRODUCERS = [
   // A /scout night's game asset (spark game-3d-assets WP4): its concepts drawn from the brief's words,
   // gated, and handed to the mesh store with the mesh job queued (lib/producers/scoutAsset.ts).
   "scout-asset",
+  // A /scout night's idea artboards (spark scout-idea-artboards): each brief drawn as one rough still in
+  // the operator's Leonardo studio, the generation deleted once held (lib/producers/scoutIdea.ts).
+  "scout-ideas",
+  // A /scout night's stats-reel ideas (spark stats-reels): each authored as a full 8 s strip in code on the
+  // Claude seat, linted, and its frame 120 rendered as the idea's tile (lib/producers/scoutReel.ts).
+  "scout-reels",
+  // A /scout night's storyboards (spark scout-storyboards): a kept idea's frames drawn by Flux 2 on this
+  // box's ComfyUI, one job per storyboard (lib/producers/scoutStoryboard.ts).
+  "scout-storyboard",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

@@ -31,6 +31,7 @@ import {
   FoundryError,
   containedIn,
   listManifests,
+  type ManifestWarning,
   readJson,
   readManifestFile,
   runRoot,
@@ -43,9 +44,12 @@ import { blobRootOf } from "../../kernelProcess.ts";
 import type { BlobRef } from "@gt/domain/blob";
 import { DEFAULT_CALL_ESTIMATE_USD, newManifest, settleReason } from "./engine";
 import type { EngineIO } from "./engine";
-import { imageDims, nearestAspect } from "./imageDims";
+import { exemplarRound } from "./helpers";
+import { imageDims, imageFormat, nearestAspect } from "./imageDims";
+import { slugify } from "./vocabulary";
 import { exportStyles, extractRoot, OPERATOR, readStyleDefs, styleStore } from "../catalogue";
 import { planExtractCommit } from "../commitPlan";
+import { EXTRACT_COMMITTABLE } from "../plant";
 import { foundryFs } from "../fsPort";
 import type {
   ExtractCommitPlan,
@@ -151,11 +155,7 @@ async function reserveRunDir(slug: string): Promise<{ id: string; dir: string }>
 }
 
 export async function createRun(slug: string, uploads: ExtractUpload[], options: Partial<ExtractOptions> = {}): Promise<ExtractManifest> {
-  const clean = slug
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
+  const clean = slugify(slug).slice(0, 40);
   if (!clean) throw new FoundryError("A slug is required.", 400);
   if (!uploads.length) throw new FoundryError("At least one image is required.", 400);
   if (uploads.length > MAX_SOURCES) throw new FoundryError(`At most ${MAX_SOURCES} images per run.`, 400);
@@ -175,16 +175,19 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
     if (!bytes.length) throw new FoundryError(`Image ${i + 1} (${u.name}) is empty.`, 400);
     if (bytes.length > MAX_SOURCE_BYTES) throw new FoundryError(`Image ${i + 1} (${u.name}) is over ${MAX_SOURCE_BYTES / 1024 / 1024} MB.`, 400);
     const dims = imageDims(new Uint8Array(bytes));
-    if (!dims) throw new FoundryError(`Image ${i + 1} (${u.name}) is not a PNG, JPEG or WebP.`, 400);
+    // The bytes name the format, not the file name or the declared type: the
+    // stored extension is what readImage tells the vision vendor the mime is.
+    const mime = imageFormat(new Uint8Array(bytes));
+    if (!dims || !mime) throw new FoundryError(`Image ${i + 1} (${u.name}) is not a PNG, JPEG or WebP.`, 400);
     const sid = `s${String(i + 1).padStart(2, "0")}`;
-    const rel = `sources/${sid}${EXT[u.mime]}`;
+    const rel = `sources/${sid}${EXT[mime]}`;
     prepared.push({
       bytes,
       source: {
         id: sid,
         name: u.name.slice(0, 120),
         file: rel,
-        mime: u.mime,
+        mime,
         width: dims.width,
         height: dims.height,
         aspect: nearestAspect(dims.width, dims.height),
@@ -205,8 +208,10 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
 
 /* ── Reads ────────────────────────────────────────────────────────────────── */
 
-export async function listExtractRuns(): Promise<ExtractSummary[]> {
-  const { items } = await listManifests<ExtractManifest, ExtractSummary>(EXTRACT_ROOT, "run.json", async (name, m) => {
+/** The shelf and the runs it could not read (a run.json that does not parse), so a feed can
+ *  hold those runs instead of pruning them as gone. `listExtractRuns` is the list alone. */
+export async function scanExtractRuns(): Promise<{ items: ExtractSummary[]; warnings: ManifestWarning[] }> {
+  const { items, warnings } = await listManifests<ExtractManifest, ExtractSummary>(EXTRACT_ROOT, "run.json", async (name, m) => {
     const v = await readJson<ExtractVerdicts>(path.join(EXTRACT_ROOT, name, "verdicts.json"), {});
     return {
       id: m.id,
@@ -221,7 +226,11 @@ export async function listExtractRuns(): Promise<ExtractSummary[]> {
       ...(m.spend ? { spendUsd: m.spend.usd } : {}),
     };
   });
-  return items.sort((a, b) => (a.created < b.created ? 1 : -1));
+  return { items: items.sort((a, b) => (a.created < b.created ? 1 : -1)), warnings };
+}
+
+export async function listExtractRuns(): Promise<ExtractSummary[]> {
+  return (await scanExtractRuns()).items;
 }
 
 export async function getExtractRun(id: string): Promise<ExtractDetail> {
@@ -386,8 +395,8 @@ export async function commitExtractRun(
     if (run.dry) throw new FoundryError("This run was dry: its images are stand-ins, and a dry run is never committed.", 409);
     // `failed` is committable, as the forge's is: a breaker or budget stop leaves
     // finished styles the operator can judge, and exemplars carry `settled`.
-    // Keep this array and EXTRACT_COMMITTABLE in app/foundry/parts.tsx identical.
-    if (!["done", "failed"].includes(run.status)) throw new FoundryError("The extract is still running this run.", 409);
+    // The plant's one set (lib/foundry/plant.ts), which the Board's gate and the ledger read too.
+    if (!EXTRACT_COMMITTABLE.includes(run.status)) throw new FoundryError("The extract is still running this run.", 409);
     if (verdictsIn) await replaceVerdictMapHeld(verdictSpec(id), run, verdictsIn, "commit");
     const verdicts = await readVerdicts(id);
 
@@ -420,7 +429,7 @@ export async function commitExtractRun(
         if (src) exemplars.push(...(await exemplarOf(src.file, "source")));
       }
       for (const r of s.replicas) {
-        const best = [...r.rounds].filter((x) => x.file).sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
+        const best = exemplarRound(r.rounds);
         // The settle reason travels with the exemplar. Without it a replica the
         // loop GAVE UP on enters the catalogue as evidence the recipe works,
         // indistinguishable from one that hit the target.

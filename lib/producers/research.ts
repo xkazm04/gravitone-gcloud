@@ -32,6 +32,7 @@ import { engineOf as adEngineOf, ideasPrompt } from "@/lib/ads/concepts";
 import type { AdBrief, AdTemplateId } from "@/lib/ads/types";
 import { assignAngles, IDEAS_SCHEMA, parseIdeas } from "@/lib/ads/validate";
 import { OUT_DIRNAME } from "@/lib/fixtures/mode";
+import { blobRootOf } from "@/lib/kernelProcess";
 import { fixtureSource, sourceOf, type NotebookSource } from "@/lib/notebook/source";
 import type { Notebook } from "@/lib/notebook/types";
 import { GLASS_HARBOR_SLOTS } from "@/lib/studio/trailerFixtures";
@@ -40,6 +41,8 @@ import { reason } from "@/lib/text/router";
 import type { TextProvenance, TextRequest, TextResult } from "@/lib/text/types";
 import { PromptUnavailable, topicRefusal } from "@/lib/turns/assemble/research";
 import { RESEARCH_SPEC, type ResearchResult } from "@/lib/turns/kinds/research";
+
+import { codeRoot } from "./forge.ts";
 
 
 // THE RESEARCH PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/research's ports
@@ -61,15 +64,33 @@ export type { ActLaunched, PartActRef, PartFacts, ReceiptOptions, StepReceipt, U
 export type StepKernel = { readonly store: Store; readonly fx: Effects };
 
 /** The blob root beside a store - the one lib/parts/gates.ts reads (a plate a job lands is a
- *  candidate the gate packet points at). */
-export const blobRootOf = (store: Store): string => (store.location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(store.location), "blobs"));
+ *  candidate the gate packet points at): lib/kernelProcess.ts's, the one spelling of that rule. */
+export { blobRootOf };
 
 export const effectsOf = (store: Store): Effects => liveEffects(store, blobStore(blobRootOf(store)));
+
+/** The blob root of the store THIS job runs on: the file its own effects write beside (SQLite's
+ *  `database_list`), so a part job driven over a store it was handed reads the plates it landed.
+ *  An in-memory store has no file; it keeps the process's root, as `blobRootOf` does. */
+export function jobBlobRoot(ctx: Pick<StepContext, "fx">): string {
+  const at = ctx.fx.tx("blob.root", (t) => t.all("PRAGMA database_list").find((r) => r["name"] === "main")?.["file"]);
+  const file = at.ok && typeof at.value === "string" ? at.value : "";
+  return file === "" ? blobRootOf(stepKernel().store) : path.join(path.dirname(file), "blobs");
+}
 
 export function stepKernel(): StepKernel {
   const k = processKernel(storeLocation(OUT_DIRNAME));
   if (!k.ok) throw k.error;
   return { store: k.value.store, fx: effectsOf(k.value.store) };
+}
+
+/** A prompt document the code ships (`pipeline/<name>`), found from the CHECKOUT, not the cwd (forge.ts
+ *  `codeRoot`: a server may run in a data universe). Unreadable, it is the turn's PromptUnavailable - a
+ *  broken install, the job's sentence, never a retry (`textFailure`). */
+export async function promptDoc(name: string, code: string = codeRoot()): Promise<string> {
+  return readFile(path.join(code, "pipeline", name), "utf8").catch(() => {
+    throw new PromptUnavailable(`The prompt could not be read from pipeline/${name}.`);
+  });
 }
 
 export function must<T>(r: Result<T>): T {
@@ -274,9 +295,7 @@ async function ideasUnit(ctx: StepContext, unit: ActUnit, s: PartSnapshot, f: Pa
   if (brief === undefined) return { kind: "fatal", code: "invalid", message: "the brief is empty" };
   const template = adTemplateOf(f.plan.project.recipe);
   const request = { brief, template, targetS: template === "ad-spot-30" ? 30 : 15 };
-  const doc = await readFile(path.join(process.cwd(), "pipeline", "ADS-IDEAS-PROMPT.md"), "utf8").catch(() => {
-    throw new PromptUnavailable("The prompt could not be read from pipeline/ADS-IDEAS-PROMPT.md.");
-  });
+  const doc = await promptDoc("ADS-IDEAS-PROMPT.md");
   // Deterministic per job and attempt-stable: the angle draw is the job's, not Math.random's.
   const seed = parseInt(createHash("sha256").update(ctx.key).digest("hex").slice(0, 7), 16);
   const req: TextRequest = { prompt: ideasPrompt(doc, request, seed), turn: "ad-ideas", schema: IDEAS_SCHEMA };

@@ -19,7 +19,7 @@
 //   · Generation is a job behind a receipt (COMMON decision 3): a `PartAct` is priced first and
 //     confirmed second; nothing a model writes lands without one.
 
-import type { WorkKind } from "@gt/catalog/recipes";
+import type { OperatorKind, WorkKind } from "@gt/catalog/recipes";
 import type { Discipline } from "@gt/catalog/projects";
 
 import type { Receipt } from "./produce.ts";
@@ -36,10 +36,10 @@ export * from "./partView.album.ts";
 /* ── kinds ────────────────────────────────────────────────────────────────── */
 
 /** Every part kind a recipe plans (`@gt/catalog/recipes` WORK_KINDS + OPERATOR_KINDS). */
-export type PartKind = WorkKind | "gate" | "slot";
+export type PartKind = WorkKind | OperatorKind;
 
-/** The kinds whose editor exists. Frames, motion, score and cut join in later lots, each adding
- *  its entry to `PartData`; until then their route is a 404, never an empty editor. */
+/** The kinds whose editor exists, each with its entry in `PartData`. Any other work kind (still,
+ *  sfx, track, extract, forge, dojo) has none: its route is a 404, never an empty editor. */
 /* L39 (frames, motion) - its own block; partView.frames.ts holds their data, ops and acts. */
 const L39_KINDS = ["frames", "motion"] as const;
 /* L40 (score, cut; the album's words and render; the explainer's article, strips and voice) -
@@ -262,8 +262,11 @@ export function opLabel(op: PartOp): string {
   }
 }
 
-const CORE_OPS: ReadonlySet<string> = new Set<(ResearchOp | ScriptOp)["op"]>([
-  "descope", "restore", "like", "deepen", "confirm-scope", "queue-follow-up", "drop-follow-up", "decide-effect", "set-face", "pick-beat", "compose-spine", "set-brief", "pick-idea",
-  "adopt", "note-add", "note-remove", "accept", "accept-over-gate", "discard-staged", "restore-version", "patch-beat", "set-connector", "reset-beat", "pick-scenario",
-]);
+// Keyed by the union, so an op added to ResearchOp or ScriptOp without its entry here is a type
+// error - a Set of names compiled with one missing and the trail showed the bare op name.
+const CORE_OP_NAMES: { readonly [K in (ResearchOp | ScriptOp)["op"]]: true } = {
+  descope: true, restore: true, like: true, deepen: true, "confirm-scope": true, "queue-follow-up": true, "drop-follow-up": true, "decide-effect": true, "set-face": true, "pick-beat": true, "compose-spine": true, "set-brief": true, "pick-idea": true,
+  adopt: true, "note-add": true, "note-remove": true, accept: true, "accept-over-gate": true, "discard-staged": true, "restore-version": true, "patch-beat": true, "set-connector": true, "reset-beat": true, "pick-scenario": true,
+};
+const CORE_OPS: ReadonlySet<string> = new Set(Object.keys(CORE_OP_NAMES));
 const isCoreOp = (op: PartOp): op is ResearchOp | ScriptOp => CORE_OPS.has(op.op);

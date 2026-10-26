@@ -41,6 +41,8 @@ export type ClaimedSlot = { readonly slot: Slot; readonly fence: number };
 export type SweepReport = {
   readonly missed: readonly string[];
   readonly interrupted: readonly string[];
+  /** Interrupts the pass could not fence out; they stay `publishing` and are judged again next pass. */
+  readonly unfenced: readonly string[];
   readonly drifted: readonly string[];
   readonly cleared: readonly string[];
   readonly claimed: readonly ClaimedSlot[];
@@ -68,13 +70,17 @@ function claimStateIn(t: Tx, slotId: string, me: Holder, alive: Alive): ClaimSta
   return staleReason(held, me, Date.parse(t.at), alive) === undefined ? "live" : "stale";
 }
 
-/** Take the lease over from a stale claimant and let it go: the fence moves past the claimant's. */
-function fenceOut(t: Tx, slotId: string, me: Holder, alive: Alive, ttlS: number): void {
+/** Take the lease over from a stale claimant and let it go: the fence moves past the claimant's.
+ *  False when the take-over was not granted (a live waiter is in line on the slot's lease): the
+ *  attempt already dropped the stale holder, so the slot is left `publishing` for the next pass,
+ *  which finds the lease free - one slot's lease must not roll back the whole calendar pass. */
+function fenceOut(t: Tx, slotId: string, me: Holder, alive: Alive, ttlS: number): boolean {
   const resource = claimResource(slotId);
-  if (snapshotOf(t, resource).row?.held === undefined) return;
+  if (snapshotOf(t, resource).row?.held === undefined) return true;
   const o = claimIn(t, { resource, holder: me, ticket: randomUUID(), ttlS, wait: false }, alive);
-  if (o.kind !== "granted") throw new AppError("internal", `slot ${slotId}: a stale claim could not be taken over (${o.kind})`);
+  if (o.kind !== "granted") return false;
   releaseIn(t, resource, o.lease.fence);
+  return true;
 }
 
 /**
@@ -109,14 +115,17 @@ export function sweep(store: Store, facts: SweepFacts, run: SweepRun): Result<Sw
       claimState: (id) => claimStateIn(t, id, me, alive),
       ...(run.only === undefined ? {} : { only: run.only }),
     });
-    const out = { missed: [] as string[], interrupted: [] as string[], drifted: [] as string[], cleared: [] as string[], claimed: [] as ClaimedSlot[] };
+    const out = { missed: [] as string[], interrupted: [] as string[], unfenced: [] as string[], drifted: [] as string[], cleared: [] as string[], claimed: [] as ClaimedSlot[] };
     for (const d of decisions) {
       const row = rows.get(d.id);
       if (row === undefined) throw new AppError("internal", `sweep decided on ${d.id}, which it did not read`);
       let next: SlotRow;
       switch (d.kind) {
         case "interrupt":
-          fenceOut(t, d.id, me, alive, ttlS);
+          if (!fenceOut(t, d.id, me, alive, ttlS)) {
+            out.unfenced.push(d.id);
+            continue;
+          }
           next = putSlotIn(t, row, toFailed(row.slot, INTERRUPTED_TEXT), null, { by, type: "slot.fail", data: { error: INTERRUPTED_TEXT, interrupted: d.why } });
           out.interrupted.push(d.id);
           break;

@@ -7,10 +7,14 @@
 // A route, not a Server Action: a returned WAV is tens of MB and an action's body is capped far
 // below that (plan §9.2: route handlers are for CLIs, agents and FILES). Access-gated, not
 // money: nothing here spends (v1 POST /api/sound/takes, the same reasoning).
+//
+// THE CAP IS route()'s: its `bodyCap` counts the body as the handler reads it (a route with no `input`
+// included) and a declared content-length over it is refused up front; this door words the refusal
+// in MB (tests/next-server/audio-return.test.ts).
 import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
-import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { STAGES } from "@gt/ui/components/audio/arrange.ts";
 
 import { route } from "../../../_server/route.ts";
@@ -19,6 +23,7 @@ import { fileReturn, OP_ID_RE } from "../../../../lib/sound/arrange.ts";
 import { can, engineById } from "../../../../lib/sound/engines.ts";
 import { MAX_UPLOAD_BYTES } from "../../../../lib/sound/takes.ts";
 import { deskEngines } from "../_audio/arrangeRead.ts";
+import { actorOf } from "../../../../lib/principal.ts";
 
 export const maxDuration = 60;
 
@@ -29,21 +34,30 @@ const fields = z.object({
   op: z.string().regex(OP_ID_RE),
 });
 
+const CAP = MAX_UPLOAD_BYTES + 1_000_000;
+const over = `the upload is over ${MAX_UPLOAD_BYTES / 1048576} MB`;
+
+/** The multipart body. route()'s `bodyCap` counts it as it is read and errors past CAP (body-too-large). */
+async function cappedForm(req: Request): Promise<Result<FormData>> {
+  try {
+    return ok(await req.formData());
+  } catch (e) {
+    return e instanceof AppError && e.detail === "body-too-large" ? err("invalid", over) : err("invalid", `expected multipart/form-data with file, head, stage and op: ${errorMessage(e)}`);
+  }
+}
+
 const field = (form: FormData, k: string): string | undefined => {
   const v = form.get(k);
   return typeof v === "string" && v !== "" ? v : undefined;
 };
 
-export const POST = route({ guard: "access", bodyCap: MAX_UPLOAD_BYTES + 1_000_000, maxDuration }, async ({ req, who }): Promise<Result<{ readonly id: string; readonly version: number; readonly created: boolean }>> => {
+export const POST = route({ guard: "access", bodyCap: CAP, maxDuration }, async ({ req, who }): Promise<Result<{ readonly id: string; readonly version: number; readonly created: boolean }>> => {
   if (!can(engineById(deskEngines(), "suno"), "file-return")) return err("refused", "the desk takes no Suno return here: the engine registry withholds file-return");
   const declared = Number(req.headers.get("content-length") ?? 0);
-  if (declared > MAX_UPLOAD_BYTES + 1_000_000) return err("invalid", `the upload is over ${MAX_UPLOAD_BYTES / 1048576} MB`);
-  let form: FormData;
-  try {
-    form = await req.formData();
-  } catch (e) {
-    return err("invalid", `expected multipart/form-data with file, head, stage and op: ${errorMessage(e)}`);
-  }
+  if (declared > CAP) return err("invalid", over);
+  const read = await cappedForm(req);
+  if (!read.ok) return read;
+  const form = read.value;
   const label = field(form, "label");
   const p = parseAt("audio return", fields, { head: field(form, "head"), stage: field(form, "stage"), op: field(form, "op"), ...(label === undefined ? {} : { label }) });
   if (!p.ok) return p;
@@ -52,7 +66,7 @@ export const POST = route({ guard: "access", bodyCap: MAX_UPLOAD_BYTES + 1_000_0
   const k = kernel();
   if (!k.ok) return k;
   const file = { bytes: new Uint8Array(await f.arrayBuffer()), mime: f.type, name: f.name };
-  const r = await fileReturn(k.value.store, { headId: p.value.head, stage: p.value.stage, opId: p.value.op, file, ...(p.value.label === undefined ? {} : { label: p.value.label }) }, { kind: "operator", id: who !== null && "uid" in who ? who.uid : "operator" }, new Date());
+  const r = await fileReturn(k.value.store, { headId: p.value.head, stage: p.value.stage, opId: p.value.op, file, ...(p.value.label === undefined ? {} : { label: p.value.label }) }, actorOf(who), new Date());
   if (!r.ok) return r;
   return ok({ id: r.value.take.id, version: r.value.version, created: r.value.created });
 });

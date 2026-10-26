@@ -20,15 +20,18 @@
 //     every writer turn and reviewer reads the experiment, the trial prompt
 //     sections and the two trial check items; a void, unclosed, dropped, taken,
 //     missing or mismatched trial creates nothing
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
 import { agentArgs, assertIsolatedWorkspace, classifyOutcome, parseEnvelope, runAgent } from "@/lib/agent/cliSeam";
-import { approveRun, createRun, defaultDeps, driveRun, getRunDetail, rejectRun, resumeRun } from "@/lib/articles/engine";
+import { approveRun, createRun, defaultDeps, driveRun, getRunDetail, rejectRun, resumeRun, walk } from "@/lib/articles/engine";
+import { ingestPatches } from "@/lib/articles/ingestDraft";
+import { EXPERIMENT_SOURCE_FILE, readExperimentSource } from "@/lib/articles/ingestSources";
 import { markdownToStoryHtml } from "@/lib/articles/mediumPackage";
+import { MAX_PATCHES } from "@/lib/articles/prompt";
 import { patchIsSafe } from "@/lib/articles/registryWrite";
 import { ArticleError, readRun, runDir } from "@/lib/articles/store";
 import type { CreateRunInput, TrialExecRecord, TrialPrereg, TrialRecord, TrialResults, TrialSeal, TrialValidity, TrialVerdict } from "@/lib/articles/types";
@@ -175,6 +178,30 @@ test("approve lands: branch pushed, publication written, approved patch applied,
   expect(readFileSync(path.join(runDir(run.id), "medium", "tags.txt"), "utf8").trim().split("\n")).toHaveLength(5);
 });
 
+test("a landing retried after gh pr create failed reuses the pushed branch and opens its PR", async () => {
+  test.slow();
+  process.env.STUB_GH_LOG = path.join(box.dir, "gh.log");
+  const run = await toGate();
+  await approveRun(run.id, ["p1"]);
+  process.env.STUB_GH_FAIL = "1";
+  const failed = await driveRun(run.id, deps());
+  expect(failed.status).toBe("failed");
+  expect(failed.error).toContain("gh pr create failed; the branch article/a-stub-post-about-tokens is pushed");
+  const branch = failed.landing?.branch;
+  expect(branch).toBe("article/a-stub-post-about-tokens");
+  delete process.env.STUB_GH_FAIL;
+  await resumeRun(run.id);
+  const landed = await driveRun(run.id, deps());
+  expect(landed.status, landed.error).toBe("landed");
+  expect(landed.landing).toMatchObject({ branch, commit: failed.landing?.commit, prUrl: "https://example.invalid/xkazm04/ai-registry/pull/1" });
+  expect(landed.landing?.worktree, "the kept worktree is removed").toBeUndefined();
+  expect(existsSync(failed.landing!.worktree!), "the failed attempt's worktree is gone").toBe(false);
+  expect(git(box.origin, "for-each-ref", "--format=%(refname)", "refs/heads/article/").trim().split("\n"), "one approved post, one pushed branch").toEqual([`refs/heads/${branch}`]);
+  const calls = readFileSync(path.join(box.dir, "gh.log"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+  expect(calls).toHaveLength(2);
+  expect(calls[1][calls[1].indexOf("--head") + 1]).toBe(branch);
+});
+
 test("a gate failure leaves the branch local: nothing pushed, no PR, status failed with the gate output", async () => {
   // Landing drives git worktree/push/gate children: 18-26 s idle, past the 120 s
   // describe budget under saturating load. Inherent work, so a longer budget.
@@ -233,6 +260,26 @@ test("agent failures: errored and seat-limit fail the step by name; resume re-ru
   expect(done.steps.find((s) => s.name === "check")?.costUsd).toBeUndefined();
 });
 
+test("walk: a step booked done while its status never moved is walked past, and a step that never finished is not", async () => {
+  const run = await createRun({ topic: { kind: "free", text: "walk guards" } }, deps());
+  const first = await walk(run.id, deps(), "research");
+  expect(first).toMatchObject({ ok: true, skipped: false, run: { status: "drafting" } });
+  const receipt = statSync(path.join(runDir(run.id), "agent", "research.json")).mtimeMs;
+  // A driver that died between booking the step and moving the status: research done, still researching.
+  const manifest = path.join(runDir(run.id), "run.json");
+  writeFileSync(manifest, JSON.stringify({ ...JSON.parse(readFileSync(manifest, "utf8")), status: "researching" }, null, 2));
+  const again = await walk(run.id, deps(), "research");
+  expect(again.ok).toBe(true);
+  expect(again.run.status, "the status moves on; the run is not left at researching").toBe("drafting");
+  expect(statSync(path.join(runDir(run.id), "agent", "research.json")).mtimeMs, "research is not run a second time").toBe(receipt);
+  // A run past a step's status whose record of that step is not done: refused by name, nothing driven.
+  const hole = JSON.parse(readFileSync(manifest, "utf8"));
+  writeFileSync(manifest, JSON.stringify({ ...hole, steps: hole.steps.filter((s: { name: string }) => s.name !== "research") }, null, 2));
+  const refused = await walk(run.id, deps(), "research");
+  expect(refused).toMatchObject({ ok: false, message: expect.stringMatching(/its research step never finished/) });
+  expect((await readRun(run.id)).steps.map((s) => s.name)).toEqual([]);
+});
+
 test("a proposal outside knowledge/ and recipes/ never becomes a patch", async () => {
   process.env.STUB_AGENT_BAD_PATCH = "1";
   const run = await toGate();
@@ -243,6 +290,30 @@ test("a proposal outside knowledge/ and recipes/ never becomes a patch", async (
   expect(patchIsSafe("--- a/scripts/gate.mjs\n+++ b/scripts/gate.mjs\n").ok).toBe(false);
   expect(patchIsSafe("--- a/knowledge/x/../../scripts/a.md\n+++ b/knowledge/x/../../scripts/a.md\n").ok).toBe(false);
   expect(patchIsSafe("--- /dev/null\n+++ b/knowledge/t/a.md\n").ok).toBe(true);
+});
+
+test("proposals past the ones read are named in patches.rejected.json, never dropped unsaid", async () => {
+  const dir = path.join(box.dir, "ingest-run");
+  const ws = path.join(box.dir, "ingest-ws");
+  mkdirSync(dir, { recursive: true });
+  mkdirSync(path.join(ws, "out"), { recursive: true });
+  writeFileSync(path.join(dir, "sources.json"), JSON.stringify([{ n: 1 }]));
+  const proposed = Array.from({ length: MAX_PATCHES * 2 + 3 }, (_, i) => ({ id: `bad-${i}`, target: "knowledge/x.md", kind: "technique", rationale: "r", sources: [1] }));
+  writeFileSync(path.join(ws, "out", "patches.json"), JSON.stringify(proposed));
+  await ingestPatches(ws, dir);
+  const rejected = JSON.parse(readFileSync(path.join(dir, "patches.rejected.json"), "utf8")) as { reason: string }[];
+  expect(rejected.filter((r) => /^id must be/.test(r.reason))).toHaveLength(MAX_PATCHES * 2);
+  expect(rejected.map((r) => r.reason)).toContain(`3 more proposals past the first ${MAX_PATCHES * 2} were not read`);
+  expect(JSON.parse(readFileSync(path.join(dir, "patches.json"), "utf8"))).toEqual([]);
+});
+
+test("trial: an experiment-source.json that does not parse fails by its file name", async () => {
+  const dir = path.join(box.dir, "experiment-run");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, EXPERIMENT_SOURCE_FILE), '{"n": 1, "url": ');
+  await expect(readExperimentSource(dir)).rejects.toThrow(EXPERIMENT_SOURCE_FILE);
+  rmSync(path.join(dir, EXPERIMENT_SOURCE_FILE));
+  await expect(readExperimentSource(dir)).rejects.toThrow(`holds no ${EXPERIMENT_SOURCE_FILE}`);
 });
 
 test("a run on a registry subject records the subject and reads its golden path", async () => {

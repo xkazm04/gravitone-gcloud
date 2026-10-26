@@ -12,7 +12,7 @@ import type { RerouteOption } from "@gt/domain/produce";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
 import { LaneChip, laneLabel } from "../runs/LaneChip.tsx";
-import { costWords, fmtDur, lean, optionCost, relDur, relUsd } from "./produce.ts";
+import { costWords, fmtDur, leanOf, optionCost, relDur, relUsd } from "./produce.ts";
 import s from "./Acts.module.css";
 
 export type RerouteListProps = {
@@ -37,15 +37,15 @@ export function RerouteList({ options, units, onPick, busy }: RerouteListProps) 
             </div>
           );
         }
-        const eta = lean(r.dEtaS, 59);
-        const usd = lean(r.dUsd, 0.004);
+        const etaWords = relDur(r.dEtaS);
+        const usdWords = relUsd(r.dUsd);
         return (
           <button
             key={o.key}
             type="button"
             className={s.alt}
             data-option={o.key}
-            aria-label={`re-route to ${o.label} on ${laneLabel(o.lane)}: eta ${relDur(r.dEtaS)}, ${relUsd(r.dUsd)}, queue ${r.queuePos}`}
+            aria-label={`re-route to ${o.label} on ${laneLabel(o.lane)}: eta ${etaWords}, ${usdWords}, queue ${r.queuePos}`}
             aria-busy={busy === o.key ? true : undefined}
             aria-disabled={busy !== null ? true : undefined}
             onClick={busy !== null ? undefined : () => onPick(o.key)}
@@ -56,8 +56,8 @@ export function RerouteList({ options, units, onPick, busy }: RerouteListProps) 
               <span className={s.mono}>
                 {fmtDur(o.secondsPerUnit * Math.max(1, units))} · {costWords(optionCost(o, units))}
               </span>
-              <span className={cx(s.d, s[eta])}>eta {relDur(r.dEtaS)}</span>
-              <span className={cx(s.d, s[usd])}>{relUsd(r.dUsd)}</span>
+              <span className={cx(s.d, s[leanOf(etaWords)])}>eta {etaWords}</span>
+              <span className={cx(s.d, s[leanOf(usdWords)])}>{usdWords}</span>
               <span className={s.mono}>q#{r.queuePos}</span>
             </span>
           </button>

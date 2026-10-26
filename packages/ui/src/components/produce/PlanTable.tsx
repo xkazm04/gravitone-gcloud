@@ -88,6 +88,8 @@ export type PlanRowProps = {
   readonly nowMs: number;
   readonly onModel: (id: string, key: string) => void;
   readonly onUnits: (id: string, units: number) => void;
+  /** The part's editor, when it has one: its title is drawn as a link there (Tab reaches it, a reader lists it). */
+  readonly hrefOf?: (id: string) => string | null;
 };
 
 function Model({ p, draft, onModel }: { readonly p: PlanPart; readonly draft: boolean; readonly onModel: (id: string, key: string) => void }) {
@@ -97,15 +99,17 @@ function Model({ p, draft, onModel }: { readonly p: PlanPart; readonly draft: bo
   return <span className={s.fixed}>{chosen?.label ?? p.chosen}</span>;
 }
 
-export function PlanRow({ p, byId, draft, selected, nowMs, onModel, onUnits }: PlanRowProps) {
+export function PlanRow({ p, byId, draft, selected, nowMs, onModel, onUnits, hrefOf }: PlanRowProps) {
   const work = isWork(p);
+  const href = hrefOf?.(p.id) ?? null;
+  const title = p.kind === "gate" ? `◆ ${(p.judges === undefined ? undefined : byId.get(p.judges)?.label) ?? p.label}` : p.label;
   const lane = work ? (p.options.find((o) => o.key === p.chosen)?.lane ?? null) : null;
   return (
     <tr className={cx(s.row, p.kind === "gate" && s.gate, p.kind === "slot" && s.slot, selected && s.sel)} data-part={p.id} data-selected={selected ? "" : undefined}>
       <td className={s.part}>
         <span className={cx(s.dot, s[STATUS.part[p.state].look])} aria-hidden="true" />
         {/* A gate is named by what it judges: its model cell already says "your verdict". */}
-        {p.kind === "gate" ? `◆ ${(p.judges === undefined ? undefined : byId.get(p.judges)?.label) ?? p.label}` : p.label}
+        {href === null ? title : <a className={s.partLink} href={href}>{title}</a>}
       </td>
       <td>{lane !== null ? <LaneChip lane={lane} /> : <LaneChip lane={p.kind === "gate" ? "weir" : "calendar"} />}</td>
       <td className={s.model}>

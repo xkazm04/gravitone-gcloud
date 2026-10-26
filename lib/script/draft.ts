@@ -16,16 +16,16 @@
 // {draft})`, `probesFor(unknowns, draft)` — and the tables survive only as the
 // FIXTURE draft's data, built verbatim by `fixtureDraft()`.
 //
-// ─── what is NOT here yet (card script-phase-A, session 2) ──────────────────
+// ─── where it stands ──────────────────────────────────────────────────────
 //
-//   · persistence: `useScriptDraft(projectId)` under a stepStore key, seeding
-//     `fixtureDraft()` only for the replay notebook
-//   · `Unknown.probe` in the notebook schema, so a research run authors probes
-//   · the matrix/coverage/scope readers and ScriptStep taking a draft
-//
-// Until then `RENDERS`, `IMPACT` and `EDIT_PLAN_SCHEMA` stay exported as
-// fixture-backed shims, because pipeline/gate-regression.mts,
-// pipeline/drive-script-step.mjs and every existing script probe read them.
+//   · `Unknown.probe` landed in the notebook schema (probesFor reads it first)
+//   · the compose turn lands a draft's renders as the part's candidates
+//     (lib/producers/script.ts composeUnit, via draftOf); useScriptDraft and
+//     ScriptStep retired with the studio before they took one
+//   · recalibration still walks the fixture renders (the producer's "KEPT v1
+//     LIMIT"), which is why `RENDERS`, `IMPACT` and `EDIT_PLAN_SCHEMA` stay
+//     exported as fixture-backed shims - pipeline/gate-regression.mts and the
+//     script probes read them too.
 
 import { fixtureSource, type NotebookSource } from "@/lib/notebook/source";
 import { CONSTRAINT_LEDGER } from "@/lib/script/constraints";

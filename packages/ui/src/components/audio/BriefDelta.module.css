@@ -13,4 +13,3 @@
 .octave .delta{color:var(--amber)}
 .unmeasured{border-style:dashed;border-color:color-mix(in srgb,var(--faint) 80%,transparent);background:none}
 .unmeasured .figures{color:var(--faint)}
-.unasked{display:none}

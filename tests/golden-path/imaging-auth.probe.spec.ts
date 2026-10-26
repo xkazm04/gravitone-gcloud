@@ -280,23 +280,39 @@ function runtimeImports(rel: string): string[] {
  * from it is asserted to read no `process.env`. The pricing modules are the
  * whole graph today (two files each); the assertion is what keeps that true.
  */
+function reachableFrom(route: string): { seen: Set<string>; envReaders: string[] } {
+  const seen = new Set<string>();
+  const queue = [route];
+  while (queue.length) {
+    const f = queue.pop()!;
+    if (seen.has(f)) continue;
+    seen.add(f);
+    queue.push(...runtimeImports(f));
+  }
+  // The walk followed at least one edge — a route that "imports nothing"
+  // means the import matcher stopped seeing imports, not that the route is
+  // self-contained.
+  expect(seen.size, `${route}: the import walk followed no edge at all`).toBeGreaterThan(1);
+  const envReaders = [...seen].filter((f) => /process\.env/.test(code(readFileSync(join(process.cwd(), f), "utf8"))));
+  return { seen, envReaders };
+}
+
+/**
+ * The price table's body is the module a public price route would serve. The
+ * rule it is built on (pricing.ts header; budget.ts "does NOT compromise
+ * pricing.ts's no-env property") is held here unconditionally, so it does not
+ * depend on a route being admitted to DELIBERATELY_PUBLIC first.
+ */
+test("the price table's handler reads no environment, transitively", () => {
+  const { seen, envReaders } = reachableFrom("lib/imaging/pricingHandler.ts");
+  expect(seen.has("lib/imaging/pricing.ts"), "the walk no longer reaches pricing.ts").toBe(true);
+  expect(envReaders, "pricing.ts promises to read no process.env and import nothing that does").toEqual([]);
+});
+
 test("every deliberately-public route reads no environment, transitively", () => {
   test.skip(Object.keys(DELIBERATELY_PUBLIC).length === 0, "no deliberately-public route exists since Phase 6 L70 - the walk has nothing to walk");
   for (const [route, why] of Object.entries(DELIBERATELY_PUBLIC)) {
-    const seen = new Set<string>();
-    const queue = [route];
-    while (queue.length) {
-      const f = queue.pop()!;
-      if (seen.has(f)) continue;
-      seen.add(f);
-      queue.push(...runtimeImports(f));
-    }
-    // The walk followed at least one edge — a route that "imports nothing"
-    // means the import matcher stopped seeing imports, not that the route is
-    // self-contained.
-    expect(seen.size, `${route}: the import walk followed no edge at all`).toBeGreaterThan(1);
-
-    const envReaders = [...seen].filter((f) => /process\.env/.test(code(readFileSync(join(process.cwd(), f), "utf8"))));
+    const { seen, envReaders } = reachableFrom(route);
     console.log(`[auth] ${route}: ${seen.size} module(s) reachable (${[...seen].filter((f) => f !== route).join(", ")}), ${envReaders.length} read process.env`);
     expect(
       envReaders,
@@ -673,7 +689,7 @@ function store() {
   if (!k.ok) throw new Error(k.error.message);
   return k.value.store;
 }
-function mint(scope: "money" | "read" = "money"): { id: string; token: string } {
+function mint(scope: "money" | "read" | "act" = "money"): { id: string; token: string } {
   const r = store().tx((t) => tk.mintToken(t, { name: `probe-${scope}`, scope }, OPERATOR));
   if (!r.ok) throw new Error(r.error.message);
   return { id: r.value.record.id, token: r.value.token };
@@ -696,6 +712,17 @@ test("token: a read token is 403 on a money route and admitted on a read route",
   expect(money?.status).toBe(403);
   expect(await bodyOf(money)).toMatchObject({ code: "refused", detail: "token-scope" });
   expect(await gate(req("/api/ledger", { ip: nextIp(), bearer: token }), "access")).toBeNull();
+});
+
+// The agent's scope (spark athena-control-mcp WP1): reads and non-spending writes, never a money door.
+test("token: an act token is 403 on a money route and admitted on a read route", async () => {
+  const { token } = mint("act");
+  const money = await gate(req(MONEY_PATH, { ip: nextIp(), bearer: token }), "money");
+  expect(money?.status).toBe(403);
+  expect(await bodyOf(money)).toMatchObject({ code: "refused", detail: "token-scope" });
+  expect(await gate(req("/api/ledger", { ip: nextIp(), bearer: token }), "access")).toBeNull();
+  const who = await resolvePrincipal(req("/api/ledger", { ip: nextIp(), bearer: token }), { use: "read" });
+  expect(who).toMatchObject({ kind: "cli-token", name: "probe-act", scope: "act" });
 });
 
 test("token: revoked, expired and unknown are 401, each naming the fix", async () => {

@@ -13,7 +13,7 @@
 
 import type { Attention, LibraryKindName } from "@gt/domain/library";
 
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 
 import { cx } from "../cx.ts";
 import { vars } from "../vars.ts";
@@ -43,9 +43,9 @@ export type LibraryCard = {
 
 export const ATTENTION_LABEL: { readonly [A in Attention]: string } = { unreadable: "media unreadable", missing: "media missing" };
 
-/** The option's name: what the face and the dot say, in words. */
+/** The option's name: what the face, the dot and the lock say, in words. */
 export function cardName(c: LibraryCard): string {
-  return [c.title, kindShort(c.kind), c.state, ...(c.attention === undefined ? [] : [ATTENTION_LABEL[c.attention]])].join(", ");
+  return [c.title, kindShort(c.kind), c.state, ...(c.locked === true ? ["locked"] : []), ...(c.attention === undefined ? [] : [ATTENTION_LABEL[c.attention]])].join(", ");
 }
 
 export type LibraryTileProps = {
@@ -53,11 +53,12 @@ export type LibraryTileProps = {
   readonly selected: boolean;
   /** The DOM id aria-activedescendant points at. */
   readonly domId: string;
-  readonly onSelect: () => void;
-  readonly onOpen: () => void;
+  /** Stable across renders (it takes the id), so a selection step re-renders the two options it changes. */
+  readonly onSelect: (id: string) => void;
+  readonly onOpen: (id: string) => void;
 };
 
-export function LibraryTile({ card, selected, domId, onSelect, onOpen }: LibraryTileProps) {
+export const LibraryTile = memo(function LibraryTile({ card, selected, domId, onSelect, onOpen }: LibraryTileProps) {
   return (
     <div
       id={domId}
@@ -67,8 +68,8 @@ export function LibraryTile({ card, selected, domId, onSelect, onOpen }: Library
       data-id={card.id}
       data-kind={card.kind}
       className={cx(s.tile, selected && s.on)}
-      onClick={onSelect}
-      onDoubleClick={onOpen}
+      onClick={() => onSelect(card.id)}
+      onDoubleClick={() => onOpen(card.id)}
     >
       <div className={s.thumb}>
         <FaceView face={card.face} size="tile" />
@@ -94,7 +95,7 @@ export function LibraryTile({ card, selected, domId, onSelect, onOpen }: Library
       </div>
     </div>
   );
-}
+});
 
 /** A tile whose row has not arrived yet: the box, so the grid never jumps when it lands. */
 export function TileSlot() {

@@ -21,7 +21,7 @@ import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
-import { CutClock, useTransport, type ClockLane } from "./CutClock.tsx";
+import { CLOCK_ZOOM_OPTIONS, CutClock, useClockT, useTransport, zoomStep, type ClockLane, type ClockStore, type ClockZoom } from "./CutClock.tsx";
 import type { EditorProps, Launch, Send } from "./PartEditor.tsx";
 import { ScoreBed } from "./ScoreBed.tsx";
 import { ScoreField as Field } from "./ScoreField.tsx";
@@ -29,7 +29,6 @@ import { ScoreTakes } from "./ScoreTakes.tsx";
 import s from "./Cut.module.css";
 
 type P = EditorProps<PartView<"score">>;
-const ZOOMS = ["0", "1", "2", "4"] as const;
 
 
 function CueInspector({ cue, d, send, busy, act }: { readonly cue: CueView; readonly d: SpottingData; readonly send: Send; readonly busy: boolean; readonly act: Launch }) {
@@ -100,12 +99,17 @@ function CueInspector({ cue, d, send, busy, act }: { readonly cue: CueView; read
   );
 }
 
+/** The time on the clock over the total: subscribed, so a playing film re-renders this and nothing around it. */
+function Readout({ clock: c, totalS }: { readonly clock: ClockStore; readonly totalS: number }) {
+  return <span className={s.read}>{`${useClockT(c, clock)} / ${clock(totalS)}`}</span>;
+}
+
 function Spotting(p: P & { readonly data: SpottingData }) {
   const { frame, send, busy, error, act, data: d } = p;
   const [chosen, setSel] = useState<string | null | undefined>(undefined);
   const sel = chosen === undefined ? (d.cues[0]?.id ?? null) : chosen;
   const cue = d.cues.find((c) => c.id === sel) ?? null;
-  const [zoom, setZoom] = useState<(typeof ZOOMS)[number]>("1");
+  const [zoom, setZoom] = useState<ClockZoom>("1");
   const tr = useTransport(d.totalS);
   const ids = d.cues.map((c) => c.id);
   const render = (c: CueView): void => act("render-cue", `render ${c.title}`, c.id);
@@ -132,8 +136,10 @@ function Spotting(p: P & { readonly data: SpottingData }) {
       },
       "nudge-span": ({ index }) => (cue === null ? false : shift(cue, index === 0 ? -1 : 1)),
       render: () => (cue === null || cue.bpm === null ? false : render(cue)),
-      "add-cue": () => send({ op: "cue-add" }),
-      zoom: ({ index }) => setZoom((z) => ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(z) + (index === 0 ? 1 : -1)))] ?? "1"),
+      // The add cue button's own guard: with no picture the press used to reach the store, which
+      // answered "every scene has a cue" of a film with no scenes.
+      "add-cue": () => (busy || d.scenes.length === 0 ? false : send({ op: "cue-add" })),
+      zoom: ({ index }) => setZoom((z) => zoomStep(z, index)),
       deselect: () => setSel(null),
     },
     { facts },
@@ -227,19 +233,11 @@ function Spotting(p: P & { readonly data: SpottingData }) {
               </div>
             )}
             <div className={s.bar}>
-              <span className={s.read}>{`${clock(tr.t)} / ${clock(d.totalS)}`}</span>
+              <Readout clock={tr.clock} totalS={d.totalS} />
               {d.targetS !== null && <span className={s.mono}>{`target ${clock(d.targetS)}`}</span>}
               <span className={s.mono}>{`${d.scenes.length} scenes`}</span>
               <Button label={tr.playing ? "pause" : "play"} size="sm" shortcut={{ mode: "part.score", verb: "play" }} disabled={d.totalS === 0} onPress={tr.toggle} />
-              <Seg
-                label="zoom"
-                options={ZOOMS.map((z) => ({
-                  value: z,
-                  label: z === "0" ? "fit" : `${z}×`,
-                }))}
-                value={zoom}
-                onChange={setZoom}
-              />
+              <Seg label="zoom" options={CLOCK_ZOOM_OPTIONS} value={zoom} onChange={setZoom} />
             </div>
             {d.scenes.length === 0 ? (
               <Empty label="no picture on the clock" />
@@ -250,7 +248,7 @@ function Spotting(p: P & { readonly data: SpottingData }) {
                 scenes={d.scenes}
                 lanes={lanes}
                 zoom={Number(zoom)}
-                t={tr.t}
+                clock={tr.clock}
                 selected={sel}
                 marks={d.turn === null ? [] : [{ atS: d.turn.atS, label: d.turn.label }]}
                 onSeek={tr.seek}

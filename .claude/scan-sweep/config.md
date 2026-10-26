@@ -240,3 +240,23 @@ before matching, the population walked off the filesystem rather than listed, an
   census coordinator-owned and regenerate it once per wave, only when `git status -- app components` is clean.
   (History: census retired with decision 5. The same trap holds for any generator that reads the working tree.)
 - **2026-10-18 - stabilize round after the one authorized push: the pre-push hook is a 2h45m wait and it can be red for reasons that are not the commits.** `npm run verify` took 2.75 h on this box (lint 27 min, probes 1.1 h with 31 timeouts/reds, build 30 min). Typecheck AND build both failed on gitignored `.next*/dev/types/validator.ts` files that still import the retired `app/kit/page`; deleting those five generated files (no tracked change) turned `tsc` green. Real reds the hook found: `mutant-registry` (stale `session-cross-origin-sets-cookie`, last touched by cf6b254, already on origin) and `imaging-auth` (`app/api/articles/[runId]/medium/route.ts` from 9042dcd has no driven case). A timed-out foundry crash probe left `pipeline/foundry/grader-calibration.json` modified plus a `catalogue-journal.jsonl` and a `styles.json.*.tmp` in the tracked tree - restore them before staging anything. During the wait, only read: the gates read the working tree. Two bug classes paid this round and are worth a grep each: a `.play().catch(() => stop())` handler that acts on the engine's CURRENT state after a newer press (engine.ts, useAudition.ts; transport.ts guards it by id), and a JS `/\b\p{L}/u` that treats an apostrophe or an accented letter as a word edge (`\b` is ASCII-only).
+
+- **2026-10-25 - all 80 contexts under --optimize (18 waves, 69 rounds) plus a full Lane B drain
+  (284 cards, 51 Sonnet worker jobs): 801 built, 98 rejected, 86 handed off. Six hazards the method
+  does not name, each paid for this run.** (1) **The lint ratchet on main never reaches its bucket
+  stage**: the gitignored `pipeline/scout-nsfw.mts` fails the error stage first, so three warning
+  buckets rose unseen for a day. Run the ratchet in a clean worktree at HEAD (no gitignored files)
+  as the integration lint gate. (2) **Root `npm run typecheck` excludes `packages/`**: the packages
+  gate is `npm run typecheck:next`; run both. (3) **In a worktree `node_modules/@gt/*` resolves to
+  the BASE checkout**, so a worker's typecheck/vitest of a package change reads the old package;
+  gate with a temporary tsconfig/vitest alias and let the director's combined gate count. (4) **The
+  mutant runner leaves `.claude/worktrees/mutants-unit/node_modules` as a real dir of ~418 per-package
+  junctions** (`dir` shows `<DIR>`, not `<JUNCTION>`): a recursive delete of a worker worktree goes
+  through them into the base. Unlink every reparse point under a worktree (os.lstat
+  FILE_ATTRIBUTE_REPARSE_POINT, os.rmdir) before `git worktree remove --force`. (5) **Parallel
+  branches conflict on the mutant registries every time**: union-resolve, and when both sides
+  appended bodies inside one shared `{ }` insert `},`/`{` between them; two branches that each guard a
+  probe leave `UNGUARDED_PROBE_BUDGET` one high - lower it to the figure the gate names, never raise.
+  (6) **Do not export GRAVITONE_DRY_ONLY around the suites** - they set it per case and the stubbed
+  non-DRY scout cases go red. Also: a `better` that is measurably worse elsewhere (a 2.8x slower
+  re-put, a 35% slower re-ingest) is a trade-off for the operator, not a merge.

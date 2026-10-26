@@ -34,9 +34,28 @@ describe("Keycaps renders the keymap's rows for a mode", () => {
     expect(rowsOf(renderToStaticMarkup(createElement(Keycaps, { mode: "board.cull", label: "keys" }))).some(([, d]) => d === "play")).toBe(false);
   });
 
+  test("the review legend promises a calendar slot only when the review schedules one", () => {
+    const does = (facts: string[]) => rowsOf(renderToStaticMarkup(createElement(Keycaps, { mode: "board.review", label: "keys", facts: new Set(facts) }))).map(([, d]) => d);
+    expect(does(["draft"])).toContain("approve");
+    expect(does(["draft"])).not.toContain("approve → calendar");
+    expect(does(["draft", "calendar"])).toContain("approve → calendar");
+    expect(does(["draft", "calendar"])).not.toContain("approve");
+  });
+
   test("a supplied keymap is drawn, not the app's", () => {
     const map = compile([{ mode: "t", keys: ["Q"], verb: "quit" }]);
     expect(rowsOf(renderToStaticMarkup(createElement(Keycaps, { mode: "t", label: "keys", map })))).toEqual([[["Q"], "quit"]]);
+  });
+});
+
+describe("a cap that takes focus is announced as something", () => {
+  test("every tabIndex=0 cap a tip opens carries a role", () => {
+    const map = compile([{ mode: "t", keys: ["3", "4"], verb: "reject" }]);
+    const tips = { reject: { "3": { term: "style", text: "The look is wrong." }, "4": { term: "use case", text: "Serves no video." } } };
+    const html = renderToStaticMarkup(createElement(Keycaps, { mode: "t", label: "keys", map, tips }));
+    const focusable = [...html.matchAll(/<kbd[^>]*tabindex="0"[^>]*>/gi)].map((m) => m[0]);
+    expect(focusable).toHaveLength(2);
+    expect(focusable.filter((k) => !/\srole="\w+"/.test(k))).toEqual([]);
   });
 });
 

@@ -360,8 +360,8 @@ export function conclusionIssues(
  *  `buildCards` is the only place the two are joined.
  *
  *  A consumer serialising "the notebook" for a model must therefore send this
- *  array ALONGSIDE the notebook object, and `app/api/recalibrate/route.ts`
- *  does — in its own block, separation intact, with out-of-scope conclusions
+ *  array ALONGSIDE the notebook object, and lib/turns/assemble/recalibrate.ts
+ *  (the route's payload builder since AIO-B) does — in its own block, separation intact, with out-of-scope conclusions
  *  named rather than dropped. This sentence said "does not" until 2026-09-06,
  *  which was the second of two copies of one stale claim; the other is on
  *  `Notebook` in types.ts, and both are now gated in

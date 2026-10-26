@@ -23,11 +23,12 @@
 // be the first crack in it. A surface that needs a price before the call gets
 // it through a prop or the API, never through an import.
 //
-// THE BROWSER'S ROUTE INTO THIS TABLE is `GET /api/imaging/pricing`, served by
-// `priceTable()` at the bottom of this file. It exists because the alternative
-// was a component restating a number this table owns — app/library/Playground.tsx
-// carried its own `0.045` — and a price declared twice is a price that rots.
-// What crosses that wire is audited in the route handler, and the audit rests on
+// THE WIRE SHAPE OF THIS TABLE is `priceTable()` at the bottom of this file,
+// served by pricingHandler.ts. Its v1 route, `GET /api/imaging/pricing`, retired
+// with the v1 pages (Phase 6 L70); it existed because a component had restated
+// a number this table owns — the v1 Playground carried its own `0.045` — and a
+// price declared twice is a price that rots. A public route that serves it again
+// is admitted through imaging-auth's DELIBERATELY_PUBLIC, whose audit rests on
 // one property of this module: **it reads no `process.env` and imports nothing
 // that does.** Its only import is type-only and therefore erased. Keep it that
 // way; a `keyFor()` or an `isConfigured()` in here would put the seam's whole
@@ -72,7 +73,7 @@ interface ModelPrice {
    * The `image_size` the figure was measured at. When set, a request at any
    * OTHER size — or one that pins no size at all and takes the vendor's default
    * — is unpriced rather than quoted at this rate. Nano Banana's price roughly
-   * doubles per size step (providers/google.ts:50-52), so carrying a 1K figure
+   * doubles per size step (providers/google.ts IMAGE_SIZE), so carrying a 1K figure
    * over to a 2K render would not be a rounding error, it would be a fiction.
    */
   atSize?: string;
@@ -83,13 +84,15 @@ interface ModelPrice {
 }
 
 /**
- * THE TABLE. Three priced rows, five deliberately unpriced ones.
+ * THE TABLE. Every row is priced or deliberately unpriced, and its `source`
+ * says which and why — count them off the rows, not off this comment.
  *
- * Neither priced figure is a vendor list price — both are this repo's own bill
- * divided by its own renders, from the 6-style x 5-beat trial grid (60 graded
- * cells, `docs/imaging.md` § The provider verdict, restated at
- * `lib/imaging/router.ts:46-47`). That makes them good estimates and bad
- * receipts, which is exactly how `basis` labels them.
+ * No priced figure is a vendor list price. The google and leonardo figures are
+ * this repo's own bill divided by its own renders, from the 6-style x 5-beat
+ * trial grid (60 graded cells, `docs/imaging.md` § The provider verdict,
+ * restated at `lib/imaging/router.ts` PLAN); leonardo-flare's is credits a
+ * sibling repo's API reported; ollama's $0 is local inference. That makes them
+ * good estimates and bad receipts, which is exactly how `basis` labels them.
  */
 export const PRICES: readonly ModelPrice[] = [
   {
@@ -99,7 +102,7 @@ export const PRICES: readonly ModelPrice[] = [
     usdPerImage: 0.045,
     atSize: "1K",
     source:
-      "MEASURED in this repo: 30 Google cells of the style-trial grid at 1K, 16:9 — $0.0450/render (docs/imaging.md § The provider verdict; lib/imaging/router.ts:46-47). Google publishes no per-image list price for this model, so this is our spend over our render count, not a rate card.",
+      "MEASURED in this repo: 30 Google cells of the style-trial grid at 1K, 16:9 — $0.0450/render (docs/imaging.md § The provider verdict; lib/imaging/router.ts PLAN). Google publishes no per-image list price for this model, so this is our spend over our render count, not a rate card.",
     checked: "2026-08-13",
   },
   {
@@ -108,7 +111,7 @@ export const PRICES: readonly ModelPrice[] = [
     bills: "per-image",
     // UNPRICED ON PURPOSE.
     source:
-      "Never measured here — the repo runs the full model, because Lite supports object references only and cannot hold style-lock (providers/google.ts:37-46). Lite is known to be cheaper than NB2 and by no established amount, and 'cheaper' is not a number. Measure a batch or read Google's rate card, then price this row.",
+      "Never measured here — the repo runs the full model, because Lite supports object references only and cannot hold style-lock (providers/google.ts IMAGE_MODEL). Lite is known to be cheaper than NB2 and by no established amount, and 'cheaper' is not a number. Measure a batch or read Google's rate card, then price this row.",
     checked: "2026-08-14",
   },
   {
@@ -128,13 +131,13 @@ export const PRICES: readonly ModelPrice[] = [
     // No `atSize`: our Leonardo calls always send an ASPECT_PX size (~1.2MP),
     // and the measurement was taken at one of them.
     source:
-      "MEASURED in this repo: 30 Leonardo cells of the same grid at 1472x832 — $0.0257/render, which is the 10-credit charge at USD_PER_CREDIT = 0.00257 (providers/leonardo.ts:39-41). FALLBACK ONLY: Leonardo reports its own cost on the start response, and a reported figure always outranks this one. Sound only for the sizes ASPECT_PX declares — Leonardo bills by pixel count.",
+      "MEASURED in this repo: 30 Leonardo cells of the same grid at 1472x832 — $0.0257/render, which is the 10-credit charge at USD_PER_CREDIT = 0.00257 (providers/leonardo.ts USD_PER_CREDIT). FALLBACK ONLY: Leonardo reports its own cost on the start response, and a reported figure always outranks this one. Sound only for the sizes ASPECT_PX declares — Leonardo bills by pixel count.",
     checked: "2026-08-13",
   },
   // Qwen — the direction asked for "the same treatment or an explicit recorded
   // reason why it cannot". This is the reason, and it is recorded three times
   // because the adapter rotates across three SKUs on quota
-  // (providers/qwen.ts:29-31) and one per-call figure could not be right for
+  // (providers/qwen.ts MODELS) and one per-call figure could not be right for
   // all three even if we had it.
   // Ollama — local inference on this machine's GPU. No vendor bill exists,
   // which is a real price, not a missing one.
@@ -186,7 +189,10 @@ export const PRICES: readonly ModelPrice[] = [
   },
   // leonardo-studio — billed from a different meter than the `leonardo` row:
   // the web studio's prepaid plan credits, not the API pool. The API row's
-  // USD_PER_CREDIT prices the API pool and does not carry over.
+  // USD_PER_CREDIT prices the API pool and does not carry over. The muse
+  // wing draws at quality Low (spark scout-muse, studio/selectors.ts imageUrl):
+  // read off the Generate button 2026-10-23, Low at SMALL is 8 credits an image
+  // (Medium 20).
   {
     provider: "leonardo-studio",
     model: "openai/gpt-image-2.5-sunburst",
@@ -194,7 +200,8 @@ export const PRICES: readonly ModelPrice[] = [
     source:
       "Billed in Leonardo STUDIO credits from the operator's prepaid plan (read 2026-10-12 off the studio's " +
       "own button: 71 credits for one GPT Image 2.5 Sunburst image at 1376x768, quality High; the model's " +
-      "schema prices 7 credits per megapixel times 9.5 for High), a separate pool from the API key's. No " +
+      "schema prices 7 credits per megapixel times 9.5 for High; the studio is driven at Medium since " +
+      "2026-10-23, read at 20 credits), a separate pool from the API key's. No " +
       "USD-per-studio-credit rate has been checked; the API's USD_PER_CREDIT prices a different meter. The " +
       "credits spent ride on the result's provenance (providers/leonardoStudio.ts, studioCreditsOf).",
     checked: "2026-10-12",
@@ -215,13 +222,32 @@ export const PRICES: readonly ModelPrice[] = [
       "reports credits on every call, and a reported figure always outranks this one.",
     checked: "2026-10-22",
   },
+  // comfy-flux2 - Flux 2 dev on this box's ComfyUI (providers/comfyFlux.ts): no vendor, no meter.
+  {
+    provider: "comfy-flux2",
+    model: "flux2-dev-fp8",
+    bills: "per-image",
+    usdPerImage: 0,
+    source: "A local model on this box's GPU: no vendor bills it. The card's minutes are the cost, recorded as the job's gpu.local effort, not in USD.",
+    checked: "2026-10-25",
+  },
 ];
 
 const rowFor = (provider: ProviderId, model: string): ModelPrice | undefined =>
   PRICES.find((p) => p.provider === provider && p.model === model);
 
 /**
- * What did this call cost, and how do we know?
+ * The identity of the price row a figure was costed with: `provider/model@checked`.
+ * A spend row booked at basis `estimate` carries it, so a window's estimates stay
+ * reconcilable to a rate after this table is repriced and re-dated. Undefined when
+ * the table declares no row for the pair.
+ */
+export function priceRef(provider: ProviderId, model: string): string | undefined {
+  const row = rowFor(provider, model);
+  return row && `${row.provider}/${row.model}@${row.checked}`;
+}
+
+/** What did this call cost, and how do we know?
  *
  * A vendor's own figure always wins — `vendorUsd` short-circuits the table, so
  * a rate that drifts out of date here can never overwrite a receipt. Everything
@@ -282,7 +308,7 @@ export function priceCall(args: {
 // Everything above prices a call that already happened. A surface that is about
 // to spend money needs the figure BEFORE the click, and it cannot import this
 // file to get it (see the header). So the two functions below are the wire
-// shape, served by app/api/imaging/pricing/route.ts.
+// shape, served by pricingHandler.ts.
 //
 // They are deliberately derived from `PRICES` alone. Nothing here reads the
 // environment, asks which vendors are configured, or consults the router's
@@ -315,6 +341,23 @@ export interface PriceTable {
   prices: PublicPrice[];
 }
 
+const pricedPerImage = (): (ModelPrice & { usdPerImage: number })[] =>
+  PRICES.filter(
+    (p): p is ModelPrice & { usdPerImage: number } =>
+      p.bills === "per-image" && p.usdPerImage !== undefined,
+  );
+
+const dearestPerImage = (priced: (ModelPrice & { usdPerImage: number })[]) =>
+  priced.reduce((a, b) => (b.usdPerImage > a.usdPerImage ? b : a));
+
+/** The `priceRef` of the row `estimatePerImage` stands on, when there is one. */
+export function estimateRef(): string | undefined {
+  const priced = pricedPerImage();
+  if (!priced.length) return undefined;
+  const d = dearestPerImage(priced);
+  return `${d.provider}/${d.model}@${d.checked}`;
+}
+
 /**
  * The pre-click estimate: the DEAREST declared per-image rate.
  *
@@ -329,10 +372,7 @@ export interface PriceTable {
  * price, never $0.00.
  */
 export function estimatePerImage(): PriceQuote {
-  const priced = PRICES.filter(
-    (p): p is ModelPrice & { usdPerImage: number } =>
-      p.bills === "per-image" && p.usdPerImage !== undefined,
-  );
+  const priced = pricedPerImage();
   if (!priced.length)
     return {
       basis: "unpriced",
@@ -341,7 +381,7 @@ export function estimatePerImage(): PriceQuote {
         "before the call. The vendor's own figure, when it sends one, still arrives with the result.",
     };
 
-  const dearest = priced.reduce((a, b) => (b.usdPerImage > a.usdPerImage ? b : a));
+  const dearest = dearestPerImage(priced);
   return {
     usd: dearest.usdPerImage,
     basis: "estimated",

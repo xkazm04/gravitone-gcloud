@@ -1,14 +1,20 @@
 // The IDEAS tab (operator, 2026-10-22): runs that are only words - a finding's claim and its quote, a
-// source line for the watchlist - as dense rows decided in place, by click or by key, with no
-// picture to open. Filed under their categories (notes, sources). A row is the run's one cell; the
-// desk's cursor rides it like any tile.
+// source line for the watchlist, a batch's seeds - as dense rows decided in place, by click or by key,
+// with no picture to open. Filed under their categories (seeds, notes, sources). A row is the run's one
+// cell; the desk's cursor rides it like any tile. A decision's note shows under its row, and the row
+// being noted (E) holds the note's field there (spark scout-decision-graph).
+import { reasonsOf } from "@gt/domain/source";
+import type { ReactNode } from "react";
+
 import type { BoardVerdict } from "../../board/boardGate.ts";
-import type { Cell } from "../../board/cull.ts";
+import { stillOpen, type Cell } from "../../board/cull.ts";
 import type { ItemWords } from "../../board/port.ts";
 import type { Run } from "../../board/runs.ts";
 import { cx } from "../cx.ts";
 import { spokenTile } from "./CullTile.tsx";
-import { VerdictPick } from "./VerdictPick.tsx";
+import { NoteText } from "./NoteField.tsx";
+import { VerdictPick, type VerdictReasons } from "./VerdictPick.tsx";
+import { WordsBody } from "./WordsBody.tsx";
 import s from "./Verdict.module.css";
 
 export type IdeaListProps = {
@@ -18,15 +24,21 @@ export type IdeaListProps = {
   readonly wordsOf: (id: string) => ItemWords;
   readonly cur: number;
   readonly nudged: ReadonlySet<number>;
-  readonly reasons: readonly string[];
-  readonly maxReasons: number;
+  readonly reasons: VerdictReasons;
   readonly onFocus: (cell: number) => void;
   readonly onVerdict: (cell: number, v: BoardVerdict | null) => void;
+  /** The row 5 rejected without a reason (a cell index): its chips are asked for. */
+  readonly asked?: number;
+  /** The row being noted, and its field (./NoteField.tsx). */
+  readonly noting?: { readonly cell: number; readonly field: ReactNode };
+  /** The tab it lists (its grid's name): `ideas`, or `storyboards` for a words-only board. */
+  readonly label?: string;
 };
 
-export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, reasons, maxReasons, onFocus, onVerdict }: IdeaListProps) {
+export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, reasons, asked, onFocus, onVerdict, noting, label = "ideas" }: IdeaListProps) {
+  const required = reasons.required === true;
   return (
-    <div className={s.ideas} role="grid" aria-label="ideas">
+    <div className={s.ideas} role="grid" aria-label={label}>
       {categories.map((c) => (
         <section key={c.category} className={s.ideaGroup} aria-label={`${c.category}, ${c.runs.length}`}>
           <header className={s.ideaHead}>
@@ -41,7 +53,7 @@ export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, re
               return (
                 <article
                   key={id}
-                  className={cx(s.idea, i === cur && s.cur, v?.verdict === "keep" && s.kept, v?.verdict === "reject" && s.rejected, nudged.has(i) && v === undefined && s.nudge)}
+                  className={cx(s.idea, i === cur && s.cur, v?.verdict === "keep" && s.kept, v?.verdict === "reject" && s.rejected, nudged.has(i) && stillOpen(v, required) && s.nudge)}
                   data-tile={i}
                   role="gridcell"
                   aria-selected={i === cur}
@@ -50,10 +62,11 @@ export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, re
                 >
                   <div className={s.ideaWords}>
                     <p className={s.ideaClaim}>{w.label}</p>
-                    {w.prompt !== undefined && <p className={s.ideaQuote}>{w.prompt}</p>}
+                    {w.prompt !== undefined && <WordsBody text={w.prompt} className={s.ideaQuote} />}
                     {w.meta !== undefined && <span className={s.ideaMeta}>{w.meta}</span>}
+                    {noting?.cell === i ? noting.field : v?.note !== undefined && <NoteText text={v.note} />}
                   </div>
-                  <VerdictPick label={w.label} verdict={v} reasons={reasons} maxReasons={maxReasons} onChange={(nv) => onVerdict(i, nv)} size="sm" />
+                  <VerdictPick label={w.label} verdict={v} reasons={{ ...reasons, list: reasonsOf(reasons, run.group) }} onChange={(nv) => onVerdict(i, nv)} size="sm" keyed ask={asked === i} />
                 </article>
               );
             }),

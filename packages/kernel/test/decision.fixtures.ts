@@ -22,12 +22,12 @@ export const cid = (s: string): CandidateId => must(parseAt("t", candidateIdSche
 
 type Item = { id: string; row?: string; judge?: number };
 
-export function packet(id: string, mode: Packet["mode"], items: readonly Item[]): Packet {
+export function packet(id: string, mode: Packet["mode"], items: readonly Item[], source?: Packet["source"]): Packet {
   return must(
     parseAt("fixture packet", packetSchema, {
       id,
       lane: "image",
-      source: mode === "blind-pair" ? "trials" : mode === "packet-review" ? "article" : "forge",
+      source: source ?? (mode === "blind-pair" ? "trials" : mode === "packet-review" ? "article" : "forge"),
       mode,
       state: "open",
       items: items.map((it) => ({

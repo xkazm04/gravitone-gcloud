@@ -67,6 +67,31 @@ test("every private form is refused, and public addresses are not", () => {
     expect(isPrivateAddress(ip), `${ip} should be public`).toBe(false);
 });
 
+// The classifier is handed what `new URL()` made of the host, not what the
+// vendor wrote: WHATWG serialises `[::ffff:127.0.0.1]` as `[::ffff:7f00:1]`.
+// The dotted forms above are therefore never the ones the download path sees.
+test("an IPv6 literal is judged in the form the URL parser hands over", async () => {
+  for (const u of [
+    "http://[::ffff:127.0.0.1]/plate.png",
+    "http://[::ffff:169.254.169.254]/latest/meta-data/",
+    "http://[::127.0.0.1]/plate.png",
+    "http://[::ffff:10.0.0.5]/plate.png",
+    "http://[64:ff9b::169.254.169.254]/latest/meta-data/",
+    "http://[fe90::1]/plate.png",
+    "http://[febf::1]/plate.png",
+    "http://[fee0::1]/plate.png",
+  ])
+    await expect(assertFetchable(u, fakeResolver), `${u} -> ${new URL(u).hostname}`).rejects.toBeInstanceOf(BlockedUrlError);
+
+  for (const ip of ["::ffff:7f00:1", "::ffff:a9fe:a9fe", "::7f00:1", "64:ff9b::a9fe:a9fe", "fe90::1", "feb0::1"])
+    expect(isPrivateAddress(ip), `${ip} should be private`).toBe(true);
+
+  // A mapped PUBLIC address and an ordinary global v6 address stay downloadable.
+  for (const ip of ["::ffff:5db8:d822", "2606:4700::1111", "2a00:1450:4001::200e"])
+    expect(isPrivateAddress(ip), `${ip} should be public`).toBe(false);
+  await expect(assertFetchable("http://[::ffff:93.184.216.34]/plate.png", fakeResolver)).resolves.toBeInstanceOf(URL);
+});
+
 test("172.15 and 172.32 are public — the /12 boundary is off-by-one bait", () => {
   expect(isPrivateAddress("172.15.0.1")).toBe(false);
   expect(isPrivateAddress("172.32.0.1")).toBe(false);

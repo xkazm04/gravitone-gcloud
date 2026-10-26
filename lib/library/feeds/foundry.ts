@@ -9,11 +9,11 @@ import { errorMessage } from "@gt/domain/errors";
 import type { LibraryState } from "@gt/domain/library";
 import type { StyleFacets } from "@gt/kernel/library/core";
 
-import { foundryFile } from "../../foundry/runStore.ts";
-import { getExtractRun, listExtractRuns, resolveInExtract } from "../../foundry/extract/store.ts";
-import { getCatalogue, getRun, listRuns, resolveInRun } from "../../foundry/store.ts";
-import { getStripRun, listStripRuns, stripRunDir } from "../../foundry/strips/store.ts";
-import { getCycle, listCycles, resolveInCycle } from "../../foundry/training/store.ts";
+import { foundryFile, type ManifestWarning } from "../../foundry/runStore.ts";
+import { getExtractRun, resolveInExtract, scanExtractRuns } from "../../foundry/extract/store.ts";
+import { getCatalogue, getRun, resolveInRun, scanRuns } from "../../foundry/store.ts";
+import { getStripRun, scanStripRuns, stripRunDir } from "../../foundry/strips/store.ts";
+import { getCycle, resolveInCycle, scanCycles } from "../../foundry/training/store.ts";
 import { dayOf, isoOf, mimeOf, words, type Feed, type FeedCtx, type FeedItem, type FeedRead } from "./types.ts";
 
 /** The origins a v1 Library theme arrives with; the importer brought it, not the forge. */
@@ -40,6 +40,22 @@ function fileOf(abs: string): FeedItem["file"] {
 }
 
 const withFile = (file: FeedItem["file"]): { file?: NonNullable<FeedItem["file"]> } => (file === undefined ? {} : { file });
+
+/** A lister's newest RUN_CAP runs (every lister here sorts newest first). The cap is said in the
+ *  report, as the kernel feed says its own: the runs past it are not read, so their items prune. */
+function newest<T>(all: readonly T[], feed: string, skipped: { id: string; reason: string }[]): readonly T[] {
+  if (all.length > RUN_CAP) skipped.push({ id: feed, reason: `${all.length - RUN_CAP} of ${all.length} runs, older than the newest ${RUN_CAP}, are not read` });
+  return all.slice(0, RUN_CAP);
+}
+
+/** A run whose run.json would not parse never reaches the feed as a summary: the lister names it in
+ *  `warnings`. It is reported as skipped and its items are held (`prefixes`), not pruned as gone. */
+function unreadable(warnings: readonly ManifestWarning[], prefixes: (id: string) => string[], skipped: { id: string; reason: string }[], held: string[]): void {
+  for (const w of warnings) {
+    skipped.push({ id: w.id, reason: w.reason });
+    held.push(...prefixes(w.id));
+  }
+}
 
 type Aspect = "16:9" | "3:2" | "4:3" | "1:1";
 const isAspect = (a: string): a is Aspect => a === "16:9" || a === "3:2" || a === "4:3" || a === "1:1";
@@ -98,12 +114,16 @@ export const forgeFeed: Feed = {
   async read(ctx): Promise<FeedRead> {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
-    for (const summary of (await listRuns()).slice(0, RUN_CAP)) {
+    const held: string[] = [];
+    const shelf = await scanRuns();
+    unreadable(shelf.warnings, (id) => [`image:forge:${id}:`, `plate:forge:${id}:`], skipped, held);
+    for (const summary of newest(shelf.items, "forge", skipped)) {
       let detail;
       try {
         detail = await getRun(summary.id);
       } catch (e) {
         skipped.push({ id: summary.id, reason: errorMessage(e) });
+        held.push(`image:forge:${summary.id}:`, `plate:forge:${summary.id}:`);
         continue;
       }
       const { run, verdicts } = detail;
@@ -157,7 +177,7 @@ export const forgeFeed: Feed = {
         });
       }
     }
-    return { items, skipped };
+    return { items, skipped, held };
   },
 };
 
@@ -166,12 +186,16 @@ export const extractFeed: Feed = {
   async read(ctx): Promise<FeedRead> {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
-    for (const summary of (await listExtractRuns()).slice(0, RUN_CAP)) {
+    const held: string[] = [];
+    const shelf = await scanExtractRuns();
+    unreadable(shelf.warnings, (id) => [`image:extract:${id}:`, `plate:extract:${id}:`], skipped, held);
+    for (const summary of newest(shelf.items, "extract", skipped)) {
       let detail;
       try {
         detail = await getExtractRun(summary.id);
       } catch (e) {
         skipped.push({ id: summary.id, reason: errorMessage(e) });
+        held.push(`image:extract:${summary.id}:`, `plate:extract:${summary.id}:`);
         continue;
       }
       const { run, verdicts } = detail;
@@ -231,7 +255,7 @@ export const extractFeed: Feed = {
         }
       }
     }
-    return { items, skipped };
+    return { items, skipped, held };
   },
 };
 
@@ -240,12 +264,16 @@ export const dojoFeed: Feed = {
   async read(ctx): Promise<FeedRead> {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
-    for (const summary of (await listCycles()).slice(0, RUN_CAP)) {
+    const held: string[] = [];
+    const shelf = await scanCycles();
+    unreadable(shelf.warnings, (id) => [`plate:dojo:${id}:`], skipped, held);
+    for (const summary of newest(shelf.items, "dojo", skipped)) {
       let detail;
       try {
         detail = await getCycle(summary.id);
       } catch (e) {
         skipped.push({ id: summary.id, reason: errorMessage(e) });
+        held.push(`plate:dojo:${summary.id}:`);
         continue;
       }
       const { cycle, verdicts } = detail;
@@ -283,7 +311,7 @@ export const dojoFeed: Feed = {
         });
       }
     }
-    return { items, skipped };
+    return { items, skipped, held };
   },
 };
 
@@ -292,12 +320,16 @@ export const stripsFeed: Feed = {
   async read(ctx): Promise<FeedRead> {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
-    for (const summary of (await listStripRuns()).slice(0, RUN_CAP)) {
+    const held: string[] = [];
+    const shelf = await scanStripRuns();
+    unreadable(shelf.warnings, (id) => [`motion:strips:${id}:`], skipped, held);
+    for (const summary of newest(shelf.items, "strips", skipped)) {
       let detail;
       try {
         detail = await getStripRun(summary.id);
       } catch (e) {
         skipped.push({ id: summary.id, reason: errorMessage(e) });
+        held.push(`motion:strips:${summary.id}:`);
         continue;
       }
       const { run, verdicts } = detail;
@@ -330,6 +362,6 @@ export const stripsFeed: Feed = {
         }
       }
     }
-    return { items, skipped };
+    return { items, skipped, held };
   },
 };

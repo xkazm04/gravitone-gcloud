@@ -1,6 +1,6 @@
 import type { PickOutcome } from "@gt/domain/board";
 import { err, ok, type Result } from "@gt/domain/errors";
-import type { PacketMode } from "@gt/domain/source";
+import { SOURCES, type PacketMode, type PacketSource, type SourceSpec } from "@gt/domain/source";
 import { sha256Hex } from "../canonical.ts";
 import type { DecisionRow } from "./schema.ts";
 
@@ -172,9 +172,31 @@ export type CommitPlan = {
   readonly writeRejects: readonly string[];
 };
 
+/** What a packet's SOURCE adds to the commit's rule (@gt/domain/source SourceSpec). */
+export type CommitRules = {
+  /** A reject must name a reason before the packet commits (`seeds`: "every X needs a reason"). */
+  readonly reasonOnReject?: boolean;
+};
+
+/** The commit rules a source declares; a source that declares none commits as every source before `seeds` did. */
+export function commitRulesOf(source: PacketSource): CommitRules {
+  const spec: SourceSpec = SOURCES[source];
+  return spec.reasonOnReject === true ? { reasonOnReject: true } : {};
+}
+
+/** How many named ids a refusal's sentence lists before it says the rest are in `detail`. */
+const NAMED = 10;
+const named = (ids: readonly string[]): string => ids.slice(0, NAMED).join(", ") + (ids.length > NAMED ? ", ..." : "");
+
 /** Refused with the undecided candidates in `detail` (a JSON array), so a
- *  surface can jump to them rather than parse a sentence. */
-export function planCommit(mode: PacketMode, members: readonly string[], current: ReadonlyMap<string, Current>, undecidedAs?: UndecidedAs): Result<CommitPlan> {
+ *  surface can jump to them rather than parse a sentence.
+ *
+ *  REASON ON REJECT (spark scout-decision-graph) is enforced HERE, at the commit, and never at the
+ *  verdict write: X then a reason key stays two writes, and a reject may stand reasonless while the
+ *  operator works - it is only the commit that cannot carry one. A sweep under such a source would write
+ *  reasonless rejects itself, so "reject the rest" is refused too. The refusal names the rejects and
+ *  carries them in `detail`, as the undecided refusal does. */
+export function planCommit(mode: PacketMode, members: readonly string[], current: ReadonlyMap<string, Current>, undecidedAs?: UndecidedAs, rules: CommitRules = {}): Result<CommitPlan> {
   const kept: string[] = [];
   const rejected: string[] = [];
   const open: string[] = [];
@@ -187,6 +209,11 @@ export function planCommit(mode: PacketMode, members: readonly string[], current
   if (open.length > 0 && (undecidedAs === undefined || !MODE_POLICY[mode].sweep)) {
     const head = open.slice(0, 5).join(", ") + (open.length > 5 ? ", ..." : "");
     return err("refused", `decision: a ${mode} packet commits only when every candidate is decided; ${open.length} undecided (${head})`, { detail: JSON.stringify(open) });
+  }
+  if (rules.reasonOnReject === true) {
+    const swept = new Set(undecidedAs === "reject" ? open : []);
+    const bare = members.filter((c) => swept.has(c) || (rejected.includes(c) && (current.get(c)?.reasons.length ?? 0) === 0));
+    if (bare.length > 0) return err("refused", `decision: ${bare.length} rejected need a reason: ${named(bare)}`, { detail: JSON.stringify(bare) });
   }
   if (undecidedAs === "reject") return ok({ kept, rejected: [...rejected, ...open], undecided: [], writeRejects: open });
   return ok({ kept, rejected, undecided: open, writeRejects: [] });

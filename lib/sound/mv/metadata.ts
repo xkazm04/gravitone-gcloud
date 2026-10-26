@@ -27,7 +27,8 @@ import type { TurnClass } from "@/lib/text/types";
 import { snippetProblem } from "@/lib/publish/youtube";
 
 import { SoundError } from "../store";
-import { analysisText, clock, fill, promptSections, type ReasonFn, type TreatmentInput } from "./treatment";
+import { fill } from "../hunt";
+import { analysisText, clock, promptSections, type ReasonFn, type TreatmentInput } from "./treatment";
 import type { MvAnalysis, MvChapter, MvMetadata, MvPatchRequest } from "./types";
 
 export const METADATA_TURN: TurnClass = "mv-metadata";
@@ -38,7 +39,6 @@ export const DEFAULT_PICTURE = "one generated still image with drifting particle
 
 export const TITLE_MAX = 100;
 export const DESCRIPTION_MAX_BYTES = 5000;
-export const TAGS_MAX_CHARS = 500;
 export const TAG_COUNT_MAX = 15;
 const TAG_MAX = 40;
 
@@ -102,7 +102,10 @@ function cutBytes(s: string, max: number): string {
   return (at > out.length * 0.6 ? out.slice(0, at) : out).trimEnd();
 }
 
-const tagCost = (tags: readonly string[]) => tags.reduce((n, t) => n + t.length + (t.includes(" ") ? 2 : 0), 0) + Math.max(0, tags.length - 1);
+/** Do these tags fit YouTube's 500 characters as the validator counts them? Asked
+ *  of snippetProblem itself (the title and description here pass every other
+ *  rule), so the count the trim fits to is the count the uploader refuses on. */
+const tagsFit = (tags: string[]): boolean => snippetProblem({ title: "t", description: "", tags }) === null;
 
 /** Tags as YouTube counts them: no commas or angle brackets inside one, no
  *  duplicates (case-blind), at most TAG_COUNT_MAX, and dropped from the END
@@ -119,7 +122,7 @@ export function fitTags(raw: unknown): string[] {
     out.push(tag);
     if (out.length >= TAG_COUNT_MAX) break;
   }
-  while (out.length && tagCost(out) > TAGS_MAX_CHARS) out.pop();
+  while (out.length && !tagsFit(out)) out.pop();
   return out;
 }
 

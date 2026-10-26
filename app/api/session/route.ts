@@ -8,7 +8,11 @@
 //   GET              who the cookie says is here: {kind, uid, exp?}, or
 //                     {kind: "none", reason} - "nobody" is an answer, not an
 //                     error. Only a JWKS outage (cannot tell) is the envelope.
-//   DELETE           sign-out: clear the cookie and answer {evict: "identity"},
+//                     Both carry `local: true` when this request may enter locally.
+//   PUT              enter locally (lib/localEntry.ts): on a loopback, unmanaged, legacy-mode
+//                     server, set the local choice and drop any token cookie; else 403 with the
+//                     condition that failed. The landing's "Enter locally" calls it.
+//   DELETE           sign-out: clear the cookie (and the local choice) and answer {evict: "identity"},
 //                     the client's cue to run the storage adapter's identity
 //                     eviction (@gt/ui/storage). The local wipe must not wait on
 //                     this call: the client evicts on both outcomes.
@@ -22,6 +26,8 @@ import { z } from "zod";
 
 import { AppError, ok } from "@gt/domain/errors";
 
+import { localEntryAvailable, localEntryCookie, localEntryGranted } from "../../../lib/localEntry.ts";
+import { LOCAL_ENTRY_COOKIE } from "../../../lib/localMode.ts";
 import { isRefusal, type Resolution } from "../../../lib/principal.ts";
 import { envelope, sameOrigin } from "../../_server/http.ts";
 import { route } from "../../_server/route.ts";
@@ -51,12 +57,29 @@ export const POST = route({ guard: "public", bodyCap: 8192, input: z.object({ id
 });
 
 export const GET = route({ guard: "public", bodyCap: 0 }, async ({ req }) => {
-  const who = await resolveSession(cookieValue(req.headers.get("cookie"), SESSION_COOKIE), "read");
-  if (isRefusal(who)) return who.status === 503 ? refusal(who, { "retry-after": "30" }) : ok({ kind: "none", reason: who.code });
-  return ok(summary(who));
+  const jar = req.headers.get("cookie");
+  const host = req.headers.get("host");
+  const who = await resolveSession(cookieValue(jar, SESSION_COOKIE), "read", undefined, localEntryGranted(cookieValue(jar, LOCAL_ENTRY_COOKIE), host));
+  const local = localEntryAvailable(host) ? { local: true } : {};
+  if (isRefusal(who)) return who.status === 503 ? refusal(who, { "retry-after": "30" }) : ok({ kind: "none", reason: who.code, ...local });
+  return ok({ ...summary(who), ...local });
+});
+
+const notLocal = new AppError("refused", "Entering locally needs this studio served on localhost, off a managed platform, in legacy principal mode, with LOCAL_ENTRY not off.", { detail: "not-local" });
+
+export const PUT = route({ guard: "public", bodyCap: 0 }, async ({ req }) => {
+  if (!sameOrigin(req)) return envelope(crossOrigin, "session");
+  if (!localEntryAvailable(req.headers.get("host"))) return envelope(notLocal, "session");
+  const headers = new Headers({ "cache-control": "no-store" });
+  headers.append("set-cookie", localEntryCookie(true));
+  headers.append("set-cookie", clearedCookie(secureFor(req)));
+  return Response.json({ kind: "local-owner", local: true }, { headers });
 });
 
 export const DELETE = route({ guard: "public", bodyCap: 0 }, async ({ req }) => {
   if (!sameOrigin(req)) return envelope(crossOrigin, "session");
-  return Response.json({ signedOut: true, evict: "identity" }, { headers: { "set-cookie": clearedCookie(secureFor(req)), "cache-control": "no-store" } });
+  const headers = new Headers({ "cache-control": "no-store" });
+  headers.append("set-cookie", clearedCookie(secureFor(req)));
+  headers.append("set-cookie", localEntryCookie(false));
+  return Response.json({ signedOut: true, evict: "identity" }, { headers });
 });

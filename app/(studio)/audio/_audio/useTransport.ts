@@ -73,6 +73,13 @@ export function useTransport(onFail: (words: string) => void): Transport {
     const a = el.current;
     if (a === null) return;
     if (playing === id && !a.paused) {
+      // A stop - also one pressed while the take is still loading. The play in flight then
+      // rejects (AbortError: interrupted by a call to pause()); that rejection is this stop's
+      // own, not a failure, so it is superseded here, and the watchdog goes with it.
+      ++gen.current;
+      asked.current = false;
+      if (dog.current !== null) clearTimeout(dog.current);
+      dog.current = null;
       a.pause();
       return;
     }

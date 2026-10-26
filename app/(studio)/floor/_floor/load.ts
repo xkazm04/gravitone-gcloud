@@ -15,6 +15,7 @@ import { liveRead } from "../../_shell/live.ts";
 import { SIDE, serverProduce } from "../../projects/_port/port.ts";
 import type { CalendarFacts } from "../_calendar/contract.ts";
 import { serverCalendar } from "../_calendar/port.ts";
+import { floorRunsOf } from "./model.ts";
 import { readShelf, type Shelf } from "./shelf.ts";
 
 // THE FLOOR'S ONE READ, at render time and server-side only (plan §9.2), each part bounded:
@@ -90,13 +91,7 @@ export async function loadFloor(now: number = Date.now()): Promise<FloorData> {
 
   const runs = serverProduce().listJobs();
   if (!runs.ok) problems.push({ source: "produce", error: runs.error.message });
-  const produced: LiveJob[] = runs.ok
-    ? runs.value.flatMap((j) =>
-        j.media === undefined || j.projectId !== undefined || j.state === "done" || j.state === "cancelled"
-          ? []
-          : [{ source: "produce", id: j.id, title: j.title, lane: j.lane, media: j.media, state: j.state, ...(j.state === "running" ? { startedAt: new Date(j.s).toISOString() } : {}), attempt: j.attempt, ...(j.error === undefined ? {} : { error: j.error }), href: `/projects/runs?job=${encodeURIComponent(`kernel:${j.id}`)}` }],
-      )
-    : [];
+  const produced: LiveJob[] = runs.ok ? floorRunsOf(runs.value) : [];
 
   return { now, head, universe: FIXTURE_MODE ? "fixture" : "real", produce: SIDE, jobs: [...live.jobs, ...produced], weir: live.weir, slots, calendar: cal.facts ?? null, shelf, unapplied, problems };
 }

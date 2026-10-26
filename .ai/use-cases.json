@@ -115,6 +115,36 @@
       "owner": "gravity"
     },
     {
+      "key": "text.research",
+      "name": "Research a subject for a project part",
+      "description": "A research turn: a prompt and optional schema in, a sourced answer out; served by the retrieval rung when TEXT_RETRIEVE=1 and by the reasoning door otherwise, plus the follow-up questions on an active research document.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/producers/research.ts -> lib/turns/kinds/research.ts -> lib/text/router.ts::retrieve()/reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.1-pro-preview"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.ad-ideas",
+      "name": "Draft ad ideas from a research document",
+      "description": "Turns a research document and the operator request into a set of ad ideas against IDEAS_SCHEMA.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/producers/research.ts -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.1-pro-preview"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.ad-scenarios",
+      "name": "Draft ad scenarios from a research document",
+      "description": "Turns a research document and the operator request into ad scenarios against SCENARIOS_SCHEMA.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/producers/script.ts -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.1-pro-preview"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.repair",
       "name": "Repair an answer that failed its validator",
       "description": "Hands a paid-for answer that failed validation back to the model with the path-addressed findings that refused it: change only those paths, return the whole object. Capped at two attempts; a repair that edits outside the listed paths or removes facts is refused, and the repaired object re-enters the same validator.",

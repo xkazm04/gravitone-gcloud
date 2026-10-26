@@ -18,6 +18,7 @@
 
 import type { Consequence, EditPlan, PacketList, PacketView, PickOutcome } from "@gt/domain/board";
 import type { ErrorEnvelope } from "@gt/domain/errors";
+import type { LoadSummary } from "@gt/domain/load";
 
 export type PortResult<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: ErrorEnvelope };
 
@@ -50,6 +51,8 @@ export type RowWords = {
   readonly checks?: readonly string[];
   /** What content the run can serve, as stated when it was launched. */
   readonly use?: string;
+  /** The prompt the run was drawn from; shown in the zoom, after triage (it is not the aim). */
+  readonly prompt?: string;
 };
 
 /** What the machine said before the gate (hitl-approval oracle-before-gate). */
@@ -97,6 +100,12 @@ export type Presentation = {
   /** What v1 holds that this packet cannot carry whole (import-normalization: lossy-conversion
    *  disclosure), shown at the gate so the operator sees it before committing (wave B ruling 8). */
   readonly losses?: readonly Loss[];
+  /** A /scout night's machine load against the operator's band (spark night-load-band): drawn by the LoadBand on
+   *  the night's desk, open and committed. Absent: the night has no samples (before the sampler, or none read). */
+  readonly load?: LoadSummary;
+  /** The packet's source commits in parts (spark scout-storyboards, the v1 adapter's `partial`): undecided cells do not
+   *  block the commit; they go on to the remainder packet `<packetId>:<n>` (`remainderOf`). */
+  readonly partial?: true;
 };
 
 /** One thing the v1 -> kernel conversion could not carry whole, graded. */
@@ -120,6 +129,8 @@ export type CommitReceipt = {
   readonly rev: number;
   readonly kept: number;
   readonly rejected: number;
+  /** Cells a partial commit left for the remainder packet (absent: none). */
+  readonly undecided?: number;
   readonly at: string;
   readonly apply?: PacketView["apply"];
 };
@@ -131,7 +142,8 @@ export type BoardPort = {
   readonly undo: (input: { readonly id: string; readonly baseRev: number }) => Promise<PortResult<Revised>>;
   readonly pick: (input: { readonly id: string; readonly baseRev: number; readonly pair: string; readonly outcome: PickOutcome }) => Promise<PortResult<Revised>>;
   readonly preview: (input: { readonly id: string }) => Promise<PortResult<Consequence>>;
-  readonly commit: (input: { readonly id: string; readonly rev: number; readonly token: string; readonly ticket: string }) => Promise<PortResult<CommitReceipt>>;
+  /** `undecidedAs: "leave"` commits a `partial` packet with cells undecided (the kernel's sweep; refused for any other source). */
+  readonly commit: (input: { readonly id: string; readonly rev: number; readonly token: string; readonly ticket: string; readonly undecidedAs?: "leave" }) => Promise<PortResult<CommitReceipt>>;
   readonly returnPacket: (input: { readonly id: string; readonly rev: number; readonly plan: EditPlan }) => Promise<PortResult<Revised>>;
 };
 
@@ -144,4 +156,15 @@ export function isStalePreview(e: ErrorEnvelope): boolean {
 export function candidateOfKey(key: string): string {
   const i = key.indexOf("::");
   return i < 0 ? key : key.slice(i + 2);
+}
+
+/**
+ * The remainder packet a partial commit leaves (spark scout-storyboards): `pkt:scout:2026-10-24` -> `...:2`,
+ * `pkt:scout:2026-10-24:2` -> `...:3`. The rule is lib/foundry/scout/parts.ts `splitPart` (a part is the last
+ * `:<n>`, n >= 2), spelled again here because a package never reaches into lib/.
+ */
+export function remainderOf(packetId: string): string {
+  const m = /^(.+):([1-9]\d*)$/.exec(packetId);
+  const n = m === null ? 1 : Number(m[2]);
+  return m === null || n < 2 ? `${packetId}:2` : `${m[1] ?? packetId}:${n + 1}`;
 }

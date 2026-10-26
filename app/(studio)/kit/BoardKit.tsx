@@ -8,11 +8,15 @@
 
 import { useState } from "react";
 
+import { reasonVocabulary } from "@gt/domain/source";
 import { ConsequencePanel } from "@gt/ui/components/consequence/ConsequencePanel.tsx";
 import { CullTile, Zoom } from "@gt/ui/components/cull/CullTile.tsx";
 import { IdeaList } from "@gt/ui/components/cull/IdeaList.tsx";
 import { VariantCard } from "@gt/ui/components/cull/VariantCard.tsx";
+import { VerdictPick } from "@gt/ui/components/cull/VerdictPick.tsx";
 import { MatrixCull } from "@gt/ui/components/cull/MatrixCull.tsx";
+import { RunMosaic } from "@gt/ui/components/cull/RunMosaic.tsx";
+import { RunView } from "@gt/ui/components/cull/RunView.tsx";
 import { CutReview } from "@gt/ui/components/cut/CutReview.tsx";
 import { BoardDesk, CommitButton, DeskFrame, OracleStrip } from "@gt/ui/components/desk/Desk.tsx";
 import { PacketRail } from "@gt/ui/components/desk/PacketRail.tsx";
@@ -35,6 +39,30 @@ const noop = (): void => undefined;
 const FINDING = { label: "Hold the subject still and let the camera do the moving", meta: "cinematic · 02-frames", prompt: "\"If the character and the lens both move, nobody knows where to look - pick one.\"" };
 const WATCH = { label: "channel: lighting breakdowns - https://example.com/breakdowns", meta: "watchlist", prompt: "motivated key and practicals, measured contrast ratios" };
 const TEXT_MEDIA = { url: "", mime: "text/plain" };
+/** A /scout night's vocabulary: three still axes of eleven, with every reason's meaning. */
+const SCOUT = reasonVocabulary("scout");
+const STILL = { ...SCOUT, list: SCOUT.list.slice(0, 3) };
+
+/**
+ * A scout night's storyboard (spark scout-storyboards; lib/decision/v1/sources/scoutPlan.ts storyboardCells): four
+ * frames, then its words - the paragraph and the bullets as `- ` lines - as one run judged whole.
+ */
+const BOARD_FRAMES = ["/presets/blueprint.jpg", "/presets/paper-relief.jpg", "/presets/chalk-argument.jpg", "/presets/data-neon.jpg"];
+const BOARD_WORDS = [
+  "A night watchman climbs a stairwell after a lantern that will not let him catch it. Each landing is darker than the last, the light always three steps up, until the top floor opens on a window.",
+  "",
+  "- beats: the lantern moves, the chase, the last landing, the window",
+  "- format: a 30 s vertical short, one shot per beat",
+  "- look: warm amber against cold slate, one held light",
+].join("\n");
+const BOARD_CELLS = [...BOARD_FRAMES.map((_, i) => ({ id: `c-10/panel-${i + 1}`, row: "c-10" })), { id: "c-10/words", row: "c-10" }];
+const BOARD_RUN = { row: "c-10", words: { id: "c-10", label: "The lantern that keeps three steps ahead", group: "storyboards" }, members: BOARD_CELLS.map((_, i) => i), group: "storyboards" };
+const boardMedia = (id: string) => {
+  const i = BOARD_CELLS.findIndex((c) => c.id === id);
+  return i >= 0 && i < BOARD_FRAMES.length ? { url: BOARD_FRAMES[i] ?? "", mime: "image/jpeg" } : TEXT_MEDIA;
+};
+const boardWords = (id: string) =>
+  id === "c-10/words" ? { label: "The lantern that keeps three steps ahead", meta: "idea: Lantern-lit stairwell · 4 frames · local · free", prompt: BOARD_WORDS } : { label: `frame ${id.slice(id.lastIndexOf("-") + 1)}` };
 
 export function BoardSection({ data }: { readonly data: BoardKitData }) {
   const { cull: CULL, cullVerdicts: CULL_VERDICTS, audio: AUDIO, pair: PAIR, review: REVIEW, cut: CUT, rail: RAIL, consequence: CONSEQUENCE, model: MODEL } = data;
@@ -55,9 +83,18 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
       </Spec>
       <Spec names={["VariantCard", "VerdictPick", "VideoBar"]} source="the opened run · a verdict by click · a clip's bar (2026-10-22)" wide>
         <div className={b.tiles}>
-          <VariantCard index={0} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "keep", reasons: [] }} current nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
-          <VariantCard index={1} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "reject", reasons: ["craft"] }} current={false} nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
-          <VariantCard index={2} words={{ label: "clip · replica-1", meta: "5s · local · free" }} media={{ url: "/clips/presets/blueprint.webm", mime: "video/webm" }} verdict={undefined} current={false} nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
+          <VariantCard index={0} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "keep", reasons: [] }} current nudged={false} reasons={STILL} onFocus={noop} onVerdict={noop} />
+          <VariantCard index={1} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "reject", reasons: ["craft"] }} current={false} nudged={false} reasons={STILL} onFocus={noop} onVerdict={noop} />
+          <VariantCard index={2} words={{ label: "clip · replica-1", meta: "5s · local · free" }} media={{ url: "/clips/presets/blueprint.webm", mime: "video/webm" }} verdict={undefined} current={false} nudged={false} reasons={STILL} onFocus={noop} onVerdict={noop} />
+        </div>
+      </Spec>
+      <Spec names={["RunMosaic", "RunView", "WordsBody"]} source="a storyboard: one run, its frames then its words · the storyboards tab (spark scout-storyboards)" wide>
+        <RunMosaic tab="storyboards" categories={[{ category: "storyboards", runs: [{ run: BOARD_RUN, at: 0 }] }]} cells={BOARD_CELLS} verdicts={{}} mediaOf={boardMedia} wordsOf={boardWords} runIx={0} nudged={new Set<number>()} onOpen={noop} grid={{ current: null }} />
+        <RunView run={BOARD_RUN} cells={BOARD_CELLS} verdicts={{ "c-10/panel-3": { verdict: "reject", reasons: ["story"] } }} mediaOf={boardMedia} wordsOf={boardWords} cur={4} nudged={new Set<number>()} reasons={{ ...SCOUT, list: ["story", "generic", "use case"] }} onFocus={noop} onVerdict={noop} />
+      </Spec>
+      <Spec names={["VerdictPick", "Tip"]} source="a reason's meaning, on hover and focus (2026-10-23) · keys 2-4 on the first three (2026-10-24)" wide>
+        <div className={b.pick}>
+          <VerdictPick label="replica 2" verdict={{ verdict: "reject", reasons: ["craft"] }} reasons={SCOUT} onChange={noop} seededTip="use case" keyed />
         </div>
       </Spec>
       <Spec names={["IdeaList"]} source="words-only runs, decided in place (2026-10-22)" wide>
@@ -68,8 +105,7 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
           wordsOf={() => ({ label: "Hold a wide shot until the subject settles, then cut.", prompt: "the push-in only reads once the figure stops moving", meta: "cinematic · 02-frames" })}
           cur={0}
           nudged={new Set<number>()}
-          reasons={[]}
-          maxReasons={0}
+          reasons={reasonVocabulary("suno")}
           onFocus={noop}
           onVerdict={noop}
         />
@@ -137,6 +173,9 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
         </div>
         <Row label="ready">
           <CommitButton mode="board.cull" refusals={0} onPress={noop} />
+        </Row>
+        <Row label="committing">
+          <CommitButton mode="board.cull" refusals={0} busy onPress={noop} />
         </Row>
       </Spec>
       <Spec names={["BlindPair"]} source="index.html :575-622 · masked until the operator picks" wide>

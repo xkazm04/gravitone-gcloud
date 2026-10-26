@@ -4,7 +4,7 @@
 // lib/sound/ledger.ts `rubricMean` over the kind's dimensions with a fallback) and "proven" as a
 // kept take whose mean reaches 7 (`readVerdict`). The two means could disagree on a bag scored
 // before the sfx rubric existed; the ledger's is the one written as `score` and read by the
-// strengths, so it is the ONE here, and tests/next-server/audio-insight.test.ts pins this copy
+// strengths, so it is the ONE here, and tests/next-server/decision-v1-audio-insight.test.ts pins this copy
 // to lib/sound's (scoring-rubrics rubric-stability: two implementations of one composite).
 //
 // Upgraded (scoring-rubrics score-explanation, unmeasured-honesty): a score ships with its

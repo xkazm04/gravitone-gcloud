@@ -142,5 +142,7 @@ describe("consequence and apply", () => {
     writeFileSync(path.join(SOUND, "suno.json"), JSON.stringify({ version: 1, queue: { running: true }, proposals: [], jobs: [], clips: CLIPS.map((c) => (c.id === "sc-b" ? { ...c, verdict: "keep" } : c)) }));
     expect((await flow.deliver())?.result).toBe("stuck");
     expect(verdicts()["sc-b"]).toBe("keep");
+    // sc-a sorts before the refused clip: a refused outcome writes none of itself.
+    expect(verdicts()["sc-a"]).toBeNull();
   });
 });

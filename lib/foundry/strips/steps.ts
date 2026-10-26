@@ -8,7 +8,7 @@
 //   lint      the frame-purity lint (./lint.ts) - a failure is the card's `lint-failed`
 //   render    the headless capture and its four gates (pipeline/strips/render.mts)
 //   asset     one supporting image per approach, cached on disk under _assets/ (v1's cache)
-//   triage    replica discrimination, then the run handed to the Strips tab
+//   triage    replica discrimination, then the run handed to the Board's strips packet
 //
 // EVERY WRITE IS FENCED: `io.stillHeld()` is asked before run.json is written, so a driver
 // whose slot was taken over writes nothing (kernel lease). A write also marks the run
@@ -267,7 +267,7 @@ export async function asset(runId: string, approachId: string, call: (c: AssetCa
 /** Replica discrimination (v1, unchanged), then the run is the operator's: awaiting triage. */
 export async function triage(runId: string, io: StepIO, capture: () => Promise<Capture>): Promise<EventData> {
   const m = readStripRunNow(runId);
-  const disc: Record<string, number> = { ...(m.discrimination ?? {}) };
+  const disc: Record<string, number | null> = { ...(m.discrimination ?? {}) };
   if (!io.dry) {
     for (const rep of m.cards.filter((c) => c.replicaOf && c.id.endsWith("--r2") && c.status === "rendered")) {
       const orig = m.cards.find((c) => c.id === rep.replicaOf && c.status === "rendered");
@@ -279,7 +279,9 @@ export async function triage(runId: string, io: StepIO, capture: () => Promise<C
       const row = d[0] ?? [];
       const noise = row[1] ?? 0;
       const between = row.slice(2).reduce((s, x) => s + x, 0) / peers.length;
-      disc[orig.approach] = noise > 0 ? Math.round((between / noise) * 100) / 100 : Infinity;
+      // A replica identical to its original leaves no noise floor to divide by. JSON has no
+      // Infinity (it wrote null and the findings crashed on it), so the gap is written as null.
+      disc[orig.approach] = noise > 0 ? Math.round((between / noise) * 100) / 100 : null;
     }
   }
   const rendered = m.cards.filter((c) => c.status === "rendered").length;

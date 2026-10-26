@@ -178,12 +178,15 @@ function walk(req: RouteRequest, table: MediumTable, posture: Posture, facts: Fa
   };
 
   const prefer = req.steer?.prefer;
-  if (prefer !== undefined && req.steer?.pin === undefined && chain.length > 1) {
+  // A one-provider chain has nothing to reorder, but a preference outside it is still dropped out loud.
+  if (prefer !== undefined && req.steer?.pin === undefined) {
     const c = byId.get(prefer);
-    const blocked = c === undefined ? undefined : gate(c);
-    if (c !== undefined && chain.includes(prefer) && blocked === undefined) chain = [prefer, ...chain.filter((id) => id !== prefer)];
-    else if (!chain.includes(prefer)) steerDropped = `${prefer} is not in the ${env} plan for ${req.medium} ${planKey}; the preference was dropped`;
-    else steerDropped = `${prefer} cannot serve this request (${blocked?.why ?? "unknown"}); the preference was dropped`;
+    if (!chain.includes(prefer)) steerDropped = `${prefer} is not in the ${env} plan for ${req.medium} ${planKey}; the preference was dropped`;
+    else if (chain.length > 1) {
+      const blocked = c === undefined ? undefined : gate(c);
+      if (c !== undefined && blocked === undefined) chain = [prefer, ...chain.filter((id) => id !== prefer)];
+      else steerDropped = `${prefer} cannot serve this request (${blocked?.why ?? "unknown"}); the preference was dropped`;
+    }
   }
 
   let rejected = 0;

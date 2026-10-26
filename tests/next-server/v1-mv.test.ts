@@ -27,6 +27,7 @@ const snap = (over: Partial<MvSnapshot> = {}): MvSnapshot => ({
   ],
   worker: { pid: 4242, at: T },
   workerAlive: true,
+  scoutClips: new Set<string>(),
   ...over,
 });
 const byType = (events: readonly IngestEvent[]): Record<string, number> => {
@@ -77,6 +78,11 @@ describe("mv projection", () => {
 
   it("finished videos with no verdict are one pile on the Weir", () => {
     expect(projectMv(snap(), ctx()).weir).toEqual([{ source: "mv", id: "mv/settled", title: "videos to judge", media: "video", kind: "cull", since: "2026-10-15T09:59:59.000Z", decided: 0, pending: 1, href: "/board" }]);
+  });
+
+  it("a scout visualizer is judged on its night's packet, so it is not in the pile", () => {
+    const scout = snap({ jobs: [job("mj-9", "Night drive", "done", { source: { kind: "clip", id: "sc-scout", title: "Night drive" }, startedAt: T - 9000, endedAt: T - 1000 })], scoutClips: new Set(["sc-scout"]) });
+    expect(projectMv(scout, ctx()).weir).toEqual([]);
   });
 });
 

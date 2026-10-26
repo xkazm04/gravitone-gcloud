@@ -4,7 +4,7 @@
 // for four constellations and was already three disciplines and three templates
 // behind the app on the day it was retired. The redesign's whole claim is the
 // GROWTH PROPERTY: a discipline appended to lib/projects DISCIPLINES, a template
-// to TEMPLATES, an area to app/library/areas.ts or a preset to PRESETS appears
+// to TEMPLATES, an area to LIBRARY_AREAS (@gt/catalog) or a preset to PRESETS appears
 // on the landing with no landing edit, in its own seeded colour and shape.
 //
 // Two halves hold it, and this file pins both:

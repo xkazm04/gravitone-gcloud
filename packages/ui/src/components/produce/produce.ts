@@ -9,7 +9,7 @@
 // Upgraded from the prototype: a sub-cent spend never reads `$0` (status-vocabulary/number-
 // formatting: sub-unit spend rendering as zero), and an unpriced figure is never a dollar sign.
 
-import type { ModelOption, PlanPart, Receipt, ReceiptLine, WorkPlanPart } from "@gt/domain/produce";
+import { crossesCeiling, type ModelOption, type PlanPart, type Receipt, type ReceiptLine, type WorkPlanPart } from "@gt/domain/produce";
 
 /** Seconds as the prototype's compact duration: `38m`, `1h 04m`, `3d`. Under a minute is `<1m`. */
 export function fmtDur(seconds: number): string {
@@ -31,8 +31,22 @@ export function fmtUsd(n: number): string {
   return `$${Math.round(n)}`;
 }
 
-/** A band as the prototype drew it: `$47–92`. */
-export const fmtRange = (r: readonly [number, number]): string => `$${Math.round(r[0])}–${Math.round(r[1])}`;
+/**
+ * One end of a band, rounded OUTWARD (`down` for the low end, up for the high one), in fmtUsd's
+ * grain: whole dollars from $10, cents under it, `<$0.01` for a sub-cent end. A band is a bound,
+ * and a bound rounded inward is a smaller worst case than the one the job may spend: the old
+ * `Math.round` drew a $6.80-54.40 band as `$7–54` and a sub-dollar one as `$0–0`.
+ */
+function bandEnd(n: number, down: boolean): string {
+  if (n === 0) return "$0";
+  if (n < 0.01) return down ? "<$0.01" : "$0.01";
+  const grain = n < 10 ? 100 : 1;
+  const v = (down ? Math.floor : Math.ceil)(Math.round(n * grain * 1e6) / 1e6) / grain;
+  return v < 10 ? `$${v.toFixed(2)}` : `$${v}`;
+}
+
+/** A band as the prototype drew it: `$47–92`; under $10 in cents (`$1.70–6.80`), never `$0–0`. */
+export const fmtRange = (r: readonly [number, number]): string => `${bandEnd(r[0], true)}–${bandEnd(r[1], false).slice(1)}`;
 
 export type Cost = { readonly usd: number | null; readonly usdRange?: readonly [number, number]; readonly unpricedReason?: string };
 
@@ -71,26 +85,42 @@ export function relUsd(d: number): string {
   return `${d > 0 ? "+" : "−"}${fmtUsd(Math.abs(d))}`;
 }
 
-/** Which way a delta leans for the operator: later or dearer is `bad`. */
-export const lean = (d: number, epsilon: number): "good" | "bad" | "even" => (d > epsilon ? "bad" : d < -epsilon ? "good" : "even");
+/**
+ * Which way a delta leans for the operator, read off the words drawn for it (relDur, relUsd):
+ * later or dearer is `bad`. Read from the words, not from a second threshold, so a tone can never
+ * call `±$0` dearer - it did, with `lean(d, 0.004)` beside relUsd's 0.005 and `lean(s, 59)` beside
+ * relDur's 60.
+ */
+export const leanOf = (words: string): "good" | "bad" | "even" => (words.startsWith("+") ? "bad" : words.startsWith("−") ? "good" : "even");
 
 export const isWork = (p: PlanPart): p is WorkPlanPart => p.kind !== "gate" && p.kind !== "slot";
 
 /* ── the receipt ──────────────────────────────────────────────────────────── */
 
-export type LineField = "lane" | "model" | "units" | "seconds" | "cost" | "queuePos" | "start";
-export type TotalField = "seconds" | "cost" | "queuePos" | "etaAt" | "mode";
+export type LineField = "lane" | "model" | "units" | "seconds" | "cost" | "src" | "queuePos" | "start";
+export type TotalField = "seconds" | "cost" | "src" | "queuePos" | "etaAt" | "mode" | "ceiling";
 
 export type ReceiptChanges = {
   readonly lines: ReadonlyMap<string, ReadonlySet<LineField>>;
   readonly added: readonly string[];
-  readonly removed: readonly string[];
+  /** A line the fresh receipt no longer has, named as the operator read it (its label, not its
+   *  key: a project's part key is `<projectId>/<part>`). */
+  readonly removed: readonly { readonly key: string; readonly label: string }[];
   readonly totals: ReadonlySet<TotalField>;
 };
 
 export const NO_CHANGES: ReceiptChanges = { lines: new Map(), added: [], removed: [], totals: new Set() };
 
-const sameCost = (a: Cost, b: Cost): boolean => costWords(a) === costWords(b);
+/** The short kind of an unpriced figure, from its reason (what the `Unpriced` chip draws). */
+export function unpricedKind(reason: string | undefined): "seat" | "credits" | "no price" {
+  const r = (reason ?? "").toLowerCase();
+  if (r.includes("seat")) return "seat";
+  if (r.includes("credit") || r.includes("subscription")) return "credits";
+  return "no price";
+}
+
+/** Two costs read the same: the same words, and for an unpriced one the same drawn kind. */
+const sameCost = (a: Cost, b: Cost): boolean => costWords(a) === costWords(b) && (a.usd !== null || unpricedKind(a.unpricedReason) === unpricedKind(b.unpricedReason));
 
 function lineDiff(a: ReceiptLine, b: ReceiptLine): Set<LineField> {
   const out = new Set<LineField>();
@@ -99,6 +129,7 @@ function lineDiff(a: ReceiptLine, b: ReceiptLine): Set<LineField> {
   if (a.units !== b.units) out.add("units");
   if (fmtDur(a.seconds) !== fmtDur(b.seconds)) out.add("seconds");
   if (!sameCost(a, b)) out.add("cost");
+  if (a.src !== b.src) out.add("src");
   if (a.queuePos !== b.queuePos) out.add("queuePos");
   if (a.start !== b.start) out.add("start");
   return out;
@@ -123,16 +154,28 @@ export function receiptChanges(before: Receipt, after: Receipt): ReceiptChanges 
   const totals = new Set<TotalField>();
   if (fmtDur(before.totals.seconds) !== fmtDur(after.totals.seconds)) totals.add("seconds");
   if (!sameCost(before.totals, after.totals) || before.totals.unpriced !== after.totals.unpriced) totals.add("cost");
+  if (before.totals.src !== after.totals.src) totals.add("src");
   if (before.queuePos !== after.queuePos) totals.add("queuePos");
   if (before.etaAt !== after.etaAt) totals.add("etaAt");
   if (before.mode !== after.mode) totals.add("mode");
+  // The token binds the ceiling a confirm carries, and the sheet reads its receipt without one: a
+  // confirm with a typed ceiling is answered with the receipt read AT that ceiling, which differs
+  // in nothing else. Without this mark that re-show counted zero changes and read as a dropped press.
+  if (before.ceilingUsd !== after.ceilingUsd) totals.add("ceiling");
   return {
     lines,
     added: [...now.keys()].filter((k) => !was.has(k)),
-    removed: [...was.keys()].filter((k) => !now.has(k)),
+    removed: before.lines.filter((l) => !now.has(l.key)).map((l) => ({ key: l.key, label: l.label })),
     totals,
   };
 }
+
+/**
+ * Does the receipt's total carry a price at all? Not when every line is unpriced: then its `usd`
+ * is a 0 nobody measured, and an unpriced figure is never a dollar sign. The Estimate and the
+ * Receipt both read this, so the line above Launch and the receipt behind it cannot disagree.
+ */
+export const totalPriced = (r: Pick<Receipt, "totals" | "lines">): boolean => r.totals.usdRange !== undefined || r.totals.unpriced < r.lines.length;
 
 export const changeCount = (c: ReceiptChanges): number => c.lines.size + c.added.length + c.removed.length + c.totals.size;
 
@@ -155,7 +198,17 @@ export function parseCeiling(text: string): { readonly ok: true; readonly value:
 export function mayStopAtCeiling(r: Pick<Receipt, "totals">, ceiling: number | undefined): boolean {
   if (ceiling === undefined) return false;
   const top = r.totals.usdRange?.[1] ?? r.totals.usd;
-  return top > ceiling + 1e-9;
+  return crossesCeiling(top, ceiling);
+}
+
+/**
+ * The worst case and the ceiling it crosses, as two figures that differ: in fmtUsd's grain when
+ * that tells them apart, else both in cents - `$54 over $54` is a crossing that reads as none.
+ */
+export function overWords(worst: number, ceiling: number): readonly [string, string] {
+  const a = fmtUsd(worst);
+  const b = fmtUsd(ceiling);
+  return a !== b ? [a, b] : [`$${worst.toFixed(2)}`, `$${ceiling.toFixed(2)}`];
 }
 
 /** `09:12` today, `Thu 09:12` on another day, both UTC (the day-line's clock). */

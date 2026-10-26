@@ -28,6 +28,7 @@ import { setHand as writeHand } from "../../../../lib/sound/hands.ts";
 import { SoundError } from "../../../../lib/sound/store.ts";
 import { draftJobId } from "../../../../lib/sound/suno/draft.ts";
 import type { Confirmed } from "../../projects/_port/contract.ts";
+import { actorOf } from "../../../../lib/principal.ts";
 
 const handInput = z.object({
   id: z.string().min(3).max(140),
@@ -74,7 +75,7 @@ const sendAction = action("audio send to suno", sendInput, async (i, who): Promi
       { kind: "fields", fields: f },
       {
         mode,
-        actor: { kind: "operator", id: "uid" in who ? who.uid : "operator" },
+        actor: actorOf(who),
         dryOnly,
         store: k.value.store,
         ...(i.ceilingUsd === undefined ? {} : { ceilingUsd: i.ceilingUsd }),

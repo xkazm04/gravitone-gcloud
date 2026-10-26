@@ -66,15 +66,27 @@ function loneId(f: LedgerFilter, post: Post): string | null {
   return /\s/.test(raw) || parseQuery(raw).words.length !== 1 ? null : raw;
 }
 
-function byIdPage(store: Store, kernel: KernelFilter, id: string, order: "asc" | "desc"): Result<Page | null> {
-  const base = { ...kernel, by: "time" as const, order, limit: PAGE };
+/**
+ * The lone-id page: the id as a subject and as a run, merged. Null when the word names no
+ * record under the filter - then it is a text word and the scan answers it. A continuation
+ * (`cursor`) stays on this path whenever the word names a record at all, even with nothing
+ * left past the cursor, so page 2 answers the same predicate page 1 did: never the text
+ * scan, which would match every record whose id merely contains this one (`r1` in `r10`).
+ */
+function byIdPage(store: Store, kernel: KernelFilter, id: string, order: "asc" | "desc", cursor?: TimeCursor): Result<Page | null> {
+  const base = { ...kernel, by: "time" as const, order, limit: PAGE, ...(cursor === undefined ? {} : { cursor }) };
   const bySubject = queryEvents(store, { ...base, subject: { ...kernel.subject, id } });
   if (!bySubject.ok) return bySubject;
   const byRun = queryEvents(store, { ...base, run: id });
   if (!byRun.ok) return byRun;
   const seen = new Map<number, Event>();
   for (const e of [...bySubject.value.events, ...byRun.value.events]) seen.set(e.seq, e);
-  if (seen.size === 0) return ok(null);
+  if (seen.size === 0) {
+    if (cursor === undefined) return ok(null);
+    const named = byIdPage(store, kernel, id, order);
+    if (!named.ok) return named;
+    return ok(named.value === null ? null : { events: [], capped: false, scanned: 0, exhausted: true, byId: true });
+  }
   const merged = [...seen.values()].sort((a, b) => (order === "asc" ? later(a, b) : later(b, a)));
   const events = merged.slice(0, PAGE);
   // Each half read at most PAGE; the merge is complete only when neither was capped.
@@ -93,9 +105,9 @@ export function readPage(store: Store, f: LedgerFilter, cursor?: TimeCursor): Re
     const { events, capped } = r.value;
     return ok({ events, capped, ...(r.value.cursor === undefined ? {} : { cursor: r.value.cursor }), scanned: events.length, exhausted: !capped, byId: false });
   }
-  const id = cursor === undefined ? loneId(f, post) : null;
+  const id = loneId(f, post);
   if (id !== null) {
-    const hit = byIdPage(store, kernel, id, order);
+    const hit = byIdPage(store, kernel, id, order, cursor);
     if (!hit.ok) return hit;
     if (hit.value !== null) return ok(hit.value);
   }
@@ -135,6 +147,8 @@ export type Facets = {
   readonly type: FacetCount;
   readonly lane: FacetCount;
   readonly source: FacetCount;
+  /** Each project the filter holds, counted on its own under the rest of the filter. */
+  readonly project: Readonly<Record<string, number>>;
 };
 
 const facet = (all: readonly FacetCount[], name: FacetCount["facet"]): FacetCount =>
@@ -142,8 +156,23 @@ const facet = (all: readonly FacetCount[], name: FacetCount["facet"]): FacetCoun
 
 /** The total and every facet, each with its own filter left out (countEvents). */
 export function readFacets(store: Store, f: LedgerFilter): Result<Facets> {
-  const r = countEvents(store, splitFilter(f).kernel);
+  const { kernel, post } = splitFilter(f);
+  const r = countEvents(store, kernel);
   if (!r.ok) return r;
+  // Project has no kernel facet (events-count.ts counts seven columns, project_id is not
+  // one), and the kernel's `project` takes one value - several go to the rows (filter.ts).
+  // So each held project is counted on its own under the rest of the filter: the other
+  // facets' rule, one value at a time. One held project is the total itself.
+  const held = post.projects ?? (kernel.project === undefined ? [] : [kernel.project]);
+  const project: Record<string, number> = {};
+  if (held.length === 1 && held[0] !== undefined) project[held[0]] = r.value.total;
+  else {
+    for (const pid of held) {
+      const c = countEvents(store, { ...kernel, project: pid });
+      if (!c.ok) return c;
+      project[pid] = c.value.total;
+    }
+  }
   const all = r.value.facets;
   const kinds = facet(all, "actorKind");
   const n = (k: string): number => kinds.values.find((v) => v.value === k)?.n ?? 0;
@@ -155,6 +184,7 @@ export function readFacets(store: Store, f: LedgerFilter): Result<Facets> {
     type: facet(all, "type"),
     lane: facet(all, "lane"),
     source: facet(all, "source"),
+    project,
   });
 }
 
@@ -164,13 +194,15 @@ export type Strip = { readonly days: readonly DayCount[]; readonly today: string
  * Events per day under the filter minus its date range, split by actor kind. One count per
  * day up to today (later days are drawn empty and hatched), each the kernel's own count
  * over the day's half-open window - so a bar and the list a click on it opens can never
- * disagree. With an actor filter set the day's total belongs to that kind alone.
+ * disagree. With an actor filter set the day's total belongs to the kinds it holds alone.
  */
 export function readStrip(store: Store, f: LedgerFilter, nowMs: number): Result<Strip> {
   const today = dayKey(nowMs);
   const { kernel } = splitFilter({ ...f, from: null, to: null });
   const days = daysBetween(dayKey(nowMs - (STRIP_PAST - 1) * DAY_MS), dayKey(nowMs + STRIP_AHEAD * DAY_MS));
-  const only = kernel.actor?.kind?.length === 1 ? kernel.actor.kind[0] : undefined;
+  // The actor facet counts with its own filter left out, so a kind the filter excludes still
+  // has a count there; it is drawn as 0, or the bar would hold acts the list never shows.
+  const held = kernel.actor?.kind;
   const out: DayCount[] = [];
   for (const day of days) {
     if (day > today) {
@@ -179,10 +211,10 @@ export function readStrip(store: Store, f: LedgerFilter, nowMs: number): Result<
     }
     const since = `${day}T00:00:00.000Z`;
     const until = new Date(Date.parse(since) + DAY_MS).toISOString();
-    const c = countEvents(store, { ...kernel, since, until });
+    const c = countEvents(store, { ...kernel, since, until }, ["actorKind"]);
     if (!c.ok) return c;
     const kinds = facet(c.value.facets, "actorKind");
-    const n = (k: ActorKind): number => (only === undefined ? (kinds.values.find((v) => v.value === k)?.n ?? 0) : only === k ? c.value.total : 0);
+    const n = (k: ActorKind): number => (held !== undefined && !held.includes(k) ? 0 : (kinds.values.find((v) => v.value === k)?.n ?? 0));
     out.push({ day, operator: n("operator"), agent: n("agent"), machine: n("machine") });
   }
   return ok({ days: out, today });

@@ -34,12 +34,13 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { CliError } from "@/lib/claudeCli";
+import { CliError, probeClaude } from "@/lib/claudeCli";
 import { crossCheckRetrieval, NotebookError, parseNotebook } from "@/lib/notebook/validate";
 import { retrievalEnabled } from "@/lib/text/env";
 import { TextError } from "@/lib/text/errors";
 import { parseRetrieveStream, runClaudeRetrieve } from "@/lib/text/providers/claudeCliRetrieve";
 import { engineStatus, retrieve } from "@/lib/text/router";
+import { __resetTextSpend, __setTextSpendStore, textSpendRows } from "@/lib/text/spend";
 import { RESEARCH_SPEC } from "@/lib/turns/kinds/research";
 import type { TurnRecord } from "@/lib/turns/ledger";
 import { startTurn, whenIdle, type TurnSpec } from "@/lib/turns/runner";
@@ -224,6 +225,19 @@ test("retrieve cross-check: a high fact citing an unfetched URL is downgraded, w
   expect(nb.facts.find((f) => f.id === "f-recalled")!.confidence).toBe("high");
 });
 
+test("retrieve cross-check: a fetched page cited in prose is fetched, whatever punctuation follows it", () => {
+  // A locator is prose ("page 4", "table 2"), and the URL inside it is followed
+  // by whatever the sentence needed. The page this run fetched is the same page.
+  const nb = parseNotebook(NOTEBOOK, "harbour dredging costs");
+  const receipt = { url: "https://example.org/report", query: null, fetchedAt: "2026-10-24T00:00:00Z" } as never;
+  const locators = ["https://example.org/report, p. 4", "see https://example.org/report.", "https://example.org/report; table 2", "(https://example.org/report)"];
+  const downgraded = locators.filter((locator) => {
+    const fact = { ...nb.facts[0], confidence: "high" as const, sources: [{ name: "report", evidenceClass: "primary" as const, locator }] };
+    return crossCheckRetrieval({ ...nb, facts: [fact] }, [receipt]).notebook.facts[0].confidence !== "high";
+  });
+  expect(downgraded).toEqual([]);
+});
+
 /* ── case 4: no tool call, no "researched" ───────────────────────────────── */
 
 test("retrieve cross-check: zero receipts still requires researchGaps[0] to name the missing search", () => {
@@ -236,6 +250,10 @@ test("retrieve cross-check: zero receipts still requires researchGaps[0] to name
   }
   expect(err, "a no-search run whose gaps do not say so was accepted").toBeInstanceOf(NotebookError);
   expect((err as NotebookError).messages.join(" ")).toMatch(/researchGaps\[0\]/);
+  // Addressed and kept like every other refusal: the finding names the one path a
+  // repair may touch, and the paid-for answer rides on the error as its draft.
+  expect((err as NotebookError).findings.map((f) => f.path)).toEqual(["researchGaps[0]"]);
+  expect((err as NotebookError).draft, "the refused answer was dropped").toEqual(nb);
 
   const honest: Notebook = { ...nb, researchGaps: ["No search was run in this session; every source is recalled", ...nb.researchGaps] };
   const { notebook, findings } = crossCheckRetrieval(honest, []);
@@ -319,6 +337,23 @@ test("retrieve door: the caller's signal ends the run, and an aborted signal spa
   });
 });
 
+test("retrieve door: a run that hits its turn cap is refused, and the cost its result event reports is booked", async () => {
+  process.env.TEXT_RETRIEVE = "1";
+  __setTextSpendStore(null);
+  __resetTextSpend();
+  const capped = [INIT, { type: "result", subtype: "error_max_turns", is_error: true, total_cost_usd: 1.25, num_turns: 30 }];
+  await withFakeEngine(retrieveCassette(capped, NOTEBOOK), async () => {
+    const e = await retrieve({ turn: "research", prompt: "# RETRIEVE capped\n" }).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(TextError);
+    expect((e as TextError).message).toMatch(/turn cap/);
+  });
+  const rows = await textSpendRows();
+  expect(rows, "a 30-turn run's reported cost left no row").toHaveLength(1);
+  expect(rows[0]).toMatchObject({ amount: 1.25, outcome: "failed", basis: "vendor" });
+  expect(rows[0]!.axes).toMatchObject({ turn: "research", provider: "claude-cli-retrieve" });
+  __resetTextSpend();
+});
+
 /* ── case 6: the flag ────────────────────────────────────────────────────── */
 
 test("retrieve flag: only an explicit 1/on/true turns retrieval on", () => {
@@ -393,5 +428,32 @@ test("retrieve flag off: the run is today's run — the reasoning door, searched
     expect(argv[argv.indexOf("--allowed-tools") + 1]).toBe("");
     expect(argv[argv.indexOf("--max-turns") + 1]).toBe("1");
     expect(argv).not.toContain("stream-json");
+  });
+});
+
+test("retrieve avoid: ruling out the only retrieval engine is named as such, and stays fallback-compatible", async () => {
+  process.env.TEXT_RETRIEVE = "1";
+  await withFakeEngine(RECORDED, async (engine) => {
+    const err = (await retrieve({ prompt: "# RETRIEVE avoid\n", turn: "research", avoid: "claude-cli-retrieve" }).catch((e: unknown) => e)) as TextError;
+    expect(err).toBeInstanceOf(TextError);
+    // research.ts falls back to reason() on `unsupported`: the kind is the contract.
+    expect(err.kind).toBe("unsupported");
+    expect(err.message, "the refusal does not name the candidate the caller ruled out").toContain("claude-cli-retrieve");
+    expect(err.message).not.toMatch(/no candidates were planned/);
+    expect(engine.turns(), "an avoided rung was spawned").toHaveLength(0);
+  });
+});
+
+test("pre-flight: with retrieval on, the one binary behind two candidates is asked its version once", async () => {
+  process.env.TEXT_RETRIEVE = "1";
+  await withFakeEngine(RECORDED, async (engine) => {
+    // The first spawn through a fresh shim is logged twice on Windows; warm it
+    // so the pre-flight's own spawns are what is counted.
+    await probeClaude();
+    const before = engine.calls().filter((c) => c.kind === "version").length;
+    const pf = await engineStatus("research");
+    expect(pf.candidates.map((c) => c.provider)).toEqual(expect.arrayContaining(["claude-cli-retrieve", "claude-cli"]));
+    expect(pf.candidates.filter((c) => c.provider.startsWith("claude-cli")).every((c) => c.ok)).toBe(true);
+    expect(engine.calls().filter((c) => c.kind === "version").length - before).toBe(1);
   });
 });

@@ -10,7 +10,7 @@ import type { Store } from "@gt/kernel/store";
 
 import { FIXTURE_MODE } from "../../../lib/fixtures/mode.ts";
 import { kernel } from "../../kernelStore.ts";
-import { digest, facts, seg } from "./facts.ts";
+import { digest, facts, liveCtx, seg } from "./facts.ts";
 import { weirPacketId } from "./packet.ts";
 import { V1_SOURCES } from "./sources.ts";
 import type { IngestEvent, LiveHold, LiveJob, LiveSlot, ProjectCtx, Projection, Source, WeirItem } from "./types.ts";
@@ -253,7 +253,7 @@ function withPacketId(w: WeirItem): WeirItem {
 
 /** v1's live work, read now, written nowhere (COMMON decision 4). */
 export async function liveJobs(sources: readonly Source<unknown>[], ctx: ProjectCtx): Promise<LiveRead> {
-  const reads = await readAll(sources, ctx);
+  const reads = await readAll(sources, liveCtx(ctx));
   const jobs: LiveJob[] = [];
   const weir: WeirItem[] = [];
   const slots: LiveSlot[] = [];
@@ -277,7 +277,7 @@ export type Freshness = { readonly started: true } | { readonly started: false; 
 /**
  * Start a sync in the background if the claim is free; never await it. The
  * outcome is the ledger itself (and the claim row's report); a sync that throws
- * past syncV1's own net is logged and its claim lapses after SYNC_TTL_MS.
+ * past syncV1's own net is logged and its claim closed with the error.
  */
 export function syncSoon(store: Store, sources: readonly Source<unknown>[], ctx: ProjectCtx): Result<Freshness> {
   const owner = `${hostname()}/${process.pid}`;
@@ -290,7 +290,14 @@ export function syncSoon(store: Store, sources: readonly Source<unknown>[], ctx:
       if (!report.ok) console.error(`[ledger-sync] ${report.error.message}`);
       if (!done.ok) console.error(`[ledger-sync] the claim could not be closed: ${done.error.message}`);
     })
-    .catch((e: unknown) => console.error(`[ledger-sync] failed outside its own report: ${errorMessage(e)}`));
+    .catch((e: unknown) => {
+      // A sync that threw past its own report still closes the claim, with the error as the report:
+      // left open, the claim would block the next sync for the whole TTL.
+      const message = errorMessage(e);
+      console.error(`[ledger-sync] failed outside its own report: ${message}`);
+      const done = finishClaim(store, SYNC_CLAIM, owner, SYNC_INTERVAL_MS, { error: message });
+      if (!done.ok) console.error(`[ledger-sync] the claim could not be closed: ${done.error.message}`);
+    });
   return ok({ started: true });
 }
 

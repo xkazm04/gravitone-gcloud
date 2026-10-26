@@ -1,4 +1,4 @@
-// COMPOSE — what /api/script's engine returns, and the laws it is held to.
+// COMPOSE — what the compose turn's engine returns, and the laws it is held to.
 //
 // Until this file nothing in the app WROTE a script. The three renders Step 2
 // shows were transcribed from a 2026-08-11 terminal run (script/renders.ts),
@@ -27,8 +27,12 @@
 // which one was quietly dropped read as a complete answer.
 //
 // What it does NOT do: judge the prose. The constraint probes, qualifier
-// survival and traceability are the gate's (script/gate.ts), and the route
-// runs it on every candidate that clears this file.
+// survival and traceability are the gate's (script/gate.ts). The producer does
+// NOT run it at compose time (lib/producers/script.ts composeUnit lands the
+// draft as parsed); the Part's script view gates each candidate when it is
+// read, against the dealt notebook (app/(studio)/projects/[id]/_part/
+// scriptView.ts). gateDraft is the compose-time entry, and only the compose
+// probe calls it.
 //
 // Server-safe by construction: nothing here, and nothing it imports, is
 // `"use client"`. That is why the template ranges are restated below instead
@@ -102,9 +106,9 @@ export function templateBand(template: string, targetS: number): { min: number; 
   return { min: Math.max(range[0], Math.ceil(targetS - tol)), max: Math.min(range[1], Math.floor(targetS + tol)) };
 }
 
-/** No render meets the project's clock. The band-aware form of ScriptStep's
- *  `runtimeMismatch` (ScriptStep.tsx, which compares fixture durations for
- *  equality) — stage 3 of script-phase-B swaps it in. */
+/** No render meets the project's clock: none runs inside the template band
+ *  for `targetS`. ScriptStep.tsx, which compared fixture durations for
+ *  equality, retired with the studio; only the compose probe calls this. */
 export function runtimeMismatch(
   renders: readonly { durationS: number }[],
   template: string,
@@ -138,9 +142,10 @@ export function qualifyingEngines(
 /* ──────────────────────────────── the scope ──────────────────────────────── */
 
 /** Which card ids exist in this notebook, and which of them the creator kept.
- *  The rule is research/scope.ts::stateOf's (that module is `"use client"`):
- *  an explicit decision wins, else conclusions are OUT until taken and every
- *  other card is kept. */
+ *  The rule is research/scope.ts::stateOf's - an explicit decision wins, else
+ *  conclusions are OUT until taken and every other card is kept - restated
+ *  over `ScopeRecord`, which reads a decision loosely (only `descoped`). The
+ *  restatement is no longer forced: scope.ts carries no "use client" now. */
 export function cardsInScope(source: NotebookSource, scope: ScopeRecord): { known: Set<string>; kept: Set<string> } {
   const known = new Set<string>();
   const kept = new Set<string>();
@@ -416,12 +421,26 @@ export function parseDraft(raw: string, ctx: ComposeContext): ComposeOutcome {
         });
       }
 
-    for (const c of cutFacts)
-      if (!known.has(c.factId))
+    for (const c of cutFacts) {
+      if (!known.has(c.factId)) {
         findings.push({
           rule: "cut", renderId: id, verdict: "violation", card: c.factId,
           detail: `${id} declares it cut ${c.factId}, which names no card in the notebook that was sent.`,
         });
+        continue;
+      }
+      // SPOKEN OR CUT, NOT BOTH. impact.ts lets a declared cut win over the
+      // attribution ("if the attribution says otherwise the attribution is
+      // wrong"), so a fact a beat states AND the render cuts was drawn in the
+      // matrix as excluded, 0 s, while the render says it aloud.
+      const speaks = Object.entries(attribution).find(([, ids]) => ids.includes(c.factId))?.[0];
+      if (speaks !== undefined)
+        findings.push({
+          rule: "cut", renderId: id, verdict: "violation", card: c.factId, at: speaks,
+          detail: `${id} declares it cut ${c.factId}, and its beat at ${speaks} rests on it. A fact is spoken or cut, not both.`,
+          quote: beats.find((b) => b.at === speaks)?.text.slice(0, 140),
+        });
+    }
 
     // SHARED, not restated: the gate's own law.
     for (const f of checkConnectors({ id, beats }))
@@ -510,9 +529,22 @@ export function parseDraft(raw: string, ctx: ComposeContext): ComposeOutcome {
 export function asNotebook(x: unknown): Notebook | null {
   if (!x || typeof x !== "object") return null;
   const n = x as Loose;
-  const arrays = ["facts", "mechanisms", "reversals", "unknowns", "engineFit"] as const;
+  const arrays = ["facts", "mechanisms", "reversals", "unknowns", "engineFit", "counterPositions"] as const;
   if (!arrays.every((k) => Array.isArray(n[k]))) return null;
   if (!n.steelMan || typeof n.steelMan !== "object") return null;
-  if (!(n.facts as Loose[]).every((f) => f && typeof f.id === "string" && typeof f.claim === "string")) return null;
+  // EVERY FIELD THE CARDS AND THE GATE DEREFERENCE, and no more: buildCards
+  // walks each card list, a reversal's evidence, a mechanism's evidence and
+  // steps; the gate walks the unknowns and the felt conversions. A notebook
+  // that fails one of these used to be admitted here and throw a TypeError one
+  // call later - on the script producer's receipt, before any sentence existed.
+  const obj = (v: unknown): v is Loose => !!v && typeof v === "object" && !Array.isArray(v);
+  const ids = (v: unknown) => Array.isArray(v) && v.every((s) => typeof s === "string");
+  const opt = (v: unknown, ok: (v: unknown) => boolean) => v === undefined || ok(v);
+  const card = (v: unknown): v is Loose => obj(v) && typeof v.id === "string";
+  if (!(n.facts as unknown[]).every((f) => card(f) && typeof f.claim === "string")) return null;
+  if (!(n.mechanisms as unknown[]).every((m) => card(m) && opt(m.evidence, ids) && opt(m.steps, (s) => Array.isArray(s) && s.every((st) => obj(st) && opt(st.evidence, ids))))) return null;
+  if (!(n.reversals as unknown[]).every((r) => card(r) && ids(r.evidence))) return null;
+  if (!(n.unknowns as unknown[]).every(card)) return null;
+  if (!opt(n.scaleConversions, (s) => Array.isArray(s) && s.every((c) => obj(c) && typeof c.raw === "string" && typeof c.felt === "string"))) return null;
   return x as Notebook;
 }

@@ -134,7 +134,8 @@ export type ForgeLaunch =
   /** The run already has a job that is not finished: the same job, never a second (v1 MV enqueue idempotency). */
   | { readonly kind: "existing"; readonly runId: string; readonly jobId: string; readonly state: Job["state"] };
 
-function jobOf(store: Store, id: string): Job | undefined {
+/** A job by id, or undefined when the store has none (strips and extract find their runs' jobs with it too). */
+export function jobOf(store: Store, id: string): Job | undefined {
   const parsed = parseAt("job id", jobIdSchema, id);
   if (!parsed.ok) throw parsed.error;
   const r = get(store, parsed.value);

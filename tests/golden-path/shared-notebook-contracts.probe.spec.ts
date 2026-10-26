@@ -19,6 +19,7 @@ import { stripComments } from "./_helpers";
 
 import { buildCards } from "@/lib/notebook/cards";
 import { NOTEBOOK } from "@/lib/notebook/notebook";
+import { NOTEBOOK_SCHEMA } from "@/lib/notebook/schema";
 
 const ROOT = resolve(__dirname, "../..");
 
@@ -133,6 +134,13 @@ test("cards: the steel-man is the only card the board may not descope", () => {
  */
 const UNCLOSED: Record<string, string> = {};
 
+/** `await openDb()` sites and `db.close()` sites in one source: the rule holds per site, so a
+ *  file with seven opens needs seven closes, not one. */
+const opensAndCloses = (src: string): { opens: number; closes: number } => ({
+  opens: (src.match(/await openDb\(\)/g) ?? []).length,
+  closes: (src.match(/db\??\.close\(\)/g) ?? []).length,
+});
+
 /** Every file that opens a database connection, walked off the tree. */
 function dbOpeners(): string[] {
   const out: string[] = [];
@@ -158,10 +166,11 @@ test("connections: every file that opens the database also closes it", () => {
   const openers = dbOpeners();
   expect(openers.length, "the source walk found no opener - it is reading the wrong tree").toBeGreaterThan(2);
 
-  const leaking = openers.filter(
-    (f) => !/db\??\.close\(\)/.test(stripComments(readFileSync(join(ROOT, f), "utf8"))),
-  );
-  console.log(`[db] ${openers.length} opener file(s); ${leaking.length} never close: ${leaking.join(", ") || "none"}`);
+  const leaking = openers.filter((f) => {
+    const { opens, closes } = opensAndCloses(stripComments(readFileSync(join(ROOT, f), "utf8")));
+    return closes < opens;
+  });
+  console.log(`[db] ${openers.length} opener file(s); ${leaking.length} close fewer connections than they open: ${leaking.join(", ") || "none"}`);
 
   const unexplained = leaking.filter((f) => !UNCLOSED[f]);
   expect(
@@ -175,9 +184,37 @@ test("connections: every unclosed exemption still describes a file that leaks", 
     expect(why.length, `${file} is exempted with no reason`).toBeGreaterThan(40);
     const src = stripComments(readFileSync(join(ROOT, file), "utf8"));
     expect(/await openDb\(\)/.test(src), `${file} no longer opens a connection - drop the exemption`).toBe(true);
+    const { opens, closes } = opensAndCloses(src);
     expect(
-      /db\??\.close\(\)/.test(src),
+      closes >= opens,
       `${file} now closes its connection - drop the exemption rather than leaving it claiming a leak`,
     ).toBe(false);
   }
+});
+
+/* ── 5 · the contract document states every field the schema enforces on an unknown ── */
+
+test("NOTEBOOK-SCHEMA.md: every unknowns[] property, probe included, is spelled (snake_case) in its section", () => {
+  const doc = readFileSync(join(ROOT, "pipeline/NOTEBOOK-SCHEMA.md"), "utf8");
+  const at = doc.indexOf("### `unknowns[]`");
+  expect(at, "the unknowns[] section moved").toBeGreaterThan(0);
+  const section = doc.slice(at, doc.indexOf("\n### ", at + 5));
+  const keys = new Set<string>();
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) return void node.forEach(walk);
+    if (node === null || typeof node !== "object") return;
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      if (k === "properties" && v !== null && typeof v === "object") for (const p of Object.keys(v as object)) keys.add(p);
+      walk(v);
+    }
+  };
+  walk((NOTEBOOK_SCHEMA.properties as unknown as Record<string, { items: unknown }>).unknowns.items);
+  expect(keys.size, "the schema walk found no properties").toBeGreaterThan(8);
+  const snake = (k: string) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+  const missing = [...keys]
+    .filter((k) => k.length > 1)
+    .filter((k) => !new RegExp(`(?<![A-Za-z0-9_])(${k}|${snake(k)})(?![A-Za-z0-9_])`).test(section))
+    .sort();
+  console.log(`[schema-doc] ${keys.size} unknowns[] properties, ${missing.length} absent from the section: ${missing.join(" ")}`);
+  expect(missing).toEqual([]);
 });

@@ -1,5 +1,6 @@
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
+import { AppError } from "@gt/domain/errors";
 import { verify } from "../src/events.ts";
 import { runJob, recover, type RunOptions } from "../src/job-run.ts";
 import { cancel, enqueue, get, list, pause, resume, retry } from "../src/job.ts";
@@ -150,6 +151,23 @@ describe("runJob", () => {
     w.store.close();
   });
 
+  // The one drive error that DOES leave a job running: the store refused the write that would
+  // have failed it. The caller must hear that, not only the error that came first.
+  it("a drive whose failure cannot be recorded says the job was left running, with both sentences", async () => {
+    const w = world();
+    queued(w);
+    const { p } = producer("gpu.local", ["a"]);
+    const fx: World["fx"] = { ...w.fx, tx: (name, fn) => (name === "next" || name === "abandon" ? { ok: false, error: new AppError("unavailable", `${name}: database is locked`) } : w.fx.tx(name, fn)) };
+    const r = await runJob(fx, p, "job-1", opts);
+    expect(r).toMatchObject({ ok: false, error: { code: "unavailable" } });
+    if (r.ok) throw new Error("expected the drive's error");
+    expect(r.error.message).toContain("next: database is locked");
+    expect(r.error.message).toContain("abandon: database is locked");
+    expect(r.error.message).toContain("left running");
+    expect(must(get(w.store, J)).job.state).toBe("running");
+    w.store.close();
+  });
+
   it("a pause during a step lets the step finish and book, then releases the lane", async () => {
     const w = world();
     queued(w);
@@ -246,6 +264,97 @@ describe("recover", () => {
     expect(must(recover(w.fx, { holder: hostA, alive: () => false }))).toEqual([]);
     w.clock.ms += 1_000;
     expect(must(recover(w.fx, { holder: hostA, alive: () => false })).map((j) => j.id)).toEqual(["job-1"]);
+    w.store.close();
+  });
+});
+
+describe("a take-over lapses the dead drive's spend holds too", () => {
+  /** A corpse: hostB's drive reserved under `cls` and hangs; its lease runs out; a second job queues on the lane. */
+  async function corpse(w: World, cls: SpendClass): Promise<void> {
+    queued(w);
+    must(enqueue(w.store, { id: "job-2", of: { kind: "run", id: "run-2" }, producer: "test", lane: "gpu.local", mode: LIVE }, operator));
+    let reserved = (): void => {};
+    const inFlight = new Promise<void>((r) => (reserved = r));
+    const { p } = producer("gpu.local", ["a"], () => new Promise<never>(() => {}));
+    const paying = {
+      ...p,
+      perform: (step: Parameters<typeof p.perform>[0], ctx: Parameters<typeof p.perform>[1]) => {
+        must(w.store.tx((t) => reserve(t, cls, { id: "res-dead", amount: 0.04, owner: ctx.owner })));
+        reserved();
+        return p.perform(step, ctx);
+      },
+    };
+    void runJob(w.fx, paying, "job-1", { ...opts, holder: hostB, ttlS: 60, heartbeatMs: 3_600_000 });
+    await inFlight;
+    w.clock.ms += 61_000;
+  }
+  const held = (w: World): number => count(w.store, "SELECT count(*) AS n FROM spend_reservations WHERE state = 'held' AND owner = ?", "box-b/502/boot-b");
+  const CLS: SpendClass = { id: "leonardo", unit: "usd", windowMs: 86_400_000, ceiling: 10 };
+
+  it("the claim's take-over of an orphan on its slot", async () => {
+    const w = world();
+    await corpse(w, CLS);
+    expect(held(w)).toBe(1);
+    await runJob(w.fx, producer("gpu.local", ["a"]).p, "job-2", { ...opts, spendClasses: [CLS] });
+    expect(must(get(w.store, J)).job.state).toBe("interrupted");
+    expect(held(w)).toBe(0);
+    expect(must(w.store.read((r) => reservationOf(r, "res-dead")))?.state).toBe("lapsed");
+    w.store.close();
+  });
+
+  it("a drive that finds its own fence lost when it books", async () => {
+    const w = world();
+    queued(w);
+    let release = (): void => {};
+    const gate = new Promise<void>((r) => (release = r));
+    let reserved = (): void => {};
+    const inFlight = new Promise<void>((r) => (reserved = r));
+    const { p } = producer("gpu.local", ["a"]);
+    const paying = {
+      ...p,
+      perform: async (_step: Parameters<typeof p.perform>[0], ctx: Parameters<typeof p.perform>[1]) => {
+        must(w.store.tx((t) => reserve(t, CLS, { id: "res-dead", amount: 0.04, owner: ctx.owner })));
+        reserved();
+        await gate;
+        return { kind: "fatal" as const, code: "internal" as const, message: "late" };
+      },
+    };
+    const drive = runJob(w.fx, paying, "job-1", { ...opts, holder: hostB, ttlS: 60, heartbeatMs: 3_600_000, spendClasses: [CLS] });
+    await inFlight;
+    w.clock.ms += 61_000;
+    release();
+    await drive;
+    expect(must(get(w.store, J)).job.state).toBe("interrupted");
+    expect(held(w)).toBe(0);
+    w.store.close();
+  });
+});
+
+describe("the heartbeat (lease-renewal)", () => {
+  /** A world whose first heartbeat transaction finds the store busy past its timeout. */
+  function busyOnce(w: World): { fx: World["fx"]; beats: () => number } {
+    let beats = 0;
+    const fx: World["fx"] = { ...w.fx, tx: (name, fn) => (name === "heartbeat" && ++beats === 1 ? { ok: false, error: new AppError("unavailable", "store is held by another writer past 10000 ms") } : w.fx.tx(name, fn)) };
+    return { fx, beats: () => beats };
+  }
+  const slow = (ms: number) => () => new Promise<{ kind: "produced"; output: { made: string } }>((r) => setTimeout(() => r({ kind: "produced", output: { made: "a" } }), ms));
+
+  it("one busy beat misses a renewal and does not stop a healthy drive", async () => {
+    const w = world();
+    queued(w);
+    const { fx, beats } = busyOnce(w);
+    const r = must(await runJob(fx, producer("gpu.local", ["a"], slow(150)).p, "job-1", { ...opts, heartbeatMs: 20 }));
+    expect(beats()).toBeGreaterThan(1);
+    expect(r).toMatchObject({ outcome: "done", job: { state: "done" } });
+    w.store.close();
+  });
+
+  it("a lost fence still stops the drive at its next boundary", async () => {
+    const w = world();
+    queued(w);
+    const fx: World["fx"] = { ...w.fx, tx: (name, fn) => (name === "heartbeat" ? { ok: false, error: new AppError("conflict", "lease gpu.local#1: fence 1 was lost") } : w.fx.tx(name, fn)) };
+    const r = await runJob(fx, producer("gpu.local", ["a"], slow(150)).p, "job-1", { ...opts, heartbeatMs: 20 });
+    expect(r).toMatchObject({ ok: false, error: { code: "conflict" } });
     w.store.close();
   });
 });

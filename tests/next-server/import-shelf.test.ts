@@ -18,8 +18,8 @@ import { importV1ThemeIn } from "@gt/kernel/styles/v1theme";
 import { readArchive, type Archive } from "../../lib/import/archive.ts";
 import { commitImport, type Committed } from "../../lib/import/commit.ts";
 import { kernelIdOf, planImport } from "../../lib/import/project.ts";
-import { themeName, v1AssetItemId, type PublicFile } from "../../lib/import/shelf.ts";
-import { THEMES_STORE } from "../../lib/studioDb.ts";
+import { publicFile, themeName, v1AssetItemId, type PublicFile } from "../../lib/import/shelf.ts";
+import { ASSETS_STORE, THEMES_STORE } from "../../lib/studioDb.ts";
 import { BLOCK, SHELF, T0, clearV1, pngB64, putRows, seedV1, v1Archive } from "./import-harness.ts";
 
 // THE SHELF, IMPORTED (Phase 5 wave B, L55): every v1 theme of the account lands as a Style and
@@ -118,6 +118,21 @@ describe("the preview", () => {
     expect(r.ok && r.value.kind).toBe("stale");
     expect(r.ok && r.value.kind === "stale" && r.value.themes.find((t) => t.v1Id === seed.theme.id)?.outcome).toBe("skip");
     expect(u.store.read((x) => x.get("SELECT count(*) AS n FROM projects")?.["n"])).toEqual(ok(0));
+  });
+});
+
+describe("the studio's served files", () => {
+  it("reads a src whose percent escapes do not decode as a file not served here, and the preview stages the rest", async () => {
+    // decodeURI throws a URIError on "%.j" - a v1 asset named "50%.jpg" kept its src unescaped.
+    expect(publicFile("/trials/50%.jpg")).toBeNull();
+    const seed = await seedV1("uid-s");
+    await putRows(ASSETS_STORE, [{ id: "as-percent", uid: seed.uid, path: ["refs"], name: "half", src: "/trials/50%.jpg", kind: "image", createdAt: T0 }]);
+    const u = universe();
+    const archive = read(await v1Archive(seed.uid));
+    const p = u.store.read((r) => planImport(r, archive, publicFile));
+    if (!p.ok) throw p.error;
+    expect(p.value.items.find((i) => i.preview.v1Id === "as-percent")?.preview).toMatchObject({ outcome: "refuse", reason: "its file /trials/50%.jpg is not served here" });
+    expect(p.value.projects.map((x) => x.preview.outcome)).toEqual(["import", "import", "import", "import"]);
   });
 });
 

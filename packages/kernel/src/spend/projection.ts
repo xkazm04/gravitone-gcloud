@@ -3,7 +3,7 @@ import type { Job } from "@gt/domain/job";
 import type { MissingStep, StepOutcome } from "../job-core.ts";
 import { loadJob } from "../job.ts";
 import type { Reader, Tx } from "../store.ts";
-import { book } from "./ledger.ts";
+import { book, type SettleBasis } from "./ledger.ts";
 import { JOB_USD } from "./meter.ts";
 
 // THE JOB'S SPEND AS A PROJECTION OF THE METER (decision 7): what the driver
@@ -22,7 +22,7 @@ const usd6 = (x: number): number => Math.round(x * 1e6) / 1e6;
  */
 export function chargeOutcome(t: Tx, job: Job, step: MissingStep, o: StepOutcome, owner: string): void {
   const axis = { jobId: job.id, step: step.name };
-  const row = (amount: number, outcome: "served" | "failed", basis: string): void => book(t, JOB_USD, { amount, outcome, basis, axes: { producer: job.producer } }, owner, axis);
+  const row = (amount: number, outcome: "served" | "failed", basis: SettleBasis): void => book(t, JOB_USD, { amount, outcome, basis, axes: { producer: job.producer } }, owner, axis);
   const none = (reason: string): void => book(t, JOB_USD, { amount: undefined, outcome: "served", basis: "estimate", axes: { producer: job.producer }, reason }, owner, axis);
   if (o.kind === "vendor-failure" && o.costUsd !== undefined && o.costUsd > 0) row(o.costUsd, "failed", "vendor");
   if (o.kind !== "produced") return;
@@ -40,10 +40,11 @@ const num = (v: unknown): number => (typeof v === "number" ? v : 0);
 
 /** The job's spend as the meter has it: settled and booked rows, and unpriced rows, by job id. */
 export function meterOf(r: Reader, jobId: string): JobMeter {
-  const usd = usd6(num(r.get("SELECT total(usd) AS v FROM spend_rows WHERE job_id = ?", jobId)?.["v"]));
-  const noUsd = num(r.get("SELECT count(*) AS v FROM spend_rows WHERE job_id = ? AND usd IS NULL", jobId)?.["v"]);
-  const unpriced = noUsd + num(r.get("SELECT count(*) AS v FROM spend_unpriced WHERE job_id = ?", jobId)?.["v"]);
-  const estimated = num(r.get("SELECT count(*) AS v FROM spend_rows WHERE job_id = ? AND basis = 'estimate'", jobId)?.["v"]) > 0;
+  // One pass over the job's rows (spend_rows_job), one over its unpriced rows: this runs in every step's booking.
+  const rows = r.get("SELECT total(usd) AS usd, total(usd IS NULL) AS no_usd, total(basis = 'estimate') AS est FROM spend_rows WHERE job_id = ?", jobId);
+  const usd = usd6(num(rows?.["usd"]));
+  const unpriced = num(rows?.["no_usd"]) + num(r.get("SELECT count(*) AS v FROM spend_unpriced WHERE job_id = ?", jobId)?.["v"]);
+  const estimated = num(rows?.["est"]) > 0;
   return { usd, unpriced, basis: estimated || unpriced > 0 ? "estimate" : "reported" };
 }
 

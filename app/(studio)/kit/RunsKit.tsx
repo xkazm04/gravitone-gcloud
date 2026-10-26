@@ -4,10 +4,14 @@
 // with every bar look, a +N overflow, a Weir pile, a Calendar pin and a selected job lighting
 // its chains; the lane chip in each kind; the resource summary. The data is literal and the
 // clock is fixed, so the specimen draws the same every time it is opened. Selecting a bar
-// here lights its chains as Runs does; the selection is the specimen's only state.
+// here lights its chains as Runs does; the selection is the specimen's only state. Beside them the
+// LoadBand over two literal nights (spark night-load-band): a balanced one, and one whose CPU queued
+// itself while the GPU idled, with a gap where the worker restarted and a RAM the probe never read.
 
 import { useState } from "react";
 
+import { LOAD_BAND, LOAD_STRIP_MS, type LoadResource, type LoadSummary } from "@gt/domain/load";
+import { LoadBand } from "@gt/ui/components/load/LoadBand.tsx";
 import { LaneChip } from "@gt/ui/components/runs/LaneChip.tsx";
 import { ResourceSummary } from "@gt/ui/components/runs/ResourceSummary.tsx";
 import { RunsDayline, type DaylineBar, type DaylineRow } from "@gt/ui/components/runs/RunsDayline.tsx";
@@ -58,6 +62,47 @@ const DEPS: readonly Dep[] = [
   { from: "gate", to: "motion" },
 ];
 
+/** A resource from its strip (a mean per five minutes, -1 unread), its figures agreeing with its bars. */
+function resource(strip: readonly number[]): LoadResource {
+  const read = strip.filter((v) => v >= 0);
+  const sorted = [...read].sort((a, b) => a - b);
+  const n = read.length;
+  if (n === 0) return { avg: 0, p95: 0, inBand: 0, read: 0, strip: [] };
+  return {
+    avg: read.reduce((a, v) => a + v, 0) / n,
+    p95: sorted[Math.min(n - 1, Math.ceil(n * 0.95) - 1)] ?? 0,
+    inBand: read.filter((v) => v >= LOAD_BAND.low && v <= LOAD_BAND.high).length / n,
+    read: n * 5,
+    strip,
+  };
+}
+const SLOTS = 72;
+const curve = (f: (i: number) => number, gap?: readonly [number, number]): number[] =>
+  Array.from({ length: SLOTS }, (_, i) => (gap !== undefined && i >= gap[0] && i < gap[1] ? -1 : Math.round(Math.max(0, Math.min(0.99, f(i))) * 100) / 100));
+const night = (cpu: number[], ram: number[], gpu: number[], rest: Pick<LoadSummary, "commit" | "waited">): LoadSummary => ({
+  fromMs: NOW - SLOTS * LOAD_STRIP_MS,
+  toMs: NOW,
+  samples: SLOTS * 5,
+  band: LOAD_BAND,
+  cpu: resource(cpu),
+  ram: resource(ram),
+  gpu: resource(gpu),
+  ...rest,
+});
+const RESTART: readonly [number, number] = [40, 46];
+const BALANCED = night(
+  curve((i) => 0.68 + 0.1 * Math.sin(i * 0.35)),
+  curve((i) => 0.72 + 0.05 * Math.sin(i * 0.12)),
+  curve((i) => 0.55 + 0.3 * Math.sin(i * 0.27)),
+  { commit: { peakGb: 88.4, limitGb: 102 }, waited: { memory: 41, "comfy-queue": 12 } },
+);
+const IDLE_GPU = night(
+  curve((i) => 0.86 + 0.08 * Math.sin(i * 0.5), RESTART),
+  Array.from({ length: SLOTS }, () => -1),
+  curve((i) => (i % 18 === 0 ? 0.4 : 0.03), RESTART),
+  { commit: { peakGb: 97 }, waited: { cpu: 22, alone: 6, vram: 3 } },
+);
+
 export function RunsSection() {
   const [job, setJob] = useState<string | null>("frames");
   const lit = light({ job }, DEPS, new Set(["motion"]));
@@ -87,6 +132,14 @@ export function RunsSection() {
           <LaneChip lane="cloud.qwen" />
           <LaneChip lane="weir" />
           <LaneChip lane="calendar" />
+        </div>
+      </Spec>
+      <Spec names={["LoadBand"]} source="load/LoadBand.tsx · band.ts · spark night-load-band" wide>
+        <div className={k.col}>
+          <span className={k.lab}>balanced</span>
+          <LoadBand load={BALANCED} />
+          <span className={k.lab}>cpu over · gpu idle · restart gap · ram unread</span>
+          <LoadBand load={IDLE_GPU} />
         </div>
       </Spec>
       <Spec names={["ResourceSummary"]} source="runs/ResourceSummary.tsx">

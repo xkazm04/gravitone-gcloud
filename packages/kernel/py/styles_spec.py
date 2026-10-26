@@ -14,20 +14,23 @@ if _HERE not in sys.path:
     sys.path.append(_HERE)
 from kernel_store import StoreError  # noqa: E402
 from styles import StyleRefused, Styles  # noqa: E402
+from verify_events import usage  # noqa: E402
+
+ARGC = {"put": 5, "export": 4}
 
 
 def main(argv):
+    if len(argv) < 2 or ARGC.get(argv[1]) != len(argv):
+        print(usage(__doc__), file=sys.stderr)
+        return 2
     op, store = argv[1], argv[2]
     st = Styles(store, host="spec-host", pid=4242)
     try:
         if op == "put":
             out = {"result": st.put_readback(json.loads(argv[3]), force=argv[4] == "1", by="spec")}
-        elif op == "export":
+        else:
             st.export(argv[3])
             out = {"result": "exported"}
-        else:
-            print(json.dumps({"error": "unknown op %s" % op}))
-            return 2
     except (StyleRefused, StoreError) as e:
         out = {"refused": str(e)}
     print(json.dumps(out))

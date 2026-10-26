@@ -7,7 +7,8 @@ import type { ResourceLane } from "@gt/domain/lane";
 import type { IngestEvent, ProjectCtx } from "./types.ts";
 
 // THE PROJECTION'S VOCABULARY - the few pure rules every adapter applies the
-// same way, so eleven sources cannot spell "when did this happen" eleven ways.
+// same way, so the sources (./sources.ts V1_SOURCES) cannot each spell "when did
+// this happen" their own way.
 //
 //   instant()   v1 writes time in three shapes: Python's `isoformat()` with
 //               `+00:00` and whole seconds (pipeline/foundry/forge.py `now()`),
@@ -54,9 +55,25 @@ export type Fact = {
   readonly data?: EventData;
 };
 
+/** Contexts made by liveCtx: a read that wants a projection's live/weir/slots/holds and none of its events. */
+const liveOnly = new WeakSet<ProjectCtx>();
+
+/**
+ * `ctx`, marked live-only: `logged` then digests nothing and returns no facts,
+ * so Runs' render-time read (sync.ts liveJobs) does not hash every log line of
+ * up to 500 runs per source to build events it throws away. The tally is
+ * counted from the records, not from these events, so it is unaffected.
+ */
+export function liveCtx(ctx: ProjectCtx): ProjectCtx {
+  const marked = { ...ctx };
+  liveOnly.add(marked);
+  return marked;
+}
+
 /** The fact builders for one source under one sync. */
 export function facts(source: string, ctx: ProjectCtx) {
   const now = ctx.now.toISOString();
+  const eventsWanted = !liveOnly.has(ctx);
   const make = (recordId: string, fact: string, f: Fact, occurredAt: string, atSrc: IngestEvent["atSrc"], extra: EventData = {}): IngestEvent => {
     const e: IngestEvent = {
       actor: f.actor,
@@ -76,6 +93,7 @@ export function facts(source: string, ctx: ProjectCtx) {
   };
   const observed = (recordId: string, fact: string, f: Fact): IngestEvent => make(recordId, fact, f, now, "derived");
   const logged = (recordId: string, log: readonly { readonly at: string | null; readonly msg: string }[], f: Omit<Fact, "type">): IngestEvent[] => {
+    if (!eventsWanted) return [];
     const seen = new Map<string, number>();
     return log.map((line) => {
       const id = digest(`${line.at ?? ""}\n${line.msg}`);

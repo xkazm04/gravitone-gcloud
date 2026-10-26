@@ -6,9 +6,12 @@
 // every failure that actually happens. "It stopped working" was unanswerable on
 // the engine that costs the most per call.
 //
-//   [text] edit-plan ok  provider=claude-cli model=claude-opus-5 rung=preferred ms=184320 cost=$0.8412 schema=prompted
-//   [text] scene-direction ok  provider=google model=gemini-3.6-pro rung=alternate ms=41100 cost=unpriced schema=native rerouted=claude-cli:managed-platform
-//   [text] edit-plan err kind=not-installed provider=claude-cli ms=8 tried=claude-cli:not-installed,google:no-key msg="…"
+//   [text] edit-plan ok provider=claude-cli model=claude-opus-5 rung=preferred ms=184320 in=40384c cost=$0.8412 schema=prompted
+//   [text] scene-direction ok provider=google model=gemini-3.6-flash rung=alternate ms=41100 in=31207c cost=unpriced schema=native rerouted=claude-cli:managed-platform
+//   [text] edit-plan err kind=not-installed ms=8 in=40384c tried=claude-cli:not-installed,google:no-key msg="No reasoning engine could serve this edit-plan turn."
+//
+// (tests/golden-path/text-log-line.probe.spec.ts prints these three through
+// formatTurn and holds them to it.)
 //
 // ── WHAT A LOG LINE MAY CARRY ───────────────────────────────────────────────
 //

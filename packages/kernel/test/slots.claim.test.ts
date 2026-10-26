@@ -2,7 +2,7 @@ import { afterAll, afterEach, describe, expect, it } from "vitest";
 import type { Result } from "@gt/domain/errors";
 import { INTERRUPTED_TEXT } from "@gt/domain/slot";
 import { gateFacts } from "../src/parts/gates.ts";
-import { snapshotOf } from "../src/lease.ts";
+import { claimIn, snapshotOf } from "../src/lease.ts";
 import { heartbeatClaim, publishByAct, recordFailure, recordMetric, recordPublication } from "../src/slots/outcome.ts";
 import { getSlot, listPublicationsIn, slottedIn, snapshotsIn } from "../src/slots/read.ts";
 import { claimResource } from "../src/slots/schema.ts";
@@ -108,6 +108,28 @@ describe("a claimant that is gone", () => {
   });
 });
 
+describe("a stale claim the sweep cannot take over", () => {
+  it("is skipped and reported; the rest of the pass still lands", () => {
+    const w = fresh();
+    const a = must(createSlot(w.k.store, draft(), OP)).slot;
+    must(sweep(w.k.store, facts(), { claim: true, holder: DEAD, alive: () => true }));
+    // a live waiter in line on slot:<a>: a wait:false take-over has someone ahead of it, so claimIn answers busy
+    const waiter = { ...ME, pid: 4300, bootId: "boot-waiter" };
+    const queued = must(w.k.store.tx((t) => claimIn(t, { resource: claimResource(a.id), holder: waiter, ticket: "t-waiter", ttlS: CLAIM_TTL_S, wait: true }, () => true)));
+    expect(queued.kind).toBe("queued");
+    const b = must(createSlot(w.k.store, draft({ libraryItemId: ITEM_B, at: at(-90) }), OP)).slot;
+    const r = sweep(w.k.store, facts(), { claim: false, holder: ME, alive: aliveBut(DEAD.pid) });
+    expect(r.ok ? null : r.error.message).toBeNull();
+    const report = must(r);
+    expect(report.missed).toEqual([b.id]);
+    expect(report.unfenced).toEqual([a.id]);
+    expect(must(getSlot(w.k.store, a.id)).slot.state).toBe("publishing");
+    expect(must(getSlot(w.k.store, b.id)).slot.state).toBe("missed");
+    // the attempt dropped the stale holder, so the next pass finds the lease free and fails the slot
+    expect(must(sweep(w.k.store, facts(), { claim: false, holder: ME, alive: aliveBut(DEAD.pid) })).interrupted).toEqual([a.id]);
+  });
+});
+
 describe("blog slots go out by an act", () => {
   it("the tick never claims a blog slot; the approve's act publishes it with its pull request", () => {
     const w = fresh();
@@ -137,6 +159,16 @@ describe("metrics", () => {
     expect(must(w.k.store.read((r) => snapshotsIn(r, live.id)))).toEqual([reading]);
     expect(code(recordMetric(w.k.store, { ...reading, publicationId: plan.id }, PUBLISHER))).toBe("refused");
     expect(eventTypes(w.k, live.id)).toEqual(["publish", "metric.snapshot"]);
+    // An instant is held in one shape whatever its spelling, as the v1 import writes it: a reading
+    // at "13:00:00Z" sorted after one half a second later ('Z' > '.').
+    const whole = (iso: string): string => iso.replace(/\.000Z$/, "Z");
+    const late = { ...reading, at: new Date(Date.parse(at(120)) + 500).toISOString() };
+    must(recordMetric(w.k.store, late, PUBLISHER));
+    must(recordMetric(w.k.store, { ...reading, at: whole(at(120)) }, PUBLISHER));
+    expect(must(w.k.store.read((r) => snapshotsIn(r, live.id))).map((x) => x.at)).toEqual([at(60), at(120), late.at]);
+    expect(live.publishedAt).toBe(at(1));
+    const act = must(createSlot(w.k.store, draft({ channel: "blog", libraryItemId: "article:run-9" }), OP)).slot;
+    expect(must(publishByAct(w.k.store, act.id, { platformId: "7", dry: false, publishedAt: whole(at(0)) }, OP)).publication.publishedAt).toBe(at(0));
   });
 });
 

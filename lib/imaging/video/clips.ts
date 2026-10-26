@@ -214,17 +214,40 @@ async function run(
   }
 
   // Money first, so a record write that throws below cannot leave a hold alive.
+  // A ledger that refuses the write (an unopenable store) cannot undo what the
+  // vendor did: the miss is logged with the figure it owed, and the clip still
+  // reaches its terminal record - `done` never rejects, and a delivered clip
+  // left `rendering` would later read as a server that stopped (readClip).
   const acc = accepted as VideoAccepted | null;
-  if (acc) {
-    await settleVideo(hold, {
-      usd: acc.costUsd,
-      project: rec.projectId,
-      provider: a.id,
-      model: rec.model,
-      outcome: outcome.kind === "done" ? "served" : "failed",
-      basis: acc.costBasis,
-    });
-  } else await releaseVideo(hold);
+  try {
+    if (acc) {
+      await settleVideo(hold, {
+        usd: acc.costUsd,
+        project: rec.projectId,
+        provider: a.id,
+        model: rec.model,
+        outcome: outcome.kind === "done" ? "served" : "failed",
+        basis: acc.costBasis,
+      });
+    } else if (outcome.kind === "failed" && outcome.billed) {
+      // The vendor took the start and never named a job: a timeout or a 5xx is
+      // presumed billed (lib/imaging/errors.ts presumedBilled), so the hold's
+      // figure is booked as an estimate rather than released as $0.
+      await settleVideo(hold, {
+        usd: hold.amount,
+        project: rec.projectId,
+        provider: a.id,
+        model: rec.model,
+        outcome: "failed",
+        basis: "estimated",
+      });
+    } else await releaseVideo(hold);
+  } catch (e) {
+    console.error(
+      `[video] clip spend not recorded id=${clipId} ${acc ? `settle usd=${acc.costUsd ?? "unpriced"}` : "release"} ` +
+        `${scrub(errorMessage(e)).slice(0, 200)}`,
+    );
+  }
 
   const finished = Date.now();
   let out: ClipRecord;

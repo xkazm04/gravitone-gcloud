@@ -1,0 +1,56 @@
+/* /scout: the header (the two packet doors, the live | all view), the bands on the left, the side column (the
+   selected node, the split) on the right. Below 1100px the side column moves above the bands and the page
+   scrolls as one; each band's graph scrolls sideways inside itself, never the page. */
+/* the page: the title section over the view */
+.page{flex:1;min-height:0;display:flex;flex-direction:column}
+.head{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-5);padding:var(--sp-3) var(--sp-5);border-bottom:1px solid var(--hair)}
+/* the head's right end: the spend and the NEXT scout pile; on a narrow screen it wraps to its own row, left. NEXT's
+   ⏎ keycap is the Floor's binding (open-next), which this page does not hold, so it is not drawn here. */
+.headEnd{margin-left:auto;display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-3);min-width:0}
+.headNext{display:flex;min-width:0}
+.headNext kbd{display:none}
+.scout{flex:1;min-height:0;display:flex;flex-direction:column}
+.top{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-3);padding:var(--sp-3) var(--sp-5);border-bottom:1px solid var(--hair)}
+.grow{flex:1}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) var(--w-detail)}
+.body[data-side=none]{grid-template-columns:minmax(0,1fr)}
+.bands{min-width:0;min-height:0;overflow:auto;padding:var(--sp-3) var(--sp-5) var(--sp-7)}
+.side{min-width:0;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:var(--sp-3);border-left:1px solid var(--hair)}
+
+/* A band: the Fold's head and body are this grid's cells (display:contents on the Fold), the figures on the
+   head's row, so they read whether the band is open or folded. */
+.band,.genre{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:var(--sp-3);border-bottom:1px solid var(--hair);padding:var(--sp-2) 0}
+.genre{border-bottom:none;border-top:1px solid var(--hair);margin-left:var(--sp-5)}
+.band>:last-child,.genre>:last-child{display:contents}
+.band>:last-child>:first-child,.genre>:last-child>:first-child{grid-column:1;grid-row:1;margin:0;min-width:0}
+.band>:last-child>:last-child,.genre>:last-child>:last-child{grid-column:1 / -1;grid-row:2;min-width:0}
+.meta{grid-column:2;grid-row:1;display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:var(--sp-3);min-width:0}
+.depth{font:600 var(--fs-micro)/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+
+/* the side column */
+.panelBody{display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5)}
+.words{margin:0;font:500 var(--fs-ui)/1.45 var(--sans);color:var(--ink-bright)}
+.row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-2)}
+.from{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--sp-1);font:500 var(--fs-meta)/1.4 var(--sans);color:var(--text)}
+.fromKind{font:600 var(--fs-micro)/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.split{display:flex;flex-direction:column;gap:var(--sp-1)}
+.share,.shareGenre{display:grid;grid-template-columns:minmax(0,1fr) var(--w-thumb) auto;align-items:center;gap:var(--sp-2)}
+.shareGenre{padding-left:var(--sp-5)}
+.shareKey{font:600 var(--fs-meta)/1.2 var(--mono);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.share .shareKey{color:var(--ink-bright)}
+.shareField{min-width:0;display:flex}
+.pct{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+
+@media (max-width:1099px){
+  .body{display:flex;flex-direction:column;overflow:auto}
+  .bands{flex:none;overflow:visible;order:2}
+  .side{flex:none;overflow:visible;order:1;border-left:none;border-bottom:1px solid var(--hair)}
+  .side>section{flex:none}
+}
+@media (max-width:639px){
+  .band,.genre{grid-template-columns:minmax(0,1fr)}
+  .meta{grid-column:1;grid-row:2;justify-content:flex-start}
+  .band>:last-child>:last-child,.genre>:last-child>:last-child{grid-row:3}
+  .genre{margin-left:var(--sp-3)}
+  .top,.bands{padding-left:var(--sp-wide);padding-right:var(--sp-wide)}
+}

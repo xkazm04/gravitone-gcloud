@@ -8,7 +8,7 @@
 // file"), so its `audioUrl` is downloaded once, when the job first runs, to
 // audio.mp3 - Suno serves mp3 there.
 
-import { copyFile, writeFile } from "node:fs/promises";
+import { copyFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { errorMessage } from "@gt/domain/errors";
@@ -25,16 +25,26 @@ export type FetchClipFn = (url: string) => Promise<Uint8Array>;
 /** Suno's CDN answers a few MB in a second or two; ninety seconds is a stall. */
 const CLIP_TIMEOUT_MS = 90_000;
 
+/** The URL's host for a sentence; the URL itself when it does not parse (fetch
+ *  refuses it first, and a `new URL` inside that catch would throw over it). */
+const hostOf = (url: string): string => {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+};
+
 export const fetchClipBytes: FetchClipFn = async (url) => {
   let res: Response;
   try {
     res = await fetch(url, { signal: AbortSignal.timeout(CLIP_TIMEOUT_MS) });
   } catch (e) {
-    throw new Error(`the clip's audio could not be downloaded from ${new URL(url).host}: ${errorMessage(e)}`);
+    throw new Error(`the clip's audio could not be downloaded from ${hostOf(url)}: ${errorMessage(e)}`);
   }
-  if (!res.ok) throw new Error(`the clip's audio at ${new URL(url).host} answered HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`the clip's audio at ${hostOf(url)} answered HTTP ${res.status}`);
   const bytes = new Uint8Array(await res.arrayBuffer());
-  if (!bytes.byteLength) throw new Error(`the clip's audio at ${new URL(url).host} was empty`);
+  if (!bytes.byteLength) throw new Error(`the clip's audio at ${hostOf(url)} was empty`);
   return bytes;
 };
 
@@ -63,8 +73,9 @@ export async function fetchAudio(jobId: string, src: MvSource, fetchClip: FetchC
     const ext = path.extname(take.file.path).toLowerCase();
     const rel = jobFileRel(jobId, `audio${AUDIO_EXTS.has(ext) ? ext : ".mp3"}`);
     const staged = stagingAbs(rel);
-    await copyFile(filePathAbs(take.file.path), staged);
-    return landFile(staged, rel);
+    const from = filePathAbs(take.file.path);
+    await stageThenLand(staged, rel, () => copyFile(from, staged));
+    return rel;
   }
   const clip = (await readSuno()).clips.find((c) => c.id === src.id);
   if (!clip) throw new Error(`the Suno clip ${src.id} is no longer in the store`);
@@ -72,6 +83,17 @@ export async function fetchAudio(jobId: string, src: MvSource, fetchClip: FetchC
   const bytes = await fetchClip(clip.audioUrl);
   const rel = jobFileRel(jobId, "audio.mp3");
   const staged = stagingAbs(rel);
-  await writeFile(staged, bytes);
-  return landFile(staged, rel);
+  await stageThenLand(staged, rel, () => writeFile(staged, bytes));
+  return rel;
+}
+
+/** Stage a file and land it; a write that fails part-way removes its staged half, as a failed landing does. */
+async function stageThenLand(staged: string, rel: string, write: () => Promise<void>): Promise<void> {
+  try {
+    await write();
+  } catch (e) {
+    await rm(staged, { force: true }).catch(() => {});
+    throw e;
+  }
+  await landFile(staged, rel);
 }

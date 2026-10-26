@@ -9,7 +9,9 @@ import "server-only";
 // (`toneWav`): honest about being a fixture, and enough for Space to play something.
 
 
+import { thumbSrc } from "@gt/catalog/presets";
 import type { MediaLane } from "@gt/domain/lane";
+import { LOAD_BAND, LOAD_STRIP_MS, type LoadResource, type LoadSummary } from "@gt/domain/load";
 import type { PacketMode, PacketSource } from "@gt/domain/source";
 import type { Presentation } from "@gt/ui/board/port";
 
@@ -66,7 +68,7 @@ const SCENES = [
   { id: "peak-and-fall", ref: "/deck-art/template-trailer.webp" },
 ];
 
-const forgeItems: SeedItem[] = SCENES.flatMap((sc) => PRESETS.slice(0, 4).map((p) => ({ id: `${sc.id}/${p}`, row: sc.id, url: `/presets/${p}.jpg`, mime: "image/jpeg" })));
+const forgeItems: SeedItem[] = SCENES.flatMap((sc) => PRESETS.slice(0, 4).map((p) => ({ id: `${sc.id}/${p}`, row: sc.id, url: thumbSrc(p), mime: "image/jpeg" })));
 
 // One /scout night (lib/decision/v1/sources/scout.ts): an extracted look's replicas, a found scene's
 // replicas and clip under its keyframe, a finding and a watch line as text cells.
@@ -80,6 +82,54 @@ const SCOUT_ITEMS: SeedItem[] = [
   { id: "c-04/text", row: "c-04", url: "", mime: "text/plain" },
 ];
 const SCENE_PROMPT = "wide low-angle shot, 24mm, a lone figure on the left third against a pale sky, long shadow toward camera";
+// The muse wing's night (spark scout-muse): idea posters only, each cell's meta its target, the card it draws and
+// what the judge read - the same night /scout's fixture graph shows as closed, so "open on Board" lands here.
+const MUSE_ITEMS: SeedItem[] = [
+  { id: "c-01/board", row: "c-01", url: "/deck-art/template-cinematic.webp", mime: "image/webp" },
+  { id: "c-02/board", row: "c-02", url: "/deck-art/discipline-free.webp", mime: "image/webp" },
+  { id: "c-03/board", row: "c-03", url: "/presets/paper-relief.jpg", mime: "image/jpeg" },
+];
+
+// A night's load as the summary hands it to the desk (@gt/domain/load), built from its strip - one
+// mean per five minutes, -1 where nothing was read - so the averages, the p95 and the share in band
+// agree with the bars the desk draws. The fixture writes no load_samples rows: the kernel table is
+// the real side's, and this literal is the only way a fixture night shows its load.
+const slot2 = (x: number): number => Math.round(Math.max(0, Math.min(0.99, x)) * 100) / 100;
+function loadOf(strip: readonly number[]): LoadResource {
+  const read = strip.filter((v) => v >= 0);
+  const sorted = [...read].sort((a, b) => a - b);
+  const n = read.length;
+  if (n === 0) return { avg: 0, p95: 0, inBand: 0, read: 0, strip };
+  const avg = read.reduce((a, v) => a + v, 0) / n;
+  const inBand = read.filter((v) => v >= LOAD_BAND.low && v <= LOAD_BAND.high).length / n;
+  return { avg, p95: sorted[Math.min(n - 1, Math.ceil(n * 0.95) - 1)] ?? 0, inBand, read: n * (LOAD_STRIP_MS / 60_000), strip };
+}
+function nightLoad(fromMs: number, slots: number, at: { readonly cpu: (i: number) => number; readonly ram: (i: number) => number; readonly gpu: (i: number) => number }, rest: Pick<LoadSummary, "commit" | "waited">): LoadSummary {
+  const strip = (f: (i: number) => number): number[] => Array.from({ length: slots }, (_, i) => slot2(f(i)));
+  return { fromMs, toMs: fromMs + slots * LOAD_STRIP_MS, samples: slots * (LOAD_STRIP_MS / 60_000), band: LOAD_BAND, cpu: loadOf(strip(at.cpu)), ram: loadOf(strip(at.ram)), gpu: loadOf(strip(at.gpu)), ...rest };
+}
+/** 2026-10-21, 22:00 to 06:30 UTC: CPU and RAM mostly in band, the GPU in bursts between the stills. */
+const NIGHT_21 = nightLoad(
+  Date.UTC(2026, 9, 21, 22, 0),
+  102,
+  {
+    cpu: (i) => (i < 4 ? 0.2 + i * 0.12 : 0.67 + 0.13 * Math.sin(i * 0.31) + 0.05 * Math.cos(i * 1.7)),
+    ram: (i) => (i < 4 ? 0.45 + i * 0.06 : 0.71 + 0.07 * Math.sin(i * 0.11)),
+    gpu: (i) => 0.32 + 0.62 * Math.max(0, Math.sin(i * 0.23)),
+  },
+  { commit: { peakGb: 88.4, limitGb: 102 }, waited: { memory: 41, "comfy-queue": 12 } },
+);
+/** 2026-10-20, 23:00 to 04:00 UTC: an under-scoped night - the box sat idle for most of it. */
+const NIGHT_20 = nightLoad(
+  Date.UTC(2026, 9, 20, 23, 0),
+  60,
+  {
+    cpu: (i) => 0.38 + 0.12 * Math.sin(i * 0.4),
+    ram: (i) => 0.52 + 0.05 * Math.sin(i * 0.2),
+    gpu: (i) => (i % 12 < 3 ? 0.9 : 0.04),
+  },
+  { commit: { peakGb: 61.2, limitGb: 102 }, waited: {} },
+);
 
 const DECK = ["discipline-educational", "discipline-free", "discipline-trailer", "engine-adjudication", "engine-derived-short", "template-short-form-clip"];
 const AUDIO = ["smeared-transients", "vocal-garble"];
@@ -133,8 +183,8 @@ export function seeds(): readonly Seed[] {
       title: "Dojo cycle 3",
       runId: "cycle-3",
       items: [0, 1, 2].flatMap((i) => [
-        { id: `pair-${i + 1}/base`, row: `pair-${i + 1}`, url: `/presets/${PRESETS[i] ?? "blueprint"}.jpg`, mime: "image/jpeg" },
-        { id: `pair-${i + 1}/improved`, row: `pair-${i + 1}`, url: `/presets/${PRESETS[i + 3] ?? "data-neon"}.jpg`, mime: "image/jpeg" },
+        { id: `pair-${i + 1}/base`, row: `pair-${i + 1}`, url: thumbSrc(PRESETS[i] ?? "blueprint"), mime: "image/jpeg" },
+        { id: `pair-${i + 1}/improved`, row: `pair-${i + 1}`, url: thumbSrc(PRESETS[i + 3] ?? "data-neon"), mime: "image/jpeg" },
       ]),
       imported: [],
       machine: { "pair-1": "a", "pair-2": "b", "pair-3": "a" },
@@ -275,6 +325,54 @@ export function seeds(): readonly Seed[] {
         ],
         oracle: { passed: true, summary: "4 candidates · 7 cells · 0 failed · stopped: target", fixture: true },
         meta: "scout · 9 sources",
+        load: NIGHT_21,
+      },
+    },
+    {
+      id: "pkt:scout:2026-10-20",
+      lane: "image",
+      source: "scout",
+      mode: "matrix-cull",
+      title: "scout 2026-10-20",
+      runId: "2026-10-20",
+      committed: true,
+      items: SCOUT_ITEMS.slice(0, 2),
+      imported: [
+        { candidate: "c-01/ink-wash/replica-1", verdict: "keep", reasons: [] },
+        { candidate: "c-01/ink-wash/transfer-1", verdict: "reject", reasons: ["style"] },
+      ],
+      present: {
+        items: {
+          "c-01/ink-wash/replica-1": { label: "replica of s-02", meta: "replica · 81%" },
+          "c-01/ink-wash/transfer-1": { label: "transfer · a harbour at dusk", meta: "transfer · 74%" },
+        },
+        rows: [{ id: "c-01/ink-wash", label: "Ink wash · illustration", ref: "/deck-art/discipline-educational.webp", inCatalogue: false }],
+        meta: "scout · 3 sources",
+        load: NIGHT_20,
+      },
+    },
+    {
+      id: "pkt:scout:muse:2026-10-23",
+      lane: "image",
+      source: "scout",
+      mode: "matrix-cull",
+      title: "muse 2026-10-23",
+      runId: "muse:2026-10-23",
+      items: MUSE_ITEMS,
+      imported: [],
+      present: {
+        items: {
+          "c-01/board": { label: "Mara Venn at the chart table", meta: "character · free · Mara Venn, 34 · read 35 · covered", prompt: "character poster of Mara Venn, a woman aged 34, auburn bob, freckles, green wool coat, brass compass on a chain" },
+          "c-02/board": { label: "Studio-lit 3D concept bust, matte clay", meta: "style · free · read 42 · covered", prompt: "3D concept bust of a woman aged 42, matte clay, studio three-point light" },
+          "c-03/board": { label: "A tango in an empty ballroom", meta: "scene · free · read 29 · revealing", prompt: "two dancers mid-turn in an empty ballroom, a woman aged 30 in a long evening dress, warm practicals" },
+        },
+        rows: [
+          { id: "c-01", label: "Mara Venn at the chart table", group: "ideas", use: "other: visual novel, chart-room sprite", aim: "learn a sprite pose against a chart table", prompt: "character poster of Mara Venn, a woman aged 34" },
+          { id: "c-02", label: "Studio-lit 3D concept bust, matte clay", group: "ideas", use: "companion-chat: avatar bust", aim: "extract a new artstyle: matte clay under three-point light", prompt: "3D concept bust of a woman aged 42, matte clay" },
+          { id: "c-03", label: "A tango in an empty ballroom", group: "ideas", use: "genre-video: ballroom dance scene", aim: "a scene as a genre-video baseline", prompt: "two dancers mid-turn in an empty ballroom" },
+        ],
+        oracle: { passed: true, summary: "3 candidates · 3 cells · 0 failed", fixture: true },
+        meta: "muse · 4 ideas",
       },
     },
     {

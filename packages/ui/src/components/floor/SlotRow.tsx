@@ -12,7 +12,6 @@
 // click opens it in place (the Floor's level sheet) and a modified click keeps the browser's
 // own meaning (a new tab gets the same record as a page).
 
-import type { MouseEvent } from "react";
 
 import { ChannelBadge, isBadgeChannel } from "../channel/ChannelBadge.tsx";
 import channelCss from "../channel/ChannelBadge.module.css";
@@ -20,6 +19,7 @@ import { SrOnly } from "../a11y/SrOnly.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
+import { plainClick } from "../link/plain.ts";
 import { StatusPill } from "../status/StatusPill.tsx";
 import { clock, isBad, type RailSlot } from "./calendar.ts";
 import { DRIFT_WORDS, missedWords } from "./slot.ts";
@@ -34,9 +34,6 @@ export function SlotMark({ channel }: { readonly channel: string }) {
     </span>
   );
 }
-
-/** A plain primary click; anything modified is the browser's. */
-export const plainClick = (e: Pick<MouseEvent, "button" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">): boolean => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 
 export type SlotRowProps = {
   readonly slot: RailSlot;

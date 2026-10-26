@@ -144,6 +144,10 @@ test("a rework keeps the research and the outline, re-does draft, critique and c
   expect(firstDraft[0].prompt).not.toContain("REWORK");
   expect(firstDraft[0].inputs).not.toContain("previous-post");
 
+  const patches = readFileSync(path.join(dir, "patches.json"), "utf8");
+  const patchFiles = (JSON.parse(patches) as { patchFile: string }[]).map((p) => p.patchFile);
+  expect(patchFiles.length, "the stub's draft proposes patches").toBeGreaterThan(0);
+
   const note = "The opening is a chronicle. Open on the one invoice that surprised us and cut the second section.";
   const sent = await reworkRun(run.id, `  ${note}  `, deps());
   expect(sent.status).toBe("drafting");
@@ -160,6 +164,9 @@ test("a rework keeps the research and the outline, re-does draft, critique and c
   expect(existsSync(path.join(dir, "rework", "1", "before", "post", "index.html"))).toBe(true);
   const oldSteps = JSON.parse(readFileSync(path.join(dir, "rework", "1", "before", "steps.json"), "utf8")) as { name: string }[];
   expect(oldSteps.map((s) => s.name)).toEqual(["research", "outline", "draft", "critique", "check"]);
+  // the sent-back draft's patches are archived with its post: the redraft replaces them wholesale
+  expect(readFileSync(path.join(dir, "rework", "1", "before", "patches.json"), "utf8")).toBe(patches);
+  for (const f of patchFiles) expect(existsSync(path.join(dir, "rework", "1", "before", ...f.split("/"))), f).toBe(true);
   // the old post is still there for a rework that fails halfway
   expect(existsSync(path.join(dir, "post", "index.html"))).toBe(true);
 

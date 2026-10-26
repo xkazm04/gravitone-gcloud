@@ -16,7 +16,7 @@ import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { Tally } from "../tally/Tally.tsx";
-import { claimProblem, type LessonProposal } from "./lesson.ts";
+import { CLAIM_MAX, claimProblem, evidenceWords, type LessonProposal } from "./lesson.ts";
 import s from "./Lesson.module.css";
 
 export const CLAIM_FIELD = "lesson-claim";
@@ -62,8 +62,8 @@ export function LessonForm({ proposal, axes = [], techniques = [], known, drafte
         sign the lesson
       </span>
       <div className={s.evidence}>
-        <Tally value={e.n} label="heard" />
-        {e.keepRate !== null && <Chip label="won" value={`${Math.round(e.keepRate * 100)}%`} tone="emerald" />}
+        <Tally value={e.n} label={evidenceWords(proposal.source).n} />
+        {e.keepRate !== null && <Chip label={evidenceWords(proposal.source).rate} value={`${Math.round(e.keepRate * 100)}%`} tone="emerald" />}
         {e.meanScore !== null && <Chip label="mean" value={e.meanScore} />}
         {proposal.provider !== null && <Chip label={proposal.provider} casing="lower" />}
         {axes.map((a) => (
@@ -95,7 +95,7 @@ export function LessonForm({ proposal, axes = [], techniques = [], known, drafte
         ref={field}
         className={s.claim}
         value={claim}
-        maxLength={600}
+        maxLength={CLAIM_MAX}
         placeholder="when X, brief Y, because Z"
         aria-label="the lesson, one sentence"
         onChange={(ev) => {

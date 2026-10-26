@@ -12,9 +12,12 @@ import { launchScene } from "../../producers/scoutScene.ts";
 import { getExtractRun } from "../extract/store.ts";
 import type { ExtractUpload } from "../extract/types.ts";
 import { nightBudget, type NightBudget } from "./budget.ts";
+import { fromIdeaOf, originWith, splitRef, type Origin } from "./direction.ts";
 import { MAX_PICTURE_BYTES } from "./ingest.ts";
 import { mutateNight, nextCandidateId, nightDir, readNight, resolveInNight, withCandidate } from "./store.ts";
-import { CANDIDATE_KINDS, CANDIDATE_STATUSES, STOP_REASONS, type Candidate, type CandidateId, type Night, type NightId, type SceneCandidate, type StopReason, type StyleCandidate } from "./types.ts";
+import { CANDIDATE_KINDS, CANDIDATE_STATUSES, STOP_REASONS, type Candidate, type CandidateId, type Night, type NightId, type SceneCandidate, type SeedRef, type StopReason, type StyleCandidate } from "./types.ts";
+import { activeWing } from "./wingScope";
+import { wingRunId } from "./wing";
 
 // THE NIGHT'S LAUNCHING ACTS - what pipeline/scout.mts `style`, `scene` and `close`
 // do, as functions a test drives without a process. Each launch is an ORDINARY
@@ -27,7 +30,11 @@ import { CANDIDATE_KINDS, CANDIDATE_STATUSES, STOP_REASONS, type Candidate, type
 //      the sentence. A job ceiling is a stop point (Director's ruling, Phase 4);
 //      the NIGHT's ceiling is a promise, so a launch that could break it is not made;
 //   2. the job's ceiling is the night's remaining money;
-//   3. the candidate row, its job id on `night.jobs`, and its outcome.
+//   3. the candidate row, its job id on `night.jobs`, and its outcome - the row carrying
+//      `fromIdea` when a source it is made from is a kept idea brought in (./direction.ts),
+//      and `fromSeed`: that idea's seed, or the `--seed` the act was handed (spark
+//      scout-decision-graph) - refused, before anything is written, when the seed door
+//      refuses it or it names another branch than the idea's.
 //
 // The CLI confirms its own receipt (COMMON decision 3, as pipeline/foundry/extract.mts
 // does): invoking a night's act is the consent, inside the operator's standing $15
@@ -50,7 +57,7 @@ export type ActContext = {
 
 const usd = (x: number): string => `$${x.toFixed(2)}`;
 export const budgetLine = (b: NightBudget): string =>
-  `remaining ${usd(b.remainingUsd)} of ${usd(b.ceilingUsd)} (settled ${usd(b.settledUsd)}, held ${usd(b.heldUsd)}) · clips ${b.clipsUsed}/${b.clipCap}`;
+  `remaining ${usd(b.remainingUsd)} of ${usd(b.ceilingUsd)} Gemini (settled ${usd(b.settledUsd)}, held ${usd(b.heldUsd)}) · uncapped ${usd(b.uncappedUsd)} · clips ${b.clipsUsed}/${b.clipCap}`;
 
 export function money(ctx: Pick<ActContext, "store">, night: Night): NightBudget {
   const b = nightBudget(ctx.store, night);
@@ -96,6 +103,37 @@ export async function setCandidate(id: NightId, c: Candidate, job?: string): Pro
   });
 }
 
+/** The seed a kept idea carries, read from its night; undefined when the ref, the night or the idea has none. */
+async function ideaSeedOf(ref: string): Promise<SeedRef | undefined> {
+  const p = splitRef(ref);
+  if (p === null) return undefined;
+  const n = await readNight(p.night).catch(() => undefined);
+  return n?.candidates.find((c) => c.id === p.rest)?.fromSeed;
+}
+
+/** `fromIdea` and `fromSeed` on a candidate the night holds, for an act whose own door takes neither (the asset brief's). */
+export async function markOrigin(id: NightId, cid: CandidateId, origin: Origin): Promise<void> {
+  await mutateNight(id, (n) => {
+    const c = n.candidates.find((x) => x.id === cid);
+    if (c === undefined) return n;
+    const next = { ...c, ...origin };
+    return next.fromIdea === c.fromIdea && next.fromSeed === c.fromSeed ? n : withCandidate(n, next);
+  });
+}
+
+/** `fromIdea` on a candidate the night holds - and the idea's own `fromSeed`, so the run inherits its branch. */
+export async function markFromIdea(id: NightId, cid: CandidateId, fromIdea: string, fromSeed?: SeedRef): Promise<void> {
+  const seed = fromSeed ?? (await ideaSeedOf(fromIdea));
+  await markOrigin(id, cid, { fromIdea, ...(seed === undefined ? {} : { fromSeed: seed }) });
+}
+
+/** The origin a style or scene over these sources records, with `--seed` checked against it; a Refusal otherwise. */
+async function originOf(night: Night, sourceIds: readonly string[], seed: string | undefined): Promise<Origin> {
+  const r = await originWith(fromIdeaOf(night, sourceIds), seed);
+  if (!r.ok) throw new Refusal(r.error.message);
+  return r.value;
+}
+
 export async function addCandidate<C extends Candidate>(id: NightId, make: (cid: CandidateId) => C): Promise<C> {
   let made: C | undefined;
   await mutateNight(id, (n) => {
@@ -117,8 +155,9 @@ export const STYLE_GENERATOR = "leonardo-flare" as const;
 export type StyleResult = { readonly candidate: StyleCandidate; readonly outcome?: string };
 
 /** An extract run over the named sources' pictures and keyframes, as one style candidate. */
-export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly string[], slug?: string, use?: string): Promise<StyleResult> {
+export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly string[], slug?: string, use?: string, seed?: SeedRef): Promise<StyleResult> {
   const { night, mode } = await launchable(ctx, id);
+  const origin = await originOf(night, sourceIds, seed);
   const uploads: ExtractUpload[] = [];
   for (const sid of sourceIds) {
     const s = night.sources.find((x) => x.id === sid);
@@ -144,7 +183,7 @@ export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly
   const refused = overBudget(`style over ${sourceIds.join(",")}`, worstOf(rc), b);
   if (refused !== null) throw refused;
   ctx.say(`receipt (${rc.mode}): ${uploads.length} picture(s) · worst case ${usd(worstOf(rc))} · ceiling ${usd(b.remainingUsd)}`);
-  let c: StyleCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "style", sourceIds: [...sourceIds], status: "pending", ...(use === undefined ? {} : { use }) }));
+  let c: StyleCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "style", sourceIds: [...sourceIds], status: "pending", ...(use === undefined ? {} : { use }), ...origin }));
   const r1 = await launchExtract(ctx.store, target, { ...opts, token: rc.token });
   if (!r1.ok || r1.value.kind !== "launched") {
     const why = !r1.ok ? r1.error.message : `the receipt moved while it was confirmed (${r1.value.kind}); nothing launched`;
@@ -177,8 +216,9 @@ export async function settleStyle(id: NightId, c: StyleCandidate): Promise<Style
 export type SceneResult = { readonly candidate: SceneCandidate; readonly outcome?: string };
 
 /** A scene candidate over one source's keyframes, launched through the scene producer's contract. */
-export async function sceneAct(ctx: ActContext, id: NightId, sourceId: string, frames?: readonly string[], use?: string): Promise<SceneResult> {
+export async function sceneAct(ctx: ActContext, id: NightId, sourceId: string, frames?: readonly string[], use?: string, seed?: SeedRef): Promise<SceneResult> {
   const { night, mode } = await launchable(ctx, id);
+  const origin = await originOf(night, [sourceId], seed);
   const s = night.sources.find((x) => x.id === sourceId);
   if (s === undefined) throw new Refusal(`night ${id} has no source ${sourceId}`);
   if (s.status !== "ingested" || s.files.length === 0) throw new Refusal(`source ${sourceId} is ${s.status}${s.error === undefined ? "" : ` (${s.error})`}; only an ingested source makes a scene`);
@@ -192,7 +232,7 @@ export async function sceneAct(ctx: ActContext, id: NightId, sourceId: string, f
   if (b.remainingUsd <= 0) throw new Refusal(`scene from ${sourceId}: the night has nothing left - ${budgetLine(b)}; nothing launched`);
   let clip = b.clipsUsed < b.clipCap;
   let clipWhy = clip ? " with a clip" : " (clip cap spent: stills only)";
-  let c: SceneCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "scene", sourceIds: [sourceId], status: "pending", keyframes, replicas: [], ...(use === undefined ? {} : { use }) }));
+  let c: SceneCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "scene", sourceIds: [sourceId], status: "pending", keyframes, replicas: [], ...(use === undefined ? {} : { use }), ...origin }));
   const fail = async (why: string): Promise<never> => {
     await setCandidate(id, { ...c, status: "failed", error: why });
     throw new Refusal(why);
@@ -252,6 +292,7 @@ export type Morning = {
   readonly stop?: StopReason;
   readonly byKind: Readonly<Record<string, Readonly<Record<string, number>>>>;
   readonly settledUsd: number;
+  readonly uncappedUsd: number;
   readonly heldUsd: number;
 };
 
@@ -259,16 +300,21 @@ export function morning(n: Night, b: NightBudget): Morning {
   const byKind = Object.fromEntries(
     CANDIDATE_KINDS.map((k) => [k, Object.fromEntries(CANDIDATE_STATUSES.map((s) => [s, n.candidates.filter((c) => c.kind === k && c.status === s).length]))]),
   );
-  return { night: n.id, packet: `pkt:scout:${n.id}`, state: n.state, ...(n.stop === undefined ? {} : { stop: n.stop }), byKind, settledUsd: b.settledUsd, heldUsd: b.heldUsd };
+  return { night: n.id, packet: `pkt:scout:${wingRunId(activeWing(), n.id)}`, state: n.state, ...(n.stop === undefined ? {} : { stop: n.stop }), byKind, settledUsd: b.settledUsd, uncappedUsd: b.uncappedUsd, heldUsd: b.heldUsd };
 }
 
 export const isStopReason = (s: string): s is StopReason => (STOP_REASONS as readonly string[]).includes(s);
 
-/** Settle the night's style candidates from their runs, then close it: the given stop, else target or sources-exhausted. */
+/**
+ * Settle the night's style candidates from their runs, then close it: the given stop, else target or
+ * sources-exhausted. The target counts the plan's rows only: idea artboards are drawn beside it (up
+ * to `ideaCap`), and twenty-five drawn ideas are not a night that studied twenty things; storyboards
+ * likewise (up to `storyboardCap`): they compose earlier keeps, they study nothing new.
+ */
 export async function closeAct(ctx: Pick<ActContext, "store" | "now">, id: NightId, stop?: StopReason): Promise<Morning> {
   for (const c of (await readNight(id)).candidates) if (c.kind === "style") await settleStyle(id, c).catch(() => c);
   const n = await readNight(id);
-  const rendered = n.candidates.filter((c) => c.status === "rendered").length;
+  const rendered = n.candidates.filter((c) => c.kind !== "idea" && c.kind !== "storyboard" && c.status === "rendered").length;
   const closed = await closeWith(id, stop ?? (rendered >= n.target ? "target" : "sources-exhausted"), ctx.now?.() ?? new Date());
   return morning(closed, money(ctx, closed));
 }

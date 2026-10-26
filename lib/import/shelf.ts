@@ -11,7 +11,7 @@ import { withStatus } from "@gt/kernel/styles/core";
 import { admit, readStyleIn } from "@gt/kernel/styles/driver";
 import { draftFromV1Theme, themeStyleId, type ThemeDraft } from "@gt/kernel/styles/v1theme";
 
-import { uploadOf, type Archive, type Row } from "./archive.ts";
+import { isoOfMs, uploadOf, type Archive, type Row } from "./archive.ts";
 import { dataUrl, stage, type Sink, type StagedBlob } from "./bytes.ts";
 import type { Outcome } from "./project.ts";
 
@@ -79,7 +79,15 @@ const PUBLIC_MIME: Readonly<Record<string, string>> = { ".png": "image/png", ".j
 export const publicFile: PublicFile = (src) => {
   if (!src.startsWith("/") || src.startsWith("//")) return null;
   const root = path.resolve(process.cwd(), "public");
-  const abs = path.resolve(root, `.${decodeURI(src.split(/[?#]/)[0] ?? "")}`);
+  let decoded: string;
+  try {
+    decoded = decodeURI(src.split(/[?#]/)[0] ?? "");
+  } catch {
+    // A `%` that is not an escape (a v1 asset named "50%.jpg", its src kept unescaped): no file
+    // here, and never a URIError that fails the whole preview.
+    return null;
+  }
+  const abs = path.resolve(root, `.${decoded}`);
   const mime = PUBLIC_MIME[path.extname(abs).toLowerCase()];
   if (mime === undefined || !abs.startsWith(root + path.sep)) return null;
   try {
@@ -92,7 +100,6 @@ export const publicFile: PublicFile = (src) => {
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown): string | undefined => (typeof v === "string" && v.trim() !== "" ? v.trim() : undefined);
 const strs = (v: unknown): string[] => (Array.isArray(v) ? v.flatMap((x) => (str(x) === undefined ? [] : [String(x).trim()])) : []);
-const iso = (ms: unknown): string | undefined => (typeof ms === "number" && Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : undefined);
 const b64 = (s: string): Uint8Array => new Uint8Array(Buffer.from(s, "base64"));
 
 /** v1's `UNTITLED`: the name its retired "From a brief" button stamped on every style. */
@@ -108,7 +115,7 @@ export function themeName(row: Row): { readonly name: string; readonly named: bo
   if (preset !== undefined) return { name: preset, named: true };
   const foundry = str(row["foundryStyleId"]);
   if (foundry !== undefined) return { name: foundry.replace(/[-_]+/g, " "), named: true };
-  const day = iso(row["createdAt"])?.slice(0, 10);
+  const day = isoOfMs(row["createdAt"])?.slice(0, 10);
   return { name: `${ORIGIN_NAME[String(row["origin"])] ?? "Style"}${day === undefined ? "" : ` ${day}`}`, named: true };
 }
 
@@ -134,6 +141,66 @@ function stageTheme(r: Reader, row: Row): StagedTheme {
   return { preview: { ...base, missing, outcome: "import" }, draft: drafted.value, blobs: [...sink.values()] };
 }
 
+/**
+ * The archive's rows by key, built ONCE per archive (staging looks a theme, an upload, a project's
+ * steps and the assets a project names up per project and per asset; a scan each is
+ * projects x steps and assets x uploads at the archive's line cap). `find` semantics are kept: the
+ * first row of an id wins; lists keep archive order, and `at` is a row's position in its section.
+ */
+export type ArchiveIndex = {
+  readonly stepsOf: ReadonlyMap<string, readonly Row[]>;
+  readonly themeById: ReadonlyMap<string, Row>;
+  readonly uploadById: ReadonlyMap<string, Row>;
+  readonly assetsById: ReadonlyMap<string, readonly { readonly at: number; readonly row: Row }[]>;
+  readonly uploadsById: ReadonlyMap<string, readonly { readonly at: number; readonly row: Row }[]>;
+};
+
+const built = new WeakMap<Archive, ArchiveIndex>();
+
+export function indexOfArchive(archive: Archive): ArchiveIndex {
+  const had = built.get(archive);
+  if (had !== undefined) return had;
+  const stepsOf = new Map<string, Row[]>();
+  for (const s of archive.rows.steps) {
+    const k = s["projectId"];
+    if (typeof k !== "string") continue;
+    const list = stepsOf.get(k);
+    if (list === undefined) stepsOf.set(k, [s]);
+    else list.push(s);
+  }
+  const firstById = (rows: readonly Row[]): Map<string, Row> => {
+    const m = new Map<string, Row>();
+    for (const r of rows) {
+      const id = r["id"];
+      if (typeof id === "string" && !m.has(id)) m.set(id, r);
+    }
+    return m;
+  };
+  const allById = (rows: readonly Row[]): Map<string, { at: number; row: Row }[]> => {
+    const m = new Map<string, { at: number; row: Row }[]>();
+    rows.forEach((row, at) => {
+      const k = String(row["id"]);
+      const list = m.get(k);
+      if (list === undefined) m.set(k, [{ at, row }]);
+      else list.push({ at, row });
+    });
+    return m;
+  };
+  const ix: ArchiveIndex = { stepsOf, themeById: firstById(archive.rows.themes), uploadById: firstById(archive.rows.uploads), assetsById: allById(archive.rows.assets), uploadsById: allById(archive.rows.uploads) };
+  built.set(archive, ix);
+  return ix;
+}
+
+/** The rows of `by` whose id (as a string) is in `ids`, in archive order. */
+export function rowsNamed(by: ArchiveIndex["assetsById"], ids: ReadonlySet<string>): Row[] {
+  const hit: { at: number; row: Row }[] = [];
+  for (const id of ids) {
+    const list = by.get(id);
+    if (list !== undefined) hit.push(...list);
+  }
+  return hit.sort((a, b) => a.at - b.at).map((h) => h.row);
+}
+
 /** v1 AudioMeta's verdict in the Library's state words. */
 const AUDIO_STATE: Readonly<Record<string, "ratified" | "rejected" | "unjudged">> = { kept: "ratified", proven: "ratified", rejected: "rejected" };
 
@@ -143,14 +210,14 @@ function bytesOf(a: Row, archive: Archive, sink: Sink, pub: PublicFile): Bytes |
   const src = typeof a["src"] === "string" ? a["src"] : "";
   const up = uploadOf(src);
   if (up !== null) {
-    const u = archive.rows.uploads.find((x) => x["id"] === up);
+    const u = indexOfArchive(archive).uploadById.get(up);
     const blob = u === undefined ? undefined : u["blob"];
     if (!isObj(blob) || typeof blob["b64"] !== "string") return `its upload ${up} is not in the archive`;
     return { ref: stage(sink, b64(blob["b64"]), typeof blob["type"] === "string" ? blob["type"] : "application/octet-stream"), origin: "upload" };
   }
   if (src.startsWith("proof:")) {
     const [themeId, proofId] = src.slice(6).split("/");
-    const theme = archive.rows.themes.find((t) => t["id"] === themeId);
+    const theme = themeId === undefined ? undefined : indexOfArchive(archive).themeById.get(themeId);
     const proof = theme !== undefined && Array.isArray(theme["proofs"]) ? theme["proofs"].find((p) => isObj(p) && p["id"] === proofId) : undefined;
     if (!isObj(proof) || typeof proof["base64"] !== "string" || proof["base64"] === "") return `its proof ${proofId ?? "?"} is not in theme ${themeId ?? "?"} in the archive`;
     return { ref: stage(sink, b64(proof["base64"]), typeof proof["mime"] === "string" ? proof["mime"] : "image/png"), origin: "proof" };
@@ -175,7 +242,7 @@ function stageAsset(r: Reader, a: Row, archive: Archive, projects: ReadonlyMap<s
   if (typeof bytes === "string" && kind === "image") return { preview: { ...base, outcome: "refuse", reason: bytes }, blobs: [] };
   const folder = strs(a["path"]);
   const collections = [...(folder.length > 0 ? [{ kind: "pin" as const, id: folder.join("/") }] : []), ...(projects.get(v1Id) ?? []).map((p) => ({ kind: "project" as const, id: p }))];
-  const at = iso(a["createdAt"]);
+  const at = isoOfMs(a["createdAt"]);
   const proofTheme = typeof bytes !== "string" && bytes.origin === "proof" ? String(a["src"]).slice(6).split("/")[0] : undefined;
   const styleId = proofTheme === undefined ? undefined : themeStyleId(proofTheme);
   const shared = {

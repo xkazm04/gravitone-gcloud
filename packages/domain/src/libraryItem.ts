@@ -88,6 +88,15 @@ const modelVocabulary = z.object({
   tris: z.number().int().nonnegative().optional(),
 });
 
+/** A kept muse character (lib/library/feeds/character.ts): her age, the build her card names, the look
+ *  directions she was kept in and the applications those stills served (the closed list is the scout's USE_APPS). */
+const characterVocabulary = z.object({
+  age: z.number().int().nonnegative(),
+  build: word.optional(),
+  looks: z.array(word),
+  applications: z.array(word),
+});
+
 /** What the operator may do with it. A screenshot of somebody's game read for
  *  its look is `reference-only`: it may teach a style, never ship in a cut. */
 export const rightsSchema = z.object({
@@ -127,6 +136,7 @@ export const libraryItemSchema = z
     z.object({ kind: z.literal("video"), vocabulary: videoVocabulary, ...shared }),
     z.object({ kind: z.literal("doc"), vocabulary: docVocabulary, ...shared }),
     z.object({ kind: z.literal("model"), vocabulary: modelVocabulary, ...shared }),
+    z.object({ kind: z.literal("character"), vocabulary: characterVocabulary, ...shared }),
   ])
   .superRefine((it, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });

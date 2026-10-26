@@ -1,6 +1,6 @@
 // THE SUNO QUEUE — the operator's acts on suno.json's records, and the
-// snapshot the Queue column reads. Server-only: it names SUNO_DRIVER and
-// reaches the browser driver.
+// snapshot the Queue column reads. Server-only: it re-exports the driver and
+// reaches the browser driver (./drivers.ts, which reads SUNO_DRIVER).
 //
 // SINCE PHASE 4 (L31) A PROMPT'S RENDER IS A KERNEL JOB on box.chrome. The v1
 // worker that lived here - the `globalThis.__gtSunoWorker` singleton (the
@@ -181,12 +181,12 @@ export async function enqueueHuntLeaves(refs: readonly string[], lane: SunoLane 
  *  is mid-create and its credits are already spent. */
 export async function cancelJob(id: string): Promise<SunoJob> {
   safeId(id);
-  const { jobs } = await readSunoLive();
-  const live = jobs.find((j) => j.id === id);
+  const kernel = sunoKernelJobs();
+  const live = overlaySuno((await readSuno()).jobs, kernel).jobs.find((j) => j.id === id);
   if (!live) throw new SoundError(`no Suno job ${id}`, 404);
-  if (live.state === "active") throw new SoundError("rendering now - it lands in triage when Suno finishes", 409);
+  if (live.state === "active" || (await readSuno()).jobs.some((j) => j.id === id && j.phase !== undefined)) throw new SoundError("rendering now - it lands in triage when Suno finishes", 409);
   if (live.state !== "queued") throw new SoundError(`this job is already ${live.state}`, 409);
-  const k = sunoKernelJobs().get(sunoKernelId(live));
+  const k = kernel.get(sunoKernelId(live));
   if (k !== undefined) cancelSunoJob(k.id, OPERATOR);
   return withSuno((f) => {
     const j = f.jobs.find((x) => x.id === id);
@@ -275,9 +275,9 @@ export async function setSunoQueue(running: boolean): Promise<SunoQueueState> {
     await withSuno((f) => {
       for (const j of f.jobs) {
         if (!paused.has(sunoKernelId(j)) || j.state !== "active") continue;
+        // The phase stays: a create still spending after Stop is the record's only mark that it is,
+        // and clearSuno / cancelJob read it. The producer deletes it when the create lands.
         j.state = "queued";
-        delete j.phase;
-        delete j.model;
       }
     });
     return state;
@@ -288,10 +288,10 @@ export async function setSunoQueue(running: boolean): Promise<SunoQueueState> {
   return state;
 }
 
-/** Queued records with no job yet (a v1 crash's included): what Start launches. */
+/** Queued records with no job yet (a v1 crash's included): what Start launches. One kernel read for the overlay and the filter. */
 async function waitingIds(): Promise<string[]> {
   const kernel = sunoKernelJobs();
-  return (await readSunoLive()).jobs.filter((j) => j.state === "queued" && !kernel.has(sunoKernelId(j))).map((j) => j.id);
+  return overlaySuno((await readSuno()).jobs, kernel).jobs.filter((j) => j.state === "queued" && !kernel.has(sunoKernelId(j))).map((j) => j.id);
 }
 
 /** What Start would launch, as a receipt (decision 3): GET /api/sound/suno/run. */

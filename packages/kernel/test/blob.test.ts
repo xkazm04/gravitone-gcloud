@@ -1,9 +1,23 @@
 import { createHash } from "node:crypto";
 import { readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { blobStore } from "../src/blob.ts";
 import { must, scratch } from "./helpers.ts";
+
+// An fs seam for the two paths no real disk produces on demand: an EPERM on the
+// cleanup rm (a held temp on Windows) and a stat error that is not ENOENT.
+const faults = vi.hoisted(() => ({ rename: false, rm: false, stat: false }));
+vi.mock("node:fs/promises", async (orig) => {
+  const real = await orig<typeof import("node:fs/promises")>();
+  const fail = (code: string) => Object.assign(new Error(code), { code });
+  return {
+    ...real,
+    rename: (...a: Parameters<typeof real.rename>) => (faults.rename ? Promise.reject(fail("EXDEV")) : real.rename(...a)),
+    rm: (...a: Parameters<typeof real.rm>) => (faults.rm ? Promise.reject(fail("EPERM")) : real.rm(...a)),
+    stat: (...a: Parameters<typeof real.stat>) => (faults.stat ? Promise.reject(fail("EACCES")) : real.stat(...a)),
+  };
+});
 
 const tmp = scratch("blob");
 afterAll(() => tmp.dispose());
@@ -53,6 +67,30 @@ describe("blob store", () => {
     writeFileSync(must(b.pathOf(ref)), "tampered");
     const r = await b.read(ref);
     expect(!r.ok && r.error.code).toBe("internal");
+  });
+
+  it("put resolves to the write's error when the cleanup rm also fails", async () => {
+    const b = fresh();
+    faults.rename = faults.rm = true;
+    try {
+      const r = await b.put(bytes("doomed"), "text/plain");
+      expect(!r.ok && r.error.code).toBe("unavailable");
+    } finally {
+      faults.rename = faults.rm = false;
+    }
+  });
+
+  it("put and has resolve to a Result and a boolean when stat fails", async () => {
+    const b = fresh();
+    const ref = must(await b.put(bytes("held"), "text/plain"));
+    faults.stat = true;
+    try {
+      expect(await b.has(ref)).toBe(false);
+      const r = await b.put(bytes("held"), "text/plain");
+      expect(!r.ok && r.error.code).toBe("unavailable");
+    } finally {
+      faults.stat = false;
+    }
   });
 
   it("refuses a ref that is not a digest, rather than resolve a path from it", async () => {

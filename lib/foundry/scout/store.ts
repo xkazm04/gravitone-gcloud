@@ -1,12 +1,16 @@
-// THE SCOUT NIGHT STORE - server only. One directory per night under
-// foundry-out/scout/<nightId>/ (SCOUT_STORE_DIR redirects the root, read per
-// call, so a test or a rehearsal never writes the checkout's):
+// THE SCOUT NIGHT STORE - server only. One directory per night under the
+// active wing's root, foundry-out/scout/<nightId>/ or foundry-out/scout-muse/<nightId>/
+// (SCOUT_STORE_DIR, SCOUT_MUSE_STORE_DIR redirect them, read per call, so a test
+// or a rehearsal never writes the checkout's):
 //
 //   night.json          the manifest (./types.ts Night)
 //   taste.md            the prior nights' verdicts, written for the skill
 //   sources/<s-NN>/     what the ingest producer brought onto this box
 //   scenes/<c-NN>/      a scene candidate's replica stills and its clip
 //   assets/<c-NN>/      a game asset's concept images (the asset itself is lib/foundry/mesh's)
+//   ideas/<c-NN>.png    an idea's tile: its artboard drawn in the Leonardo studio, or a stats
+//                       idea's strip at frame 120
+//   ideas/<c-NN>/       a stats idea's brief.json and approach.json (the ideas door), its strip
 //
 // Every writer goes through `mutateNight`: the ingest and scene producers and
 // the CLI write the same manifest from different processes, and the run lock
@@ -24,7 +28,12 @@ import {
   DEFAULT_ASSET_CAP,
   DEFAULT_CEILING_USD,
   DEFAULT_CLIP_CAP,
+  DEFAULT_IDEA_CAP,
+  DEFAULT_REEL_CAP,
   DEFAULT_TARGET,
+  DEFAULT_TRACK_CAP,
+  DEFAULT_STORYBOARD_CAP,
+  DEFAULT_VISUALIZER_CAP,
   NIGHT_ID_RE,
   type Candidate,
   type CandidateId,
@@ -33,15 +42,26 @@ import {
   type NightSummary,
   type SourceId,
 } from "./types";
+import { WING_OUT_DIR, type ScoutWing } from "./wing";
+import { activeWing } from "./wingScope";
 
 const NIGHT_FILE = "night.json";
 
-/** Files a night may serve to the Board: pictures, clips, the manifest. */
-const SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json", ".mp4", ".webm"]);
+/** Files a night may serve to the Board: pictures, clips, a track's mp3s, the manifest. */
+const SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json", ".mp4", ".webm", ".mp3"]);
 
-/** SCOUT_STORE_DIR, else `<out>/scout`. Read per call. */
+/** The ACTIVE wing's root (wingScope.ts; `scout` outside any scope). Read per call. */
 export function scoutRoot(): string {
-  return process.env["SCOUT_STORE_DIR"]?.trim() || outPath("scout");
+  return rootOf(activeWing());
+}
+
+/** The env var that moves a wing's root (tests point it at a temp dir). Server-only: wing.ts is client-safe
+ *  and must not spell an env var's name (check:bundle). */
+export const WING_STORE_ENV: Readonly<Record<ScoutWing, string>> = { scout: "SCOUT_STORE_DIR", muse: "SCOUT_MUSE_STORE_DIR" };
+
+/** A wing's root: its env var (SCOUT_STORE_DIR, SCOUT_MUSE_STORE_DIR), else `<out>/scout`, `<out>/scout-muse`. */
+export function rootOf(wing: ScoutWing): string {
+  return process.env[WING_STORE_ENV[wing]]?.trim() || outPath(WING_OUT_DIR[wing]);
 }
 
 export function nightDir(id: NightId): string {
@@ -61,6 +81,11 @@ export type NightOptions = {
   readonly target?: number;
   readonly clipCap?: number;
   readonly assetCap?: number;
+  readonly ideaCap?: number;
+  readonly reelCap?: number;
+  readonly trackCap?: number;
+  readonly visualizerCap?: number;
+  readonly storyboardCap?: number;
   /** ISO instant. */
   readonly deadline?: string;
   readonly dry: boolean;
@@ -95,6 +120,11 @@ export async function createNight(o: NightOptions): Promise<Night> {
       target: o.target ?? DEFAULT_TARGET,
       clipCap: o.clipCap ?? DEFAULT_CLIP_CAP,
       assetCap: o.assetCap ?? DEFAULT_ASSET_CAP,
+      ideaCap: o.ideaCap ?? DEFAULT_IDEA_CAP,
+      reelCap: o.reelCap ?? DEFAULT_REEL_CAP,
+      trackCap: o.trackCap ?? DEFAULT_TRACK_CAP,
+      visualizerCap: o.visualizerCap ?? DEFAULT_VISUALIZER_CAP,
+      storyboardCap: o.storyboardCap ?? DEFAULT_STORYBOARD_CAP,
       dry: o.dry,
       state: "open",
       sources: [],
@@ -134,8 +164,13 @@ export function readNightNow(id: NightId): Night {
   }
 }
 
+/**
+ * The night's rows by status - what the skill's stop rule (~20 rendered rows) reads. Idea artboards
+ * are drawn beside the plan, not toward it, so they are not counted here (closeAct's `target` does
+ * the same); the morning's `byKind` counts them under `idea`.
+ */
 export function summarise(n: Night): NightSummary {
-  const count = (s: Candidate["status"]): number => n.candidates.filter((c) => c.status === s).length;
+  const count = (s: Candidate["status"]): number => n.candidates.filter((c) => c.kind !== "idea" && c.status === s).length;
   return {
     id: n.id,
     state: n.state,
@@ -166,6 +201,19 @@ export async function listNights(): Promise<NightSummary[]> {
   return out.sort((a, b) => (a.startedAt < b.startedAt ? 1 : a.startedAt > b.startedAt ? -1 : 0));
 }
 
+/**
+ * Every night on disk that can be read, newest first - the whole history (spark scout-decision-graph: the
+ * graph and the seed doors read it). A night mid-write is skipped, never fatal.
+ */
+export async function readAllNights(): Promise<Night[]> {
+  const out: Night[] = [];
+  for (const s of await listNights()) {
+    const n = await readNight(s.id).catch(() => undefined);
+    if (n !== undefined) out.push(n);
+  }
+  return out;
+}
+
 /** Every extract run a night's style candidate launched - the extract Weir leaves them to the night's packet. */
 export async function scoutExtractRunIds(): Promise<Set<string>> {
   let names: string[];
@@ -194,9 +242,18 @@ export const saveNight = (n: Night): Promise<void> => writeJsonAtomic(path.join(
  * returning the same object writes nothing.
  */
 export async function mutateNight(id: NightId, fn: (n: Night) => Night): Promise<Night> {
+  return mutateNightWith(id, async (n) => fn(n));
+}
+
+/**
+ * `mutateNight` whose change does file work first under the same lock (add-source copying a kept
+ * idea's artboard into `sources/s-NN/`): the id it takes and the file it writes cannot be raced by
+ * a second writer. A throw writes no manifest.
+ */
+export async function mutateNightWith(id: NightId, fn: (n: Night) => Promise<Night>): Promise<Night> {
   return withRunLock(nightDir(id), async () => {
     const before = await readNight(id);
-    const after = fn(before);
+    const after = await fn(before);
     if (after !== before) await saveNight(after);
     return after;
   });

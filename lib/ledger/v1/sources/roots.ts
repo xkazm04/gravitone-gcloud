@@ -5,9 +5,10 @@ import { outPath } from "../../../../lib/fixtures/roots.ts";
 
 // WHERE A v1 STORE LIVES IN THE UNIVERSE THE SYNC PROJECTS.
 //
-// Four v1 stores never learned the fixture switch (lib/fixtures/mode.ts): their
-// root is `foundry-out/<x>` in both universes, with at most an env override -
-//   strips    lib/foundry/strips/store.ts OUT_ROOT, a module constant, no override
+// The v1 stores below never learned the fixture switch (lib/fixtures/mode.ts): their
+// root is `foundry-out/<x>` in both universes, with at most an env override (strips
+// was one until Phase 4 L33 gave lib/foundry/strips/store.ts `stripsRoot()`, which
+// picks the universe itself; ./strips.ts reads it there) -
 //   articles  lib/articles/store.ts storeRoot(), ARTICLES_STORE_DIR (deliberately
 //             unmoved: lib/fixtures/mode.ts calls Articles "real in both universes")
 //   turns     lib/turns/ledger.ts turnDir(), TEXT_TURN_DIR

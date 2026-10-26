@@ -1,17 +1,13 @@
 import { createHash } from "node:crypto";
-import path from "node:path";
 
-import { parseAt } from "@gt/domain/door";
 import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
-import { jobIdSchema } from "@gt/domain/ids";
 import type { Job } from "@gt/domain/job";
 import type { ProducerRunInput, Receipt, ReceiptMode } from "@gt/domain/produce";
 import { blobStore } from "@gt/kernel/blob";
 import { armLive } from "@gt/kernel/dryrun";
 import { liveEffects, type Effects } from "@gt/kernel/effects";
 import type { Producer } from "@gt/kernel/job-core";
-import { get } from "@gt/kernel/job";
 import { runJob, type RunOptions, type RunReport } from "@gt/kernel/job-run";
 import { modelOptions } from "@gt/kernel/records/options";
 import { launchRun, runReceipt, type RunQuote } from "@gt/kernel/records/launch";
@@ -27,6 +23,9 @@ import type { Critique, ExtractManifest, ExtractOptions, ExtractUpload } from ".
 import { next } from "../foundry/extract/units.ts";
 import { ENUMS } from "../foundry/extract/vocabulary.ts";
 import { FoundryError } from "../foundry/runStore.ts";
+import { blobRootOf } from "../kernelProcess.ts";
+
+import { jobOf } from "./forge.ts";
 
 // THE EXTRACT PRODUCER'S PORTS, BOUND TO v1 (Phase 4, L29) - the definition
 // (packages/producers/src/extract/define.ts) over lib/foundry/extract: the
@@ -238,15 +237,6 @@ export type ExtractLaunch =
 
 const jobBase = (runId: string): string => `job:run:${runId}`;
 
-function jobOf(store: Store, id: string): Job | undefined {
-  const parsed = parseAt("job id", jobIdSchema, id);
-  if (!parsed.ok) throw parsed.error;
-  const r = get(store, parsed.value);
-  if (r.ok) return r.value.job;
-  if (r.error.code === "not-found") return undefined;
-  throw r.error;
-}
-
 /** A free job id for a run: the base, else `~2`, `~3`... (a re-run of a done run is a new job). */
 function freeJobId(store: Store, runId: string): string {
   for (let k = 1; k < 1000; k++) {
@@ -325,9 +315,10 @@ export async function launchExtract(store: Store, target: ExtractTarget, opts: L
 
 /* ── Drive ─────────────────────────────────────────────────────────────────── */
 
-/** The effect port over a store, blobs beside it - the worker's binding (workers/worker.ts). */
-export function effectsFor(store: Store, location: string): Effects {
-  return liveEffects(store, blobStore(location === ":memory:" ? path.resolve("foundry-out", "blobs") : path.join(path.dirname(location), "blobs")));
+/** The effect port over a store, blobs beside it - the worker's binding (workers/worker.ts). `_location`
+ *  is the path `store` was opened at, kept for the callers; the root is lib/kernelProcess.ts's. */
+export function effectsFor(store: Store, _location: string): Effects {
+  return liveEffects(store, blobStore(blobRootOf(store)));
 }
 
 export type DriveOptions = RunOptions & {
@@ -371,12 +362,14 @@ export async function settleExtractManifest(store: Store, jobId: string): Promis
  * alone.
  */
 async function settleExtract(job: Job): Promise<void> {
-  if (job.producer !== "extract" || job.state !== "failed" || job.error === undefined) return;
+  if (job.producer !== "extract" || (job.state !== "failed" && job.state !== "cancelled")) return;
+  const reason = job.error?.message ?? `job ${job.id} was ${job.state}`;
+  if (job.state === "failed" && job.error === undefined) return;
   const { run: m } = await getExtractRun(job.of.id);
   if (m.job !== job.id || m.status === "done" || m.status === "failed" || m.status === "committed") return;
   m.status = "failed";
-  m.error = job.error.message;
+  m.error = reason;
   if (job.stop !== undefined) m.stopped = { by: job.stop.by, spentUsd: job.stop.spentUsd, ...(job.stop.ceilingUsd === undefined ? {} : { ceilingUsd: job.stop.ceilingUsd }), at: job.stop.at };
-  m.log.push({ at: new Date().toISOString(), msg: `stopped: ${job.error.message}` });
+  m.log.push({ at: new Date().toISOString(), msg: `stopped: ${reason}` });
   await saveManifest(m);
 }

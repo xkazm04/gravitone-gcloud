@@ -50,6 +50,8 @@ import type { RunAgentInput, AgentResult } from "@/lib/agent/cliSeam";
 import { createRun, defaultDeps, type EngineDeps } from "./engine";
 import { listTopicSubjects, resolveRegistryDir, resolveTopicSubject } from "./registryRead";
 import { ArticleError, listRuns, storeRoot, writeJsonAtomic } from "./store";
+import { refusedTurn } from "./turns";
+import { uniqueDir } from "./tempDir";
 import type { ArticleRun, ArticleStatus, TopicSubject } from "./types";
 
 /* ── covered topics ────────────────────────────────────────────────────────── */
@@ -81,6 +83,9 @@ export interface Coverage {
   claimed: string[];
   /** Runs that are neither finished nor driven by anyone (a killed process). */
   orphaned: string[];
+  /** Run directories whose run.json does not parse: their topic is unknown, so it is neither
+   *  covered nor claimed, and a loop may start a second article on it. Named so that shows. */
+  damaged: string[];
 }
 
 const freeKey = (text: string) => `free:${text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)}`;
@@ -88,7 +93,7 @@ const topicKey = (t: ArticleRun["topic"]) => (t.kind === "subject" && t.bundle &
 
 /** Read the publications lane directly: publications/<slug>/publication.json carries the topic
  *  (publications/index.json leaves it out). A lane that is absent or unreadable is empty. */
-async function publicationItems(registryDir: string): Promise<{ item: CoveredItem; runId?: string }[]> {
+async function publicationItems(registryDir: string): Promise<CoveredItem[]> {
   const root = path.join(registryDir, "publications");
   let names: string[] = [];
   try {
@@ -96,7 +101,7 @@ async function publicationItems(registryDir: string): Promise<{ item: CoveredIte
   } catch {
     return [];
   }
-  const out: { item: CoveredItem; runId?: string }[] = [];
+  const out: CoveredItem[] = [];
   for (const slug of names.sort()) {
     try {
       const p = JSON.parse(await fs.readFile(path.join(root, slug, "publication.json"), "utf8")) as {
@@ -106,7 +111,7 @@ async function publicationItems(registryDir: string): Promise<{ item: CoveredIte
       };
       const t = p.topic ?? {};
       const key = t.kind === "subject" && t.bundle && t.subject ? `${t.bundle}/${t.subject}` : freeKey(t.text ?? slug);
-      out.push({ item: { key, source: "publication", ref: slug, status: p.status ?? "approved" }, runId: p.run?.id });
+      out.push({ key, source: "publication", ref: slug, status: p.status ?? "approved" });
     } catch {
       /* a publication that cannot be read covers nothing */
     }
@@ -117,26 +122,30 @@ async function publicationItems(registryDir: string): Promise<{ item: CoveredIte
 /** `driven` answers whether something holds a run that is not finished (its job is queued or running);
  *  without one every such run counts as orphaned. */
 export async function coverage(registryDir: string = resolveRegistryDir().dir, driven: (runId: string) => Promise<boolean> = async () => false): Promise<Coverage> {
-  const { runs } = await listRuns();
+  const { runs, damaged } = await listRuns();
   const covered: CoveredItem[] = [];
   const claimed: string[] = [];
   const orphaned: string[] = [];
+  // A TOPIC is covered, not a post: the target counts topics, so a subject with a run at the gate
+  // and the publication of an earlier run (or of the same run, once it landed) is one item. The
+  // first item per key wins, so a run's row is kept over its publication's.
+  const keys = new Set<string>();
   for (const r of runs) {
     const key = topicKey(r.topic);
-    if (COVERING_STATUSES.includes(r.status)) covered.push({ key, source: "run", ref: r.id, status: r.status });
-    else if (!NOT_RUNNING.includes(r.status)) {
+    if (COVERING_STATUSES.includes(r.status)) {
+      if (!keys.has(key)) covered.push({ key, source: "run", ref: r.id, status: r.status });
+      keys.add(key);
+    } else if (!NOT_RUNNING.includes(r.status)) {
       claimed.push(key);
       if (!(await driven(r.id))) orphaned.push(r.id);
     }
   }
-  const have = new Set(covered.map((c) => c.ref));
-  for (const { item, runId } of await publicationItems(registryDir)) {
-    // A landed run is also a publication: count the post once.
-    if (runId && [...have].some((ref) => runId.startsWith(ref))) continue;
-    if (covered.some((c) => c.key === item.key && c.source === "run" && c.status === "landed")) continue;
+  for (const item of await publicationItems(registryDir)) {
+    if (keys.has(item.key)) continue;
+    keys.add(item.key);
     covered.push(item);
   }
-  return { covered, claimed: [...new Set(claimed)].sort(), orphaned };
+  return { covered, claimed: [...new Set(claimed)].sort(), orphaned, damaged };
 }
 
 /* ── ranking ───────────────────────────────────────────────────────────────── */
@@ -249,8 +258,6 @@ interface RunBox {
   tripped?: string;
 }
 
-const refusal = (reason: string): AgentResult => ({ outcome: "errored", final: "", turns: 0, durationMs: 0, exitCode: null, errors: [reason] });
-
 /** The deps for one run: the base deps with every agent turn behind the guard. */
 export function guardedDeps(base: EngineDeps, ledger: Ledger, box: RunBox, ceilings: Ceilings): EngineDeps {
   const why = (): string | undefined => {
@@ -269,7 +276,7 @@ export function guardedDeps(base: EngineDeps, ledger: Ledger, box: RunBox, ceili
       const stop = why();
       if (stop) {
         box.tripped ??= stop;
-        return refusal(stop);
+        return refusedTurn({ kind: "writer", input }, stop);
       }
       box.turns++;
       const cap = Math.min(input.maxBudgetUsd ?? Infinity, ceilings.turnUsd, ceilings.runUsd - box.cost);
@@ -281,7 +288,7 @@ export function guardedDeps(base: EngineDeps, ledger: Ledger, box: RunBox, ceili
       const stop = why();
       if (stop) {
         box.tripped ??= stop;
-        return { ...refusal(stop), outcome: "unavailable" };
+        return refusedTurn({ kind: "reviewer", call }, stop);
       }
       box.turns++;
       const r = await base.runReviewer(call);
@@ -361,6 +368,8 @@ export interface LoopReport {
   spentUsd: number;
   runs: LoopRunReport[];
   orphaned: string[];
+  /** Coverage's `damaged` at the start: runs whose subject the loop could not see. */
+  damaged: string[];
   /** Cost is the engine's reported cost: codex and agy turns report none. */
   note: string;
 }
@@ -388,9 +397,10 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
     ? opts.topics.filter((t) => !start.covered.some((c) => c.key === t.subject) && !start.claimed.includes(t.subject))
     : rankUncovered(await listTopicSubjects(registry), start, { onlyBundles: AUDIENCE_BUNDLES }).map((t) => ({ subject: `${t.bundle}/${t.slug}` }));
 
-  const id = `loop-${new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "")}`;
-  const dir = path.join(loopsRoot(), id);
-  await fs.mkdir(dir, { recursive: true });
+  // The stamp is to the second, so two loops started in one second named one directory and wrote
+  // one loop.json and one events.log; uniqueDir appends a suffix the file system guarantees.
+  const dir = await uniqueDir(loopsRoot(), `loop-${new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "")}`);
+  const id = path.basename(dir);
   const report: LoopReport = {
     schema: "article-loop/1",
     id,
@@ -402,6 +412,7 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
     spentUsd: 0,
     runs: [],
     orphaned: start.orphaned,
+    damaged: start.damaged,
     note: NOTE,
   };
   const event = async (line: string) => {
@@ -410,6 +421,7 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
   };
   const save = () => writeJsonAtomic(path.join(dir, "loop.json"), report);
   await event(`START ${id} target ${target} (covered ${start.covered.length}) budget $${opts.budgetUsd} concurrency ${concurrency}`);
+  if (start.damaged.length) await event(`DAMAGED ${start.damaged.join(" ")}: run.json does not parse; their topics are not counted or claimed`);
 
   const ledger: Ledger = { spent: 0 };
   let inflight = 0;

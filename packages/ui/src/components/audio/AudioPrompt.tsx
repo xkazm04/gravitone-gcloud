@@ -6,6 +6,7 @@
 //
 // v1 drew the same three in two places (InspectorRecipe's `draft` pre and InspectorTake's quote);
 // the prototype's Library detail is the one that survived.
+import { SrOnly } from "../a11y/SrOnly.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import s from "./AudioPrompt.module.css";
 
@@ -23,7 +24,8 @@ export function AudioPrompt({ prompt, negative, reasons }: AudioPromptProps) {
       {prompt.trim() === "" ? <p className={s.none}>no prompt recorded</p> : <p className={s.text}>{prompt}</p>}
       {negative !== undefined && negative.trim() !== "" && (
         <p className={s.neg}>
-          <b aria-label="excluded">−</b> {negative}
+          <b aria-hidden="true">−</b>
+          <SrOnly text="excluded" /> {negative}
         </p>
       )}
       {reasons.length > 0 && (

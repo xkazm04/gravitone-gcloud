@@ -1,6 +1,3 @@
-import { tmpdir } from "node:os";
-import path from "node:path";
-
 import { parseAt } from "@gt/domain/door";
 import { AppError, isAppError, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
@@ -23,6 +20,7 @@ import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
 import type { Reader, Store } from "@gt/kernel/store";
 
 import { OUT_DIRNAME } from "@/lib/fixtures/mode";
+import { blobRootOf } from "@/lib/kernelProcess";
 
 // THE SOUND PRODUCERS' KERNEL GLUE (L31: music video + Suno) - the three things
 // both bound producers do the same way, said once:
@@ -47,8 +45,8 @@ export function soundKernel(): SoundKernel {
   const location = storeLocation(OUT_DIRNAME);
   const k = processKernel(location);
   if (!k.ok) throw k.error;
-  const blobs = location === ":memory:" ? path.join(tmpdir(), "gravitone-blobs") : `${location}.blobs`;
-  return { store: k.value.store, fx: liveEffects(k.value.store, blobStore(blobs)) };
+  // The store's blobs live where every other door reads them (lib/kernelProcess.ts): `<dir>/blobs`.
+  return { store: k.value.store, fx: liveEffects(k.value.store, blobStore(blobRootOf(k.value.store))) };
 }
 
 export function must<T>(r: Result<T>): T {

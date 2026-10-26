@@ -43,6 +43,7 @@ import { finishProducer } from "../../lib/producers/finish.ts";
 import { driveStage, meshProducer, stageJobs } from "../../lib/producers/mesh.ts";
 import { scoutAssetProducer } from "../../lib/producers/scoutAsset.ts";
 import { scoutSceneProducer } from "../../lib/producers/scoutScene.ts";
+import { assetUse } from "../../lib/decision/v1/sources/scoutPlan.ts";
 
 const ENV = { ...process.env, GRAVITONE_DRY_ONLY: "1" };
 const LOC = path.join(ROOT, "kernel.sqlite");
@@ -105,9 +106,11 @@ function brief(name: string, body: unknown): string {
   return p;
 }
 
-const HERO = { class: "character", subject: "hooded archer, leather jerkin, quiver", style: "flat leather browns" };
-const AXE = { class: "weapon", kind: "axe", subject: "bearded battle axe, iron head, wrapped haft" };
-const CRATE = { class: "prop", subject: "supply crate, banded planks" };
+// Every brief states what it is for and the project it serves (operator, 2026-10-23: "we cannot create assets without purpose").
+const FOR = { use: "the starting party of a co-op dungeon crawler", serves: { project: "pof" } };
+const HERO = { class: "character", subject: "hooded archer, leather jerkin, quiver", style: "flat leather browns", ...FOR };
+const AXE = { class: "weapon", kind: "axe", subject: "bearded battle axe, iron head, wrapped haft", ...FOR };
+const CRATE = { class: "prop", subject: "supply crate, banded planks", ...FOR };
 
 const candidateOf = async (night: string, cid: string): Promise<Asset3dCandidate> => {
   const c = (await readNight(night)).candidates.find((x) => x.id === cid);
@@ -129,8 +132,30 @@ describe("the brief and its concepts", () => {
     if (!axe.ok) throw axe.error;
     expect(conceptsFor(axe.value.brief, ["T1", "M1"])[0]?.prompt).toMatch(/concept: axe, bearded battle axe.*Strict flat orthographic side profile.*exactly one blade or head on one straight shaft/);
     expect(parseBrief({ ...CRATE, colour: "red" }).ok).toBe(false);
-    expect(parseBrief({ class: "vehicle", subject: "cart" }).ok).toBe(false);
+    expect(parseBrief({ class: "vehicle", subject: "cart", ...FOR }).ok).toBe(false);
     expect(assetIdFor("2026-10-22-2", "c-03", "Hooded Archer, leather!")).toBe("2026-10-22-2-c-03-hooded-archer-leather");
+  });
+
+  it("a brief states what it is for and the project it serves - an existing game, or a new kind of project", () => {
+    const why = (raw: unknown): string => {
+      const r = parseBrief(raw);
+      return r.ok ? "ok" : r.error.message;
+    };
+    const { use: _u, ...noUse } = CRATE;
+    expect(why(noUse)).toMatch(/^asset brief: use: /);
+    const { serves: _s, ...noServes } = CRATE;
+    expect(why(noServes)).toMatch(/^asset brief: serves: /);
+    expect(why({ ...CRATE, serves: { project: "skyrim" } })).toMatch(/^asset brief: serves: /);
+    const fresh = parseBrief({ ...CRATE, serves: { newProject: "a cozy farming sim" } });
+    expect(fresh.ok && fresh.value.serves).toEqual({ newProject: "a cozy farming sim" });
+    expect(parseBrief(CRATE).ok && (parseBrief(CRATE) as { value: { serves: unknown; use: string } }).value).toMatchObject({ serves: { project: "pof" }, use: "the starting party of a co-op dungeon crawler" });
+  });
+
+  it("the 3D row states the purpose: the project first, then what it is for there", () => {
+    expect(assetUse({ use: "the forge set dressing", serves: { project: "mage-arena" } })).toBe("for mage-arena · the forge set dressing");
+    expect(assetUse({ use: "a hero roster", serves: { newProject: "a cozy farming sim" } })).toBe("new project: a cozy farming sim · a hero roster");
+    expect(assetUse({ use: "an older brief's use" })).toBe("an older brief's use");
+    expect(assetUse({})).toBeUndefined();
   });
 
   it("every dry stand-in concept passes the input gate it stands in front of", async () => {
@@ -186,7 +211,7 @@ describe("a dry night briefs three assets, refuses a fourth, and the worker fini
 
   it("a fourth brief is refused by the cap, before a candidate or a job exists", async () => {
     const before = (await readNight(night)).candidates.length;
-    const r = await cli(["asset", night, "--brief", brief("fourth", { class: "prop", subject: "iron lantern" })]);
+    const r = await cli(["asset", night, "--brief", brief("fourth", { class: "prop", subject: "iron lantern", ...FOR })]);
     expect(r.code).toBe(1);
     expect(r.err).toBe(`night ${night} has briefed 3 of its 3 game assets; "iron lantern" was not launched`);
     expect((await readNight(night)).candidates.length).toBe(before);
@@ -271,7 +296,7 @@ describe("refusals", () => {
   it("a brief the door refuses is a usage of the act, nothing written", async () => {
     const r0 = await cli(["open", "--json"]);
     const night = String(r0.doc["night"]);
-    const r = await cli(["asset", night, "--brief", brief("bad", { class: "weapon", subject: "longsword", techniques: ["M1"] })]);
+    const r = await cli(["asset", night, "--brief", brief("bad", { class: "weapon", subject: "longsword", techniques: ["M1"], ...FOR })]);
     expect(r.code).toBe(1);
     expect(r.err).toMatch(/M1 touches up a weapon's T1 mesh/);
     expect((await readNight(night)).candidates).toEqual([]);

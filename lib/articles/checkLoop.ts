@@ -68,7 +68,7 @@ export async function checkLoop(id: string, label: string, deps: EngineDeps): Pr
     const held = await readCheckPasses(dir, label);
     let rec = held[held.length - 1];
     if (!rec || rec.fixed) {
-      const report = await runCheck(dir, { render: deps.render, now: deps.now });
+      const report = await runCheck(dir, { render: deps.render, screenshots: false, now: deps.now });
       rec = {
         label,
         pass: held.length + 1,

@@ -204,6 +204,10 @@ function apply(ctx: Ctx, s: ScriptRec, op: ScriptOp, at: number): Result<ScriptR
     case "pick-scenario":
       if (!s.scenarios.some((x) => x.id === op.scenarioId)) return no(`no scenario ${op.scenarioId}`);
       return op.scenarioId === s.picked ? no("already picked") : ok({ ...s, picked: op.scenarioId });
+    // Another kind's op reaches here at run time (the door admits every editor's op): the real
+    // side's refusal (realScene.ts `nope`), not a fall-through.
+    default:
+      return no("not a script op");
   }
 }
 

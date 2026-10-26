@@ -9,10 +9,10 @@ import type { ModelOption, PlanView, Receipt, ReceiptMode, WorkPlanPart } from "
 import { isStepKind } from "@gt/domain/steps/registry";
 import { armLive, DRY as DRY_MODE, dryOnlyFrom } from "@gt/kernel/dryrun";
 import type { StepContext } from "@gt/kernel/job-core";
-import { gateContext } from "@gt/kernel/parts/gates";
+import { gateFacts } from "@gt/kernel/parts/gates";
 import { projectRecords, readPartIn, type PartSnapshot } from "@gt/kernel/parts/driver";
 import { launchOf } from "@gt/kernel/records/options";
-import { planViewIn, readQueue } from "@gt/kernel/records/read";
+import { chosenOf, planViewIn, readQueue } from "@gt/kernel/records/read";
 import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
 import type { Reader, Store } from "@gt/kernel/store";
 import type { Job } from "@gt/domain/job";
@@ -49,10 +49,10 @@ export function disciplineFor(recipeId: string): Discipline {
 
 /** The part's plan row and project clock, read in `r` (the same read the editor's view makes). */
 export function partFactsIn(r: Reader, projectId: string, partId: string, now: number): PartFacts {
-  const plan = planViewIn(r, projectId, gateContext(r, now));
+  const plan = planViewIn(r, projectId, gateFacts(now));
   const part = plan.parts.find((p): p is WorkPlanPart => p.id === partId && "options" in p);
   if (part === undefined) throw new AppError("not-found", `project ${projectId} has no work part ${partId}`);
-  const option = part.options.find((o) => o.key === part.chosen) ?? part.options[0];
+  const option = chosenOf(part.options, part.chosen);
   if (option === undefined) throw new AppError("internal", `part ${partId} has no model option`);
   const recipe = recipeById(plan.project.recipe);
   const targetS = plan.project.runtimeS ?? (recipe?.template === undefined ? null : templateOf(recipe.template).defaultS);

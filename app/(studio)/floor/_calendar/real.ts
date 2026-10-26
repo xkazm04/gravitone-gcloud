@@ -93,7 +93,7 @@ export function unimported(root: string): Problem | null {
 
 export async function realSlots(): Promise<{ readonly slots: readonly RailSlot[]; readonly problems: readonly Problem[]; readonly facts?: CalendarFacts }> {
   const pending = unimported(v1Root());
-  const c = ctx();
+  const c = ctx(true);
   const problems = pending === null ? [] : [pending];
   if (!c.ok) return { slots: [], problems: [...problems, { source: "calendar", error: c.error.message }] };
   const { channels, mode, lastChannel, tick } = c.value.ready;
@@ -166,6 +166,13 @@ export function viewOfRow(store: Store, row: SlotRow, mode: "dry" | "live"): Res
 /** The channel's own mode: live only where the readiness seam says this channel uploads. */
 const modeFor = (ready: Readiness, channel: string): "dry" | "live" => (ready.channels.find((c) => c.channel === channel)?.state === "live" ? "live" : "dry");
 
+/** A verb sent on a revision the slot has moved past, said from the slot as it now is (both sides). */
+export const staleText = (verb: string, s: Pick<Slot, "title" | "state" | "at">): string => `${verb} ${s.title}: it changed since it was opened - now ${s.state} for ${s.at}`;
+
+/** Publish-now refused for a slot it cannot take (@gt/ui slot.ts canPublishNow), both sides. */
+export const notPublishedText = (s: Pick<Slot, "title" | "state" | "channel" | "drift">): string =>
+  `publish ${s.title}: a ${s.drift === undefined ? s.state : `drifted (${s.drift})`} ${s.channel} slot is not published from here`;
+
 /** A verb's answer, read back and drawn; a stale revision re-worded from the slot as it now is. */
 function answer(store: Store, ready: Readiness, verb: string, r: Result<SlotRow>, id: string): Result<SlotView> {
   if (r.ok) return viewOfRow(store, r.value, modeFor(ready, r.value.slot.channel));
@@ -173,16 +180,22 @@ function answer(store: Store, ready: Readiness, verb: string, r: Result<SlotRow>
   const now = getSlot(store, id);
   if (!now.ok) return r;
   const n = now.value.slot;
-  return err("conflict", `${verb} ${n.title}: it changed since it was opened - now ${n.state} for ${n.at}`, { detail: "stale" });
+  return err("conflict", staleText(verb, n), { detail: "stale" });
 }
 
 type Ctx = { readonly store: Store; readonly rows: readonly SlotRow[]; readonly ready: Readiness };
 
-/** The store, the calendar as it stands, and the readiness read against it - once per act. */
-function ctx(): Result<Ctx> {
+/**
+ * The store and the readiness read against it - once per act. The calendar as it stands
+ * (`rows`) is read only for the rail and the month: a record or a verb needs its channel's mode
+ * and the missed window, never every slot, and every slot is what a calendar's history grows by
+ * (3000 slots: 25 ms a record before this, measured). Without the rows, `lastChannel` - the
+ * schedule form's default, which no verb reads - is null.
+ */
+function ctx(withRows = false): Result<Ctx> {
   const s = store();
   if (!s.ok) return s;
-  const rows = listSlots(s.value);
+  const rows = withRows ? listSlots(s.value) : ok<SlotRow[]>([]);
   if (!rows.ok) return rows;
   const facts = s.value.read(storeFactsIn);
   if (!facts.ok) return facts;
@@ -243,10 +256,13 @@ export function realPublishNow(v: VerbIn): Result<SlotView> {
   // A blog slot goes out as its article approve's pull request (owner ruling 4): publish-now
   // would only make it due for a tick that never claims it, and it would be marked missed.
   if (!canPublishNow({ status: s.state, channel: s.channel, ...(s.drift === undefined ? {} : { drift: s.drift }) })) {
-    return err("refused", `publish ${s.title}: a ${s.drift ?? s.state} ${s.channel} slot is not published from here`);
+    return err("refused", notPublishedText(s));
   }
   return answer(st, ready, "publish", publishNow(st, v.id, actorOf(v.who), { now: v.nowMs, ready: engineReady(c.value) }, opts(v)), v.id);
 }
+
+/** A video channel's refusal of an item that is not an export (the adapter's sentence). */
+export const exportOnly = (item: string, channel: string): string => `${item} is not an export; ${channel} publishes exports`;
 
 export function realSchedule(d: ScheduleDraft, who: Who): Result<SlotView> {
   const c = ctx();
@@ -255,6 +271,9 @@ export function realSchedule(d: ScheduleDraft, who: Who): Result<SlotView> {
   const channel = channelSchema.safeParse(d.channel);
   if (!channel.success) return err("invalid", `${d.channel} is not a channel`);
   if (channel.data === "blog") return err("refused", "a blog slot is made by its article's approve on the Board, not here");
+  // Every other channel publishes an export (lib/producers/publish.ts youtubeAdapter refuses
+  // anything else at its tick, in these words): another Library item would be a slot that can only fail.
+  if (exportIdOf(d.item) === undefined) return err("refused", exportOnly(d.item, channel.data));
   const made = createSlot(st, { libraryItemId: d.item, channel: channel.data, at: d.at, title: d.title, description: d.description, tags: d.tags }, actorOf(who), engineReady(c.value));
   return made.ok ? viewOfRow(st, made.value, modeFor(ready, channel.data)) : made;
 }

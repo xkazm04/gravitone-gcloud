@@ -112,7 +112,10 @@ describe("the roster", () => {
     const lines: TimerLine[] = [];
     const r = timerRoster(entries, { store: k.store, holder: A, alive: () => true, clock: () => new Date(), say: (l) => lines.push(l) });
     r.start();
-    await sleep(400);
+    // Until the counts, not for a fixed 400 ms: 8 ticks at a 15 ms cadence is ~120 ms alone, and a
+    // fixed window under the full suite's load measured 5.
+    const until = Date.now() + 10_000;
+    while ((throws < 3 || fine < 8) && Date.now() < until) await sleep(25);
     expect(await r.stop(1_000)).toEqual([]);
     expect(throws).toBeGreaterThanOrEqual(3);
     expect(fine).toBeGreaterThanOrEqual(8);
@@ -125,7 +128,7 @@ describe("the roster", () => {
     await sleep(60);
     expect(fine).toBe(before);
     k.close();
-  });
+  }, 60_000);
 
   it("an answered error is `failed`, a hang past the deadline is `timed-out` and abandoned, and the loop goes on", async () => {
     const k = store();
@@ -144,12 +147,13 @@ describe("the roster", () => {
     const lines: TimerLine[] = [];
     const r = timerRoster(entries, { store: k.store, holder: A, alive: () => true, clock: () => new Date(), say: (l) => lines.push(l) });
     r.start();
-    await sleep(500);
+    const until = Date.now() + 10_000;
+    while (lines.length < 3 && Date.now() < until) await sleep(25);
     await r.stop(500);
     expect(lines.map((l) => l.outcome).slice(0, 3)).toEqual(["failed", "timed-out", "succeeded"]);
     expect(events(k, "timer.recover")).toEqual(["timer:publish-tick"]);
     k.close();
-  });
+  }, 60_000);
 
   it("two workers on one store run each timer once: the second stands down, naming the holder, until the first lets go", async () => {
     const k = store();

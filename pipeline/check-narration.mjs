@@ -207,7 +207,7 @@ function exprFragments(src, re) {
 }
 
 /**
- * Every literal <Hint> body in `src`, in both spellings:
+ * Every literal <Hint> body (and <Empty> label) in `src`, in both spellings:
  *   v1      <Hint ...>words</Hint>             children; a `{expr}` or element
  *                                             child stops the match (header).
  *   @gt/ui  <Hint text="words" ... />          the prop, literal or braced; a
@@ -220,7 +220,10 @@ function exprFragments(src, re) {
 function hintBodies(src) {
   const out = [];
   for (const m of src.matchAll(/<Hint\b[^>]*>([^<>{}]+)<\/Hint>/g)) out.push(m[1]);
-  for (const m of src.matchAll(/<Hint\b/g)) {
+  // <Empty label=...> is the second door of the same wall: its type counts a literal and cannot
+  // count a template or a ternary (empty/Empty.tsx), so its braced label is read here too.
+  for (const m of src.matchAll(/<(Hint|Empty)\b/g)) {
+    const attr = m[1] === "Hint" ? "text" : "label";
     // The opening tag, up to the first `>` outside braces (an arrow in a prop is not its end).
     let i = m.index + m[0].length;
     let depth = 0;
@@ -230,8 +233,8 @@ function hintBodies(src) {
       i++;
     }
     const tag = src.slice(m.index, i);
-    for (const t of tag.matchAll(/(?<![\w-])text="([^"]*)"/g)) out.push(t[1]);
-    out.push(...exprFragments(tag, /(?<![\w-])text=\{/g));
+    for (const t of tag.matchAll(new RegExp(String.raw`(?<![\w-])${attr}="([^"]*)"`, "g"))) out.push(t[1]);
+    out.push(...exprFragments(tag, new RegExp(String.raw`(?<![\w-])${attr}=\{`, "g")));
   }
   return out.map((t) => t.replace(/\s+/g, " ").trim());
 }

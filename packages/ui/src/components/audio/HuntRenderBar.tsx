@@ -21,13 +21,17 @@ export type HuntRenderBarProps = {
 };
 
 export function HuntRenderBar({ plan, picked, busy, liveBlock, onRender, onClear }: HuntRenderBarProps) {
+  // Settled is two states: a leaf in flight has not been heard yet.
+  const inFlight = plan.settled.filter((n) => n.state === "rendering").length;
+  const heard = plan.settled.length - inFlight;
   return (
     <div className={s.bar} role="group" aria-label="render the selection">
       <Tally value={picked} label="picked" />
       <Chip label="render" value={plan.render.length} tone="cyan" />
       <Chip label="seconds" value={plan.seconds} tone="cyan" casing="lower" />
       {plan.byHand.length > 0 && <Chip label="by hand" value={plan.byHand.length} tone="amber" />}
-      {plan.settled.length > 0 && <Chip label="heard" value={plan.settled.length} />}
+      {heard > 0 && <Chip label="heard" value={heard} />}
+      {inFlight > 0 && <Chip label="rendering" value={inFlight} tone="violet" />}
       {plan.unreachable.length > 0 && <Chip label="no engine" value={plan.unreachable.length} tone="rose" />}
       {liveBlock !== null && <Chip label="live" value="off" ghost name={`live off: ${liveBlock}`} />}
       <span className={s.barGrow} />

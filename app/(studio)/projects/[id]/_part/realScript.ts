@@ -3,8 +3,7 @@ import "server-only";
 import type { AdScenario } from "@/lib/ads/types";
 import type { ScriptRender } from "@/lib/script/types";
 import { BASELINE, type Note, type Version } from "@/lib/script/versions";
-import { derive, newLog, type CutLog } from "@/lib/script/trailer/ops";
-import type { TrailerCut, WithholdingBudget } from "@/lib/script/trailer/types";
+import { derive, logFromRecord, type CutLog } from "@/lib/script/trailer/ops";
 
 import type { ScriptRec } from "./fixtureScript.ts";
 import { obj, str, written, type Obj, type Recs } from "./realRecs.ts";
@@ -20,8 +19,7 @@ export function scriptOf(recs: Recs): ScriptRec {
   const engine = obj(sv?.["engine"]);
   const adsEngine = obj(as?.["engine"]);
   const staged = obj(sv?.["staged"]);
-  const cut: CutLog | null =
-    st === undefined ? null : obj(st["origin"]) !== undefined ? written<CutLog>({ origin: st["origin"], originBudget: st["originBudget"], ops: st["ops"] ?? [], head: st["head"] ?? 0 }) : newLog(written<TrailerCut>(st["cut"]), written<WithholdingBudget>(st["budget"]));
+  const cut: CutLog | null = st === undefined ? null : logFromRecord(written<Parameters<typeof logFromRecord>[0]>(st));
   return {
     candidates: written<readonly ScriptRender[]>(sv?.["candidates"] ?? []),
     adopted: str(recs.get("script-adopted")?.["renderId"]) || null,

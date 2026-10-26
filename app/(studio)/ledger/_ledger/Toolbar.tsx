@@ -104,7 +104,7 @@ export function Toolbar(p: ToolbarProps) {
         <Tally value={post && !p.exhausted ? `${shown}+` : shown} of={p.facets.head} label="events" />
       </span>
       <span className={s.cost}>
-        <Chip label="cost" value={cost.priced === 0 ? "—" : `${usd(Number(cost.total.toFixed(2)))}${p.capped ? "+" : ""}`} name={`cost of loaded events ${usd(cost.total)}`} />
+        <Chip label="cost" value={cost.priced === 0 ? "—" : `${usd(cost.total)}${p.capped ? "+" : ""}`} name={`cost of loaded events ${usd(cost.total)}`} />
         {marks.map((k) => (
           <SourceTag key={k} kind={k} value={usd(cost.bySrc[k] ?? 0)} />
         ))}
@@ -119,7 +119,7 @@ export function Toolbar(p: ToolbarProps) {
         />
       )}
       {p.rows.some(isFixture) && <Chip label="fixture" tone="amber" casing="lower" name="fixture universe" />}
-      {post && !p.exhausted && <Chip label="searched" value={p.scanned} tone="amber" casing="lower" name={`text search examined the newest ${p.scanned} events`} />}
+      {post && !p.exhausted && <Chip label="searched" value={p.scanned} tone="amber" casing="lower" name={`text search examined the ${f.order === "asc" ? "oldest" : "newest"} ${p.scanned} events`} />}
       {p.ignored.map((x) => (
         <Chip key={x} label={`ignored ${x}`} tone="amber" casing="lower" ghost />
       ))}

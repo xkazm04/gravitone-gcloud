@@ -15,6 +15,7 @@ import { readLedger } from "../../../../lib/sound/store.ts";
 import { readSunoLive } from "../../../../lib/sound/suno/queue.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
 import type { SoundTake } from "../../../../lib/sound/types.ts";
+import { takeFileHref } from "../../../../lib/sound/takeHref.ts";
 import { deriveVocabulary } from "../../../../lib/sound/vocabulary.ts";
 import { SUNO_PHASE_WORD, type SunoJob } from "../../../../lib/suno/types.ts";
 import { REFERENCES } from "./references.ts";
@@ -80,7 +81,7 @@ export function seedTake(t: SoundTake): SeedTake {
     id: t.id,
     title: t.title,
     seed: seedOfTake(t),
-    src: t.file === null ? null : `/api/sound/takes/${encodeURIComponent(t.id)}/file`,
+    src: t.file === null ? null : takeFileHref(t.id),
     peaks: t.peaks ?? [],
     durationS: m?.durationS ?? t.durationS,
     prompt: t.prompt,
@@ -98,16 +99,17 @@ function draftState(j: SunoJob | undefined): DraftState {
   return j.state === "active" ? "running" : j.state;
 }
 
-export async function readAudio(): Promise<AudioView> {
-  const all = await read(() => listTakes({ fixtures: FIXTURE_MODE }));
-  const music = all.ok ? all.value.filter((t) => t.kind === "music") : [];
-  const terms = await read(async () => {
+function readTerms(): Promise<Read<Term[]>> {
+  return read(async () => {
     const [ledger, hands] = await Promise.all([readLedger(), readHands()]);
     return deriveVocabulary(computeInsights(ledger.verdicts).cells, hands)
       .filter((e) => e.n > 0)
       .map((e): Term => ({ id: e.id, term: e.term, facet: e.facet, n: e.n, kept: e.kept, rejected: e.rejected, keepRate: e.keepRate, stance: e.stance, phrase: e.phrase, topDefect: e.topDefect }));
   });
-  const drafts = await read(async () => {
+}
+
+function readDrafts(): Promise<Read<DraftRow[]>> {
+  return read(async () => {
     const { file, jobs } = await readSunoLive();
     return [...file.proposals]
       .sort((a, b) => b.createdAt - a.createdAt)
@@ -131,6 +133,12 @@ export async function readAudio(): Promise<AudioView> {
         };
       });
   });
+}
+
+export async function readAudio(): Promise<AudioView> {
+  // The three reads share nothing, so they wait together; each still fails on its own.
+  const [all, terms, drafts] = await Promise.all([read(() => listTakes({ fixtures: FIXTURE_MODE })), readTerms(), readDrafts()]);
+  const music = all.ok ? all.value.filter((t) => t.kind === "music") : [];
   const concept: ConceptTake[] = music.map((t) => ({
     referenceTrackId: t.referenceTrackId,
     verdict: t.verdict,

@@ -41,6 +41,15 @@ export const LOCAL_MODE = process.env.NEXT_PUBLIC_LOCAL_MODE === "1";
 
 export const LOCAL_UID = "local-owner";
 
+/** The runtime door to the same identity (lib/localEntry.ts judges it on the server): the landing's
+ *  "Enter locally" sets this cookie, and every request re-earns the grant. */
+export const LOCAL_ENTRY_COOKIE = "gt_local";
+
+/** This browser chose to enter locally (`document.cookie`, or a Cookie header). A hint, not the grant. */
+export function localEntryChosen(cookies: string): boolean {
+  return cookies.split(";").some((c) => c.trim() === `${LOCAL_ENTRY_COOKIE}=1`);
+}
+
 export const LOCAL_PROFILE: Profile = {
   uid: LOCAL_UID,
   displayName: "Local Studio",

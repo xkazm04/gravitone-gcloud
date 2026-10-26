@@ -1,13 +1,11 @@
 import path from "node:path";
 
-import { parseAt } from "@gt/domain/door";
 import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
-import { jobIdSchema } from "@gt/domain/ids";
 import type { Job, RunMode } from "@gt/domain/job";
 import { blobStore } from "@gt/kernel/blob";
 import { liveEffects } from "@gt/kernel/effects";
-import { enqueueIn, get } from "@gt/kernel/job";
+import { enqueueIn } from "@gt/kernel/job";
 import type { Ending, Producer } from "@gt/kernel/job-core";
 import { runJob, type RunOptions, type RunReport } from "@gt/kernel/job-run";
 import type { Store } from "@gt/kernel/store";
@@ -18,6 +16,7 @@ import { generateVariant, liveGenerateEngines, type GenerateEngines } from "../f
 import { failedWith, readAssetNow, writeVariant } from "../foundry/mesh/variant.ts";
 import { FoundryError } from "../foundry/runStore.ts";
 import { kernel } from "../kernelProcess.ts";
+import { jobOf } from "./forge.ts";
 
 // THE MESH PRODUCER, BOUND TO THIS BOX (spark game-3d-assets WP2): the definition
 // (packages/producers/src/mesh/define.ts) over the asset store (lib/foundry/mesh/store.ts) and the
@@ -39,15 +38,6 @@ import { kernel } from "../kernelProcess.ts";
 // about work no job will do.
 
 const OPEN: readonly Job["state"][] = ["planned", "queued", "running", "paused", "interrupted"];
-
-function jobOf(store: Store, id: string): Job | undefined {
-  const parsed = parseAt("job id", jobIdSchema, id);
-  if (!parsed.ok) throw parsed.error;
-  const r = get(store, parsed.value);
-  if (r.ok) return r.value.job;
-  if (r.error.code === "not-found") return undefined;
-  throw r.error;
-}
 
 /** The stage's jobs for a target in launch order: `job:run:<run>`, then `~2`, `~3`... */
 export function stageJobs(store: Store, stage: MeshStage, t: MeshTarget): Job[] {

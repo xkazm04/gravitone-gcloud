@@ -31,28 +31,28 @@
 // NO VENDOR, NO SPAWN, NO SPEND: every case forces a posture in which the local
 // transport is blocked BEFORE its probe would spawn anything, and leaves the
 // Google key unset so its adapter is refused at the cheap gate.
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { test, expect } from "@playwright/test";
 
 import { TextError } from "@/lib/text/errors";
 import { orderFor, planFor, reason, engineStatus } from "@/lib/text/router";
 import type { TurnClass } from "@/lib/text/types";
 
-import { keepEnv } from "./_helpers";
+import { keepEnv, stripComments } from "./_helpers";
 
-const REAL_TURNS: TurnClass[] = [
-  "edit-plan",
-  "scene-direction",
-  "style-synthesis",
-  "sound-hunt",
-  "sound-lesson",
-  "suno-propose",
-  "suno-riff",
-  "mv-treatment",
-  "mv-metadata",
-  "ad-ideas",
-  "ad-scenarios",
-  "voice-fx",
-];
+/** Every production turn class, walked off lib/text/types.ts's TurnClass union
+ *  (comments stripped) rather than listed here: a hand list stood at 11 of the
+ *  14 while `compose`, `research` and `repair` went unpinned. `probe` is the
+ *  one class with its own plan, asserted below. */
+const TURN_UNION = /export type TurnClass =([^;]+);/.exec(stripComments(readFileSync(resolve("lib/text/types.ts"), "utf8")))?.[1] ?? "";
+const REAL_TURNS = [...TURN_UNION.matchAll(/"([a-z-]+)"/g)].map((m) => m[1] as TurnClass).filter((t) => t !== "probe");
+
+test("plan: the turn walk read the union", () => {
+  expect(REAL_TURNS.length, "TurnClass was not read from lib/text/types.ts").toBeGreaterThanOrEqual(14);
+  expect(REAL_TURNS).toEqual(expect.arrayContaining(["compose", "research", "repair"]));
+});
 
 keepEnv(["TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY"]);
 
@@ -171,6 +171,72 @@ test("refusal: the kind is the engine we MEANT to use, not a hardcoded default",
   expect((cloud as TextError).kind).toBe("no-key");
   expect((cloud as TextError).message).not.toContain("claude-cli");
   console.log(`[ladder] cloud refusal kind -> ${(cloud as TextError).kind}`);
+});
+
+/* ── the cancel ───────────────────────────────────────────────────────────── */
+
+test("cancel: a cloud turn's in-flight request is aborted by the caller's signal, and reads as cancelled", async () => {
+  process.env.TEXT_ENV = "cloud";
+  process.env.GOOGLE_AI_API_KEY = "probe-google-key-0123456789";
+  const real = globalThis.fetch;
+  let sawCallerAbort = false;
+  // A vendor that takes 3s to answer, unless the request's own signal aborts it first.
+  globalThis.fetch = ((_url: unknown, init?: RequestInit) =>
+    new Promise<Response>((resolve, reject) => {
+      const t = setTimeout(
+        () => resolve(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "late" }] } }] }), { status: 200 })),
+        3_000,
+      );
+      init?.signal?.addEventListener("abort", () => {
+        clearTimeout(t);
+        sawCallerAbort = true;
+        reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+      });
+    })) as typeof fetch;
+  const ctl = new AbortController();
+  const started = Date.now();
+  try {
+    setTimeout(() => ctl.abort(), 50);
+    const out = await reason({ turn: "edit-plan", prompt: "x", signal: ctl.signal }).then(
+      () => "served",
+      (e: unknown) => e as TextError,
+    );
+    expect(out, "a cancelled cloud turn ran on and was served").toBeInstanceOf(TextError);
+    expect((out as TextError).kind).toBe("cancelled");
+    expect((out as TextError).dispatched).toBe(true);
+    expect(sawCallerAbort).toBe(true);
+    expect(Date.now() - started).toBeLessThan(2_000);
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("size cap: the prompt as SENT is held to it, schema instruction included", async () => {
+  process.env.TEXT_ENV = "cloud";
+  process.env.GOOGLE_AI_API_KEY = "probe-google-key-0123456789";
+  const real = globalThis.fetch;
+  let sent = 0;
+  globalThis.fetch = (async () => {
+    sent++;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"a":1}' }] } }] }), { status: 200 });
+  }) as typeof fetch;
+  // `oneOf` keeps this schema off native enforcement, so its instruction is appended.
+  const schema = { type: "object", required: ["a"], properties: { a: { oneOf: [{ type: "number" }, { type: "string" }] } } };
+  const lines: string[] = [];
+  const realErr = console.error;
+  console.error = (...a: unknown[]) => void lines.push(a.join(" "));
+  try {
+    const out = await reason({ turn: "edit-plan", prompt: "x".repeat(900_000 - 10), schema }).catch((e: unknown) => e);
+    expect(sent, "a prompt past the cap once its schema was appended went on the wire").toBe(0);
+    expect((out as TextError).kind).toBe("invalid-request");
+  } finally {
+    console.error = realErr;
+    globalThis.fetch = real;
+  }
+  // The descent record names the refusal as what it was, not as an engine fault.
+  const line = lines.find((l) => l.includes("kind=invalid-request")) ?? "";
+  expect(line, "no refusal line was logged").toContain("tried=google:");
+  expect(line).toContain("tried=google:invalid-request");
 });
 
 /* ── the availability oracle ──────────────────────────────────────────────── */

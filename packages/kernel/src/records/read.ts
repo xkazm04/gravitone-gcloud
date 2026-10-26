@@ -15,7 +15,7 @@ import { digestIn } from "./digest.ts";
 import { modelOptions, unitNounOf } from "./options.ts";
 import { priceLine, placePlan, totalsOf, type PlanLine, type QueueRead } from "./receipt.ts";
 import { etaOf, type SchedItem } from "./schedule.ts";
-import { loadParts, loadProject, quotedSecondsOf, type PartRow } from "./schema.ts";
+import { loadParts, loadProject, quotedSecondsMap, type PartRow } from "./schema.ts";
 
 // THE READS - a project as the Plan draws it, the list as the left column groups it, and the
 // queue state every receipt is computed against. Everything is assembled from the records, the
@@ -44,14 +44,14 @@ const dayOf = (now: number): string => new Date(now).toISOString().slice(0, 10);
 
 const ms = (iso: string | undefined): number | undefined => (iso === undefined ? undefined : Date.parse(iso));
 
-function jobOf(r: Reader, id: string): Job | undefined {
-  const raw = r.get("SELECT record FROM jobs WHERE id = ?", id);
-  return raw === undefined ? undefined : must(parseJsonAt("job record", jobSchema, String(raw["record"])));
-}
+const parseJob = (record: unknown): Job => must(parseJsonAt("job record", jobSchema, String(record)));
 
-function orderOf(r: Reader, id: string): number {
-  const v = r.get("SELECT ord FROM jobs WHERE id = ?", id)?.["ord"];
-  return typeof v === "number" ? v : Number.MAX_SAFE_INTEGER;
+/** A job's record and its queue order, in one statement (data-access: batching-and-n-plus-one). */
+function jobOf(r: Reader, id: string): { readonly job: Job; readonly order: number } | undefined {
+  const raw = r.get("SELECT record, ord FROM jobs WHERE id = ?", id);
+  if (raw === undefined) return undefined;
+  const ord = raw["ord"];
+  return { job: parseJob(raw["record"]), order: typeof ord === "number" ? ord : Number.MAX_SAFE_INTEGER };
 }
 
 /** When a finished job last ran: its last claim and its finish, from its own events. */
@@ -72,21 +72,21 @@ function ranAt(r: Reader, jobId: string): { start?: number; end?: number } {
  * priced is placed as itself, not as somebody else's work). Its digest is half a receipt's token.
  */
 export function readQueue(r: Reader, exclude: ReadonlySet<string> = new Set()): QueueRead {
-  const rows = r.all("SELECT id, lane, state, ord FROM jobs WHERE state IN ('queued', 'running') ORDER BY lane, ord, n");
+  const rows = r.all("SELECT id, ord, record FROM jobs WHERE state IN ('queued', 'running') ORDER BY lane, ord, n");
   const others: SchedItem[] = [];
   const seen: unknown[] = [];
+  const quoted = quotedSecondsMap(r, rows.map((row) => String(row["id"])).filter((id) => !exclude.has(id)));
   for (const row of rows) {
     const id = String(row["id"]);
     if (exclude.has(id)) continue;
-    const job = jobOf(r, id);
-    if (job === undefined) continue;
+    const job = parseJob(row["record"]);
     const order = typeof row["ord"] === "number" ? row["ord"] : 0;
     seen.push([id, job.lane, job.state, order]);
     const started = ms(job.lease?.acquiredAt);
     others.push({
       key: `job:${id}`,
       lane: job.lane,
-      seconds: quotedSecondsOf(r, id),
+      seconds: quoted.get(id) ?? 0,
       after: [],
       order,
       status: job.state === "running" ? "running" : "pending",
@@ -151,14 +151,16 @@ export function projectModel(r: Reader, id: string, ctx: ReadContext): ProjectMo
   const rows = loadParts(r, id);
   const day = dayOf(ctx.now);
   const jobs = new Map<string, Job>();
+  const orders = new Map<string, number>();
   const facts = new Map<string, PartFacts>();
   for (const row of rows) {
     const p = row.part;
     if (row.jobId !== null) {
-      const job = jobOf(r, row.jobId);
-      if (job !== undefined) {
-        jobs.set(p.id, job);
-        facts.set(p.id, { job: job.state });
+      const held = jobOf(r, row.jobId);
+      if (held !== undefined) {
+        jobs.set(p.id, held.job);
+        orders.set(p.id, held.order);
+        facts.set(p.id, { job: held.job.state });
       }
     } else if (p.kind === "gate") {
       const packet = ctx.packetOf?.(p.id, r);
@@ -183,7 +185,7 @@ export function projectModel(r: Reader, id: string, ctx: ReadContext): ProjectMo
     const opts = modelOptions(p.kind, day);
     options.set(p.id, opts);
     const option = chosenOf(opts, p.option);
-    const order = job === undefined ? 1e9 + row.ord : orderOf(r, job.id);
+    const order = job === undefined ? 1e9 + row.ord : (orders.get(p.id) ?? Number.MAX_SAFE_INTEGER);
     return { key: p.id, label: p.kind, lane: option?.lane ?? null, units: p.units, ...(option === undefined ? {} : { option }), after: p.after, order, status, ...timing };
   });
   return { project, rows, states, jobs, options, lines, state: projectStateOf([...states.values()].map((state) => ({ state }))), unlaunched };
@@ -294,13 +296,15 @@ export const LIST_LIMIT = 100;
 export function listProjects(store: Store, ctx: ReadContext, limit = LIST_LIMIT): Result<ProjectList> {
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) return { ok: false, error: new AppError("invalid", `list limit ${limit} is not 1..500`) };
   return store.read((r) => {
-    const ids = r.all("SELECT id FROM projects WHERE listed = 1 ORDER BY updated_at DESC, id LIMIT ?", limit + 1).map((x) => String(x["id"]));
+    const rows = r.all("SELECT id, updated_at FROM projects WHERE listed = 1 ORDER BY updated_at DESC, id LIMIT ?", limit + 1);
+    const ids = rows.map((x) => String(x["id"]));
+    const updatedOf = new Map(rows.map((x) => [String(x["id"]), x["updated_at"]]));
     const truncated = ids.length > limit;
     const queue = readQueue(r);
     const projects = ids.slice(0, limit).map((id): ProjectSummary => {
       const m = projectModel(r, id, ctx);
       const v = view(m, queue, ctx);
-      const updated = r.get("SELECT updated_at FROM projects WHERE id = ?", id)?.["updated_at"];
+      const updated = updatedOf.get(id);
       const pips = v.parts.map((p) => p.state);
       const digest = digestIn(r, m.project);
       return {

@@ -1,10 +1,13 @@
 // The Ledger's parts (Phase 2, lot 16): the strip's geometry, the JSON scanner, the money
 // format, and what each new or extended component exposes - rendered with react-dom/server
 // (Vitest runs without a DOM; the strip's drag is driven live in tests/live/ledger).
+import { readFileSync } from "node:fs";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import sr from "../../src/components/a11y/SrOnly.module.css";
+import { count, plural } from "../../src/count.ts";
 import { Button } from "../../src/components/button/Button.tsx";
 import { EventRow, type EventRowProps } from "../../src/components/eventrow/EventRow.tsx";
 import { usd } from "../../src/components/eventrow/usd.ts";
@@ -17,7 +20,7 @@ import seg from "../../src/components/seg/Seg.module.css";
 import { SourceTag } from "../../src/components/source/SourceTag.tsx";
 import { StaleBadge, type StaleBadgeProps } from "../../src/components/stalebadge/StaleBadge.tsx";
 import { BAR_MAX, bars, daysBetween, dragRange, MIN_BAR, nowAt, slotAt, ticks, type DayCount } from "../../src/components/timestrip/strip.ts";
-import { restingReadout, type TimeStripProps } from "../../src/components/timestrip/TimeStrip.tsx";
+import { keyStep, readout, restingReadout, stepDrag, TimeStrip, type TimeStripProps } from "../../src/components/timestrip/TimeStrip.tsx";
 import { Toggle } from "../../src/components/toggle/Toggle.tsx";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
@@ -35,6 +38,16 @@ describe("time strip geometry", () => {
     const [b] = bars([day("2026-10-01", 1, 2, 997)], { today: "2026-10-01", range: null });
     expect(b?.segments.map((s) => s.kind)).toEqual(["machine", "agent", "operator"]);
     expect(Math.min(...(b?.segments.map((s) => s.px) ?? []))).toBeGreaterThanOrEqual(1);
+  });
+
+  test("a bar's segments stack to the bar's own height: the 1 px floors come out of the largest kind", () => {
+    // The busiest day (56 px) and a quiet one (6 px), each with two minority kinds under 1 px raw.
+    const drawn = bars([day("2026-10-01", 1, 2, 997), day("2026-10-02", 1, 1, 98), day("2026-10-03", 0, 0, 0)], { today: "2026-10-03", range: null });
+    for (const b of drawn) {
+      expect(b.segments.reduce((a, g) => a + g.px, 0)).toBeCloseTo(b.px, 6);
+      for (const g of b.segments) expect(g.px).toBeGreaterThanOrEqual(1);
+    }
+    expect(drawn[0]?.px).toBe(BAR_MAX);
   });
 
   test("days after today are future; a range dims every day outside it", () => {
@@ -77,6 +90,56 @@ describe("time strip geometry", () => {
     expect(restingReadout(d, { from: "2026-10-02", to: "2026-10-03" }, 41)).toEqual(["02 Oct → 03 Oct", "41 events"]);
     expect(restingReadout(d, null, undefined)).toEqual(["01 Oct → 05 Oct", "5 days"]);
   });
+
+  test("a drag moving inside one slot is the same state object, so the strip does not re-render", () => {
+    const d = { a: 2, b: 4 };
+    expect(stepDrag(d, 4)).toBe(d);
+    expect(stepDrag(d, 5)).toEqual({ a: 2, b: 5 });
+    expect(stepDrag(d, 5)).not.toBe(d);
+  });
+
+  test("a hovered day is drawn outside the live region: the range is the only thing announced", () => {
+    const html = renderToStaticMarkup(readout(["02 Oct → 03 Oct", "41 events"], { day: "2026-10-02", operator: 1, agent: 2, machine: 3 }));
+    const live = /<div[^>]*aria-live="polite"[^>]*>([\s\S]*?)<\/div>/.exec(html);
+    expect(live?.[1]).toContain("41 events");
+    expect(live?.[1]).not.toContain("02 Oct · 6 ev");
+    expect(html).toMatch(/<div aria-hidden="true"><b>02 Oct · 6 ev<\/b>/);
+    const rest = renderToStaticMarkup(readout(["a", "b"], undefined));
+    expect(rest).toContain('aria-live="polite"');
+    expect(rest).not.toContain("aria-hidden");
+  });
+
+  test("the strip takes focus and a range is set by keys: move, extend, apply, clear", () => {
+    const days = daysBetween("2026-10-01", "2026-10-10");
+    const strip = renderToStaticMarkup(h(TimeStrip, { days: days.map((day) => ({ day, operator: 1, agent: 0, machine: 0 })), today: "2026-10-10", nowMs: Date.parse("2026-10-10T12:00:00Z"), range: null, onRange: () => undefined }));
+    expect(strip).toMatch(/role="group"[^>]*tabindex="0"|tabindex="0"[^>]*role="group"/);
+    let kb = { a: 0, b: 0 };
+    for (let i = 0; i < 3; i++) kb = keyStep(kb, "ArrowRight", false, days.length)?.kb ?? kb;
+    expect(kb).toEqual({ a: 3, b: 3 });
+    for (let i = 0; i < 2; i++) kb = keyStep(kb, "ArrowRight", true, days.length)?.kb ?? kb;
+    expect(kb).toEqual({ a: 3, b: 5 });
+    const applied = keyStep(kb, "Enter", false, days.length);
+    expect(applied?.write).toBe("apply");
+    expect(dragRange(days, kb.a, kb.b, null)).toEqual({ from: "2026-10-04", to: "2026-10-06" });
+    expect(keyStep(kb, "Escape", false, days.length)).toEqual({ kb: { a: 5, b: 5 }, write: "clear" });
+    expect(keyStep({ a: 0, b: 0 }, "ArrowLeft", false, days.length)?.kb).toEqual({ a: 0, b: 0 });
+    expect(keyStep(kb, "a", false, days.length)).toBeNull();
+    expect(keyStep(kb, "Enter", false, 0)).toBeNull();
+  });
+
+  test("one singular/plural rule: the kit's counts read the shared helper, no private copy", () => {
+    expect([count(1, "item"), count(0, "item"), count(2, "new act")]).toEqual(["1 item", "0 items", "2 new acts"]);
+    expect([plural(1, "plate"), plural(2, "plate")]).toEqual(["plate", "plates"]);
+    const root = new URL("../../src/", import.meta.url);
+    const files = ["components/produce/Composer.tsx", "components/header/HeaderChips.tsx", "components/timestrip/TimeStrip.tsx"];
+    const own = files.filter((f) => /const (count|plural) = /.test(readFileSync(new URL(f, root), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "")));
+    expect(own).toEqual([]);
+  });
+
+  test("the readout counts one event and one day in the singular", () => {
+    expect(restingReadout(daysBetween("2026-10-01", "2026-10-05"), { from: "2026-10-02", to: "2026-10-02" }, 1)).toEqual(["02 Oct", "1 event"]);
+    expect(restingReadout(["2026-10-01"], null, undefined)).toEqual(["01 Oct", "1 day"]);
+  });
 });
 
 describe("JSON runs", () => {
@@ -107,6 +170,10 @@ describe("JSON runs", () => {
     expect(out).toContain("&lt;script&gt;");
   });
 
+  test("the record's name sits on a role that can carry one", () => {
+    expect(html(h(JsonBlock, { text: "{}", label: "event 7 as JSON" }))).toMatch(/^<pre[^>]* role="group" aria-label="event 7 as JSON"/);
+  });
+
   test("a JSON line is a selectable row with its number hidden from speech", () => {
     const out = html(h(JsonLine, { n: 12, text: "{}", selected: true, index: 3, onSelect: noop }));
     expect(out).toMatch(/^<div[^>]*role="row" aria-rowindex="3" aria-selected="true"/);
@@ -122,6 +189,14 @@ describe("money", () => {
     [47, "$47"],
     [-0.5, "-$0.50"],
   ])("%s reads %s", (n, s) => expect(usd(n)).toBe(s));
+
+  test("a figure is spelled by its cents: one amount has one spelling either side of $1 and $10", () => {
+    expect(usd(9.996)).toBe(usd(10));
+    expect(usd(0.996)).toBe(usd(1));
+    expect(usd(0.004)).toBe(usd(0));
+    expect(usd(-0.004)).toBe(usd(0));
+    for (const n of [0.004, 0.005, 0.994, 0.999, 1.004, 9.994, 9.995, 9.999, 10.004, 47.5, -9.999]) expect(usd(n)).toBe(usd(Math.round(n * 100) / 100));
+  });
 });
 
 const row = (over: Partial<EventRowProps> = {}): EventRowProps => ({
@@ -155,7 +230,11 @@ describe("EventRow", () => {
   });
 
   test("a cost carries its source unless it is a receipt; no cost is spoken as such", () => {
-    expect(html(h(EventRow, row({ cost: { usd: 0.42, src: "model" } })))).toMatch(/\$0\.42<sup aria-label="model">est<\/sup>/);
+    // The mark is a glyph and the source is spoken in words: a sup is not a role that takes
+    // an aria-label (ARIA 1.2 prohibits naming it), so a name there is never read.
+    const est = html(h(EventRow, row({ cost: { usd: 0.42, src: "model" } })));
+    expect(est).toMatch(/\$0\.42<sup aria-hidden="true">est<\/sup><span[^>]*>, model<\/span>/);
+    expect(est).not.toMatch(/<sup[^>]*aria-label/);
     expect(html(h(EventRow, row({ cost: { usd: 1.2, src: "real" } })))).not.toContain("<sup");
     expect(html(h(EventRow, row()))).toContain("no cost");
   });
@@ -169,12 +248,15 @@ describe("EventRow", () => {
 
 describe("StaleBadge", () => {
   test("live draws nothing; stale and down draw the word and the coarse age", () => {
-    expect(html(h(StaleBadge, { edge: "live", ageMs: 1000, feed: "ledger feed" }))).toBe("");
+    // Live is the region alone, empty and out of flow: a region mounted WITH its words announces nowhere.
+    expect(html(h(StaleBadge, { edge: "live", ageMs: 1000, feed: "ledger feed" }))).toBe(`<span role="status" class="${sr.sr}"></span>`);
     const stale = html(h(StaleBadge, { edge: "stale", ageMs: 42_000, feed: "ledger feed" }));
     expect(stale).toContain("stale");
     expect(stale).toContain("42 s");
     expect(stale).toContain('aria-label="ledger feed stale, 42 s old"');
     expect(html(h(StaleBadge, { edge: "down", feed: "ledger feed" }))).toContain("offline");
+    // Each edge is the same region, so stale arrives as a change inside one already observed.
+    for (const edge of ["stale", "down"] as const) expect(html(h(StaleBadge, { edge, feed: "ledger feed" }))).toMatch(/^<span role="status">/);
   });
 });
 

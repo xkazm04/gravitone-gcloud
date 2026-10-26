@@ -7,8 +7,9 @@
 // one reason vocabulary per surface and the rebuild's first domain had one for
 // all of them (the prototype's REJECT_REASONS, four image words), so an audio
 // take could only be rejected for "motion". Each list below is v1's own, cited
-// where it lives; the Board binds keys 1-9, 0, - to a list in order, so the
-// ORDER is part of the contract and a reorder rebinds the operator's fingers.
+// where it lives; the Board binds keys 2, 3 and 4 to the first three of a row's
+// order (`reasonsBy`, else this list), so the ORDER is part of the contract and
+// a reorder rebinds the operator's fingers.
 //
 // What the table refuses by construction: `satisfies { [S in PacketSource]: … }`
 // makes a source without a row a compile error, so a new source cannot reach
@@ -22,7 +23,7 @@ import { err, ok, type Result } from "./errors.ts";
  *  carried to Phase 4). The first domain also had `triage`; nothing opened a
  *  packet under it, and the word was ambiguous between audio triage (`audio`)
  *  and v1's explainer research scope (not a Weir surface), so it is gone. */
-export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout"] as const;
+export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout", "seeds", "spend"] as const;
 export type PacketSource = (typeof PACKET_SOURCES)[number];
 
 export const PACKET_MODES = ["matrix-cull", "blind-pair", "packet-review"] as const;
@@ -31,12 +32,26 @@ export type PacketMode = (typeof PACKET_MODES)[number];
 export type SourceSpec = {
   /** The desk modes a packet of this source may be opened in. */
   readonly modes: readonly PacketMode[];
-  /** The reject reasons, in key order (1-9, 0, -). Empty: a reject is one thing. */
+  /** The reject reasons, in chip order; the first three are keys 2-4 where `reasonsBy` names no order. Empty: a reject is one thing. */
   readonly reasons: readonly string[];
   /** How many reasons one verdict may carry. */
   readonly maxReasons: number;
   /** The longest note a verdict may carry; 0 means v1 had no note to keep it in. */
   readonly noteMax: number;
+  /**
+   * A reject must name at least one reason before the packet COMMITS (spark scout-decision-graph:
+   * "every X needs a reason"). Enforced at the commit - the cull's gate and the kernel's planCommit -
+   * never at the verdict write, so X then a reason key stays two keystrokes. Absent: a bare reject
+   * commits, as every source before `seeds` did.
+   */
+  readonly reasonOnReject?: true;
+  /**
+   * The reasons in key order PER ROW GROUP (spark scout-storyboards: "1 keep, 2-4 reject with reason 1-3
+   * in order"): a desk binds keys 2, 3 and 4 to the first three of the row's group, so a 3D row's keys
+   * name a mesh's defects and an idea's an idea's. Each list is an ORDER over this source's own
+   * `reasons` (the domain test refuses a word outside it); a group absent here keys off `reasons`.
+   */
+  readonly reasonsBy?: Readonly<Record<string, readonly string[]>>;
 };
 
 /** v1's note bound where v1 had one (lib/articles/types.ts NOTE_MAX_CHARS, lib/sound/takes.ts `str(b.note, 2000)`). */
@@ -66,9 +81,9 @@ export const SOURCES = {
   // lib/articles/types.ts:337 CHECK_DIMENSIONS, the Board's reject axes for
   // articles (lib/board/sources/articles.ts:569). A reject may name all seven.
   article: { modes: ["packet-review"], reasons: ["structure", "storytelling", "depth", "figures", "voice", "medium-fidelity", "truth"], maxReasons: 7, noteMax: NOTE_LONG },
-  // lib/sound/types.ts:48 DEFECTS - fifteen codes: 1-9, 0, - and Q W E R for the four technical ones
-  // (clipping, level, dead-air, wrong-length) that the triage detectors evidence.
-  // takes.ts reasonsOf de-duplicated and capped nothing, so all eleven may stand.
+  // lib/sound/types.ts:48 DEFECTS - fifteen codes; keys 2-4 name the first three, the chips all fifteen
+  // (the last four are the technical ones the triage detectors evidence: clipping, level, dead-air, wrong-length).
+  // takes.ts reasonsOf de-duplicated and capped nothing, so all fifteen may stand.
   audio: {
     modes: ["matrix-cull"],
     reasons: ["smeared-transients", "vocal-garble", "section-bleed", "tempo-instability", "broken-ending", "loop-seam", "spectral-imbalance", "phase-width", "confident-hallucination", "off-brief", "wrong-event", "clipping", "level", "dead-air", "wrong-length"],
@@ -99,23 +114,175 @@ export const SOURCES = {
   // A game asset's variant (spark game-3d-assets) adds the defects a mesh is thrown for, APPENDED so
   // every earlier key keeps its binding: `topology` (holes, floaters, fused or thin parts), `texture`
   // (the bake), `rig` (the weights or the chains), `scale` (world size against the class).
-  scout: { modes: ["matrix-cull"], reasons: ["style", "subject", "craft", "motion", "rights", "generic", "use case", "topology", "texture", "rig", "scale"], maxReasons: 3, noteMax: NOTE_SHORT },
+  // `story` (spark scout-storyboards): a storyboard's frames do not add up to a video worth making - APPENDED.
+  // reasonsBy: the first three of each row group are keys 2-4 (RowWords.group, lib/decision/v1/sources/scoutPlan.ts).
+  scout: {
+    modes: ["matrix-cull"],
+    reasons: ["style", "subject", "craft", "motion", "rights", "generic", "use case", "topology", "texture", "rig", "scale", "story"],
+    maxReasons: 3,
+    noteMax: NOTE_SHORT,
+    reasonsBy: {
+      ideas: ["generic", "use case", "subject"],
+      storyboards: ["story", "generic", "use case"],
+      videos: ["craft", "motion", "style"],
+      "art styles": ["style", "generic", "craft"],
+      "3d": ["topology", "texture", "rig"],
+      music: ["craft", "generic", "use case"],
+      notes: ["generic", "use case", "subject"],
+      sources: ["generic", "use case", "subject"],
+    },
+  },
+  // A batch of one-sentence SEEDS (spark scout-decision-graph): genre, subgenre, type of content,
+  // audience and format, kept or thrown in one pass. Every reject names why (the operator, wave 3),
+  // because a reasoned throw is the ban the next batch steers by; a note may follow the reason.
+  seeds: { modes: ["matrix-cull"], reasons: ["generic", "not for us", "audience", "done before", "format"], maxReasons: 2, noteMax: NOTE_SHORT, reasonOnReject: true },
+  // spark athena-control-mcp: a day's live launches an agent asked for (@gt/domain/mcp SpendRequest), a row
+  // per request; K pays at the price on the card, X says why not, and the agent reads the reason back.
+  spend: { modes: ["matrix-cull"], reasons: ["price", "vendor", "timing", "brief", "duplicate", "local"], maxReasons: 2, noteMax: NOTE_SHORT, reasonOnReject: true },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
-/** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */
-// Q W E R (the row under 1-4) hold reasons 12-15: audio grew four technical codes on 2026-10-24
-// (spark audio-labelling) so the operator can label what the triage detectors claim.
-export const REASON_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "Q", "W", "E", "R"] as const;
-export type ReasonKey = (typeof REASON_KEYS)[number];
+type ReasonOf<S extends PacketSource> = (typeof SOURCES)[S]["reasons"][number];
+
+// The forge's four, which the extractor shares (above): a plate is a still, so craft names a still's faults.
+const STILL_MEANING = {
+  style: "The look is wrong for the video we are making.",
+  subject: "What is shown does not fit: the wrong subject or content.",
+  text: "Type in the plate rendered as garbled glyphs.",
+  craft: "Poorly executed: anatomy, composition, artefacts or framing.",
+} as const;
+
+/**
+ * WHAT EACH REASON MEANS (operator, 2026-10-23: "explain on hover in one sentence the meaning of
+ * the reason in case the one word is not clear"). One sentence, at most twelve words, the work as
+ * its subject; the Board shows it as the reason's tip, carried in PacketView.reasons. The type
+ * holds every source's every reason to a meaning (a reason added above without one is a compile
+ * error) and refuses a word the list does not have; the twelve-word bound is the domain test's.
+ * Taken from where each list is defined: the comments above, the registry's generated-audio defect
+ * taxonomy (lib/sound/types.ts DEFECTS) and the article check's seven dimensions (docs/articles.md).
+ * The dojo's two and the strips' eight had no recorded definition and are the plainest reading.
+ */
+export const REASON_MEANING: { readonly [S in PacketSource]: { readonly [R in ReasonOf<S>]: string } } = {
+  forge: STILL_MEANING,
+  extract: STILL_MEANING,
+  dojo: {
+    technique: "The claimed technique itself does not improve the work.",
+    execution: "The technique is sound but was applied badly here.",
+  },
+  strips: {
+    concept: "The idea does not land: the wrong chart form or story.",
+    legibility: "Text or data is too small, tilted, or outside the safe box.",
+    motion: "The movement is wrong: too many cues, or none selling a beat.",
+    craft: "Poorly executed: easing, spacing, timing or finish.",
+    identity: "Off the channel's look: palette, type or style module.",
+    "too-busy": "Too much at once: the frame crowds its one beat.",
+    generic: "A template look, nothing specific to this story.",
+    broken: "Fails to render or play: blank, frozen or glitched frames.",
+  },
+  article: {
+    structure: "The shape is off: preview, sections, closing table or length.",
+    storytelling: "The post does not carry the reader through a story.",
+    depth: "Too shallow: the insight a practitioner needs is missing.",
+    figures: "Too few figures, uncaptioned or unsourced, or long prose between them.",
+    voice: "Not the author's voice: no first person, or em dashes.",
+    "medium-fidelity": "Will not read well on Medium: type, scroll or resources.",
+    truth: "Claims outrun their sources: too few, undated or unresolved.",
+  },
+  audio: {
+    "smeared-transients": "Drums without edges: mush where an attack should be.",
+    "vocal-garble": "Syllables melt, or words are invented mid-line.",
+    "section-bleed": "One section's elements leak into the section before it.",
+    "tempo-instability": "The grid drifts or a bar hiccups.",
+    "broken-ending": "An unbriefed abrupt stop, or a fade where a hard out was.",
+    "loop-seam": "An audible joint where the material repeats.",
+    "spectral-imbalance": "No low end, harsh highs, or hollow mids.",
+    "phase-width": "Swimmy stereo that vanishes in mono.",
+    "confident-hallucination": "An instrument or voice nobody briefed, mixed as if intended.",
+    "off-brief": "Pleasant, but the wrong piece for the brief.",
+    "wrong-event": "The sound reads as a different event than the one briefed.",
+    clipping: "Peaks hit the ceiling and distort.",
+    level: "Too quiet or too loud to sit in a mix.",
+    "dead-air": "Silence inside the take where sound should be.",
+    "wrong-length": "The length is off the brief.",
+  },
+  suno: {},
+  mv: {},
+  trials: {},
+  step: {},
+  proof: {},
+  scout: {
+    style: STILL_MEANING.style,
+    subject: STILL_MEANING.subject,
+    craft: STILL_MEANING.craft,
+    motion: "The movement is wrong: drift, jitter, or an unmotivated camera.",
+    rights: "Material we should not have taken, or may not use.",
+    generic: "Teaches nothing new: the median, or already in the Library.",
+    "use case": "Serves no video worth making; later nights steer away.",
+    topology: "The mesh is broken: holes, floaters, fused or too-thin parts.",
+    texture: "The texture bake is wrong: seams, smears, wrong materials.",
+    rig: "The rig fails: bad weights or broken bone chains.",
+    scale: "Its size in the world is wrong for its class.",
+    story: "The frames do not add up to a video worth making.",
+  },
+  seeds: {
+    generic: "The obvious take: nothing here we would make differently.",
+    "not for us": "A genre or content type this channel will not make.",
+    audience: "Wrong audience for this genre or type of content.",
+    "done before": "Already kept, thrown or made under another seed.",
+    format: "Will not hold as a Short or a short video.",
+  },
+  spend: {
+    price: "Costs more than this work is worth right now.",
+    vendor: "The wrong vendor or model for this piece.",
+    timing: "Not now: after another result lands, or another day.",
+    brief: "The brief is wrong: fix what it makes before paying.",
+    duplicate: "Already made, or already asked for on another card.",
+    local: "A free local lane can make this instead.",
+  },
+};
+
+/** A source's vocabulary as the Board holds it (PacketView.reasons): the reasons in key order, how
+ *  many a verdict may carry, the note bound, and each reason's meaning. */
+export type ReasonVocabulary = {
+  readonly list: readonly string[];
+  readonly max: number;
+  readonly noteMax: number;
+  /** One sentence per reason; a reason absent here draws no tip. */
+  readonly meaning: Readonly<Record<string, string>>;
+  /** Set when a reject must name a reason before the packet commits (SourceSpec.reasonOnReject). */
+  readonly required?: true;
+  /** The list's order per row group (SourceSpec.reasonsBy); `reasonsOf` reads it. */
+  readonly by?: Readonly<Record<string, readonly string[]>>;
+};
+
+/** The reasons a row of `group` offers, in key order: its group's order first, then the rest of the list. */
+export function reasonsOf(v: Pick<ReasonVocabulary, "list" | "by">, group: string | undefined): readonly string[] {
+  const first = group === undefined ? undefined : v.by?.[group];
+  return first === undefined ? v.list : [...first, ...v.list.filter((r) => !first.includes(r))];
+}
+
+/** The one builder of a packet view's vocabulary, so the meanings travel with the list they define. */
+export function reasonVocabulary(source: PacketSource): ReasonVocabulary {
+  const spec: SourceSpec = SOURCES[source];
+  return { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax, meaning: REASON_MEANING[source], ...(spec.reasonOnReject === true ? { required: true as const } : {}), ...(spec.reasonsBy === undefined ? {} : { by: spec.reasonsBy }) };
+}
+
+/**
+ * The keys that reject WITH a reason (spark scout-storyboards, the operator: "1 keep, 2-4 reject with reason
+ * 1-3 in order, 5 reject without one, the reason clicked"): 2, 3 and 4 name the first three of a row's ordered
+ * list (`reasonsOf`). A source's other reasons are reached by the chips only. Before this the number row bound
+ * the whole list, 1-9, 0, - (plan §8), which no hand could hold.
+ */
+export const REJECT_KEYS = ["2", "3", "4"] as const;
+export type RejectKey = (typeof REJECT_KEYS)[number];
 
 export function sourceSpec(source: PacketSource): SourceSpec {
   return SOURCES[source];
 }
 
-/** The reason a key names for this source, or undefined when the key is past the list. */
-export function reasonForKey(source: PacketSource, key: string): string | undefined {
-  const i = REASON_KEYS.findIndex((k) => k === key);
-  return i < 0 ? undefined : SOURCES[source].reasons[i];
+/** The reason a reject key names on a row of `group`, or undefined when the key is not one or its slot is past the list. */
+export function keyedReason(v: ReasonVocabulary, group: string | undefined, key: string): string | undefined {
+  const i = REJECT_KEYS.findIndex((k) => k === key);
+  return i < 0 ? undefined : reasonsOf(v, group)[i];
 }
 
 export type VerdictInput = {

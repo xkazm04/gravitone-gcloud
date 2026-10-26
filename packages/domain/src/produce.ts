@@ -26,8 +26,8 @@ import type { ProjectState } from "./project.machine.ts";
  * `illustrative` the prototype's placeholder, kept so the screen has a shape, and marked as one.
  * A total is as weak as its weakest line: one illustrative figure makes the sum illustrative.
  */
-export type FigureSource = "real" | "model" | "illustrative";
-export const FIGURE_SOURCES = ["real", "model", "illustrative"] as const satisfies readonly FigureSource[];
+export const FIGURE_SOURCES = ["real", "model", "illustrative"] as const;
+export type FigureSource = (typeof FIGURE_SOURCES)[number];
 
 /** One figure's provenance: its source and, for `real`, the date and what was measured. An
  *  UNPRICED usd basis is `real` with the reason as its note: the absence is the fact on record. */
@@ -57,7 +57,9 @@ export type ModelOption = {
 
 /* ── the receipt ──────────────────────────────────────────────────────────── */
 
-export type ReceiptMode = "dry" | "live";
+/** How a launch may spend: the one list every receipt door and record reads (./produce.schema.ts, steps/parts.ts). */
+export const RECEIPT_MODES = ["dry", "live"] as const;
+export type ReceiptMode = (typeof RECEIPT_MODES)[number];
 
 export type ReceiptLine = {
   /** A part id for a project, a step name for a run. */
@@ -113,8 +115,19 @@ export type Receipt = {
   readonly readAt: string;
 };
 
+/**
+ * THE ONE RULE for a worst case crossing a ceiling: the kernel's `overCeiling`, the fixture
+ * schedule and the Receipt's "may stop at ceiling" mark all read it, so the mark the screen shows
+ * and the verdict the launch event records cannot be two comparisons. The epsilon absorbs float
+ * noise from summed unit prices; no ceiling crosses nothing.
+ */
+export const crossesCeiling = (worst: number, ceiling: number | undefined): boolean => ceiling !== undefined && worst > ceiling + 1e-9;
+
 /** A stale confirm: nothing launched, and the receipt as it reads now. */
 export type StaleReceipt = { readonly kind: "stale"; readonly fresh: Receipt };
+
+/** A confirm's answer: launched (with what it made), or stale with the fresh receipt. */
+export type Confirmed<T> = ({ readonly kind: "launched" } & T) | StaleReceipt;
 
 /* ── the plan ─────────────────────────────────────────────────────────────── */
 
@@ -222,7 +235,6 @@ export type PlanView = {
 
 /** The prototype's list groups, in its order. */
 export type ProjectGroup = "weir" | "blocked" | "active" | "plans" | "shipped";
-export const PROJECT_GROUPS = ["weir", "blocked", "active", "plans", "shipped"] as const satisfies readonly ProjectGroup[];
 
 /** A project's own picture: a blob by its address (`/api/blob/<sha256>`), the type it is served as. */
 export type ProjectPoster = { readonly sha256: string; readonly mime: string };
@@ -275,7 +287,8 @@ export type PartPatch = { readonly option?: string; readonly units?: number };
 /* ── the composers ────────────────────────────────────────────────────────── */
 
 /** The forge mechanisms the image composer toggles (prototype index.html :1287). */
-export type ImageMechanism = "text" | "ref-early";
+export const IMAGE_MECHANISMS = ["text", "ref-early"] as const;
+export type ImageMechanism = (typeof IMAGE_MECHANISMS)[number];
 
 export type ComposerInput =
   | ({ readonly lane: "image"; readonly text: string; readonly mechanisms: readonly ImageMechanism[] } & (

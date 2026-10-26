@@ -4,7 +4,7 @@
 // plus one directory per card: strip.html, style.json, strip.mp4, strip.webm,
 // poster.jpg, sheet.png, meta.json — lib/foundry/strips/types.ts draws the
 // tree). This module is the app's only way to read them and the only way the
-// /foundry Strips triage mutates them. Two things per run are the app's to
+// Board's strips packet (lib/decision/v1/sources/strips.ts) mutates them. Two things per run are the app's to
 // write: verdicts.json, and on commit the deletions, findings.md and
 // run.json's status flip. Everything else is the pipeline's.
 //
@@ -31,8 +31,9 @@
 // Path safety: run ids pass RUN_ID_RE (runStore.ts); every run-relative path
 // is resolved and held inside its run directory before it is read, served or
 // unlinked; a card's files are resolved inside that card's own directory.
-// strip.html is LLM-written code and is never served by the file route — only
-// by GET /api/foundry/strips/<id>/page, under a sandbox CSP.
+// strip.html is LLM-written code and no route serves it: the file route
+// refuses .html, and the page route that served it under a sandbox CSP retired
+// with the Strips tab (Phase 6 wave C, L70).
 //
 // WHERE THE RUNS LIVE (Phase 4, L33): `stripsRoot()`, the universe's own
 // `<foundry-out | fixtures-out>/strips` (lib/fixtures/roots.ts outPath), or
@@ -53,6 +54,7 @@ import {
   patchVerdictMap,
   readVerdictState,
   replaceVerdictMap,
+  unreadableVerdicts,
   withRunLock,
   type VerdictPatch,
   type VerdictSpec,
@@ -67,6 +69,7 @@ import {
   containedIn,
   foundryFile,
   listManifests,
+  type ManifestWarning,
   readJson,
   readManifestFile,
   runRoot,
@@ -157,17 +160,30 @@ export function readStripRunNow(id: string): StripRun {
 export const saveStripRun = (m: StripRun): Promise<void> => writeJsonAtomic(path.join(runDir(m.id), "run.json"), m);
 
 async function readStripVerdicts(id: string): Promise<StripVerdicts> {
-  return readJson<StripVerdicts>(path.join(runDir(id), "verdicts.json"), {});
+  return readJson<StripVerdicts>(path.join(runDir(id), "verdicts.json"), {}).catch((e: unknown) => {
+    throw e instanceof SyntaxError ? unreadableVerdicts(runDir(id)) : e;
+  });
 }
 
 const isDecided = (v: StripVerdict | undefined): v is StripVerdict => v?.verdict === "keep" || v?.verdict === "reject";
 
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
-export async function listStripRuns(): Promise<StripRunSummary[]> {
+/** The shelf and the runs it could not read (a run.json that does not parse), so a feed can
+ *  hold those runs instead of pruning them as gone. `listStripRuns` is the list alone. */
+export async function scanStripRuns(): Promise<{ items: StripRunSummary[]; warnings: ManifestWarning[] }> {
   const root = stripsRoot();
-  const { items } = await listManifests<StripRun, StripRunSummary>(root, "run.json", async (name, m) => {
-    const v = await readJson<StripVerdicts>(path.join(root, name, "verdicts.json"), {}).catch(() => ({}) as StripVerdicts);
+  const { items, warnings } = await listManifests<StripRun, StripRunSummary>(root, "run.json", async (name, m) => {
+    let v: StripVerdicts;
+    try {
+      v = await readJson<StripVerdicts>(path.join(root, name, "verdicts.json"), {});
+    } catch (e) {
+      // Still LISTED (the Library's strips feed holds a listed run whose getStripRun fails, and
+      // would prune one the list dropped), but NAMED: the read used to be swallowed in silence.
+      if (!(e instanceof SyntaxError)) throw e;
+      console.warn(`[foundry] ${name}: verdicts.json is unreadable — listed with nothing decided`);
+      v = {};
+    }
     const cards = Array.isArray(m.cards) ? m.cards : [];
     const lane = (l: "edu" | "stat") => {
       const cs = cards.filter((c) => c.lane === l);
@@ -185,7 +201,11 @@ export async function listStripRuns(): Promise<StripRunSummary[]> {
       kept: decided.filter(([, x]) => x.verdict === "keep").length,
     };
   });
-  return items.sort((a, b) => (a.at < b.at ? 1 : -1));
+  return { items: items.sort((a, b) => (a.at < b.at ? 1 : -1)), warnings };
+}
+
+export async function listStripRuns(): Promise<StripRunSummary[]> {
+  return (await scanStripRuns()).items;
 }
 
 export async function getStripRun(id: string): Promise<StripRunDetail & { rev: number }> {
@@ -207,7 +227,8 @@ export async function stripFileStat(id: string, rel: string): Promise<{ abs: str
   }
 }
 
-/** The authored page of one card, for the sandboxed page route only. */
+/** The authored page of one card, held inside its card directory. No route serves it since
+ *  the sandboxed page route retired; foundry-strips.probe pins its containment. */
 export async function stripPageFile(id: string, cardId: string): Promise<string> {
   const run = await readStripRun(id);
   const card = run.cards.find((c) => c.id === cardId);
@@ -292,8 +313,17 @@ function approachOf(run: StripRun, card: StripCard): Approach | undefined {
   return run.approaches.find((a) => a.id === card.approach);
 }
 
+/** The verdicts that still stand: the verdict door takes one only on a JUDGEABLE
+ *  card, so a keep or reject left on a card a retry re-rendered as failed is not
+ *  read by the plan, the commit or the Board's preview. */
+export function judgedVerdicts(run: StripRun, stored: StripVerdicts): StripVerdicts {
+  const judgeable = new Set(run.cards.filter((c) => JUDGEABLE.includes(c.status)).map((c) => c.id));
+  return Object.fromEntries(Object.entries(stored).filter(([cardId]) => judgeable.has(cardId)));
+}
+
 /** Pure projection of what `commitStripRun` will do. */
-export function planStripCommit(run: StripRun, verdicts: StripVerdicts): StripCommitPlan {
+export function planStripCommit(run: StripRun, stored: StripVerdicts): StripCommitPlan {
+  const verdicts = judgedVerdicts(run, stored);
   const kept = run.cards.filter((c) => verdicts[c.id]?.verdict === "keep");
   const rejected = run.cards.filter((c) => verdicts[c.id]?.verdict === "reject");
   const del: string[] = [];
@@ -369,7 +399,8 @@ export function stripFindings(run: StripRun, verdicts: StripVerdicts, at: string
 
   if (run.discrimination && Object.keys(run.discrimination).length) {
     rows.push("## replica discrimination", "");
-    for (const [a, d] of Object.entries(run.discrimination)) rows.push(`- ${a}: ${d.toFixed(2)}${d >= 1.5 ? "" : " (below 1.5 — picks only)"}`);
+    for (const [a, d] of Object.entries(run.discrimination))
+      rows.push(typeof d === "number" && Number.isFinite(d) ? `- ${a}: ${d.toFixed(2)}${d >= 1.5 ? "" : " (below 1.5 — picks only)"}` : `- ${a}: no noise floor (the replica's sheet matched the original's)`);
     rows.push("");
   }
 
@@ -396,7 +427,7 @@ export async function commitStripRun(id: string, token?: string): Promise<StripC
     if (run.status === "committed") throw new FoundryError("This strip run is already committed.", 409);
     if (run.dry === true) throw new FoundryError("This strip run was a dry job: its pages are stand-ins and nothing was captured. It cannot be committed.", 409);
     if (!STRIP_COMMITTABLE.includes(run.status)) throw new FoundryError("The pipeline is still running this strip run.", 409);
-    const verdicts = await readStripVerdicts(id);
+    const verdicts = judgedVerdicts(run, await readStripVerdicts(id));
     const plan = planStripCommit(run, verdicts);
     if (token !== undefined && token !== plan.token) throw new FoundryError("The run state changed since the preview was generated.", 409);
 

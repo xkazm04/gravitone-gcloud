@@ -270,10 +270,19 @@ export function recipeOf(raw: unknown, ctx: { readonly deny: readonly string[]; 
  *  prefer-only in the router, so naming it is the whole chain: a Flare refusal is the candidate's sentence,
  *  never a quiet Nano Banana bill. The readback stays on Google (scoutSceneActs.ts `prefer: "google"`). */
 export const REPLICA_GENERATOR = "leonardo-flare" as const;
+/** The engines a replica or a concept may be drawn by: Flare over the API, or Flux 2 on this box's ComfyUI. */
+export const REPLICA_GENERATORS = [REPLICA_GENERATOR, "comfy-flux2"] as const;
+/**
+ * The replica and concept generator for this process (operator, 2026-10-25, the API pool empty until its
+ * renewal): `SCOUT_REPLICA_GENERATOR=comfy-flux2` draws them on the local Flux model at $0; absent or any
+ * other value, Flare as before.
+ */
+export const replicaGenerator = (env: Readonly<Record<string, string | undefined>> = process.env): (typeof REPLICA_GENERATORS)[number] =>
+  env["SCOUT_REPLICA_GENERATOR"]?.trim() === "comfy-flux2" ? "comfy-flux2" : REPLICA_GENERATOR;
 
 /** A replica still: the recipe's prompt verbatim, and NO reference image - the source never conditions it. */
 export function replicaRequest(recipe: SceneRecipe, k: number): GenerateRequest {
-  return { prompt: recipe.prompt, negativePrompt: REPLICA_NEGATIVE, aspect: "16:9", count: 1, prefer: REPLICA_GENERATOR, seed: k };
+  return { prompt: recipe.prompt, negativePrompt: REPLICA_NEGATIVE, aspect: "16:9", count: 1, prefer: replicaGenerator(), seed: k };
 }
 
 const EXT: Readonly<Record<string, string>> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };

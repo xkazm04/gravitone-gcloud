@@ -34,7 +34,7 @@
  * Until the engine has chosen, the root has no data-tier: first paint is the
  * CSS sky below (.sky0) and the hero wordmark, and the canvases fade in over it.
  *
- * The Enter pill is parts.tsx's EnterButton (appearance="paper"): .pc-enter*
+ * The Enter pill is parts.tsx's EnterButton: .pc-enter*
  * below draws it as the variant's #enter.
  */
 .pc{
@@ -64,7 +64,8 @@
 /* first paint: the dusk before any canvas (the sky plane covers it once painted) */
 .pc .sky0{position:absolute;inset:0;pointer-events:none;background:linear-gradient(var(--pc-sky-0) 0%,var(--pc-sky-1) 9%,var(--pc-sky-2) 25%,var(--pc-sky-3) 37%,var(--pc-sky-4) 49%,var(--pc-sky-5) 61%,var(--pc-sky-6) 72%,var(--pc-sky-7) 78.5%,var(--pc-sky-7) 79.5%,var(--pc-ground) 79.5%)}
 .pc.portrait .sky0{background:linear-gradient(var(--pc-sky-0) 0%,var(--pc-sky-1) 12%,var(--pc-sky-2) 24%,var(--pc-sky-3) 33%,var(--pc-sky-4) 43%,var(--pc-sky-5) 52%,var(--pc-sky-6) 61%,var(--pc-sky-7) 66%,var(--pc-sky-7) 67%,var(--pc-ground) 67%)}
-.pc.booted .sky0{visibility:hidden}
+/* only once a build has placed the scene (data-ready): a boot whose build threw keeps its dusk */
+.pc.booted[data-ready] .sky0{visibility:hidden}
 .pc:not([data-tier]) #hero{opacity:1;transform:translate(-50%,-50%) scale(1)}
 /* one build of the overview (or a world): a rebuild fades in over the last */
 .pc .stack{position:absolute;inset:0}
@@ -177,9 +178,11 @@
 .pc .pc-enter:active{transform:translateY(3px);box-shadow:0 1px 0 color-mix(in srgb, var(--pc-enter-glint) 70%, transparent) inset,0 1px 0 var(--pc-enter-edge),0 4px 8px color-mix(in srgb, var(--pc-black) 40%, transparent)}
 .pc .pc-enter .pc-enter-arrow{stroke-width:2.8}
 .pc .pc-enter:disabled{cursor:default;opacity:.6;transform:none}
-/* the pill's own column: the reason chip and a sign-in error hang below it, so the pill stays level with the search button */
-.pc .pc-enter-wrap{position:relative;display:inline-flex}
-.pc .pc-enter-wrap>:not(.pc-enter){position:absolute;right:0;top:calc(100% + 10px);white-space:nowrap}
+/* the pill's own column: the reason chip and a sign-in error stack in one column below it, never on the same spot, so the pill stays level with the search button */
+.pc .pc-enter-wrap{position:relative;display:inline-flex;gap:10px}
+/* The runtime local door (lib/localEntry.ts): the same pill in bone, so the coral one stays the doorway. */
+.pc .pc-enter.pc-enter-local{background-color:var(--bone);background-image:var(--grain);color:var(--ink)}
+.pc .pc-enter-under{position:absolute;right:0;width:max-content;top:calc(100% + 10px);display:flex;flex-direction:column;align-items:flex-end;gap:8px;white-space:nowrap}
 .pc .pc-enter-err{margin:0;max-width:min(280px,80vw);white-space:normal;text-align:right;padding:8px 12px;border-radius:5px;background:var(--bone);background-image:var(--grain);color:var(--ink);font:600 var(--fs-s)/1.25 var(--ui);box-shadow:0 2px 0 color-mix(in srgb, var(--pc-shadow) 35%, transparent),0 6px 10px color-mix(in srgb, var(--pc-black) 25%, transparent)}
 .pc #depth{position:absolute;right:var(--pad);top:50%;transform:translateY(-50%);z-index:800;display:flex;flex-direction:column;gap:0;align-items:center}
 .pc #depth button{position:relative;width:34px;height:20px;margin-top:-6px;border-radius:5px;background:var(--pc-bone);background-image:var(--grain);box-shadow:0 0 0 2px color-mix(in srgb, var(--pc-depth-ring) 72%, transparent),0 6px 8px color-mix(in srgb, var(--pc-black) 30%, transparent);opacity:.6;transition:opacity .3s,transform .3s var(--ease2),background-color .3s;transform:perspective(60px) rotateX(24deg)}
@@ -356,6 +359,10 @@
 /* portrait: the family's name sits on its ream, not on a tab above it */
 .pc.portrait .ream .tab{height:auto;background:none!important;box-shadow:none!important;padding:0;color:var(--pc-print-ink);font-size:max(15px,calc(var(--S)*.0158));font-weight:700}
 .pc.portrait .pc-enter{padding:0 18px 0 20px}
+/* a phone: "Sign in with Google" is ~280 px with the search button, and the wordmark ends at ~167 px, so the pill sat over it by 53-104 px (360-412 wide); the G mark keeps the name, the button's aria-label keeps all of it */
+@media (max-width:479px){.pc .pc-enter-long{display:none}}
+/* the smallest phones (320 px): the wordmark ends at ~167 px and the search button plus the pill began at 129, so they met by 38 px; a smaller wordmark and a tighter pill clear it */
+@media (max-width:339px){.pc{--fs-wm:20px}.pc .pc-enter,.pc.portrait .pc-enter{padding:0 12px;gap:6px}}
 @media (prefers-reduced-motion:reduce){
   .pc .sway,.pc .drift,.pc .pulse,.pc .med .bob{animation:none!important}
   .pc .pp,.pc .med,.pc .ream,.pc #world,.pc .view,.pc .lsheet,.pc #banner,.pc .sv-side{transition-duration:.15s!important;transition-delay:0s!important}

@@ -96,6 +96,16 @@ export { pricingHandler } from "@/lib/imaging/pricingHandler";
 
 /** GET /api/imaging/budget — forecast affordability and window reset timing. */
 export async function budgetHandler(req: Request): Promise<Response> {
+  // Wrapped like the other bodies: a ledger that cannot be opened (a bad
+  // SPEND_STORE, a store the posture refuses) answers in the one error shape.
+  try {
+    return await budgetBody(req);
+  } catch (e) {
+    return errorResponse(e);
+  }
+}
+
+async function budgetBody(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const imagesParam = url.searchParams.get("images");
   const parsed = imagesParam ? parseInt(imagesParam, 10) : undefined;

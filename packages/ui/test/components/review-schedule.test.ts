@@ -3,8 +3,11 @@
 // line keeps its words and schedules nothing; a calendar line that does not read is `invalid`,
 // never silently "no schedule"; the proposal is the prototype's next day at 08:00 UTC; only the
 // sources whose subject is publishable offer a channel.
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { ApproveSchedule } from "../../src/components/review/ApproveSchedule.tsx";
 import { decodeSchedule, encodeSchedule, proposeAt, scheduleChannels, scheduleWords } from "../../src/components/review/schedule.ts";
 
 describe("the schedule a kept verdict carries", () => {
@@ -27,6 +30,14 @@ describe("the schedule a kept verdict carries", () => {
     expect(decodeSchedule("calendar: blog 2026-10-20T09:30:00.000Z extra")).toEqual({ kind: "invalid", error: 'calendar: "2026-10-20T09:30:00.000Z" is not an ISO instant' });
   });
 
+  it("an instant names its zone: a zone-less time would read in the host's zone, so it is refused", () => {
+    // Date.parse reads "2026-10-20T09:30" as LOCAL time: 09:30Z on a UTC box, 07:30Z in Prague.
+    expect(decodeSchedule("calendar: blog 2026-10-20T09:30")).toEqual({ kind: "invalid", error: 'calendar: "2026-10-20T09:30" is not an ISO instant' });
+    expect(decodeSchedule("calendar: blog 2026-10-20T09:30:00.000")).toEqual({ kind: "invalid", error: 'calendar: "2026-10-20T09:30:00.000" is not an ISO instant' });
+    expect(decodeSchedule("calendar: blog 2026-10-20T09:30:00+02:00")).toEqual({ kind: "schedule", schedule: { channel: "blog", publishAt: "2026-10-20T07:30:00.000Z" }, note: null });
+    expect(decodeSchedule("calendar: blog 2026-10-20T09:30Z")).toEqual({ kind: "schedule", schedule: { channel: "blog", publishAt: "2026-10-20T09:30:00.000Z" }, note: null });
+  });
+
   it("proposes the next day at 08:00 UTC, worded as the calendar reads it", () => {
     expect(proposeAt(Date.parse("2026-10-17T21:40:00.000Z"))).toBe("2026-10-18T08:00:00.000Z");
     expect(proposeAt(Date.parse("2026-12-31T07:00:00.000Z"))).toBe("2027-01-01T08:00:00.000Z");
@@ -37,5 +48,23 @@ describe("the schedule a kept verdict carries", () => {
     expect(scheduleChannels("article")).toEqual(["blog"]);
     expect(scheduleChannels("mv")).toEqual([]);
     expect(scheduleChannels("forge")).toEqual([]);
+  });
+});
+
+describe("the calendar control beside Approve", () => {
+  const value = { channel: "blog" as const, publishAt: "2026-10-18T08:00:00.000Z" };
+  const html = (channels: readonly ("blog" | "youtube")[]) => renderToStaticMarkup(h(ApproveSchedule, { channels, value, onChange: () => undefined }));
+
+  it("shows the instant in UTC, never the host's zone", () => {
+    expect(html(["blog"])).toContain('value="2026-10-18T08:00"');
+    expect(html(["blog"])).toContain('aria-label="publish at, UTC"');
+  });
+
+  it("a single channel is named, not offered; several are pressed chips, the value's pressed", () => {
+    expect(html(["blog"])).not.toContain("aria-pressed");
+    expect(html(["blog"])).toContain("blog");
+    const two = html(["blog", "youtube"]);
+    expect(two.match(/aria-pressed="true"/g)).toHaveLength(1);
+    expect(two.match(/aria-pressed="false"/g)).toHaveLength(1);
   });
 });

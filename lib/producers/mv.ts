@@ -1,9 +1,9 @@
-import { AppError, errorMessage, type Result } from "@gt/domain/errors";
+import { AppError, errorMessage } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { Job } from "@gt/domain/job";
 import type { CallIntent } from "@gt/kernel/dryrun";
 import type { Producer, StepContext } from "@gt/kernel/job-core";
-import { cancel, list, pause, resume, retry } from "@gt/kernel/job";
+import { cancel, get, list, pause, resume, retry } from "@gt/kernel/job";
 import { nextClaimable } from "@gt/kernel/job-queue";
 import type { Store } from "@gt/kernel/store";
 import { JOB_USD } from "@gt/kernel/spend/meter";
@@ -78,11 +78,6 @@ const running = (x: MvJob): void => {
   delete x.error;
 };
 
-const unwrap = <T>(r: Result<T>): T => {
-  if (!r.ok) throw r.error;
-  return r.value;
-};
-
 /**
  * The two paid engines, through the step's meter: declared (so a DRY job is
  * answered by the stand-in and books a would-call), booked on the job when
@@ -105,7 +100,7 @@ function metered(eng: MvEngines, ctx: StepContext): MvEngines {
         stand: standStill,
       };
       const credits: SettleEntry = { amount: undefined, outcome: "served", basis: "credits", axes, reason: STUDIO_CREDITS };
-      return unwrap(await ctx.meter.paid(JOB_USD, 0, intent, async () => ({ value: await eng.still(req), entries: [credits] })));
+      return must(await ctx.meter.paid(JOB_USD, 0, intent, async () => ({ value: await eng.still(req), entries: [credits] })));
     },
     async reason(req: TextRequest) {
       const ask = eng.reason ?? routerReason;
@@ -118,7 +113,7 @@ function metered(eng: MvEngines, ctx: StepContext): MvEngines {
         subject,
         stand: () => standText(req),
       };
-      return unwrap(
+      return must(
         await ctx.meter.paid(JOB_USD, 0, intent, async () => {
           const out = await ask(req);
           const usd = out.provenance.costUsd;
@@ -133,9 +128,10 @@ function metered(eng: MvEngines, ctx: StepContext): MvEngines {
   };
 }
 
-/** The interrupted mv job whose still may have been bought, if any - the look v1 forced by switching its queue off. */
+/** The interrupted mv job whose still may have been bought, if any - the look v1 forced by switching its queue off.
+ *  Read off the interrupted jobs only: this runs before every claim on box.render, and the store holds every producer's. */
 function stuckAtStill(store: Store): Job | undefined {
-  return [...mvKernelJobs(store).values()].find((j) => j.state === "interrupted" && j.interruption?.stage === "still");
+  return must(list(store, { state: "interrupted" })).find((j) => j.producer === MV_PRODUCER && j.interruption?.stage === "still");
 }
 
 export function mvProducer(binding: { readonly engines?: Partial<MvEngines> } = {}): Producer {
@@ -320,9 +316,12 @@ export function resumeMvJobs(actor: Actor, opts: { readonly retryInterrupted?: b
   return out;
 }
 
-/** The kernel side of a v1 act on one record's current attempt, when it has a job. */
+/** The kernel side of a v1 act on one record's current attempt, when it has a job: one row, by its derived id. */
 export function mvJobOf(j: Pick<MvJob, "id" | "enqueuedAt">, store: Store = soundKernel().store): Job | undefined {
-  return mvKernelJobs(store).get(mvKernelId(j));
+  const r = get(store, jobIdOf(mvKernelId(j)));
+  if (r.ok) return r.value.job.producer === MV_PRODUCER ? r.value.job : undefined;
+  if (r.error.code === "not-found") return undefined;
+  throw r.error;
 }
 
 export const pauseMvJob = (id: string, actor: Actor, store: Store = soundKernel().store): Job => must(pause(store, jobIdOf(id), actor));

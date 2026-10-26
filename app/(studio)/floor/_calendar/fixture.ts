@@ -23,13 +23,15 @@ import "server-only";
 
 import { err, ok, type Result } from "@gt/domain/errors";
 import { parseAt } from "@gt/domain/door";
-import { channelSchema, slotMachine, slotSchema, type Slot, type SlotState } from "@gt/domain/slot";
+import { channelSchema, exportIdOf, slotMachine, slotSchema, type Slot, type SlotState } from "@gt/domain/slot";
 import type { RailSlot } from "@gt/ui/components/floor/calendar.ts";
-import { canSchedule, type ChannelReady, type ScheduleDraft, type ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
+import { canSchedule, holds, type ChannelReady, type ScheduleDraft, type ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
 import { canCancel, canPublishNow, moveProblem } from "@gt/ui/components/floor/slot.ts";
 import type { SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 
 import { ledgerFor } from "../../_shell/links.ts";
+import { ARTICLE_CLI, PUBLISH_CLI } from "./readiness.ts";
+import { exportOnly, notPublishedText, railOfSlot, staleText } from "./real.ts";
 import type { CalendarFacts } from "./contract.ts";
 import { CHANNEL_SEED, ITEMS, PROJECTS, SLOTS, type FixtureMetric, type FixtureSlot } from "./fixtureData.ts";
 
@@ -101,7 +103,7 @@ export function applyCancel(row: FixtureRow): Result<FixtureRow> {
 
 export function applyPublishNow(row: FixtureRow, nowMs: number): Result<FixtureRow> {
   const s = row.slot;
-  if (!canPublishNow({ status: s.state, channel: s.channel, ...(s.drift === undefined ? {} : { drift: s.drift }) })) return err("refused", `publish ${s.id}: a ${s.drift === undefined ? s.state : "drifted"} ${s.channel} slot is not published from here`);
+  if (!canPublishNow({ status: s.state, channel: s.channel, ...(s.drift === undefined ? {} : { drift: s.drift }) })) return err("refused", notPublishedText(s));
   const path: readonly SlotState[] = s.state === "scheduled" ? ["publishing", "published"] : ["scheduled", "publishing", "published"];
   const to = walk(s.state, path);
   if (!to.ok) return to;
@@ -127,18 +129,10 @@ function rows(nowMs: number): Result<Map<string, FixtureRow>> {
   return ok(out);
 }
 
-export function railOfRow({ slot: s }: FixtureRow): RailSlot {
-  return {
-    id: s.id,
-    title: s.title,
-    channel: s.channel,
-    publishAt: s.at,
-    status: s.state,
-    ...(s.error === undefined ? {} : { error: s.error }),
-    ...(s.drift === undefined ? {} : { drift: s.drift }),
-    ...(s.missedAt === undefined ? {} : { missedAt: s.missedAt }),
-    item: s.libraryItemId,
-  };
+/** The real side's rail mapping, over the fixture row: a dry publish-now is marked, as the slot
+ *  store marks it, so neither the schedule form nor this table reads it as holding its item. */
+export function railOfRow({ slot, extra }: FixtureRow): RailSlot {
+  return railOfSlot({ slot, ...(extra.dry === true ? { dry: true } : {}) });
 }
 
 export function viewOf(row: FixtureRow): SlotView {
@@ -189,12 +183,12 @@ export function fixtureDetail(id: string, nowMs: number): Result<SlotView> {
 }
 
 /** Apply one verb to the table and answer the slot as it now is; a stale `baseRev` writes nothing. */
-export function fixtureAct(id: string, nowMs: number, act: (row: FixtureRow) => Result<FixtureRow>, baseRev?: number): Result<SlotView> {
+export function fixtureAct(verb: string, id: string, nowMs: number, act: (row: FixtureRow) => Result<FixtureRow>, baseRev?: number): Result<SlotView> {
   const t = rows(nowMs);
   if (!t.ok) return t;
   const row = t.value.get(id);
   if (row === undefined) return err("not-found", `slot ${id}: not in the fixture calendar`);
-  if (baseRev !== undefined && baseRev !== row.rev) return err("conflict", `${row.slot.title}: it changed since it was opened - now ${row.slot.state} for ${row.slot.at}`, { detail: "stale" });
+  if (baseRev !== undefined && baseRev !== row.rev) return err("conflict", staleText(verb, row.slot), { detail: "stale" });
   const next = act(row);
   if (!next.ok) return next;
   const landed = { ...next.value, rev: row.rev + 1 };
@@ -204,7 +198,6 @@ export function fixtureAct(id: string, nowMs: number, act: (row: FixtureRow) => 
 
 /* ── putting something on the calendar ─────────────────────────────────── */
 
-const HOLDS: readonly SlotState[] = ["scheduled", "publishing", "published"];
 let minted = 0;
 
 /** A new slot, as the engine would take it (@gt/kernel/slots/write createSlot's refusals). */
@@ -215,9 +208,10 @@ export function fixtureSchedule(d: ScheduleDraft, nowMs: number): Result<SlotVie
   const ch = fixtureChannels(t.value).find((c) => c.channel === d.channel);
   if (!channel.success || ch === undefined) return err("invalid", `${d.channel} is not a channel`);
   if (ch.state === "act") return err("refused", "a blog slot is made by its article's approve on the Board, not here");
+  if (exportIdOf(d.item) === undefined) return err("refused", exportOnly(d.item, d.channel));
   if (!canSchedule(ch)) return err("conflict", `${d.channel} is not wired`, { detail: "channel_not_wired" });
   if (ITEMS[d.item] === undefined) return err("conflict", `unknown item ${d.item}`, { detail: "export_missing" });
-  const held = [...t.value.values()].find((r) => r.slot.libraryItemId === d.item && r.slot.channel === d.channel && HOLDS.includes(r.slot.state));
+  const held = [...t.value.values()].find((r) => r.slot.libraryItemId === d.item && r.slot.channel === d.channel && holds(railOfRow(r)));
   if (held !== undefined) return err("conflict", `${d.item} is already on ${d.channel} (slot ${held.slot.id}, ${held.slot.state} for ${held.slot.at})`);
   minted += 1;
   const slot = door({ id: `sl-new-${minted}`, libraryItemId: d.item, channel: channel.data, at: d.at, state: "scheduled", title: d.title, description: d.description, tags: [...d.tags] });
@@ -244,7 +238,7 @@ function fixtureChannels(table: ReadonlyMap<string, FixtureRow>): ChannelReady[]
       state: c.state,
       env: c.env.map((name) => ({ name, present: false })),
       ...(c.note === undefined ? {} : { note: c.note }),
-      command: c.channel === "blog" ? "node pipeline/article.mts status" : "npx tsx pipeline/publish.mts channels --json",
+      command: c.channel === "blog" ? ARTICLE_CLI : PUBLISH_CLI,
       ...(out === undefined ? {} : { lastOut: out }),
       ...(fail?.slot.error === undefined ? {} : { lastFailure: { at: fail.slot.at, error: fail.slot.error, inARow: fails.length } }),
     };

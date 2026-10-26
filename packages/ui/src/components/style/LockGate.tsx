@@ -22,6 +22,8 @@ export type LockGateProps = Pick<StyleView, "status" | "why" | "keptCells" | "pr
 export function LockGate({ status, why, keptCells, provenKeeps, coverage, lockProblems, lock }: LockGateProps) {
   const at = STEPS.indexOf(status);
   const covered = coverage.filter((c) => c.covered).length;
+  const day = lock.lockedAt?.slice(0, 10);
+  const stamped = day !== undefined && why.includes(day);
   return (
     <section className={s.gate} aria-label="ratchet" data-component="LockGate" data-status={status} data-can-lock={lock.can ? "" : undefined}>
       <ol className={s.steps} aria-label={`at ${status}`}>
@@ -42,10 +44,13 @@ export function LockGate({ status, why, keptCells, provenKeeps, coverage, lockPr
         <PipRow looks={Array.from({ length: Math.min(covered, lockProblems) }, () => "done" as const)} max={lockProblems} label={`${covered} of ${lockProblems} trial problems covered to lock`} />
       </div>
       {status === "locked" ? (
-        <p className={s.locked} role="status">
-          locked{lock.lockedAt === undefined ? "" : ` ${lock.lockedAt.slice(0, 10)}`}
-          {lock.lockedBy === undefined ? "" : ` by ${lock.lockedBy}`}
-        </p>
+        // The lock is stamped once, too: the view's why for a locked style already names its day and hand.
+        !stamped && (
+          <p className={s.locked} role="status">
+            locked{day === undefined ? "" : ` ${day}`}
+            {lock.lockedBy === undefined ? "" : ` by ${lock.lockedBy}`}
+          </p>
+        )
       ) : (
         // The blocker is drawn once: when it IS the one-line why (a proven style held at the
         // gate), the line above already says it.

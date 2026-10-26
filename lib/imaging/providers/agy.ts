@@ -106,69 +106,73 @@ async function generateOne(prompt: string, ratio: string): Promise<ImageRef> {
     `Set AspectRatio to "${ratio}". Save the result to the absolute path ${outPath} ` +
     "exactly (create any needed directories). Do not respond until the file has been written.";
 
-  await new Promise<void>((resolve, reject) => {
-    let child;
-    try {
-      // NO SHELL — see agyAvailable()'s comment. This matters far more here
-      // than on the version probe: the prompt is a multi-word sentence, and
-      // shell:true's unescaped concatenation measurably broke it (agy saw the
-      // first word of `-p`'s value and rejected the rest as stray arguments).
-      // stdout is NEVER read (the design note above: the response's prose is
-      // not parsed for a path) — so it stays "ignore", not "pipe". A piped
-      // stream nobody consumes is paused by default; agy's JSON response runs
-      // to thousands of tokens of prose on a real generation, which can fill
-      // the OS pipe buffer and block the child's write(), turning every call
-      // into a GENERATE_TIMEOUT_MS hang instead of the ~57s this measured.
-      child = spawn("agy", ["-p", instruction, "--output-format", "json", "--sandbox", "--disable-slash-commands"], {
-        cwd: ws,
-        stdio: ["ignore", "ignore", "pipe"],
-      });
-    } catch {
-      return reject(new ImagingError("The `agy` CLI could not be started.", "failed", "agy"));
-    }
-
-    let stderr = "";
-    const timer = setTimeout(() => {
-      // The whole tree: agy can spawn grandchildren that outlive a plain kill
-      // and keep writing into the workspace (same reason as lib/agent/*).
-      killTree(child.pid, () => child.kill());
-      reject(
-        new ImagingError(
-          `agy did not finish within ${GENERATE_TIMEOUT_MS / 1000}s (measured ~57s/image; this run took longer).`,
-          "timeout",
-          "agy",
-        ),
-      );
-    }, GENERATE_TIMEOUT_MS);
-
-    child.stderr?.on("data", (c) => (stderr += c));
-    child.on("error", () => {
-      clearTimeout(timer);
-      reject(new ImagingError("The `agy` CLI is not installed or not on PATH.", "failed", "agy"));
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      if (code !== 0) {
-        const tail = stderr.replace(/\s+/g, " ").trim().slice(-240);
-        return reject(
-          new ImagingError(`agy exited ${code}.${tail ? ` stderr: ${tail}` : ""}`, "bad-response", "agy"),
-        );
-      }
-      resolve();
-    });
-  });
-
+  // Every exit removes the workspace - a non-zero exit and a timeout included: the
+  // agent may have written into it, and nothing reads it after this call returns.
   let buf: Buffer;
   try {
-    buf = await readFile(outPath);
-  } catch {
-    throw new ImagingError(
-      "agy reported success but the output file it was asked to write was not found.",
-      "bad-response",
-      "agy",
-    );
+    await new Promise<void>((resolve, reject) => {
+      let child;
+      try {
+        // NO SHELL — see agyAvailable()'s comment. This matters far more here
+        // than on the version probe: the prompt is a multi-word sentence, and
+        // shell:true's unescaped concatenation measurably broke it (agy saw the
+        // first word of `-p`'s value and rejected the rest as stray arguments).
+        // stdout is NEVER read (the design note above: the response's prose is
+        // not parsed for a path) — so it stays "ignore", not "pipe". A piped
+        // stream nobody consumes is paused by default; agy's JSON response runs
+        // to thousands of tokens of prose on a real generation, which can fill
+        // the OS pipe buffer and block the child's write(), turning every call
+        // into a GENERATE_TIMEOUT_MS hang instead of the ~57s this measured.
+        child = spawn("agy", ["-p", instruction, "--output-format", "json", "--sandbox", "--disable-slash-commands"], {
+          cwd: ws,
+          stdio: ["ignore", "ignore", "pipe"],
+        });
+      } catch {
+        return reject(new ImagingError("The `agy` CLI could not be started.", "failed", "agy"));
+      }
+
+      let stderr = "";
+      const timer = setTimeout(() => {
+        // The whole tree: agy can spawn grandchildren that outlive a plain kill
+        // and keep writing into the workspace (same reason as lib/agent/*).
+        killTree(child.pid, () => child.kill());
+        reject(
+          new ImagingError(
+            `agy did not finish within ${GENERATE_TIMEOUT_MS / 1000}s (measured ~57s/image; this run took longer).`,
+            "timeout",
+            "agy",
+          ),
+        );
+      }, GENERATE_TIMEOUT_MS);
+
+      child.stderr?.on("data", (c) => (stderr += c));
+      child.on("error", () => {
+        clearTimeout(timer);
+        reject(new ImagingError("The `agy` CLI is not installed or not on PATH.", "failed", "agy"));
+      });
+      child.on("close", (code) => {
+        clearTimeout(timer);
+        if (code !== 0) {
+          const tail = stderr.replace(/\s+/g, " ").trim().slice(-240);
+          return reject(
+            new ImagingError(`agy exited ${code}.${tail ? ` stderr: ${tail}` : ""}`, "bad-response", "agy"),
+          );
+        }
+        resolve();
+      });
+    });
+
+    try {
+      buf = await readFile(outPath);
+    } catch {
+      throw new ImagingError(
+        "agy reported success but the output file it was asked to write was not found.",
+        "bad-response",
+        "agy",
+      );
+    }
   } finally {
-    // Best-effort — a leaked temp PNG is a disk-usage nit, not a result we may
+    // Best-effort - a leaked temp PNG is a disk-usage nit, not a result we may
     // fail the call over once the bytes are already in hand.
     rm(ws, { recursive: true, force: true }).catch(() => {});
   }
@@ -219,7 +223,9 @@ export function agyProvider(): ImagingProvider {
           "agy",
         );
 
-      const count = Math.max(req.count ?? 1, 1);
+      // Capped at 8, the bound google.ts and leonardo.ts apply and the HTTP door
+      // refuses past: each image here is a full sequential agent turn (~57 s).
+      const count = Math.min(Math.max(req.count ?? 1, 1), 8);
       const images: ImageRef[] = [];
       for (let i = 0; i < count; i++) images.push(await generateOne(req.prompt, ratio));
 

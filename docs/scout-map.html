@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scout output map</title>
+<style>
+:root{
+  --bg:#0e1013; --panel:#161a20; --panel2:#1c222a; --line:#2a323d; --ink:#e6e9ee; --dim:#8b95a3;
+  --scout:#6aa9ff; --muse:#e58fc0; --shared:#c9b458; --sink:#7bd0a0; --steer:#9aa4b2;
+  --warn:#ff8a5b; --ok:#7bd0a0; --paused:#c9b458; --nb:#ff6b6b; --plan:#a58bff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,Segoe UI,sans-serif}
+header{padding:18px 24px 8px}
+h1{margin:0 0 4px;font-size:20px}
+header p{margin:0;color:var(--dim);max-width:980px}
+.bar{display:flex;flex-wrap:wrap;gap:14px;padding:8px 24px 12px;align-items:center;color:var(--dim);font-size:12.5px}
+.bar label{display:flex;gap:6px;align-items:center;cursor:pointer;color:var(--ink)}
+.key span{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.finds{margin:0 24px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.finds summary{cursor:pointer;padding:9px 14px;font-weight:600}
+.finds ol{margin:0;padding:4px 18px 12px 34px;color:var(--ink)}
+.finds li{margin:5px 0}
+.finds code{color:var(--shared)}
+.scroller{overflow:auto;padding:0 24px 24px}
+#stage{position:relative;display:grid;grid-template-columns:repeat(6,minmax(172px,1fr));column-gap:46px;row-gap:12px;min-width:1280px;padding:30px 0 10px}
+#edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.colhead{grid-row:1;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.08em;align-self:end;padding-bottom:2px}
+.lane{position:absolute;left:-12px;right:-12px;border-radius:10px;z-index:0;pointer-events:none}
+.lane b{position:absolute;left:12px;top:6px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:.9}
+.node{position:relative;z-index:2;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,var(--steer));border-radius:8px;padding:8px 10px;cursor:pointer;transition:transform .08s,border-color .08s}
+.node:hover,.node.sel{transform:translateY(-1px);border-color:var(--c,var(--steer));background:var(--panel2)}
+.node h3{margin:0 0 3px;font-size:13px;line-height:1.25}
+.node .sub{font-size:11.5px;color:var(--dim)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.chip{font-size:10.5px;padding:1px 6px;border-radius:9px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.chip.step{color:var(--ink)}
+.chip.nb{color:var(--nb);border-color:var(--nb)}
+.chip.paused{color:var(--paused);border-color:var(--paused)}
+.chip.dead{color:var(--warn);border-color:var(--warn)}
+.chip.ok{color:var(--ok);border-color:var(--ok)}
+.chip.plan{color:var(--plan);border-color:var(--plan)}
+.node.plan{border-left-color:var(--plan);border-style:dashed}
+.node.sink{border-style:dashed}
+.node.dim{opacity:.28}
+body:not(.showdead) .chip.dead{display:none}
+body:not(.showstep) .chip.step{display:none}
+path.e{fill:none;stroke:#5b6676;stroke-width:1.5}
+path.e.soft{stroke-dasharray:5 4}
+path.e.nb{stroke:var(--nb);stroke-dasharray:2 4}
+path.e.paused{stroke:var(--paused)}
+path.e.back{stroke:var(--shared);stroke-dasharray:6 4;opacity:.7}
+path.e.hot{stroke:#fff;stroke-width:2.2}
+path.e.fade{opacity:.08}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+#modal.on{display:flex}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(760px,100%);max-height:90vh;overflow:auto;padding:18px 22px 20px;position:relative}
+.card h2{margin:0 0 2px;font-size:18px}
+.card .meta{color:var(--dim);font-size:12.5px;margin-bottom:10px}
+.card h4{margin:14px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)}
+.card p,.card li{margin:3px 0}
+.card ul{margin:0;padding-left:18px}
+.x{position:absolute;right:12px;top:10px;background:none;border:0;color:var(--dim);font-size:22px;cursor:pointer}
+.rej{display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
+.rej code{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:0 6px;height:fit-content;white-space:nowrap}
+.rej .first{border-color:var(--warn)}
+.flag{border-left:3px solid var(--warn);background:#2a1d17;padding:6px 10px;border-radius:0 6px 6px 0;margin:4px 0}
+.src{font-size:11.5px;color:var(--dim);margin-top:12px;word-break:break-word}
+.reach{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.chrono{margin:0 24px 28px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.chrono section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.chrono h3{margin:0 0 6px;font-size:13px}
+.chrono ol{margin:0;padding-left:20px;font-size:12.5px}
+.chrono li{margin:2px 0}
+.chrono em{color:var(--warn);font-style:normal}
+@media (max-width:900px){.chrono{grid-template-columns:1fr}}
+</style>
+</head>
+<body class="showdead showstep">
+<header>
+  <h1>Scout output map</h1>
+  <p>Every output <code>/scout</code> and <code>/scout-muse</code> can make, arranged by what each one <em>needs kept before it can exist</em>. Click a node for its use case, aim and reject reasons. Dashed red edges name an act that does not exist yet; violet nodes are the planned stages of spark <code>scout-vision</code> (S2-S5).</p>
+</header>
+
+<div class="bar">
+  <span class="key"><span style="background:var(--scout)"></span>scout wing</span>
+  <span class="key"><span style="background:var(--muse)"></span>muse wing</span>
+  <span class="key"><span style="background:var(--shared)"></span>shared</span>
+  <span class="key"><span style="background:var(--sink)"></span>where a keep lands (dashed box)</span>
+  <span class="key"><span style="background:var(--plan)"></span>planned stage</span>
+  <label><input type="checkbox" id="tStep" checked> skill step chips</label>
+  <label><input type="checkbox" id="tDead" checked> reach chips (what a keep can become)</label>
+</div>
+
+<details class="finds" open>
+  <summary>The redesign (spark scout-vision, 2026-10-25)</summary>
+  <ol>
+    <li><b>The ladder.</b> Spread genres while no project exists; prove a kept idea can be executed (storyboard &rarr; trial clips &rarr; piece); a project (channel, album, game) is born on the Board only after that.</li>
+    <li><b>S1 shipped: prove before you spread.</b> While 20+ kept scene/style ideas have no storyboard, a seed batch takes children plus at most 20 fresh (47 waiting at the cut). Storyboards: default 12, max 20, each applying a researched technique a keep files into PATTERNS.md. Music seeds carry instruments, tempo, mood, vocals; the Suno prompt is written from them.</li>
+    <li><b>S2</b> genre record (trials = storyboard + local clips, 4 kept &rarr; piece) and project record born from a publishable genre, kept tracks or a POF onboarding. <b>S3</b> muse merged into scout: one character creator fed by artboards or web sources; named fictional characters allowed in words (parody / what-if), never real people, never source pixels. <b>S4</b> POF writes <code>asset-needs.json</code> per game (inventory, peer score, needs); asset briefs answer a need. <b>S5</b> a kept stats reel gets real data and a full render.</li>
+  </ol>
+</details>
+<details class="finds">
+  <summary>What the first map showed (before the redesign)</summary>
+  <ol>
+    <li><b>Two roots, not one.</b> Ideas, tracks and music grow from <code>seed</code>; styles, scene clips and findings grow from <code>web source</code> and have no seed parent (the app files them under "before seeds"). The skill numbers them as one night: 1a seeds, 1d ideas, then 2 discover. They are two chains that never meet except through the taste brief.</li>
+    <li><b>Only one chain reaches a published video today:</b> kept seed &rarr; track &rarr; visualizer (paused until Suno's limit resets, ~2026-11-06). Storyboard &rarr; full video and stats reel &rarr; real data are "later work" in the code; scene clips, styles, findings and directions end at a keep.</li>
+    <li><b>Three different products hide under one word.</b> A scout <code>asset</code> serves a <i>game project</i>; a muse <code>scene</code> is a still for a <i>companion / roleplay app</i>; only the rest claim to serve a <i>YouTube video</i>. The skill's first rule ("the product is a YouTube video") is true of the scout wing's seeds and ideas only.</li>
+    <li><b>"Scene" means two things.</b> Scout scene = a replica still plus a local LTX clip from a found keyframe. Muse scene = a 16:9 still of a <i>kept character</i> in a situation. Different inputs, different outputs, same word.</li>
+    <li><b>Skill step order is not dependency order.</b> Steps 1b-1e say "brief EARLY, before any search", yet ideas need a kept seed, storyboards need a kept idea from a <i>previous</i> night, and 0b "develop kept ideas first" sits inside step 4. Directions (4b) come after music (4c). See the two lists at the bottom.</li>
+    <li><b>The missing top node.</b> Nothing in either skill states which channel, series or video a night is working toward. Each node's popup ends with the question a keep of it should answer; that question is where a vision statement would plug in.</li>
+  </ol>
+</details>
+
+<div class="scroller">
+  <div id="stage">
+    <svg id="edges"></svg>
+  </div>
+</div>
+
+<div class="chrono">
+  <section><h3>Night order since scout 2.0.0 (stage 1)</h3>
+    <ol id="skillOrder"></ol></section>
+  <section><h3>Dependency order (what the doors enforce)</h3>
+    <ol id="depOrder"></ol></section>
+</div>
+
+<div id="modal"><div class="card" id="card"></div></div>
+
+<script>
+// ---------------------------------------------------------------------------------------------
+// DATA. col 1-6 and row are grid cells; lane is scout | muse | shared | steer.
+// "reach" is computed from the edges below, not typed here. `nb` marks an act that does not exist yet.
+// ---------------------------------------------------------------------------------------------
+const COLS = ["Memory", "Raw material", "First make", "Develop", "Result", "End"];
+const LANES = [
+  {id:"steer", label:"steering", r0:2, r1:2, c:"var(--steer)"},
+  {id:"scout", label:"scout wing (YouTube video)", r0:3, r1:9, c:"var(--scout)"},
+  {id:"shared", label:"shared", r0:10, r1:10, c:"var(--shared)"},
+  {id:"muse", label:"muse wing (characters)", r0:11, r1:13, c:"var(--muse)"},
+];
+const N = [
+ // ---------- steering
+ {id:"taste", lane:"steer", col:1, row:2, title:"Taste brief", sub:"kept + thrown verdicts, bans, directions, branch shares", step:"1 (read)",
+  use:"The only memory between nights: what the operator kept, what they threw and why, which branches are paused.",
+  aim:"Make tonight start from yesterday's verdicts instead of from a blank page.",
+  gate:"Written by the app from committed packets. The skill reads it; it never edits it.",
+  reject:null,
+  teaches:"A channel or look rejected twice is not searched again; a use under 'refused as a use' is not proposed again.",
+  question:"Which channel or series is this brief steering toward? Today it holds verdicts but no stated destination.",
+  src:"SKILL.md scout 'What the night is for', step 1; lib/foundry/scout/taste.ts"},
+
+ // ---------- scout: raw material
+ {id:"seed", lane:"scout", col:2, row:3, title:"Seed", sub:"one sentence: genre, subgenre, type, audience, format", step:"1a",
+  use:"A one-line video idea, ~100 a night, kept or thrown in one pass on pkt:seeds:<batch>. Every kept seed is a branch; the next night writes 2-3 narrower child seeds from it.",
+  aim:"Spread the genres cheaply (words only, no spend) so later nights derive from what the operator actually keeps. Operator 2026-10-23: 60 kept / 40 thrown; documentary and short animated stories showed promise; adult seeds were too safe.",
+  gate:"Door: one line, facets in bounds, no person/studio/franchise name. A paused branch's door refuses children. Min 15 genres, all 3 audiences, max 10 per genre.",
+  reject:{list:[["generic","The obvious take: nothing here we would make differently."],["not for us","A genre or content type this channel will not make."],["audience","Wrong audience for this genre or type of content."],["done before","Already kept, thrown or made under another seed."],["format","Will not hold as a Short or a short video."]], note:"A reason is mandatory on every seed reject; it becomes a ban on the next batch (## Seeds blocked)."},
+  teaches:"Reasoned throws are the steering signal for every downstream node: they are the only place the operator says what the channel is NOT.",
+  question:"Would we watch ten of these in a row? Is this a series premise or a one-off?",
+  src:"SKILL.md scout 1a; lib/foundry/scout/seeds.ts; packages/domain/src/source.ts (seeds)"},
+
+ {id:"source", lane:"scout", col:2, row:5, title:"Web source", sub:"picture, trailer or page found by search", step:"2, 3",
+  use:"Public, official or promotional material (a museum's open-access image, a studio's own trailer) held on the box for study. Only frames are kept.",
+  aim:"Feed the style, scene and finding acts with looks and shots a video could wear. A source seeds WORDS, never pixels.",
+  gate:"No login, paywall, re-upload or AI-image gallery. A URL an earlier night launched from is skipped. Has NO seed parent (graph files it under 'before seeds').",
+  reject:{list:[["generic","Teaches nothing new: the median, or already in the Library."],["use case","Serves no video worth making; later nights steer away."],["subject","What is shown does not fit: the wrong subject or content."]], note:"Group 'sources' on the scout packet. A channel rejected twice is not searched again."},
+  teaches:"Which channels and media are worth searching; two good sources from one channel earn it a watch line.",
+  question:"Which seed or idea branch is this source for? Today a source is chosen from the watchlist and gaps, not from a kept branch.",
+  flag:"Discovery runs parallel to the seed tree. Nothing links a source to the seed it would serve.",
+  src:"SKILL.md scout step 2-3; lib/foundry/scout/sources.ts, ingest.ts"},
+
+ {id:"track", lane:"scout", col:3, row:3, title:"Track", sub:"Suno song from a kept music seed", step:"4c.1", status:"paused",
+  use:"A ~4-clip Suno create from a kept music seed; the song is the clock of a later music video.",
+  aim:"Make the audio first, judge it alone, and only then pay for pictures (a ladder judged per rung).",
+  gate:"Needs a kept seed whose type is music. Capped by trackCap (default 4). PAUSED: no tracks until ~2026-11-06 (Suno limit); the six kept music seeds are paused.",
+  reject:{list:[["craft","Poorly executed: anatomy, composition, artefacts or framing."],["generic","Teaches nothing new: the median, or already in the Library."],["use case","Serves no video worth making; later nights steer away."]], note:"Group 'music'."},
+  teaches:"Whether a song is worth a visualizer. A kept clip is the only input the visualizer accepts.",
+  question:"Is this song for a channel release or a placeholder? A track kept with no destination is stock.",
+  src:"SKILL.md scout 4c; lib/foundry/scout/track.ts"},
+
+ // ---------- scout: first make
+ {id:"idea", lane:"scout", col:3, row:4, title:"Idea artboard", sub:"one rough picture of a video's key moment", step:"1d",
+  use:"20-30 a night drawn in the operator's Leonardo studio. targets: scene, style, asset3d, stats.",
+  aim:"The cheapest question the night can ask: one picture of a rough intent, one keystroke to block or develop. Each states ONE sentence WHY (extract a style, test a technique, baseline of a genre video, or fill a graph layer).",
+  gate:"Needs a KEPT seed once any seed is kept (door refuses unkept or paused). Repeat guard bans near-neighbours of blocked titles. Studio credits, not the Gemini ceiling.",
+  reject:{list:[["generic","Teaches nothing new: the median, or already in the Library."],["use case","Serves no video worth making; later nights steer away."],["subject","What is shown does not fit: the wrong subject or content."]], note:"Group 'ideas'. Blocked titles become tonight's bans."},
+  teaches:"A kept idea fans out into the four targets. A 'use case' throw steers the next nights away from that direction.",
+  question:"Which seed does this grow from, and what would the finished video be called?",
+  src:"SKILL.md scout 1d; lib/foundry/scout/idea.ts"},
+
+ {id:"style", lane:"scout", col:3, row:5, title:"Style (look)", sub:"extracted still look + replica + transfer score", step:"4.1 / 0b",
+  use:"The baseline LOOK of a video: technique, palette roles, finish, no subject. Grouped from 1-4 ingested pictures or developed from a kept style idea.",
+  aim:"Grow the Library's catalogue of looks so a genre video can vary its look. A look nobody would animate or cut is not a find.",
+  gate:"Run states its USE (a video, never a print or poster). Engine's scores are a pre-filter, not a verdict. Kept muse looks arrive here too.",
+  reject:{list:[["style","The look is wrong for the video we are making."],["generic","Teaches nothing new: the median, or already in the Library."],["craft","Poorly executed: anatomy, composition, artefacts or framing."]], note:"Group 'art styles'. Operator's eye and the score disagree sometimes (LESSONS: graphite study scored 38% but looked 100%)."},
+  teaches:"Which looks are 'proven' (a keep earns a registry lead).",
+  question:"Which genre video wears this look, and has one of the kept seeds asked for it?",
+  flag:"A kept style lands in the catalogue and no built act picks it up for a video.",
+  src:"SKILL.md scout 4.1; lib/foundry/extract"},
+
+ {id:"scene", lane:"scout", col:3, row:6, title:"Scene + clip", sub:"replica still, then local LTX clip", step:"4.2",
+  use:"A single instructive shot from a found keyframe, re-made as our own replica still and animated into a short local clip.",
+  aim:"Learn how a shot, a camera move or a cut lands, as the baseline of a genre video.",
+  gate:"Source frame or kept idea artboard in; the clip animates ONLY our replica still (source files are reference-only). Skip talking heads, screenshots, burnt-in text. First two scenes get a clip while the cap allows.",
+  reject:{list:[["craft","Poorly executed: anatomy, composition, artefacts or framing."],["motion","The movement is wrong: drift, jitter, or an unmotivated camera."],["style","The look is wrong for the video we are making."]], note:"Group 'videos'."},
+  teaches:"Camera and motion craft; a kept clip may support a finding.",
+  question:"Which storyboard beat would this shot be? A clip kept without a beat is a loose end.",
+  flag:"'A scene clip is not a full video and stays ungated': no storyboard or video act consumes it.",
+  src:"SKILL.md scout 4.2, 'What NOT to do'; lib/foundry/scout/scene.ts"},
+
+ {id:"asset", lane:"scout", col:3, row:7, title:"3D game asset", sub:"concept, TRELLIS mesh, Blender finish", step:"1b",
+  use:"A character, weapon or prop for an existing game project (pof, mage-arena, bp) or one that opens a new project.",
+  aim:"Fill the 3D shelf by class and technique. Operator rejected every asset of the first 3D nights for having no purpose.",
+  gate:"Brief needs serves.project OR serves.newProject, plus use. Concept drawn from OUR words, never a found picture. Max --assets (default 3). Mesh and finish are local and free.",
+  reject:{list:[["topology","The mesh is broken: holes, floaters, fused or too-thin parts."],["texture","The texture bake is wrong: seams, smears, wrong materials."],["rig","The rig fails: bad weights or broken bone chains."],["scale","Its size in the world is wrong for its class."]], note:"Group '3d'. Taste block says which technique is kept per class."},
+  teaches:"Which 3D technique (budget generation vs game-camera design) to run per class.",
+  question:"Which game project needs this? This is not a YouTube output.",
+  flag:"Serves a game project, not a video. Sits under the 'YouTube video' rule without being one.",
+  src:"SKILL.md scout 1b; lib/foundry/scout/asset.ts"},
+
+ {id:"reel", lane:"scout", col:3, row:8, title:"Stats reel", sub:"8 s data strip authored in code, illustrative numbers", step:"1c",
+  use:"A data-video idea: continuity, path over conclusion, dated accelerators. Illustrative numbers only, no research tonight.",
+  aim:"Triage the idea of a data explainer, not the dataset. Up to 6 a night.",
+  gate:"Passes the data-video-virality gates (no single-value ladder, record list or winners list). Goes through the ideas door, target stats. Always queued, never driven.",
+  reject:{list:[["generic","Teaches nothing new: the median, or already in the Library."],["use case","Serves no video worth making; later nights steer away."],["subject","What is shown does not fit: the wrong subject or content."]], note:"Rides the 'ideas' group (K records the keep, X blocks it)."},
+  teaches:"Which data-story forms deserve real data on a later night.",
+  question:"Which topic is worth real research? A kept reel today leaves nothing.",
+  flag:"'Real data and full render come on a later night (not built yet)'.",
+  src:"SKILL.md scout 1c; lib/foundry/scout/idea.ts (reel); graph.ts"},
+
+ {id:"finding", lane:"scout", col:3, row:9, title:"Craft finding", sub:"claim + verbatim quote + knowledge step", step:"4.3",
+  use:"At most 2 a night, about execution in a video only: how a shot, cut or beat lands (140 chars), backed by a verbatim quote.",
+  aim:"Add to knowledge/templates/**/PATTERNS.md under an existing step (camera and staging go under 02-frames). A finding already stated is not a finding.",
+  gate:"Existing step directory only. 'restates' links an n=1 line to tonight's independent source. Kept at n=2 it earns a registry lead.",
+  reject:{list:[["generic","Teaches nothing new: the median, or already in the Library."],["use case","Serves no video worth making; later nights steer away."],["subject","What is shown does not fit: the wrong subject or content."]], note:"Group 'notes'. Two statistic-only findings were rejected 'generic' (2026-10-22)."},
+  teaches:"Whether the knowledge base is being enriched or just restated.",
+  question:"Which step of which template does this change, and would it change a decision in a storyboard?",
+  src:"SKILL.md scout 4.3; lib/foundry/scout/knowledge.ts"},
+
+ // ---------- scout: develop
+ {id:"story", lane:"scout", col:4, row:4, title:"Storyboard", sub:"up to 5 Flux frames + paragraph + beats", step:"1e",
+  use:"A kept idea composed into a whole video: title, paragraph (480 chars), 3-6 beats with format, audience, look, hook, and 1-5 frames.",
+  aim:"Prove the idea can become a whole video. The root any full video needs.",
+  gate:"fromIdea must be KEPT on a live committed night; one storyboard per idea (unless failed). Panels: craft words only, lower case after the first word.",
+  reject:{list:[["story","The frames do not add up to a video worth making."],["generic","Teaches nothing new: the median, or already in the Library."],["use case","Serves no video worth making; later nights steer away."]], note:"Group 'storyboards'. Judged WHOLE: kept when its words cell is kept."},
+  teaches:"Whether the idea survives being a sequence. A kept storyboard is listed under '## Ready for full video'.",
+  question:"Would you publish this video as drawn? If not, what beat is missing?",
+  src:"SKILL.md scout 1e; lib/foundry/scout/storyboard.ts, storyboardKept.ts"},
+
+ {id:"viz", lane:"scout", col:4, row:3, title:"Visualizer", sub:"full-song video from a kept track", step:"4c.2", status:"paused",
+  use:"A particles-and-light full-song video on the render box, ~20-30 min each, from a kept track clip (a kept idea artboard of the same seed is the still).",
+  aim:"Turn a kept song into a publishable video.",
+  gate:"Needs a kept track clip; one clip, one visualizer; capped (default 2). Paused with music.",
+  reject:{list:[["craft","Poorly executed: anatomy, composition, artefacts or framing."],["generic","Teaches nothing new: the median, or already in the Library."],["use case","Serves no video worth making; later nights steer away."]], note:"Reasons inferred from the music group; confirm."},
+  teaches:"Kept, it IS the output (graph stage 'output').",
+  question:"Is this the release cut or another draft?",
+  src:"SKILL.md scout 4c; lib/foundry/scout/visualizer.ts; graph.ts"},
+
+ {id:"direction", lane:"scout", col:4, row:7, title:"Direction", sub:"a video someone could start making", step:"4b",
+  use:"1-3 a night in production words: format, genre, style, tone, audience, premise, built from what was APPROVED.",
+  aim:"Confirm what the approved decisions add up to, e.g. 'animated comedy sketch, painted-3D look, dark humour for adults, a lighthouse keeper's cat'.",
+  gate:"basedOn lists committed kept cells; the CLI refuses a cell the night did not keep. Refused directions are never proposed again.",
+  reject:{list:[["generic","Teaches nothing new: the median, or already in the Library."],["use case","Serves no video worth making; later nights steer away."],["subject","What is shown does not fit: the wrong subject or content."]], note:"Group 'notes'. Confirmed ones become the lanes the next nights work inside."},
+  teaches:"Confirmed directions are the closest thing to a vision statement the loop has; the night works inside them.",
+  question:"This node is the high-level intent. Why is it produced last (4b) and consumed by nothing built?",
+  flag:"Highest-level node in the loop, but it is written at the END of the night and 'leaves no output' (graph.ts).",
+  src:"SKILL.md scout 4b; lib/foundry/scout/direction.ts"},
+
+ {id:"watch", lane:"scout", col:4, row:9, title:"Watch line", sub:"a channel or site worth searching", step:"4.4",
+  use:"A channel that produced two or more good sources tonight and is not on the watchlist.",
+  aim:"Make the next nights' search start from proven channels.",
+  gate:"Appended to knowledge/scout/watchlist.md only through the Board's apply.",
+  reject:{list:[["generic","Teaches nothing new: the median, or already in the Library."],["use case","Serves no video worth making; later nights steer away."],["subject","What is shown does not fit: the wrong subject or content."]], note:"Group 'notes'."},
+  teaches:"Closes the discovery loop (watchlist &rarr; source &rarr; watch line).",
+  question:"Does this channel serve a kept branch?",
+  src:"SKILL.md scout 4.4"},
+
+ // ---------- scout: results / end
+ {id:"video", lane:"scout", col:5, row:4, title:"Full video", sub:"from a kept storyboard", step:"none", nb:true,
+  use:"The Short (~30 s) or video (up to 5 min) the storyboard describes.",
+  aim:"The point of the whole loop.",
+  gate:"Gate exists (keptStoryboardFor) but no act in the CLI builds it: 'a storyboard's full video is later work'.",
+  reject:null,
+  teaches:"-",
+  question:"What is the first full video to build, and from which kept storyboard?",
+  flag:"Not built. This is the missing link between kept ideas and a published video.",
+  src:"lib/foundry/scout/storyboardKept.ts; graph.ts header; SKILL.md 'What NOT to do'"},
+
+ {id:"catalog", lane:"shared", col:5, row:10, title:"Style catalogue", sub:"pipeline/foundry/styles.json (Library)", step:"-",
+  use:"The shared Library of looks. Both wings write to it; the scout may use a muse look and vice versa.",
+  aim:"A look already there is not a find, so it is also the dedupe list.",
+  gate:"Written only by a kept style run's apply.",
+  reject:null,
+  teaches:"-",
+  question:"Which of these looks has ever been used in a published video?",
+  src:"SKILL.md scout 1 (read), scout-muse description"},
+
+ {id:"kb", lane:"scout", col:5, row:8, title:"Knowledge + registry", sub:"PATTERNS.md, watchlist.md, .ai/registry-leads.jsonl", step:"0.2, 0.3",
+  use:"Kept findings and watch lines land in knowledge/; keeps that earned it (a proven style, a restated finding, a rich source) become claims for the ai-registry.",
+  aim:"Make a night's learning permanent and shareable.",
+  gate:"Committed in preflight, never pushed; leads are 'when X, do Y, because Z' claims, craft only.",
+  reject:null,
+  teaches:"-",
+  question:"Has any PATTERNS.md line changed a later night's output?",
+  src:"SKILL.md scout 0.2-0.3"},
+
+ {id:"game", lane:"scout", col:5, row:7, title:"Game project", sub:"pof, mage-arena, bp, or a new kind", step:"-",
+  use:"Where a kept 3D asset goes.", aim:"-", gate:"-", reject:null, teaches:"-",
+  question:"Is a game project in scope for this loop at all?",
+  src:"SKILL.md scout 1b"},
+
+ {id:"yt", lane:"scout", col:6, row:3, title:"Published YouTube video", sub:"Short ~30 s or video up to 5 min", step:"-",
+  use:"The stated product of the scout wing.", aim:"Everything in the scout wing is meant to serve it.", gate:"-", reject:null, teaches:"-",
+  question:"Which channel? How many videos a week? This is the node the skills never describe.",
+  flag:"The skills name the product but not the channel, the cadence or the success measure.",
+  src:"SKILL.md scout 'What the night is for'"},
+
+ // ---------- planned (scout-vision S2-S5)
+ {id:"genre", lane:"scout", col:5, row:5, title:"Genre (S2)", sub:"use x look x grammar, perfected on trials", step:"S2", plan:true,
+  use:"A candidate format proven on trials: storyboards of kept ideas in the genre plus 1-2 local clips of their beats.",
+  aim:"Turn 'we kept some ideas' into 'we can execute this format'. 4 kept trials lead to an assembled 15-30 s piece; keeping the piece makes the genre publishable.",
+  gate:"Planned. Born by the operator on a kept run; state derived from evidence (perfecting -> publishable -> varying).",
+  reject:{list:[["story","The frames do not add up to a video worth making."],["motion","The movement is wrong: drift, jitter, or an unmotivated camera."],["use case","Serves no video worth making; later nights steer away."]], note:"Trial reasons revise the genre's recipe for the next night."},
+  teaches:"Which formats the loop can actually execute.",
+  question:"Would you publish the piece? That keep is the only proof a genre has.",
+  src:"spark scout-vision wave 2; genre-forge design 2026-10-22"},
+ {id:"project", lane:"scout", col:6, row:5, title:"Project (S2)", sub:"channel, album or game", step:"S2", plan:true,
+  use:"The frame later nights work inside: tone, look, characters, audience. Born from a publishable genre (channel), kept tracks (album) or a POF onboarding (game).",
+  aim:"Balance content for existing projects (reused looks and characters) against new genres.",
+  gate:"Planned. Only the operator births one, on the Board, from proven quality.",
+  reject:null, teaches:"-",
+  question:"Which project does tonight's work serve, and does it fit its frame?",
+  src:"spark scout-vision wave 1-2"},
+ {id:"realdata", lane:"scout", col:4, row:8, title:"Reel real data (S5)", sub:"researched dataset + full render", step:"S5", plan:true,
+  use:"A kept stats reel's next step: real data researched and rendered in full.",
+  aim:"Give the data-explainer genre a path to a published video.", gate:"Planned.", reject:null, teaches:"-",
+  question:"Is the real story as good as the illustrative one?", src:"spark scout-vision, operator 2026-10-25"},
+ {id:"needs", lane:"scout", col:4, row:6, title:"Game asset needs (S4)", sub:"POF asset-needs.json per game", step:"S4", plan:true,
+  use:"POF reads a game's manifests, scores each asset against its class and peers, and lists what is missing.",
+  aim:"Every asset brief answers a need: 'no arena gate yet', 'character X is low poly next to the other main characters'.",
+  gate:"Planned; built in POF, read by gravitone from a static file.", reject:null, teaches:"-",
+  question:"Which need does this asset close, and how much does it raise the score?", src:"spark scout-vision wave 2 (POF seam)"},
+ // ---------- muse
+ {id:"mres", lane:"muse", col:2, row:12, title:"Prompt-technique research", flag:"S3: the muse wing merges into scout; research becomes the step a storyboard or character applies, not a goal of its own.", sub:"how a light, lens, skin or line reads on a portrait", step:"muse 2",
+  use:"Public practitioner guides and model docs searched around the watchlist and gaps; each technique worth testing becomes one idea.",
+  aim:"A technique is a finding only once a still shows it.",
+  gate:"No login or paywall; a source seeds words, never pixels.",
+  reject:null, teaches:"-",
+  question:"Which technique has the operator actually kept, and what does it unlock?",
+  src:"scout-muse SKILL.md step 2"},
+
+ {id:"mchar", lane:"muse", col:3, row:12, title:"Character + look still", sub:"9:16 poster, a new woman in a new look, every time", step:"muse 3",
+  use:"Discovery still: one fictional adult (card: name, age 25-50, look, personality), one look direction, 9:16, studio quality Low.",
+  aim:"One-of-one spreads the chances: a keep says the PAIR worked, a throw costs one still.",
+  gate:"Card required; age stated (door refuses youth and nudity words); vision eye deletes under-21, nude or real-person reads. Repeat guard refuses a card name or look drawn in any earlier muse night. Conventionally attractive, 25-50, slim to curvy-fit.",
+  reject:{list:[["craft","anatomy: hands, limbs, proportions"],["rights","likeness: reads as someone real"],["subject","note 'young' or 'drift'"],["style","note 'plastic' (procedural skin glow) or the look missed"],["generic","stock, no character"]], note:"All on the shared 'scout' source's 12 keys; the NOTE names the precise failure."},
+  teaches:"Which looks hold across several different women; a kept look must be tried on a NEW character before it is trusted.",
+  question:"What is she FOR? A companion in an app, a lead in a video, or a style probe?",
+  flag:"Aim is 'master the artstyle of expressing a woman', with companions and roleplay named as aims, not as a product.",
+  src:"scout-muse SKILL.md 'What the night is for', step 3; lib/foundry/scout/museDoor.ts"},
+
+ {id:"mscene", lane:"muse", col:4, row:12, title:"Roleplay scene still", sub:"16:9, a KEPT character in one situation", step:"muse 3-4",
+  use:"A kept character in a situation that names its use case: companion-chat opening image, date-night beat, morning greeting, shared hobby. 2-3 per kept character a night.",
+  aim:"How a kept woman is developed. Operator: scenes are the next step, with use cases for how to develop them.",
+  gate:"Only on a kept character; her card restated VERBATIM; `use` names the use case; each a different situation.",
+  reject:{list:[["craft","anatomy: hands, limbs, proportions"],["rights","likeness: reads as someone real"],["subject","note 'young' or 'drift'"],["style","note 'plastic' or the look missed"],["generic","stock, no character"]], note:"Same keys as the portrait."},
+  teaches:"Which situations keep her recognisable; feeds the next scene of the same use case.",
+  question:"Which app screen shows this still, and is it in this repo's scope?",
+  flag:"Output is a still for a companion app, not a video. Never reaches the YouTube chain.",
+  src:"scout-muse SKILL.md step 3-4"},
+
+ {id:"mlook", lane:"muse", col:4, row:13, title:"Look (muse)", sub:"subject-free style from a kept look idea", step:"muse 4",
+  use:"A kept style idea run through the extract engine; writes a subject-free look to the shared catalogue.",
+  aim:"Let the scout wing try a muse look.",
+  gate:"Kept style idea -> add-source fromIdea -> style run.",
+  reject:{list:[["style","note 'plastic' or the look missed"],["craft","anatomy: hands, limbs, proportions"],["generic","stock, no character"]], note:"Inferred from the muse reason table."},
+  teaches:"Which look families survive on more than one woman.",
+  question:"Has any scout video used a muse look? If not, the 'crosses into the scout wing' claim is untested.",
+  src:"scout-muse SKILL.md step 4"},
+
+ {id:"mkb", lane:"muse", col:5, row:12, title:"Muse knowledge", sub:"characters.md, techniques.md, watchlist.md", step:"muse 0.2",
+  use:"Kept characters file their card; kept technique findings and watch lines land in techniques.md and watchlist.md.",
+  aim:"Make the cast and the method permanent.", gate:"Committed in preflight, never pushed.", reject:null, teaches:"-",
+  question:"How many kept characters have a scene, and how many scenes has one character had?",
+  src:"scout-muse SKILL.md step 0.2"},
+
+ {id:"app", lane:"muse", col:6, row:12, title:"Companion / roleplay app", sub:"videogame, dating-sim, companion-chat", step:"-",
+  use:"The `app` field values the muse briefs name.", aim:"-", gate:"-", reject:null, teaches:"-",
+  question:"Is this app a real project the operator is building?",
+  src:"scout-muse SKILL.md step 3 (app field)"},
+];
+
+// edge: [from, to, kind, label]   kinds: need (hard gate), words (feeds words), nb (not built), paused, back
+const E = [
+ ["taste","seed","soft","steers"],
+ ["taste","idea","soft","bans, shares"],
+ ["taste","source","soft","watchlist, gaps"],
+ ["seed","idea","need","needs a KEPT seed"],
+ ["seed","track","paused","kept music seed"],
+ ["track","viz","paused","kept clip"],
+ ["viz","yt","paused","publishable"],
+ ["source","style","need","ingested pictures"],
+ ["source","scene","need","keyframe"],
+ ["source","finding","need","quote"],
+ ["source","watch","soft","2+ good sources"],
+ ["idea","style","need","kept style idea"],
+ ["idea","scene","need","kept scene idea"],
+ ["idea","asset","need","kept 3D idea"],
+ ["idea","reel","need","target stats"],
+ ["idea","story","need","needs a KEPT idea"],
+ ["story","video","nb","kept storyboard"],
+ ["story","genre","nb","trial"],
+ ["scene","genre","nb","trial clip"],
+ ["genre","video","nb","piece"],
+ ["genre","project","nb","publishable"],
+ ["track","project","nb","album"],
+ ["game","project","nb","onboarding"],
+ ["project","yt","nb","channel"],
+ ["reel","realdata","nb","kept reel"],
+ ["realdata","yt","nb","publish"],
+ ["needs","asset","nb","a stated need"],
+ ["video","yt","nb","publish"],
+ ["asset","game","need","serves.project"],
+ ["style","catalog","need","kept look"],
+ ["finding","kb","need","kept line"],
+ ["watch","kb","soft","kept line"],
+ ["style","direction","soft","basedOn"],
+ ["idea","direction","soft","basedOn"],
+ ["catalog","taste","back","not a find"],
+ ["mres","mchar","words","technique to test"],
+ ["mchar","mscene","need","needs a KEPT character"],
+ ["mchar","mkb","need","card filed"],
+ ["mlook","mchar","back","tried on a NEW woman"],
+ ["mchar","mlook","soft","kept look idea"],
+ ["mlook","catalog","need","shared catalogue"],
+ ["mscene","app","need","use case"],
+ ["mres","mkb","soft","technique finding"],
+];
+
+// ---------------------------------------------------------------------------------------------
+const stage = document.getElementById("stage");
+const svg = document.getElementById("edges");
+const LC = {steer:"var(--steer)", scout:"var(--scout)", muse:"var(--muse)", shared:"var(--shared)"};
+const SINKS = new Set(["kb","catalog","game","mkb","app","yt"]);
+
+// reach: which end each node can arrive at through hard or paused edges (not through "back")
+const adj = {}; E.forEach(([a,b,k])=>{ if(k!=="back"&&k!=="soft"||k==="soft"&&false){} });
+function reachOf(id, targets){
+  const seen=new Set([id]), q=[id];
+  while(q.length){ const x=q.shift(); E.forEach(([a,b,k])=>{ if(a===x&&k!=="back"&&k!=="soft"&&!seen.has(b)){seen.add(b);q.push(b);} }); }
+  return targets.filter(t=>seen.has(t));
+}
+function reachNoNb(id,t){
+  const seen=new Set([id]), q=[id];
+  while(q.length){ const x=q.shift(); E.forEach(([a,b,k])=>{ if(a===x&&(k==="need")&&!seen.has(b)){seen.add(b);q.push(b);} }); }
+  return seen.has(t);
+}
+function reachChips(n){
+  const out=[];
+  const toVideo = reachOf(n.id,["yt"]).length>0;
+  if(n.id==="yt"||n.lane==="steer") return out;
+  const built = reachNoNb(n.id,"yt");
+  if(toVideo && !built){ const viaPaused = E.some(()=>true); out.push(["dead","video: paused / not built"]); }
+  if(toVideo && built) out.push(["ok","reaches a video"]);
+  if(!toVideo && reachOf(n.id,["game"]).length) out.push(["dead","ends in a game project"]);
+  if(!toVideo && reachOf(n.id,["app"]).length) out.push(["dead","ends in an app, not a video"]);
+  if(!toVideo && !reachOf(n.id,["game","app"]).length && !SINKS.has(n.id)) out.push(["dead","no built consumer"]);
+  return out;
+}
+
+// column heads
+COLS.forEach((c,i)=>{ const h=document.createElement("div"); h.className="colhead"; h.style.gridColumn=i+1; h.textContent=c; stage.appendChild(h); });
+// lanes (absolute, positioned after layout)
+const laneEls = LANES.map(l=>{ const d=document.createElement("div"); d.className="lane"; d.style.background=`color-mix(in srgb, ${l.c} 6%, transparent)`; d.innerHTML=`<b style="color:${l.c}">${l.label}</b>`; stage.prepend(d); return d; });
+
+const els = {};
+N.forEach(n=>{
+  const d=document.createElement("div");
+  d.className="node"+(SINKS.has(n.id)?" sink":"")+(n.plan?" plan":"");
+  d.style.gridColumn=n.col; d.style.gridRow=n.row; d.style.setProperty("--c", LC[n.lane]);
+  const chips=[];
+  if(n.step&&n.step!=="-") chips.push(`<span class="chip step">step ${n.step}</span>`);
+  if(n.status==="paused") chips.push(`<span class="chip paused">paused</span>`);
+  if(n.nb) chips.push(`<span class="chip nb">not built</span>`);
+  if(n.plan) chips.push(`<span class="chip plan">planned</span>`);
+  reachChips(n).forEach(([k,t])=>chips.push(`<span class="chip ${k}">${t}</span>`));
+  d.innerHTML=`<h3>${n.title}</h3><div class="sub">${n.sub}</div><div class="chips">${chips.join("")}</div>`;
+  d.onclick=()=>open(n.id);
+  d.id="n-"+n.id; stage.appendChild(d); els[n.id]=d;
+});
+
+function layoutLanes(){
+  const sr=stage.getBoundingClientRect();
+  LANES.forEach((l,i)=>{
+    const rows=N.filter(n=>n.lane===l.id).map(n=>els[n.id].getBoundingClientRect());
+    if(!rows.length) return;
+    const top=Math.min(...rows.map(r=>r.top))-sr.top-22, bot=Math.max(...rows.map(r=>r.bottom))-sr.top+8;
+    laneEls[i].style.top=top+"px"; laneEls[i].style.height=(bot-top)+"px";
+  });
+}
+function draw(){
+  layoutLanes();
+  const sr=stage.getBoundingClientRect();
+  svg.setAttribute("viewBox",`0 0 ${sr.width} ${sr.height}`);
+  svg.innerHTML=`<defs><marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L8,4L0,8z" fill="#7d8899"/></marker></defs>`;
+  E.forEach(([a,b,k,label],i)=>{
+    const A=els[a].getBoundingClientRect(), B=els[b].getBoundingClientRect();
+    let x1,y1,x2,y2;
+    if(B.left>A.right-4){ x1=A.right-sr.left; y1=A.top+A.height/2-sr.top; x2=B.left-sr.left; y2=B.top+B.height/2-sr.top; }
+    else if(B.right<A.left+4){ x1=A.left-sr.left; y1=A.top+A.height/2-sr.top; x2=B.right-sr.left; y2=B.top+B.height/2-sr.top; }
+    else { x1=A.left+A.width/2-sr.left; x2=B.left+B.width/2-sr.left; if(B.top>A.top){y1=A.bottom-sr.top;y2=B.top-sr.top;} else {y1=A.top-sr.top;y2=B.bottom-sr.top;} }
+    const horiz=Math.abs(x2-x1)>Math.abs(y2-y1)*0.2 && !(Math.abs(x2-x1)<20);
+    const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+    const dx=(x2-x1)/2;
+    p.setAttribute("d", horiz?`M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`:`M${x1},${y1} C${x1},${(y1+y2)/2} ${x2},${(y1+y2)/2} ${x2},${y2}`);
+    p.setAttribute("class","e "+(k==="need"?"":k)); p.setAttribute("marker-end","url(#ar)");
+    p.dataset.a=a; p.dataset.b=b;
+    const t=document.createElementNS("http://www.w3.org/2000/svg","title"); t.textContent=`${a} -> ${b}: ${label}`; p.appendChild(t);
+    svg.appendChild(p);
+  });
+}
+addEventListener("load",draw); addEventListener("resize",draw);
+document.getElementById("tStep").onchange=e=>{document.body.classList.toggle("showstep",e.target.checked);draw()};
+document.getElementById("tDead").onchange=e=>{document.body.classList.toggle("showdead",e.target.checked);draw()};
+
+// hover: light the edges of a node, dim the others
+Object.entries(els).forEach(([id,el])=>{
+  el.onmouseenter=()=>{ svg.querySelectorAll("path.e").forEach(p=>{ const on=p.dataset.a===id||p.dataset.b===id; p.classList.toggle("hot",on); p.classList.toggle("fade",!on); }); };
+  el.onmouseleave=()=>{ svg.querySelectorAll("path.e").forEach(p=>p.classList.remove("hot","fade")); };
+});
+
+// popup
+const modal=document.getElementById("modal"), card=document.getElementById("card");
+const esc=s=>String(s).replace(/&(?!amp;|lt;|gt;|rarr;)/g,"&amp;");
+function open(id){
+  const n=N.find(x=>x.id===id);
+  const ins=E.filter(e=>e[1]===id&&e[2]!=="back").map(e=>N.find(x=>x.id===e[0]).title+" ("+e[3]+")");
+  const outs=E.filter(e=>e[0]===id&&e[2]!=="back").map(e=>N.find(x=>x.id===e[1]).title+" ("+e[3]+")");
+  const rc=reachChips(n).map(([k,t])=>`<span class="chip ${k}">${t}</span>`).join("");
+  card.innerHTML=`<button class="x" aria-label="Close">&times;</button>
+    <h2>${n.title}</h2>
+    <div class="meta">${n.lane} wing · skill step ${n.step} ${n.status?"· "+n.status:""} ${n.nb?"· not built":""}</div>
+    <div class="reach">${rc}</div>
+    <h4>Use case</h4><p>${esc(n.use)}</p>
+    <h4>Aim</h4><p>${esc(n.aim)}</p>
+    <h4>Gate (what must be true before it exists)</h4><p>${esc(n.gate)}</p>
+    ${n.flag?`<div class="flag"><b>To reconcile:</b> ${esc(n.flag)}</div>`:""}
+    ${n.reject?`<h4>Reject reasons</h4><div class="rej">${n.reject.list.map((r,i)=>`<code class="${i===0?"first":""}">${r[0]}</code><span>${esc(r[1])}</span>`).join("")}</div><p style="color:var(--dim);font-size:12.5px">${esc(n.reject.note)}</p>`:""}
+    ${n.teaches&&n.teaches!=="-"?`<h4>What a verdict here steers</h4><p>${esc(n.teaches)}</p>`:""}
+    <h4>Question a keep should answer</h4><p>${esc(n.question)}</p>
+    <h4>Needs</h4><p>${ins.length?ins.join("; "):"nothing upstream"}</p>
+    <h4>Feeds</h4><p>${outs.length?outs.join("; "):"nothing built"}</p>
+    <div class="src">source: ${esc(n.src)}</div>`;
+  card.querySelector(".x").onclick=close;
+  modal.classList.add("on");
+}
+function close(){ modal.classList.remove("on"); }
+modal.onclick=e=>{ if(e.target===modal) close(); };
+addEventListener("keydown",e=>{ if(e.key==="Escape") close(); });
+
+// chronology lists
+const SK=["0 preflight: doctor, commit kept knowledge, file registry leads","1 open + read ## Backlog first, then taste, registry, watchlist","2 develop first: 2a storyboards of waiting ideas (up to 20, each applying a researched technique), 2b kept ideas' own targets","3 seeds: children first, fresh ones within the gate (<= 20 while 20+ ideas wait)","4 ideas from kept seeds (one in, one out while gated)","5a game assets (a stated need), 5b stats reels - launched early for load","6 discover, 7 ingest, 8 styles / scenes / findings / watch lines from tonight's sources","9 music: tracks from seeds with facets, then visualizers","10 directions","11 stop, 12 night summary"];
+const DEP=["Taste brief (all past verdicts)","Seed -> child seed (needs kept parent)","Idea (needs kept seed)","Storyboard (needs kept idea from an earlier night)","Full video (needs kept storyboard) - not built","Track (needs kept music seed) -> Visualizer (needs kept clip)","Web source -> Style / Scene / Finding / Watch (no seed needed)","Direction (needs kept cells of any kind)","Stats reel real data - not built","Asset (needs a purpose; independent of seeds)"];
+document.getElementById("skillOrder").innerHTML=SK.map(s=>`<li>${s}</li>`).join("");
+document.getElementById("depOrder").innerHTML=DEP.map(s=>`<li>${s}</li>`).join("");
+</script>
+</body>
+</html>

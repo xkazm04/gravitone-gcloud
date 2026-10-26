@@ -2,6 +2,9 @@
 // missing or inventing a state does not compile) and at runtime (the table's keys are the
 // machine's states, no more, no fewer); every look has a class and a real token role; an
 // unknown wire token degrades toward attention and is reported.
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, expectTypeOf, test } from "vitest";
@@ -21,6 +24,7 @@ import {
   statusOf,
   type Look,
   type Machine,
+  type Mark,
   type StatusEntry,
   type StatusMiss,
   type StatusTable,
@@ -28,6 +32,7 @@ import {
 import { EntryPill, StatusPill } from "../../src/components/status/StatusPill.tsx";
 import pill from "../../src/components/status/StatusPill.module.css";
 import pip from "../../src/components/piprow/PipRow.module.css";
+import { pipClasses } from "../../src/components/piprow/PipRow.tsx";
 import { tokens } from "../../src/tokens.ts";
 
 const STATES: { readonly [M in Machine]: readonly string[] } = {
@@ -89,6 +94,54 @@ describe("looks", () => {
     expect(statusOf("slot", "published").look).toBe("done");
     expect(statusOf("slot", "missed").look).toBe("failed");
     expect(statusOf("slot", "cancelled").look).toBe("idle");
+  });
+});
+
+// LOOKS and the two stylesheets are three tables over the same Look union. Totality is the type
+// system's; AGREEMENT is not (status-color-mapping, "totality is not agreement"): a pill drawn in
+// one hue and a pip in another, or a kit row naming a mark the CSS does not draw, compiles and
+// renders. So the stylesheet is read here and its colour and its ::before mark are pinned to the
+// role and mark LOOKS declares.
+describe("the stylesheets draw what LOOKS declares", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const sheet = (p: string): readonly { readonly sel: readonly string[]; readonly body: string }[] =>
+    [...readFileSync(join(here, "../../src/components", p), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+      sel: (m[1] ?? "").split(",").map((x) => x.trim()),
+      body: m[2] ?? "",
+    }));
+  const pills = sheet("status/StatusPill.module.css");
+  const pips = sheet("piprow/PipRow.module.css");
+  const rule = (rules: typeof pills, sel: string): string => rules.filter((r) => r.sel.includes(sel)).map((r) => r.body).join(";");
+  const looks = Object.keys(LOOKS).filter((l): l is Look => l in LOOKS);
+
+  test("the walk read rules (a sheet it cannot parse is not a sheet that agrees)", () => {
+    expect(pills.length).toBeGreaterThan(8);
+    expect(pips.length).toBeGreaterThan(5);
+  });
+
+  test.each(looks)("%s: the pill's colour is its role", (l) => {
+    expect(rule(pills, `.${l}`)).toMatch(new RegExp(`(^|;)color:var\\(--${LOOKS[l].role}\\)`));
+  });
+
+  test.each(looks)("%s: the pill's ::before draws its mark", (l) => {
+    const before = rule(pills, `.${l}::before`);
+    const drawn: Mark = /animation:pulse/.test(before)
+      ? "pulse"
+      : /border-left:[^;]*solid/.test(before) && /border-right:[^;]*solid/.test(before)
+        ? "bars"
+        : /border:[^;]*dashed/.test(before)
+          ? "dashed-ring"
+          : /border:[^;]*solid/.test(before)
+            ? "ring"
+            : "dot";
+    expect(drawn).toBe(LOOKS[l].mark);
+  });
+
+  test.each(looks.filter((l) => pipClasses({ looks: [l] })[0] === l))("%s: the pip's colour is its role", (l) => {
+    const own = rule(pips, `.${l}`);
+    const role = `var(--${LOOKS[l].role})`;
+    // The idle pip is the bare pip with its border dashed; its colour is the bare pip's.
+    expect(own.includes(role) || (/border-style:dashed/.test(own) && rule(pips, ".pip").includes(role))).toBe(true);
   });
 });
 

@@ -28,6 +28,7 @@ import { parseCeiling, receiptChanges, type ReceiptChanges } from "@gt/ui/compon
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
+import { settled } from "../../audio/_hunt/settled.ts";
 
 /** What a confirm came to: launched (with the toast's words), stale (with the fresh receipt), or refused. */
 export type Outcome = { readonly kind: "done"; readonly note: string; readonly ledger?: ToastLedger } | { readonly kind: "stale"; readonly fresh: ReceiptValue } | { readonly kind: "error"; readonly message: string };
@@ -59,6 +60,14 @@ export type ReceiptFlow = {
   readonly sheet: ReactNode;
 };
 
+// An answer lands on the sheet AS IT NOW READS, never on the copy the await started from: the
+// ceiling field stays live while a re-read or a confirm is in flight, and a dollar figure typed in
+// that window must be the one the next confirm sends (the old spread put the pre-await ceiling back).
+export const onOpen =
+  (patch: Partial<Open>) =>
+  (cur: Open | null): Open | null =>
+    cur === null ? cur : { ...cur, ...patch };
+
 export function useReceipt(nowMs: number): ReceiptFlow {
   const [st, setSt] = useState<Open | null>(null);
   const [reading, setReading] = useState(false);
@@ -72,7 +81,7 @@ export function useReceipt(nowMs: number): ReceiptFlow {
     inflight.current = true;
     setReading(true);
     try {
-      const r = await spec.read("dry");
+      const r = await settled(spec.read("dry"));
       gen.current++;
       if (r.ok) setSt({ spec, receipt: r.value, ceiling: "", busy: false });
       else spec.failed(r.error.error);
@@ -93,14 +102,17 @@ export function useReceipt(nowMs: number): ReceiptFlow {
       if (st === null || inflight.current) return;
       inflight.current = true;
       const mine = gen.current;
-      setSt({ ...st, busy: true });
+      setSt(onOpen({ busy: true }));
       try {
-        const r = await st.spec.read(mode);
+        const r = await settled(st.spec.read(mode));
         if (gen.current !== mine) return;
-        if (r.ok) {
-          const { error: _error, changes: _changes, ...rest } = st;
-          setSt({ ...rest, receipt: r.value, busy: false });
-        } else setSt({ ...st, busy: false, error: r.error.error });
+        if (r.ok)
+          setSt((cur) => {
+            if (cur === null) return cur;
+            const { error: _error, changes: _changes, ...rest } = cur;
+            return { ...rest, receipt: r.value, busy: false };
+          });
+        else setSt(onOpen({ busy: false, error: r.error.error }));
       } finally {
         inflight.current = false;
       }
@@ -114,15 +126,15 @@ export function useReceipt(nowMs: number): ReceiptFlow {
     if (!c.ok) return false;
     inflight.current = true;
     const mine = gen.current;
-    setSt({ ...st, busy: true });
+    setSt(onOpen({ busy: true }));
     try {
-      const out = await st.spec.confirm(st.receipt.token, c.value, st.receipt.mode);
+      const out = await settledOutcome(st.spec.confirm(st.receipt.token, c.value, st.receipt.mode));
       if (out.kind === "done") st.spec.done(out.note, out.ledger);
       if (gen.current !== mine) return;
       if (out.kind === "done") {
         setSt(null);
-      } else if (out.kind === "stale") setSt({ ...st, receipt: out.fresh, changes: receiptChanges(st.receipt, out.fresh), busy: false });
-      else setSt({ ...st, busy: false, error: out.message });
+      } else if (out.kind === "stale") setSt(onOpen({ receipt: out.fresh, changes: receiptChanges(st.receipt, out.fresh), busy: false }));
+      else setSt(onOpen({ busy: false, error: out.message }));
     } finally {
       inflight.current = false;
     }
@@ -156,6 +168,13 @@ export function useReceipt(nowMs: number): ReceiptFlow {
       </LevelSheet>
     );
   return { open, reading, sheet };
+}
+
+/** A confirm whose round trip failed (a Server Action that REJECTS, not one that answers no) is
+ * an `error` in settled's words, so the sheet leaves busy and names it rather than going dead. */
+export async function settledOutcome(p: Promise<Outcome>): Promise<Outcome> {
+  const r = await settled<Outcome>(p.then((value) => ({ ok: true as const, value })));
+  return r.ok ? r.value : { kind: "error", message: r.error.error };
 }
 
 /** An action's envelope as an Outcome: refused is `error` with the server's words verbatim. */

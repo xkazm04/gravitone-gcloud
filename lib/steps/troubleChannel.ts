@@ -1,20 +1,35 @@
 // THE TROUBLE CHANNEL: the one published storage trouble slot, and its listener set.
 //
 // `listeners` is owned by this file and nowhere else: every subscriber
-// (onStorageTrouble, useStorageTrouble) and every notifier (report, clearStorageTrouble,
-// resolveTroubleWhere) reads this one Set. Split out of the stepStore.ts door, which
-// re-exports the public names. `report` and `serverTrouble` are exported for the
-// sibling files that publish and snapshot; they are not on the door.
+// (onStorageTrouble) and every notifier (report, clearStorageTrouble,
+// resolveTroubleWhere) reads this one Set. Split out of v1's stepStore.ts; the door
+// is now index.ts, which re-exports the public names. `report` and
+// `resolveTroubleWhere` are exported for the sibling files that publish and resolve;
+// they are not on the door.
 
 import type { StorageTrouble } from "./storageOutcome";
 
 /* ──────────────────────── the one place to learn about it ────────────────── */
 
+/** Tell every listener, each in its own try: one subscriber that throws must not
+ *  reject saveStep (report runs in withStore's catch) nor turn a write that
+ *  committed into a reported failure (resolveTroubleWhere runs in its try). The
+ *  error is logged, not swallowed. */
+function notify(): void {
+  for (const l of [...listeners]) {
+    try {
+      l();
+    } catch (e) {
+      console.error("storage-trouble listener threw", e);
+    }
+  }
+}
+
 let latest: StorageTrouble | null = null;
 const listeners = new Set<() => void>();
 
-/** Subscribe to storage trouble. `useSyncExternalStore`-shaped on purpose —
- *  see `useStorageTrouble` below, which is the one-line way to mount it. */
+/** Subscribe to storage trouble. `useSyncExternalStore`-shaped on purpose — v1's
+ *  `useStorageTrouble` hook mounted it in one line; it retired with the v1 shell. */
 export function onStorageTrouble(listener: () => void): () => void {
   listeners.add(listener);
   return () => void listeners.delete(listener);
@@ -26,21 +41,15 @@ export function lastStorageTrouble(): StorageTrouble | null {
   return latest;
 }
 
-/** Nothing has failed on the server, and nothing can: there is no IndexedDB
- *  there. A constant, so hydration does not tear. */
-export function serverTrouble(): StorageTrouble | null {
-  return null;
-}
-
 export function clearStorageTrouble(): void {
   if (!latest) return;
   latest = null;
-  listeners.forEach((l) => l());
+  notify();
 }
 
 export function report(t: StorageTrouble): { ok: false; trouble: StorageTrouble } {
   latest = t;
-  listeners.forEach((l) => l());
+  notify();
   return { ok: false, trouble: t };
 }
 
@@ -51,5 +60,5 @@ export function resolveTroubleWhere(resolves: (t: StorageTrouble) => boolean): v
   const t = latest;
   if (!t || !resolves(t)) return;
   latest = null;
-  listeners.forEach((l) => l());
+  notify();
 }

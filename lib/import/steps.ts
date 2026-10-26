@@ -1,3 +1,4 @@
+import { errorMessage } from "@gt/domain/errors";
 import { encodeRecord, isStepKey, STEP_RECORDS, type StepKey, type StepKind } from "@gt/domain/steps/registry";
 
 import { framesV1ToV2 } from "@/lib/frames/picture/migrate";
@@ -59,7 +60,15 @@ function lift(key: StepKey, data: Obj, sink: Sink): Record<string, unknown> | st
   if (key === "frames") {
     if (raw > 3) return `${key} was written as v${raw} by a newer build; this build reads up to v3`;
     // v3 is the kernel's own shape - a re-imported kernel export; v1 and v2 are v1's.
-    const v2 = raw === 1 ? framesV1ToV2({ ...data }) : { ...data };
+    // v1's walk THROWS on a v1 object it cannot read (its header's registry, which turned the throw
+    // into a refusal, retired with app/_phases): caught here, so one damaged row is one data-only
+    // loss with the walk's sentence, not a preview that fails for every project in the archive.
+    let v2: Record<string, unknown>;
+    try {
+      v2 = raw === 1 ? framesV1ToV2({ ...data }) : { ...data };
+    } catch (e) {
+      return `${key} v1 could not be read: ${errorMessage(e)}`;
+    }
     const { frames: _shadow, ...units } = withoutV(v2);
     void _shadow;
     const lifted = refsInRecord(units, sink);

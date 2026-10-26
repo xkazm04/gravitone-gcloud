@@ -12,7 +12,12 @@ export type BadgeChannel = Channel;
 
 const MARK: { readonly [C in BadgeChannel]: string } = { youtube: "YT", tiktok: "TT", instagram: "IG", blog: "PR" };
 
-/** The marks in drawing order; a v1 channel id that is not one of them has no badge. */
+/**
+ * The marks in drawing order; a v1 channel id that is not one of them has no badge. A copy of
+ * @gt/domain/slot `CHANNELS` by necessity: slot.ts loads zod, and this is client code
+ * (tests/next-gates/client-closure). signal.test.ts pins the two equal, so a channel added there
+ * fails a test here rather than drawing behind the neutral mark.
+ */
 export const BADGE_CHANNELS: readonly BadgeChannel[] = ["youtube", "tiktok", "instagram", "blog"];
 
 export function isBadgeChannel(id: string): id is BadgeChannel {

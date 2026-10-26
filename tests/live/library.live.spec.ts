@@ -64,7 +64,7 @@ test("a facet's count is what clicking it yields, and the filter lives in the UR
 test("5,000 items hold one screen of tiles; scrolling far fetches the rows it reaches", async ({ page }) => {
   await open(page);
   expect(await total(page)).toBe(5000);
-  const rendered = async (): Promise<number> => Number(((await page.getByTestId("rendered").innerText()).match(/rendered ([\d,]+)/)?.[1] ?? "0").replace(/,/g, ""));
+  const rendered = async (): Promise<number> => Number(await page.locator("[data-rendered]").first().getAttribute("data-rendered"));
   expect(await rendered()).toBeLessThan(60);
   expect(await listbox(page).locator("[role=option]").count()).toBeLessThan(60);
   await listbox(page).evaluate((el) => (el.scrollTop = el.scrollHeight));
@@ -153,4 +153,16 @@ test("legibility: the Library, an item open, reads at the floors (text 4.5, mark
   // Disabled controls keep the prototype's dimming (WCAG 1.4.3 exempts them; owner ruling 2026-10-15).
   const found = a.filter((k) => b.includes(k) && !k.includes("aria-disabled"));
   expect(found).toEqual([]);
+});
+
+test("a tile whose picture fails to load draws the unreadable face, never a blank thumb", async ({ page }) => {
+  // Every picture 404s: the bytes moved, or would not decode.
+  await page.route("**/*", (route) => (route.request().resourceType() === "image" ? route.fulfill({ status: 404, body: "" }) : route.continue()));
+  await open(page, "?kind=plate");
+  const first = listbox(page).locator("[role=option]").first();
+  await expect(first).toBeVisible();
+  await expect(first.locator('[data-face="unreadable"]')).toBeVisible();
+  await expect(first.locator("img")).toHaveCount(0);
+  await first.click();
+  await expect(page.locator("[data-component=LibraryDetail] [data-face=unreadable]")).toBeVisible();
 });

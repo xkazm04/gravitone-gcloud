@@ -17,12 +17,15 @@ export type Frame =
 /**
  * Split `buffer` into complete frames and the incomplete tail to keep. A frame ends at a
  * blank line; `\r\n` and `\r` line ends are normalised first (the SSE spec allows all
- * three). A frame with no data and no comment (a lone `id:`) yields nothing.
+ * three). A frame with no data and no comment (a lone `id:`) yields nothing. A trailing `\r`
+ * stays in the tail unread: the `\n` that may complete it is in the next read, and read
+ * alone it would be a line end of its own - two, with that `\n`, a frame boundary.
  */
 export function parseFrames(buffer: string): { readonly frames: readonly Frame[]; readonly rest: string } {
-  const text = buffer.replace(/\r\n?/g, "\n");
+  const held = buffer.endsWith("\r") ? "\r" : "";
+  const text = buffer.slice(0, buffer.length - held.length).replace(/\r\n?/g, "\n");
   const blocks = text.split("\n\n");
-  const rest = blocks.pop() ?? "";
+  const rest = (blocks.pop() ?? "") + held;
   const frames: Frame[] = [];
   for (const block of blocks) {
     let id: number | null = null;

@@ -17,12 +17,14 @@ export type ChipProps = {
   readonly dot?: boolean;
   /** The accessible name, when label and value read badly aloud. */
   readonly name?: string;
+  /** The id of what describes a door chip - its Tip (a reject reason's meaning). */
+  readonly describedBy?: string;
   readonly onPress?: () => void;
   readonly pressed?: boolean;
   readonly href?: string;
 };
 
-export function Chip({ label, value, tone = "neutral", ghost = false, casing = "caps", dot = false, name, onPress, pressed, href }: ChipProps) {
+export function Chip({ label, value, tone = "neutral", ghost = false, casing = "caps", dot = false, name, describedBy, onPress, pressed, href }: ChipProps) {
   const door = onPress !== undefined || href !== undefined;
   const cls = cx(s.chip, tone !== "neutral" && s[tone], ghost && s.ghost, casing === "lower" && s.lower, door && s.door);
   const body = (
@@ -34,14 +36,14 @@ export function Chip({ label, value, tone = "neutral", ghost = false, casing = "
   );
   if (onPress !== undefined) {
     return (
-      <button type="button" className={cls} onClick={onPress} aria-pressed={pressed} aria-label={name}>
+      <button type="button" className={cls} onClick={onPress} aria-pressed={pressed} aria-label={name} aria-describedby={describedBy}>
         {body}
       </button>
     );
   }
   if (href !== undefined) {
     return (
-      <a className={cls} href={href} aria-label={name}>
+      <a className={cls} href={href} aria-label={name} aria-describedby={describedBy}>
         {body}
       </a>
     );

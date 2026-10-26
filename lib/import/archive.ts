@@ -73,6 +73,18 @@ const sectionDigest = (rowDigests: readonly string[]): string => hex(rowDigests.
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 
+/** The furthest instant a Date holds (ECMA-262 time value range); `toISOString` throws past it. */
+const MAX_TIME_MS = 8.64e15;
+
+/**
+ * v1's epoch-ms instant as the kernel's ISO (`toISOString`'s one shape), or undefined when no Date
+ * can hold it: not a number, not after the epoch, or past ±8.64e15 - JSON v1 can write, a value
+ * `new Date(ms).toISOString()` throws a RangeError on. The importer's ONE reading of a v1 instant
+ * (project sign-offs and creation, theme and asset creation), so a damaged one is a reported loss
+ * at staging and never a throw that fails the preview or refuses the commit the preview promised.
+ */
+export const isoOfMs = (ms: unknown): string | undefined => (typeof ms === "number" && Number.isFinite(ms) && ms > 0 && ms <= MAX_TIME_MS ? new Date(ms).toISOString() : undefined);
+
 /** `upload:<id>` (lib/assets.ts UPLOAD_SCHEME) - the one pointer the archive's closure check reads. */
 export function uploadOf(src: unknown): string | null {
   return typeof src === "string" && src.startsWith("upload:") && src.length > 7 ? src.slice(7) : null;

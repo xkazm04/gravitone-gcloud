@@ -8,6 +8,7 @@ import type { Actor, EventData } from "@gt/domain/event";
 import type { JobState } from "@gt/domain/job";
 
 import { readSuno } from "../../../../lib/sound/suno/store.ts";
+import { isScoutSunoJob } from "../../../../lib/foundry/scout/types.ts";
 import { bump, digest, facts, instant } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Source, WeirItem } from "../types.ts";
 
@@ -164,10 +165,14 @@ function liveOf(s: SunoSnapshot): LiveJob[] {
 }
 
 function weirOf(s: SunoSnapshot): WeirItem[] {
-  const pending = s.clips.filter((c) => c.verdict === null);
+  // A scout take is judged on its night's packet (pkt:scout:<night>), never in this pile - in
+  // neither half of it: counted as decided, an unjudged night take read as triaged (./mv.ts and
+  // ./sound.ts count `decided` over the same population as `pending`).
+  const own = s.clips.filter((c) => !isScoutSunoJob(c.jobId));
+  const pending = own.filter((c) => c.verdict === null);
   if (pending.length === 0) return [];
   const oldest = instant(Math.min(...pending.map((c) => c.createdAt)));
-  return [{ source: "suno", id: "suno/triage", title: "suno clips to judge", media: "audio", kind: "cull", ...(oldest === null ? {} : { since: oldest }), decided: s.clips.length - pending.length, pending: pending.length, href: HREF }];
+  return [{ source: "suno", id: "suno/triage", title: "suno clips to judge", media: "audio", kind: "cull", ...(oldest === null ? {} : { since: oldest }), decided: own.length - pending.length, pending: pending.length, href: HREF }];
 }
 
 export function projectSuno(s: SunoSnapshot, ctx: ProjectCtx): Projection {

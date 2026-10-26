@@ -58,20 +58,21 @@ const iso = (s: string): string | undefined => {
 };
 
 /** Why `run` is not imported, or null when it is. */
-function skipOf(r: Reader, run: V1Run): string | null {
+function skipOf(r: Reader, run: V1Run, served: ReadonlySet<string>): string | null {
   if (run.state === "live") return "still working in v1; its producer launches it as a job from there";
   if (run.job !== undefined) return `already on the job system (${run.job})`;
   if (r.get("SELECT 1 AS x FROM runs WHERE id = ?", run.runId) !== undefined) return "a Run row already serves this id";
-  if (r.get("SELECT 1 AS x FROM jobs WHERE json_extract(record, '$.of.id') = ?", run.runId) !== undefined) return "a job already serves this id";
+  if (served.has(run.runId)) return "a job already serves this id";
   if (iso(run.at) === undefined) return `v1's creation instant ${run.at} is unreadable`;
   return null;
 }
 
-function land(t: Tx, run: V1Run, now: number): void {
-  const read = readRunIn(t, run.input, { mode: "dry", ...(run.units === undefined ? {} : { units: run.units }) }, { now });
+/** Everything of `land` that only reads: the Run door's read of the input, the option and the run record. A dry pass runs exactly this, so it refuses what the wet pass would, without the write lock. */
+function prepare(r: Reader, run: V1Run, now: number, stamp: string) {
+  const read = readRunIn(r, run.input, { mode: "dry", ...(run.units === undefined ? {} : { units: run.units }) }, { now });
   const option = read.line.option ?? read.picked.option;
   const est = priceLine(read.line.units, option);
-  const at = iso(run.at) ?? t.at;
+  const at = iso(run.at) ?? stamp;
   const rec = parseAt("imported run", runSchema, {
     id: run.runId,
     lane: read.plan.lane,
@@ -84,8 +85,13 @@ function land(t: Tx, run: V1Run, now: number): void {
     createdAt: at,
   });
   if (!rec.ok) throw rec.error;
+  return { read, option, rec: rec.value, at };
+}
+
+function land(t: Tx, run: V1Run, now: number): void {
+  const { read, option, rec, at } = prepare(t, run, now, t.at);
   const jobId = runJobId(run.runId);
-  insertRun(t, rec.value, jobId);
+  insertRun(t, rec, jobId);
   // Through the job machine (kernel `recordImportedJobIn`), ending as v1 recorded it.
   const ending = run.state === "done" ? { state: "done" as const } : { state: "failed" as const, code: "unavailable" as const, message: run.error ?? `failed in v1 (${run.source} recorded no sentence)` };
   recordImportedJobIn(t, { id: jobId, of: { kind: "run", id: run.runId }, producer: run.input.producer, lane: option.lane, correlation: { runId: run.runId }, units: read.plan.units, ending, data: { from: "v1", source: run.source } }, IMPORT_RUN_ACTOR);
@@ -106,15 +112,22 @@ function land(t: Tx, run: V1Run, now: number): void {
  */
 export function importRuns(store: Store, runs: readonly V1Run[], opts: { readonly dry: boolean; readonly now: number }): Result<RunOutcome[]> {
   const out: RunOutcome[] = [];
+  // The ids the jobs already serve, read once: jobs carries no index on `of.id`, so a per-run lookup is a scan of the table. A run
+  // imported below is caught by its Run row, so the set need not follow the writes of this pass.
+  const read = store.read((r) => new Set(r.all("SELECT DISTINCT json_extract(record, '$.of.id') AS id FROM jobs").map((x) => x["id"]).filter((id): id is string => typeof id === "string")));
+  if (!read.ok) return read;
+  const served = read.value;
   for (const run of runs) {
-    const skip = store.read((r) => skipOf(r, run));
+    const skip = store.read((r) => skipOf(r, run, served));
     if (!skip.ok) return skip;
     if (skip.value !== null) {
       out.push({ source: run.source, runId: run.runId, outcome: "skipped", state: run.state, reason: skip.value });
       continue;
     }
     if (opts.dry) {
-      out.push({ source: run.source, runId: run.runId, outcome: "would-import", state: run.state });
+      // The same door the wet pass goes through, read-only: a run it would refuse is reported refused.
+      const seen = store.read((r) => prepare(r, run, opts.now, new Date(opts.now).toISOString()));
+      out.push(seen.ok ? { source: run.source, runId: run.runId, outcome: "would-import", state: run.state } : { source: run.source, runId: run.runId, outcome: "refused", state: run.state, reason: seen.error.message });
       continue;
     }
     const w = store.tx((t) => land(t, run, opts.now));

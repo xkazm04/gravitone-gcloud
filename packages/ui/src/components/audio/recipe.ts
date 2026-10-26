@@ -101,9 +101,14 @@ export function compose(seed: Seed, target: Target, hands: Readonly<Record<strin
     if (seed.avoid.length) s += ` No ${seed.avoid.join(", no ")}.`;
     return s;
   }
-  const lines = [`Style: ${[...g, ...mo, ...ins, ...tk].join(", ")}`];
-  if (seed.avoid.length) lines.push(`Exclude: ${seed.avoid.join(", ")}`);
-  lines.push("", INSTRUMENTAL);
+  // Suno's dialect is drawn FROM the form `sunoFieldsOf` sends, not written a second time: it was,
+  // and the drawn line said "108 BPM" and ran past STYLE_MAX while the sent one said "108 bpm" and
+  // was cut at 200 - the composer showed words Suno never received.
+  const f = sunoFieldsOf(seed, hands);
+  const exclude = fitTo(seed.avoid.join(", "), EXCLUDE_MAX);
+  const lines = [`Style: ${f?.style ?? ""}`];
+  if (exclude !== "") lines.push(`Exclude: ${exclude}`);
+  lines.push("", f?.lyrics ?? INSTRUMENTAL);
   return lines.join("\n");
 }
 
@@ -116,6 +121,36 @@ export function fitTo(text: string, max: number): string {
   return (at > max / 2 ? cut.slice(0, at) : cut).replace(/[\s,]+$/, "");
 }
 
+/** The style line's words in Suno's order, each phrased through the hand. */
+function sunoParts(seed: Seed, hands: Readonly<Record<string, Hand>>): { readonly g: string[]; readonly mo: string[]; readonly ins: string[]; readonly tk: string[] } {
+  return {
+    g: seed.genres.map((t) => phraseOf(hands, "genre", t)),
+    mo: seed.moods.map((t) => phraseOf(hands, "mood", t)),
+    ins: seed.instruments.map((t) => phraseOf(hands, "instrument", t)),
+    tk: tempoKey(seed).map((x) => x.replace(/ BPM$/, " bpm")),
+  };
+}
+
+const whole = (t: string): string => fitTo(t, Number.MAX_SAFE_INTEGER);
+
+/** How many of `parts` a field held to `max` does not carry whole (a word cut mid-phrase counts). */
+function dropped(parts: readonly string[], max: number): number {
+  const fitted = fitTo(parts.join(", "), max);
+  let kept = 0;
+  while (kept < parts.length) {
+    const head = whole(parts.slice(0, kept + 1).join(", "));
+    if (fitted !== head && !fitted.startsWith(`${head}, `)) break;
+    kept++;
+  }
+  return parts.length - kept;
+}
+
+/** The seed's style words and fences Suno's form drops at STYLE_MAX / EXCLUDE_MAX; 0 when it all fits. */
+export function sunoCut(seed: Seed, hands: Readonly<Record<string, Hand>>): number {
+  const { g, mo, ins, tk } = sunoParts(seed, hands);
+  return dropped([...g, ...mo, ...ins, ...tk], STYLE_MAX) + dropped(seed.avoid, EXCLUDE_MAX);
+}
+
 export type SunoFieldsDraft = { readonly title?: string; readonly style: string; readonly lyrics: string; readonly exclude?: string };
 
 /**
@@ -124,10 +159,7 @@ export type SunoFieldsDraft = { readonly title?: string; readonly style: string;
  * An empty style is `null` - a seed with no words is not a prompt, and the door refuses it.
  */
 export function sunoFieldsOf(seed: Seed, hands: Readonly<Record<string, Hand>>, title?: string): SunoFieldsDraft | null {
-  const g = seed.genres.map((t) => phraseOf(hands, "genre", t));
-  const mo = seed.moods.map((t) => phraseOf(hands, "mood", t));
-  const ins = seed.instruments.map((t) => phraseOf(hands, "instrument", t));
-  const tk = tempoKey(seed).map((x) => x.replace(/ BPM$/, " bpm"));
+  const { g, mo, ins, tk } = sunoParts(seed, hands);
   const style = fitTo([...g, ...mo, ...ins, ...tk].join(", "), STYLE_MAX);
   if (style === "") return null;
   const exclude = fitTo(seed.avoid.join(", "), EXCLUDE_MAX);
@@ -148,17 +180,24 @@ export function sortTerms(list: readonly Term[], k: TermSort): Term[] {
     );
 }
 
+/** A word already in a list, in any case: a term is keyed lower-cased (`termId`), so "Piano" and
+ *  "piano" are one term and must never be two chips, two floats or "Piano, piano" in a style line. */
+const holds = (have: readonly string[], word: string): boolean => {
+  const w = word.trim().toLowerCase();
+  return have.some((x) => x.trim().toLowerCase() === w);
+};
+
 /** The preferred terms of a facet not yet in the seed's list: v1's ★ floats. */
 export const preferredFloats = (terms: readonly Term[], facet: TermFacet, have: readonly string[]): Term[] =>
-  terms.filter((t) => t.facet === facet && t.stance === "prefer" && !have.includes(t.term));
+  terms.filter((t) => t.facet === facet && t.stance === "prefer" && !holds(have, t.term));
 
 /** The avoided terms not yet fenced: v1's ⊘ floats. */
-export const avoidFloats = (terms: readonly Term[], have: readonly string[]): Term[] => terms.filter((t) => t.stance === "avoid" && !have.includes(t.term));
+export const avoidFloats = (terms: readonly Term[], have: readonly string[]): Term[] => terms.filter((t) => t.stance === "avoid" && !holds(have, t.term));
 
 /** Add a word to a seed list, once. */
 export function addTo(seed: Seed, list: SeedList | "avoid", word: string): Seed {
   const w = word.trim();
-  if (w === "" || seed[list].includes(w)) return seed;
+  if (w === "" || holds(seed[list], w)) return seed;
   return { ...seed, [list]: [...seed[list], w] };
 }
 

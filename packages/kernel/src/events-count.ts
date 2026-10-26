@@ -1,7 +1,7 @@
 import { parseAt } from "@gt/domain/door";
 import type { Result } from "@gt/domain/errors";
 import { clausesOf, eventQuerySchema, whereOf, type EventQuery, type Facet } from "./events-query.ts";
-import type { Param, Store } from "./store.ts";
+import type { Param, Row, Store } from "./store.ts";
 
 // COUNTING THE LEDGER - the facet column beside the Ledger's list, and the
 // reconcile probe's side of "does the ledger hold what v1 holds".
@@ -63,7 +63,7 @@ export type EventCounts = {
  * minus that facet's own predicate. Paging fields (`limit`, cursors, order)
  * are ignored: a count is over the whole match, never a page of it.
  */
-export function countEvents(store: Store, input: Omit<EventQuery, "limit">): Result<EventCounts> {
+export function countEvents(store: Store, input: Omit<EventQuery, "limit">, only?: readonly FacetCount["facet"][]): Result<EventCounts> {
   const p = parseAt("ledger count", eventQuerySchema, { ...input, limit: 1 });
   if (!p.ok) return p;
   const clauses = clausesOf(p.value);
@@ -71,11 +71,25 @@ export function countEvents(store: Store, input: Omit<EventQuery, "limit">): Res
     const all = whereOf(clauses);
     const totalRow = r.get(`SELECT count(*) AS n FROM events${all.where}`, ...all.params);
     const headRow = r.get("SELECT coalesce(max(seq), 0) AS head FROM events");
-    const facets: FacetCount[] = GROUPS.map((g) => {
+    // `only` names the facets a caller reads (the Ledger strip reads one of seven); the rest are
+    // not counted and not returned. Absent, every facet is.
+    const wanted = only === undefined ? GROUPS : GROUPS.filter((g) => only.includes(g.name));
+    // The sums (matching rows, and those with a value) depend only on the filter left out, so
+    // `type` and `typeGroup` (and `lane`, `laneGroup`) share one statement.
+    const sums = new Map<Facet, Row | undefined>();
+    for (const left of new Set(wanted.map((g) => g.facet))) {
+      const { where, params } = whereOf(clauses.filter((c) => c.facet !== left));
+      const cols = wanted.filter((g) => g.facet === left).map((g) => `count(${g.column}) AS v_${g.column}`);
+      sums.set(left, r.get(`SELECT count(*) AS n, ${cols.join(", ")} FROM events${where}`, ...params));
+    }
+    const facets: FacetCount[] = wanted.map((g) => {
       const { where, params } = whereOf(clauses.filter((c) => c.facet !== g.facet));
       const args: Param[] = [...params, TOP + 1];
-      const rows = r.all(`SELECT ${g.column} AS value, count(*) AS n FROM events${where} GROUP BY ${g.column} ORDER BY n DESC, value LIMIT ?`, ...args);
-      const sum = r.get(`SELECT count(*) AS n, count(${g.column}) AS valued FROM events${where}`, ...params);
+      // The NULL group is `none`, counted below; left in, it would take one of the TOP + 1 slots
+      // ahead of the values and hide that the facet was cut.
+      const valuedOnly = `${where === "" ? " WHERE" : `${where} AND`} ${g.column} IS NOT NULL`;
+      const rows = r.all(`SELECT ${g.column} AS value, count(*) AS n FROM events${valuedOnly} GROUP BY ${g.column} ORDER BY n DESC, value LIMIT ?`, ...args);
+      const sum = sums.get(g.facet);
       const values: FacetValue[] = [];
       for (const row of rows) {
         if (typeof row["value"] === "string" && typeof row["n"] === "number") values.push({ value: row["value"], n: row["n"] });
@@ -83,8 +97,9 @@ export function countEvents(store: Store, input: Omit<EventQuery, "limit">): Res
       const truncated = values.length > TOP;
       const shown = values.slice(0, TOP);
       const n = typeof sum?.["n"] === "number" ? sum["n"] : 0;
-      const valued = typeof sum?.["valued"] === "number" ? sum["valued"] : 0;
-      const other = valued - shown.reduce((acc, v) => acc + v.n, 0);
+      const v = sum?.[`v_${g.column}`];
+      const valued = typeof v === "number" ? v : 0;
+      const other = valued - shown.reduce((acc, x) => acc + x.n, 0);
       return { facet: g.name, values: shown, other, truncated, none: n - valued };
     });
     return {

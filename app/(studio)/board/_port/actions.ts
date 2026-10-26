@@ -20,28 +20,20 @@ import { kernel } from "../../../../lib/kernelStore.ts";
 import { runAction, type ActionResult } from "../../../_server/actionCore.ts";
 import { action } from "../../../_server/action.ts";
 import { principal } from "../../../_server/principal.ts";
-import type { Principal } from "../../../../lib/principal.ts";
 import { serverBoard } from "./port.ts";
+import { actorOf } from "./real.ts";
+import { verdictChanges } from "./verdict.ts";
 
 const id = z.string().min(1).max(400);
 const rev = z.number().int().nonnegative();
-const change = z.object({
-  candidate: z.string().min(1).max(400),
-  verdict: z.enum(["keep", "reject"]).nullable(),
-  reasons: z.array(z.string().min(1).max(64)).max(11),
-  note: z.string().min(1).max(2000).optional(),
-});
 
 type In<K extends keyof BoardPort> = Parameters<BoardPort[K]>[0];
 type Out<K extends keyof BoardPort> = ReturnType<BoardPort[K]>;
 
 const reader = () => principal("read");
 
-/** The ledger's actor id for a decision: the principal's uid; the shared secret names nobody. */
-const as = (p: Principal) => ("uid" in p ? { who: p.uid } : {});
-
 export async function loadPacket(input: In<"loadPacket">): Out<"loadPacket"> {
-  return runAction("board load", reader, z.object({ id }), (i, who) => serverBoard().loadPacket(i, as(who)), input);
+  return runAction("board load", reader, z.object({ id }), (i, who) => serverBoard().loadPacket(i, actorOf(who)), input);
 }
 
 export async function listPackets(): Out<"listPackets"> {
@@ -52,27 +44,27 @@ export async function preview(input: In<"preview">): Out<"preview"> {
   return runAction("board preview", reader, z.object({ id }), (i) => serverBoard().preview(i), input);
 }
 
-const patchAction = action("board patch", z.object({ id, baseRev: rev, changes: z.array(change).min(1).max(500) }), (i, who) => serverBoard().patch(i, as(who)));
+const patchAction = action("board patch", z.object({ id, baseRev: rev, changes: verdictChanges }), (i, who) => serverBoard().patch(i, actorOf(who)));
 export async function patch(input: In<"patch">): Out<"patch"> {
   return patchAction(input);
 }
 
-const undoAction = action("board undo", z.object({ id, baseRev: rev }), (i, who) => serverBoard().undo(i, as(who)));
+const undoAction = action("board undo", z.object({ id, baseRev: rev }), (i, who) => serverBoard().undo(i, actorOf(who)));
 export async function undo(input: In<"undo">): Out<"undo"> {
   return undoAction(input);
 }
 
-const pickAction = action("board pick", z.object({ id, baseRev: rev, pair: z.string().min(1).max(400), outcome: pickOutcomeSchema }), (i, who) => serverBoard().pick(i, as(who)));
+const pickAction = action("board pick", z.object({ id, baseRev: rev, pair: z.string().min(1).max(400), outcome: pickOutcomeSchema }), (i, who) => serverBoard().pick(i, actorOf(who)));
 export async function pick(input: In<"pick">): Out<"pick"> {
   return pickAction(input);
 }
 
-const commitAction = action("board commit", z.object({ id, rev, token: z.string().min(1).max(200), ticket: z.string().min(8).max(100) }), (i, who) => serverBoard().commit(i, as(who)));
+const commitAction = action("board commit", z.object({ id, rev, token: z.string().min(1).max(200), ticket: z.string().min(8).max(100), undecidedAs: z.literal("leave").optional() }), (i, who) => serverBoard().commit(i, actorOf(who)));
 export async function commit(input: In<"commit">): Out<"commit"> {
   return commitAction(input);
 }
 
-const returnAction = action("board return", z.object({ id, rev, plan: editPlanSchema }), (i, who) => serverBoard().returnPacket(i, as(who)));
+const returnAction = action("board return", z.object({ id, rev, plan: editPlanSchema }), (i, who) => serverBoard().returnPacket(i, actorOf(who)));
 export async function returnPacket(input: In<"returnPacket">): Out<"returnPacket"> {
   return returnAction(input);
 }
@@ -87,7 +79,7 @@ const redriveAction = action("board redrive", z.object({ id }), (i, who) => {
   const store = k.value.store;
   const packetId = parseAt("packet id", packetIdSchema, i.id);
   if (!packetId.ok) return packetId;
-  const done = store.tx((t) => redriveApply(t, { by: "operator", surface: "board", ...as(who), packetId: packetId.value }));
+  const done = store.tx((t) => redriveApply(t, { by: "operator", surface: "board", ...actorOf(who), packetId: packetId.value }));
   if (!done.ok) return done;
   if (!done.value.ok) return done.value;
   kickApply(store, packetId.value);

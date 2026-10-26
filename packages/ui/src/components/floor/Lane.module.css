@@ -28,6 +28,5 @@
   border-bottom-color:color-mix(in srgb,var(--amber) 10%,transparent)
 }
 .weir::after{content:"";position:absolute;top:0;bottom:0;right:0;width:var(--w-wall);pointer-events:none;background:linear-gradient(90deg,color-mix(in srgb,var(--wall) 45%,var(--letterbox)),var(--wall) 45%,var(--wall-hi) 60%,color-mix(in srgb,var(--wall) 61%,var(--letterbox)));box-shadow:calc(-1 * var(--sp-2)) 0 var(--sp-6) color-mix(in srgb,var(--amber) 18%,transparent),var(--sp-hair) 0 var(--sp-loose) var(--shadow)}
-.shelfEmpty{overflow:hidden}
 
 .summary{display:flex;align-items:center;gap:var(--sp-3);height:100%;padding:0 var(--sp-5);font-size:var(--fs-ui);color:var(--muted);white-space:nowrap;overflow:hidden}

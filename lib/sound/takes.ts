@@ -14,7 +14,7 @@
 
 import path from "node:path";
 
-import { syncVerdict } from "./ledger";
+import { syncVerdict, verdictRow } from "./ledger";
 import { mintId, readTakes, removeFile, safeId, SoundError, withStore, writeBytesAtomic, ID_RE, type StoreTx } from "./store";
 import {
   DEFECTS,
@@ -207,6 +207,9 @@ function applyRules(t: SoundTake, prev: SoundTake | null, now: string): void {
   } else t.finalizedAt = null;
 }
 
+/** The longest negative a take files - and so the longest generate.ts sends. */
+export const NEGATIVE_MAX = 2000;
+
 /* ── create ───────────────────────────────────────────────────────────────── */
 
 const AUDIO_EXT: Record<string, string> = {
@@ -268,7 +271,15 @@ export interface IncomingFile {
  * had audio (they play through the Library's WebAudio sketch), and every other
  * origin without a file would be a row nobody can listen to.
  */
-export async function createTake(
+export function createTake(metaIn: Partial<SoundTake>, file: IncomingFile | null, now = new Date()): Promise<{ take: SoundTake; created: boolean }> {
+  return withStore((tx) => createTakeTx(tx, metaIn, file, now));
+}
+
+/** createTake inside a transaction the caller holds - so a door that judges the store and files
+ *  a take (lib/sound/arrange.ts fileReturn: is this still the card's head?) does both under ONE
+ *  lock, and a second writer cannot land between the judgement and the write. */
+export async function createTakeTx(
+  tx: StoreTx,
   metaIn: Partial<SoundTake>,
   file: IncomingFile | null,
   now = new Date(),
@@ -284,83 +295,84 @@ export async function createTake(
   const wanted = typeof meta.id === "string" && ID_RE.test(meta.id) ? meta.id : null;
   const nowIso = now.toISOString();
 
-  return withStore(async (tx) => {
-    const store = await tx.get("takes");
-    if (wanted) {
-      const have = store.takes.find((t) => t.id === wanted);
-      if (have) return { take: have, created: false };
-    }
-    const id = wanted ?? mintId("st");
-    const terms = termsOf(meta.terms);
-    const opIn = pick(OPS, meta.op);
-    const kind: SoundKind = pick(KINDS, meta.kind) ?? (opIn === "sfx" || terms.sfxCategory ? "sfx" : "music");
-    const verdict = pick(VERDICTS, meta.verdict) ?? "unjudged";
-    const title =
-      str(meta.title, 200) ?? (file?.name ? path.basename(file.name, path.extname(file.name)).slice(0, 200) : null) ?? "untitled take";
-    let fileRec: SoundTake["file"] = null;
-    if (hasBytes) {
-      const ext = AUDIO_EXT[mime!] ?? (path.extname(file!.name).toLowerCase() || ".bin");
-      const rel = await writeBytesAtomic(path.join("files", `${safeId(id)}${ext}`), file!.bytes);
-      fileRec = { path: rel, mime: mime!, bytes: file!.bytes.byteLength };
-    }
-    const take: SoundTake = {
-      id,
-      kind,
-      title,
-      provider: pick(PROVIDERS, meta.provider) ?? (origin === "suno-return" ? "suno" : "local"),
-      op: opIn ?? "manual",
-      origin,
-      technique: strs(meta.technique, 20),
-      prompt: str(meta.prompt, 8000) ?? "",
-      negative: str(meta.negative, 2000),
-      terms,
-      tempoBpm: num(meta.tempoBpm),
-      key: str(meta.key, 40),
-      durationS: num(meta.durationS),
-      loop: typeof meta.loop === "boolean" ? meta.loop : null,
-      file: fileRec,
-      peaks: peaksOf(meta.peaks),
-      measured: measuredOf(meta.measured),
-      ratings: ratingsOf(meta.ratings),
-      verdict,
-      reasons: reasonsOf(meta.reasons),
-      note: str(meta.note, 2000),
-      stage: stageOf(meta.stage),
-      group: str(meta.group, 80),
-      label: str(meta.label, 120),
-      use: str(meta.use, 200),
-      aim: str(meta.aim, 600),
-      parentId: typeof meta.parentId === "string" && ID_RE.test(meta.parentId) ? meta.parentId : null,
-      huntId: str(meta.huntId, 80),
-      nodeId: str(meta.nodeId, 80),
-      songId: str(meta.songId, 200),
-      plan: meta.plan && typeof meta.plan === "object" ? meta.plan : null,
-      referenceTrackId: str(meta.referenceTrackId, 120),
-      promptRound: str(meta.promptRound, 120),
-      draftId: str(meta.draftId, 120),
-      variation: variationOf(meta.variation),
-      editModes: editModesOf(meta.editModes),
-      // The name the file arrived under, unless the caller states another (a
-      // migrated Library row keeps the name it was uploaded with).
-      fileName: str(meta.fileName, 255) ?? (hasBytes && file!.name ? file!.name.slice(0, 255) : null),
-      projectId: str(meta.projectId, 120),
-      cueId: str(meta.cueId, 120),
-      // A migrated row keeps the time it was made, so "newest first" means the
-      // same thing in the Library after the move as before it.
-      createdAt: iso(meta.createdAt) ?? nowIso,
-      judgedAt: null,
-      finalizedAt: null,
-    };
-    // A return inherits its parent's row on the board (the brief: "inherits
-    // group"), unless the caller placed it explicitly.
-    if (take.parentId && !take.group) take.group = store.takes.find((t) => t.id === take.parentId)?.group ?? null;
-    applyRules(take, null, iso(meta.judgedAt) ?? nowIso);
-    if (take.finalizedAt && iso(meta.finalizedAt)) take.finalizedAt = iso(meta.finalizedAt);
-    store.takes.push(take);
-    tx.touch("takes");
-    await syncVerdict(tx, take);
-    return { take, created: true };
-  });
+  const store = await tx.get("takes");
+  if (wanted) {
+    const have = store.takes.find((t) => t.id === wanted);
+    if (have) return { take: have, created: false };
+  }
+  const id = wanted ?? mintId("st");
+  const terms = termsOf(meta.terms);
+  const opIn = pick(OPS, meta.op);
+  const kind: SoundKind = pick(KINDS, meta.kind) ?? (opIn === "sfx" || terms.sfxCategory ? "sfx" : "music");
+  const verdict = pick(VERDICTS, meta.verdict) ?? "unjudged";
+  const title =
+    str(meta.title, 200) ?? (file?.name ? path.basename(file.name, path.extname(file.name)).slice(0, 200) : null) ?? "untitled take";
+  // The bytes are written LAST (below), once every rule that can refuse the take has spoken:
+  // written first, a refused rating, stage or an unreadable ledger left an audio file in
+  // files/ that no take names, one per attempt.
+  const fileAt = hasBytes ? path.join("files", `${safeId(id)}${AUDIO_EXT[mime!] ?? (path.extname(file!.name).toLowerCase() || ".bin")}`) : null;
+  const fileRec: SoundTake["file"] = fileAt === null ? null : { path: fileAt.split(path.sep).join("/"), mime: mime!, bytes: file!.bytes.byteLength };
+  const take: SoundTake = {
+    id,
+    kind,
+    title,
+    provider: pick(PROVIDERS, meta.provider) ?? (origin === "suno-return" ? "suno" : "local"),
+    op: opIn ?? "manual",
+    origin,
+    technique: strs(meta.technique, 20),
+    prompt: str(meta.prompt, 8000) ?? "",
+    negative: str(meta.negative, NEGATIVE_MAX),
+    terms,
+    tempoBpm: num(meta.tempoBpm),
+    key: str(meta.key, 40),
+    durationS: num(meta.durationS),
+    loop: typeof meta.loop === "boolean" ? meta.loop : null,
+    file: fileRec,
+    peaks: peaksOf(meta.peaks),
+    measured: measuredOf(meta.measured),
+    ratings: ratingsOf(meta.ratings),
+    verdict,
+    reasons: reasonsOf(meta.reasons),
+    note: str(meta.note, 2000),
+    stage: stageOf(meta.stage),
+    group: str(meta.group, 80),
+    label: str(meta.label, 120),
+    use: str(meta.use, 200),
+    aim: str(meta.aim, 600),
+    parentId: typeof meta.parentId === "string" && ID_RE.test(meta.parentId) ? meta.parentId : null,
+    huntId: str(meta.huntId, 80),
+    nodeId: str(meta.nodeId, 80),
+    songId: str(meta.songId, 200),
+    plan: meta.plan && typeof meta.plan === "object" ? meta.plan : null,
+    referenceTrackId: str(meta.referenceTrackId, 120),
+    promptRound: str(meta.promptRound, 120),
+    draftId: str(meta.draftId, 120),
+    variation: variationOf(meta.variation),
+    editModes: editModesOf(meta.editModes),
+    // The name the file arrived under, unless the caller states another (a
+    // migrated Library row keeps the name it was uploaded with).
+    fileName: str(meta.fileName, 255) ?? (hasBytes && file!.name ? file!.name.slice(0, 255) : null),
+    projectId: str(meta.projectId, 120),
+    cueId: str(meta.cueId, 120),
+    // A migrated row keeps the time it was made, so "newest first" means the
+    // same thing in the Library after the move as before it.
+    createdAt: iso(meta.createdAt) ?? nowIso,
+    judgedAt: null,
+    finalizedAt: null,
+  };
+  // A return inherits its parent's row on the board (the brief: "inherits
+  // group"), unless the caller placed it explicitly.
+  if (take.parentId && !take.group) take.group = store.takes.find((t) => t.id === take.parentId)?.group ?? null;
+  applyRules(take, null, iso(meta.judgedAt) ?? nowIso);
+  if (take.finalizedAt && iso(meta.finalizedAt)) take.finalizedAt = iso(meta.finalizedAt);
+  store.takes.push(take);
+  tx.touch("takes");
+  // A new take with no judgement has no ledger row to write, so it does not read the ledger:
+  // a ledger.json that will not parse (a merge conflict in the tracked file) must not refuse
+  // an unjudged render the vendor already billed. A judged one still reads it and refuses.
+  if (verdictRow(take) !== null) await syncVerdict(tx, take);
+  if (fileAt !== null) await writeBytesAtomic(fileAt, file!.bytes);
+  return { take, created: true };
 }
 
 /* ── patch ───────────────────────────────────────────────────────────────── */

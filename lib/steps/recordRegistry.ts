@@ -1,6 +1,6 @@
 // STEP RECORDS, DECLARED ONCE — the key, its owner, its version, how to read it.
 //
-// The step store (../stepStore.ts) is a key/value store: `readStep<T>` returns
+// The step store (./index.ts) is a key/value store: `readStep<T>` returns
 // whatever is on disk cast to whatever the caller asked for, and every phase key
 // is a string literal retyped at each reader. That is how three kinds of silent
 // data loss lived in the tree, each re-fixed (or not) per site:
@@ -24,7 +24,9 @@
 // projection, the step-local defs for frames/score/cut/trailer, and the ratchet
 // against literal keys outside this directory.
 //
-// No React in this module: the hook is `useRecord.ts`, the writes `patch.ts`.
+// No React in this module. v1's hook (`useRecord.ts`) and writes (`patch.ts`) retired
+// with app/_phases; lib/score/ads/record.ts and lib/frames/picture/migrate.ts still
+// declare and parse through it.
 
 import { errorMessage } from "@gt/domain/errors";
 
@@ -128,12 +130,6 @@ export function defineRecord<T extends object>(spec: RecordSpec<T>): RecordDef<T
   return def;
 }
 
-/** Every def declared so far in this module graph — for the lineage stage and
- *  the ratchet, which need the population rather than one def. */
-export function recordDefs(): readonly RecordDef<object>[] {
-  return [...REGISTRY.values()];
-}
-
 /* ──────────────────────────────── decoding ───────────────────────────────── */
 
 export const isPlainObject = (x: unknown): x is Record<string, unknown> =>
@@ -144,13 +140,6 @@ function storedVersion(stored: Record<string, unknown>): number | RecordRefusal 
   const v = stored.v ?? 1;
   if (typeof v !== "number" || !Number.isInteger(v) || v < 1) return malformed(`v is ${JSON.stringify(stored.v)}`);
   return v;
-}
-
-/** Is this stored object from a build newer than the def? Cheap — no parse. */
-export function isFromTheFuture(def: RecordDef<object>, stored: unknown): boolean {
-  if (!isPlainObject(stored)) return false;
-  const v = storedVersion(stored);
-  return typeof v === "number" && v > def.version;
 }
 
 /**
@@ -201,7 +190,7 @@ export function decodeRecord<T extends object>(
  *   · `ok: false, refused` — read, and not ours to interpret. Saving now would
  *     overwrite a newer build's record or one nobody can parse.
  *
- * In every `ok: false` case the caller must not write — `useRecord` enforces it.
+ * In every `ok: false` case the caller must not write — v1's `useRecord` enforced it.
  */
 export async function readRecord<T extends object>(
   def: RecordDef<T>,

@@ -16,6 +16,8 @@ import { fixtureSource } from "../../lib/notebook/source.ts";
 import type { Store } from "@gt/kernel/store";
 
 import { makeRealPart } from "../../app/(studio)/projects/[id]/_part/real.ts";
+import { LATER } from "../../app/(studio)/projects/[id]/_part/kinds.ts";
+import { partOpSchema, researchOpSchema, scriptOpSchema } from "../../app/(studio)/projects/[id]/_part/schema.ts";
 
 // THE REAL PART SIDE (L36) end to end over a kernel store: L38's PartPort verbs, answered from
 // part records + the op log, with L38's per-kind intelligence called on this project's records.
@@ -32,14 +34,14 @@ afterEach(() => {
 const OP = { kind: "operator", id: "op" } as const;
 const NOW = Date.parse("2026-10-16T09:00:00Z");
 
-function universe(recipe: string, id: string): { store: Store; port: ReturnType<typeof makeRealPart> } {
+function universe(recipe: string, id: string, takeId?: string): { store: Store; port: ReturnType<typeof makeRealPart> } {
   const dir = mkdtempSync(path.join(tmpdir(), "gt-parts-"));
   dirs.push(dir);
   const k = openKernel(path.join(dir, "k.sqlite"));
   if (!k.ok) throw k.error;
   open.push(k.value);
   const store = k.value.store;
-  const c = compose(store, { recipe }, OP, { id });
+  const c = compose(store, { recipe, ...(takeId === undefined ? {} : { takeId }) }, OP, { id });
   if (!c.ok) throw c.error;
   return { store, port: portOn(store, dir) };
 }
@@ -142,6 +144,91 @@ describe("a scope decided on the notebook's own digest is not orphaned by storag
     await must(writePart(store, { projectId: "imported", partId: "imported/research", baseRev: "current", act: "land", op: { import: "v1" }, label: "import", by: { kind: "machine", id: "import" }, next: () => ok({ "research-notebook": nb, "research-scope": { scope: {}, confirmed: {}, digest: src.digest } }) }));
     const v = await must(port.loadPart({ projectId: "imported", key: "research" }));
     expect(v.verdict).toMatchObject({ state: "ready", codes: [{ code: "scope-confirmed" }] });
+  });
+});
+
+/** The `op` literals of a zod union of op objects (a union of unions is walked). */
+function opNames(schema: unknown): string[] {
+  const options = (schema as { options?: readonly unknown[] }).options ?? [];
+  return options.flatMap((o) => {
+    const op = (o as { shape?: { op?: { value?: unknown } } }).shape?.op?.value;
+    return typeof op === "string" ? [op] : opNames(o);
+  });
+}
+
+describe("the door every part edit passes (schema.ts)", () => {
+  // The door is a hand copy of the PartOp union: an op it lacks is an edit no editor can send,
+  // an op no side takes is a door to a refusal. Both are read off the sides' own lists.
+  it("admits exactly the ops research, script and every later kind's module accept", () => {
+    const door = opNames(partOpSchema);
+    const research = opNames(researchOpSchema);
+    const script = opNames(scriptOpSchema);
+    const later = Object.values(LATER).flatMap((m) => [...m.ops]);
+    expect(research.length * script.length * later.length).toBeGreaterThan(0);
+    expect(new Set(door).size).toBe(door.length);
+    expect([...door].sort()).toEqual([...research, ...script, ...later].sort());
+  });
+});
+
+describe("an act whose kind has no producer bound", () => {
+  // The receipt is the first half of the confirm (decision 3): a price the confirm can never
+  // launch is refused at the receipt, in the confirm's own words.
+  it("is refused at the receipt as the confirm refuses it, and a bound kind still prices", async () => {
+    const { port } = universe("explainer", "ex1");
+    const r = await port.actReceipt({ projectId: "ex1", key: "article", act: "write-article" });
+    expect(r.ok ? "priced" : { code: r.error.code, message: r.error.message }).toEqual({ code: "unavailable", message: "no producer is bound for a article part yet" });
+    const go = await port.act({ projectId: "ex1", key: "article", act: "write-article", token: "0123456789abcdef" });
+    expect(go.ok ? "launched" : { code: go.error.code, message: go.error.message }).toEqual(r.ok ? "priced" : { code: r.error.code, message: r.error.message });
+    const album = universe("album-video", "a1", "take-salt-lines");
+    const words = await album.port.actReceipt({ projectId: "a1", key: "words", act: "write-words" });
+    expect(words.ok).toBe(true);
+  });
+});
+
+describe("an act whose kind module says it still needs something", () => {
+  // The view draws write-words blocked ("a track") when the album has no take; the real receipt
+  // and the confirm refuse in the module's words instead of pricing and launching it.
+  it("is refused at the receipt and at the confirm in the module's words", async () => {
+    const { port } = universe("album-video", "a2");
+    const view = await must(port.loadPart({ projectId: "a2", key: "words" }));
+    expect(view.acts.find((a) => a.act === "write-words")?.needs).toEqual(["a track"]);
+    const r = await port.actReceipt({ projectId: "a2", key: "words", act: "write-words" });
+    expect(r.ok ? "priced" : r.error.message).toBe("write words needs a track");
+    const go = await port.act({ projectId: "a2", key: "words", act: "write-words", token: "0123456789abcdef" });
+    expect(go.ok ? "launched" : go.error.message).toBe("write words needs a track");
+  });
+});
+
+describe("a gate that throws after an edit", () => {
+  // The edit's gate check runs after the answer (real.ts `kick`): a throw inside it is the
+  // part-gates log line, never an unhandled rejection in the server process.
+  it("is logged, and the edit still answers applied", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "gt-parts-"));
+    dirs.push(dir);
+    const k = openKernel(path.join(dir, "k.sqlite"));
+    if (!k.ok) throw k.error;
+    open.push(k.value);
+    const store = k.value.store;
+    const c = compose(store, { recipe: "film/ad-social-15" }, OP, { id: "ad1" });
+    if (!c.ok) throw c.error;
+    const gone = (): never => {
+      throw new Error("clock gone");
+    };
+    const port = makeRealPart({ store: () => ok(store), now: () => NOW, gates: { store: () => ok(store), blobs: () => blobStore(path.join(dir, "blobs")), now: gone } });
+    const unhandled: unknown[] = [];
+    const onUnhandled = (e: unknown): void => void unhandled.push(e);
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const v = await applied(port.opPart({ projectId: "ad1", key: "research", baseRev: 1, op: { op: "set-brief", field: "product", value: "Rainshell" } }));
+      expect(v.rev).toBe(2);
+      await new Promise((res) => setTimeout(res, 50));
+      expect(unhandled).toEqual([]);
+      expect(logged.mock.calls.map((a) => String(a[0]))).toContain("[part-gates] ad1: clock gone");
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+      logged.mockRestore();
+    }
   });
 });
 

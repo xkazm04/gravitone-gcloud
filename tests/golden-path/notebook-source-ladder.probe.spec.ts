@@ -79,7 +79,7 @@ test("the source ladder's adoption is counted, and cannot quietly go backwards",
   expect(FACTS.length, "the fact table is empty - this probe is reading the wrong module").toBeGreaterThan(15);
 
   const legacy = FACTS.filter((f) => !migrated(f)).map((f) => f.id);
-  const blobs = FACTS.filter((f) => !migrated(f) && joined(f.source)).map((f) => f.id);
+  const blobs = FACTS.filter((f) => !migrated(f) && joined(f.source ?? "")).map((f) => f.id);
 
   const added = (now: string[], base: string[]) => now.filter((id) => !base.includes(id));
   const fixed = (now: string[], base: string[]) => base.filter((id) => !now.includes(id));

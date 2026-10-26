@@ -36,6 +36,7 @@ import { Select } from "@gt/ui/components/field/Field.tsx";
 
 import { outcomeOf, useReceipt } from "../../projects/_plan/receipt.tsx";
 import { useShell } from "../../_shell/Providers.tsx";
+import { copyText } from "../../_shell/clipboard.ts";
 import type { AudioView, SeedTake } from "./read.ts";
 import type { setHand, sunoConfirm, sunoReceipt } from "./actions.ts";
 import s from "./audio.module.css";
@@ -56,7 +57,9 @@ export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly vi
   const takes: readonly SeedTake[] = view.takes.ok ? view.takes.value : [];
   const [seed, setSeed] = useState<Seed>(() => takes[0]?.seed ?? BLANK_SEED);
   const [from, setFrom] = useState<string>(() => takes[0]?.id ?? BLANK);
-  // The hand a person just set, laid over the server's terms until the refresh brings it back.
+  // The hand a person just set, laid over the server's terms until the refresh brings it back;
+  // a hand the store refused (or whose request never came back) is taken off again, so the rail
+  // never draws a stance the store does not hold.
   const [mine, setMine] = useState<Readonly<Record<string, Hand>>>({});
   const terms: readonly Term[] = useMemo(() => {
     const base = view.terms.ok ? view.terms.value : [];
@@ -94,10 +97,21 @@ export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly vi
 
   const onHand = (id: string, h: Hand): void => {
     setMine((m) => ({ ...m, [id]: h }));
-    void setHand({ id, stance: h.stance ?? null, phrase: h.phrase ?? "" }).then((r) => {
-      if (!r.ok) toast(r.error.error);
-      else router.refresh();
-    });
+    const undo = (words: string): void => {
+      setMine((m) => {
+        if (m[id] !== h) return m;
+        const { [id]: _refused, ...rest } = m;
+        return rest;
+      });
+      toast(words);
+    };
+    void setHand({ id, stance: h.stance ?? null, phrase: h.phrase ?? "" }).then(
+      (r) => {
+        if (!r.ok) undo(r.error.error);
+        else router.refresh();
+      },
+      (e: unknown) => undo(errorMessage(e)),
+    );
   };
 
   const onPick = (t: Term): void => {
@@ -106,10 +120,7 @@ export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly vi
   };
 
   const copy = (text: string): void => {
-    void navigator.clipboard.writeText(text).then(
-      () => toast("prompt copied"),
-      (e: unknown) => toast(`clipboard refused: ${errorMessage(e)}`),
-    );
+    void copyText(text).then((r) => toast(r.ok ? "prompt copied" : `clipboard refused: ${r.error}`));
   };
 
   const seedFrom = (id: string): void => {

@@ -12,7 +12,8 @@ import type { Estimate } from "@gt/domain/estimate";
 // it through a structural VIEW, so v1's mutable `ExtractManifest` is accepted as
 // it is and nothing here can write to it.
 
-export type CriticView = { readonly recipe_fix?: string | undefined };
+/** `has_text` is the veto (lib/foundry/extract/helpers.ts `textVetoed`): such a round never wins the recipe. */
+export type CriticView = { readonly recipe_fix?: string | undefined; readonly has_text?: boolean | undefined };
 export type RoundView = { readonly file: string | null; readonly error: string | null; readonly score: number | null; readonly recipe: string; readonly critique: CriticView | null };
 export type ReplicaView = { readonly source: string; readonly rounds: readonly RoundView[] };
 export type TransferView = { readonly scene: number; readonly file: string | null; readonly error: string | null };
@@ -101,7 +102,8 @@ export function settleReason(m: ManifestView, rounds: readonly RoundView[]): Set
   if (last === undefined) return null;
   if (rounds.length >= m.options.rounds) return "round-cap";
   if (last.error && !last.file) return "generation-failed"; // do not burn rounds on a refusal
-  if (typeof last.score === "number" && last.score >= m.options.target) return "target-met";
+  // A round that drew text has not arrived, whatever it scored: it can never be the recipe in force.
+  if (typeof last.score === "number" && last.score >= m.options.target && last.critique?.has_text !== true) return "target-met";
   if (usableFix(last.critique, last.recipe) === null) return "no-usable-fix";
   return null;
 }

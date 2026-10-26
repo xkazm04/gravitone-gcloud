@@ -26,8 +26,10 @@ export type PaidCall<T> = {
   readonly estimate?: Estimate;
   /** What a dry job continues with. */
   readonly stand: () => T;
-  /** The live call; `usd` is what the vendor reported (absent = unpriced, with `unpriced` saying why). */
-  readonly live: () => Promise<{ readonly value: T; readonly usd?: number; readonly unpriced?: string }>;
+  /** The live call; `usd` is what the vendor reported (absent = unpriced, with `unpriced` saying why), and
+   *  `served` the `<provider>/<model>` that answered when a router picked it - booked as the row's `model`
+   *  axis, which is what a ceiling that caps one vendor reads (lib/foundry/scout/budget.ts). */
+  readonly live: () => Promise<{ readonly value: T; readonly usd?: number; readonly unpriced?: string; readonly served?: string }>;
 };
 
 export async function meteredCall<T>(ctx: StepContext, c: PaidCall<T>): Promise<T> {
@@ -45,9 +47,9 @@ export async function meteredCall<T>(ctx: StepContext, c: PaidCall<T>): Promise<
     subject,
     stand: c.stand,
   };
-  const axes = { producer: ctx.job.producer, provider: c.provider };
   const r = await ctx.meter.paid(JOB_USD, 0, intent, async () => {
     const out = await c.live();
+    const axes = { producer: ctx.job.producer, provider: c.provider, ...(out.served === undefined ? {} : { model: out.served }) };
     const entry: SettleEntry =
       out.usd !== undefined && out.usd > 0
         ? { amount: out.usd, outcome: "served", basis: "vendor", axes }

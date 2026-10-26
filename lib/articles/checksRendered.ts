@@ -65,7 +65,10 @@ const RENDERED = [
   ["offline-rendered", "No network requests when rendered"],
 ] as const;
 
-export async function renderedItems(postDir: string, shotDir: string): Promise<{ items: CheckItem[]; screenshots: string[] }> {
+/** `screenshots: false` takes the measurements and no pictures: the between-turn checks read the
+ *  numbers, and the check step deletes check/ before the run whose pictures the human sees. */
+export async function renderedItems(postDir: string, shotDir: string, opts: { screenshots?: boolean } = {}): Promise<{ items: CheckItem[]; screenshots: string[] }> {
+  const shoot = opts.screenshots !== false;
   const index = path.join(postDir, "index.html");
   const items: CheckItem[] = [];
   const screenshots: string[] = [];
@@ -82,7 +85,7 @@ export async function renderedItems(postDir: string, shotDir: string): Promise<{
   }
   try {
     const { mkdir } = await import("node:fs/promises");
-    await mkdir(shotDir, { recursive: true });
+    if (shoot) await mkdir(shotDir, { recursive: true });
     const requests: string[] = [];
     const results: Record<number, Measured> = {};
     for (const width of [1440, 390]) {
@@ -98,10 +101,12 @@ export async function renderedItems(postDir: string, shotDir: string): Promise<{
       });
       await page.goto(pathToFileURL(index).href, { waitUntil: "load" });
       results[width] = (await page.evaluate(MEASURE)) as Measured;
-      const shot = path.join(shotDir, `screenshot-${width}.png`);
-      await page.screenshot({ path: shot, fullPage: true });
-      screenshots.push(shot);
-      if (width === 1440) {
+      if (shoot) {
+        const shot = path.join(shotDir, `screenshot-${width}.png`);
+        await page.screenshot({ path: shot, fullPage: true });
+        screenshots.push(shot);
+      }
+      if (shoot && width === 1440) {
         await page.emulateMedia({ colorScheme: "dark" });
         const dark = path.join(shotDir, `screenshot-${width}-dark.png`);
         await page.screenshot({ path: dark, fullPage: true });

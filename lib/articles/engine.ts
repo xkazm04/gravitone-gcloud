@@ -42,7 +42,7 @@ import type { MediumDriver } from "@/lib/medium/types";
 
 export interface EngineDeps {
   runAgent: (input: RunAgentInput) => Promise<AgentResult>;
-  /** One reviewer of the critique, any of the four engines. */
+  /** One reviewer of the critique, through any of REVIEWER_ENGINES. */
   runReviewer: (call: ReviewerCall) => Promise<AgentResult>;
   now: () => Date;
   /** Open a browser for the rendered check items. */

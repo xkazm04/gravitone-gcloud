@@ -37,6 +37,10 @@ export class CliError extends Error {
   /** For `cancelled` only: was a process started before the cancel landed? A
    *  signal already aborted at the door spawns nothing and spends nothing. */
   spawned = false;
+
+  /** The cost the engine's own envelope reported for a run that ended without an
+   *  answer (is_error): the seat did the work, and a refused answer is still a bill. */
+  costUsd?: number;
 }
 
 /** Whether this platform needs the shell to resolve `claude` (a `.cmd` shim on
@@ -322,8 +326,11 @@ function settleEnvelope(out: string): CliResult {
   } catch {
     throw new CliError("The local Claude process returned output that was not JSON.", "failed");
   }
-  if (j.is_error || j.subtype !== "success")
-    throw new CliError((j.result as string) || `The run ended as ${j.subtype}.`, "failed");
+  if (j.is_error || j.subtype !== "success") {
+    const e = new CliError((j.result as string) || `The run ended as ${j.subtype}.`, "failed");
+    if (typeof j.total_cost_usd === "number" && Number.isFinite(j.total_cost_usd)) e.costUsd = j.total_cost_usd;
+    throw e;
+  }
   return {
     text: String(j.result ?? ""),
     sessionId: j.session_id,

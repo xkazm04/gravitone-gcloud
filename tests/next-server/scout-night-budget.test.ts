@@ -5,9 +5,11 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { armLive } from "@gt/kernel/dryrun";
+import { append } from "@gt/kernel/events";
 import { enqueue } from "@gt/kernel/job";
+import { SCENE_REQUEST } from "@gt/producers/scout-scene/define";
 import { closeProcessKernel, processKernel } from "@gt/kernel/process";
-import { nightBudget } from "../../lib/foundry/scout/budget.ts";
+import { capped, extractGeminiWorst, nightBudget } from "../../lib/foundry/scout/budget.ts";
 import { tasteOf } from "../../lib/foundry/scout/taste.ts";
 import type { Night, ScoutSource } from "../../lib/foundry/scout/types.ts";
 
@@ -46,7 +48,60 @@ describe("nightBudget", () => {
       ],
     };
     const b = nightBudget(store, night);
-    expect(b).toEqual({ ok: true, value: { ceilingUsd: 15, settledUsd: 0, heldUsd: 4.5, remainingUsd: 10.5, clipsUsed: 1, clipCap: 2 } });
+    expect(b).toEqual({ ok: true, value: { ceilingUsd: 15, settledUsd: 0, uncappedUsd: 0, heldUsd: 4.5, remainingUsd: 10.5, clipsUsed: 1, clipCap: 2 } });
+  });
+});
+
+describe("a scout scene's hold", () => {
+  it("is its unbooked reads at their worst case, not the night's remainder it was launched with as its ceiling", () => {
+    const arm = armLive(OP, new Date().toISOString(), "scout budget test", { dryOnly: false });
+    if (!arm.ok) throw arm.error;
+    const id = "job:scout-scene:2026-10-02:c-09";
+    const j = enqueue(store, { id, of: { kind: "run", id: "scout:2026-10-02/c-09" }, producer: "scout-scene", lane: "gpu.local", mode: arm.value, ceilingUsd: 15 }, OP);
+    if (!j.ok) throw j.error;
+    const est = (usd: number) => ({ seconds: 10, usd, src: "model" as const });
+    const w = store.tx((t) =>
+      append(t, { actor: OP, type: SCENE_REQUEST, subject: { kind: "job", id }, data: { nightId: "2026-10-02", candidateId: "c-09", keyframes: ["sources/s-01/k-001.jpg", "sources/s-01/k-002.jpg"], replicas: 2, clip: true, estimates: { read: est(0.004), replica: est(0.0154), clip: est(0) }, by: "op-test" } }),
+    );
+    if (!w.ok) throw w.error;
+    const b = nightBudget(store, { ...base, jobs: [id] });
+    // Two reads at $0.004 are its Gemini; the two Leonardo stills and the local clip are uncapped and not held.
+    expect(b.ok && b.value.heldUsd).toBe(0.008);
+    expect(b.ok && b.value.remainingUsd).toBe(14.992);
+  });
+});
+
+describe("a scout asset's hold", () => {
+  it("is nothing: its concepts are Leonardo's and its gate, mesh and finish local, whatever ceiling it was launched with", () => {
+    const arm = armLive(OP, new Date().toISOString(), "scout budget test", { dryOnly: false });
+    if (!arm.ok) throw arm.error;
+    const j = enqueue(store, { id: "job:scout-asset:2026-10-02:c-10", of: { kind: "run", id: "scout:2026-10-02/c-10" }, producer: "scout-asset", lane: "cloud.leonardo", mode: arm.value, ceilingUsd: 14.8 }, OP);
+    if (!j.ok) throw j.error;
+    const b = nightBudget(store, { ...base, jobs: [j.value.id] });
+    expect(b.ok && b.value.heldUsd).toBe(0);
+  });
+});
+
+describe("extractGeminiWorst", () => {
+  // 2026-10-23: a 24-frame style run's receipt said $3.44 (Leonardo stills and the seat's turn in it); its
+  // Gemini is one read a source plus a read-back a round and a transfer.
+  it("holds a source's read and its read-backs at $0.002, never the stills or the grouping turn", () => {
+    expect(extractGeminiWorst({ sources: 24, rounds: 1, transfers: 3 })).toBe(0.24);
+    expect(extractGeminiWorst({ sources: 14, rounds: 1 })).toBe(0.056);
+    expect(extractGeminiWorst({ sources: 0, rounds: 1, transfers: 99 })).toBeLessThan(0.05);
+  });
+});
+
+describe("capped", () => {
+  // The ceiling caps Gemini only (operator, 2026-10-23); the axes are the ones 2026-10-22's live night booked.
+  it("Gemini and an unattributed row count; the Claude seat, Leonardo and the card do not", () => {
+    expect(capped('{"call":"recognize","model":"google/gemini-3.6-flash"}')).toBe(true);
+    expect(capped('{"producer":"scout-scene","provider":"imaging-router"}')).toBe(true);
+    expect(capped("not json")).toBe(true);
+    expect(capped('{"call":"reason","model":"claude-cli/claude-opus-5"}')).toBe(false);
+    expect(capped('{"call":"generate","model":"leonardo-flare/openai/gpt-image-2.5-flare"}')).toBe(false);
+    expect(capped({ producer: "scout-scene", provider: "imaging-router", model: "leonardo-studio/gpt-image-2.5-sunburst" })).toBe(false);
+    expect(capped({ model: "comfyui/ltx-2.5-distilled" })).toBe(false);
   });
 });
 

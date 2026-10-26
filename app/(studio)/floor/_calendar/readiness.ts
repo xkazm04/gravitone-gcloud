@@ -29,8 +29,9 @@ import type { ChannelReady, PublishTick } from "@gt/ui/components/floor/schedule
 import { channelReadiness, missedWindowMs, WIRED_CHANNELS } from "../../../../lib/publish/channels.ts";
 import type { CalendarFacts } from "./contract.ts";
 
-const PUBLISH_CLI = "npx tsx pipeline/publish.mts channels --json";
-const ARTICLE_CLI = "node pipeline/article.mts status";
+/** What a readiness row names to check a channel by hand (the fixture side names the same). */
+export const PUBLISH_CLI = "npx tsx pipeline/publish.mts channels --json";
+export const ARTICLE_CLI = "node pipeline/article.mts status";
 
 export type Readiness = CalendarFacts & {
   readonly wired: ReadonlySet<Channel>;

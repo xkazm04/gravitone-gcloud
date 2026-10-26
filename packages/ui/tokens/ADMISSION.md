@@ -129,6 +129,8 @@ here saying which component's constant it is and why no role fits.
 | `--one-off-w-node` | `70px` | UpstreamBreak |
 | `--one-off-dock` | `22px` | Toast |
 | `--one-off-rise` | `20px` | Toast |
+| `--one-off-draw-card-min` | `280px` | /local-draws card grid: the least width of a draw card. No role fits - the Library tile roles carry the Library's own sizes, and a dev viewer of local frames should not borrow them (admitted 2026-10-25, budget 6 -> 8) |
+| `--one-off-draw-shot-max` | `520px` | /local-draws: the tallest a frame or clip draws in its card; one screen, one constant |
 
 ## Admitted at the Ledger port (Phase 2, lot 16)
 

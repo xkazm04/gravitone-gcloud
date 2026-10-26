@@ -13,6 +13,7 @@ import type { StyleEvidenceRow, StyleExemplarView, StyleView } from "@gt/domain/
 
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import { StackBar } from "../stackbar/StackBar.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import s from "./Style.module.css";
@@ -39,8 +40,10 @@ export function Palette({ palette }: { readonly palette: readonly PaletteColor[]
 const SHOWN = 8;
 
 export function EvidenceTable({ rows, all = false }: { readonly rows: readonly StyleEvidenceRow[]; readonly all?: boolean }) {
-  const keep = rows.filter((r) => r.verdict === "keep").length;
-  const reject = rows.length - keep;
+  // `counts` is the view's own reading (an operator's keep); an agent's keep stays in the table,
+  // marked, and in neither tally - nor is it a reject.
+  const keep = rows.filter((r) => r.counts).length;
+  const reject = rows.filter((r) => r.verdict === "reject").length;
   const scenes = new Set(rows.map((r) => `${r.run}/${r.scene}`)).size;
   const shown = all ? rows : rows.slice(0, SHOWN);
   return (
@@ -86,8 +89,7 @@ export function PlateStrip({ exemplars, srcOf }: { readonly exemplars: readonly 
     <ul className={s.strip} aria-label="exemplars" data-component="PlateStrip">
       {exemplars.map((x) => (
         <li key={`${x.run}/${x.media.sha256}`} className={cx(s.stripItem, x.abandoned && s.abandoned)}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a content-addressed blob */}
-          <img className={s.plate} src={srcOf(x.media)} alt={`${x.role} from ${x.run}`} loading="lazy" />
+          <Plate className={s.plate} src={srcOf(x.media)} alt={`${x.role} from ${x.run}`} lazy />
           <span className={s.chips}>
             <Chip label={x.role} casing="lower" />
             {x.abandoned && <Chip label={x.settled ?? "abandoned"} tone="amber" casing="lower" ghost />}

@@ -10,7 +10,8 @@ import "server-only";
 //     the kind counts honour only the shared groups (library.js `compute`, the disjunctive count);
 //   · a selected value at 0 is still sent; values in FIXED_ORDER keep it; TOP-N with `more`;
 //   · items that cannot show their media sort last (library.js `bad`), then by the sort;
-//   · `limit` is required and capped (LIBRARY_PAGE_MAX), `offset` is an index into the order;
+//   · the query through the index's own door (querySchema): `limit` required and capped, a facet
+//     key a rail group, `offset` bounded and an index into the order;
 //   · an act is an event: pin, unpin and use-in-project write the universe and its act log; an
 //     export is logged and writes NO file - the fixture has no game project to write into.
 // State lives for the server process; `resetLibraryFixture` starts it over.
@@ -18,6 +19,7 @@ import "server-only";
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 import {
+  COLUMN_GROUPS,
   DEFAULT_PIN,
   FIXED_ORDER,
   groupLabel,
@@ -25,7 +27,6 @@ import {
   KIND_LABELS,
   LIBRARY_GROUP_TOP,
   LIBRARY_KINDS,
-  LIBRARY_PAGE_MAX,
   normText,
   parseSearch,
   railGroups,
@@ -37,6 +38,8 @@ import {
   type ParsedSearch,
 } from "@gt/domain/library";
 import { libraryItemSchema, type LibraryItemDetail } from "@gt/domain/libraryItem";
+import { querySchema } from "@gt/kernel/library/clauses";
+import { resolveLineage } from "@gt/kernel/library/detail";
 
 import { buildCorpus, labelOf, type FixtureRecord } from "./fixtureCorpus.ts";
 import { PROJECTS } from "./fixtureData.ts";
@@ -69,19 +72,23 @@ const KIND_RANK = new Map<string, number>(LIBRARY_KINDS.map((k, i) => [k, i]));
 function ordered(u: Universe, sort: NonNullable<LibraryQuery["sort"]>): FixtureRecord[] {
   const have = u.order.get(sort);
   if (have !== undefined) return have;
+  // A tie on the date falls to the newer write, as the kernel's ORDER does (kernel library/query.ts
+  // `seq DESC`); the corpus order is that write order.
+  const seq = new Map(u.items.map((x, i) => [x, i]));
+  const s = (x: FixtureRecord): number => seq.get(x) ?? 0;
   const bad = (x: FixtureRecord): number => (x.row.attention === undefined ? 0 : 1);
   const a = [...u.items].sort((x, y) => {
     const b = bad(x) - bad(y);
     if (b !== 0) return b;
     if (sort === "name") return x.row.title.localeCompare(y.row.title) || x.row.id.localeCompare(y.row.id);
-    if (sort === "kind") return (KIND_RANK.get(x.row.kind) ?? 0) - (KIND_RANK.get(y.row.kind) ?? 0) || y.t - x.t || x.row.id.localeCompare(y.row.id);
-    return y.t - x.t || x.row.id.localeCompare(y.row.id);
+    if (sort === "kind") return (KIND_RANK.get(x.row.kind) ?? 0) - (KIND_RANK.get(y.row.kind) ?? 0) || y.t - x.t || s(y) - s(x);
+    return y.t - x.t || s(y) - s(x);
   });
   u.order.set(sort, a);
   return a;
 }
 
-const kindWords = (k: string): string => `${k} ${normText(KIND_LABELS.find((x) => x.kind === k)?.short ?? k)}`;
+const kindMatches = (k: string, v: string): boolean => k.includes(v) || normText(KIND_LABELS.find((x) => x.kind === k)?.short ?? k).includes(v);
 
 /** Does the item answer the parsed search? Words prefix a word of its text; tokens hit a field. */
 export function matches(x: FixtureRecord, p: ParsedSearch): boolean {
@@ -90,10 +97,11 @@ export function matches(x: FixtureRecord, p: ParsedSearch): boolean {
     for (const w of p.words) if (!ws.some((h) => h.startsWith(w))) return false;
   }
   for (const t of p.tokens) {
+    // `kind:` and `id:` match a substring, as the kernel's clauses do (kernel library/clauses.ts).
     if (t.key === "kind") {
-      if (!kindWords(x.row.kind).split(" ").some((h) => h.startsWith(t.value))) return false;
+      if (!kindMatches(x.row.kind, t.value)) return false;
     } else if (t.key === "id") {
-      if (!x.row.id.toLowerCase().startsWith(t.value.toLowerCase())) return false;
+      if (!x.row.id.toLowerCase().includes(t.value.toLowerCase())) return false;
     } else {
       const vals = x.f[t.key] ?? [];
       if (!vals.some((v) => normText(v).includes(t.value) || normText(labelOf(t.key, v)).includes(t.value))) return false;
@@ -102,17 +110,20 @@ export function matches(x: FixtureRecord, p: ParsedSearch): boolean {
   return true;
 }
 
-export function fixtureQuery(q: LibraryQuery): Result<LibraryPage> {
-  const limit = Math.floor(q.limit);
-  const offset = Math.max(0, Math.floor(q.offset ?? 0));
-  if (!(limit >= 0 && limit <= LIBRARY_PAGE_MAX)) return err("invalid", `limit is 0..${LIBRARY_PAGE_MAX}`);
+export function fixtureQuery(input: LibraryQuery): Result<LibraryPage> {
+  // Through the index's own door, so the fixture refuses what the kernel refuses, in its words.
+  const door = parseAt("library query", querySchema, input);
+  if (!door.ok) return door;
+  const q = door.value;
+  const limit = q.limit;
+  const offset = q.offset ?? 0;
   const u = universe();
   const kind = q.kind;
   const parsed = parseSearch(q.q ?? "");
   const active = Object.entries(q.facets ?? {}).flatMap(([g, vs]) => (vs !== undefined && vs.length > 0 ? [[g, new Set(vs)] as const] : []));
   const rail = railGroups(kind ?? "all");
   const counts = new Map<string, Map<string, number>>(rail.map((g) => [g.key, new Map()]));
-  const kindCounts: Record<LibraryKindName | "all", number> = { all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0, model: 0 };
+  const kindCounts: Record<LibraryKindName | "all", number> = { all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0, model: 0, character: 0 };
   const list: FixtureRecord[] = [];
   for (const x of ordered(u, q.sort ?? "newest")) {
     if (!matches(x, parsed)) continue;
@@ -140,7 +151,6 @@ export function fixtureQuery(q: LibraryQuery): Result<LibraryPage> {
       for (const v of x.f[g.key] ?? []) m.set(v, (m.get(v) ?? 0) + 1);
     }
   }
-  if (kind !== undefined) kindCounts[kind] = list.length;
   let truncated = false;
   const groups: LibraryGroup[] = [];
   for (const g of rail) {
@@ -162,21 +172,25 @@ export function fixtureQuery(q: LibraryQuery): Result<LibraryPage> {
 /** Everything the universe holds, before any query. */
 export const fixtureEverything = (): number => universe().items.length;
 
-/** The vocabulary lines a detail lists: the kind's groups, then its collections (library.js `body`). */
-const DETAIL_SHARED = ["project", "run", "hunt"];
+/** An id the index does not hold, in the kernel's words (kernel library/detail.ts, write.ts). */
+const gone = (id: string): Result<never> => err("not-found", `library: no item ${id}`);
+
+/** Groups the index keeps as columns of the item: a detail lists none of them (kernel library/detail.ts). */
+const COLUMNS: ReadonlySet<string> = new Set<string>(COLUMN_GROUPS);
 
 export function fixtureDetail(id: string): Result<LibraryItemDetail> {
   const x = universe().byId.get(id);
-  if (x === undefined) return err("not-found", `no library item ${id}`);
+  if (x === undefined) return gone(id);
   const item = parseAt(`fixture library item ${id}`, libraryItemSchema, x.raw);
   if (!item.ok) return item;
-  const keys = [...railGroups(x.row.kind).filter((g) => g.section === "vocabulary").map((g) => g.key), ...DETAIL_SHARED];
-  const vocabulary = keys.flatMap((key) => {
-    const vs = x.f[key] ?? [];
-    return vs.length === 0 ? [] : [{ key, label: groupLabel(key), values: vs.map((value) => ({ value, label: labelOf(key, value) })) }];
-  });
-  const pinned = (x.f["pin"] ?? []).length > 0;
-  return ok({ item: item.value, row: x.row, vocabulary, lineage: x.lineage, extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", "use-in-project", ...(x.row.kind === "model" ? (["export"] as const) : [])] });
+  // The index's vocabularyOf: every facet group the item holds, in rail order (the rest after, by
+  // name), each group's values in value order.
+  const order = railGroups(x.row.kind).map((g) => g.key);
+  const rank = (key: string): number => (order.includes(key) ? order.indexOf(key) : 1e3);
+  const keys = Object.keys(x.f).filter((key) => !COLUMNS.has(key) && (x.f[key] ?? []).length > 0).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  const vocabulary = keys.map((key) => ({ key, label: groupLabel(key), values: [...(x.f[key] ?? [])].sort().map((value) => ({ value, label: labelOf(key, value) })) }));
+  const pinned = (x.f["pin"] ?? []).includes(DEFAULT_PIN);
+  return ok({ item: item.value, row: x.row, vocabulary, lineage: resolveLineage(item.value, (other) => universe().byId.get(other)?.raw.title), extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", "use-in-project", ...(x.row.kind === "model" ? (["export"] as const) : [])] });
 }
 
 /** Presentation extras the index does not carry on a row (a take's peaks, a face's palette, a player's address). */
@@ -192,17 +206,19 @@ export const fixtureProjects = (): readonly { readonly value: string; readonly l
 export function fixtureAct(id: string, act: LibraryAct, now: () => string): Result<{ readonly said: string }> {
   const u = universe();
   const x = u.byId.get(id);
-  if (x === undefined) return err("not-found", `no library item ${id}`);
+  if (x === undefined) return gone(id);
+  // A pin is a mark per collection, the default one what the detail's Pin presses (kernel write.ts).
   const pins = x.f["pin"] ?? [];
+  const into = act.act === "pin" || act.act === "unpin" ? (act.collection ?? DEFAULT_PIN) : DEFAULT_PIN;
   if (act.act === "pin") {
-    if (pins.length > 0) return err("conflict", `${x.row.title} is already pinned`);
-    x.f["pin"] = [act.collection ?? DEFAULT_PIN];
+    if (pins.includes(into)) return err("conflict", `${x.row.title} is already pinned`);
+    x.f["pin"] = [...pins, into];
     u.acts.push({ at: now(), type: "library.pinned", id });
     return ok({ said: `Pinned · ${x.row.title}` });
   }
   if (act.act === "unpin") {
-    if (pins.length === 0) return err("conflict", `${x.row.title} is not pinned`);
-    x.f["pin"] = [];
+    if (!pins.includes(into)) return err("conflict", `${x.row.title} is not pinned`);
+    x.f["pin"] = pins.filter((c) => c !== into);
     u.acts.push({ at: now(), type: "library.unpinned", id });
     return ok({ said: `Unpinned · ${x.row.title}` });
   }
@@ -214,7 +230,10 @@ export function fixtureAct(id: string, act: LibraryAct, now: () => string): Resu
   const p = PROJECTS.find((pr) => pr.id === act.projectId);
   if (p === undefined) return err("not-found", `no project ${act.projectId}`);
   const used = x.f["project"] ?? [];
-  if (!used.includes(p.id)) x.f["project"] = [...used, p.id];
-  u.acts.push({ at: now(), type: "library.used", id, projectId: p.id });
+  // Using it again is the same answer and no second event: the kernel writes a mark once (kernel write.ts).
+  if (!used.includes(p.id)) {
+    x.f["project"] = [...used, p.id];
+    u.acts.push({ at: now(), type: "library.used", id, projectId: p.id });
+  }
   return ok({ said: `${x.row.title} → ${p.title}` });
 }

@@ -1,8 +1,8 @@
 import "server-only";
 
 // THE FIXTURE LIBRARY'S VOCABULARY - the tables the generated corpus (./fixtureCorpus.ts) draws
-// from, over media this repo ships in public/ (the six preset plates, the 25 trial plates, the
-// deck art, the preset clips and their posters), so the Library is built, driven and photographed
+// from, over media this repo tracks in public/ (the six preset plates, the deck art, the preset
+// clips and their posters), so the Library is built, driven and photographed
 // against real pixels without a store (the Board fixture's rule, board/_port/fixtureData.ts).
 //
 // The words are the studio's: the style observables are the vocab's `style_source` fields
@@ -52,7 +52,7 @@ export const PALETTES: Readonly<Record<string, readonly [string, string]>> = {
   "complementary-split": ["#6a2d1f", "#1f5a43"],
 };
 
-/** The trial plates in public/trials/google: five styles over five scenes. */
+/** The styles a generated plate or still is drawn in: five of the presets, each plate its preset's picture. */
 export const TRIAL_STYLES = ["blueprint", "chalk-argument", "data-neon", "newsprint-cutout", "paper-relief"] as const;
 export const SCENES = ["the-exit", "flywheel", "peak-and-fall", "booking-not-meal", "wish-list"] as const;
 export const DECK = [
@@ -101,11 +101,8 @@ export const PROJECTS: readonly { readonly id: string; readonly title: string; r
   { id: "prj-signal-room", title: "Signal Room · ad", style: "blueprint" },
 ];
 export const RUNS = { forge: ["2026-08-26-sweep-01", "2026-09-14-sweep-02", "2026-10-02-sweep-03"], extract: ["2026-09-03-extract-arcane", "2026-10-09-extract-harbor"], dojo: ["2026-09-01-dojo-cycle-7", "2026-09-05-dojo-cycle-9"], strips: ["2026-10-13-strips-edu"], articles: ["art-2026-10-11-search", "art-2026-10-14-faceting"] } as const;
-export const HUNTS: readonly { readonly id: string; readonly label: string }[] = [
-  { id: "hunt-rain-city", label: "Rain city at 3 am" },
-  { id: "hunt-glass-pulse", label: "Glass pulse under the harbor" },
-  { id: "hunt-chalk-march", label: "Chalk march for the explainer" },
-];
+/** Hunts by id alone: the index labels a hunt collection by its id (kernel library/core.ts facetsOf). */
+export const HUNTS = ["hunt-rain-city", "hunt-glass-pulse", "hunt-chalk-march"] as const;
 
 /** A seeded generator (library-data.js `rnd`, seed 0x5eed2026): the same corpus on every boot. */
 export function rng(seed = 0x5eed2026): () => number {

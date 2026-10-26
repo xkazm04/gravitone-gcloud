@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { checkEditPlan, EDIT_DIRECTIVES, pickVerdicts, PICK_OUTCOMES, type EditPlan } from "../src/board.ts";
 import { editPlanSchema } from "../src/decision.ts";
-import { checkVerdict, PACKET_SOURCES, reasonForKey, REASON_KEYS, SOURCES, type PacketSource } from "../src/source.ts";
+import { checkVerdict, keyedReason, PACKET_SOURCES, REASON_MEANING, REJECT_KEYS, reasonsOf, reasonVocabulary, SOURCES, type PacketSource, type SourceSpec } from "../src/source.ts";
 
 // Reasons belong to the source (Phase 3 decision 4). These pin each list to the
 // v1 vocabulary it was taken from, the key binding, and the verdict door.
@@ -22,17 +22,81 @@ describe("packet sources", () => {
     expect(SOURCES.forge.reasons).toEqual(["style", "subject", "text", "craft"]);
   });
 
-  it("binds keys 1-9, 0, -, Q W E R to a source's list in order; fifteen audio defects use all fifteen keys", () => {
-    expect(REASON_KEYS).toHaveLength(15);
-    expect(reasonForKey("audio", "1")).toBe("smeared-transients");
-    expect(reasonForKey("audio", "0")).toBe("off-brief");
-    expect(reasonForKey("audio", "-")).toBe("wrong-event");
-    expect(reasonForKey("audio", "Q")).toBe("clipping");
-    expect(reasonForKey("audio", "R")).toBe("wrong-length");
-    expect(reasonForKey("forge", "4")).toBe("craft");
-    expect(reasonForKey("forge", "5")).toBeUndefined();
-    expect(reasonForKey("suno", "1")).toBeUndefined();
-    for (const s of PACKET_SOURCES) expect(SOURCES[s].reasons.length, s).toBeLessThanOrEqual(REASON_KEYS.length);
+  it("binds keys 2-4 to the first three of a row's order; past the list, or on another key, nothing", () => {
+    expect(REJECT_KEYS).toEqual(["2", "3", "4"]);
+    const audio = reasonVocabulary("audio");
+    expect(keyedReason(audio, undefined, "2")).toBe("smeared-transients");
+    expect(keyedReason(audio, undefined, "4")).toBe("section-bleed");
+    // The rest of a long list is the chips', never a key's.
+    for (const k of ["1", "5", "0", "-"]) expect(keyedReason(audio, undefined, k), k).toBeUndefined();
+    expect(keyedReason(reasonVocabulary("forge"), undefined, "4")).toBe("text");
+    expect(keyedReason(reasonVocabulary("suno"), undefined, "2")).toBeUndefined();
+    const scout = reasonVocabulary("scout");
+    expect(REJECT_KEYS.map((k) => keyedReason(scout, "3d", k))).toEqual(["topology", "texture", "rig"]);
+    expect(REJECT_KEYS.map((k) => keyedReason(scout, "ideas", k))).toEqual(["generic", "use case", "subject"]);
+    expect(REJECT_KEYS.map((k) => keyedReason(scout, "storyboards", k))).toEqual(["story", "generic", "use case"]);
+    // A group the source names no order for keys off its own list.
+    expect(REJECT_KEYS.map((k) => keyedReason(scout, "nobody", k))).toEqual(["style", "subject", "craft"]);
+    // Every cull source with reasons fills the three keys, so 2-4 never fall back to a bare reject where a reason exists.
+    for (const s of PACKET_SOURCES) {
+      const spec: SourceSpec = SOURCES[s];
+      if (spec.modes.includes("matrix-cull") && spec.reasons.length > 0) expect(spec.reasons.length, s).toBeGreaterThanOrEqual(REJECT_KEYS.length);
+    }
+  });
+
+  it("orders a row group's reasons from the source's own list, three at least, no repeats", () => {
+    for (const s of PACKET_SOURCES) {
+      const spec: SourceSpec = SOURCES[s];
+      for (const [group, order] of Object.entries(spec.reasonsBy ?? {})) {
+        expect(order.length, `${s}/${group}`).toBeGreaterThanOrEqual(3);
+        expect(new Set(order).size, `${s}/${group}`).toBe(order.length);
+        for (const r of order) expect(spec.reasons, `${s}/${group}`).toContain(r);
+      }
+    }
+    const v = reasonVocabulary("scout");
+    expect(reasonsOf(v, "3d").slice(0, 3)).toEqual(["topology", "texture", "rig"]);
+    expect(reasonsOf(v, "storyboards").slice(0, 3)).toEqual(["story", "generic", "use case"]);
+    expect(reasonsOf(v, "ideas")).toHaveLength(v.list.length);
+    expect(reasonsOf(v, "no such group")).toEqual(v.list);
+    expect(reasonsOf(reasonVocabulary("audio"), "music")).toEqual(SOURCES.audio.reasons);
+  });
+});
+
+// A reason's meaning is the Board's tip on that reason (operator, 2026-10-23). The bound is the
+// Hint's (packages/ui/src/components/hint/words.ts HINT_WORDS = 12), restated: @gt/domain sits below @gt/ui.
+const MEANING_WORDS = 12;
+const words = (s: string) => s.split(/\s+/).filter((w) => w.length > 0).length;
+
+describe("what each reason means", () => {
+  it("every source's every reason has one sentence of at most twelve words, and no word the list lacks", () => {
+    for (const s of PACKET_SOURCES) {
+      const meaning: Readonly<Record<string, string>> = REASON_MEANING[s];
+      expect(Object.keys(meaning).sort(), s).toEqual([...SOURCES[s].reasons].sort());
+      for (const r of SOURCES[s].reasons) {
+        const m = meaning[r] ?? "";
+        expect(words(m), `${s} · ${r}: ${m}`).toBeGreaterThan(0);
+        expect(words(m), `${s} · ${r}: ${m}`).toBeLessThanOrEqual(MEANING_WORDS);
+        expect(m, `${s} · ${r}: one sentence`).toMatch(/^[A-Z][^.!?]*[.]$/);
+      }
+    }
+  });
+
+  it("the view's vocabulary carries the meanings with the list they define", () => {
+    const v = reasonVocabulary("scout");
+    expect(v.list).toBe(SOURCES.scout.reasons);
+    expect([v.max, v.noteMax]).toEqual([SOURCES.scout.maxReasons, SOURCES.scout.noteMax]);
+    expect(v.meaning["style"]).toBe("The look is wrong for the video we are making.");
+    expect(v.meaning["use case"]).toBe("Serves no video worth making; later nights steer away.");
+    expect(reasonVocabulary("suno").meaning).toEqual({});
+  });
+
+  it("the table's type holds a source to a meaning for each of its reasons, and only those", () => {
+    type Forge = (typeof REASON_MEANING)["forge"];
+    // @ts-expect-error - a forge reason with no meaning
+    const missing: Forge = { style: "a", subject: "b", text: "c" };
+    // @ts-expect-error - a word the forge's list does not have
+    const extra: Forge = { style: "a", subject: "b", text: "c", craft: "d", motion: "e" };
+    expect([missing, extra]).toHaveLength(2);
   });
 });
 

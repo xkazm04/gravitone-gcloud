@@ -31,7 +31,7 @@ export function ResourceSummary({ lines, label }: { readonly lines: readonly Res
               <LaneChip lane={l.lane} />
               <span className={s.n}>{resourceWords(l)}</span>
             </span>
-            <span className={s.bar} role="meter" aria-valuemin={0} aria-valuemax={l.cap} aria-valuenow={l.running} aria-label={`${l.running} of ${l.cap} held`}>
+            <span className={s.bar} role="meter" aria-valuemin={0} aria-valuemax={l.cap} aria-valuenow={Math.min(l.running, l.cap)} aria-label={`${l.running} of ${l.cap} held`}>
               <i style={vars({ "--share": share })} />
             </span>
           </li>

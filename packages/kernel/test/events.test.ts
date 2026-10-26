@@ -95,6 +95,21 @@ describe("events", () => {
     expect(must(verify(s))).toMatchObject({ state: "tampered", seq: 2, reason: expect.stringMatching(/^missing/) });
   });
 
+  it("a tail cut and re-written as a valid chain verifies alone, and is caught by the anchor it no longer holds", () => {
+    const s = tpl.fresh();
+    must(s.tx((t) => {
+      for (let i = 1; i <= 5; i++) append(t, ev(i));
+    }));
+    const anchor = must(chainHead(s));
+    if (anchor === null) throw new Error("expected a head");
+    must(s.tx((t) => t.exec("DROP TRIGGER events_no_delete; DELETE FROM events WHERE seq >= 3;")));
+    must(s.tx((t) => {
+      for (let i = 3; i <= 6; i++) append(t, ev(100 + i));
+    }));
+    expect(must(verify(s))).toMatchObject({ state: "intact", count: 6 });
+    expect(must(verify(s, anchor))).toEqual({ state: "tampered", seq: 5, reason: "the row at the anchor's seq is not the anchored row" });
+  });
+
   it("verify reports a row that no longer parses, rather than throwing", () => {
     const s = tpl.fresh();
     must(s.tx((t) => append(t, ev(1))));

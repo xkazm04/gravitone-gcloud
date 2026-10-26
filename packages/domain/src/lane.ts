@@ -25,7 +25,8 @@ export type MediaLane = z.output<typeof mediaLaneSchema>;
  * `seat` the operator's text CLI sessions, `cloud` a paid vendor with its own
  * quota.
  *
- * The prototype's seven (studio.js `LANES`) plus `cloud.qwen`: v1's imaging
+ * The prototype's seven (studio.js `LANES`) plus `box.blender` (headless Blender, its own row so a
+ * mesh finish never waits behind an ffmpeg render; ./lane.capacity.ts) and `cloud.qwen`: v1's imaging
  * router serves recognition from Qwen's hosted endpoint
  * (lib/imaging/providers/qwen.ts), a vendor with its own key and its own
  * rate, and folding it into `cloud.google` would put two quotas on one row.

@@ -214,6 +214,29 @@ describe("kernel/decision - commit", () => {
     expect(must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t", ...shown }))).ok).toBe(true);
   });
 
+  it("a source whose reject needs a reason refuses a reasonless one at the commit - never at the write - and a sweep", () => {
+    const S = pid("pkt:seeds:2026-10-23");
+    const sk = (c: string) => `${S}::${c}`;
+    const s = tpl.fresh();
+    must(s.tx((t) => openPacket(t, { packet: packet(S, "matrix-cull", [{ id: "sd-001" }, { id: "sd-002" }, { id: "sd-003" }, { id: "sd-004" }], "seeds") }, agent)));
+    const bare = must(s.tx((t) => patchMany(t, { ...operator, packetId: S, baseRev: 0, changes: [{ key: sk("sd-001"), verdict: "keep" }, { key: sk("sd-002"), verdict: "reject" }, { key: sk("sd-004"), verdict: "reject" }] })));
+    expect(bare.ok).toBe(true);
+    const at = () => preview(s, S);
+    const p0 = at();
+    const swept = must(s.tx((t) => commit(t, { ...operator, packetId: S, ticket: "t", ...p0, undecidedAs: "reject" })));
+    expect(!swept.ok && swept.error.message).toBe("decision: 3 rejected need a reason: sd-002, sd-003, sd-004");
+    must(s.tx((t) => patch(t, { ...operator, key: sk("sd-003"), verdict: "keep", baseRev: 1 })));
+    const p1 = at();
+    const refused = must(s.tx((t) => commit(t, { ...operator, packetId: S, ticket: "t", ...p1 })));
+    expect(!refused.ok && [refused.error.code, refused.error.message, refused.error.detail]).toEqual(["refused", "decision: 2 rejected need a reason: sd-002, sd-004", JSON.stringify(["sd-002", "sd-004"])]);
+    expect(must(s.read((x) => previewCommit(x, S))).plan.ok).toBe(false);
+    must(s.tx((t) => patchMany(t, { ...operator, packetId: S, baseRev: 2, changes: [{ key: sk("sd-002"), verdict: "reject", reasons: ["generic"] }, { key: sk("sd-004"), verdict: "reject", reasons: ["audience"], note: "this reads as adult" }] })));
+    const p2 = at();
+    expect(must(must(s.tx((t) => commit(t, { ...operator, packetId: S, ticket: "t", ...p2 })))).rejected).toEqual(["sd-002", "sd-004"]);
+    // Every other source commits a bare reject, as it always did.
+    expect(must(commitAs(decided(), "t")).rejected).toHaveLength(5);
+  });
+
   it("writes the apply outbox row in the commit's transaction", () => {
     const s = decided();
     must(commitAs(s, "t-1"));

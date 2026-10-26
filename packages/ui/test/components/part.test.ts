@@ -26,6 +26,8 @@ describe("verdicts and tabs", () => {
     expect(["empty", "working", "ready", "blocked"].map(verdictLook)).toEqual(["idle", "awaiting", "done", "failed"]);
     expect(verdictLook("done")).toBe("failed");
     expect(verdictLook("")).toBe("failed");
+    // `in` reads the prototype chain: a state spelled like an Object member is still unknown.
+    expect(Object.getOwnPropertyNames(Object.prototype).map(verdictLook).filter((l) => l !== "failed")).toEqual([]);
   });
 
   test("a tab names its state as a shape and a word: gates, the slot and editor-less parts are not editors", () => {
@@ -103,8 +105,9 @@ describe("markup", () => {
     const html = renderToStaticMarkup(h(VerdictChip, { verdict: v }));
     expect(html).toContain('data-verdict="blocked"');
     expect(html).toContain("2 gate violation(s)");
-    expect(html).toContain("+1");
-    expect(html).toContain("; 5:00 against a 2:00 clock");
+    // The rest are a Tip on the +N, so a sighted operator reads them on hover or focus too, and
+    // the tip stays mounted inside the status, so it is spoken with it.
+    expect(html).toMatch(/<span[^>]*tabindex="0"[^>]*aria-describedby="([^"]+)"[^>]*>\+1<\/span><span role="tooltip" id="\1"[^>]*>5:00 against a 2:00 clock<\/span>/);
   });
 
   test("part tabs link editors, mark the current one, and leave gates, the slot and editor-less parts unlinked", () => {
@@ -149,5 +152,14 @@ describe("markup", () => {
     expect(rows).toBeGreaterThan(0);
     expect(rows).toBeLessThan(40);
     expect(html).toContain('aria-activedescendant="rail-cards-c0"');
+  });
+
+  test("two ids that differ only in punctuation are two DOM ids, and the active one names the picked row", () => {
+    const items = [{ id: "s1:b" }, { id: "s1-b" }, { id: "s1 b" }];
+    const html = renderToStaticMarkup(h(RailList<{ id: string }>, { label: "beats", items, idOf: (x) => x.id, selected: "s1-b", onSelect: noop, row: (x) => x.id }));
+    const ids = [...html.matchAll(/ id="([^"]+)" role="option"/g)].map((m) => m[1]);
+    expect(new Set(ids).size).toBe(3);
+    const active = /aria-activedescendant="([^"]+)"/.exec(html)?.[1];
+    expect(html).toContain(`id="${active}" role="option" aria-selected="true"`);
   });
 });

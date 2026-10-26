@@ -13,7 +13,7 @@
  *
  *  `non-storage` is the sixth and it is NOT a storage failure — it is how a
  *  failure that merely arrived through this channel says so. The only producer
- *  is `reportTaskTrouble` (lib/GlobalErrorBridge's unhandled-rejection route),
+ *  is `reportTaskTrouble` (v1's retired lib/GlobalErrorBridge rejection route),
  *  and it exists because the alternative was worse: every non-storage rejection
  *  — a `void fetch(...)` that dropped, an AbortError, a TypeError thrown in
  *  fire-and-forget code — fell through `classify` into `failed` and was voiced

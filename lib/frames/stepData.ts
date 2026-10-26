@@ -1,6 +1,8 @@
-// The Frames step's persisted record. It lives beside its writer's hook
-// (app/_phases/frames/useFrames.ts re-exports it) so score and the board can
-// name it without importing app/.
+// v1's Frames record, at its v2 shape. The kernel's own record is @gt/domain's
+// FRAMES (packages/domain/src/steps/frames.ts, v3: units only, plates as blob
+// refs); this shape is what v1 stored, and what the importer's walk
+// (./picture/migrate.ts, called from lib/import/steps.ts) produces on the way
+// up to it.
 
 import type { DirectionSpend, Frame } from "./frames";
 import type { PictureUnit } from "./picture/unit";
@@ -18,9 +20,9 @@ import type { PictureUnit } from "./picture/unit";
  *  beat, a shot unit per trailer shot. `frames` is the read-only SHADOW of the
  *  beat units, rebuilt from them on every read and written beside them on every
  *  save, for the readers that have not moved to units yet (Motion, the board).
- *  Score and the Cut read units, through ./picture/read.ts. Read and written
- *  through `FRAMES_RECORD` (./records), whose migration walks a v1 record up
- *  at the read seam. */
+ *  Score and the Cut read units. In v1 it was read and written through
+ *  `FRAMES_RECORD` (retired with app/_phases); the walk from v1 is
+ *  `framesV1ToV2` (./picture/migrate.ts). */
 export interface FramesStepData {
   units: PictureUnit[];
   /** Shadow of `units`' beat units. Read it; never write it on its own. */

@@ -172,3 +172,38 @@ subject vocabulary the recipes deliberately exclude. Cosmetic, cull renames.
 **Verdict across the three runs:** extract with singletons when fidelity per source matters or grouping keeps
 failing; extract grouped when the catalogue needs recipes that generalise; either way the cull decides merges —
 run 3's clusters + run 2's rows are complementary evidence over the same gallery.
+
+## 1.2.0 - 2026-10-23 - night 2026-10-23-3
+- A source title the skill writes is read by the scene's craft-not-content check: titling two stop-motion shorts
+  "Stop-motion ... film" made both scene recipes refuse themselves for naming "stop-motion" (c-52, c-53). Keep the
+  medium and the technique OUT of a source's `title` and `channel` (put them in `why`) - argues a change in
+  lib/foundry/scout/scene.ts: a craft word (stop-motion, cel, risograph) is not content and should not trip the check.
+- `ideas` / `style` / `scene` launched with `--detach` are run by the worker only: start the worker with its keys
+  (`node --env-file-if-exists=.env.local workers/runner.mts`) before the first launch, and never restart it mid-night -
+  each restart leaves jobs `interrupted` and their paid lanes held until retried and acknowledged (2026-10-23: the reels
+  and five style runs sat queued behind three lane holds for two hours).
+
+## 2026-10-24 · night 2026-10-24 (2 h round)
+
+- A worker started before a new producer landed never claims its jobs and logs nothing about it (the 10:14 worker left
+  `scout-storyboard` pending all night). After a spark adds a producer, the operator restarts the worker BETWEEN nights;
+  the night's doctor should name a queued head no binding reaches. Argues a change in lib/foundry/scout/doctor.ts.
+- `open --tracks 0` is refused ("needs a positive number") although SKILL.md says to pass it while music is paused: open
+  without the flag and launch no track. Argues a fix in pipeline/scout.mts `num()` (0 is a valid cap) or in SKILL.md.
+- Storyboards draw nothing on this box: the Flux 2 weights (flux2_dev_fp8mixed, mistral_3_small_flux2_fp8, flux2-vae) are
+  not under ComfyUI's models; the doctor's `flux weights` note says so. Send no storyboard brief until the operator has
+  put them there - a failed board can be redone, but it fills the packet with a loss.
+
+## 2026-10-25 · night 2026-10-24-2 (storyboards + clips)
+
+- The doctor's Leonardo line reads the WEB pool; Flare spends the API pool (`/me` apiSubscriptionTokens), which was 0 until
+  2026-11-19 - every scene, style and concept failed "Insufficient tokens" with 9530 "credits" shown. Argues a change in
+  lib/foundry/scout/doctor.ts (read apiSubscriptionTokens + apiPaidTokens). While it is empty, .env.local carries
+  SCOUT_REPLICA_GENERATOR=comfy-flux2 and replicas draw on local Flux.
+- A scene's first steps run on cloud.leonardo even with a local clip, so the worker claims them at once: a scene launched
+  while the WORKER lacks an env switch runs with the worker's engines, not the shell's. Set the switch for the worker.
+- A job cancelled in the kernel leaves its scout candidate `pending` (and a clip scene keeps holding a clip slot): there
+  is no settle path. Argues one in lib/producers/scoutScene.ts (ended on cancel) or in acts.ts.
+- With Flux (~53 GB) and LTX loaded, the commit charge sits above the admission mark (95 GB of 112) and the worker holds
+  every gpu.local job, while physical RAM is ~50%. One night should not mix many storyboards and clips; run boards, unload,
+  then clips. Argues a look at packages/kernel admission (commit vs resident) - not a cap change.

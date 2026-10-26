@@ -3,8 +3,8 @@
 //
 // WHY THIS FILE EXISTS AND WHAT IT IS NOT A SECOND COPY OF.
 //
-// `pipeline/NOTEBOOK-SCHEMA.md` is the contract, `app/_phases/_shared/notebook/
-// types.ts` is its TypeScript restatement, and `pipeline/check-notebook.mts` is
+// `pipeline/NOTEBOOK-SCHEMA.md` is the contract, `lib/notebook/types.ts` is its
+// TypeScript restatement, and `pipeline/check-notebook.mts` is
 // the terminal gate over the shipped FIXTURE. None of the three can be pointed
 // at a notebook that arrives over the wire at 3am from a model:
 //
@@ -52,7 +52,9 @@
 // the document says they should.
 //
 // SERVER-ONLY BY LOCATION, not by secret: it reads no environment and holds no
-// key. It lives under lib/ because the route is the only caller and the fixture
+// key. It lives under lib/ because its callers are server-side (the research turn,
+// lib/turns/kinds/research.ts; the repair loop, lib/text/repair.ts; the corpus
+// lane, ./corpus.ts) and the fixture
 // import it pulls in (`cards.ts` → `conclusions.ts`) is ~45KB that no client
 // surface should pay for twice.
 

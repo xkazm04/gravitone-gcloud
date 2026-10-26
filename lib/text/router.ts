@@ -65,6 +65,7 @@ import { claudeCliRetrieveProvider } from "./providers/claudeCliRetrieve";
 import { googleProvider } from "./providers/google";
 import type {
   LadderRung,
+  ProbeResult,
   RerouteStep,
   TextProvider,
   TextProviderId,
@@ -347,6 +348,10 @@ export async function reason(req: TextRequest): Promise<TextResult> {
     /** The first thing that went wrong. It describes the engine we MEANT to
      *  use, which is the honest headline when the whole chain comes up empty. */
     let first: TextError | null = null;
+    /** Did any candidate the walk descended past actually reach its engine (a
+     *  429, a safety refusal)? The refusal at the bottom carries it, so a spend
+     *  meter counts the call (spend.ts::bookFailedTurn). */
+    let reached = false;
 
     for (let i = 0; i < chain.length; i++) {
       const id = chain[i];
@@ -417,7 +422,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
         // schema the VENDOR was given, which for Gemini is a translated subset,
         // so a `required` this app depends on can be dropped in translation and
         // enforced away. Re-checking costs microseconds and closes that gap.
-        const json = req.schema ? parseAgainstSchema(id, served.text, req.schema) : undefined;
+        const json = req.schema ? checkServed(id, served, req.schema) : undefined;
 
         return {
           ...served,
@@ -438,6 +443,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
       } catch (e) {
         const err = e instanceof TextError ? e : new TextError(String(e), "failed", id);
         first ??= err;
+        reached ||= err.dispatched;
         trail.push({ provider: id, why: trailReason(err) });
         // Only a reroutable failure walks. Everything else stops here: a
         // minutes-long metered turn is not something to repeat on a hunch, and
@@ -453,7 +459,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
     // because "the model could not be reached" is precisely the sentence that
     // sends an operator to look in the one place the fault is not.
     const why = trail.map((t) => `${t.provider} (${t.why})`).join(", ") || "no candidates were planned";
-    throw noEngine(
+    const refusal = noEngine(
       `No reasoning engine could serve this ${req.turn} turn. Tried: ${why}. ` +
         // `first` describes the engine we MEANT to use, and its message already
         // names that engine's remedy. Appending describePosture() as well
@@ -466,6 +472,8 @@ export async function reason(req: TextRequest): Promise<TextResult> {
       // See errors.ts::noEngine for the measured defect this replaces.
       first?.kind,
     );
+    refusal.dispatched = reached;
+    throw refusal;
   }
 }
 
@@ -533,6 +541,7 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
   async function walk(): Promise<TextResult> {
     const chain = retrievePlanFor(req.turn, env).filter((id) => id !== req.avoid);
     let first: TextError | null = null;
+    let reached = false; // as in reason()
 
     for (let i = 0; i < chain.length; i++) {
       const id = chain[i];
@@ -571,7 +580,7 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
         req.schema && !provider.enforcesSchema ? `${req.prompt}\n${schemaInstruction(req.schema)}` : req.prompt;
       try {
         const served = await provider.retrieve({ ...req, prompt }, timeoutMs);
-        const json = req.schema ? parseAgainstSchema(id, served.text, req.schema) : undefined;
+        const json = req.schema ? checkServed(id, served, req.schema) : undefined;
         return {
           ...served,
           json,
@@ -589,21 +598,56 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
       } catch (e) {
         const err = e instanceof TextError ? e : new TextError(String(e), "failed", id);
         first ??= err;
+        reached ||= err.dispatched;
         trail.push({ provider: id, why: trailReason(err) });
         if (!err.reroutable) throw err;
       }
     }
 
-    const why = trail.map((t) => `${t.provider} (${t.why})`).join(", ") || "no candidates were planned";
-    throw new TextError(
+    // A plan the caller's `avoid` emptied is not an empty plan: name the
+    // candidate it ruled out (reason()'s no-alternative says the same).
+    const avoided = req.avoid !== undefined && retrievePlanFor(req.turn, env).includes(req.avoid) ? req.avoid : undefined;
+    const why =
+      trail.map((t) => `${t.provider} (${t.why})`).join(", ") ||
+      (avoided ? `none (${avoided} was ruled out by the caller)` : "no candidates were planned");
+    const refusal = new TextError(
       `No retrieval engine could serve this ${req.turn} turn. Tried: ${why}. ` +
-        (first ? first.message : `Nothing may retrieve for a ${req.turn} turn in ${env} posture.`),
+        (first
+          ? first.message
+          : avoided
+            ? `${avoided} is the only engine planned to retrieve a ${req.turn} turn in ${env} posture, and the caller ruled it out.`
+            : `Nothing may retrieve for a ${req.turn} turn in ${env} posture.`),
       // The engine we meant to use, as in reason(); `unsupported` when the
       // plan named nobody, which is the cloud posture today.
       first?.kind ?? "unsupported",
       first?.provider,
       { trail: [...trail] },
     );
+    refusal.dispatched = reached;
+    throw refusal;
+  }
+}
+
+/** The schema check on an answer an engine has already SERVED. A refusal here
+ *  comes after the turn ran and billed, so the `bad-response` it throws carries
+ *  the served receipt's cost (`detail.costUsd`/`costBasis`/`model`): spend.ts
+ *  books a vendor-reported one as a failed turn, and a caller summing attempts
+ *  (repair.ts) can see the attempt was paid for. The parse door's own excerpt
+ *  rides along as `detail.excerpt`. */
+function checkServed(id: TextProviderId, served: TextResult, schema: Record<string, unknown>): unknown {
+  try {
+    return parseAgainstSchema(id, served.text, schema);
+  } catch (e) {
+    if (!(e instanceof TextError)) throw e;
+    const p = served.provenance;
+    const err = new TextError(e.message, e.kind, e.provider, {
+      excerpt: e.detail,
+      costUsd: p.costUsd,
+      costBasis: p.costBasis,
+      model: p.model,
+    });
+    err.dispatched = true;
+    throw err;
   }
 }
 
@@ -648,6 +692,8 @@ function trailReason(e: TextError): RerouteStep["why"] {
     case "rate-limited":
     case "timeout":
     case "bad-response":
+    case "invalid-request":
+    case "unsupported":
     case "cancelled":
       return e.kind;
     default:
@@ -677,6 +723,7 @@ export async function engineStatus(turn: TurnClass = "edit-plan"): Promise<{
   const env = currentTextEnv();
   const candidates: { provider: TextProviderId; ok: boolean; detail: string }[] = [];
   let serving: TextProviderId | null = null;
+  const probed = new Map<TextProviderId, Promise<ProbeResult>>();
 
   // The retrieval candidates first, because when one is open it is what a run
   // of this turn would use (/api/research tries it before reasoning). Off, it is
@@ -693,7 +740,11 @@ export async function engineStatus(turn: TurnClass = "edit-plan"): Promise<{
       candidates.push({ provider: id, ok: false, detail: blockError(id, blocked).message });
       continue;
     }
-    const p = await PROVIDERS[id]().probe();
+    // One probe per BINARY: the retrieval rung's probe IS the reasoning
+    // adapter's (claudeCliRetrieve.ts), so two candidates would spawn
+    // `claude --version` twice for one answer.
+    const key = id === "claude-cli-retrieve" ? "claude-cli" : id;
+    const p = await (probed.get(key) ?? probed.set(key, PROVIDERS[id]().probe()).get(key)!);
     candidates.push({ provider: id, ok: p.ok, detail: p.detail });
     if (p.ok && !serving) serving = id;
   }

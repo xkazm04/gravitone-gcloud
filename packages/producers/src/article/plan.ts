@@ -36,7 +36,8 @@ export function articleJobId(runId: string, act: ArticleAct): string {
   if (!RUN_ID_RE.test(runId)) throw new AppError("invalid", `not an article run id: ${JSON.stringify(runId)}`);
   if (act.kind === "gate") return `${PREFIX}${runId}`;
   if (act.kind === "landing") return `${PREFIX}${runId}:landing`;
-  if (!Number.isInteger(act.n) || act.n < 1) throw new AppError("invalid", `a rework is numbered from 1; got ${act.n}`);
+  // The same bound parseArticleJob reads (`rework-[1-9][0-9]{0,3}`): an id minted past it is one no plan can read.
+  if (!Number.isInteger(act.n) || act.n < 1 || act.n > 9999) throw new AppError("invalid", `a rework is numbered from 1 to 9999; got ${act.n}`);
   return `${PREFIX}${runId}:rework-${act.n}`;
 }
 

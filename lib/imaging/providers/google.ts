@@ -314,21 +314,43 @@ async function runImage(
     }),
   );
 
-  const results = await Promise.all(calls);
+  // Every call was billable the moment it left, so one call's refusal or
+  // transport failure must not discard the images the others already returned:
+  // settle them all, keep what arrived, and say how many were lost. The router
+  // would otherwise book a failed row and pay a second vendor for N more images.
+  const settled = await Promise.allSettled(calls);
   const images: ImageRef[] = [];
-  for (const res of results) {
-    assertUsable(res, what);
-    for (const img of imagesFrom(res))
-      images.push({ base64: img.data, mime: (img.mime as ImageRef["mime"]) ?? "image/png" });
+  let refused = 0;
+  let failed = 0;
+  let firstError: unknown;
+  for (const r of settled) {
+    try {
+      if (r.status === "rejected") throw r.reason;
+      assertUsable(r.value, what);
+      const got = imagesFrom(r.value);
+      for (const img of got)
+        images.push({ base64: img.data, mime: (img.mime as ImageRef["mime"]) ?? "image/png" });
+      // A completed call with no image is how a safety block usually presents.
+      if (!got.length) refused++;
+    } catch (e) {
+      firstError ??= e;
+      if (e instanceof ImagingError && e.kind === "refused") refused++;
+      else failed++;
+    }
   }
 
-  if (!images.length)
+  // Nothing arrived: the first failure is the cause, as it was when Promise.all
+  // threw it. An empty success (no failure, no image) reads as a safety block.
+  if (!images.length) {
+    if (firstError) throw firstError;
     throw new ImagingError(
       `Google returned no image for this ${what}. This is how a safety block usually presents.`,
       "refused",
       "google",
-      results[0]?.status,
+      (settled[0] as PromiseFulfilledResult<Interaction> | undefined)?.value?.status,
     );
+  }
+  const shortBatch = refused + failed > 0 ? { asked: n, returned: images.length, refused, failed } : undefined;
 
   // Google's Interactions response carries no money field, so the cost comes
   // from the declared table instead of being left undefined. It is an ESTIMATE
@@ -347,6 +369,7 @@ async function runImage(
       costBasis: price.basis,
       durationMs: Date.now() - started,
       cleanup: "not-applicable", // nothing is stored server-side to clean up
+      ...(shortBatch ? { shortBatch } : {}),
     },
   };
 }

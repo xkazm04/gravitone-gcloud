@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
@@ -8,7 +8,7 @@ import { blobStore } from "../src/blob.ts";
 import { liveEffects } from "../src/effects.ts";
 import { migrate } from "../src/migrate.ts";
 import { openStore } from "../src/store.ts";
-import { must, scratch } from "./helpers.ts";
+import { findPython, must, scratch } from "./helpers.ts";
 
 // Node and Python processes contend for ONE lease on ONE store file (v1's
 // pipeline/gpu/selftest.py case 4, upgraded from "one try each" to sustained
@@ -23,13 +23,6 @@ const pyChild = path.join(here, "..", "py", "lease_contend.py");
 const tmp = scratch("lease-mixed");
 afterAll(() => tmp.dispose());
 
-function findPython(): string | undefined {
-  for (const bin of ["python", "python3", "py"]) {
-    const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
-    if (r.status === 0 && r.stdout.trim() === "3") return bin;
-  }
-  return undefined;
-}
 const python = findPython();
 if (python === undefined) console.warn("[lease.mixed] SKIPPED: no Python 3 on PATH; Node/Python contention did not run");
 
@@ -117,5 +110,49 @@ describe.skipIf(python === undefined)("a Python waiter while Node holds", () => 
       s.close();
     }
   });
+
+  // src/lease.ts `acquire` leaves the queue on this path too (98d4de7f): a ticket left behind is
+  // a live waiter (the pid is alive) ahead of every newcomer, so each Node drive's slot claim
+  // reads busy until the waiter's TTL drops it.
+  it("gives up its place in the queue when the store refuses a poll past the deadline", async () => {
+    const db = path.join(tmp.dir, "held-busy.sqlite");
+    const s = must(openStore(db));
+    must(migrate(s, [eventsMigrations, leaseMigrations], { snapshotDir: tmp.dir }));
+    const fx = liveEffects(s, blobStore(`${db}.blobs`));
+    const held = must(await acquire(fx, "gpu.local", { waitMs: 1_000, ttlS: 30 }));
+    try {
+      const code = [
+        "import sqlite3, sys, time, types",
+        `sys.path.insert(0, ${JSON.stringify(path.join(here, "..", "py"))})`,
+        "import lease",
+        // The first poll is real and queues; the second finds the store busy with the deadline
+        // passed (the module's clock is moved, not the machine's, so load cannot reorder the two).
+        "real, polls, late = lease.claim_in, [], [0.0]",
+        "lease.time = types.SimpleNamespace(monotonic=lambda: time.monotonic() + late[0], sleep=time.sleep)",
+        "def busy_after_first(*a):",
+        "    polls.append(1)",
+        "    if len(polls) == 1:",
+        "        return real(*a)",
+        "    late[0] = 3600.0",
+        "    raise sqlite3.OperationalError('database is locked')",
+        "lease.claim_in = busy_after_first",
+        `l = lease.Leases(${JSON.stringify(db)})`,
+        "try:",
+        "    l.acquire('gpu.local', wait_s=60, ttl_s=30, poll_s=0.02)",
+        "    print('GRANTED')",
+        "except sqlite3.OperationalError as e:",
+        "    print('RAISED %s after %d polls' % (e, len(polls)))",
+        "finally:",
+        "    l.close()",
+      ].join("\n");
+      const r = await run(python ?? "python", ["-I", "-c", code]);
+      expect({ out: r.out.trim(), stderr: r.errText }).toEqual({ out: "RAISED database is locked after 2 polls", stderr: "" });
+      const left = must(s.read((q) => q.get("SELECT count(*) AS n FROM lease_waiters WHERE resource = 'gpu.local'")?.["n"]));
+      expect(left, "the Python ticket is still queued").toBe(0);
+    } finally {
+      must(s.tx((t) => releaseIn(t, "gpu.local", held.fence)));
+      s.close();
+    }
+  }, 30_000);
 });
 

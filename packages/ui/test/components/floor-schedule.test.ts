@@ -86,6 +86,17 @@ describe("what the engine or the tick will decide", () => {
     expect(scheduleWarnings(form(), [slot("d", "2026-10-14T10:00:00.000Z", "published", { item: "video:export:a", dry: true })], NOW)).toEqual([]);
   });
 
+  test("a busy sheet's fields stay focusable: read-only and aria-disabled, with the title and description bounded", () => {
+    const html = renderToStaticMarkup(h(ScheduleForm, { items: { kind: "read", items: [{ id: "video:export:a", title: "A cut" }] }, channels: CHANNELS, slots: [], nowMs: NOW, day: null, item: null, lastChannel: "youtube", busy: true, onSchedule: () => undefined }));
+    for (const name of ["publish at, UTC", "title", "description", "tags, comma separated"]) {
+      const tag = html.match(new RegExp(`<(?:input|textarea)[^>]*aria-label="${name}"[^>]*>`))?.[0] ?? "";
+      expect(tag, name).toContain('aria-disabled="true"');
+      expect(tag, name).toContain('readOnly=""');
+    }
+    expect(html).toMatch(/<input[^>]*type="datetime-local"[^>]*aria-label="publish at, UTC"|<input[^>]*aria-label="publish at, UTC"[^>]*type="datetime-local"/);
+    expect(html).toMatch(/<input[^>]*aria-label="title"[^>]*maxLength="\d+"|<input[^>]*maxLength="\d+"[^>]*aria-label="title"/);
+  });
+
   test("the sheet's item list marks a live-published item as on the channel, and a dry-published one not", () => {
     const items = [{ id: "video:export:a", title: "Rehearsed", meta: "m-a" }, { id: "video:export:b", title: "Went out", meta: "m-b" }];
     const slots = [slot("d", "2026-10-14T10:00:00.000Z", "published", { item: "video:export:a", dry: true }), slot("l", "2026-10-14T11:00:00.000Z", "published", { item: "video:export:b" })];
@@ -128,6 +139,10 @@ describe("what is drawn", () => {
     expect(html).toContain("YT_TOKEN · unset");
     expect(html).toContain("auth: invalid_grant");
     expect(html).toContain("npx tsx pipeline/publish.mts channels --json");
+    // Every calendar instant names its zone (calendar.ts whenUtc), the readiness hours too.
+    expect(html).toContain("failed · Wed 14 Oct · 09:00 UTC");
+    const out = renderToStaticMarkup(h(ChannelReadiness, { channels: [ch("youtube", "live", { lastOut: "2026-10-13T18:30:00.000Z" })] }));
+    expect(out).toContain("out · Tue 13 Oct · 18:30 UTC");
   });
 
   test("the month: a toggle on an unwired channel says so; the agenda carries the readiness; Schedule is offered", () => {

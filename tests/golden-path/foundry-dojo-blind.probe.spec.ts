@@ -20,10 +20,10 @@ import { BLIND_FLOOR, armInSlotA, blindPairView, buildBlindMap, measureBlind, pi
 import { commitCycle, getCycle, patchBlind, patchTrainingVerdicts } from "@/lib/foundry/training/store";
 import type { CycleManifest, PairResult } from "@/lib/foundry/training/types";
 
-import { probeFoundryDir } from "./_helpers";
+import { probeFoundryDir, probeTrainingDir } from "./_helpers";
 
 const foundryDir = probeFoundryDir();
-const TRAINING_ROOT = path.join(process.cwd(), "foundry-out", "training");
+const trainingDir = probeTrainingDir();
 
 const pair = (id: string, judge: PairResult["judge_pick"]): PairResult => ({
   id,
@@ -36,7 +36,7 @@ const pair = (id: string, judge: PairResult["judge_pick"]): PairResult => ({
 });
 
 function setup(id: string, pairs: PairResult[], verdicts: Record<string, string> = {}) {
-  const dir = path.join(TRAINING_ROOT, id);
+  const dir = path.join(trainingDir(), id);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(path.join(dir, "pairs", "imp-1"), { recursive: true });
   for (const p of pairs) for (const f of [p.baseline.file, p.challenger.file]) writeFileSync(path.join(dir, f), "x", "utf8");
@@ -74,8 +74,8 @@ const ledgerRows = (): { cycle: string; verdict: string; human_pick_rate?: numbe
 test("blindMap is deterministic and independent of the judge's pick", async () => {
   const a = buildBlindMap("cyc-1", setup("probe-blind-map-a", [pair("p1", "challenger"), pair("p2", "baseline")]).cycle.improvements);
   const b = buildBlindMap("cyc-1", setup("probe-blind-map-b", [pair("p1", "baseline"), pair("p2", "challenger")]).cycle.improvements);
-  rmSync(path.join(TRAINING_ROOT, "probe-blind-map-a"), { recursive: true, force: true });
-  rmSync(path.join(TRAINING_ROOT, "probe-blind-map-b"), { recursive: true, force: true });
+  rmSync(path.join(trainingDir(), "probe-blind-map-a"), { recursive: true, force: true });
+  rmSync(path.join(trainingDir(), "probe-blind-map-b"), { recursive: true, force: true });
   expect(a).toEqual(b);
   expect(a["imp-1/p1"]).toBe(armInSlotA("cyc-1", "imp-1", "p1"));
   // Across many pairs both slots are used, so the shuffle is a shuffle.
@@ -111,7 +111,22 @@ test("a claim verdict is refused while a pair is unpicked, and allowed once pick
     await patchBlind(id2, [{ imp: "imp-1", anchored: true }]);
     await patchTrainingVerdicts(id2, { baseRev: 0, set: { "imp-1": "reject" }, surface: "foundry" });
     expect((await getCycle(id2)).blind.improvements["imp-1"].anchored).toBe(true);
-    rmSync(path.join(TRAINING_ROOT, id2), { recursive: true, force: true });
+    rmSync(path.join(trainingDir(), id2), { recursive: true, force: true });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a board verdict the kernel refuses (stale base) leaves the improvement un-anchored", async () => {
+  const id = `probe-blind-refused-${Date.now().toString(36)}`;
+  const { dir } = setup(id, [pair("p1", "challenger")]);
+  try {
+    await patchTrainingVerdicts(id, { baseRev: 0, set: { "imp-1": "approve" }, surface: "board" });
+    const id2 = `${id}-stale`;
+    setup(id2, [pair("p1", "challenger")]);
+    await expect(patchTrainingVerdicts(id2, { baseRev: 7, set: { "imp-1": "approve" }, surface: "board" })).rejects.toThrow();
+    expect((await getCycle(id2)).blind.improvements["imp-1"]?.anchored).toBeFalsy();
+    rmSync(path.join(trainingDir(), id2), { recursive: true, force: true });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

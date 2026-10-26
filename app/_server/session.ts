@@ -1,4 +1,5 @@
 import { DEV_AUTH } from "../../lib/devAuth.ts";
+import { isLoopbackHost } from "../../lib/localEntry.ts";
 import { LOCAL_MODE } from "../../lib/localMode.ts";
 import { DEV_FIXTURE, LOCAL_OWNER, principalMode, refuse, verifyIdToken, type KeyUse, type Resolution } from "../../lib/principal.ts";
 
@@ -49,10 +50,7 @@ export const SESSION_COOKIE = "gt_session";
 /** The longest ID-token cookie accepted: a Firebase ID token is ~1 KB; a cookie caps at 4 KB. */
 export const MAX_TOKEN_CHARS = 4096;
 
-export function isLoopbackHost(hostname: string): boolean {
-  const h = hostname.replace(/^\[|\]$/g, "").toLowerCase();
-  return h === "localhost" || h.endsWith(".localhost") || h === "::1" || /^127(\.\d{1,3}){3}$/.test(h);
-}
+export { isLoopbackHost };
 
 /** Secure unless the request reached us on loopback. */
 export const secureFor = (req: Request): boolean => !isLoopbackHost(new URL(req.url).hostname);
@@ -89,10 +87,14 @@ export async function verifySession(token: string, use: KeyUse, now?: number): P
   return verifyIdToken(token, now === undefined ? { use } : { use, now });
 }
 
-/** Who the session cookie (or the posture) says is here. Never throws; a refusal is a value. */
-export async function resolveSession(token: string | undefined, use: KeyUse, now?: number): Promise<Resolution> {
+/**
+ * Who the session cookie (or the posture) says is here. Never throws; a refusal is a value.
+ * `local` is the landing's runtime local entry, already judged for this request (lib/localEntry.ts
+ * `localEntryGranted`): it stands where NEXT_PUBLIC_LOCAL_MODE does, after a presented token.
+ */
+export async function resolveSession(token: string | undefined, use: KeyUse, now?: number, local = false): Promise<Resolution> {
   if (DEV_AUTH) return DEV_FIXTURE;
   if (token !== undefined) return verifySession(token, use, now);
-  if (LOCAL_MODE) return principalMode() === "legacy" ? LOCAL_OWNER : refuse("local-owner-unverifiable");
+  if (LOCAL_MODE || local) return principalMode() === "legacy" ? LOCAL_OWNER : refuse("local-owner-unverifiable");
   return refuse("missing-token");
 }

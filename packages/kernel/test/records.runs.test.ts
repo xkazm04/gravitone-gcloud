@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { z } from "zod";
+import { parseJsonAt } from "@gt/domain/door";
 import type { Actor } from "@gt/domain/event";
 import { jobIdSchema } from "@gt/domain/ids";
 import type { ModelOption } from "@gt/domain/produce";
@@ -146,5 +148,7 @@ describe("a producer's own launch", () => {
     const r = ok(launchRun(s, { input: gallery, token: receipt.token, mode: "dry", ceilingUsd: 1, quote }, OP, { ...lctx, id: "capped" }));
     expect(must(s.read((x) => loadJob(x, r.jobId))).job.ceilingUsd).toBe(1);
     expect(String(events(s, "run.launched")[0]?.["data"])).toContain('"overCeiling":true');
+    // What was agreed to rides on the launch, as project.launched carries it: the receipt's total and the ceiling.
+    expect(must(parseJsonAt("run.launched data", z.unknown(), String(events(s, "run.launched")[0]?.["data"])))).toMatchObject({ usd: 15, unpriced: 0, ceilingUsd: 1 });
   });
 });

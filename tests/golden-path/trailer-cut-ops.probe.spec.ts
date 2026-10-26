@@ -1,4 +1,4 @@
-// LANE — THE TRAILER CUT AS AN EDIT LOG (app/_phases/script/trailer/ops.ts), pure.
+// LANE — THE TRAILER CUT AS AN EDIT LOG (lib/script/trailer/ops.ts), pure.
 //
 // The cut is stored as the dealt origin plus an ordered log of typed ops, and the
 // snapshot is derived by replay. These cases pin the properties that make undo

@@ -1,7 +1,7 @@
 // The scene-spec contract — what the authoring engine must return, and the
 // validator that refuses anything else.
 //
-// Shaped like app/_phases/script/editPlan.ts: the engine is driven headlessly
+// Shaped like lib/script/editPlan.ts: the engine is driven headlessly
 // and cannot be given a response schema, so its output is a REQUEST rather than
 // a guarantee. Everything here exists because a plausible-but-wrong spec is
 // worse than a failed run — it silently produces sixteen frames that look
@@ -82,12 +82,15 @@ export const SCENE_SCHEMA = {
 
 const num = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 const clamp = (v: number) => Math.max(0, Math.min(100, v));
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** Asking a generative layer for glyphs is the one unconditional defect: a plate
  *  that comes back carrying letters is not a nicer plate, it is an unusable one.
  *  The same is true of a move described as "the label slides in" — our text
  *  layer is vector and ours, so no generated frame may be asked to carry it. */
-const ASKS_FOR_TEXT = /\b(text|label(l)?ed|caption|write|written|word|letter|number|digit|title)\b/i;
+// Plurals and noun forms are spelled out: a word boundary after "letter" does
+// not match inside "letters", so "a wall covered in letters" used to pass.
+const ASKS_FOR_TEXT = /\b(texts?|labels?|label(l)?ed|captions?|writes?|writing|written|words?|letters?|lettering|numbers?|digits?|titles?)\b/i;
 
 /** One scene the parser refused, and the sentence that says why.
  *
@@ -149,7 +152,8 @@ function parseScene(
     throw new SceneSpecError("The motion just restates the subject. A still is not a move.");
 
   const elements = (Array.isArray(s.elements) ? s.elements : []).map((e) => {
-    const el = e as Record<string, unknown>;
+    if (!isRecord(e)) throw new SceneSpecError("An element is not an object.");
+    const el = e;
     const kind = String(el.kind ?? "");
     if (!(ELEMENT_KINDS as readonly string[]).includes(kind))
       throw new SceneSpecError(`Unknown element kind "${kind}".`);
@@ -171,7 +175,8 @@ function parseScene(
   });
 
   const texts = (Array.isArray(s.texts) ? s.texts : []).map((t) => {
-    const tx = t as Record<string, unknown>;
+    if (!isRecord(t)) throw new SceneSpecError("A text is not an object.");
+    const tx = t;
     const role = String(tx.role ?? "");
     if (!(TEXT_ROLES as readonly string[]).includes(role)) throw new SceneSpecError(`Unknown text role "${role}".`);
     const factId = tx.factId ? String(tx.factId) : undefined;
@@ -238,12 +243,22 @@ export function reviewSceneSpecs(
   const end = raw.lastIndexOf("}");
   if (start === -1 || end <= start) throw new SceneSpecError("The engine returned no JSON object.");
 
-  let doc: { scenes?: unknown };
-  try {
-    doc = JSON.parse(raw.slice(start, end + 1));
-  } catch {
-    throw new SceneSpecError("The engine returned malformed JSON.");
+  // Each "{" up to the last "}" is tried in turn and the first that parses wins:
+  // a preamble that itself holds a brace ("the plan {draft}:") used to make the
+  // whole answer read as malformed. When none parses, the refusal carries the
+  // parser's own sentence for the outermost try - its position is the one fact
+  // that says where the answer broke.
+  let doc: { scenes?: unknown } | undefined;
+  let parseError = "";
+  for (let i = start; i !== -1 && i < end; i = raw.indexOf("{", i + 1)) {
+    try {
+      doc = JSON.parse(raw.slice(i, end + 1));
+      break;
+    } catch (e) {
+      parseError ||= e instanceof Error ? e.message : String(e);
+    }
   }
+  if (doc === undefined) throw new SceneSpecError(`The engine returned malformed JSON (${parseError}).`);
   if (!Array.isArray(doc.scenes)) throw new SceneSpecError("The engine returned no `scenes` array.");
 
   const byAt = new Map(frames.map((f) => [f.at, f]));
@@ -256,10 +271,15 @@ export function reviewSceneSpecs(
   const specs: SceneSpec[] = [];
   const rejected: SpecRejection[] = [];
 
-  for (const s of doc.scenes as Record<string, unknown>[]) {
+  for (const item of doc.scenes as unknown[]) {
+    // A scene that is not an object (null, a string) is the ENGINE'S defect, not
+    // this parser's, so it is a finding like any other - not a TypeError that
+    // throws away the pass's other scenes.
+    const s: Record<string, unknown> = isRecord(item) ? item : {};
     const beatAt = String(s.beatAt ?? "");
     mentioned.add(beatAt);
     try {
+      if (!isRecord(item)) throw new SceneSpecError("The scene is not an object.");
       if (!byAt.has(beatAt)) throw new SceneSpecError(`"${beatAt}" is not a beat in this script.`);
       if (accepted.has(beatAt)) throw new SceneSpecError(`A second scene for ${beatAt} — the first one stands.`);
       specs.push({ beatAt, ...parseScene(s, knownFactIds, grades) });
@@ -288,32 +308,4 @@ export function parseSceneSpecs(
   grades?: FactGrades,
 ): SceneSpec[] {
   return reviewSceneSpecs(raw, frames, knownFactIds, grades).specs;
-}
-
-/** Fold authored specs into the frames, replacing the seeded layers.
- *
- *  Frames with no spec in the list are returned untouched — which is exactly
- *  what a rejected or unmentioned beat gets. It keeps whatever it had, which is
- *  usually the template output this pass exists to replace, and the row says so
- *  rather than the frame quietly emptying. */
-export function applySceneSpecs(frames: Frame[], specs: SceneSpec[]): Frame[] {
-  const byAt = new Map(specs.map((s) => [s.beatAt, s]));
-  return frames.map((f) => {
-    const s = byAt.get(f.at);
-    if (!s) return f;
-    return {
-      ...f,
-      rationale: s.rationale,
-      // The plate is NOT cleared. A rendered picture is money already spent, and
-      // the new subject may well produce the same image; re-render is a
-      // decision the user makes per frame.
-      plate: { ...f.plate, subject: s.subject },
-      // The clip's STATUS is carried through untouched rather than reset. There
-      // is nothing to reset it from — no renderer has ever set it — and folding
-      // direction in is authoring, not un-rendering.
-      clip: { ...(f.clip ?? { status: "not-started" as const, motion: "" }), motion: s.motion },
-      elements: s.elements.map((e, i) => ({ ...e, id: `e-${f.id}-${i}` })),
-      texts: s.texts.map((t, i) => ({ ...t, id: `t-${f.id}-${i}` })),
-    };
-  });
 }

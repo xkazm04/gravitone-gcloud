@@ -45,13 +45,14 @@ function pictureOf(records: ReadonlyMap<string, Rec>): ProjectPoster | null {
 }
 
 /** "m:ss" or "h:mm:ss" in seconds; null rather than a guess (lib/script/trailer/types.ts atSeconds). */
-function secondsAt(at: unknown): number | null {
+export function secondsAt(at: unknown): number | null {
   if (typeof at !== "string") return null;
   const parts = at.trim().split(":");
   if (parts.length < 2 || parts.length > 3) return null;
   let total = 0;
-  for (const p of parts) {
-    if (!/^\d+$/.test(p)) return null;
+  for (const [i, p] of parts.entries()) {
+    // a field after the first is two digits under 60: "0:75" is a typo, not 1:15
+    if (i === 0 ? !/^\d+$/.test(p) : !/^[0-5]\d$/.test(p)) return null;
     total = total * 60 + Number(p);
   }
   return total;

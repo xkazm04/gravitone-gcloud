@@ -18,7 +18,8 @@ import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { Seg } from "../seg/Seg.tsx";
-import { addTo, avoidFloats, compose, FACET_OF, preferredFloats, removeFrom, SEED_LISTS, sunoFieldsOf, type Hand, type Seed, type SeedList, type Target, type Term } from "./recipe.ts";
+import { TEMPO, tempoProblem } from "./batch.ts";
+import { addTo, avoidFloats, BLANK_SEED, compose, FACET_OF, preferredFloats, removeFrom, SEED_LISTS, sunoCut, sunoFieldsOf, type Hand, type Seed, type SeedList, type Target, type Term } from "./recipe.ts";
 import s from "./Composer.module.css";
 
 function AddWord({ label, list, onAdd }: { readonly label: string; readonly list: string; readonly onAdd: (w: string) => void }) {
@@ -62,6 +63,8 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
   const dl = (f: string): string => `audio-composer-${f}`;
   const text = compose(seed, target, hands);
   const fields = sunoFieldsOf(seed, hands);
+  const cut = target === "suno" ? sunoCut(seed, hands) : 0;
+  const tempoRefused = tempoProblem(seed.bpm === null ? null : Math.round(seed.bpm));
   const row = (list: SeedList, label: string) => (
     <div className={s.facet} key={list}>
       <span className={s.facetLabel}>{label}</span>
@@ -87,7 +90,7 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
         <CapsHeading text="composer" variant="section" />
         <Chip label="from" value={from} casing="lower" />
         <span className={s.grow} />
-        <Button label="Blank" size="sm" onPress={() => onSeed({ genres: [], moods: [], instruments: [], bpm: null, key: null, avoid: [] })} />
+        <Button label="Blank" size="sm" onPress={() => onSeed(BLANK_SEED)} />
       </div>
       <div className={s.facets}>
       {SEED_LISTS.map(({ list, label }) => row(list, label))}
@@ -114,8 +117,8 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
           <input
             className={s.num}
             type="number"
-            min={40}
-            max={220}
+            min={TEMPO.min}
+            max={TEMPO.max}
             step={1}
             value={seed.bpm === null ? "" : Math.round(seed.bpm)}
             placeholder="bpm"
@@ -136,9 +139,10 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
       </pre>
       <div className={s.acts}>
         <span className={s.count}>{text.length} chars</span>
+        {cut > 0 && <Chip label="cut" value={cut} tone="amber" casing="lower" name={`${cut} seed term${cut === 1 ? "" : "s"} past Suno's limit`} />}
         <span className={s.grow} />
         <Button label="Copy" size="sm" onPress={() => onCopy(text)} />
-        <Button label="Send to Suno" tone="cyan" disabled={busy || fields === null} onPress={onSend} />
+        <Button label="Send to Suno" tone="cyan" disabled={busy || fields === null || tempoRefused !== null} {...(tempoRefused === null ? {} : { badge: { label: tempoRefused, tone: "amber" as const } })} onPress={onSend} />
       </div>
       <div hidden>
         {(["genre", "mood", "instrument"] as const).map((f) => (

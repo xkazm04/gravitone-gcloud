@@ -50,18 +50,9 @@ export const CATALOGUE_LOCK = ".catalogue.lock";
 export const STYLES_FILE = "styles.json";
 
 /** RETIRED with the journal (Phase 5 decision 3): nothing writes this file any more. Exported
- *  only so v1's journal probe (tests/golden-path/foundry-catalogue-tx.probe.spec.ts) still
- *  typechecks until it retires with v1's Foundry in wave B; its journal assertions now fail. */
+ *  only for tests/golden-path/foundry-catalogue-tx.probe.spec.ts, which asserts that no commit
+ *  writes it and removes a stale one before it seeds. */
 export const CATALOGUE_JOURNAL = "catalogue-journal.jsonl";
-/** RETIRED with CATALOGUE_JOURNAL: the shape v1's journal lines had. */
-export interface JournalLine {
-  rev: number;
-  at: string;
-  op: string;
-  run: string;
-  ids: string[];
-  by: string;
-}
 
 /** Where extract runs live (the exemplars' files): EXTRACT_STORE_DIR, else <out>/extract. */
 export const extractRoot = (): string => process.env["EXTRACT_STORE_DIR"]?.trim() || outPath("extract");

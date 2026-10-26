@@ -313,6 +313,7 @@ export async function acquire(fx: Effects, resource: string, opts: AcquireOption
   const sleep = opts.sleep ?? sleepMs;
   const req: ClaimRequest = { resource, holder, ticket, ttlS: opts.ttlS ?? DEFAULT_TTL_S, wait: waitMs > 0 };
   const deadline = now() + waitMs;
+  let queued = false;
   for (;;) {
     const r = fx.tx("lease.claim", (t) => claimIn(t, req, opts.alive ?? pidAlive));
     // A store busy past its busy_timeout is contention, not a fault: SQLite's busy
@@ -322,8 +323,15 @@ export async function acquire(fx: Effects, resource: string, opts: AcquireOption
       await sleep(opts.pollMs ?? 250);
       continue;
     }
-    if (!r.ok) return r;
+    if (!r.ok) {
+      // Giving up on an error still gives up the place: a ticket left in the queue is a live
+      // waiter (this process is alive) ahead of every newcomer until its TTL drops it. Best
+      // effort - when the store refuses this too, the TTL is what remains.
+      if (queued) fx.tx("lease.leave", (t) => leaveIn(t, resource, ticket));
+      return r;
+    }
     const o = r.value;
+    if (o.kind === "queued") queued = true;
     if (o.kind === "granted") return ok(o.lease);
     if (o.kind === "busy" || now() >= deadline) {
       if (o.kind === "queued") {

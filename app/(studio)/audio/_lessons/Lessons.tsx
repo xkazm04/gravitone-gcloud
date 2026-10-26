@@ -16,6 +16,7 @@ export function Lessons({ view }: { readonly view: LessonsView }) {
   return (
     <section className={s.section} aria-label="lessons">
       <CapsHeading text="lessons" tally={{ value: n, label: "signed" }} level={2} />
+      {view.hunts !== null && <ErrorLine message={view.hunts} />}
       {!view.lessons.ok ? <ErrorLine message={view.lessons.error} /> : n === 0 ? <Empty label="no lessons signed yet" /> : <LessonList lessons={view.lessons.value} huntHref={(id) => huntHref(view.kind, id)} />}
     </section>
   );

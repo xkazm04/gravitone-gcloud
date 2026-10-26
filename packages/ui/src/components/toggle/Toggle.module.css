@@ -2,6 +2,6 @@
    count inside it, library.js a keycap. */
 .toggle{display:inline-flex;align-items:center;gap:var(--sp-1);height:var(--h-control-sm);padding:0 var(--sp-control);border-radius:var(--r-sm);border:1px solid var(--hair-2);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);white-space:nowrap}
 .toggle:hover{color:var(--ink-bright)}
-.toggle[aria-pressed=true]{color:var(--cyan);border-color:color-mix(in srgb,var(--cyan) 40%,transparent);background:var(--cyan-a)}
+.toggle[aria-pressed=true],.toggle[aria-expanded=true]{color:var(--cyan);border-color:color-mix(in srgb,var(--cyan) 40%,transparent);background:var(--cyan-a)}
 .glyph{width:var(--size-glyph-xs);height:var(--size-glyph-xs);flex:none}
 .count{color:var(--cyan);font-weight:700}

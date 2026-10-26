@@ -131,7 +131,7 @@ function FramesBoardEditor({ view, frame, send, busy, error, act, data: d }: Edi
   const t = d.tally;
   const acts = (
     <>
-      {d.checkpoint && <Button label="revert pass" size="sm" tone="rose" onPress={() => send({ op: "revert-direction" })} />}
+      {d.checkpoint && <Button label="revert pass" size="sm" tone="rose" disabled={busy} onPress={() => send({ op: "revert-direction" })} />}
       {frame.acts}
     </>
   );
@@ -197,7 +197,7 @@ function FramesBoardEditor({ view, frame, send, busy, error, act, data: d }: Edi
                 </span>
               )}
               {d.direction.runs > 0 && <Chip label="direction" value={d.direction.unpriced > 0 ? `${d.direction.runs} · ${d.direction.unpriced} unpriced` : `$${d.direction.usd.toFixed(2)}`} casing="lower" />}
-              {d.sourceMoved && <Button label="rederive" size="sm" tone="amber" badge={{ label: "cut moved", tone: "amber" }} onPress={() => send({ op: "rederive" })} />}
+              {d.sourceMoved && <Button label="rederive" size="sm" tone="amber" badge={{ label: "cut moved", tone: "amber" }} disabled={busy} onPress={() => send({ op: "rederive" })} />}
             </div>
             {d.proposal !== null && (
               <div className={s.proposal} role="region" aria-label="direction proposal">
@@ -205,9 +205,9 @@ function FramesBoardEditor({ view, frame, send, busy, error, act, data: d }: Edi
                 {d.proposal.conflicts > 0 && <Chip label="human layers" value={d.proposal.conflicts} tone="amber" />}
                 {d.proposal.rejected > 0 && <Chip label="refused" value={d.proposal.rejected} tone="rose" />}
                 {d.proposal.missing.length > 0 && <Chip label="unmentioned" value={d.proposal.missing.length} />}
-                <Button label="accept" size="sm" tone="emerald" shortcut={{ mode: "part.frames", verb: "accept" }} onPress={() => send({ op: "accept-direction", units: "all", overwrite: false })} />
-                {d.proposal.conflicts > 0 && <Button label="accept over human" size="sm" tone="amber" onPress={() => send({ op: "accept-direction", units: "all", overwrite: true })} />}
-                <Button label="discard" size="sm" onPress={() => send({ op: "discard-direction" })} />
+                <Button label="accept" size="sm" tone="emerald" shortcut={{ mode: "part.frames", verb: "accept" }} disabled={busy} onPress={() => send({ op: "accept-direction", units: "all", overwrite: false })} />
+                {d.proposal.conflicts > 0 && <Button label="accept over human" size="sm" tone="amber" disabled={busy} onPress={() => send({ op: "accept-direction", units: "all", overwrite: true })} />}
+                <Button label="discard" size="sm" disabled={busy} onPress={() => send({ op: "discard-direction" })} />
               </div>
             )}
             {unit === undefined ? (

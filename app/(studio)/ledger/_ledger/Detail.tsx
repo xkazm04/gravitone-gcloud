@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from "react";
 
+import { errorMessage } from "@gt/domain/errors";
 import type { Event } from "@gt/domain/event";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
@@ -30,6 +31,8 @@ import s from "./ledger.module.css";
 
 export type DetailProps = {
   readonly event: Event | null;
+  /** The selected seq when no act holds it (an `ev` link to an act this ledger lacks). */
+  readonly missing?: number;
   readonly nowMs: number;
   readonly related: (input: { seq: number }) => Promise<ActionResult<Related & { readonly event: Event }>>;
   readonly onSelect: (e: Event) => void;
@@ -38,18 +41,27 @@ export type DetailProps = {
   readonly onCopy: (text: string, done: string) => void;
 };
 
+/**
+ * A read's answer, or the words of one that REJECTED - a Server Action whose request never
+ * came back (a dropped connection, a redeploy) rejects rather than answering `ok: false`.
+ * Never a rejection itself, so the caller's settle (a spinner off, an error drawn) runs.
+ */
+export function settled<T>(p: Promise<ActionResult<T>>): Promise<ActionResult<T>> {
+  return p.catch((e: unknown): ActionResult<T> => ({ ok: false, error: { error: errorMessage(e), code: "unavailable" } }));
+}
+
 type Rel = { readonly seq: number; readonly value: Related } | { readonly seq: number; readonly error: string };
 
 const text = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" ? v : null);
 
-export function Detail({ event: e, nowMs, related, onSelect, onQuery, onClose, onCopy }: DetailProps) {
+export function Detail({ event: e, missing, nowMs, related, onSelect, onQuery, onClose, onCopy }: DetailProps) {
   const [rel, setRel] = useState<Rel | null>(null);
   const seq = e?.seq ?? null;
   useEffect(() => {
     if (seq === null) return;
     let latest = true;
     const t = window.setTimeout(() => {
-      void related({ seq }).then((r) => {
+      void settled(related({ seq })).then((r) => {
         if (latest) setRel(r.ok ? { seq, value: r.value } : { seq, error: r.error.error });
       });
     }, 120);
@@ -74,7 +86,14 @@ export function Detail({ event: e, nowMs, related, onSelect, onQuery, onClose, o
     return (
       <aside className={s.detail} aria-label="event detail">
         {head}
-        <div className={s.dtEmpty}>0 selected</div>
+        {missing === undefined ? (
+          <div className={s.dtEmpty}>0 selected</div>
+        ) : (
+          // The words actions.ts relatedEvents answers for the same seq.
+          <div className={s.dt}>
+            <ErrorLine message={`ledger: no event #${missing}`} />
+          </div>
+        )}
       </aside>
     );
   }

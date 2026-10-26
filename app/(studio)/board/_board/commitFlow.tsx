@@ -57,7 +57,8 @@ export function useCommitFlow(gate: BoardGateT, opts: { readonly onDone: () => v
         setCommitting(false);
         setOpen(false);
         gate.clearPlan();
-        const words = `committed · ${r.kept} kept · ${r.rejected} rejected`;
+        // A commit in parts names what went on to the remainder packet (spark scout-storyboards).
+        const words = `committed · ${r.kept} kept · ${r.rejected} rejected${r.undecided === undefined ? "" : ` · ${r.undecided} later`}`;
         toast(words);
         announce(words);
         onDone();

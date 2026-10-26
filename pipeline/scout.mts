@@ -1,17 +1,21 @@
 // SCOUT - the night's CLI (spark media-training-loop). The /scout skill drives it;
 // an operator may type any line of it. Docs: docs/scout.md.
 //
+//   Every command takes [--wing scout|muse] (spark scout-muse): the root it reads and writes; absent: scout.
 //   npx tsx pipeline/scout.mts doctor [--dry] [--json]
-//   npx tsx pipeline/scout.mts open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live] [--json]
+//   npx tsx pipeline/scout.mts open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas 25] [--reels 6] [--until HH:MM] [--live] [--json]
 //   npx tsx pipeline/scout.mts add-source <night> --json <file|->
 //   npx tsx pipeline/scout.mts ingest <night> [--source s-NN] [--detach]
 //   npx tsx pipeline/scout.mts style <night> --sources s-01,s-03 --use "<content it serves>" [--slug x] [--detach]
 //   npx tsx pipeline/scout.mts scene <night> --source s-NN --use "<content it serves>" [--frames k-012.jpg] [--detach]
 //   npx tsx pipeline/scout.mts asset <night> --brief <file|-> [--detach]
+//   npx tsx pipeline/scout.mts ideas <night> --json <file|-> [--detach]   (lib/foundry/scout/idea.ts)
 //   npx tsx pipeline/scout.mts finding <night> --json <file|->
+//   npx tsx pipeline/scout.mts direction <night> --json <file|->   (lib/foundry/scout/direction.ts)
 //   npx tsx pipeline/scout.mts watch <night> --entry "..." --why "..." [--sources s-01,s-02]
 //   npx tsx pipeline/scout.mts close <night> [--stop <reason>]
 //   npx tsx pipeline/scout.mts status [<night>] [--json]
+//   npx tsx pipeline/scout.mts leads [--json] | lead <key> --json <file|->   (lib/foundry/scout/leadFile.ts)
 //   npx tsx pipeline/scout.mts folder <dir> [pipeline/foundry/extract.mts args]
 //
 // THE MONEY. A night is DRY unless it was opened with --live (refused under
@@ -19,10 +23,13 @@
 // jobs answer every paid call with a stand-in. Every launch's job ceiling is what
 // the night has left (lib/foundry/scout/budget.ts); a launch whose worst case is
 // over that, a launch from a closed night, and a launch after the deadline (which
-// closes the night, `stop: deadline`) are refused with the numbers. Ingest is free.
+// closes the night, `stop: deadline`) are refused with the numbers. Ingest is free;
+// an ideas batch is drawn on the Leonardo studio's prepaid credits and its stats reels
+// are authored on the Claude seat, neither of which the ceiling caps, so it is refused
+// by the night's idea and reel caps and never by its money.
 //
-// --json: one JSON document on stdout, progress on stderr. Under add-source and
-// finding, `--json <file|->` names the INPUT, and the output is JSON as well.
+// --json: one JSON document on stdout, progress on stderr. Under add-source, finding,
+// direction, ideas and lead, `--json <file|->` names the INPUT, and the output is JSON as well.
 // EXIT 0 done · 1 failed or refused · 2 usage. Never touches foundry-out/ when
 // GRAVITONE_STORE_PATH and SCOUT_STORE_DIR point elsewhere.
 
@@ -34,12 +41,18 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { errorMessage } from "@gt/domain/errors";
 
-import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_TARGET } from "../lib/foundry/scout/types.ts";
+import { MUSE_DEFAULT_CEILING_USD, MUSE_DEFAULT_IDEA_CAP, MUSE_MAX_IDEA_CAP } from "../lib/foundry/scout/muse.ts";
+import { DEFAULT_WING, SCOUT_WINGS, isWing, type ScoutWing } from "../lib/foundry/scout/wing.ts";
+import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, DEFAULT_TARGET, DEFAULT_STORYBOARD_CAP, DEFAULT_TRACK_CAP, DEFAULT_VISUALIZER_CAP, MAX_IDEA_CAP, MAX_REEL_CAP, MAX_STORYBOARD_CAP, MAX_TRACK_CAP, MAX_VISUALIZER_CAP } from "../lib/foundry/scout/types.ts";
 
 type IngestDeps = import("../lib/foundry/scout/ingest.ts").IngestDeps;
 type Spawn = import("../lib/foundry/scout/ingest.ts").Spawn;
 type Resolver = import("../lib/imaging/safeUrl.ts").Resolver;
 type AssetEngines = import("../lib/producers/scoutAssetActs.ts").AssetEngines;
+type IdeasEngines = import("../lib/foundry/scout/idea.ts").IdeasEngines;
+type TrackEngines = import("../lib/foundry/scout/track.ts").TrackEngines;
+type VisualizerEngines = import("../lib/foundry/scout/visualizer.ts").VisualizerEngines;
+type StoryboardEngines = import("../lib/foundry/scout/storyboard.ts").StoryboardEngines;
 
 /** What a test or a rehearsal injects; production passes none. */
 export type CliPorts = {
@@ -54,38 +67,55 @@ export type CliPorts = {
   readonly keyFetch?: KeyFetch;
   /** `asset`'s concept vendor and input-gate decoder; a test hands fakes. */
   readonly asset?: Partial<AssetEngines>;
+  /** `ideas`' studio still and its reels launcher; a test hands fakes (absent: the imaging router, lib/producers/scoutReel.ts). */
+  readonly ideas?: IdeasEngines;
+  /** `track`'s Suno browser and clip download; `visualizer`'s mv queue, launch and drive. A test hands fakes. */
+  readonly track?: TrackEngines;
+  readonly visualizer?: VisualizerEngines;
+  /** `storyboard`'s Flux frame; a test hands a fake (absent: the scout-storyboard producer on gpu.local). */
+  readonly storyboard?: StoryboardEngines;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const USAGE = [
   "usage: npx tsx pipeline/scout.mts <command> [--json]",
-  "  doctor [--dry]                              the box, the keys, the store",
-  "  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live]",
-  "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?}]",
+  "  doctor [--dry] [--tracks N]                 the box, the keys, the store (and the Suno browser when tracks > 0)",
+  `  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas ${DEFAULT_IDEA_CAP}] [--reels ${DEFAULT_REEL_CAP}] [--tracks ${DEFAULT_TRACK_CAP}] [--visualizers ${DEFAULT_VISUALIZER_CAP}] [--storyboards ${DEFAULT_STORYBOARD_CAP}] [--until HH:MM] [--live]`,
+  "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?, rich?} | {fromIdea: <night>/<c-id>, why?}]",
   "  ingest <night> [--source s-NN] [--detach]",
-  "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--detach]",
-  "  scene <night> --source s-NN --use \"<content>\" [--frames k-012.jpg] [--detach]",
-  "  asset <night> --brief <file|-> [--detach]  {class, subject, use, style?, kind?, techniques?}",
-  "  finding <night> --json <file|->            [{sourceIds, template, step, claim, quote}]",
+  "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--seed <batch>/sd-NNN] [--detach]",
+  "  scene <night> --source s-NN --use \"<content>\" [--frames k-012.jpg] [--seed <batch>/sd-NNN] [--detach]",
+  "  asset <night> --brief <file|-> [--seed <batch>/sd-NNN] [--detach]  {class, subject, use, style?, kind?, techniques?, fromIdea?}",
+  "  ideas <night> --json <file|-> [--detach]   [{title, target: scene|style|asset3d|stats, genre, prompt, anchor: {kind: watch|gap|free, ref}, app, appTarget, aim, look?, reel?}]",
+  "                                             reel (stats only): {brief: {case, title, hook, unit, kind, data, steps?, illustrative: true}, approach: {name, medium, grammar, density, direction, falsifier}}",
+  "  finding <night> --json <file|->            [{sourceIds, template, step, claim, quote, restates?}]",
+  "  direction <night> --json <file|->          {title, format: short|video, genre, style, tone, audience, premise, basedOn: [<night>/<cell id>], use?}",
   '  watch <night> --entry "..." --why "..." [--sources s-01]',
   "  close <night> [--stop deadline|budget|target|failure|sources-exhausted|operator]",
   "  status [<night>]",
+  "  seeds new --json <file|-> [--dry]          [{sentence, genre, subgenre, type, audience: kids|family|adult, format: short|video, parent?: <batch>/sd-NNN, music?}]",
+  "                                             music (required on a music video|lyric video|visualizer seed): {instruments: [..6], tempo: 40-220, mood, vocals: instrumental|female|male|duet|choir}",
+  "  seeds status [<batch>]",
+  "  track <night> --seed <batch>/sd-NNN [--detach] · track <night> --collect",
+  "  visualizer <night> --track <night>/<c-id>/<aN> [--detach] · visualizer <night> --collect",
+  "  storyboard <night> [--json <briefs|->] [--detach] · storyboard <night> --collect",
+  "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
 ].join("\n");
 
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "finding", "watch", "close", "status"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
-/** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source and finding. */
+/** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas, storyboard, lead and seeds new. */
 function parse(argv: readonly string[]): { pos: string[]; flags: Map<string, string | true> } {
   const pos: string[] = [];
   const flags = new Map<string, string | true>();
   const cmd = argv.find((a) => !a.startsWith("--"));
-  const reads = cmd === "add-source" || cmd === "finding";
+  const reads = cmd === "add-source" || cmd === "finding" || cmd === "direction" || cmd === "ideas" || cmd === "lead" || (cmd === "seeds" && argv.includes("new")) || (cmd === "storyboard" && !argv.includes("--collect"));
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] ?? "";
     if (!a.startsWith("--")) {
@@ -113,7 +143,28 @@ export function deadlineOf(hhmm: string, now: Date): string {
   return d.toISOString();
 }
 
+/** What the muse wing runs (spark scout-muse): no ingest, clips, assets, reels, seeds, music or leads in v1. */
+const MUSE_COMMANDS = new Set(["doctor", "open", "add-source", "ideas", "finding", "direction", "watch", "close", "status", "style"]);
+
+/** `--wing <scout|muse>` picks the root every command reads and writes (lib/foundry/scout/wing.ts); absent: scout. */
 export async function runCli(argv: readonly string[], io: Io): Promise<number> {
+  const at = argv.indexOf("--wing");
+  const w = at < 0 ? DEFAULT_WING : argv[at + 1];
+  if (!isWing(w)) {
+    io.err(`--wing is one of ${SCOUT_WINGS.join(", ")}, got "${w ?? ""}"`);
+    return 2;
+  }
+  const cmd = argv.find((a, i) => !a.startsWith("--") && (at < 0 || i !== at + 1));
+  if (w !== DEFAULT_WING && cmd !== undefined && !MUSE_COMMANDS.has(cmd)) {
+    io.err(`${cmd} is not in the ${w} wing (it runs ${[...MUSE_COMMANDS].join(", ")})`);
+    return 3;
+  }
+  const { withWing } = await import("../lib/foundry/scout/wingScope.ts");
+  return withWing(w, () => runInWing(argv.filter((_, i) => at < 0 || (i !== at && i !== at + 1)), io, w));
+}
+
+async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Promise<number> {
+  const muse = wing !== DEFAULT_WING;
   const { pos, flags } = parse(argv);
   const cmd = pos[0];
   const json = flags.has("json");
@@ -174,7 +225,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       const { blocking, doctor, doctorLine } = await import("../lib/foundry/scout/doctor.ts");
       const { storeLocation } = await import("@gt/kernel/process");
       const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
-      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }), ...(io.ports?.keyFetch === undefined ? {} : { keyFetch: io.ports.keyFetch }) });
+      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), tracks: num("tracks", DEFAULT_TRACK_CAP), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }), ...(io.ports?.keyFetch === undefined ? {} : { keyFetch: io.ports.keyFetch }) });
       const failed = blocking(checks);
       if (json) doc({ ok: failed.length === 0, checks });
       else for (const c of checks) io.out(doctorLine(c));
@@ -184,12 +235,48 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
     if (cmd === "open") {
       if (flags.has("live") && dryOnly) throw new Refused("GRAVITONE_DRY_ONLY=1 pins this shell dry: a live night is refused here (open without --live for a dry one)");
       const until = str("until");
+      const maxIdeas = muse ? MUSE_MAX_IDEA_CAP : MAX_IDEA_CAP;
+      const ideaCap = num("ideas", muse ? MUSE_DEFAULT_IDEA_CAP : DEFAULT_IDEA_CAP);
+      if (!Number.isInteger(ideaCap) || ideaCap > maxIdeas) throw new Usage(`--ideas is a whole number from 1 to ${maxIdeas}, got ${ideaCap}`);
+      const reelCap = num("reels", DEFAULT_REEL_CAP);
+      if (!Number.isInteger(reelCap) || reelCap > MAX_REEL_CAP) throw new Usage(`--reels is a whole number from 1 to ${MAX_REEL_CAP}, got ${reelCap}`);
+      const trackCap = num("tracks", DEFAULT_TRACK_CAP);
+      if (!Number.isInteger(trackCap) || trackCap < 0 || trackCap > MAX_TRACK_CAP) throw new Usage(`--tracks is a whole number from 0 to ${MAX_TRACK_CAP}, got ${trackCap}`);
+      const visualizerCap = num("visualizers", DEFAULT_VISUALIZER_CAP);
+      if (!Number.isInteger(visualizerCap) || visualizerCap < 0 || visualizerCap > MAX_VISUALIZER_CAP) throw new Usage(`--visualizers is a whole number from 0 to ${MAX_VISUALIZER_CAP}, got ${visualizerCap}`);
+      const storyboardCap = num("storyboards", DEFAULT_STORYBOARD_CAP);
+      if (!Number.isInteger(storyboardCap) || storyboardCap < 0 || storyboardCap > MAX_STORYBOARD_CAP) throw new Usage(`--storyboards is a whole number from 0 to ${MAX_STORYBOARD_CAP}, got ${storyboardCap}`);
       const { tasteBrief } = await import("../lib/foundry/scout/taste.ts");
-      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: Math.round(num("assets", DEFAULT_ASSET_CAP)), now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
-      fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id), "utf8");
-      if (json) doc({ ok: true, night: n.id, dry: n.dry, ceilingUsd: n.ceilingUsd, target: n.target, clipCap: n.clipCap, assetCap: n.assetCap, ...(n.deadline === undefined ? {} : { deadline: n.deadline }), taste: path.join(store.nightDir(n.id), "taste.md") });
+      // A muse night draws stills only: no clips, assets, reels, tracks or visualizers, whatever the flags say.
+      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", muse ? MUSE_DEFAULT_CEILING_USD : DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: muse ? 0 : Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: muse ? 0 : Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, reelCap: muse ? 0 : reelCap, trackCap: muse ? 0 : trackCap, visualizerCap: muse ? 0 : visualizerCap, storyboardCap: muse ? 0 : storyboardCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
+      // Last night's load opens the brief (lib/foundry/scout/load.ts): the samples are the kernel store's.
+      const kp = await import("@gt/kernel/process");
+      const { nightLoad } = await import("../lib/foundry/scout/load.ts");
+      const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
+      const k = kp.processKernel(kp.storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]));
+      try {
+        // The graph's branches, the backlog (spark scout-vision) and the tracks waiting for a visualizer close the brief (spark scout-decision-graph).
+        const { branchesSection, buildGraph } = await import("../lib/foundry/scout/graph.ts");
+        const { readSteer } = await import("../lib/foundry/scout/steer.ts");
+        const { tracksSection } = await import("../lib/foundry/scout/track.ts");
+        const { backlogOf, backlogSection } = await import("../lib/foundry/scout/backlog.ts");
+        const { listSeedBatches } = await import("../lib/foundry/scout/seedStore.ts");
+        const graph = await buildGraph({ ...(k.ok ? { store: k.value.store } : {}), now: now() });
+        const steer = await readSteer();
+        const others = (await store.readAllNights()).filter((x) => x.id !== n.id);
+        // The backlog is the scout wing's (a muse night makes no storyboard and takes no seed).
+        const backlog = muse ? [] : backlogSection(backlogOf(others, await listSeedBatches(), steer), others);
+        const extra = [...branchesSection(graph, steer), ...backlog, ...tracksSection(others)];
+        fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id, k.ok ? (x) => nightLoad(k.value.store, x, now().getTime()) : undefined, extra), "utf8");
+      } finally {
+        kp.closeProcessKernel();
+      }
+      // The registry digest beside it (spark registry-feedback-loop): `registry: none` when none resolves.
+      const { registryDigest } = await import("../lib/foundry/scout/registry.ts");
+      fs.writeFileSync(path.join(store.nightDir(n.id), "registry.md"), (await registryDigest()).text, "utf8");
+      if (json) doc({ ok: true, night: n.id, dry: n.dry, ceilingUsd: n.ceilingUsd, target: n.target, clipCap: n.clipCap, assetCap: n.assetCap, ideaCap: n.ideaCap, reelCap: n.reelCap, ...(n.deadline === undefined ? {} : { deadline: n.deadline }), taste: path.join(store.nightDir(n.id), "taste.md"), registry: path.join(store.nightDir(n.id), "registry.md") });
       else io.out(n.id);
-      say(`night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap} · assets ${n.assetCap ?? DEFAULT_ASSET_CAP}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
+      say(`${muse ? `${wing} ` : ""}night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap} · assets ${n.assetCap ?? DEFAULT_ASSET_CAP} · ideas ${n.ideaCap ?? DEFAULT_IDEA_CAP} · reels ${n.reelCap ?? DEFAULT_REEL_CAP}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
       return 0;
     }
 
@@ -217,6 +304,34 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       return 0;
     }
 
+    if (cmd === "direction") {
+      const id = nightArg();
+      const { addDirection } = await import("../lib/foundry/scout/direction.ts");
+      const r = await addDirection(id, await input());
+      if (!r.ok) throw new Refused(r.error.message);
+      say(`  + ${r.value.id} direction ${r.value.status} · ${r.value.format} · ${r.value.genre} · based on ${r.value.basedOn.length} kept`);
+      if (json) doc({ ok: true, night: id, candidate: r.value });
+      return 0;
+    }
+
+    // A batch of one-sentence seeds (spark scout-decision-graph): words only, no kernel job.
+    if (cmd === "seeds") {
+      const { seedsCommand } = await import("../lib/foundry/scout/seeds.ts");
+      const r = await seedsCommand(pos[1], { ...(pos[2] === undefined ? {} : { batch: pos[2] }), input: () => input(), dry: flags.has("dry"), now: now() });
+      for (const l of r.lines) say(l);
+      if (json) doc(r.doc);
+      return r.code;
+    }
+
+    // The registry leads the Board's commits queued: listed, and filed one claim at a time.
+    if (cmd === "leads" || cmd === "lead") {
+      const { leadsCommand } = await import("../lib/foundry/scout/leadFile.ts");
+      const r = await leadsCommand(cmd === "leads" ? undefined : { key: pos[1] ?? usage("lead needs a key: `scout.mts leads` lists them"), input: await input() }, { env: io.env, now: now() });
+      for (const l of r.lines) say(l);
+      if (json) doc(r.doc);
+      return 0;
+    }
+
     // Everything below reads or launches kernel jobs: the store this process names.
     const { closeProcessKernel, processKernel, storeLocation } = await import("@gt/kernel/process");
     const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
@@ -237,9 +352,28 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         }
         const n = await store.readNight(id);
         const b = acts.money(ctx, n);
-        if (json) doc({ ok: true, summary: store.summarise(n), budget: b, morning: acts.morning(n, b), night: n });
+        const { ideaCapOf, ideasUsed, reelCapOf, reelsUsed } = await import("../lib/foundry/scout/idea.ts");
+        const ideas = { used: ideasUsed(n), cap: ideaCapOf(n) };
+        const reels = { used: reelsUsed(n), cap: reelCapOf(n) };
+        // The box against the band over the last 15 minutes, what waits now, and the jobs only the operator retries.
+        const { interruptedOf, recentLine, recentLoad, waitingLine } = await import("../lib/foundry/scout/load.ts");
+        const recent = recentLoad(ctx.store, now().getTime());
+        const interrupted = interruptedOf(ctx.store, n);
+        const load = { last15: recent.avg, band: recent.band, waiting: recent.waiting, samples: recent.samples };
+        // The backlog and its seed gate (spark scout-vision), over the scout wing whichever wing the night is.
+        const { backlogOf } = await import("../lib/foundry/scout/backlog.ts");
+        const { listSeedBatches } = await import("../lib/foundry/scout/seedStore.ts");
+        const { readSteer } = await import("../lib/foundry/scout/steer.ts");
+        const { withWing } = await import("../lib/foundry/scout/wingScope.ts");
+        const bl = await withWing("scout", async () => backlogOf(await store.readAllNights(), await listSeedBatches(), await readSteer()));
+        const backlog = { waiting: bl.waiting.length, seedsWaiting: bl.seedsWaiting, gated: bl.gated, freshAllowed: bl.freshAllowed };
+        if (json) doc({ ok: true, summary: store.summarise(n), budget: b, ideas, reels, load, interrupted, morning: acts.morning(n, b), backlog, night: n });
         else {
-          io.out(`night ${n.id} · ${n.state}${n.stop === undefined ? "" : ` (${n.stop})`} · ${n.dry ? "dry" : "live"} · ${acts.budgetLine(b)}`);
+          io.out(`night ${n.id} · ${n.state}${n.stop === undefined ? "" : ` (${n.stop})`} · ${n.dry ? "dry" : "live"} · ${acts.budgetLine(b)} · ideas ${ideas.used}/${ideas.cap} · reels ${reels.used}/${reels.cap}`);
+          io.out(recentLine(recent));
+          const waiting = waitingLine(recent);
+          if (waiting !== undefined) io.out(waiting);
+          if (interrupted.length > 0) io.out(`interrupted: ${interrupted.join(" · ")}`);
           for (const s of n.sources) io.out(`  ${s.id} ${s.kind.padEnd(5)} ${s.status.padEnd(8)} ${s.files.length} file(s)  ${s.url}${s.error === undefined ? "" : `\n         ${s.error}`}`);
           for (const c of n.candidates) io.out(`  ${c.id} ${c.kind.padEnd(7)} ${c.status.padEnd(8)} ${c.sourceIds.join(",")}${c.jobId === undefined ? "" : `  ${c.jobId}`}${c.error === undefined ? "" : `\n         ${c.error}`}`);
         }
@@ -255,7 +389,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         else {
           io.out(`night ${m.night} ${m.state}${m.stop === undefined ? "" : ` (${m.stop})`} · packet ${m.packet} · /board/${m.packet}`);
           for (const [k, by] of Object.entries(m.byKind)) io.out(`  ${k.padEnd(8)} ${Object.entries(by).map(([s, v]) => `${v} ${s}`).join(" · ")}`);
-          io.out(`  settled $${m.settledUsd.toFixed(2)} · held $${m.heldUsd.toFixed(2)}`);
+          io.out(`  Gemini settled $${m.settledUsd.toFixed(2)} · held $${m.heldUsd.toFixed(2)} · uncapped $${m.uncappedUsd.toFixed(2)} (Claude seat, Leonardo credits)`);
         }
         return 0;
       }
@@ -271,7 +405,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
             const again = n.sources.filter((s) => s.status === "failed" && (source === undefined || s.id === source));
             if (again.length === 0) return n;
             const ids = new Set(again.map((s) => s.id));
-            return { ...n, sources: n.sources.map((s) => (ids.has(s.id) ? { id: s.id, url: s.url, kind: s.kind, title: s.title, ...(s.channel === undefined ? {} : { channel: s.channel }), why: s.why, found: s.found, ...(s.watch === undefined ? {} : { watch: s.watch }), rights: s.rights, status: "pending" as const, files: [] } : s)) };
+            return { ...n, sources: n.sources.map((s) => (ids.has(s.id) ? { id: s.id, url: s.url, kind: s.kind, title: s.title, ...(s.channel === undefined ? {} : { channel: s.channel }), why: s.why, found: s.found, ...(s.watch === undefined ? {} : { watch: s.watch }), ...(s.rich === undefined ? {} : { rich: s.rich }), rights: s.rights, ...(s.fromIdea === undefined ? {} : { fromIdea: s.fromIdea }), status: "pending" as const, files: [] } : s)) };
           });
         }
         const { driveIngest, launchIngest } = await import("../lib/producers/scoutIngest.ts");
@@ -300,12 +434,79 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       if (cmd === "asset") {
         const id = nightArg();
         const { assetAct } = await import("../lib/foundry/scout/asset.ts");
-        const r = await assetAct(ctx, id, await input("brief"), io.ports?.asset ?? {});
-        const c = r.candidate;
+        const { briefFromIdea, originWith } = await import("../lib/foundry/scout/direction.ts");
+        // `fromIdea`: the kept idea this asset develops. The asset door is the mesh brief's own, so the
+        // ref is checked and taken off here, and set on the candidate once the act has written it.
+        const from = await briefFromIdea(await input("brief"));
+        if (!from.ok) throw new Refused(from.error.message);
+        // --seed: the kept seed it grows from, checked against the idea's own before anything is launched.
+        const { brief, ...idea } = from.value;
+        const origin = await originWith(idea, str("seed"));
+        if (!origin.ok) throw new Refused(origin.error.message);
+        const r = await assetAct(ctx, id, brief, io.ports?.asset ?? {});
+        if (origin.value.fromIdea !== undefined || origin.value.fromSeed !== undefined) await acts.markOrigin(id, r.candidate.id, origin.value);
+        const c = { ...r.candidate, ...origin.value };
         const failed = c.status === "failed" || (r.outcome !== undefined && !["done", "detached"].includes(r.outcome));
         say(`${c.id} asset3d ${c.status}${r.outcome === undefined ? "" : ` · ${r.outcome}`}${c.assetId === undefined ? "" : ` · mesh asset ${c.assetId}`}${c.error === undefined ? "" : ` · ${c.error}`}`);
         for (const v of r.asset?.variants ?? []) say(`  ${v.id} ${v.technique} ${v.status}${v.error === undefined ? "" : ` · ${v.error}`}`);
         if (json) doc({ ok: !failed, night: id, candidate: c, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.asset === undefined ? {} : { asset: r.asset }), budget: acts.money(ctx, await store.readNight(id)) });
+        return failed ? 1 : 0;
+      }
+
+      if (cmd === "ideas") {
+        const id = nightArg();
+        const { ideasAct, ideaCapOf, ideasUsed, reelCapOf, reelsUsed } = await import("../lib/foundry/scout/idea.ts");
+        const r = await ideasAct(ctx, id, await input(), io.ports?.ideas ?? {});
+        for (const c of r.candidates) say(`  ${c.id} idea ${c.target === "stats" ? "stats " : ""}${c.status}${c.image === undefined ? "" : ` · ${c.image}`}${c.error === undefined ? "" : ` · ${c.error}`}`);
+        const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
+        if (r.jobId !== undefined) say(`ideas ${r.jobId} · ${r.outcome ?? "?"}`);
+        if (r.reelsJobId !== undefined) say(`reels ${r.reelsJobId} · detached`);
+        const n = await store.readNight(id);
+        if (json) doc({ ok: !failed, night: id, ...(r.jobId === undefined ? {} : { jobId: r.jobId }), ...(r.reelsJobId === undefined ? {} : { reelsJobId: r.reelsJobId }), ...(r.outcome === undefined ? {} : { outcome: r.outcome }), candidates: r.candidates, ideas: { used: ideasUsed(n), cap: ideaCapOf(n) }, reels: { used: reelsUsed(n), cap: reelCapOf(n) } });
+        return failed ? 1 : 0;
+      }
+
+      // A kept idea composed as a storyboard: up to five local Flux frames + the seat's words (spark scout-storyboards).
+      if (cmd === "storyboard") {
+        const id = nightArg();
+        const sb = await import("../lib/foundry/scout/storyboard.ts");
+        if (flags.has("collect")) {
+          const got = await sb.collectStoryboards(id, { store: ctx.store });
+          for (const c of got) say(`${c.id} storyboard ${c.status}${c.error === undefined ? "" : ` · ${c.error}`}`);
+          if (got.length === 0) say(`nothing to collect in night ${id}`);
+          if (json) doc({ ok: true, night: id, candidates: got });
+          return 0;
+        }
+        const r = await sb.storyboardAct(ctx, id, await input(), io.ports?.storyboard ?? {});
+        for (const c of r.candidates) say(`  ${c.id} storyboard ${c.status} · ${c.fromIdea} · ${(c.images ?? []).filter((f) => f !== null).length}/${c.panels.length} frame(s)${c.error === undefined ? "" : ` · ${c.error}`}`);
+        const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
+        const n = await store.readNight(id);
+        if (json) doc({ ok: !failed, night: id, jobIds: r.jobIds, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.dry === true ? { dry: true } : {}), candidates: r.candidates, storyboards: { used: sb.storyboardsUsed(n), cap: sb.storyboardCapOf(n) } });
+        return failed ? 1 : 0;
+      }
+
+      // A kept music seed made into a Suno track, and a kept track clip into a visualizer (spark scout-decision-graph).
+      if (cmd === "track" || cmd === "visualizer") {
+        const id = nightArg();
+        // --collect: a detached job's results into the night - every pending track (visualizer) whose job is done.
+        if (flags.has("collect")) {
+          const got =
+            cmd === "track"
+              ? await (await import("../lib/foundry/scout/track.ts")).collectTracks(ctx, id, io.ports?.track ?? {})
+              : await (await import("../lib/foundry/scout/visualizer.ts")).collectVisualizers(id);
+          for (const c of got) say(`${c.id} ${c.kind} ${c.status}${c.error === undefined ? "" : ` · ${c.error}`}`);
+          if (got.length === 0) say(`nothing to collect in night ${id}`);
+          if (json) doc({ ok: true, night: id, candidates: got });
+          return 0;
+        }
+        const r =
+          cmd === "track"
+            ? await (await import("../lib/foundry/scout/track.ts")).trackAct(ctx, id, str("seed") ?? usage("track needs --seed <batch>/sd-NNN"), io.ports?.track ?? {})
+            : await (await import("../lib/foundry/scout/visualizer.ts")).visualizerAct(ctx, id, str("track") ?? usage("visualizer needs --track <night>/<c-id>/<aN>"), io.ports?.visualizer ?? {});
+        const c = r.candidate;
+        const failed = c.status === "failed" || (r.outcome !== undefined && !["done", "detached", "enqueued", "launched", "queued", "running"].includes(r.outcome));
+        say(`${c.id} ${c.kind} ${c.status}${r.outcome === undefined ? "" : ` · ${r.outcome}`}${c.error === undefined ? "" : ` · ${c.error}`}`);
+        if (json) doc({ ok: !failed, night: id, candidate: c, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), budget: acts.money(ctx, await store.readNight(id)) });
         return failed ? 1 : 0;
       }
 
@@ -316,8 +517,8 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         if (use !== undefined && (use === "" || use.length > USE_MAX)) usage(`--use is one line of at most ${USE_MAX} characters: the content this run can help make`);
         const r =
           cmd === "style"
-            ? await acts.styleAct(ctx, id, list("sources").length > 0 ? list("sources") : usage("style needs --sources s-01,s-03"), str("slug"), use)
-            : await acts.sceneAct(ctx, id, str("source") ?? usage("scene needs --source s-NN"), flags.has("frames") ? list("frames") : undefined, use);
+            ? await acts.styleAct(ctx, id, list("sources").length > 0 ? list("sources") : usage("style needs --sources s-01,s-03"), str("slug"), use, str("seed"))
+            : await acts.sceneAct(ctx, id, str("source") ?? usage("scene needs --source s-NN"), flags.has("frames") ? list("frames") : undefined, use, str("seed"));
         const c = r.candidate;
         const failed = c.status === "failed" || (r.outcome !== undefined && !["done", "detached", "enqueued", "launched", "queued", "running"].includes(r.outcome));
         say(`${c.id} ${c.kind} ${c.status}${r.outcome === undefined ? "" : ` · ${r.outcome}`}${c.error === undefined ? "" : ` · ${c.error}`}`);
@@ -380,5 +581,9 @@ if (entry !== undefined && pathToFileURL(path.resolve(entry)).href.toLowerCase()
   // The stores resolve from process.cwd(); a --json input and a folder are resolved where they were typed, before the move.
   const args = process.argv.slice(2).map((a, i, all) => ((all[i - 1] === "--json" || all[i - 1] === "--brief" || all[i - 1] === "folder") && a !== "-" && fs.existsSync(a) ? path.resolve(a) : a));
   process.chdir(ROOT);
-  process.exitCode = await runCli(args, { env: process.env, out: (s) => console.log(s), err: (s) => console.error(s) });
+  const code = await runCli(args, { env: process.env, out: (s) => console.log(s), err: (s) => console.error(s) });
+  // The studio's CDP socket (lib/imaging/studio/browser.ts) is never closed - closing it closes the
+  // operator's Chrome - and it keeps node alive after the doctor's studio line or an `ideas` batch
+  // (2026-10-23: a doctor that printed nothing and never exited). Leave once stdout has drained.
+  process.stdout.write("", () => process.exit(code));
 }

@@ -11,9 +11,10 @@
 //      ElevenLabs is copy-only on the desk and Local is declared-not-installed - and a withheld
 //      operation keeps its reason, verbatim. Never a fake take for an engine not installed.
 //   2. THE EDIT - kept here, on the server's own copy (lib/sound/editPlan.ts, which
-//      lib/sound/generate.ts renders and charges with). Kept sections are references at the
+//      lib/sound/generate.ts renders and guards with). Kept sections are references at the
 //      source's ranges; regenerated ones carry the conditioning the mode asked for; only the
-//      regenerated seconds are counted as spend.
+//      regenerated seconds count as new audio (the meter books the whole plan -
+//      sound-generate-door.probe.spec.ts).
 //   Retired with the lab's model, each with its successor:
 //   · the mapping of a render into AudioMeta (`renderMeta`): takes are filed on the server now
 //     (lib/sound/takes.ts createTake, lib/sound/huntRender.ts), held by sound-hunt and the

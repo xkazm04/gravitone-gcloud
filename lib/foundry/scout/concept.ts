@@ -24,12 +24,17 @@ import { parseAt } from "@gt/domain/door";
 import { ok, type Result } from "@gt/domain/errors";
 import type { ConceptDesign } from "@gt/producers/scout-asset/define";
 
-import { ASSET_CLASSES, BUDGETS, TECHNIQUES, type AssetClass, type MeshBrief, type Technique } from "../mesh/types";
-import { USE_MAX } from "./types";
+import { ASSET_CLASSES, BUDGETS, EXPORT_PROJECTS, TECHNIQUES, type AssetClass, type MeshBrief, type Technique } from "../mesh/types";
+import { USE_MAX, type AssetServes } from "./types";
 
 /* ── The brief's door ─────────────────────────────────────────────────────── */
 
 const words = (max: number) => z.string().trim().min(1).max(max);
+
+/** The project an asset is for: an existing game it helps, or a new kind of project it opens (./types.ts AssetServes). */
+const servesSchema = z.union([z.object({ project: z.enum(EXPORT_PROJECTS) }).strict(), z.object({ newProject: words(120) }).strict()], {
+  message: `serves: {project: ${EXPORT_PROJECTS.join(" | ")}} for a game it helps, or {newProject: "<the kind of project it opens>"}`,
+});
 
 const briefSchema = z
   .object({
@@ -37,15 +42,17 @@ const briefSchema = z
     /** What it is, in craft words: "hooded archer, leather jerkin, quiver". */
     subject: words(200),
     style: words(200).optional(),
-    /** What content the asset can serve, one line (every scout run states its use - types.ts USE_MAX). */
-    use: words(USE_MAX).optional(),
+    /** What the asset is for in that project, one line - REQUIRED (operator, 2026-10-23: "we cannot create assets
+     *  without purpose"); every scout run states its use (types.ts USE_MAX). */
+    use: words(USE_MAX),
+    serves: servesSchema,
     /** A weapon's kind (sword, mace, axe, staff): the M1 touch-up keys on it. */
     kind: words(40).optional(),
     techniques: z.array(z.enum(TECHNIQUES)).min(1).max(TECHNIQUES.length).optional(),
   })
   .strict();
 
-export type BriefInput = { readonly brief: MeshBrief; readonly techniques?: readonly Technique[]; readonly use?: string };
+export type BriefInput = { readonly brief: MeshBrief; readonly techniques?: readonly Technique[]; readonly use: string; readonly serves: AssetServes };
 
 /** The skill's brief JSON as a MeshBrief: the class's budget, and a character rigged onto UE5 Mannequin chains. */
 export function parseBrief(raw: unknown): Result<BriefInput> {
@@ -61,7 +68,8 @@ export function parseBrief(raw: unknown): Result<BriefInput> {
     budgetTris: BUDGETS[b.class].tris,
     ...(b.class === "character" ? { rig: "ue5-mannequin" as const } : {}),
   };
-  return ok({ brief, ...(b.techniques === undefined ? {} : { techniques: b.techniques }), ...(b.use === undefined ? {} : { use: b.use }) });
+  const serves: AssetServes = "project" in b.serves ? { project: b.serves.project } : { newProject: b.serves.newProject };
+  return ok({ brief, ...(b.techniques === undefined ? {} : { techniques: b.techniques }), use: b.use, serves });
 }
 
 /* ── The prompts ──────────────────────────────────────────────────────────── */

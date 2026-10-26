@@ -86,6 +86,12 @@ export function FrameCanvas(p: FrameCanvasProps) {
     if (d.kind === "move" && (v.a !== l.x || v.b !== l.y)) p.onMove?.(l, v.a, v.b);
     if (d.kind === "size" && (v.a !== l.w || v.b !== l.h)) p.onResize?.(l, Math.max(1, v.a), Math.max(1, v.b));
   };
+  // The browser took the pointer (a system gesture, a lost capture): no lift will come, so the
+  // local drag is dropped and the layer is drawn where its record says it is - no edit leaves.
+  const cancel = (): void => { setDrag(null); setLive(null); };
+  // A layer is a button, so a click alone selects it: a screen reader's activation sends a click
+  // with no pointer press before it. After a press it re-selects the same layer, which is nothing.
+  const pick = (k: string) => () => p.onSelect?.(k);
   const at = (l: CanvasLayer) => {
     const k = layerKey(l);
     const d = drag?.key === k ? drag.kind : null;
@@ -124,9 +130,14 @@ export function FrameCanvas(p: FrameCanvasProps) {
               onPointerDown={down(l, "move")}
               onPointerMove={move}
               onPointerUp={up(l)}
+              onPointerCancel={cancel}
+              onClick={pick(k)}
             >
               <span className={s.elLabel}>{l.label || l.role}</span>
-              {on && editable && p.onResize !== undefined && <span className={s.handle} aria-hidden="true" onPointerDown={down(l, "size")} onPointerMove={move} onPointerUp={up(l)} />}
+              {/* The handle takes the press (and stops it, so the element does not start a move);
+                  its moves and its lift bubble to the element's own handlers. Wiring them here as
+                  well ran `up` twice off one render's state and sent every resize twice. */}
+              {on && editable && p.onResize !== undefined && <span className={s.handle} aria-hidden="true" onPointerDown={down(l, "size")} />}
             </div>
           ) : (
             <div
@@ -141,6 +152,8 @@ export function FrameCanvas(p: FrameCanvasProps) {
               onPointerDown={down(l, "move")}
               onPointerMove={move}
               onPointerUp={up(l)}
+              onPointerCancel={cancel}
+              onClick={pick(k)}
             >
               {l.unsourced && (
                 <span className={s.unsourced} aria-hidden="true">

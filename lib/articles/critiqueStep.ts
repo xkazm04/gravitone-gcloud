@@ -36,10 +36,14 @@ import type { EngineDeps } from "./engine";
 //
 // COST BOUND, in agent turns: per round, one per reviewer plus at most one
 // retry each for a malformed review, one writer turn plus at most one retry
-// for an invalid answer, and at most two revision turns (research, rewrite).
-// With the four-reviewer panel and two rounds: 8 turns at the least (round 1
-// and keep, plus the three writer turns before it: 3 + 4 + 1), 26 at the most
-// (3 + round 1: 4+4+1+1+2 + round 2: 4+4+1+1+1).
+// for an invalid answer, a research turn plus at most one retry (critiqueTurn
+// retries `revise-research`), and one rewrite. Each check between turns
+// (checkLoop.ts: after the draft, drive.ts, and after every revision here)
+// adds at most MAX_FIX_PASSES fix turns of two attempts each.
+// With the four-reviewer panel, two rounds and MAX_FIX_PASSES 2: 8 turns at the
+// least (round 1 and keep, a clean draft, plus the three writer turns before
+// it: 3 + 4 + 1), 39 at the most (3 + round 1: 4+4+1+1+2+1 + round 2:
+// 4+4+1+1+1 + three checks: 3 x 2 x 2).
 
 /** The panel this run is reviewed by: the snapshot taken when its critique
  *  began, so a resume (or the UI) never meets a panel the run did not start

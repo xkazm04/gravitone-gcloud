@@ -23,8 +23,11 @@
 //   · `blog` is a channel the form cannot pick: its slot is made by the article approve on the
 //     Board and goes out as that approve's pull request (owner ruling 4), never by this form.
 
+import { wordsCount } from "@gt/domain/partView.album";
+import { SLOT_HOLDS } from "@gt/domain/slot.machine";
+
 import type { RailSlot } from "./calendar.ts";
-import { nextFullHour, toUtcInput } from "./slot.ts";
+import { fromUtcInput, nextFullHour, toUtcInput } from "./slot.ts";
 
 const MIN_MS = 60_000;
 
@@ -107,6 +110,26 @@ export const splitTags = (s: string): string[] => [
 /** The YouTube snippet limits v1's form held its fields to (lib/publish/youtube.ts snippetProblem). */
 export const TITLE_MAX = 100;
 export const DESCRIPTION_MAX = 5000;
+/** Tags, counted as YouTube counts them: every comma, and the quotes a tag with a space carries. */
+export const TAGS_MAX = 500;
+
+
+/**
+ * The rest of snippetProblem, which the upload applies at the slot's HOUR: a description over
+ * 5000 BYTES (the field caps characters), a `<` or `>` in title or description, tags past 500.
+ * A slot the form let through would be accepted, wait, and fail at its hour with nobody
+ * watching - so the form refuses it now. YouTube's alone; no other channel uploads yet.
+ * tests/next-server/schedule-snippet-parity.test.ts feeds the same cases to both doors.
+ */
+function youtubeBlocked(title: string, description: string, tags: readonly string[]): Blocked[] {
+  const out: Blocked[] = [];
+  if (/[<>]/.test(title)) out.push({ field: "title", words: "title holds < or >" });
+  if (/[<>]/.test(description)) out.push({ field: "description", words: "description holds < or >" });
+  // Past 5000 characters the length rule below has already said so.
+  if (description.length <= DESCRIPTION_MAX && wordsCount.description(description) > DESCRIPTION_MAX) out.push({ field: "description", words: `description over ${DESCRIPTION_MAX} bytes` });
+  if (wordsCount.tags(tags) > TAGS_MAX) out.push({ field: "tags", words: `tags over ${TAGS_MAX}` });
+  return out;
+}
 
 /**
  * Where the time field opens: the next full hour when the day is today (or none was picked),
@@ -142,16 +165,9 @@ export function itemDefault(items: readonly ScheduleItem[], slots: readonly Rail
  * still counts as placed on its Plan, @gt/kernel/slots/read.ts slottedIn: that is the part's gate,
  * not the item's channel.)
  */
-export const holds = (s: Pick<RailSlot, "status" | "dry">): boolean => s.status === "scheduled" || s.status === "publishing" || (s.status === "published" && s.dry !== true);
+export const holds = (s: Pick<RailSlot, "status" | "dry">): boolean => SLOT_HOLDS.includes(s.status) && !(s.status === "published" && s.dry === true);
 
-/** The UTC instant a `datetime-local` text names, or null. */
-function instantOf(when: string): string | null {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(when)) return null;
-  const t = Date.parse(`${when}:00.000Z`);
-  return Number.isNaN(t) ? null : new Date(t).toISOString();
-}
-
-export type Blocked = { readonly field: "item" | "channel" | "when" | "title" | "description"; readonly words: string };
+export type Blocked = { readonly field: "item" | "channel" | "when" | "title" | "description" | "tags"; readonly words: string };
 
 /**
  * What stops the form from being sent at all, field by field, in the work's words; empty when
@@ -159,7 +175,7 @@ export type Blocked = { readonly field: "item" | "channel" | "when" | "title" | 
  */
 export function checkSchedule(f: ScheduleForm, channels: readonly ChannelReady[]): { readonly blocked: readonly Blocked[]; readonly draft: ScheduleDraft | null } {
   const blocked: Blocked[] = [];
-  const at = instantOf(f.when);
+  const at = fromUtcInput(f.when);
   const ch = channels.find((c) => c.channel === f.channel);
   const title = f.title.trim();
   if (f.item === null) blocked.push({ field: "item", words: "no export" });
@@ -169,9 +185,11 @@ export function checkSchedule(f: ScheduleForm, channels: readonly ChannelReady[]
   if (title === "") blocked.push({ field: "title", words: "no title" });
   else if (title.length > TITLE_MAX) blocked.push({ field: "title", words: `title over ${TITLE_MAX}` });
   if (f.description.length > DESCRIPTION_MAX) blocked.push({ field: "description", words: `description over ${DESCRIPTION_MAX}` });
+  const tags = splitTags(f.tags);
+  if (f.channel === "youtube") blocked.push(...youtubeBlocked(title, f.description, tags));
   const draft =
     blocked.length === 0 && f.item !== null && f.channel !== null && at !== null
-      ? { item: f.item, channel: f.channel, at, title, description: f.description, tags: splitTags(f.tags) }
+      ? { item: f.item, channel: f.channel, at, title, description: f.description, tags }
       : null;
   return { blocked, draft };
 }
@@ -190,7 +208,7 @@ export type ScheduleWarning =
  */
 export function scheduleWarnings(f: Pick<ScheduleForm, "item" | "channel" | "when">, slots: readonly RailSlot[], nowMs: number): ScheduleWarning[] {
   const out: ScheduleWarning[] = [];
-  const at = instantOf(f.when);
+  const at = fromUtcInput(f.when);
   if (at !== null && Date.parse(at) < nowMs - MIN_MS) out.push({ kind: "past", at });
   if (at !== null && f.channel !== null) {
     const minute = Math.floor(Date.parse(at) / MIN_MS);

@@ -2,7 +2,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { MetricSnapshot, Publication } from "@gt/domain/publication";
 import type { Channel } from "@gt/domain/slot";
 import type { SlotState } from "@gt/domain/slot.machine";
-import type { Reader, Store } from "../store.ts";
+import type { Param, Reader, Store } from "../store.ts";
 import { readPublicationRow, readSlotRow, readSnapshotRow, SLOT_COLUMNS, type SlotRow } from "./schema.ts";
 
 // THE CALENDAR, READ - and only read. v1's `listSlots` swept before it answered (a GET that
@@ -21,26 +21,52 @@ export type SlotQuery = {
   readonly from?: string;
   readonly to?: string;
   readonly states?: readonly SlotState[];
+  /** One item on one channel - the clash check's question, so it never reads the whole calendar. */
+  readonly item?: string;
+  readonly channel?: Channel;
+  /** The earliest `limit` rows (the order below), so a caller that wants one never decodes the calendar. */
+  readonly limit?: number;
 };
+
+/**
+ * An instant in the one shape the `at` column holds (toISOString's: ms, Z), which is what makes
+ * its TEXT order and its bounds the instant's. The door admits "12:00:00Z" and "12:00:00.5Z"
+ * too, and those sort after "12:00:00.000Z" ('Z' > '.'), so every writer and every bound goes
+ * through this - as the v1 import's `iso` already did. Unparseable text is left for the door.
+ */
+export function instantOf(s: string): string {
+  const t = Date.parse(s);
+  return Number.isNaN(t) ? s : new Date(t).toISOString();
+}
 
 /** The calendar, earliest first (v1 listSlots' order); ties by id so the order is total. */
 export function listSlotsIn(r: Reader, q: SlotQuery = {}): SlotRow[] {
   const where: string[] = [];
-  const params: string[] = [];
+  const params: Param[] = [];
   if (q.from !== undefined) {
     where.push("at >= ?");
-    params.push(q.from);
+    params.push(instantOf(q.from));
   }
   if (q.to !== undefined) {
     where.push("at < ?");
-    params.push(q.to);
+    params.push(instantOf(q.to));
+  }
+  if (q.item !== undefined) {
+    where.push("item = ?");
+    params.push(q.item);
+  }
+  if (q.channel !== undefined) {
+    where.push("channel = ?");
+    params.push(q.channel);
   }
   if (q.states !== undefined) {
     if (q.states.length === 0) return [];
     where.push(`state IN (${q.states.map(() => "?").join(", ")})`);
     params.push(...q.states);
   }
-  const sql = `SELECT ${SLOT_COLUMNS} FROM slots${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY at, id`;
+  const limit = q.limit === undefined ? "" : " LIMIT ?";
+  if (q.limit !== undefined) params.push(q.limit);
+  const sql = `SELECT ${SLOT_COLUMNS} FROM slots${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY at, id${limit}`;
   return r.all(sql, ...params).map(readSlotRow);
 }
 

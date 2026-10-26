@@ -1,12 +1,11 @@
 // THE WHOLE-RECORD SAVE. saveStep never rejects: it resolves to an outcome, and every
 // failure is also published to the trouble channel by withStore.
 //
-// Split out of the stepStore.ts door, which re-exports saveStep.
+// Split out of v1's stepStore.ts; the door is now index.ts, which re-exports saveStep.
 
 import { STEPS_STORE, runTx } from "@/lib/studioDb";
 
 import { claimSaveSlot, inIssueOrder } from "./saveOrder";
-import { saveWatchers } from "./saveWatchers";
 import { SCHEMA_VERSION } from "./schemaVersion";
 import type { SaveOutcome } from "./storageOutcome";
 import { key, withStore } from "./withStore";
@@ -18,21 +17,22 @@ export async function saveStep<T>(
   projectId: string,
   phase: string,
   data: T,
-  /** `v`: the record version to stamp — a record def's own (records/patch.ts).
+  /** `v`: the record version to stamp — a record def's own (recordRegistry.ts).
    *  Absent means `SCHEMA_VERSION`, which is every caller without a def. */
   opts?: { v?: number },
 ): Promise<SaveOutcome> {
   // Ticket taken HERE — at call time, in issue order — not inside the write,
-  // which would be the same race one layer down. See the block above.
+  // which would be the same race one layer down. See saveOrder.ts.
   const slot = claimSaveSlot(projectId, phase);
-  saveWatchers.forEach((w) => w(projectId, phase, data));
-  // An early out for the common overtaking case, so a superseded keystroke does
-  // not even open the database. It is an optimisation, not the guard: the guard
-  // is the check inside the transaction callback, which is the only one that
-  // cannot be raced.
-  if (!slot.stillNewest()) return { ok: true, superseded: true };
 
-  return inIssueOrder(key(projectId, phase), async () => {
+  return inIssueOrder<SaveOutcome>(key(projectId, phase), async () => {
+    // An early out for the common overtaking case, so a superseded keystroke does
+    // not even open the database. It runs when this save's turn in the chain comes
+    // up, not at call time: the slot was claimed a line above the call, so a check
+    // there could never be false (measured: three saves in one tick opened three
+    // connections). It is an optimisation, not the guard: the guard is the check
+    // inside the transaction callback, which is the only one that cannot be raced.
+    if (!slot.stillNewest()) return { ok: true, superseded: true };
     let wrote = false;
     const r = await withStore("write", projectId, phase, (db) =>
       runTx(db, STEPS_STORE, "readwrite", (store) => {

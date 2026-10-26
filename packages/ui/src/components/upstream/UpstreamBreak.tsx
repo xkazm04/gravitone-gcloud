@@ -33,7 +33,8 @@ export function UpstreamBreak({ steps, brokeAt, detail }: UpstreamBreakProps) {
     <div className={s.ub}>
       <div className={s.rail} role="list">
         {steps.map((step, i) => (
-          <Fragment key={step}>
+          // Keyed by place: a chain may name one step twice (two upstream parts of one kind).
+          <Fragment key={`${step}:${i}`}>
             {i > 0 && <span className={cx(s.link, i > brokeAt && s.off)} aria-hidden="true" />}
             <span role="listitem" className={cx(s.node, states[i] === "broke" && s.brk, states[i] === "unreached" && s.todo)}>
               <i className={s.mark} aria-hidden="true" />

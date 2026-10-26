@@ -109,7 +109,10 @@ async function recognizeOnCard(req: RecognizeRequest, host: string, started: num
   } catch (e) {
     // A model without a thinking mode rejects `think` outright (probe.py's
     // measured behaviour); one retry without it, everything else re-throws.
-    if (!(e instanceof ImagingError)) throw e;
+    // "Rejects" is an ANSWER: `failed` with `dispatched` set (http.ts, a 4xx/5xx
+    // the daemon sent). An unreachable host and a 180 s timeout are not that
+    // answer, and retrying them only doubles the wait under the card's lease.
+    if (!(e instanceof ImagingError) || e.kind !== "failed" || !e.dispatched) throw e;
     res = await requestJson<ChatResponse>("ollama", `${host}/api/chat`, {
       method: "POST",
       body,
@@ -118,6 +121,10 @@ async function recognizeOnCard(req: RecognizeRequest, host: string, started: num
   }
 
   const text = res.message?.content?.trim() ?? "";
+  // An empty answer is never a judgement (google.ts refuses one, qwen.ts rotates
+  // on one). `bad-response`, not `refused`: it is not reroutable, so an empty
+  // free local read does not become a billed cloud call.
+  if (!text) throw new ImagingError("Ollama returned an empty recognition.", "bad-response", "ollama");
   const json = req.schema ? parseAgainstSchema("ollama", text, req.schema) : undefined;
 
   const price = priceCall({ provider: "ollama", model: MODEL });

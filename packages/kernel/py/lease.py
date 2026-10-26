@@ -3,31 +3,29 @@ and lease.ts, over the same tables in the same SQLite store, with the standard l
 
     python lease.py status <store.sqlite> <resource>
 
-(lease_spec.py runs spec/lease.json against this module.)
-
-The forge and Dojo workers (pipeline/foundry/forge.py, dojo_run.py) will take the GPU
-through this module in a later phase. What a worker calls, and nothing else:
-
-    from lease import Leases, assert_fence
-    lease = Leases(store_path).acquire("gpu.local", wait_s=600)   # FIFO; raises LeaseTimeout, never hangs
+job.py and pipeline/gpu/lease.py (v1's GPU broker, a shim over this module) load it as
+`gt_kernel_lease` through kernel_store.kernel_lease(), since a GPU tenant's `lease` is that broker:
+    lease = leases.acquire("gpu.local", wait_s=600)    # leases = kernel_lease().Leases(store); FIFO, LeaseTimeout
     try:
-        ... every write the worker makes to the store, inside its own transaction:
-            assert_fence(conn, "gpu.local", lease.fence)          # raises FenceConflict; roll back
-        lease.heartbeat()                                         # on a timer, every ttl/3 s; raises LeaseLost
+        with leases.tx() as t:                         # every write, in its own transaction:
+            assert_fence(t, "gpu.local", lease.fence)  # raises FenceConflict; the transaction rolls back
+        lease.heartbeat()                              # on a timer, every ttl/3 s; raises LeaseLost
     finally:
         lease.release()
 
-A worker that sees LeaseLost or FenceConflict stops at once: another holder has the
+A holder that sees LeaseLost or FenceConflict stops at once: another holder has the
 resource, and every write it still tries is refused by the fence. The rules (one
 holder, FIFO tickets, a pid probed only on its own host, a reused pid told apart by
 bootId, expiry is loss, the fence never reused) are stated in lease-core.ts; this file
-mirrors them decision for decision, and spec/lease.json holds both to one table.
+mirrors them decision for decision, and spec/lease.json holds both to one table
+(lease_spec.py runs it here).
 
 Every grant, reclaim, release and queue change appends its Event in the same
 transaction, through the hash chain that verify_events.py re-derives; a heartbeat
 and a waiter's poll are liveness pings and write none.
 """
 
+import contextlib
 import json
 import os
 import socket
@@ -42,6 +40,7 @@ if _HERE not in sys.path:
     sys.path.append(_HERE)  # behind the caller's entries: to a GPU tenant `lease` is pipeline/gpu's
 from kernel_ledger import append, machine  # noqa: E402
 from lease_pid import pid_alive  # noqa: E402
+from verify_events import usage  # noqa: E402
 
 DEFAULT_TTL_S = 120
 BUSY_TIMEOUT_S = 10.0
@@ -364,6 +363,8 @@ class Leases:
                 # Busy past the connection timeout is contention, not a fault (the
                 # Node acquire says why); poll again while the wait has time left.
                 if ("locked" not in str(e) and "busy" not in str(e)) or time.monotonic() >= deadline:
+                    with contextlib.suppress(sqlite3.Error), self.tx() as t:  # lease.ts `acquire`: an error gives up the place too, best effort
+                        leave_in(t, resource, ticket)  # a queued ticket is a live waiter ahead of every newcomer until its TTL
                     raise
                 time.sleep(poll_s)
                 continue
@@ -391,7 +392,7 @@ def main(argv):
         finally:
             leases.close()
         return 0
-    print(__doc__.strip().splitlines()[2].strip(), file=sys.stderr)  # the usage line
+    print(usage(__doc__), file=sys.stderr)
     return 2
 
 

@@ -12,6 +12,9 @@ settle exactly while no such event follows it. That is what lets `recover` settl
 NODE recovery made (it interrupts a dead Python holder's job and has no Python settle to call)
 without telling any ending twice: a retried job that ends again is owed again.
 """
+import sqlite3
+import sys
+
 from job_record import fence_loss, interrupt, job_event, load, ms, read_row
 from kernel_store import kernel_lease
 
@@ -33,8 +36,13 @@ def settle(jobs, job_id):
         typ, data = "job.settled", {"ending": job["state"]}
     except Exception as e:  # noqa: BLE001 - recorded on the job, Node's job.settle-failed; the ending stands
         typ, data = "job.settle-failed", {"ending": job["state"], "message": str(e) or type(e).__name__}
-    with jobs.tx() as t:
-        job_event(t, jobs.holder, load(t, job_id), typ, data)
+    try:
+        with jobs.tx() as t:
+            job_event(t, jobs.holder, load(t, job_id), typ, data)
+    except sqlite3.Error as e:
+        # Node's settleAfter: the ending stands, and so does the call that made it (a finish, a
+        # claim holding a granted run). Unrecorded, the ending is still owed: recover tells it again.
+        print("job %s: %s was not recorded: %s" % (job_id, typ, e), file=sys.stderr)
     return job["state"]
 
 
@@ -62,6 +70,11 @@ def recover(jobs, producers):
             why = loss or ("holder-gone" if _gone(lease["holder"], jobs.holder, jobs.alive) else None)
             if why is not None:
                 interrupt(t, job, jobs.holder, why)
+        # Only the endings with no settle after them (`owed`, as one query): the sweep's cost follows
+        # what is owed, not the store's whole history. settle() still re-checks each one it is handed.
         ended = [r[0] for r in t.conn.execute(
-            "SELECT id FROM jobs WHERE state IN ('done', 'failed', 'interrupted') AND json_extract(record, '$.producer') IN (%s) ORDER BY n" % marks, names).fetchall()]
+            "SELECT id FROM jobs WHERE state IN ('done', 'failed', 'interrupted') AND json_extract(record, '$.producer') IN (%s) "
+            "AND (SELECT max(seq) FROM events WHERE subject_id = jobs.id AND type IN ('job.done', 'job.failed', 'job.interrupted')) "
+            "> coalesce((SELECT max(seq) FROM events WHERE subject_id = jobs.id AND type IN ('job.settled', 'job.settle-failed')), 0) "
+            "ORDER BY n" % marks, names).fetchall()]
     return [jid for jid in ended if settle(jobs, jid) is not None]

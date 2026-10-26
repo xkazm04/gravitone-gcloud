@@ -1,14 +1,13 @@
 // QUALITY-GATE HONESTY for the trailer structural checker (dynamic).
 //
 // Sibling of `gate-vacuous-pass.probe.spec.ts`, and here for the reason that file
-// names: a check that examined nothing must not count as enforcement. This lane is
-// where it matters, because `docs/knowledge-library-field-report.md:61` records
-// that every `pipeline/*.mts` driver in this repo "run[s] only by hand" — so the
-// full 22-case control at `pipeline/trailer-structure-regression.mts` protects
-// nothing between runs, while THIS file runs under `npm test`.
+// names: a check that examined nothing must not count as enforcement. The full
+// 22-case control is `pipeline/trailer-structure-regression.mts` (run by
+// `check:trailer-structure`, in `verify` and in CI); this file is the subset that
+// runs under `npm test`.
 //
 // So this probe pins the four properties that, if they ever silently flipped,
-// would turn `app/_phases/script/trailer/structure.ts` back into the thing it
+// would turn `lib/script/trailer/structure.ts` back into the thing it
 // replaces: an array of sentences that says `pass` about things nobody measured.
 //
 //   1. A magnitude rule with no resolver is `unmeasured`, never `pass`.
@@ -16,7 +15,7 @@
 //   3. The standing "does this cut work" row is always present, so `enforced`
 //      can never reach 100.
 //   4. `AND THEN` trips — the one rule this repo already held in prose
-//      (`app/_phases/script/types.ts:24`) and could not execute.
+//      (`lib/script/types.ts`, `Beat.connector`) and could not execute.
 import { test, expect } from "@playwright/test";
 import { runStructureCheck } from "@/lib/script/trailer/structure";
 import type { TrailerBeat, TrailerCut } from "@/lib/script/trailer/types";
@@ -72,6 +71,50 @@ test("the same rule becomes executable when the shot lane injects a resolver", (
   expect(rows(big, "magnitude", "violation").length).toBeGreaterThan(0);
   expect(rows(small, "magnitude", "violation")).toHaveLength(0);
   expect(rows(small, "magnitude", "pass").length).toBeGreaterThan(0);
+});
+
+// Every comparison against NaN is false, so a resolver that answered NaN made
+// `a >= b` false and the button read as "smaller than the climax" - a pass over a
+// size nobody measured (2 magnitude passes before the guard).
+test("a resolver's NaN or Infinity is unmeasured, never a pass", () => {
+  for (const junk of [NaN, Infinity]) {
+    const r = runStructureCheck(minimal(), { magnitudeOf: (b) => (b.kind === "peak" ? 9 : junk) });
+    console.log(`[trailer] resolver=${junk} -> magnitude pass=${rows(r, "magnitude", "pass").length}, unmeasured=${rows(r, "magnitude", "unmeasured").length}`);
+    expect(rows(r, "magnitude", "pass")).toHaveLength(0);
+    expect(rows(r, "magnitude", "violation")).toHaveLength(0);
+    expect(rows(r, "magnitude", "unmeasured").length).toBeGreaterThan(0);
+    for (const f of rows(r, "magnitude", "unmeasured")) expect(f.detail).not.toContain("No magnitude resolver was supplied");
+  }
+});
+
+// The reset's cue row used one sentence for "no mark" and "no cue", so a reset
+// that named its mark on a cut with no cue was told it named none.
+test("a reset's cue row says which half is missing, the mark or the cue", () => {
+  const marked = minimal();
+  marked.beats = marked.beats.map((b) => (b.kind === "reset" ? { ...b, cueMark: "s3" } : b));
+  const cueRow = (c: TrailerCut) =>
+    runStructureCheck(c).findings.find((f) => f.rule === "reset" && f.beatId === "p4" && f.cites.includes("cue-first"));
+  const named = cueRow(marked);
+  const unnamed = cueRow(minimal());
+  console.log(`[trailer] reset cue row -> marked="${named?.detail.slice(0, 70)}"`);
+  expect(named?.verdict).toBe("unmeasured");
+  expect(named?.detail).toContain(`names cue mark "s3"`);
+  expect(named?.detail).not.toContain("names no cue mark");
+  expect(unnamed?.detail).toContain("names no cue mark and the cut declares no cue");
+});
+
+// A stored record reaches the checker through a cast (`written<TrailerCut>`), so a
+// role the union no longer has arrives at runtime. checkSpine indexed LEGAL_KINDS
+// with it and threw "Cannot read properties of undefined (reading 'includes')".
+test("a movement whose role the spine does not rank is a graph violation, not a throw", () => {
+  const cut = minimal();
+  cut.movements = cut.movements.map((m) => (m.id === "m4" ? { ...m, role: "bridge" as never } : m));
+  const r = runStructureCheck(cut);
+  const v = rows(r, "graph", "violation").filter((f) => f.subject === "m4");
+  console.log(`[trailer] unranked role -> graph violations on m4=${v.length}`);
+  expect(v).toHaveLength(1);
+  expect(v[0].detail).toContain(`"bridge"`);
+  expect(r.malformed).toBe(true);
 });
 
 test("a declared specialty-lane cut is never graded malformed", () => {

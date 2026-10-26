@@ -2,8 +2,8 @@
 // reportStorageTrouble for a caller that knows it was doing storage work, and
 // reportTaskTrouble for the last-resort unhandled-rejection route.
 //
-// Split out of the stepStore.ts door, which re-exports the two reporters. The
-// publishing itself is `report` in troubleChannel.ts.
+// Split out of v1's stepStore.ts; the door is now index.ts, which re-exports the two
+// reporters. The publishing itself is `report` in troubleChannel.ts.
 
 import { errorMessage } from "@gt/domain/errors";
 
@@ -18,6 +18,9 @@ import { report } from "./troubleChannel";
 export function classify(e: unknown): StorageFailure {
   const name = typeof e === "object" && e !== null ? (e as { name?: string }).name : undefined;
   if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") return "quota";
+  // A blocked site or an opaque origin throws SecurityError on the first touch: @gt/ui's classify
+  // (storage/trouble.ts) says `unavailable` for it, and one rule gets one answer.
+  if (name === "SecurityError") return "unavailable";
   const message = errorMessage(e);
   if (message.includes("another tab")) return "blocked";
   if (message.includes("IndexedDB unavailable")) return "unavailable";
@@ -28,9 +31,10 @@ export function classify(e: unknown): StorageFailure {
  * Publish a storage failure raised somewhere OTHER than this module's store,
  * through this module's channel and this module's five kinds.
  *
- * Exported so the PROJECT record's writes (lib/projects.ts, lib/useProjects.ts,
- * the studio's bookmark and the frames step's progress report) land in the same
- * place with the same vocabulary, instead of growing a second error taxonomy one
+ * Exported so the PROJECT record's writes (v1 wired lib/projects.ts, the retired
+ * lib/useProjects.ts, the studio's bookmark and the frames step's progress report;
+ * the one caller left is lib/identityEviction.ts) land in the same place with the
+ * same vocabulary, instead of growing a second error taxonomy one
  * layer up. They already fail for identical reasons — the quota is one quota and
  * a blocked upgrade blocks both stores — and `useProjects` used to degrade all
  * of it to a bare `e.message` with no kind, while `parkAt` and `reportPhase`

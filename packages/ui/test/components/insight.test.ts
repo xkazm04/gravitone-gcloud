@@ -6,7 +6,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { batchBrief, batchProblem, batchSeconds, blankBatch, composeSfxPrompt, priceSeconds } from "../../src/components/audio/batch.ts";
+import { BATCH_LIMITS, batchBrief, batchProblem, batchSeconds, blankBatch, composeSfxPrompt, priceSeconds } from "../../src/components/audio/batch.ts";
 import { BatchForm } from "../../src/components/audio/BatchForm.tsx";
 import { briefCheck, briefWords } from "../../src/components/audio/brief.ts";
 import { BriefDelta } from "../../src/components/audio/BriefDelta.tsx";
@@ -85,6 +85,13 @@ describe("strengths: the evidence floor", () => {
     expect(html).toContain("75%");
     expect(html).toContain("ElevenLabs on ambient: kept 75% of 4, mean 7.3");
   });
+
+  test("a facet nobody judged keeps the table's column heads, every one named, n included", () => {
+    const heads = (cells: readonly StrengthCell[]) =>
+      [...renderToStaticMarkup(h(StrengthTable, { kind: "music", cells, facet: "mood", sort: { key: "n", provider: null, dir: "desc" }, picked: null, onFacet: () => {}, onSort: () => {}, onPick: () => {} })).matchAll(/<span role="columnheader"[^>]*>(.*?)<\/span>/g)].map((m) => (m[1] ?? "").replace(/<[^>]+>/g, "").replace(/\s*[↑↓]$/, ""));
+    expect(heads([])).toEqual(["mood", "ElevenLabs", "Suno", "n"]);
+    expect(heads([cell({ facet: "mood", value: "calm", n: 1 })])).toEqual(["mood", "ElevenLabs", "Suno", "n"]);
+  });
 });
 
 describe("rubric", () => {
@@ -156,6 +163,13 @@ describe("brief vs measured", () => {
     expect(html).toContain("length asked 2s, measured 4.5s, +2.5s");
     expect(renderToStaticMarkup(h(BriefDelta, { check: briefCheck("music", { tempoBpm: null, key: null, durationS: null }, null), label: "t" }))).toBe("");
   });
+
+  test("a key is held whatever its spelling: enharmonic, abbreviated, flat glyph; a real miss stays a miss", () => {
+    // The tracker spells keys as lib/sound/measure.ts NOTES does ("C#", "Eb", "Ab", "Bb"); a brief is typed.
+    const held = (askedKey: string, measuredKey: string): string | undefined => briefCheck("music", { tempoBpm: null, key: askedKey, durationS: null }, { tempoBpm: null, key: measuredKey, durationS: null }).axes[1]?.verdict;
+    expect([held("Db major", "C# major"), held("G# minor", "Ab minor"), held("Am", "A minor"), held("A♭ major", "Ab major"), held("F#m", "F# minor"), held("Cmaj", "C major"), held("Bb", "Bb major")]).toEqual(["held", "held", "held", "held", "held", "held", "held"]);
+    expect([held("A minor", "C major"), held("A major", "A minor"), held("C# minor", "D minor")]).toEqual(["missed", "missed", "missed"]);
+  });
 });
 
 describe("the operator batch", () => {
@@ -179,6 +193,19 @@ describe("the operator batch", () => {
     expect(batchProblem("sfx", { ...s, count: 2.5 })).toBe("1–6 takes");
     expect(batchProblem("sfx", { ...s, promptInfluence: 1.4 })).toBe("influence 0–1");
     expect(batchProblem("sfx", s)).toBeNull();
+  });
+
+  test("every free-text cap the door holds is named before anything is priced", () => {
+    const m = { ...blankBatch("music"), prompt: "a tune" };
+    expect(batchProblem("music", m)).toBeNull();
+    expect(batchProblem("music", { ...m, prompt: "x".repeat(BATCH_LIMITS.prompt + 1) })).toBe("prompt over 2000 characters");
+    expect(batchProblem("music", { ...m, key: "k".repeat(BATCH_LIMITS.key + 1) })).toBe("key over 40 characters");
+    expect(batchProblem("music", { ...m, key: "k".repeat(BATCH_LIMITS.key) })).toBeNull();
+    for (const field of Object.keys(BATCH_LIMITS) as (keyof typeof BATCH_LIMITS)[]) {
+      const over = "x".repeat(BATCH_LIMITS[field] + 1);
+      const f = field === "prompt" ? { ...m, prompt: over } : { ...m, [field]: over };
+      expect(batchProblem("music", f), field).toBe(`${field} over ${BATCH_LIMITS[field]} characters`);
+    }
   });
 
   test("seconds of audio are priced to the tenth under ten seconds", () => {

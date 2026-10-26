@@ -103,6 +103,16 @@ const COUNTER: FieldMap = {
   locator: "locator",
 };
 
+// The machine form of an unknown's impact (types.ts::Unknown.probe, c12015d2).
+// `forbid` items and `noCausalLink.{a,b}` are values, carried as they stand.
+const PROBE: FieldMap = {
+  when_mentions: "whenMentions",
+  forbid: "forbid",
+  require_one: "requireOne",
+  no_causal_link: "noCausalLink",
+  tests: "tests",
+};
+
 const UNKNOWN: FieldMap = {
   id: "id",
   what: "what",
@@ -110,6 +120,7 @@ const UNKNOWN: FieldMap = {
   impact: "impact",
   about: "about",
   resolved_by: "resolvedBy",
+  probe: { to: "probe", of: PROBE },
 };
 
 const OBLIGATION: FieldMap = {

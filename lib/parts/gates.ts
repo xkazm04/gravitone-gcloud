@@ -10,10 +10,9 @@ import type { PlanView } from "@gt/domain/produce";
 import { STEP_RECORDS, type StepKey } from "@gt/domain/steps/registry";
 import { blobStore, type BlobStore } from "@gt/kernel/blob";
 import { canonical } from "@gt/kernel/canonical";
-import { committedResult } from "@gt/kernel/decision/commit";
 import { openPacket, type Author } from "@gt/kernel/decision/driver";
 import { readPartIn, writePart } from "@gt/kernel/parts/driver";
-import { releaseAfterGate, stepPacketId } from "@gt/kernel/parts/gates";
+import { cullRatifies, latestGatePacket, releaseAfterGate, stepPacketId } from "@gt/kernel/parts/gates";
 import type { Reader, Store } from "@gt/kernel/store";
 
 import { blobRootOf, kernel } from "@/lib/kernelStore";
@@ -34,12 +33,11 @@ import { isGateKind, partVerdict, type GateKind } from "./verdict.ts";
 //   score   a PICK: rows are cues, candidates their takes, ONE keep per row (a second is refused
 //           at the preview, the cue named); the kept take becomes the cue's take in use;
 //   motion, cut   a packet review, as L36 had every gate.
-// A cull RATIFIES only when every row holds exactly one keep (`ratifies`); one with a reject is a
-// failed attempt, like a returned review. ATTEMPTS (Director's ruling): a failed attempt is final,
-// so the gate reopens on the next READY as a NEW packet, `pkt:step:<gate>#<n>` (attempt 1 keeps
-// L36's id). DEVIATION until the Director lands the kernel line: @gt/kernel/parts/gates
-// `gatePacketFact` reads attempt 1 only and any commit as ratified, so the PLAN shows a failed
-// cull ratified; the release here already follows `ratifies`. The kernel patch is in L39's report.
+// A cull RATIFIES only when every row holds exactly one keep (`ratifies`, the kernel's rule); one
+// with a reject is a failed attempt, like a returned review. ATTEMPTS (Director's ruling): a failed
+// attempt is final, so the gate reopens on the next READY as a NEW packet, `pkt:step:<gate>#<n>`
+// (attempt 1 keeps L36's id). The plan reads the same attempt and the same rule
+// (@gt/kernel/parts/gates `gatePacketFact`), so a failed cull is never shown ratified.
 
 export type GateDeps = { readonly store: () => Result<Store>; readonly blobs: (store: Store) => BlobStore; readonly now: () => number };
 
@@ -71,36 +69,18 @@ export function splitAttempt(ref: string): { readonly gatePartId: string; readon
   return m === null ? { gatePartId: ref, attempt: 1 } : { gatePartId: m[1] ?? ref, attempt: Math.max(1, Number(m[2])) };
 }
 
-/** Did this committed cull ratify? Every row (a candidate with no row is a row of its own) holds exactly one keep. */
-export function ratifies(r: Reader, packetId: string): boolean {
-  const res = committedResult(r, packetId);
-  if (res === undefined || !res.ok) return false;
-  const kept = new Set<string>(res.value.kept);
-  const rows = new Map<string, number>();
-  for (const it of r.all("SELECT candidate_id, row FROM packet_items WHERE packet_id = ?", packetId)) {
-    const id = String(it["candidate_id"]);
-    const row = it["row"] === null || it["row"] === undefined ? `#${id}` : String(it["row"]);
-    rows.set(row, (rows.get(row) ?? 0) + (kept.has(id) ? 1 : 0));
-  }
-  return rows.size > 0 && [...rows.values()].every((n) => n === 1);
-}
+/** Did this committed cull ratify? The kernel's rule, the one the plan reads. */
+export const ratifies: (r: Reader, packetId: string) => boolean = cullRatifies;
 
 export type Attempt = { readonly id: string; readonly attempt: number; readonly state: "open" | "ratified" | "failed" };
 
 /** The gate's newest attempt, or undefined while none was opened. */
 export function latestAttempt(r: Reader, gatePartId: string): Attempt | undefined {
-  const base = stepPacketId(gatePartId);
-  let best: { id: string; attempt: number; state: string; mode: string } | undefined;
-  for (const row of r.all("SELECT id, state, mode FROM packets WHERE id = ? OR substr(id, 1, ?) = ?", base, base.length + 1, `${base}#`)) {
-    const id = String(row["id"]);
-    const attempt = id === base ? 1 : Number(id.slice(base.length + 1));
-    if (!Number.isInteger(attempt)) continue;
-    if (best === undefined || attempt > best.attempt) best = { id, attempt, state: String(row["state"]), mode: String(row["mode"]) };
-  }
+  const best = latestGatePacket(r, gatePartId);
   if (best === undefined) return undefined;
-  if (best.state === "open") return { id: best.id, attempt: best.attempt, state: "open" };
-  if (best.state === "returned") return { id: best.id, attempt: best.attempt, state: "failed" };
-  return { id: best.id, attempt: best.attempt, state: best.mode !== "matrix-cull" || ratifies(r, best.id) ? "ratified" : "failed" };
+  if (best.state === "open") return { id: best.id, attempt: best.n, state: "open" };
+  if (best.state === "returned") return { id: best.id, attempt: best.n, state: "failed" };
+  return { id: best.id, attempt: best.n, state: best.mode !== "matrix-cull" || cullRatifies(r, best.id) ? "ratified" : "failed" };
 }
 
 /* ── a cull's candidates and its effect on the records ────────────────────── */

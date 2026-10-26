@@ -37,6 +37,9 @@ export interface TextRequestOptions {
   timeoutMs: number;
   /** Attempts for retryable failures. ONE by default — see the header. */
   attempts?: number;
+  /** The caller's cancel (TextRequest.signal). It aborts the request in flight
+   *  and surfaces as `cancelled`, never as this helper's own `timeout`. */
+  signal?: AbortSignal;
 }
 
 function kindForStatus(status: number): TextErrorKind {
@@ -53,12 +56,18 @@ export async function postJson<T>(
   url: string,
   opts: TextRequestOptions,
 ): Promise<T> {
-  const { headers = {}, body, timeoutMs, attempts = 1 } = opts;
+  const { headers = {}, body, timeoutMs, attempts = 1, signal } = opts;
 
   let last: TextError | null = null;
   for (let attempt = 1; attempt <= attempts; attempt++) {
+    // Checked before every attempt: a cancel between two is not a third bill.
+    if (signal?.aborted) throw new TextError(`The turn was cancelled before ${provider} was asked.`, "cancelled", provider);
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), timeoutMs);
+    const onCancel = () => ctl.abort();
+    signal?.addEventListener("abort", onCancel, { once: true });
+    /** A status arrived: whatever breaks after this, the vendor took the call. */
+    let answered = false;
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -66,6 +75,7 @@ export async function postJson<T>(
         body: JSON.stringify(body),
         signal: ctl.signal,
       });
+      answered = true;
 
       const text = await res.text();
       if (!res.ok) {
@@ -107,6 +117,12 @@ export async function postJson<T>(
       if (e instanceof TextError) {
         if (attempt >= attempts || !e.retryable) throw e;
         last = e;
+      } else if ((e as Error)?.name === "AbortError" && signal?.aborted) {
+        // The CALLER hung up, not our clock. The request was in flight, so it
+        // may still be billed - dispatched - and no other engine is tried.
+        const err = new TextError(`The turn was cancelled while ${provider} was answering.`, "cancelled", provider);
+        err.dispatched = true;
+        throw err;
       } else if ((e as Error)?.name === "AbortError") {
         last = new TextError(
           `${provider} did not answer within ${Math.round(timeoutMs / 1000)}s.`,
@@ -117,6 +133,13 @@ export async function postJson<T>(
         // finished the work and will bill for it; our clock ran out, not theirs.
         last.dispatched = true;
         throw last;
+      } else if (answered) {
+        // The vendor answered and the BODY broke mid-read (a reset, a truncated
+        // stream). It took the request and ran it, so this is dispatched like
+        // any other answered failure - lib/imaging/http.ts's rule, same words.
+        const err = new TextError(`${provider} answered, but its response could not be read.`, "failed", provider, String(e));
+        err.dispatched = true;
+        throw err;
       } else {
         // NOT dispatched: the transport refused to connect — DNS, TLS, an
         // unreachable host — so nothing reached a vendor and nothing can have
@@ -127,6 +150,7 @@ export async function postJson<T>(
       await sleep(400 * 2 ** (attempt - 1));
     } finally {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", onCancel);
     }
   }
   throw last ?? new TextError(`${provider} failed.`, "failed", provider);

@@ -23,7 +23,7 @@ import { useState } from "react";
 
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
-import fieldCss from "../field/Field.module.css";
+import { Field } from "../field/Field.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { LedgerLink } from "../ledgerlink/LedgerLink.tsx";
@@ -32,7 +32,7 @@ import type { Look } from "../status/status.ts";
 import { StatusPill } from "../status/StatusPill.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import { UpstreamBreak } from "../upstream/UpstreamBreak.tsx";
-import { clock, dayLabel, dayKey, isBad, type RailSlot } from "./calendar.ts";
+import { isBad, whenUtc as when, type RailSlot } from "./calendar.ts";
 import { PUBLISH_CHAIN, breakOf, canCancel, canMove, canPublishNow, duration, figure, fromUtcInput, missedWords, moveDefault, moveProblem, signed, DRIFT_WORDS } from "./slot.ts";
 import { SlotConfirm } from "./SlotConfirm.tsx";
 import { SlotMark } from "./SlotRow.tsx";
@@ -86,11 +86,6 @@ export type SlotDetailProps = {
   readonly onCancel: () => void;
   readonly onPublishNow: () => void;
   readonly specimen?: boolean;
-};
-
-const when = (iso: string): string => {
-  const t = Date.parse(iso);
-  return Number.isNaN(t) ? iso : `${dayLabel(dayKey(t))} · ${clock(t)} UTC`;
 };
 
 function Media({ view }: { readonly view: SlotView }) {
@@ -228,15 +223,17 @@ export function SlotDetail({ view, nowMs, busy, error, asked, onMove, onCancel, 
                     if (problem === null && at !== null && idle) onMove(at);
                   }}
                 >
-                  <input className={fieldCss.field} type="datetime-local" aria-label="move to, UTC" value={field} onChange={(e) => setField(e.currentTarget.value)} />
+                  <Field type="datetime-local" label="move to, UTC" value={field} onChange={setField} />
                   <span className={s.utc}>UTC</span>
                   <Button label="Move" tone="violet" size="sm" submit disabled={problem !== null || !idle} />
                   {problem !== null && <ErrorLine message={problem} />}
                 </form>
               )}
-              {error !== undefined && confirm === null && <ErrorLine message={error} live />}
             </section>
           )}
+          {/* Outside the verbs: a refusal on a slot that moved under the press (the caller re-reads
+              it on a conflict) is drawn beside the slot as it now is, even when no verb is left. */}
+          {error !== undefined && confirm === null && <ErrorLine message={error} live />}
         </div>
       </div>
       {confirm !== null && (

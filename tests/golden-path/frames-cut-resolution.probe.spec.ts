@@ -196,3 +196,29 @@ test("every template the trailer discipline offers reads as a promotional cut", 
   expect(promotional.length).toBeGreaterThan(0);
   console.log(`[templates] promotional: ${promotional.join(", ")}`);
 });
+
+/* ── 6 · the seeded figure is the line's number, whole ──────────────────────── */
+
+/** The figure `framesFromRender` seeds for one sentence, or null. */
+const seededFigure = (text: string) =>
+  framesFromRender({ ...RENDERS[0], beats: [{ ...RENDERS[0].beats[0], text }] })[0].texts.find((t) => t.role === "figure")?.value ?? null;
+
+test("the seeded figure is the number the line states, never a fragment of it", () => {
+  // Each of these was drawn wrong on the shipped fixture or on a line shaped like
+  // one: cut mid-word at 30 characters, a list read as a number, a magnitude a
+  // hundred thousand short, a percent sign dropped, a year with its comma, and a
+  // figure lost because a year came first.
+  const cases: [string, string | null][] = [
+    ["On the 6th of October 2025, Bitcoin hit one hundred and twenty six thousand dollars.", "one hundred and twenty six thousand"],
+    ["Bitcoin peaked at a hundred and twenty six thousand dollars in October 2025.", "a hundred and twenty six thousand"],
+    ["Strategy holds more than two and a half years of cash. Holders added roughly three hundred and eighty thousand Bitcoin.", "three hundred and eighty thousand"],
+    ["Candidates one, two and three are the transmission.", null],
+    ["Yields near 4.5%, thirty-year at 5%, a stronger dollar.", "4.5%"],
+    ["In 2021, 40 percent of miners left.", "40 percent"],
+    ["By 2024 there were 21 million coins.", "21 million"],
+    ["Long-term holders sold about three point six seven million Bitcoin.", "three point six seven million"],
+    ["Holders added 380,000 BTC in a single month.", "380,000"],
+    ["On the 6th of October, nothing.", null],
+  ];
+  for (const [line, figure] of cases) expect(seededFigure(line), line).toBe(figure);
+});

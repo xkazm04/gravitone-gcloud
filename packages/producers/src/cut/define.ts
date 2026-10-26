@@ -41,7 +41,9 @@ export function cutPlan(v: CutView, act: string | null, target: string | undefin
     case "render-aspect": {
       if (v.face !== "ads") return refuse("aspect renders are the ads face's act");
       if (v.adsBlocked !== undefined) return refuse(v.adsBlocked);
-      const aspects = target === undefined ? v.aspects : [target];
+      // Each aspect once: the ads-finish record takes any list, and a repeat would be a unit planned
+      // twice - priced on the receipt, then refused by the part act as an internal fault.
+      const aspects = target === undefined ? [...new Set(v.aspects)] : [target];
       if (aspects.length === 0) return refuse("no aspect asked for");
       const bad = aspects.find((x) => !(AD_ASPECT_TARGETS as readonly string[]).includes(x));
       if (bad !== undefined) return refuse(`${bad} is not an aspect an ad renders at`);

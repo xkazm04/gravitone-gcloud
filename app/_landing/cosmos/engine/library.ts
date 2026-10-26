@@ -5,7 +5,7 @@
 import { hideBanner, showBanner } from "./banner";
 import { el, ICON } from "./dom";
 import { famItems, fmtN, squarify, tornTop } from "./layout";
-import { setLv } from "./nav";
+import { focusStage, setLv } from "./nav";
 import { palette } from "./palette";
 import { artGet, artPut, drawInto, type Surface } from "./raster";
 import type { Op } from "./rasterJobs";
@@ -52,8 +52,8 @@ function buildLib(cx: Cx, id: string): void {
     h1 = el("h1", "lv-title", hd);
   h1.textContent = f.label;
   const total = famItems(f);
-  if (locked) hd.insertAdjacentHTML("beforeend", `<span class="chipx" aria-label="locked">${ICON.lock}</span>`);
-  else if (total) hd.insertAdjacentHTML("beforeend", `<span class="chipx" aria-label="${fmtN(total)} items">${ICON.stack}${fmtN(total)}</span>`);
+  if (locked) hd.insertAdjacentHTML("beforeend", `<span class="chipx" role="img" aria-label="locked">${ICON.lock}</span>`);
+  else if (total) hd.insertAdjacentHTML("beforeend", `<span class="chipx" role="img" aria-label="${fmtN(total)} items">${ICON.stack}${fmtN(total)}</span>`);
   const area = el("div", "lv-area", sh);
   cx.famSorted = [];
   if (!f.categories.length) {
@@ -138,11 +138,13 @@ function hotCat(cx: Cx, b: HTMLElement, c: GalaxyCategory, n: number | null, on:
     return;
   }
   if (cx.ST.lv !== "fam") return;
-  b.classList.add("hot");
-  area.classList.add("hasHot");
+  // the rect is read before the class writes: read after them it forces a layout of its own,
+  // ahead of the one showBanner's name write forces (the hot classes only filter and lift tiles)
   const ar = area.getBoundingClientRect(),
     fam = cx.ST.fam!,
     P = palette(fam);
+  b.classList.add("hot");
+  area.classList.add("hasHot");
   showBanner(cx, {
     name: c.label,
     meta: n ? `<span class="mi">${ICON.stack}${fmtN(n)}</span>` : cx.famById.get(fam)!.status === "locked" ? `<span class="mi">${ICON.lock}</span>` : "",
@@ -186,6 +188,7 @@ export function openCat(cx: Cx, k: number): void {
   renderStage(cx, "cat", k, r);
   setLv(cx, "cat");
   hideBanner(cx);
+  focusStage(cx);
 }
 
 export function closeCat(cx: Cx): void {

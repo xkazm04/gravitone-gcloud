@@ -19,7 +19,7 @@ import { errorMessage } from "@gt/domain/errors";
 import { generateTake, parseGenerateRequest } from "./generate";
 import { renderParams, renderPatterns } from "./knowledge";
 import { ledgerPath, readLedger, SoundError, storeRoot } from "./store";
-import { listTakes, parseTakeFilter, parseTakePatch, patchTake } from "./takes";
+import { getTake, listTakes, parseTakeFilter, parseTakePatch, patchTake } from "./takes";
 import { RUBRIC, STAGES, type SoundTake } from "./types";
 
 export const USAGE =
@@ -58,6 +58,14 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
     return v;
   };
   const has = (name: string) => args.includes(`--${name}`);
+  /** A number flag, read or refused: Number("ninety") is NaN, which the request door files as "no tempo". */
+  const numFlag = (name: string): number | null => {
+    const v = flag(name);
+    if (v === undefined) return null;
+    const n = Number(v);
+    if (v.trim() === "" || !Number.isFinite(n)) throw new Usage(`--${name} needs a number; got ${JSON.stringify(v)}`);
+    return n;
+  };
   const list = (name: string) =>
     (flag(name) ?? "")
       .split(",")
@@ -109,7 +117,7 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
           promptInfluence: flag("influence") !== undefined ? Number(flag("influence")) : null,
           technique: list("technique"),
           terms: { genre: list("genre"), mood: list("mood"), instrument: list("instrument"), sfxCategory: flag("category") ?? null },
-          tempoBpm: flag("tempo") ? Number(flag("tempo")) : null,
+          tempoBpm: numFlag("tempo"),
           key: flag("key") ?? null,
           // THE AGENT LANE: a take generated from a terminal arrives in Triage
           // as an agent's, unjudged, for a person to hear.
@@ -123,6 +131,11 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
           use: flag("use") ?? null,
           aim: flag("aim") ?? null,
         });
+        // `generate` is the one sound door that bills with no receipt (the kernel's producers
+        // price theirs and go dry under the flag); GRAVITONE_DRY_ONLY=1 forces DRY everywhere,
+        // so here it refuses the render after the request was held to its contract.
+        if (process.env.GRAVITONE_DRY_ONLY === "1")
+          throw new SoundError("GRAVITONE_DRY_ONLY=1: generate renders live on ElevenLabs with no receipt and has no dry stand-in; nothing was sent", 403);
         const take = await generateTake(req);
         if (JSON_OUT) json({ take });
         else {
@@ -146,6 +159,11 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
               throw new Usage(`--score takes dim=n pairs (dims: ${[...RUBRIC.music, ...RUBRIC.sfx].join(", ")})`);
             ratings[k] = Number(n);
           }
+          // Held to THIS take's rubric: a dimension it does not carry is stored and never read by
+          // the ledger's mean - or, alone, becomes the mean (ledger.ts rubricMean's fallback).
+          const dims = RUBRIC[(await getTake(id)).kind];
+          const off = Object.keys(ratings).filter((k) => !dims.includes(k));
+          if (off.length) throw new Usage(`--score ${off.join(", ")}: not on this take's rubric (${dims.join(", ")})`);
           body.ratings = ratings;
         }
         if (flag("reasons") !== undefined) body.reasons = list("reasons");

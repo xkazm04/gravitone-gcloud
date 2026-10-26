@@ -13,26 +13,15 @@
 // measured tempo and key plus the terms its kept descendants share. No model guesses a genre
 // here (core.js#conceptFor). The registry's reference-track-anchoring: a reference carries
 // style, never melody - which is why only terms, tempo and key cross into the seed.
+import { TEMPO } from "./batch.ts";
+import { relativeKey, sameKey } from "./brief.ts";
 import type { Seed, Term, TermFacet } from "./recipe.ts";
 
 export type Variation = { readonly axis: "swap" | "mood" | "tempo" | "key" | "fence"; readonly diff: readonly string[]; readonly seed: Seed; readonly why: string };
 
-const REL: Readonly<Record<string, string>> = {
-  "A minor": "C major",
-  "C major": "A minor",
-  "F minor": "Ab major",
-  "Ab major": "F minor",
-  "D minor": "F major",
-  "F major": "D minor",
-  "E minor": "G major",
-  "G major": "E minor",
-  "G minor": "Bb major",
-  "Bb major": "G minor",
-  "C minor": "Eb major",
-  "Eb major": "C minor",
-  "B minor": "D major",
-  "D major": "B minor",
-};
+// The relative key is computed, not listed: a hand list held 14 of the tracker's 24 keys (no
+// F# minor / A major, no E major / C# minor), so those seeds offered no key axis and a
+// reference read relative to its truth was graded `wrong`. ./brief.ts parses any spelling.
 
 const pctKept = (e: Term): string => (e.keepRate !== null ? `${Math.round(e.keepRate * 100)}% kept` : "");
 
@@ -55,9 +44,10 @@ export function variationsOfSeed(base: Seed, terms: readonly Term[]): Variation[
     out.push({ axis: "mood", diff: [`−${wm.term}`, `+${bm.term}`], seed: { ...base, moods: base.moods.map((x) => (x === wm.term ? bm.term : x)) }, why: pctKept(bm) });
   }
   const bpm = base.bpm !== null && base.bpm > 0 ? base.bpm : 100;
-  for (const d of [-6, 6]) out.push({ axis: "tempo", diff: [`${d > 0 ? "+" : ""}${d} BPM`], seed: { ...base, bpm: bpm + d }, why: `${Math.round(bpm + d)} BPM` });
-  const rel = base.key === null ? undefined : REL[base.key];
-  if (base.key !== null && rel !== undefined) out.push({ axis: "key", diff: [`${base.key} → ${rel}`], seed: { ...base, key: rel }, why: "relative" });
+  // A step past the range a brief may lock is not a variation the batch would take (batch.ts TEMPO).
+  for (const d of [-6, 6]) if (bpm + d >= TEMPO.min && bpm + d <= TEMPO.max) out.push({ axis: "tempo", diff: [`${d > 0 ? "+" : ""}${d} BPM`], seed: { ...base, bpm: bpm + d }, why: `${Math.round(bpm + d)} BPM` });
+  const rel = base.key === null ? null : relativeKey(base.key);
+  if (base.key !== null && rel !== null) out.push({ axis: "key", diff: [`${base.key} → ${rel}`], seed: { ...base, key: rel }, why: "relative" });
   const fence =
     terms.find((v) => v.stance === "avoid" && v.facet === "instrument" && !base.instruments.includes(v.term) && !base.avoid.includes(v.term)) ??
     terms.filter((v) => v.facet === "instrument" && v.n >= 4 && !base.instruments.includes(v.term) && !base.avoid.includes(v.term)).sort((a, b) => (a.keepRate ?? 1) - (b.keepRate ?? 1))[0];
@@ -90,7 +80,11 @@ export function tempoError(est: number, truth: number): TempoError {
 
 export type KeyRelation = "exact" | "relative" | "wrong";
 
-export const keyRelation = (est: string, truth: string): KeyRelation => (est === truth ? "exact" : REL[est] === truth ? "relative" : "wrong");
+export const keyRelation = (est: string, truth: string): KeyRelation => {
+  if (sameKey(est, truth)) return "exact";
+  const rel = relativeKey(est);
+  return rel !== null && sameKey(rel, truth) ? "relative" : "wrong";
+};
 
 /** A take as the concept reads it: its verdict, whether it scores (proven), its words. */
 export type ConceptTake = {

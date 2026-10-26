@@ -25,7 +25,7 @@ import { FIELD_ATTR } from "../../keymap/target.ts";
 import { Keycap } from "../keycaps/Keycaps.tsx";
 import { LaneChip } from "../runs/LaneChip.tsx";
 import { SourceTag } from "../source/SourceTag.tsx";
-import { changeCount, costWords, fmtDur, fmtUsd, NO_CHANGES, mayStopAtCeiling, parseCeiling, when, type LineField, type ReceiptChanges } from "./produce.ts";
+import { changeCount, costWords, fmtDur, fmtUsd, NO_CHANGES, mayStopAtCeiling, overWords, parseCeiling, totalPriced, when, type LineField, type ReceiptChanges, type TotalField } from "./produce.ts";
 import { Unpriced } from "./Unpriced.tsx";
 import s from "./Receipt.module.css";
 
@@ -77,9 +77,9 @@ function Line({ l, marks, added, nowMs }: { readonly l: ReceiptLine; readonly ma
       <Cell field="cost" marks={marks} className={s.num}>
         {l.usd === null && l.usdRange === undefined ? <Unpriced reason={l.unpricedReason} /> : costWords(l)}
       </Cell>
-      <td>
+      <Cell field="src" marks={marks}>
         <SourceTag kind={l.src} />
-      </td>
+      </Cell>
       <Cell field="queuePos" marks={marks} className={s.num}>
         #{l.queuePos}
       </Cell>
@@ -92,28 +92,39 @@ function Line({ l, marks, added, nowMs }: { readonly l: ReceiptLine; readonly ma
 
 export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, onConfirm, busy, error, nowMs }: ReceiptProps) {
   const parsed = parseCeiling(ceiling);
-  const over = parsed.ok && mayStopAtCeiling(r, parsed.value);
+  // At the ceiling the receipt was read at, the mark IS the server's verdict (the one the launch
+  // event records); at any other typed value it is the same rule on the typed text.
+  const over = parsed.ok && (parsed.value !== undefined && parsed.value === r.ceilingUsd ? r.overCeiling : mayStopAtCeiling(r, parsed.value));
   const blocked = !parsed.ok;
   const worst = r.totals.usdRange?.[1] ?? r.totals.usd;
   const moved = changeCount(changes);
   const t = r.totals;
-  const mark = (f: "seconds" | "cost" | "queuePos" | "etaAt" | "mode"): string | undefined => (changes.totals.has(f) ? s.moved : undefined);
+  const mark = (f: TotalField): string | undefined => (changes.totals.has(f) ? s.moved : undefined);
+  // The totals' marks speak to every reader, as the lines' cells do (Cell): the ring is for the eye.
+  const said = (f: TotalField): ReactNode => changes.totals.has(f) && <SrOnly text=" (changed)" />;
   return (
-    <section className={s.receipt} data-component="Receipt" data-mode={r.mode} aria-label={`receipt, ${r.lines.length} lines, ${r.mode}`}>
+    <section className={s.receipt} data-component="Receipt" data-mode={r.mode} aria-label={`receipt, ${r.lines.length} ${r.lines.length === 1 ? "line" : "lines"}, ${r.mode}`}>
       <div className={s.head}>
         <span className={mark("mode")}>
           <Chip label={r.mode} tone={r.mode === "live" ? "rose" : "cyan"} dot name={`mode ${r.mode}`} />
+          {said("mode")}
         </span>
         {moved > 0 && <Chip label="changed" value={moved} tone="amber" name={`${moved} changes since you read it`} />}
         <span className={s.totals}>
           <span className={mark("seconds")}>
             <Chip label="work" value={fmtDur(t.seconds)} />
+            {said("seconds")}
           </span>
-          <span className={mark("cost")}>
-            <Chip label="cost" value={t.usdRange !== undefined ? costWords(t) : fmtUsd(t.usd)} />
+          {/* One mark over the priced total and the unpriced count: `cost` moves when either does. */}
+          <span className={cx(s.group, mark("cost"))}>
+            {totalPriced(r) && <Chip label="cost" value={t.usdRange !== undefined ? costWords(t) : fmtUsd(t.usd)} />}
+            {t.unpriced > 0 && <Chip label="unpriced" value={t.unpriced} tone="violet" />}
+            {said("cost")}
           </span>
-          {t.unpriced > 0 && <Chip label="unpriced" value={t.unpriced} tone="violet" />}
-          <SourceTag kind={t.src} />
+          <span className={mark("src")}>
+            <SourceTag kind={t.src} />
+            {said("src")}
+          </span>
         </span>
       </div>
       <div className={s.scroll}>
@@ -139,8 +150,8 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
         </table>
         {changes.removed.length > 0 && (
           <div className={s.removed}>
-            {changes.removed.map((k) => (
-              <Chip key={k} label={`− ${k}`} tone="rose" casing="lower" />
+            {changes.removed.map((l) => (
+              <Chip key={l.key} label={`− ${l.label}`} tone="rose" casing="lower" />
             ))}
           </div>
         )}
@@ -148,9 +159,15 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
       <div className={s.foot}>
         <dl className={s.facts}>
           <dt>queue</dt>
-          <dd className={mark("queuePos")}>#{r.queuePos}</dd>
+          <dd className={mark("queuePos")}>
+            #{r.queuePos}
+            {said("queuePos")}
+          </dd>
           <dt>eta</dt>
-          <dd className={mark("etaAt")}>{when(r.etaAt, nowMs)}</dd>
+          <dd className={mark("etaAt")}>
+            {when(r.etaAt, nowMs)}
+            {said("etaAt")}
+          </dd>
         </dl>
         <label className={s.ceiling}>
           <span>ceiling $</span>
@@ -166,7 +183,7 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
           />
         </label>
         {!parsed.ok && <ErrorLine message={parsed.error} />}
-        {over && <Chip label="may stop at ceiling" tone="amber" name={`worst case ${fmtUsd(worst)} over the ceiling ${parsed.ok && parsed.value !== undefined ? fmtUsd(parsed.value) : ""}`} />}
+        {over && parsed.ok && parsed.value !== undefined && <Chip label="may stop at ceiling" tone="amber" name={`worst case ${overWords(worst, parsed.value)[0]} over the ceiling ${overWords(worst, parsed.value)[1]}`} />}
         <button
           type="button"
           className={cx(s.confirm, busy && s.busy)}

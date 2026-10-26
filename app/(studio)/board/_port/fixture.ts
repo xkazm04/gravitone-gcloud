@@ -15,7 +15,8 @@ import "server-only";
 //     matches the decisions and v1's state (`conflict`, detail "stale-preview"), and is
 //     idempotent on its ticket;
 //   · only a packet review is returned, with a checked edit plan.
-// State lives for the server process; `resetFixture` starts it over.
+// State lives for the server process; `resetFixture` starts it over (nothing calls it today:
+// SIDE in ./port.ts is "real", so this whole side is unreached - see the note there).
 
 import { createHash } from "node:crypto";
 
@@ -25,7 +26,7 @@ import type { Decision } from "@gt/domain/decision";
 import { err, ok, type Result } from "@gt/domain/errors";
 import { candidateIdSchema, packetIdSchema, partIdSchema, runIdSchema } from "@gt/domain/ids";
 import type { PacketState } from "@gt/domain/packet.machine";
-import { checkVerdict, PACKET_SOURCES, SOURCES, type PacketSource } from "@gt/domain/source";
+import { checkVerdict, PACKET_SOURCES, reasonVocabulary, SOURCES, type PacketSource } from "@gt/domain/source";
 import type { BoardPacket, CommitReceipt, ItemWords, VerdictChange } from "@gt/ui/board/port";
 
 import type { ServerBoard } from "./port.ts";
@@ -72,7 +73,7 @@ function open(seed: Seed): Pile {
   return { seed, state: seed.committed === true ? "committed" : "open", acts, digest: `fixture:${seed.id}:${universe().epoch}` };
 }
 
-/** Start every pile over (the live lane's reset). */
+/** Start every pile over. */
 export function resetFixture(): void {
   const u = universe();
   u.epoch++;
@@ -165,7 +166,6 @@ function view(p: Pile): BoardPacket {
   // A blind arm's label is the machine's tell as much as its pick is: withheld until judged.
   const hidden = new Set(pairs.filter((pr) => pr.outcome === null).flatMap((pr): string[] => [pr.a, pr.b]));
   const items: Record<string, ItemWords> = Object.fromEntries(Object.entries(s.present.items).filter(([k]) => !hidden.has(k)));
-  const spec = SOURCES[s.source];
   const gone = undone(p);
   return {
     view: {
@@ -188,7 +188,7 @@ function view(p: Pile): BoardPacket {
       decisions,
       undecided: s.items.filter((it) => (cur.get(it.id) ?? null) === null).length,
       canUndo: p.state === "open" && p.acts.some((a) => (a.kind === "patch" || a.kind === "pick") && !gone.has(a.rev)),
-      reasons: { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax },
+      reasons: reasonVocabulary(s.source),
       pairs,
       ...(p.returned === undefined ? {} : { returned: p.returned }),
       ...(p.receipt?.value.apply === undefined ? {} : { apply: p.receipt.value.apply }),

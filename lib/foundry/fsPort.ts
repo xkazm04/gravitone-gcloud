@@ -22,7 +22,7 @@
 // back after it (pass null). The stores read the port at call time, never at
 // import, so a swap takes effect on the next effect.
 
-import { copyFile, mkdir, stat, unlink, writeFile } from "node:fs/promises";
+import { appendFile, copyFile, mkdir, stat, unlink, writeFile } from "node:fs/promises";
 
 import { readJson as kernelReadJson, writeJsonAtomic as kernelWriteJsonAtomic } from "./runStore";
 
@@ -34,6 +34,8 @@ export interface FsPort {
   unlink(file: string): Promise<void>;
   copyFile(src: string, dst: string): Promise<void>;
   writeFile(file: string, data: string): Promise<void>;
+  /** Append to an append-only log (verdictLog.ts); creates the file. */
+  appendFile(file: string, data: string): Promise<void>;
   /** Always recursive. */
   mkdir(dir: string): Promise<void>;
   stat(file: string): Promise<{ size: number }>;
@@ -45,6 +47,7 @@ export const realFsPort: FsPort = {
   unlink: (file) => unlink(file),
   copyFile: (src, dst) => copyFile(src, dst),
   writeFile: (file, data) => writeFile(file, data, "utf8"),
+  appendFile: (file, data) => appendFile(file, data, "utf8"),
   mkdir: async (dir) => {
     await mkdir(dir, { recursive: true });
   },

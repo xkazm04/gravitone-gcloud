@@ -21,12 +21,17 @@
 // Case 7 below guards exactly that edge.
 
 import { test, expect } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { keepEnv, stripComments } from "./_helpers";
 import { spendRows, __resetBudget, BUDGET_VAR, WINDOW_VAR, FLOOR_VAR } from "@/lib/imaging/budget";
 import { ImagingError, presumedBilled } from "@/lib/imaging/errors";
-import { billedOnFailure, generate } from "@/lib/imaging/router";
+import { leonardoProvider } from "@/lib/imaging/providers/leonardo";
+import { ollamaProvider } from "@/lib/imaging/providers/ollama";
+import { qwenProvider } from "@/lib/imaging/providers/qwen";
+import { billedOnFailure, generate, recognize } from "@/lib/imaging/router";
+import { PRICES } from "@/lib/imaging/pricing";
 
 const realFetch = globalThis.fetch;
 
@@ -38,6 +43,9 @@ keepEnv([
   "GOOGLE_AI_API_KEY",
   "LEONARDO_API_KEY",
   "OLLAMA_HOST",
+  "QWEN_API_KEY",
+  "OLLAMA_LEASE_WAIT_MS",
+  "GRAVITONE_STORE_PATH",
   "IMAGING_ENV",
 ]);
 
@@ -45,7 +53,7 @@ const INTERACTIONS = "generativelanguage.googleapis.com";
 const LEONARDO = "cloud.leonardo.ai";
 
 /** Every dispatch, by method and URL, so a case can count per endpoint. */
-let calls: Array<{ method: string; url: string }> = [];
+let calls: Array<{ method: string; url: string; model?: string }> = [];
 const count = (host: string, method?: string) =>
   calls.filter((c) => c.url.includes(host) && (!method || c.method === method)).length;
 
@@ -187,6 +195,218 @@ test("8. [guard] leonardo poll GET with one transient 500 then COMPLETE -> serve
   expect(out.images).toHaveLength(1);
   expect(count(LEONARDO, "POST")).toBe(1);
   expect(polls).toBe(2);
+});
+
+test("11. google answers 200 and the body breaks mid-read -> `failed` dispatched, 1 failed row, no second dispatch", async () => {
+  // The headers arrived, so the vendor took the request and ran it; only the
+  // download of its answer failed. That is not "could not be reached".
+  stubFetch(
+    () =>
+      new Response(
+        new ReadableStream({
+          start(c) {
+            c.error(new TypeError("terminated"));
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+  );
+  const err = await failure(generate({ prompt: "probe body cut", aspect: "16:9", count: 1 }));
+  expect(count(INTERACTIONS)).toBe(1);
+  expect(err.kind).toBe("failed");
+  expect(err.dispatched, "a request the vendor answered was booked as never sent").toBe(true);
+  const rows = await spendRows();
+  expect(rows.map((r) => r.outcome)).toEqual(["failed"]);
+});
+
+test("12. leonardo started the generation, then its poll reports FAILED -> `failed` dispatched, 1 failed row", async () => {
+  // Leonardo charges at the start (the credit figure rides on the start answer), so a
+  // generation the poll later reports FAILED was billed. providers/leonardoFlare.ts books
+  // the same terminal status as dispatched; the Lucid Origin adapter must agree.
+  test.setTimeout(30_000); // one real 3 s poll interval
+  delete process.env.GOOGLE_AI_API_KEY;
+  process.env.LEONARDO_API_KEY = "probe-leonardo-key";
+  stubFetch((_n, url, method) => {
+    if (method === "POST") return json({ sdGenerationJob: { generationId: "gen-failed", apiCreditCost: 10 } });
+    if (method === "DELETE") return json({});
+    return json({ generations_by_pk: { status: "FAILED" } });
+  });
+  const err = await failure(generate({ prompt: "probe poll failed", aspect: "16:9", count: 1 }));
+  expect(err.provider).toBe("leonardo");
+  expect(err.kind).toBe("failed");
+  expect(err.dispatched, "a generation Leonardo started and charged for was booked as never sent").toBe(true);
+  expect(count(LEONARDO, "POST")).toBe(1);
+  const rows = await spendRows();
+  expect(rows.map((r) => r.outcome)).toEqual(["failed"]);
+});
+
+test("19. leonardo started the generation, then every poll answers 401 -> the give-up carries the 401 sentence", async () => {
+  // Same rule the video and Flare adapters keep: polls that all failed must not read as a slow vendor.
+  process.env.LEONARDO_API_KEY = "probe-leonardo-key";
+  stubFetch((_n, url, method) => {
+    if (method === "POST") return json({ sdGenerationJob: { generationId: "gen-401", apiCreditCost: 10 } });
+    if (method === "DELETE") return json({});
+    return json({ error: "Invalid authentication token" }, 401);
+  });
+  const p = leonardoProvider({ sleep: async () => undefined, pollMs: 1, maxPolls: 3 });
+  const err = await failure(p.generate!({ prompt: "probe poll 401", aspect: "16:9", count: 1 }));
+  expect(err.kind).toBe("timeout");
+  expect(err.message, "the polls' own failure was dropped").toMatch(/Invalid authentication token/);
+  expect(err.message).toMatch(/last poll failed/);
+});
+
+/** The Ollama eye takes the card's lease from the kernel store: a temp store per case. */
+async function withLeaseStore(fn: () => Promise<void>): Promise<void> {
+  const dir = mkdtempSync(join(tmpdir(), "billed-ollama-"));
+  process.env.GRAVITONE_STORE_PATH = join(dir, "gravitone.sqlite");
+  process.env.OLLAMA_HOST = "http://ollama.probe";
+  process.env.OLLAMA_LEASE_WAIT_MS = "0";
+  try {
+    await fn();
+  } finally {
+    const { closeProcessKernel } = await import("@gt/kernel/process");
+    closeProcessKernel();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const RECOGNIZE = { image: { base64: "AQID", mime: "image/png" as const }, instruction: "describe" };
+
+test("13. ollama daemon unreachable -> 1 dispatch attempt, not a second one without `think`", async () => {
+  // The retry without `think` exists for ONE answer: a model with no thinking mode
+  // rejecting the key. A host that never answered is not that answer.
+  await withLeaseStore(async () => {
+    stubFetch(() => Promise.reject(new TypeError("fetch failed")));
+    const err = await failure(ollamaProvider().recognize!(RECOGNIZE));
+    expect(err.kind).toBe("failed");
+    expect(err.dispatched).toBe(false);
+    expect(count("ollama.probe"), "an unreachable daemon was asked twice").toBe(1);
+  });
+});
+
+test("14. [guard] ollama rejects `think` with a 400 -> one retry without it, served", async () => {
+  await withLeaseStore(async () => {
+    const bodies: string[] = [];
+    calls = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      calls.push({ method: (init?.method ?? "GET").toUpperCase(), url });
+      bodies.push(String(init?.body ?? ""));
+      return calls.length === 1
+        ? json({ error: '"qwen3.8:27b" does not support thinking' }, 400)
+        : json({ message: { content: "a local answer" } });
+    }) as typeof fetch;
+    const out = await ollamaProvider().recognize!(RECOGNIZE);
+    expect(out.text).toBe("a local answer");
+    expect(count("ollama.probe")).toBe(2);
+    expect(JSON.parse(bodies[0]).think).toBe(false);
+    expect("think" in JSON.parse(bodies[1])).toBe(false);
+  });
+});
+
+test("15. qwen rotates SKUs on a 429 or empty content, never on a 400; each SKU is asked once", async () => {
+  process.env.QWEN_API_KEY = "probe-qwen-key";
+  const QWEN = "aliyuncs.com";
+  const asked = () => calls.filter((c) => c.url.includes(QWEN)).map((c) => c.model);
+  const stubQwen = (answer: (model: string) => Response) => {
+    calls = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      const model = String((JSON.parse(String(init?.body ?? "{}")) as { model?: string }).model);
+      calls.push({ method: (init?.method ?? "GET").toUpperCase(), url, model });
+      return answer(model);
+    }) as typeof fetch;
+  };
+  const answer = (content: string) => json({ choices: [{ message: { content } }] });
+
+  // 429 on the primary, then served by the first fallback.
+  stubQwen((m) => (m === "qwen3.8-max" ? status(429) : answer("a qwen answer")));
+  const served = await qwenProvider().recognize!(RECOGNIZE);
+  expect(served.provenance.model).toBe("qwen3.7-plus");
+  expect(asked()).toEqual(["qwen3.8-max", "qwen3.7-plus"]);
+
+  // Empty content is a soft failure: the next SKU is asked.
+  stubQwen((m) => (m === "qwen3.6-flash" ? answer("the last SKU") : answer("  ")));
+  expect((await qwenProvider().recognize!(RECOGNIZE)).text).toBe("the last SKU");
+  expect(asked()).toEqual(["qwen3.8-max", "qwen3.7-plus", "qwen3.6-flash"]);
+
+  // A 400 fails identically on every SKU: thrown at once.
+  stubQwen(() => status(400));
+  const err = await failure(qwenProvider().recognize!(RECOGNIZE));
+  expect(err.kind).toBe("failed");
+  expect(asked(), "a malformed request was re-sent to the fallback SKUs").toEqual(["qwen3.8-max"]);
+});
+
+test("16. an estimate-basis row names the price row it was costed with (served and failed)", async () => {
+  // A row booked at basis `estimate` must stay explicable after PRICES is
+  // repriced and re-dated: it records provider/model@checked of the row used.
+  const rowOf = (ref: string | undefined) => PRICES.find((p) => `${p.provider}/${p.model}@${p.checked}` === ref);
+
+  stubFetch(() => googleImage());
+  await generate({ prompt: "probe served", aspect: "16:9", count: 1 });
+  let rows = await spendRows();
+  expect(rows).toHaveLength(1);
+  expect(rows[0].basis).toBe("estimate");
+  const served = rowOf(rows[0].price);
+  expect(served, `served estimate row names no PRICES row: ${rows[0].price}`).toBeDefined();
+  expect([served?.provider, served?.model]).toEqual([rows[0].provider, rows[0].model]);
+
+  __resetBudget();
+  stubFetch(() => status(500));
+  await failure(generate({ prompt: "probe 500", aspect: "16:9", count: 1 }));
+  rows = await spendRows();
+  expect(rows).toHaveLength(1);
+  expect(rows[0].outcome).toBe("failed");
+  const standIn = rowOf(rows[0].price);
+  expect(standIn, `failed estimate row names no PRICES row: ${rows[0].price}`).toBeDefined();
+  expect(standIn?.usdPerImage).toBe(rows[0].usd);
+});
+
+test("17. google count 3, one call refused or 500 -> the 2 paid images are kept and the provenance names the loss", async () => {
+  const refused = () => json({ status: "failed", error: { message: "blocked by safety" } });
+  stubFetch((n) => (n === 2 ? refused() : googleImage()));
+  const out = await generate({ prompt: "probe batch", aspect: "16:9", count: 3 });
+  expect(count(INTERACTIONS)).toBe(3);
+  expect(out.images, "a refusal on one call discarded the images the others returned").toHaveLength(2);
+  expect(out.provenance.shortBatch).toEqual({ asked: 3, returned: 2, refused: 1, failed: 0 });
+  expect(out.provenance.reroutedFrom?.map((r) => r.provider) ?? [], "a short batch was re-routed to a second vendor").not.toContain("google");
+
+  __resetBudget();
+  stubFetch((n) => (n === 3 ? status(500) : googleImage()));
+  const out2 = await generate({ prompt: "probe batch 500", aspect: "16:9", count: 3 });
+  expect(out2.images).toHaveLength(2);
+  expect(out2.provenance.shortBatch).toEqual({ asked: 3, returned: 2, refused: 0, failed: 1 });
+
+  // The whole batch refused is still a refusal, not an empty success.
+  __resetBudget();
+  stubFetch(() => refused());
+  await failure(generate({ prompt: "probe all refused", aspect: "16:9", count: 3 }));
+  expect(count(INTERACTIONS), "the refused batch was re-sent").toBe(3);
+});
+
+test("17b. [guard] a full batch carries no shortBatch", async () => {
+  stubFetch(() => googleImage());
+  const out = await generate({ prompt: "probe full", aspect: "16:9", count: 2 });
+  expect(out.images).toHaveLength(2);
+  expect(out.provenance.shortBatch).toBeUndefined();
+});
+
+test("18. an empty Ollama recognition is not a served judgement and is not re-sent to a billed eye", async () => {
+  // google.ts refuses an empty recognition and qwen rotates on one; the local eye
+  // used to resolve text "" as a green, empty judgement. `bad-response` is not
+  // reroutable, so the empty local read stops here instead of spending on Google.
+  await withLeaseStore(async () => {
+    stubFetch(() => json({ message: { content: "  " } }));
+    const err = await failure(ollamaProvider().recognize!(RECOGNIZE));
+    expect(err.kind).toBe("bad-response");
+    expect(err.reroutable).toBe(false);
+
+    stubFetch((_n, url) => (url.includes("ollama.probe") ? json({ message: { content: "" } }) : googleImage()));
+    const viaRouter = await failure(recognize(RECOGNIZE));
+    expect(viaRouter.kind).toBe("bad-response");
+    expect(count("ollama.probe")).toBe(1);
+    expect(count(INTERACTIONS), "an empty local read was sent to the billed cloud eye").toBe(0);
+  });
 });
 
 test("9. one authority: the router's billing predicate IS errors.ts's presumedBilled", () => {

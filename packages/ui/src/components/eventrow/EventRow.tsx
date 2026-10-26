@@ -93,7 +93,12 @@ export function EventRow(p: EventRowProps) {
         ) : (
           <>
             {usd(p.cost.usd)}
-            {mark !== "" && <sup aria-label={p.cost.src}>{mark}</sup>}
+            {mark !== "" && (
+              <>
+                <sup aria-hidden="true">{mark}</sup>
+                <SrOnly text={`, ${p.cost.src}`} />
+              </>
+            )}
           </>
         )}
       </span>

@@ -4,9 +4,11 @@ import { parseAt, type Parsed } from "@gt/domain/door";
 import { AppError, type Result } from "@gt/domain/errors";
 
 import { clientIp, presentedSecret, rateLimit, resolvePrincipal } from "../../lib/apiAuth.ts";
+import { localEntryGranted } from "../../lib/localEntry.ts";
+import { LOCAL_ENTRY_COOKIE } from "../../lib/localMode.ts";
 import { isRefusal, presentedIdToken, principalRateKey, type KeyUse, type Principal, type Refusal, type Resolution } from "../../lib/principal.ts";
 import { asAppError, clientGone, envelope, queryOf, readJson, resultResponse, sameOrigin } from "./http.ts";
-import { cookieValue, SESSION_COOKIE, verifySession } from "./session.ts";
+import { cookieValue, resolveSession, SESSION_COOKIE, verifySession } from "./session.ts";
 
 // route() - THE ONE WRAPPER every handler under app/api goes through, and the
 // only HTTP surface the rebuild keeps: CLIs, agents and file bytes (plan §3.4).
@@ -94,9 +96,13 @@ export async function guardOf(req: Request, guard: Exclude<Guard, "public">): Pr
   let who: Resolution = await resolvePrincipal(req, { use });
   let viaCookie = false;
   if (isRefusal(who) && presentedSecret(req) === undefined && presentedIdToken(req) === undefined) {
-    const token = cookieValue(req.headers.get("cookie"), SESSION_COOKIE);
-    if (token !== undefined) {
-      who = await verifySession(token, use);
+    const jar = req.headers.get("cookie");
+    const token = cookieValue(jar, SESSION_COOKIE);
+    // The landing's local entry rides the same way (lib/localEntry.ts): an <img> or a fetch from the
+    // studio carries the choice cookie and nothing else, and the grant is re-judged for this request.
+    const local = localEntryGranted(cookieValue(jar, LOCAL_ENTRY_COOKIE), req.headers.get("host"));
+    if (token !== undefined || local) {
+      who = token !== undefined ? await verifySession(token, use) : await resolveSession(undefined, use, undefined, true);
       viaCookie = true;
     }
   }
@@ -117,6 +123,25 @@ export async function guardOf(req: Request, guard: Exclude<Guard, "public">): Pr
     return { refusal: envelope(new AppError("refused", "A session cookie is accepted on a write only from this origin.", { detail: "cross-origin" }), "route guard") };
   }
   return { who };
+}
+
+function bodyTooBig(where: string, cap: number): AppError {
+  return new AppError("invalid", `${where}: body exceeds ${cap} bytes`, { detail: "body-too-large" });
+}
+
+/** The same request with its body counted as it is read: past `cap` the stream errors with body-too-large. */
+function cappedRequest(req: Request, cap: number, where: string): Request {
+  let size = 0;
+  const counted = req.body!.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, c) {
+        size += chunk.byteLength;
+        if (size > cap) c.error(bodyTooBig(where, cap));
+        else c.enqueue(chunk);
+      },
+    }),
+  );
+  return new Request(req, { body: counted, duplex: "half" } as RequestInit);
 }
 
 function deadline(req: Request, maxDuration: number | undefined): AbortSignal {
@@ -148,6 +173,13 @@ export function route<S extends z.ZodType | undefined = undefined, T = unknown>(
         // A route that declared no input takes no body; one byte is refused, not ignored.
         const none = await readJson(req, 0, z.null(), where);
         if (!none.ok) return envelope(none.error, where);
+      } else if (HAS_BODY.has(req.method) && opts.bodyCap > 0 && req.body !== null) {
+        // A route that declared no input reads its own body (a multipart file, an archive, JSON-RPC):
+        // the cap it declared still binds the bytes as the handler pulls them, so a body that
+        // declares no length is cut at the cap, never buffered whole.
+        const declared = Number(req.headers.get("content-length") ?? "NaN");
+        if (Number.isFinite(declared) && declared > opts.bodyCap) return envelope(bodyTooBig(where, opts.bodyCap), where);
+        req = cappedRequest(req, opts.bodyCap, where);
       }
       // `input` is the schema door's output when `opts.input` is a schema and
       // undefined when it is not - which is InputOf<S> by construction; the

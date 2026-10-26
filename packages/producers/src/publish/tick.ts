@@ -86,7 +86,7 @@ export async function publishTick(deps: TickDeps, now: Date, opts: TickOptions =
     const next = pending.shift();
     if (next !== undefined) outcomes.push(await publishClaimed(deps, next, pending, opts.beat));
   }
-  const upcoming = deps.store.read((r) => listSlotsIn(r, { states: ["scheduled"], from: now.toISOString() })[0]?.slot.at);
+  const upcoming = deps.store.read((r) => listSlotsIn(r, { states: ["scheduled"], from: now.toISOString(), limit: 1 })[0]?.slot.at);
   if (!upcoming.ok) return upcoming;
   const next = upcoming.value;
   return ok({ missed: s.missed, interrupted: s.interrupted, drifted: s.drifted, cleared: s.cleared, outcomes, ...(downtime === undefined ? {} : { downtime }), ...(next === undefined ? {} : { next }) });

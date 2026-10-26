@@ -21,6 +21,7 @@ import { Composer, ComposerSelect, Estimate } from "@gt/ui/components/produce/Co
 import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 
 import type { ComposerChoices, ProducePort } from "../../projects/_port/contract.ts";
+import { settle } from "./settle.ts";
 
 export const SWEEP = "__sweep";
 
@@ -87,7 +88,7 @@ export function useEstimate(port: ProducePort, lane: MediaLane, choice: LaneChoi
   useEffect(() => {
     const mine = ++ask.current;
     let live = true;
-    void port.composerReceipt({ input: inputOf(lane, choice, "") }).then((r) => {
+    void settle(port.composerReceipt({ input: inputOf(lane, choice, "") })).then((r) => {
       if (!live || mine !== ask.current) return;
       setSt(r.ok ? { receipt: r.value } : { receipt: null, error: r.error.error });
     });

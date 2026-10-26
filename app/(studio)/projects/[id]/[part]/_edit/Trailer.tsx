@@ -94,7 +94,7 @@ function BeatBlock({ b, d, on, busy, send, onSelect }: { readonly b: TrailerBeat
         ))}
       </div>
       <textarea className={s.area} aria-label={`on screen in ${b.id}`} value={text} onChange={(e) => setText(e.currentTarget.value)} onBlur={() => text !== b.text && send({ op: "patch-beat", beatId: b.id, text })} {...{ [FIELD_ATTR]: "part-text" }} />
-      {b.edited && <Button label="reset to dealt" size="sm" onPress={() => send({ op: "reset-beat", beatId: b.id })} />}
+      {b.edited && <Button label="reset to dealt" size="sm" disabled={busy} onPress={() => send({ op: "reset-beat", beatId: b.id })} />}
     </section>
   );
 }
@@ -110,7 +110,7 @@ export function TrailerEditor({ frame, send, busy, error, data: d }: EditorProps
     document.querySelector(`[data-beat="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" });
   };
   useKeys(
-    "part.script",
+    "part.trailer",
     {
       item: ({ index }) => {
         const next = walk(d.beats.map((b) => b.id), sel, index === 0 ? 1 : -1);
@@ -127,7 +127,7 @@ export function TrailerEditor({ frame, send, busy, error, data: d }: EditorProps
   return (
     <PartWorkspace
       {...frame}
-      mode="part.script"
+      mode="part.trailer"
       facts={sel === null ? [] : ["item"]}
       rail={{
         label: "beats",

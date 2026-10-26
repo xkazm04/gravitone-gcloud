@@ -7,7 +7,7 @@ import { MOTION_MAX_CHARS, type MotionOutcome } from "@/lib/motion/direction";
 import { partVerdict, plateSigOf } from "@/lib/parts/verdict";
 
 import type { Ctx } from "./fixture.ts";
-import { unitsOf, type UnitRec } from "./fixtureFrames.ts";
+import { dryPreset, unitsOf, type UnitRec } from "./fixtureFrames.ts";
 import { isAds, pickedScenario, plateUrl, plateView, stepRecords, takeUrl, verdictInputOf } from "./fixtureFramesView.ts";
 import type { KCtx, KindModule, Obj, Recs } from "./kinds.ts";
 
@@ -37,8 +37,7 @@ export type MotionRec = {
 
 const EMPTY: MotionRec = { byFrame: {}, accepted: {}, clips: {}, adsClips: {}, framesRaw: null, adsRaw: null };
 const no = (msg: string): Result<never> => err("invalid", msg);
-const DRY_CLIPS = ["signal-ledger", "blueprint", "newsprint-cutout", "paper-relief", "data-neon", "chalk-argument"] as const;
-const dryClip = (n: number): string => `/clips/presets/${DRY_CLIPS[Math.abs(n) % DRY_CLIPS.length] ?? "signal-ledger"}.webm`;
+const dryClip = (n: number): string => dryPreset(n, "webm");
 
 const platedUnits = (ctx: KCtx): readonly UnitRec[] => unitsOf(ctx, ctx.rec("frames"));
 const lineOf = (m: MotionRec, u: UnitRec): string => m.accepted[u.id] ?? u.clip.motion;

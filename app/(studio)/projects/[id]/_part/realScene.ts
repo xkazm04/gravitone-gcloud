@@ -9,11 +9,13 @@ import { runningActs } from "@gt/producers/research/partJob";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { WorkPlanPart } from "@gt/domain/produce";
-import { OPS_SHOWN, actBelongs, isEditorKind, opLabel, type EditorKind, type PartActKind, type PartOp, type PartProject, type PartRef, type PartRunning, type PartView, type ResearchOp, type ScriptOp } from "@gt/domain/partView";
+import { OPS_SHOWN, actBelongs, isEditorKind, opLabel, type EditorKind, type PartOp, type PartProject, type PartRef, type PartRunning, type PartView, type ResearchOp, type ScriptOp } from "@gt/domain/partView";
 
+import type { Who } from "../../_port/port.ts";
+import { keptTakes } from "../../_port/realChoices.ts";
 import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
 import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
-import type { ActBasis, Ctx } from "./fixture.ts";
+import type { Ctx } from "./fixture.ts";
 import { isLaterKind, later, recReader, type KCtx } from "./kinds.ts";
 import { changed, type Obj } from "./realRecs.ts";
 import { researchOf, researchRecords } from "./realResearch.ts";
@@ -21,11 +23,15 @@ import { scriptOf, scriptRecords } from "./realScript.ts";
 
 // THE REAL SIDE'S SCENE (L36; split out of ./real.ts by L43): one part read from the kernel in
 // one reader - its project's plan, its records mapped to every editor kind's working record - and
-// what the port derives from it: the view, the next records an op writes, an act's basis.
+// what the port derives from it: the view and the next records an op writes.
 
 export type Scene = { readonly read: ProjectRead; readonly ctx: KCtx; readonly part: WorkPlanPart; readonly kind: EditorKind; readonly snap: Pick<PartSnapshot, "records" | "rev"> };
 
 export const OPERATOR: Actor = { kind: "operator", id: "operator" };
+
+/** Who acts, as the part's op log and its act's job name them: the operator unless a caller says
+ *  otherwise (the MCP door names its agent, ../../_port/port.ts `Who`). */
+export const actorOfWho = (w: Who | undefined): Actor => (w === undefined ? OPERATOR : { kind: w.kind ?? "operator", id: w.who ?? "operator" });
 
 export function unwrap<T>(r: Result<Result<T>>): Result<T> {
   return r.ok ? r.value : r;
@@ -41,7 +47,9 @@ export function sceneOf(r: Reader, projectId: string, key: string, now: number):
   const snap = readPartIn(r, { projectId, partId: part.id });
   const p = read.plan.project;
   const project: PartProject = { id: p.id, title: p.title, recipe: p.recipe, recipeLabel: p.recipeLabel, discipline: read.discipline, targetS: read.targetS };
-  const base: Ctx = { project, plan: read.plan, now, research: () => researchOf(project, snap.records), look: projectLookIn(r, p.styleId) };
+  // The Library's takes, read once per scene and only by a part that asks (an album's track).
+  let takes: ReturnType<typeof keptTakes> | undefined;
+  const base: Ctx = { project, plan: read.plan, now, research: () => researchOf(project, snap.records), look: projectLookIn(r, p.styleId), take: (id) => (takes ??= keptTakes()).find((t) => t.id === id) };
   const ctx: KCtx = { ...base, rec: recReader({ research: base.research, script: () => scriptOf(snap.records), later: (k) => later(k).fromRecords(snap.records, base) }), records: () => snap.records };
   return ok({ read, ctx, part, kind, snap });
 }
@@ -110,38 +118,24 @@ function nextOf(s: Scene, f: { research: (rec: ResearchRec) => Result<ResearchRe
 
 /** A later kind's op as the driver writes it: the module's next record mapped to the step records
  *  it changes (the kernel refuses a key the part neither owns nor grows). */
-function laterOp(s: Scene, op: PartOp): OpPlan {
-  if (!isLaterKind(s.kind)) return { act: "op", label: op.op, by: OPERATOR, raw: op, next: err("internal", `${s.kind} is not a later kind`) };
+function laterOp(s: Scene, op: PartOp, by: Actor): OpPlan {
+  if (!isLaterKind(s.kind)) return { act: "op", label: op.op, by, raw: op, next: err("internal", `${s.kind} is not a later kind`) };
   const m = later(s.kind);
   const applied = m.apply(s.ctx, op);
-  return { act: "op", label: applied.ok ? applied.value.label : op.op, by: OPERATOR, raw: op, next: applied.ok ? ok(m.writes(s.ctx, applied.value.next)) : applied };
+  return { act: "op", label: applied.ok ? applied.value.label : op.op, by, raw: op, next: applied.ok ? ok(m.writes(s.ctx, applied.value.next)) : applied };
 }
 
-/** The operator's op on any editor kind, as the driver writes it. */
-export function opPlan(s: Scene, op: PartOp): OpPlan {
-  if (isLaterKind(s.kind)) return laterOp(s, op);
+/** An op on any editor kind, as the driver writes it, by the operator unless `by` names another. */
+export function opPlan(s: Scene, op: PartOp, by: Actor = OPERATOR): OpPlan {
+  if (isLaterKind(s.kind)) return laterOp(s, op, by);
   return {
     act: "op",
     label: opLabel(op),
-    by: OPERATOR,
+    by,
     raw: op,
     next: nextOf(s, {
       research: (rec) => (isResearchOp(op) ? RESEARCH.apply(s.ctx, rec, op) : nope("research")),
       script: (rec) => (isScriptOp(op) ? SCRIPT.apply(s.ctx, rec, op) : nope("script")),
     }),
   };
-}
-
-/** The act's subject as the receipt prices it: L38's ActBasis, built from the kernel's part. */
-export function basisOf(r: Reader, projectId: string, key: string, act: PartActKind, now: number, target?: string): Result<ActBasis> {
-  const s = sceneOf(r, projectId, key, now);
-  if (!s.ok) return s;
-  if (isLaterKind(s.value.kind)) {
-    const u = later(s.value.kind).units(s.value.ctx, act, target);
-    if (!u.ok) return u;
-    return ok({ ctx: s.value.ctx, kind: s.value.kind, part: s.value.part, rev: s.value.snap.rev, units: u.value, ...(target === undefined ? {} : { target }) });
-  }
-  const units = s.value.kind === "research" ? RESEARCH.units(s.value.ctx, s.value.ctx.research(), act) : SCRIPT.units(s.value.ctx, scriptOf(s.value.snap.records), act);
-  if (!units.ok) return units;
-  return ok({ ctx: s.value.ctx, kind: s.value.kind, part: s.value.part, rev: s.value.snap.rev, units: units.value });
 }

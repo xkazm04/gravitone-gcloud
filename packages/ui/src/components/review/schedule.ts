@@ -44,6 +44,9 @@ const _everyChannel: [Unspelled] extends [never] ? true : never = true;
 void _everyChannel;
 
 const LINE = /^calendar:[ \t]*([^\n]*)(?:\n|$)/;
+// An INSTANT names its zone. Date.parse reads a zone-less date-time ("2026-10-20T09:30") as the
+// host's local time, so the same note would schedule 09:30Z on a UTC box and 07:30Z in Prague.
+const INSTANT = /^\d{4}-\d{2}-\d{2}T[\d:.]+(?:Z|[+-]\d{2}:?\d{2})$/i;
 const isChannel = (x: string): x is Channel => CHANNELS.some((c) => c === x);
 
 /** The note a kept verdict carries: the calendar line, then the notes (trimmed; absent when empty). */
@@ -66,7 +69,7 @@ export function decodeSchedule(note: string | null | undefined): Decoded {
   const [channel = "", at = "", ...extra] = (m[1] ?? "").trim().split(/\s+/);
   if (!isChannel(channel)) return { kind: "invalid", error: `calendar: "${channel}" is not a channel (${CHANNELS.join(", ")})` };
   const t = Date.parse(at);
-  if (extra.length > 0 || !/^\d{4}-\d{2}-\d{2}T/.test(at) || !Number.isFinite(t)) return { kind: "invalid", error: `calendar: "${at}" is not an ISO instant` };
+  if (extra.length > 0 || !INSTANT.test(at) || !Number.isFinite(t)) return { kind: "invalid", error: `calendar: "${at}" is not an ISO instant` };
   const rest = note.slice(m[0].length).trim();
   return { kind: "schedule", schedule: { channel, publishAt: new Date(t).toISOString(), ...(rest === "" ? {} : { notes: rest }) }, note: rest === "" ? null : rest };
 }

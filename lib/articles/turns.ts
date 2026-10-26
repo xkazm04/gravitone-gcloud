@@ -2,7 +2,7 @@
 // reviewer's `runReviewer`) as one union, so the article job's meter
 // (packages/producers/src/article/define.ts) can declare, cap, refuse and stand in for any
 // turn without knowing which. Server only. Kept beside the engine because these are the
-// engine's own shapes: the refusal shapes are lib/articles/loop.ts `guardedDeps`' (a writer
+// engine's own shapes: the refusal is the one lib/articles/loop.ts `guardedDeps` returns too (a writer
 // turn errors, a reviewer is unavailable), and the stand-in is lib/articles/dryAgent.ts.
 
 import { runAgent, runReviewer, type AgentResult, type ReviewerCall, type RunAgentInput } from "@/lib/agent/cliSeam";

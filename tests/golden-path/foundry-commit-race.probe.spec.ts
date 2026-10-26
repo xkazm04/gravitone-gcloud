@@ -44,13 +44,13 @@ import type { CycleManifest, TrainingLedgerRow } from "@/lib/foundry/training/ty
 import type { Candidate, LedgerRow, RunManifest, StyleDef } from "@/lib/foundry/types";
 
 import { Interleaver, RecordingPort, type Outcome } from "./_effects";
-import { probeFoundryDir } from "./_helpers";
+import { probeFoundryDir, probeTrainingDir } from "./_helpers";
 
 const foundryDir = probeFoundryDir();
 
 test.afterEach(() => __setFoundryFsPort(null));
 
-const TRAINING_ROOT = path.join(process.cwd(), "foundry-out", "training");
+const trainingDir = probeTrainingDir();
 const INDICES = ["ledger.json", "styles.json", "training-ledger.json"] as const;
 
 /** A boundary is any read or write of a versioned index — nothing else is held. */
@@ -144,7 +144,7 @@ function extractRun(id: string): string {
 
 /** A cycle awaiting the gate: one improvement, approved, one image pair. */
 function cycle(id: string): string {
-  const dir = path.join(TRAINING_ROOT, id);
+  const dir = path.join(trainingDir(), id);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(path.join(dir, "pairs", "imp-1"), { recursive: true });
   const base = "pairs/imp-1/pair-1-baseline.png";
@@ -266,8 +266,8 @@ for (const first of ["c1", "c2"] as const) {
       console.log(`[race] window=${r.window} → training-ledger rows: c1 ${per[0]}/1, c2 ${per[1]}/1`);
       expect(per, "one row per committed cycle").toEqual([1, 1]);
     } finally {
-      rmSync(path.join(TRAINING_ROOT, c1), { recursive: true, force: true });
-      rmSync(path.join(TRAINING_ROOT, c2), { recursive: true, force: true });
+      rmSync(path.join(trainingDir(), c1), { recursive: true, force: true });
+      rmSync(path.join(trainingDir(), c2), { recursive: true, force: true });
     }
   });
 }

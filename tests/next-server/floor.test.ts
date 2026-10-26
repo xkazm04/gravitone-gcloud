@@ -10,11 +10,14 @@ await vi.hoisted(async () => {
   process.env["GRAVITONE_STORE_PATH"] = join(mkdtempSync(join(tmpdir(), "floor-test-")), "store.sqlite");
 });
 
-import { nextPile, pileOrder, spendOf } from "../../app/(studio)/_shell/facts.ts";
+import { nextPile, nextScoutPile, pileOrder, spendOf } from "../../app/(studio)/_shell/facts.ts";
 import { SLOTS } from "../../app/(studio)/floor/_calendar/fixtureData.ts";
-import { applyCancel, applyMove, applyPublishNow, fixtureAct, fixtureFacts, fixtureItems, fixtureSchedule, seedRow, viewOf, type FixtureRow } from "../../app/(studio)/floor/_calendar/fixture.ts";
-import { byLane, floorSearch, parseFloorUrl, scheduleHref, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
-import { downsample } from "../../app/(studio)/floor/_floor/shelf.ts";
+import { applyCancel, applyMove, applyPublishNow, fixtureAct, fixtureFacts, fixtureItems, fixtureSchedule, fixtureSlots, seedRow, viewOf, type FixtureRow } from "../../app/(studio)/floor/_calendar/fixture.ts";
+import { byLane, floorRunsOf, floorSearch, levelOver, parseFloorUrl, scheduleHref, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
+import type { ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
+import { downsample, projects as shelfProjects, SHELF_ROWS } from "../../app/(studio)/floor/_floor/shelf.ts";
+import { shelfCount } from "../../app/(studio)/floor/_floor/LaneCells.tsx";
+import { fixtureProduce } from "../../app/(studio)/projects/_port/port.ts";
 import type { LiveJob, WeirItem } from "../../lib/ledger/v1/types.ts";
 
 // The Floor's pure rules: which pile is NEXT (the header and the Floor share it), how runs and
@@ -58,6 +61,31 @@ describe("NEXT", () => {
   });
 });
 
+// The Scout header's NEXT (spark scout-storyboards WP2): the same order over the scout's piles only - a night of
+// either wing (a muse night is source `scout`, id `muse:<night>`) and a seed batch.
+describe("the Scout header's NEXT", () => {
+  it("is the oldest scout or seeds pile; an older pile of any other source is not the scout's", () => {
+    const weir = [
+      pile("suno", "old-take", "audio", "2026-10-10T08:00:00Z"),
+      pile("forge", "older-plates", "image", "2026-10-11T08:00:00Z"),
+      pile("scout", "2026-10-14", "image", "2026-10-14T06:00:00Z"),
+      pile("seeds", "2026-10-13", "image", "2026-10-13T06:00:00Z"),
+      pile("scout", "muse:2026-10-15", "image", "2026-10-15T06:00:00Z"),
+    ];
+    expect(nextPile(weir)?.id).toBe("old-take");
+    expect(nextScoutPile(weir)?.id).toBe("2026-10-13");
+  });
+
+  it("names a muse night when it is the oldest, and skips a scout pile with nothing pending", () => {
+    const weir = [pile("scout", "2026-10-12", "image", "2026-10-12T06:00:00Z", 0, 40), pile("scout", "muse:2026-10-13", "image", "2026-10-13T06:00:00Z"), pile("seeds", "2026-10-14", "image", "2026-10-14T06:00:00Z")];
+    expect(nextScoutPile(weir)?.id).toBe("muse:2026-10-13");
+  });
+
+  it("is null when only other sources wait", () => {
+    expect(nextScoutPile([pile("suno", "t", "audio", "2026-10-10T08:00:00Z"), pile("proof", "p", "image", "2026-10-11T08:00:00Z")])).toBeNull();
+  });
+});
+
 describe("lanes", () => {
   it("files runs and pending piles by medium, each lane oldest first, finished piles dropped", () => {
     const lanes = byLane(
@@ -69,6 +97,25 @@ describe("lanes", () => {
     expect(lanes.audio.piles.map((p) => p.id)).toEqual(["suno/triage"]);
     expect(lanes.article.piles).toEqual([]);
     expect(lanes.video).toEqual({ jobs: [], piles: [] });
+  });
+});
+
+describe("the composers' runs on the floor", () => {
+  const run = (id: string, over: Partial<ProduceJob> = {}): ProduceJob => ({ id, title: id, lane: "gpu.local", state: "queued", media: "image", after: [], s: Date.UTC(2026, 9, 15, 9), e: Date.UTC(2026, 9, 15, 10), queuePos: 1, blocked: false, held: false, attempt: 1, model: "m", units: 1, noun: "plate", seconds: 60, usd: null, src: "model", mode: "dry", reroutable: false, ...over });
+
+  it("draws a lane's own runs, each a door to its job in Runs; a running one says since when", () => {
+    const [q, r] = floorRunsOf([run("j-q"), run("j r", { state: "running", media: "audio" })]);
+    expect(q).toEqual({ source: "produce", id: "j-q", title: "j-q", lane: "gpu.local", media: "image", state: "queued", attempt: 1, href: "/projects/runs?job=kernel%3Aj-q" });
+    expect([r?.media, r?.startedAt, r?.href]).toEqual(["audio", "2026-10-15T09:00:00.000Z", "/projects/runs?job=kernel%3Aj%20r"]);
+  });
+
+  it("keeps a failed run with its sentence: it is still owed on the floor", () => {
+    expect(floorRunsOf([run("j-f", { state: "failed", error: "comfy: out of memory" })])).toMatchObject([{ id: "j-f", state: "failed", error: "comfy: out of memory" }]);
+  });
+
+  it("leaves out a run with no medium, a project's run, and a done or cancelled one", () => {
+    const { media: _m, ...bare } = run("j-none");
+    expect(floorRunsOf([bare, run("j-proj", { projectId: "glass-harbor" }), run("j-done", { state: "done" }), run("j-x", { state: "cancelled" })])).toEqual([]);
   });
 });
 
@@ -125,6 +172,19 @@ function must<T>(r: { readonly ok: true; readonly value: T } | { readonly ok: fa
   return r.value;
 }
 
+describe("a level over the Floor", () => {
+  const at = (q: Record<string, string>) => parseFloorUrl(q);
+  it("is the month, a slot's record, or the schedule sheet - and then the Floor's keys wait", () => {
+    expect(levelOver(at({}), true)).toBe(false);
+    expect([levelOver(at({ cal: "1" }), true), levelOver(at({ slot: "sl-x" }), true), levelOver(at({ new: "1" }), true)]).toEqual([true, true, true]);
+  });
+
+  it("is not a schedule sheet the calendar could not open: the month closed over a `?new=1` hands the keys back", () => {
+    expect(levelOver(at({ new: "1", item: "video:export:x" }), false)).toBe(false);
+    expect(levelOver(at({ cal: "1", new: "1" }), false)).toBe(true);
+  });
+});
+
 describe("the fixture calendar", () => {
   it("every fixture row passes the slot schema, and together they hold every state and channel", () => {
     for (const f of SLOTS) expect(seedRow(f, ANCHOR).ok, f.id).toBe(true);
@@ -163,9 +223,10 @@ describe("the fixture calendar", () => {
     expect(viewOf(p).dry).toBe(true);
   });
 
-  it("publish now refuses a drifted slot and a blog slot", () => {
-    expect(applyPublishNow(row("sl-chokepoint-tt-drift"), NOW).ok).toBe(false);
-    expect(applyPublishNow(row("sl-routing-blog"), NOW).ok).toBe(false);
+  it("publish now refuses a drifted slot and a blog slot, in the real side's words", () => {
+    const words = (r: { ok: boolean; error?: { message: string } }) => (r.ok ? null : (r.error?.message ?? ""));
+    expect(words(applyPublishNow(row("sl-chokepoint-tt-drift"), NOW))).toBe("publish Chokepoint explainer · vertical: a drifted (export_missing) tiktok slot is not published from here");
+    expect(words(applyPublishNow(row("sl-routing-blog"), NOW))).toBe("publish Generative provider routing: a scheduled blog slot is not published from here");
   });
 
   it("the record shows a blog post as its PR, a clip as its player, and metrics with null kept null", () => {
@@ -193,12 +254,24 @@ describe("the fixture calendar's engine refusals", () => {
     expect(words(fixtureSchedule({ ...draft, channel: "blog" }, NOW))).toMatch(/approve on the Board/);
   });
 
+  it("refuses a Library item that is not an export on a video channel, in the adapter's words", () => {
+    const r = fixtureSchedule({ ...draft, item: "article:run:art-2026-10-16-routing" }, NOW);
+    expect(r.ok ? null : [r.error.code, r.error.message]).toEqual(["refused", "article:run:art-2026-10-16-routing is not an export; youtube publishes exports"]);
+  });
+
+  it("a slot published dry holds nothing: the rail marks it, and the same export may be scheduled on its channel again", () => {
+    must(fixtureAct("publish", "sl-harbor-teaser-tt", NOW, (r) => applyPublishNow(r, NOW)));
+    expect(must(fixtureSlots(NOW)).find((x) => x.id === "sl-harbor-teaser-tt")).toMatchObject({ status: "published", dry: true });
+    expect(must(fixtureSchedule({ ...draft, item: "video:export:glass-harbor-teaser", channel: "tiktok" }, NOW)).slot).toMatchObject({ status: "scheduled", item: "video:export:glass-harbor-teaser", channel: "tiktok" });
+    expect(must(fixtureSlots(NOW)).find((x) => x.id === "sl-harbor-yt-out")).not.toHaveProperty("dry");
+  });
+
   it("refuses a verb sent on a revision the slot has moved past, and writes nothing", () => {
-    const first = must(fixtureAct("sl-tariff-yt-later", NOW, (r) => applyMove(r, "2026-10-28T10:00:00.000Z", NOW), 1));
+    const first = must(fixtureAct("move", "sl-tariff-yt-later", NOW, (r) => applyMove(r, "2026-10-28T10:00:00.000Z", NOW), 1));
     expect(first.rev).toBe(2);
-    const stale = fixtureAct("sl-tariff-yt-later", NOW, applyCancel, 1);
-    expect(stale.ok ? null : [stale.error.code, stale.error.message]).toEqual(["conflict", "The quiet tariff: it changed since it was opened - now scheduled for 2026-10-28T10:00:00.000Z"]);
-    expect(must(fixtureAct("sl-tariff-yt-later", NOW, (r) => ({ ok: true, value: r }))).slot.status).toBe("scheduled");
+    const stale = fixtureAct("cancel", "sl-tariff-yt-later", NOW, applyCancel, 1);
+    expect(stale.ok ? null : [stale.error.code, stale.error.message]).toEqual(["conflict", "cancel The quiet tariff: it changed since it was opened - now scheduled for 2026-10-28T10:00:00.000Z"]);
+    expect(must(fixtureAct("cancel", "sl-tariff-yt-later", NOW, (r) => ({ ok: true, value: r }))).slot.status).toBe("scheduled");
   });
 
   it("says what each channel can do: YouTube dry, Instagram not wired, blog by its approve; names only", () => {
@@ -214,5 +287,26 @@ describe("a kept take's waveform", () => {
     expect(downsample([0.1, 0.9, 0.2, 0.3, 0.8, 0.4], 3)).toEqual([0.9, 0.3, 0.8]);
     expect(downsample([0.5, 0.6], 37)).toEqual([0.5, 0.6]);
     expect(downsample(Array.from({ length: 1000 }, (_, i) => i / 1000), 37)).toHaveLength(37);
+  });
+});
+
+describe("the video lane's shelf", () => {
+  it("reads the produce port's projects: a count, bounded rows, each a door to its plan", () => {
+    const listed = fixtureProduce().listProjects();
+    if (!listed.ok) throw new Error(listed.error.message);
+    const read = shelfProjects(fixtureProduce());
+    if (!read.ok) throw new Error(read.error);
+    expect(listed.value.projects.length).toBeGreaterThan(0);
+    expect(read.value.total).toBe(listed.value.projects.length);
+    expect(read.value.rows.length).toBe(Math.min(SHELF_ROWS, read.value.total));
+    expect(read.value.rows[0]).toEqual({ id: listed.value.projects[0]!.id, title: listed.value.projects[0]!.title, recipe: listed.value.projects[0]!.recipe, href: `/projects/${encodeURIComponent(listed.value.projects[0]!.id)}` });
+    const shelf = { projects: read } as Parameters<typeof shelfCount>[1];
+    expect(shelfCount("video", shelf)).toBe(read.value.total);
+  });
+
+  it("says a failed read in the shelf, counting nothing", () => {
+    const read = shelfProjects({ listProjects: () => ({ ok: false, error: { code: "internal", message: "store closed" } }) } as never);
+    expect(read).toEqual({ ok: false, error: "projects: store closed" });
+    expect(shelfCount("video", { projects: read } as Parameters<typeof shelfCount>[1])).toBe(0);
   });
 });

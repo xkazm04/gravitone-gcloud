@@ -1,9 +1,9 @@
 // LIGHTTRACK — an OPT-IN usage sink beside the stdout log.
 //
 // lib/text/log.ts prints one line per turn and stops at the console. That was
-// the whole trace this engine had. .ai/use-cases.json now declares five call
-// sites by name — the five TurnClass values, `text.`-prefixed, plus the one
-// imaging call site — and there was no way to report a single event against
+// the whole trace this engine had. .ai/use-cases.json declares the call sites
+// by name — TurnClass values, `text.`-prefixed, plus the imaging call site —
+// and there was no way to report a single event against
 // any of them. This is that way: it feeds off the exact same settle point as
 // `logTurn` (see router.ts::reason, both branches), and does nothing else.
 //

@@ -1,6 +1,7 @@
-// The Library's marks (prototype shell.js `I.ref|image|style|motion|audio|video|doc|grid|list|
-// play|pause|retry`). A kind is drawn by its mark everywhere it appears - rail row, tile corner,
-// list row, detail head, lineage link - so the mark lives with the kind table, not per site.
+// The Library's marks (prototype shell.js `I.ref|image|style|motion|audio|video|doc|grid`), plus
+// play and pause, which the Cull's VideoBar draws. The prototype's list, retry and pin marks had
+// no caller and were dropped. A kind is drawn by its mark everywhere it appears - rail row, tile
+// corner, list row, detail head, lineage link - so the mark lives with the kind table, not per site.
 // Note the prototype's pairing, kept: an IMAGE item (a reference) wears the magnifier-on-paper
 // mark and a PLATE (a made picture) the picture mark; a reference is what you look AT.
 // Each paints from currentColor; size is the caller's class. Always decorative (aria-hidden):
@@ -19,7 +20,7 @@ export const KINDS: readonly { readonly id: KindId; readonly label: string; read
 export const kindLabel = (k: KindId): string => KINDS.find((x) => x.id === k)?.label ?? k;
 export const kindShort = (k: KindId): string => KINDS.find((x) => x.id === k)?.short ?? k;
 
-export type LibraryGlyphName = KindId | "list" | "play" | "pause" | "retry" | "pin";
+export type LibraryGlyphName = KindId | "play" | "pause";
 
 export function LibraryGlyph({ name, className }: { readonly name: LibraryGlyphName; readonly className?: string | undefined }) {
   switch (name) {
@@ -67,12 +68,11 @@ export function LibraryGlyph({ name, className }: { readonly name: LibraryGlyphN
           <path d="M3.5 6.25L10 10l6.5-3.75M10 10v7.5" />
         </svg>
       );
-    case "list":
+    case "character":
       return (
-        <svg className={className} viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
-          <rect x="1" y="2" width="12" height="2" rx="1" />
-          <rect x="1" y="6" width="12" height="2" rx="1" />
-          <rect x="1" y="10" width="12" height="2" rx="1" />
+        <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="10" cy="6.5" r="3" />
+          <path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
         </svg>
       );
     case "play":
@@ -86,20 +86,6 @@ export function LibraryGlyph({ name, className }: { readonly name: LibraryGlyphN
         <svg className={className} viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
           <rect x="2" y="1" width="2.2" height="8" />
           <rect x="5.8" y="1" width="2.2" height="8" />
-        </svg>
-      );
-    case "retry":
-      return (
-        <svg className={className} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-          <path d="M11.5 5A5 5 0 102.5 8" />
-          <path d="M11.5 1.5V5H8" />
-        </svg>
-      );
-    case "pin":
-      return (
-        <svg className={className} viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-          <path d="M5 1.5h4l-.5 4 2 2h-7l2-2z" />
-          <path d="M7 7.5v5" />
         </svg>
       );
   }

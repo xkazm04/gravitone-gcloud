@@ -15,3 +15,5 @@ Edit freely; a line the operator deletes is never searched again unless a night 
 - tag: title sequences and motion-graphics openers - type-led composition, cut rhythm against music
 
 ## Proposed by the scout
+
+- channel: GOBELINS Paris - https://www.youtube.com/@GOBELINSParis - graduation story shorts, each a distinct 2D look with palette roles and staging a kids or comedy short could wear <!-- scout:2026-10-23-4/c-63 -->

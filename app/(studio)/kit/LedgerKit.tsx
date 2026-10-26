@@ -27,7 +27,7 @@ import k from "./kit.module.css";
 
 // A fixed NOW, so the sheet draws the same strip on every load.
 const NOW = Date.parse("2026-10-15T09:12:00.000Z");
-const DAYS: readonly DayCount[] = daysBetween("2026-09-10", "2026-10-22").map((day, i) => {
+export const DAYS: readonly DayCount[] = daysBetween("2026-09-10", "2026-10-22").map((day, i) => {
   if (day > "2026-10-15") return { day, operator: 0, agent: 0, machine: 0 };
   const wave = Math.round(Math.abs(Math.sin(i / 3)) * 30);
   return { day, operator: i % 5 === 0 ? 0 : (i * 7) % 11, agent: i % 4 === 0 ? (i * 3) % 13 : 0, machine: i % 9 === 4 ? 0 : wave };
@@ -52,10 +52,15 @@ const ROWS: readonly { readonly e: Event; readonly tone: "cyan" | "emerald" | "v
   { e: ev(515, { type: "run.end", actor: { kind: "machine", id: "forge" }, subject: { kind: "run", id: "2026-09-01-nb-counted-beats" }, cost: { usd: 1.2, src: "real" } }), tone: "rose", trail: { text: "CUDA out of memory. Tried to allocate 2.00 GiB (GPU 0; 23.99 GiB total capacity)", error: true } },
 ];
 
+/** The range the strip opens on. */
+export const RANGE: Range = { from: "2026-10-01", to: "2026-10-05" };
+/** The events a range covers, counted off the same days the strip draws (the Ledger's own count is the facet total). */
+const eventsIn = (r: Range | null): number => (r === null ? 0 : DAYS.filter((d) => d.day >= r.from && d.day <= r.to).reduce((a, d) => a + d.operator + d.agent + d.machine, 0));
+
 type Who = "all" | ActorKind;
 
 export function LedgerSections() {
-  const [range, setRange] = useState<Range | null>({ from: "2026-10-01", to: "2026-10-05" });
+  const [range, setRange] = useState<Range | null>(RANGE);
   const [sel, setSel] = useState(513);
   const [who, setWho] = useState<Who>("all");
   const [facets, setFacets] = useState(true);
@@ -65,7 +70,7 @@ export function LedgerSections() {
   return (
     <Section id="ledger">
       <Spec names={["TimeStrip"]} source="timestrip/TimeStrip.tsx" wide>
-        <TimeStrip days={DAYS} today="2026-10-15" nowMs={NOW} range={range} inRange={212} onRange={setRange} />
+        <TimeStrip days={DAYS} today="2026-10-15" nowMs={NOW} range={range} inRange={eventsIn(range)} onRange={setRange} />
       </Spec>
       <Spec names={["EventRow"]} source="eventrow/EventRow.tsx" wide>
         <div className={k.frame} role="grid" aria-label="events" aria-rowcount={ROWS.length}>

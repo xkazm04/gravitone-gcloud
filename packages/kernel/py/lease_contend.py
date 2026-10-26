@@ -14,11 +14,12 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lease import Leases, assert_fence  # noqa: E402
+from verify_events import usage  # noqa: E402
 
 
 def main(argv):
     if len(argv) != 5:
-        print(__doc__.strip().splitlines()[3].strip(), file=sys.stderr)
+        print(usage(__doc__), file=sys.stderr)
         return 2
     db, resource, rounds, name = argv[1], argv[2], int(argv[3]), argv[4]
     leases = Leases(db)

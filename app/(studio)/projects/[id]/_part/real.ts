@@ -13,14 +13,15 @@ import { cutProducer, cutUnits } from "@/lib/producers/cut";
 import { framesProducer, framesUnits } from "@/lib/producers/frames";
 import { motionProducer, motionUnits } from "@/lib/producers/motion";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
+import type { Actor } from "@gt/domain/event";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
 import { isMusicConfigured } from "@/lib/music/elevenlabs";
 import type { EditorKind, PartActKind, PartOp, PartReceipt, PartView } from "@gt/domain/partView";
 
 import type { ServerPart } from "./port.ts";
 import { actModeOf } from "./actMode.ts";
-import { receiptOf } from "./fixtureActs.ts";
-import { basisOf, OPERATOR, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type Scene } from "./realScene.ts";
+import { isLaterKind, later } from "./kinds.ts";
+import { actorOfWho, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type Scene } from "./realScene.ts";
 
 // THE REAL PART SIDE (L36) - the PartPort over the kernel's `parts` module: the part's records
 // are rows under their v1 keys, every edit is a row in an append-only op log, undo appends the
@@ -48,9 +49,24 @@ const modeOf = (kind: EditorKind, act: PartActKind): "dry" | "live" => actModeOf
 const ACT_WAIT_MS = 2500;
 
 /** The producer each editor kind's acts run under (L37), built for the job's own lane, and the
- *  units its receipt and its job's plan step share. A kind absent here has no producer bound yet. */
-const FACTORIES: Readonly<Partial<Record<EditorKind, StepFactory>>> = { research: researchProducer, script: scriptProducer, words: wordsProducer, voice: voiceProducer, score: scoreProducer, cut: cutProducer, frames: framesProducer, motion: motionProducer };
-const UNITS: Readonly<Partial<Record<EditorKind, UnitsFn>>> = { research: withRecords(researchUnits), script: withRecords(scriptUnits), words: wordsUnits, voice: voiceUnits, score: scoreUnits, cut: cutUnits, frames: framesUnits, motion: motionUnits };
+ *  units its receipt and its job's plan step share - ONE row per kind, so a kind can never be
+ *  priced and enqueued with no producer to drive it. A kind absent here has no producer bound yet. */
+type Bound = { readonly factory: StepFactory; readonly units: UnitsFn };
+const BOUND: Readonly<Partial<Record<EditorKind, Bound>>> = {
+  research: { factory: researchProducer, units: withRecords(researchUnits) },
+  script: { factory: scriptProducer, units: withRecords(scriptUnits) },
+  words: { factory: wordsProducer, units: wordsUnits },
+  voice: { factory: voiceProducer, units: voiceUnits },
+  score: { factory: scoreProducer, units: scoreUnits },
+  cut: { factory: cutProducer, units: cutUnits },
+  frames: { factory: framesProducer, units: framesUnits },
+  motion: { factory: motionProducer, units: motionUnits },
+};
+/** The receipt and the confirm refuse an unbound kind with the same words. */
+const boundOf = (kind: EditorKind): Result<Bound> => {
+  const b = BOUND[kind];
+  return b === undefined ? err("unavailable", `no producer is bound for a ${kind} part yet`) : ok(b);
+};
 
 export function makeRealPart(deps: RealDeps): ServerPart {
   const withStore = <T,>(fn: (s: Store) => Result<T>): Result<T> => {
@@ -58,9 +74,14 @@ export function makeRealPart(deps: RealDeps): ServerPart {
     return k.ok ? fn(k.value) : k;
   };
   const kick = (store: Store, projectId: string): void => {
-    void openReadyGates({ ...deps.gates, store: () => ok(store) }, projectId, { by: "agent", surface: "parts", who: "part-gates" }).then((r) => {
-      if (!r.ok) console.error(`[part-gates] ${projectId}: ${r.error.message}`);
-    });
+    // After the answer, so a gate that THROWS (a blob root, a clock) is this log line too - never
+    // an unhandled rejection in the server process.
+    void openReadyGates({ ...deps.gates, store: () => ok(store) }, projectId, { by: "agent", surface: "parts", who: "part-gates" }).then(
+      (r) => {
+        if (!r.ok) console.error(`[part-gates] ${projectId}: ${r.error.message}`);
+      },
+      (e: unknown) => console.error(`[part-gates] ${projectId}: ${errorMessage(e)}`),
+    );
   };
   const read = (store: Store, projectId: string, key: string): Result<PartView> =>
     unwrap(
@@ -87,12 +108,12 @@ export function makeRealPart(deps: RealDeps): ServerPart {
 
   return {
     loadPart: ({ projectId, key }) => withStore((store) => read(store, projectId, key)),
-    opPart: ({ projectId, key, baseRev, op }) => {
-      const w = write(projectId, key, baseRev, op, (_t, s) => opPlan(s, op));
+    opPart: ({ projectId, key, baseRev, op }, who) => {
+      const w = write(projectId, key, baseRev, op, (_t, s) => opPlan(s, op, actorOfWho(who)));
       if (!w.ok) return w;
       return ok(w.value.outcome.kind === "conflict" ? { kind: "conflict", current: w.value.view } : { kind: "applied", view: w.value.view });
     },
-    undoPart: ({ projectId, key, baseRev }) =>
+    undoPart: ({ projectId, key, baseRev }, who) =>
       withStore((store) => {
         const at = store.read((r) => {
           const s = sceneOf(r, projectId, key, deps.now());
@@ -100,7 +121,7 @@ export function makeRealPart(deps: RealDeps): ServerPart {
         });
         const partId = unwrap(at);
         if (!partId.ok) return partId;
-        const u = undoPart(store, { projectId, partId: partId.value, baseRev, by: OPERATOR });
+        const u = undoPart(store, { projectId, partId: partId.value, baseRev, by: actorOfWho(who) });
         if (!u.ok) return u;
         kick(store, projectId);
         const view = read(store, projectId, key);
@@ -108,10 +129,10 @@ export function makeRealPart(deps: RealDeps): ServerPart {
         return ok(u.value.kind === "conflict" ? { kind: "conflict", current: view.value } : { kind: "applied", view: view.value });
       }),
     actReceipt: ({ projectId, key, act, target }) => receiptFor(deps, projectId, key, act, target),
-    act: async ({ projectId, key, act, token, target }) => {
+    act: async ({ projectId, key, act, token, target }, who) => {
       const store = deps.store();
       if (!store.ok) return store;
-      const launched = launchAct(deps, store.value, projectId, key, act, token, target);
+      const launched = launchAct(deps, store.value, projectId, key, act, token, actorOfWho(who), target);
       if (!launched.ok) return launched;
       if (launched.value.kind === "stale") return ok(launched.value);
       const { jobId, kind_: kind } = launched.value;
@@ -119,9 +140,9 @@ export function makeRealPart(deps: RealDeps): ServerPart {
       // lands it, and fenced by the lane slot so a worker that claims it first wins and this drive
       // reads `busy`. The confirm answers when the job ends or the wait runs out, whichever is
       // first; a longer act shows in the view's `running` and lands where the editor reads it.
-      const factory = FACTORIES[kind];
-      if (factory === undefined) return err("unavailable", `no producer is bound for a ${kind} part yet`);
-      const drive = driveStep(factory, store.value, jobId, { hooks: { onSettled: async () => kick(store.value, projectId) } }).then(
+      const bound = boundOf(kind);
+      if (!bound.ok) return bound;
+      const drive = driveStep(bound.value.factory, store.value, jobId, { hooks: { onSettled: async () => kick(store.value, projectId) } }).then(
         (r) => {
           if (!r.ok) console.error(`[part-act] ${jobId}: ${r.error.message}`);
         },
@@ -139,20 +160,28 @@ export function makeRealPart(deps: RealDeps): ServerPart {
  * transaction reads, a stale token answers the fresh receipt and writes nothing, and only then is
  * the act's job enqueued (L37 `enqueueActIn`: the same act on the same unit while its job is live
  * is that job - a double click is one purchase). The job runs under the part kind's producer on
- * the chosen option's lane; the receipt's mode decides dry or live (live needs an arm, refused
- * under GRAVITONE_DRY_ONLY).
+ * the chosen option's lane, DRY but for the voice act, which the receipt arms live (modeOf above).
  */
-function launchAct(deps: RealDeps, store: Store, projectId: string, key: string, act: PartActKind, token: string, target?: string): Result<{ kind: "stale"; fresh: PartReceipt } | { kind: "go"; jobId: string; kind_: EditorKind }> {
+function launchAct(deps: RealDeps, store: Store, projectId: string, key: string, act: PartActKind, token: string, actor: Actor, target?: string): Result<{ kind: "stale"; fresh: PartReceipt } | { kind: "go"; jobId: string; kind_: EditorKind }> {
   const now = deps.now();
   const scene = unwrap(store.read((r) => sceneOf(r, projectId, key, now)));
   if (!scene.ok) return scene;
   const kind = scene.value.kind;
-  const units = UNITS[kind];
-  if (units === undefined) return err("unavailable", `no producer is bound for a ${kind} part yet`);
+  const bound = boundOf(kind);
+  if (!bound.ok) return bound;
+  const needs = moduleNeeds(scene.value, act, target);
+  if (!needs.ok) return needs;
   const ref = { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) };
-  const l = launchPartAct(store, ref, units, { mode: modeOf(kind, act), now, token, actor: OPERATOR });
+  const l = launchPartAct(store, ref, bound.value.units, { mode: modeOf(kind, act), now, token, actor });
   if (!l.ok) return l;
   return l.value.kind === "stale" ? ok({ kind: "stale", fresh: partReceiptOf(l.value.fresh, act) }) : ok({ kind: "go", jobId: l.value.jobId, kind_: kind });
+}
+
+/** A later kind's own refusal (the view's `needs`: "write words needs a track"), the one the fixture
+ *  side's receipt gives. The producer's units price the purchase; they do not know what the editor
+ *  still lacks, so both halves ask the module first. */
+function moduleNeeds(scene: Scene, act: PartActKind, target?: string): Result<number> {
+  return isLaterKind(scene.kind) ? later(scene.kind).units(scene.ctx, act, target) : ok(0);
 }
 
 /** The lib receipt in the editor contract's words (its act is this editor's own). */
@@ -164,7 +193,8 @@ function partReceiptOf(r: StepReceipt, act: PartActKind): PartReceipt {
 /**
  * An act's receipt. A kind with a bound producer (L37) is priced from THAT producer's units - the
  * same function its job's plan step books - placed among the live queue (lib/producers
- * `partActReceipt`). A kind whose producer is not bound yet keeps the editor side's static receipt.
+ * `partActReceipt`). A kind whose producer is not bound yet is refused here as its confirm refuses
+ * it: the editor side's static receipt was a price for a purchase the confirm could never launch.
  * Every receipt reads `dry` but the voice act's, which reads `live` where this process may spend
  * (./actMode.ts): its confirm is the arm (decision 4: a confirm of a live receipt).
  */
@@ -174,13 +204,12 @@ function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartAct
   const now = deps.now();
   const scene = unwrap(k.value.read((r) => sceneOf(r, projectId, key, now)));
   if (!scene.ok) return scene;
-  const units = UNITS[scene.value.kind];
-  if (units !== undefined) {
-    const r = partActReceipt(k.value, { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) }, units, { mode: modeOf(scene.value.kind, act), now });
-    return r.ok ? ok(partReceiptOf(r.value, act)) : r;
-  }
-  const b = unwrap(k.value.read((r) => basisOf(r, projectId, key, act, now, target)));
-  return b.ok ? ok(receiptOf(b.value, act)) : b;
+  const bound = boundOf(scene.value.kind);
+  if (!bound.ok) return bound;
+  const needs = moduleNeeds(scene.value, act, target);
+  if (!needs.ok) return needs;
+  const r = partActReceipt(k.value, { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) }, bound.value.units, { mode: modeOf(scene.value.kind, act), now });
+  return r.ok ? ok(partReceiptOf(r.value, act)) : r;
 }
 
 export const realPart: ServerPart = makeRealPart({

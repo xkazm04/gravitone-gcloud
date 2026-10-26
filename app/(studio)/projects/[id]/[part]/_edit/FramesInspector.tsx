@@ -58,7 +58,7 @@ function Commit({ value, label, area = false, onCommit }: { readonly value: stri
   );
 }
 
-function UnitFields({ data: d, unit: u, layerSel, onLayer, send, act }: P) {
+function UnitFields({ data: d, unit: u, layerSel, onLayer, send, act, busy }: P) {
   const p = u.plate;
   const texts = u.layers.filter((l) => l.layer === "text");
   return (
@@ -88,12 +88,12 @@ function UnitFields({ data: d, unit: u, layerSel, onLayer, send, act }: P) {
           )}
           {u.proposal.subject !== undefined && <p className={s.work}>{u.proposal.subject}</p>}
           {u.proposal.conflicts > 0 && <Chip label="human layers" value={u.proposal.conflicts} tone="amber" />}
-          {u.proposal.rejected === undefined && <Button label="accept row" size="sm" tone="emerald" onPress={() => send({ op: "accept-direction", units: [u.id], overwrite: false })} />}
+          {u.proposal.rejected === undefined && <Button label="accept row" size="sm" tone="emerald" disabled={busy} onPress={() => send({ op: "accept-direction", units: [u.id], overwrite: false })} />}
         </div>
       )}
       {d.checkpoint && (
         <div className={s.sect}>
-          <Button label="revert row" size="sm" onPress={() => send({ op: "revert-direction", unitId: u.id })} />
+          <Button label="revert row" size="sm" disabled={busy} onPress={() => send({ op: "revert-direction", unitId: u.id })} />
         </div>
       )}
       <div className={s.sect}>
@@ -115,7 +115,7 @@ function UnitFields({ data: d, unit: u, layerSel, onLayer, send, act }: P) {
           <div key={t.id} className={s.textRow} data-text={t.id}>
             <Chip label={t.role} casing="lower" tone={t.unsourced ? "amber" : "neutral"} />
             <Commit label={`${t.role} ${t.id}`} value={t.label} onCommit={(v) => send({ op: "set-text", unitId: u.id, textId: t.id, value: v })} />
-            <Button label="×" size="sm" onPress={() => send({ op: "remove-layer", unitId: u.id, layer: "text", layerId: t.id })} />
+            <Button label="×" size="sm" disabled={busy} onPress={() => send({ op: "remove-layer", unitId: u.id, layer: "text", layerId: t.id })} />
             <select
               className={cx(s.select, s.factRow)}
               aria-label={`fact for ${t.id}`}
@@ -131,7 +131,7 @@ function UnitFields({ data: d, unit: u, layerSel, onLayer, send, act }: P) {
         ))}
         <div className={s.acts}>
           {(["caption", "figure", "label"] as const).map((role) => (
-            <Button key={role} label={`+ ${role}`} size="sm" onPress={() => send({ op: "add-text", unitId: u.id, role })} />
+            <Button key={role} label={`+ ${role}`} size="sm" disabled={busy} onPress={() => send({ op: "add-text", unitId: u.id, role })} />
           ))}
         </div>
       </div>
@@ -141,10 +141,12 @@ function UnitFields({ data: d, unit: u, layerSel, onLayer, send, act }: P) {
           {[...u.layers].reverse().map((l) => {
             const k = layerKey(l);
             return (
-              <div key={k} className={s.layer} aria-pressed={layerSel === k} role="button" tabIndex={0} onClick={() => onLayer(layerSel === k ? null : k)} data-layer={k}>
-                <span className={s.ell}>{`${l.unsourced ? "● " : ""}${l.role} · ${l.label || l.id}${l.by === "human" ? " · ✎" : ""}`}</span>
+              <div key={k} className={s.layer} data-selected={layerSel === k} data-layer={k}>
+                <button type="button" className={s.pick} aria-pressed={layerSel === k} onClick={() => onLayer(layerSel === k ? null : k)}>
+                  <span className={s.ell}>{`${l.unsourced ? "● " : ""}${l.role} · ${l.label || l.id}${l.by === "human" ? " · ✎" : ""}`}</span>
+                </button>
                 <span className={s.layerActs}>
-                  <Button label={l.hidden ? "show" : "hide"} size="sm" onPress={() => send({ op: "hide-layer", unitId: u.id, layer: l.layer, layerId: l.id, hidden: !l.hidden })} />
+                  <Button label={l.hidden ? "show" : "hide"} size="sm" disabled={busy} onPress={() => send({ op: "hide-layer", unitId: u.id, layer: l.layer, layerId: l.id, hidden: !l.hidden })} />
                 </span>
               </div>
             );

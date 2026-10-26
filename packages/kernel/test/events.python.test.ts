@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { copyFileSync, mkdirSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
@@ -6,7 +7,7 @@ import { z } from "zod";
 import { parseJsonAt } from "@gt/domain/door";
 import type { EventInput } from "@gt/domain/event";
 import { append, chainHead, eventsMigrations, verify } from "../src/events.ts";
-import { must, templateStores } from "./helpers.ts";
+import { findPython, must, scratch, templateStores } from "./helpers.ts";
 
 // Node writes, Python checks: the chain must verify in the second language with
 // the standard library alone (packages/kernel/py/verify_events.py), byte for
@@ -17,13 +18,6 @@ const verifier = path.join(here, "..", "py", "verify_events.py");
 const tpl = templateStores([eventsMigrations]);
 afterAll(() => tpl.dispose());
 
-function findPython(): string | undefined {
-  for (const bin of ["python", "python3", "py"]) {
-    const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
-    if (r.status === 0 && r.stdout.trim() === "3") return bin;
-  }
-  return undefined;
-}
 const python = findPython();
 if (python === undefined) console.warn("[events.python] SKIPPED: no Python 3 on PATH (tried python, python3, py); the cross-language check did not run");
 
@@ -68,7 +62,7 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     const out = runVerifier(s.location);
     expect(out.report).toEqual({ state: "intact", count: 22, head });
     expect(out.status).toBe(0);
-  });
+  }, 30_000);
 
   it("re-derives the projection's fields (occurredAt, atSrc, key) and sees an edit to them", () => {
     const s = tpl.fresh();
@@ -85,7 +79,7 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     const out = runVerifier(s.location);
     expect(node).toMatchObject({ state: "tampered", seq: 3 });
     expect(out.report).toEqual(node);
-  });
+  }, 30_000);
 
   it("finds the same broken link Node finds", () => {
     const s = tpl.fresh();
@@ -99,7 +93,7 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     expect(out.status).toBe(1);
     expect(out.report).toEqual(node);
     expect(node).toMatchObject({ state: "tampered", seq: 3 });
-  });
+  }, 30_000);
 
   it("reports a cut tail against an anchor, as Node does", () => {
     const s = tpl.fresh();
@@ -113,5 +107,54 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     s.close();
     const out = runVerifier(s.location, `${head.seq}:${head.hash}`);
     expect(out.report).toEqual(node);
-  });
+  }, 30_000);
+
+  it("reads a store whose path carries URI characters (# and %) read-only, and writes no file beside it", () => {
+    const s = tpl.fresh();
+    must(s.tx((t) => {
+      for (let i = 0; i < 3; i++) append(t, { ...tricky, data: { i } });
+    }));
+    const node = must(verify(s));
+    s.close();
+    const dir = scratch("events-uri");
+    try {
+      const odd = path.join(dir.dir, "a#b%41");
+      mkdirSync(odd);
+      const db = path.join(odd, "s.sqlite");
+      copyFileSync(s.location, db);
+      expect(runVerifier(db)).toEqual({ status: 0, report: node });
+      // kernel_store.missing_tables (the job protocol's tables, and styles.py's) opens the same read-only URI form.
+      const code = [
+        "import json, sys",
+        `sys.path.append(${JSON.stringify(path.join(here, "..", "py"))})`,
+        "import kernel_store, styles",
+        `print(json.dumps([kernel_store.missing_tables(${JSON.stringify(db)}), kernel_store.missing_tables(${JSON.stringify(s.location)}), kernel_store.missing_tables(${JSON.stringify(db)}, styles.STYLE_TABLES)]))`,
+      ].join("\n");
+      const r = spawnSync(python ?? "python", ["-I", "-c", code], { encoding: "utf8" });
+      expect(r.stderr).toBe("");
+      const [odd1, plain, stylesOdd] = must(parseJsonAt("missing_tables", z.tuple([z.array(z.string()), z.array(z.string()), z.array(z.string())]), r.stdout.trim()));
+      expect(odd1).toEqual(plain);
+      expect(odd1).not.toContain("events");
+      expect(stylesOdd).toEqual(["styles", "style_ops"]);
+      expect(readdirSync(dir.dir)).toEqual(["a#b%41"]);
+    } finally {
+      dir.dispose();
+    }
+  }, 30_000);
+
+  it("answers an anchor that is not SEQ:HASH with 2 (could not run), never 1 (tampered)", () => {
+    const s = tpl.fresh();
+    must(s.tx((t) => {
+      for (let i = 0; i < 3; i++) append(t, { ...tricky, data: { i } });
+    }));
+    const head = must(chainHead(s));
+    if (head === null) throw new Error("expected a head");
+    s.close();
+    expect(runVerifier(s.location, `${head.seq}:${head.hash}`).status).toBe(0);
+    // A typo in the anchor is the operator's, not the ledger's: the chain above is intact.
+    for (const bad of ["abc", `${head.seq}`, `${head.seq}:`, `${head.seq}:${head.hash.slice(1)}`, `x:${head.hash}`, `0:${head.hash}`]) {
+      const out = runVerifier(s.location, bad);
+      expect({ anchor: bad, status: out.status, said: JSON.stringify(out.report).includes("tampered") }).toEqual({ anchor: bad, status: 2, said: false });
+    }
+  }, 30_000);
 });

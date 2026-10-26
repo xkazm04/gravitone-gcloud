@@ -38,7 +38,7 @@ import { realFsPort, type FsPort } from "@/lib/foundry/fsPort";
 export type EffectOp = keyof FsPort;
 
 /** The calls that change the disk. Reads and stats are logged, never crashed. */
-export const MUTATIONS: ReadonlySet<EffectOp> = new Set<EffectOp>(["writeJsonAtomic", "unlink", "copyFile", "writeFile", "mkdir"]);
+export const MUTATIONS: ReadonlySet<EffectOp> = new Set<EffectOp>(["writeJsonAtomic", "unlink", "copyFile", "writeFile", "appendFile", "mkdir"]);
 
 export interface Effect {
   /** Order applied, across every actor. */
@@ -119,6 +119,9 @@ export class RecordingPort implements FsPort {
   }
   writeFile(file: string, data: string): Promise<void> {
     return this.around("writeFile", file, undefined, () => this.inner.writeFile(file, data));
+  }
+  appendFile(file: string, data: string): Promise<void> {
+    return this.around("appendFile", file, undefined, () => this.inner.appendFile(file, data));
   }
   mkdir(dir: string): Promise<void> {
     return this.around("mkdir", dir, undefined, () => this.inner.mkdir(dir));

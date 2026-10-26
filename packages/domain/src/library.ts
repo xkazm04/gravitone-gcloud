@@ -10,13 +10,15 @@
 // door user text goes through (search: query-parsing), and it folds diacritics,
 // which the prototype's `toLowerCase().replace(/[-_]/g, " ")` did not.
 
+import { AGE_BANDS } from "./libraryCharacter.ts";
 import { TRIS_BANDS, type LibraryExtras, type MediaFacts, type ModelExportProject } from "./libraryMedia.ts";
 
+export * from "./libraryCharacter.ts";
 export * from "./libraryMedia.ts";
 
 // ── the closed sets (moved here from ./libraryItem.ts so the client holds them zod-free) ──
 
-export const LIBRARY_KINDS = ["image", "plate", "style", "motion", "audio", "video", "doc", "model"] as const;
+export const LIBRARY_KINDS = ["image", "plate", "style", "motion", "audio", "video", "doc", "model", "character"] as const;
 export type LibraryKindName = (typeof LIBRARY_KINDS)[number];
 
 /** The Library's shared state facet (library-data.js `STATES`). */
@@ -41,7 +43,7 @@ export type Attention = (typeof ATTENTION)[number];
 
 /** The kinds whose item is its media: one with no blob is `missing`. Audio has a
  *  waveform face and a doc or a style a designed one, so neither is ever missing. */
-export const MEDIA_KINDS: readonly LibraryKindName[] = ["image", "plate", "motion", "video", "model"];
+export const MEDIA_KINDS: readonly LibraryKindName[] = ["image", "plate", "motion", "video", "model", "character"];
 
 /** library-data.js `KINDS`, in rail order. */
 export const KIND_LABELS: readonly { readonly kind: LibraryKindName | "all"; readonly label: string; readonly short: string }[] = [
@@ -54,6 +56,7 @@ export const KIND_LABELS: readonly { readonly kind: LibraryKindName | "all"; rea
   { kind: "video", label: "Video", short: "video" },
   { kind: "doc", label: "Documents", short: "document" },
   { kind: "model", label: "3D models", short: "model" },
+  { kind: "character", label: "Characters", short: "character" },
 ];
 
 /**
@@ -77,6 +80,7 @@ export const VOCAB_GROUPS: { readonly [K in LibraryKindName | "all"]: readonly s
   video: ["format", "captions"],
   doc: ["bundle", "techniques"],
   model: ["class", "technique", "rig", "tris"],
+  character: ["age", "build", "look", "application"],
 };
 export type RailSection = "vocabulary" | "attention" | "state" | "collections" | "origin";
 
@@ -118,19 +122,21 @@ export const FIXED_ORDER: Readonly<Record<string, readonly string[]>> = {
   state: LIBRARY_STATES,
   source: LIBRARY_SOURCES,
   attention: ATTENTION,
-  techniques: ["1–4", "5–8", "9–15", "16+"],
+  techniques: ["0", "1–4", "5–8", "9–15", "16+"],
   tris: TRIS_BANDS,
+  age: AGE_BANDS,
 };
 
 /** library.js `CHIPKEYS`: the facets a list row shows, first value of each, at most three. */
 export const CHIP_GROUPS: { readonly [K in LibraryKindName]: readonly string[] } = {
   ...{ image: ["scene", "set"], plate: ["family", "render_mode", "station"], style: ["family", "render_mode", "palette_strategy"] },
   ...{ motion: ["subject", "format"], audio: ["genre", "mood", "type"], video: ["format", "captions"], doc: ["bundle", "techniques"], model: ["class", "technique", "tris"] },
+  ...{ character: ["age", "build", "application"] },
 };
 
-/** A doc's technique count as its facet band (library-data.js `band`). */
+/** A doc's technique count as its facet band (library-data.js `band`); a subject with none is "0", not one to four. */
 export function techniqueBand(n: number): string {
-  return n <= 4 ? "1–4" : n <= 8 ? "5–8" : n <= 15 ? "9–15" : "16+";
+  return n <= 0 ? "0" : n <= 4 ? "1–4" : n <= 8 ? "5–8" : n <= 15 ? "9–15" : "16+";
 }
 // ── the search grammar ──────────────────────────────────────────────────────
 
@@ -163,7 +169,9 @@ export type ParsedSearch = {
   readonly tokens: readonly SearchToken[];
 };
 
-const TOKEN_RE = /[a-z_]+:"[^"]*"|"[^"]*"|\S+/g;
+// Case-blind like KV_RE's lowercased input: without `i`, `Mood:"dark ambient"` split at the
+// space into a one-word token and a stray word, while `Mood:dark` was already a token.
+const TOKEN_RE = /[a-z_]+:"[^"]*"|"[^"]*"|\S+/gi;
 const KV_RE = /^([a-z_]+):(.+)$/;
 
 /**

@@ -39,18 +39,25 @@
 // on that node (takeIds, state rendered — or failed with the vendor's own
 // sentence), so a hunt reads the same from the lab, the CLI and a reload.
 
+import { createHash } from "node:crypto";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+
 import { errorMessage } from "@gt/domain/errors";
 import { composeDetailed, draftPlan, generateSfx, toWirePlan } from "@/lib/music/elevenlabs";
 import { cueDurationS, cueToPlan } from "@/lib/music/plan";
 import type { CueBrief, CuePicture, WirePlan } from "@/lib/music/types";
 
-import { asWirePlan, buildEditPlan, editSeconds, isGenChunk, planMs } from "./editPlan";
-import { getTake, createTake, termsOf } from "./takes";
-import { SoundError, withStore } from "./store";
+import { asWirePlan, buildEditPlan, EDIT_MODES, editSeconds, isGenChunk, planMs } from "./editPlan";
+import { getTake, createTake, NEGATIVE_MAX, termsOf } from "./takes";
+import { SoundError, storeRoot, withStore } from "./store";
 import type { GenerateRequest, SoundKind, SoundTake } from "./types";
 
 const OPS = ["compose", "plan", "section-edit", "sfx", "cue"] as const;
 const ORIGINS = ["agent", "lab", "hunt", "score", "library"] as const;
+
+/** The longest text a compose or an effect sends (the prompt with its negative tail). */
+const PROMPT_MAX = 4100;
 
 /** The vendor's windows, restated as the bounds a request is held to BEFORE
  *  anything is sent (lib/music/elevenlabs.ts states them for the wire). */
@@ -58,6 +65,12 @@ export const DURATION_BOUNDS: Record<SoundKind, { min: number; max: number }> = 
   music: { min: 3, max: 600 },
   sfx: { min: 0.5, max: 30 },
 };
+
+/** The longest a plan drafted from a prompt is asked for (a supplied plan keeps the music
+ *  bound above). The vendor's own draft limit is not stated offline (lib/music/elevenlabs.ts
+ *  validates 3 s..10 min for a whole plan), so a longer request is refused by name rather than
+ *  drafted at this length and filed as a shorter take than the one asked for. */
+export const PLAN_DRAFT_MAX_S = 300;
 
 /** A Score cue's brief, held to the bounds app/api/music/generate/route.ts
  *  holds the same brief to, BEFORE anything is sent — the picture's length is
@@ -145,7 +158,17 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
 
   const prompt = typeof b.prompt === "string" ? b.prompt.trim() : "";
   if (op !== "section-edit" && op !== "plan" && op !== "cue" && !prompt) throw new SoundError('"prompt" is required', 400);
-  if (prompt.length > 4100) throw new SoundError('"prompt" is over 4100 characters', 400);
+  if (prompt.length > PROMPT_MAX) throw new SoundError(`"prompt" is over ${PROMPT_MAX} characters`, 400);
+  const negative = (typeof b.negative === "string" && b.negative.trim()) || null;
+  // The take files at most NEGATIVE_MAX of a negative (takes.ts); one longer would be sent whole
+  // and kept cut, so the ledger would learn from a negative that was not the one sent.
+  if (negative !== null && negative.length > NEGATIVE_MAX) throw new SoundError(`"negative" is over ${NEGATIVE_MAX} characters`, 400);
+  // A compose and an effect send the negative as a "No …" tail (withNegative), so the bound is
+  // on the text the vendor receives, not on the prompt alone.
+  if (op === "compose" || op === "sfx") {
+    const sent = withNegative(prompt, negative).length;
+    if (sent > PROMPT_MAX) throw new SoundError(`"prompt" with its "No …" tail is ${sent} characters; the vendor takes ${PROMPT_MAX}`, 400);
+  }
 
   const d = typeof b.durationS === "number" && Number.isFinite(b.durationS) ? b.durationS : NaN;
   const bounds = DURATION_BOUNDS[kind];
@@ -154,13 +177,25 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
 
   const plan = b.plan === null || b.plan === undefined ? null : asWirePlan(b.plan);
   if (b.plan && !plan) throw new SoundError('"plan" is not a composition plan ({ chunks: [...] })', 400);
+  if (op === "plan" && !plan && d > PLAN_DRAFT_MAX_S) throw new SoundError(`a plan drafted from a prompt runs at most ${PLAN_DRAFT_MAX_S}s; "durationS" is ${d}s`, 400);
   if (op === "plan" && !plan && !prompt) throw new SoundError('op "plan" needs a drafted "plan" or a "prompt" to draft one from', 400);
+  // A drafted plan IS the length bought (the meter reads it, lib/music requestedSeconds), so the
+  // bound is held on the plan, not on a `durationS` the render never reads.
+  if (op === "plan" && plan) {
+    if (plan.chunks.filter(isGenChunk).some((c) => !(c.duration_ms > 0))) throw new SoundError('every "plan" section needs a positive duration_ms', 400);
+    const planS = planMs(plan) / 1000;
+    if (planS < bounds.min || planS > bounds.max) throw new SoundError(`the plan totals ${planS}s; a ${kind} plan renders ${bounds.min}..${bounds.max}s`, 400);
+  }
 
   const sourceTakeId = typeof b.sourceTakeId === "string" && b.sourceTakeId ? b.sourceTakeId : null;
   const editModes = Array.isArray(b.editModes) ? b.editModes.filter((x): x is string => typeof x === "string") : null;
   if (op === "section-edit") {
     if (!sourceTakeId) throw new SoundError('a section edit needs "sourceTakeId"', 400);
     if (!editModes || !editModes.length) throw new SoundError('a section edit needs "editModes", one per section', 400);
+    // The plan reads a word it does not know as "keep" (editPlan.ts modeOf), so a typo'd mode
+    // would buy a render of sections nobody asked to change. Refused by name instead.
+    const unknown = editModes.filter((m) => !(EDIT_MODES as readonly string[]).includes(m));
+    if (unknown.length) throw new SoundError(`unknown edit mode(s): ${unknown.map((m) => JSON.stringify(m)).join(", ")} (one of ${EDIT_MODES.join(", ")})`, 400);
     if (editModes.every((m) => m === "keep")) throw new SoundError("every section is kept — there is nothing to render", 400);
   }
   // prompt_influence is the SFX endpoint's own knob (lib/music/elevenlabs.ts
@@ -181,7 +216,7 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
     provider: "elevenlabs",
     op,
     prompt,
-    negative: strOrNull(b.negative),
+    negative,
     durationS: cue ? cueDurationS(cue.picture) : Number.isFinite(d) ? d : 0,
     loop: typeof b.loop === "boolean" ? b.loop : null,
     promptInfluence,
@@ -275,7 +310,7 @@ async function render(req: GenerateRequest): Promise<Rendered> {
     case "plan": {
       const plan =
         (req.plan as WirePlan | null) ??
-        (await draftPlan({ prompt: req.prompt, lengthMs: Math.round(Math.min(req.durationS, 300) * 1000), negativeStyle: req.negative ?? undefined }));
+        (await draftPlan({ prompt: req.prompt, lengthMs: Math.round(req.durationS * 1000), negativeStyle: req.negative ?? undefined }));
       const out = await composeDetailed({ plan, storeForInpainting: true });
       return { b64: out.audio.b64, mime: out.audio.mime, songId: out.songId, plan: out.plan ?? plan, durationS: planMs(plan) / 1000, parentId: null, prompt: req.prompt, link: NO_LINK };
     }
@@ -342,17 +377,53 @@ async function markNode(req: GenerateRequest, takeId: string | null, error: stri
 
 const CUE_TECHNIQUES = ["section-plan-as-the-brief", "sonic-style-vocabulary", "duration-and-tempo-locking"];
 
+/** Where a clip the vendor SERVED waits when the store refuses to file it. The bytes exist only in
+ *  this process until createTake lands them, and a retry would buy the render again, so a refusal
+ *  parks the Rendered here, keyed by the request, and the next identical request files it WITHOUT
+ *  calling the vendor. A parked clip nobody retries stays: it is billed audio, not scratch. */
+const parkedAt = (req: GenerateRequest): string => path.join(storeRoot(), "unfiled", `${createHash("sha256").update(JSON.stringify(req)).digest("hex").slice(0, 32)}.json`);
+
+async function parkedRender(file: string): Promise<Rendered | null> {
+  let raw: string;
+  try {
+    raw = await readFile(file, "utf8");
+  } catch {
+    return null;
+  }
+  try {
+    const v = JSON.parse(raw) as Partial<Rendered>;
+    return typeof v.b64 === "string" && typeof v.mime === "string" && typeof v.durationS === "number" && typeof v.prompt === "string" ? (v as Rendered) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateTake(req: GenerateRequest, now = new Date()): Promise<SoundTake> {
+  const parked = parkedAt(req);
   let r: Rendered;
   try {
-    r = await render(req);
+    r = (await parkedRender(parked)) ?? (await render(req));
   } catch (e) {
     const msg = errorMessage(e);
     await markNode(req, null, msg).catch(() => undefined);
     throw e;
   }
   const bytes = Buffer.from(r.b64, "base64");
-  const { take } = await createTake(
+  let filed: { take: SoundTake };
+  try {
+    filed = await fileTake(req, r, bytes, now);
+  } catch (e) {
+    await mkdir(path.dirname(parked), { recursive: true }).then(() => writeFile(parked, JSON.stringify(r))).catch(() => undefined);
+    if (e instanceof SoundError && e.status < 500) throw e;
+    throw new SoundError(`the sound store refused the clip the vendor served (${errorMessage(e)}); it is kept and filed on the next try without a new render`, 503);
+  }
+  await rm(parked, { force: true }).catch(() => undefined);
+  await markNode(req, filed.take.id, null);
+  return filed.take;
+}
+
+async function fileTake(req: GenerateRequest, r: Rendered, bytes: Buffer, now: Date): Promise<{ take: SoundTake }> {
+  return createTake(
     {
       kind: req.kind,
       title: titleFor(req),
@@ -385,7 +456,5 @@ export async function generateTake(req: GenerateRequest, now = new Date()): Prom
     { bytes, mime: r.mime, name: `${req.op}.mp3` },
     now,
   );
-  await markNode(req, take.id, null);
-  return take;
 }
 

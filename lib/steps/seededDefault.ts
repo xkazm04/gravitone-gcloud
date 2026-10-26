@@ -1,5 +1,6 @@
 // THE SEEDED DEFAULT for a key with no stored record. Read by both the read path and
-// the patch path, so it lives in its own file. Split out of the stepStore.ts door.
+// the patch path, so it lives in its own file. Split out of v1's stepStore.ts; the
+// door is now index.ts.
 
 import { seededResearchTopic } from "@/lib/studio/projectSeed";
 

@@ -15,6 +15,7 @@
 //   · a cell of the strengths table may draft a lesson too (L66), held to the same evidence
 //     floor the table draws (n < 3 is "waiting for evidence", not a finding to sign).
 import { buildTree, type HuntNodeView } from "./hunt.ts";
+import { MIN_N } from "./strengths.ts";
 
 export type LessonKind = "music" | "sfx";
 export type LessonSource = "triage" | "hunt";
@@ -38,8 +39,9 @@ export type LessonProposal = {
 };
 
 export const CLAIM_MAX = 600;
-/** Below this many judged takes a strengths cell is "waiting for evidence" (v1 triage cellView). */
-export const EVIDENCE_FLOOR = 3;
+/** Below this many judged takes a strengths cell is "waiting for evidence" (v1 triage cellView):
+ *  the table's own floor, read from it, so the cell that draws pips is the cell refused here. */
+export const EVIDENCE_FLOOR = MIN_N;
 
 /* ── what a hunt measured ───────────────────────────────────────────────── */
 
@@ -105,6 +107,13 @@ export function huntLessonBlock(nodes: readonly HuntNodeView[]): string | null {
   if (e.winners.length === 0) return "no crown yet: a lesson is what the winners did";
   return null;
 }
+
+/**
+ * The evidence's two figures in the words of what was counted: a hunt's n is the leaves HEARD
+ * and its rate the share CROWNED (`handLesson`); a strengths cell's n is the takes JUDGED and its
+ * rate the share KEPT (`cellLesson`). The sign and the signed list read the same words.
+ */
+export const evidenceWords = (source: LessonSource): { readonly n: string; readonly rate: string } => (source === "hunt" ? { n: "heard", rate: "won" } : { n: "judged", rate: "kept" });
 
 /** The evidence's identity: a confirm signed over another count is refused, never saved. */
 export function evidenceKey(e: LessonEvidence): string {

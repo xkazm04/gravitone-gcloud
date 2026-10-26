@@ -44,10 +44,14 @@ export default async function LibraryPage({ searchParams }: { readonly searchPar
   if (!page.ok) return <ErrorLine message={`library: ${page.error.message}`} live />;
   const detail = u.sel === null ? null : side.detail(u.sel, u.f);
   // A selection the index no longer holds is not an error to stop on: the page opens on the set.
+  // Any other refusal (the store, the projects read, a cover) opens on the set too, and says why -
+  // it used to drop the selection from the address and leave no trace of the reason.
   const shown = detail !== null && detail.ok ? detail.value : null;
+  const refused = detail !== null && !detail.ok && detail.error.code !== "not-found" ? detail.error.message : null;
   return (
     <>
       {sync !== null && !sync.ok && <ErrorLine message={`library sync: ${sync.error.message}`} />}
+      {refused !== null && <ErrorLine message={`library ${u.sel ?? ""}: ${refused}`} />}
       <Library url={shown === null ? { ...u, sel: null } : u} page={page.value} detail={shown} port={LIBRARY_PORT} />
     </>
   );

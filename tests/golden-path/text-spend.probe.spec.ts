@@ -10,6 +10,8 @@ import { test, expect } from "@playwright/test";
 
 import { SPEND_CLASSES } from "@/lib/spend/classes";
 import { createMeter } from "@/lib/spend/meter";
+import { TextError } from "@/lib/text/errors";
+import { postJson } from "@/lib/text/http";
 import { reason } from "@/lib/text/router";
 import {
   __resetTextSpend,
@@ -90,6 +92,68 @@ test("card case 4: a vendor-reported turn books one row; an unpriced google turn
   expect((await textSpendStats()).counters.booked).toBe(1);
 });
 
+test("a served answer the schema check refuses still books the turn's vendor-reported cost", async () => {
+  // `# DOOR prose`: the engine ran, reported total_cost_usd 0.0019, and answered
+  // in prose where JSON was required. The turn is refused bad-response, and the
+  // bill it ran up is a failed row, not a gap in the ledger.
+  let refused: unknown;
+  await withFakeEngine(loadCassette("engine-door"), async () => {
+    refused = await reason({ prompt: "# DOOR prose\n", turn: "edit-plan", schema: SCHEMA }).catch((e: unknown) => e);
+  });
+  expect((refused as { kind?: string }).kind).toBe("bad-response");
+  const rows = await textSpendRows();
+  expect(rows, "a paid, refused answer booked no row").toHaveLength(1);
+  expect(rows[0]).toMatchObject({ basis: "vendor", amount: 0.0019, outcome: "failed" });
+  expect(rows[0]!.axes).toMatchObject({ turn: "edit-plan", provider: "claude-cli" });
+  expect(rows[0]!.axes.model).not.toBe("unknown");
+});
+
+test("a failed turn that reached its engine with no cost is counted unpriced; one that never left is not", async () => {
+  process.env.TEXT_ENV = "cloud";
+  // No key: refused at the cheap gate, nothing was sent.
+  await reason({ prompt: "x", turn: "edit-plan" }).catch(() => undefined);
+  expect((await textSpendStats()).counters.unpriced, "a call that never left the machine was counted").toBe(0);
+
+  process.env.GOOGLE_AI_API_KEY = "probe-google-key-0123456789";
+  const real = globalThis.fetch;
+  let status = 500;
+  globalThis.fetch = (async () => new Response("{}", { status })) as typeof fetch;
+  try {
+    // A 500: the vendor answered, the turn stops there.
+    await reason({ prompt: "x", turn: "edit-plan" }).catch(() => undefined);
+    expect((await textSpendStats()).counters.unpriced, "a vendor 500 left no trace in the ledger").toBe(1);
+    // A 429 walks to the bottom of a one-entry chain; the refusal there still reached Google.
+    status = 429;
+    await reason({ prompt: "x", turn: "edit-plan" }).catch(() => undefined);
+    expect((await textSpendStats()).counters.unpriced, "a 429 at the ladder's bottom left no trace").toBe(2);
+  } finally {
+    globalThis.fetch = real;
+  }
+  expect(await textSpendRows(), "an unpriced failure wrote a $ row").toHaveLength(0);
+});
+
+test("a vendor answer whose body breaks mid-read is a dispatched failure, not 'could not be reached'", async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(
+      new ReadableStream({
+        start(c) {
+          c.enqueue(new TextEncoder().encode('{"candidates":'));
+          c.error(new TypeError("terminated"));
+        },
+      }),
+      { status: 200 },
+    )) as typeof fetch;
+  try {
+    const e = (await postJson("google", "https://vendor.invalid/x", { body: {}, timeoutMs: 30_000 }).catch((x: unknown) => x)) as TextError;
+    expect(e).toBeInstanceOf(TextError);
+    expect(e.message).not.toMatch(/could not be reached/);
+    expect(e.dispatched, "an answered call was booked as never sent").toBe(true);
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
 test("no refusal: far past any imaging-sized ceiling, the next text turn is still served", async () => {
   for (let i = 0; i < 500; i++)
     await bookServedTurn({ turn: "edit-plan", provider: "claude-cli", model: "m", costUsd: 1000, costBasis: "vendor-reported" });
@@ -134,4 +198,17 @@ test("a booking failure does not fail the turn", async () => {
     expect(out.provenance.costUsd).toBe(0.31);
     expect(out.json).toEqual({ ok: true });
   });
+});
+
+test("an is_error envelope the engine reported a cost for books that cost as a failed row", async () => {
+  // `# DOOR is_error`: the run ended error_during_execution and the envelope
+  // carries total_cost_usd 0.0004. The seat did the work; the ledger holds it.
+  let refused: unknown;
+  await withFakeEngine(loadCassette("engine-door"), async () => {
+    refused = await reason({ prompt: "# DOOR is_error\n", turn: "edit-plan", schema: SCHEMA }).catch((e: unknown) => e);
+  });
+  expect((refused as { kind?: string }).kind).toBe("failed");
+  const rows = await textSpendRows();
+  expect(rows, "an errored run's reported cost booked no vendor row").toHaveLength(1);
+  expect(rows[0]).toMatchObject({ basis: "vendor", amount: 0.0004, outcome: "failed" });
 });

@@ -11,12 +11,12 @@ across pages lives in `tokens.css` and `shell.js`, so that is where the kit come
 | Kit name | Replaces (prototype) | Pages | States / variants |
 | --- | --- | --- | --- |
 | `status/STATUS` + `StatusPill` | `.state.*`, GT.State; the 5 mapping copies (index `SLOT_STATE` + slot detail, kit `mslot`, projects `STATUS_TO_STATE` + ribbon tail) | F P L | 8 looks: idle paused running awaiting done failed reference candidate; 8 vocabularies (job run part project packet slot style library) |
-| `Chip` | `.chip` (+`b`, `.dot`), `button.chip`, `a.chip` | F P L G | tone neutral/cyan/violet/emerald/amber/rose; ghost; casing caps/lower; dot; span/button(pressed)/link |
+| `Chip` | `.chip` (+`b`, `.dot`), `button.chip`, `a.chip` | F P L G | tone neutral/cyan/violet/emerald/amber/rose; ghost; casing caps/lower; dot; span/button(pressed)/link; a door described by its `Tip` (`describedBy`) |
 | `Tally` | `.tally`, GT.Tally | F P L G | value, of, label |
 | `StackBar` | `.stackbar`, GT.StackBar | F L | kept/rejected/undecided; whole-hatched when untouched |
 | `PipRow` | `.piprow .pip.*`, GT.PipRow | F P | pip per Look; capacity (`max`) as bare pips |
-| `Hint` | `.hint`, GT.Hint | F L | one; text capped at 12 words by type |
-| `Keycap`, `Keycaps` | `.keycap`, `.keymap`, GT.Keycaps, every hand-typed `<kbd>` | F P L G | md/sm cap; legend per keymap mode + facts/field |
+| `Hint`, `Tip` | `.hint`, GT.Hint | F L | Hint: one "?" glyph, text capped at 12 words by type. Tip (2026-10-23): the same `tooltip` layer opened by the control itself, its id handed to the trigger's aria-describedby; a bold `term` for a bare trigger (a key cap); `above` at a desk foot; `seededOpen` for /kit. Its text is data (a reject reason's meaning, @gt/domain/source `REASON_MEANING`), held to 12 words by the domain test |
+| `Keycap`, `Keycaps` | `.keycap`, `.keymap`, GT.Keycaps, every hand-typed `<kbd>` | F P L G | md/sm cap; legend per keymap mode + facts/field; `tips` by row and cap: a cap that stands for something (a reason key) takes focus and opens its `Tip` |
 | `SourceTag` | `.src.*`, GT.Src | P L G | real, illustrative, model, fixture, derived, session; `value` (the figure it qualifies: `model $417`) |
 | `LedgerLink` | `.ledger-link`, GT.LedgerLink | F P L | one |
 | `ErrorLine` | `.err` (+ I.warn) | F P L G | static / live (role=alert) |
@@ -24,12 +24,12 @@ across pages lives in `tokens.css` and `shell.js`, so that is where the kit come
 | `Button` | `.btn`, `.btn.{tone}`, `.btn.sm`, `kbd.keycap` inside | F P L G | tone x size; glyph; badge chip; tally stamp (`history 9`); trailing glyph (`Open record ›`); shortcut from keymap; aria-disabled |
 | `Toggle` | `.toggle[aria-pressed]` | F P L G | on/off; glyph; count of what is on; keycap; aria-controls/expanded for a drawer |
 | `Seg` | `.seg button[aria-pressed]` | F P L G | one of n; option glyph, count, actor accent (Ledger actors) |
-| `Field`, `Select`, `Search` | `.field`, `select.field`, `.search` | P L G | keyfield; search caps from the mode's `search` verb |
+| `Field`, `Select`, `Search`, `TextArea` | `.field`, `select.field`, `.search` | P L G | keyfield; search caps from the mode's `search` verb; `disabled` is aria-disabled + read-only; `type`, `maxLength`, `describedBy`; `TextArea` the multi-line field |
 | `CapsHeading` | `.side-h`, `.h4` / `.detail h4` | F P L G | side / section; level; tally |
 | `Panel` | `.panel`, `.panel-head`, `.panel-body`, `.toolbar` | P L G | title + tally; toolbar |
 | `Empty` | `.empty` | F L G | label (<= 12 words by type); one act |
 | `Ghost` | `.ghost-card` | F P | count; spoken label |
-| `Toast` | `.toast`, GT.toast/announce | F P L G | open/closed; always-mounted polite region |
+| `Toast` | `.toast`, GT.toast/announce | F P L G | open/closed; always-mounted polite region; an act's ledger chip (the only part that takes the pointer); rise dropped under reduced motion |
 | `Crumbs` | `[data-component=Crumbs]` | F P L | link/button steps; current place |
 | `Facts` | `.obs` (dl) | F L | term/value rows |
 | `Wave` | GT.Wave | F P L | tone; playhead; empty midline |
@@ -81,14 +81,15 @@ Library: LibraryNav (`.kind`), FacetGroup body, LibraryToolbar (`.fchips`), Libr
 - Ghost rows are one height (32px, `--h-field`); the prototype set 32 or 34 inline per site.
 - The two facet rows (Library check, Ledger rail) are one component with two marks, both
   pixel-exact; which survives is the owner's call.
-- The prototype's `blog` channel ("PR", amber) had no badge at first (the domain publishes to
-  youtube, tiktok and instagram only); lot 20 gave it one, as a badge, not a slot channel.
+- The prototype's `blog` channel ("PR", amber) had no badge at first; lot 20 gave it one, and
+  since Phase 6 (owner ruling 2026-10-17) it is a slot channel in `@gt/domain/slot` `CHANNELS`,
+  whose slot publishes as the article approve's pull request. `BADGE_CHANNELS` is that list.
 
 ## Ledger parts (Phase 2, lot 16)
 
 | Kit name | Replaces (prototype) | Pages | States / variants |
 | --- | --- | --- | --- |
-| `TimeStrip` (+ `strip.ts`) | ledger.js `renderStrip`, `.lg-strip`, `.ts-*` | G | √n bars stacked machine/agent/operator; future days hatched; empty days drawn as measured zero; NOW line; drag sets a range, a click on the whole range clears it; hover readout as a live region |
+| `TimeStrip` (+ `strip.ts`) | ledger.js `renderStrip`, `.lg-strip`, `.ts-*` | G | √n bars stacked machine/agent/operator; future days hatched; empty days drawn as measured zero; NOW line; drag sets a range, a click on the whole range clears it; the resting readout is the live region, the hover line aria-hidden |
 | `EventRow` (+ `usd.ts`) | ledger.js `rowHtml`, `.ev`, `.ty` | G | actor rule and glyph; type tag by tone; subject link; error/note trail; cost with `est`/`ill` mark; `≈` derived time (spoken); the v1 store it came from; selected; fresh |
 | `JsonLine`, `JsonBlock` (+ `highlight.ts`) | ledger.js `lineHtml`, `jsonHi`, `.jl`, `.json` | G | one line with its number (fixed height, windowed); one pretty record; runs, never HTML |
 | `StaleBadge` | v1 `signal/StaleBadge.tsx` | G | nothing when live; amber `stale 42 s` / `offline 9 min` from the freshness view |
@@ -172,12 +173,13 @@ Where this port moved from the prototype:
 
 | Kit name | Replaces (prototype) | Pages | States / variants |
 | --- | --- | --- | --- |
-| `LevelSheet` | tokens.css `[data-component=LevelSheet]`, `.scrim`, `.grab`, `.sheet-bar`, `.sheet-close`, index.html `openLevel` | F | sheet over the Floor (rises; a `sheet` layer in the desk's keymap mode; its close is the caller's) / full page (in flow, no scrim, still on the stack) / specimen |
+| `LevelSheet` | tokens.css `[data-component=LevelSheet]`, `.scrim`, `.grab`, `.sheet-bar`, `.sheet-close`, index.html `openLevel` | F | sheet over the Floor (rises; a `sheet` layer in the desk's keymap mode; its close is the caller's) / fit (hugs its body from the bottom edge: a receipt) / full page (in flow, no scrim, still on the stack) / specimen; no rise under reduced motion |
 | `BoardDesk`, `DeskFrame` | `[data-component=BoardDesk]`, `.desk`, `.desk-top`, `.desk-main`, `.desk-foot` | F | title + mono second line; marks; foot; an overlay (the lens, the consequence) |
 | `PacketRail` | index.html `PacketRail`, `.rail-lane`, `.rail-item` (+ `.done`, `[aria-current]`) | F | grouped by lane (its FloorGlyph mark, open tally) then desk; open (amber mode mark, FloorGlyph), committed (✓), returned (↩); link + client open |
 | `OracleStrip` | index.html `Oracle` | F | pass / fail, summary, digest, fixture |
 | `CommitButton` | `.commit`, `.commit.wait`, `.commit.refuse` + `@keyframes shake` | F | ready / waiting (`N undecided`, `N left`) / refusal replayed per press; cap from the mode's `commit` row |
-| `MatrixCull` (+ `RunMosaic`, `RunCard`, `RunModal`, `RunView`, `VariantCard`, `VerdictPick`, `VideoBar`, `IdeaList`, `CullFoot`, `useRunDesk`, board `runs.ts`) | the run grid (2026-10-22, operator-designed; no prototype source) | F | runs filed in tabs by content kind (images · videos · audio · ideas) and category rows; a run card per run (picture, label, a pip per variant); a run opens across the whole screen with its brief (aim, checks), at most three variants a row, a verdict by click under each and on the whole run, a clip's play / sound / volume bar; words-only runs decided in place in the ideas list; every act also a key |
+| `MatrixCull` (+ `RunMosaic`, `RunCard`, `RunModal`, `RunView`, `VariantCard`, `VerdictPick`, `VideoBar`, `IdeaList`, `WordsBody`, `CullFoot`, `useRunDesk`, board `runs.ts`) | the run grid (2026-10-22, operator-designed; no prototype source) | F | runs filed in tabs by content kind (images · videos · audio · ideas · storyboards) and category rows; a storyboard one 16:9 card, opened as its frames then one wide words card - the paragraph and its `- ` lines as a list (`WordsBody`, no markdown dependency), the head's prompt left out when that card already shows it (spark scout-storyboards); a run card per run (picture, label, a pip per variant); a run opens across the whole screen with its brief (aim, checks), at most three variants a row, a verdict by click under each and on the whole run, each reject reason opening its meaning as a `Tip` (and each reject key in `CullFoot`); the number row decides (1 keep · 2-4 reject with the run group's first three reasons, `reasonsOf` · 5 reject bare, the chips asked: ringed and focused), the whole-run and words-row chips keyed with their 2-4 caps from the keymap, ⇧1 / ⇧2 one variant; a clip's play / sound / volume bar; words-only runs decided in place in a list under any tab's mosaic; every act also a key |
+| `NoteField`, `NoteText` | — (no prototype; spark scout-decision-graph WP-S1) | B | a one-line note on a cull decision: @gt/ui `Field` keyed `note`, opened by E, saved with ⏎ and dropped with Esc in `board.cull`; `NoteText` the saved note under its row, in the operator's words |
 | `CullTile`, `Zoom` | index.html `CullTile`, `Zoom`; `.tiles`, `.badge`, `.reason`, `.nudge`, `.wavebox`, `.take-tile-body`, `.zoom` | F | tile image / video / audio take / text; cur / keep / reject / nudge; reasons as rose chips; the lens over a desk; a `model/*` cell (spark game-3d-assets): the tile its poster (`ItemWords.poster`) or its words, never a canvas, the lens the `ModelViewer`; in an opened run the current model cell is the live viewer (`VariantCard`, one canvas at a time) |
 | `Plate` | every `<img>` a desk draws | F | lazy or eager; the one exemption from next/image (a candidate is judged as its own bytes) |
 | `BlindPair` | index.html `BlindPair`; `.pair-q`, `.pair-arms`, `.arm` (+ `.picked .dropped .bad`), `.armcap`, `.masked`, `.agree-banner` | F | masked arms / revealed for a beat (agrees, differs, not comparable) / summary with agreement tally |
@@ -207,6 +209,22 @@ Where this port moved from the prototype:
   the review side's ground is `--panel-ground` (.14 where it wrote .15) and its scroll room
   60px (40px); the article page's side inset is 28px (30px).
 
+## Produce parts (Phase 4, L28)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `Composer`, `ComposerSelect`, `Estimate`, `LaunchButton` | index.html `IdeaComposer`, `Estimate`, floor.css `.comp-row`, `.comp-sel`, `.comp-text`, `.launch`; projects.css `.launch-plan` | F P | Estimate: reading (dashes hold the line), error verbatim, units · ~time · cost (or one `Unpriced` per kind) · queue #n · source; the cost is the receipt's totals, never a second sum. LaunchButton `row` / `plan`, busy, detail figures; it opens a receipt |
+| `Receipt` | none (NEW, COMMON decision 3; the prototype launched on the press) | F P | dry / live; per line lane, provider · model, units, time, cost or `Unpriced`, source, queue, start; totals (no cost chip when nothing is priced); stale: every moved cell and total ringed and spoken `(changed)`, `changed N`, added `new`, removed `− label`; ceiling field (bad amount disarms the confirm), `may stop at ceiling` over the band's top; refusal verbatim |
+| `PlanTable`, `PlanRow`, `ModelPicker` | projects.js `PlanRow`, `optLabel`; projects.css `.plan-t`, `.model-sel`, `.units-in`, `.dep`, `.pdot` | P | draft (picker + units field) / launched (fixed); gate row `◆ judged part` with no model; slot row; cost a figure, a band or `Unpriced` (no Hint) with its source |
+| `RerouteList` | projects.js Inspector `alt`; projects.css `.alts`, `.alt` | P | current (dashed, unchoosable) / option with time · cost, `eta ±Δ`, `±$`, `q#n`, tone read off the delta's words; busy disarms the list; choosing opens the option's receipt |
+| `LaneHold` | the inspector's `.err` block, given a lane | P | a paid lane on hold: lane, `hold`, since, job (link or text) and stage, v1's sentence verbatim, Acknowledge |
+| `Unpriced` | none (the prototype priced these $0) | F P | `unpriced · seat` / `credits` / `no price`, the reason its name and Hint; `hint={false}` in a narrow column |
+| `ComposeDialog` | projects.js `renderCompose`; projects.css `.compose-pop`, `.cp`, `.recipe`, `.cp-src` | P | popover on the stack / in place (specimen); recipes 1-3 keyed, the rest below; style · take · topic sources from the port; busy; error verbatim |
+
+Pure module beside them: `produce/produce.ts` (`fmtDur`, `fmtUsd`, `fmtRange` - a band's ends rounded
+outward -, `costWords`, `optionCost`, `optionLabel`, `relDur`, `relUsd`, `leanOf`, `receiptChanges`,
+`totalPriced`, `parseCeiling`, `mayStopAtCeiling`, `overWords`, `unpricedKind`, `when`).
+
 ## Library parts (Phase 5, L50)
 
 | Kit name | Replaces (prototype) | Pages | States / variants |
@@ -215,8 +233,9 @@ Where this port moved from the prototype:
 | `LibraryTile`, `TileGrid`, `TileSlot` | library.js `make` (grid), `.tile`, `.th`, `.kg`, `.refmark`, `.lk`, `.sd`, `.cap` | L | faces below; selected; REF on a reference image; lock on a ratified style; state dot per state; attention chip; S/M/L; a slot for a row not fetched yet |
 | `LibraryRow`, `LibraryColumns`, `ColumnsHead`, `RowList` | library.js `make` (list), `.lrow`, `.lcols` | L | thumb, name (+ attention), kind, three facets, state, date, source; >1360 / >1100 / phone columns; S/M/L |
 | `FaceView` | library.js `face`, `vface`; `.wv`, `.paper`, `.swatch`, `.vf` | L | image, poster, wave, paper, swatch, designed face; row / tile / preview sizes; palette as data |
-| `LibraryGlyph` (+ `KINDS`) | shell.js `I.ref|image|style|motion|doc|list|play|pause|retry` | L | one mark per kind; the kinds' order and words from `@gt/domain/library` KIND_LABELS |
+| `LibraryGlyph` (+ `KINDS`) | shell.js `I.ref|image|style|motion|doc|play|pause` | L | one mark per kind; the kinds' order and words from `@gt/domain/library` KIND_LABELS; play/pause for the Cull's VideoBar |
 | `DetailPanel`, `DetailSection`, `DetailTitle`, `DetailChips`, `DetailFacets`, `DetailPreview` | library.js `detHead`, `body`, `preview`; `.det`, `.dbody`, `.pv`, `.dtitle`, `.did`, `.dchips`, `.det h4`, `.fdl` | L | head with kind, i / N, prev / next, close `]`; facets as pressed chips that filter; a clip loops muted, an export plays |
+| `LookStrip` | none (spark scout-use-aim: a character's kept stills had no shape; a row of captions was the only spelling) | L (a character's detail), /kit | portrait thumbnails 9:16 under their look slug and genre rung; a door (pressed lit) filters by the look, a figure when a legacy night kept no look; the picture named `look · genre` |
 | `Lineage` | library.js `lineage`, `node`; `.lin`, `.lnode`, `button.lk` | L | one line per role; item door (thumb or kind mark), facet door (+ ledger link for a run), text, ghost for a parent that is gone; THIS lit |
 | `SetSummary` | library.js `summary`; `.sumh`, `.stbar`, `.stl`, `.kbar`, `.recent`, `.keys-d` | L | count of N; state bar and state doors; kind bars on All; newest pictures; the library keymap |
 
@@ -240,10 +259,78 @@ Where this port moved from the prototype:
 | --- | --- | --- | --- |
 | `ArrangeBoard`, `TakeCard`, `RowHead`/`RowFoot`, `LabelPrompt`, `RoundTrip`, `EngineList` (+ `arrange.ts`, `arrangeGroups.ts`) | app/playground/arrange/*, engines.ts | /audio | card provisional/pending, vN versions open, finalized label; cell lit on drag; withheld op with reason |
 | `StrengthTable`/`StrengthHead`, `RubricCard`, `BriefDelta`, `BatchForm` (+ `strengths.ts`, `rubric.ts`, `brief.ts`, `batch.ts`) | app/playground/triage/{Strengths,Judge,Batch}.tsx, shared/Rubric.tsx | /audio, Board audio tile | cell measured/waiting/empty, heat ±2; dim scored/unscored/busy, proven; axis held/missed/octave/unmeasured; batch music/sfx, problem badge |
-| `HuntShelf`/`HuntIdea`, `HuntMap`, `HuntRenderBar`, `HuntAudition`, `LessonForm`, `LessonList` (+ `hunt.ts`, `lesson.ts`) | app/playground/hunt/*, hunt/Lesson.tsx | /audio | idea / drafting / map; leaf idle-selected-rendering-rendered-crowned; render bar priced in audio-seconds; audition side by side; lesson draft / hand / signed, refused without "because" or under three takes |
+| `HuntShelf`/`HuntIdea`, `HuntMap`, `HuntRenderBar`, `HuntAudition`, `AskedChips`, `LessonForm`, `LessonList` (+ `hunt.ts`, `lesson.ts`) | app/playground/hunt/*, hunt/Lesson.tsx | /audio | idea / drafting / map; leaf idle-selected-rendering-rendered-crowned; render bar priced in audio-seconds; audition side by side; lesson draft / hand / signed, refused without "because" or under three takes |
 
 ## Model (spark game-3d-assets WP3)
 
 | Kit name | Replaces (v1) | Pages | States / variants |
 | --- | --- | --- | --- |
 | `ModelViewer` (+ `ModelStage`, its lazy three + @react-three/fiber chunk) | none (PoF's r3f viewer is the reference; no prototype) | Library detail, Board zoom | loading (poster under a loading chip), ready (orbit, wireframe, bones over a rigged model, tris and bones from the scene), failed (the loader's sentence verbatim), no WebGL; pane 16:10 or `fill` (the lens) |
+
+## Load (spark night-load-band)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `LoadBand` (+ `load/band.ts`) | none (prototype source: none - spark night-load-band; v1's `BandTrack` was never built) | F (a /scout night's desk, open and committed), /kit | per resource (cpu, ram, gpu) a meter: average in band (emerald) / under (amber, the box idled) / over (rose, the night queued itself), p95 tick, `avg 64 · p95 81 · 72% in band`; unread (hatched track, `unread`, no marks, spoken `gpu unread`); the night strip, a bar per 5 min coloured by its own slot's look, a read slot never under a hairline, a slot with no reading a gap (nothing drawn); `commit 88 of 102 GB peak` (no limit: `commit 88 GB peak`; no peak: absent); `waited: memory 41 min · comfy queue 12 min`, longest first (none: absent); no `load`: nothing drawn |
+
+Mounted through `DeskFrame`'s `load` prop (the summary, not a slot): `MatrixCull` passes `present.load`, the
+Board's `DecidedDesk` its packet's `present.load`. The three cells sit side by side on a wide desk and wrap as it
+narrows (a cell is at least `--w-detail`).
+
+## Scout graph (spark scout-decision-graph WP-S2)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `StageGraph` (+ `StageHead`, `GraphNodeButton`, `graph/stageGraph.ts`) | none (prototype source: none; the geometry is the day-line's shared-anchor rule, `runs/dayline.ts`) | /scout, /kit | five columns by `GRAPH_STAGES` (seed · derived · idea · run · output); a node per decision as a button, its mark the verdict's Look (`GRAPH_LOOK`: kept done, open awaiting, pending running, rejected and failed failed); dead (rejected, failed) in the faint role - faint words, dashed edge, never opacity; paused (the paused bars, dotted edge and links); selected (cyan, its links lit); `all` / `live` (the dead and their links hidden, each column head `+N`); links as cubic beziers from the node boxes, a loop for a link inside one column |
+| `ShareMeter` | none | /scout, /kit | a group's share of the runs (fill) against the split's target (tick): under, at, over (amber fill), no split set (no tick); one image named `kids: took 29% of runs, split 50%` |
+
+Pure module beside them: `graph/stageGraph.ts` (`GEOMETRY` from the tokens, `layout` - columns ordered by
+the barycentre of what each node grows from -, `nodeBox`, `linkPath`, `visibleOf`, `spokenNode`, `spokenGraph`).
+
+Not a StackBar: StackBar's segments are kept / rejected / undecided and speak those words; a share against a
+target is one quantity and a mark (ShareMeter's header says why). The graph is not windowed: /scout draws only
+unfolded bands, and the 10x fixture measure (WP-S2 report) decides whether a column needs `window/useWindow`.
+
+
+## Rows owed (24 shapes that shipped without one; closes `inventory.test.ts` OWED)
+
+Audio desk, the Recipe Book half (`/audio`, the Library's audio detail).
+
+| Kit name | Replaces (v1 / prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `AudioMeasures` | prototype library.js :552-554, library.css `.meas` | /audio, L (audio detail) | bpm, key, length / lufs, true peak, energy; the asked figure beside the measured one in amber only where the bytes disagree with the brief; a figure read off the brief (nothing measured) in its label's tone |
+| `AudioPrompt` | prototype library.js :550-551, `.prompt-s`, `.neg`, `.dchips`; v1 InspectorRecipe `draft` pre, InspectorTake quote | /audio, L (audio detail) | prompt whole in the reading serif; exclusions after a rose minus; defect codes as rose chips; each part absent when the take has none |
+| `DraftList` | v1 app/library/audio/InspectorDrafts.tsx | /audio | draft proposed / queued / running / done / failed / cancelled; its clips with keep / drop / unjudged; a link to the Board's audio triage (never keeps or rejects itself) |
+| `ReferenceList` | v1 app/library/audio/References.tsx | /audio | per reference: published truth against each method's tempo and key with the kind of error; kept / rejected of its descendants; Seed per method |
+| `SeedComposer` | v1 InspectorComposer.tsx, InspectorComposerTempo.tsx, InspectorAddTerm.tsx | /audio | term chips per facet; preferred terms (★) and avoided ones as fences (⊘); tempo and key; prompt per vendor dialect, copyable; Send to Suno opens a receipt; busy |
+| `TermRail` | v1 app/library/audio/Terms.tsx | /audio | per facet: keep rate, judged count, kept / rejected rail, most frequent defect; ★ prefer, ⊘ avoid and a phrase committed on submit or blur; an effects category carries no hand; a press adds the term to the seed |
+| `VariationList` | v1 app/library/audio/InspectorVariations.tsx | /audio | one-change fan-outs, one axis each, the change as a diff and the evidence that picked it; Load into the composer, Send opens its receipt; busy |
+| `PlayMark` | prototype shell.js play / pause marks | /audio, L (audio detail), Board audio tile | on / off; the mark shared by AudioPreview, HuntAudition, HuntMap, Rubric and the Arrange card's transport |
+
+Style atelier (`/library/style/[id]`).
+
+| Kit name | Replaces (v1 / prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `LockGate` | v1 parts.tsx `StyleStepper`, SpecEditor blocker line, coverage pips | L (style dossier) | candidate / proven / locked; keep pips against the proven threshold and coverage pips against the lock gate; the server's blocker sentence; the lock act only when the gate holds |
+| `ProofSheet`, `ProofTile` | v1 app/library/parts.tsx `StyleSheet`, `ProofThumb` | L (style atelier) | tile pending / approved / rejected; approve and reject on the plate; reject opens a one-line note (Esc backs out); reference window counts approved only; an approval under an earlier block dimmed; a forge plate marked with its origin; held; busy |
+| `StyleSlots` | v1 SpecEditor (finish) + Playground (technique, subject) | L (style dossier) | technique, subject, finish as text slots committing on blur or Esc and only when changed; palette drawn with its roles; locked as prose; busy |
+| `TrialMatrix` | v1 app/library/TrialMatrix.tsx | L (style atelier) | five trial columns: head covered / uncovered, face the covering plate or an outline, foot verdict counts with `earlier` for a stale plate; a head chosen for proof generation |
+| `Palette`, `EvidenceTable`, `PlateStrip` | v1 parts.tsx `PaletteDots`; prototype library detail `.evt` table; v1 StylesShelf document strip | L (style atelier, detail panel) | Palette swatches labelled by role; EvidenceTable keep / reject / scenes with an agent's keep marked and not counted, rows past the first page behind a count (`all` shows them); PlateStrip exemplar plates, an abandoned replica marked |
+
+Part workspace (`/projects/[id]/[part]`).
+
+| Kit name | Replaces (v1 / prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `PartWorkspace` | STEPS-DESIGN §1; v1 research page | P (every part editor) | header crumbs, verdict, acts, undo; rail, one primary and an optional inspector as labelled regions; foot part tabs and the upstream break when a part is not ready; fixed viewport |
+| `PartTabs` | v1 phase rail | P | the project's parts in recipe order with a state mark; the current one; a part with no editor, a gate and the slot aria-disabled; `[` `]` walk the rail |
+| `RailList` | v1 research board (39 cards, 7000 px) | P | one listbox, windowed past a screen, active-descendant keyboard (J / K); selected row scrolled into view; row height `h-pile-face`, or 1.5x when tall |
+| `VerdictChip` | STEPS-DESIGN §1 header verdict | P | the part's state as a status pill, its first reason in the work's words, the rest in a Tip on `+N` |
+| `FrameCanvas` | v1 app/_phases/frames/parts.tsx `FrameCanvas` | P (Frames, Motion) | plate underneath, vector elements, then texts, in percent of the frame; 16:9 or 9:16; plate absent as a dashed ground; hidden layer faint, selected ringed with a resize handle; unsourced figure marked ●; drag local until release, one edit; Motion movers over the same plate |
+
+Cull and status.
+
+| Kit name | Replaces (v1 / prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `RunFace` | none (the Run card's picture, split out of `RunCard`) | Board (cull mosaic), /kit | the reference when the run has one, else its first variant: a plate, a clip's first frame, a take's waveform, a finding's claim, a model's poster |
+| `SeriesBadge` | none (StaleBadge cannot say a different grader) | Board (cull) | amber chip carrying the graded series verbatim, its accessible name saying which was graded and which the calibration was measured on; draws nothing when no grade differs |
+| `EntryPill` | prototype `GT.State` over a ledger entry | Runs inspector, /scout | an already-resolved status entry (a wire token through `statusFromWire`) as the pill of its look and label; `StatusPill` is the same pill from a machine and its state |

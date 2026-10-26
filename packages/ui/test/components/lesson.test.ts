@@ -6,7 +6,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import type { HuntLeafView } from "../../src/components/audio/hunt.ts";
-import { cellLesson, claimProblem, EVIDENCE_FLOOR, evidenceKey, evidenceOf, handLesson, huntLessonBlock } from "../../src/components/audio/lesson.ts";
+import { cellLesson, claimProblem, EVIDENCE_FLOOR, evidenceKey, evidenceOf, evidenceWords, handLesson, huntLessonBlock } from "../../src/components/audio/lesson.ts";
+import { LessonForm } from "../../src/components/audio/LessonForm.tsx";
 import { LessonList } from "../../src/components/audio/LessonList.tsx";
 
 const leaf = (o: Partial<HuntLeafView> & { readonly id: string }): HuntLeafView => ({
@@ -91,5 +92,29 @@ describe("the signed list", () => {
     expect(html).toContain("When a bed sits under speech, lock the tempo, because unlocked beds drift.");
     expect(html).toContain('href="/audio?s=hunt&amp;h=hn-1"');
     expect(html).toContain("33%");
+  });
+
+  test("a hunt's figures are leaves heard and crowned, a cell's takes judged and kept - in the list as in the sign", () => {
+    const row = (source: "hunt" | "triage") => ({ id: `ls-${source}`, claim: "c, because z.", source, provider: null, technique: [], n: 3, keepRate: 0.33, meanScore: null, confirmedAt: "2026-10-17T10:00:00Z" });
+    const list = (source: "hunt" | "triage") => renderToStaticMarkup(h(LessonList, { lessons: [row(source)], huntHref: (id) => id }));
+    const sign = (source: "hunt" | "triage") =>
+      renderToStaticMarkup(
+        h(LessonForm, {
+          proposal: { kind: "music", source, provider: null, huntId: null, claim: "", technique: [], evidence: { n: 3, keepRate: 0.33, meanScore: null, takeIds: [] } },
+          known: [],
+          draftedBy: null,
+          engineError: null,
+          busy: false,
+          error: null,
+          onSign: () => undefined,
+          onDiscard: () => undefined,
+        }),
+      );
+    const words = (html: string) => [/heard 3/.test(html), />won</.test(html), /judged 3/.test(html), />kept</.test(html)];
+    expect(words(list("hunt"))).toEqual([true, true, false, false]);
+    expect(words(sign("hunt"))).toEqual([true, true, false, false]);
+    expect(words(list("triage"))).toEqual([false, false, true, true]);
+    expect(words(sign("triage"))).toEqual([false, false, true, true]);
+    expect(evidenceWords("hunt")).toEqual({ n: "heard", rate: "won" });
   });
 });

@@ -55,11 +55,17 @@ function Row({ t, onPick, onHand }: { readonly t: Term; readonly onPick: (t: Ter
   const hand = t.facet !== "sfxCategory";
   return (
     <li className={s.term} data-stance={t.stance ?? "none"}>
-      <button type="button" className={s.termName} onClick={() => onPick(t)} aria-label={`add ${t.term} to the seed`}>
-        {t.stance === "prefer" && <span aria-hidden="true">★ </span>}
-        {t.stance === "avoid" && <span aria-hidden="true">⊘ </span>}
-        {t.term}
-      </button>
+      {hand ? (
+        <button type="button" className={s.termName} onClick={() => onPick(t)} aria-label={`add ${t.term} to the seed`}>
+          {t.stance === "prefer" && <span aria-hidden="true">★ </span>}
+          {t.stance === "avoid" && <span aria-hidden="true">⊘ </span>}
+          {t.term}
+        </button>
+      ) : (
+        // An effect category is no seed word (a seed carries genre, mood, instrument): the
+        // press was drawn and did nothing (AudioLane's onPick has no list for it).
+        <span className={s.termName}>{t.term}</span>
+      )}
       <span className={s.termRate}>{rate}</span>
       <span className={s.termN}>{t.n}</span>
       <span className={s.termBar}>

@@ -79,6 +79,20 @@ describe("the ledger by time", () => {
     expect(oct.events.every((e) => e.type === "job.done")).toBe(true);
   });
 
+  it("a window bound means its instant, whatever precision it is written in", () => {
+    const one = tpl.fresh();
+    const [e] = must(one.tx((t) => [append(t, own(1))]));
+    const at = e?.at ?? "";
+    expect(at).toMatch(/\.\d{3}Z$/);
+    const whole = at.replace(/\.\d{3}Z$/, "Z");
+    expect(at.endsWith(".000Z")).toBe(true);
+    // since is inclusive, until exclusive: the row at 00:00:00.000 is in [00:00:00Z, ...) and not in [..., 00:00:00Z).
+    expect(must(queryEvents(one, { since: whole, limit: 10 })).events).toHaveLength(1);
+    expect(must(queryEvents(one, { until: whole, limit: 10 })).events).toHaveLength(0);
+    expect(must(countEvents(one, { since: whole })).total).toBe(1);
+    expect(must(queryEvents(one, { since: at.replace(/Z$/, "000Z"), limit: 10 })).events).toHaveLength(1);
+  });
+
   it("filters by source, project, run and a list of subjects", () => {
     const forge = must(queryEvents(s, { source: ["forge"], limit: 1000 })).events;
     expect(forge.length).toBe(all.filter((e) => e.key?.startsWith("forge:")).length);
@@ -121,6 +135,20 @@ describe("countEvents", () => {
     expect(c.head).toBe(all.length);
   });
 
+  it("`only` counts the named facets alone, in 4 statements for one, and they equal the full count's", () => {
+    let stmts = 0;
+    const counted = { ...s, read: (fn) => s.read((r) => fn({ ...r, get: (q, ...p) => (stmts++, r.get(q, ...p)), all: (q, ...p) => (stmts++, r.all(q, ...p)) })) } as Store;
+    const q = { type: ["verdict.keep"] };
+    const full = must(countEvents(counted, q));
+    expect(stmts).toBe(14);
+    stmts = 0;
+    const one = must(countEvents(counted, q, ["actorKind"]));
+    expect(stmts).toBe(4);
+    expect(one.facets.map((f) => f.facet)).toEqual(["actorKind"]);
+    expect(one.facets[0]).toEqual(full.facets.find((f) => f.facet === "actorKind"));
+    expect([one.total, one.head]).toEqual([full.total, full.head]);
+  });
+
   it("says how many rows have no value, and when a facet was cut", () => {
     const c = must(countEvents(s, {}));
     const lane = c.facets.find((f) => f.facet === "lane");
@@ -130,5 +158,14 @@ describe("countEvents", () => {
     const type = must(countEvents(wide, {})).facets.find((f) => f.facet === "type");
     expect(type).toMatchObject({ truncated: true, other: 10 });
     expect(type?.values).toHaveLength(50);
+  });
+
+  it("rows with no value never take one of the shown slots: 60 lanes beside many laneless rows is still cut", () => {
+    const wide = tpl.fresh();
+    must(wide.tx((t) => Array.from({ length: 60 }, (_, i) => append(t, { ...own(i), lane: `lane-${String(i).padStart(2, "0")}` }))));
+    must(wide.tx((t) => Array.from({ length: 100 }, (_, i) => append(t, { ...own(i), lane: undefined }))));
+    const lane = must(countEvents(wide, {})).facets.find((f) => f.facet === "lane");
+    expect(lane).toMatchObject({ truncated: true, other: 10, none: 100 });
+    expect(lane?.values).toHaveLength(50);
   });
 });

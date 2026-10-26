@@ -139,7 +139,7 @@ export interface ArticleLanding {
 
 /* ── the critique (scope amendment 1) ──────────────────────────────────────── */
 
-/** The four local CLIs a reviewer can run through (lib/agent/cliSeam.ts). */
+/** The local CLIs a reviewer can run through (lib/agent/cliSeam.ts). A reviewer id is not an engine: `gemini` and `gemini4` both run through agy. */
 export const REVIEWER_ENGINES = ["claude", "codex", "agy"] as const;
 export type ReviewerEngine = (typeof REVIEWER_ENGINES)[number];
 

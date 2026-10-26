@@ -43,10 +43,11 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { codeRoot } from "@/lib/producers/forge";
 import { reason as routerReason } from "@/lib/text/router";
 import type { TextRequest, TextResult, TurnClass } from "@/lib/text/types";
 
-import { sectionsOf } from "../hunt";
+import { fill, sectionsOf } from "../hunt";
 import { SoundError } from "../store";
 import type { MvAnalysis, MvChapter, MvMotion, MvTreatment } from "./types";
 
@@ -111,21 +112,21 @@ export function analysisText(a: MvAnalysis): string {
 
 /* ── the prompt file ──────────────────────────────────────────────────────── */
 
-export async function promptSections(file: string, needs: readonly string[]): Promise<Record<string, string>> {
-  const at = path.join(process.cwd(), "pipeline", file);
+/** A prompt file the CODE ships, found from the checkout and not the cwd
+ *  (lib/producers/forge.ts `codeRoot`: a server or a worker may run with its
+ *  cwd in a data universe, and the ads prompts were found there once already). */
+export async function promptSections(file: string, needs: readonly string[], code: string = codeRoot()): Promise<Record<string, string>> {
   let md: string;
   try {
-    md = await readFile(at, "utf8");
+    md = await readFile(path.join(code, "pipeline", file), "utf8");
   } catch {
-    throw new SoundError(`the prompt file ${path.relative(process.cwd(), at)} is missing — it is part of the code`, 500);
+    throw new SoundError(`the prompt file pipeline/${file} is missing — it is part of the code`, 500);
   }
   const s = sectionsOf(md);
   const missing = needs.filter((n) => !s[n]);
   if (missing.length) throw new SoundError(`${file} needs the section(s) ${missing.map((m) => `"${m}"`).join(", ")}`, 500);
   return s;
 }
-
-export const fill = (tpl: string, slots: Record<string, string>) => tpl.replace(/\{\{([A-Z_]+)\}\}/g, (all, k: string) => (k in slots ? slots[k] : all));
 
 const motionText = (m: MvMotion) => `particleDensity=${m.particleDensity}, particleHue=${m.particleHue}, pulseStrength=${m.pulseStrength}`;
 

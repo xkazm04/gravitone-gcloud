@@ -14,7 +14,7 @@ import { enumerateCrashes } from "@gt/kernel/crash";
 import type { Effects } from "@gt/kernel/effects";
 import { ackLane } from "@gt/kernel/job-queue";
 import { recover, runJob } from "@gt/kernel/job-run";
-import { get, retry } from "@gt/kernel/job";
+import { cancel, get, retry } from "@gt/kernel/job";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { assertReconciled, reconcileJobSpend } from "@gt/kernel/spend/projection";
 
@@ -322,6 +322,38 @@ describe("a crash at every effect boundary", () => {
     expect(report.prefixes).toBeGreaterThan(10);
     expect(report.violations).toEqual([]);
   }, 120_000);
+});
+
+describe("a cancelled job", () => {
+  it("ends its manifest with the cancel, and a rerun of the run still drives to done", async () => {
+    const w = open();
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const v = vendor({ gate: () => gate });
+    v.install();
+    const { runId, jobId } = await launch(w, "live", { sources: 1, options: { rounds: 1, replicas: 1, transfers: 0 } });
+    const first = drive(w, jobId);
+    while (v.calls.filter((c) => c === "generate").length === 0) await new Promise((r) => setTimeout(r, 5));
+    if (!cancel(w.kernel.store, jid(jobId), operator).ok) throw new Error("cancel refused");
+    release();
+    await first;
+    expect(jobOf(w, jobId).state).toBe("cancelled");
+    const ended = disk(runId);
+    expect(ended.status).toBe("failed");
+    expect(ended.error).toContain("cancelled");
+    const target = { kind: "run" as const, runId, rerun: true };
+    const base = { mode: "live" as const, actor: operator, dryOnly: false, now: w.clock.ms };
+    const r0 = await launchExtract(w.kernel.store, target, base);
+    if (!r0.ok || r0.value.kind !== "receipt") throw new Error(`no receipt: ${JSON.stringify(r0)}`);
+    const r1 = await launchExtract(w.kernel.store, target, { ...base, token: r0.value.receipt.token });
+    if (!r1.ok || r1.value.kind !== "launched") throw new Error(`not launched: ${JSON.stringify(r1)}`);
+    expect(r1.value.jobId).toBe(`job:run:${runId}~2`);
+    const again = await drive(w, r1.value.jobId);
+    if (!again.ok) throw again.error;
+    expect(again.value.outcome).toBe("done");
+    expect(disk(runId).status).toBe("done");
+    w.kernel.close();
+  });
 });
 
 describe("the fence: one driver per job", () => {

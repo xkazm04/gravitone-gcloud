@@ -124,6 +124,14 @@ describe("settleReason: why a critique loop ended", () => {
     expect(settleReason(m, [round({ error: "critique: 500", critique: null, score: null })])).toBe("no-usable-fix");
     expect(usableFix({ recipe_fix: FIX }, FIX.toUpperCase())).toBeNull();
   });
+
+  it("a round that drew text has not arrived at the target, whatever it scored: the loop stays open on its fix", () => {
+    // has_text is the veto (lib/foundry/extract/helpers.ts textVetoed): such a round can never be
+    // the recipe in force, so ending the loop on it would stop with nothing adopted from it.
+    expect(settleReason(m, [round({ score: 1, critique: { recipe_fix: FIX, has_text: true } })])).toBeNull();
+    expect(settleReason(m, [round({ score: 1, critique: { recipe_fix: "short", has_text: true } })])).toBe("no-usable-fix");
+    expect(settleReason(m, [round({ score: 1, critique: { recipe_fix: FIX, has_text: false } })])).toBe("target-met");
+  });
 });
 
 describe("planOf: one step, named by the unit", () => {
@@ -185,6 +193,13 @@ describe("entriesOf: what one served call books on the job", () => {
 
   it("an estimated figure keeps its basis, and a zero is a missing figure, not a free call", () => {
     expect(entriesOf({ value: 1, model: "m", costUsd: 0.04, basis: "estimated" }, "generate", 0.04)[0]?.basis).toBe("estimate");
-    expect(entriesOf({ value: 1, model: "m", costUsd: 0 }, "generate", 0.04)).toEqual([{ amount: undefined, outcome: "served", basis: "vendor", axes: { call: "generate", model: "m" }, reason: "m reported $0 for a generate" }]);
+    expect(entriesOf({ value: 1, model: "m", costUsd: 0 }, "generate", 0.04).map((e) => e.amount)).toEqual([0.04, undefined]);
+    expect(entriesOf({ value: 1, model: "m", costUsd: 0 }, "generate", 0.04)[1]?.reason).toBe("m reported $0 for a generate; booked at its $0.04 estimate");
+  });
+
+  it("a zero, a negative and an absent figure are one case - missing - and book alike (kernel pricing/quote.ts)", () => {
+    const amounts = (costUsd: number | undefined) => entriesOf({ value: 1, model: "m", ...(costUsd === undefined ? {} : { costUsd }) }, "generate", 0.04).map((e) => [e.amount, e.basis]);
+    expect(amounts(0)).toEqual(amounts(undefined));
+    expect(amounts(-0.01)).toEqual(amounts(undefined));
   });
 });

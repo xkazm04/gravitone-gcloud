@@ -11,7 +11,7 @@
 # The task runs as the logged-on user, only when that user is logged on (the seat's credentials
 # are the user's), and wakes nothing. The run is fenced: the seat may only search, read, write its
 # scratch, drive pipeline/scout.mts and commit knowledge/ (the skill's step 0); money is held by the
-# night's own ceiling in the CLI, and --max-budget-usd bounds the seat's turns. The operator installs
+# night's own ceiling in the CLI; the seat runs to the deadline, unbudgeted. The operator installs
 # this, never an agent: registering a scheduled task is a change to the machine, not to the repo.
 
 param(
@@ -32,7 +32,7 @@ $allowed = @(
   "WebSearch", "WebFetch", "Read", "Write", "Edit", "Glob", "Grep",
   "Bash(npx tsx pipeline/scout.mts*)", "Bash(curl -s https://collectionapi.metmuseum.org/*)",
   "Bash(yt-dlp *)", "Bash(ffmpeg *)", "Bash(mkdir *)", "Bash(rm *.vtt)",
-  "Bash(git status*)", "Bash(git diff*)", "Bash(git add knowledge/*)", "Bash(git commit*)"
+  "Bash(git status*)", "Bash(git diff*)", "Bash(git add knowledge/*)", "Bash(git add .ai/registry-leads.jsonl)", "Bash(git commit*)"
 )
 
 # The night's clips render locally (LTX-2.5 through ComfyUI, the free gpu.local lane). ComfyUI is
@@ -51,7 +51,20 @@ function Confirm-Comfy {
   Write-Output "ComfyUI did not answer at $url within 3 minutes - clips will be refused by doctor"
 }
 
+# The CLI finds ffmpeg through FFMPEG/FFPROBE in .env.local, but the seat also runs `ffmpeg` itself
+# (a contact sheet), and a winget install is not on PATH: the first live night (2026-10-22) stopped
+# at doctor for it. The folder of the configured binary goes on this run's PATH.
+function Add-FfmpegPath {
+  $envFile = Join-Path $repo ".env.local"
+  if (-not (Test-Path $envFile)) { return }
+  $line = Get-Content $envFile | Where-Object { $_ -match '^FFMPEG=' } | Select-Object -First 1
+  if (-not $line) { return }
+  $bin = Split-Path -Parent ($line -replace '^FFMPEG=', '').Trim()
+  if ((Test-Path $bin) -and -not (($env:PATH -split ';') -contains $bin)) { $env:PATH = "$bin;$env:PATH" }
+}
+
 function Invoke-Night {
+  Add-FfmpegPath
   Confirm-Comfy
   $claude = (Get-Command claude -ErrorAction SilentlyContinue).Source
   if (-not $claude) { throw "claude is not on PATH for this user - install Claude Code or add it to PATH." }
@@ -61,7 +74,9 @@ function Invoke-Night {
   $log = Join-Path $logs ("{0}.log" -f (Get-Date -Format "yyyy-MM-dd-HHmm"))
   Set-Location $repo
   $night = if ($Dry) { "/scout night --dry --until $Until" } else { "/scout night --until $Until" }
-  $argv = @("-p", $night, "--output-format", "json", "--permission-mode", "dontAsk", "--max-budget-usd", "20", "--allowed-tools") + $allowed
+  # No --max-budget-usd: the seat is not the night's cost (operator, 2026-10-23: "do not limit Claude runs to
+  # the budget, only Gemini is the real cost"); the deadline bounds the run, the CLI's ceiling bounds vendor money.
+  $argv = @("-p", $night, "--output-format", "json", "--permission-mode", "dontAsk", "--allowed-tools") + $allowed
   # UTF-8, not the redirect operator's UTF-16: the log is read by tools and by people.
   # The task runs Windows PowerShell 5.1, where under "Stop" the first stderr line of a native
   # command merged by 2>&1 is a terminating NativeCommandError: the night would end at the CLI's
@@ -93,7 +108,7 @@ else {
   Write-Output "task:      $TaskName"
   Write-Output "when:      daily at $At (missed runs start when the machine is next available)"
   Write-Output "runs:      powershell -NoProfile -ExecutionPolicy Bypass -File $self -Run -Until $Until   (in $repo)"
-  Write-Output "seat:      claude -p `"/scout night --until $Until`" --permission-mode dontAsk --max-budget-usd 20"
+  Write-Output "seat:      claude -p `"/scout night --until $Until`" --permission-mode dontAsk (no seat budget)"
   Write-Output "tools:     $($allowed -join ', ')"
   Write-Output "install:   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Install -At $At"
 }

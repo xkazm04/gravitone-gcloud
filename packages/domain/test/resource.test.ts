@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { admit, peaksOver, type Baseline, type Costed, type MachineLoad, type MachineProfile } from "../src/resource.ts";
+import { admit, peaksOver, profileReady, type Baseline, type Costed, type MachineLoad, type MachineProfile } from "../src/resource.ts";
 
 // Admission's rules as a table (spark game-3d-assets WP1): measured resources overlap when they
 // fit, memory serialises, an unprofiled engine runs alone, the memory gate holds between its two
@@ -132,5 +132,37 @@ describe("peaksOver", () => {
     expect(r.cost).toEqual({ commitGb: 22.5, vramGb: 0, cpuCores: 10 });
     expect(r.unread).toEqual([]);
     expect(peaksOver({ cpuBusy: 0.1 }, [{ cpuBusy: 0.2 }], 20).unread).toEqual(["commit", "vram"]);
+  });
+});
+
+describe("profileReady: a profile holds itself to a quiet box", () => {
+  it("starts on an idle box, ComfyUI's queue empty", () => {
+    expect(profileReady("comfy", IDLE, M)).toBeUndefined();
+    expect(profileReady("blender", { commitUsedGb: 50 }, M)).toBeUndefined();
+  });
+
+  it("refuses at the LOW mark, where admit would start it alone at any level", () => {
+    // The 2026-10-23 reading, scaled: 97 of 100 committed. admit starts an unprofiled job alone.
+    const full: MachineLoad = { ...IDLE, commitUsedGb: 97, vramUsedGb: 54 };
+    expect(admit({ engine: "profile" }, [], full, M, false).ok).toBe(true);
+    expect(profileReady("comfy", full, M)).toMatch(/commit charge is 97\.0 GB of 100\.0 GB; a profile starts under 75\.0 GB/);
+    expect(profileReady("comfy", { ...IDLE, commitUsedGb: 74.9 }, M)).toBeUndefined();
+    expect(profileReady("comfy", { ...IDLE, vramUsedGb: 48 }, M)).toMatch(/GPU memory/);
+  });
+
+  it("an unread commit charge refuses; an unread GPU or CPU reading does not", () => {
+    expect(profileReady("blender", { vramUsedGb: 2 }, M)).toBe("the commit charge is unread");
+    expect(profileReady("blender", { commitUsedGb: 50 }, M)).toBeUndefined();
+  });
+
+  it("defers on a saturated CPU", () => {
+    expect(profileReady("blender", { ...IDLE, cpuBusy: 0.95 }, M)).toMatch(/CPU 95% busy/);
+  });
+
+  it("ComfyUI's queue holds a comfy profile only, and a silent ComfyUI is not an empty one", () => {
+    expect(profileReady("comfy", { ...IDLE, comfyQueue: 2 }, M)).toBe("ComfyUI has 2 prompt(s) queued");
+    expect(profileReady("blender", { ...IDLE, comfyQueue: 2 }, M)).toBeUndefined();
+    const { comfyQueue: _, ...silent } = IDLE;
+    expect(profileReady("comfy", silent, M)).toBe("ComfyUI does not answer");
   });
 });

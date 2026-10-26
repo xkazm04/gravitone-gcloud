@@ -317,7 +317,8 @@ export function launchRun(
       actor,
       type: "run.launched",
       subject: { kind: "run", id: run.id },
-      data: { runId: run.id, jobId, lane: run.lane, recipe: run.recipe, producer: run.producer, token: input.token, mode: mode.kind, ...(read.receipt.overCeiling ? { overCeiling: true } : {}) },
+      // The terms confirmed, as `project.launched` records them: the receipt's total and the ceiling.
+      data: { runId: run.id, jobId, lane: run.lane, recipe: run.recipe, producer: run.producer, token: input.token, mode: mode.kind, usd: read.receipt.totals.usd, unpriced: read.receipt.totals.unpriced, ...(ceilingUsd === undefined ? {} : { ceilingUsd }), ...(read.receipt.overCeiling ? { overCeiling: true } : {}) },
     });
     return { ok: true, value: { runId: run.id, jobId } };
   });

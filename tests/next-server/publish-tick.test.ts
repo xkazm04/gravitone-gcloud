@@ -168,6 +168,28 @@ describe("a publisher killed mid-upload", () => {
   }, 60_000);
 });
 
+describe("the tick's look at the next slot", () => {
+  it("reads one row of the future schedule, not every future slot, to name the next time", async () => {
+    const { k } = fresh();
+    const first = at(60);
+    for (let i = 0; i < 50; i++) slot(k, `video:export:future-${i}`, at(60 + i));
+    const rows: number[] = [];
+    const store: typeof k.store = {
+      ...k.store,
+      read: (fn) =>
+        k.store.read((r) => fn({ at: r.at, get: (sql, ...p) => r.get(sql, ...p), all: (sql, ...p) => { const out = r.all(sql, ...p); if (/FROM slots WHERE at >= \?/.test(sql)) rows.push(out.length); return out; } })),
+    };
+    const c = counting();
+    const deps = publishDeps({ store, env: {}, adapters: new Map([["youtube", c.adapter]]), alive: pidAlive });
+    if (!deps.ok) throw deps.error;
+    const d = { ...deps.value, facts: (now: number) => Promise.resolve(ok({ now, windowMs: 3_600_000, wired: new Set<Channel>(["youtube"]), itemExists: () => true })) };
+    const t = await publishTick(d, new Date(NOW));
+    expect(t.ok && t.value.next).toBe(first);
+    expect(rows.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(1);
+    k.close();
+  });
+});
+
 describe("two processes ticking one store", () => {
   it("publish each due slot exactly once between them", async () => {
     const { file, k } = fresh();

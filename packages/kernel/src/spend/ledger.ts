@@ -127,12 +127,20 @@ export type Reservation = {
 /** `Result<Reservation>`, with the numbers beside a `budget` refusal. */
 export type ReserveOutcome = { readonly ok: true; readonly value: Reservation } | { readonly ok: false; readonly error: AppError; readonly refusal?: Refusal };
 
+/**
+ * Where a booked figure came from. A CLOSED set: only "estimate" marks a booking as the model's
+ * (the event's `cost.src`, the projection's `meterOf`), so a free-text spelling - the quote's
+ * "estimated" - used to book an estimate as real money. A quote's basis goes through
+ * pricing/quote.ts `settleBasisOf`.
+ */
+export type SettleBasis = "vendor" | "estimate" | "credits" | "seat" | "seat-report";
+
 export type SettleEntry = {
   /** The vendor's figure. Absent, zero, negative or NaN is unpriced: counted, never booked. */
   readonly amount: number | undefined;
   readonly outcome: "served" | "failed";
-  /** Where the figure came from, in the class's words ("vendor", "estimate"). */
-  readonly basis: string;
+  /** Where the figure came from. */
+  readonly basis: SettleBasis;
   readonly axes: Readonly<Record<string, string>>;
   /** The dollar figure, for a class not denominated in dollars (audio seconds); a usd class's amount is its dollars. */
   readonly usd?: number;
@@ -176,9 +184,13 @@ const num = (v: unknown): number => (typeof v === "number" ? v : 0);
 export function totals(r: Reader, cls: SpendClass, now: number = nowOf(r)): Totals {
   const since = now - cls.windowMs;
   const spent = num(r.get("SELECT total(amount) AS v FROM spend_rows WHERE class = ? AND at_ms >= ?", cls.id, since)?.["v"]);
-  const held = num(r.get("SELECT total(amount) AS v FROM spend_reservations WHERE class = ? AND state = 'held'", cls.id)?.["v"]);
-  const lapsed = num(r.get("SELECT total(amount) AS v FROM spend_reservations WHERE class = ? AND state = 'lapsed' AND closed_ms >= ?", cls.id, since)?.["v"]);
-  return { spent, held, lapsed };
+  // Live holds and in-window lapses in one pass over the class's open reservations (spend_reservations_open).
+  const open = r.get(
+    "SELECT total(CASE WHEN state = 'held' THEN amount END) AS held, total(CASE WHEN state = 'lapsed' AND closed_ms >= ? THEN amount END) AS lapsed FROM spend_reservations WHERE class = ? AND state IN ('held', 'lapsed')",
+    since,
+    cls.id,
+  );
+  return { spent, held: num(open?.["held"]), lapsed: num(open?.["lapsed"]) };
 }
 
 const usage = (cls: SpendClass) => ({ class: cls.id, unit: cls.unit });
@@ -194,8 +206,11 @@ export function reserve(t: Tx, cls: SpendClass, input: { readonly id: string; re
   if (input.id.length === 0 || input.owner.length === 0) return err("invalid", "spend: a reservation names its id and its owner");
   const prior = readReservation(t, input.id);
   if (prior !== undefined) {
-    if (prior.cls === cls.id && prior.amount === input.amount && prior.owner === input.owner) return ok(prior);
-    return err("conflict", `spend: reservation ${input.id} already exists for another call`);
+    if (prior.cls !== cls.id || prior.amount !== input.amount || prior.owner !== input.owner) return err("conflict", `spend: reservation ${input.id} already exists for another call`);
+    // Only a LIVE hold is the retried reserve's answer. A closed one is no hold at all: handing it
+    // back would admit a second call against the ceiling unheld, and its settle would book nothing.
+    if (prior.state !== "held") return err("conflict", `spend: reservation ${input.id} is ${prior.state}; a new call needs a new reservation id`);
+    return ok(prior);
   }
   const now = nowOf(t);
   const tot = totals(t, cls, now);

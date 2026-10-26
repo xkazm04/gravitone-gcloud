@@ -40,24 +40,19 @@ import { CompositionList } from "../../_plan/CompositionList.tsx";
 import { useCompose } from "../../_plan/compose.tsx";
 import { outcomeOf, useReceipt } from "../../_plan/receipt.tsx";
 import type { RunsData } from "./load.ts";
-import { canMove, canPause, canRetry } from "./Acts.tsx";
+import { canMove, canPause, canReroute, canRetry, ceilingFor, retryPress, type TypedCeiling } from "./Acts.tsx";
 import { DojoDoors, dojoSpec, type DojoPort } from "./DojoDoors.tsx";
 import { Inspector, type InspectorActs } from "./Inspector.tsx";
 import { mvRegenerateSpec, type MvPort } from "./MvActs.tsx";
+import { settled } from "./actRunner.ts";
+import { legendOf } from "./legend.ts";
 import { BACKSTOP_MS, openFeed } from "./liveFeed.ts";
-import { barsOf, blockedOf, depsOf, heldMoney, litOf, pinsOf, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
+import { barsOf, blockedOf, depsOf, floorRunsOf, heldLabel, heldMoney, litOf, pinsOf, projectMeta, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
 import s from "./Runs.module.css";
 
 export type Selection = { readonly job: string | null; readonly project: string | null; readonly zoom: Zoom };
 
-const LEGEND: readonly { readonly look: string; readonly label: string }[] = [
-  { look: "running", label: "running" },
-  { look: "idle", label: "queued" },
-  { look: "awaiting", label: "at weir" },
-  { look: "failed", label: "failed" },
-  { look: "paused", label: "paused" },
-  { look: "done", label: "done" },
-];
+const LEGEND = legendOf();
 
 function urlOf(sel: Selection): string {
   const q = new URLSearchParams();
@@ -78,7 +73,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
   const compose = useCompose(port, data.choices);
   const [busy, setBusy] = useState(false);
   const inflight = useRef(false);
-  const [retryCeiling, setRetryCeiling] = useState("");
+  const [ceiling, setCeiling] = useState<TypedCeiling>({ job: null, text: "" });
   const [alts, setAlts] = useState<{ readonly job: string; readonly options: readonly RerouteOption[] | null; readonly error?: string } | null>(null);
   const altsRef = useRef<HTMLDivElement | null>(null);
   const [sel, setSel] = useState<Selection>(initial);
@@ -124,13 +119,19 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
 
   // The selected job's alternatives, read when it is selected (latest wins: a fast J/K walk must
   // not draw one job's options under another).
-  const actId = act?.reroutable === true ? act.id : null;
+  const actId = act !== undefined && canReroute(act, data.holds) ? act.id : null;
   useEffect(() => {
     if (actId === null) return;
     let live = true;
-    void port.rerouteOptions({ jobId: actId }).then((r) => {
-      if (live) setAlts(r.ok ? { job: actId, options: r.value } : { job: actId, options: null, error: r.error.error });
-    });
+    void settled(
+      () => port.rerouteOptions({ jobId: actId }),
+      (r) => {
+        if (live) setAlts(r.ok ? { job: actId, options: r.value } : { job: actId, options: null, error: r.error.error });
+      },
+      (message) => {
+        if (live) setAlts({ job: actId, options: null, error: message });
+      },
+    );
     return () => {
       live = false;
     };
@@ -142,16 +143,19 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
     if (inflight.current) return false;
     inflight.current = true;
     setBusy(true);
-    void call()
-      .then((r) => {
+    void settled(
+      call,
+      (r) => {
         if (r.ok) toast(r.value.note, { href: `/ledger?q=${encodeURIComponent(r.value.jobId)}`, subject: r.value.jobId });
         else toast(r.error.error);
         if (r.ok) router.refresh();
-      })
-      .finally(() => {
+      },
+      (message) => toast(message),
+      () => {
         inflight.current = false;
         setBusy(false);
-      });
+      },
+    );
   };
   const reroute = (key: string): void => {
     if (act === undefined) return;
@@ -186,8 +190,8 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
     onResume: () => withAct((jobId) => port.resumeJob({ jobId })),
     onRetry: (ceilingUsd) => withAct((jobId) => port.retryJob({ jobId, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) })),
     onMove: (dir) => withAct((jobId) => port.moveJob({ jobId, dir })),
-    retryCeiling,
-    onRetryCeiling: setRetryCeiling,
+    retryCeiling: ceilingFor(ceiling, act?.id ?? null),
+    onRetryCeiling: (text) => setCeiling({ job: act?.id ?? null, text }),
     options: alts !== null && alts.job === actId ? alts.options : null,
     ...(alts !== null && alts.job === actId && alts.error !== undefined ? { optionsError: alts.error } : {}),
     reading: flow.reading ? "reading" : null,
@@ -216,11 +220,15 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
               ),
             // A send answers with the slot's own level, not a job's ledger.
             onSchedule: (track, channel, publishAt) =>
-              void mv.schedule({ track, channel, publishAt }).then((r) => {
-                if (!r.ok) return toast(r.error.error);
-                toast(`${track} · ${channel} · ${r.value.at.slice(0, 16).replace("T", " ")} UTC`, { href: `/floor?slot=${encodeURIComponent(r.value.slotId)}`, subject: r.value.slotId });
-                router.refresh();
-              }),
+              void settled(
+                () => mv.schedule({ track, channel, publishAt }),
+                (r) => {
+                  if (!r.ok) return toast(r.error.error);
+                  toast(`${track} · ${channel} · ${r.value.at.slice(0, 16).replace("T", " ")} UTC`, { href: `/floor?slot=${encodeURIComponent(r.value.slotId)}`, subject: r.value.slotId });
+                  router.refresh();
+                },
+                (message) => toast(message),
+              ),
           },
         }),
   };
@@ -242,7 +250,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
     if (next !== null) setSel((cur) => ({ ...cur, project: next, job: null }));
   };
 
-  const facts = [...(job === null ? [] : ["job"]), ...(act?.reroutable === true ? ["reroutable"] : []), ...(data.holds.length > 0 ? ["hold"] : [])];
+  const facts = [...(job === null ? [] : ["job"]), ...(act !== undefined && canReroute(act, data.holds) ? ["reroutable"] : []), ...(data.holds.length > 0 ? ["hold"] : [])];
   // Two scopes: the `projects` rows Plan shares, then the `projects.runs` rows only Runs has. The
   // dispatcher runs a row's handler from the scope of the row's own mode, and the page's mode is
   // the scope mounted last - `projects.runs`, so its P shadows Plan's P while a job is selected.
@@ -256,7 +264,11 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
       project: ({ cap }) => (projects.length === 0 ? false : walkProject(cap === "↓" ? 1 : -1)),
       deselect: () => select(null),
       compose: () => compose.open(),
-      retry: () => (act === undefined || !canRetry(act) ? false : acts.onRetry(undefined)),
+      retry: () => {
+        const press = retryPress(acts.retryCeiling);
+        if (act === undefined || !canRetry(act, data.holds) || press === null) return false;
+        acts.onRetry(press.ceilingUsd);
+      },
       move: ({ index }) => (act === undefined || !canMove(act) ? false : acts.onMove(index === 0 ? "earlier" : "later")),
     },
     { facts },
@@ -299,9 +311,9 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
         current={sel.project}
         nowMs={m.now}
         onCompose={compose.open}
-        floorRuns={m.jobs.filter((j) => j.projectId === undefined && j.from !== "ledger").length}
+        floorRuns={floorRunsOf(m)}
         hrefOf={runsHref}
-        others={projects.filter((p) => !produceIds.has(p.id)).map((p) => ({ id: p.id, meta: `${p.jobs} jobs · ${p.slots} slots` }))}
+        others={projects.filter((p) => !produceIds.has(p.id)).map((p) => ({ id: p.id, meta: projectMeta(p) }))}
       />
       <section className={s.pmain} aria-label="Runs">
         <div className={s.ptop}>
@@ -327,7 +339,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
               <Chip label={String(totals.waiting)} value="waiting" name={`${totals.waiting} waiting`} />
               <Chip label={String(totals.weir)} value="at the weir" tone="amber" name={`${totals.weir} at the weir`} />
               <Chip label={String(totals.failed)} value="failed" tone="rose" name={`${totals.failed} failed`} />
-              {money.n > 0 && <Chip label={money.usd > 0 ? `$${money.usd.toFixed(2)}` : `${Math.round(money.audioS)} s`} value="held" tone="violet" name={`${money.n} open spend holds`} />}
+              {money.n > 0 && <Chip label={heldLabel(money)} value="held" tone="violet" name={`${money.n} open spend holds`} />}
             </div>
           </div>
         </div>

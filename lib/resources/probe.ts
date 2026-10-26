@@ -5,15 +5,18 @@ import { MACHINE_MARKS, type MachineLoad, type MachineProfile } from "@gt/domain
 // THE MACHINE PROBE - what admission reads the box by (spark game-3d-assets WP1;
 // @gt/domain/resource says what each reading is charged against and why).
 //
-// Four readings, each from the one place this box answers it truthfully, each BOUNDED and each
+// Five readings, each from the one place this box answers it truthfully, each BOUNDED and each
 // ABSENT when it cannot be had - never a throw, never a zero:
 //   commit charge  Win32_OperatingSystem TotalVirtualMemorySize / FreeVirtualMemory, one CIM call.
 //                  Not free RAM: the measured failure here was a 55 GB ComfyUI paging the box
 //                  while RAM still looked fine (a 423 s clip took 8741 s). The same call carries
 //                  physical RAM, reported beside it for the operator and charged against nothing.
-//   GPU memory     nvidia-smi --query-gpu=memory.used,memory.total (MiB). On this box's unified
-//                  memory it is the card's view of the same 64 GB; on a box without the driver it
-//                  is absent, and a GPU-costly job waits as `unread` rather than guessing.
+//   GPU memory     nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu (MiB). On this
+//                  box's unified memory it is the card's view of the same 64 GB; on a box without
+//                  the driver it is absent, and a GPU-costly job waits as `unread` rather than guessing.
+//   GPU busy       the same call's utilization.gpu (spark night-load-band): whether the card WORKED,
+//                  which its memory cannot say - a loaded model idles at full VRAM. Charged against
+//                  nothing; the night's load band reads it.
 //   CPU            two os.cpus() samples a quarter second apart, every core, foreign load included
 //                  (other sessions' builds share this box; CPU is their ceiling).
 //   ComfyUI queue  GET /queue, running + pending, whoever queued them. Read, never written: this
@@ -85,22 +88,30 @@ export function parseCim(out: string | undefined): { commitUsedGb: number; commi
 }
 
 /**
- * `used, total` MiB per device line -> GB summed over the devices that report memory, or undefined
- * when none does. A device that reports `[N/A]` has no memory of its own to count: archemond lists
- * its NPU beside the GPU that way (measured 2026-10-22: "1788, 64000" then "[N/A], [N/A]").
+ * `used, total, utilization` per device line (MiB, MiB, percent) -> GB summed over the devices that
+ * report memory, or undefined when none does. A device that reports `[N/A]` memory has no memory of
+ * its own to count and is skipped whole, its utilisation with it: archemond lists its NPU beside the
+ * GPU that way (measured 2026-10-22: "1788, 64000" then "[N/A], [N/A]"). A device whose memory reads
+ * but whose utilisation is `[N/A]` counts its memory and says nothing about how busy it is: gpuBusy
+ * is the busiest device that answered (spark night-load-band - on one card, that card), absent when
+ * none did.
  */
-export function parseSmi(out: string | undefined): { vramUsedGb: number; vramTotalGb: number } | undefined {
+export function parseSmi(out: string | undefined): { vramUsedGb: number; vramTotalGb: number; gpuBusy?: number } | undefined {
   let used = 0;
   let total = 0;
   let read = 0;
+  let busy: number | undefined;
   for (const l of (out ?? "").split(/\r?\n/)) {
-    const [u, t, extra] = l.split(",").map((s) => (s.trim() === "" ? Number.NaN : Number(s.trim())));
-    if (u === undefined || t === undefined || extra !== undefined || !Number.isFinite(u) || !Number.isFinite(t) || t <= 0) continue;
+    const fields = l.split(",").map((s) => (s.trim() === "" ? Number.NaN : Number(s.trim())));
+    if (fields.length > 3) continue;
+    const [u, t, util] = fields;
+    if (u === undefined || t === undefined || !Number.isFinite(u) || !Number.isFinite(t) || t <= 0) continue;
     used += u;
     total += t;
     read++;
+    if (util !== undefined && Number.isFinite(util) && util >= 0 && util <= 100 && (busy === undefined || util / 100 > busy)) busy = util / 100;
   }
-  return read === 0 ? undefined : { vramUsedGb: round2(used / MIB_PER_GB), vramTotalGb: round2(total / MIB_PER_GB) };
+  return read === 0 ? undefined : { vramUsedGb: round2(used / MIB_PER_GB), vramTotalGb: round2(total / MIB_PER_GB), ...(busy === undefined ? {} : { gpuBusy: round2(busy) }) };
 }
 
 /** ComfyUI's /queue -> prompts running plus pending, or undefined when it is not that shape. */
@@ -162,12 +173,13 @@ export function machineProbe(ports: ProbePorts = nodePorts, opts: { readonly cac
   const read = async (): Promise<MachineReading> => {
     const [mem, gpu, cpuBusy, queue] = await Promise.all([
       memory(),
-      ports.run("nvidia-smi", ["--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits"], SMI_TIMEOUT_MS).then(parseSmi),
+      ports.run("nvidia-smi", ["--query-gpu=memory.used,memory.total,utilization.gpu", "--format=csv,noheader,nounits"], SMI_TIMEOUT_MS).then(parseSmi),
       cpu(),
       ports.getJson(`${comfy}/queue`, COMFY_TIMEOUT_MS).then(parseQueue),
     ]);
     const load: MachineLoad = {
       ...(gpu === undefined ? {} : { vramUsedGb: gpu.vramUsedGb }),
+      ...(gpu?.gpuBusy === undefined ? {} : { gpuBusy: gpu.gpuBusy }),
       ...(mem === undefined ? {} : { commitUsedGb: mem.commitUsedGb }),
       ...(cpuBusy === undefined ? {} : { cpuBusy }),
       ...(queue === undefined ? {} : { comfyQueue: queue }),

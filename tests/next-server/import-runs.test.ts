@@ -1,15 +1,20 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
+import { recordImportedJobIn } from "@gt/kernel/job";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { reconcileJobSpend } from "@gt/kernel/spend/projection";
 import type { Store } from "@gt/kernel/store";
 
-import { importRuns, type V1Run } from "../../lib/import/runs.ts";
+import { ARTICLE_STATUSES, WORKING } from "../../lib/articles/types.ts";
+import { listV1Runs } from "../../lib/import/runSources.ts";
+import { IMPORT_RUN_ACTOR, importRuns, type V1Run } from "../../lib/import/runs.ts";
 import { clearV1, seedV1, v1Archive } from "./import-harness.ts";
 
 // THE ONE-TIME IMPORTERS (Phase 4 wave D, L42): v1 runs that predate the job system become Run
@@ -38,6 +43,9 @@ function store(): Store {
   open.push(k.value);
   return k.value.store;
 }
+
+/** One scan of 5,000 jobs is milliseconds; 500 of them (the per-run json_extract) is seconds. */
+const JOBS_SCAN_BUDGET_MS = 500;
 
 const RUNS: V1Run[] = [
   { source: "forge", runId: "forge:r1", input: { producer: "forge", plan: "plan-a" }, units: 4, at: "2026-09-01T10:00:00Z", state: "done" },
@@ -80,6 +88,81 @@ describe("v1 runs as Run rows with a terminal job", () => {
     importRuns(s, RUNS, { dry: false, now: 0 });
     const again = importRuns(s, RUNS, { dry: false, now: 0 });
     expect(again.ok && again.value.map((x) => x.outcome)).toEqual(["skipped", "skipped", "skipped", "skipped"]);
+  });
+});
+
+describe("a dry import reports what the wet one will do", () => {
+  it("refuses a run the Run door refuses, with the door's sentence, and writes nothing", () => {
+    const s = store();
+    const bad: V1Run = { source: "extract", runId: "ex-bad", input: { producer: "extract", slug: "Not A Slug!", sources: 3, rounds: 2, replicas: 1, grouping: "engine" }, at: "2026-09-02T10:00:00Z", state: "done" };
+    const runs = [RUNS[0]!, bad];
+    const dry = importRuns(s, runs, { dry: true, now: 0 });
+    const wet = importRuns(store(), runs, { dry: false, now: 0 });
+    expect(wet.ok && wet.value.map((x) => x.outcome)).toEqual(["imported", "refused"]);
+    expect(dry.ok && dry.value.map((x) => [x.runId, x.outcome === "would-import" ? "imported" : x.outcome])).toEqual([["forge:r1", "imported"], ["ex-bad", "refused"]]);
+    expect(dry.ok && dry.value[1]!.reason).toBe(wet.ok ? wet.value[1]!.reason : undefined);
+    expect(s.read((x) => x.get("SELECT (SELECT count(*) FROM runs) + (SELECT count(*) FROM jobs) + (SELECT count(*) FROM events WHERE type LIKE '%imported') AS n")?.["n"])).toEqual({ ok: true, value: 0 });
+  });
+});
+
+describe("a dry import over a populated store", () => {
+  it("answers 500 runs against 5,000 jobs from one read of the jobs, not one scan per run", () => {
+    const s = store();
+    const T = Date.parse("2026-10-16T09:00:00Z");
+    const seeded = s.tx((t) => {
+      for (let i = 0; i < 5000; i++) recordImportedJobIn(t, { id: `job:run:old-${i}`, of: { kind: "run", id: `old-${i}` }, producer: "forge", lane: "box.render", correlation: { runId: `old-${i}` }, units: 1 }, IMPORT_RUN_ACTOR);
+    });
+    expect(seeded.ok).toBe(true);
+    const runs: V1Run[] = Array.from({ length: 500 }, (_, i) => ({ source: "forge", runId: i % 50 === 0 ? `old-${i}` : `forge:new-${i}`, input: { producer: "forge", plan: "plan-a" }, units: 1, at: "2026-09-01T10:00:00Z", state: "done" as const }));
+    const t0 = performance.now();
+    const dry = importRuns(s, runs, { dry: true, now: T });
+    const ms = performance.now() - t0;
+    console.log(`import-runs dry 500 runs / 5000 jobs: ${ms.toFixed(0)} ms`);
+    expect(dry.ok && dry.value.filter((x) => x.outcome === "skipped").map((x) => x.reason)).toEqual(Array(10).fill("a job already serves this id"));
+    expect(dry.ok && dry.value.filter((x) => x.outcome === "would-import")).toHaveLength(490);
+    expect(ms).toBeLessThan(JOBS_SCAN_BUDGET_MS);
+  });
+});
+
+describe("the v1 stores the importer reads", () => {
+  it("reports a record whose instant no Date can hold as unread, and lists every other run of every store", async () => {
+    const dir = temp("gt-import-sources-");
+    const was = process.env["SOUND_STORE_DIR"];
+    process.env["SOUND_STORE_DIR"] = path.join(dir, "sound");
+    try {
+      mkdirSync(path.join(dir, "sound"), { recursive: true });
+      const at = Date.parse("2026-09-04T10:00:00Z");
+      writeFileSync(path.join(dir, "sound", "mv.json"), JSON.stringify({ version: 1, queue: { running: false }, jobs: [{ id: "mj-1", state: "done", enqueuedAt: at }, { id: "mj-2", state: "done", enqueuedAt: 1e20 }], imports: [], progress: {} }));
+      const r = await listV1Runs(["mv"]);
+      if (!r.ok) throw r.error;
+      expect(r.value.runs.map((x) => [x.runId, x.at])).toEqual([[`mv.mj-1.${at}`, "2026-09-04T10:00:00.000Z"]]);
+      expect(r.value.unread).toHaveLength(1);
+      expect(r.value.unread[0]).toMatch(/^mv mj-2: enqueuedAt /);
+    } finally {
+      if (was === undefined) delete process.env["SOUND_STORE_DIR"];
+      else process.env["SOUND_STORE_DIR"] = was;
+    }
+  });
+
+  it("reads an article run as working by the article store's own WORKING set, failed as failed, the rest done", async () => {
+    const dir = temp("gt-import-articles-");
+    const was = process.env["ARTICLES_STORE_DIR"];
+    process.env["ARTICLES_STORE_DIR"] = dir;
+    try {
+      for (const status of ARTICLE_STATUSES) {
+        mkdirSync(path.join(dir, `a-${status}`));
+        writeFileSync(path.join(dir, `a-${status}`, "run.json"), JSON.stringify({ id: `a-${status}`, status, createdAt: "2026-09-05T10:00:00.000Z", topic: { kind: "free", text: "glass harbors" } }));
+      }
+      const r = await listV1Runs(["article"]);
+      if (!r.ok) throw r.error;
+      const got = Object.fromEntries(r.value.runs.map((x) => [x.runId.slice(2), x.state]));
+      expect(got).toEqual(Object.fromEntries(ARTICLE_STATUSES.map((s) => [s, s === "failed" ? "failed" : WORKING.includes(s) ? "live" : "done"])));
+      // approved and landing are still the driver's: never imported as finished history.
+      expect([got["approved"], got["landing"]]).toEqual(["live", "live"]);
+    } finally {
+      if (was === undefined) delete process.env["ARTICLES_STORE_DIR"];
+      else process.env["ARTICLES_STORE_DIR"] = was;
+    }
   });
 });
 

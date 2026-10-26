@@ -129,6 +129,35 @@ describe("route() input and answers", () => {
     expect(streamed.ok).toBe(false);
   });
 
+  it("holds a no-input route's bodyCap on the bytes its handler pulls, declared length or none", async () => {
+    // route() applied bodyCap only through readJson, so a route with no `input` that read its own
+    // body (a multipart file, an archive) pulled a chunked body to the end. Measured on HEAD: 1 MiB
+    // of 1 MiB pulled by req.arrayBuffer() under bodyCap 1024.
+    const reads = route({ guard: "public", bodyCap: 1024 }, async ({ req: r }) => ok({ n: (await r.arrayBuffer()).byteLength }));
+    const chunk = new Uint8Array(256);
+    const chunked = (n: number, count: { pulled: number }): Request => {
+      let sent = 0;
+      const body = new ReadableStream<Uint8Array>({
+        pull(c) {
+          if (sent === n) return c.close();
+          sent += 1;
+          count.pulled += chunk.byteLength;
+          c.enqueue(chunk);
+        },
+      });
+      return new Request(URL0, { method: "POST", body, duplex: "half" } as RequestInit);
+    };
+    const count = { pulled: 0 };
+    const over = await reads(chunked(4096, count));
+    expect(over.status).toBe(400);
+    expect(await json(over)).toMatchObject({ code: "invalid", detail: "body-too-large" });
+    expect(count.pulled).toBeLessThanOrEqual(1024 + 3 * chunk.byteLength);
+    const fits = await reads(chunked(4, { pulled: 0 }));
+    expect(await json(fits)).toMatchObject({ n: 1024 });
+    const declared = await reads(req({ method: "POST", body: "x".repeat(2000), headers: { "content-length": "2000" } }));
+    expect(await json(declared)).toMatchObject({ code: "invalid", detail: "body-too-large" });
+  });
+
   it("refuses a body sent to a route that takes none", async () => {
     const none = route({ guard: "public", bodyCap: 0 }, async () => ok({}));
     const r = await none(req({ method: "POST", body: "{}" }));

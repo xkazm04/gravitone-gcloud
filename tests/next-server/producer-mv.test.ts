@@ -57,6 +57,8 @@ import type { MvJob } from "../../lib/sound/mv/types.ts";
 import { makeRealProduce } from "../../app/(studio)/projects/_port/real.ts";
 import { stripsKernel } from "../../lib/producers/strips.ts";
 import { audioDir, mvFakes, TREAT_USD } from "./producer-mv-fakes.ts";
+import { blobStore } from "@gt/kernel/blob";
+import { blobRootOf } from "../../lib/kernelProcess.ts";
 
 afterAll(() => {
   closeProcessKernel();
@@ -279,5 +281,16 @@ describe("the music-video producer on the kernel", () => {
     expect(ended).toContain("job.end");
     expect((await mvSnapshot()).jobs.find((j) => j.id === job.id)?.state).toBe("done");
     expect(existsSync(path.join(ROOT, "sound", "mv.json"))).toBe(true);
+  });
+});
+
+describe("the sound kernel's blobs", () => {
+  // One store, one blob root: what the mv and Suno drive writes through its effects is read back
+  // where every other door reads that store's blobs (lib/kernelProcess.ts blobRootOf, `<dir>/blobs`).
+  it("a blob written through soundKernel's effects is read from the store's own blob root", async () => {
+    const { store, fx } = soundKernel();
+    const ref = must(await fx.blob(new Uint8Array([7, 7, 7]), "audio/wav"));
+    const back = await blobStore(blobRootOf(store)).read(ref);
+    expect(back.ok ? back.value.byteLength : back.error.message).toBe(3);
   });
 });

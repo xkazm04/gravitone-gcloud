@@ -8,6 +8,7 @@
 .thumb{position:relative;height:calc(100% - var(--sp-3));border-radius:var(--r-xs);overflow:hidden;background:var(--ink-1);border:1px solid var(--hair)}
 .name{min-width:0;display:flex;align-items:center;gap:var(--sp-3)}
 .title{color:var(--ink-bright);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lock{flex:none;width:var(--size-mark);height:var(--size-mark);color:var(--emerald)}
 .kind{display:flex;align-items:center;gap:var(--sp-2);color:var(--muted);font:500 var(--fs-meta)/1 var(--mono);min-width:0}
 .kindMark{width:var(--size-mark);height:var(--size-mark);flex:none}
 .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

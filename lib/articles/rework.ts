@@ -25,7 +25,7 @@ import { defaultDeps, type EngineDeps } from "./engine";
  * otherwise find its own old answers and skip itself: the draft, critique and
  * check step records, the critique's `round-*` directories, the between-turn
  * `checks/`, `check.json` and its screenshots. They are MOVED to
- * `rework/<count>/before/` (with the post and the old step records, costs
+ * `rework/<count>/before/` (with copies of the post and its patches, and the old step records, costs
  * included), never deleted. The reviewer panel snapshot (`critique/reviewers.json`)
  * stays: a run keeps the panel it started with. The old post stays in `post/`
  * until the new draft replaces it, so a rework that fails halfway still has one.
@@ -96,6 +96,13 @@ async function archiveForRework(id: string, run: ArticleRun, count: number): Pro
     else if (/^draft(-prompt)?\.(json|md)$/.test(n)) await copyFile(path.join(dir, "agent", n), path.join(before, "agent", n)).catch(() => undefined);
   }
   await copyDir(path.join(dir, "post"), path.join(before, "post"));
+  // The draft's patches are the other half of what was sent back, and the redraft's ingest
+  // replaces them wholesale (ingestDraft.ts `ingestPatches` removes patches/ first): copied, so
+  // a rework that fails before the redraft still has them where the gate read them.
+  for (const name of ["patches.json", "patches.rejected.json"]) {
+    if (await fileExists(path.join(dir, name))) await copyFile(path.join(dir, name), path.join(before, name));
+  }
+  if (await fileExists(path.join(dir, "patches"))) await copyDir(path.join(dir, "patches"), path.join(before, "patches"));
 }
 
 /**

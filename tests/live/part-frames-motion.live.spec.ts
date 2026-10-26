@@ -195,3 +195,19 @@ for (const [name, url] of [
     expect(await settledFindings(page)).toEqual([]);
   });
 }
+
+test("a layer row in the inspector is selected by Space and Enter, and holds no nested control", async ({ page }) => {
+  await adoptExplainer(page);
+  await ready(page, "/projects/why-bitcoin/frames");
+  const layers = page.getByRole("complementary", { name: "unit" }).getByRole("region", { name: "layers" });
+  const pick = layers.locator("[aria-pressed]").first();
+  await expect(pick).toBeVisible();
+  await expect(pick).toHaveAttribute("aria-pressed", "false");
+  expect(await layers.locator('[role="button"] button').count(), "a button nested in a role=button").toBe(0);
+  await pick.focus();
+  await page.keyboard.press("Space");
+  await expect(pick).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Enter");
+  await expect(pick).toHaveAttribute("aria-pressed", "false");
+  await expect(receipt(page)).toHaveCount(0);
+});

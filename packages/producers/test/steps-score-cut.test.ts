@@ -50,4 +50,9 @@ describe("cut acts", () => {
     expect(cutPlan(ads, "render-aspect", "21:9", free)).toMatchObject({ ok: false, error: { message: "21:9 is not an aspect an ad renders at" } });
     expect(cutPlan({ ...ads, adsBlocked: "1 shot without a clip" }, null, undefined, free)).toMatchObject({ ok: false, error: { message: "1 shot without a clip" } });
   });
+  it("an aspect the finish record names twice is rendered once (ads-finish takes any list of strings)", () => {
+    const twice = cv({ face: "ads", aspects: ["9:16", "1:1", "9:16"] });
+    const r = cutPlan(twice, null, undefined, free);
+    expect(r.ok && r.value.units.map((u) => u.name)).toEqual(["aspect:9:16", "aspect:1:1"]);
+  });
 });

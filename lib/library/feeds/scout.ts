@@ -5,7 +5,8 @@ import type { LibraryOrigin } from "@gt/domain/library";
 
 import { listNights, readNight, resolveInNight } from "../../foundry/scout/store.ts";
 import { cellId, type Night, type SceneCandidate } from "../../foundry/scout/types.ts";
-import { isoOf, mimeOf, type Feed, type FeedItem, type FeedRead } from "./types.ts";
+import { withWing } from "../../foundry/scout/wingScope.ts";
+import { isoOf, mimeOf, type Feed, type FeedCtx, type FeedItem, type FeedRead } from "./types.ts";
 
 // THE SCOUT'S KEPT SCENES, AS LIBRARY ITEMS - foundry-out/scout/<night>/night.json
 // (lib/foundry/scout/store.ts), read through the night store's own readers.
@@ -23,6 +24,11 @@ import { isoOf, mimeOf, type Feed, type FeedItem, type FeedRead } from "./types.
 // Findings and watch lines are knowledge files, not media. A game asset (`asset3d`) is
 // shelved by the mesh feed (./mesh.ts) from its own manifest, where the night's apply wrote each
 // variant's verdict - shelving it here too would put one model in the Library twice.
+//
+// THE SCOUT WING ONLY (spark scout-muse), pinned by name rather than left to whatever scope a caller
+// runs in. The muse wing's kept characters are shelved by their own feed (./character.ts, one
+// `character` item per woman); its other stills stay on the Board. A kept muse look reaches the
+// catalogue through the extract path, and stylesFeed shelves it from there.
 
 const ORIGIN: LibraryOrigin = "scout";
 
@@ -85,24 +91,26 @@ export function shelveNight(night: Night, universe: "real" | "fixture"): FeedRea
   return { items, skipped };
 }
 
+async function readScoutWing(ctx: FeedCtx): Promise<FeedRead> {
+  const items: FeedItem[] = [];
+  const skipped: { id: string; reason: string }[] = [];
+  for (const summary of (await listNights()).slice(0, NIGHT_CAP)) {
+    if (summary.state !== "committed" || summary.dry) continue;
+    let night: Night;
+    try {
+      night = await readNight(summary.id);
+    } catch (e) {
+      skipped.push({ id: summary.id, reason: errorMessage(e) });
+      continue;
+    }
+    const r = shelveNight(night, ctx.universe);
+    items.push(...r.items);
+    skipped.push(...r.skipped);
+  }
+  return { items, skipped };
+}
+
 export const scoutFeed: Feed = {
   id: "scout",
-  async read(ctx): Promise<FeedRead> {
-    const items: FeedItem[] = [];
-    const skipped: { id: string; reason: string }[] = [];
-    for (const summary of (await listNights()).slice(0, NIGHT_CAP)) {
-      if (summary.state !== "committed" || summary.dry) continue;
-      let night: Night;
-      try {
-        night = await readNight(summary.id);
-      } catch (e) {
-        skipped.push({ id: summary.id, reason: errorMessage(e) });
-        continue;
-      }
-      const r = shelveNight(night, ctx.universe);
-      items.push(...r.items);
-      skipped.push(...r.skipped);
-    }
-    return { items, skipped };
-  },
+  read: (ctx) => withWing("scout", () => readScoutWing(ctx)),
 };

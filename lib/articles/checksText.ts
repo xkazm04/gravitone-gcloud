@@ -9,15 +9,19 @@
 
 /* ── text helpers ──────────────────────────────────────────────────────────── */
 
+// The named entities a post's page uses for its prose. The two dashes are here because the
+// no-em-dash rule reads decoded text: `&mdash;` renders as the character the rule forbids.
+const NAMED: Record<string, string> = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", mdash: "—", ndash: "–" };
+
+// One pass, so each entity is read once (`&amp;lt;` is the text "&lt;"), decimal and hex alike.
+// A number past U+10FFFF names no character and stays as written: String.fromCodePoint throws
+// on it, and that RangeError ended the whole check.
 export const decode = (s: string) =>
-  s
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_m, d: string) => String.fromCodePoint(Number(d)));
+  s.replace(/&(#\d{1,8}|#[xX][0-9a-fA-F]{1,8}|[a-z]+);/g, (m, e: string) => {
+    if (e[0] !== "#") return NAMED[e] ?? m;
+    const n = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : Number(e.slice(1));
+    return n <= 0x10ffff ? String.fromCodePoint(n) : m;
+  });
 
 /** The prose of an HTML page: no scripts, styles, code, SVG or tags. */
 export function htmlProse(html: string, opts: { dropQuotes?: boolean } = {}): string {

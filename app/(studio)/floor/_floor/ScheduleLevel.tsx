@@ -21,6 +21,7 @@ import { LevelSheet } from "@gt/ui/components/sheet/LevelSheet.tsx";
 
 import { useShell } from "../../_shell/Providers.tsx";
 import type { CalendarFacts, CalendarPort } from "../_calendar/contract.ts";
+import { settle } from "./settle.ts";
 
 export type ScheduleLevelProps = {
   readonly port: CalendarPort;
@@ -44,7 +45,7 @@ export function ScheduleLevel({ port, facts, slots, nowMs, day, item, onClose, o
 
   useEffect(() => {
     let live = true;
-    void port.items().then((r) => {
+    void settle(port.items()).then((r) => {
       if (live) setItems(r.ok ? { kind: "read", items: r.value } : { kind: "failed", error: r.error.error });
     });
     return () => {
@@ -57,7 +58,7 @@ export function ScheduleLevel({ port, facts, slots, nowMs, day, item, onClose, o
     armed.current = true;
     setBusy(true);
     setRefusal(undefined);
-    void port.schedule(draft).then((r) => {
+    void settle(port.schedule(draft)).then((r) => {
       armed.current = false;
       setBusy(false);
       if (!r.ok) {

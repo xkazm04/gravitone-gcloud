@@ -49,9 +49,15 @@ export const STUDIO = {
      *  quality=MEDIUM 20, size=MEDIUM 2048x1136 at HIGH 155. promptEnhance=OFF:
      *  the studio's Auto rewrites short prompts, which could add the lettering
      *  the treatment forbids. (Lucid Origin, the first model: model=lucid-origin
-     *  at SMALL read "Generate 8".) */
-    imageUrl: (aspect: string) =>
-      `https://app.leonardo.ai/generate?model=${encodeURIComponent(MODEL_ID)}&aspectRatio=${encodeURIComponent(aspect)}&quantity=1&size=SMALL&quality=HIGH&promptEnhance=OFF`,
+     *  at SMALL read "Generate 8".) MEDIUM since 2026-10-23 (operator: "use
+     *  'Medium' quality setting instead of 'High', it will be good enough"): 20
+     *  credits an image instead of 71. LOW (spark scout-muse, 2026-10-23: the
+     *  muse wing's first launch draws 50 stills "at quality Low to spare
+     *  credits") was read off the page the same day: quality=LOW at SMALL
+     *  reads "Generate 8" (MEDIUM "Generate 20"). The aspect radios the page
+     *  offers are 16:9, 1:1 and 9:16 only. */
+    imageUrl: (aspect: string, quality: "low" | "medium" = "medium") =>
+      `https://app.leonardo.ai/generate?model=${encodeURIComponent(MODEL_ID)}&aspectRatio=${encodeURIComponent(aspect)}&quantity=1&size=SMALL&quality=${quality === "low" ? "LOW" : "MEDIUM"}&promptEnhance=OFF`,
     /** UNVERIFIED 2026-10-12 — a signed-out visit is redirected to an auth page. */
     signedOutPath: /\/(auth|login|sign-?in)\b/i,
   },
@@ -97,11 +103,11 @@ export const STUDIO = {
     sessionCookie: /better-auth\.session_token|session-token|CognitoIdentityServiceProvider\..*\.(idToken|refreshToken)$/i,
   },
   limits: {
-    /** 2026-10-12 recon — one Sunburst image at Small/High reads "Generate 71"
-     *  (Lucid Origin was 8). A price read off the button above this ceiling is
-     *  refused before the click: a Medium size left in the session (155) or a
-     *  video model (90) is never bought by accident. */
-    maxCreditsPerImage: 80,
+    /** 2026-10-12 recon — one Sunburst image at Small/High reads "Generate 71",
+     *  at Small/Medium 20 (Lucid Origin was 8). A price read off the button above
+     *  this ceiling is refused before the click: High quality left in the session
+     *  (71), a Medium size (155) or a video model (90) is never bought by accident. */
+    maxCreditsPerImage: 25,
     /** 2026-10-11 run — 11 s for one image; three minutes is the API adapter's ceiling. */
     renderTimeoutMs: 3 * 60_000,
     /** How long the page may take to answer the click with `Generate`. */

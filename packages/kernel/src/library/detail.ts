@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { parseAt, parseJsonAt } from "@gt/domain/door";
-import { AppError, ok, type Result } from "@gt/domain/errors";
+import { AppError, type Result } from "@gt/domain/errors";
 import { DEFAULT_PIN, groupLabel, railGroups, type LibraryActName, type LibraryCover, type LineageNode, type MediaFacts } from "@gt/domain/library";
 import { libraryItemSchema, type LibraryItem, type LibraryItemDetail } from "@gt/domain/libraryItem";
 import type { Reader, Row, Store } from "../store.ts";
 import { extrasSchema, meshFactsSchema } from "./extras.ts";
 import { readMeasure, withMeasure } from "./measures.ts";
-import { ROW_SELECT, rowOf } from "./query.ts";
+import { chipsFor, ROW_SELECT, rowOf } from "./query.ts";
 
 // ONE ITEM, WHOLE - the detail panel's read: the record, every facet labelled in
 // rail order, the lineage resolved against the index, the media facts and the
@@ -36,16 +36,21 @@ const BEFORE_SELF = new Set(["library-item", "run", "job", "candidate"]);
 export const styleItemId = (styleId: string): string => `style:${styleId}`;
 
 function lineageOf(r: Reader, item: LibraryItem): LineageNode[] {
-  const has = (id: string): boolean => r.get("SELECT 1 AS x FROM library_docs WHERE id = ?", id) !== undefined;
-  const labelOf = (id: string): string => {
+  // One lookup a pointer: the title is both the proof the index holds it and its label.
+  return resolveLineage(item, (id) => {
     const t = r.get("SELECT title FROM library_docs WHERE id = ?", id)?.["title"];
-    return typeof t === "string" ? t : id;
-  };
+    return typeof t === "string" ? t : undefined;
+  });
+}
+
+/** The pure half of `lineageOf`: the fixture port resolves its records' pointers with this same rule. */
+export function resolveLineage(item: LibraryItem, titleOf: (id: string) => string | undefined): LineageNode[] {
   const node = (l: LibraryItem["lineage"][number]): LineageNode => {
     const role = item.source === "derived" && l.kind === "library-item" ? "derived from" : (ROLE[l.kind] ?? l.kind);
     const target = l.kind === "library-item" ? l.id : l.kind === "style" ? styleItemId(l.id) : undefined;
-    const base = { role, ref: { kind: l.kind, id: l.id }, label: target !== undefined && has(target) ? labelOf(target) : l.id };
-    if (target !== undefined && has(target)) return { ...base, itemId: target };
+    const title = target === undefined ? undefined : titleOf(target);
+    const base = { role, ref: { kind: l.kind, id: l.id }, label: title ?? l.id };
+    if (target !== undefined && title !== undefined) return { ...base, itemId: target };
     if (l.kind === "project" || l.kind === "run") return { ...base, facet: { group: l.kind, value: l.id } };
     return base;
   };
@@ -138,7 +143,8 @@ export function libraryDetail(store: Store, id: string): Result<LibraryItemDetai
       if (!collections.some((c) => c.kind === kind && c.id === ref)) collections.push({ kind, id: ref });
     }
     const item = { ...rec.value.item, collections };
-    const chips = vocabulary.flatMap((g) => g.values.slice(0, 1).map((v) => ({ group: g.key, value: v.value, label: v.label }))).slice(0, 3);
+    // The grid's rule (CHIP_GROUPS), not a second one: the card the detail leads with is the tile it was opened from.
+    const chips = chipsFor(r, [row]).get(seq) ?? [];
     return {
       item,
       row: rowOf(row, chips),
@@ -160,17 +166,23 @@ export function libraryDetail(store: Store, id: string): Result<LibraryItemDetai
  */
 export function chooseCover(store: Store, itemIds: readonly string[]): Result<string | null> {
   return store.read((r) => {
-    let fallback: string | null = null;
-    for (const id of itemIds) {
-      const row = r.get(`${ROW_SELECT} WHERE d.id = ?`, id);
-      if (row === undefined) continue;
-      const c = rowOf(row, []);
-      if (c.cover.blobSha === null || c.attention !== undefined) continue;
-      if (!c.cover.nearBlack) return id;
-      fallback ??= id;
-    }
-    return fallback;
+    const pick = coverOf(itemIds, (id) => r.get(`${ROW_SELECT} WHERE d.id = ?`, id));
+    return pick === null ? null : String(pick["id"]);
   });
+}
+
+/** chooseCover's rule, in the order given; `rowFor` reads lazily, so the first bright one ends it. */
+function coverOf<K>(keys: readonly K[], rowFor: (key: K) => Row | undefined): Row | null {
+  let fallback: Row | null = null;
+  for (const key of keys) {
+    const row = rowFor(key);
+    if (row === undefined) continue;
+    const c = rowOf(row, []);
+    if (c.cover.blobSha === null || c.attention !== undefined) continue;
+    if (!c.cover.nearBlack) return row;
+    fallback ??= row;
+  }
+  return fallback;
 }
 
 /** How many of a style's plates its cover is chosen from (the newest kept first). */
@@ -183,29 +195,20 @@ export const STYLE_COVER_POOL = 12;
  * has none, and its tile keeps its swatch.
  */
 export function styleCovers(store: Store, styleIds: readonly string[]): Result<ReadonlyMap<string, LibraryCover>> {
-  const pools = store.read((r) =>
-    styleIds.map((styleId) => ({
-      styleId,
-      ids: r
-        .all(
-          `SELECT d.id FROM library_facets f JOIN library_items i ON i.seq = f.item_seq JOIN library_docs d ON d.seq = f.item_seq
-            WHERE f.grp = 'style' AND f.value = ? AND f.kind = 'plate' ORDER BY i.state = 'ratified' DESC, i.at DESC, i.seq DESC LIMIT ?`,
-          styleId,
-          STYLE_COVER_POOL,
-        )
-        .map((x) => String(x["id"])),
-    })),
-  );
-  if (!pools.ok) return pools;
-  const out = new Map<string, LibraryCover>();
-  for (const p of pools.value) {
-    const pick = chooseCover(store, p.ids);
-    if (!pick.ok) return pick;
-    if (pick.value === null) continue;
-    const id = pick.value;
-    const row = store.read((r) => r.get(`${ROW_SELECT} WHERE d.id = ?`, id));
-    if (!row.ok) return row;
-    if (row.value !== undefined) out.set(p.styleId, rowOf(row.value, []).cover);
-  }
-  return ok(out);
+  // One snapshot, and the pool read as whole rows: it was a read for the pools, then per style a
+  // read per pooled plate (chooseCover) and another for the pick - 1 + 2 reads a style.
+  return store.read((r) => {
+    const out = new Map<string, LibraryCover>();
+    for (const styleId of styleIds) {
+      const pool = r.all(
+        `${ROW_SELECT} JOIN library_facets f ON f.item_seq = i.seq
+          WHERE f.grp = 'style' AND f.value = ? AND f.kind = 'plate' ORDER BY i.state = 'ratified' DESC, i.at DESC, i.seq DESC LIMIT ?`,
+        styleId,
+        STYLE_COVER_POOL,
+      );
+      const pick = coverOf(pool, (row) => row);
+      if (pick !== null) out.set(styleId, rowOf(pick, []).cover);
+    }
+    return out as ReadonlyMap<string, LibraryCover>;
+  });
 }

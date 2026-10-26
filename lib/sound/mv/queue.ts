@@ -37,7 +37,7 @@ import { PHASE_OF, isMvStep } from "@gt/producers/mv/plan";
 
 import type { Receipt } from "@gt/domain/produce";
 
-import { cancelMvJob, launchMv, launchMvNow, mvKernelId, mvKernelJobs, pauseMvJob, pauseMvJobs, resumeMvJobs, retryMvJob } from "@/lib/producers/mv";
+import { cancelMvJob, launchMv, launchMvNow, mvJobOf, mvKernelId, mvKernelJobs, pauseMvJob, pauseMvJobs, resumeMvJobs, retryMvJob } from "@/lib/producers/mv";
 import { OPERATOR } from "@/lib/producers/sound";
 
 import { filePathAbs, safeId, SoundError } from "../store";
@@ -170,13 +170,14 @@ function find(f: MvFile, id: string): MvJob {
   return j;
 }
 
-/** The record's state with its job's running state on it. */
+/** The record's state with its job's running state on it: its one kernel row,
+ *  read by its derived id (lib/producers/mv.ts mvJobOf) - not every job of every
+ *  producer listed twice to find it. */
 async function liveState(id: string): Promise<{ j: MvJob; k: Job | undefined }> {
-  const { file, jobs } = await readMvLive();
-  const j = jobs.find((x) => x.id === id);
-  if (!j) throw new SoundError(`no music-video job ${id}`, 404);
-  const raw = find(file, id);
-  return { j, k: mvKernelJobs().get(mvKernelId(raw)) };
+  const raw = find(await readMv(), id);
+  const k = mvJobOf(raw);
+  const [j] = overlayMv([raw], k === undefined ? new Map() : new Map([[mvKernelId(raw), k]])).jobs;
+  return { j: j ?? raw, k };
 }
 
 export function parseRegenerate(body: unknown): { part: MvPart; note?: string; prompt?: string } {
@@ -361,7 +362,8 @@ async function waitingIds(): Promise<string[]> {
   return (await readMvLive()).jobs.filter((j) => j.state === "queued" && !kernel.has(mvKernelId(j))).map((j) => j.id);
 }
 
-/** What Start would launch, as a receipt (decision 3): GET /api/sound/mv/run. */
+/** What Start would launch, as a receipt (decision 3). Its route,
+ *  /api/sound/mv/run, retired with the v1 Settled column (Phase 6 L67). */
 export async function mvStartReceipt(): Promise<Receipt> {
   const r = await launchMv(await waitingIds(), { mode: columnMode(), actor: OPERATOR });
   if (r.kind !== "receipt") throw new SoundError("a receipt read launched something", 500);

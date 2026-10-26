@@ -14,7 +14,7 @@ import { listStylesIn } from "@gt/kernel/styles/driver";
 import { RegistryUnreachableError, resolveRegistryDir } from "../../../../lib/articles/registryRead.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { foundryFile } from "../../../../lib/foundry/runStore.ts";
-import { loadApproaches } from "../../../../lib/foundry/strips/cards.ts";
+import { stripCases } from "../../../../lib/foundry/strips/cases.ts";
 import { storeRoot } from "../../../../lib/sound/store.ts";
 import type { Choice, ComposeChoices, ComposerChoices } from "./contract.ts";
 
@@ -97,20 +97,6 @@ export function registryTopics(env: Readonly<Record<string, string | undefined>>
     }
   }
   return out;
-}
-
-/** A strips subject is a case: the approach cards written for it, by lane. */
-export type StripCase = { readonly id: string; readonly lane: "edu" | "stat"; readonly approaches: readonly string[] };
-
-export function stripCases(cwd: string): readonly StripCase[] {
-  if (!existsSync(path.join(cwd, "pipeline", "strips", "approaches.json"))) return [];
-  const by = new Map<string, { lane: "edu" | "stat"; approaches: string[] }>();
-  for (const a of loadApproaches(cwd)) {
-    const c = by.get(a.case) ?? { lane: a.lane, approaches: [] };
-    c.approaches.push(a.id);
-    by.set(a.case, c);
-  }
-  return [...by.entries()].map(([id, c]) => ({ id, lane: c.lane, approaches: c.approaches })).sort((a, b) => a.lane.localeCompare(b.lane) || a.id.localeCompare(b.id));
 }
 
 type Take = { readonly id: string; readonly title: string; readonly durationS: number | null };

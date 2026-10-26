@@ -2,7 +2,6 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { stat } from "node:fs/promises";
-import path from "node:path";
 
 import type { BlobRef } from "@gt/domain/blob";
 import type { ConsequenceItem } from "@gt/domain/board";
@@ -14,6 +13,7 @@ import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
 import { applyBlindEdit, blindComplete, blindKey, claimAllowed, ledgerVerdict, measureBlind, pickToArm, pickedCount, type Arm, type BlindPick, type BlindState } from "../../../foundry/training/blind.ts";
 import { commitCycle, getCycle, patchBlind, patchTrainingVerdicts, trainingFileStat } from "../../../foundry/training/store.ts";
+import { keeperThumb } from "../../../foundry/training/ledger.ts";
 import type { CycleManifest, Improvement, PairResult, TrainingVerdict, TrainingVerdicts } from "../../../foundry/training/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { decidedInV1, reviewClaims, reviewed, reviewPacket, shown, type Claim, type DojoV1 } from "./dojoReview.ts";
@@ -23,7 +23,7 @@ import {
   decisionMap,
   foundryFileUrl,
   instantOr,
-  mediaRef,
+  mediaRefs,
   mintPacket,
   runIdOf,
   v1Call,
@@ -100,7 +100,7 @@ async function read(ref: AdapterRef): Promise<Result<DojoV1>> {
   const detail = await v1Call(() => getCycle(id));
   if (!detail.ok) return detail;
   const { cycle, verdicts, blind, rev } = detail.value;
-  const media: Record<string, BlobRef> = {};
+  const files: { key: string; abs: string }[] = [];
   for (const imp of cycle.improvements) {
     // The thumbnail is what a cycle decided wholly in v1 shows per improvement (ruling 3).
     const rels = [...imp.pairs.flatMap((p) => [p.baseline, p.challenger].filter((r) => !r.deleted).map(shown)), ...(imp.thumbnail === undefined ? [] : [imp.thumbnail])];
@@ -110,11 +110,13 @@ async function read(ref: AdapterRef): Promise<Result<DojoV1>> {
         if (at.error.code === "not-found" || at.error.code === "invalid") continue;
         return at;
       }
-      const b = await mediaRef(at.value.abs);
-      if (b.ok) media[rel] = b.value;
-      else if (b.error.code !== "not-found") return b;
+      files.push({ key: rel, abs: at.value.abs });
     }
   }
+  // Hashed together, eight at a time, once every path has been resolved.
+  const hashed = await mediaRefs(files);
+  if (!hashed.ok) return hashed;
+  const media: Record<string, BlobRef> = Object.fromEntries(hashed.value);
   const sidecar = await v1Call(() => trainingFileStat(id, "blind.json"));
   const fallback = instantOr(cycle.at, new Date(0).toISOString()).at;
   const picksAt = sidecar.ok ? await stat(sidecar.value.abs).then((s) => s.mtime.toISOString(), () => fallback) : fallback;
@@ -327,8 +329,11 @@ function consequence(v1: DojoV1, at: DecisionsAt): Result<Preview> {
     return { kind: "index-row" as const, target: "pipeline/foundry/training-ledger.json", candidate: i.id, detail: `${i.technique}: ${human} → ${v}${asIs?.anchored ? " (anchored)" : ""}${why}` };
   });
   const thumbs = decided
-    .filter((i) => verdicts[i.id] === "approve" && i.thumbnail)
-    .map((i) => ({ kind: "file" as const, target: `pipeline/foundry/training/thumbs/${cycle.id}--${i.id}${path.extname(i.thumbnail ?? "").toLowerCase()}`, candidate: i.id, detail: "the kept thumbnail, copied into git" }));
+    .filter((i) => verdicts[i.id] === "approve")
+    .flatMap((i) => {
+      const keeper = keeperThumb(cycle.id, i);
+      return keeper === undefined ? [] : [{ kind: "file" as const, target: keeper.rel, candidate: i.id, detail: "the kept thumbnail, copied into git" }];
+    });
   const v1Digest = digestOf(v1);
   return ok({
     v1Digest,

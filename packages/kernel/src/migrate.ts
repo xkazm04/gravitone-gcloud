@@ -2,7 +2,7 @@ import { readdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { parseAt } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import { sha256Hex } from "./canonical.ts";
 import type { Store } from "./store.ts";
 
@@ -70,6 +70,8 @@ export function stepDigest(step: MigrationStep): string {
 
 type Recorded = { module: string; version: number; digest: string };
 type Failure = z.output<typeof failureRow>;
+/** A standing failure mark: the module and step that failed, when, and the error. */
+export type MigrationMark = Failure;
 type Pending = { module: string; step: MigrationStep; digest: string };
 
 /** The pure half: which steps run, or why none may. */
@@ -121,13 +123,44 @@ function readLedger(store: Store): Result<{ recorded: Recorded[]; failures: Fail
     if (!p.ok) return err("refused", `migrations: the ledger is unreadable: ${p.error.message}`);
     recorded.push(p.value);
   }
+  const failures = parseMarks(rows.value.failures);
+  if (!failures.ok) return failures;
+  return ok({ recorded, failures: failures.value });
+}
+
+function parseMarks(rows: readonly unknown[]): Result<Failure[]> {
   const failures: Failure[] = [];
-  for (const row of rows.value.failures) {
+  for (const row of rows) {
     const p = parseAt("migrations failure mark", failureRow, row);
     if (!p.ok) return err("refused", `migrations: a failure mark is unreadable: ${p.error.message}`);
     failures.push(p.value);
   }
-  return ok({ recorded, failures });
+  return ok(failures);
+}
+
+/** The failure marks standing in the store, read without running anything: the
+ *  operator's view of why every open refuses (`pipeline/kernel.mts migrations status`). */
+export function migrationMarks(store: Store): Result<readonly MigrationMark[]> {
+  const boot = store.tx((t) => t.exec(LEDGER_DDL));
+  if (!boot.ok) return boot;
+  const rows = store.read((r) => r.all("SELECT module, version, at, reason FROM _migration_failures ORDER BY module"));
+  if (!rows.ok) return rows;
+  return parseMarks(rows.value);
+}
+
+/** The newest pre-migration snapshot beside a file store, if one was taken. */
+export function newestSnapshot(store: Store, dir?: string): string | undefined {
+  if (store.location === ":memory:") return undefined;
+  const where = dir ?? path.dirname(store.location);
+  const base = path.basename(store.location);
+  let names: string[];
+  try {
+    names = readdirSync(where).filter((f) => f.startsWith(`${base}.pre-migrate.`)).sort();
+  } catch {
+    return undefined;
+  }
+  const last = names[names.length - 1];
+  return last === undefined ? undefined : path.join(where, last);
 }
 
 /** The snapshot's file name: the store's, the time, and a 12-hex digest of
@@ -159,6 +192,9 @@ function rotate(dir: string, base: string, keep: number): void {
  * snapshot would be an empty file per fresh store (every test, every new cell).
  */
 export function migrate(store: Store, modules: readonly ModuleMigrations[], opts: MigrateOptions = {}): Result<MigrateReport> {
+  const keep = opts.keepSnapshots ?? KEEP_SNAPSHOTS;
+  // Rotation runs right after the snapshot: a budget under one would delete the restore point it just took.
+  if (!Number.isInteger(keep) || keep < 1) return err("invalid", `migrations: keepSnapshots must be a whole number of at least 1, not ${keep}`);
   const ledger = readLedger(store);
   if (!ledger.ok) return ledger;
   const plan = planMigrations(modules, ledger.value.recorded, ledger.value.failures);
@@ -174,16 +210,27 @@ export function migrate(store: Store, modules: readonly ModuleMigrations[], opts
     snapshot = path.join(dir, snapshotName(path.basename(store.location), pending, stamp.value));
     const snap = store.snapshot(snapshot);
     if (!snap.ok) return err("refused", `migrations: no step ran, the pre-migration snapshot failed: ${snap.error.message}`, { cause: snap.error });
-    rotate(dir, path.basename(store.location), opts.keepSnapshots ?? KEEP_SNAPSHOTS);
+    rotate(dir, path.basename(store.location), keep);
   }
 
   const applied: Applied[] = [];
   for (const p of pending) {
-    const step = store.tx((t) => {
+    const step = store.tx((t): boolean => {
+      // The plan was read outside this lock. Another process booting the same
+      // store (the app and the worker after one release) may have committed
+      // this step since; re-running its DDL would fail ("table already
+      // exists") and mark a failure that refuses every later open.
+      const held = t.get("SELECT digest FROM _migrations WHERE module = ? AND version = ?", p.module, p.step.version);
+      if (held !== undefined) {
+        if (held["digest"] !== p.digest) throw new AppError("refused", `migrations: ${p.module} v${p.step.version} was applied by another process with a different digest; append a new step instead`);
+        return false;
+      }
       t.exec(p.step.sql);
       // The ledger row is the LAST write of the step's transaction.
       t.run("INSERT INTO _migrations (module, version, digest, at) VALUES (?, ?, ?, ?)", p.module, p.step.version, p.digest, t.at);
+      return true;
     });
+    if (step.ok && !step.value) continue;
     if (!step.ok) {
       // The mark is written OUTSIDE the failed step's transaction, or its
       // rollback would erase it; it stops every later run until cleared.
@@ -191,7 +238,9 @@ export function migrate(store: Store, modules: readonly ModuleMigrations[], opts
         t.run("INSERT OR REPLACE INTO _migration_failures (module, version, at, reason) VALUES (?, ?, ?, ?)", p.module, p.step.version, t.at, step.error.message);
       });
       const tail = mark.ok ? "" : ` (and its failure mark could not be written: ${mark.error.message})`;
-      return err(step.error.code, `migrations: ${p.module} v${p.step.version} failed after ${applied.length} step(s) applied: ${step.error.message}${tail}`, { cause: step.error });
+      // The restore point travels with the error (migrations: error-propagation).
+      const restore = snapshot === undefined ? "" : `; the pre-migration snapshot is ${snapshot}`;
+      return err(step.error.code, `migrations: ${p.module} v${p.step.version} failed after ${applied.length} step(s) applied: ${step.error.message}${tail}${restore}`, { cause: step.error });
     }
     applied.push({ module: p.module, version: p.step.version });
   }

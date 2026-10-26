@@ -8,10 +8,12 @@
 // shell's toast (@gt/ui/storage, app/(studio)/_shell/Providers.tsx), held by
 // packages/ui/test/storage.test.ts.
 //
-// What stays is the step store's half, which the v1 step records still write through:
-// stepStore kept ONE `latest` slot and nothing ever cleared a trouble when saving
-// resumed, so `noteStorageOk` clears only a storage trouble of the same op, project and
-// step, and withStore's success path is held to calling it.
+// What stays is the step store's half (lib/steps: okChannel, troubleChannel, withStore). No
+// production code writes a step record through it now - saveStep and patchStep have tests as
+// their only callers, and lib/identityEviction.ts publishes through reportStorageTrouble - so
+// this pins the channel itself: the store kept ONE `latest` slot and nothing ever cleared a
+// trouble when saving resumed, so `noteStorageOk` clears only a storage trouble of the same
+// op, project and step, and withStore's success path is held to calling it.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -19,6 +21,7 @@ import { test, expect } from "@playwright/test";
 
 import { clearStorageTrouble, lastStorageTrouble, noteStorageOk, reportStorageTrouble, reportTaskTrouble } from "@/lib/steps";
 
+import { classify as classifyUi } from "@gt/ui/storage/trouble";
 import { stripComments } from "./_helpers";
 
 const quotaError = () => Object.assign(new Error("The quota has been exceeded."), { name: "QuotaExceededError" });
@@ -44,6 +47,14 @@ test("case 6: stepStore's noteStorageOk clears only a storage trouble of the sam
   expect(lastStorageTrouble()).toBe(task);
 });
 
+test("case 6d: v1's classify names every recognised storage error what @gt/ui's does", () => {
+  const named = (name: string) => Object.assign(new Error(name), { name });
+  for (const name of ["QuotaExceededError", "NS_ERROR_DOM_QUOTA_REACHED", "SecurityError", "UnknownError"]) {
+    reportStorageTrouble("write", "p1", "script", named(name));
+    expect(lastStorageTrouble()?.kind, name).toBe(classifyUi(named(name)));
+  }
+});
+
 test("case 6b (critic): an asset-blob quota is not cleared by a small step record saving elsewhere", () => {
   reportStorageTrouble("write", "", "assets", quotaError());
   const raised = lastStorageTrouble();
@@ -52,9 +63,8 @@ test("case 6b (critic): an asset-blob quota is not cleared by a small step recor
 });
 
 test("case 6c (source ratchet): withStore's success path calls noteStorageOk(op, projectId, phase)", () => {
-  // withStore moved to its own file when stepStore.ts was split; stepStore.ts is
-  // the door now and holds no implementation. The ratchet is unchanged - it still
-  // reads the success path of the real withStore.
+  // The ratchet reads the success path of the real withStore (lib/steps/withStore.ts);
+  // lib/steps/index.ts is the door and holds no implementation.
   const src = stripComments(readFileSync(join(process.cwd(), "lib/steps/withStore.ts"), "utf8"));
   const start = src.indexOf("async function withStore");
   expect(start).toBeGreaterThan(-1);

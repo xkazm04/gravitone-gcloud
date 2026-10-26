@@ -4,7 +4,7 @@ import { err, ok } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
 import type { Output } from "@gt/kernel/job-core";
 
-import { defineStyleProducer, stylePlan, type StyleRequest } from "../src/style/define.ts";
+import { defineStyleProducer, stylePlan, styleRequestSchema, type StyleRequest } from "../src/style/define.ts";
 
 // The style producer's plan (the drive itself, over a temp store, is
 // tests/next-server/style-real.test.ts): which steps a request still owes, and that the request
@@ -61,5 +61,33 @@ describe("the request is read outside the drive's transaction", () => {
     expect(() => p.plan(job, done())).toThrow("job carries no style request");
     await p.health?.(job);
     expect(p.plan(job, done()).map((s) => s.name)).toEqual(["palette", "land"]);
+  });
+});
+
+describe("the request a job carries is read through the same rule the act was asked under", () => {
+  it("refuses a trial named twice, as the atelier's act door does: two priced plates the landing would refuse", () => {
+    expect(styleRequestSchema.safeParse(proofs).success).toBe(true);
+    expect(styleRequestSchema.safeParse({ ...proofs, trialIds: ["flywheel", "flywheel"] }).success).toBe(false);
+  });
+});
+
+describe("the request is kept only while its job can still be driven", () => {
+  it("an ended job lets its request go (the worker's producer outlives every job), and a re-drive reads it again", async () => {
+    let reads = 0;
+    const p = defineStyleProducer("cloud.google", {
+      request: () => {
+        reads++;
+        return ok(proofs);
+      },
+      palette: async () => ({ kind: "fatal", code: "internal", message: "unused" }),
+      plate: async () => ({ kind: "fatal", code: "internal", message: "unused" }),
+      land: async () => ({ kind: "fatal", code: "internal", message: "unused" }),
+    });
+    await p.health?.(job);
+    await p.settle?.(job, "done");
+    expect(() => p.plan(job, done())).toThrow("planned before its request was read");
+    await p.health?.(job);
+    expect(reads).toBe(2);
+    expect(p.plan(job, done()).map((s) => s.name)).toEqual(["proof:peak-and-fall", "proof:flywheel", "land"]);
   });
 });

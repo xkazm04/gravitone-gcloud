@@ -60,7 +60,9 @@ export type ActAsk = { readonly partId: string; readonly act: string | null; rea
 export function partJobId(ask: ActAsk): string {
   const base = `job:part:${ask.partId}`;
   if (ask.act === null) return base;
-  const target = ask.target === undefined ? "" : `:${encodeURIComponent(ask.target)}`;
+  // `~` is the launch mark and encodeURIComponent leaves it bare (RFC 3986 unreserved): spelled
+  // %7E here, or a target "take~2" reads back as target "take", launch 2. decodeURIComponent undoes it.
+  const target = ask.target === undefined ? "" : `:${encodeURIComponent(ask.target).replaceAll("~", "%7E")}`;
   return `${base}:${ask.act}:${ask.rev ?? 0}${target}${ask.n === undefined || ask.n <= 1 ? "" : `~${ask.n}`}`;
 }
 

@@ -2,6 +2,7 @@ import "server-only";
 
 import { recipeById, type WorkKind } from "@gt/catalog/recipes";
 import { err, ok, type Result } from "@gt/domain/errors";
+import type { Actor } from "@gt/domain/event";
 import { jobMachine, type JobState } from "@gt/domain/job.machine";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { ComposeInput, ComposerInput, LaunchedProject, LaunchedRun, ModelOption, PartPatch, Receipt, ReceiptSubject, RerouteOption } from "@gt/domain/produce";
@@ -10,6 +11,7 @@ import type { ActOutcome, Confirmed, RerouteResult } from "./contract.ts";
 import { CANDIDATE_STYLES, KEPT_TAKES, PROVEN_STYLES, SUBJECTS, SWEEP_PLATES_PER_STYLE, SWEEP_STYLES, TOPICS } from "./fixtureData.ts";
 import { isWorkKind, optionOf, optionsOf, partJobId, partsOf, placeAll, tokenOf, type FxJob, type FxProject, type Universe } from "./fixture.ts";
 import { costOf } from "./fixtureRead.ts";
+import { firstSentence, slug } from "./names.ts";
 import { lineOf, receiptOf, type Item } from "./schedule.ts";
 
 // THE FIXTURE'S WRITES - receipts, confirms and the Runs acts, over the universe in ./fixture.ts.
@@ -23,11 +25,6 @@ const NEW = "__receipt";
 /* ── the Floor composers ──────────────────────────────────────────────────── */
 
 type RunSpec = { readonly kind: WorkKind; readonly units: number; readonly label: string; readonly title: string; readonly option: ModelOption };
-
-const firstSentence = (text: string, fallback: string): string => {
-  const t = text.trim().split(/(?<=[.!?…])\s/)[0]?.trim() ?? "";
-  return t === "" ? fallback : t.length > 80 ? `${t.slice(0, 79)}…` : t;
-};
 
 /** What a composer's input runs as: a single-producer recipe's one part (@gt/catalog/recipes). */
 export function runSpec(input: ComposerInput): Result<RunSpec> {
@@ -82,14 +79,21 @@ export function launchRun(u: Universe, input: ComposerInput, token: string, now:
 
 /* ── projects ─────────────────────────────────────────────────────────────── */
 
-const slug = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "project";
-
-function draftOf(u: Universe, id: string, rev: number): Result<FxProject> {
+function projectAt(u: Universe, id: string, rev: number): Result<FxProject> {
   const p = u.projects.get(id);
   if (p === undefined) return err("not-found", `no project ${id}`);
-  if (p.rev !== rev) return err("conflict", `the plan moved: it is at rev ${p.rev}, the write named rev ${rev}`, { detail: "stale-rev" });
-  if (p.launched) return err("refused", `${p.title} is launched; a launched part changes route in Runs`);
+  if (p.rev !== rev) return err("conflict", `project ${id} moved on (now at revision ${p.rev}); re-read the plan and send it again`);
   return ok(p);
+}
+
+/** The kernel's words for a write to a launched plan (records/write.ts). */
+const launchedSays = (id: string): string => `project ${id} is launched; a launched plan changes by re-routing its jobs`;
+
+function draftOf(u: Universe, id: string, rev: number): Result<FxProject> {
+  const p = projectAt(u, id, rev);
+  if (!p.ok) return p;
+  if (p.value.launched) return err("refused", launchedSays(id));
+  return p;
 }
 
 const touch = (p: FxProject, now: number): void => {
@@ -102,8 +106,18 @@ export function compose(u: Universe, input: ComposeInput, now: number): Result<{
   if (recipe === undefined) return err("invalid", `no recipe ${input.recipe}`);
   const take = KEPT_TAKES.find((t) => t.id === input.takeId);
   const topic = TOPICS.find((t) => t.slug === input.topic);
+  // A topic is what an explainer or an article is made from; the titles are the kernel's (records/write.ts
+  // `titleFor`), with the take's and the topic's own names where the real port finds them (./real.ts `compose`).
+  const topical = recipe.family === "explainer" || recipe.family === "article";
   const title =
-    input.title ?? (recipe.family === "album" ? `${take?.title ?? "Album"} — music video` : recipe.family === "explainer" ? `${topic?.title ?? "Explainer"} — explainer` : recipe.family === "film" ? "Untitled film" : recipe.label);
+    input.title ??
+    (recipe.family === "album"
+      ? `${take?.title ?? input.takeId ?? "Untitled take"} — music video`
+      : topical
+        ? `${topic?.title ?? input.topic ?? "Untitled topic"} — ${recipe.family}`
+        : recipe.family === "film"
+          ? "Untitled film"
+          : `Untitled ${recipe.label.toLowerCase()}`);
   const id = `${slug(title)}-${++u.seq}`;
   u.projects.set(id, {
     id,
@@ -112,7 +126,7 @@ export function compose(u: Universe, input: ComposeInput, now: number): Result<{
     recipe,
     ...(recipe.family !== "album" && input.styleId !== undefined ? { styleId: input.styleId } : {}),
     ...(recipe.family === "album" && take !== undefined ? { takeId: take.id, runtimeS: take.durationS } : {}),
-    ...(recipe.family === "explainer" && topic !== undefined ? { topic: topic.slug } : {}),
+    ...(topical && input.topic !== undefined ? { topic: input.topic } : {}),
     createdAt: now,
     launched: false,
     parts: partsOf(id, recipe, input.units ?? {}),
@@ -122,14 +136,19 @@ export function compose(u: Universe, input: ComposeInput, now: number): Result<{
 }
 
 export function setPart(u: Universe, id: string, rev: number, partId: string, patch: PartPatch, now: number): Result<FxProject> {
-  const d = draftOf(u, id, rev);
+  // The kernel's order and words (records/write.ts `setPart`): the revision, the part, a launched
+  // part's job, then what the part is and what it may take.
+  const d = projectAt(u, id, rev);
   if (!d.ok) return d;
   const part = d.value.parts.find((x) => x.id === partId);
-  if (part === undefined || !isWorkKind(part.kind)) return err("not-found", `no work part ${partId}`);
-  if (patch.option !== undefined && !optionsOf(part.kind).some((o) => o.key === patch.option)) return err("invalid", `${patch.option} is not an option for ${part.kind}`);
+  if (part === undefined) return err("not-found", `project ${id} has no part ${partId}`);
+  if (d.value.launched && isWorkKind(part.kind) && u.jobs.has(partJobId(part.id))) return err("refused", launchedSays(id));
+  if (!isWorkKind(part.kind)) return err("refused", `part ${part.id} is a ${part.kind}; it has no model or units`);
+  if (patch.option !== undefined && !optionsOf(part.kind).some((o) => o.key === patch.option)) return err("invalid", `${patch.option} is not an option for a ${part.kind} part`);
   if (patch.units !== undefined) {
-    const [lo, hi] = part.unitsRange ?? [part.units, part.units];
-    if (patch.units < lo || patch.units > hi) return err("invalid", `${part.kind} takes ${lo}-${hi} units`);
+    if (part.unitsRange === undefined) return err("refused", `part ${part.id} has fixed units`);
+    const [lo, hi] = part.unitsRange;
+    if (patch.units < lo || patch.units > hi) return err("invalid", `units ${patch.units} is outside ${lo}..${hi} for ${part.kind}`);
     part.units = patch.units;
   }
   if (patch.option !== undefined) part.option = patch.option;
@@ -138,11 +157,16 @@ export function setPart(u: Universe, id: string, rev: number, partId: string, pa
 }
 
 export function rename(u: Universe, id: string, rev: number, title: string, now: number): Result<FxProject> {
-  const d = draftOf(u, id, rev);
+  // A title is the project's, not its plan's: a launched one is renamed too, and its own words
+  // write nothing (kernel records/write.ts `rename`).
+  const d = projectAt(u, id, rev);
   if (!d.ok) return d;
-  d.value.title = title;
+  const t = title.trim();
+  if (t.length === 0 || t.length > 200) return err("invalid", "a title is 1..200 characters");
+  if (t === d.value.title) return d;
+  d.value.title = t;
   touch(d.value, now);
-  return ok(d.value);
+  return d;
 }
 
 export function discard(u: Universe, id: string, rev: number): Result<{ readonly id: string }> {
@@ -197,7 +221,6 @@ function jobOf(u: Universe, id: string): Result<FxJob> {
 
 function move(j: FxJob, to: JobState, now: number, u: Universe): Result<FxJob> {
   if (!jobMachine.can(j.state, to)) return err("refused", `${j.title} is ${j.state}; it cannot go ${to}`);
-  j.prev = j.state;
   j.state = to;
   const p = j.projectId === undefined ? undefined : u.projects.get(j.projectId);
   if (p !== undefined) p.updatedAt = now;
@@ -215,18 +238,26 @@ export function pauseJob(u: Universe, id: string, now: number): Result<ActOutcom
 export function resumeJob(u: Universe, id: string, now: number): Result<ActOutcome> {
   const j = jobOf(u, id);
   if (!j.ok) return j;
+  // The machine lets failed and interrupted go to queued too, but that edge is the retry's (and an
+  // interruption's is the operator's look first): only a paused job resumes (kernel job.ts `resume`).
+  if (j.value.state !== "paused") return err("refused", `job ${id} is ${j.value.state}; only a paused job resumes`);
   const r = move(j.value, "queued", now, u);
   return r.ok ? ok({ jobId: id, note: "resumed · back to queued" }) : r;
 }
 
 const holdNames = (u: Universe, j: FxJob): ResourceLane | null => (u.holds.get(j.option.lane)?.jobId === j.id ? j.option.lane : null);
 
-export function retryJob(u: Universe, id: string, now: number, ceilingUsd?: number): Result<ActOutcome> {
+/** Who acts: the operator unless the caller names someone else (the MCP door's agent). */
+const OPERATOR: Actor = { kind: "operator", id: "operator" };
+
+export function retryJob(u: Universe, id: string, now: number, ceilingUsd?: number, by: Actor = OPERATOR): Result<ActOutcome> {
   const j = jobOf(u, id);
   if (!j.ok) return j;
-  if (j.value.state !== "failed" && j.value.state !== "interrupted") return err("refused", `${j.value.title} is ${j.value.state}; only failed or interrupted work is retried`);
+  // The real port's order: the hold first (./real.ts), then the kernel's retry (job.ts) - its actor, then its state.
   const held = holdNames(u, j.value);
   if (held !== null) return err("refused", `${held} is on hold for this job: acknowledge the hold first`);
+  if (by.kind !== "operator") return err("refused", `job ${id}: only an operator retries a ${j.value.state} job; ${by.kind} ${by.id} may not`);
+  if (j.value.state !== "failed" && j.value.state !== "interrupted") return err("refused", `job ${id} is ${j.value.state}; only a failed or interrupted job is retried`);
   const r = move(j.value, "queued", now, u);
   if (!r.ok) return r;
   j.value.attempt++;
@@ -235,13 +266,12 @@ export function retryJob(u: Universe, id: string, now: number, ceilingUsd?: numb
   return ok({ jobId: id, note: `retry · attempt ${j.value.attempt} · same route${ceilingUsd === undefined ? "" : ` · ceiling $${ceilingUsd}`}` });
 }
 
-export function moveJob(u: Universe, id: string, dir: "earlier" | "later", now: number): Result<ActOutcome> {
+export function moveJob(u: Universe, id: string, dir: "earlier" | "later", _now: number): Result<ActOutcome> {
   const j = jobOf(u, id);
   if (!j.ok) return j;
-  if (j.value.state !== "queued" && j.value.state !== "planned") return err("refused", `${j.value.title} is ${j.value.state}; only queued work moves`);
-  const placed = placeAll(u, now);
-  const at = (x: FxJob): number => placed.get(x.partId ?? x.id)?.s ?? Number.POSITIVE_INFINITY;
-  const lane = [...u.jobs.values()].filter((x) => x.option.lane === j.value.option.lane && (x.state === "queued" || x.state === "planned")).sort((a, b) => at(a) - at(b) || a.order - b.order);
+  if (j.value.state !== "queued" && j.value.state !== "planned") return err("refused", `job ${id} is ${j.value.state}; only a waiting job (queued or planned) moves in the line`);
+  // The line is the queue's order, as the kernel swaps in it (job-queue.ts `move`, ORDER BY ord, n) - not the start the schedule gives a job that waits on an upstream.
+  const lane = [...u.jobs.values()].filter((x) => x.option.lane === j.value.option.lane && (x.state === "queued" || x.state === "planned")).sort((a, b) => a.order - b.order);
   const i = lane.indexOf(j.value);
   const k = lane[i + (dir === "earlier" ? -1 : 1)];
   if (k === undefined) return err("refused", "end of the lane queue");
@@ -289,7 +319,7 @@ export function rerouteOptions(u: Universe, id: string, now: number): Result<rea
   );
 }
 
-export function reroute(u: Universe, id: string, key: string, now: number, token?: string, ceilingUsd?: number): Result<RerouteResult> {
+export function reroute(u: Universe, id: string, key: string, now: number, token?: string, ceilingUsd?: number, by: Actor = OPERATOR): Result<RerouteResult> {
   const j = jobOf(u, id);
   if (!j.ok) return j;
   const job = j.value;
@@ -304,9 +334,13 @@ export function reroute(u: Universe, id: string, key: string, now: number, token
     return receiptOf({ subject, lines: [lineOf({ key: job.partId ?? job.id, label: job.kind, option: o, units: job.units }, placed.get(job.partId ?? job.id), now)], mode: job.mode, token: tokenOf(subject, { id, key }, u), now, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) });
   });
   if (token === undefined) return ok({ kind: "receipt", receipt });
-  if (token !== receipt.token) return ok({ kind: "stale", fresh: receipt });
+  // The hold comes before the token, as in the real confirm (realReroute.ts): a stale token on a
+  // held job is told the hold, not handed a fresh receipt for a move the lane would refuse.
   const held = holdNames(u, job);
   if (held !== null) return err("refused", `${held} is on hold for this job: acknowledge the hold first`);
+  if (token !== receipt.token) return ok({ kind: "stale", fresh: receipt });
+  // Kernel records/reroute.ts: only an operator puts a failed or interrupted job back in a queue, by a steer or a successor.
+  if ((job.state === "failed" || job.state === "interrupted") && by.kind !== "operator") return err("refused", `job ${id}: only an operator re-routes a ${job.state} job; ${by.kind} ${by.id} may not`);
   const from = job.option.label;
   job.option = o;
   if (job.state === "failed" || job.state === "interrupted") {
@@ -323,9 +357,11 @@ export function reroute(u: Universe, id: string, key: string, now: number, token
   return ok({ kind: "done", act: { jobId: id, note: `re-routed · ${from} → ${o.label}` } });
 }
 
-export function ackLane(u: Universe, lane: ResourceLane): Result<ActOutcome> {
+export function ackLane(u: Universe, lane: ResourceLane, by: Actor = OPERATOR): Result<ActOutcome> {
+  // An agent cannot vouch that it looked (kernel job-queue.ts `ackLane`).
+  if (by.kind !== "operator") return err("refused", `lane ${lane}: only an operator acknowledges a held lane; ${by.kind} ${by.id} may not`);
   const h = u.holds.get(lane);
-  if (h === undefined) return err("not-found", `${lane} is not on hold`);
+  if (h === undefined) return err("refused", `lane ${lane} is not held`);
   u.holds.delete(lane);
   return ok({ jobId: h.jobId, note: `${lane} hold acknowledged` });
 }

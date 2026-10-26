@@ -16,7 +16,7 @@ import path from "node:path";
 
 import { diffFiles } from "./diffFiles";
 import { readOutJson } from "./ingestSources";
-import { MAX_PATCHES } from "./prompt";
+import { MAX_PATCHES, trialSubjectDir } from "./prompt";
 import { resolveRegistryDir, type RegistryLocation } from "./registryRead";
 import { PATCHABLE_ROOTS } from "./registryWrite";
 import { readJsonFile, readTextFile, writeFileAtomic, writeJsonAtomic } from "./store";
@@ -84,7 +84,11 @@ export async function ingestPatches(ws: string, dir: string, registry?: Registry
   }
   const accepted: RegistryPatch[] = [];
   const rejected: { entry: unknown; reason: string }[] = [];
-  for (const entry of Array.isArray(proposed) ? proposed.slice(0, MAX_PATCHES * 2) : []) {
+  // At most twice the limit is read; what lies past it is still named, as one row, so a proposal
+  // the gate never shows is counted where the refused ones are.
+  const read = MAX_PATCHES * 2;
+  if (Array.isArray(proposed) && proposed.length > read) rejected.push({ entry: { unread: proposed.length - read }, reason: `${proposed.length - read} more proposals past the first ${read} were not read` });
+  for (const entry of Array.isArray(proposed) ? proposed.slice(0, read) : []) {
     const o = (entry ?? {}) as Record<string, unknown>;
     const reason = patchProblem(o, nums, accepted) ?? (trial ? trialPatchProblem(o, trial) : undefined);
     if (reason) {
@@ -136,13 +140,8 @@ export async function ingestPatches(ws: string, dir: string, registry?: Registry
 export const TRIAL_PATCH_ID = "t1";
 export const TRIAL_PATCH_RATIONALE = "The trial's measurement record; the post cites it as source 1.";
 
-/** `knowledge/<...>/<subject>` out of `<subject dir>/applications/<stack>--<technique>.md`. */
-export function trialSubjectDir(ref: Pick<ArticleTrialRef, "applicationPath">): string {
-  const p = ref.applicationPath.replace(/\\/g, "/");
-  const at = p.lastIndexOf("/applications/");
-  if (at <= 0 || !p.startsWith("knowledge/")) throw new Error(`run.trial.applicationPath ${JSON.stringify(ref.applicationPath)} is not <subject dir>/applications/<file>`);
-  return p.slice(0, at);
-}
+// trialSubjectDir lives in prompt.ts, beside the technique path it also derives.
+export { trialSubjectDir };
 
 /** Why a model proposal on a trial run is refused, or undefined when it is in scope: a
  *  technique amendment whose target is a file under the subject's techniques/. The golden path

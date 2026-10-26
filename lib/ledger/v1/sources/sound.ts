@@ -17,7 +17,8 @@ import type { IngestEvent, ProjectCtx, Projection, Source, WeirItem } from "../t
 //
 // Recorded: take.create at `createdAt`; verdict.kept | verdict.rejected at
 // `judgedAt` (a verdict cleared back to `unjudged` leaves its fact in the
-// ledger, which is history, not state). A take with no judgedAt is judged at
+// ledger, which is history, not state; each verdict's key carries its judgedAt, so a flip-back is a new
+// fact). A take with no judgedAt is judged at
 // an observed instant, the facts.ts rule. No live work: a take is made by a
 // call that returns it whole (lib/sound/takes.ts), so nothing here runs.
 //
@@ -58,6 +59,12 @@ async function read(): Promise<Result<SoundShelf>> {
 
 const makerOf = (t: Pick<Take, "origin" | "provider">): Actor => (t.origin === "agent" ? { kind: "agent", id: `sound-${t.provider}` } : t.origin === "fixture" ? { kind: "machine", id: "fixture" } : OPERATOR);
 
+/** A verdict's fact key carries its instant, as forge/extract/strips do: a take judged kept, rejected,
+ *  kept again must key its third verdict apart from its first, or appendOnce reports drift and the ledger
+ *  ends on `rejected`. A verdict v1 stamped no instant on keeps the bare key (an observed instant moves
+ *  every sync and would mint a new fact each time). */
+const verdictFact = (t: Pick<Take, "verdict" | "judgedAt">): string => (t.judgedAt === null ? `verdict.${t.verdict}` : `verdict.${t.verdict}.${t.judgedAt}`);
+
 function eventsOf(s: SoundShelf, ctx: ProjectCtx): IngestEvent[] {
   const f = facts("sound", ctx);
   const out: IngestEvent[] = [];
@@ -65,7 +72,7 @@ function eventsOf(s: SoundShelf, ctx: ProjectCtx): IngestEvent[] {
     const subject = { kind: "take", id: t.id };
     const data = { runId: t.id, title: t.title, kind: t.kind, provider: t.provider, origin: t.origin };
     out.push(f.recorded(t.id, "create", t.createdAt, { actor: makerOf(t), type: "take.create", subject, lane: "audio", data }));
-    if (t.verdict !== "unjudged") out.push(f.recorded(t.id, `verdict.${t.verdict}`, t.judgedAt, { actor: OPERATOR, type: `verdict.${t.verdict}`, subject, lane: "audio", data: { runId: t.id } }));
+    if (t.verdict !== "unjudged") out.push(f.recorded(t.id, verdictFact(t), t.judgedAt, { actor: OPERATOR, type: `verdict.${t.verdict}`, subject, lane: "audio", data: { runId: t.id } }));
   }
   return out;
 }

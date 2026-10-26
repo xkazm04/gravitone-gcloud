@@ -55,7 +55,8 @@ const BEAT_BOARDS: Readonly<Record<string, readonly BeatSlot[]>> = { "glass-harb
 
 const face = (ctx: Ctx, r: ResearchRec) => researchFaceOf(ctx.project.discipline, r.choice) ?? "notebook";
 const template = (ctx: Ctx): AdTemplateId => (ctx.project.recipe.endsWith("ad-spot-30") ? "ad-spot-30" : "ad-social-15");
-export const dryEngine = (ctx: Ctx, kind: "research" | "script", seconds: number): EngineView => {
+/** The engine a dry act's stand-in lands under: the part's chosen option, marked dry. */
+export const dryEngine = (ctx: Ctx, kind: string, seconds: number): EngineView => {
   const part = ctx.plan.parts.find((p) => p.kind === kind);
   const o = part !== undefined && "options" in part ? part.options.find((x) => x.key === part.chosen) : undefined;
   return { provider: o?.provider ?? "dry", model: o?.model ?? "stand-in", usd: null, unpricedReason: "dry run", seconds, mode: "dry" };
@@ -264,6 +265,10 @@ function apply(ctx: Ctx, r: ResearchRec, op: ResearchOp): Result<ResearchRec> {
     case "pick-idea":
       if (!r.ideas.some((i) => i.id === op.ideaId)) return no(`no idea ${op.ideaId}`);
       return op.ideaId === r.picked ? no(`${op.ideaId} is already picked`) : ok({ ...r, picked: op.ideaId });
+    // The zod door admits every editor's op on every key: another kind's op reaches here at run
+    // time, and the real side's words for it (realScene.ts `nope`) are the answer, not a fall-through.
+    default:
+      return no("not a research op");
   }
 }
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { STUDIO_CREDITS_REASON } from "@gt/catalog/partOptions";
 import { parseAt } from "@gt/domain/door";
 import { errorMessage, isAppError } from "@gt/domain/errors";
 import type { Estimate } from "@gt/domain/estimate";
@@ -60,7 +61,7 @@ export type MvPorts = {
 };
 
 /** The catalog's words for a studio still (packages/catalog partOptions STUDIO_CREDITS). */
-export const STUDIO_CREDITS = "Leonardo studio credits from the prepaid plan (71 for one still, read 2026-10-12); no USD per credit is checked";
+export const STUDIO_CREDITS = STUDIO_CREDITS_REASON;
 /** A text turn: priced after the turn when the model reports it, never before. */
 export const TEXT_TURN = "a text turn bills the operator's text seat or a model that reports its cost after the turn; nothing prices it before";
 
@@ -107,19 +108,28 @@ export function mvPlan(outputs: Outputs): MissingStep[] {
  */
 export const fenceLost = (e: unknown): boolean => isAppError(e) && e.code === "conflict" && (e.detail === "taken-over" || e.detail === "released" || e.detail === "expired");
 
+/**
+ * A step's throw as the job reads it - the one failure door of the record-backed
+ * producers (this one and suno/producer.ts). A process death (the crash
+ * harness's sentinel is not an Error) and a lost fence pass up untouched and
+ * nothing is recorded; anything else is worn by the record (`wear`), and a
+ * record that cannot be written is said in the same sentence rather than
+ * swallowed. A budget refusal is a money stop, never a breaker count; the rest
+ * fails the job with the engine's sentence verbatim, under its own code.
+ */
+export async function wornFailure(e: unknown, record: string, wear: (message: string) => Promise<void>): Promise<StepOutcome> {
+  if (!(e instanceof Error)) throw e;
+  if (fenceLost(e)) throw e;
+  const message = e.message;
+  const worn = await wear(message).then(
+    () => message,
+    (w: unknown) => `${message} (and ${record} could not record it: ${errorMessage(w)})`,
+  );
+  if (isAppError(e) && e.code === "budget") return { kind: "money-stop", message: worn };
+  return { kind: "fatal", code: isAppError(e) ? e.code : "internal", message: worn };
+}
+
 export function defineMv(ports: MvPorts): Producer {
-  const fail = async (e: Error, ctx: StepContext): Promise<StepOutcome> => {
-    if (fenceLost(e)) throw e;
-    const message = e.message;
-    // The record wears the sentence; a record that cannot be written is said
-    // in the same sentence rather than swallowed.
-    const worn = await ports.fail(ctx.job, message, ctx).then(
-      () => message,
-      (w: unknown) => `${message} (and mv.json could not record it: ${errorMessage(w)})`,
-    );
-    if (isAppError(e) && e.code === "budget") return { kind: "money-stop", message: worn };
-    return { kind: "fatal", code: isAppError(e) ? e.code : "internal", message: worn };
-  };
   return {
     lane: "box.render",
     plan: (_job, outputs) => mvPlan(outputs),
@@ -141,9 +151,7 @@ export function defineMv(ports: MvPorts): Producer {
         // booked on the meter, and the driver reads the meter, not this outcome.
         return { kind: "produced", output: { step: step.name, made }, ...(made && ctx.meter.used() ? {} : { costUsd: 0 }) };
       } catch (e) {
-        // A process death (the crash harness's sentinel) is not an Error and is not ours to record.
-        if (!(e instanceof Error)) throw e;
-        return fail(e, ctx);
+        return wornFailure(e, "mv.json", (m) => ports.fail(ctx.job, m, ctx));
       }
     },
     ...(ports.health === undefined ? {} : { health: vendorHealth(ports.health) }),

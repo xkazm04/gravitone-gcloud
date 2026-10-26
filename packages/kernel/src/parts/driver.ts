@@ -16,7 +16,7 @@ import { OP_COLUMNS, readOpRow, readRecordRow, type OpRow, type Write } from "./
 // import lib/ (COMMON decision 1). The kernel holds the data, the log and the undo; every value a
 // `next` returns still passes its record's door here before a row is written.
 //
-// THE 409 SHAPE is the decision kernel's (./decision/driver.ts `stale`): a write on a stale base
+// THE 409 SHAPE is the decision kernel's (../decision/driver.ts `stale`): a write on a stale base
 // writes nothing and answers the current revision, so the editor redraws from the truth.
 
 export type PartAt = { readonly projectId: string; readonly partId: string };

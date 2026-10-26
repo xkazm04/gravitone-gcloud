@@ -124,6 +124,16 @@ export function sentenceBrief(text: string): BatchBrief {
   return { kind: "sfx", prompt: text.trim(), negative: null, durationS: 3, loop: false, promptInfluence: null, technique: ["single-sentence"], terms: { genre: [], mood: [], instrument: [], sfxCategory: null }, tempoBpm: null, key: null };
 }
 
+/** What a clip is titled by: its category, else the brief's first worded phrase, else "effect" -
+ *  never empty (a split's first piece is a string, so a `??` after it was never reached). */
+const clipHead = (brief: BatchBrief): string =>
+  brief.terms.sfxCategory?.trim() ||
+  brief.prompt
+    .split(/[.,]/)
+    .map((s) => s.trim())
+    .find((s) => s !== "") ||
+  "effect";
+
 /** The vendor request for clip `i` of `n`: identical but for its title - the batch IS its sameness. */
 export function clipRequest(brief: BatchBrief, i: number, n: number): GenerateRequest {
   return {
@@ -145,7 +155,7 @@ export function clipRequest(brief: BatchBrief, i: number, n: number): GenerateRe
     plan: null,
     huntId: null,
     nodeId: null,
-    title: `${brief.terms.sfxCategory ?? brief.prompt.split(/[.,]/)[0]?.trim() ?? "effect"} · ${i}/${n}`.slice(0, 200),
+    title: `${clipHead(brief)} · ${i}/${n}`.slice(0, 200),
   };
 }
 
@@ -169,7 +179,19 @@ const LIVE: SfxEngines = { generateTake: (req) => generateTake(req) };
 const SILENT_MP3 = new Uint8Array([0xff, 0xfb, 0x90, 0x64, ...new Array<number>(413).fill(0)]);
 
 const musicFailure = (e: unknown): StepOutcome =>
-  failureOf(e, (x) => (x instanceof MusicError ? (x.kind === "over-budget" ? "money" : x.kind === "rate-limited" || x.kind === "timeout" || x.kind === "failed" ? "retry" : "fatal") : undefined));
+  failureOf(e, (x) =>
+    x instanceof MusicError
+      ? x.kind === "over-budget"
+        ? "money"
+        : x.kind === "rate-limited" || x.kind === "timeout" || x.kind === "failed"
+          ? "retry"
+          // A store that refused to file a served clip (a lock past its wait, an unreadable ledger) may
+          // answer next time, and generateTake keeps the clip, so the retry does not buy it twice.
+          : "fatal"
+      : x instanceof SoundError && x.status >= 500
+        ? "retry"
+        : undefined,
+  );
 
 async function briefFor(ctx: StepContext, runId: string): Promise<Result<BatchBrief>> {
   const filed = await readBrief(runId);

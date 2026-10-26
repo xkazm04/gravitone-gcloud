@@ -20,16 +20,15 @@ import { EntryPill, StatusPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { STATUS } from "@gt/ui/components/status/status.ts";
 
 import type { LaneHoldView } from "../../_port/contract.ts";
-import { Holds, JobActs, type JobActsProps } from "./Acts.tsx";
+import { canReroute, Holds, JobActs, type JobActsProps } from "./Acts.tsx";
 import { MvActs, mvTrackOf, type MvChannel, type MvPart } from "./MvActs.tsx";
 import type { RunJob, RunWeir, RunsModel } from "./model.ts";
 import { RUNS_KEYS } from "./readKeys.ts";
-import { holdingOf, membersOf, when } from "./view.ts";
+import { failedOf, holdingOf, membersOf, when } from "./view.ts";
 import s from "./Runs.module.css";
 
 /** What the acts need, gathered by Runs (./Runs.tsx owns the calls and their state). */
 export type InspectorActs = Omit<JobActsProps, "job"> & {
-  readonly holds: readonly LaneHoldView[];
   readonly onAck: (lane: LaneHoldView["lane"]) => void;
   /** A music video's Regenerate and Send to Calendar (./MvActs.tsx), when the page hands its port. */
   readonly mv?: { readonly onRegenerate: (track: string, part: MvPart) => void; readonly onSchedule: (track: string, channel: MvChannel, publishAt: string) => void };
@@ -125,7 +124,7 @@ function JobView({ j, m, deps, blocked, onSelect, acts }: { readonly j: RunJob; 
         {j.projectId !== undefined && j.act !== undefined && <Button size="sm" label="plan" href={`/projects/${encodeURIComponent(j.projectId)}`} glyphAfter="chevR" />}
         <LedgerLink href={ledgerHref(j.id)} subject={j.title} />
       </div>
-      <Keycaps mode="projects" label="keys" map={RUNS_KEYS} facts={new Set(["job", ...(j.act?.reroutable === true ? ["reroutable"] : []), ...(acts.holds.length > 0 ? ["hold"] : [])])} />
+      <Keycaps mode="projects" label="keys" map={RUNS_KEYS} facts={new Set(["job", ...(j.act !== undefined && canReroute(j.act, acts.holds) ? ["reroutable"] : []), ...(acts.holds.length > 0 ? ["hold"] : [])])} />
     </>
   );
 }
@@ -184,7 +183,7 @@ function ProjectView({ id, title, m, onSelect }: { readonly id: string; readonly
 
 function Everything({ m, onSelect, acts }: { readonly m: RunsModel; readonly onSelect: (key: string) => void; readonly acts: InspectorActs }) {
   const live = m.jobs.filter((j) => j.from !== "ledger");
-  const failed = live.filter((j) => j.state === "failed" || j.state === "interrupted");
+  const failed = failedOf(m);
   const running = live.filter((j) => j.state === "running");
   const weir = m.weir.filter((w) => !w.done);
   const holding = holdingOf(m);

@@ -14,11 +14,17 @@
 .reasons{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
 .reason{padding:var(--sp-1) var(--sp-3);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:500 var(--fs-micro)/1.2 var(--mono);color:var(--muted);background:var(--ink-2)}
 .reason[aria-pressed="true"]{border-color:var(--rose);color:var(--text);background:color-mix(in srgb,var(--rose) 18%,var(--ink-2))}
+/* a keyed chip's cap (2-4), and the chips 5 asks a reason of: ringed until one is picked */
+.reason:has(.reasonCap){display:inline-flex;align-items:center;gap:var(--sp-2);padding-left:var(--sp-1)}
+.asked{padding:var(--sp-1);border-radius:var(--r-chip);box-shadow:0 0 0 var(--ring-halo) var(--rose)}
 .sm .opt{padding:var(--sp-1) var(--sp-3);font-size:var(--fs-micro)}
 
 /* the variant, large */
 .card{margin:0;min-height:0;display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-3);border-radius:var(--r-tile);background:var(--ink-3);border:var(--stroke-mark) solid transparent}
 .wide{grid-column:1/-1}
+/* a words card closing a row its stills began (a storyboard's 4th frame + its words) */
+.span1{grid-column:span 1}
+.span2{grid-column:span 2}
 .cur{box-shadow:0 0 0 var(--ring-halo) var(--cyan)}
 .kept{border-color:var(--emerald)}
 .rejected{border-color:color-mix(in srgb,var(--rose) 70%,transparent)}
@@ -31,6 +37,9 @@
 .text{align-self:stretch;width:100%;display:flex;flex-direction:column;gap:var(--sp-4);padding:var(--sp-5);background:var(--ink-2);overflow:auto}
 .claim{font:600 var(--fs-h3)/1.35 var(--sans);color:var(--ink-bright)}
 .quote{font-size:var(--fs-read);line-height:1.55;color:var(--text)}
+/* a words body's list (WordsBody): each item draws its own marker, so the spans read as a list */
+.list{display:flex;flex-direction:column;gap:var(--sp-2);padding-left:var(--sp-5)}
+.item{display:list-item;list-style:disc outside}
 .player{width:100%}
 .caption{display:flex;justify-content:space-between;gap:var(--sp-3);align-items:baseline;min-width:0}
 .capLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:var(--fs-control-sm);color:var(--text)}
@@ -55,6 +64,11 @@
 .ideaClaim{margin:0;font:600 var(--fs-body)/1.4 var(--sans);color:var(--ink-bright)}
 .ideaQuote{margin:0;font-size:var(--fs-control-sm);line-height:1.5;color:var(--text);overflow-wrap:anywhere}
 .ideaMeta{font:500 var(--fs-micro)/1.2 var(--mono);color:var(--muted)}
+/* a decision's note (spark scout-decision-graph): the saved one in the work's words, and the field that writes it */
+.ideaNote{margin:0;padding-left:var(--sp-3);border-left:var(--stroke-mark) solid var(--amber);font-size:var(--fs-control-sm);line-height:1.5;color:var(--text);overflow-wrap:anywhere}
+.noteField{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-top:var(--sp-2)}
+.noteField input{flex:1 1 0;min-width:0}
+.noteCount{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
 
 @media (prefers-reduced-motion: reduce){.nudge{animation:none;box-shadow:0 0 0 var(--ring-halo) var(--rose)}}
 .stage{height:56vh;min-height:0;border-radius:var(--r-control);overflow:hidden;background:var(--ink-2)}

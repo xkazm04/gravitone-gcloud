@@ -46,12 +46,14 @@ import { ImagingError } from "@/lib/imaging/errors";
 import { generate, recognize } from "@/lib/imaging/router";
 import type { GeneratedImages, ImageRef, Recognition } from "@/lib/imaging/types";
 import { OUT_DIRNAME } from "@/lib/fixtures/mode";
-import { blobRootOf } from "@/lib/parts/gates";
+// The kernel process's own spelling, not lib/parts/gates.ts's re-export: that module is `server-only`, and
+// the registry (which binds this producer) loads it lazily, so the worker and a CLI can import the registry.
+import { blobRootOf } from "@/lib/kernelProcess";
 import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
 
 import { codeRoot } from "./forge.ts";
 import { imageFailure, PIXEL } from "./frames.ts";
-import { STYLE_LANE } from "./styleLaunch.ts";
+import { actRefusal, STYLE_LANE } from "./styleLaunch.ts";
 
 // THE STYLE PRODUCER, BOUND (Phase 5 wave B, L54) - packages/producers/src/style's ports over
 // v1's engines: the imaging router's `generate` (a proof plate, conditioned on the style's SENT
@@ -211,6 +213,12 @@ async function palette(e: StyleEngines, req: AdoptRequest, ctx: StepContext): Pr
   const cat = await getCatalogue();
   const def = cat.styles.find((s) => s.id === req.styleId);
   if (def === undefined) return fatal("not-found", `no style ${req.styleId}`);
+  // Re-check before paying (hitl-approval: resume-after-decision), as the proofs path does: a style
+  // that gained a look since the receipt was confirmed refuses here, not after the palette read.
+  const row = current(ctx, req);
+  if (!row.ok) return fatal("not-found", row.error.message);
+  const why = actRefusal({ kind: "adopt", fromStyleId: req.styleId }, row.value.style, true);
+  if (why !== null) return fatal("refused", why);
   const dry = { value: false };
   const read = await adoptionDraft(def, cat.ledger, adoptIO(e, ctx, req, dry)).then(
     (d) => ok(d),

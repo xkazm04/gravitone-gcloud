@@ -191,6 +191,57 @@ describe("workLoop", () => {
     w.store.close();
   }, 20_000);
 
+  // A drive that comes back as an ERROR changed nothing either: a dry-only worker refuses a live
+  // head at the claim, the head stays first in line, and the next look picked it again at once.
+  it("cools a lane whose head the claim refuses (a live job under dry-only) instead of re-driving it at the speed of the loop", async () => {
+    const w = world();
+    must(enqueue(w.store, { id: "l1", of: { kind: "run", id: "l1" }, producer: "gpu", lane: "gpu.local", mode: LIVE }, operator));
+    let claims = 0;
+    const fx: Effects = {
+      ...w.fx,
+      tx: (name, fn) => {
+        if (name === "claim") claims++;
+        return w.fx.tx(name, fn);
+      },
+    };
+    const gpu = gated("gpu.local");
+    const stop = new AbortController();
+    const loop = workLoop(fx, new Map([[producerKey("gpu", "gpu.local"), gpu.p]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 60, run: { dryOnly: true } });
+    await new Promise((r) => setTimeout(r, 300));
+    stop.abort();
+    const summary = must(await loop);
+    expect(claims).toBeGreaterThan(0);
+    expect(claims).toBeLessThanOrEqual(8);
+    expect(summary.reports.every((r) => !r.report.ok && r.report.error.detail === "dry-only")).toBe(true);
+    expect(must(get(w.store, jobId("l1"))).job.state).toBe("queued");
+    w.store.close();
+  }, 20_000);
+
+  // Recovery ran only at start, so a drive another process abandoned AFTER that left its job
+  // `running` - and a lane of capacity one counted it as full on every look, forever: nothing was
+  // ever claimed there again, so the claim's own take-over sweep never ran either.
+  it("names a running job another process abandoned after start, so its lane is not counted full for good", async () => {
+    const w = world();
+    const corpse = { bootId: "boot-gone", pid: 9_997, host: hostA.host };
+    const gpu = gated("gpu.local");
+    gpu.open();
+    const stop = new AbortController();
+    const loop = workLoop(w.fx, new Map([[producerKey("gpu", "gpu.local"), gpu.p]]), { signal: stop.signal, holder: hostA, alive: (pid) => pid !== corpse.pid, idleMs: 5 });
+    await new Promise((r) => setTimeout(r, 30));
+    must(enqueue(w.store, { id: "dead", of: { kind: "run", id: "dead" }, producer: "gpu", lane: "gpu.local" }, operator));
+    // Claimed by the other process in the same tick it was enqueued: this loop never saw it queued.
+    void runJob(w.fx, { lane: "gpu.local", plan: () => [{ name: "x", estimate: { seconds: 1, usd: 0 } }], perform: () => new Promise(() => {}) }, "dead", { holder: corpse, alive: () => true, heartbeatMs: 3_600_000 });
+    expect(must(get(w.store, jobId("dead"))).job.state).toBe("running");
+    must(enqueue(w.store, { id: "next", of: { kind: "run", id: "next" }, producer: "gpu", lane: "gpu.local" }, operator));
+    await until(() => must(get(w.store, jobId("next"))).job.state === "done", 2_000).catch(() => undefined);
+    stop.abort();
+    const summary = must(await loop);
+    expect(must(get(w.store, jobId("dead"))).job.state).toBe("interrupted");
+    expect(must(get(w.store, jobId("next"))).job.state).toBe("done");
+    expect(summary.recovered).toBe(1);
+    w.store.close();
+  }, 20_000);
+
   it("recovers first, and on stop parks a drive at its next step boundary: the step booked, the job back in the queue", async () => {
     const w = world();
     must(enqueue(w.store, { id: "dead", of: { kind: "run", id: "dead" }, producer: "gpu", lane: "gpu.local" }, operator));

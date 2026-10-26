@@ -1,3 +1,4 @@
+import { AppError } from "@gt/domain/errors";
 import {
   FIXED_ORDER,
   groupLabel,
@@ -40,7 +41,7 @@ import { isColumnGroup } from "./core.ts";
 // every item - and the probe (lib/library/probe.ts) measures that shape too.
 
 const isKind = (k: string): k is LibraryKindName => (LIBRARY_KINDS as readonly string[]).includes(k);
-const zeroKinds = (): { -readonly [K in keyof LibraryPage["kindCounts"]]: number } => ({ all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0, model: 0 });
+const zeroKinds = (): { -readonly [K in keyof LibraryPage["kindCounts"]]: number } => ({ all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0, model: 0, character: 0 });
 
 export type Counts = Pick<LibraryPage, "total" | "kindCounts" | "groups" | "truncated">;
 type Tally = Map<string, Map<string, number>>;
@@ -121,7 +122,7 @@ function fromScope(
   const passed = new Uint8Array(Math.max(1, facetSel.length));
   for (const row of rows) {
     const blob = row["vids"];
-    if (!(blob instanceof Uint8Array)) continue;
+    if (!(blob instanceof Uint8Array)) throw new AppError("internal", `library row ${num(row["seq"])}: vids is not a blob`);
     const view = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
     const n = blob.byteLength >>> 2;
     passed.fill(0);

@@ -51,17 +51,26 @@ const board: Binding[] = [
   { mode: "board", keys: ["[", "]"], verb: "packet", does: "packet" },
   { mode: "board", keys: ["⏎"], verb: "open-next", does: "next packet", when: "!desk" },
 
-  { mode: "board.cull", keys: ["K"], verb: "keep", does: "keep" },
-  { mode: "board.cull", keys: ["X"], verb: "reject", does: "reject" },
+  // THE NUMBER ROW DECIDES (spark scout-storyboards, the operator: "simplify so I can use only numerics"): 1 keeps,
+  // 2-4 reject with reason 1-3 of the run's group order (@gt/domain/source REJECT_KEYS, `reasonsOf`), 5 rejects
+  // with none and stays for a chip to be clicked. K and X are unbound; a source's other reasons are the chips'.
+  { mode: "board.cull", keys: ["1"], verb: "keep", does: "keep" },
+  { mode: "board.cull", keys: ["2", "3", "4"], verb: "reason", does: "reason" },
+  { mode: "board.cull", keys: ["5"], verb: "reject", does: "reject" },
   { mode: "board.cull", keys: ["U"], verb: "undecide", does: "undecide" },
-  { mode: "board.cull", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "Q", "W", "E", "R"], verb: "reason", does: "reason" },
   { mode: "board.cull", keys: ["←"], alias: ["J"], verb: "prev", does: "move", repeat: true },
   { mode: "board.cull", keys: ["→"], alias: ["L"], verb: "next", does: "move", repeat: true },
   { mode: "board.cull", keys: [], alias: ["↑"], verb: "row-up", does: "move", repeat: true },
   { mode: "board.cull", keys: [], alias: ["↓"], verb: "row-down", does: "move", repeat: true },
-  { mode: "board.cull", keys: ["⇧K"], verb: "keep-row", does: "row" },
-  { mode: "board.cull", keys: ["⇧X"], verb: "reject-row", does: "row" },
+  // ⇧ on a digit is matched by its position too (chord.ts: Shift+1 reports "!" on a US board, `code` Digit1).
+  { mode: "board.cull", keys: ["⇧1"], verb: "keep-item", does: "item" },
+  { mode: "board.cull", keys: ["⇧2"], verb: "reject-item", does: "item" },
   { mode: "board.cull", keys: ["Z"], verb: "zoom", does: "zoom" },
+  // A note on the decision under the cursor (spark scout-decision-graph), for a source that keeps one:
+  // E opens the row's one-line field, ⏎ in it saves the note with the verdict, Esc leaves it unsaved.
+  { mode: "board.cull", keys: ["E"], verb: "note", does: "note", when: "notes" },
+  { mode: "board.cull", keys: ["⏎"], verb: "save-note", does: "save", field: "note", onControl: true },
+  { mode: "board.cull", keys: ["Esc"], verb: "cancel-note", does: "cancel", field: "note" },
   { mode: "board.cull", keys: ["⌫"], alias: ["⌘Z"], verb: "undo", does: "undo" },
   { mode: "board.cull", keys: ["Space"], verb: "play", does: "play", when: "audio" },
   { mode: "board.cull", keys: ["M"], verb: "spawn-mv", does: "spawn MV", when: "audio" },
@@ -78,7 +87,8 @@ const board: Binding[] = [
   { mode: "board.review", keys: ["↓"], alias: ["J"], verb: "next-section", does: "section", repeat: true },
   { mode: "board.review", keys: ["E"], verb: "note", does: "note", when: "draft" },
   { mode: "board.review", keys: ["⇧E"], verb: "send-edit-plan", does: "send edit plan" },
-  { mode: "board.review", keys: ["A"], verb: "approve", does: "approve → calendar" },
+  { mode: "board.review", keys: ["A"], verb: "approve", does: "approve → calendar", when: "calendar" },
+  { mode: "board.review", keys: ["A"], verb: "approve", does: "approve", when: "!calendar" },
   { mode: "board.review", keys: ["R"], verb: "reject", does: "reject" },
   { mode: "board.review", keys: ["Tab"], alias: ["⇧Tab"], verb: "directive", does: "directive", field: "note" },
   { mode: "board.review", keys: ["⏎"], verb: "attach", does: "attach", field: "note", onControl: true },
@@ -203,6 +213,19 @@ const part: Binding[] = [
   { mode: "part.frames", keys: ["A"], verb: "accept", does: "accept direction", when: "proposal" },
   { mode: "part.frames", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], verb: "adopt", does: "adopt take", when: "takes" },
   { mode: "part.frames", keys: ["Esc"], verb: "deselect", does: "deselect", when: "layer" },
+
+  // The editors that share a face with a board but answer a smaller set of its keys get their own
+  // mode, so the legend draws what they answer: the ad's take grid (frames' walk, render and
+  // adopt - no inspector views, layers or directions) and the trailer cut (script's walk and
+  // deselect - no adopt, no inspector views). Named beside `part.`, not under `part.frames` or
+  // `part.script`, because a mode inherits every row of the modes it is nested in.
+  { mode: "part.takes", keys: ["J", "K"], verb: "item", does: "unit", repeat: true },
+  { mode: "part.takes", keys: ["N"], verb: "next-missing", does: "next missing" },
+  { mode: "part.takes", keys: ["⏎"], verb: "render", does: "render", when: "unit" },
+  { mode: "part.takes", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], verb: "adopt", does: "adopt take", when: "takes" },
+
+  { mode: "part.trailer", keys: ["J", "K"], verb: "item", does: "item", repeat: true },
+  { mode: "part.trailer", keys: ["Esc"], verb: "deselect", does: "deselect", when: "item" },
 
   { mode: "part.motion", keys: ["J", "K"], verb: "item", does: "unit", repeat: true },
   { mode: "part.motion", keys: ["⏎"], verb: "direct", does: "direct", when: "plate" },

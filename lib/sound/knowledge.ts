@@ -12,7 +12,9 @@
 //     and n sits beside every figure.
 //   · NOTHING BELOW n=3 IS CLAIMED. A cell with two judged takes is counted in
 //     the "below the floor" line and never named: naming it would be a claim,
-//     and two takes is a coincidence. The floor is MIN_N, stated in both files.
+//     and two takes is a coincidence. The floor is MIN_N, stated in both files
+//     and read from the one constant the Strengths table and the lesson floor
+//     read (@gt/ui strengths.ts), so the page and the table cannot disagree.
 //   · A lesson is a person's reasoning across takes — INFERRED — and it is
 //     quoted verbatim with the evidence it was confirmed on (n, keep rate,
 //     mean score, the take ids), never paraphrased into authority.
@@ -23,11 +25,13 @@
 // the ledger, never the wall clock, so regenerating an unchanged ledger is a
 // no-op in git and a diff of these files is always a diff in the evidence.
 
+import { MIN_N } from "@gt/ui/components/audio/strengths.ts";
+
 import { computeInsights, FACETS_FOR, keepRate } from "./insights";
 import type { LedgerFile } from "./store";
 import type { InsightCell, Lesson, SoundKind } from "./types";
 
-export const MIN_N = 3;
+export { MIN_N };
 export const KNOWLEDGE_COMMAND = "npx tsx pipeline/sound.mts knowledge";
 export const LEDGER_REL = "pipeline/sound/ledger.json";
 

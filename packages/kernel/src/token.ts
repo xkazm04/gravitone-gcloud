@@ -46,11 +46,20 @@ import type { Reader, Store, Tx } from "./store.ts";
 // Pure core first (parse, plan, judge: time and randomness are parameters),
 // then the driver (one table, each act with its Event).
 
-export const TOKEN_SCOPES = ["money", "read"] as const;
+export const TOKEN_SCOPES = ["money", "read", "act"] as const;
 export type TokenScope = (typeof TOKEN_SCOPES)[number];
 
-/** What a door needs from a token: a money door needs money; a read door takes either. */
-export type TokenUse = "money" | "read";
+/** What a door needs from a token: a money door spends, an act door writes without spending
+ *  (the agent surface: dry runs, free live runs, spend requests), a read door reads. */
+export type TokenUse = "money" | "read" | "act";
+
+/** Which uses each scope admits. `act` is the agent's (spark athena-control-mcp): it reads and makes
+ *  non-spending writes, and every money door refuses it by scope. */
+const ADMITS: { readonly [S in TokenScope]: readonly TokenUse[] } = {
+  money: ["money", "act", "read"],
+  act: ["act", "read"],
+  read: ["read"],
+};
 
 export const TOKEN_PREFIX = "gt_";
 export const SECRET_BYTES = 32;
@@ -116,14 +125,14 @@ export function parseTtl(text: string): Result<number> {
   return ok(Number(m[1]) * (m[2] === "d" ? DAY_MS : HOUR_MS));
 }
 
-export const scopeAdmits = (scope: TokenScope, use: TokenUse): boolean => scope === "money" || use === "read";
+export const scopeAdmits = (scope: TokenScope, use: TokenUse): boolean => ADMITS[scope].includes(use);
 
 export type MintInput = { readonly name: string; readonly scope: TokenScope; readonly ttlMs?: number };
 
 /** The row and the plaintext a mint would produce at `now`, or why it may not. */
 export function mintPlan(input: MintInput, now: string, random: (n: number) => Uint8Array): Result<{ record: Stored; token: string }> {
   if (!NAME_RE.test(input.name)) return err("invalid", `token name "${input.name}" must be 1-64 of a-z 0-9 . _ - (it names the caller, e.g. dojo-skill)`);
-  if (!(TOKEN_SCOPES as readonly string[]).includes(input.scope)) return err("invalid", `token scope "${String(input.scope)}" is not money|read`);
+  if (!(TOKEN_SCOPES as readonly string[]).includes(input.scope)) return err("invalid", `token scope "${String(input.scope)}" is not ${TOKEN_SCOPES.join("|")}`);
   const ttl = input.ttlMs ?? DEFAULT_TTL_MS;
   if (!Number.isInteger(ttl) || ttl < MIN_TTL_MS || ttl > MAX_TTL_MS) {
     return err("invalid", `a token lives between ${MIN_TTL_MS / HOUR_MS}h and ${MAX_TTL_MS / DAY_MS}d; ${Number.isFinite(ttl) ? `${Math.round(ttl / HOUR_MS)}h` : String(ttl)} was asked. Mint again before it ends instead.`);
@@ -163,7 +172,8 @@ export function judge(stored: Stored | undefined, secret: string, nowMs: number)
   const equal = timingSafeEqual(want, got);
   if (!(equal && stored !== undefined)) return { ok: false, why: "unknown" };
   if (stored.revokedAt !== undefined) return { ok: false, why: "revoked" };
-  if (nowMs >= Date.parse(stored.expiresAt)) return { ok: false, why: "expired" };
+  // "Not before the end", so an end that is not an instant (NaN) refuses rather than admits.
+  if (!(nowMs < Date.parse(stored.expiresAt))) return { ok: false, why: "expired" };
   return { ok: true, token: publicOf(stored) };
 }
 
@@ -194,6 +204,35 @@ BEGIN SELECT RAISE(ABORT, 'a revocation is final'); END;
 CREATE TRIGGER tokens_never_deleted BEFORE DELETE ON tokens
 BEGIN SELECT RAISE(ABORT, 'tokens are revoked, never deleted'); END;`,
     },
+    {
+      // The `act` scope (spark athena-control-mcp): an agent's token reads and writes without spending.
+      // SQLite cannot alter a CHECK, so the table is rebuilt and renamed. Nothing holds a foreign key to
+      // it; DROP TABLE drops its triggers and fires no DELETE trigger, so `tokens_never_deleted` does not
+      // refuse the drop, and all three triggers are recreated on the new table. The only index v1 made
+      // is the UNIQUE on hash, which the new table's own constraint recreates.
+      version: 2,
+      sql: `
+CREATE TABLE tokens_v2 (
+  id TEXT PRIMARY KEY CHECK (length(id) = 12),
+  name TEXT NOT NULL,
+  scope TEXT NOT NULL CHECK (scope IN ('money', 'read', 'act')),
+  hash TEXT NOT NULL UNIQUE CHECK (length(hash) = 64),
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL CHECK (expires_at > created_at),
+  revoked_at TEXT,
+  last_used_at TEXT
+) WITHOUT ROWID;
+INSERT INTO tokens_v2 (id, name, scope, hash, created_at, expires_at, revoked_at, last_used_at)
+  SELECT id, name, scope, hash, created_at, expires_at, revoked_at, last_used_at FROM tokens;
+DROP TABLE tokens;
+ALTER TABLE tokens_v2 RENAME TO tokens;
+CREATE TRIGGER tokens_fixed_at_mint BEFORE UPDATE OF id, name, scope, hash, created_at, expires_at ON tokens
+BEGIN SELECT RAISE(ABORT, 'a token''s id, name, scope, hash and life are fixed at mint'); END;
+CREATE TRIGGER tokens_revocation_final BEFORE UPDATE OF revoked_at ON tokens WHEN OLD.revoked_at IS NOT NULL
+BEGIN SELECT RAISE(ABORT, 'a revocation is final'); END;
+CREATE TRIGGER tokens_never_deleted BEFORE DELETE ON tokens
+BEGIN SELECT RAISE(ABORT, 'tokens are revoked, never deleted'); END;`,
+    },
   ],
 };
 
@@ -202,8 +241,9 @@ const rowSchema = z.object({
   name: z.string(),
   scope: z.enum(TOKEN_SCOPES),
   hash: z.string().regex(HASH_RE),
-  created_at: z.string(),
-  expires_at: z.string(),
+  // Instants, not text: the schema's CHECK compares strings, and 'never' > '2026-...' passes it.
+  created_at: z.iso.datetime(),
+  expires_at: z.iso.datetime(),
   revoked_at: z.string().nullable(),
   last_used_at: z.string().nullable(),
 });

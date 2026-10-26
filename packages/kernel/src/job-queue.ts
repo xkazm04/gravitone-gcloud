@@ -144,14 +144,39 @@ export function move(store: Store, jobId: JobId, dir: "earlier" | "later", actor
       .map((raw) => must(parseAt("job order", ordRow, raw)));
     const at = line.findIndex((x) => x.id === job.id);
     const mine = line[at];
-    const other = line[dir === "earlier" ? at - 1 : at + 1];
+    const step = dir === "earlier" ? -1 : 1;
+    const other = line[at + step];
     if (mine === undefined || other === undefined) return job;
-    // Equal orders (two jobs enqueued with the same explicit `order`) cannot
-    // be swapped by value; the mover takes a place strictly past its neighbour.
-    const [a, b] = mine.ord === other.ord ? [other.ord + (dir === "earlier" ? -0.5 : 0.5), mine.ord] : [other.ord, mine.ord];
-    t.run("UPDATE jobs SET ord = ? WHERE id = ?", a, mine.id);
-    t.run("UPDATE jobs SET ord = ? WHERE id = ?", b, other.id);
-    jobEvent(t, actor, job, "job.reordered", { dir, swappedWith: other.id, from: mine.ord, to: a });
+    // The line is (ord, n), so a mover that TOOK its neighbour's order sorted by its enqueue
+    // number among every job at that order and could jump a whole tie (three jobs at one order;
+    // a re-route that lands with the order it had on its old lane). The mover takes a place
+    // strictly between its neighbour and the job beyond it; only when those two tie is there no
+    // such number, and then the tied run alone is spread over its own span in the new order.
+    const beyond = line[at + 2 * step];
+    const mid = beyond === undefined ? other.ord + step : (beyond.ord + other.ord) / 2;
+    const between = beyond === undefined || (mid !== beyond.ord && mid !== other.ord);
+    const placed = between ? [{ id: mine.id, ord: mid }] : spread(line, at, at + step);
+    for (const p of placed) t.run("UPDATE jobs SET ord = ? WHERE id = ?", p.ord, p.id);
+    const to = placed.find((p) => p.id === mine.id)?.ord ?? mine.ord;
+    jobEvent(t, actor, job, "job.reordered", { dir, swappedWith: other.id, from: mine.ord, to });
     return job;
   });
+}
+
+/** Swap `i` and `j` in the line, then give the run holding the neighbour's tied order distinct orders inside its span. */
+function spread(line: readonly { id: string; ord: number }[], i: number, j: number): { id: string; ord: number }[] {
+  const tie = line[j]?.ord;
+  const order = [...line];
+  const a = order[i];
+  const b = order[j];
+  if (a === undefined || b === undefined || tie === undefined) return [];
+  order[i] = b;
+  order[j] = a;
+  const inRun = (x: { id: string; ord: number }): boolean => x.ord === tie || x.id === a.id;
+  const s = order.findIndex(inRun);
+  const e = order.length - 1 - [...order].reverse().findIndex(inRun);
+  const below = order[s - 1]?.ord ?? tie - 1;
+  const above = order[e + 1]?.ord ?? tie + 1;
+  const gap = (above - below) / (e - s + 2);
+  return order.slice(s, e + 1).map((x, k) => ({ id: x.id, ord: below + gap * (k + 1) }));
 }

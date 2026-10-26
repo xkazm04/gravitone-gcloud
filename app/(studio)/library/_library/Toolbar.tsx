@@ -1,9 +1,9 @@
 "use client";
 
 // The results' head and toolbar (library.html `.lhead`, `.ltool`, `.fchips`; library.js
-// `renderHead`): where the filter has narrowed to, how many it holds and how many the DOM holds
-// of them, the search with its grammar, sort, grid or list, size, the detail toggle, and the
-// filter as chips that remove themselves.
+// `renderHead`): where the filter has narrowed to, how many it holds, the search with its grammar, sort, grid or list, size, the detail toggle, and the
+// filter as chips that remove themselves. How many rows the DOM holds of the total is the head's
+// `data-rendered`, the live lane's figure: it was a chip, the screen narrating its own window.
 //
 // Free text applies on a pause in typing or on ⏎/↓ (the prototype's 110 ms debounce, lengthened
 // because each application is a server render here); the facets apply on click. A query the
@@ -102,7 +102,7 @@ export function Toolbar(p: ToolbarProps) {
   const active = activeCount(p.u.f);
   return (
     <>
-      <div className={s.lhead}>
+      <div className={s.lhead} data-rendered={p.shown}>
         <span className={s.crumbs}>
           <Crumbs trail={trail} here={here} />
         </span>
@@ -110,9 +110,6 @@ export function Toolbar(p: ToolbarProps) {
         <span className={s.sp} />
         <span aria-live="polite" className={s.total}>
           <Tally value={count(p.total)} label="items" />
-        </span>
-        <span className={s.rendered} data-testid="rendered">
-          <Chip label={`rendered ${count(p.shown)} of ${count(p.total)}`} casing="lower" />
         </span>
       </div>
       <div className={s.tool} role="toolbar" aria-label="library tools">

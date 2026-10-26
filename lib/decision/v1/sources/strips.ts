@@ -11,7 +11,7 @@ import type { ApplyClaim } from "@gt/kernel/decision/apply";
 import type { InitialDecision } from "@gt/kernel/decision/driver";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
-import { commitStripRun, getStripRun, patchStripVerdicts, planStripCommit, previewStripCommit, stripFileStat, stripsRoot } from "../../../foundry/strips/store.ts";
+import { commitStripRun, getStripRun, judgedVerdicts, patchStripVerdicts, planStripCommit, previewStripCommit, stripFileStat, stripsRoot } from "../../../foundry/strips/store.ts";
 import { JUDGEABLE, STRIP_COMMITTABLE } from "../../../foundry/strips/triage.ts";
 import { STRIP_CHIPS, type StripCard, type StripChip, type StripRun, type StripVerdict, type StripVerdicts } from "../../../foundry/strips/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
@@ -23,9 +23,10 @@ import {
   decisionMap,
   foundryFileUrl,
   instantOr,
-  mediaRef,
+  mediaRefs,
   mintPacket,
   runIdOf,
+  sameVerdict,
   v1Call,
   v1DigestOf,
   type AdapterRef,
@@ -81,7 +82,7 @@ async function read(ref: AdapterRef): Promise<Result<StripsV1>> {
   const detail = await v1Call(() => getStripRun(id));
   if (!detail.ok) return detail;
   const { run, verdicts, rev } = detail.value;
-  const media: Record<string, BlobRef> = {};
+  const files: { key: string; abs: string }[] = [];
   for (const c of rendered(run)) {
     const rel = playback(c);
     if (rel === undefined) continue;
@@ -91,10 +92,12 @@ async function read(ref: AdapterRef): Promise<Result<StripsV1>> {
       if (at.error.code === "not-found") continue;
       return at;
     }
-    const ref = await mediaRef(at.value.abs);
-    if (ref.ok) media[c.id] = ref.value;
-    else if (ref.error.code !== "not-found") return ref;
+    files.push({ key: c.id, abs: at.value.abs });
   }
+  // Hashed together, eight at a time, once every path has been resolved.
+  const hashed = await mediaRefs(files);
+  if (!hashed.ok) return hashed;
+  const media: Record<string, BlobRef> = Object.fromEntries(hashed.value);
   const map = await v1Call(() => stripFileStat(id, "verdicts.json"));
   const verdictsAt = map.ok ? await stat(map.value.abs).then((s) => s.mtime.toISOString(), () => instantOr(run.at, new Date(0).toISOString()).at) : instantOr(run.at, new Date(0).toISOString()).at;
   return ok({ run, verdicts, rev, media, verdictsAt });
@@ -112,9 +115,6 @@ export function importVerdict(v: StripVerdict): Imported {
   const note = [moved.length > 0 ? `chips: ${moved.join(", ")}` : "", v.note ?? ""].filter((s) => s.trim() !== "").join("\n");
   return { verdict: v.verdict, reasons, ...(note === "" ? {} : { note }), moved };
 }
-
-const same = (a: { verdict: string | null; reasons: readonly string[]; note?: string }, b: { verdict: string | null; reasons: readonly string[]; note?: string }): boolean =>
-  a.verdict === b.verdict && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "");
 
 function recordOf(d: Decision): StripVerdict {
   const chips = STRIP_CHIPS.filter((c) => d.reasons.includes(c));
@@ -218,7 +218,7 @@ function effectiveVerdicts(v1: StripsV1, at: DecisionsAt, items: ReadonlySet<str
 
 /** What apply leaves in v1 for one card: v1's own record when the decision is still the imported one. */
 function writtenOf(current: StripVerdict | undefined, d: Decision): StripVerdict {
-  return current !== undefined && same(importVerdict(current), d) ? current : recordOf(d);
+  return current !== undefined && sameVerdict(importVerdict(current), d) ? current : recordOf(d);
 }
 
 function digestOf(v1: StripsV1): string {
@@ -230,7 +230,7 @@ function consequence(v1: StripsV1, at: DecisionsAt): Result<Preview> {
   if (no !== undefined) return err("refused", `strip run ${v1.run.id}: ${no}`);
   const cards = judgeable(v1);
   const ids = new Set(cards.map((c) => c.id));
-  const verdicts = effectiveVerdicts(v1, at, ids);
+  const verdicts = judgedVerdicts(v1.run, effectiveVerdicts(v1, at, ids));
   const plan = planStripCommit(v1.run, verdicts);
   // The universe's own root (store.ts `stripsRoot`, Phase 4 L33), repo-relative as the consequence names it.
   const runRel = (rel: string) => `${path.relative(process.cwd(), stripsRoot()).replace(/\\/g, "/")}/${v1.run.id}/${rel}`;
