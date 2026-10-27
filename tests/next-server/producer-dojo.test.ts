@@ -168,6 +168,7 @@ describe.skipIf(PYTHON === undefined)("a local cycle as a dry job", () => {
     for (const tag of ["t0", "t1", "t2"]) expect(statSync(path.join(dir, "pairs", `p1--baseline--${tag}.png`)).size).toBeGreaterThan(0);
   });
 
+  // Spawns child processes: under the pre-push gate's parallel load (and a box drawing at night) it runs past vitest's 5 s default.
   it("dojo_run.py --detach, the Node launcher and launchDojo name one job; worker.py drives it", () => {
     const u = universe();
     const dir = cycle(u, "one", LOCAL_IMAGE);
@@ -180,7 +181,7 @@ describe.skipIf(PYTHON === undefined)("a local cycle as a dry job", () => {
     k.close();
     const w = py(u, [WORKER, "--once", "--json"]);
     expect(linesOf(w)).toEqual([{ jobId: "job:run:dojo:one", lane: "gpu.local", producer: "dojo", outcome: "done", state: "done" }]);
-  });
+  }, 60_000);
 
   it("a readback that read nothing is not cached: the job fails counting it, and a retry reads only that unit", () => {
     const u = universe();

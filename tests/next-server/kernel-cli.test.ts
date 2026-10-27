@@ -50,12 +50,13 @@ describe("pipeline/kernel.mts migrations", () => {
     expect(again.ok && again.value.applied.map((a) => a.version)).toEqual([2]);
   });
 
+  // Spawns child processes: under the pre-push gate's parallel load (and a box drawing at night) it runs past vitest's 5 s default.
   it("clear of a module with no mark exits 1 and changes nothing; a missing store exits 2", () => {
     const file = seededStore("other.sqlite");
     expect(run(file, "migrations", "clear", "elsewhere").status).toBe(1);
     expect(run(file, "migrations", "status").stdout).toMatch(/probe v2 failed/);
     expect(run(path.join(dir, "absent.sqlite"), "migrations", "status").status).toBe(2);
-  });
+  }, 60_000);
 
   it("usage errors exit 2", () => {
     const out = spawnSync(process.execPath, ["pipeline/kernel.mts", "migrations"], { encoding: "utf8", windowsHide: true });

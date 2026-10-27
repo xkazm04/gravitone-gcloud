@@ -10,6 +10,9 @@ import path from "node:path";
 
 export const ROOT = mkdtempSync(path.join(os.tmpdir(), "gt-scout-"));
 process.env["SCOUT_STORE_DIR"] = path.join(ROOT, "scout");
+// The muse archive too: unset, a read of both wings (the scout graph) takes the checkout's foundry-out/scout-muse,
+// which is empty in CI and holds the operator's archived nights on the box - the same test then passes only in CI.
+process.env["SCOUT_MUSE_STORE_DIR"] = path.join(ROOT, "scout-muse");
 process.env["SCOUT_CHANNELS_DIR"] = path.join(ROOT, "scout-channels");
 process.env["EXTRACT_STORE_DIR"] = path.join(ROOT, "extract");
 process.env["FOUNDRY_DIR"] = path.join(ROOT, "catalogue");

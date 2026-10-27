@@ -216,6 +216,7 @@ describe("the repeat guard", () => {
 });
 
 describe("the ideas act refuses a repeat with nothing written", () => {
+  // Spawns child processes: under the pre-push gate's parallel load (and a box drawing at night) it runs past vitest's 5 s default.
   it("a later night repeating a card, a look, or a card twice in one batch writes no candidate", async () => {
     writeJson(path.join(ROOT, "scout", "seeds", SEED_BATCH, "batch.json"), seedBatch);
     const seeded = (b: Record<string, unknown>) => ({ ...b, seed: SEED });
@@ -239,7 +240,7 @@ describe("the ideas act refuses a repeat with nothing written", () => {
     const same = await cli(["ideas", second, "--json", batch([seeded(character("Ines Roca", "c-look"))])]);
     expect(same.err).toBe(`idea 1: card Ines Roca already drawn in ${second}/c-01 (undecided)`);
     expect(await ideasOf(second)).toHaveLength(1);
-  });
+  }, 60_000);
 });
 
 describe("the taste brief", () => {
