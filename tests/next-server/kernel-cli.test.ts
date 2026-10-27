@@ -33,6 +33,7 @@ const run = (file: string, ...args: string[]) =>
   spawnSync(process.execPath, ["pipeline/kernel.mts", ...args], { encoding: "utf8", windowsHide: true, env: { ...process.env, GRAVITONE_STORE_PATH: file, GRAVITONE_DRY_ONLY: "1" } });
 
 describe("pipeline/kernel.mts migrations", () => {
+  // Spawns the kernel CLI: under the pre-push gate's parallel load (and a box drawing at night) it runs past vitest's 5 s default.
   it("status names the standing mark and its error; clear lifts it and migrate then runs", () => {
     const file = seededStore("refused.sqlite");
     const status = run(file, "migrations", "status");
@@ -48,7 +49,7 @@ describe("pipeline/kernel.mts migrations", () => {
     const again = migrate(s.value, [good]);
     s.value.close();
     expect(again.ok && again.value.applied.map((a) => a.version)).toEqual([2]);
-  });
+  }, 60_000);
 
   // Spawns child processes: under the pre-push gate's parallel load (and a box drawing at night) it runs past vitest's 5 s default.
   it("clear of a module with no mark exits 1 and changes nothing; a missing store exits 2", () => {

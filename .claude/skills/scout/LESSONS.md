@@ -248,3 +248,17 @@ run 3's clusters + run 2's rows are complementary evidence over the same gallery
   Restarting the worker: `schtasks /End /TN "Gravitone worker"` ends the PowerShell wrapper, not `node
   workers\runner.mts` - after `/Run` two runners were live, the old one still on the night's env. After a restart,
   list `runner.mts` processes and kill any whose start time predates the restart (only when no job runs).
+
+## 2026-10-27-2 night
+
+- **GPU memory deadlocks the storyboards, not commit.** nvidia-smi reports a 62.5 GB GPU on this unified-memory box
+  (ComfyUI sees 117.8 GB). After a board, ComfyUI keeps Flux resident (~50 GB); admission adds the next board's
+  charge on top (56.5 projected vs the 53.1 mark) and then holds gpu.local until under 46.9 GB, which a resident Flux
+  never reaches. One board ran per ComfyUI `/free`. Tonight ran a bounded helper that POSTs `/free` only while
+  ComfyUI's queue is empty and the worker's last line says a gpu.local job waits on vram (never a restart). Lasting
+  fixes: `MACHINE_VRAM_GB` from ComfyUI's `vram_total` in lib/resources/probe.ts, and the resident-aware ComfyUI
+  charge in packages/domain/src/resource.ts admit already named above.
+- `doctor` exits 1 on the suno line whenever music is paused, and `--tracks 0` is a usage error (exit 2): read the
+  failing lines, and when suno is the only one the night goes on.
+- The pre-push gate's next-unit failed on scout-graph (3 cases) because tests/next-server/scout-cli-harness.ts never
+  set SCOUT_MUSE_STORE_DIR: on this box the test read the operator's foundry-out/scout-muse, empty in CI. Fixed.
