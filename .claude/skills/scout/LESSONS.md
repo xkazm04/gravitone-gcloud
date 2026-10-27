@@ -232,3 +232,19 @@ run 3's clusters + run 2's rows are complementary evidence over the same gallery
     resident-aware charge for comfy jobs (lib/resources/profiles + packages/domain/src/resource.ts admit).
   - **The night-fill's band test is all-resources**: with the GPU at 96% it launched nothing all night, while CPU sat at
     ~20% and the 12 queued Ollama drafts (CPU/unified-memory work) waited. A per-lane or per-resource test would fill it.
+- 2026-10-26 night (first channel night): **never restart ComfyUI under a live worker.** A watchdog restarted ComfyUI to
+  clear its resident commit charge in the gap after admission let a storyboard start; that storyboard and the next 17
+  failed in under a minute ("ComfyUI is not reachable"), because the storyboard producer fails a panel at once when
+  ComfyUI does not answer and the gpu.local queue then drains through every job. Failed storyboards still count to the
+  night's storyboardCap, so the episodes (back to outline-kept, nothing lost) had to be relaunched on a second night.
+  The admission deadlock it tried to work around is real (MACHINE_MEM_HIGH 0.9 against a commit limit that shrank from
+  ~124 to 112 GB: 102 projected vs 100.8 mark); the fixes belong in code - a resident-aware ComfyUI charge in
+  admission, and a storyboard that waits for ComfyUI rather than failing on a short outage
+  (lib/imaging/local/flux2.ts reachability, lib/producers/scoutStoryboardActs.ts).
+  Stopping the background task did NOT stop it: TaskStop ended the harness's handle, but the `bash watchdog.sh`
+  process lived on and restarted ComfyUI again at 00:52, failing 14 more storyboards on the second night. A
+  background loop that acts on the box is killed by its process id (find it by command line), and its script is
+  renamed so nothing re-runs it; then check its log stops growing. Better: never start a loop that acts on the box.
+  Restarting the worker: `schtasks /End /TN "Gravitone worker"` ends the PowerShell wrapper, not `node
+  workers\runner.mts` - after `/Run` two runners were live, the old one still on the night's env. After a restart,
+  list `runner.mts` processes and kill any whose start time predates the restart (only when no job runs).
