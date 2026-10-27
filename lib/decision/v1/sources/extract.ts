@@ -13,6 +13,7 @@ import type { InitialDecision } from "@gt/kernel/decision/driver";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
 import { planExtractCommit } from "../../../foundry/commitPlan.ts";
+import { exemplarRound } from "../../../foundry/extract/helpers.ts";
 import { commitExtractRun, EXTRACT_ROOT, getExtractRun, patchExtractVerdicts, previewExtractCommit, resolveInExtract } from "../../../foundry/extract/store.ts";
 import type { ExtractManifest, ExtractVerdictRecord, ExtractVerdicts, ExtractedStyle } from "../../../foundry/extract/types.ts";
 import { readStyleDefs } from "../../../foundry/catalogue.ts";
@@ -31,6 +32,7 @@ import {
   mediaRefs,
   mintPacket,
   runIdOf,
+  sameVerdict,
   v1By,
   v1Call,
   v1DigestOf,
@@ -82,16 +84,11 @@ export type ExtractV1 = {
 /** One image a look produced, as a packet cell. */
 type Cell = { readonly id: string; readonly look: string; readonly file: string; readonly role: "replica" | "transfer" | "source"; readonly score: number | null; readonly label: string; readonly prompt?: string };
 
-/** The best round of a replica: the highest-scoring one with a file (commitExtractRun's own pick). */
-function bestRound(r: ExtractedStyle["replicas"][number]) {
-  return [...r.rounds].filter((x) => x.file).sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
-}
-
 /** A look's cells. A look that drew nothing shows its first gallery source, disclosed. */
 function cellsOf(run: ExtractManifest, s: ExtractedStyle): Cell[] {
   const out: Cell[] = [];
   s.replicas.forEach((r, i) => {
-    const best = bestRound(r);
+    const best = exemplarRound(r.rounds);
     if (best?.file) out.push({ id: `${s.id}/replica-${i + 1}`, look: s.id, file: best.file, role: "replica", score: best.score, label: `replica of ${r.source}`, prompt: best.prompt });
   });
   s.transfers.forEach((t, i) => {
@@ -177,8 +174,8 @@ export function lookDecision(all: readonly (Decision | undefined)[], order: read
   return { verdict: "reject", reasons, ...(note === "" ? {} : { note }), by, at };
 }
 
-export const same = (a: { verdict: string | null; reasons: readonly string[]; note?: string }, b: { verdict: string | null; reasons: readonly string[]; note?: string }): boolean =>
-  a.verdict === b.verdict && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "");
+/** The import comparator, under the name ./scout.ts reads it by. */
+export const same = sameVerdict;
 
 export function recordOf(d: LookDecision): ExtractVerdictRecord {
   return { verdict: d.verdict === "keep" ? "keep" : "reject", at: d.at, ...(d.reasons.length > 0 ? { reasons: [...d.reasons] } : {}), ...(d.note === undefined ? {} : { note: d.note }), by: v1By(d.by) };
@@ -245,7 +242,8 @@ export function planLooks(v1: ExtractV1): Result<OpenPlan> {
     if (rec === undefined || (rec.verdict !== "keep" && rec.verdict !== "reject")) continue;
     const imp = importVerdict(rec);
     const when = instantOr(rec.at, v1.verdictsAt);
-    if (imp.lost.length > 0) losses.push({ candidate: look, grade: "approximate", reason: `v1 tag(s) ${imp.lost.join(", ")} are not extract reasons; kept in the note` });
+    // On a keep EVERY tag is lost (the door gives reasons to a reject only), extract words included.
+    if (imp.lost.length > 0) losses.push({ candidate: look, grade: "approximate", reason: rec.verdict === "reject" ? `v1 tag(s) ${imp.lost.join(", ")} are not extract reasons; kept in the note` : `v1 tag(s) on a keep (${imp.lost.join(", ")}) ride in the note; only a reject carries reasons` });
     if (imp.cut) losses.push({ candidate: look, grade: "approximate", reason: `v1's note is longer than ${SPEC.noteMax} characters; the packet holds it cut` });
     if (!when.exact) losses.push({ candidate: look, grade: "approximate", reason: "v1 recorded no readable instant; the verdict map's write time stands in" });
     // v1 decided the look whole: every image of it carries the look's verdict.

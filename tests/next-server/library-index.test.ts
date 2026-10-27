@@ -123,7 +123,7 @@ function queries(n: number): LibraryQuery[] {
   const pick = <T>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)] as T;
   const out: LibraryQuery[] = [];
   for (let i = 0; i < n; i++) {
-    const kind = rnd() < 0.3 ? undefined : pick(["image", "plate", "style", "motion", "audio", "video", "doc"] as const);
+    const kind = rnd() < 0.3 ? undefined : pick(["image", "plate", "style", "motion", "audio", "video", "doc", "character"] as const);
     const pool = ref.filter((r) => kind === undefined || r.kind === kind);
     const facets: Record<string, string[]> = {};
     const groups = railGroups(kind ?? "all").map((g) => g.key);
@@ -180,5 +180,16 @@ describe("the index answers the prototype's rule", () => {
     const mood = got.value.groups.find((g) => g.key === "mood");
     expect(mood?.values.find((v) => v.value === "no-such-mood")).toMatchObject({ count: 0, selected: true });
     expect(got.value.total).toBe(0);
+  });
+});
+
+describe("the corpus generator", () => {
+  it("draws every kind at each size from 100 up, and names a kind it could not draw", () => {
+    for (const n of [100, 120, 150, 166, 167, 400]) {
+      const kinds = new Set(generateCorpus(n).entries.map((e) => e.item.kind));
+      expect([n, kinds.size]).toEqual([n, 9]);
+    }
+    // Below 100 a sliver kind may round to nought, and that is allowed, not thrown.
+    expect(generateCorpus(60).entries).toHaveLength(60);
   });
 });

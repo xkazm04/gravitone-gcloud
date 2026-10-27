@@ -17,12 +17,12 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from job import FenceConflict, Jobs, LaneHeld, LeaseLost, NotQueued, Refused, SlotsBusy, Stopped, connect  # noqa: E402
-from verify_events import BASE_COLUMNS, OPTIONAL, verify  # noqa: E402
+from verify_events import BASE_COLUMNS, OPTIONAL, usage, verify  # noqa: E402
 
 
 def main(argv):
     if len(argv) != 3:
-        print(__doc__.strip().splitlines()[4].strip(), file=sys.stderr)
+        print(usage(__doc__), file=sys.stderr)
         return 2
     with open(argv[1], encoding="utf-8") as f:
         spec = json.load(f)

@@ -5,7 +5,7 @@
 // same point in the order of findings as before (after engineFit, before gaps).
 // `say` is the shape half's own finding sink, passed in unchanged.
 
-import { arr, isObj, LEAPS, str, USES } from "./shape-helpers";
+import { arr, FALSIFIER_KINDS, isObj, LEAPS, str, USES } from "./shape-helpers";
 
 /**
  * Check the optional `dimensions` and `conclusions` fields, appending each
@@ -56,6 +56,16 @@ export function columnFindings(
         if (!arr(raw.restsOn)) say(`${at}.restsOn`, `${at}.restsOn must be an array of fact ids.`);
         if (!(str(raw.falsifiableBy) || isObj(raw.falsifiableBy)))
           say(`${at}.falsifiableBy`, `${at}.falsifiableBy is missing. A conclusion that cannot be wrong is a vibe.`);
+        // The typed form (conclusions.ts::Falsifier) is read by conclusionIssues,
+        // which trims `test` and branches on `kind` and `binds`: an object missing
+        // them passed here and threw in the script gate.
+        else if (isObj(raw.falsifiableBy)) {
+          const fb = raw.falsifiableBy;
+          if (!str(fb.test)) say(`${at}.falsifiableBy.test`, `${at}.falsifiableBy.test is missing. A typed falsifier states the test in words.`);
+          if (!FALSIFIER_KINDS.includes(fb.kind as string))
+            say(`${at}.falsifiableBy.kind`, `${at}.falsifiableBy.kind must be one of ${FALSIFIER_KINDS.join(", ")}.`, String(fb.kind));
+          if (!str(fb.binds)) say(`${at}.falsifiableBy.binds`, `${at}.falsifiableBy.binds is missing: "whole-claim" or a clause id.`);
+        }
         if (!USES.includes(raw.useFor as string)) say(`${at}.useFor`, `${at}.useFor must be one of ${USES.join(", ")}.`, String(raw.useFor));
       });
   }

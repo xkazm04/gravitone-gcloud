@@ -5,8 +5,26 @@
 // ship schema 2 together. `normalizeLedgerRow` reads either into the schema-2
 // shape; the file itself is not migrated here.
 
+import path from "node:path";
+
 import { FoundryError } from "../runStore";
-import type { TrainingLedgerRow, TrainingLedgerRowV2, TrainingPin } from "./types";
+import type { Improvement, TrainingLedgerRow, TrainingLedgerRowV2, TrainingPin } from "./types";
+
+/** Ledger `thumb` paths are repo-relative with forward slashes on every OS. */
+export const THUMBS_REL = "pipeline/foundry/training/thumbs";
+
+/** The picture an approved improvement keeps in git: `src` cycle-relative, `name` in the thumbs
+ *  dir, `rel` as the ledger records it. The loop names the chosen arm's FILE as the thumbnail
+ *  (pipeline/foundry/dojo_judge.py), which on a video cycle is a .webm; the arm's poster is the
+ *  image it keeps then. The commit (./store.ts) and the Board's preview (decision/v1/sources/dojo.ts)
+ *  both read this, so the file the preview names is the file the commit writes. */
+export function keeperThumb(cycleId: string, imp: Pick<Improvement, "id" | "thumbnail" | "pairs">): { src: string; name: string; rel: string } | undefined {
+  if (!imp.thumbnail) return undefined;
+  const ref = (imp.pairs ?? []).flatMap((p) => [p.baseline, p.challenger]).find((r) => r?.file === imp.thumbnail);
+  const src = ref?.kind === "video" && ref.poster ? ref.poster : imp.thumbnail;
+  const name = `${cycleId}--${imp.id}${path.extname(src).toLowerCase()}`;
+  return { src, name, rel: `${THUMBS_REL}/${name}` };
+}
 
 type RawRow = Partial<TrainingLedgerRowV2> & Partial<TrainingLedgerRow> & Record<string, unknown>;
 

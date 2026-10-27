@@ -36,3 +36,14 @@
 
 /* The slot level before its record arrives, or when it was refused: the id, or the refusal. */
 .slotWait{flex:1;display:flex;align-items:flex-start;padding:var(--sp-6) var(--sp-page)}
+
+/* A phone: the rail drops under the lanes as a bounded strip, so the three columns keep the width
+   (390 - 260 - 52 left them 78px between Foundry, Weir and the shelf). */
+@media (max-width:700px){
+  .floor{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,38%)}
+  .floor>[data-component=CalendarColumn]{border-left:0;border-top:1px solid var(--hair)}
+  .colhead{padding:0 var(--sp-3);gap:var(--sp-2)}
+  .cWeir{justify-content:flex-start}
+  .weirTitle{letter-spacing:.12em}
+  .sub{display:none}
+}

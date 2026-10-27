@@ -1,4 +1,4 @@
-import { ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { MetricSnapshot, Publication } from "@gt/domain/publication";
 import type { Channel } from "@gt/domain/slot";
 import { paid, withDryRun } from "@gt/kernel/dryrun";
@@ -58,7 +58,10 @@ export async function refreshMetrics(deps: PublishDeps, now: Date): Promise<Resu
     const ids = group.flatMap((p) => (p.platformId === null ? [] : [p.platformId]));
     const read = await port.effects.call(
       `${channel}.stats`,
-      paid({ provider: channel, model: "stats", usage: {}, quote: STATS_QUOTE, payload: { ids }, subject: { kind: "channel", id: channel } }, () => stats(ids)),
+      // A throwing adapter answers as a refusal would (./adapter.ts: the outcome is data).
+      paid({ provider: channel, model: "stats", usage: {}, quote: STATS_QUOTE, payload: { ids }, subject: { kind: "channel", id: channel } }, () =>
+        stats(ids).catch((e: unknown): Result<readonly LifetimeStats[]> => err("unavailable", errorMessage(e))),
+      ),
     );
     if (!read.ok) return read;
     const byId = new Map(group.map((p) => [p.platformId, p]));

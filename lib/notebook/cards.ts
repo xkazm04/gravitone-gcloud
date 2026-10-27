@@ -161,13 +161,13 @@ export function buildCards(input: NotebookSource | Notebook = fixtureSource()): 
  *  permanently non-empty, so its `emptyMeans` alarm could never fire. They now
  *  carry the `untagged` dimension, which says what it is.
  *
- *  WHERE THE MIS-FILING BECOMES VISIBLE: three places, since `c7b2bd6`.
- *  `notebookIssues()` below reports it to the dev console on every page load and
- *  to `npm run check:notebook` in a terminal — and BOTH boards now draw it.
- *  research/ResearchTriageBoard.tsx and script/_matrix/MatrixCoverage.tsx call
- *  `columnsFor()` off the same card set, so an untagged card appears on both or
- *  neither; it can no longer be visible on one surface and invisible on the
- *  other. */
+ *  WHERE THE MIS-FILING BECOMES VISIBLE: `notebookIssues()` below reports it to
+ *  the dev console on every page load and to `npm run check:notebook` in a
+ *  terminal. The two v1 boards that drew it through `columnsFor()`
+ *  (ResearchTriageBoard, MatrixCoverage) retired at the Phase 6 cutover, and
+ *  nothing calls `columnsFor()` now: lib/research/scope.ts::scopeSummary rolls
+ *  `byDim` up over `source.dimensions` alone, so on a screen an untagged card is
+ *  in no column. */
 export function untaggedIds(input: NotebookSource | Notebook = fixtureSource()): string[] {
   const src = asSource(input);
   const nb = src.notebook;

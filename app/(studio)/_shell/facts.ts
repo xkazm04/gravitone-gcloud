@@ -1,6 +1,6 @@
 // THE HEADER'S NUMBERS, as pure functions over what the server read: which pile is NEXT, and
-// what the last 24 hours cost. The Floor uses the same NEXT, so the header's button and the
-// Floor's amber ring can never name two different piles.
+// what the last 24 hours cost. NEXT is the Floor's amber ring; the Scout header's NEXT is the
+// same rule over the scout's own piles (nextScoutPile), so the two can never disagree on order.
 //
 // NEXT is the oldest pile still waiting on the operator (a pile with something pending), by
 // the instant v1 recorded it became ready. A pile v1 gave no instant to is drawn after every
@@ -33,6 +33,18 @@ export function pileOrder(a: WeirItem, b: WeirItem): number {
 /** The oldest pile with anything pending, or null when the weir is clear. */
 export function nextPile(weir: readonly WeirItem[]): WeirItem | null {
   return [...weir].filter((w) => w.pending > 0).sort(pileOrder)[0] ?? null;
+}
+
+/**
+ * The pile sources that are the scout's: a night of either wing (a muse night's pile is source
+ * `scout` too, id `muse:<night>`) and a seed batch. The same set as scout/_scout/ScoutHead.tsx
+ * isScoutPacket, read here off the pile rather than the packet.
+ */
+export const SCOUT_PILE_SOURCES: ReadonlySet<string> = new Set(["scout", "seeds"]);
+
+/** The oldest scout pile with anything pending (the Scout header's NEXT), or null. */
+export function nextScoutPile(weir: readonly WeirItem[]): WeirItem | null {
+  return nextPile(weir.filter((w) => SCOUT_PILE_SOURCES.has(w.source)));
 }
 
 /** The priced acts' sum, split by where each figure came from. */

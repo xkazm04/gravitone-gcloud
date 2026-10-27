@@ -30,8 +30,8 @@ import type { Store } from "@gt/kernel/store";
 import { admitMove, cellOf, nextStage, stackVersions, type Cell, type MoveRequest, type Stage } from "@gt/ui/components/audio/arrange.ts";
 import { applyGroupOp, carriedBy, type GroupOp, type Groups } from "@gt/ui/components/audio/arrangeGroups.ts";
 
-import { readGroups, readTakes, SoundError, withStore } from "./store.ts";
-import { createTake, patchTakeTx, type IncomingFile } from "./takes.ts";
+import { readGroups, SoundError, withStore } from "./store.ts";
+import { createTakeTx, patchTakeTx, type IncomingFile } from "./takes.ts";
 import type { SoundKind, SoundTake } from "./types.ts";
 
 const STATUS_CODE: Readonly<Record<number, AppErrorCode>> = { 400: "invalid", 403: "refused", 404: "not-found", 409: "refused", 413: "invalid", 415: "invalid", 503: "unavailable" };
@@ -110,7 +110,7 @@ export async function editGroups(kernel: Store, input: GroupInput, actor: Actor,
       const stacks = stackVersions(kin.filter((t) => t.verdict === "kept"));
       const edit = applyGroupOp(file.groups, input.kind, input.op, stacks);
       if (!edit.ok) return err("invalid", edit.error);
-      const carried = carriedBy(input.op, input.kind, kin, stacks);
+      const carried = carriedBy(input.op, input.kind, kin, stacks, file.groups[input.kind]);
       file.groups = { music: [...edit.groups.music], sfx: [...edit.groups.sfx] };
       tx.touch("groups");
       for (const c of carried) await patchTakeTx(tx, c.id, { group: c.group }, now);
@@ -134,26 +134,27 @@ export function returnStages(head: Stage): readonly Stage[] {
 }
 
 export async function fileReturn(kernel: Store, input: ReturnInput, actor: Actor, now: Date): Promise<Result<Returned>> {
-  const read = await inStore(async () => ok((await readTakes()).takes));
-  if (!read.ok) return read;
-  const takes = read.value;
   const id = `rt-${input.opId}`;
-  const filed = takes.find((t) => t.id === id);
-  const h = takes.find((t) => t.id === input.headId);
-  if (h === undefined) return err("not-found", `no take ${input.headId} in the sound store`);
-  const stack = stackVersions(takes.filter((t) => t.kind === h.kind && t.verdict === "kept")).find((s) => s.versions.some((v) => v.id === h.id));
-  if (filed === undefined) {
-    if (h.verdict !== "kept" || stack === undefined) return err("refused", `${h.title} is ${h.verdict}; a return answers a kept take`);
-    if (stack.head.id !== h.id) return err("conflict", `${h.title} is no longer the card's head: v${stack.versions.length} was filed since`);
-    const at = cellOf(stack).stage;
-    if (!returnStages(at).includes(input.stage)) return err("invalid", `a return to ${h.title} lands in ${returnStages(at).join(" or ")}, not ${input.stage}`);
-  }
-  const label = input.label?.trim() ?? "";
-  const keep = label !== "" ? label : (h.label ?? "");
-  if (input.stage === "finalized" && keep.trim() === "") return err("refused", "a finalized take needs a library label");
-  const made = await inStore(async () =>
-    ok(
-      await createTake(
+  // The head is judged and the version filed under ONE store lock: judged on an unlocked read,
+  // two returns raced onto one card both passed "still the head" and forked the stack.
+  const made = await inStore(() =>
+    withStore(async (tx): Promise<Result<{ take: SoundTake; created: boolean; version: number; head: SoundTake }>> => {
+      const { takes } = await tx.get("takes");
+      const filed = takes.find((t) => t.id === id);
+      const h = takes.find((t) => t.id === input.headId);
+      if (h === undefined) return err("not-found", `no take ${input.headId} in the sound store`);
+      const stack = stackVersions(takes.filter((t) => t.kind === h.kind && t.verdict === "kept")).find((s) => s.versions.some((v) => v.id === h.id));
+      if (filed === undefined) {
+        if (h.verdict !== "kept" || stack === undefined) return err("refused", `${h.title} is ${h.verdict}; a return answers a kept take`);
+        if (stack.head.id !== h.id) return err("conflict", `${h.title} is no longer the card's head: v${stack.versions.length} was filed since`);
+        const at = cellOf(stack).stage;
+        if (!returnStages(at).includes(input.stage)) return err("invalid", `a return to ${h.title} lands in ${returnStages(at).join(" or ")}, not ${input.stage}`);
+      }
+      const label = input.label?.trim() ?? "";
+      const keep = label !== "" ? label : (h.label ?? "");
+      if (input.stage === "finalized" && keep.trim() === "") return err("refused", "a finalized take needs a library label");
+      const r = await createTakeTx(
+        tx,
         {
           id,
           kind: h.kind,
@@ -174,11 +175,12 @@ export async function fileReturn(kernel: Store, input: ReturnInput, actor: Actor
         },
         input.file,
         now,
-      ),
-    ),
+      );
+      return ok({ ...r, version: (stack?.versions.length ?? 1) + (r.created ? 1 : 0), head: h });
+    }),
   );
   if (!made.ok) return made;
-  const version = (stack?.versions.length ?? 1) + (made.value.created ? 1 : 0);
-  const ev = record(kernel, input.opId, { actor, type: "take.returned", subject: { kind: "take", id: made.value.take.id }, data: { title: h.title, parentId: h.id, stage: input.stage, version, file: input.file.name } });
-  return ev.ok ? ok({ take: made.value.take, version, created: made.value.created, recorded: ev.value.recorded }) : ev;
+  const { take, created, version, head: h } = made.value;
+  const ev = record(kernel, input.opId, { actor, type: "take.returned", subject: { kind: "take", id: take.id }, data: { title: h.title, parentId: h.id, stage: input.stage, version, file: input.file.name } });
+  return ev.ok ? ok({ take, version, created, recorded: ev.value.recorded }) : ev;
 }

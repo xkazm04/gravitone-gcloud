@@ -33,7 +33,7 @@ export type TextProviderId = (typeof TEXT_PROVIDER_IDS)[number];
 /**
  * What a text provider can be asked to DO.
  *
- * One member today, and that is a statement rather than a placeholder: every
+ * `reason` came first, and it is a statement rather than a placeholder: every
  * reasoning call in this app is the same shape — a built prompt in, one answer
  * out, no tool use, no multi-turn. `lib/claudeCli.ts` enforces that shape at the
  * transport (`--allowed-tools "" --max-turns 1`) for a reason its header states
@@ -88,7 +88,7 @@ export interface SourceReceipt {
  * model-routing/turn-classification technique.
  *
  * It exists so that routing, pricing and the log all key on the same word.
- * Without it the two production call sites are distinguishable only by which
+ * Without it the production call sites are distinguishable only by which
  * route handler they came from, which means spend cannot be attributed, a
  * routing rule cannot be written for one and not the other, and a new call site
  * shows up unlabelled on every chart.
@@ -100,7 +100,7 @@ export interface SourceReceipt {
  *   · `scene-direction`  /api/frames — a script and a notebook in, scene specs
  *                        out. Sixteen art-direction decisions in one turn.
  *   · `probe`            a health check. Must be cheap or free, and must never
- *                        be routed like the two above.
+ *                        be routed like the turns above.
  *   · `style-synthesis`  lib/foundry/extract — a gallery's readbacks in, named
  *                        styles with recipes out. One turn per extract run,
  *                        schema-shaped, a few KB of prompt; cheap enough for
@@ -258,7 +258,7 @@ export type TextTransport = "local-subprocess" | "cloud-api";
  * already takes.
  *
  * There is no `floor` member and that is deliberate. Rung 3 of the registry's
- * ladder is a deterministic stand-in, and neither of this app's two turns has an
+ * ladder is a deterministic stand-in, and none of this app's turns has an
  * honest one: there is no heuristic that writes an edit plan or art-directs a
  * script. Per the technique's own rung 4, the answer for those is honest refusal
  * — which is a thrown `TextError`, not a `Provenance` with a lying rung. If a
@@ -299,6 +299,9 @@ export interface RerouteStep {
     | "not-logged-in"
     /** It was called and it failed. */
     | "failed"
+    /** Refused before dispatch (a prompt past the adapter's cap): nothing was
+     *  sent and nothing was billed, so it must not read as an engine fault. */
+    | "invalid-request"
     | "refused"
     | "rate-limited"
     | "timeout"
@@ -321,7 +324,7 @@ export interface TextSteer {
 /** One reasoning call. */
 export interface TextRequest extends TextSteer {
   /** The whole prompt, already built by the caller. This engine composes
-   *  nothing: the two production prompts are assembled from versioned documents
+   *  nothing: every production prompt is assembled from versioned documents
    *  in pipeline/ plus the run's payload, and that assembly is the caller's
    *  domain knowledge, not the transport's. */
   prompt: string;
@@ -357,11 +360,9 @@ export interface TextRequest extends TextSteer {
    * never walks on to the next rung (that would be a second bill for a turn the
    * caller asked to stop). A cancel surfaces as `TextError` kind `cancelled`.
    *
-   * KNOWN GAP: the cloud adapter (providers/google.ts via lib/text/http.ts) does
-   * not yet abort its in-flight fetch on this signal. A request already sent to
-   * the vendor runs to its own end and its answer is returned; what the caller
-   * does with an answer to a turn it cancelled is the caller's rule (the turn
-   * ledger, lib/turns/runner.ts, refuses to let it overwrite the cancel).
+   * The cloud adapter (providers/google.ts via lib/text/http.ts) aborts its
+   * in-flight fetch on it: `cancelled`, dispatched (the vendor may still bill
+   * what it had started).
    */
   signal?: AbortSignal;
 }

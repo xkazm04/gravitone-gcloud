@@ -8,19 +8,21 @@ import { ok } from "@gt/domain/errors";
 import { blobStore, type BlobStore } from "@gt/kernel/blob";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { readPartIn, writePart } from "@gt/kernel/parts/driver";
-import { gateContext, gateFacts } from "@gt/kernel/parts/gates";
+import { gateFacts } from "@gt/kernel/parts/gates";
 import { launchProject, planReceipt } from "@gt/kernel/records/launch";
 import { planViewIn } from "@gt/kernel/records/read";
-import { setPart } from "@gt/kernel/records/write";
+import { loadProject, putProject as putKernelProject } from "@gt/kernel/records/schema";
+import { compose, setPart } from "@gt/kernel/records/write";
 import type { Store } from "@gt/kernel/store";
 
 import { inspectArchive } from "../../lib/studioArchive.ts";
-import { readArchive, rowLine, type Archive } from "../../lib/import/archive.ts";
+import { ARCHIVE_KIND, MANIFEST_KIND, readArchive, rowLine, type Archive, type Row } from "../../lib/import/archive.ts";
 import { commitImport } from "../../lib/import/commit.ts";
 import { exportProjects } from "../../lib/import/export.ts";
 import { kernelIdOf, planImport } from "../../lib/import/project.ts";
 import { putProject } from "../../lib/projects.ts";
-import { clearV1, dataUrl, putStep, seedV1, v1Archive, type Seeded } from "./import-harness.ts";
+import { THEMES_STORE } from "../../lib/studioDb.ts";
+import { clearV1, dataUrl, putRows, pngB64, putStep, seedV1, SHELF, v1Archive, type Seeded } from "./import-harness.ts";
 
 // THE IMPORT, END TO END (Phase 4 wave D, L42): an archive v1 wrote (its own exportAccount over
 // its own IndexedDB) -> the preview -> the confirm -> kernel Projects whose Plan opens with the
@@ -41,6 +43,9 @@ beforeEach(async () => {
   await clearV1();
 });
 
+// Measured 2026-10-25 on the 1000 x 100 x 20,000 archive below: 5.2 s with a scan per project and per
+// asset, 1.4 s indexed; the bound sits between them.
+const BOUND_MS = 3000;
 const OP = { kind: "operator", id: "op" } as const;
 const NOW = Date.parse("2026-10-16T09:00:00Z");
 
@@ -70,7 +75,7 @@ async function imported(seed: Seeded) {
 }
 
 const plan = (store: Store, id: string) => {
-  const v = store.read((r) => planViewIn(r, id, gateContext(r, NOW)));
+  const v = store.read((r) => planViewIn(r, id, gateFacts(NOW)));
   if (!v.ok) throw v.error;
   return v.value;
 };
@@ -121,6 +126,48 @@ describe("preview, then confirm", () => {
   });
 });
 
+describe("staging an archive at the line cap", () => {
+  it("indexes steps, themes, assets and uploads once, not once per project and per asset", () => {
+    const PROJECTS = 1000;
+    const STEPS = 100;
+    const ASSETS = 20_000;
+    const projects: Row[] = Array.from({ length: PROJECTS }, (_, i) => ({ id: `p${i}`, uid: "u", title: `Film ${i}`, template: "short-educational-video", targetS: 90, cover: `a${i}`, themeId: "th-none", signedOff: {} }));
+    const steps: Row[] = projects.flatMap((p) => Array.from({ length: STEPS }, (_, j) => ({ id: `${String(p["id"])}:k${j}`, projectId: p["id"], phase: "script-mode", data: { mode: "expert" } })));
+    const assets: Row[] = Array.from({ length: ASSETS }, (_, i) => ({ id: `a${i}`, uid: "u", path: ["refs"], name: `a${i}`, src: `upload:up${i}`, kind: "image", createdAt: 1 }));
+    const uploads: Row[] = Array.from({ length: ASSETS }, (_, i) => ({ id: `up${i}`, blob: { b64: pngB64(i % 200), type: "image/png" }, mime: "image/png", bytes: 11 }));
+    const archive: Archive = {
+      header: { kind: ARCHIVE_KIND, format: 1, dbVersion: 5, exportedAt: 1, from: "test", scope: "account" },
+      manifest: { kind: MANIFEST_KIND, counts: { projects: PROJECTS, steps: steps.length, themes: 0, assets: ASSETS, uploads: ASSETS }, sha256: { projects: "", steps: "", themes: "", assets: "", uploads: "" } },
+      rows: { projects, steps, themes: [], assets, uploads },
+      bytes: 0,
+      digest: "scale",
+    };
+    // A scan is a call to the list's own search: counted per section, so each surface is held alone.
+    const scans: string[] = [];
+    for (const [name, rows] of Object.entries(archive.rows)) {
+      for (const m of ["filter", "find", "some", "findIndex"] as const) {
+        const own = rows[m].bind(rows) as (...a: unknown[]) => unknown;
+        Object.defineProperty(rows, m, { value: (...a: unknown[]) => (scans.push(`${name}.${m}`), own(...a)) });
+      }
+    }
+    const u = universe();
+    const t0 = performance.now();
+    const p = u.store.read((r) => planImport(r, archive));
+    const ms = performance.now() - t0;
+    if (!p.ok) throw p.error;
+    // The same plan as the scanning version staged: the lookups return the same rows.
+    expect(p.value.token).toBe("c677326e50374b579c418456574226af9db13d23279dfee5eb25ab41e4d38d70");
+    expect(p.value.projects).toHaveLength(PROJECTS);
+    expect(p.value.items).toHaveLength(ASSETS);
+    expect(p.value.projects.every((x) => x.preview.outcome === "import")).toBe(true);
+    // The rows each project names, in archive order: the cover asset, and its upload through it.
+    expect(p.value.projects[7]?.record.assets.map((a) => (a as Row)["id"])).toEqual(["a7"]);
+    expect(p.value.projects[7]?.record.uploads.map((x) => (x as Row)["id"])).toEqual(["up7"]);
+    expect([...new Set(scans)], "no section is searched by scanning it").toEqual([]);
+    expect(ms, "planImport over a capped archive is bounded").toBeLessThan(BOUND_MS);
+  }, 30_000);
+});
+
 describe("what the import will not take, and says so", () => {
   it("carries a newer build's record as data only, never writes it, and refuses an unknown template", async () => {
     const seed = await seedV1("uid-a");
@@ -135,6 +182,55 @@ describe("what the import will not take, and says so", () => {
     const outcome = done.kind === "done" ? done.outcomes.find((o) => o.v1Id === seed.empty.id) : undefined;
     expect(outcome).toMatchObject({ outcome: "refused", reason: "template hologram is not in the catalogue" });
     expect(store.read((r) => r.get("SELECT 1 AS x FROM projects WHERE id = ?", kernelIdOf(seed.empty.id)))).toEqual(ok(undefined));
+  });
+
+  it("grades a v1 frames row its walk cannot read as data only, and stages every other project", async () => {
+    const seed = await seedV1("uid-a");
+    await putStep(seed.film.id, "frames", { frames: "x", renderId: "r" });
+    const u = universe();
+    const archive = read(await v1Archive(seed.uid));
+    const p = u.store.read((r) => planImport(r, archive));
+    if (!p.ok) throw p.error;
+    const film = p.value.projects.find((x) => x.preview.v1Id === seed.film.id)?.preview;
+    expect(film?.outcome).toBe("import");
+    expect(film?.losses).toEqual(expect.arrayContaining([{ entity: "frames", grade: "data-only", reason: "frames v1 could not be read: frames is not a list" }]));
+    // The other six records are still held (frames-alts keeps the frames part done).
+    expect(film?.held).toBe(6);
+    expect(p.value.projects.map((x) => x.preview.outcome)).toEqual(["import", "import", "import", "import"]);
+  });
+
+  it("previews a project exactly as the commit lands it: a target the creation door refuses is refused at the preview", async () => {
+    const seed = await seedV1("uid-a");
+    await putProject({ ...seed.film, targetS: 1e300 });
+    const u = universe();
+    const archive = read(await v1Archive(seed.uid));
+    const p = u.store.read((r) => planImport(r, archive));
+    if (!p.ok) throw p.error;
+    const film = p.value.projects.find((x) => x.preview.v1Id === seed.film.id)?.preview;
+    const done = await commitImport({ ...u, actor: OP }, archive, p.value.token);
+    if (!done.ok) throw done.error;
+    const landed = done.value.kind === "done" ? done.value.outcomes.find((o) => o.v1Id === seed.film.id) : undefined;
+    // The preview's outcome is the commit's: both import, or both refuse with the door's sentence.
+    expect({ preview: film?.outcome, landed: landed?.outcome }).toEqual({ preview: "refuse", landed: "refused" });
+    expect(film?.reason).toBeDefined();
+    expect(landed?.reason).toBe(film?.reason);
+  });
+
+  it("reads a v1 instant no Date can hold as unreadable: a reported loss, never a failed preview or a refused commit", async () => {
+    const seed = await seedV1("uid-a");
+    // 1e20 ms is JSON v1 can write and past what a Date holds (8.64e15): toISOString throws on it.
+    await putProject({ ...seed.film, createdAt: 1e20, signedOff: { research: seed.signedAt, frames: 1e20 } });
+    await putRows(THEMES_STORE, [{ id: SHELF.untitled, uid: seed.uid, name: "Untitled style", origin: "scratch", block: {}, elements: [], proofs: [], createdAt: 1e20, updatedAt: 1e20 }]);
+    const { store, plan: p, done } = await imported(seed);
+    const film = p.projects.find((x) => x.preview.v1Id === seed.film.id)?.preview;
+    expect(film?.outcome).toBe("import");
+    expect(film?.ratified).toEqual([]);
+    expect(film?.losses).toEqual(expect.arrayContaining([{ entity: "sign-off frames", grade: "dropped", reason: "v1's sign-off instant 100000000000000000000 is unreadable" }]));
+    expect(p.themes.find((t) => t.preview.v1Id === SHELF.untitled)?.preview.name).toBe("Brief style");
+    // The preview's promise is the commit's: imported, its event at the import's own clock.
+    expect(done.kind === "done" && done.outcomes.find((o) => o.v1Id === seed.film.id)?.outcome).toBe("imported");
+    const ev = store.read((r) => r.get("SELECT at_src FROM events WHERE type = 'project.imported' AND subject_id = ?", kernelIdOf(seed.film.id)));
+    expect(ev).toEqual(ok({ at_src: null }));
   });
 });
 
@@ -252,5 +348,43 @@ describe("the re-export", () => {
     // The rest still byte for byte.
     const cut = (a: Archive) => a.rows.steps.find((r) => r["id"] === `${seed.film.id}:cut`);
     expect(rowLine("steps", cut(read(out.value)) ?? {})).toBe(rowLine("steps", cut(archive) ?? {}));
+  });
+
+  it("carries a kernel rename and a new runtime of an imported project back to v1, and leaves an untouched project's row byte for byte", async () => {
+    const seed = await seedV1("uid-a");
+    const { store, blobs, archive } = await imported(seed);
+    const id = kernelIdOf(seed.film.id);
+    const renamed = store.tx((t) => {
+      const head = loadProject(t, id);
+      putKernelProject(t, { ...head, title: "Glass harbor, recut", runtimeS: 75, rev: head.rev + 1 }, head.rev);
+    });
+    expect(renamed.ok).toBe(true);
+    const out = await exportProjects(store, blobs, { ids: [id, kernelIdOf(seed.ad.id)], uid: seed.uid, now: NOW });
+    if (!out.ok) throw out.error;
+    const back = read(out.value);
+    const row = (a: Archive, v1Id: string) => a.rows.projects.find((r) => r["id"] === v1Id);
+    expect(row(back, seed.film.id)).toMatchObject({ title: "Glass harbor, recut", targetS: 75 });
+    expect(rowLine("projects", row(back, seed.ad.id) ?? {})).toBe(rowLine("projects", row(archive, seed.ad.id) ?? {}));
+    // Only the two fields move: the rest of the film's row is v1's, as it was.
+    const { title: _t, targetS: _s, ...rest } = row(back, seed.film.id) ?? {};
+    const { title: _t0, targetS: _s0, ...was } = row(archive, seed.film.id) ?? {};
+    expect(rest).toEqual(was);
+    const v1 = await inspectArchive(new Blob([Buffer.from(out.value)]));
+    expect(v1.manifest.counts).toMatchObject({ projects: 2 });
+  });
+
+  it("writes a project the kernel composed itself in v1's project shape when its recipe is a v1 template's film, and refuses an album by name", async () => {
+    const { store, blobs } = universe();
+    expect(compose(store, { recipe: "film/trailer", title: "Tidal tariffs" }, OP, { id: "flm" }).ok).toBe(true);
+    expect(compose(store, { recipe: "album-video", title: "Night drive" }, OP, { id: "alb" }).ok).toBe(true);
+    const out = await exportProjects(store, blobs, { ids: ["flm"], uid: "uid-k", now: NOW });
+    if (!out.ok) throw out.error;
+    const back = read(out.value);
+    expect(back.header).toMatchObject({ from: "uid-k", scope: "project", projectIds: ["flm"], exportedAt: NOW });
+    expect(back.rows.projects).toEqual([expect.objectContaining({ id: "flm", uid: "uid-k", title: "Tidal tariffs", template: "trailer", targetS: expect.any(Number) })]);
+    const v1 = await inspectArchive(new Blob([Buffer.from(out.value)]));
+    expect(v1.manifest.counts).toMatchObject({ projects: 1 });
+    const album = await exportProjects(store, blobs, { ids: ["flm", "alb"], uid: "uid-k", now: NOW });
+    expect(album.ok ? null : [album.error.code, album.error.message]).toEqual(["refused", "a album-video project has no v1 shape; only a film of a v1 template exports"]);
   });
 });

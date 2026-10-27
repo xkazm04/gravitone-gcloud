@@ -1,6 +1,6 @@
-// HUNT — an idea in, a map of variations out; a finished map in, a drafted
-// lesson out. Server-only: both drafts are lib/text turns (the "sound-hunt" and
-// "sound-lesson" TurnClasses, lib/text/types.ts), and nothing here touches a
+// HUNT — an idea in, a map of variations out. Server-only: the draft is a
+// lib/text turn (the "sound-hunt" TurnClass, lib/text/types.ts; the lesson's
+// "sound-lesson" turn is lib/sound/lessons.ts's), and nothing here touches a
 // music vendor — the map is drafted for free-ish, and the operator decides
 // which leaves are worth rendering (generate.ts, metered there).
 //
@@ -14,9 +14,12 @@
 // rationales and prompts. It does not decide what counts as a technique (the
 // slugs are filtered to types.ts TECHNIQUES), what a duration may be (clamped to
 // the vendor window), or which provider exists (a leaf naming anything but
-// elevenlabs/suno is dropped). For a lesson it drafts the CLAIM only: the
-// evidence (n, keep rate, mean score, take ids) is counted here from the takes,
-// so a fluent sentence cannot carry an n the hunt does not have.
+// elevenlabs/suno is dropped).
+//
+// The v1 doors that lived here - the whole-map PATCH (`patchHunt`), the lesson
+// draft (`draftHuntLesson`), `listHunts` / `getHunt` - had no caller once their
+// routes went: a gesture edits one node through lib/sound/huntDesk.ts and the
+// lesson is lib/sound/lessons.ts's, which counts its evidence from the map.
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -24,12 +27,10 @@ import path from "node:path";
 import { reason as routerReason } from "@/lib/text/router";
 import type { TextRequest, TextResult } from "@/lib/text/types";
 
-import { rubricMean } from "./ledger";
 import type { AudioParams } from "./knowledge";
-import { patchTakeTx } from "./takes";
-import { mintId, readHunts, readLedger, readTakes, safeId, SoundError, withStore } from "./store";
+import { mintId, readLedger, SoundError, withStore } from "./store";
 import { DURATION_BOUNDS } from "./generate";
-import { TECHNIQUES, type Hunt, type HuntNode, type HuntNodeState, type Lesson, type ProviderId, type SoundKind } from "./types";
+import { TECHNIQUES, type Hunt, type HuntNode, type Lesson, type ProviderId, type SoundKind } from "./types";
 
 /** The text engine, injectable. Production passes nothing and gets the router;
  *  the probe replaces `fetch` under the REAL router instead, which is the
@@ -70,14 +71,26 @@ export async function promptFile(name: string): Promise<Record<string, string>> 
   return s;
 }
 
-/** knowledge/audio/params.json, or null when it has not been generated. The
- *  hunt prompt leans on what worked; an absent file is "nothing measured yet",
- *  which the prompt is told to read as permission to explore. */
+/** knowledge/audio/params.json (SOUND_KNOWLEDGE_DIR moves the directory, as `knowledge` in
+ *  cli.ts reads it), or null when it has not been generated. The hunt prompt leans on what
+ *  worked; an ABSENT file is "nothing measured yet", which the prompt is told to read as
+ *  permission to explore. An unreadable or unparseable one is not that: a truncated or
+ *  merge-conflicted generated file would steer every hunt to explore with no error anywhere,
+ *  so it is a SoundError naming the file and the command that regenerates it. */
 export async function readAudioParams(): Promise<AudioParams | null> {
+  const envDir = process.env["SOUND_KNOWLEDGE_DIR"]?.trim();
+  const at = path.join(envDir ? path.resolve(envDir) : path.join(process.cwd(), "knowledge", "audio"), "params.json");
+  let text: string;
   try {
-    return JSON.parse(await readFile(path.join(process.cwd(), "knowledge", "audio", "params.json"), "utf8")) as AudioParams;
+    text = await readFile(at, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw new SoundError(`${path.basename(at)} cannot be read (${(e as Error).message}) - regenerate it: npx tsx pipeline/sound.mts knowledge`, 500);
+  }
+  try {
+    return JSON.parse(text) as AudioParams;
   } catch {
-    return null;
+    throw new SoundError(`${path.basename(at)} is not valid JSON - regenerate it: npx tsx pipeline/sound.mts knowledge`, 500);
   }
 }
 
@@ -349,108 +362,7 @@ export async function draftHunt(kind: SoundKind, idea: string, reason: ReasonFn 
   return hunt;
 }
 
-export async function listHunts(kind?: SoundKind | null): Promise<Hunt[]> {
-  const { hunts } = await readHunts();
-  return hunts.filter((h) => !kind || h.kind === kind).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-export async function getHunt(id: string): Promise<Hunt> {
-  safeId(id);
-  const h = (await readHunts()).hunts.find((x) => x.id === id);
-  if (!h) throw new SoundError(`no hunt ${id}`, 404);
-  return h;
-}
-
-/* ── PATCH: the operator's edits to a map ─────────────────────────────────── */
-
-const STATES: readonly HuntNodeState[] = ["idea", "rendering", "rendered", "awaiting-return", "failed"];
-
-function nodeOf(v: unknown, kind: SoundKind): HuntNode {
-  if (!v || typeof v !== "object") throw new SoundError("each node must be an object", 400);
-  const n = v as Record<string, unknown>;
-  const id = typeof n.id === "string" ? safeId(n.id) : (() => { throw new SoundError("a node needs an id", 400); })();
-  const provider = (["elevenlabs", "suno", "local"] as const).find((p) => p === n.provider);
-  if (!provider) throw new SoundError(`node ${id}: unknown provider ${JSON.stringify(n.provider)}`, 400);
-  const state = STATES.find((x) => x === n.state);
-  if (!state) throw new SoundError(`node ${id}: unknown state ${JSON.stringify(n.state)}`, 400);
-  const strs = (x: unknown) => (Array.isArray(x) ? x.filter((y): y is string => typeof y === "string") : []);
-  const d = typeof n.durationS === "number" && Number.isFinite(n.durationS) ? n.durationS : 0;
-  const b = DURATION_BOUNDS[kind];
-  return {
-    id,
-    parentId: typeof n.parentId === "string" && n.parentId ? n.parentId : null,
-    axis: s(n.axis, 40),
-    label: s(n.label, 120),
-    rationale: s(n.rationale, 600),
-    provider,
-    technique: strs(n.technique).slice(0, 12),
-    prompt: s(n.prompt, 4000),
-    negative: typeof n.negative === "string" && n.negative.trim() ? n.negative.trim().slice(0, 600) : null,
-    // 0 is the root's and a branch's "no length"; a leaf is held to the window.
-    durationS: d === 0 ? 0 : Math.min(b.max, Math.max(b.min, d)),
-    // The operator's map comes back whole on every PATCH; a node sent without
-    // the closeout fields (a tab opened before them) keeps them absent.
-    ...askOf(n, kind),
-    state,
-    takeIds: strs(n.takeIds).filter((x) => /^[A-Za-z0-9_-]{1,80}$/.test(x)),
-    winner: n.winner === true,
-    error: typeof n.error === "string" && n.error ? n.error.slice(0, 600) : null,
-  };
-}
-
-/**
- * Replace a hunt's nodes and/or set its lesson.
- *
- * A NEW WINNER IS A KEEP. The brief: "winner -> verdict kept, stage pending, so
- * it appears in Arrangement". A node that becomes a winner here has each of its
- * UNJUDGED takes kept, in the same transaction, through takes.ts's own patch —
- * so the stage, the judgedAt stamp and the ledger row are exactly what a K in
- * Triage would have written. A take the person already rejected is left
- * rejected: winning the hunt does not overrule a verdict somebody gave.
- */
-export async function patchHunt(id: string, body: unknown): Promise<Hunt> {
-  safeId(id);
-  if (!body || typeof body !== "object" || Array.isArray(body)) throw new SoundError("a hunt patch must be a JSON object", 400);
-  const b = body as Record<string, unknown>;
-  const extra = Object.keys(b).filter((k) => k !== "nodes" && k !== "lessonId");
-  if (extra.length) throw new SoundError(`not patchable: ${extra.join(", ")}`, 400);
-  return withStore(async (tx) => {
-    const file = await tx.get("hunts");
-    const hunt = file.hunts.find((h) => h.id === id);
-    if (!hunt) throw new SoundError(`no hunt ${id}`, 404);
-    if ("nodes" in b) {
-      if (!Array.isArray(b.nodes)) throw new SoundError("nodes must be an array", 400);
-      if (b.nodes.length > 200) throw new SoundError("a hunt carries at most 200 nodes", 400);
-      const next = b.nodes.map((n) => nodeOf(n, hunt.kind));
-      const ids = new Set(next.map((n) => n.id));
-      if (ids.size !== next.length) throw new SoundError("node ids must be unique", 400);
-      for (const n of next)
-        if (n.parentId && !ids.has(n.parentId)) throw new SoundError(`node ${n.id} names a parent that is not in the map`, 400);
-      const was = new Map(hunt.nodes.map((n) => [n.id, n] as const));
-      const takes = await tx.get("takes");
-      for (const n of next) {
-        if (!n.winner || was.get(n.id)?.winner) continue;
-        for (const tid of n.takeIds) {
-          const t = takes.takes.find((x) => x.id === tid);
-          if (t && t.verdict === "unjudged") await patchTakeTx(tx, tid, { verdict: "kept" });
-        }
-      }
-      hunt.nodes = next;
-    }
-    if ("lessonId" in b) {
-      if (b.lessonId === null) hunt.lessonId = null;
-      else if (typeof b.lessonId === "string") {
-        const ledger = await tx.get("ledger");
-        if (!ledger.lessons.some((l) => l.id === b.lessonId)) throw new SoundError(`no lesson ${b.lessonId} in the ledger`, 404);
-        hunt.lessonId = b.lessonId;
-      } else throw new SoundError("lessonId must be a string or null", 400);
-    }
-    tx.touch("hunts");
-    return hunt;
-  });
-}
-
-/* ── the lesson draft ─────────────────────────────────────────────────────── */
+/* ── the lesson draft's schema (lib/sound/lessons.ts draftLesson asks with it) ── */
 
 export const LESSON_SCHEMA: Record<string, unknown> = {
   type: "object",
@@ -461,76 +373,3 @@ export const LESSON_SCHEMA: Record<string, unknown> = {
     provider: { type: "string" },
   },
 };
-
-export type LessonDraft = Omit<Lesson, "id" | "confirmedAt">;
-
-export async function draftHuntLesson(id: string, reason: ReasonFn = routerReason): Promise<LessonDraft> {
-  const hunt = await getHunt(id);
-  const winners = hunt.nodes.filter((n) => n.winner);
-  if (!winners.length) throw new SoundError("mark at least one winner before drafting a lesson — a lesson is what the winners did", 409);
-  const { takes } = await readTakes();
-  const byId = new Map(takes.map((t) => [t.id, t] as const));
-  const leaves = hunt.nodes.filter((n) => n.prompt);
-  const results: string[] = [];
-  const judged: string[] = [];
-  let kept = 0;
-  let scoreSum = 0;
-  let scored = 0;
-  for (const n of leaves) {
-    for (const tid of n.takeIds) {
-      const t = byId.get(tid);
-      if (!t) continue;
-      const mean = rubricMean(t.kind, t.ratings);
-      const call = n.winner
-        ? "WINNER"
-        : t.verdict === "rejected"
-          ? `rejected${t.reasons.length ? ` (${t.reasons.join(", ")})` : ""}`
-          : t.verdict;
-      results.push(
-        `- [${n.axis}] ${n.label} · ${n.provider} · ${n.technique.join("+") || "no technique"} · ${call}` +
-          `${mean !== null ? ` · mean ${Math.round(mean * 10) / 10}` : ""}\n  prompt: ${t.prompt || n.prompt}`,
-      );
-      if (t.verdict !== "unjudged") {
-        judged.push(t.id);
-        if (t.verdict === "kept") kept++;
-        if (mean !== null) {
-          scoreSum += mean;
-          scored++;
-        }
-      }
-    }
-  }
-  if (!judged.length) throw new SoundError("no rendered take in this hunt has been judged yet — audition and judge before drafting", 409);
-  const sections = await promptFile("SOUND-LESSON-PROMPT.md");
-  const prompt = fill(sections.shared, {
-    KIND: hunt.kind === "music" ? "music" : "sound effect",
-    IDEA: hunt.idea,
-    RESULTS: results.join("\n"),
-    TECHNIQUES: TECHNIQUES[hunt.kind].join(", "),
-  });
-  const out = await reason({ turn: "sound-lesson", prompt, schema: LESSON_SCHEMA });
-  const j = (out.json ?? {}) as Record<string, unknown>;
-  const claim = s(j.claim, 600);
-  if (!claim) throw new SoundError("the text engine drafted an empty claim", 502);
-  const known = new Set(TECHNIQUES[hunt.kind]);
-  const technique = Array.isArray(j.technique)
-    ? [...new Set(j.technique.filter((t): t is string => typeof t === "string" && known.has(t.trim())).map((t) => t.trim()))]
-    : [];
-  const winnerProviders = [...new Set(winners.map((w) => w.provider))];
-  const provider =
-    (["elevenlabs", "suno", "local"] as const).find((p) => p === j.provider) ?? (winnerProviders.length === 1 ? winnerProviders[0] : null);
-  return {
-    kind: hunt.kind,
-    source: "hunt",
-    provider,
-    huntId: hunt.id,
-    claim,
-    technique,
-    evidence: {
-      n: judged.length,
-      keepRate: Math.round((kept / judged.length) * 100) / 100,
-      meanScore: scored ? Math.round((scoreSum / scored) * 100) / 100 : null,
-      takeIds: judged,
-    },
-  };
-}

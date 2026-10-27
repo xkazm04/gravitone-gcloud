@@ -37,8 +37,13 @@ function index(deps: readonly Dep[]): { ups: Map<string, string[]>; downs: Map<s
   const ups = new Map<string, string[]>();
   const downs = new Map<string, string[]>();
   for (const d of deps) {
-    ups.set(d.to, [...(ups.get(d.to) ?? []), d.from]);
-    downs.set(d.from, [...(downs.get(d.from) ?? []), d.to]);
+    // push, never spread: a spread copies the list per edge, quadratic in a node's fan-in.
+    const u = ups.get(d.to);
+    if (u === undefined) ups.set(d.to, [d.from]);
+    else u.push(d.from);
+    const w = downs.get(d.from);
+    if (w === undefined) downs.set(d.from, [d.to]);
+    else w.push(d.to);
   }
   return { ups, downs };
 }

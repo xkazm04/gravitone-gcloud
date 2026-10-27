@@ -6,7 +6,10 @@ import "server-only";
 // side (./real.ts: the kernel's decision driver plus each source's v1 adapter, the apply
 // outbox kicked after every commit) and flipped SIDE. Nothing else in the Board changed: the
 // actions (./actions.ts), the keepalive route and the desks all reach the port through
-// `serverBoard()`. The fixture stays for the kit and for the desks' own tests.
+// `serverBoard()`. SIDE is a constant, not GRAVITONE_PRODUCE_SIDE as the other studio ports
+// read it, so the fixture lane's server answers the Board from the real kernel too, and
+// ./fixture.ts is reached by nothing at run time: no kit specimen, test or route imports it
+// (the kit draws its own packets, ../../kit/boardKitData.ts).
 //
 // The server side speaks the domain's `Result<T>` (COMMON: "Server Actions, each returning
 // Result<T>"); ./actions.ts turns it into the wire envelope the client's BoardPort reads. Each

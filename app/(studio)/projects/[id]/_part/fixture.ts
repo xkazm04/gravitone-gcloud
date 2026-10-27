@@ -21,6 +21,7 @@ import {
 } from "@gt/domain/partView";
 
 import { fixtureProduce } from "../../_port/port.ts";
+import { KEPT_TAKES } from "../../_port/fixtureData.ts";
 import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
 import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
 import { encodeRecord } from "@gt/domain/steps/registry";
@@ -96,6 +97,9 @@ export type Ctx = {
   /** What the project's pictures are drawn in (@gt/producers/frames/look): the real side reads
    *  the Style store; the fixture universe has none, so a bound style reads as `missing`. */
   readonly look: ProjectLook;
+  /** A music take by id, out of THIS side's takes (the fixture's seed list; the real side's
+   *  Library), so an album names its track without either side reading the other's. */
+  readonly take: (id: string) => { readonly title: string; readonly durationS: number | null } | undefined;
 };
 
 function disciplineFor(plan: PlanView): Discipline {
@@ -118,7 +122,7 @@ function contextOf(projectId: string, now: number): Result<Ctx> {
     discipline: disciplineFor(plan.value),
     targetS,
   };
-  const ctx: Ctx = { project, plan: plan.value, now, research: () => recOf(ctx, "research").data, look: lookOf(plan.value.project.styleId, undefined) };
+  const ctx: Ctx = { project, plan: plan.value, now, research: () => recOf(ctx, "research").data, look: lookOf(plan.value.project.styleId, undefined), take: (id) => KEPT_TAKES.find((t) => t.id === id) };
   return ok(ctx);
 }
 
@@ -194,6 +198,15 @@ function write<R extends object>(rec: Rec<R>, next: R, meta: { readonly label: s
   rec.log.push({ n: rec.log.length + 1, ...meta, before, wrote, undone: false });
   rec.data = next;
   rec.rev++;
+}
+
+/** An operator's edit: the kernel refuses one that changes nothing (@gt/kernel/parts/driver.ts
+ *  writePartIn, `<label>: changes nothing`) - no rev, no undo line - and so does this side. The
+ *  real side compares the records by JSON (realRecs.ts `changed`); this compares the working record. */
+function opWrite<R extends object>(rec: Rec<R>, next: R, label: string, at: number): Result<null> {
+  if (JSON.stringify(next) === JSON.stringify(rec.data)) return err("invalid", `${label}: changes nothing`);
+  write(rec, next, { label, by: "operator", kind: "op", at });
+  return ok(null);
 }
 
 const effective = <R>(rec: Rec<R>): Entry<R>[] => rec.log.filter((e) => e.kind === "op" && !e.undone).reverse();
@@ -295,23 +308,18 @@ export function opPart(projectId: string, key: string, baseRev: number, op: Part
       if (rec.rev !== baseRev) return ((stale = true), ok(null));
       const next = later(kind).apply(kctxOf(ctx), op);
       if (!next.ok) return next;
-      write(rec, asRec(next.value.next), { label: next.value.label, by: "operator", kind: "op", at: now });
-      return ok(null);
+      return opWrite(rec, asRec(next.value.next), next.value.label, now);
     }
     if (kind === "research") {
       const rec = recOf(ctx, "research");
       if (rec.rev !== baseRev) return ((stale = true), ok(null));
       const next = RESEARCH.apply(ctx, rec.data, op as PartOp<"research">);
-      if (!next.ok) return next;
-      write(rec, next.value, { label: opLabel(op), by: "operator", kind: "op", at: now });
-    } else {
-      const rec = recOf(ctx, "script");
-      if (rec.rev !== baseRev) return ((stale = true), ok(null));
-      const next = SCRIPT.apply(ctx, rec.data, op as PartOp<"script">);
-      if (!next.ok) return next;
-      write(rec, next.value, { label: opLabel(op), by: "operator", kind: "op", at: now });
+      return next.ok ? opWrite(rec, next.value, opLabel(op), now) : next;
     }
-    return ok(null);
+    const rec = recOf(ctx, "script");
+    if (rec.rev !== baseRev) return ((stale = true), ok(null));
+    const next = SCRIPT.apply(ctx, rec.data, op as PartOp<"script">);
+    return next.ok ? opWrite(rec, next.value, opLabel(op), now) : next;
   });
   if (!done.ok) return done;
   const view = viewOf(done.value.ctx, done.value.kind);
@@ -321,11 +329,13 @@ export function opPart(projectId: string, key: string, baseRev: number, op: Part
 
 function undoIn<R extends object>(rec: Rec<R>, now: number): Result<null> {
   const last = effective(rec)[0];
-  if (last === undefined) return err("invalid", "nothing to undo");
+  // The kernel's refusal, code and words (@gt/kernel/parts/core.ts planUndo).
+  if (last === undefined) return err("refused", "nothing on this part is left to undo");
   for (const k of Object.keys(last.wrote) as (keyof R)[]) {
     if (rec.data[k] !== last.wrote[k]) {
-      const by = [...rec.log].reverse().find((e) => e.kind === "job" && k in e.wrote)?.by ?? "a later write";
-      return err("conflict", `${last.label}: ${String(k)} was rewritten by ${by} since`);
+      // The writer as planUndo names a landing: its job and the act it landed.
+      const job = [...rec.log].reverse().find((e) => e.kind === "job" && k in e.wrote);
+      return err("conflict", `${last.label}: ${String(k)} was rewritten by ${job === undefined ? "a later write" : `${job.by} (${job.label})`} since`);
     }
   }
   last.undone = true;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EventData } from "@gt/domain/event";
 import type { Outputs } from "@gt/kernel/job-core";
+import { imageEntries, seatEntry } from "../src/strips/define.ts";
 import { cardNext, lintOutput, parseStep, planStrips, renderOutput, stepNames, turnOutput, type CardView, type RunView } from "../src/strips/plan.ts";
 
 // The strip job's plan over literal inputs: v1's card loop (pipeline/strips/run.mts
@@ -100,5 +101,22 @@ describe("the run's plan", () => {
       expect(parseStep(n)?.name).toBe(n);
     }
     for (const bad of ["author:x:r1", "fix:x:r0", "lint:x", "paint:x:r1", "asset:E07:r1"]) expect(parseStep(bad)).toBeUndefined();
+  });
+});
+
+describe("what a turn and a supporting image book on the job", () => {
+  const author = { kind: "author" as const, card: c, round: 0, name: stepNames.author(c) };
+  it("a seat's own figure as itself, failed or served; a silent seat as an unpriced row with its reason", () => {
+    expect(seatEntry({ outcome: "completed", costUsd: 3.19, errors: [] }, author)).toEqual({ amount: 3.19, outcome: "served", basis: "seat-report", axes: { producer: "strips", card: c, turn: "author" } });
+    expect(seatEntry({ outcome: "timed-out", costUsd: 2, errors: [] }, author).outcome).toBe("failed");
+    expect(seatEntry({ outcome: "completed", errors: [] }, author)).toMatchObject({ amount: undefined, reason: "seat reported no cost" });
+  });
+  it("an image's vendor figure as itself; an absent, zero or negative one at its estimate AND counted unpriced", () => {
+    expect(imageEntries({ file: "a.png", provider: "p", costUsd: 0.039 }, 0.04, "E01")).toEqual([{ amount: 0.039, outcome: "served", basis: "vendor", axes: { producer: "strips", asset: "E01", model: "p" } }]);
+    for (const costUsd of [undefined, 0, -1]) {
+      const e = imageEntries({ file: "a.png", provider: "p", ...(costUsd === undefined ? {} : { costUsd }) }, 0.04, "E01");
+      expect(e.map((x) => [x.amount, x.basis])).toEqual([[0.04, "estimate"], [undefined, "estimate"]]);
+      expect(e[1]?.reason).toMatch(/booked at its \$0\.04 estimate/);
+    }
   });
 });

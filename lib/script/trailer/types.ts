@@ -474,8 +474,9 @@ export function atSeconds(at: string): number | null {
   const parts = at.trim().split(":");
   if (parts.length < 2 || parts.length > 3) return null;
   let total = 0;
-  for (const p of parts) {
-    if (!/^\d+$/.test(p)) return null;
+  for (const [i, p] of parts.entries()) {
+    // a field after the first is two digits under 60: "0:75" is a typo, not 1:15
+    if (i === 0 ? !/^\d+$/.test(p) : !/^[0-5]\d$/.test(p)) return null;
     total = total * 60 + Number(p);
   }
   return total;

@@ -43,8 +43,12 @@ import { evidenceKey } from "@gt/ui/components/audio/lesson.ts";
 
 import { fileLeafReturn } from "../../app/(studio)/audio/_hunt/leafReturn.ts";
 import { producers } from "../../lib/producers/registry.ts";
+import { crownLeaf, inStore as huntInStore } from "../../lib/sound/huntDesk.ts";
 import { HUNT_LANE, huntJobId, huntProducer, huntRunId, launchHuntRender, type RenderLaunch } from "../../lib/sound/huntRender.ts";
-import { confirmLesson, handDraft } from "../../lib/sound/lessons.ts";
+import { stubReason } from "../../lib/sound/huntEngine.ts";
+import { confirmLesson, draftLesson, handDraft, inStore as lessonInStore } from "../../lib/sound/lessons.ts";
+import { readAudioParams } from "../../lib/sound/hunt.ts";
+import { SoundError, soundFailure } from "../../lib/sound/store.ts";
 import type { GenerateRequest, Hunt, HuntNode, SoundTake } from "../../lib/sound/types.ts";
 
 const SOUND = path.join(ROOT, "sound");
@@ -203,6 +207,18 @@ describe("a hunt's render is a Run the worker carries", () => {
     expect(after.map((n) => n.state)).toEqual(["failed", "failed"]);
     expect(after.every((n) => n.error !== null && n.error.includes(c.jobId))).toBe(true);
   });
+
+  it("a leaf named twice is priced and booked once", async () => {
+    seed([hunt("hn-dup01", [node("a"), node("b", { durationS: 20 })])]);
+    const ask = { huntId: "hn-dup01", leafIds: ["a", "b", "a"], mode: "dry" as const, opId: "opd00001" };
+    const r = must(await launchHuntRender(store, ask, OP, NOW));
+    if (r.kind !== "receipt") throw new Error(r.kind);
+    expect(r.receipt.lines.map((l) => l.label)).toEqual(["Leaf a · 30s", "Leaf b · 20s"]);
+    const c = must(await launchHuntRender(store, { ...ask, token: r.receipt.token }, OP, NOW));
+    expect(c).toMatchObject({ kind: "launched", leaves: ["a", "b"] });
+    const { run } = must(store.read((t) => loadRun(t, huntRunId("hn-dup01", "opd00001"))));
+    expect(run).toMatchObject({ units: 2, input: { leaves: ["a", "b"] } });
+  });
 });
 
 /* ── the lesson door ────────────────────────────────────────────────────── */
@@ -253,6 +269,55 @@ describe("the lesson door", () => {
   });
 });
 
+describe("the engine's lesson draft", () => {
+  it("the engine writes the claim; its techniques are held to the kind's list and the evidence is the map's, not the model's", async () => {
+    seed([heardHunt("hn-les03", ["a"])], [take("hn-les03-ta", { ...WHOLE, huntId: "hn-les03", nodeId: "a", verdict: "kept" }), take("hn-les03-tb", { ...WHOLE, huntId: "hn-les03", nodeId: "b", verdict: "rejected", reasons: ["section-bleed"] })]);
+    const sent: string[] = [];
+    const reason = async (req: Parameters<typeof stubReason>[0]) => {
+      sent.push(req.prompt);
+      const r = await stubReason(req);
+      return { ...r, json: { claim: CLAIM, technique: ["duration-and-tempo-locking", "invented"], provider: "elevenlabs" } };
+    };
+    const d = must(await draftLesson("hn-les03", reason));
+    expect(d).toMatchObject({ engineError: null, proposal: { claim: CLAIM, technique: ["duration-and-tempo-locking"], provider: "elevenlabs", source: "hunt", huntId: "hn-les03" } });
+    expect(d.proposal.evidence).toEqual(must(await handDraft("hn-les03")).proposal.evidence);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain("WINNER");
+    expect(sent[0]).toContain("section-bleed");
+    expect(lessonsOnDisk(), "a draft is never stored").toEqual([]);
+  });
+});
+
+/* ── the crown ──────────────────────────────────────────────────────────── */
+
+/** The fields a take carries for its ledger row (a judged take is written there). */
+const WHOLE: Partial<SoundTake> = { technique: [], negative: null, terms: { genre: ["ambient"], mood: [], instrument: [], sfxCategory: null }, tempoBpm: null, key: null, durationS: 30, loop: null, file: null, peaks: null, measured: null, ratings: {}, reasons: [], note: null, stage: null, group: null, label: null, parentId: null, songId: null, plan: null, createdAt: "2026-10-17T09:00:00.000Z", judgedAt: null, finalizedAt: null };
+
+describe("the crown door", () => {
+  it("a crown keeps an unjudged take in the same write, once per op; a rejected take is never overruled", async () => {
+    seed([heardHunt("hn-crn01", [])], [take("hn-crn01-ta", { ...WHOLE, huntId: "hn-crn01", nodeId: "a" }), take("hn-crn01-tb", { ...WHOLE, huntId: "hn-crn01", nodeId: "b", verdict: "rejected", reasons: ["section-bleed"] })]);
+    const on = must(await crownLeaf(store, { huntId: "hn-crn01", nodeId: "a", takeId: "hn-crn01-ta", on: true, opId: "opcrn001" }, OP, NOW));
+    expect(on).toMatchObject({ winner: true, kept: true, unkept: false, recorded: true });
+    expect(takesOnDisk().find((t) => t.id === "hn-crn01-ta")).toMatchObject({ verdict: "kept", stage: "pending" });
+    expect(huntOnDisk("hn-crn01")?.nodes.find((n) => n.id === "a")?.winner).toBe(true);
+    const again = must(await crownLeaf(store, { huntId: "hn-crn01", nodeId: "a", takeId: "hn-crn01-ta", on: true, opId: "opcrn001" }, OP, NOW));
+    expect(again).toMatchObject({ winner: true, kept: false, recorded: false });
+    expect(events("hunt.crowned", "hn-crn01")).toBe(1);
+    const no = await crownLeaf(store, { huntId: "hn-crn01", nodeId: "b", takeId: "hn-crn01-tb", on: true, opId: "opcrn002" }, OP, NOW);
+    expect(no.ok ? null : no.error.code).toBe("refused");
+    expect(takesOnDisk().find((t) => t.id === "hn-crn01-tb")?.verdict).toBe("rejected");
+    expect(huntOnDisk("hn-crn01")?.nodes.find((n) => n.id === "b")?.winner).toBe(false);
+  });
+
+  it("an uncrown reaches back into the take only while it sits pending", async () => {
+    const off = must(await crownLeaf(store, { huntId: "hn-crn01", nodeId: "a", takeId: "hn-crn01-ta", on: false, opId: "opcrn003" }, OP, NOW));
+    expect(off).toMatchObject({ winner: false, kept: false, unkept: true, recorded: true });
+    expect(takesOnDisk().find((t) => t.id === "hn-crn01-ta")).toMatchObject({ verdict: "unjudged", stage: null });
+    expect(huntOnDisk("hn-crn01")?.nodes.find((n) => n.id === "a")?.winner).toBe(false);
+    expect(events("hunt.uncrowned", "hn-crn01")).toBe(1);
+  });
+});
+
 /* ── a Suno leaf's file, back ───────────────────────────────────────────── */
 
 const WAV = { bytes: new Uint8Array([0x52, 0x49, 0x46, 0x46, 1, 2, 3, 4]), mime: "audio/wav", name: "suno-return.wav" };
@@ -276,5 +341,59 @@ describe("a Suno leaf takes its file back", () => {
     const br = await fileLeafReturn(store, { huntId: "hn-ret01", nodeId: "br", opId: "opret003", file: WAV }, OP, NOW);
     expect(br.ok ? null : br.error.code).toBe("refused");
     expect(takesOnDisk().map((t) => t.id)).toEqual(["hr-opret001"]);
+  });
+});
+
+describe("one store failure reads as one code on every door of the desk", () => {
+  const INPUTS: readonly [string, () => unknown, string][] = [
+    ["400", () => new SoundError("bad", 400), "invalid"],
+    ["404", () => new SoundError("gone", 404), "not-found"],
+    ["409", () => new SoundError("moved", 409), "conflict"],
+    ["500", () => new SoundError("corrupt", 500), "internal"],
+    ["503", () => new SoundError("busy", 503), "unavailable"],
+    ["a non-SoundError", () => new Error("EIO"), "internal"],
+  ];
+  for (const [name, make, code] of INPUTS) {
+    it(`${name} is ${code} at the crown door, the lesson door and the shared reading`, async () => {
+      const door = async <T,>(inStore: (fn: () => Promise<Result<T>>) => Promise<Result<T>>): Promise<string | null> => {
+        const r = await inStore(async () => {
+          throw make();
+        });
+        return r.ok ? null : r.error.code;
+      };
+      const shared = soundFailure(make());
+      expect([await door(huntInStore), await door(lessonInStore), shared.ok ? null : shared.error.code]).toEqual([code, code, code]);
+    });
+  }
+
+  it("the rubric door keeps no table of its own", () => {
+    const src = readFileSync(path.join(process.cwd(), "lib/sound/rubric.ts"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(src).toContain("soundFailure(e)");
+    expect(src).not.toMatch(/e\.status|STATUS_CODE/);
+  });
+});
+
+describe("knowledge/audio/params.json: only an absent file means nothing measured yet", () => {
+  const dir = path.join(ROOT, "knowledge");
+  const put = (text: string) => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "params.json"), text);
+  };
+  it("an absent file is null, a good one is read, a corrupt one is a SoundError that names the file and the regenerating command", async () => {
+    const was = process.env["SOUND_KNOWLEDGE_DIR"];
+    process.env["SOUND_KNOWLEDGE_DIR"] = dir;
+    try {
+      expect(await readAudioParams()).toBeNull();
+      put('{"kinds":{}}');
+      expect(await readAudioParams()).toEqual({ kinds: {} });
+      put("{");
+      const bad = await readAudioParams().then(() => null, (e: unknown) => e);
+      expect(bad).toBeInstanceOf(SoundError);
+      expect((bad as SoundError).message).toContain("params.json");
+      expect((bad as SoundError).message).toContain("pipeline/sound.mts knowledge");
+    } finally {
+      if (was === undefined) delete process.env["SOUND_KNOWLEDGE_DIR"];
+      else process.env["SOUND_KNOWLEDGE_DIR"] = was;
+    }
   });
 });

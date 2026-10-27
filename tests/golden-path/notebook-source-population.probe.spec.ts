@@ -29,6 +29,7 @@
 // changing nothing anyone notices.
 import { test, expect } from "@playwright/test";
 
+import { countsOf } from "@/lib/notebook/counts";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "@/lib/notebook/notebook";
 
 // Frozen baselines for the SHIPPED run-1 fixture, defended by the measurement
@@ -87,4 +88,16 @@ test("notebook-source-population: factSourceStrings counts DISTINCT strings, not
   expect(NOTEBOOK_COUNTS.factSourceStrings, "distinct must be <= raw rows, or something double-counted").toBeLessThanOrEqual(
     raw.length,
   );
+});
+
+test("notebook-source-population: a fact with no `source` string is not an attribution", () => {
+  // A notebook from the validation door carries `sources[]` per fact and,
+  // usually, no legacy `source` string at all. The distinct set of five
+  // undefineds is one element; the count of attributions it holds is zero.
+  // (types.ts calls `source` required; the door does not, hence the cast.)
+  type Facts = typeof NOTEBOOK.facts;
+  const facts = NOTEBOOK.facts.slice(0, 5).map(({ source: _gone, ...f }) => f) as unknown as Facts;
+  expect(countsOf({ ...NOTEBOOK, facts }).factSourceStrings).toBe(0);
+  const mixed: Facts = [...facts, NOTEBOOK.facts[0], NOTEBOOK.facts[0]];
+  expect(countsOf({ ...NOTEBOOK, facts: mixed }).factSourceStrings).toBe(1);
 });

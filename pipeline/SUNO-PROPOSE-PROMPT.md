@@ -4,8 +4,17 @@
   lane of the audio board), `riff` (N variations of one existing prompt) or
   `sentence` (one prompt from the operator's sentence on the Floor's audio
   composer; lib/sound/suno/propose.ts `proposeFromSentence`, L52).
+  `facets` is never sent alone: filled, it is the {{FACETS}} slot of `sentence` when the
+  sentence comes with a prepared song (a scout music seed's genre, subgenre, mood,
+  instruments, tempo and vocals; spark scout-vision), and the slot is empty otherwise, so
+  a sentence without facets reads exactly as before. Its layers follow the registry's
+  music-prompt-composition techniques sonic-style-vocabulary (one layer per axis, the
+  fence on both sides: vocals stated in `style` AND in `exclude`) and
+  duration-and-tempo-locking (tempo as a number in bpm).
   Slots: {{LANE_AXIS}} {{LANE_VALUE}} {{COUNT}} {{EXAMPLES}} {{SOURCE}} {{SENTENCE}}
-  {{STYLE_MAX}} {{TITLE_MAX}}. Text before the first section marker is never sent.
+  {{FACETS}} {{STYLE_MAX}} {{TITLE_MAX}}; in `facets`: {{GENRE}} {{MOOD}} {{INSTRUMENTS}}
+  {{TEMPO}} {{VOCALS_STYLE}} {{VOCALS_LYRICS}} {{VOCALS_EXCLUDE}}. Text before the first
+  section marker is never sent.
 -->
 
 <!-- section: shared -->
@@ -37,6 +46,16 @@ Keep its identity — the genre and the thing that makes it that track — and v
 <!-- section: sentence -->
 Write {{COUNT}} prompt that turns the operator's sentence into a track they would keep:
 
-{{SENTENCE}}
+{{SENTENCE}}{{FACETS}}
 
 The sentence is a brief, not a style line: read what it asks the music to DO (hold under a voice, carry a minute, land a turn) and choose the genre, mood, instruments and tempo that do it. Keep anything the sentence names outright (an instrument, a tempo, a length, "no vocals"). Do not copy the sentence into `style`. The title names the track the sentence describes.
+
+<!-- section: facets -->
+The song is already prepared. Write `style` from these layers, each stated once, in this order, and keep every one of them:
+
+- genre and era: {{GENRE}}
+- mood: {{MOOD}}
+- instrumentation: {{INSTRUMENTS}}
+- tempo: {{TEMPO}} bpm
+
+Vocals are stated on both sides: put "{{VOCALS_STYLE}}" in `style`, {{VOCALS_LYRICS}} as `lyrics`, and "{{VOCALS_EXCLUDE}}" in `exclude`.

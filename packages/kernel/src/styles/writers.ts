@@ -49,15 +49,15 @@ export function recordForgeEvidenceIn(t: Tx, run: string, at: string, rows: read
   for (const row of styles) {
     const s = row.style;
     const mine = rows.filter((r) => r.style === s.id);
-    const evidence: EvidenceInput[] = [
-      ...s.evidence.filter((e) => e.run !== run),
-      ...mine.map((r) => ({ run, scene: r.scene, mechanism: r.mechanism, verdict: r.verdict, at, by: byOf(r.by) })),
-    ];
+    const fresh: EvidenceInput[] = mine.map((r) => ({ run, scene: r.scene, mechanism: r.mechanism, verdict: r.verdict, at, by: byOf(r.by) }));
     // A retry of a crashed commit re-stamps its rows with its own instant; the verdicts are the
     // same, so the write is the same - compare without `at`, or every retry would mint a revision
-    // (and the export a `_rev`) the uninterrupted commit never had.
+    // (and the export a `_rev`) the uninterrupted commit never had. Compare THIS RUN's rows, not
+    // the whole list: replacing them moves them to the end, so a retry after another run had
+    // committed reordered the evidence and minted that revision anyway.
     const bare = (rows: readonly EvidenceInput[]) => canonical(rows.map(({ at: _at, ...r }) => r));
-    if (bare(evidence) === bare(s.evidence)) continue;
+    if (bare(s.evidence.filter((e) => e.run === run)) === bare(fresh)) continue;
+    const evidence: EvidenceInput[] = [...s.evidence.filter((e) => e.run !== run), ...fresh];
     const kept = mine.filter((r) => r.verdict === "keep").length;
     const written = putStyleIn(t, row, withStatus({ ...s, evidence }), { kind: "forge-commit", op: { run }, by, type: "style.evidence", data: { run, rows: mine.length, kept } });
     touched.push(s.id);

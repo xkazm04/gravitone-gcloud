@@ -153,6 +153,10 @@ export interface SpendRow {
   model?: string;
   outcome: SpendOutcome;
   basis: SpendBasis;
+  /** The PRICES row an `estimate` row was costed with, as `provider/model@checked`
+   *  (pricing.ts `priceRef`). Absent on a vendor receipt, on a row booked before
+   *  this field existed, and where the table declared no row. */
+  price?: string;
 }
 
 /**
@@ -212,7 +216,9 @@ function note(line: string): void {
 }
 
 /** The axes an imaging row is attributed on — the ones log.ts prints. */
-type ImagingAxes = { cap: Capability; provider: ProviderId; model?: string };
+// `price` rides along unaggregated: it is not in the class's axis list, so no
+// by-axis total splits on it, but the persisted row keeps it.
+type ImagingAxes = { cap: Capability; provider: ProviderId; model?: string; price?: string };
 
 /**
  * The ledger. One kernel meter over the store lib/spend/select.ts picks for
@@ -224,7 +230,7 @@ const meter = createMeter<SpendEntry, ImagingAxes, SpendBasis>(CLASS, {
     amount: e.usd,
     outcome: e.outcome,
     basis: e.basis,
-    axes: { cap: e.cap, provider: e.provider, model: e.model },
+    axes: { cap: e.cap, provider: e.provider, model: e.model, price: e.price },
     at: e.at,
   }),
   refuse: ({ amount, spent, held, ceiling, windowMs, refusals }) => {
@@ -417,6 +423,8 @@ export interface SpendEntry {
   model?: string;
   outcome: SpendOutcome;
   basis: SpendBasis;
+  /** See `SpendRow.price`. */
+  price?: string;
   at?: number;
 }
 
@@ -512,6 +520,7 @@ function asSpendRow(r: { at: number; amount: number; outcome: SpendOutcome; basi
     model: r.axes.model,
     outcome: r.outcome,
     basis: r.basis,
+    price: r.axes.price,
   };
 }
 

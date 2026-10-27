@@ -39,6 +39,17 @@ export function checkPromises(cut: TrailerCut): StructureFinding[] {
     }
   }
 
+  // Step 4, "separate spend from debt": "Spending is sometimes correct and always a
+  // cost." Whether the spend is right is a judgement, so the row is unmeasured.
+  for (const [b, p] of rows) {
+    if (!p.spentByTheCut) continue;
+    out.push({
+      rule: "promise", subject: `${p.id}:spent`, verdict: "unmeasured",
+      detail: `Promise "${p.sentence}" is spent by the cut itself: delivered inside the promotion, it will not land again when the work ships. Spending is sometimes correct and always a cost; whether this one is worth it is a judgement.`,
+      ...where(b), cites: CITE.promise,
+    });
+  }
+
   // THE EXTRACTION ITSELF IS NOT AUTOMATABLE, and saying so is the point.
   out.push({
     rule: "promise", subject: "extraction", verdict: "unmeasured",

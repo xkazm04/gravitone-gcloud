@@ -1,9 +1,9 @@
 // LANE — THE MULTI-MODEL CRITIQUE (scope amendment 1), offline.
 //
-// lib/agent/cliSeam.ts (four engines, one read-only reviewer profile),
+// lib/agent/cliSeam.ts (three engines, one read-only reviewer profile),
 // lib/articles/critique.ts (the panel, the schema, the record) and the
 // `critique` step of lib/articles/engine.ts, driven end to end with
-// tests/fixtures/articles/stub-agent.mjs standing in for ALL FOUR CLIs through
+// tests/fixtures/articles/stub-agent.mjs standing in for ALL THREE CLIs through
 // the real seam (ARTICLES_AGENT_BIN, ARTICLES_CODEX_BIN,
 // ARTICLES_AGY_BIN). Nothing spends, nothing reaches the network, the real
 // registry is never named. What is pinned:
@@ -87,7 +87,7 @@ async function toGate(text = "the token tax") {
   return driveRun(run.id, deps());
 }
 
-/* ── the seam: four engines ───────────────────────────────────────────── */
+/* ── the seam: three engines ───────────────────────────────────────────── */
 
 const call = { model: "m", effort: "high", cwd: "C:/ws", prompt: "ARTICLE-REVIEW …", timeoutMin: 25 };
 
@@ -229,6 +229,9 @@ test("schema: a review is held to the contract; the panel says who reviewed", ()
   // a reviewer quoting its workspace path does not carry a home path into the registry
   expect(scrubHomePaths("see C:\\Users\\someone\\AppData\\Local\\Temp\\ws\\post\\post.md and /home/al/x/y")).toBe("see ~/AppData\\Local\\Temp\\ws\\post\\post.md and ~/x/y");
   expect(validateReview(JSON.stringify({ verdict: "publish", summary: "read C:/Users/someone/ws/post.md", findings: [] }), spec).review.summary).toBe("read ~/ws/post.md");
+  // the same profile as a Windows shell spells it: lower-case drive, Git Bash, WSL
+  expect(scrubHomePaths("c:\\users\\someone\\ws and /c/Users/someone/AppData/x and /mnt/d/Users/al/y")).toBe("~/ws and ~/AppData/x and ~/y");
+  expect(scrubHomePaths("posts/c/Users-guide/x and https://h.example/c/Users/z/")).toBe("posts/c/Users-guide/x and https://h.example/c/Users/z/");
   expect(() => extractJsonObject("[1,2]")).toThrow();
 });
 
@@ -459,6 +462,25 @@ test("a malformed review gets one retry; twice malformed is errored; a reviewer'
   expect(json(run.id, "critique/round-1/receipts/gemini4.json")).toMatchObject({ outcome: "completed", attempts: 1, dropped: 1 });
 });
 
+test("a reviewer whose retry throws keeps on its receipt what its first attempt spent", async () => {
+  // gpt (codex) answers garbage for $0.5, then its retry fails before it can answer at all
+  let codexCalls = 0;
+  const d = defaultDeps({
+    render: false,
+    runReviewer: async (c) => {
+      if (c.engine !== "codex") return runReviewer(c);
+      codexCalls++;
+      if (codexCalls === 1) return { outcome: "completed", final: "not a review", turns: 1, costUsd: 0.5, durationMs: 1, exitCode: 0, errors: [] };
+      throw new Error("the workspace went away");
+    },
+  });
+  const created = await createRun({ topic: { kind: "free", text: "the token tax" } }, d);
+  const run = await driveRun(created.id, d);
+  expect(run.status, run.error).toBe("awaiting-approval");
+  expect(json(run.id, "critique/round-1/receipts/gpt.json")).toMatchObject({ outcome: "errored", attempts: 2, costUsd: 0.5, errors: ["the workspace went away"] });
+  expect(run.critique?.reviewers.find((r) => r.id === "gpt")).toMatchObject({ outcome: "errored", costUsd: 0.5 });
+});
+
 /* ── the check item and the registry ─────────────────────────────────── */
 
 test("check item: quorum in every round and every blocker factual answered", () => {
@@ -483,8 +505,12 @@ test("check item: quorum in every round and every blocker factual answered", () 
   expect(critiqueCheckItem(detail())).toMatchObject({ id: "critique", status: "pass", value: "r1 2/0; 1 blocker factual" });
   expect(critiqueCheckItem(detail({ dispositions: [] }))).toMatchObject({ status: "fail", detail: ["round 1: blocker factual a/f1 has no disposition with a reason"] });
   const short = detail();
-  short.rounds[0].receipts[1].outcome = "unavailable";
+  short.rounds[0].reviews.pop();
   expect(critiqueCheckItem(short)).toMatchObject({ status: "fail", detail: [expect.stringMatching(/round 1: 1 of 0 reviewers completed/)] });
+  // A crash after a review file landed but before its receipt: the round closed on the reviews.
+  const crashed = detail();
+  crashed.rounds[0].receipts.pop();
+  expect(critiqueCheckItem(crashed)).toMatchObject({ status: "pass", value: "r1 2/0; 1 blocker factual" });
   expect(critiqueCheckItem(undefined)).toMatchObject({ status: "fail", value: "no critique record" });
 });
 

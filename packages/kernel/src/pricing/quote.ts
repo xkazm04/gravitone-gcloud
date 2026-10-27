@@ -1,6 +1,7 @@
 import { parseAt } from "@gt/domain/door";
 import { estimateSchema, type Estimate } from "@gt/domain/estimate";
 import type { Result } from "@gt/domain/errors";
+import type { SettleBasis } from "../spend/ledger.ts";
 import { findRow, PRICE_TABLE, type PriceRow, type PriceUnit } from "./table.ts";
 
 // QUOTING - what a call cost, or will cost, and how anyone knows.
@@ -27,6 +28,18 @@ export type Usage = Partial<Record<PriceUnit, number>>;
 
 export type CostBasis = "vendor-reported" | "estimated" | "unpriced";
 
+/** The ledger's word for a quote's basis (spend/ledger.ts `SettleBasis`): the one translation, so "estimated" cannot book as real money. */
+export function settleBasisOf(basis: CostBasis): SettleBasis {
+  switch (basis) {
+    case "vendor-reported":
+      return "vendor";
+    case "estimated":
+      return "estimate";
+    case "unpriced":
+      return "credits";
+  }
+}
+
 export type Quote =
   | { readonly usd: number; readonly basis: "vendor-reported" | "estimated"; readonly note: string }
   | { readonly usd: null; readonly basis: "unpriced"; readonly note: string };
@@ -44,6 +57,11 @@ export type QuoteInput = {
 };
 
 const unpriced = (note: string): Quote => ({ usd: null, basis: "unpriced", note });
+
+/** The `YYYY-MM-DD` a quote prices for, or undefined. A dated rate is compared
+ *  as text, so an epoch-ms string ("1801...") sorts before every expiry and
+ *  would keep an introductory rate pricing after it ended. */
+const dayOf = (on: string): string | undefined => (/^\d{4}-\d{2}-\d{2}/.test(on) ? on.slice(0, 10) : undefined);
 
 function billed(usage: Usage): [PriceUnit, number][] {
   const out: [PriceUnit, number][] = [];
@@ -71,7 +89,8 @@ export function quote(q: QuoteInput, table: readonly PriceRow[] = PRICE_TABLE): 
   }
   const units = billed(q.usage);
   if (units.length === 0) return unpriced(`no usage is known for ${q.provider}/${q.model} before the call, so there is nothing to multiply`);
-  const day = q.on.slice(0, 10);
+  const day = dayOf(q.on);
+  if (day === undefined) return unpriced(`the quote's day "${q.on}" is not an ISO date, so no dated rate can be checked against it`);
   let usd = 0;
   const parts: string[] = [];
   for (const [unit, n] of units) {
@@ -101,11 +120,12 @@ export function toEstimate(q: Quote, seconds: number): Result<Estimate> {
  * guess, a ledger may not. Undefined when no row of that unit has a figure.
  */
 export function dearestRate(unit: PriceUnit, on: string, table: readonly PriceRow[] = PRICE_TABLE): { row: PriceRow; usdPerUnit: number } | undefined {
-  const day = on.slice(0, 10);
+  // A day that cannot be read retires no rate: the gate errs high, so every priced row competes.
+  const day = dayOf(on);
   let best: { row: PriceRow; usdPerUnit: number } | undefined;
   for (const row of table) {
     if (row.unit !== unit || row.usd === undefined) continue;
-    if (row.validUntil !== undefined && day > row.validUntil) continue;
+    if (row.validUntil !== undefined && day !== undefined && day > row.validUntil) continue;
     const perUnit = row.usd / row.per;
     if (best === undefined || perUnit > best.usdPerUnit) best = { row, usdPerUnit: perUnit };
   }

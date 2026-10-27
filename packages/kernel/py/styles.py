@@ -43,7 +43,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.append(_HERE)  # behind the caller's entries: kernel_ledger.py says why
 from kernel_ledger import append  # noqa: E402
-from kernel_store import REPO, RUNNER, STORE_PATH_VAR, StoreError, ensure_store  # noqa: E402
+from kernel_store import REPO, REQUIRED, STORE_PATH_VAR, StoreError, ensure_store  # noqa: E402
 from verify_events import canonical  # noqa: E402
 
 STYLE_TABLES = ("styles", "style_ops")
@@ -61,32 +61,11 @@ def _iso(dt=None):
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.") + "%03dZ" % (dt.microsecond // 1000)
 
 
-def _missing(path):
-    db = sqlite3.connect("file:%s?mode=ro" % path.replace("\\", "/"), uri=True)
-    try:
-        have = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
-    finally:
-        db.close()
-    return [t for t in STYLE_TABLES if t not in have]
-
-
 def ensure_styles(path, node=None, timeout_s=120):
-    """kernel_store.ensure_store, plus the style tables: a store migrated before Phase 5 has
-    every table the job protocol needs and none of these, so it is migrated once more by the
-    same Node `--migrate` (Python never migrates - kernel_store.py says why)."""
-    ensure_store(path, node=node, timeout_s=timeout_s)
-    if not _missing(path):
-        return path
-    node = node or shutil.which("node")
-    if node is None:
-        raise StoreError("store %s has no style tables and node is not on PATH to migrate it" % path)
-    env = dict(os.environ, **{STORE_PATH_VAR: path})
-    r = subprocess.run([node, str(RUNNER), "--migrate", "--json"], cwd=str(REPO), env=env,
-                       capture_output=True, text=True, timeout=timeout_s)
-    if r.returncode != 0 or _missing(path):
-        raise StoreError("migrating %s for the style tables failed (exit %s): %s" % (
-            path, r.returncode, (r.stderr or r.stdout).strip()[-400:]))
-    return path
+    """kernel_store.ensure_store, asked for the style tables too: a store migrated before Phase 5
+    has every table the job protocol needs and none of these, and the same Node `--migrate`
+    brings them (Python never migrates - kernel_store.py says why)."""
+    return ensure_store(path, node=node, timeout_s=timeout_s, required=REQUIRED + STYLE_TABLES)
 
 
 def _check(record):

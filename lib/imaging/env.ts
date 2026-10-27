@@ -2,12 +2,7 @@
 //
 // The dev/prod split is the user's standing decision, and the table that
 // encodes it lives in router.ts (PLAN) — this file only answers "is there a key
-// for that vendor". As of the 60-cell style trial:
-//
-//   dev   Google generates and edits, Leonardo is the re-route target for
-//         generate, Qwen recognises.
-//   prod  Google does everything — one vendor, one style-lock mechanism, and
-//         the reference-image window the production style block is tuned for.
+// for that vendor". Read the roster there; a copy here is a copy that rots.
 //
 // Keys are read lazily, per call, rather than captured at module load: a route
 // handler that booted before .env.local was filled in would otherwise hold a
@@ -38,8 +33,10 @@ export const KEY_VAR: Record<ProviderId, string> = {
   // `canSpawnLocalBinaries()` AND a live `agy --version` presence probe
   // (providers/agy.ts#agyAvailable) — both `keyFor` and `isConfigured` below
   // special-case "agy" rather than reading this string as a variable name.
-  // The entry exists only so this Record stays exhaustive.
-  agy: "agy (presence-checked, not an env var)",
+  // The entry exists so this Record stays exhaustive, and it is the clause the
+  // router's no-key sentence ends with (errors.ts noKey), so it says what agy
+  // needs - the kernel router's spelling of the same fact.
+  agy: "the `agy` CLI, installed and authenticated (presence-probed)",
   // The Leonardo WEB STUDIO's credit pool, reached by driving a signed-in
   // Chrome profile over CDP (providers/leonardoStudio.ts). The "key" is the
   // CDP endpoint; set = this machine opted in. A separate pool from the API
@@ -50,6 +47,9 @@ export const KEY_VAR: Record<ProviderId, string> = {
   // GPT Image 2.5 Flare over the API (providers/leonardoFlare.ts): the same key
   // and the same credit pool as Lucid Origin, a different model and adapter.
   "leonardo-flare": "LEONARDO_API_KEY",
+  // Flux 2 dev on this box's ComfyUI (providers/comfyFlux.ts): no key. Like agy, `keyFor` and `isConfigured`
+  // special-case it - a prefer-only local model is reached by name and answers for itself when ComfyUI is down.
+  "comfy-flux2": "ComfyUI at COMFY_URL (default http://127.0.0.1:8188) with the Flux 2 weights",
 };
 
 const studioFake = () => process.env.LEONARDO_STUDIO_DRIVER?.trim() === "fake";
@@ -61,6 +61,7 @@ export function keyFor(provider: ProviderId): string {
     return "agy-cli";
   }
   if (provider === "leonardo-studio" && studioFake()) return "fake";
+  if (provider === "comfy-flux2") return "local";
   const v = process.env[KEY_VAR[provider]];
   if (!v || !v.trim()) throw noKey(provider, KEY_VAR[provider]);
   return v.trim();
@@ -71,6 +72,7 @@ export function keyFor(provider: ProviderId): string {
 export function isConfigured(provider: ProviderId): boolean {
   if (provider === "agy") return agyAvailable();
   if (provider === "leonardo-studio" && studioFake()) return true;
+  if (provider === "comfy-flux2") return true;
   const v = process.env[KEY_VAR[provider]];
   return Boolean(v && v.trim());
 }

@@ -169,7 +169,8 @@ export type StyleSummary = {
   readonly originKind: StyleOriginKind;
   readonly discipline?: Discipline;
   readonly palette: readonly PaletteColor[] | null;
-  /** The first approved current proof, else the first exemplar; null when the style has no picture. */
+  /** The first approved proof that is still sent (current, or before lineage; never stale), else the
+   *  first exemplar; null when the style has no picture. */
   readonly cover: BlobRef | null;
   readonly proofs: { readonly approved: number; readonly pending: number; readonly rejected: number };
   readonly keptCells: number;

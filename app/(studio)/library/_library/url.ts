@@ -12,6 +12,7 @@
 // only what was changed.
 
 import { isSharedGroup, LIBRARY_KINDS, LIBRARY_SORTS, VOCAB_GROUPS, type LibraryKindName, type LibraryQuery, type LibrarySort } from "@gt/domain/library";
+import type { FacetLine } from "@gt/ui/components/library/DetailPanel.tsx";
 import type { Density, View } from "@gt/ui/components/library/library.ts";
 
 export type Facets = Readonly<Record<string, readonly string[]>>;
@@ -120,3 +121,13 @@ export function toggled(u: LibraryUrl, group: string, value: string, on: boolean
 }
 
 export const activeCount = (f: Facets): number => Object.values(f).reduce((n, vs) => n + vs.length, 0);
+
+/**
+ * A detail's facet lines pressed by the filter in the address NOW. The screen keeps a detail by
+ * id for the visit, and the server drew its `pressed` under the filter it was fetched with - so a
+ * chip pressed from the panel (a navigation that keeps the selection) stayed drawn unpressed and
+ * named without "in the filter", while the next press of it removed the value it said was absent.
+ */
+export function pressedBy(lines: readonly FacetLine[], f: Facets): readonly FacetLine[] {
+  return lines.map((l) => ({ ...l, values: l.values.map((v) => ({ ...v, pressed: (f[l.group] ?? []).includes(v.value) })) }));
+}

@@ -173,6 +173,10 @@ test("case 1: commitRun's effects land in the documented order — styles (the s
   // it leads the ledger exactly as the styles.json write used to sit beside it. Its own crash and
   // ratchet guarantees live in packages/kernel/test/styles.test.ts.
   expect(mutations).toEqual([
+    // The auto-reject of sc2 goes through the verdict kernel first: its log line, its revision, then the map.
+    "appendFile verdicts.log.jsonl",
+    "writeJsonAtomic verdicts.rev.json",
+    "writeJsonAtomic verdicts.json",
     "writeJsonAtomic ledger.json",
     "writeFile grader-calibration.json",
     "unlink haze--ref--s1.png",
@@ -239,4 +243,35 @@ test("case 3: a crash between the last unlink and run.json leaves I1 and I2 inta
     expect(r.afterRetry, `k=${e.k} (${r.crashed}) after the retry`).toEqual([]);
     console.log(`[effects] crash at k=${e.k} (${r.crashed}): I1/I2 hold at the crash and after the retry`);
   }
+});
+
+/* ── 4. An auto-reject is a verdict, and the verdict kernel logs it ───────── */
+
+test("case 4: commitRun('reject') logs each auto-rejected candidate and bumps the revision, once, through the verdict kernel", async () => {
+  await reference();
+  const logFile = path.join(runDir(), "verdicts.log.jsonl");
+  const lines = existsSync(logFile) ? readFileSync(logFile, "utf8").split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l) as { op: string; key: string; surface: string }) : [];
+  const rev = readJsonFile<{ rev: number }>(path.join(runDir(), "verdicts.rev.json"), { rev: 0 }).rev;
+  console.log(`[effects] auto-rejects: sc2 undecided -> ${lines.length} log line(s), rev ${rev}`);
+  expect(lines.filter((l) => l.op === "set").map((l) => [l.key, l.surface])).toEqual([["sc2/haze--ref--s2", "commit"]]);
+  expect(rev).toBe(1);
+});
+
+/* ── 5. The log leads the map, and the port can kill between them ─────────── */
+
+test("case 5: a crash after the verdict-log line and before its map write leaves a logged decision and an unchanged map", async () => {
+  const { port } = await reference();
+  const log = port.mutationLog();
+  const append = log.find((e) => label(e) === "appendFile verdicts.log.jsonl");
+  expect(append, "the verdict log append is an effect on the port").toBeDefined();
+  const rev = log.find((e) => label(e) === "writeJsonAtomic verdicts.rev.json")!;
+  expect(append!.k!, "the log leads the revision and the map").toBeLessThan(rev.k!);
+
+  seed();
+  __setFoundryFsPort(new RecordingPort({ crashAt: rev.k }));
+  await expect(commitRun(RUN, "reject")).rejects.toBeInstanceOf(CrashAt);
+  __setFoundryFsPort(null);
+  const lines = readFileSync(path.join(runDir(), "verdicts.log.jsonl"), "utf8").split("\n").filter((l) => l.trim());
+  expect(lines.length, "the decision is logged").toBe(1);
+  expect(readJsonFile<Verdicts>(path.join(runDir(), "verdicts.json"), {})["sc2/haze--ref--s2"], "the map has not taken it").toBeUndefined();
 });

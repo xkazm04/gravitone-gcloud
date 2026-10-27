@@ -94,6 +94,13 @@ export type Preview = { readonly consequence: Consequence; readonly v1Digest: st
  */
 export interface DecisionAdapter<V1> {
   readonly source: PacketSource;
+  /**
+   * A COMMIT IN PARTS (spark scout-storyboards): the packet may commit with cells left undecided (the kernel's
+   * `undecidedAs: "leave"`), and the adapter opens the rest as a remainder packet `<packetId>:<n>`
+   * (lib/foundry/scout/parts.ts). Opt-in: an adapter without it refuses a commit while anything is undecided, as
+   * every source did before.
+   */
+  readonly partial?: true;
   /** v1 record(s) behind a Weir pile, through v1's own readers (bounded, read-only). */
   read(ref: AdapterRef): Promise<Result<V1>>;
   /** Pure. An err when the v1 record is not decidable as a packet (nothing judgeable, not committable). */
@@ -121,6 +128,16 @@ export function candidateOf(d: Pick<Decision, "key">): string {
 export function decisionMap(decisions: readonly Decision[]): ReadonlyMap<string, Decision> {
   return new Map(decisions.map((d) => [candidateOf(d), d]));
 }
+
+/** A verdict as an import and a kernel decision both spell it: what `sameVerdict` compares. */
+export type VerdictWords = { readonly verdict: string | null; readonly reasons: readonly string[]; readonly note?: string };
+
+/**
+ * Whether a kernel decision still IS the v1 record it was imported from: verdict, reasons in
+ * order, note. Apply leaves v1's record byte-identical when it is (the forge, extract, strips and
+ * scout adapters' rule - one copy, so the four cannot drift on what "unchanged" means).
+ */
+export const sameVerdict = (a: VerdictWords, b: VerdictWords): boolean => a.verdict === b.verdict && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "");
 
 /** v1's `by` words to the ledger's actor words. Absent = a record older than the field: a human's. */
 export const byOf = (v1: "human" | "model" | undefined): By => (v1 === "model" ? "agent" : "operator");

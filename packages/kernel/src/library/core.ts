@@ -1,4 +1,5 @@
 import {
+  ageBand,
   COLUMN_GROUPS,
   LIBRARY_KINDS,
   MEDIA_KINDS,
@@ -148,6 +149,12 @@ export function facetsOf(item: LibraryItem, ctx: IndexContext): FacetRow[] {
       add("technique", item.vocabulary.technique, item.vocabulary.technique);
       add("rig", item.vocabulary.rigged ? "rigged" : "static");
       if (item.vocabulary.tris !== undefined) add("tris", trisBand(item.vocabulary.tris), trisBand(item.vocabulary.tris));
+      break;
+    case "character":
+      add("age", ageBand(item.vocabulary.age), ageBand(item.vocabulary.age));
+      add("build", item.vocabulary.build);
+      for (const l of item.vocabulary.looks) add("look", l);
+      for (const a of item.vocabulary.applications) add("application", a);
       break;
   }
   for (const c of item.collections) {

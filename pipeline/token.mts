@@ -1,6 +1,6 @@
 // CLI TOKENS - the operator mints one credential per caller, lists them, revokes them.
 //
-//   node pipeline/token.mts mint --name <caller> --scope money|read [--ttl 30d] [--json]
+//   node pipeline/token.mts mint --name <caller> --scope money|read|act [--ttl 30d] [--json]
 //   node pipeline/token.mts list [--json]
 //   node pipeline/token.mts revoke <id> [--reason "<why>"] [--json]
 //
@@ -22,6 +22,9 @@
 // nowhere and be revocable by no one. The store keeps a hash; nothing here or
 // in the ledger can print it again. `list` never shows a secret.
 //
+// Scopes: `money` opens every door; `act` reads and writes without spending (the agent's, e.g.
+// `mint --name athena --scope act` for /api/mcp; every money door refuses it); `read` reads only.
+//
 // Exit 0 done · 1 refused (bad input, unknown id) · 2 could not run (store).
 // Runs under plain `node` (type stripping): erasable TypeScript only.
 
@@ -37,7 +40,7 @@ import { OUT_DIRNAME } from "../lib/fixtures/mode.ts";
 
 const USAGE = [
   "usage:",
-  "  node pipeline/token.mts mint --name <caller> --scope money|read [--ttl 30d] [--json]",
+  "  node pipeline/token.mts mint --name <caller> --scope money|read|act [--ttl 30d] [--json]",
   "  node pipeline/token.mts list [--json]",
   "  node pipeline/token.mts revoke <id> [--reason \"<why>\"] [--json]",
 ].join("\n");
@@ -91,7 +94,7 @@ if (verb === "mint") {
   const ttlText = flag("ttl");
   if (name === undefined || scope === undefined) fail(1, `mint needs --name and --scope\n${USAGE}`);
   const scoped: TokenScope | undefined = TOKEN_SCOPES.find((x) => x === scope);
-  if (scoped === undefined) fail(1, `--scope ${scope} is not money|read`);
+  if (scoped === undefined) fail(1, `--scope ${scope} is not ${TOKEN_SCOPES.join("|")}`);
   const ttl = ttlText === undefined ? undefined : parseTtl(ttlText);
   if (ttl !== undefined && !ttl.ok) fail(1, ttl.error.message);
   const input = { name, scope: scoped, ...(ttl === undefined ? {} : { ttlMs: ttl.value }) };

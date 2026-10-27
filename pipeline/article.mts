@@ -410,6 +410,7 @@ async function main() {
         console.log(`  covered ${report.coveredAtStart} -> ${report.coveredNow} of ${report.options.target} · reported spend $${report.spentUsd.toFixed(2)} of $${report.options.budgetUsd}`);
         for (const r of report.runs) console.log(`  ${r.topic.padEnd(56)} ${r.end.padEnd(16)} ${r.runId}  $${r.costUsd.toFixed(2)}  ${r.turns} turns${r.resumes ? `  ${r.resumes} resumes` : ""}${r.error ? `  ${r.error.slice(0, 80)}` : ""}`);
         if (report.orphaned.length) console.log(`  orphaned (no driver, not finished): ${report.orphaned.join(", ")}`);
+        if (report.damaged.length) console.log(`  damaged (run.json does not parse): ${report.damaged.join(", ")}`);
         console.log(`  ${report.note}`);
       }
       closeProcessKernel();

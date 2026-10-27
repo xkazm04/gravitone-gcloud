@@ -6,12 +6,13 @@ import { AppError } from "@gt/domain/errors";
 import { packetIdSchema, runIdSchema, type CandidateId } from "@gt/domain/ids";
 import { mediaLaneSchema, type MediaLane } from "@gt/domain/lane";
 import { packetModeSchema, packetSourceSchema, packetStateSchema, type PacketState } from "@gt/domain/packet";
-import { SOURCES } from "@gt/domain/source";
+import { reasonVocabulary } from "@gt/domain/source";
 import type { Reader } from "../store.ts";
-import { applyStatus } from "./apply.ts";
+import { applyStatus, applyStatusOf } from "./apply.ts";
 import { returnedPlan } from "./commit.ts";
 import { pairOutcomes, planUndo } from "./core.ts";
-import { currentDecisions, head, items, must, pairsOf, readPacket, revealPicks, rows } from "./read.ts";
+import { head, items, must, pairsOf, readPacket, revealPicks, rows } from "./read.ts";
+import { toDecision, type DecisionRow } from "./schema.ts";
 
 // THE BOARD'S READS - the two shapes the UI is built against (Phase 3's
 // BoardPort: `loadPacket -> PacketView`, `listPackets -> PacketSummary[]`),
@@ -35,9 +36,11 @@ export function readPacketView(r: Reader, packetId: string, opts: ViewOptions): 
   const h = head(r, packetId);
   const p = readPacket(r, packetId);
   const all = rows(r, packetId);
-  const decisions = currentDecisions(r, packetId).decisions;
+  // currentDecisions' own fold over the one rows() read above (head and rows are not asked twice).
+  const newest = new Map<string, DecisionRow>();
+  for (const d of all) newest.set(d.candidate_id, d);
+  const decisions = [...newest.values()].map((d) => must(toDecision(d)));
   const decided = decisions.filter((d) => d.verdict !== null).length;
-  const spec = SOURCES[p.source];
   const pairs: PairView[] = [];
   if (p.mode === "blind-pair") {
     const arms = pairsOf(items(r, packetId));
@@ -67,7 +70,7 @@ export function readPacketView(r: Reader, packetId: string, opts: ViewOptions): 
     decisions,
     undecided: p.items.length - decided,
     canUndo: h.state === "open" && planUndo(all) !== undefined,
-    reasons: { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax },
+    reasons: reasonVocabulary(p.source),
     pairs,
     ...(returned === undefined ? {} : { returned: must(returned).plan }),
     ...(apply === undefined ? {} : { apply }),
@@ -96,6 +99,11 @@ const summaryRow = z.object({
   items: z.number().int().nonnegative(),
   decided: z.number().int().nonnegative(),
   opened_at: z.string(),
+  apply_act: z.enum(["commit", "return"]).nullable(),
+  apply_state: z.enum(["pending", "applied", "stuck"]).nullable(),
+  apply_attempts: z.number().int().nonnegative().nullable(),
+  apply_last_error: z.string().nullable(),
+  apply_next_at: z.string().nullable(),
 });
 
 /**
@@ -114,8 +122,10 @@ export function listPacketSummaries(r: Reader, opts: ListOptions = {}): PacketLi
             (SELECT count(*) FROM packet_items i WHERE i.packet_id = p.id) AS items,
             (SELECT count(*) FROM decisions d
               WHERE d.packet_id = p.id AND d.verdict IS NOT NULL
-                AND d.seq = (SELECT max(d2.seq) FROM decisions d2 WHERE d2.packet_id = d.packet_id AND d2.candidate_id = d.candidate_id)) AS decided
+                AND d.seq = (SELECT max(d2.seq) FROM decisions d2 WHERE d2.packet_id = d.packet_id AND d2.candidate_id = d.candidate_id)) AS decided,
+            a.act AS apply_act, a.state AS apply_state, a.attempts AS apply_attempts, a.last_error AS apply_last_error, a.next_at AS apply_next_at
        FROM packets p
+       LEFT JOIN packet_applies a ON a.packet_id = p.id
       WHERE (? IS NULL OR p.state = ?) AND (? IS NULL OR json_extract(p.body, '$.lane') = ?)
       ORDER BY p.state = 'open' DESC, p.opened_at DESC, p.id
       LIMIT ?`,
@@ -123,7 +133,12 @@ export function listPacketSummaries(r: Reader, opts: ListOptions = {}): PacketLi
   );
   const packets: PacketSummary[] = found.slice(0, limit).map((x) => {
     const s = must(parseAt("packet summary", summaryRow, x));
-    const apply = applyStatus(r, s.id);
+    // The outbox row rides the rail's one query: asked per packet it was 1 + N reads (ledger-sync
+    // asks for 500 twice). The row is all-or-nothing, so its key column says whether there is one.
+    const apply =
+      s.apply_act === null || s.apply_state === null || s.apply_attempts === null || s.apply_next_at === null
+        ? undefined
+        : applyStatusOf({ act: s.apply_act, state: s.apply_state, attempts: s.apply_attempts, lastError: s.apply_last_error, nextAt: s.apply_next_at });
     return {
       id: s.id,
       lane: s.lane,

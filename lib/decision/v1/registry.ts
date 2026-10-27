@@ -12,6 +12,8 @@ import { audioAdapter } from "./sources/audio.ts";
 import { mvAdapter } from "./sources/mv.ts";
 import { proofAdapter } from "./sources/proof.ts";
 import { scoutAdapter } from "./sources/scout.ts";
+import { seedsAdapter } from "./sources/seeds.ts";
+import { spendAdapter } from "./sources/spend.ts";
 import { sunoAdapter } from "./sources/suno.ts";
 import type { DecisionAdapter } from "./types.ts";
 import { stepAdapter } from "@/lib/parts/gates";
@@ -47,11 +49,16 @@ export const DECISION_ADAPTERS = {
   mv: adapter(mvAdapter),
   // No v1 surface
   trials: notDecidable("the prototype's mechanism trials have no v1 store; nothing opens a trials packet from v1"),
+  // Phase 4 (L36): a part's step gate, from the part records (lib/parts/gates.ts).
   step: adapter(stepAdapter),
   // Phase 5 (L56): a style's pending proofs, from the Style table
   proof: adapter(proofAdapter),
   // spark media-training-loop: one /scout night, a row per candidate (./sources/scout.ts).
   scout: adapter(scoutAdapter),
+  // spark scout-decision-graph: a batch of one-sentence seeds, a row per seed (./sources/seeds.ts).
+  seeds: adapter(seedsAdapter),
+  // spark athena-control-mcp: a day's agent spend requests, a row per request (./sources/spend.ts).
+  spend: adapter(spendAdapter),
 } as const satisfies { readonly [S in PacketSource]: AdapterEntry };
 
 /** The adapter that decides `source`, or `refused` with the reason none does. */

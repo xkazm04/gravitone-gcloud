@@ -185,7 +185,7 @@
   --chan-tiktok: #8ef0f7; /* Mark colour of the TikTok channel. */
   --chan-youtube: #ff8a8a; /* Mark colour of the YouTube channel. */
   --cloud-mark: #cbd5e1; /* Mark of a paid cloud resource. */
-  --hatch: repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 2px,transparent 2px 5px); /* Fill of an undecided or unmeasured span. */
+  --hatch: repeating-linear-gradient(135deg,rgba(255,255,255,.36) 0 2px,transparent 2px 5px); /* Fill of an undecided or unmeasured span. */
   --panel-ground: rgba(0,0,0,.14); /* Recessed ground of a route panel. */
   --warn-cut: #3b0712; /* Cut-out mark inside the warning glyph. */
 

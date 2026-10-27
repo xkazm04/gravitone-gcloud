@@ -13,12 +13,10 @@ import type { BeatSlot } from "@/lib/research/beats";
 import {
   SPINE_RANK,
   type Allowance,
-  type Connector,
   type Cue,
   type Movement,
   type MovementRole,
   type PromiseClaim,
-  type RaisedVariable,
   type TrailerBeat,
   type TrailerCut,
   type WithholdingBudget,
@@ -173,15 +171,6 @@ export function withAllowance(
     }),
   };
 }
-
-/** The raised variable a rung declares, when it declares exactly one. Used by
- *  the surface to warn a rung that repeats its predecessor; the checker makes
- *  the same reading in `checkEscalation`. */
-export function singleRaise(b: TrailerBeat | undefined): RaisedVariable | null {
-  return b?.raises?.length === 1 ? b.raises[0] : null;
-}
-
-export const CONNECTOR_OPTIONS: readonly Exclude<Connector, null>[] = ["BUT", "THEREFORE", "AND THEN"] as const;
 
 /* ─────────────────────────────── the curve ────────────────────────────────── */
 

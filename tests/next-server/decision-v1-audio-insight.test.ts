@@ -16,6 +16,22 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+// The Suno draft door with a seam: `ensureFails.at` makes the n-th ensure of a confirm throw the
+// way the real one does (a SoundError 409 / a 503 lock timeout); null leaves it untouched.
+const ensureFails = vi.hoisted(() => ({ at: null as number | null, calls: 0 }));
+vi.mock("../../lib/sound/suno/draft.ts", async (orig) => {
+  const m = await orig<typeof import("../../lib/sound/suno/draft.ts")>();
+  const { SoundError } = await import("../../lib/sound/store.ts");
+  return {
+    ...m,
+    ensureDraftJob: (...a: Parameters<typeof m.ensureDraftJob>) => {
+      ensureFails.calls += 1;
+      if (ensureFails.at !== null && ensureFails.calls === ensureFails.at) return Promise.reject(new SoundError("suno store is busy", 503));
+      return m.ensureDraftJob(...a);
+    },
+  };
+});
+
 const ROOT = vi.hoisted(() => {
   const fs = process.getBuiltinModule("node:fs");
   const os = process.getBuiltinModule("node:os");
@@ -50,6 +66,7 @@ import { engineRegistry, type EngineDef } from "../../lib/sound/engines.ts";
 import { rubricMean } from "../../lib/sound/ledger.ts";
 import { rateTake } from "../../lib/sound/rubric.ts";
 import { readBrief, sfxProducer } from "../../lib/sound/sfxJob.ts";
+import { SoundError } from "../../lib/sound/store.ts";
 import { createTake } from "../../lib/sound/takes.ts";
 import { RUBRIC, type GenerateRequest, type SoundTake } from "../../lib/sound/types.ts";
 
@@ -208,6 +225,27 @@ describe("the operator batch", () => {
     expect(suno().jobs.map((j) => j.job)).toEqual(c.kind === "launched" ? c.jobIds : []);
   });
 
+  it("music: a confirm that throws on draft k takes back the drafts it already queued; the retry starts clean", async () => {
+    seed([]);
+    const form = { ...music, count: 4 };
+    const rec = must(await sendBatch({ kind: "music", form, batch: "bthrows0001" }, DESK, o()));
+    if (rec.kind !== "receipt") throw new Error(rec.kind);
+    const kernelJobs = jobIds();
+    ensureFails.at = 3;
+    ensureFails.calls = 0;
+    try {
+      const r = await sendBatch({ kind: "music", form, batch: "bthrows0001" }, DESK, o({ token: rec.receipt.token }));
+      expect(r.ok ? r.value.kind : [r.error.code, r.error.message]).toEqual(["unavailable", "suno store is busy"]);
+    } finally {
+      ensureFails.at = null;
+    }
+    expect(suno().jobs.filter((j) => j.job === undefined)).toEqual([]);
+    expect(jobIds()).toEqual(kernelJobs);
+    const again = must(await sendBatch({ kind: "music", form, batch: "bthrows0001" }, DESK, o({ token: rec.receipt.token })));
+    expect(again.kind).toBe("launched");
+    expect(suno().jobs).toHaveLength(4);
+  });
+
   it("sfx: ONE run of N clips under the sfx producer, its brief filed before the job; another brief under the batch is refused", async () => {
     seed([]);
     const rec = must(await sendBatch({ kind: "sfx", form: sfx, batch: "bsfx000001" }, SFX_DESK, o()));
@@ -278,6 +316,19 @@ describe("the sfx producer", () => {
     expect(rec.drift).toBeUndefined();
     expect(rec.job.unpriced).toBe(2);
     expect(onDisk().filter((t) => t.origin === "lab")).toHaveLength(2);
+  });
+
+  it("a sound store that refuses to file a served clip is a retry, not a fatal: the next try completes the job", async () => {
+    seed([]);
+    const jobId = await launched("bstore0001", { ...sfx, count: 1 }, "live");
+    let tries = 0;
+    const generateTake = async (req: GenerateRequest): Promise<SoundTake> => {
+      if (++tries === 1) throw new SoundError("the sound store is locked and the holder did not release it", 503);
+      return (await createTake({ kind: "sfx", title: req.title ?? "fx", provider: "elevenlabs", op: "sfx", origin: "lab", prompt: req.prompt, loop: req.loop, durationS: req.durationS }, { bytes: new Uint8Array([0xff, 0xfb, 0x90, 0x64, 1, 2]), mime: "audio/mpeg", name: "fx.mp3" })).take;
+    };
+    const report = must(await runJob(fx, sfxProducer("cloud.elevenlabs", { generateTake }), jobId, { dryOnly: false, sleep: () => Promise.resolve() }));
+    expect(report.outcome).toBe("done");
+    expect(tries).toBe(2);
   });
 
   it("the plan is the run id's clips; a run id that names no batch plans one step that fails, nothing rendered", async () => {

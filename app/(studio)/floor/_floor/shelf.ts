@@ -1,10 +1,13 @@
 import "server-only";
 
 import { errorMessage } from "@gt/domain/errors";
+import { styleCovers } from "@gt/kernel/library/detail";
 import { getCatalogue } from "../../../../lib/foundry/store.ts";
 import { articlesRoot, readArticles } from "../../../../lib/ledger/v1/sources/articles.ts";
 import { FIXTURE_MODE } from "../../../../lib/fixtures/mode.ts";
+import { kernel } from "../../../../lib/kernelStore.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
+import { serverProduce, type ServerProduce } from "../../projects/_port/port.ts";
 import { ledgerFor } from "../../_shell/links.ts";
 
 // THE LIBRARY / PROJECTS COLUMN - what each lane has ratified that the SERVER can read today,
@@ -12,28 +15,33 @@ import { ledgerFor } from "../../_shell/links.ts";
 //
 //   image    proven styles in pipeline/foundry/styles.json (lib/foundry/store.ts getCatalogue).
 //            v1 has no "locked" state - a style is a candidate until a commit proves it - so the
-//            shelf is the proven ones, and the candidates are a count beside them.
+//            shelf is the proven ones, and the candidates are a count beside them. Each carries its
+//            cover plate when the Library holds one for it (kernel `styleCovers`, the Library's rule).
 //   article  landed posts: runs whose status is `landed` (the PR into ai-registry was opened),
 //            read through the ledger projection's reader so the fixture universe reads the
 //            fixture store (lib/ledger/v1/sources/roots.ts says why v1's own reader cannot).
 //   audio    kept takes (lib/sound/takes.ts listTakes, verdict `kept`), fixture takes only in
 //            the fixture universe, as v1's own filter rule has it.
-//   video    PROJECTS. v1 keeps projects in the browser (IndexedDB, lib/studioArchive.ts), so
-//            the server cannot list them until Phase 4 imports them; the column draws its head
-//            and a door to /projects, and no count - a count of zero would be a false claim.
+//   video    PROJECTS, read through the produce port's listProjects (../../projects/_port): the
+//            fixture's on the fixture side, the kernel's own on the real one. The port bounds the
+//            read (`truncated`); the shelf carries SHELF_ROWS of it and the head's count is the
+//            projects the read returned.
 //
 // Each read fails on its own: one unreadable store is a line in that shelf, not a blank floor.
 
 export type Read<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: string };
 
-export type ShelfStyleRow = { readonly id: string; readonly name: string; readonly family: string };
+/** `plate`: the address of the style's cover plate (the Library's rule, kernel `styleCovers`); absent = it has none. */
+export type ShelfStyleRow = { readonly id: string; readonly name: string; readonly family: string; readonly plate?: string };
 export type ShelfPost = { readonly id: string; readonly title: string; readonly href: string; readonly pr?: string };
+export type ShelfProject = { readonly id: string; readonly title: string; readonly recipe: string; readonly href: string };
 export type ShelfTake = { readonly id: string; readonly title: string; readonly kind: string; readonly durationS?: number; readonly peaks: readonly number[] };
 
 export type Shelf = {
   readonly styles: Read<{ readonly proven: readonly ShelfStyleRow[]; readonly candidates: number }>;
   readonly posts: Read<readonly ShelfPost[]>;
   readonly takes: Read<{ readonly kept: readonly ShelfTake[]; readonly total: number }>;
+  readonly projects: Read<{ readonly rows: readonly ShelfProject[]; readonly total: number }>;
 };
 
 /** Rows a shelf carries to the page; the head's count is always the whole. */
@@ -53,10 +61,26 @@ export function downsample(peaks: readonly number[], n: number): number[] {
   return out;
 }
 
+/** One cover plate address per style that has one. A kernel that cannot be read gives none: the tile keeps its ground. */
+export function stylePlates(ids: readonly string[]): ReadonlyMap<string, string> {
+  const out = new Map<string, string>();
+  const k = kernel();
+  if (!k.ok || ids.length === 0) return out;
+  const covers = styleCovers(k.value.store, ids);
+  if (!covers.ok) return out;
+  for (const [id, c] of covers.value) if (c.blobSha !== null && c.mime !== null) out.set(id, `/api/blob/${c.blobSha}?type=${encodeURIComponent(c.mime)}`);
+  return out;
+}
+
 async function styles(): Promise<Shelf["styles"]> {
   try {
     const c = await getCatalogue();
-    const proven = c.styles.filter((s) => s.status === "proven").map((s) => ({ id: s.id, name: s.name, family: s.family }));
+    const heads = c.styles.filter((s) => s.status === "proven");
+    const plates = stylePlates(heads.map((s) => s.id));
+    const proven = heads.map((s) => {
+      const plate = plates.get(s.id);
+      return { id: s.id, name: s.name, family: s.family, ...(plate === undefined ? {} : { plate }) };
+    });
     return { ok: true, value: { proven, candidates: c.styles.length - proven.length } };
   } catch (e) {
     return { ok: false, error: `styles: ${errorMessage(e)}` };
@@ -104,7 +128,18 @@ async function takes(): Promise<Shelf["takes"]> {
   }
 }
 
+export function projects(port: Pick<ServerProduce, "listProjects"> = serverProduce()): Shelf["projects"] {
+  try {
+    const r = port.listProjects();
+    if (!r.ok) return { ok: false, error: `projects: ${r.error.message}` };
+    const all = r.value.projects;
+    return { ok: true, value: { total: all.length, rows: all.slice(0, SHELF_ROWS).map((p) => ({ id: p.id, title: p.title, recipe: p.recipe, href: `/projects/${encodeURIComponent(p.id)}` })) } };
+  } catch (e) {
+    return { ok: false, error: `projects: ${errorMessage(e)}` };
+  }
+}
+
 export async function readShelf(): Promise<Shelf> {
   const [s, p, t] = await Promise.all([styles(), posts(), takes()]);
-  return { styles: s, posts: p, takes: t };
+  return { styles: s, posts: p, takes: t, projects: projects() };
 }

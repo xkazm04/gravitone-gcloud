@@ -30,6 +30,7 @@ import {
   containedIn,
   foundryFile,
   listManifests,
+  type ManifestWarning,
   readJson,
   readManifestFile,
   runRoot,
@@ -54,12 +55,15 @@ import { recordForgeEvidenceIn } from "@gt/kernel/styles/writers";
 
 import { registerRunGrades } from "./calibrationRegister";
 import { exportStyles, OPERATOR, readStyleDefs, styleStore, withCatalogue } from "./catalogue";
-import { planForgeCommit } from "./commitPlan";
-import { graderCalibrationText, graderStamp } from "./calibration";
+import { deriveForgeCommit, planForgeCommit } from "./commitPlan";
+import { COMMITTABLE } from "./plant";
+import { graderCalibrationText } from "./calibration";
 import {
   patchVerdictMap,
   readVerdictState,
   replaceVerdictMap,
+  replaceVerdictMapHeld,
+  unreadableVerdicts,
   withRunLock,
   type VerdictPatch,
   type VerdictSpec,
@@ -87,14 +91,27 @@ async function readManifest(id: string): Promise<RunManifest> {
 }
 
 async function readVerdicts(id: string): Promise<Verdicts> {
-  return readJson<Verdicts>(path.join(runDir(id), "verdicts.json"), {});
+  return readJson<Verdicts>(path.join(runDir(id), "verdicts.json"), {}).catch((e: unknown) => {
+    throw e instanceof SyntaxError ? unreadableVerdicts(runDir(id)) : e;
+  });
 }
 
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
-export async function listRuns(): Promise<RunSummary[]> {
-  const { items } = await listManifests<RunManifest, RunSummary>(OUT_ROOT, "run.json", async (name, m) => {
-    const v = await readJson<Verdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
+/** The shelf and the runs it could not read (a run.json that does not parse), so a feed can
+ *  hold those runs instead of pruning them as gone. `listRuns` is the list alone. */
+export async function scanRuns(): Promise<{ items: RunSummary[]; warnings: ManifestWarning[] }> {
+  const { items, warnings } = await listManifests<RunManifest, RunSummary>(OUT_ROOT, "run.json", async (name, m) => {
+    let v: Verdicts;
+    try {
+      v = await readJson<Verdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
+    } catch (e) {
+      // The manifest rule (listManifests), for the file beside it: one damaged
+      // verdict map is skipped and named, never a failure of the whole shelf.
+      if (!(e instanceof SyntaxError)) throw e;
+      console.warn(`[foundry] ${name}: verdicts.json is unreadable — skipped from the list`);
+      return null;
+    }
     return {
       id: m.id,
       created: m.created,
@@ -107,7 +124,11 @@ export async function listRuns(): Promise<RunSummary[]> {
       kept: Object.values(v).filter((r) => r.verdict === "keep").length,
     };
   });
-  return items.sort((a, b) => (a.created < b.created ? 1 : -1));
+  return { items: items.sort((a, b) => (a.created < b.created ? 1 : -1)), warnings };
+}
+
+export async function listRuns(): Promise<RunSummary[]> {
+  return (await scanRuns()).items;
 }
 
 export async function getRun(id: string): Promise<RunDetail> {
@@ -252,32 +273,27 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     const run = await readManifest(id);
     if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
     // `incomplete` belongs here for the same reason `failed` does: the run stopped
-    // early with every plate it did generate on disk, and this button is the only
-    // way to reach them. Keep this array and COMMITTABLE in app/foundry/parts.tsx
-    // equal — tests/golden-path/commit-gate-parity.probe.spec.ts reads this one off
-    // disk and fails if they drift.
-    if (!["done", "incomplete", "failed"].includes(run.status)) throw new FoundryError("The forge is still running this run.", 409);
-    const verdicts = await readVerdicts(id);
+    // early with every plate it did generate on disk, and this commit is the only
+    // way to reach them. The plant's one set (lib/foundry/plant.ts), which the
+    // Board's gate and the ledger read too; extract-commit-gate.probe.spec.ts
+    // holds this door to it.
+    if (!COMMITTABLE.includes(run.status)) throw new FoundryError("The forge is still running this run.", 409);
+    const stored = await readVerdicts(id);
     // Read once, inside the lock: the plan, the token and the writes below all
     // see these same bytes.
     const ledger = await tx.read("ledger.json");
     const catalogue = await readStyleDefs();
 
-    const plan = planForgeCommit(run, verdicts, { styles: catalogue.styles, ledger: ledger.rows }, undecidedAs);
+    // ONE derivation (commitPlan.ts): what is judged, what is auto-rejected and
+    // what the ledger rows are come from the plan the preview showed, stamped
+    // with this commit's time. Undecided candidates that never produced a file
+    // are outside the cull either way.
+    const at = new Date().toISOString();
+    const { plan, decided, verdicts, autoRejected } = deriveForgeCommit(run, stored, { styles: catalogue.styles, ledger: ledger.rows }, undecidedAs, at);
     if (token !== undefined && token !== plan.token) {
       throw new FoundryError("The run state changed since the preview was generated.", 409);
     }
-
-    const at = new Date().toISOString();
-
-    // Undecided candidates that never produced a file cannot be kept or
-    // rejected — they are outside the cull either way.
-    const withFile = run.candidates.filter((c) => c.status !== "pending" && c.status !== "failed" && !c.deleted);
-    if (undecidedAs === "reject") {
-      for (const c of withFile) if (!verdicts[c.id]) verdicts[c.id] = { verdict: "reject", at };
-    }
-    const decided = withFile.filter((c) => verdicts[c.id]);
-    const undecided = withFile.length - decided.length;
+    const undecided = plan.counts.undecided;
 
     // The style store FIRST, in one transaction: a run's evidence rows are
     // REPLACED, not appended (a retry writes the same rows), and `proven` is
@@ -299,27 +315,17 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     if (!written.ok) throw new FoundryError(`The commit failed and nothing was deleted: ${written.error.message}`, written.error.code === "refused" ? 409 : 503);
     exportStyles(styles);
 
+    // The auto-rejects are verdicts that delete files, so they go through the verdict kernel (a log
+    // line per key, a revision bump) before the indices name them and before any unlink.
+    if (undecidedAs === "reject" && autoRejected.length) await replaceVerdictMapHeld(verdictSpec(id), run, verdicts, "commit");
+
     // Then ledger.json. A run's rows are REPLACED, not appended. Indices are
     // written before any file is unlinked, so a failure here leaves the banner
     // "The commit failed and nothing was deleted" honest; the retry rewrites
     // the same store rows (no change) and this file.
     await tx.begin([...new Set(decided.map((c) => c.style))]);
     ledger.rows = ledger.rows.filter((r) => r.run !== id);
-    for (const c of decided) {
-      ledger.rows.push({
-        run: id,
-        scene: c.scene,
-        style: c.style,
-        mechanism: c.mechanism,
-        seed: c.seed,
-        verdict: verdicts[c.id].verdict as Verdict,
-        craft: c.grade?.craft?.score ?? null,
-        style_score: c.grade?.style?.score ?? null,
-        has_text: c.grade?.veto?.has_text ?? null,
-        at,
-        ...graderStamp(c.grade),
-      });
-    }
+    ledger.rows.push(...plan.ledgerRows);
     await tx.write("ledger.json");
     // The calibration is a pure function of the ledger just written, so it
     // follows it directly: a crash between the two leaves a stale derived file

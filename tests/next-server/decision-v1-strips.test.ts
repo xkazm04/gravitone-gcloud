@@ -174,3 +174,16 @@ describe("strips adapter - consequence and apply over a temp v1 store", () => {
     expect(r.ok ? "" : r.error.message).toContain("edu-c1--E03 is reject in v1, keep here");
   }, 30_000); // every crash prefix replays a commit: slow under a full parallel run
 });
+
+describe("strips adapter - a stale verdict on a card that is no longer rendered", () => {
+  it("is not previewed as a keep, a ledger row or a promotion", async () => {
+    seed();
+    const stale: StripVerdicts = { ...VERDICTS, "edu-c2--E05": { verdict: "keep", at: "2026-10-14T10:02:00.000Z" } };
+    writeFileSync(path.join(runDir, "verdicts.json"), JSON.stringify(stale));
+    const flow = await openFlow(stripsAdapter, RUN, blobDir);
+    const p = must(flow.preview());
+    expect(p.consequence.promotions.map((x) => x.target)).toEqual([`${RUN}--edu-c2--E04`]);
+    expect(p.consequence.writes.filter((w) => w.target === "pipeline/foundry/strips-ledger.json")).toHaveLength(2);
+    expect(p.consequence.writes.filter((w) => w.candidate === "edu-c2--E05")).toEqual([]);
+  });
+});

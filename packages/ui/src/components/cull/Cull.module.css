@@ -1,15 +1,8 @@
-/* floor.css "matrix cull": [data-component=MatrixCull], .cull-row, .cull-label, .tiles,
-   [data-component=CullTile] (+ .cur .keep .reject .badge .reason .nudge), the audio tile
+/* floor.css "matrix cull": [data-component=CullTile] (+ .cur .keep .reject .badge .reason .nudge), the audio tile
    (.wavebox, .take-tile-body), the text tile (.textBody, .zText: no prototype, a scout
    finding or watch line) and .zoom. Grounds behind captions are the page ink at the
-   prototype's .9 and .94, mixed rather than admitted (one component each). */
-.matrix{padding:var(--sp-loose) var(--sp-6) var(--sp-7);display:flex;flex-direction:column;gap:var(--sp-loose)}
-.row{display:grid;grid-template-columns:var(--w-cull-label) minmax(0,1fr);gap:var(--sp-5);align-items:start}
-.label{display:flex;flex-direction:column;gap:var(--sp-2);font:600 var(--fs-meta)/1.25 var(--mono);color:var(--muted);word-break:break-word}
-.ref{width:var(--w-cull-label);aspect-ratio:16/9;object-fit:cover;border-radius:var(--r-chip);opacity:.85;border:1px solid var(--hair-2)}
-.refNote{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-.tiles,.tilesAudio{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-tile),1fr));gap:var(--sp-4)}
-.tilesAudio{grid-template-columns:repeat(auto-fill,minmax(var(--w-tile-audio),1fr))}
+   prototype's .9 and .94, mixed rather than admitted (one component each). The row desk's
+   .cull-row / .cull-label / .tiles left with it for the run grid (43627d5e, Runs.module.css). */
 .tile{position:relative;display:block;width:100%;padding:0;border-radius:var(--r-tile);overflow:hidden;background:var(--ink-3);border:var(--stroke-mark) solid transparent;text-align:left;transition:transform .18s var(--ease),border-color .18s,opacity .25s}
 .media{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;transition:filter .25s,opacity .25s}
 .cap{display:flex;justify-content:space-between;gap:var(--sp-2);align-items:center;padding:var(--sp-2) var(--sp-3);font-size:var(--fs-control-sm);color:var(--ink-bright);background:color-mix(in srgb,var(--ink) 90%,transparent)}

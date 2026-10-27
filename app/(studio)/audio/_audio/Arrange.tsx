@@ -11,8 +11,9 @@
 // it settles and is said once in the toast region; refused, the card returns and the store's own
 // sentence stays over the board until the next success. One write per card at a time - a second
 // gesture on a card whose first is in flight is refused here, because the first's rollback would
-// land on top of it (v1's rule). A request with no answer in ANSWER_MS resolves to refused with
-// that sentence and the page re-reads the store, so nothing floats provisional forever.
+// land on top of it (v1's rule); a move and a Suno return are both writes (`inFlight`). A request with no answer in ANSWER_MS resolves to refused with
+// that sentence and the page re-reads the store, so nothing floats provisional forever - and a
+// request that REJECTS (the action's round trip failed) is refused with its words the same way.
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -29,6 +30,7 @@ import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
 import { useShell } from "../../_shell/Providers.tsx";
+import { copyText } from "../../_shell/clipboard.ts";
 import { can, engineById } from "../../../../lib/sound/engines.ts";
 import type { editRows, moveCard } from "./arrangeActs.ts";
 import type { ArrangeView } from "./arrangeRead.ts";
@@ -49,6 +51,13 @@ type Ask = { readonly id: string; readonly to: Cell; readonly file?: File };
 const DIR: Readonly<Record<string, Dir>> = { "←": "left", "→": "right", "↑": "up", "↓": "down", "⇧←": "left", "⇧→": "right", "⇧↑": "up", "⇧↓": "down" };
 const opId = (): string => crypto.randomUUID().replace(/-/g, "").slice(0, 20);
 
+/** The write a card has in flight, in words, or null: a move not yet answered, or a return uploading. */
+export function inFlight(pending: ReadonlyMap<string, { readonly landed: boolean }>, uploading: ReadonlySet<string>, id: string): string | null {
+  if (pending.get(id)?.landed === false) return "a move is still in flight";
+  if (uploading.has(id)) return "a return is still uploading";
+  return null;
+}
+
 function withPending(takes: readonly CardTake[], pending: ReadonlyMap<string, Pending>): CardTake[] {
   return takes.map((t) => {
     const p = pending.get(t.id);
@@ -56,8 +65,27 @@ function withPending(takes: readonly CardTake[], pending: ReadonlyMap<string, Pe
   });
 }
 
-function answered<T>(p: Promise<T>, ms: number): Promise<T | "no-answer"> {
-  return Promise.race([p, new Promise<"no-answer">((r) => setTimeout(() => r("no-answer"), ms))]);
+/** A write that threw: the words it threw with. */
+export type Threw = { readonly threw: string };
+const threw = (v: unknown): v is Threw => typeof v === "object" && v !== null && "threw" in v;
+
+/**
+ * A write's answer within `ms`: its own, "no-answer" past the wait, or the words of a write that
+ * REJECTED (a Server Action whose request never came back rejects; it does not answer `ok: false`).
+ * Never a rejection itself, so the caller's settle always runs, and the timer goes with the answer.
+ */
+export async function answered<T>(p: Promise<T>, ms: number): Promise<T | "no-answer" | Threw> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      p.catch((e: unknown): Threw => ({ threw: errorMessage(e) })),
+      new Promise<"no-answer">((r) => {
+        timer = setTimeout(() => r("no-answer"), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly acts: ArrangeActs }) {
@@ -106,8 +134,9 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
 
   const move = async (stack: Stack<CardTake>, to: Cell, label?: string): Promise<void> => {
     const h = stack.head;
-    if (pending.has(h.id) && pending.get(h.id)?.landed === false) {
-      setRefusal(`${h.title} · a move is still in flight`);
+    const busy = inFlight(pending, uploading, h.id);
+    if (busy !== null) {
+      setRefusal(`${h.title} · ${busy}`);
       return;
     }
     const c = checkMove(stack, to, rows, label);
@@ -123,13 +152,13 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
     setAsk(null);
     settle(h.id, { to, ...(c.patch.label === undefined ? {} : { label: c.patch.label }), landed: false });
     const r = await answered(acts.moveCard({ id: h.id, from, to, opId: opId(), ...(c.patch.label === undefined ? {} : { label: c.patch.label }) }), ANSWER_MS);
-    if (r !== "no-answer" && r.ok) {
+    if (r !== "no-answer" && !threw(r) && r.ok) {
       settle(h.id, { to, ...(c.patch.label === undefined ? {} : { label: c.patch.label }), landed: true });
       setRefusal(null);
       toast(movedSentence(h.title, to));
     } else {
       settle(h.id, null);
-      const words = r === "no-answer" ? `no answer from the sound store in ${ANSWER_MS / 1000} s` : r.error.error;
+      const words = r === "no-answer" ? `no answer from the sound store in ${ANSWER_MS / 1000} s` : threw(r) ? r.threw : r.error.error;
       setRefusal(`${h.title} · refused · ${words}`);
       toast(`${h.title} · refused`);
     }
@@ -138,6 +167,11 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
 
   const upload = async (stack: Stack<CardTake>, file: File, to: Stage, label?: string): Promise<void> => {
     const h = stack.head;
+    const busy = inFlight(pending, uploading, h.id);
+    if (busy !== null) {
+      setRefusal(`${h.title} · ${busy}`);
+      return;
+    }
     setAsk(null);
     setUploading((u) => new Set(u).add(h.id));
     const r = await uploadReturn({ head: h.id, stage: to, file, op: opId(), ...(label === undefined ? {} : { label }) });
@@ -156,12 +190,12 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
   const edit = async (op: GroupOp): Promise<void> => {
     if (rowsBusy) return;
     setRowsBusy(true);
-    const r = await acts.editRows({ kind: view.kind, op, opId: opId() });
+    const r = await answered(acts.editRows({ kind: view.kind, op, opId: opId() }), ANSWER_MS);
     setRowsBusy(false);
-    if (r.ok) {
+    if (r !== "no-answer" && !threw(r) && r.ok) {
       setRefusal(null);
       toast(r.value.carried > 0 ? `rows · ${r.value.carried} filed` : "rows saved");
-    } else setRefusal(`rows · refused · ${r.error.error}`);
+    } else setRefusal(`rows · refused · ${r === "no-answer" ? `no answer from the sound store in ${ANSWER_MS / 1000} s` : threw(r) ? r.threw : r.error.error}`);
     router.refresh();
   };
 
@@ -267,7 +301,7 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
             next={next}
             download={h.src === null ? null : { href: h.src, name: h.fileName ?? h.title }}
             busy={uploading.has(h.id)}
-            onCopyPrompt={h.prompt.trim() === "" ? null : () => void navigator.clipboard.writeText(h.prompt).then(() => toast("prompt copied"), (e: unknown) => setRefusal(`clipboard refused: ${errorMessage(e)}`))}
+            onCopyPrompt={h.prompt.trim() === "" ? null : () => void copyText(h.prompt).then((r) => (r.ok ? toast("prompt copied") : setRefusal(`clipboard refused: ${r.error}`)))}
             onFile={(file, to) => {
               if (to === "finalized" && (h.label ?? "").trim() === "") setAsk({ id: h.id, to: { stage: "finalized", group: h.group }, file });
               else void upload(stack, file, to, to === "finalized" ? (h.label ?? undefined) : undefined);
@@ -282,6 +316,7 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
     <section className={s.arrange} aria-label="arrange">
       {refusal !== null && <ErrorLine message={refusal} live />}
       {view.measures !== null && <ErrorLine message={`measures: ${view.measures}`} />}
+      {view.rows !== null && <ErrorLine message={`rows: ${view.rows}`} />}
       {stacks.length === 0 ? (
         <Empty label="no kept takes of this kind" action={{ label: "Triage", href: "/floor?lane=audio" }} />
       ) : (

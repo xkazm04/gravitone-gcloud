@@ -183,7 +183,7 @@ export type AdFinishData = {
   readonly endCard: { readonly cta: string; readonly line: string; readonly holdS: number };
   readonly aspects: readonly { readonly aspect: AdAspect; readonly on: boolean; readonly px: string; readonly export: ExportView | null }[];
   /** finish.ts `adFinishChecks` - loudness included, `unmeasured` never a pass. */
-  readonly checks: readonly { readonly id: string; readonly label: string; readonly value: string; readonly verdict: "pass" | "fail" | "unmeasured"; readonly blocking: boolean; readonly deny?: string }[];
+  readonly checks: readonly { readonly id: string; readonly label: string; readonly value: string; readonly target: string; readonly verdict: "pass" | "fail" | "unmeasured"; readonly blocking: boolean; readonly deny?: string }[];
   readonly runtimeS: number;
   readonly targetS: number | null;
 };

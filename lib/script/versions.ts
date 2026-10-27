@@ -412,22 +412,3 @@ export const BASELINE: Version = {
 export function usageIn(v: Version, renderId: string, cardId: string): Usage {
   return v.impact[renderId]?.[cardId] ?? { kind: "unused", seconds: 0, beats: [] };
 }
-
-export function totalIn(v: Version, cardId: string) {
-  return RENDERS.reduce((n, r) => n + usageIn(v, r.id, cardId).seconds, 0);
-}
-
-export function coverageIn(v: Version, renderId: string, cardIds: string[]) {
-  const spoken = cardIds.filter((id) => usageIn(v, renderId, id).kind === "spoken");
-  const cut = cardIds.filter((id) => usageIn(v, renderId, id).kind === "cut");
-  const seconds = spoken.reduce((n, id) => n + usageIn(v, renderId, id).seconds, 0);
-  const b = v.budget[renderId];
-  return {
-    spoken: spoken.length,
-    cut: cut.length,
-    unused: cardIds.length - spoken.length - cut.length,
-    seconds,
-    unattributedS: Math.max(0, (b?.duration ?? 0) - seconds),
-    overrunS: b?.overrunS ?? 0,
-  };
-}

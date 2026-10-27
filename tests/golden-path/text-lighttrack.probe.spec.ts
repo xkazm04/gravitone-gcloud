@@ -9,12 +9,15 @@
 //       class, `text.`-prefixed, matching .ai/use-cases.json's keys.
 //   (c) the emitter cannot fail the caller: a rejecting or throwing `fetch`
 //       never propagates out of `emitLightTrack`.
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { test, expect } from "@playwright/test";
 
 import { emitLightTrack } from "@/lib/text/lighttrack";
 import type { TurnLog } from "@/lib/text/log";
 
-import { keepEnv } from "./_helpers";
+import { keepEnv, stripComments } from "./_helpers";
 
 keepEnv(["LIGHTTRACK_URL", "LIGHTTRACK_KEY", "LIGHTTRACK_DISABLE"]);
 
@@ -203,4 +206,16 @@ test.describe("lighttrack: it cannot fail the caller", () => {
       spy.restore();
     }
   });
+});
+
+test("every TurnClass member has a `text.<turn>` use case declared in .ai/use-cases.json", () => {
+  // emitLightTrack names each event `text.<turn>`; a turn the file does not
+  // declare reports against a name the coverage report calls a gap.
+  const union = /export type TurnClass =([^;]+);/.exec(stripComments(readFileSync(resolve("lib/text/types.ts"), "utf8")))?.[1] ?? "";
+  const turns = [...union.matchAll(/"([a-z-]+)"/g)].map((m) => m[1]!);
+  expect(turns.length, "TurnClass was not read from lib/text/types.ts").toBeGreaterThanOrEqual(15);
+  const declared = new Set(
+    (JSON.parse(readFileSync(resolve(".ai/use-cases.json"), "utf8")) as { use_cases: { key: string }[] }).use_cases.map((u) => u.key),
+  );
+  expect(turns.filter((t) => !declared.has(`text.${t}`))).toEqual([]);
 });

@@ -1,7 +1,8 @@
-import { ok, type Result } from "@gt/domain/errors";
+import { err, ok, type Result } from "@gt/domain/errors";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { Producer } from "@gt/kernel/job-core";
 import { madeFree, madePaid, type ActAsk, type ActPlan } from "@gt/producers/research/partAct";
+import { landPart } from "@gt/producers/research/partJob";
 import { defineWords, wordsPlan } from "@gt/producers/words/define";
 
 import { standText } from "@/lib/sound/mv/standIns";
@@ -10,7 +11,7 @@ import { cleanTitle, readMv } from "@/lib/sound/mv/store";
 import type { MvAnalysis } from "@/lib/sound/mv/types";
 import type { TextRequest } from "@/lib/text/types";
 
-import { asData, enginesOf, meteredText, partFacts, priceOf, textFailure, type DriveHooks, type PartFacts } from "./research.ts";
+import { asData, enginesOf, meteredText, partFacts, priceOf, recOf, textFailure, type DriveHooks, type PartFacts } from "./research.ts";
 
 // THE WORDS PRODUCER, BOUND (Phase 4 wave C, L37): the `mv-metadata` turn over the album track's
 // analysis, through the step's meter. v1's `writeMetadata` takes its `reason` as a parameter, so
@@ -65,9 +66,14 @@ export function wordsProducer(lane: ResourceLane = "seat.text", hooks: DriveHook
         return textFailure(e);
       }
     },
-    // The words part holds no step record yet: the answer stays on the job, where render reads it.
-    async land() {
-      return ok({ rev: 0, unchanged: true });
+    // The turn's fitted answer lands as the WORDS record's `written` (what an edit since stays
+    // visible against); the operator's own title, description and tags are not touched. The answer
+    // stays on the job as well.
+    async land(_job, plan, made, ctx) {
+      const m = made.get("metadata")?.["metadata"];
+      if (typeof m !== "object" || m === null) return err("internal", `${plan.act}: no metadata booked`);
+      const { title, description, tags } = m as { title: unknown; description: unknown; tags: unknown };
+      return landPart(ctx, plan.act, (s) => ok({ words: { ...recOf(s, "words"), written: asData({ title, description, tags }) } }));
     },
     ...(hooks.onSettled === undefined ? {} : { settled: hooks.onSettled }),
   });

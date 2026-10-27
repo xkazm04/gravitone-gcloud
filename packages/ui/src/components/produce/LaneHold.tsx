@@ -10,7 +10,7 @@ import type { ResourceLane } from "@gt/domain/lane";
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
-import { LaneChip } from "../runs/LaneChip.tsx";
+import { LaneChip, laneLabel } from "../runs/LaneChip.tsx";
 import { when } from "./produce.ts";
 import s from "./Acts.module.css";
 
@@ -31,7 +31,7 @@ export type LaneHoldProps = {
 
 export function LaneHold({ lane, job, stage, since, nowMs, onAck, busy, href }: LaneHoldProps) {
   return (
-    <div className={s.hold} data-component="LaneHold" data-lane={lane} role="group" aria-label={`${lane} on hold`}>
+    <div className={s.hold} data-component="LaneHold" data-lane={lane} role="group" aria-label={`${laneLabel(lane)} on hold`}>
       <div className={s.holdH}>
         <LaneChip lane={lane} />
         <Chip label="hold" tone="rose" dot />

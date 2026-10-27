@@ -20,6 +20,9 @@
 //   4. a row graded by another grader version is excluded from the series and
 //      counted in `other_graders`;
 //   5. the cull-order function ignores a field the calibration says is inverted.
+//   7. (sweep 2026-10-24) the AUC is the pair walk's to the bit, ties half, and a
+//      2,000-row ledger calibrates in well under the 16 s the pair walk took --
+//      the forge commit runs this inside the catalogue lock.
 //
 // Cases 3 (commitRun writes grader-calibration.json) and 6 (thumbnails kept
 // before unlink) live in lib/foundry/store.ts's commit and wait for the
@@ -91,6 +94,35 @@ test("calibration is deterministic: a fixed seed, the same CI every time", () =>
   const b = calibrate(realRows());
   expect(JSON.stringify(a)).toBe(JSON.stringify(b));
   expect(CALIBRATION_METHOD.seed).toBeGreaterThan(0);
+});
+
+/* ── 7. rank, not pairs ───────────────────────────────────────────────────── */
+
+/** n rows on a coarse grid (ties on purpose), seeded so every run sees the same ledger. */
+function gridRows(n: number, grain: number, seed = 7): CalibrationRow[] {
+  let s = seed;
+  const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  return Array.from({ length: n }, (_, i) => ({ mechanism: i % 2 ? "text" : "ref-early", verdict: r() < 0.3 ? ("keep" as const) : ("reject" as const), craft: Math.round(r() * grain) / grain, style_score: Math.round(r() * grain) / grain, has_text: r() < 0.1, grader: "g", grader_digest: null }));
+}
+
+test("the AUC equals the pair walk's, ties half, to the bit", () => {
+  const rs = gridRows(300, 10);
+  const keep = rs.filter((r) => r.verdict === "keep").map((r) => r.craft as number);
+  const reject = rs.filter((r) => r.verdict === "reject").map((r) => r.craft as number);
+  let s = 0;
+  for (const k of keep) for (const j of reject) s += k > j ? 1 : k === j ? 0.5 : 0;
+  const walked = Math.round((s / (keep.length * reject.length)) * 1000) / 1000;
+  expect(calibrate(rs).fields.craft.all.auc).toBe(walked);
+});
+
+test("a 2,000-row ledger calibrates in seconds, not the pair walk's sixteen", () => {
+  const rs = gridRows(2000, 100);
+  const t = performance.now();
+  const file = calibrationFile(rs);
+  const ms = performance.now() - t;
+  console.log(`[calibration] 2000 rows: ${Math.round(ms)} ms`);
+  expect(file.ledger_rows).toBe(2000);
+  expect(ms).toBeLessThan(4000);
 });
 
 /* ── 2. the floor ─────────────────────────────────────────────────────────── */

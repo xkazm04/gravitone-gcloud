@@ -14,7 +14,7 @@
 // Launch is a receipt and a confirm (../_plan/receipt.tsx), never the press itself.
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { PartPatch, PlanView, ProjectList } from "@gt/domain/produce";
 import { isEditorKind } from "@gt/domain/partView";
@@ -30,11 +30,14 @@ import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 import { FIELD_ATTR } from "@gt/ui/keymap/target";
 
+import { settled } from "../../audio/_hunt/settled.ts";
 import { useShell } from "../../_shell/Providers.tsx";
 import type { ComposeChoices, ProducePort } from "../_port/contract.ts";
 import { CompositionList, ordered } from "./CompositionList.tsx";
 import { useCompose } from "./compose.tsx";
 import { PlanSummary } from "./PlanSummary.tsx";
+import { clock } from "./shelf.ts";
+import { titleGate } from "./title.ts";
 import { outcomeOf, useReceipt } from "./receipt.tsx";
 import s from "./Plan.module.css";
 
@@ -51,8 +54,6 @@ export type PlanProps = {
   readonly composing?: boolean;
 };
 
-const runtime = (s: number): string => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
-
 export function Plan({ view: first, list, choices, port, nowMs, floorRuns, composed, composing = false }: PlanProps) {
   const router = useRouter();
   const { toast } = useShell();
@@ -64,6 +65,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
     setView(first);
   }
   const [title, setTitle] = useState(first.project.title);
+  const [titles] = useState(titleGate);
   const [sel, setSel] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const flow = useReceipt(nowMs);
@@ -91,7 +93,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
     const [partId, patch] = next.value;
     queue.current.delete(partId);
     busy.current = true;
-    const r = await port.setPart({ id: p.id, rev: rev.current, partId, patch });
+    const r = await settled(port.setPart({ id: p.id, rev: rev.current, partId, patch }));
     busy.current = false;
     if (r.ok) {
       rev.current = r.value.project.rev;
@@ -108,14 +110,22 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
     void drain();
   };
 
+  // On the queue's revision (rev.current), as every other write here: p.rev is a render behind
+  // while a units write is in flight. A conflict re-reads the page, as the queue's does.
   const commitTitle = (): void => {
-    const t = title.trim();
-    if (!draft || t === "" || t === p.title) return;
-    void port.rename({ id: p.id, rev: p.rev, title: t }).then((r) => {
+    if (!draft) return;
+    const t = titles.take(title, p.title);
+    if (t === null) return;
+    void settled(port.rename({ id: p.id, rev: rev.current, title: t })).then((r) => {
+      titles.settle();
       if (r.ok) {
+        rev.current = r.value.project.rev;
         setView(r.value);
         router.refresh();
-      } else setErr(r.error.error);
+      } else {
+        setErr(r.error.error);
+        if (r.error.code === "conflict") router.refresh();
+      }
     });
   };
 
@@ -142,7 +152,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
   };
 
   const discard = (): void => {
-    void port.discard({ id: p.id, rev: p.rev }).then((r) => {
+    void settled(port.discard({ id: p.id, rev: rev.current })).then((r) => {
       if (!r.ok) return setErr(r.error.error);
       toast(`${p.title} · discarded`, { href: `/ledger?q=${encodeURIComponent(p.id)}`, subject: p.title });
       const next = ordered(list).find((x) => x.id !== p.id);
@@ -152,19 +162,12 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
 
   const rows = ordered(list);
   const work = view.parts.filter(isWork);
-  // THE PLAN ROW LINK (Phase 4 wave C, L38): a part with an editor opens it - the row on a click
-  // that is not on one of its own controls, the selected row on E. PlanRow is L28's @gt/ui
-  // component and draws no anchor (asked: an `href` per row there retires this delegation).
+  // THE PLAN ROW LINK (Phase 4 wave C, L38): a part with an editor links to it from its title in
+  // the plan (PlanTable `hrefOf`), and the selected row opens it on E.
   const editorHref = (partId: string): string | null => {
     const part = view.parts.find((x) => x.id === partId);
     if (part === undefined || !isEditorKind(part.kind)) return null;
     return `/projects/${encodeURIComponent(p.id)}/${encodeURIComponent(part.id.slice(p.id.length + 1))}`;
-  };
-  const openRow = (e: MouseEvent<HTMLDivElement>): void => {
-    if (!(e.target instanceof Element) || e.target.closest("select,input,button,a") !== null) return;
-    const id = e.target.closest("tr[data-part]")?.getAttribute("data-part");
-    const to = id === null || id === undefined ? null : editorHref(id);
-    if (to !== null) router.push(to);
   };
   const selHref = sel === null ? null : editorHref(sel);
   const walk = (dir: 1 | -1): void => {
@@ -193,6 +196,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
         titleRef.current?.blur();
       },
       "leave-field": () => {
+        if (document.activeElement === titleRef.current) titles.cancel();
         setTitle(p.title);
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
       },
@@ -237,7 +241,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
                 p.title
               )}
             </h1>
-            <span className={s.sub}>{[p.runtimeS === undefined ? null : runtime(p.runtimeS), p.styleId ?? p.topic ?? null].filter((x) => x !== null).join(" · ")}</span>
+            <span className={s.sub}>{[p.runtimeS === undefined ? null : clock(p.runtimeS), p.styleId ?? p.topic ?? null].filter((x) => x !== null).join(" · ")}</span>
             <div className={s.totals}>
               {draft ? <Chip label="plan" casing="lower" /> : <StatusPill machine="project" state={p.state} />}
               <Chip label={fmtDur(t.seconds)} value="work" />
@@ -249,9 +253,9 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
           </div>
         </div>
         <div className={s.plan} data-component="PlanBreakdown">
-          <div className={s.planMain} onClick={openRow}>
+          <div className={s.planMain}>
             {err !== null && <ErrorLine message={err} live />}
-            <PlanTable parts={view.parts} selectedId={sel} draft={draft} nowMs={nowMs} onModel={(id, option) => patch(id, { option })} onUnits={(id, units) => patch(id, { units })} />
+            <PlanTable parts={view.parts} selectedId={sel} hrefOf={editorHref} draft={draft} nowMs={nowMs} onModel={(id, option) => patch(id, { option })} onUnits={(id, units) => patch(id, { units })} />
           </div>
           <PlanSummary view={view} nowMs={nowMs} busy={flow.reading} onLaunch={() => void launch()} onDiscard={discard} />
         </div>

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { hostname } from "node:os";
 import path from "node:path";
 
@@ -98,7 +98,18 @@ function ownerOf(r: { bootId: string; host?: string; pid: number }): Turn["owner
   return pidAlive(r.pid) ? "alive" : "gone";
 }
 
-export async function readTurns(root: string): Promise<Result<TurnsSnapshot>> {
+/**
+ * The `cap` most recently written records. A turn id is `tn-` + random hex (ledger.ts mintTurnId), so
+ * the ids' order is no clock and a lexical cut keeps an arbitrary set - live turns included. v1
+ * rewrites a record on every transition, so its mtime is its last write: the live and the newly
+ * settled sort first. A record gone between the listing and its stat is simply not kept.
+ */
+async function newest(root: string, ids: readonly string[], cap: number): Promise<string[]> {
+  const got = await readEach(ids, async (id) => ({ id, ms: (await stat(path.join(root, `${id}.json`))).mtimeMs }));
+  return got.items.sort((a, b) => b.ms - a.ms || a.id.localeCompare(b.id)).slice(0, cap).map((x) => x.id);
+}
+
+export async function readTurns(root: string, cap = TURNS_READ_CAP): Promise<Result<TurnsSnapshot>> {
   let names: string[];
   try {
     names = await readdir(root);
@@ -106,7 +117,8 @@ export async function readTurns(root: string): Promise<Result<TurnsSnapshot>> {
     if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) return err("unavailable", `turns: listing ${root} failed: ${errorMessage(e)}`, { cause: e });
     names = [];
   }
-  const ids = names.filter((n) => n.endsWith(".json") && TURN_ID_RE.test(n.slice(0, -5))).map((n) => n.slice(0, -5)).sort().slice(-TURNS_READ_CAP);
+  const all = names.filter((n) => n.endsWith(".json") && TURN_ID_RE.test(n.slice(0, -5))).map((n) => n.slice(0, -5));
+  const ids = (all.length <= cap ? all : await newest(root, all, cap)).sort();
   const got = await readEach(ids, async (id) => ({ id, raw: await readJson<unknown>(path.join(root, `${id}.json`)) }));
   const turns: Turn[] = [];
   const skipped: Skipped[] = [...got.skipped];

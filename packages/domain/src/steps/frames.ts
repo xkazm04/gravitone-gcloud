@@ -23,6 +23,11 @@ import { defineStepRecord, textOrNull, versionField } from "./record.ts";
 
 const PLATE_STATES = ["empty", "generating", "ready", "refused"] as const;
 
+// A data: URL as a browser reads one: the scheme is case-insensitive (RFC 2397 over RFC 3986) and a
+// src's leading whitespace is stripped before it is parsed, so `DATA:` and ` data:` are inline bytes too.
+const INLINE = /^\s*data:/i;
+const isInline = (src: string): boolean => INLINE.test(src);
+
 export const plateSchema = z
   .looseObject({
     state: z.enum(PLATE_STATES),
@@ -37,7 +42,7 @@ export const plateSchema = z
     renderedSubject: z.string().optional(),
     receipt: z.string().optional(),
   })
-  .refine((p) => p.src === undefined || !p.src.startsWith("data:"), { message: "a plate carries its bytes as a blob ref, never a data: URL" });
+  .refine((p) => p.src === undefined || !isInline(p.src), { message: "a plate carries its bytes as a blob ref, never a data: URL" });
 
 const textSchema = z.looseObject({ role: z.string(), factId: z.string().optional() });
 
@@ -50,7 +55,7 @@ export const unitSchema = z.looseObject({
   texts: z.array(textSchema),
 });
 
-const inlineBytes = (x: unknown): boolean => typeof x === "object" && x !== null && "src" in x && typeof x.src === "string" && x.src.startsWith("data:");
+const inlineBytes = (x: unknown): boolean => typeof x === "object" && x !== null && "src" in x && typeof x.src === "string" && isInline(x.src);
 
 function refuseInline(where: string, plates: readonly unknown[]): Result<null> {
   const n = plates.filter(inlineBytes).length;

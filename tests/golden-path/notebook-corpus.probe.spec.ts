@@ -42,6 +42,7 @@ import {
   type CorpusSnapshot,
 } from "@/lib/notebook/corpus";
 import { detectDialect, fromSchemaDialect } from "@/lib/notebook/dialect";
+import { NOTEBOOK_SCHEMA } from "@/lib/notebook/schema";
 
 const ROOT = resolve(__dirname, "../..");
 const CONFLICT_OSINT = "gauntlet/runs/2026-08-12-l1-first-sweep/l2/conflict-osint/notebook.json";
@@ -121,6 +122,24 @@ test("notebook-corpus: a key the map does not know is counted, never silently dr
   });
   expect(unmapped).toEqual({ brand_new_key: 1, "facts[].surprise": 2 });
   expect("brand_new_key" in notebook).toBe(false);
+});
+
+test("notebook-corpus: the dialect map can carry every NOTEBOOK_SCHEMA property, at every depth", () => {
+  // The population is the schema, walked: a notebook holding every property it
+  // declares (one element per array), in the camel spelling the map accepts as
+  // itself. Whatever comes back unmapped is a field a terminal run can write and
+  // the adapter would drop on the way to the door. Measured before the fix:
+  // `unknowns[].probe` (c12015d2 added it to the schema, not to dialect.ts).
+  type Node = { type?: string; properties?: Record<string, Node>; items?: Node };
+  const every = (s: Node): unknown =>
+    s.type === "object" && s.properties
+      ? Object.fromEntries(Object.entries(s.properties).map(([k, v]) => [k, every(v)]))
+      : s.type === "array"
+        ? s.items ? [every(s.items)] : []
+        : "x";
+  const raw = every(NOTEBOOK_SCHEMA as unknown as Node) as Record<string, unknown>;
+  expect(Object.keys(raw).length, "the walk read nothing").toBeGreaterThan(10);
+  expect(fromSchemaDialect(raw).unmapped).toEqual({});
 });
 
 test("notebook-corpus: detectDialect tells schema, camel, mixed and unknown apart", () => {

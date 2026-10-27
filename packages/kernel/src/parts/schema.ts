@@ -5,7 +5,7 @@ import type { ModuleMigrations } from "../migrate.ts";
 import type { Row } from "../store.ts";
 
 // THE PART RECORDS AND THEIR OP LOG (STEPS-DESIGN §3) - the decision kernel's shape
-// (./decision/schema.ts) for a studio part's own records.
+// (../decision/schema.ts) for a studio part's own records.
 //
 // `part_records` holds the CURRENT value of each step record of a project, one row per v1 record
 // key (research-scope, frames, score...), owned by one part. It is a cache of the log in the same

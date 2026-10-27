@@ -53,6 +53,9 @@ export type MachineLoad = {
   readonly commitUsedGb?: number;
   /** 0..1 over every core, foreign load included (other sessions' builds share this box). */
   readonly cpuBusy?: number;
+  /** 0..1 GPU utilisation (nvidia-smi utilization.gpu) - whether the card WORKED, which memory alone cannot say
+   *  (spark night-load-band). Absent when the device reports [N/A]. */
+  readonly gpuBusy?: number;
   /** Prompts running or pending on the shared ComfyUI, whoever queued them. */
   readonly comfyQueue?: number;
 };
@@ -192,4 +195,24 @@ export function peaksOver(baseline: MachineLoad, samples: readonly MachineLoad[]
   const round = (x: number): number => Math.round(x * 100) / 100;
   const unread = [...(commit === undefined ? ["commit" as const] : []), ...(vram === undefined ? ["vram" as const] : []), ...(cpu === undefined ? ["cpu" as const] : [])];
   return { cost: { commitGb: round(commit ?? 0), vramGb: round(vram ?? 0), cpuCores: round((cpu ?? 0) * cores) }, unread };
+}
+
+/**
+ * May a profile of `engine` start on a machine reading `load`? undefined when it may; otherwise
+ * the reason it may not. `admit` lets an unprofiled job start at ANY memory level once it is alone -
+ * it has no cost to project - and a profile is exactly such a job. So the profile holds itself to a
+ * quiet box: memory under the LOW mark (the headroom an unknown peak needs; the first ComfyUI
+ * profile was attempted at 117 of 120 GB committed, 2026-10-23, where TRELLIS's ~12 GB would have
+ * crossed the limit), the CPU under its mark, and for ComfyUI an empty queue. A reading taken on a
+ * loaded box is also a poorer baseline: the peaks over it are another tenant's as much as the
+ * engine's. An unread commit charge is refused, as `admit` refuses it.
+ */
+export function profileReady(engine: string, load: MachineLoad, m: MachineProfile): string | undefined {
+  if (load.commitUsedGb === undefined) return "the commit charge is unread";
+  if (load.commitUsedGb >= m.memLow * m.commitLimitGb) return `commit charge is ${gb(load.commitUsedGb)} of ${gb(m.commitLimitGb)}; a profile starts under ${gb(m.memLow * m.commitLimitGb)}`;
+  if (load.vramUsedGb !== undefined && load.vramUsedGb >= m.memLow * m.vramTotalGb) return `GPU memory is ${gb(load.vramUsedGb)} of ${gb(m.vramTotalGb)}; a profile starts under ${gb(m.memLow * m.vramTotalGb)}`;
+  if (load.cpuBusy !== undefined && load.cpuBusy > m.cpuHigh) return `CPU ${Math.round(load.cpuBusy * 100)}% busy; the mark is ${Math.round(m.cpuHigh * 100)}%`;
+  if (engine !== "comfy") return undefined;
+  if (load.comfyQueue === undefined) return "ComfyUI does not answer";
+  return load.comfyQueue > 0 ? `ComfyUI has ${load.comfyQueue} prompt(s) queued` : undefined;
 }

@@ -13,7 +13,7 @@
 
 import { z } from "zod";
 
-import { composeInputSchema, composerInputSchema, ceilingUsdSchema, partPatchSchema, receiptModeSchema } from "@gt/domain/produce.schema";
+import { composeInputSchema, composerEstimateSchema, composerInputSchema, ceilingUsdSchema, partPatchSchema, receiptModeSchema } from "@gt/domain/produce.schema";
 import { RESOURCE_LANES } from "@gt/domain/lane";
 
 import type { Principal } from "../../../../lib/principal.ts";
@@ -34,22 +34,12 @@ const ceilingUsd = ceilingUsdSchema.optional();
 const mode = receiptModeSchema.optional();
 /** Who acts, as the job events name the operator (the Board's `as`). */
 const as = (p: Principal) => ("uid" in p ? { who: p.uid } : {});
-const mechanisms = z.array(z.enum(["text", "ref-early"])).min(1);
-const draft = z.string().max(4000);
-// The estimate's door: the composer union with the sentence allowed empty.
-const estimateInput = z.union([
-  z.object({ lane: z.literal("image"), text: draft, mechanisms, styleId: z.string().min(1) }).strict(),
-  z.object({ lane: z.literal("image"), text: draft, mechanisms, sweep: z.literal(true) }).strict(),
-  z.object({ lane: z.literal("article"), text: draft, topic: z.string().trim().min(1) }).strict(),
-  z.object({ lane: z.literal("audio"), text: draft, kind: z.enum(["music", "sfx"]) }).strict(),
-  z.object({ lane: z.literal("video"), text: draft, subject: z.string().trim().min(1) }).strict(),
-]);
 
 export async function composerChoices(): Out<"composerChoices"> {
   return runAction("produce composer choices", reader, z.undefined(), () => serverProduce().composerChoices(), undefined);
 }
 
-const composerReceiptAction = action("produce composer receipt", z.object({ input: estimateInput, mode }), (i, who) => serverProduce().composerReceipt(i, as(who)));
+const composerReceiptAction = action("produce composer receipt", z.object({ input: composerEstimateSchema, mode }), (i, who) => serverProduce().composerReceipt(i, as(who)));
 export async function composerReceipt(input: In<"composerReceipt">): Out<"composerReceipt"> {
   return composerReceiptAction(input);
 }

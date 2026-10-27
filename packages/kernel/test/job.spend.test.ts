@@ -1,6 +1,8 @@
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
+import { err } from "@gt/domain/errors";
 import { enumerateCrashes, type CrashSpec, type Phase } from "../src/crash.ts";
+import type { Effects } from "../src/effects.ts";
 import type { MissingStep, Producer, StepContext, StepOutcome } from "../src/job-core.ts";
 import { ackLane, laneHold } from "../src/job-queue.ts";
 import { recover, runJob, type RunOptions } from "../src/job-run.ts";
@@ -125,6 +127,30 @@ describe("the job's spend is the meter's projection", () => {
     const r = must(await runJob(w.fx, p, "j1", opts));
     expect(r.job).toMatchObject({ state: "failed", spend: { usd: 0 } });
     expect(must(w.store.read((x) => x.all("SELECT state FROM spend_reservations")))).toEqual([{ state: "lapsed" }]);
+    expect(reconciled(w).drift).toBeUndefined();
+    w.store.close();
+  });
+
+  it("a settle the busy store deferred is applied when its step books, never left held", async () => {
+    const w = world();
+    put(w);
+    const cls = IMAGING();
+    let busy = 1;
+    // The settle's own transaction meets a busy store once; every other transaction lands.
+    const fx: Effects = {
+      blob: (bytes, mime) => w.fx.blob(bytes, mime),
+      call: (name, fn) => w.fx.call(name, fn),
+      tx(name, fn) {
+        if (name === "spend.settle" && busy-- > 0) return err("unavailable", "the store is busy");
+        return w.fx.tx(name, fn);
+      },
+    };
+    const { p } = scripted([priced("a", metered(cls, 0.03))]);
+    const r = must(await runJob(fx, p, "j1", opts));
+    expect(busy).toBe(0);
+    expect(r.job).toMatchObject({ state: "done", spend: { usd: 0.03, basis: "reported" } });
+    expect(must(w.store.read((x) => x.all("SELECT state FROM spend_reservations")))).toEqual([{ state: "settled" }]);
+    expect(must(w.store.read((x) => x.get("SELECT value FROM spend_counters WHERE class = 'imaging-usd' AND name = 'lateWrites'")))).toEqual({ value: 1 });
     expect(reconciled(w).drift).toBeUndefined();
     w.store.close();
   });

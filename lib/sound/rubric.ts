@@ -20,17 +20,15 @@
 //   · a fixture is refused (the ledger refuses it too, so its score would teach nothing either);
 //   · every write carries the client's op id, which keys its event (appendOnce): a retried
 //     score records once.
-import { err, errorMessage, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
+import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { appendOnce } from "@gt/kernel/ingest";
 import type { Store } from "@gt/kernel/store";
 import { checkRatings, rubricMean, type Ratings } from "@gt/ui/components/audio/rubric.ts";
 
-import { SoundError, withStore } from "./store.ts";
+import { soundFailure, withStore } from "./store.ts";
 import { patchTakeTx } from "./takes.ts";
 import type { SoundTake } from "./types.ts";
-
-const STATUS_CODE: Readonly<Record<number, AppErrorCode>> = { 400: "invalid", 403: "refused", 404: "not-found", 409: "refused", 503: "unavailable" };
 
 export const RATE_OP_RE = /^[a-z0-9]{6,40}$/;
 
@@ -51,8 +49,7 @@ export async function rateTake(kernel: Store, input: RateInput, actor: Actor, no
       return ok(await patchTakeTx(tx, t.id, { ratings: { ...checked.ratings } }, now));
     });
   } catch (e) {
-    if (e instanceof SoundError) return err(STATUS_CODE[e.status] ?? "internal", e.message);
-    return err("internal", errorMessage(e), { cause: e });
+    return soundFailure(e);
   }
   if (!landed.ok) return landed;
   const take = landed.value;

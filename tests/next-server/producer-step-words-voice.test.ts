@@ -22,6 +22,7 @@ const SOUND = vi.hoisted(() => {
 
 import { openKernel } from "@gt/kernel/kernel";
 import { list } from "@gt/kernel/job";
+import { readPart } from "@gt/kernel/parts/driver";
 import { compose } from "@gt/kernel/records/write";
 import type { Store } from "@gt/kernel/store";
 
@@ -71,6 +72,16 @@ describe("album words", () => {
     const out = must(s.read((r) => r.get("SELECT output FROM job_outputs WHERE step = 'unit:metadata'")));
     expect(String(out?.["output"])).toContain('"title"');
     expect(must(list(s))[0]).toMatchObject({ producer: "words", state: "done", spend: { usd: 0 } });
+  });
+
+  it("lands what the turn wrote on the words record, beside the job's output", async () => {
+    const s = store("album-video", "alb");
+    await run(s, { projectId: "alb", partId: "alb/words", act: "write-words" }, wordsUnits, wordsProducer);
+    const out = must(s.read((r) => r.get("SELECT output FROM job_outputs WHERE step = 'unit:metadata'")));
+    const meta = (JSON.parse(String(out?.["output"])) as { metadata: { title: string; description: string; tags: string[] } }).metadata;
+    const rec = must(readPart(s, { projectId: "alb", partId: "alb/words" })).records.get("words");
+    expect(rec?.["written"]).toEqual({ title: meta.title, description: meta.description, tags: meta.tags });
+    expect(rec?.["title"]).toBe("");
   });
 });
 

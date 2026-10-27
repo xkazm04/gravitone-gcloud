@@ -67,7 +67,8 @@ export function runnerOf(spec: GenSpecView): Result<Runner> {
   const media = mediaOf(spec);
   const r = RUNNERS[`${stack}/${media}`];
   if (r === undefined || (media !== "image" && media !== "video" && media !== "video-serial-lanes")) {
-    return err("invalid", `no runner for stack=${stack} media=${media} — google video has no lane; see the overlay's video section.`);
+    const why = stack === "google" && media.startsWith("video") ? " — google video has no lane; see the overlay's video section." : ".";
+    return err("invalid", `no runner for stack=${stack} media=${media}${why}`);
   }
   return ok({ stack, media, lane: r.lane, runner: r.runner });
 }
@@ -85,7 +86,7 @@ export function dojoLocalSteps(units: readonly LocalUnit[], booked: ReadonlySet<
 /** The local runners' render order (dojo_video_h3.py `order`: every wan clip, then every H3 one). */
 export function localOrder(spec: GenSpecView, media: DojoMedia): { readonly pair: string; readonly arm: ArmName }[] {
   const units = (spec.pairs ?? []).flatMap((p) => ARMS.map((arm) => ({ pair: p.id, arm, engine: p[arm]?.engine })));
-  const ordered = media === "video-serial-lanes" ? [...units.filter((u) => (u.engine ?? "wan") === "wan"), ...units.filter((u) => (u.engine ?? "wan") !== "wan")] : units;
+  const ordered = media === "video-serial-lanes" ? [...units.filter((u) => (u.engine || "wan") === "wan"), ...units.filter((u) => (u.engine || "wan") !== "wan")] : units;
   return ordered.map(({ pair, arm }) => ({ pair, arm }));
 }
 

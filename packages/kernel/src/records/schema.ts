@@ -123,14 +123,36 @@ export function loadRun(r: Reader, id: string): { run: Run; jobId: string } {
   return { run: must(parseJsonAt("run record", runSchema, String(raw["record"]))), jobId: String(raw["job_id"]) };
 }
 
+const IN_CHUNK = 200;
+
+/**
+ * The seconds each job was quoted at launch, for the jobs that were quoted: a part's `quoted`, or the
+ * run's estimate; a job neither serves is absent (the caller reads 0). One statement per table per
+ * chunk of ids, not one per job.
+ */
+export function quotedSecondsMap(r: Reader, jobIds: readonly string[]): ReadonlyMap<string, number> {
+  const out = new Map<string, number>();
+  for (let at = 0; at < jobIds.length; at += IN_CHUNK) {
+    const ids = jobIds.slice(at, at + IN_CHUNK);
+    const marks = ids.map(() => "?").join(", ");
+    for (const part of r.all(`SELECT job_id, record FROM parts WHERE job_id IN (${marks})`, ...ids)) {
+      const job = String(part["job_id"]);
+      if (out.has(job)) continue;
+      const env = must(parseJsonAt("part row", partEnvelope, String(part["record"])));
+      const p = must(parseAt("part record", partSchema, env.part));
+      out.set(job, "quoted" in p && p.quoted !== undefined ? p.quoted.seconds : 0);
+    }
+    const rest = ids.filter((id) => !out.has(id));
+    if (rest.length === 0) continue;
+    for (const run of r.all(`SELECT job_id, record FROM runs WHERE job_id IN (${rest.map(() => "?").join(", ")})`, ...rest)) {
+      const job = String(run["job_id"]);
+      if (!out.has(job)) out.set(job, must(parseJsonAt("run record", runSchema, String(run["record"]))).estimate.seconds);
+    }
+  }
+  return out;
+}
+
 /** The seconds the job serving a part or run was quoted at launch; 0 when nothing quoted it. */
 export function quotedSecondsOf(r: Reader, jobId: string): number {
-  const part = r.get("SELECT record FROM parts WHERE job_id = ?", jobId);
-  if (part !== undefined) {
-    const env = must(parseJsonAt("part row", partEnvelope, String(part["record"])));
-    const p = must(parseAt("part record", partSchema, env.part));
-    return "quoted" in p && p.quoted !== undefined ? p.quoted.seconds : 0;
-  }
-  const run = r.get("SELECT record FROM runs WHERE job_id = ?", jobId);
-  return run === undefined ? 0 : must(parseJsonAt("run record", runSchema, String(run["record"]))).estimate.seconds;
+  return quotedSecondsMap(r, [jobId]).get(jobId) ?? 0;
 }

@@ -9,7 +9,8 @@
 // (zero under the other sections) is drawn anyway at 0, so a pressed filter can always be
 // unpressed - an option list built from the matching rows would hide it. Project has no
 // kernel facet yet (events-count.ts counts seven columns, project_id is not one): its
-// section appears only while a project filter is set, so that filter is never invisible.
+// section appears only while a project filter is set, so that filter is never invisible,
+// and each held project carries its own count (read.ts readFacets).
 
 import type { FacetCount } from "@gt/kernel/events-count";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
@@ -49,8 +50,11 @@ export function Facets({ filter: f, facets: c, onApply }: { readonly filter: Led
     </div>
   );
   // A type value is held either as a bare group (`verdict`) or a full type (`verdict.keep`).
-  const groups = valuesOf(c.typeGroup, f.type.filter((t) => !t.includes(".")));
-  const types = valuesOf(c.type, f.type.filter((t) => t.includes(".")));
+  // A held full type keeps its group drawn (at 0 if need be) and itself drawn beneath it, or
+  // the one pressed row of the filter would be folded away where it cannot be unpressed.
+  const heldTypes = f.type.filter((t) => t.includes("."));
+  const groups = valuesOf(c.typeGroup, [...f.type.filter((t) => !t.includes(".")), ...heldTypes.map((t) => t.slice(0, t.indexOf(".")))]);
+  const types = valuesOf(c.type, heldTypes);
   const gmax = max(groups);
   const lanes = valuesOf(c.lane, f.lane);
   const sources = valuesOf(c.source, f.src);
@@ -64,7 +68,7 @@ export function Facets({ filter: f, facets: c, onApply }: { readonly filter: Led
           return (
             <div key={g.value}>
               <FacetRow mark="rail" label={g.value} count={g.n} share={g.n / gmax} pressed={f.type.includes(g.value)} onToggle={(on) => toggle("type", g.value, on)} />
-              {subs.length > 1 &&
+              {(subs.length > 1 || subs.some((t) => f.type.includes(t.value))) &&
                 subs.map((t) => (
                   <FacetRow key={t.value} mark="rail" nested={{ tone: toneOf(t.value) }} label={t.value} count={t.n} pressed={f.type.includes(t.value)} onToggle={(on) => toggle("type", t.value, on)} />
                 ))}
@@ -84,7 +88,7 @@ export function Facets({ filter: f, facets: c, onApply }: { readonly filter: Led
         <div className={s.sec}>
           {head("project", "project")}
           {f.project.map((pid) => (
-            <FacetRow key={pid} mark="rail" label={pid} count={f.project.length === 1 ? c.total : 0} pressed onToggle={(on) => toggle("project", pid, on)} />
+            <FacetRow key={pid} mark="rail" label={pid} count={c.project[pid] ?? 0} pressed onToggle={(on) => toggle("project", pid, on)} />
           ))}
         </div>
       )}

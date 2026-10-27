@@ -61,6 +61,19 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
   The build also leaves symlinks in `.next/node_modules/` pointing INTO the main checkout's node_modules: rmdir every
   reparse point in the worktree (`Get-ChildItem -Recurse -Attributes ReparsePoint`) before `git worktree remove --force`.
   Measured 2026-10-24 (audio-postproduction-research).
+  2026-10-23: that build now SUCCEEDS but `check:bundle` cannot read the worktree's manifest ("COULD NOT RUN: ... names no
+  (studio) layout entry"). Measure on main right after the ff with `NEXT_DIST_DIR=.next-landing npm run build && NEXT_DIST_DIR=.next-landing npm run check:bundle`
+  - the operator's dev server keeps `.next` - and land the budget raise as the next commit.
+- `exit codes and the shared main (promoted 2026-10-24, scout-storyboards; the chained-exit trap's second bite after 2026-10-14):`
+  never pipe a gate into `tail`/`grep` and then chain on it (`check:bundle | tail -2 && git commit` committed a partial budget
+  raise because `tail` exited 0 and the truncated list hid ten routes) - run the gate bare or read `$?`/`PIPESTATUS`. And never
+  `git commit --amend` (or rebase) on main in the main checkout: parallel sessions commit there every few minutes, and an amend
+  meant for your commit rewrote another session's (repaired by `reset --soft <theirs>`). Land a follow-up commit instead.
+- `tests/mutants-unit/registry.ts` on a busy main: put a spark's new mutants NEXT TO a related entry, never at the file's tail -
+  every rebase onto a sweeping main conflicts on the tail append (two conflicts in one landing, 2026-10-24).
+- `before merge:` re-run the landing overlap (`git status --short` of the main checkout against the branch's files) before
+  the LAST package, not only at the gate: an unregistered session's uncommitted edit appeared mid-build (2026-10-23) and
+  blocked the ff; tell the operator then.
 
 ## Rituals
 
@@ -95,11 +108,34 @@ See `.claude/perfect/config.md` `## Repo law` verbatim, plus:
   spell a server-only env var NAME, not even in a dev fixture or a label (`check:bundle`; a dynamic
   import behind an inline NODE_ENV test did NOT keep the chunk out). All three surfaced only at the
   Director's verify on 2026-10-05, after six builders reported green.
+- **Two more tree-wide probes a builder never opens (promoted 2026-10-23, bitten twice that day):** a new
+  exported method on an API route needs its row in `tests/golden-path/deployment-cells.probe.spec.ts` AND, when
+  `guard: "public"`, its stated reason in `tests/golden-path/access-only-401.probe.spec.ts`; and every test file
+  under `packages/*/test` needs a mutant in `tests/mutants-unit/registry.ts` (CRLF) - a changed line a mutant
+  `find`s must be re-pointed - verified with `node pipeline/unit-mutants.mts --only <id>` AFTER the commit
+  (it runs on HEAD in its own worktree, so an uncommitted edit reads `stale`).
+- **A new packet source or ledger source has four homes no builder brief names by default (promoted 2026-10-23,
+  scout-decision-graph - the third "tree-wide probe" trap):** its row in `tests/golden-path/runs-live.probe.spec.ts`
+  `predicates()` AND `ledger-reconcile.probe.spec.ts` `SOURCES`; real work for it in `pipeline/fixtures/` (ledger-reconcile
+  fails a source that tallies nothing); and every sibling pile that could show the same work twice (a scout-launched Suno
+  take sat in pkt:suno and the Floor's suno pile). A page that stops being a redirect needs its bundle budget raised with
+  the reason.
+- **One builder per shared dispatch file.** When two packages add commands to one CLI (`pipeline/scout.mts`), the Director
+  pre-wires EVERY block in WP-0 and builders fill modules only; otherwise a per-package commit needs a hand-built blob.
 - **A new surface is built in the Watershed from `@gt/ui`** (`packages/ui/src/components/<dir>/`,
   `INVENTORY.md`; specimens at `/kit`), inside `app/(studio)/<route>/` with its `_port`. Dropdowns are
   `@gt/ui`'s `field/Field.tsx` `Select`, never a native `<select>`. (History: v1's Almanac
   `components/kit`, briefed as a reuse target on 2026-10-05, drew "like looking at wireframes"; it
   was deleted in Phase 6.)
+- **Every new golden-path probe needs a probe mutant (promoted 2026-10-24, the second time - 5f45006c articles-medium, then
+  mcp-conformance):** `tests/golden-path/mutant-registry.probe.spec.ts` holds UNGUARDED_PROBE_BUDGET (159) and fails the full
+  `npm test` when a new `*.probe.spec.ts` has no entry in `tests/mutants/registry.ts` (probe mutants, not tests/mutants-unit).
+  Name it Director-owned in every brief that adds a probe; verify with `npx tsx pipeline/probe-mutants.mts --only <id>`.
+- **A lib/ consumer of a produce receipt imports the Floor's lane doors from `lib/produce/laneDoors.ts`** (moved out of app/
+  2026-10-24); a design that puts a Board adapter or worker over a server function must check, at scout time, that the
+  function is importable from lib/ (no-app-imports) - liveness rule 5 applies to adapters, not only to screens.
+- **New wire identifiers are grepped for collisions before the brief names them** (event types, packet/ledger source ids,
+  env vars): `spend.*` and the ledger source `spend` were both taken (2026-10-24).
 - Prompts live in `pipeline/*-PROMPT.md` and are read by the code (`lib/<domain>/`, run by
   `lib/producers/`); a prompt change is a code change and its regression control
   (`pipeline/*-regression.mts`) runs.
@@ -121,6 +157,13 @@ One AskUserQuestion call of up to 4 questions per wave.
   library; picks the smaller infra option (catalog default voice) when the creative part is elsewhere; keeps risky options
   (static analysis of trial binaries) as a named contingency rather than dropping them. Mid-build scope additions that
   close a dead end ("add WP5") are welcome as one targeted question.
+- 2026-10-23 (scout-decision-graph): the operator stages generated media as a LADDER judged per rung (track -> visualizer -> full video -> Short; a Short never from the cheap rung) - offer the staged option first. Reasons are mandatory even on cheap words, with an optional note; offer `required + note` rather than `optional`.
+- 2026-10-23 (scout-muse): on a new generative lane the operator defers what research can decide ("decide based on the research" for reject reasons), stops at concept until the end goal is known (3D = Leonardo concept stills, no mesh), and prefers a cheap direction check over quality (50 stills at studio quality Low). Offer `research first, then decide` and `concept only` as options, and size a first batch as a direction check.
+
+- 2026-10-24 (athena-control-mcp): on INFRASTRUCTURE the operator picks the simplest mechanism over the recommended richer one - hand-rolled over an SDK dependency, poll over subscribe, fewer gate cards for speed, and no spend authority for an agent (dry + a confirm packet) - while on SCOPE picking everything (all four families) and accepting a staged split. Offer the no-dependency / simplest option as a first-class choice; scout a pricing field's real shape (priced vs unpriced lines) BEFORE asking a '$0' question.
+
+- 2026-10-24 (scout-storyboards): every pick Recommended except the header, where the operator kept spend GLOBAL while moving NEXT into the Scout header - a
+  number the operator watches everywhere stays everywhere; offer "move X, keep Y global" when a spark relocates shell chrome.
 
 ## Skill improvement log
 
@@ -152,3 +195,12 @@ One AskUserQuestion call of up to 4 questions per wave.
   document is worth a verified / not-verified ledger: this session's "live" TTS, LLM chains and voice FX were all
   exercised only by fakes or fixtures, which commit messages alone did not show. When the operator redirects the whole
   session's scope, stop building, write the plan, and end - do not widen the next spark.
+- 2026-10-23 (registry-feedback-loop, 3 builders, one in a sibling repo) · The brief hung an event on a function that does not exist (`planExtractCommit().promotions`); the builder stubbed it as a hook rather than invent it - liveness rule 6 should name the function for every EVENT, not just every field. Two builders hand-rolled a second reader of the sibling repo's location; name the existing reader (`lib/articles/registryRead` `manifestRegistryLocal`) in the brief. An agent shell's `npm run verify` lacks the winget ffmpeg: put the `.env.local` FFMPEG folder on PATH first (3 false reds otherwise).
+- 2026-10-23 (stats-reels, 2 builders in a worktree) · Before removing a worktree, count junctions whose target lies outside it in a SEPARATE step and read the count first; build the root with `Resolve-Path` (backslashes) - a `pwd -W` root (forward slashes) never prefixes a junction's target, so every junction reads as outward and the check is noise. Also: an active-runs `BUILDING` entry went stale within the hour (its spark had landed) - check `git log main` for a sibling's WP commits before designing beside it.
+- 2026-10-23 (scout-idea-artboards WP-I4) · Read a gate run's FULL failure list - a head -20 of the log hid access-only-401 behind deployment-cells and I reported the rest green. The operator's purpose doctrine (YouTube video only; notes as direction confirmations) arrived after a triage: for a generative loop, wave 1 should ask what the output is FOR.
+- 2026-10-23 (night-load-band, 3 parallel builders) · `tests/mutants-unit/registry.ts` is a shared file every package's new test needs an entry in - all three builders found it red and proposed an entry they could not write. Name it Director-owned in every brief that adds a package test, and ask each builder to return its entry (find/replace/why, verified by hand) in the report.
+- 2026-10-23 (scout-decision-graph, 3 builders, 4 waves) · Promoted to Repo law: a new packet/ledger source's probe rows, fixture work and sibling piles; one builder per shared CLI dispatch file. Promoted to Gates: check:bundle on main via NEXT_DIST_DIR after the ff; the landing overlap re-checked before the last package. A wave-1 contradiction (a scope pick against a firmness pick) was settled by one synthesis question; the operator's two 'Other' answers were doctrines (mandatory reason + note; a media LADDER judged per rung) and the second split the spark.
+- 2026-10-23 (scout-muse, 3 builders in a worktree) · A vendor UI driver's VALUES are a liveness item: the brief chose a 4:5 poster from the project's Aspect type, and the studio page has no 4:5 radio - found on the first live still (no spend: the driver refuses before Generate). Scout the control values the driver can click (its recon comments, or a CDP read of the page) before a brief names one. A Board source binds at most 11 reason keys (packages/domain source.test) and `scout` uses all 11 - a design that adds reasons must check that first. A long-lived worker (Gravitone worker task) keeps pre-merge producer code: restart it after a merge that changes a producer's request schema, and kill the node child by pid (Stop-ScheduledTask leaves it). The registry map had no row for the scout contexts, so the subjects were read late and rewrote the brief's prompt order; search the bundle index by keyword before wave 1 when the map is silent.
+- 2026-10-24 (athena-control-mcp, 3 builders + 2 Director packages, worktree) · `pipeline/unit-mutants.mts` has NO help flag: any unrecognised argument runs the WHOLE unit registry (~1h, CPU that flakes worker-lanes/publish-timers in a parallel gate run); always pass `--only <id>...`. Killing it mid-run leaves a mutated file in its scratch tree - restore it and remove the tree (junctions first) before the next run, which otherwise fails 'already exists'. Measured: `git worktree remove --force` on a tree whose node_modules entries junction to main's unlinked them without following (main 418 -> 418), but count first anyway. Briefs as scratch files paid off again: WP2 took post-WP1 amendments as an appended section. The kernel refuses non-operator actors for retry / requeueing reroute / ackLane (job.ts:316,359, job-queue.ts:112) - a design that hands an agent those verbs must widen the kernel, not just the door.
+- 2026-10-24 (scout-storyboards, 5 builders) · The scout reported a policy (idea door names rule) from a COMMENT; liveness rule 6 (a policy exists only if something computes it) caught it at review, not at scout time - ask the scout to name the function. Briefs said "drive a fixture packet" but the Board reads the real side only: scout the route's port SIDE before writing a drive step. Promoted to Gates this run: exit codes through pipes + no amend on main; mutant entries not at the tail.
+- 2026-10-25 (scout-vision S1, 2 builders, worktree) · This repo mixes CRLF and LF: a Director's scripted replace that did not ASSERT its match count silently missed on CRLF (types.ts) and a field shipped under the old name; every scripted edit asserts count==1 and normalizes line endings. Git Bash heredocs failed twice on prose with quotes - write edit scripts with the Write tool and run them. A compound spark (operator picked every scope item) staged as gated stages in one spark kept wave 3 focused on S1 only; asking at each stage's gate defers questions until the earlier stage has taught something.

@@ -1,6 +1,8 @@
 // The style atelier's parts (Phase 5, L51): which plate a trial column shows, where J/K land,
 // what the atelier's keys answer, and the markup the sheet and the ratchet speak - pure functions
 // over literal data, the components through react-dom/server.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
@@ -10,6 +12,8 @@ import type { ProofState, StyleCoverageRow, StyleLockGate, StyleProofView } from
 
 import { LockGate } from "../../src/components/style/LockGate.tsx";
 import { ProofSheet } from "../../src/components/style/ProofSheet.tsx";
+import { EvidenceTable } from "../../src/components/style/StyleFacts.tsx";
+import { TrialMatrix } from "../../src/components/style/TrialMatrix.tsx";
 import { proofLook, spendWords, stepProof, trialColumns } from "../../src/components/style/style.ts";
 import { KEYMAP } from "../../src/keymap/bindings.ts";
 import { chordsOf } from "../../src/keymap/chord.ts";
@@ -123,5 +127,55 @@ describe("the sheet and the ratchet, drawn", () => {
     expect(count(gate(blocker, { can: false, blocker, legacySheet: false }))).toBe(1);
     expect(count(gate("operator keeps in 1 of 2 cells", { can: false, blocker, legacySheet: false }))).toBe(1);
     expect(gate("the gate holds — it may lock", { can: true, blocker: null, legacySheet: false })).toContain("data-can-lock");
+  });
+});
+
+describe("the evidence table", () => {
+  const row = (scene: string, verdict: "keep" | "reject", by: "operator" | "agent") => ({ run: "2026-09-01-night", scene, mechanism: "m", verdict, at: "2026-09-01T00:00:00.000Z", by, counts: verdict === "keep" && by === "operator" });
+
+  test("an agent's keep is drawn in the table and marked, never counted in the tallies", () => {
+    const html = renderToStaticMarkup(h(EvidenceTable, { rows: [row("s1", "keep", "operator"), row("s2", "keep", "agent"), row("s3", "reject", "operator")] }));
+    expect(html).toContain("keep 1<");
+    expect(html).toContain("reject 1<");
+    expect(html).toContain("evidence kept 1, rejected 1, undecided 0");
+    expect(html).toContain("an agent&#x27;s verdict: shown, not counted");
+    expect(html.split("<tr").length - 1).toBe(4);
+  });
+});
+
+describe("the ratchet, locked", () => {
+  const COVERED: readonly StyleCoverageRow[] = [{ problem: "quantity", trialIds: ["peak-and-fall"], approved: 1, rejected: 0, covered: true }];
+  const locked = (why: string) =>
+    renderToStaticMarkup(h(LockGate, { status: "locked", why, keptCells: 3, provenKeeps: 2, coverage: COVERED, lockProblems: 1, lock: { can: false, blocker: null, legacySheet: false, lockedAt: "2026-08-20T11:30:00.000Z", lockedBy: "operator" } }));
+
+  test("the lock's date and hand are drawn once: the why says them when it carries them", () => {
+    // The sentence styleView's `why` writes for a lock (packages/domain/src/styleView.ts).
+    const why = "locked 2026-08-20 by operator — the block is frozen; duplicate to change the look";
+    expect(locked(why).split("2026-08-20").length - 1).toBe(1);
+    expect(locked("locked — projects build on this block").split("2026-08-20").length - 1).toBe(1);
+  });
+});
+
+describe("the trial matrix, drawn", () => {
+  const COVERAGE: readonly StyleCoverageRow[] = [{ problem: "quantity", trialIds: ["peak-and-fall"], approved: 1, rejected: 0, covered: true }];
+  const matrix = (onHold?: (id: string) => void) =>
+    renderToStaticMarkup(h(TrialMatrix, { trials: STYLE_TRIALS, coverage: COVERAGE, proofs: [proof("a", "peak-and-fall", "approved")], srcOf: () => "/a.jpg", ...(onHold === undefined ? {} : { onHold }) }));
+
+  test("a face is a button only where pressing it holds the proof, as a head is only where it chooses", () => {
+    const buttons = (html: string) => html.split("<button").length - 1;
+    expect(buttons(matrix())).toBe(0);
+    expect(matrix()).toContain('role="img" aria-label="the fall: a, approved"');
+    expect(buttons(matrix(noop))).toBe(1);
+  });
+});
+
+describe("the trial matrix's columns", () => {
+  const css = readFileSync(join(import.meta.dirname, "../../src/components/style/Style.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const mrow = /\.mrow\{([^}]*)\}/.exec(css)?.[1] ?? "";
+
+  test("follow the trials a row holds, not a count typed into the stylesheet", () => {
+    expect(mrow).not.toMatch(/repeat\(\s*\d/);
+    expect(mrow).toMatch(/grid-auto-flow:\s*column/);
+    expect(mrow).toMatch(/grid-auto-columns:/);
   });
 });

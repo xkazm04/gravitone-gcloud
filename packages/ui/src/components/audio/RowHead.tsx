@@ -14,7 +14,11 @@ import s from "./Arrange.module.css";
 
 export const ROW_FIELD = "row-name";
 
-function NameForm({ initial, label, placeholder, onDone }: { readonly initial: string; readonly label: string; readonly placeholder?: string; readonly onDone: (name: string | null) => void }) {
+/** The two ways out of an open rename that make no edit: Escape, and focus leaving the field
+ *  with the name as it was. */
+export const abandons = (on: "Escape" | "blur", value: string, initial: string): boolean => on === "Escape" || value.trim() === initial.trim();
+
+function NameForm({ initial, label, placeholder, onDone, onAbandon }: { readonly initial: string; readonly label: string; readonly placeholder?: string; readonly onDone: (name: string | null) => void; readonly onAbandon?: () => void }) {
   const [v, setV] = useState(initial);
   return (
     <form
@@ -24,7 +28,18 @@ function NameForm({ initial, label, placeholder, onDone }: { readonly initial: s
         onDone(v.trim() === "" ? null : v.trim());
       }}
     >
-      <input className={s.nameField} value={v} aria-label={label} placeholder={placeholder} maxLength={80} onChange={(e) => setV(e.currentTarget.value)} {...{ [FIELD_ATTR]: ROW_FIELD }} />
+      <input className={s.nameField} value={v} aria-label={label}
+        placeholder={placeholder}
+        maxLength={80}
+        onChange={(e) => setV(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (e.key !== "Escape" || onAbandon === undefined) return;
+          e.preventDefault();
+          onAbandon();
+        }}
+        onBlur={(e) => {
+          if (onAbandon !== undefined && abandons("blur", e.currentTarget.value, initial)) onAbandon();
+        }} {...{ [FIELD_ATTR]: ROW_FIELD }} />
     </form>
   );
 }
@@ -48,6 +63,7 @@ export function RowHead({ row, held, first, last, onEdit }: RowHeadProps) {
       <NameForm
         initial={name}
         label={`rename ${name}`}
+        onAbandon={() => setRenaming(false)}
         onDone={(to) => {
           setRenaming(false);
           if (to !== null && to !== name) onEdit({ op: "rename", from: name, to });
@@ -58,7 +74,7 @@ export function RowHead({ row, held, first, last, onEdit }: RowHeadProps) {
     <div className={s.rowHeadIn}>
       <span className={s.rowName}>{name}</span>
       {row.orphan ? (
-        <Chip label="adopt" casing="lower" tone="amber" ghost name={`adopt ${name} as a row`} onPress={() => onEdit({ op: "add", name })} />
+        <Chip label="adopt" casing="lower" tone="amber" ghost name={`adopt ${name} as a row`} onPress={() => onEdit({ op: row.into === null ? "add" : "adopt", name })} />
       ) : (
         <span className={s.rowActs}>
           <Chip label="rename" casing="lower" name={`rename ${name}`} onPress={() => setRenaming(true)} />

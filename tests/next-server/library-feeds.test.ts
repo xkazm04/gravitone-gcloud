@@ -15,8 +15,9 @@ import { liveEffects } from "@gt/kernel/effects";
 import { runJob } from "@gt/kernel/job-run";
 import { mediaFactsProducer, queueFacts, type MediaProbe } from "@gt/producers/media-facts/run";
 
-import { kernelFeed } from "../../lib/library/feeds/kernel.ts";
-import { sunoFeed } from "../../lib/library/feeds/sound.ts";
+import { stripsFeed } from "../../lib/library/feeds/foundry.ts";
+import { KERNEL_BLOB_CAP, kernelFeed } from "../../lib/library/feeds/kernel.ts";
+import { sunoFeed, takesFeed } from "../../lib/library/feeds/sound.ts";
 import { clipsFeed, exportsFeed } from "../../lib/library/feeds/studio.ts";
 import type { FeedItem } from "../../lib/library/feeds/types.ts";
 import { syncLibrary } from "../../lib/library/project.ts";
@@ -28,7 +29,7 @@ import { syncLibrary } from "../../lib/library/project.ts";
 
 let dir = "";
 const kernels: Kernel[] = [];
-const ENV = ["SOUND_STORE_DIR", "CLIP_STORE_DIR", "PUBLISH_EXPORTS_DIR", "AD_EXPORT_DIR"] as const;
+const ENV = ["SOUND_STORE_DIR", "CLIP_STORE_DIR", "PUBLISH_EXPORTS_DIR", "AD_EXPORT_DIR", "STRIPS_STORE_DIR"] as const;
 const saved = new Map<string, string | undefined>();
 
 beforeEach(() => {
@@ -78,6 +79,84 @@ describe("sunoFeed", () => {
     expect(kept?.file).toBeUndefined();
     expect(r.skipped).toEqual([{ id: "sc-wait", reason: "Suno has not reported its length yet" }]);
   });
+});
+
+describe("takesFeed", () => {
+  it("admits a take with a length and names the one it cannot draw without one", async () => {
+    const sound = process.env["SOUND_STORE_DIR"] ?? "";
+    const take = (id: string, over: object = {}) => ({
+      ...{ id, kind: "music", title: id, provider: "local", origin: "studio", prompt: "warm pad", negative: null, terms: { genre: [], mood: [], instrument: [] }, tempoBpm: null, key: null, durationS: null },
+      ...{ file: null, peaks: null, measured: null, verdict: "unjudged", reasons: [], stage: null, group: null, label: null, parentId: null, huntId: null, projectId: null, songId: null, createdAt: "2026-10-01T00:00:00.000Z" },
+      ...over,
+    });
+    write(path.join(sound, "takes.json"), { version: 1, takes: [take("t-long", { durationS: 30 }), take("t-none")] });
+    const r = await takesFeed.read(ctx);
+    expect(r.items.map((i) => i.item.id)).toEqual(["audio:t-long"]);
+    expect(r.skipped).toEqual([{ id: "t-none", reason: "the take has no length, asked or measured" }]);
+  });
+});
+
+describe("stripsFeed", () => {
+  it("holds a listed run whose verdicts cannot be read: named in the report, its items not pruned", async () => {
+    const k = kernel();
+    const blobs = blobStore(path.join(dir, "blobs"));
+    const run = path.join(process.env["STRIPS_STORE_DIR"] ?? "", "2026-10-01-edu");
+    mkdirSync(run, { recursive: true });
+    write(path.join(run, "run.json"), { id: "2026-10-01-edu", at: "2026-10-01T00:00:00.000Z", status: "done", cards: [{ id: "c1", lane: "edu", case: "tides", approach: "diagram", status: "rendered", files: { poster: "poster.png" } }] });
+    write(path.join(run, "verdicts.json"), {});
+    const one = await syncLibrary(k.store, blobs, [stripsFeed], ctx);
+    if (!one.ok) throw one.error;
+    expect(one.value.feeds[0]).toMatchObject({ feed: "strips", items: 1, inserted: 1 });
+    writeFileSync(path.join(run, "verdicts.json"), "{ torn");
+    const two = await syncLibrary(k.store, blobs, [stripsFeed], ctx);
+    if (!two.ok) throw two.error;
+    expect(two.value.feeds[0]).toMatchObject({ feed: "strips", items: 0, pruned: 0, skipped: [{ id: "2026-10-01-edu" }] });
+    const p = queryLibrary(k.store, { limit: 5 });
+    expect(p.ok && p.value.items.map((i) => i.id)).toEqual(["motion:strips:2026-10-01-edu:c1:poster"]);
+  });
+
+  it("holds a run whose run.json cannot be read: named in the report, its items not pruned", async () => {
+    const k = kernel();
+    const blobs = blobStore(path.join(dir, "blobs"));
+    const run = path.join(process.env["STRIPS_STORE_DIR"] ?? "", "2026-10-03-edu");
+    mkdirSync(run, { recursive: true });
+    write(path.join(run, "run.json"), { id: "2026-10-03-edu", at: "2026-10-03T00:00:00.000Z", status: "done", cards: [{ id: "c1", lane: "edu", case: "tides", approach: "diagram", status: "rendered", files: { poster: "poster.png" } }] });
+    write(path.join(run, "verdicts.json"), {});
+    const one = await syncLibrary(k.store, blobs, [stripsFeed], ctx);
+    if (!one.ok) throw one.error;
+    expect(one.value.feeds[0]).toMatchObject({ feed: "strips", items: 1, inserted: 1 });
+    writeFileSync(path.join(run, "run.json"), "{ torn");
+    const two = await syncLibrary(k.store, blobs, [stripsFeed], ctx);
+    if (!two.ok) throw two.error;
+    expect(two.value.feeds[0]).toMatchObject({ feed: "strips", items: 0, pruned: 0, skipped: [{ id: "2026-10-03-edu" }] });
+    const p = queryLibrary(k.store, { limit: 5 });
+    expect(p.ok && p.value.items.map((i) => i.id)).toEqual(["motion:strips:2026-10-03-edu:c1:poster"]);
+  });
+
+  it("reads a card's verdict as its state: keep is ratified, reject is rejected, none is unjudged", async () => {
+    const run = path.join(process.env["STRIPS_STORE_DIR"] ?? "", "2026-10-02-edu");
+    mkdirSync(run, { recursive: true });
+    const card = (id: string) => ({ id, lane: "edu", case: "tides", approach: "diagram", status: "rendered", files: { poster: "poster.png" } });
+    write(path.join(run, "run.json"), { id: "2026-10-02-edu", at: "2026-10-02T00:00:00.000Z", status: "done", cards: [card("k"), card("r"), card("n")] });
+    write(path.join(run, "verdicts.json"), { k: { verdict: "keep", at: "2026-10-02T01:00:00.000Z" }, r: { verdict: "reject", at: "2026-10-02T01:00:00.000Z" } });
+    const r = await stripsFeed.read(ctx);
+    expect(r.items.map((i) => [i.item.id.split(":")[3], i.item.state])).toEqual([
+      ["k", "ratified"],
+      ["r", "rejected"],
+      ["n", "unjudged"],
+    ]);
+  });
+
+  it("says its run cap: the runs past the newest 200 are named in the report, not silently left out", async () => {
+    const root = process.env["STRIPS_STORE_DIR"] ?? "";
+    for (let i = 0; i < 201; i++) {
+      const id = `2026-01-01-r${String(i).padStart(3, "0")}`;
+      mkdirSync(path.join(root, id), { recursive: true });
+      write(path.join(root, id, "run.json"), { id, at: new Date(Date.parse("2026-01-01T00:00:00Z") + i * 60_000).toISOString(), status: "done", cards: [] });
+    }
+    const r = await stripsFeed.read(ctx);
+    expect(r.skipped).toEqual([{ id: "strips", reason: "1 of 201 runs, older than the newest 200, are not read" }]);
+  }, 60_000); // writes and reads 201 run dirs: past vitest's 5 s default under a full suite's load
 });
 
 describe("clipsFeed and exportsFeed", () => {
@@ -137,6 +216,21 @@ describe("kernelFeed", () => {
     });
     // Without a store the feed says so instead of reading nothing silently.
     expect((await kernelFeed.read(ctx)).skipped).toEqual([{ id: "kernel", reason: "no kernel store in this sync" }]);
+  });
+
+  it("says its cap in refs, and the refs past it are the same ones on the next read", async () => {
+    const k = kernel();
+    const units = Array.from({ length: KERNEL_BLOB_CAP + 1 }, (_, i) => ({ blob: { sha256: i.toString(16).padStart(64, "0"), bytes: 1, mime: "image/png" } }));
+    const w = k.store.tx((t) => {
+      t.run("INSERT INTO projects (id, rev, listed, updated_at, record) VALUES ('p-1', 1, 1, '2026-10-01T00:00:00.000Z', '{}')");
+      t.run("INSERT INTO part_records (project_id, key, part_id, rev, data) VALUES ('p-1', 'frames', 'p-1/frames', 1, ?)", JSON.stringify({ units }));
+    });
+    if (!w.ok) throw w.error;
+    const one = await kernelFeed.read({ ...ctx, store: k.store });
+    expect(one.items).toHaveLength(KERNEL_BLOB_CAP);
+    expect(one.skipped).toEqual([{ id: "kernel", reason: `more than ${KERNEL_BLOB_CAP} blob refs; the refs past the cap are not read` }]);
+    const two = await kernelFeed.read({ ...ctx, store: k.store });
+    expect(two.items.map((i) => i.item.id)).toEqual(one.items.map((i) => i.item.id));
   });
 });
 

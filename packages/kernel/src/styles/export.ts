@@ -2,11 +2,12 @@ import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { parseJsonAt } from "@gt/domain/door";
-import { AppError, err, ok, type Result } from "@gt/domain/errors";
+import { err, ok, type Result } from "@gt/domain/errors";
 import type { Style } from "@gt/domain/style";
 import { renameRetryingSync, type SyncRetryOptions } from "../renameRetrySync.ts";
 import type { Reader, Store } from "../store.ts";
 import { catalogueRevIn, listStylesIn } from "./driver.ts";
+import type { StyleRow } from "./schema.ts";
 
 // THE GIT EXPORT - pipeline/foundry/styles.json as a PROJECTION of the store (Phase 5 decision
 // 3), for the Python READERS (forge.py `prepare`, grade.py `style_score`) and for a diff a person
@@ -69,7 +70,11 @@ export function exportedStyle(s: Style): Record<string, unknown> {
 
 /** The whole file, as text, from a read of the store. */
 export function exportStylesIn(r: Reader): string {
-  const doc = { ...HEAD, _rev: catalogueRevIn(r), styles: listStylesIn(r).map((row) => exportedStyle(row.style)) };
+  return renderExport(catalogueRevIn(r), listStylesIn(r));
+}
+
+function renderExport(rev: number, rows: readonly StyleRow[]): string {
+  const doc = { ...HEAD, _rev: rev, styles: rows.map((row) => exportedStyle(row.style)) };
   return `${JSON.stringify(doc, null, 2)}\n`;
 }
 
@@ -103,10 +108,11 @@ export function writeStylesExport(store: Store, file: string): Result<ExportRepo
   // The transaction is only a consistent read (and the write lock that orders two exporters'
   // renders); the file I/O, whose rename may retry for ~5 s, runs after it has committed.
   const plan = store.tx((t): Result<ExportReport & { readonly text: string | null }> => {
-    const text = exportStylesIn(t);
+    // One list and one revision serve both the render and the lost-style check.
     const styles = listStylesIn(t);
-    const before = current(file);
     const rev = catalogueRevIn(t);
+    const text = renderExport(rev, styles);
+    const before = current(file);
     if (before === text) return ok({ rev, changed: false, styles: styles.length, text: null });
     if (before !== null) {
       const parsed = parseJsonAt(file, fileIds, before);
@@ -127,7 +133,9 @@ export function writeStylesExport(store: Store, file: string): Result<ExportRepo
     renameRetryingSync(tmp, file, EXPORT_RENAME);
   } catch (e) {
     rmSync(tmp, { force: true });
-    throw new AppError("unavailable", `cannot write ${file}`, { cause: e });
+    // An answer, not a throw: the store has committed, and the caller (lib/foundry/catalogue.ts
+    // unwrap, pipeline/import/styles.mts) says so in its own words only when it gets a Result.
+    return err("unavailable", `cannot write ${file}`, { cause: e });
   }
   return ok(report);
 }

@@ -9,6 +9,8 @@ import type { JobState } from "@gt/domain/job";
 
 import { pidAlive } from "../../../../lib/gpu/lease.ts";
 import { cleanTitle, readMv } from "../../../../lib/sound/mv/store.ts";
+import { readSuno } from "../../../../lib/sound/suno/store.ts";
+import { isScoutSunoJob } from "../../../../lib/foundry/scout/types.ts";
 import { bump, digest, facts, instant } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Source, WeirItem } from "../types.ts";
 
@@ -71,6 +73,8 @@ const fileSchema = z.object({
 export type MvSnapshot = Parsed<z.output<typeof fileSchema>> & {
   /** Whether mv.json's worker lease names a live process; null when no lease is held. Probed by the reader. */
   readonly workerAlive: boolean | null;
+  /** Suno clip ids of scout tracks: a visualizer over one is judged on its night's packet, not in this pile. */
+  readonly scoutClips: ReadonlySet<string>;
 };
 type Job = MvSnapshot["jobs"][number];
 
@@ -89,7 +93,13 @@ async function read(): Promise<Result<MvSnapshot>> {
   }
   const p = parseAt("mv.json", fileSchema, raw);
   if (!p.ok) return p;
-  return ok({ ...p.value, workerAlive: p.value.worker === undefined ? null : pidAlive(p.value.worker.pid) });
+  let scoutClips: ReadonlySet<string>;
+  try {
+    scoutClips = new Set((await readSuno()).clips.filter((c) => isScoutSunoJob(c.jobId)).map((c) => c.id));
+  } catch (e) {
+    return err("unavailable", `mv: readSuno failed: ${errorMessage(e)}`, { cause: e });
+  }
+  return ok({ ...p.value, workerAlive: p.value.worker === undefined ? null : pidAlive(p.value.worker.pid), scoutClips });
 }
 
 /** The queued job recover() named in `queue.interrupted`, by its cleaned, quoted title. */
@@ -162,7 +172,7 @@ function liveOf(s: MvSnapshot): LiveJob[] {
 }
 
 function weirOf(s: MvSnapshot): WeirItem[] {
-  const done = s.jobs.filter((j) => j.state === "done");
+  const done = s.jobs.filter((j) => j.state === "done" && !(j.source.kind === "clip" && s.scoutClips.has(j.source.id)));
   const pending = done.filter((j) => j.verdict === null);
   if (pending.length === 0) return [];
   const oldest = instant(Math.min(...pending.map((j) => j.endedAt ?? j.enqueuedAt)));

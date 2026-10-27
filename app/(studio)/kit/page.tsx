@@ -13,8 +13,9 @@ import { join } from "node:path";
 
 import type { Metadata } from "next";
 
+import { err, errorMessage, type Result } from "@gt/domain/errors";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
-import { parseSource } from "@gt/ui/tokenSource";
+import { parseSource, type TokenSource } from "@gt/ui/tokenSource";
 
 import { AudioSection } from "./AudioKit.tsx";
 import { BoardSection } from "./BoardKit.tsx";
@@ -22,6 +23,7 @@ import { boardKitData } from "./boardKitData.ts";
 import { ContractSection } from "./Contract.tsx";
 import { ControlSections } from "./Controls.tsx";
 import { FloorSection } from "./FloorKit.tsx";
+import { GraphSection } from "./GraphKit.tsx";
 import { KitNav } from "./KitNav.tsx";
 import { LedgerSections } from "./LedgerKit.tsx";
 import { LibrarySection } from "./LibraryKit.tsx";
@@ -39,8 +41,18 @@ export const metadata: Metadata = { title: "Gravitone · Kit" };
 
 const BODY = "kit-body";
 
+/** source.json through the one door: a file that cannot be read is the same Result as one that
+ *  cannot be parsed, so either way the page draws one ErrorLine and every other section. */
+function readSource(): Result<TokenSource> {
+  try {
+    return parseSource(readFileSync(join(process.cwd(), "packages/ui/tokens/source.json"), "utf8"));
+  } catch (e) {
+    return err("unavailable", errorMessage(e));
+  }
+}
+
 export default function KitPage() {
-  const source = parseSource(readFileSync(join(process.cwd(), "packages/ui/tokens/source.json"), "utf8"));
+  const source = readSource();
   // A group the sheet has no place for would be a token the kit silently omits: say so on
   // the page, where the next person to add a group will see it (zero-input is not green).
   const unplaced = source.ok ? source.value.groups.filter((g) => !DRAWN_GROUPS.includes(g.id)).map((g) => g.id) : [];
@@ -62,6 +74,7 @@ export default function KitPage() {
         <ProduceSection />
         <PartSection />
         <AudioSection />
+        <GraphSection />
         <LibrarySection />
         <StyleSection />
         <ContractSection />

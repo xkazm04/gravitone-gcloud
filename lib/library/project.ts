@@ -91,6 +91,17 @@ async function ingest(store: Store, blobs: BlobStore, file: { abs: string; mime:
   return ok(ref.value);
 }
 
+/** The ids a prune keeps: those read, and any under a prefix the feed could not read this time.
+ *  A set whose membership answers the prefixes too, so the index's ids need no second read. */
+function keepSet(read: readonly string[], held: readonly string[]): ReadonlySet<string> {
+  if (held.length === 0) return new Set(read);
+  return new (class extends Set<string> {
+    override has(id: string): boolean {
+      return super.has(id) || held.some((p) => id.startsWith(p));
+    }
+  })(read);
+}
+
 async function entriesOf(store: Store, blobs: BlobStore, feed: string, items: readonly FeedItem[]): Promise<Result<{ entries: LibraryEntry[]; ingested: number; missing: number }>> {
   const entries: LibraryEntry[] = [];
   const memos: IngestMemo[] = [];
@@ -157,8 +168,9 @@ export async function syncLibrary(store: Store, blobs: BlobStore, feeds: readonl
       n.updated += up.value.updated;
       n.unchanged += up.value.unchanged;
     }
-    // Pruned only after a whole, clean read: a half-written feed keeps what it had.
-    const pruned = failed === undefined ? pruneFeed(store, r.feed, new Set(built.value.entries.map((e) => e.item.id))) : ok(0);
+    // Pruned only after a whole, clean read: a half-written feed keeps what it had, and so does
+    // a record the feed listed but could not read (its `held` prefixes).
+    const pruned = failed === undefined ? pruneFeed(store, r.feed, keepSet(built.value.entries.map((e) => e.item.id), r.read.held ?? [])) : ok(0);
     if (!pruned.ok) failed = pruned.error.message;
     reports.push({
       feed: r.feed,
@@ -197,6 +209,13 @@ export function syncLibrarySoon(store: Store, blobs: BlobStore, feeds: readonly 
       if (!report.ok) console.error(`[library-sync] ${report.error.message}`);
       if (!done.ok) console.error(`[library-sync] the claim could not be closed: ${done.error.message}`);
     })
-    .catch((e: unknown) => console.error(`[library-sync] failed outside its own report: ${errorMessage(e)}`));
+    .catch((e: unknown) => {
+      // A sync that threw past its own report still closes the claim, with the error as the report:
+      // left open, the claim would block the next sync for the whole TTL and keep the last report.
+      const message = errorMessage(e);
+      console.error(`[library-sync] failed outside its own report: ${message}`);
+      const done = finishClaim(store, LIBRARY_CLAIM, owner, LIBRARY_SYNC_INTERVAL_MS, { error: message });
+      if (!done.ok) console.error(`[library-sync] the claim could not be closed: ${done.error.message}`);
+    });
   return ok({ started: true });
 }

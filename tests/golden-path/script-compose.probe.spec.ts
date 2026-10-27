@@ -40,6 +40,7 @@ import type { Notebook } from "@/lib/notebook/types";
 import { admitCompose, ComposePromptUnavailable, composePrompt, type ComposeBody } from "@/lib/script/compose";
 import { checkConnectors, gateDraft, runGate, type GateReport } from "@/lib/script/gate";
 import { draftOf, type DraftRender } from "@/lib/script/draft";
+import { RENDERS } from "@/lib/script/renders";
 import { editPlanSchema, parseEditPlan, PlanError } from "@/lib/script/editPlan";
 import { TEMPLATES } from "@/lib/projects";
 import {
@@ -192,6 +193,28 @@ test("case 1b: a conclusion the creator never took is out by default, and an unk
   expect(err).toBeInstanceOf(DraftError);
   const cards = (err as DraftError).findings.filter((f) => f.rule === "attribution").map((f) => f.card);
   expect(cards.sort()).toEqual(["c-one-time-rerating", "f-nowhere"]);
+});
+
+// A render that declares a fact CUT while a beat of the same render rests on it
+// is two claims about one script. impactOf/usageMapOf lets the cut win, so the
+// matrix drew the card as excluded, 0 s, while the render speaks it - measured
+// before the fix: f-mnav, spoken by rc-own-clock's beat at 2:50, read back by
+// impactOf as `cut`, 0 s, and parseDraft accepted the answer.
+test("case 1c: a fact a render declares cut while one of its beats rests on it is refused, naming both", () => {
+  const raw = JSON.parse(answerOf("compose-ok")) as { renders: { cutFacts: { factId: string; why: string }[] }[] };
+  raw.renders[0]!.cutFacts.push({ factId: "f-mnav", why: "covered elsewhere" });
+  let err: unknown;
+  try {
+    parseDraft(JSON.stringify(raw), ctx());
+  } catch (e) {
+    err = e;
+  }
+  expect(err, "a spoken-and-cut fact was accepted").toBeInstanceOf(DraftError);
+  const cut = (err as DraftError).findings.filter((f) => f.rule === "cut");
+  expect(cut.map((f) => [f.renderId, f.card])).toEqual([["rc-own-clock", "f-mnav"]]);
+  expect(cut[0]!.at, "the finding does not say which beat speaks it").toMatch(/^\d+:\d\d$/);
+  // The control: the cassette's own cut (a fact no beat rests on) still parses.
+  expect(parseDraft(answerOf("compose-ok"), ctx()).kind).toBe("draft");
 });
 
 /* ───────────────────────────── 2 · the connector law ────────────────────── */
@@ -415,4 +438,62 @@ test("case 6: the composed draft names its renders to the edit-plan schema and p
       { draft },
     ),
   ).toThrow(PlanError);
+});
+
+/* ──────────────── 7 · the door reads what it admits, or refuses it ──────── */
+
+// asNotebook's contract is "can the composer read it without throwing", and it
+// checked the five arrays and the facts. Measured before the fix, on the
+// fixture notebook with one field damaged at a time: 6 of 11 mutations threw a
+// TypeError out of admitCompose itself (buildCards walking counterPositions,
+// mechanisms, reversals[].evidence, steps) - and admitCompose runs on the
+// script producer's RECEIPT, so a damaged record failed the act before it was
+// priced, with no sentence. Two more were admitted and then threw in the gate
+// a candidate is run through (an unknown that is null, felt conversions that
+// are not a list). Each is now `bad`, in the work's words, or reads clean.
+test("case 7: a notebook the cards or the gate cannot read is bad input, never a TypeError", () => {
+  // [field path, value]; `undefined` deletes the field.
+  const muts: [string, unknown][] = [
+    ["counterPositions", undefined],
+    ["counterPositions", 5],
+    ["mechanisms.0", null],
+    ["mechanisms.0.steps", 3],
+    ["mechanisms.0.evidence", "x"],
+    ["reversals.0", null],
+    ["reversals.0.evidence", undefined],
+    ["unknowns.0", null],
+    ["unknowns.0.id", 4],
+    ["scaleConversions", "x"],
+    ["scaleConversions.0", null],
+    ["steelMan.evidence", "x"],
+    ["engineFit.0", null],
+  ];
+  const threw: string[] = [];
+  const bad: string[] = [];
+  for (const [path, value] of muts) {
+    const name = `${path} = ${value === undefined ? "absent" : JSON.stringify(value)}`;
+    const n = JSON.parse(JSON.stringify(NOTEBOOK)) as Record<string, unknown>;
+    const keys = path.split(".");
+    const last = keys.pop()!;
+    const at = keys.reduce<Record<string, unknown>>((o, k) => o[k] as Record<string, unknown>, n);
+    if (value === undefined) delete at[last];
+    else at[last] = value;
+    try {
+      const a = admitCompose({ notebook: n, template: TEMPLATE, targetS: TARGET_S });
+      if (a.kind === "bad") {
+        expect(a.detail, name).toMatch(/notebook/i);
+        bad.push(name);
+        continue;
+      }
+      if (a.kind !== "run") continue;
+      gateDraft([{ id: "r", beats: RENDERS[0]!.beats }], a.run.source);
+    } catch (e) {
+      threw.push(`${name}: ${(e as Error).message}`);
+    }
+  }
+  expect(threw, "a damaged notebook threw past the compose door").toEqual([]);
+  expect(bad.length, "no mutation was refused - the walk damaged nothing the door reads").toBeGreaterThan(5);
+  // The control: the fixture notebook is admitted and gates.
+  const ok = admitCompose({ notebook: NOTEBOOK, template: TEMPLATE, targetS: TARGET_S });
+  expect(ok.kind).toBe("run");
 });

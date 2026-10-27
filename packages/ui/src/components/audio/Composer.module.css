@@ -13,7 +13,8 @@
 .terms{list-style:none;margin:0;padding:0;display:grid}
 .term{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"name rate n" "bar bar bar" "hands hands hands" "defect defect defect";gap:var(--sp-1) var(--sp-2);padding:var(--sp-2) 0;border-bottom:1px solid var(--hair);align-items:center}
 .termName{grid-area:name;justify-self:start;max-width:100%;background:none;border:0;padding:0;font:600 var(--fs-ui)/1.3 var(--sans);color:var(--text);text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.termName:hover{color:var(--ink-bright)}
+button.termName:hover{color:var(--ink-bright)}
+span.termName{cursor:default}
 .term[data-stance="prefer"] .termName{color:var(--emerald)}
 .term[data-stance="avoid"] .termName{color:var(--rose)}
 .termRate{grid-area:rate;font:600 var(--fs-micro)/1 var(--mono);color:var(--ink-bright)}

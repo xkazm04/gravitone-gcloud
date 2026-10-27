@@ -12,6 +12,7 @@ import {
 } from "@/lib/frames/directionPlan";
 import { isStalePlate, type Frame } from "@/lib/frames/frames";
 import type { SceneSpec } from "@/lib/frames/sceneSpec";
+import { addDirectionSpend, landDirection } from "@/lib/frames/direction";
 
 const frame = (n: number, over: Partial<Frame> = {}): Frame =>
   ({
@@ -98,4 +99,45 @@ test("direction-proposal: a re-subjected plate is stale", () => {
   expect(out.plate.subject).toBe("B: a wide field of small blocks drifting");
   expect(isStalePlate(out)).toBe(true);
   expect(isStalePlate(fs[1])).toBe(false);
+});
+
+/* ── landing a settled pass (lib/frames/direction.ts) ── */
+
+const scene = (at: string, over: Record<string, unknown> = {}) => ({
+  beatAt: at,
+  subject: "a wide field of small blocks, one cluster drifting away",
+  motion: "the cluster slides out to the right",
+  rationale: "r",
+  elements: [],
+  texts: [],
+  ...over,
+});
+
+test("direction-landing: findings go to their rows, an invented beat to the summary, and the summary says proposed", () => {
+  // 0:01 and 0:02 land, 0:03 is refused (a figure citing nothing), 0:04 never
+  // arrives, and "9:99" is a beat the engine made up.
+  const raw = JSON.stringify({
+    scenes: [scene("0:01"), scene("0:02"), scene("0:03", { texts: [{ role: "figure", value: "9", x: 1, y: 1 }] }), scene("9:99")],
+  });
+  const landing = landDirection(raw, cut(), []);
+  expect(landing.specs.map((x) => x.beatAt)).toEqual(["0:01", "0:02"]);
+  expect(Object.keys(landing.rejections).sort()).toEqual(["0:03", "0:04"]);
+  expect(landing.rejections["0:04"]).toBe("The pass returned no scene for this beat.");
+  expect(landing.notice).toBe(
+    '2 of 4 beats directed · 1 rejected · 1 with no scene returned. The reasons are on those rows; every other beat is in the proposal. The engine also invented "9:99".',
+  );
+  // A whole pass has no summary at all.
+  expect(landDirection(JSON.stringify({ scenes: cut().map((f) => scene(f.at)) }), cut(), []).notice).toBeNull();
+  // Nothing usable: nothing was proposed, and the invented beat is still named once.
+  expect(landDirection(JSON.stringify({ scenes: [scene("9:99")] }), cut(), []).notice).toBe(
+    '0 of 4 beats directed · 4 with no scene returned. Nothing was proposed. The engine also invented "9:99".',
+  );
+});
+
+test("direction-landing: an unpriced pass is counted, never read as free", () => {
+  const one = addDirectionSpend(null, { costUsd: 0.4, durationMs: 1200 }, 10);
+  expect(one).toEqual({ runs: 1, costUsd: 0.4, unpriced: 0, lastMs: 1200, lastAt: 10 });
+  const two = addDirectionSpend(one, { costUsd: Number.NaN }, 20);
+  expect(two).toEqual({ runs: 2, costUsd: 0.4, unpriced: 1, lastMs: undefined, lastAt: 20 });
+  expect(addDirectionSpend(two, undefined, 30).unpriced).toBe(2);
 });

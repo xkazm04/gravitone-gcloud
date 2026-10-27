@@ -28,6 +28,8 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { trialSubjectDir } from "@/lib/articles/ingestDraft";
+import { trialTechniquePath } from "@/lib/articles/prompt";
 import { ArticleError } from "@/lib/articles/store";
 import { manifestKnowledgeDomains, rankTrialCandidates, trialScore } from "@/lib/articles/trial/candidates";
 import { checkTrial, closeTrial, dropTrial, execTrial, openTrial, readExecs, readTrial, scanTrials, sealTrial, trialDir } from "@/lib/articles/trial/store";
@@ -221,6 +223,19 @@ test("the verdict table: upheld, challenged, null, the three voids, guards, band
   expect(a.verdict).toBe("upheld");
   expect(a.arms[0].sd).toBeCloseTo(sampleSd([10, 12, 9, 11, 13, 10]), 12);
   expect(sampleSd([2, 4, 4, 4, 5, 5, 7, 9])).toBeCloseTo(Math.sqrt(32 / 7), 12);
+});
+
+test("the technique path and the patch scope read one subject directory off the application path", () => {
+  const ref = { applicationPath: "knowledge/se/llm-agent/runtime/agent-memory/applications/node--recall-cap.md", technique: "recall-cap" };
+  expect(trialSubjectDir(ref)).toBe("knowledge/se/llm-agent/runtime/agent-memory");
+  expect(trialTechniquePath(ref)).toBe("knowledge/se/llm-agent/runtime/agent-memory/techniques/recall-cap.md");
+  // Every spelling the scope check accepts, the technique path accepts the same way...
+  const win = { ...ref, applicationPath: ref.applicationPath.replace(/\//g, "\\") };
+  expect(trialTechniquePath(win)).toBe(`${trialSubjectDir(win)}/techniques/recall-cap.md`);
+  // ...and what the scope check refuses, the technique path refuses rather than invents a path.
+  const stray = { ...ref, applicationPath: "knowledge/se/agent-memory/notes.md" };
+  expect(() => trialSubjectDir(stray)).toThrow(/applications/);
+  expect(() => trialTechniquePath(stray)).toThrow(/applications/);
 });
 
 test("the validators name every problem in one error", () => {

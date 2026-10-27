@@ -67,6 +67,15 @@ describe("quote (lib/imaging/pricing.ts priceCall + lib/text/pricing.ts priceTur
     expect(quote({ provider: "google", model: "gemini-3.8-flash", usage, on: "2027-01-01T00:00:00.000Z" })).toMatchObject({ usd: null, note: expect.stringContaining("held until 2026-12-31") });
   });
 
+  it("a day that is not an ISO date cannot keep a dated rate pricing: the quote is unpriced, the gate errs high", () => {
+    const usage = { "input-token": 1_000_000 };
+    const epochMs = String(Date.parse("2027-02-01T00:00:00.000Z"));
+    expect(quote({ provider: "google", model: "gemini-3.8-flash", usage, on: epochMs })).toMatchObject({ usd: null, basis: "unpriced", note: expect.stringContaining("not an ISO date") });
+    expect(quote({ provider: "google", model: "gemini-3.1-flash-image", usage: { image: 1 }, size: "1K", on: "Feb 1 2027" }).basis).toBe("unpriced");
+    expect(quote({ provider: "google", model: "gemini-3.8-flash", usage, on: epochMs, vendorUsd: 0.6 })).toMatchObject({ usd: 0.6, basis: "vendor-reported" });
+    expect(dearestRate("input-token", "Feb 1 2027")?.usdPerUnit).toBe(0.75 / 1_000_000);
+  });
+
   it("a call whose usage is unknown before it runs is unpriced, never $0", () => {
     expect(quote({ provider: "claude-cli", model: "claude-opus-5", usage: {}, on: ON })).toMatchObject({ usd: null, basis: "unpriced" });
   });

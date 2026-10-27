@@ -91,6 +91,29 @@ describe("research acts are jobs with receipts", () => {
     expect(pick.verdict.state).toBe("ready");
   });
 
+  it("the ads rounds read their prompt documents from the checkout, whatever directory the process runs in", async () => {
+    const { store, port } = universe("film/ad-social-15", "ad9");
+    let rev = 1;
+    for (const [field, value] of [["product", "Rainshell — a packable rain jacket"], ["proposition", "This jacket keeps you dry in a downpour."], ["cta", "Pack one today"]] as const) {
+      rev = (await applied(port.opPart({ projectId: "ad9", key: "research", baseRev: rev, op: { op: "set-brief", field, value } }))).rev;
+    }
+    const home = process.cwd();
+    const away = mkdtempSync(path.join(tmpdir(), "gt-step-cwd-"));
+    dirs.push(away);
+    process.chdir(away);
+    try {
+      const { jobId, view } = await confirm(port, "ad9", "research", "generate-ideas");
+      expect((await must(list(store))).find((j) => j.id === jobId)?.error?.message).toBeUndefined();
+      if (view.kind !== "research" || view.data.face !== "ads") throw new Error("not the ads face");
+      const picked = await applied(port.opPart({ projectId: "ad9", key: "research", baseRev: view.rev, op: { op: "pick-idea", ideaId: view.data.ideas[0]?.id ?? "" } }));
+      expect(picked.verdict.state).toBe("ready");
+      const sc = await confirm(port, "ad9", "script", "generate-scenarios");
+      expect((await must(list(store))).find((j) => j.id === sc.jobId)?.error?.message).toBeUndefined();
+    } finally {
+      process.chdir(home);
+    }
+  });
+
   it("a stale token launches nothing and answers the fresh receipt; a refused act (an empty brief) is the work's own sentence", async () => {
     const { store, port } = universe("film/ad-social-15", "ad2");
     const r = await port.actReceipt({ projectId: "ad2", key: "research", act: "generate-ideas" });

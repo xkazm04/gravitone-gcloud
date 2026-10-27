@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { keepEnv, stripComments } from "./_pure";
 
@@ -98,6 +98,27 @@ export function probeFoundryDir(): () => string {
   test.afterEach(() => {
     // Close the process's store before deleting it: Windows refuses to remove an open file.
     closeKernel();
+    if (dir) rmSync(dir, { recursive: true, force: true });
+    dir = "";
+  });
+  return () => dir;
+}
+
+/**
+ * A TEMP DOJO STORE per test (TRAINING_STORE_DIR, which the training store reads per call). The
+ * Board, the Ledger and the Library list every cycle under foundry-out/training while it lives,
+ * and a probe killed before its cleanup leaves one behind; a probe that writes cycles takes its
+ * root from here. Call it at FILE SCOPE.
+ */
+export function probeTrainingDir(): () => string {
+  keepEnv(["TRAINING_STORE_DIR"]);
+  let dir = "";
+  test.beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), "training-probe-"));
+    process.env.TRAINING_STORE_DIR = dir;
+    expect(path.relative(path.join(process.cwd(), "foundry-out"), dir).startsWith(".."), `dojo store ${dir}`).toBe(true);
+  });
+  test.afterEach(() => {
     if (dir) rmSync(dir, { recursive: true, force: true });
     dir = "";
   });

@@ -7,6 +7,7 @@ import type { Ctx } from "./fixture.ts";
 import type { ResearchRec } from "./fixtureResearch.ts";
 import type { ScriptRec } from "./fixtureScript.ts";
 import { digest } from "./hash.ts";
+import { changed } from "./realRecs.ts";
 import { FRAMES_KIND, type FramesRec } from "./fixtureFrames.ts";
 import { MOTION_KIND, type MotionRec } from "./fixtureMotion.ts";
 import { SCORE_KIND } from "./fixtureScore.ts";
@@ -37,7 +38,7 @@ export const asObj = (o: object): Obj => ({ ...o });
 export type Recs = ReadonlyMap<string, Obj>;
 
 /** The later kinds' working records, ONE LINE PER KIND, added with the kind's EDITOR_KINDS entry
- *  (L39: frames, motion, still; L40: score, cut, words, render, voice, article, strips). A kind in
+ *  (L39: frames, motion; L40: score, cut, words, render, voice, article, strips). A kind in
  *  EDITOR_KINDS without its line here fails the type of `RecOf` - the forcing function. */
 export type LaterRecs = L39Recs & L40Recs;
 /* L39 */
@@ -146,11 +147,7 @@ function erase<K extends LaterKind>(kind: K, m: KindModule<K>): Erased {
     units: (ctx, act, target) => m.units(ctx, own(ctx), act, target),
     land: (ctx, act, at, jobId, target) => m.land(ctx, own(ctx), act, at, jobId, target),
     actLabel: (act) => m.actLabel(act),
-    writes: (ctx, next) => {
-      const before = m.toRecords(own(ctx));
-      const after = m.toRecords(back(next));
-      return Object.fromEntries(Object.entries(after).filter(([k, v]) => before[k] === undefined || JSON.stringify(before[k]) !== JSON.stringify(v)));
-    },
+    writes: (ctx, next) => changed(m.toRecords(own(ctx)), m.toRecords(back(next))),
     records: (ctx) => m.toRecords(own(ctx)),
   };
 }

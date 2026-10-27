@@ -7,7 +7,7 @@ import { buildTypeView, syncCarousel } from "./carousel";
 import { frameReq } from "./camera";
 import { measure } from "./layout";
 import { rebuildLib } from "./library";
-import { currentPath, setLv } from "./nav";
+import { setLv } from "./nav";
 import { buildScene, buildWorld, layoutTabs } from "./scene";
 import { renderStage } from "./stage";
 import type { Cx } from "./state";
@@ -136,7 +136,6 @@ export function wireFlare(cx: Cx): void {
   life.on(cx.root, "click", (e) => {
     const pill = (e.target as Element | null)?.closest?.(".pc-enter");
     if (!pill || (pill as HTMLButtonElement).disabled) return;
-    cx.opts.onEnter?.(currentPath(cx));
     const b = pill.getBoundingClientRect(),
       fl = els.flare;
     fl.style.setProperty("--fx", b.left + b.width / 2 + "px");

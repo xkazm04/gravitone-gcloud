@@ -142,8 +142,9 @@ test("the source's dimensions and tags decide the columns, not the market table"
   expect(untaggedIds(src)).toContain("f-now");
 
   const s = scopeSummary(cards, {}, src);
-  expect(s.byDim.map((d) => d.id), "byDim reads the source's columns").toEqual(["law"]);
+  expect(s.byDim.map((d) => d.id), "byDim reads the source's columns, and the untagged bucket when a card is in it").toEqual(["law", UNTAGGED_DIMENSION_ID]);
   expect(s.byDim[0].total).toBe(1);
+  expect(s.byDim[1].total).toBe(untaggedIds(src).length);
 });
 
 test("two different notebooks do not share a digest", () => {
@@ -312,6 +313,19 @@ test("stage 2 (d): parseNotebook refuses a malformed dimensions or conclusions v
   expect(bad({ conclusions: [{ ...conclusion("c-one"), restsOn: "f-volume" }] })).toMatch(/conclusions\[0\]\.restsOn/);
 });
 
+test("stage 2 (d): a typed falsifier the gate cannot read is refused at the door, not thrown at the gate", () => {
+  // conclusionIssues (lib/script/gate.ts's reader) calls falsifierText(c).trim():
+  // an object with no string `test` threw there, after the door had accepted it.
+  const typed = (falsifiableBy: unknown) => ({ conclusions: [{ ...conclusion("c-one"), falsifiableBy }] });
+  const bad = (patch: Record<string, unknown>) => rejection(() => parseNotebook({ ...declared(), ...patch }, "x")).join(" ");
+  expect(bad(typed({}))).toMatch(/conclusions\[0\]\.falsifiableBy\.test/);
+  expect(bad(typed({ test: 5, kind: "record", binds: "whole-claim" }))).toMatch(/conclusions\[0\]\.falsifiableBy\.test/);
+  expect(bad(typed({ test: "a filing", kind: "rumour", binds: "whole-claim" }))).toMatch(/conclusions\[0\]\.falsifiableBy\.kind/);
+  expect(bad(typed({ test: "a filing", kind: "document" }))).toMatch(/conclusions\[0\]\.falsifiableBy\.binds/);
+  const ok = parseNotebook({ ...declared(), ...typed({ test: "a filing", kind: "document", binds: "whole-claim" }) }, "x");
+  expect(ok.conclusions?.[0].falsifiableBy).toEqual({ test: "a filing", kind: "document", binds: "whole-claim" });
+});
+
 // ------------------------------------- (e) the fixture is the control
 
 test("stage 2 (e): the fixture declares neither field, so it keeps its own tables and a clean graph", () => {
@@ -452,4 +466,32 @@ test("stage 4 (case 7, widened - C1 closing case 12): the files reading any fixt
   expect(found.length).toBeLessThanOrEqual(PINNED_CONSTANT_IMPORTERS);
   // Named, so a swap (one leaves, another arrives) cannot hide inside the count.
   expect(found).toEqual(EXPECTED_IMPORTERS);
+});
+
+// ------------------------------------- scopeSummary.byDim files every dealt card
+
+test("byDim: every card a reasoned research-ok notebook deals sits in some column", () => {
+  const ok = (loadCassette("research-ok").turns[0]! as CassetteTurn).resultJson as Record<string, unknown>;
+  const src = sourceOf(parseNotebook(structuredClone(ok), "harbour dredging costs"), { kind: "reasoned" });
+  const cards = buildCards(src);
+  const s = scopeSummary(cards, {}, src);
+  const filed = s.byDim.reduce((n, d) => n + d.total, 0);
+  console.log(`[byDim] ${filed} of ${cards.length} cards in a column; columns ${s.byDim.map((d) => `${d.id}:${d.total}`).join(" ")}`);
+  expect(filed).toBe(cards.length);
+  expect(s.byDim.reduce((n, d) => n + d.kept, 0)).toBe(s.kept);
+  // The fixture has no untagged card, so it gains no eighth column.
+  expect(scopeSummary(buildCards(fixtureSource()), {}, fixtureSource()).byDim).toHaveLength(DIMENSIONS.length);
+});
+
+// ------------------------------------- Fact.source is what the door accepts: optional
+
+test("Fact.source: a door-accepted notebook carries sources[] only, and the type says so", () => {
+  const ok = (loadCassette("research-ok").turns[0]! as CassetteTurn).resultJson as Record<string, unknown>;
+  const nb = parseNotebook(structuredClone(ok), "harbour dredging costs");
+  const without = nb.facts.filter((f) => f.source === undefined).length;
+  console.log(`[fact.source] ${without} of ${nb.facts.length} accepted facts carry no source string`);
+  expect(without).toBe(nb.facts.length);
+  // Compiled by `npm run typecheck`: with `source: string` this directive is unused (TS2578).
+  // @ts-expect-error source is optional, so reading through it unguarded is a type error
+  expect(() => nb.facts[0]!.source.length).toThrow();
 });

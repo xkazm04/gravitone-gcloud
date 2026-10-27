@@ -128,6 +128,45 @@ describe("migrations", () => {
     s.close();
   });
 
+  it("a failed step's error names the snapshot taken before it, so the restore point is in the message", () => {
+    const s = fileStore();
+    must(migrate(s, [upTo(probe, 1)]));
+    const broken: ModuleMigrations = { module: "probe", steps: [probe.steps[0], { version: 2, sql: "INSERT INTO no_such_table VALUES (1);" }].filter((x) => x !== undefined) };
+    const r = migrate(s, [broken]);
+    const snaps = readdirSync(tmp.dir).filter((f) => f.startsWith(`${path.basename(s.location)}.pre-migrate.`));
+    expect(snaps).toHaveLength(1);
+    expect(!r.ok && r.error.message).toContain(path.join(tmp.dir, snaps[0] ?? "?"));
+    s.close();
+  });
+
+  it("a second process that planned the same step before the first applied it converges, and marks nothing", () => {
+    // Two processes boot one store after a release (the app and the worker):
+    // both read the ledger and plan probe v2..v3, and the first commits them
+    // before the second reaches its step. The second's stamp read (a read with
+    // no statement, so it holds no lock) is where the first process runs.
+    const a = fileStore();
+    must(migrate(a, [upTo(probe, 1)]));
+    let calls = 0;
+    let armed = false;
+    const b = must(
+      openStore(a.location, {
+        clock: () => {
+          if (armed && ++calls === 3) must(migrate(a, [probe]));
+          return new Date("2026-10-15T12:00:00.000Z");
+        },
+      }),
+    );
+    armed = true;
+    const r = migrate(b, [probe]);
+    armed = false;
+    expect(r.ok && r.value.applied).toEqual([]);
+    expect(must(b.read((x) => x.all("SELECT module FROM _migration_failures")))).toEqual([]);
+    expect(ledgerOf(b).map((x) => x["version"])).toEqual([1, 2, 3]);
+    expect(must(migrate(b, [probe])).applied).toEqual([]);
+    a.close();
+    b.close();
+  });
+
   it("snapshots a file store before the first pending step, holding the pre-migration state", () => {
     const s = fileStore();
     must(migrate(s, [upTo(probe, 1)]));
@@ -167,6 +206,18 @@ describe("migrations", () => {
     expect(taken).toHaveLength(2);
     const mine = readdirSync(dir).filter((f) => f.startsWith(`${path.basename(s.location)}.pre-migrate.`));
     expect(mine).toEqual([taken[1]]);
+    s.close();
+  });
+
+  it("refuses a snapshot budget under one before anything runs, rather than delete the snapshot it just took", () => {
+    const s = fileStore();
+    must(migrate(s, [upTo(probe, 1)]));
+    for (const keepSnapshots of [0, -1, 1.5]) {
+      const r = migrate(s, [probe], { keepSnapshots });
+      expect(!r.ok && r.error.code).toBe("invalid");
+    }
+    expect(ledgerOf(s).map((x) => x["version"])).toEqual([1]);
+    expect(readdirSync(tmp.dir).filter((f) => f.startsWith(`${path.basename(s.location)}.pre-migrate.`))).toEqual([]);
     s.close();
   });
 

@@ -41,12 +41,13 @@ type Turn = { readonly engine: "claude" | "codex"; readonly cap?: number };
 type Res = { readonly outcome: string; readonly costUsd?: number };
 
 /** Ports whose every work step makes `turnsPerStep` turns: claude at `cost`, codex unpriced. */
-function fake(o: { turnsPerStep?: number; cost?: number; fail?: string } = {}) {
+function fake(o: { turnsPerStep?: number; cost?: number; standCost?: number; fail?: string } = {}) {
   const calls = { live: 0, stand: 0, steps: [] as string[], land: 0, caps: [] as number[], refused: [] as string[] };
   const ports: ArticlePorts<Turn, Res> = {
     describe: (t) => ({ engine: t.engine, model: `${t.engine}-model`, effort: "high", turn: "article-draft", promptChars: 10 }),
     live: async (t) => (calls.live++, t.engine === "claude" ? { outcome: "completed", costUsd: o.cost ?? 0.5 } : { outcome: "completed" }),
-    stand: async () => (calls.stand++, { outcome: "completed" }),
+    // The stub agent reports a cost when a probe sets STUB_AGENT_COST (tests/fixtures/articles/stub-agent.mjs).
+    stand: async (t) => (calls.stand++, o.standCost !== undefined && t.engine === "claude" ? { outcome: "completed", costUsd: o.standCost } : { outcome: "completed" }),
     refused: (_t, reason) => (calls.refused.push(reason), { outcome: "errored" }),
     capped: (t, usd) => (calls.caps.push(usd), { ...t, cap: usd }),
     ensureRun: async (job: Job) => ok({ runId: parseArticleJob(job.id).runId, created: false }),
@@ -79,6 +80,10 @@ describe("the plan", () => {
     expect(parseArticleJob("job:run:2026-10-16-tax:rework-3")).toEqual({ runId: "2026-10-16-tax", act: { kind: "rework", n: 3 } });
     expect(parseArticleJob("job:run:2026-10-16-tax:landing").act).toEqual({ kind: "landing" });
     for (const bad of ["job:part:x", "job:run:Bad_Id", "job:run:a:rework-0", "job:run:a:landing:x"]) expect(() => parseArticleJob(bad)).toThrow(/not an article job/);
+    // Minting is the inverse of reading: every id it mints reads back to its act, and an act the
+    // grammar cannot spell is refused at the mint, not at the job's first plan.
+    for (const n of [1, 9999]) expect(parseArticleJob(articleJobId("t", { kind: "rework", n })).act).toEqual({ kind: "rework", n });
+    for (const n of [0, 10_000, 1.5]) expect(() => articleJobId("t", { kind: "rework", n })).toThrow(/a rework is numbered/);
   });
 
   it("is the missing outputs, in v1's step order, per act", () => {
@@ -103,6 +108,18 @@ describe("a dry article job", () => {
     expect(r.wouldCalls?.map((c) => c.provider).slice(0, 2)).toEqual(["claude-seat", "codex-seat"]);
     expect(count(w.store, "SELECT count(*) AS n FROM spend_rows")).toBe(0);
     expect(count(w.store, "SELECT count(*) AS n FROM spend_unpriced")).toBe(0);
+    w.store.close();
+  });
+
+  it("a dry job's ceiling counts no stand-in figure: the meter books none, so a stand-in that reports a cost refuses no turn", async () => {
+    const w = world();
+    put(w.store, "job:run:2026-10-16-tax", { ceilingUsd: 100 });
+    const f = fake({ turnsPerStep: 6, standCost: 40 });
+    const r = must(await runJob(w.fx, defineArticle(f.ports), "job:run:2026-10-16-tax", RUN));
+    expect(r.outcome).toBe("done");
+    expect(r.job?.spend.usd).toBe(0);
+    expect(f.calls.refused).toEqual([]);
+    expect(f.calls.stand).toBe(24);
     w.store.close();
   });
 

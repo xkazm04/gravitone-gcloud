@@ -16,7 +16,7 @@
 //   · the strengths map and the knowledge doc — the counts, the rubric means,
 //     the top defect, and NOTHING below n=3 claimed;
 //   · the kept file route's content-type, byte ranges and door (no `k=` since L70);
-//   · generate through lib/music, and the hunt map / lesson draft through
+//   · generate through lib/music, and the hunt map through
 //     lib/text's real router, with `globalThis.fetch` REPLACED: the vendor and
 //     the model are canned responses, and any other URL fails the test. No
 //     ElevenLabs call and no model turn is ever made;
@@ -45,7 +45,7 @@ import type { Hunt, SoundTake } from "@/lib/sound/types";
 import { GET as fileGET } from "@/app/api/sound/takes/[id]/file/route";
 import { generateTake, parseGenerateRequest } from "@/lib/sound/generate";
 import { toErrorResponse } from "@/lib/sound/http";
-import { draftHunt, draftHuntLesson, listHunts, patchHunt } from "@/lib/sound/hunt";
+import { draftHunt } from "@/lib/sound/hunt";
 import { appendLesson, parseLessonInput } from "@/lib/sound/ledger";
 import { readGroups, withStore } from "@/lib/sound/store";
 import { listTakes, parseTakeFilter, parseTakePatch, patchTake, removeFixtures } from "@/lib/sound/takes";
@@ -175,16 +175,10 @@ const lessonsPOST = async (req: Request) => {
   const raw: unknown = await req.json();
   return answer(201, async () => ({ lesson: await withStore((tx) => appendLesson(tx, parseLessonInput(raw))) }));
 };
-const huntsGET = (req: Request) => answer(200, async () => ({ hunts: await listHunts(kindOf(req)) }));
 const huntsPOST = async (req: Request) => {
   const b = (await req.json()) as { kind: "music" | "sfx"; idea: string };
   return answer(201, async () => ({ hunt: await draftHunt(b.kind, b.idea) }));
 };
-const huntPATCH = async (req: Request, c: { params: Promise<{ id: string }> }) => {
-  const raw: unknown = await req.json();
-  return answer(200, async () => ({ hunt: await patchHunt((await c.params).id, raw) }));
-};
-const huntLessonPOST = async (_req: Request, c: { params: Promise<{ id: string }> }) => answer(200, async () => ({ draft: await draftHuntLesson((await c.params).id) }));
 async function body<T = Record<string, unknown>>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
@@ -607,10 +601,6 @@ test("hunt: a canned model map is validated — unusable leaves dropped, techniq
   expect(sent).toContain("forgetting 'instrumental'");
   expect(sent).not.toContain("ENVELOPE");
   expect(sent).toContain("none yet");
-
-  const listed = await body<{ hunts: Hunt[] }>(await huntsGET(rq("/api/sound/hunts?kind=music")));
-  expect(listed.hunts.length).toBe(1);
-  expect((await body<{ hunts: Hunt[] }>(await huntsGET(rq("/api/sound/hunts?kind=sfx")))).hunts).toEqual([]);
 });
 
 test("hunt: the sfx prompt is envelope-first; a prose answer is a 502 and nothing is stored", async () => {
@@ -634,40 +624,6 @@ test("hunt: the sfx prompt is envelope-first; a prose answer is a 502 and nothin
   expect(res.status).toBe(502);
   expect(b.code).toBe("bad-response");
   expect((await readHunts()).hunts.length).toBe(0);
-});
-
-test("hunt: a new winner keeps its unjudged takes; the lesson draft's evidence is counted, not written by the model", async () => {
-  process.env.GOOGLE_AI_API_KEY = "probe-key";
-  respond = gemini(JSON.stringify(MAP));
-  const { hunt } = await body<{ hunt: Hunt }>(await huntsPOST(rq("/api/sound/hunts", { method: "POST", json: { kind: "music", idea: "bed" } })));
-  const [a, b] = hunt.nodes.filter((n) => n.provider === "elevenlabs" && n.prompt);
-  const ta = (await upload({ origin: "hunt", huntId: hunt.id, nodeId: a.id, technique: a.technique, prompt: a.prompt })).take;
-  const tb = (await upload({ origin: "hunt", huntId: hunt.id, nodeId: b.id, technique: b.technique, prompt: b.prompt })).take;
-  await patch(tb.id, { verdict: "rejected", reasons: ["section-bleed"], ratings: { melody: 3 } });
-
-  // No winner yet: nothing to learn.
-  expect((await huntLessonPOST(rq(`/api/sound/hunts/${hunt.id}/lesson`, { method: "POST" }), ctx(hunt.id))).status).toBe(409);
-
-  const nodes = hunt.nodes.map((n) => (n.id === a.id ? { ...n, takeIds: [ta.id], state: "rendered", winner: true } : n.id === b.id ? { ...n, takeIds: [tb.id], state: "rendered" } : n));
-  const pr = await huntPATCH(rq(`/api/sound/hunts/${hunt.id}`, { method: "PATCH", json: { nodes } }), ctx(hunt.id));
-  expect(pr.status).toBe(200);
-  const won = (await readTakes()).takes.find((t) => t.id === ta.id)!;
-  expect(won.verdict, "winner -> kept").toBe("kept");
-  expect(won.stage, "-> pending, so it appears in Arrangement").toBe("pending");
-  expect((await readTakes()).takes.find((t) => t.id === tb.id)!.verdict, "a rejected take stays rejected").toBe("rejected");
-
-  respond = gemini(JSON.stringify({ claim: "When a bed must sit under voice, brief one sentence with an instrumental fence, because the plan bled sections.", technique: ["single-sentence", "invented"], provider: "elevenlabs" }));
-  const lr = await huntLessonPOST(rq(`/api/sound/hunts/${hunt.id}/lesson`, { method: "POST" }), ctx(hunt.id));
-  expect(lr.status).toBe(200);
-  const { draft } = await body<{ draft: { evidence: { n: number; keepRate: number; takeIds: string[] }; technique: string[]; source: string; huntId: string } }>(lr);
-  console.log(`[sound] lesson draft evidence: ${JSON.stringify(draft.evidence)}`);
-  expect(draft).toMatchObject({ source: "hunt", huntId: hunt.id, technique: ["single-sentence"] });
-  expect(draft.evidence).toMatchObject({ n: 2, keepRate: 0.5 });
-  expect(draft.evidence.takeIds.sort()).toEqual([ta.id, tb.id].sort());
-  const lessonPrompt = JSON.stringify(calls[calls.length - 1].body);
-  expect(lessonPrompt).toContain("WINNER");
-  expect(lessonPrompt).toContain("section-bleed");
-  expect((await readLedger()).lessons.length, "a draft is never stored").toBe(0);
 });
 
 /* ── the CLI, in-process ─────────────────────────────────────────────────── */
@@ -918,8 +874,7 @@ test("closeout · hunt leaves: terms, tempo, key and loop are drafted as fields,
   expect(huntPrompt(sectionsOf(md), "sfx", "rain", null, [])).toContain("event: …; material: …; attack: …; body: …; tail: …; space: …; duration: …s; loop: yes|no");
   expect(huntPrompt(sectionsOf(md), "music", "bed", null, [])).toMatch(/`tempoBpm` is the BPM the prompt states/);
 
-  // A hunts.json written before the fields: listed with them absent, and a
-  // PATCH of those nodes round-trips.
+  // A hunts.json written before the fields reads with them absent.
   mkdirSync(process.env.SOUND_STORE_DIR!, { recursive: true });
   const legacyNode = (id: string, parentId: string | null, prompt: string) => ({
     id,
@@ -946,15 +901,5 @@ test("closeout · hunt leaves: terms, tempo, key and loop are drafted as fields,
       ],
     }),
   );
-  const listed = await body<{ hunts: Hunt[] }>(await huntsGET(rq("/api/sound/hunts")));
-  expect(listed.hunts[0].nodes[1]).toMatchObject({ loop: null, tempoBpm: null, key: null, terms: { genre: [], mood: [], instrument: [], sfxCategory: null } });
-  const res = await huntPATCH(
-    rq("/api/sound/hunts/hn-old", {
-      method: "PATCH",
-      json: { nodes: [legacyNode("r", null, ""), { ...legacyNode("l", "r", "lofi at 90 BPM"), tempoBpm: 90, terms: { genre: ["lofi"] } }] },
-    }),
-    ctx("hn-old"),
-  );
-  expect(res.status).toBe(200);
-  expect((await body<{ hunt: Hunt }>(res)).hunt.nodes[1]).toMatchObject({ tempoBpm: 90, key: null, terms: { genre: ["lofi"], mood: [], instrument: [], sfxCategory: null } });
+  expect((await readHunts()).hunts[0].nodes[1]).toMatchObject({ loop: null, tempoBpm: null, key: null, terms: { genre: [], mood: [], instrument: [], sfxCategory: null } });
 });

@@ -13,10 +13,10 @@ export type PlantState = "live" | "ready" | "inc" | "failed" | "committed" | "ga
 
 export const LIVE: RunStatus[] = ["created", "annotating", "generating", "grading"];
 
-/** The run statuses a cull may be committed from — the SAME set
- *  `commitRun` in lib/foundry/store.ts enforces, and
- *  tests/golden-path/commit-gate-parity.probe.spec.ts reads that function's
- *  own array off disk and fails if these two drift apart.
+/** The run statuses a cull may be committed from — the set `commitRun` in
+ *  lib/foundry/store.ts reads, as the Board's gate and the ledger do;
+ *  tests/golden-path/extract-commit-gate.probe.spec.ts fails if that door
+ *  carries a status list of its own.
  *
  *  `failed` belongs here and its absence was a real loss. A forge run that
  *  dies partway is marked `failed` with every plate it did generate still on

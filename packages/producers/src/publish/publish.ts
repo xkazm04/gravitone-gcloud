@@ -7,6 +7,7 @@ import type { BlobRef } from "@gt/domain/blob";
 import { canonical } from "@gt/kernel/canonical";
 import { paid, withDryRun } from "@gt/kernel/dryrun";
 import type { Effects } from "@gt/kernel/effects";
+import { append } from "@gt/kernel/events";
 import { actorOf } from "@gt/kernel/lease";
 import type { Alive } from "@gt/kernel/lease-core";
 import type { Quote } from "@gt/kernel/pricing/quote";
@@ -119,9 +120,16 @@ export async function publishClaimed(deps: PublishDeps, claimed: ClaimedSlot, pe
     return fail(`${errorMessage(e)}${what}`);
   }
   if (out.kind !== "published" || a.forget === undefined) return out;
-  // After the commit and outside the catch: the publication stands whatever the clean-up says.
-  const forgot = await a.forget(slot.id);
-  return forgot.ok ? out : { ...out, kept: forgot.error.message };
+  // After the commit and outside the send's catch: the publication stands whatever the clean-up
+  // says - and a clean-up that THROWS says it too, rather than escaping the tick (./adapter.ts).
+  let kept: string | undefined;
+  try {
+    const forgot = await a.forget(slot.id);
+    if (!forgot.ok) kept = forgot.error.message;
+  } catch (e) {
+    kept = errorMessage(e);
+  }
+  return kept === undefined ? out : { ...out, kept };
 }
 
 async function send(
@@ -170,7 +178,16 @@ async function send(
     // The upload happened; the claim did not survive it. Say what exists on the platform so the
     // operator can find it - the slot itself already carries the sweep's verdict.
     const what = delivered === undefined ? "" : ` - ${slot.channel} holds it as ${delivered.platformId}`;
-    return { kind: "lost", slotId: slot.id, error: `${landed.error.message}${what}` };
+    // The outcome is counted and dropped by the worker, and no publication row exists to block a
+    // re-schedule of the "interrupted" slot: an UNFENCED event is the one durable word that the
+    // platform holds this video. A failed append is said in the outcome, never thrown.
+    let orphan = "";
+    if (delivered !== undefined) {
+      const found = delivered;
+      const noted = deps.store.tx((t) => append(t, { actor: by, type: "publish.orphan", subject: { kind: "slot", id: slot.id }, data: { channel: slot.channel, platformId: found.platformId } }));
+      if (!noted.ok) orphan = ` (not recorded as an orphan: ${noted.error.message})`;
+    }
+    return { kind: "lost", slotId: slot.id, error: `${landed.error.message}${what}${orphan}` };
   }
   return { kind: "published", slotId: slot.id, publication: landed.value.publication, ...(receipt === undefined ? {} : { plan: receipt }) };
 }

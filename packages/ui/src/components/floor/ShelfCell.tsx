@@ -7,7 +7,7 @@
 // and a placeholder under it would be a picture of nothing.
 //
 // The tiles and rows are read-only here: the prototype's play and Spawn MV controls write to
-// stores the Floor does not own in this phase, so they are not drawn (a dead control is a lie).
+// stores the Floor does not own, so they are not drawn (a dead control is a lie).
 
 import type { ReactNode } from "react";
 
@@ -33,7 +33,7 @@ export function ShelfCell({ title, href, tallies = [], extra, children }: ShelfC
           <span className={s.t}>{title}</span>
         ) : (
           <a className={cx(s.t, s.door)} href={href}>
-            {title} ›
+            {title} <span aria-hidden="true">›</span>
           </a>
         )}
         {tallies.map((t) => (
@@ -52,14 +52,18 @@ export function ShelfGrid({ children }: { readonly children: ReactNode }) {
 }
 
 /**
- * One ratified style: a ground where its plate will sit, its lock, its name. v1's catalogue
- * names no hero plate per style (lib/foundry/types.ts StyleDef); the plate arrives with the
- * Library's media (Phase 5) and the tile draws it then.
+ * One ratified style: its plate (the shelf's row brings one when the style has a kept plate;
+ * app/(studio)/floor/_floor/shelf.ts ShelfStyleRow), else a bare ground, its lock, its name.
  */
-export function ShelfStyle({ name, href }: { readonly name: string; readonly href?: string }) {
+export function ShelfStyle({ name, href, plate }: { readonly name: string; readonly href?: string; readonly plate?: string }) {
   const body = (
     <>
-      <span className={cx(s.hero, s.noHero)} aria-hidden="true" />
+      {plate === undefined ? (
+        <span className={cx(s.hero, s.noHero)} aria-hidden="true" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- a style is shown as its own plate's bytes (desk/Plate.tsx, library/Face.tsx)
+        <img className={s.hero} src={plate} alt={name} loading="lazy" />
+      )}
       <span className={s.lock} aria-hidden="true">
         <FloorGlyph name="lock" className={s.lockMark} />
       </span>

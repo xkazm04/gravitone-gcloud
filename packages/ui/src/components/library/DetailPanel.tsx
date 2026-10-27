@@ -1,3 +1,5 @@
+"use client";
+
 // THE LIBRARY'S DETAIL (library.js `detHead`, `renderDetail`, `body`; library.css `.det`): a
 // column with a head - the kind, where the item sits in the result (i / N), previous and next,
 // and the close whose key is `]` - and a scrolling body the page composes from parts: preview,
@@ -7,7 +9,7 @@
 // The panel takes PARTS, never a paragraph: a section is a caps heading over structured
 // content (CapsHeading's law), and nothing here narrates what the parts already show.
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Chip } from "../chip/Chip.tsx";
 import { FloorGlyph } from "../floor/FloorGlyph.tsx";
@@ -126,10 +128,19 @@ export function DetailFacets({ lines, onPress }: { readonly lines: readonly Face
  * (L52 `AudioPreview`), which owns its one <audio> element and releases it on unmount.
  */
 export function DetailPreview({ face, title, video }: { readonly face: Face; readonly title: string; readonly video?: { readonly src: string; readonly poster?: string; readonly loop: boolean } }) {
+  const [failed, setFailed] = useState<string | null>(null);
   if (video !== undefined) {
+    // A video that will not load is drawn as unreadable, keyed by its src as a picture is.
+    if (failed === video.src) {
+      return (
+        <div className={s.preview}>
+          <FaceView face={{ kind: "designed", lead: "media", name: "unreadable", tail: title }} size="preview" />
+        </div>
+      );
+    }
     return (
       <div className={s.preview}>
-        <video className={s.video} src={video.src} poster={video.poster} controls muted={video.loop} loop={video.loop} preload="metadata" playsInline aria-label={title} />
+        <video className={s.video} src={video.src} poster={video.poster} controls muted={video.loop} loop={video.loop} preload="metadata" playsInline aria-label={title} onError={() => setFailed(video.src)} />
       </div>
     );
   }

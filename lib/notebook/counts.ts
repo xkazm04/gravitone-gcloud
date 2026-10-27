@@ -43,7 +43,10 @@ export function countsOf(nb: Notebook) {
     // notebook-source-population.probe.spec.ts pins both numbers so a future
     // edit that grows one list without the other is caught rather than silent.
     sources: nb.sources.length,
-    factSourceStrings: new Set(nb.facts.map((f) => f.source)).size,
+    // Only facts that carry the string: a fact from the validation door holds
+    // `sources[]` and usually no `source`, and a set of undefineds is one
+    // element, not one attribution.
+    factSourceStrings: new Set(nb.facts.flatMap((f) => (typeof f.source === "string" ? [f.source] : []))).size,
     unknowns: nb.unknowns.length,
     /** The count that actually constrains a script being written today. */
     unknownsOpen: nb.unknowns.filter((u) => !u.resolvedBy).length,

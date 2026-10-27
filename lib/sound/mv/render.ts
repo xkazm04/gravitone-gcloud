@@ -24,7 +24,7 @@
 // back, so a motion-only regenerate never decodes the track again.
 
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { Browser } from "playwright";
@@ -48,6 +48,9 @@ import {
 } from "@/lib/musicVideoExport";
 import { DEFAULT_EFFECT_PARAMS, type EffectParams } from "@/lib/sound/mv/compositor";
 
+import { renameRetry } from "@/lib/renameRetry";
+
+import { JITTERED_RENAME } from "../store";
 import { MV_LOOKS, type MvLookId } from "./looks";
 import { detectSections, energyShape } from "./sections";
 import type { MvAnalysis, MvMotion } from "./types";
@@ -92,13 +95,24 @@ async function stillDataUrl(stillPath: string): Promise<string> {
   return `data:${mime};base64,${(await readFile(stillPath)).toString("base64")}`;
 }
 
+let stagedN = 0;
+
 /** Write through a sibling temp name and rename, so a reader never sees half
- *  a file under the real name. */
-async function writeAtomically(target: string, bytes: Buffer | string): Promise<void> {
+ *  a file under the real name. The name is the store's own (pid and counter, so
+ *  two writers of one target never share a staging file) and the rename is
+ *  lib/sound/mv/store.ts landFile's: Windows refuses a rename onto a file a
+ *  reader holds, and the refusal is retried. */
+export async function writeAtomically(target: string, bytes: Buffer | string): Promise<void> {
   await mkdir(path.dirname(target), { recursive: true });
-  const tmp = `${target}.partial`;
-  await writeFile(tmp, bytes);
-  await rename(tmp, target);
+  const ext = path.extname(target);
+  const tmp = `${target.slice(0, target.length - ext.length)}.${process.pid}.${++stagedN}.partial${ext}`;
+  try {
+    await writeFile(tmp, bytes);
+    await renameRetry(tmp, target, JITTERED_RENAME);
+  } catch (e) {
+    await rm(tmp, { force: true }).catch(() => {});
+    throw e;
+  }
 }
 
 const clamp = (v: number | undefined, lo: number, hi: number, fallback: number) =>

@@ -188,10 +188,8 @@ export function carMetrics(g: Geo, n: number): CarMetrics {
   if (m.flat) {
     if (portrait) {
       m.cw = Math.round(Math.min(W * 0.8, ((H * (n === 1 ? 0.34 : n === 2 ? 0.2 : 0.145)) / 0.75) * 1.0));
-      m.gap = H * 0.02;
     } else {
-      m.gap = gap0;
-      m.cw = Math.round(Math.min(W * (n <= 1 ? 0.44 : n === 2 ? 0.37 : 0.31), (H * 0.5) / 0.75, (W * 0.88 - (n - 1) * gap0) / n));
+      m.cw =Math.round(Math.min(W * (n <= 1 ? 0.44 : n === 2 ? 0.37 : 0.31), (H * 0.5) / 0.75, (W * 0.88 - (n - 1) * gap0) / n));
     }
   }
   m.ch = Math.round(m.cw * 0.75);

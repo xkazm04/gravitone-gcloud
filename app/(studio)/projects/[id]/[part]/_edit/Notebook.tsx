@@ -11,6 +11,7 @@
 import { useMemo, useState } from "react";
 
 import type { NotebookBoard, PartView, ResearchCard, ResearchData } from "@gt/domain/partView";
+import { SrOnly } from "@gt/ui/components/a11y/SrOnly.tsx";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
@@ -28,6 +29,8 @@ import s from "./Editors.module.css";
 
 type Data = Extract<ResearchData, { face: "notebook" }>;
 
+const SCOPE_SAID: Readonly<Record<ResearchCard["scope"], string>> = { in: "in scope", descoped: "descoped", "not-taken": "not taken" };
+
 function CardRow({ c }: { readonly c: ResearchCard }) {
   return (
     <div className={cx(s.card, c.scope !== "in" && s.out)} data-card={c.id} data-scope={c.scope}>
@@ -43,13 +46,15 @@ function CardRow({ c }: { readonly c: ResearchCard }) {
           {c.deepen && <span className={s.on}>⤓</span>}
           <span>{c.scope === "in" ? "●" : "○"}</span>
         </span>
+        {/* The glyphs and the strike-through, spoken: the inspector's words for the same state. */}
+        <SrOnly text={[SCOPE_SAID[c.scope], ...(c.liked ? ["liked"] : []), ...(c.deepen ? ["deepen"] : [])].join(", ")} />
       </div>
       <div className={cx(s.rrTitle, s.clamp2)}>{c.title}</div>
     </div>
   );
 }
 
-function Inspector({ c, cards, send, onSelect }: { readonly c: ResearchCard; readonly cards: ReadonlyMap<string, ResearchCard>; readonly send: EditorProps<unknown>["send"]; readonly onSelect: (id: string) => void }) {
+function Inspector({ c, cards, send, busy, onSelect }: { readonly c: ResearchCard; readonly cards: ReadonlyMap<string, ResearchCard>; readonly send: EditorProps<unknown>["send"]; readonly busy: boolean; readonly onSelect: (id: string) => void }) {
   const link = (ids: readonly string[], label: string) =>
     ids.length === 0 ? null : (
       <div className={s.sect}>
@@ -66,7 +71,7 @@ function Inspector({ c, cards, send, onSelect }: { readonly c: ResearchCard; rea
       <div className={s.bar}>
         <Chip label={c.kind} casing="lower" />
         {c.confidence !== undefined && <Chip label="confidence" value={c.confidence} casing="lower" tone={c.confidence === "low" ? "amber" : "neutral"} />}
-        <Chip label={c.scope === "in" ? "in scope" : c.scope === "descoped" ? "descoped" : "not taken"} casing="lower" tone={c.scope === "in" ? "emerald" : "amber"} />
+        <Chip label={SCOPE_SAID[c.scope]} casing="lower" tone={c.scope === "in" ? "emerald" : "amber"} />
       </div>
       <div className={s.sect}>
         <p className={s.claim}>{c.title}</p>
@@ -95,19 +100,21 @@ function Inspector({ c, cards, send, onSelect }: { readonly c: ResearchCard; rea
       {link(c.contests, "contests")}
       {link(c.qualifies, "qualifies")}
       <div className={s.acts}>
-        {c.required && c.scope === "in" ? <Chip label="required" tone="violet" casing="lower" /> : <Button label={c.scope === "in" ? "descope" : "restore"} size="sm" tone={c.scope === "in" ? "rose" : "emerald"} shortcut={{ mode: "part.research", verb: "descope" }} onPress={() => send({ op: c.scope === "in" ? "descope" : "restore", cardId: c.id })} />}
-        <Button label={c.liked ? "unlike" : "like"} size="sm" shortcut={{ mode: "part.research", verb: "like" }} onPress={() => send({ op: "like", cardId: c.id, on: !c.liked })} />
-        <Button label={c.deepen ? "undeepen" : "deepen"} size="sm" shortcut={{ mode: "part.research", verb: "deepen" }} onPress={() => send({ op: "deepen", cardId: c.id, on: !c.deepen })} />
-        <Button label="follow up" size="sm" tone="cyan" onPress={() => send({ op: "queue-follow-up", prompt: "", cardId: c.id })} />
+        {c.required && c.scope === "in" ? <Chip label="required" tone="violet" casing="lower" /> : <Button label={c.scope === "in" ? "descope" : "restore"} size="sm" tone={c.scope === "in" ? "rose" : "emerald"} shortcut={{ mode: "part.research", verb: "descope" }} disabled={busy} onPress={() => send({ op: c.scope === "in" ? "descope" : "restore", cardId: c.id })} />}
+        <Button label={c.liked ? "unlike" : "like"} size="sm" shortcut={{ mode: "part.research", verb: "like" }} disabled={busy} onPress={() => send({ op: "like", cardId: c.id, on: !c.liked })} />
+        <Button label={c.deepen ? "undeepen" : "deepen"} size="sm" shortcut={{ mode: "part.research", verb: "deepen" }} disabled={busy} onPress={() => send({ op: "deepen", cardId: c.id, on: !c.deepen })} />
+        <Button label="follow up" size="sm" tone="cyan" disabled={busy} onPress={() => send({ op: "queue-follow-up", prompt: "", cardId: c.id })} />
       </div>
     </>
   );
 }
 
-function FollowUps({ d, send }: { readonly d: NotebookBoard; readonly send: EditorProps<unknown>["send"] }) {
+function FollowUps({ d, send, busy }: { readonly d: NotebookBoard; readonly send: EditorProps<unknown>["send"]; readonly busy: boolean }) {
   const [q, setQ] = useState("");
   const queue = (): void => {
-    if (q.trim() === "") return;
+    // The island declines a second write while one is in flight; the question stays in the
+    // field rather than being cleared for an op that was never sent.
+    if (busy || q.trim() === "") return;
     send({ op: "queue-follow-up", prompt: q.trim() });
     setQ("");
   };
@@ -122,14 +129,14 @@ function FollowUps({ d, send }: { readonly d: NotebookBoard; readonly send: Edit
         }}
       >
         <input className={cx(s.input, s.grow)} aria-label="question" value={q} onChange={(e) => setQ(e.currentTarget.value)} {...{ [FIELD_ATTR]: "follow-up" }} />
-        <Button label="queue" size="sm" submit />
+        <Button label="queue" size="sm" disabled={busy} submit />
       </form>
       {d.followUps.map((f) => (
         <div key={f.id} className={s.fu} data-follow-up={f.id}>
           <div className={s.row}>
             <Chip label={f.status} casing="lower" tone={f.status === "returned" ? "emerald" : f.status === "unanswered" ? "rose" : "neutral"} />
             <span className={cx(s.mono, s.ell, s.grow)}>{f.cardId ?? "question"}</span>
-            {f.status === "queued" && <Button label="drop" size="sm" onPress={() => send({ op: "drop-follow-up", id: f.id })} />}
+            {f.status === "queued" && <Button label="drop" size="sm" disabled={busy} onPress={() => send({ op: "drop-follow-up", id: f.id })} />}
           </div>
           <p className={cx(s.work, s.clamp2)}>{f.prompt}</p>
           {f.result !== undefined && (
@@ -141,8 +148,8 @@ function FollowUps({ d, send }: { readonly d: NotebookBoard; readonly send: Edit
                   <Chip label={e.landing} casing="lower" tone={e.landing === "landed" ? "emerald" : e.landing === "pending" ? "amber" : "neutral"} />
                   {e.landing === "pending" && (
                     <>
-                      <Button label="apply" size="sm" tone="emerald" onPress={() => send({ op: "decide-effect", followUpId: f.id, index: e.index, decision: "applied" })} />
-                      <Button label="reject" size="sm" tone="rose" onPress={() => send({ op: "decide-effect", followUpId: f.id, index: e.index, decision: "rejected" })} />
+                      <Button label="apply" size="sm" tone="emerald" disabled={busy} onPress={() => send({ op: "decide-effect", followUpId: f.id, index: e.index, decision: "applied" })} />
+                      <Button label="reject" size="sm" tone="rose" disabled={busy} onPress={() => send({ op: "decide-effect", followUpId: f.id, index: e.index, decision: "rejected" })} />
                     </>
                   )}
                 </div>
@@ -202,7 +209,7 @@ export function NotebookEditor({ view, frame, send, busy, error, data: d }: Edit
   const canConfirm = d.source !== null && t.requiredGone.length === 0 && (!d.scope.confirmed || d.scope.moved > 0 || d.scope.orphan !== undefined);
   const acts = (
     <>
-      {canConfirm && <Button label="confirm scope" size="sm" tone="emerald" tally={{ value: t.kept, of: t.total, label: "kept" }} onPress={() => send({ op: "confirm-scope" })} />}
+      {canConfirm && <Button label="confirm scope" size="sm" tone="emerald" tally={{ value: t.kept, of: t.total, label: "kept" }} disabled={busy} onPress={() => send({ op: "confirm-scope" })} />}
       {frame.acts}
     </>
   );
@@ -228,7 +235,7 @@ export function NotebookEditor({ view, frame, send, busy, error, data: d }: Edit
                 </button>
               ))}
             </div>
-            <FollowUps d={d} send={send} />
+            <FollowUps d={d} send={send} busy={busy} />
           </>
         ),
       }}
@@ -252,7 +259,7 @@ export function NotebookEditor({ view, frame, send, busy, error, data: d }: Edit
               </div>
               {d.scope.moved > 0 && <Chip label="moved" value={d.scope.moved} tone="amber" />}
               {d.scope.orphan !== undefined && <Chip label="orphaned scope" value={d.scope.orphan.decisions} tone="amber" />}
-              {view.data.offers.length > 1 && <Button label="beats" size="sm" onPress={() => send({ op: "set-face", face: "beats" })} />}
+              {view.data.offers.length > 1 && <Button label="beats" size="sm" disabled={busy} onPress={() => send({ op: "set-face", face: "beats" })} />}
             </div>
             {d.source === null ? (
               <div className={s.empty}>
@@ -280,7 +287,7 @@ export function NotebookEditor({ view, frame, send, busy, error, data: d }: Edit
         label: "card",
         children: (
           <div tabIndex={-1} data-region="inspector">
-            {card === undefined ? <Empty label="no card selected" /> : <Inspector c={card} cards={byId} send={send} onSelect={select} />}
+            {card === undefined ? <Empty label="no card selected" /> : <Inspector c={card} cards={byId} send={send} busy={busy} onSelect={select} />}
           </div>
         ),
       }}

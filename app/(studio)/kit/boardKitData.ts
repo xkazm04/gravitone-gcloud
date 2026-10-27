@@ -6,9 +6,10 @@ import "server-only";
 // the repo's own preset plates, so the sheet draws the same every time.
 
 import type { Consequence, PacketSummary, PacketView } from "@gt/domain/board";
+import { thumbSrc } from "@gt/catalog/presets";
 import { parseAt } from "@gt/domain/door";
 import { candidateIdSchema, packetIdSchema } from "@gt/domain/ids";
-import { SOURCES, type PacketSource } from "@gt/domain/source";
+import { reasonVocabulary, type PacketSource } from "@gt/domain/source";
 import type { BoardVerdict } from "@gt/ui/board/boardGate";
 import type { BoardPacket } from "@gt/ui/board/port";
 
@@ -25,9 +26,8 @@ const img = (id: string, row: string, url: string, mime = "image/jpeg") => ({ id
 const PRESETS = ["signal-ledger", "newsprint-cutout", "blueprint", "chalk-argument"] as const;
 
 function packet(id: string, source: PacketSource, over: Partial<PacketView>, present: BoardPacket["present"]): BoardPacket {
-  const spec = SOURCES[source];
   return {
-    view: { id: pid(id), lane: "image", source, mode: "matrix-cull", state: "open", rev: 4, items: [], decisions: [], undecided: 0, canUndo: true, reasons: { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax }, pairs: [], ...over },
+    view: { id: pid(id), lane: "image", source, mode: "matrix-cull", state: "open", rev: 4, items: [], decisions: [], undecided: 0, canUndo: true, reasons: reasonVocabulary(source), pairs: [], ...over },
     present,
   };
 }
@@ -35,7 +35,7 @@ function packet(id: string, source: PacketSource, over: Partial<PacketView>, pre
 const CULL = packet(
   "pkt:forge:sweep-01",
   "forge",
-  { title: "Forge sweep-01", items: ["the-exit", "flywheel"].flatMap((row) => PRESETS.map((p) => img(`${row}/${p}`, row, `/presets/${p}.jpg`))) },
+  { title: "Forge sweep-01", items: ["the-exit", "flywheel"].flatMap((row) => PRESETS.map((p) => img(`${row}/${p}`, row, thumbSrc(p)))) },
   {
     items: Object.fromEntries(["the-exit", "flywheel"].flatMap((row) => PRESETS.map((p) => [`${row}/${p}`, { label: p.replace(/-/g, " "), meta: "forge · sdxl" }]))),
     rows: [

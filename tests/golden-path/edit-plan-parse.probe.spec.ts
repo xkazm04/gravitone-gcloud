@@ -6,7 +6,10 @@
 // fields / prose, and NEVER silently patch a malformed plan into a valid-looking
 // one. Also exercises the imaging json extractor (brace-balanced, string-aware).
 import { test, expect } from "@playwright/test";
-import { parseEditPlan, PlanError } from "@/lib/script/editPlan";
+import { applyEdits, EDIT_PLAN_SCHEMA, parseEditPlan, PlanError } from "@/lib/script/editPlan";
+import { ATTRIBUTION } from "@/lib/script/impact";
+import { RENDERS } from "@/lib/script/renders";
+import { runGate } from "@/lib/script/gate";
 import { extractJsonObject, parseAgainstSchema } from "@/lib/imaging/json";
 import { ImagingError } from "@/lib/imaging/errors";
 
@@ -134,4 +137,56 @@ test("Lane2b/editPlan: a missing required field still wins over a bad mark", () 
   // more useful to report than it misreading the script.
   const bad = { ...okPlan(), edits: [{ renderId: RID, op: "cut", beatAt: "9:99" }] };
   expect(() => parseEditPlan(JSON.stringify(bad))).toThrow(/why/i);
+});
+
+// ---- the schema's declared types, walked -----------------------------------
+//
+// parseEditPlan checked that `cards` was an array and `beatAt` a string, and no
+// other declared type. Measured before the fix, over every wrong-typed value of
+// every property EDIT_PLAN_SCHEMA declares on a retime/rewrite/insert/cut, plus
+// a non-object edit and wrong-typed refusals: 137 mutations, 89 refused, 37
+// accepted (a retime whose `seconds` is a string retimes nothing; a `label` of
+// 42 reaches the beat; `refusals: "x"` became []), and 11 threw a TypeError -
+// `edits: [null]` out of the door itself, and a rewrite whose `text` is 42 out
+// of the gate the applied chain is run through. The walk reads the SCHEMA, so a
+// property added to it is walked without this file changing.
+test("Lane2b/editPlan: every wrong-typed declared property is REFUSED, and nothing throws past the door", () => {
+  const BEAT = "0:12";
+  const base: Record<string, Record<string, unknown>> = {
+    retime: { renderId: RID, op: "retime", beatAt: BEAT, seconds: 9, why: "w" },
+    rewrite: { renderId: RID, op: "rewrite", beatAt: BEAT, seconds: 9, text: "t", label: "l", cards: ["f-sbr"], why: "w" },
+    insert: { renderId: RID, op: "insert", afterBeatAt: BEAT, seconds: 9, text: "t", label: "l", connector: "BUT", cards: ["f-sbr"], why: "w" },
+    cut: { renderId: RID, op: "cut", beatAt: BEAT, why: "w" },
+  };
+  const props = EDIT_PLAN_SCHEMA.properties.edits.items.properties as Record<string, { type: string }>;
+  const fits = (type: string, v: unknown) =>
+    type === "string" ? typeof v === "string" : type === "integer" ? typeof v === "number" : type === "array" ? Array.isArray(v) && v.every((x) => typeof x === "string") : true;
+  const WRONG: unknown[] = [null, 42, true, {}, [], "s", ["s", 1]];
+  const plans: unknown[] = [];
+  for (const ok of Object.values(base))
+    for (const k of Object.keys(props))
+      if (k in ok && k !== "op")
+        for (const v of WRONG) if (!fits(props[k]!.type, v)) plans.push({ edits: [{ ...ok, [k]: v }], refusals: [], summary: "s" });
+  for (const edits of [[null], [5], ["x"]]) plans.push({ edits, refusals: [], summary: "s" });
+  for (const refusals of [[5], "x", [{ note: 1, why: 2 }], [{ note: "n" }]]) plans.push({ edits: [], refusals, summary: "s" });
+  // A retime is nothing but its seconds: without them it silently changes nothing.
+  plans.push({ edits: [{ renderId: RID, op: "retime", beatAt: BEAT, why: "w" }], refusals: [], summary: "s" });
+  expect(plans.length, "the walk generated no mutations").toBeGreaterThan(100);
+
+  const accepted: string[] = [];
+  const threw: string[] = [];
+  for (const p of plans) {
+    try {
+      const plan = parseEditPlan(JSON.stringify(p));
+      const a = applyEdits(RENDERS.find((r) => r.id === RID)!, plan.edits, ATTRIBUTION[RID] ?? {});
+      runGate({ id: RID, beats: a.beats }, { connectors: true });
+      accepted.push(JSON.stringify(p));
+    } catch (e) {
+      if (!(e instanceof PlanError)) threw.push(`${JSON.stringify(p)}: ${(e as Error).message}`);
+    }
+  }
+  expect(threw, "a wrong-typed plan threw past the door").toEqual([]);
+  expect(accepted, "a wrong-typed plan was accepted").toEqual([]);
+  // The control: every base edit still parses, applies and gates.
+  for (const ok of Object.values(base)) expect(() => parseEditPlan(JSON.stringify({ edits: [ok], refusals: [], summary: "s" }))).not.toThrow();
 });

@@ -46,6 +46,11 @@ export const projectSchema = z.object({
   launchedAt: z.iso.datetime().optional(),
   /** A discarded draft keeps its row and its events; reads stop listing it (entity-lifecycle). */
   discardedAt: z.iso.datetime().optional(),
+}).superRefine((p, ctx) => {
+  // Only a draft is discarded (kernel records/write.ts `discard`): a launched project's jobs are
+  // cancelled in Runs, and a tombstone over live jobs would hide them from every list.
+  if (p.discardedAt !== undefined && p.launchedAt !== undefined)
+    ctx.addIssue({ code: "custom", path: ["discardedAt"], message: "only a draft is discarded; this project was launched" });
 });
 export type Project = z.output<typeof projectSchema>;
 

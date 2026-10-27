@@ -27,8 +27,9 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { createRun, defaultDeps, driveRun } from "@/lib/articles/engine";
-import { EXCLUDED_BUNDLES, listUncoveredTopics, loopsRoot, rankUncovered, runLoop, suggestAngle } from "@/lib/articles/loop";
-import { readRun } from "@/lib/articles/store";
+import { coverage, EXCLUDED_BUNDLES, listUncoveredTopics, loopsRoot, rankUncovered, runLoop, suggestAngle } from "@/lib/articles/loop";
+import { readRun, writeNewRun } from "@/lib/articles/store";
+import type { ArticleRun } from "@/lib/articles/types";
 import { loopDriver } from "@/lib/producers/article";
 
 import { keepEnv } from "./_helpers";
@@ -107,6 +108,70 @@ test("topics: a run at the gate and a publication cover their subject; a failed 
   expect(left).not.toContain("agent-operations/delta-topic");
   expect(left).toContain("software-engineering/beta-topic");
   expect(after.covered.map((c) => c.key)).toEqual(expect.arrayContaining(["software-engineering/alpha-topic", "agent-operations/delta-topic"]));
+});
+
+/** A run.json on disk at `status`, with no turns behind it: what `coverage` reads. */
+async function runAt(id: string, bundle: string, subject: string, status: ArticleRun["status"]) {
+  const at = "2026-10-01T00:00:00.000Z";
+  await writeNewRun({ id, status, topic: { kind: "subject", bundle, subject, text: subject }, promptRef: { file: "p", sha: "s" }, standard: { recipe: "r", bundle: "technical-writing", subjects: [] }, model: "m", effort: "high", steps: [], createdAt: at, updatedAt: at } as unknown as ArticleRun);
+}
+function publication(slug: string, bundle: string, subject: string, runId: string) {
+  mkdirSync(path.join(box.registry, "publications", slug), { recursive: true });
+  writeFileSync(path.join(box.registry, "publications", slug, "publication.json"), JSON.stringify({ topic: { kind: "subject", bundle, subject }, status: "approved", run: { id: runId } }));
+}
+
+test("coverage: a topic counts once however many posts cover it, and a run id that prefixes another hides nothing", async () => {
+  // one subject, two posts: a run at the gate and the publication of an earlier run of it
+  await runAt("2026-10-01-alpha-topic-2", "software-engineering", "alpha-topic", "awaiting-approval");
+  publication("alpha-one", "software-engineering", "alpha-topic", "2026-10-01-alpha-topic");
+  // a run whose id is a prefix of another subject's publication's run id
+  await runAt("2026-10-01-delta", "agent-operations", "delta", "awaiting-approval");
+  publication("delta-topic-one", "agent-operations", "delta-topic", "2026-10-01-delta-topic");
+  const cov = await coverage(box.registry);
+  const keys = cov.covered.map((c) => c.key).sort();
+  expect(keys).toEqual(["agent-operations/delta", "agent-operations/delta-topic", "software-engineering/alpha-topic"]);
+});
+
+test("create: two runs on one topic at once both get a run, each under its own id", async () => {
+  const topic = { kind: "free" as const, text: "One topic asked for twice" };
+  const made = await Promise.allSettled([createRun({ topic }, deps()), createRun({ topic }, deps()), createRun({ topic }, deps())]);
+  const refused = made.filter((m) => m.status === "rejected").map((m) => String((m as PromiseRejectedResult).reason?.message));
+  expect(refused, "no create is refused because a sibling minted the same id").toEqual([]);
+  const ids = made.map((m) => (m as PromiseFulfilledResult<ArticleRun>).value.id);
+  expect(new Set(ids).size).toBe(3);
+  for (const id of ids) expect((await readRun(id)).topic.text).toBe(topic.text);
+});
+
+test("loop: two loops started in the same second keep their own report and log", async () => {
+  publication("covered-one", "software-engineering", "token-budgeting", "2026-10-01-token-budgeting");
+  // The target is already met, so neither loop launches a run: the driver is never asked.
+  const idle = { start: () => Promise.reject(new Error("no launch")), resume: () => Promise.reject(new Error("no resume")), driven: async () => false };
+  const [a, b] = await Promise.all([runLoop({ target: 1, budgetUsd: 10 }, deps(), undefined, idle), runLoop({ target: 1, budgetUsd: 10 }, deps(), undefined, idle)]);
+  expect(a.id).not.toBe(b.id);
+  for (const r of [a, b]) {
+    expect(JSON.parse(readFileSync(path.join(loopsRoot(), r.id, "loop.json"), "utf8")).id).toBe(r.id);
+    expect(readFileSync(path.join(loopsRoot(), r.id, "events.log"), "utf8").match(/^.* START /gm)).toHaveLength(1);
+  }
+});
+
+test("coverage and the loop report name a run whose run.json does not parse", async () => {
+  publication("covered-one", "software-engineering", "token-budgeting", "2026-10-01-token-budgeting");
+  mkdirSync(path.join(box.store, "2026-10-01-broken"), { recursive: true });
+  writeFileSync(path.join(box.store, "2026-10-01-broken", "run.json"), '{"id": "2026-10-01-broken", "topic": ');
+  expect((await coverage(box.registry)).damaged).toEqual(["2026-10-01-broken"]);
+  const idle = { start: () => Promise.reject(new Error("no launch")), resume: () => Promise.reject(new Error("no resume")), driven: async () => false };
+  const report = await runLoop({ target: 1, budgetUsd: 10 }, deps(), undefined, idle);
+  expect(report.damaged).toEqual(["2026-10-01-broken"]);
+  expect(readFileSync(path.join(loopsRoot(), report.id, "events.log"), "utf8")).toMatch(/DAMAGED 2026-10-01-broken/);
+});
+
+test("cli: the loop summary names a run whose run.json does not parse, beside the orphaned line", () => {
+  publication("covered-one", "software-engineering", "token-budgeting", "2026-10-01-token-budgeting");
+  mkdirSync(path.join(box.store, "2026-10-01-broken"), { recursive: true });
+  writeFileSync(path.join(box.store, "2026-10-01-broken", "run.json"), '{"id": "2026-10-01-broken", "topic": ');
+  // The target is already covered, so the loop launches nothing and prints its summary.
+  const out = execSync("npx tsx pipeline/article.mts loop --target 1 --budget-usd 10", { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env: process.env });
+  expect(out).toMatch(/damaged \(run\.json does not parse\): 2026-10-01-broken/);
 });
 
 test("loop: refuses to start without a budget or with an unclear target", async () => {

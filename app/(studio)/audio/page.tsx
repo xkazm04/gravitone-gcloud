@@ -52,8 +52,7 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   const q = await searchParams;
   const url = parseDeskUrl(q);
   const registry = deskEngines();
-  const final = await finalizedCount(url.kind);
-  const unscored = await unscoredCount(url.kind);
+  const [final, unscored] = await Promise.all([finalizedCount(url.kind), unscoredCount(url.kind)]);
   const tabs = SECTIONS.map((x) => ({
     id: x.id,
     label: x.label,

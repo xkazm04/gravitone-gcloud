@@ -57,12 +57,48 @@ function tempo(asked: number | null, measured: number | null): AxisCheck {
 
 const keyNorm = (k: string): string => k.trim().toLowerCase().replace(/\s+/g, " ").replace(/\bmaj(or)?\b/, "major").replace(/\bmin(or)?\b/, "minor");
 
+// A key is a pitch class and a mode, not a string. The tracker spells it one way (lib/sound/
+// measure.ts NOTES: C C# D Eb E F F# G Ab A Bb B, then "major"/"minor"); a brief is typed, so
+// "Db major", "G# minor", "Am", "A♭ major" and "Cmaj" each name a key the tracker writes
+// differently. Compared as text, every one of them read as a MISS the provider never made.
+const LETTER: Readonly<Record<string, number>> = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+/** The tracker's own spelling, so a derived key (a relative) reads as a measured one would. */
+export const KEY_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"] as const;
+
+export type KeyPitch = { readonly pc: number; readonly minor: boolean };
+
+/** A key as written by a person or the tracker, as a pitch class and mode; null when unreadable. */
+export function keyPitch(k: string): KeyPitch | null {
+  const m = /^([A-Ga-g])\s*([#♯b♭]?)\s*(.*)$/u.exec(k.trim());
+  if (m === null) return null;
+  const [, letter = "", acc = "", rest = ""] = m;
+  const mode = rest.trim();
+  const minor = mode === "m" || /^min(or)?$/i.test(mode) ? true : mode === "" || mode === "M" || /^maj(or)?$/i.test(mode) ? false : null;
+  if (minor === null) return null;
+  const shift = acc === "#" || acc === "♯" ? 1 : acc === "" ? 0 : -1;
+  return { pc: ((LETTER[letter.toLowerCase()] ?? 0) + shift + 12) % 12, minor };
+}
+
+/** Two spellings of one key; text the parser cannot read is compared as text. */
+export function sameKey(a: string, b: string): boolean {
+  const pa = keyPitch(a);
+  const pb = keyPitch(b);
+  return pa !== null && pb !== null ? pa.pc === pb.pc && pa.minor === pb.minor : keyNorm(a) === keyNorm(b);
+}
+
+/** The relative major or minor, in the tracker's spelling; null for a key the parser cannot read. */
+export function relativeKey(k: string): string | null {
+  const p = keyPitch(k);
+  if (p === null) return null;
+  return `${KEY_NAMES[(p.pc + (p.minor ? 3 : 9)) % 12] ?? "C"} ${p.minor ? "major" : "minor"}`;
+}
+
 function key(asked: string | null, measured: string | null): AxisCheck {
   const a = asked === null || asked.trim() === "" ? null : asked.trim();
   const base = { axis: "key" as const, asked: a, measured };
   if (a === null) return { ...base, verdict: "unasked" };
   if (measured === null) return { ...base, verdict: "unmeasured" };
-  return { ...base, verdict: keyNorm(a) === keyNorm(measured) ? "held" : "missed" };
+  return { ...base, verdict: sameKey(a, measured) ? "held" : "missed" };
 }
 
 /** Seconds as the kind reads them: an effect in tenths ("2.5s"), music as m:ss. */

@@ -6,15 +6,10 @@
 // the app explaining itself.
 import { Chip } from "../chip/Chip.tsx";
 import { Hint } from "../hint/Hint.tsx";
+import { unpricedKind } from "./produce.ts";
 import s from "./Acts.module.css";
 
-/** The short kind of an unpriced figure, from its reason. */
-export function unpricedKind(reason: string | undefined): "seat" | "credits" | "no price" {
-  const r = (reason ?? "").toLowerCase();
-  if (r.includes("seat")) return "seat";
-  if (r.includes("credit") || r.includes("subscription")) return "credits";
-  return "no price";
-}
+export { unpricedKind };
 
 /** `hint={false}` where the column is narrow (the plan table): the reason stays the chip's name. */
 export function Unpriced({ reason, hint = true }: { readonly reason?: string | undefined; readonly hint?: boolean }) {

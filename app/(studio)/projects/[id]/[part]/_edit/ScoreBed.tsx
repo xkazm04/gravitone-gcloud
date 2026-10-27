@@ -25,7 +25,9 @@ export function ScoreBed(p: EditorProps<PartView<"score">> & { readonly data: Be
   return (
     <PartWorkspace
       {...frame}
-      mode="part.score"
+      // Its own mode, bound to nothing: the bed has no spotting clock, so part.score's rows
+      // (play, shuttle, cue walk, add cue, zoom) would be a legend of keys nothing here answers.
+      mode="part.bed"
       rail={{
         label: "shots",
         children:

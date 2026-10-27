@@ -2,6 +2,111 @@
   "contexts": [
     {
       "api_surface": "",
+      "business_feature": "Agent Turns",
+      "category": "lib",
+      "cross_refs": [
+        "text-reasoning-engine",
+        "article-run-engine"
+      ],
+      "db_tables": [],
+      "description": "Runs Claude agent turns and reviewer engines through a CLI seam, with the envelope, engine binary resolution and the harness protocol, then records each turn with assembly, kinds, ledger and runner for frames, research and recalibration.",
+      "entry_points": [
+        "lib/agent/runAgent.ts",
+        "lib/turns/runner.ts"
+      ],
+      "file_paths": [
+        "lib/agent/agentArgs.ts",
+        "lib/agent/cliSeam.ts",
+        "lib/agent/envelope.ts",
+        "lib/agent/resolveEngineBin.ts",
+        "lib/agent/reviewerCommand.ts",
+        "lib/agent/reviewerEngines.ts",
+        "lib/agent/reviewerEnv.ts",
+        "lib/agent/runAgent.ts",
+        "lib/agent/runReviewer.ts",
+        "lib/agent/spawnTurn.ts",
+        "lib/claudeCli.ts",
+        "lib/harness/protocol.ts",
+        "lib/turns/ledger.ts",
+        "lib/turns/runner.ts",
+        "lib/turns/assemble/frames.ts",
+        "lib/turns/assemble/manifest.ts",
+        "lib/turns/assemble/recalibrate.ts",
+        "lib/turns/assemble/research.ts",
+        "lib/turns/kinds/frames.ts",
+        "lib/turns/kinds/recalibrate.ts",
+        "lib/turns/kinds/research.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3",
+      "keywords": [
+        "agent",
+        "turn",
+        "claude-cli",
+        "reviewer",
+        "envelope",
+        "harness"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.393671100+00:00",
+      "name": "agent-cli-and-turns",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0",
+        "Node"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "App Root",
+      "category": "ui",
+      "cross_refs": [
+        "landing-cosmos-shell",
+        "studio-shell"
+      ],
+      "db_tables": [],
+      "description": "The root app shell (layout, landing page, error boundaries, global CSS), the dev inspector tooling, and client hooks: announcer, jobs, poll freshness, remembered state and identity eviction.",
+      "entry_points": [
+        "app/layout.tsx",
+        "app/page.tsx"
+      ],
+      "file_paths": [
+        "app/layout.tsx",
+        "app/page.tsx",
+        "app/error.tsx",
+        "app/global-error.tsx",
+        "app/globals.css",
+        "app/_dev-inspector/DevInspector.tsx",
+        "app/_dev-inspector/DevInspectorAbsent.tsx",
+        "app/_dev-inspector/devInspectorUi.tsx",
+        "app/_dev-inspector/devLocate.ts",
+        "lib/announcer.tsx",
+        "lib/jobs.tsx",
+        "lib/pollFreshness.ts",
+        "lib/useRemembered.ts",
+        "lib/identityEviction.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "83b32ed7-9fa1-4a2a-b1ec-2cdd1b5926d3",
+      "keywords": [
+        "layout",
+        "error-boundary",
+        "dev-inspector",
+        "announcer",
+        "freshness"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.394579+00:00",
+      "name": "app-root-and-dev-inspector",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "React 19.2",
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": null,
       "business_feature": "Article Checks and Critique",
       "category": "lib",
       "cross_refs": [
@@ -32,8 +137,8 @@
         "lib/articles/critiqueWriter.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "0572228c-bd2e-42a3-a146-6a91d10fa08f",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "396608fd-9886-4a9d-829d-4a5efb6ea9d3",
       "keywords": [
         "check",
         "critique",
@@ -43,7 +148,7 @@
         "quality-gate",
         "article"
       ],
-      "last_written_at": "2026-10-18T17:58:49.744640800+00:00",
+      "last_written_at": "2026-10-25T15:57:03.047573400+00:00",
       "name": "article-check-and-critique",
       "pinned": false,
       "tech_stack": [
@@ -75,8 +180,8 @@
         "lib/articles/registryWrite.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "e660bf0f-199c-4cd9-91e1-1a13e318e55f",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "6a878b5f-8652-4265-839a-dce38680a9c7",
       "keywords": [
         "approve",
         "landing",
@@ -87,7 +192,7 @@
         "calendar",
         "article"
       ],
-      "last_written_at": "2026-10-18T17:58:49.744846800+00:00",
+      "last_written_at": "2026-10-25T15:57:03.047702700+00:00",
       "name": "article-human-gate-and-landing",
       "pinned": false,
       "tech_stack": [
@@ -130,8 +235,8 @@
         "lib/articles/types.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "14632859-df56-4340-9e16-c420ff681ee3",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "d968dc62-e28c-4437-abb1-af18df448216",
       "keywords": [
         "article",
         "run",
@@ -143,7 +248,7 @@
         "rework",
         "techwriter"
       ],
-      "last_written_at": "2026-10-18T17:58:49.744182+00:00",
+      "last_written_at": "2026-10-25T15:57:03.047930+00:00",
       "name": "article-run-engine",
       "pinned": false,
       "tech_stack": [
@@ -152,7 +257,54 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": "GET /api/articles/[runId]/file/*, /api/articles/[runId]/medium",
+      "business_feature": "Article Trials",
+      "category": "lib",
+      "cross_refs": [
+        "article-human-gate-and-landing",
+        "article-run-engine"
+      ],
+      "db_tables": [],
+      "description": "Article trials (candidates, leads, records, registry record, store, verdict), the Medium draft and package routes, and the Medium browser driver with selectors and a fake for tests.",
+      "entry_points": [
+        "lib/articles/trial/record.ts"
+      ],
+      "file_paths": [
+        "lib/articles/mediumDraft.ts",
+        "lib/articles/trial/candidates.ts",
+        "lib/articles/trial/leads.ts",
+        "lib/articles/trial/record.ts",
+        "lib/articles/trial/registryRecord.ts",
+        "lib/articles/trial/store.ts",
+        "lib/articles/trial/verdict.ts",
+        "lib/medium/browser.ts",
+        "lib/medium/driver.ts",
+        "lib/medium/fake.ts",
+        "lib/medium/selectors.ts",
+        "lib/medium/types.ts",
+        "app/api/articles/[runId]/file/[...path]/route.ts",
+        "app/api/articles/[runId]/medium/route.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "492013a4-a2b2-4f74-b6e3-9dde233632a9",
+      "keywords": [
+        "trial",
+        "medium",
+        "verdict",
+        "leads",
+        "registry"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.393795100+00:00",
+      "name": "article-trials-and-medium",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": null,
       "business_feature": "Asset Library",
       "category": "ui",
       "cross_refs": [
@@ -183,8 +335,8 @@
         "packages/ui/src/components/library/library.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "fc3aef24-ad29-492b-ab6f-c0360d291987",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "bdb7f333-4ecd-4edf-b3a6-d343a0fe4d0b",
       "keywords": [
         "library",
         "asset",
@@ -194,7 +346,7 @@
         "set",
         "browse"
       ],
-      "last_written_at": "2026-10-18T17:34:16.483834300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.048068800+00:00",
       "name": "asset-library-browser",
       "pinned": false,
       "tech_stack": [
@@ -228,8 +380,8 @@
         "packages/kernel/src/library/write.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "17769afc-f302-4371-8956-63b8f52ada32",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "4b7d0aa8-b99a-48cb-86b7-986a7c99f9d5",
       "keywords": [
         "library",
         "asset",
@@ -238,7 +390,7 @@
         "detail",
         "measures"
       ],
-      "last_written_at": "2026-10-18T17:28:44.875072500+00:00",
+      "last_written_at": "2026-10-25T15:57:03.048174500+00:00",
       "name": "asset-library-store",
       "pinned": false,
       "tech_stack": [
@@ -278,8 +430,8 @@
         "app/(studio)/audio/_audio/useTransport.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "2836155f-e2b2-4d2f-b13a-d98a29291078",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "fc4d39eb-1778-430b-805f-fe081c9ea223",
       "keywords": [
         "audio",
         "arrange",
@@ -291,7 +443,7 @@
         "return",
         "studio"
       ],
-      "last_written_at": "2026-10-18T17:35:54.228790700+00:00",
+      "last_written_at": "2026-10-25T15:57:03.048475600+00:00",
       "name": "audio-arrange-desk",
       "pinned": false,
       "tech_stack": [
@@ -302,7 +454,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Audio Composer and Briefs",
       "category": "ui",
       "cross_refs": [
@@ -336,8 +488,8 @@
         "packages/ui/src/components/audio/TermRail.tsx"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "03bbdce3-27bb-4361-947c-ba8f0d70fa2c",
       "keywords": [
         "brief",
         "prompt",
@@ -348,7 +500,7 @@
         "engine",
         "draft"
       ],
-      "last_written_at": "2026-10-18T17:34:20.058653100+00:00",
+      "last_written_at": "2026-10-25T15:57:03.048623800+00:00",
       "name": "audio-composer-briefs",
       "pinned": false,
       "tech_stack": [
@@ -382,8 +534,8 @@
         "app/(studio)/audio/hunt-return/route.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "8a7f833b-0182-4184-bfdf-83e057ca5121",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "81727933-5b57-4d12-a91d-a626568e0072",
       "keywords": [
         "hunt",
         "audio",
@@ -393,7 +545,7 @@
         "url",
         "search"
       ],
-      "last_written_at": "2026-10-18T17:35:54.229249300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.048809100+00:00",
       "name": "audio-hunt",
       "pinned": false,
       "tech_stack": [
@@ -404,7 +556,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Audio Hunt and Arrange",
       "category": "ui",
       "cross_refs": [
@@ -434,8 +586,8 @@
         "packages/ui/src/components/audio/RowHead.tsx"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "c909310e-6f47-45b3-b06e-b18cfb3ab27c",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "35c4885c-477a-4fa4-8e6d-356b3af05959",
       "keywords": [
         "hunt",
         "arrange",
@@ -446,7 +598,7 @@
         "round-trip",
         "groups"
       ],
-      "last_written_at": "2026-10-18T17:34:20.059122300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.048925600+00:00",
       "name": "audio-hunt-arrange",
       "pinned": false,
       "tech_stack": [
@@ -456,7 +608,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Audio Insight and Lessons",
       "category": "ui",
       "cross_refs": [
@@ -482,8 +634,8 @@
         "app/(studio)/audio/_lessons/read.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "8ee4e416-6184-4f45-b91d-43a7e9ad5380",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "ba9b446f-2750-43ec-b036-3c829739bc9f",
       "keywords": [
         "insight",
         "lessons",
@@ -493,7 +645,7 @@
         "audio",
         "acceptance"
       ],
-      "last_written_at": "2026-10-18T17:35:54.229462400+00:00",
+      "last_written_at": "2026-10-25T15:57:03.049020900+00:00",
       "name": "audio-insight-lessons",
       "pinned": false,
       "tech_stack": [
@@ -504,7 +656,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Audio Judging and Lessons",
       "category": "ui",
       "cross_refs": [
@@ -535,8 +687,8 @@
         "packages/ui/src/components/audio/strengths.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "f54f23e7-c790-44ff-beaf-a5cb83c8d5c4",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "daafd078-1722-4200-983a-9b8bcf1cc3a8",
       "keywords": [
         "rubric",
         "measures",
@@ -546,7 +698,7 @@
         "audio",
         "preview"
       ],
-      "last_written_at": "2026-10-18T17:34:16.482232100+00:00",
+      "last_written_at": "2026-10-25T15:57:03.049120100+00:00",
       "name": "audio-lessons-measures",
       "pinned": false,
       "tech_stack": [
@@ -586,8 +738,8 @@
         "packages/producers/src/forge/plan.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "970bf5b7-6aa6-407d-97c3-cbe87f301ec5",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "06a49bc3-5cc1-4701-9869-efbacdcf5f6c",
       "keywords": [
         "producer",
         "set",
@@ -600,7 +752,7 @@
         "forge",
         "plan"
       ],
-      "last_written_at": "2026-10-18T17:31:05.499480500+00:00",
+      "last_written_at": "2026-10-25T15:57:03.049209700+00:00",
       "name": "audio-text-producers",
       "pinned": false,
       "tech_stack": [
@@ -638,8 +790,8 @@
         "lib/decision/v1/sources/suno.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "8c854c7a-5467-4ddc-80ed-76f19b1f5094",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "9508a262-9b09-4e7e-ab74-ff10c182a001",
       "keywords": [
         "board",
         "decision",
@@ -652,7 +804,7 @@
         "forge",
         "article"
       ],
-      "last_written_at": "2026-10-18T17:54:07.726826300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.049321500+00:00",
       "name": "board-decision-adapters",
       "pinned": false,
       "tech_stack": [
@@ -694,8 +846,8 @@
         "app/(studio)/board/_port/wire.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "3fa7a830-b03c-4d82-87ef-fba8e753d390",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "c1a2a2a3-7561-4522-816b-c2418500374c",
       "keywords": [
         "board",
         "packet",
@@ -708,7 +860,7 @@
         "server-actions",
         "redirect"
       ],
-      "last_written_at": "2026-10-18T17:43:09.914615500+00:00",
+      "last_written_at": "2026-10-25T15:57:03.049817500+00:00",
       "name": "board-decision-desk",
       "pinned": false,
       "tech_stack": [
@@ -717,6 +869,51 @@
         "TypeScript",
         "zod",
         "CSS Modules"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Scout and Spend Decisions",
+      "category": "lib",
+      "cross_refs": [
+        "board-decision-adapters",
+        "ledger-v1-sources"
+      ],
+      "db_tables": [],
+      "description": "Board decision adapters and ledger projections for scout and spend: scout brief, music, part, plan and wing packets, seeds, and spend requests with their live view and wording. They apply the operator's verdicts back to the scout and spend stores and project their events into the ledger.",
+      "entry_points": [
+        "lib/decision/v1/sources/scout.ts"
+      ],
+      "file_paths": [
+        "lib/decision/v1/sources/scout.ts",
+        "lib/decision/v1/sources/scoutBrief.ts",
+        "lib/decision/v1/sources/scoutMusic.ts",
+        "lib/decision/v1/sources/scoutPart.ts",
+        "lib/decision/v1/sources/scoutPlan.ts",
+        "lib/decision/v1/sources/scoutWing.ts",
+        "lib/decision/v1/sources/seeds.ts",
+        "lib/decision/v1/sources/spend.ts",
+        "lib/decision/v1/sources/spendLive.ts",
+        "lib/decision/v1/sources/spendWords.ts",
+        "lib/ledger/v1/sources/scout.ts",
+        "lib/ledger/v1/sources/seeds.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "eb8e4f16-65ba-445e-9299-2e00abf63aaa",
+      "keywords": [
+        "packet",
+        "verdict",
+        "scout",
+        "seeds",
+        "spend-request",
+        "ledger"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.392199800+00:00",
+      "name": "board-scout-spend-sources",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0"
       ]
     },
     {
@@ -757,8 +954,8 @@
         "lib/producers/words.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "13ee868d-574a-4147-b72e-11339db0250d",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "7d7b94f7-f312-4ea4-b315-23df705c2286",
       "keywords": [
         "producer",
         "kernel job",
@@ -772,7 +969,7 @@
         "publish",
         "article"
       ],
-      "last_written_at": "2026-10-18T17:52:32.618743400+00:00",
+      "last_written_at": "2026-10-25T15:57:03.049950900+00:00",
       "name": "bound-producers",
       "pinned": false,
       "tech_stack": [
@@ -781,6 +978,102 @@
         "Zod",
         "SQLite",
         "Node.js"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Run Cull Desk",
+      "category": "ui",
+      "cross_refs": [
+        "style-trials-cull",
+        "ui-board-state"
+      ],
+      "db_tables": [],
+      "description": "The run desk for culling generated runs: run cards, mosaic, modal and view, variant cards, verdict pick, idea list, words body, video bar, series badge, note field and foot, with the useRunDesk hook and the Plate styling.",
+      "entry_points": [
+        "packages/ui/src/components/cull/RunView.tsx"
+      ],
+      "file_paths": [
+        "packages/ui/src/components/cull/CullFoot.tsx",
+        "packages/ui/src/components/cull/IdeaList.tsx",
+        "packages/ui/src/components/cull/NoteField.tsx",
+        "packages/ui/src/components/cull/RunCard.tsx",
+        "packages/ui/src/components/cull/RunModal.tsx",
+        "packages/ui/src/components/cull/RunMosaic.tsx",
+        "packages/ui/src/components/cull/RunView.tsx",
+        "packages/ui/src/components/cull/Runs.module.css",
+        "packages/ui/src/components/cull/SeriesBadge.tsx",
+        "packages/ui/src/components/cull/VariantCard.tsx",
+        "packages/ui/src/components/cull/Verdict.module.css",
+        "packages/ui/src/components/cull/VerdictPick.tsx",
+        "packages/ui/src/components/cull/VideoBar.tsx",
+        "packages/ui/src/components/cull/WordsBody.tsx",
+        "packages/ui/src/components/cull/props.ts",
+        "packages/ui/src/components/cull/useRunDesk.ts",
+        "packages/ui/src/components/desk/Plate.module.css"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "18bf2edc-835f-4f6d-85cd-1d95474fb6bb",
+      "keywords": [
+        "cull",
+        "run",
+        "variant",
+        "verdict",
+        "mosaic",
+        "words"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.395193500+00:00",
+      "name": "cull-run-desk",
+      "pinned": false,
+      "tech_stack": [
+        "React 19.2",
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Cut and Export",
+      "category": "lib",
+      "cross_refs": [
+        "part-editor-media-cut-score"
+      ],
+      "db_tables": [],
+      "description": "Cut documents, timeline derivation, edits, offsets, the explainer and ads finish, plus the cut, ad and music-video exports and the headless export.",
+      "entry_points": [
+        "lib/cut/cutDocument.ts"
+      ],
+      "file_paths": [
+        "lib/cut/ads/finish.ts",
+        "lib/cut/cutDocument.ts",
+        "lib/cut/deriveTimeline.ts",
+        "lib/cut/edits.ts",
+        "lib/cut/explainer.ts",
+        "lib/cut/finishLine.ts",
+        "lib/cut/offsets.ts",
+        "lib/cutExport.ts",
+        "lib/adExports.ts",
+        "lib/adOverlayPage.ts",
+        "lib/adRender.ts",
+        "lib/musicVideoExport.ts",
+        "lib/export/headless.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "bba6c91f-7e8c-40e9-acee-8929eb245a8c",
+      "keywords": [
+        "cut",
+        "timeline",
+        "export",
+        "ads",
+        "explainer",
+        "render"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.394045300+00:00",
+      "name": "cut-and-export",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0"
       ]
     },
     {
@@ -816,8 +1109,8 @@
         "packages/kernel/src/parts/schema.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "431b1607-266c-4fcb-93e8-b7f91e5a0ebc",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "92742f06-a6dc-418e-8c50-42c050345bc7",
       "keywords": [
         "decision",
         "board",
@@ -827,7 +1120,7 @@
         "parts",
         "approval"
       ],
-      "last_written_at": "2026-10-18T17:28:14.666379500+00:00",
+      "last_written_at": "2026-10-25T15:57:03.050042700+00:00",
       "name": "decision-and-gates",
       "pinned": false,
       "tech_stack": [
@@ -862,8 +1155,8 @@
         "packages/domain/src/ids.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "3610b8be-4772-464f-b2f8-dd3a38fef27f",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "ea68a117-e84a-4b1b-bff1-c49133e939a9",
       "keywords": [
         "decision",
         "packet",
@@ -874,7 +1167,7 @@
         "AppError",
         "ids"
       ],
-      "last_written_at": "2026-10-18T17:24:48.142082500+00:00",
+      "last_written_at": "2026-10-25T15:57:03.050151900+00:00",
       "name": "domain-decision-board-core",
       "pinned": false,
       "tech_stack": [
@@ -912,8 +1205,8 @@
         "packages/domain/src/publication.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "298a4b92-0268-4d06-99a5-7ad103981170",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "9256d898-a1aa-470e-86db-7f3a9dee0865",
       "keywords": [
         "part",
         "project",
@@ -924,7 +1217,7 @@
         "frames",
         "finish"
       ],
-      "last_written_at": "2026-10-18T17:24:48.141596700+00:00",
+      "last_written_at": "2026-10-25T15:57:03.050252400+00:00",
       "name": "domain-parts-projects-slots",
       "pinned": false,
       "tech_stack": [
@@ -969,8 +1262,8 @@
         "packages/domain/src/steps/still.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "f770abb6-6609-4c9f-959f-a31407dc501f",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "1155c1ec-f832-471a-929c-2a16f06cfbb7",
       "keywords": [
         "run",
         "job",
@@ -982,7 +1275,7 @@
         "produce",
         "transitions"
       ],
-      "last_written_at": "2026-10-18T17:24:48.139594300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.050378+00:00",
       "name": "domain-run-job-steps",
       "pinned": false,
       "tech_stack": [
@@ -1014,8 +1307,8 @@
         "packages/domain/src/blob.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "da2b8086-0019-48a6-91bf-5c3f95187072",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "105e323d-773b-4714-843b-31f9a3a97690",
       "keywords": [
         "style",
         "ratchet",
@@ -1024,7 +1317,7 @@
         "blob",
         "asset"
       ],
-      "last_written_at": "2026-10-18T17:24:48.141848700+00:00",
+      "last_written_at": "2026-10-25T15:57:03.050779500+00:00",
       "name": "domain-style-library-assets",
       "pinned": false,
       "tech_stack": [
@@ -1056,8 +1349,8 @@
         "app/(studio)/floor/_calendar/wire.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "94b106ab-d9bd-4bd6-b7e2-83ad6b1c5077",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "453eefad-eacc-4fdc-87fb-37e83ded0b47",
       "keywords": [
         "calendar",
         "port",
@@ -1068,7 +1361,7 @@
         "wire",
         "actions"
       ],
-      "last_written_at": "2026-10-18T17:35:08.364184+00:00",
+      "last_written_at": "2026-10-25T15:57:03.091578500+00:00",
       "name": "floor-calendar-port",
       "pinned": false,
       "tech_stack": [
@@ -1077,7 +1370,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Publishing Calendar",
       "category": "ui",
       "cross_refs": [
@@ -1107,8 +1400,8 @@
         "packages/ui/src/components/floor/slot.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "1561e25e-0547-4ace-8e3b-6a3407a3b40f",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "a0dd902a-5adc-4c0a-8b28-28239c18303e",
       "keywords": [
         "calendar",
         "schedule",
@@ -1118,7 +1411,7 @@
         "month",
         "floor"
       ],
-      "last_written_at": "2026-10-18T17:34:16.482579300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093009200+00:00",
       "name": "floor-calendar-slots",
       "pinned": false,
       "tech_stack": [
@@ -1155,8 +1448,8 @@
         "app/(studio)/floor/_floor/shelf.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "b1bb3381-a002-4ed7-b36e-ab8844eec683",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "38f619c8-80eb-4040-986c-10c9e35e734e",
       "keywords": [
         "floor",
         "lanes",
@@ -1169,7 +1462,7 @@
         "composer",
         "shelf"
       ],
-      "last_written_at": "2026-10-18T17:35:08.363435200+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093132600+00:00",
       "name": "floor-hub-screen",
       "pinned": false,
       "tech_stack": [
@@ -1180,7 +1473,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Floor Lanes",
       "category": "ui",
       "cross_refs": [
@@ -1208,8 +1501,8 @@
         "packages/ui/src/components/floor/floor.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "9b613e95-e69b-49f7-9cb5-e2e64b448cb1",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "59d40b40-c1eb-4e42-8187-018bb749c736",
       "keywords": [
         "lane",
         "pile",
@@ -1219,7 +1512,7 @@
         "floor",
         "channel"
       ],
-      "last_written_at": "2026-10-18T17:34:16.483508600+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093217200+00:00",
       "name": "floor-lanes-runs",
       "pinned": false,
       "tech_stack": [
@@ -1266,8 +1559,8 @@
         "lib/foundry/extract/vocabulary.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "0335f0dc-2987-4b19-96e1-58941a70c9d5",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "333e954c-3d86-400f-a6c8-48777a94ccba",
       "keywords": [
         "extract",
         "style",
@@ -1280,7 +1573,7 @@
         "manifest",
         "vocabulary"
       ],
-      "last_written_at": "2026-10-18T17:59:40.524178500+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093322100+00:00",
       "name": "foundry-extract-engine",
       "pinned": false,
       "tech_stack": [
@@ -1319,8 +1612,8 @@
         "lib/foundry/verdictLog.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "e481098a-3532-46d9-bdc9-de84fbc2ce01",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "47a52ae3-c07c-4d24-86e1-da7d59861f7e",
       "keywords": [
         "foundry",
         "forge",
@@ -1333,13 +1626,115 @@
         "adopt",
         "fs-port"
       ],
-      "last_written_at": "2026-10-18T17:59:42.508130100+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093405700+00:00",
       "name": "foundry-forge-store-and-verdicts",
       "pinned": false,
       "tech_stack": [
         "Next.js",
         "TypeScript",
         "Node fs"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Mesh Quality Gates",
+      "category": "lib",
+      "cross_refs": [
+        "foundry-mesh-pipeline"
+      ],
+      "db_tables": [],
+      "description": "Quality gates for generated meshes: polycount, face budget, component split, world scale, rig binding, bone conformity, rig presets and skeleton profiles, combined into a mesh score through a gate request.",
+      "entry_points": [
+        "lib/foundry/mesh/gates/gate-request.ts"
+      ],
+      "file_paths": [
+        "lib/foundry/mesh/gates/bone-conform.ts",
+        "lib/foundry/mesh/gates/component-split.ts",
+        "lib/foundry/mesh/gates/face-budget.ts",
+        "lib/foundry/mesh/gates/gate-request.ts",
+        "lib/foundry/mesh/gates/mesh-score.ts",
+        "lib/foundry/mesh/gates/polycount.ts",
+        "lib/foundry/mesh/gates/rig-binding.ts",
+        "lib/foundry/mesh/gates/rig-gate.ts",
+        "lib/foundry/mesh/gates/rig-presets.ts",
+        "lib/foundry/mesh/gates/skeleton-profiles.ts",
+        "lib/foundry/mesh/gates/version.ts",
+        "lib/foundry/mesh/gates/world-scale.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "79439a23-e379-41e6-92c6-ea1bbd2516d7",
+      "keywords": [
+        "gate",
+        "rig",
+        "polycount",
+        "skeleton",
+        "scale",
+        "score"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.392482900+00:00",
+      "name": "foundry-mesh-gates",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "3D Mesh Pipeline",
+      "category": "lib",
+      "cross_refs": [
+        "foundry-mesh-gates",
+        "bound-producers"
+      ],
+      "db_tables": [],
+      "description": "The 3D asset line: concept to TRELLIS mesh to Blender finish. It covers generation, ComfyUI calls, GLB handling, grading, variants, metrics, export and the store, with the mesh, profile and finish producers and GLB media facts.",
+      "entry_points": [
+        "lib/foundry/mesh/generate.ts",
+        "lib/producers/mesh.ts"
+      ],
+      "file_paths": [
+        "lib/foundry/mesh/blender.ts",
+        "lib/foundry/mesh/cli-acts.ts",
+        "lib/foundry/mesh/comfy.ts",
+        "lib/foundry/mesh/describe.ts",
+        "lib/foundry/mesh/export.ts",
+        "lib/foundry/mesh/finish.ts",
+        "lib/foundry/mesh/generate.ts",
+        "lib/foundry/mesh/glb.ts",
+        "lib/foundry/mesh/grade.ts",
+        "lib/foundry/mesh/inputGate.ts",
+        "lib/foundry/mesh/metrics.ts",
+        "lib/foundry/mesh/standin.ts",
+        "lib/foundry/mesh/store.ts",
+        "lib/foundry/mesh/types.ts",
+        "lib/foundry/mesh/variant.ts",
+        "lib/producers/mesh.ts",
+        "lib/producers/finish.ts",
+        "lib/producers/profile.ts",
+        "packages/producers/src/mesh/define.ts",
+        "packages/producers/src/profile/define.ts",
+        "packages/producers/src/media-facts/glb.ts",
+        "packages/producers/src/media-facts/glbSample.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "df5a83c6-e07e-44c2-9c71-5967ed8e2906",
+      "keywords": [
+        "mesh",
+        "trellis",
+        "blender",
+        "glb",
+        "comfy",
+        "3d"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.392335400+00:00",
+      "name": "foundry-mesh-pipeline",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0",
+        "Blender",
+        "ComfyUI"
       ]
     },
     {
@@ -1370,8 +1765,8 @@
         "lib/foundry/training/types.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "fb6d9704-d95c-46bc-b440-c6599e487cff",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "946b3fa8-75ef-47c1-94b1-40703a9401b1",
       "keywords": [
         "strips",
         "triage",
@@ -1384,7 +1779,7 @@
         "contact-sheet",
         "verdict"
       ],
-      "last_written_at": "2026-10-18T17:59:40.524405300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093486300+00:00",
       "name": "foundry-strips-and-training",
       "pinned": false,
       "tech_stack": [
@@ -1418,8 +1813,8 @@
         "lib/frames/picture/migrate.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "158d061e-feaa-4660-a1d3-6e8774b1f152",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "76331df3-dc8c-4421-bb81-6c2bbe2f688b",
       "keywords": [
         "frames",
         "scene-spec",
@@ -1432,7 +1827,7 @@
         "migration",
         "trailer"
       ],
-      "last_written_at": "2026-10-18T18:13:44.924269300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093559800+00:00",
       "name": "frames-picture-composition",
       "pinned": false,
       "tech_stack": [
@@ -1473,8 +1868,8 @@
         "lib/imaging/types.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "8c6c65cc-6679-4c2c-8951-670d77b8ad7c",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "f666874c-d32c-49e2-a1bc-70363f3ca4f2",
       "keywords": [
         "imaging",
         "router",
@@ -1486,7 +1881,7 @@
         "handlers",
         "spend"
       ],
-      "last_written_at": "2026-10-18T18:06:04.099363600+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093633700+00:00",
       "name": "imaging-gateway-and-spend",
       "pinned": false,
       "tech_stack": [
@@ -1529,8 +1924,8 @@
         "lib/imaging/video/types.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "60361278-9fbe-43c5-add7-454ed78ef0f5",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "1eb57510-dcfa-4549-97ed-56f3f97519ec",
       "keywords": [
         "leonardo",
         "google",
@@ -1542,7 +1937,7 @@
         "video",
         "clips"
       ],
-      "last_written_at": "2026-10-18T18:06:04.100203200+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093721100+00:00",
       "name": "imaging-vendor-providers-and-video",
       "pinned": false,
       "tech_stack": [
@@ -1584,8 +1979,8 @@
         "packages/kernel/src/effects.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "0c02b354-237b-44cb-9283-518ed620e846",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "0735052e-7b05-4df7-b581-eaa0bc632249",
       "keywords": [
         "job",
         "queue",
@@ -1596,7 +1991,7 @@
         "dry-run",
         "effects"
       ],
-      "last_written_at": "2026-10-18T17:28:14.666132300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093792200+00:00",
       "name": "job-queue-and-leases",
       "pinned": false,
       "tech_stack": [
@@ -1638,8 +2033,8 @@
         "packages/kernel/py/verify_events.py"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "3eb496e8-52aa-446d-bf75-07dc7c891b16",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "969da751-61f5-40a0-a5fc-dfca59f20636",
       "keywords": [
         "kernel",
         "python",
@@ -1652,7 +2047,7 @@
         "style-store",
         "cross-language-spec"
       ],
-      "last_written_at": "2026-10-18T18:12:25.055107800+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093894900+00:00",
       "name": "kernel-python-protocol",
       "pinned": false,
       "tech_stack": [
@@ -1690,8 +2085,8 @@
         "packages/kernel/src/events-query.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "e5b296e2-cccf-47a5-b8bd-ce730d40ace8",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "8cd64732-19d4-4f28-9919-51939b0b58d0",
       "keywords": [
         "sqlite",
         "store",
@@ -1702,7 +2097,7 @@
         "ingest",
         "token"
       ],
-      "last_written_at": "2026-10-18T17:28:44.879481400+00:00",
+      "last_written_at": "2026-10-25T15:57:03.093965600+00:00",
       "name": "kernel-store-and-events",
       "pinned": false,
       "tech_stack": [
@@ -1740,8 +2135,8 @@
         "app/(studio)/kit/ContractHooks.tsx"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "e9de0daf-ffe2-4687-be68-b0c9a8d8583d",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "6106734e-7508-4cd1-a097-e28e4bb7a484",
       "keywords": [
         "kit",
         "tokens",
@@ -1753,7 +2148,7 @@
         "nav",
         "design-system"
       ],
-      "last_written_at": "2026-10-18T17:49:35.960467800+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094044500+00:00",
       "name": "kit-design-system-specimens",
       "pinned": false,
       "tech_stack": [
@@ -1764,7 +2159,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Screen Kit Specimens",
       "category": "ui",
       "cross_refs": [
@@ -1791,8 +2186,8 @@
         "app/(studio)/kit/StyleKit.tsx"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "5b1d1ebe-d7e3-4173-8204-ed5349e29010",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "21a8a03c-bd42-4bad-a36e-a6e929a471e0",
       "keywords": [
         "kit",
         "specimen",
@@ -1805,7 +2200,7 @@
         "runs",
         "fixtures"
       ],
-      "last_written_at": "2026-10-18T17:49:35.959522100+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094115+00:00",
       "name": "kit-screen-specimens",
       "pinned": false,
       "tech_stack": [
@@ -1816,7 +2211,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Landing Paper Rasterisation",
       "category": "lib",
       "cross_refs": [
@@ -1841,8 +2236,8 @@
         "app/_landing/cosmos/engine/layout.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "ff0b289f-5f39-4747-acce-5d56797b9c43",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "2ffc5528-1ffc-4179-bd6a-1a5f35e36da9",
       "keywords": [
         "raster",
         "worker",
@@ -1853,7 +2248,7 @@
         "layout",
         "offscreen"
       ],
-      "last_written_at": "2026-10-18T18:03:14.007285700+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094186700+00:00",
       "name": "landing-cosmos-paper-raster",
       "pinned": false,
       "tech_stack": [
@@ -1863,7 +2258,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Landing Scenes and Worlds",
       "category": "ui",
       "cross_refs": [
@@ -1893,8 +2288,8 @@
         "app/_landing/cosmos/engine/medalLayer.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "076622f1-4906-4cdc-9a76-307df47fdd14",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "d627b5c0-0c27-4fd3-a621-4898fc4475cf",
       "keywords": [
         "scene",
         "diorama",
@@ -1906,7 +2301,7 @@
         "worlds",
         "motifs"
       ],
-      "last_written_at": "2026-10-18T18:03:14.006502400+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094266500+00:00",
       "name": "landing-cosmos-scenes",
       "pinned": false,
       "tech_stack": [
@@ -1915,7 +2310,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Landing Page Shell",
       "category": "ui",
       "cross_refs": [
@@ -1948,8 +2343,8 @@
         "app/_landing/cosmos/engine/perf.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "e5f8b2b5-3ac7-422b-9950-c7431117591a",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "1f3a062b-ff35-4626-bdb1-d590720c665b",
       "keywords": [
         "landing",
         "cosmos",
@@ -1961,7 +2356,7 @@
         "tabs",
         "performance"
       ],
-      "last_written_at": "2026-10-18T18:03:14.004237600+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094336700+00:00",
       "name": "landing-cosmos-shell",
       "pinned": false,
       "tech_stack": [
@@ -2001,8 +2396,8 @@
         "app/(studio)/ledger/_ledger/vocab.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "19e8292e-3706-401a-8259-d1dd22ab89b1",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "551f6c6b-4411-4000-aea5-53a1c71d084d",
       "keywords": [
         "ledger",
         "events",
@@ -2015,7 +2410,7 @@
         "timeline",
         "server-actions"
       ],
-      "last_written_at": "2026-10-18T17:47:13.858607900+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094417800+00:00",
       "name": "ledger-screen",
       "pinned": false,
       "tech_stack": [
@@ -2046,8 +2441,8 @@
         "lib/ledger/v1/sync.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "bd05d347-c5c6-4eb4-8de2-b68a6102ac01",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "e175da72-0e26-4725-95bf-eecd8c3ffc6f",
       "keywords": [
         "ledger",
         "projection",
@@ -2059,7 +2454,7 @@
         "reconcile",
         "natural-key"
       ],
-      "last_written_at": "2026-10-18T17:56:27.971190300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094494200+00:00",
       "name": "ledger-v1-projection-core",
       "pinned": false,
       "tech_stack": [
@@ -2097,8 +2492,8 @@
         "lib/ledger/v1/sources/turns.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "86dbb3bb-044c-4ed3-810a-93d088bcad64",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "b94edc9f-f1d4-4be0-99cb-4483648000eb",
       "keywords": [
         "adapter",
         "v1-store",
@@ -2111,7 +2506,7 @@
         "articles",
         "projection"
       ],
-      "last_written_at": "2026-10-18T17:56:10.421639400+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094566800+00:00",
       "name": "ledger-v1-sources",
       "pinned": false,
       "tech_stack": [
@@ -2145,8 +2540,8 @@
         "app/(studio)/library/_library/library.module.css"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "4ce0de70-b998-4d9c-bb23-665d20624b7c",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "ee38e76a-8e14-43c9-b82d-c83504463ef9",
       "keywords": [
         "library",
         "assets",
@@ -2157,7 +2552,7 @@
         "toolbar",
         "url-state"
       ],
-      "last_written_at": "2026-10-18T17:38:44.455927500+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094647800+00:00",
       "name": "library-browser-screen",
       "pinned": false,
       "tech_stack": [
@@ -2165,6 +2560,56 @@
         "React",
         "TypeScript",
         "CSS Modules"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Library Characters and Models",
+      "category": "ui",
+      "cross_refs": [
+        "library-browser-screen",
+        "library-projection-feeds"
+      ],
+      "db_tables": [],
+      "description": "Library support for characters and 3D models: detail views, fixture characters and models, the look strip, the 3D model viewer and stage, and the character, mesh and scout feeds that index them.",
+      "entry_points": [
+        "app/(studio)/library/_library/CharacterDetail.tsx",
+        "lib/library/feeds/character.ts"
+      ],
+      "file_paths": [
+        "app/(studio)/library/_library/CharacterDetail.tsx",
+        "app/(studio)/library/_library/ModelDetail.tsx",
+        "app/(studio)/library/_port/fixtureCharacters.ts",
+        "app/(studio)/library/_port/fixtureModels.ts",
+        "packages/ui/src/components/library/LookStrip.tsx",
+        "packages/ui/src/components/library/LookStrip.module.css",
+        "packages/ui/src/components/model/ModelStage.tsx",
+        "packages/ui/src/components/model/ModelViewer.tsx",
+        "packages/ui/src/components/model/ModelViewer.module.css",
+        "packages/ui/src/components/model/model.ts",
+        "lib/library/feeds/character.ts",
+        "lib/library/feeds/mesh.ts",
+        "lib/library/feeds/scout.ts",
+        "packages/domain/src/libraryCharacter.ts",
+        "packages/domain/src/libraryMedia.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "993f34a7-f7ba-42ea-ba8a-7de795b2032d",
+      "keywords": [
+        "character",
+        "model",
+        "glb",
+        "viewer",
+        "library",
+        "feed"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.392823800+00:00",
+      "name": "library-characters-models",
+      "pinned": false,
+      "tech_stack": [
+        "React 19.2",
+        "TypeScript 6.0"
       ]
     },
     {
@@ -2194,8 +2639,8 @@
         "app/(studio)/library/_port/actions.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "65532049-3be0-4143-a9c8-0c6919a26841",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "19bc7f75-f983-4a12-9f0a-19a952d2e4fe",
       "keywords": [
         "port",
         "contract",
@@ -2206,7 +2651,7 @@
         "actions",
         "library"
       ],
-      "last_written_at": "2026-10-18T17:38:44.457099200+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094724300+00:00",
       "name": "library-port",
       "pinned": false,
       "tech_stack": [
@@ -2244,8 +2689,8 @@
         "lib/library/feeds/types.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "d067e4e3-6739-4666-9103-06dac7f825ac",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "04e4702a-4221-4673-9cfa-130cbd21f93e",
       "keywords": [
         "library",
         "feed",
@@ -2258,7 +2703,7 @@
         "media-facts",
         "prune"
       ],
-      "last_written_at": "2026-10-18T18:12:55.663020800+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094793700+00:00",
       "name": "library-projection-feeds",
       "pinned": false,
       "tech_stack": [
@@ -2269,7 +2714,159 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": "GET /api/local-draws/file, GET /api/foundry/file",
+      "business_feature": "Local Draws",
+      "category": "lib",
+      "cross_refs": [
+        "imaging-vendor-providers-and-video"
+      ],
+      "db_tables": [],
+      "description": "The local-draws desk and its file door, plus local image and video providers (Flux2, ComfyUI Flux, Leonardo Flare, LTX clips) and the key probe. The foundry calibration register, strips cases and training ledger and lifecycle sit alongside.",
+      "entry_points": [
+        "lib/foundry/local-draws/desk.ts"
+      ],
+      "file_paths": [
+        "app/(studio)/local-draws/page.tsx",
+        "app/(studio)/local-draws/Draws.module.css",
+        "app/api/local-draws/file/route.ts",
+        "app/api/foundry/file/route.ts",
+        "lib/foundry/local-draws/desk.ts",
+        "lib/foundry/local-draws/read.ts",
+        "lib/imaging/local/flux2.ts",
+        "lib/imaging/providers/comfyFlux.ts",
+        "lib/imaging/providers/leonardoFlare.ts",
+        "lib/imaging/video/comfyLtx.ts",
+        "lib/imaging/keyProbe.ts",
+        "lib/foundry/calibrationRegister.ts",
+        "lib/foundry/strips/cases.ts",
+        "lib/foundry/training/ledger.ts",
+        "lib/foundry/training/lifecycle.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "1ee1af3d-2b19-4463-adf0-146c4c579da4",
+      "keywords": [
+        "local",
+        "flux",
+        "comfy",
+        "ltx",
+        "flare",
+        "calibration",
+        "training"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.392697200+00:00",
+      "name": "local-draws-and-comfy-providers",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "TypeScript 6.0",
+        "ComfyUI"
+      ]
+    },
+    {
+      "api_surface": "POST /api/mcp",
+      "business_feature": "MCP Agent Door",
+      "category": "api",
+      "cross_refs": [
+        "server-seam",
+        "spend-meter-and-requests"
+      ],
+      "db_tables": [],
+      "description": "The agent door: MCP over one stateless JSON-RPC POST. It carries the op registry, principal, projection and rpc layers, and tools for job, launch, read and spend. An agent never spends.",
+      "entry_points": [
+        "app/api/mcp/route.ts",
+        "app/_server/mcp/registry.ts"
+      ],
+      "file_paths": [
+        "app/api/mcp/route.ts",
+        "app/_server/mcp/op.ts",
+        "app/_server/mcp/principal.ts",
+        "app/_server/mcp/projection.ts",
+        "app/_server/mcp/registry.ts",
+        "app/_server/mcp/rpc.ts",
+        "app/_server/mcp/tools/job.ts",
+        "app/_server/mcp/tools/launch.ts",
+        "app/_server/mcp/tools/read.ts",
+        "app/_server/mcp/tools/spend.ts",
+        "packages/domain/src/mcp.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "ad4279e3-e7c5-48d5-b166-db447059b183",
+      "keywords": [
+        "mcp",
+        "json-rpc",
+        "agent",
+        "act-token",
+        "tools"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.393252100+00:00",
+      "name": "mcp-agent-door",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "zod 4",
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": "GET /api/sound/mv/jobs/[id]/file, GET /api/sound/takes/[id]/file",
+      "business_feature": "Music and Publishing Vendors",
+      "category": "lib",
+      "cross_refs": [
+        "publish-producers",
+        "suno-driver-queue"
+      ],
+      "db_tables": [],
+      "description": "Music vendors (ElevenLabs music, budget, pricing, plan), the Suno browser driver, and the publish helpers for channels, exports, import, OAuth, sessions and YouTube, with the file routes for music-video jobs and takes.",
+      "entry_points": [
+        "lib/publish/youtube.ts",
+        "lib/music/elevenlabs.ts"
+      ],
+      "file_paths": [
+        "lib/music/budget.ts",
+        "lib/music/elevenlabs.ts",
+        "lib/music/errors.ts",
+        "lib/music/log.ts",
+        "lib/music/plan.ts",
+        "lib/music/pricing.ts",
+        "lib/music/types.ts",
+        "lib/suno/browser.ts",
+        "lib/suno/driver.ts",
+        "lib/suno/selectors.ts",
+        "lib/suno/types.ts",
+        "lib/publish/channels.ts",
+        "lib/publish/exports.ts",
+        "lib/publish/import.ts",
+        "lib/publish/oauth.ts",
+        "lib/publish/sessions.ts",
+        "lib/publish/youtube.ts",
+        "lib/audioEnvelope.ts",
+        "lib/sound/takeHref.ts",
+        "app/api/sound/mv/jobs/[id]/file/route.ts",
+        "app/api/sound/takes/[id]/file/route.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "95dd9201-2503-481d-8cdd-a863f6566283",
+      "keywords": [
+        "elevenlabs",
+        "suno",
+        "youtube",
+        "oauth",
+        "publish",
+        "music"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.393929200+00:00",
+      "name": "music-vendors-and-publish",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0",
+        "Playwright"
+      ]
+    },
+    {
+      "api_surface": null,
       "business_feature": "Music Video Production",
       "category": "lib",
       "cross_refs": [
@@ -2299,8 +2896,8 @@
         "lib/sound/mv/types.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "30a879d3-b06e-4530-a9fa-051ee66769dd",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "311a7f00-ddc9-4938-b67a-60807c67e0b4",
       "keywords": [
         "music-video",
         "compositor",
@@ -2311,7 +2908,7 @@
         "metadata",
         "queue"
       ],
-      "last_written_at": "2026-10-18T18:33:44.516956700+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094888300+00:00",
       "name": "music-video-pipeline",
       "pinned": false,
       "tech_stack": [
@@ -2319,7 +2916,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Research Notebook Content",
       "category": "lib",
       "cross_refs": [
@@ -2342,8 +2939,8 @@
         "lib/notebook/counts.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "52a8fa01-9fd2-44a0-88ee-30ff178edd5c",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "808dd745-6559-4775-9333-a15e37d6f3f5",
       "keywords": [
         "notebook",
         "facts",
@@ -2354,7 +2951,7 @@
         "counts",
         "board"
       ],
-      "last_written_at": "2026-10-18T18:07:25.315710600+00:00",
+      "last_written_at": "2026-10-25T15:57:03.094969400+00:00",
       "name": "notebook-content-and-board",
       "pinned": false,
       "tech_stack": [
@@ -2362,7 +2959,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Notebook Contract and Validation",
       "category": "lib",
       "cross_refs": [
@@ -2392,8 +2989,8 @@
         "lib/notebook/engineReceipt.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "c425f431-c0d1-4f34-b736-1a5d70683ef4",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "f13ec7fd-bc87-4556-bbbe-e46b4cd046cd",
       "keywords": [
         "notebook",
         "schema",
@@ -2405,7 +3002,7 @@
         "corpus",
         "contract"
       ],
-      "last_written_at": "2026-10-18T18:07:25.312985400+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095047400+00:00",
       "name": "notebook-contract-validation",
       "pinned": false,
       "tech_stack": [
@@ -2447,8 +3044,8 @@
         "app/(studio)/projects/[id]/[part]/_edit/Voice.tsx"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "bf8089f7-ccb4-458c-9a60-2ad34bd0ebbb",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "cfbabdf6-58ed-4f4a-acad-2a2249c19dbd",
       "keywords": [
         "frames",
         "cut",
@@ -2460,7 +3057,7 @@
         "takes",
         "timeline"
       ],
-      "last_written_at": "2026-10-18T17:36:48.234529700+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095182300+00:00",
       "name": "part-editor-media-cut-score",
       "pinned": false,
       "tech_stack": [
@@ -2502,8 +3099,8 @@
         "app/(studio)/projects/[id]/[part]/_edit/Words.tsx"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "a91965bd-84cb-42b6-978f-29ca7258f718",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "93249c73-ef93-4c55-909a-6f3a67262366",
       "keywords": [
         "part",
         "editor",
@@ -2515,7 +3112,7 @@
         "scenarios",
         "ads"
       ],
-      "last_written_at": "2026-10-18T17:36:48.233822100+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095266700+00:00",
       "name": "part-editor-writing-research",
       "pinned": false,
       "tech_stack": [
@@ -2526,7 +3123,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Part Fixture Data",
       "category": "test",
       "cross_refs": [
@@ -2553,8 +3150,8 @@
         "app/(studio)/projects/[id]/_part/fixtureScript.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "f6554c57-29ce-484d-90c3-ae89e2f466c0",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "693915d1-61ac-4fc1-835d-7dbb074613b2",
       "keywords": [
         "fixture",
         "sample data",
@@ -2565,7 +3162,7 @@
         "score",
         "script"
       ],
-      "last_written_at": "2026-10-18T17:36:48.235143800+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095361200+00:00",
       "name": "part-port-fixtures",
       "pinned": false,
       "tech_stack": [
@@ -2607,8 +3204,8 @@
         "app/(studio)/projects/[id]/_part/wire.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "24d70cb5-a388-4b29-ac00-026e932d947e",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "017c20b1-6e01-4427-b944-83501aef72b3",
       "keywords": [
         "port",
         "contract",
@@ -2620,7 +3217,7 @@
         "research",
         "server action"
       ],
-      "last_written_at": "2026-10-18T17:37:07.468319200+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095438900+00:00",
       "name": "part-port-real-and-contract",
       "pinned": false,
       "tech_stack": [
@@ -2632,7 +3229,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Part Workspace and Desk",
       "category": "ui",
       "cross_refs": [
@@ -2660,8 +3257,8 @@
         "packages/ui/src/components/desk/Plate.tsx"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "430ace14-ef3a-4ef0-acd0-71c989368950",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "368829fe-5714-4cbb-af3a-2a71bbe73607",
       "keywords": [
         "part",
         "workspace",
@@ -2672,7 +3269,7 @@
         "plate",
         "tabs"
       ],
-      "last_written_at": "2026-10-18T17:34:16.484944+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095521900+00:00",
       "name": "part-workspace-desk",
       "pinned": false,
       "tech_stack": [
@@ -2707,8 +3304,8 @@
         "app/(studio)/projects/import/page.tsx"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "9c525f5b-e99e-405e-a21d-ba19247ed5a7",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "68c509d8-83c3-4e03-bf76-78e85000433b",
       "keywords": [
         "plan",
         "composition",
@@ -2717,7 +3314,7 @@
         "import",
         "summary"
       ],
-      "last_written_at": "2026-10-18T17:36:48.236572600+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095594+00:00",
       "name": "plan-and-import",
       "pinned": false,
       "tech_stack": [
@@ -2728,7 +3325,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Job Composition and Receipts",
       "category": "ui",
       "cross_refs": [
@@ -2757,8 +3354,8 @@
         "packages/ui/src/components/produce/produce.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "cd263cf6-0195-4db1-820d-2435a3af746c",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "df7b69e1-8e03-4636-a7bc-91e117f32faa",
       "keywords": [
         "compose",
         "plan",
@@ -2769,7 +3366,7 @@
         "unpriced",
         "dry"
       ],
-      "last_written_at": "2026-10-18T17:34:16.484138900+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095667200+00:00",
       "name": "produce-compose-receipt",
       "pinned": false,
       "tech_stack": [
@@ -2784,7 +3381,7 @@
       "category": "data",
       "cross_refs": [],
       "db_tables": [],
-      "description": "Per-project persistence of each pipeline step's content (research, script, cut, score, music-video source) in IndexedDB, keyed by `${projectId}:${phase}`, so opening a step in one project never shows another's data. It provides an honest read path that separates never-written from failed, latest-wins and issue-ordered writes, atomic read-modify-write patching, schema-version stamping and a record registry that refuses to downgrade newer records. Storage failures and successes are published through trouble and ok channels that surfaces subscribe to. Depends on lib/studioDb and the project seed.",
+      "description": "Per-project persistence of each pipeline step's content (research, script, cut, score, music-video source) in IndexedDB, keyed by `${projectId}:${phase}`, so opening a step in one project never shows another's data. It provides an honest read path that separates never-written from failed, latest-wins and issue-ordered writes, atomic read-modify-write patching, schema-version stamping and a record registry that refuses to downgrade newer records. Storage failures and successes are published through trouble and ok channels; the saveWatchers module was removed.",
       "entry_points": [
         "lib/steps/index.ts",
         "lib/steps/recordRegistry.ts",
@@ -2799,7 +3396,6 @@
         "lib/steps/reportTrouble.ts",
         "lib/steps/saveOrder.ts",
         "lib/steps/saveStep.ts",
-        "lib/steps/saveWatchers.ts",
         "lib/steps/schemaVersion.ts",
         "lib/steps/seededDefault.ts",
         "lib/steps/stepDataMusicVideo.ts",
@@ -2810,21 +3406,16 @@
         "lib/steps/withStore.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "e2f6231a-d39f-4d39-9465-0a48436cae92",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "868afe8a-01af-428e-9f7c-d561ee033d4c",
       "keywords": [
         "indexeddb",
-        "step-store",
-        "per-project",
-        "save-order",
-        "schema-version",
-        "storage-trouble",
-        "patch-step",
-        "research",
-        "record-registry",
-        "latest-wins"
+        "step",
+        "persistence",
+        "project",
+        "schema-version"
       ],
-      "last_written_at": "2026-10-18T18:08:32.784259500+00:00",
+      "last_written_at": "2026-10-25T16:01:26.422506300+00:00",
       "name": "project-step-store",
       "pinned": false,
       "tech_stack": [
@@ -2869,8 +3460,8 @@
         "app/(studio)/projects/_port/wire.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "a3e9906f-52ed-4440-ad2d-1ae25b225045",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "1b623dc8-2658-4458-af5f-c1cae9f0a02b",
       "keywords": [
         "projects",
         "launch",
@@ -2881,7 +3472,7 @@
         "fixture",
         "new project"
       ],
-      "last_written_at": "2026-10-18T17:37:07.468729400+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095823100+00:00",
       "name": "projects-index-port",
       "pinned": false,
       "tech_stack": [
@@ -2917,8 +3508,8 @@
         "packages/producers/src/publish/wire.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "7226db68-4ca8-41ee-a2f8-3012d05e4acd",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "d8928803-1de2-497f-882c-809d029b705b",
       "keywords": [
         "publish",
         "metrics",
@@ -2929,7 +3520,7 @@
         "dry-run",
         "schedule"
       ],
-      "last_written_at": "2026-10-18T17:31:05.496956800+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095907300+00:00",
       "name": "publish-producers",
       "pinned": false,
       "tech_stack": [
@@ -2962,8 +3553,8 @@
         "packages/producers/src/media-facts/run.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "5195e631-ab0c-4f12-930b-8c0da09fcd3d",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "9afe60ec-09d0-49f1-be50-24cbf0b835f0",
       "keywords": [
         "research",
         "facts",
@@ -2973,7 +3564,7 @@
         "media-facts",
         "part"
       ],
-      "last_written_at": "2026-10-18T17:31:05.498391600+00:00",
+      "last_written_at": "2026-10-25T15:57:03.095979200+00:00",
       "name": "research-producers",
       "pinned": false,
       "tech_stack": [
@@ -2983,6 +3574,49 @@
     },
     {
       "api_surface": "",
+      "business_feature": "Resource Gates",
+      "category": "lib",
+      "cross_refs": [
+        "job-queue-and-leases"
+      ],
+      "db_tables": [],
+      "description": "Resource profiles and gates in the kernel, the resource domain type, the machine probe, GPU leases (including the legacy path), lane doors, and the capability and deployment cells that say what this box can do.",
+      "entry_points": [
+        "packages/kernel/src/resources/gate.ts"
+      ],
+      "file_paths": [
+        "packages/kernel/src/resources/gate.ts",
+        "packages/kernel/src/resources/load.ts",
+        "packages/kernel/src/resources/profiles.ts",
+        "packages/domain/src/resource.ts",
+        "lib/resources/probe.ts",
+        "lib/gpu/lease.ts",
+        "lib/gpu/legacy.ts",
+        "lib/produce/laneDoors.ts",
+        "lib/capabilities.ts",
+        "lib/serverCapabilities.ts",
+        "lib/deployment.ts",
+        "lib/deploymentCells.ts"
+      ],
+      "group": "Domain Kernel Model",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "d74a16c1-aca7-4dee-9935-c890f5785336",
+      "keywords": [
+        "gpu",
+        "lease",
+        "resource",
+        "capability",
+        "profile"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.393477100+00:00",
+      "name": "resource-gates-and-gpu",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": null,
       "business_feature": "Packet Review and Run History",
       "category": "ui",
       "cross_refs": [
@@ -3012,8 +3646,8 @@
         "packages/ui/src/components/runs/thread.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "571eae96-e297-40c6-a556-3a3bf8f48e3f",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "3ceb5985-07f1-4504-830b-fca7669a4404",
       "keywords": [
         "review",
         "packet",
@@ -3024,7 +3658,7 @@
         "lanes",
         "thread"
       ],
-      "last_written_at": "2026-10-18T17:34:16.484416+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096052100+00:00",
       "name": "review-and-runs-history",
       "pinned": false,
       "tech_stack": [
@@ -3072,8 +3706,8 @@
         "packages/kernel/src/slots/write.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "fe524e46-e5d6-4aba-b475-fe39c41f3819",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "7d68ed0e-8d1f-44d9-a825-4a8b7f6504c0",
       "keywords": [
         "run",
         "plan",
@@ -3084,7 +3718,7 @@
         "calendar",
         "sweep"
       ],
-      "last_written_at": "2026-10-18T17:28:14.666659700+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096132600+00:00",
       "name": "run-records-and-slots",
       "pinned": false,
       "tech_stack": [
@@ -3123,8 +3757,8 @@
         "app/(studio)/projects/runs/_runs/view.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "5f587245-f343-4253-b6d1-a84fec6327a6",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "48eca705-7472-4b83-8678-2b451b2b723f",
       "keywords": [
         "runs",
         "jobs",
@@ -3134,7 +3768,7 @@
         "live feed",
         "acts"
       ],
-      "last_written_at": "2026-10-18T17:37:07.468972300+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096209900+00:00",
       "name": "runs-console",
       "pinned": false,
       "tech_stack": [
@@ -3143,6 +3777,359 @@
         "TypeScript",
         "CSS Modules",
         "SSE"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Runtime Support",
+      "category": "config",
+      "cross_refs": [
+        "kernel-store-and-events"
+      ],
+      "db_tables": [],
+      "description": "Runtime plumbing: the kernel process and store handles, disk transactions, env file and git env, rename retry and sleep helpers (also in the kernel), local mode and entry, fixture roots and browser bundle, and the domain load module.",
+      "entry_points": [
+        "lib/kernelStore.ts",
+        "lib/localMode.ts"
+      ],
+      "file_paths": [
+        "lib/kernelProcess.ts",
+        "lib/kernelStore.ts",
+        "lib/diskTx.ts",
+        "lib/envFile.ts",
+        "lib/gitEnv.ts",
+        "lib/renameRetry.ts",
+        "lib/sleep.ts",
+        "lib/localEntry.ts",
+        "lib/localMode.ts",
+        "lib/fixtures/browserBundle.ts",
+        "lib/fixtures/mode.ts",
+        "lib/fixtures/roots.ts",
+        "packages/kernel/src/renameRetrySync.ts",
+        "packages/kernel/src/sleep.ts",
+        "packages/domain/src/load.ts"
+      ],
+      "group": "Domain Kernel Model",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "4eabdc72-cf31-48f3-a218-98ebd0914ff1",
+      "keywords": [
+        "local-mode",
+        "fixture",
+        "rename",
+        "env",
+        "kernel-process"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.394426+00:00",
+      "name": "runtime-support-and-local-mode",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0",
+        "Node"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Score and Ads",
+      "category": "lib",
+      "cross_refs": [
+        "part-editor-media-cut-score"
+      ],
+      "db_tables": [],
+      "description": "Score gaps, picture, spots and takes with ad beds and records, ad concepts and validation, studio score, motion direction, cinematography vocabulary and shot types.",
+      "entry_points": [
+        "lib/score/spots.ts"
+      ],
+      "file_paths": [
+        "lib/score/ads/bed.ts",
+        "lib/score/ads/record.ts",
+        "lib/score/gaps.ts",
+        "lib/score/picture.ts",
+        "lib/score/spots.ts",
+        "lib/score/takes.ts",
+        "lib/ads/concepts.ts",
+        "lib/ads/types.ts",
+        "lib/ads/validate.ts",
+        "lib/studio/score.ts",
+        "lib/motion/direction.ts",
+        "lib/vocab/cinematography.ts",
+        "lib/frames/shotTypes.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "51e3f5c9-f984-40e7-9588-f8eab2b916f9",
+      "keywords": [
+        "score",
+        "ads",
+        "spots",
+        "bed",
+        "cinematography",
+        "shots"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.394168+00:00",
+      "name": "score-and-ads",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Scout Engine",
+      "category": "lib",
+      "cross_refs": [
+        "scout-engine-creative",
+        "scout-producers",
+        "board-scout-spend-sources"
+      ],
+      "db_tables": [],
+      "description": "Core of the nightly scout loop: the store, types, graph, load and registry, source ingestion, leads and lead events, knowledge, budget and effort, steering, judging, wings and the doctor. It brings material onto the box and holds the night's state that producers and the Board read.",
+      "entry_points": [
+        "lib/foundry/scout/store.ts",
+        "lib/foundry/scout/graph.ts"
+      ],
+      "file_paths": [
+        "lib/foundry/scout/acts.ts",
+        "lib/foundry/scout/budget.ts",
+        "lib/foundry/scout/doctor.ts",
+        "lib/foundry/scout/effort.ts",
+        "lib/foundry/scout/graph.ts",
+        "lib/foundry/scout/ingest.ts",
+        "lib/foundry/scout/judge.ts",
+        "lib/foundry/scout/knowledge.ts",
+        "lib/foundry/scout/leadEvents.ts",
+        "lib/foundry/scout/leadFile.ts",
+        "lib/foundry/scout/leads.ts",
+        "lib/foundry/scout/load.ts",
+        "lib/foundry/scout/registry.ts",
+        "lib/foundry/scout/sources.ts",
+        "lib/foundry/scout/steer.ts",
+        "lib/foundry/scout/store.ts",
+        "lib/foundry/scout/types.ts",
+        "lib/foundry/scout/wing.ts",
+        "lib/foundry/scout/wingScope.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "67420468-b503-4a5c-bf04-0e24a9bbc225",
+      "keywords": [
+        "scout",
+        "leads",
+        "night",
+        "wing",
+        "budget",
+        "knowledge",
+        "judge"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.391731100+00:00",
+      "name": "scout-engine-core",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0",
+        "Node"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Scout Creative Stages",
+      "category": "lib",
+      "cross_refs": [
+        "scout-engine-core",
+        "scout-producers"
+      ],
+      "db_tables": [],
+      "description": "The creative stages of the scout loop: seeds and seed store, ideas and repeats, concepts, scenes, storyboards, direction, tracks and visualizers, assets, taste models and the muse wing with its door. Each stage turns kept material into the next artefact and feeds the scout producers.",
+      "entry_points": [
+        "lib/foundry/scout/idea.ts",
+        "lib/foundry/scout/seeds.ts"
+      ],
+      "file_paths": [
+        "lib/foundry/scout/asset.ts",
+        "lib/foundry/scout/concept.ts",
+        "lib/foundry/scout/direction.ts",
+        "lib/foundry/scout/idea.ts",
+        "lib/foundry/scout/ideaRepeat.ts",
+        "lib/foundry/scout/muse.ts",
+        "lib/foundry/scout/museDoor.ts",
+        "lib/foundry/scout/parts.ts",
+        "lib/foundry/scout/scene.ts",
+        "lib/foundry/scout/seedStore.ts",
+        "lib/foundry/scout/seeds.ts",
+        "lib/foundry/scout/storyboard.ts",
+        "lib/foundry/scout/storyboardKept.ts",
+        "lib/foundry/scout/taste.ts",
+        "lib/foundry/scout/tasteMuse.ts",
+        "lib/foundry/scout/track.ts",
+        "lib/foundry/scout/visualizer.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc",
+      "keywords": [
+        "seeds",
+        "ideas",
+        "storyboard",
+        "muse",
+        "taste",
+        "visualizer",
+        "scene"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.391880900+00:00",
+      "name": "scout-engine-creative",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0",
+        "Node"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Stage Graph",
+      "category": "ui",
+      "cross_refs": [
+        "scout-screen",
+        "kit-screen-specimens"
+      ],
+      "db_tables": [],
+      "description": "Stage graph and share meter, the load band, the Tip disclosure and the Graph specimen on /kit. They show how a night's stages connect and how the box is loaded.",
+      "entry_points": [
+        "packages/ui/src/components/graph/StageGraph.tsx"
+      ],
+      "file_paths": [
+        "packages/ui/src/components/graph/ShareMeter.module.css",
+        "packages/ui/src/components/graph/ShareMeter.tsx",
+        "packages/ui/src/components/graph/StageGraph.module.css",
+        "packages/ui/src/components/graph/StageGraph.tsx",
+        "packages/ui/src/components/graph/stageGraph.ts",
+        "packages/ui/src/components/load/LoadBand.module.css",
+        "packages/ui/src/components/load/LoadBand.tsx",
+        "packages/ui/src/components/load/band.ts",
+        "packages/ui/src/components/hint/Tip.tsx",
+        "app/(studio)/kit/GraphKit.tsx"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "b7b82279-3310-4772-8c75-0b351f9ec3e0",
+      "keywords": [
+        "graph",
+        "stage",
+        "load",
+        "share",
+        "tip"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.395356800+00:00",
+      "name": "scout-graph-ui",
+      "pinned": false,
+      "tech_stack": [
+        "React 19.2",
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Scout Producers",
+      "category": "lib",
+      "cross_refs": [
+        "bound-producers",
+        "scout-engine-core"
+      ],
+      "db_tables": [],
+      "description": "Kernel producers for the scout loop: ingest, ideas, scenes, storyboards, reels and 3D assets. Pure definitions in packages/producers plan and price each job; the bound files in lib/producers run them with their acts, and loadSample supplies sample loads.",
+      "entry_points": [
+        "lib/producers/scoutIngest.ts"
+      ],
+      "file_paths": [
+        "lib/producers/scoutAsset.ts",
+        "lib/producers/scoutAssetActs.ts",
+        "lib/producers/scoutIdea.ts",
+        "lib/producers/scoutIdeaActs.ts",
+        "lib/producers/scoutIngest.ts",
+        "lib/producers/scoutReel.ts",
+        "lib/producers/scoutReelActs.ts",
+        "lib/producers/scoutScene.ts",
+        "lib/producers/scoutSceneActs.ts",
+        "lib/producers/scoutStoryboard.ts",
+        "lib/producers/scoutStoryboardActs.ts",
+        "lib/producers/loadSample.ts",
+        "packages/producers/src/scout-asset/define.ts",
+        "packages/producers/src/scout-ideas/define.ts",
+        "packages/producers/src/scout-ingest/define.ts",
+        "packages/producers/src/scout-ingest/gates.ts",
+        "packages/producers/src/scout-reels/define.ts",
+        "packages/producers/src/scout-scene/define.ts",
+        "packages/producers/src/scout-storyboard/define.ts",
+        "packages/domain/src/scoutGraph.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "ce5ef2e0-d944-4b79-a500-32f8a081923f",
+      "keywords": [
+        "producer",
+        "scout",
+        "reel",
+        "storyboard",
+        "ingest",
+        "receipt"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.392030900+00:00",
+      "name": "scout-producers",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0",
+        "zod 4"
+      ]
+    },
+    {
+      "api_surface": "server actions via scout _port",
+      "business_feature": "Scout Screen",
+      "category": "ui",
+      "cross_refs": [
+        "scout-engine-core",
+        "scout-graph-ui"
+      ],
+      "db_tables": [],
+      "description": "The /scout studio screen: the nightly scout graph shown as bands and node panels, a split editor, the next-step block and the runs list. It reads through a scout port that switches between fixture and real by GRAVITONE_PRODUCE_SIDE and sends acts as server actions.",
+      "entry_points": [
+        "app/(studio)/scout/page.tsx",
+        "app/(studio)/scout/_scout/Scout.tsx"
+      ],
+      "file_paths": [
+        "app/(studio)/scout/page.tsx",
+        "app/(studio)/scout/runs/page.tsx",
+        "app/(studio)/scout/runs/[packet]/page.tsx",
+        "app/(studio)/scout/_port/actions.ts",
+        "app/(studio)/scout/_port/contract.ts",
+        "app/(studio)/scout/_port/fixture.ts",
+        "app/(studio)/scout/_port/fixtureData.ts",
+        "app/(studio)/scout/_port/port.ts",
+        "app/(studio)/scout/_port/real.ts",
+        "app/(studio)/scout/_port/wire.ts",
+        "app/(studio)/scout/_scout/Band.tsx",
+        "app/(studio)/scout/_scout/NodePanel.tsx",
+        "app/(studio)/scout/_scout/Scout.tsx",
+        "app/(studio)/scout/_scout/ScoutHead.tsx",
+        "app/(studio)/scout/_scout/ScoutNext.tsx",
+        "app/(studio)/scout/_scout/SplitEditor.tsx",
+        "app/(studio)/scout/_scout/bands.ts",
+        "app/(studio)/scout/_scout/scout.module.css"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "403a996c-9490-4011-a01f-cb9c66fd5f99",
+      "keywords": [
+        "scout",
+        "night",
+        "graph",
+        "band",
+        "port",
+        "fixture"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.391549300+00:00",
+      "name": "scout-screen",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "React 19.2",
+        "TypeScript 6.0"
       ]
     },
     {
@@ -3177,8 +4164,8 @@
         "lib/script/versions.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "f8036604-75f5-4f7d-898c-734511ac5e86",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "1c2ac174-ba41-4264-b184-6b7aa04507d4",
       "keywords": [
         "script",
         "compose",
@@ -3191,13 +4178,69 @@
         "scope",
         "edit-plan"
       ],
-      "last_written_at": "2026-10-18T18:04:41.582590100+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096295400+00:00",
       "name": "script-composition-and-validation",
       "pinned": false,
       "tech_stack": [
         "Next.js",
         "TypeScript",
         "zod"
+      ]
+    },
+    {
+      "api_surface": "GET /api/blob/[sha], GET /api/events/stream, /api/session, /api/import, /api/ledger",
+      "business_feature": "Server Seam",
+      "category": "api",
+      "cross_refs": [
+        "studio-shell",
+        "mcp-agent-door"
+      ],
+      "db_tables": [],
+      "description": "The server seam every route and action goes through (route, action, session, sse, serveFile, settle, http, principal) and the API routes agents and screens call: blob, event stream, session, import, ledger. Identity comes from Firebase, a session token and dev auth.",
+      "entry_points": [
+        "app/_server/route.ts",
+        "app/_server/action.ts"
+      ],
+      "file_paths": [
+        "app/_server/action.ts",
+        "app/_server/actionCore.ts",
+        "app/_server/http.ts",
+        "app/_server/principal.ts",
+        "app/_server/route.ts",
+        "app/_server/serveFile.ts",
+        "app/_server/session.ts",
+        "app/_server/settle.ts",
+        "app/_server/sse.ts",
+        "app/api/blob/[sha]/route.ts",
+        "app/api/events/stream/route.ts",
+        "app/api/session/route.ts",
+        "app/api/import/route.ts",
+        "app/api/ledger/route.ts",
+        "lib/principal.ts",
+        "lib/apiAuth.ts",
+        "lib/sessionToken.ts",
+        "lib/devAuth.ts",
+        "lib/firebase.ts",
+        "lib/useAuth.tsx"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "14864630-7306-4708-b9a9-e557f4fa10de",
+      "keywords": [
+        "session",
+        "principal",
+        "sse",
+        "action",
+        "firebase",
+        "auth"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.393137900+00:00",
+      "name": "server-seam",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "Firebase",
+        "TypeScript 6.0"
       ]
     },
     {
@@ -3233,8 +4276,8 @@
         "lib/sound/types.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "f6a26c60-230a-4e2d-811f-4ecef7a2cad1",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "b2bfa3eb-ee06-4262-8eaa-d19d9cc16dc2",
       "keywords": [
         "music",
         "sfx",
@@ -3246,7 +4289,7 @@
         "ledger",
         "spend"
       ],
-      "last_written_at": "2026-10-18T18:33:44.514037200+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096366600+00:00",
       "name": "sound-generation-engine",
       "pinned": false,
       "tech_stack": [
@@ -3255,7 +4298,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Sound Hunt and Measurement",
       "category": "lib",
       "cross_refs": [
@@ -3283,8 +4326,8 @@
         "lib/sound/vocabulary.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "3f11be96-c51f-4098-8472-341c42362e6d",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "4f4a61e0-df30-4a71-b7e9-b0f355e4e848",
       "keywords": [
         "hunt",
         "measure",
@@ -3295,7 +4338,7 @@
         "vocabulary",
         "acceptance"
       ],
-      "last_written_at": "2026-10-18T18:33:44.514743900+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096474300+00:00",
       "name": "sound-hunt-and-measure",
       "pinned": false,
       "tech_stack": [
@@ -3330,8 +4373,8 @@
         "packages/kernel/src/spend/v1Port.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "5e00d05c-885e-4eac-ad26-f937df9d612f",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "6deb060a-3f7b-4426-a66b-970a7bb54a5e",
       "keywords": [
         "spend",
         "price",
@@ -3342,13 +4385,217 @@
         "meter",
         "settle"
       ],
-      "last_written_at": "2026-10-18T17:28:44.879951600+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096554100+00:00",
       "name": "spend-and-pricing",
       "pinned": false,
       "tech_stack": [
         "TypeScript",
         "SQLite",
         "zod 4.6"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Spend Requests",
+      "category": "data",
+      "cross_refs": [
+        "spend-and-pricing",
+        "mcp-agent-door"
+      ],
+      "db_tables": [
+        "spend_requests"
+      ],
+      "description": "The v1 spend classes, meter and stores (file and SQLite), the class selector, and the kernel's spend-request schema and store that let an agent ask while the operator decides. Record digests live beside them.",
+      "entry_points": [
+        "lib/spend/meter.ts",
+        "packages/kernel/src/spend-requests/store.ts"
+      ],
+      "file_paths": [
+        "lib/spend/classes.ts",
+        "lib/spend/fileStore.ts",
+        "lib/spend/meter.ts",
+        "lib/spend/select.ts",
+        "lib/spend/sqliteStore.ts",
+        "lib/spend/store.ts",
+        "packages/kernel/src/spend-requests/schema.ts",
+        "packages/kernel/src/spend-requests/store.ts",
+        "packages/kernel/src/records/digest.ts"
+      ],
+      "group": "Domain Kernel Model",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "95a47cdb-181e-41d7-8dcd-2e2277a63d3e",
+      "keywords": [
+        "spend",
+        "meter",
+        "request",
+        "budget",
+        "sqlite"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.393360500+00:00",
+      "name": "spend-meter-and-requests",
+      "pinned": false,
+      "tech_stack": [
+        "SQLite",
+        "zod 4",
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Studio Local Store",
+      "category": "lib",
+      "cross_refs": [
+        "project-step-store",
+        "v1-import-and-archive"
+      ],
+      "db_tables": [],
+      "description": "The browser-side studio database, project seed and types, scenes and trailer fixtures, the studio archive format with its read and import, projects, shelf pointers and the research, parts and board helpers that sit on them.",
+      "entry_points": [
+        "lib/studioDb.ts",
+        "lib/projects.ts"
+      ],
+      "file_paths": [
+        "lib/studioDb.ts",
+        "lib/studioArchive.ts",
+        "lib/studioArchiveFormat.ts",
+        "lib/studioArchiveImport.ts",
+        "lib/studioArchiveRead.ts",
+        "lib/projects.ts",
+        "lib/shelfPointers.ts",
+        "lib/studio/projectSeed.ts",
+        "lib/studio/projectTypes.ts",
+        "lib/studio/scenes.ts",
+        "lib/studio/trailerFixtures.ts",
+        "lib/research/beats.ts",
+        "lib/research/followup.ts",
+        "lib/research/revisions.ts",
+        "lib/research/scope.ts",
+        "lib/parts/context.ts",
+        "lib/parts/gates.ts",
+        "lib/parts/verdict.ts",
+        "lib/board/pipeline.ts",
+        "lib/formatBrief.ts",
+        "lib/stylePrompt.ts",
+        "lib/model.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "c027c39d-d8fd-4768-add8-4ecc5f206783",
+      "keywords": [
+        "indexeddb",
+        "archive",
+        "project",
+        "research",
+        "parts",
+        "shelf"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.394288300+00:00",
+      "name": "studio-local-store-and-projects",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0",
+        "IndexedDB"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Studio Route Helpers",
+      "category": "ui",
+      "cross_refs": [
+        "board-decision-desk",
+        "runs-console",
+        "floor-hub-screen"
+      ],
+      "db_tables": [],
+      "description": "Small helpers the studio routes gained: settle logic for audio hunt and Floor, Board rail, re-drive, verdict and keepalive, plan shelf and title, project names, import answer, and the Runs act runner and legend.",
+      "entry_points": [
+        "app/(studio)/board/_board/rail.ts"
+      ],
+      "file_paths": [
+        "app/(studio)/audio/_hunt/settled.ts",
+        "app/(studio)/board/_board/rail.ts",
+        "app/(studio)/board/_board/redrive.ts",
+        "app/(studio)/board/_port/keepalive.ts",
+        "app/(studio)/board/_port/verdict.ts",
+        "app/(studio)/floor/_floor/settle.ts",
+        "app/(studio)/projects/_plan/shelf.ts",
+        "app/(studio)/projects/_plan/title.ts",
+        "app/(studio)/projects/_port/names.ts",
+        "app/(studio)/projects/import/answer.ts",
+        "app/(studio)/projects/runs/_runs/actRunner.ts",
+        "app/(studio)/projects/runs/_runs/legend.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "c98573cb-d7c1-42db-b48d-a1bdde8ae3d3",
+      "keywords": [
+        "settle",
+        "rail",
+        "redrive",
+        "verdict",
+        "keepalive",
+        "legend"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.392941300+00:00",
+      "name": "studio-route-helpers",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Studio Routing",
+      "category": "ui",
+      "cross_refs": [
+        "studio-shell",
+        "board-decision-desk"
+      ],
+      "db_tables": [],
+      "description": "The (studio) layout, the parallel @sheet slot that opens a Board packet as an overlay, and the thin routes for articles, calendar, foundry, playground and studio that redirect legacy addresses to the screens they became. The shell additions here carry the agent navigation, the spend slot and clipboard helper. Routes defer to the Board, Floor and Projects screens.",
+      "entry_points": [
+        "app/(studio)/layout.tsx"
+      ],
+      "file_paths": [
+        "app/(studio)/layout.tsx",
+        "app/(studio)/@sheet/default.tsx",
+        "app/(studio)/@sheet/(.)board/[packet]/page.tsx",
+        "app/(studio)/_shell/AgentNav.tsx",
+        "app/(studio)/_shell/SpendSlot.tsx",
+        "app/(studio)/_shell/agentNav.ts",
+        "app/(studio)/_shell/clipboard.ts",
+        "app/(studio)/articles/page.tsx",
+        "app/(studio)/articles/redirect.ts",
+        "app/(studio)/articles/new/page.tsx",
+        "app/(studio)/articles/[runId]/page.tsx",
+        "app/(studio)/calendar/page.tsx",
+        "app/(studio)/calendar/redirect.ts",
+        "app/(studio)/foundry/page.tsx",
+        "app/(studio)/foundry/redirect.ts",
+        "app/(studio)/playground/page.tsx",
+        "app/(studio)/playground/redirect.ts",
+        "app/(studio)/studio/[projectId]/page.tsx",
+        "app/(studio)/studio/[projectId]/redirect.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "78923fed-ef5d-48d9-b781-bdb558f77b88",
+      "keywords": [
+        "redirect",
+        "layout",
+        "parallel-route",
+        "sheet",
+        "agent-nav",
+        "spend-slot"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.391155600+00:00",
+      "name": "studio-routes-and-redirects",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "React 19.2",
+        "TypeScript 6.0"
       ]
     },
     {
@@ -3383,8 +4630,8 @@
         "app/(studio)/_shell/world.css"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "f2b24d86-7201-4945-837d-0c6343e1273b",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "95a41c11-42cf-4369-b4c3-1233543bd74f",
       "keywords": [
         "shell",
         "header",
@@ -3397,7 +4644,7 @@
         "next-pile",
         "spend"
       ],
-      "last_written_at": "2026-10-18T18:08:00.320233900+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096624200+00:00",
       "name": "studio-shell",
       "pinned": false,
       "tech_stack": [
@@ -3439,8 +4686,8 @@
         "app/(studio)/library/style/_port/actions.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "d71ab371-c2c2-4e30-a32f-ecc38451e694",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "e1ce049c-26d0-4fe6-bb21-81eefafa79af",
       "keywords": [
         "style",
         "atelier",
@@ -3450,7 +4697,7 @@
         "fixture",
         "schema"
       ],
-      "last_written_at": "2026-10-18T17:38:44.457379+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096707500+00:00",
       "name": "style-atelier",
       "pinned": false,
       "tech_stack": [
@@ -3485,8 +4732,8 @@
         "packages/kernel/src/styles/writers.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "543cb8a9-abee-46e1-a06e-f5dfc6ed4fb2",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "945bdecb-65ee-4232-9e43-9d1216c620df",
       "keywords": [
         "style",
         "theme",
@@ -3494,7 +4741,7 @@
         "v1",
         "locking"
       ],
-      "last_written_at": "2026-10-18T17:28:14.667613900+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096779800+00:00",
       "name": "style-store",
       "pinned": false,
       "tech_stack": [
@@ -3504,7 +4751,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Style Trials and Culling",
       "category": "ui",
       "cross_refs": [
@@ -3534,8 +4781,8 @@
         "packages/ui/src/components/pair/Pair.module.css"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "cc39e764-df6c-4508-a8a9-e13944674461",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "862d474e-1da6-4513-a2c9-f7c8b54c7a29",
       "keywords": [
         "style",
         "lock",
@@ -3546,7 +4793,7 @@
         "cut",
         "matrix"
       ],
-      "last_written_at": "2026-10-18T17:34:16.484678800+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096851400+00:00",
       "name": "style-trials-cull",
       "pinned": false,
       "tech_stack": [
@@ -3579,8 +4826,8 @@
         "lib/sound/suno/store.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "ab872012-f902-4f43-b9c7-f13137e36f24",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "8e1afe6e-41c9-41fe-b8c8-f01186dfa849",
       "keywords": [
         "suno",
         "driver",
@@ -3589,7 +4836,7 @@
         "library",
         "draft"
       ],
-      "last_written_at": "2026-10-18T18:33:44.516259800+00:00",
+      "last_written_at": "2026-10-25T15:57:03.096931300+00:00",
       "name": "suno-driver-queue",
       "pinned": false,
       "tech_stack": [
@@ -3626,8 +4873,8 @@
         "lib/text/types.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "94e6b933-0f6a-4631-b2f0-4c98b0799c28",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "63ca5808-c5b5-4e64-840b-69d8c3c6991f",
       "keywords": [
         "llm",
         "router",
@@ -3641,7 +4888,7 @@
         "turn-stats",
         "lighttrack"
       ],
-      "last_written_at": "2026-10-18T18:11:06.967002400+00:00",
+      "last_written_at": "2026-10-25T15:57:03.097003800+00:00",
       "name": "text-reasoning-engine",
       "pinned": false,
       "tech_stack": [
@@ -3652,7 +4899,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Trailer Structure Engine",
       "category": "lib",
       "cross_refs": [
@@ -3678,8 +4925,8 @@
         "lib/script/trailer/types.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "d12a6aa7-39d7-464c-b47d-c4a1670d3bbd",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "e44cfa27-83ec-470a-adec-674d8a2a8037",
       "keywords": [
         "trailer",
         "structure",
@@ -3690,7 +4937,7 @@
         "notes",
         "readers"
       ],
-      "last_written_at": "2026-10-18T18:04:41.584079600+00:00",
+      "last_written_at": "2026-10-25T15:57:03.097073400+00:00",
       "name": "trailer-structure-engine",
       "pinned": false,
       "tech_stack": [
@@ -3698,7 +4945,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Trailer Structure Rules",
       "category": "lib",
       "cross_refs": [
@@ -3724,8 +4971,8 @@
         "lib/script/trailer/rules/withholding.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "f2d24a0a-da51-4b5b-a694-198122624880",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "033fc22c-e0c0-47fb-8668-5dbc8cb2ada6",
       "keywords": [
         "rules",
         "escalation",
@@ -3736,7 +4983,7 @@
         "magnitude",
         "cue"
       ],
-      "last_written_at": "2026-10-18T18:04:41.584639400+00:00",
+      "last_written_at": "2026-10-25T15:57:03.097152900+00:00",
       "name": "trailer-structure-rules",
       "pinned": false,
       "tech_stack": [
@@ -3745,6 +4992,53 @@
     },
     {
       "api_surface": "",
+      "business_feature": "Board State",
+      "category": "lib",
+      "cross_refs": [
+        "board-decision-desk",
+        "cull-run-desk"
+      ],
+      "db_tables": [],
+      "description": "Pure state behind the Board and cull surfaces in @gt/ui: gate, boardGate, commit, cull, pair, runs, undo and the port type, with the useGate hook, plus count helpers, packet items and plain links.",
+      "entry_points": [
+        "packages/ui/src/board/gate.ts"
+      ],
+      "file_paths": [
+        "packages/ui/src/board/boardGate.ts",
+        "packages/ui/src/board/commit.ts",
+        "packages/ui/src/board/cull.ts",
+        "packages/ui/src/board/gate.ts",
+        "packages/ui/src/board/pair.ts",
+        "packages/ui/src/board/port.ts",
+        "packages/ui/src/board/runs.ts",
+        "packages/ui/src/board/undo.ts",
+        "packages/ui/src/board/useGate.ts",
+        "packages/ui/src/count.ts",
+        "packages/ui/src/components/tally/count.ts",
+        "packages/ui/src/components/review/packetItems.ts",
+        "packages/ui/src/components/link/plain.ts"
+      ],
+      "group": "Domain Kernel Model",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "dbc8253a-d568-4111-9b0b-a85e938e539c",
+      "keywords": [
+        "gate",
+        "commit",
+        "undo",
+        "cull",
+        "pair",
+        "port"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.394723700+00:00",
+      "name": "ui-board-state",
+      "pinned": false,
+      "tech_stack": [
+        "React 19.2",
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": null,
       "business_feature": "UI Controls and Shell",
       "category": "ui",
       "cross_refs": [
@@ -3781,8 +5075,8 @@
         "packages/ui/src/components/css-modules.d.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "5b95d7b7-d2b7-4625-a5bb-4585b8ab9dbc",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "992eaeaf-aaba-458d-8a06-475cb8281107",
       "keywords": [
         "button",
         "toggle",
@@ -3793,7 +5087,7 @@
         "sheet",
         "primitive"
       ],
-      "last_written_at": "2026-10-18T17:34:16.485230800+00:00",
+      "last_written_at": "2026-10-25T15:57:03.097229500+00:00",
       "name": "ui-controls-shell",
       "pinned": false,
       "tech_stack": [
@@ -3804,6 +5098,60 @@
     },
     {
       "api_surface": "",
+      "business_feature": "UI Plumbing",
+      "category": "lib",
+      "cross_refs": [
+        "ui-controls-shell",
+        "studio-shell"
+      ],
+      "db_tables": [],
+      "description": "Shared @gt/ui plumbing: the keymap (bindings, chords, dispatch, route, target), layer stack with containment and live regions, stored state with identity and trouble reporting, window sizing, and poll-based freshness.",
+      "entry_points": [
+        "packages/ui/src/keymap/keymap.ts",
+        "packages/ui/src/layers/stack.ts"
+      ],
+      "file_paths": [
+        "packages/ui/src/keymap/bindings.ts",
+        "packages/ui/src/keymap/chord.ts",
+        "packages/ui/src/keymap/dispatch.ts",
+        "packages/ui/src/keymap/keymap.ts",
+        "packages/ui/src/keymap/route.ts",
+        "packages/ui/src/keymap/target.ts",
+        "packages/ui/src/layers/containment.ts",
+        "packages/ui/src/layers/live.ts",
+        "packages/ui/src/layers/stack.ts",
+        "packages/ui/src/layers/useLayer.ts",
+        "packages/ui/src/storage/identity.ts",
+        "packages/ui/src/storage/store.ts",
+        "packages/ui/src/storage/trouble.ts",
+        "packages/ui/src/storage/useStored.ts",
+        "packages/ui/src/window/core.ts",
+        "packages/ui/src/window/useWindow.ts",
+        "packages/ui/src/freshness/core.ts",
+        "packages/ui/src/freshness/poll.ts",
+        "packages/ui/src/freshness/useFreshness.ts"
+      ],
+      "group": "Domain Kernel Model",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "57aecc2d-d579-4f82-8772-3dc68bf0d2b5",
+      "keywords": [
+        "keymap",
+        "chord",
+        "layer",
+        "storage",
+        "freshness",
+        "window"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.394885900+00:00",
+      "name": "ui-keymap-layers-storage",
+      "pinned": false,
+      "tech_stack": [
+        "React 19.2",
+        "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": null,
       "business_feature": "Ledger and Timeline Shapes",
       "category": "ui",
       "cross_refs": [
@@ -3838,8 +5186,8 @@
         "packages/ui/src/components/wave/wave.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "2e702395-189e-4eb9-910c-dc4b76ff6e9a",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "00c6177f-43a3-4f35-8252-59c9ae8110e0",
       "keywords": [
         "ledger",
         "event",
@@ -3850,7 +5198,7 @@
         "crumbs",
         "header"
       ],
-      "last_written_at": "2026-10-18T17:34:16.486360200+00:00",
+      "last_written_at": "2026-10-25T15:57:03.097314300+00:00",
       "name": "ui-ledger-timeline",
       "pinned": false,
       "tech_stack": [
@@ -3860,7 +5208,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Non-prose UI Vocabulary",
       "category": "ui",
       "cross_refs": [
@@ -3898,8 +5246,8 @@
         "packages/ui/src/components/a11y/SrOnly.tsx"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "5414e8ac-5105-43f0-a153-088e12501c9d",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "eb037310-8dca-433e-81ce-73ebf2d545fa",
       "keywords": [
         "chip",
         "hint",
@@ -3910,7 +5258,7 @@
         "narration",
         "error-line"
       ],
-      "last_written_at": "2026-10-18T17:34:16.485531200+00:00",
+      "last_written_at": "2026-10-25T15:57:03.097386600+00:00",
       "name": "ui-marks-and-text",
       "pinned": false,
       "tech_stack": [
@@ -3920,7 +5268,7 @@
       ]
     },
     {
-      "api_surface": "",
+      "api_surface": null,
       "business_feature": "Status and Provenance Shapes",
       "category": "ui",
       "cross_refs": [
@@ -3959,8 +5307,8 @@
         "packages/ui/src/components/channel/ChannelBadge.tsx"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "d6ef2aee-128a-4430-80a9-de42991c6316",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "1de3c823-3d27-478d-8f7e-b3b940344faf",
       "keywords": [
         "status",
         "tally",
@@ -3971,13 +5319,57 @@
         "facet",
         "stackbar"
       ],
-      "last_written_at": "2026-10-18T17:34:16.485979700+00:00",
+      "last_written_at": "2026-10-25T15:57:03.097469200+00:00",
       "name": "ui-status-provenance",
       "pinned": false,
       "tech_stack": [
         "React",
         "TypeScript",
         "CSS Modules"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Design Tokens and Catalog",
+      "category": "config",
+      "cross_refs": [
+        "kit-design-system-specimens"
+      ],
+      "db_tables": [],
+      "description": "Design token source, lint, render and CSS output for @gt/ui, plus the @gt/catalog data: deck art, library areas, part options, presets, projects, recipes and styles.",
+      "entry_points": [
+        "packages/ui/src/tokenSource.ts"
+      ],
+      "file_paths": [
+        "packages/ui/src/tokenLint.ts",
+        "packages/ui/src/tokenRender.ts",
+        "packages/ui/src/tokenSource.ts",
+        "packages/ui/src/tokens.css",
+        "packages/ui/src/tokens.ts",
+        "packages/catalog/src/deckArt.ts",
+        "packages/catalog/src/libraryAreas.ts",
+        "packages/catalog/src/partOptions.ts",
+        "packages/catalog/src/presets.ts",
+        "packages/catalog/src/projects.ts",
+        "packages/catalog/src/recipes.ts",
+        "packages/catalog/src/style.ts"
+      ],
+      "group": "Domain Kernel Model",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "7cfc1d67-f77b-480c-a052-25c3217f0b1b",
+      "keywords": [
+        "tokens",
+        "catalog",
+        "presets",
+        "recipes",
+        "lint"
+      ],
+      "last_written_at": "2026-10-25T16:01:26.395023500+00:00",
+      "name": "ui-tokens-and-catalog",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript 6.0",
+        "CSS"
       ]
     },
     {
@@ -4011,8 +5403,8 @@
         "lib/import/steps.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "b412ea73-0dc3-4362-93c4-2a9b913f9a61",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "052f74ff-87c5-45a8-a5ea-6fbb2ae44102",
       "keywords": [
         "import",
         "export",
@@ -4025,7 +5417,7 @@
         "v1",
         "runs"
       ],
-      "last_written_at": "2026-10-18T18:14:13.266833600+00:00",
+      "last_written_at": "2026-10-25T15:57:03.097539400+00:00",
       "name": "v1-import-and-archive",
       "pinned": false,
       "tech_stack": [
@@ -4059,8 +5451,8 @@
         "packages/kernel/src/calibration/series.ts"
       ],
       "group": "Domain Kernel Model",
-      "group_id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
-      "id": "311e06b8-6aea-4a5b-867f-c93a256bc44d",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "43edf8cd-29be-430d-898d-70c96d2d537c",
       "keywords": [
         "router",
         "vendor",
@@ -4070,7 +5462,7 @@
         "model",
         "route"
       ],
-      "last_written_at": "2026-10-18T17:28:44.880284200+00:00",
+      "last_written_at": "2026-10-25T15:57:03.097949300+00:00",
       "name": "vendor-routing-and-calibration",
       "pinned": false,
       "tech_stack": [
@@ -4105,8 +5497,8 @@
         "packages/producers/src/cut/define.ts"
       ],
       "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "038cd727-793d-43fe-b86b-a39ef50c7334",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "e3a63c9a-324f-417a-b93b-bfddb63e7aa5",
       "keywords": [
         "frames",
         "still",
@@ -4117,7 +5509,7 @@
         "cut",
         "look"
       ],
-      "last_written_at": "2026-10-18T17:31:05.499120100+00:00",
+      "last_written_at": "2026-10-25T15:57:03.098448400+00:00",
       "name": "visual-producers",
       "pinned": false,
       "tech_stack": [
@@ -4126,38 +5518,38 @@
       ]
     }
   ],
-  "generated_at": "2026-10-18T18:34:32.150354600+00:00",
+  "generated_at": "2026-10-25T16:01:29.491377100+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
       "color": "blue",
-      "context_count": 63,
+      "context_count": 85,
       "domain": "feature",
-      "id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
+      "id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
       "name": "Production Pipeline"
     },
     {
       "color": "violet",
-      "context_count": 17,
+      "context_count": 23,
       "domain": "shared",
-      "id": "f9a9770d-ac5c-4dfa-8174-285d941db198",
+      "id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
       "name": "Domain Kernel Model"
     }
   ],
   "project": {
-    "id": "d57f858b-b917-4fd7-b5f4-ee7df0f989a0",
+    "id": "89d7cc8b-79a3-40b6-8918-bc425881f0b5",
     "name": "gravitone-gcloud",
-    "root": "C:\\Users\\kazda\\kiro\\gravitone-gcloud"
+    "root": "C:/Users/kazda/kiro/gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "f437d981c2a1b408c5de9b0326202c70d8791a08",
-    "git_commit_count": 1515
+    "git_commit": "2b29bbbcdfa5429fa6ed3aae2421e50847597075",
+    "git_commit_count": 2778
   },
   "stats": {
-    "contexts": 80,
-    "files": 1047,
+    "contexts": 108,
+    "files": 1483,
     "groups": 2,
-    "use_cases": 12
+    "use_cases": 0
   },
   "taxonomy": {
     "context_categories": [
@@ -4176,139 +5568,6 @@
       "data"
     ]
   },
-  "use_cases": [
-    {
-      "contexts": [],
-      "description": "A creator organises promoted image plates into a folder tree with drag-and-drop and bulk operations, previews them in a lightbox, and makes individual plates available across all their projects.",
-      "id": "5fdfbdee-d201-4e00-8b49-08e5e3482f52",
-      "kind": "capability",
-      "name": "Asset Library Management",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "asset-library-management",
-      "tier": "standard"
-    },
-    {
-      "contexts": [],
-      "description": "An operator evaluates whether a generated character's visual identity holds across camera setups and across time within a clip using FaceNet/DINOv2 similarity anchored to film ground-truth floor and ceiling values.",
-      "id": "98e0050f-8e45-4f1f-ae48-e5aeadf83db3",
-      "kind": "ops",
-      "name": "Character Visual Consistency",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "character-visual-consistency",
-      "tier": "standard"
-    },
-    {
-      "contexts": [],
-      "description": "A creator walks a project through all five steps—Research, Script, Frames, Score, Cut—in a guided stepper that persists state locally in IndexedDB and calls AI services at each step.",
-      "id": "58847f37-bc54-4eba-a39e-d051467c4627",
-      "kind": "user_flow",
-      "name": "Content Production Pipeline",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "content-production-pipeline",
-      "tier": "major"
-    },
-    {
-      "contexts": [],
-      "description": "A developer or designer inspects the live design-guideline viewer—Identity, Law, Parts, and Migration tabs—to verify component compliance and surface gaps before shipping a new UI surface.",
-      "id": "b1a24a60-d8f9-499b-842f-280a1e2a7ef7",
-      "kind": "ops",
-      "name": "Design System Kit",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "design-system-kit",
-      "tier": "standard"
-    },
-    {
-      "contexts": [],
-      "description": "Operators run a mass-generation forge that crosses scenes against style recipes, then evaluate whether a named technique improves style fidelity over a baseline in the dojo A/B harness, before promoting winners to the curated catalogue.",
-      "id": "e15d3c1a-83c3-44fa-b246-a47855e013c7",
-      "kind": "ops",
-      "name": "Foundry Style Training",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "foundry-style-training",
-      "tier": "major"
-    },
-    {
-      "contexts": [],
-      "description": "Script beats are decomposed into scene specs by an AI director pass, then routed to an image vendor (Imagen, Leonardo, Qwen, or Ollama) to produce visual plates assembled in an Assembly ledger and compared in an Alternatives contact-sheet.",
-      "id": "e627d422-df21-424f-b625-0a410a5901eb",
-      "kind": "capability",
-      "name": "Frame Plate Generation",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "frame-plate-generation",
-      "tier": "major"
-    },
-    {
-      "contexts": [],
-      "description": "A creator places cues against picture on a clock-based spotting surface; ElevenLabs generates audio from a CueBrief whose durations are derived from picture timings; takes land in the Audio Workbench for review.",
-      "id": "f1442bcc-3c04-43e9-8c2a-c7c02cba902a",
-      "kind": "capability",
-      "name": "Music Cue Scoring",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "music-cue-scoring",
-      "tier": "major"
-    },
-    {
-      "contexts": [],
-      "description": "A creator interactively experiments with all four ElevenLabs generation modes—cue generation, free plan drafting, composition, and inpainting—outside the main pipeline to prototype a sound direction before committing to scoring.",
-      "id": "e5f679f7-ce00-424e-ab15-85ec3434a969",
-      "kind": "capability",
-      "name": "Music Playground",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "music-playground",
-      "tier": "standard"
-    },
-    {
-      "contexts": [],
-      "description": "A creator views all their projects in a progress matrix, reads per-phase status across five columns, and creates, edits, or deletes projects from the shelf.",
-      "id": "a55af2f0-ab69-47b6-ad46-d9c292e00721",
-      "kind": "user_flow",
-      "name": "Project Shelf & Progress",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "project-shelf-progress",
-      "tier": "standard"
-    },
-    {
-      "contexts": [],
-      "description": "A persistent background research job builds a triage notebook of facts and unknowns; the creator scopes decisions across the board; the pipeline condenses findings into a craft-grounded, beat-checked script.",
-      "id": "3ebd9f26-296b-424d-a2e4-361decfcf8e2",
-      "kind": "capability",
-      "name": "Research-to-Script Generation",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "research-to-script-generation",
-      "tier": "major"
-    },
-    {
-      "contexts": [],
-      "description": "A creator authors a trailer-discipline script with beat-level editing, energy curves, connector picks, and movement sections—a structurally distinct Step 2 branch that enforces trailer beat law independently of the educational script path.",
-      "id": "1902c06f-6529-4438-bd85-e2db83b9b7c9",
-      "kind": "capability",
-      "name": "Trailer Script Editing",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "trailer-script-editing",
-      "tier": "standard"
-    },
-    {
-      "contexts": [],
-      "description": "A creator generates image candidates in the Foundry, curates them in the keyboard-navigated cull grid, runs a five-beat proof trial in the Library Atelier, and locks a visual identity that gates all subsequent project work.",
-      "id": "c1e88b78-3fe9-4404-af17-f5119da9de26",
-      "kind": "user_flow",
-      "name": "Visual Style Locking",
-      "pinned": false,
-      "primary_context": null,
-      "slug": "visual-style-locking",
-      "tier": "major"
-    }
-  ],
+  "use_cases": [],
   "version": 2
 }

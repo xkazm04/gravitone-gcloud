@@ -156,6 +156,18 @@ describe("the rows", () => {
     expect(ledger(k).filter((e) => e.type === "sound.groups.edited")).toHaveLength(1);
   });
 
+  it("an orphan row in another case than a declared row is adopted by merging its takes into the declared row", async () => {
+    seed([take("a", { group: "Ambient" }), take("b", { group: "ambient" }), take("c", { group: "ambient", parentId: "b" }), take("x", { group: null })], { music: ["Ambient", "drone"], sfx: [] });
+    const r = await editGroups(kernel(), { kind: "music", op: { op: "adopt", name: "ambient" }, opId: "op0020" }, OP, NOW);
+    expect(r.ok && [r.value.groups.music, r.value.carried]).toEqual([["Ambient", "drone"], 2]);
+    expect(onDisk().map((t) => [t.id, t.group])).toEqual([
+      ["a", "Ambient"],
+      ["b", "Ambient"],
+      ["c", "Ambient"],
+      ["x", null],
+    ]);
+  });
+
   it("a held row is not deleted, and the refusal names what holds it", async () => {
     seed([take("a")]);
     const r = await editGroups(kernel(), { kind: "music", op: { op: "delete", name: "ambient" }, opId: "op0006" }, OP, NOW);
@@ -186,5 +198,19 @@ describe("the Suno round trip", () => {
     const nolabel = await fileReturn(k, { headId: "e", stage: "finalized", opId: "op0010", file: wav }, OP, NOW);
     expect(nolabel.ok ? null : nolabel.error.message).toBe("a finalized take needs a library label");
     expect(onDisk()).toHaveLength(1);
+  });
+
+  it("two returns raced onto one head file one version; the other is refused as stale, nothing forked", async () => {
+    seed([take("a", { stage: "remaster", group: "drone" })]);
+    const k = kernel();
+    // Two tabs (or two machines' drops) answer the same card at once, under different ops.
+    const [x, y] = await Promise.all([
+      fileReturn(k, { headId: "a", stage: "edit", opId: "op0011", file: wav }, OP, NOW),
+      fileReturn(k, { headId: "a", stage: "edit", opId: "op0012", file: wav }, OP, NOW),
+    ]);
+    const outcomes = [x, y].map((r) => (r.ok ? `v${r.value.version}` : r.error.code)).sort();
+    expect(outcomes).toEqual(["conflict", "v2"]);
+    expect(onDisk().filter((t) => t.parentId === "a")).toHaveLength(1);
+    expect(ledger(k).filter((e) => e.type === "take.returned")).toHaveLength(1);
   });
 });

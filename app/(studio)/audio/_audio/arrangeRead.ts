@@ -11,6 +11,7 @@ import { deploymentFacts, serverCapabilities } from "../../../../lib/serverCapab
 import { engineRegistry, engineState, type EngineDef } from "../../../../lib/sound/engines.ts";
 import { readGroups } from "../../../../lib/sound/store.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
+import { takeFileHref } from "../../../../lib/sound/takeHref.ts";
 import type { SoundTake } from "../../../../lib/sound/types.ts";
 import type { Kind } from "./desk.ts";
 import type { Read } from "./read.ts";
@@ -25,12 +26,15 @@ import type { Read } from "./read.ts";
 // offers the Suno round trip only while `can(suno, "file-return")`.
 //
 // Each part fails on its own: a kernel that will not open is a line over the board, and the
-// cards still draw what the takes carry.
+// cards still draw what the takes carry; a groups file that will not read is a line too, and the
+// board draws the rows the cards themselves name.
 
 export type ArrangeView = {
   readonly kind: Kind;
   readonly takes: Read<readonly CardTake[]>;
   readonly groups: readonly string[];
+  /** Why the groups file could not be read, when it could not. */
+  readonly rows: string | null;
   /** Why the ingest measures could not be read, when they could not. */
   readonly measures: string | null;
   readonly engines: readonly EngineRow[];
@@ -59,7 +63,7 @@ function cardOf(t: SoundTake, m: AudioMeasureRow | undefined): CardTake {
     loop: t.loop,
     terms: { genre: [...t.terms.genre], mood: [...t.terms.mood], instrument: [...t.terms.instrument], sfxCategory: t.terms.sfxCategory },
     verdict: t.verdict,
-    src: t.file === null ? null : `/api/sound/takes/${encodeURIComponent(t.id)}/file`,
+    src: t.file === null ? null : takeFileHref(t.id),
     peaks: ok && m.peaks.length > 0 ? [...m.peaks] : (t.peaks ?? []),
     lengthS: (ok ? m.durationS : null) ?? t.measured?.durationS ?? t.durationS,
     prompt: t.prompt,
@@ -71,17 +75,23 @@ function cardOf(t: SoundTake, m: AudioMeasureRow | undefined): CardTake {
 export async function readArrange(kind: Kind): Promise<ArrangeView> {
   const registry = deskEngines();
   const base = { kind, engines: engineRows(registry), registry };
-  let takes: SoundTake[];
-  let groups: readonly string[];
-  try {
-    [takes, groups] = await Promise.all([listTakes({ kind, verdict: "kept", fixtures: FIXTURE_MODE }), readGroups().then((g) => g.groups[kind])]);
-  } catch (e) {
-    return { ...base, takes: { ok: false, error: errorMessage(e) }, groups: [], measures: null };
-  }
+  const [read, groups] = await Promise.all([
+    listTakes({ kind, verdict: "kept", fixtures: FIXTURE_MODE }).then(
+      (t): Read<SoundTake[]> => ({ ok: true, value: t }),
+      (e: unknown): Read<SoundTake[]> => ({ ok: false, error: errorMessage(e) }),
+    ),
+    readGroups().then(
+      (g): Read<readonly string[]> => ({ ok: true, value: g.groups[kind] }),
+      (e: unknown): Read<readonly string[]> => ({ ok: false, error: errorMessage(e) }),
+    ),
+  ]);
+  const rowsOf = { groups: groups.ok ? groups.value : [], rows: groups.ok ? null : groups.error };
+  if (!read.ok) return { ...base, ...rowsOf, takes: read, measures: null };
+  const takes = read.value;
   const k = kernel();
   const m = k.ok ? measuresByItem(k.value.store, takes.map((t) => `audio:${t.id}`)) : k;
   const by = m.ok ? m.value : new Map<string, AudioMeasureRow>();
-  return { ...base, takes: { ok: true, value: takes.map((t) => cardOf(t, by.get(`audio:${t.id}`))) }, groups, measures: m.ok ? null : m.error.message };
+  return { ...base, ...rowsOf, takes: { ok: true, value: takes.map((t) => cardOf(t, by.get(`audio:${t.id}`))) }, measures: m.ok ? null : m.error.message };
 }
 
 /** The finalized stacks' heads of a kind: the pool agents select from (`sound.mts finalized`). */

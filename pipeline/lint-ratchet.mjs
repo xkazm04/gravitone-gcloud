@@ -18,6 +18,7 @@
 // location, never from the current working directory, so the gate walks the same
 // tree from a hook, from the pipeline, and from a shell in any subdirectory.
 
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -65,10 +66,25 @@ if (!baseline.warnings || typeof baseline.warnings !== "object") {
 }
 
 // --- run the instrument ------------------------------------------------------
+// Lint what git would ship. A file git ignores (.gitignore, or a machine's own .git/info/exclude)
+// never reaches CI, so it must not decide this gate locally either: measured 2026-10-25, one
+// locally-excluded scratch file failed the error stage on every machine run and hid the bucket
+// stage behind it, so three warning buckets rose unseen. `--directory` collapses ignored trees
+// (node_modules/, .next/) to one entry each.
+let gitIgnored = [];
+try {
+  gitIgnored = execFileSync("git", ["ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"], { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+    .split("\0")
+    .filter(Boolean)
+    .map((p) => (p.endsWith("/") ? `${p}**` : p));
+} catch {
+  // No git (an exported tree): lint everything, as before.
+}
+
 let results;
 try {
   const { ESLint } = await import("eslint");
-  const eslint = new ESLint({ cwd: ROOT });
+  const eslint = new ESLint({ cwd: ROOT, ignorePatterns: gitIgnored });
   results = await eslint.lintFiles([ROOT]);
 } catch (err) {
   die(2, "COULD NOT RUN: ESLint failed to load or threw while linting.", [

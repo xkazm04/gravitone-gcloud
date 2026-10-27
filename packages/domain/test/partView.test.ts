@@ -1,11 +1,32 @@
 // The part view contract's few values (Phase 4 wave C, L38): which kinds have an editor, which
 // face a discipline's editors wear, which acts a kind may launch, and the op trail's words.
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { DISCIPLINES } from "@gt/catalog/projects";
 import { RECIPES } from "@gt/catalog/recipes";
 
-import { EDITOR_KINDS, PART_ACTS, actBelongs, isEditorKind, opLabel, researchFaceOf, scriptFaceOf, type ResearchOp, type ScriptOp } from "../src/partView.ts";
+import {
+  EDITOR_KINDS,
+  PART_ACTS,
+  actBelongs,
+  albumOpLabel,
+  finishOpLabel,
+  framesOpLabel,
+  isEditorKind,
+  opLabel,
+  researchFaceOf,
+  scriptFaceOf,
+  type AlbumOp,
+  type CutOp,
+  type ExplainerOp,
+  type FramesOp,
+  type MotionOp,
+  type PartKind,
+  type ResearchOp,
+  type ScoreOp,
+  type ScriptOp,
+} from "../src/partView.ts";
+import type { PartKind as RecordPartKind } from "../src/part.ts";
 
 describe("editor kinds", () => {
   // Wave C grew the list: L39 frames and motion, L40 score, cut and the album and explainer parts.
@@ -23,6 +44,12 @@ describe("editor kinds", () => {
     for (const r of RECIPES.filter((x) => x.family === "film")) plans(r.id, ["research", "script", "frames", "motion", "score", "cut"]);
     plans("album-video", ["words", "render"]);
     plans("explainer", ["article", "strips", "voice", "cut"]);
+  });
+});
+
+describe("part kinds", () => {
+  test("the view names the same part kinds as the record door (one source: @gt/catalog/recipes)", () => {
+    expectTypeOf<PartKind>().toEqualTypeOf<RecordPartKind>();
   });
 });
 
@@ -98,5 +125,113 @@ describe("op labels", () => {
     expect(opLabel({ op: "like", cardId: "f-ath", on: false })).toBe("unlike f-ath");
     expect(opLabel({ op: "confirm-scope" })).toBe("confirm scope");
     expect(opLabel({ op: "decide-effect", followUpId: "fu", index: 1, decision: "applied" })).toBe("apply effect 2");
+  });
+});
+
+// The later kinds' trails (_part/kinds.ts `label` calls these). Keyed by op name, so an op added to
+// a union without a sample here is a type error, not an unlabelled line nobody looked at.
+describe("op labels of the later kinds", () => {
+  const frames: { readonly [K in (FramesOp | MotionOp)["op"]]: readonly (FramesOp | MotionOp)[] } = {
+    "move-layer": [{ op: "move-layer", unitId: "c:b1:0", layer: "text", layerId: "t1", x: 1, y: 2 }],
+    "resize-layer": [{ op: "resize-layer", unitId: "c:b1:0", layer: "element", layerId: "e1", w: 3, h: 4 }],
+    "order-layer": [
+      { op: "order-layer", unitId: "c:b1:0", layer: "element", layerId: "e1", dir: 1 },
+      { op: "order-layer", unitId: "c:b1:0", layer: "element", layerId: "e1", dir: -1 },
+    ],
+    "hide-layer": [
+      { op: "hide-layer", unitId: "c:b1:0", layer: "text", layerId: "t1", hidden: true },
+      { op: "hide-layer", unitId: "c:b1:0", layer: "text", layerId: "t1", hidden: false },
+    ],
+    "remove-layer": [{ op: "remove-layer", unitId: "c:b1:0", layer: "text", layerId: "t1" }],
+    "set-text": [{ op: "set-text", unitId: "c:b1:0", textId: "t1", value: "x" }],
+    "add-text": [{ op: "add-text", unitId: "c:b1:0", role: "caption" }],
+    "bind-fact": [
+      { op: "bind-fact", unitId: "c:b1:0", textId: "t1", factId: "f1" },
+      { op: "bind-fact", unitId: "c:b1:0", textId: "t1", factId: null },
+    ],
+    "set-subject": [{ op: "set-subject", unitId: "c:b1:0", subject: "a harbour" }],
+    "set-clip-motion": [{ op: "set-clip-motion", unitId: "c:b1:0", motion: "push in" }],
+    "adopt-alt": [{ op: "adopt-alt", unitId: "c:b1:0", altId: "c:b1:0~a1" }],
+    "accept-direction": [
+      { op: "accept-direction", units: "all", overwrite: false },
+      { op: "accept-direction", units: ["c:b1:0", "c:b2:0"], overwrite: true },
+    ],
+    "discard-direction": [{ op: "discard-direction" }],
+    "revert-direction": [{ op: "revert-direction" }, { op: "revert-direction", unitId: "c:b1:0" }],
+    rederive: [{ op: "rederive" }],
+    "adopt-image": [{ op: "adopt-image", shotId: "s1", takeId: "tk1" }],
+    "accept-motion": [{ op: "accept-motion", unitId: "c:b1:0" }],
+    "clear-motion": [{ op: "clear-motion", unitId: "c:b1:0" }],
+    "adopt-clip": [{ op: "adopt-clip", shotId: "s1", clipId: "cl1" }],
+  };
+  const finish: { readonly [K in (ScoreOp | CutOp)["op"]]: readonly (ScoreOp | CutOp)[] } = {
+    "cue-span": [{ op: "cue-span", cueId: "q1", first: "s1", last: "s3" }],
+    "cue-field": [
+      { op: "cue-field", cueId: "q1", field: "title", value: "x" },
+      { op: "cue-field", cueId: "q1", field: "note", value: "x" },
+    ],
+    "cue-bpm": [
+      { op: "cue-bpm", cueId: "q1", bpm: 92 },
+      { op: "cue-bpm", cueId: "q1", bpm: null },
+    ],
+    "cue-add": [{ op: "cue-add" }],
+    "cue-delete": [{ op: "cue-delete", cueId: "q1" }],
+    "take-use": [{ op: "take-use", cueId: "q1", takeId: "tk1" }],
+    "take-mark": [
+      { op: "take-mark", cueId: "q1", takeId: "tk1", mark: "kept" },
+      { op: "take-mark", cueId: "q1", takeId: "tk1", mark: "rejected" },
+      { op: "take-mark", cueId: "q1", takeId: "tk1", mark: null },
+    ],
+    "take-note": [{ op: "take-note", cueId: "q1", takeId: "tk1", section: 0, note: "softer" }],
+    nudge: [
+      { op: "nudge", clipId: "v1", ms: 40 },
+      { op: "nudge", clipId: "v1", ms: -40 },
+    ],
+    snap: [{ op: "snap", clipId: "v1" }],
+    super: [{ op: "super", shotId: "s1", text: "x" }],
+    "end-card": [
+      { op: "end-card", field: "cta", value: "x" },
+      { op: "end-card", field: "line", value: "x" },
+    ],
+    "end-hold": [{ op: "end-hold", holdS: 2 }],
+    aspect: [
+      { op: "aspect", aspect: "9:16", on: true },
+      { op: "aspect", aspect: "9:16", on: false },
+    ],
+  };
+  const album: { readonly [K in (AlbumOp | ExplainerOp)["op"]]: readonly (AlbumOp | ExplainerOp)[] } = {
+    "words-field": [
+      { op: "words-field", field: "title", value: "x" },
+      { op: "words-field", field: "description", value: "x" },
+    ],
+    "words-tags": [{ op: "words-tags", tags: ["a", "b"] }],
+    "render-res": [{ op: "render-res", res: "1440p" }],
+    "voice-use": [{ op: "voice-use", lineId: "l1", takeId: "tk1" }],
+    "voice-mark": [
+      { op: "voice-mark", lineId: "l1", takeId: "tk1", mark: "kept" },
+      { op: "voice-mark", lineId: "l1", takeId: "tk1", mark: "rejected" },
+      { op: "voice-mark", lineId: "l1", takeId: "tk1", mark: null },
+    ],
+    "voice-line": [{ op: "voice-line", lineId: "l1", text: "x" }],
+  };
+
+  test.each([
+    ["frames and motion", Object.values(frames).flat().map((op) => framesOpLabel(op))],
+    ["score and cut", Object.values(finish).flat().map((op) => finishOpLabel(op))],
+    ["album and explainer", Object.values(album).flat().map((op) => albumOpLabel(op))],
+  ])("%s: every op has words, and two different edits never read the same", (_, labels) => {
+    for (const l of labels) expect(l.trim().length).toBeGreaterThan(0);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  test("the trail says which way an edit went", () => {
+    expect(framesOpLabel({ op: "order-layer", unitId: "c:b1:0", layer: "element", layerId: "e1", dir: 1 })).toBe("forward e1");
+    expect(framesOpLabel({ op: "hide-layer", unitId: "c:b1:0", layer: "text", layerId: "t1", hidden: false })).toBe("show t1");
+    expect(framesOpLabel({ op: "set-subject", unitId: "c:b1:0", subject: "x" })).toBe("subject b1:0");
+    expect(finishOpLabel({ op: "nudge", clipId: "v1", ms: 40 })).toBe("+40ms v1");
+    expect(finishOpLabel({ op: "nudge", clipId: "v1", ms: -40 })).toBe("-40ms v1");
+    expect(finishOpLabel({ op: "take-mark", cueId: "q1", takeId: "tk1", mark: "rejected" })).toBe("reject tk1");
+    expect(finishOpLabel({ op: "take-note", cueId: "q1", takeId: "tk1", section: 0, note: "x" })).toBe("note tk1 §1");
+    expect(albumOpLabel({ op: "voice-mark", lineId: "l1", takeId: "tk1", mark: "kept" })).toBe("keep tk1");
   });
 });

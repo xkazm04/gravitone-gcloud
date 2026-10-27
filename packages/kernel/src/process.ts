@@ -4,8 +4,8 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { openKernel, type Kernel } from "./kernel.ts";
 
 // THE PROCESS'S ONE KERNEL - the handle every reader and writer in one process
-// shares: Next's server (app/_server/kernel.ts binds it for pages, actions and
-// routes), v1's money door (lib/principal.ts, judging a CLI token), and the
+// shares: Next's server (lib/kernelProcess.ts binds it; pages, actions and
+// routes reach it through lib/kernelStore.ts), v1's money door (lib/principal.ts, judging a CLI token), and the
 // operator's CLIs (pipeline/token.mts). Moved here from app/_server/kernel.ts
 // (Phase 1) because two of those three may not import app/
 // (tests/golden-path/no-app-imports.probe.spec.ts), and a second accessor would

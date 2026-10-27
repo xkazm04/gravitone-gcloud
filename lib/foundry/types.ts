@@ -77,7 +77,8 @@ export interface Evidence {
 }
 
 /** A file that shows what a style looks like, outside the forge's ledger.
- *  `kind` names which output root the run lives under (see store.ts). */
+ *  `kind` names which output root the run lives under (catalogue.ts
+ *  `extractRoot` for `extract`). */
 export interface Exemplar {
   kind: "extract";
   run: string;

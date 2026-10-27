@@ -65,6 +65,8 @@ describe("a press makes chords, best reading first", () => {
   });
 });
 
+const has = (mode: string, cap: string) => BINDINGS.some((b) => b.mode === mode && [...b.keys, ...(b.alias ?? [])].includes(cap));
+
 describe("the real table is sound", () => {
   it("every cap parses and every shadows has something to shadow", () => {
     expect(problems(KEYMAP)).toEqual([]);
@@ -73,11 +75,13 @@ describe("the real table is sound", () => {
     expect(conflicts(KEYMAP).map((c) => c.why)).toEqual([]);
   });
   it("covers the design's named keys", () => {
-    const has = (mode: string, cap: string) => BINDINGS.some((b) => b.mode === mode && [...b.keys, ...(b.alias ?? [])].includes(cap));
     for (const [mode, cap] of [
-      ["floor", "⇧1"], ["floor", "⇧4"], ["board.cull", "K"], ["board.cull", "X"], ["board.cull", "U"], ["board.cull", "4"],
-      ["board.cull", "⇧K"], ["board.cull", "⇧X"], ["board.cull", "Z"], ["board.cull", "⌫"], ["board", "]"],
+      ["floor", "⇧1"], ["floor", "⇧4"], ["board.cull", "1"], ["board.cull", "2"], ["board.cull", "4"], ["board.cull", "5"], ["board.cull", "U"],
+      ["board.cull", "⇧1"], ["board.cull", "⇧2"], ["board.cull", "Z"], ["board.cull", "⌫"], ["board", "]"],
     ] as const) expect(has(mode, cap), `${mode} ${cap}`).toBe(true);
+  });
+  it("the cull decides on the number row alone: K, X and the old reason keys 6-9, 0, - are nobody's there", () => {
+    for (const cap of ["K", "X", "⇧K", "⇧X", "6", "7", "8", "9", "0", "-"]) expect(has("board.cull", cap), cap).toBe(false);
   });
 });
 
@@ -133,18 +137,25 @@ describe("resolve: modes", () => {
   });
   it("⌘Z undoes in the cull; Ctrl+K is the browser's, not a keep", () => {
     expect(verbOf(press({ key: "z", ctrlKey: true }), "board.cull")).toBe("undo");
-    expect(verbOf(press({ key: "k", ctrlKey: true }), "board.cull")).toBeNull();
+    expect(verbOf(press({ key: "1", ctrlKey: true }), "board.cull")).toBeNull();
   });
-  it("the matched cap and its index reach the handler (reason 1-4)", () => {
+  it("the matched cap and its index reach the handler (reject keys 2-4)", () => {
     const m = resolve(KEYMAP, press({ key: "3" }), "board.cull", none);
-    expect(m && { cap: m.cap, index: m.index }).toEqual({ cap: "3", index: 2 });
+    expect(m && { cap: m.cap, index: m.index }).toEqual({ cap: "3", index: 1 });
+  });
+  it("⇧1 and ⇧2 judge one item by the digit's position: Shift+1 reports ! on a US board, and another character elsewhere", () => {
+    expect(verbOf(press({ key: "!", code: "Digit1", shiftKey: true }), "board.cull")).toBe("keep-item");
+    expect(verbOf(press({ key: "@", code: "Digit2", shiftKey: true }), "board.cull")).toBe("reject-item");
+    // A German board: Shift+2 types a quote mark, still on Digit2.
+    expect(verbOf(press({ key: '"', code: "Digit2", shiftKey: true }), "board.cull")).toBe("reject-item");
+    expect(verbOf(press({ key: "1" }), "board.cull")).toBe("keep");
   });
 });
 
 describe("resolve: guards", () => {
   const field = (name: string): TargetInfo => ({ editable: true, field: name, control: false });
   it("a letter typed into a field is text, not a verdict", () => {
-    expect(verbOf(press({ key: "k" }, { target: field("") }), "board.cull")).toBeNull();
+    expect(verbOf(press({ key: "1" }, { target: field("") }), "board.cull")).toBeNull();
   });
   it("a row opts into one named field: Esc clears the Library search, nothing else", () => {
     expect(verbOf(press({ key: "Escape" }, { target: field("search") }), "library")).toBe("clear-search");
@@ -152,7 +163,7 @@ describe("resolve: guards", () => {
     expect(verbOf(press({ key: "Escape" }, { target: field("other") }), "library")).toBeNull();
   });
   it("a held K decides ONE item; a held arrow walks", () => {
-    expect(verbOf(press({ key: "k" }, { repeat: true }), "board.cull")).toBeNull();
+    expect(verbOf(press({ key: "1" }, { repeat: true }), "board.cull")).toBeNull();
     expect(verbOf(press({ key: "ArrowRight" }, { repeat: true }), "board.cull")).toBe("next");
   });
   it("a refused repeat does not fall through to an outer row", () => {
@@ -193,12 +204,12 @@ describe("targetInfo reads the press's element", () => {
 describe("keyTable is drawn from the same rows", () => {
   it("the cull draws the prototype's desk keymap, in its order", () => {
     expect(keyTable(KEYMAP, "board.cull", { facts: new Set(["desk"]) })).toEqual([
-      { keys: ["K"], does: "keep" },
-      { keys: ["X"], does: "reject" },
+      { keys: ["1"], does: "keep" },
+      { keys: ["2", "3", "4"], does: "reason" },
+      { keys: ["5"], does: "reject" },
       { keys: ["U"], does: "undecide" },
-      { keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "Q", "W", "E", "R"], does: "reason" },
       { keys: ["←", "→"], does: "move" },
-      { keys: ["⇧K", "⇧X"], does: "row" },
+      { keys: ["⇧1", "⇧2"], does: "item" },
       { keys: ["Z"], does: "zoom" },
       { keys: ["⌫"], does: "undo" },
       { keys: ["⏎"], does: "commit" },

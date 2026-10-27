@@ -80,11 +80,14 @@ export function planOp(s: Style, op: StyleOp, ctx: OpContext): Result<StylePlan>
     case "judge-proof": {
       const p = proofOf(s, op.proofId);
       if (!p.ok) return p;
-      if (p.value.state === op.state && (op.note === undefined || op.note === p.value.note)) return err("invalid", `judge-proof: ${op.proofId} is already ${op.state}`);
       const { note: _old, ...bare } = p.value;
       void _old;
       const note = op.note?.trim();
-      const judged: StyleProof = { ...bare, state: op.state, ...(note ? { note } : p.value.note !== undefined && op.note === undefined ? { note: p.value.note } : {}) };
+      // The note the proof will carry: a written one, else the old one when none was sent, else none.
+      const kept = note ? note : op.note === undefined ? p.value.note : undefined;
+      // Unchanged is judged on what would be WRITTEN, so " x " over "x" (or "" over no note) is not a new revision.
+      if (p.value.state === op.state && kept === p.value.note) return err("invalid", `judge-proof: ${op.proofId} is already ${op.state}`);
+      const judged: StyleProof = { ...bare, state: op.state, ...(kept === undefined ? {} : { note: kept }) };
       // An approval is a keep and a rejection a reject, appended - never rewritten - so a
       // keep once given still counts toward `proven` (the ratchet does not demote).
       const evidence = op.state === "pending" || op.state === p.value.state ? s.evidence : [...s.evidence, proofEvidence(s.id, p.value, op.state === "approved" ? "keep" : "reject", ctx.at)];

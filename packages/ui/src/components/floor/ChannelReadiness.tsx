@@ -14,18 +14,13 @@
 import { Chip } from "../chip/Chip.tsx";
 import type { Tone } from "../chip/tone.ts";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
-import { clock, dayKey, dayLabel } from "./calendar.ts";
+import { whenUtc } from "./calendar.ts";
 import type { ChannelReady, ChannelState } from "./schedule.ts";
 import { SlotMark } from "./SlotRow.tsx";
 import s from "./ChannelReadiness.module.css";
 
 export const STATE_WORDS: Readonly<Record<ChannelState, string>> = { live: "live", dry: "dry run", not_wired: "not wired", act: "by approve" };
 export const STATE_TONE: Readonly<Record<ChannelState, Tone>> = { live: "emerald", dry: "amber", not_wired: "rose", act: "cyan" };
-
-const when = (iso: string): string => {
-  const t = Date.parse(iso);
-  return Number.isNaN(t) ? iso : `${dayLabel(dayKey(t))} ${clock(t)}`;
-};
 
 export function ChannelReadiness({ channels }: { readonly channels: readonly ChannelReady[] }) {
   return (
@@ -48,8 +43,8 @@ export function ChannelReadiness({ channels }: { readonly channels: readonly Cha
           )}
           {c.note !== undefined && <span className={s.note}>{c.note}</span>}
           <div className={s.standing}>
-            {c.lastOut !== undefined && <Chip label={`out · ${when(c.lastOut)}`} casing="lower" />}
-            {c.lastFailure !== undefined && <Chip label={`failed${c.lastFailure.inARow > 1 ? ` ×${c.lastFailure.inARow}` : ""} · ${when(c.lastFailure.at)}`} tone="rose" casing="lower" />}
+            {c.lastOut !== undefined && <Chip label={`out · ${whenUtc(c.lastOut)}`} casing="lower" />}
+            {c.lastFailure !== undefined && <Chip label={`failed${c.lastFailure.inARow > 1 ? ` ×${c.lastFailure.inARow}` : ""} · ${whenUtc(c.lastFailure.at)}`} tone="rose" casing="lower" />}
           </div>
           {c.lastFailure !== undefined && <ErrorLine message={c.lastFailure.error} />}
           <code className={s.cmd}>{c.command}</code>

@@ -3,7 +3,8 @@
 // What only a browser can see: the four media lanes in the order the digits bind; each lane's
 // piles equal to what v1's live read says is waiting in that medium (`ledger-sync live`, the
 // same liveNow the page reads - page against store, never against a number copied here); the
-// NEXT pile ringed on the Floor and named by the header as one and the same; the keymap's floor
+// NEXT pile ringed on the Floor and opened by ⏎, with no NEXT in the studio header any more - the
+// Scout header names the oldest SCOUT pile instead (spark scout-storyboards WP2); the keymap's floor
 // verbs answering through the one dispatcher (⇧1-4 focus with the lane in the URL, Esc, C opens
 // the month and Esc closes it, a digit and ⏎ open a packet's Board). The type floor and the
 // legibility baseline for /floor are held by studio-routes.live.spec.ts.
@@ -40,6 +41,9 @@ function weir(): Pile[] {
   return out.weir.filter((w) => w.pending > 0);
 }
 
+/** The Scout header's link of a pile: the Runs tab, one encoded segment holding the packet id. */
+const scoutHref = (p: Pick<Pile, "source" | "id" | "packetId">): string => `/scout/runs/${encodeURIComponent(p.packetId ?? `pkt:${p.source}:${p.id}`)}`;
+
 /** The Board link of a pile: one encoded segment holding pkt:<source>:<runId>. */
 // The packet the live read stamped (articles decide as `article`, the sound shelf as `audio`).
 const boardHref = (p: Pick<Pile, "source" | "id" | "packetId">): string => `/board/${encodeURIComponent(p.packetId ?? `pkt:${p.source}:${p.id}`)}`;
@@ -71,18 +75,31 @@ test("four lanes in the order the digits bind, and each lane's piles are v1's We
   }
 });
 
-test("the NEXT pile is the oldest waiting one, ringed on the Floor and named by the header", async ({ page }) => {
-  const live = weir();
-  const rank = (m: string): number => LANES.indexOf(m as (typeof LANES)[number]);
-  const at = (w: Pile): number => (w.since === undefined || !Number.isFinite(Date.parse(w.since)) ? Number.POSITIVE_INFINITY : Date.parse(w.since));
-  const oldest = [...live].sort((a, b) => at(a) - at(b) || rank(a.media) - rank(b.media) || a.source.localeCompare(b.source) || a.id.localeCompare(b.id))[0];
+const rank = (m: string): number => LANES.indexOf(m as (typeof LANES)[number]);
+const at = (w: Pile): number => (w.since === undefined || !Number.isFinite(Date.parse(w.since)) ? Number.POSITIVE_INFINITY : Date.parse(w.since));
+const oldestOf = (piles: readonly Pile[]): Pile | undefined => [...piles].sort((a, b) => at(a) - at(b) || rank(a.media) - rank(b.media) || a.source.localeCompare(b.source) || a.id.localeCompare(b.id))[0];
+
+test("the NEXT pile is the oldest waiting one, ringed on the Floor; the studio header names no NEXT", async ({ page }) => {
+  const oldest = oldestOf(weir());
   expect(oldest, "no pile waiting").toBeDefined();
   if (oldest === undefined) return;
   await openFloor(page);
   const ringed = page.locator('[data-component="Pile"][data-next]');
   await expect(ringed).toHaveCount(1);
   await expect(ringed).toHaveAttribute("href", boardHref(oldest));
-  await expect(page.locator('[data-component="NextButton"]')).toHaveAttribute("href", boardHref(oldest));
+  const header = page.locator('[data-component="StudioHeader"]');
+  await expect(header.locator('[data-component="SpendChip"], [aria-label^="spend 24h could not be read"]')).toHaveCount(1);
+  await expect(page.locator('[data-component="NextButton"]')).toHaveCount(0);
+  await expect(header.getByRole("link", { name: /^ledger, / })).toHaveCount(0);
+});
+
+test("the Scout header names the oldest scout or seeds pile, on its Runs tab, and none when none waits", async ({ page }) => {
+  const oldest = oldestOf(weir().filter((w) => w.source === "scout" || w.source === "seeds"));
+  await page.goto("/scout", { waitUntil: "domcontentloaded" });
+  await expect(page.getByTestId("dev-auth-banner")).toBeVisible();
+  const next = page.locator('[data-component="NextButton"]');
+  if (oldest === undefined) await expect(next).toHaveCount(0);
+  else await expect(next).toHaveAttribute("href", scoutHref(oldest));
 });
 
 test("⇧1-4 focuses a lane into the URL and folds the rest; Esc shows all lanes", async ({ page }) => {
@@ -128,7 +145,7 @@ test("a lane's digit opens its first pile's Board, and ⏎ opens the NEXT one", 
   await page.keyboard.press(`Digit${LANES.indexOf(lane) + 1}`);
   await expect(page).toHaveURL(new RegExp(`${(first ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
   await openFloor(page);
-  const next = await page.locator('[data-component="NextButton"]').getAttribute("href");
+  const next = await page.locator('[data-component="Pile"][data-next]').getAttribute("href");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(new RegExp(`${(next ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
 });

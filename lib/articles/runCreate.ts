@@ -76,7 +76,8 @@ export async function createRun(input: CreateRunInput, deps: EngineDeps = defaul
   }
   if (angle) topic.angle = angle;
 
-  const id = opts.id ?? (await freshRunId(topic.subject ?? topic.text, now));
+  const seed = topic.subject ?? topic.text;
+  let id = opts.id ?? (await freshRunId(seed, now));
   const run: ArticleRun = {
     id,
     status: error ? "failed" : "queued",
@@ -90,7 +91,18 @@ export async function createRun(input: CreateRunInput, deps: EngineDeps = defaul
     updatedAt: now.toISOString(),
     ...(error ? { error } : {}),
   };
-  await writeNewRun(run);
+  // freshRunId reads which ids are free and writeNewRun claims one under the run's lock, so two
+  // creates on one topic at once can mint the same id; the one that loses the claim mints again
+  // (the winner's directory now exists). A caller-named id is never re-minted: it is refused.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await writeNewRun(run);
+      break;
+    } catch (e) {
+      if (opts.id !== undefined || !(e instanceof ArticleError && e.code === "exists") || attempt >= 8) throw e;
+      run.id = id = await freshRunId(seed, now);
+    }
+  }
   if (!trial) return run;
 
   try {

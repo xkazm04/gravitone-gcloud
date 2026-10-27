@@ -7,6 +7,7 @@
 // queue collected - so every machine sees the same drafts, and "awaiting return" is the job's
 // real state rather than the absence of a dropped file. Judging a return is the Board's audio
 // triage (owner ruling 2026-10-17): this list links there and never keeps or rejects itself.
+import { SrOnly } from "../a11y/SrOnly.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { EntryPill } from "../status/StatusPill.tsx";
@@ -73,7 +74,13 @@ export function DraftList({ drafts, triageHref }: DraftListProps) {
               {(d.style !== d.title || d.exclude !== undefined) && (
                 <div className={s.draftStyle}>
                   {d.style === d.title ? "" : d.style}
-                  {d.exclude !== undefined && <span className={s.draftEx}> − {d.exclude}</span>}
+                  {d.exclude !== undefined && (
+                    <span className={s.draftEx}>
+                      {" "}
+                      <span aria-hidden="true">−</span>
+                      <SrOnly text="excluded" /> {d.exclude}
+                    </span>
+                  )}
                 </div>
               )}
               {d.detail !== undefined && <div className={d.state === "failed" ? s.draftErr : s.draftDetail}>{d.detail}</div>}

@@ -4,13 +4,14 @@
 //   - issue order (inIssueOrder): every write to a key, save or patch, runs in the
 //     order it was issued, through one chain per key.
 //
-// Both are module Maps owned by this file only. Split out of the stepStore.ts door.
+// Both are module Maps owned by this file only. Split out of v1's stepStore.ts; the
+// door is now index.ts.
 
 import { key } from "./withStore";
 
 /* ───────────────────────── latest-wins (added 2026-08-24) ──────────────────
  *
- * THE BUG. Every caller fires `void saveStep(...)` on a keystroke, which is the
+ * THE BUG. Every v1 caller fired `void saveStep(...)` on a keystroke, which is the
  * right ergonomics for a save that runs that often and was, until now, missing
  * its other half: nothing decided which of two in-flight writes for one
  * `${projectId}:${phase}` key was allowed to land. They settled in ARRIVAL
@@ -48,9 +49,11 @@ export interface SaveSlot {
  * Claim the right to write this key, and get back the test for whether that
  * right still holds.
  *
- * Exported and separated from `saveStep` on purpose: the IndexedDB write itself
- * cannot be driven in this repo's Node-context probe suite, and a latest-wins
- * rule that cannot be asserted is a rule nobody can trust. This is the whole
+ * Exported and separated from `saveStep` on purpose: when this was written the
+ * IndexedDB write could not be driven in this repo's Node-context probe suite
+ * (tests/golden-path/dal-real-engine.probe.spec.ts now drives it through
+ * fake-indexeddb), and a latest-wins rule that cannot be asserted is a rule
+ * nobody can trust. This is the whole
  * ordering decision, and it is a pure function of call order.
  */
 export function claimSaveSlot(projectId: string, phase: string): SaveSlot {

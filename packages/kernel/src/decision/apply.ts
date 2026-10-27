@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ApplyStatus } from "@gt/domain/board";
 import type { Decision } from "@gt/domain/decision";
 import { parseAt } from "@gt/domain/door";
-import { AppError, err, errorMessage, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
+import { AppError, err, errorMessage, isAppError, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
 import { packetIdSchema, type PacketId } from "@gt/domain/ids";
 import type { Packet } from "@gt/domain/packet";
 import type { Effects } from "../effects.ts";
@@ -114,19 +114,40 @@ export function takeApply(t: Tx, opts: TakeOptions): ApplyClaim | undefined {
         data: { act: row.act, ticket: row.ticket, attempt: row.attempts, error: `the applier ${row.holder ?? "?"} held attempt ${row.attempts} past its lease and never reported`, code: "unavailable", reaped: true },
       });
     }
-    return {
-      packetId: row.packetId,
-      act: row.act,
-      ticket: row.ticket,
-      attempt: plan.attempts,
-      holder: opts.holder,
-      leaseUntil: plan.leaseUntil,
-      packet: readPacket(t, row.packetId),
-      decisions: currentDecisions(t, row.packetId).decisions,
-      outcome: outcomeOf(t, row),
-    };
+    const claim = claimOf(t, row, opts.holder, plan);
+    if (claim.ok) return claim.value;
+    // An unreadable claim (a stored packet, decision or result the door refuses) takes the severe
+    // bucket at once (fail-loud-classification-default): stuck, with the door's sentence. Thrown
+    // instead, the take rolled back, the row kept its place at the head of the due order, and every
+    // later drain threw on it again - one bad packet held every other packet's apply behind it.
+    // More attempts cannot heal it; a redrive after the record is repaired is the way back.
+    t.run(`UPDATE packet_applies SET state = 'stuck', last_error = ?, holder = NULL, lease_until = NULL, done_at = ? WHERE packet_id = ? AND state = 'pending' AND holder = ?`, claim.error, t.at, row.packetId, opts.holder);
+    append(t, { actor: machine(opts.holder), type: "decision.apply-stuck", subject: { kind: "packet", id: row.packetId }, data: { act: row.act, ticket: row.ticket, attempts: plan.attempts, error: claim.error, permanent: true, unreadable: true } });
   }
   return undefined;
+}
+
+/** The claim's reads, or the door's sentence when one of them refuses (an AppError; anything else propagates). */
+function claimOf(t: Tx, row: ApplyRow & { readonly packetId: PacketId }, holder: string, plan: { readonly attempts: number; readonly leaseUntil: string }): { readonly ok: true; readonly value: ApplyClaim } | { readonly ok: false; readonly error: string } {
+  try {
+    return {
+      ok: true,
+      value: {
+        packetId: row.packetId,
+        act: row.act,
+        ticket: row.ticket,
+        attempt: plan.attempts,
+        holder,
+        leaseUntil: plan.leaseUntil,
+        packet: readPacket(t, row.packetId),
+        decisions: currentDecisions(t, row.packetId).decisions,
+        outcome: outcomeOf(t, row),
+      },
+    };
+  } catch (e) {
+    if (!isAppError(e)) throw e;
+    return { ok: false, error: `apply: packet ${row.packetId} cannot be read for delivery: ${e.message}` };
+  }
 }
 
 /** Record what `claim`'s attempt did. A claim that was reaped meanwhile is `lost` and writes nothing. */
@@ -138,6 +159,10 @@ export function finishApply(t: Tx, claim: Pick<ApplyClaim, "packetId" | "holder"
   const held = "WHERE packet_id = ? AND state = 'pending' AND holder = ?";
   switch (plan.kind) {
     case "lost":
+      // The row is someone else's now, so nothing about it changes; but the late report is the
+      // only evidence the lease was too short (the reaper's event says "never reported"), and a
+      // failure's sentence lives nowhere else.
+      append(t, { actor: machine(claim.holder), type: "decision.apply-late", subject, data: { act: row.act, ticket: row.ticket, holder: claim.holder, ...(outcome.ok ? { ok: true } : { ok: false, error: outcome.error, code: outcome.code }) } });
       return "lost";
     case "applied":
       t.run(`UPDATE packet_applies SET state = 'applied', holder = NULL, lease_until = NULL, done_at = ? ${held}`, t.at, row.packetId, claim.holder);
@@ -168,7 +193,11 @@ export function redriveApply(t: Tx, input: Author & { readonly packetId: PacketI
 /** A surface's view of one packet's apply, or undefined before its commit. */
 export function applyStatus(r: Reader, packetId: string): ApplyStatus | undefined {
   const row = rowOf(r, packetId);
-  if (row === undefined) return undefined;
+  return row === undefined ? undefined : applyStatusOf(row);
+}
+
+/** The status of an outbox row already read (the rail joins it rather than asking per packet). */
+export function applyStatusOf(row: Pick<ApplyRow, "act" | "state" | "attempts" | "lastError" | "nextAt">): ApplyStatus {
   return {
     act: row.act,
     state: row.state,

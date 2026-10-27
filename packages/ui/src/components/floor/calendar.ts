@@ -4,12 +4,15 @@
 // two renders. The prototype mixed the two (its day keys were UTC, its times local); here the
 // clock the page names is the one it computes with.
 
+import type { SlotState } from "@gt/domain/slot.machine";
+
 export type RailSlot = {
   readonly id: string;
   readonly title: string;
   readonly channel: string;
   readonly publishAt: string;
-  readonly status: "scheduled" | "publishing" | "published" | "missed" | "failed" | "cancelled";
+  /** The machine's states (@gt/domain/slot.machine): a state it gains is a state the rail is typed for. */
+  readonly status: SlotState;
   /** The channel's sentence, verbatim: on a failed slot, and kept on one cancelled after failing. */
   readonly error?: string;
   /** Why a waiting slot will not fire (@gt/domain/slot SLOT_DRIFTS); it clears itself. */
@@ -43,6 +46,12 @@ export function clock(ms: number): string {
 export function dayLabel(key: string): string {
   const d = new Date(`${key}T12:00:00Z`);
   return `${DOW[d.getUTCDay()] ?? ""} ${d.getUTCDate()} ${(MONTHS[d.getUTCMonth()] ?? "").slice(0, 3)}`;
+}
+
+/** `Thu 15 Oct · 09:12 UTC` for an instant; the text itself when it is not one (dayKey would throw). */
+export function whenUtc(iso: string): string {
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? iso : `${dayLabel(dayKey(t))} · ${clock(t)} UTC`;
 }
 
 export const isBad = (s: Pick<RailSlot, "status">): boolean => s.status === "failed" || s.status === "missed";

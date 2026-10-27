@@ -230,9 +230,6 @@ export type MotionOp =
 export const FRAMES_ACTS = ["direct-cut", "render-plates", "render-plate", "render-alternative", "image-takes"] as const;
 export const MOTION_ACTS = ["direct-motion", "render-clip"] as const;
 
-/** The acts that name one unit (`PartAct.target` = a unit id, or an ads shot id). */
-export const UNIT_ACTS: ReadonlySet<string> = new Set(["render-plate", "render-alternative", "image-takes", "direct-motion", "render-clip"]);
-
 /** A unit id without its chain (`<chain>:<at>:<n>` -> `<at>:<n>`): the trail names the beat. */
 const unitOf = (id: string): string => (id.includes(":") ? id.slice(id.indexOf(":") + 1) : id);
 

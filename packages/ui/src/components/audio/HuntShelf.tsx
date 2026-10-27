@@ -65,7 +65,7 @@ export function HuntShelf({ hunts, open, hrefOf }: HuntShelfProps) {
         const c = h.counts;
         return (
           <li key={h.id}>
-            <a className={cx(s.card, h.id === open && s.cardOn)} href={hrefOf(h.id)} aria-current={h.id === open ? "page" : undefined} aria-label={`${h.idea} · ${c.rendered} of ${c.leaves} heard · ${c.winners} crowned${h.lessonId === null ? "" : " · lesson signed"}`}>
+            <a className={cx(s.card, h.id === open && s.cardOn)} href={hrefOf(h.id)} aria-current={h.id === open ? "page" : undefined} aria-label={`${h.idea} · ${c.rendered} of ${c.leaves} heard · ${c.winners} crowned${c.failed > 0 ? ` · ${c.failed} failed` : ""}${h.lessonId === null ? "" : " · lesson signed"}`}>
               <span className={s.cardIdea}>{h.idea}</span>
               <span className={s.mini} aria-hidden="true">
                 {h.mini.map((col, i) => (

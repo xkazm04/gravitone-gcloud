@@ -217,6 +217,17 @@ export function paintLayer<S>(job: Job, li: number, make: (w: number, h: number)
   return surface;
 }
 
+/** the renderer a throwaway WebGL context names (unmasked where the browser
+ *  allows), for the tier probe; the context is let go at once. Both raster paths
+ *  ask through this: the worker on an OffscreenCanvas, the fallback on a canvas. */
+export function rendererOf(gl: WebGLRenderingContext | null): string | null {
+  if (!gl) return null;
+  const ext = gl.getExtension("WEBGL_debug_renderer_info");
+  const ren = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+  gl.getExtension("WEBGL_lose_context")?.loseContext();
+  return ren;
+}
+
 /** the job's shared stream, advanced past the draws the main thread already took */
 export function sharedRng(job: Job): Rand | null {
   if (!job.rng) return null;

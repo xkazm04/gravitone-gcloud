@@ -23,14 +23,14 @@
 // adapter does it against a stubbed global fetch and a resolver that never asks
 // DNS, with a placeholder key that is not a credential.
 
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
 import { keepEnv } from "./_helpers";
-import { VIDEO_BUDGET_VAR, __resetVideoBudget, videoBudgetStats } from "@/lib/imaging/video/budget";
+import { VIDEO_BUDGET_VAR, __resetVideoBudget, videoBudgetStats, videoSpendRows } from "@/lib/imaging/video/budget";
 import { parseClipRequest, readClip, setVideoAdapterForTests, startClip, videoCapability } from "@/lib/imaging/video/clips";
 import { videoErrorResponse } from "@/lib/imaging/video/errors";
 import { leonardoVideoAdapter, type VideoAdapter, type VideoOutcome } from "@/lib/imaging/video/leonardo";
@@ -56,7 +56,7 @@ const MP4 = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0
 
 let dir = "";
 
-keepEnv(["CLIP_STORE_DIR", VIDEO_BUDGET_VAR, "LEONARDO_API_KEY"]);
+keepEnv(["CLIP_STORE_DIR", VIDEO_BUDGET_VAR, "LEONARDO_API_KEY", "SPEND_STORE"]);
 
 test.beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "video-clips-"));
@@ -167,6 +167,15 @@ test("store: a minted id round-trips a record and an mp4; patches serialise", as
   writeFileSync(clipRecordPath(id), "{ half a rec");
   await expect(readClipRecord(id)).rejects.toThrow(/not a readable clip record/);
   expect((await listClipRecords()).unreadable).toBe(1);
+});
+
+test("store: a write whose rename never succeeds leaves no .tmp behind", async () => {
+  // A directory squatting on the target name makes the rename fail for good (EPERM on
+  // Windows after its retries, EISDIR elsewhere) - no seam into the retry needed.
+  const id = mintClipId();
+  mkdirSync(clipRecordPath(id), { recursive: true });
+  await expect(writeClipRecord({ clipId: id } as ClipRecord)).rejects.toThrow();
+  expect(readdirSync(dir).filter((n) => n.endsWith(".tmp")), "an orphan tmp survived the failed rename").toEqual([]);
 });
 
 test("store: an id the store did not mint names no path", async () => {
@@ -285,6 +294,37 @@ test("an adapter that throws closes the clip as failed and releases nothing it n
   expect(rec.error).toMatch(/socket hang up/);
   expect((await videoBudgetStats()).held).toBe(0);
   expect((await videoBudgetStats()).spent).toBe(0);
+});
+
+test("a ledger that refuses the settle does not strand a delivered clip: `done` resolves, the record is terminal", async () => {
+  // The vendor took the job and delivered; only the money write fails (here: the spend
+  // store becomes unselectable between the reserve and the settle). The clip's ending
+  // stands - `done` "never rejects" - and the record does not sit `rendering` for
+  // readClip to misreport later as a server that stopped.
+  setVideoAdapterForTests({
+    id: "fake",
+    configured: () => true,
+    render: async (_input, onAccepted) => {
+      await onAccepted({ vendorJobId: "gen-ledger", costUsd: 1.2, costBasis: "estimated" });
+      process.env.SPEND_STORE = "unselectable-probe";
+      return { kind: "done", bytes: MP4 };
+    },
+  });
+  const run = await startClip(body());
+  let rec: ClipRecord | null = null;
+  try {
+    rec = await run.done;
+  } catch (e) {
+    rec = null;
+    expect.soft(String(e), "the run's promise rejected").toBe("");
+  } finally {
+    process.env.SPEND_STORE = "memory";
+  }
+  expect(rec?.status).toBe("done");
+  const stored = await readClipRecord(run.clipId);
+  expect(stored?.status, "the record was left non-terminal").toBe("done");
+  expect(stored?.vendorJobId).toBe("gen-ledger");
+  expect((await clipFileStat(run.clipId))?.size).toBe(MP4.length);
 });
 
 test("a clip left rendering by a process that is gone reads as failed, not rendering forever", async () => {
@@ -434,6 +474,22 @@ test.describe("leonardo adapter against a scripted vendor (no network)", () => {
     expect(seen.filter((s) => s.endsWith("/v2/generations")).length).toBe(1);
   });
 
+  test("every poll errors: the give-up names what the last poll said, not only the clock", async () => {
+    // A key revoked mid-render answers every poll 401. The run gives up at the cap
+    // either way; the record must say the polls failed, or it reads as a slow vendor.
+    stub((url, init) => {
+      const c = common(url, init);
+      if (c) return c;
+      if (url.endsWith("/v2/generations")) return json({ generate: { generationId: "gen-401" } });
+      if (url.endsWith("/v2/generations/gen-401")) return json({ error: "Invalid authentication token" }, 401);
+      return undefined;
+    }, []);
+    const out = await leonardoVideoAdapter(opts).render(input, () => undefined);
+    expect(out.kind).toBe("failed");
+    expect(out.kind !== "done" && out.message).toMatch(/gen-401/);
+    expect(out.kind !== "done" && out.message, "the poll's own failure was dropped").toMatch(/Invalid authentication token/);
+  });
+
   test("terminal FAILED and NSFW statuses during the poll", async () => {
     for (const [status, kind] of [["FAILED", "failed"], ["NSFW", "refused"]] as const) {
       stub((url, init) => {
@@ -447,5 +503,34 @@ test.describe("leonardo adapter against a scripted vendor (no network)", () => {
       expect(out.kind, status).toBe(kind);
       expect(out.kind !== "done" && out.message).toMatch(new RegExp(`vendor says ${status}`));
     }
+  });
+
+  test("a start the vendor received and then timed out on books a failed row at the hold; an undispatched start books none", async () => {
+    // The start POST is aborted after dispatch: the vendor probably ran it. The video window
+    // must read the same rule the image meter reads (presumedBilled), not $0.
+    const abort = Object.assign(new Error("aborted"), { name: "AbortError" });
+    const refuseStart = (err: Error): Script => (url, init) => {
+      const c = common(url, init);
+      if (c) return c;
+      if (url.endsWith("/v2/generations")) throw err;
+      return undefined;
+    };
+    const run = async () => {
+      setVideoAdapterForTests(leonardoVideoAdapter(opts));
+      const { done } = await startClip(body({ model: "hailuo-03" }));
+      return done;
+    };
+
+    stub(refuseStart(abort), []);
+    const rec = await run();
+    expect(rec.status).toBe("failed");
+    const rows = await videoSpendRows();
+    expect(rows.map((r) => [r.outcome, r.amount, r.basis])).toEqual([["failed", gateHoldUsd("hailuo-03", 5), "estimated"]]);
+
+    // Control: a refusal to connect never left the machine - nothing is booked.
+    __resetVideoBudget();
+    stub((url, init) => common(url, init) ?? (url.endsWith("/v2/generations") ? (() => { throw new TypeError("fetch failed"); })() : undefined), []);
+    expect((await run()).status).toBe("failed");
+    expect(await videoSpendRows()).toEqual([]);
   });
 });

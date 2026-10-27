@@ -34,6 +34,7 @@ import type {
 } from "./types";
 import { OBSERVABLE_FIELDS } from "./types";
 import { subsetDescriptions, subsetEnums, subsetWeights, vocabFields } from "@/lib/vocab/cinematography";
+import { usableFix as producerUsableFix } from "@gt/producers/extract/units";
 
 /* ── Enums ────────────────────────────────────────────────────────────────── */
 
@@ -230,6 +231,13 @@ export function similarity(a: Observables, b: Observables): number {
   return got / total;
 }
 
+/** The partition's pairing rule: render_mode AND medium agree and the weighted
+ *  similarity is at least `threshold`. Also what places a source read after the
+ *  styles exist (performGroup.ts placeLate). */
+export function sameStyle(a: Observables, b: Observables, threshold = 0.8): boolean {
+  return a.render_mode === b.render_mode && a.medium === b.medium && similarity(a, b) >= threshold;
+}
+
 /**
  * Deterministic grouping: two sources share a style when their render_mode
  * AND medium agree and their weighted similarity is at least `threshold` —
@@ -257,7 +265,7 @@ export function partition(readbacks: (Observables | null)[], threshold = 0.8): n
     for (let j = i + 1; j < readbacks.length; j++) {
       const b = readbacks[j];
       if (!b) continue;
-      if (a.render_mode === b.render_mode && a.medium === b.medium && similarity(a, b) >= threshold) union(i, j);
+      if (sameStyle(a, b, threshold)) union(i, j);
     }
   }
   const groups = new Map<number, number[]>();
@@ -441,16 +449,8 @@ export function validateSynthesis(
 }
 
 /** Is a critique's `recipe_fix` worth adopting? It has to be a recipe, not a
- *  shrug — and not the same recipe again, which would spend a round to learn
- *  nothing.
- *
- *  THE JOB'S PLAN READS THE SAME RULE from packages/producers/src/extract/units.ts
- *  (it settles a replica's loop there). This copy stays because this module is in
- *  the browser bundle (app/foundry/styleArt.ts) and the producers workspace is
- *  not; tests/next-server/producer-extract.test.ts holds the two equal. */
-export function usableFix(c: Critique | null, current: string): string | null {
-  const fix = c?.recipe_fix?.trim();
-  if (!fix || fix.length < 40) return null;
-  if (fix.toLowerCase() === current.trim().toLowerCase()) return null;
-  return fix;
-}
+ *  shrug - and not the same recipe again, which would spend a round to learn
+ *  nothing. ONE rule with the job's plan, which settles a replica's loop by it
+ *  (packages/producers/src/extract/units.ts): this module used to carry a copy
+ *  because it was in a browser bundle, and no client imports it any more. */
+export const usableFix: (c: Critique | null, current: string) => string | null = producerUsableFix;

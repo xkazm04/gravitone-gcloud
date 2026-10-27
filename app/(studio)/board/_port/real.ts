@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 import type { PacketSummary } from "@gt/domain/board";
+import type { LoadSummary } from "@gt/domain/load";
 import { canonical } from "@gt/kernel/canonical";
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
@@ -18,9 +19,11 @@ import type { BoardPacket, Presentation } from "@gt/ui/board/port";
 
 import { adapterFor } from "../../../../lib/decision/v1/registry.ts";
 import { reworkNote } from "../../../../lib/decision/v1/sources/article.ts";
+import { nightLoadOf } from "../../../../lib/foundry/scout/load.ts";
 import type { DecisionAdapter, OpenPlan } from "../../../../lib/decision/v1/types.ts";
 import { parsePacketId } from "../../../../lib/ledger/v1/packet.ts";
 import type { WeirItem } from "../../../../lib/ledger/v1/types.ts";
+import type { Principal } from "../../../../lib/principal.ts";
 import type { ServerBoard } from "./port.ts";
 
 // THE REAL BOARD - the BoardPort over the kernel's decision driver and each source's v1
@@ -45,6 +48,11 @@ import type { ServerBoard } from "./port.ts";
 // THE COMMIT RE-READS v1. The preview's token folds in the digest of the v1 state it was
 // planned from; the commit recomputes that digest from a fresh read and hands it to the
 // kernel, which refuses with `conflict` / "stale-preview" when either side moved (decision 6).
+//
+// A COMMIT IN PARTS (spark scout-storyboards): a source whose adapter is `partial` is drawn with `present.partial`,
+// and its commit may carry `undecidedAs: "leave"` - the kernel commits the decided cells and records the rest as
+// undecided; the adapter opens them as the remainder packet. Any other source's commit with a sweep is refused here,
+// before the kernel sees it.
 
 export type Deps = {
   readonly store: () => Result<Store>;
@@ -58,6 +66,9 @@ export type Deps = {
 
 /** Who wrote it, as the ledger names the actor. A principal without a uid (the shared secret) is the operator. */
 export type Who = { readonly who?: string };
+
+/** The ledger's actor for a principal: its uid; the shared secret (and a public door's null) names nobody. */
+export const actorOf = (p: Principal | null): Who => (p !== null && "uid" in p ? { who: p.uid } : {});
 
 const SURFACE = "board";
 const author = (w: Who | undefined): Author => ({ by: "operator", surface: SURFACE, ...(w?.who === undefined ? {} : { who: w.who }) });
@@ -83,6 +94,18 @@ function revised(r: Result<PatchOutcome>): Result<{ readonly rev: number }> {
 /** What the desks draw when v1 no longer plans the packet: the candidate ids, which is all a decided desk needs. */
 const bare = (): Presentation => ({ items: {}, rows: [] });
 
+/**
+ * What a decided desk still draws beside the ids, read without the adapter's plan: a /scout night's load
+ * (spark night-load-band). A committed night is refused by the adapter's `packet` - it is decided - but its
+ * load is a measurement of the night, not a judgement in it, and the committed desk shows it as the open one did.
+ */
+async function decidedExtras(store: Store, id: string): Promise<{ readonly load?: LoadSummary }> {
+  const s = sourceOf(id);
+  if (!s.ok || s.value.source !== "scout") return {};
+  const load = await nightLoadOf(store, s.value.runId);
+  return load === undefined ? {} : { load };
+}
+
 export function makeRealBoard(deps: Deps): ServerBoard {
   const adapterOf = deps.adapter ?? adapterFor;
 
@@ -98,12 +121,21 @@ export function makeRealBoard(deps: Deps): ServerBoard {
     return p.ok ? ok({ adapter: a.value, v1: v1.value, plan: p.value }) : p;
   }
 
+  /** Whether the source a packet id names commits in parts (its adapter's `partial`). */
+  const partialOf = (id: string): boolean => {
+    const s = sourceOf(id);
+    if (!s.ok) return false;
+    const a = adapterOf(s.value.source);
+    return a.ok && a.value.partial === true;
+  };
+
   /** The stored packet's view, with the adapter's words where it still has them. */
-  function view(store: Store, id: string, planned: OpenPlan | undefined): Result<BoardPacket> {
+  function view(store: Store, id: string, planned: OpenPlan | undefined, extras: { readonly load?: LoadSummary } = {}): Result<BoardPacket> {
     const urls = planned?.urls ?? {};
     const v = store.read((r) => readPacketView(r, id, { mediaUrl: (_blob, c) => urls[c] ?? "" }));
     if (!v.ok) return v;
-    const present: Presentation = planned === undefined ? bare() : { ...planned.present, ...(planned.losses.length === 0 ? {} : { losses: planned.losses }) };
+    const drawn: Presentation = planned === undefined ? { ...bare(), ...extras } : { ...planned.present, ...(planned.losses.length === 0 ? {} : { losses: planned.losses }) };
+    const present: Presentation = partialOf(id) ? { ...drawn, partial: true } : drawn;
     if (v.value.mode !== "blind-pair") return ok({ view: v.value, present });
     // A blind arm's words are the machine's tell as much as its pick is: withheld until the
     // operator has judged that pair (ruling 9; L21's fixture does the same).
@@ -118,7 +150,14 @@ export function makeRealBoard(deps: Deps): ServerBoard {
     const held = exists(store, id);
     if (!held.ok) return held;
     const planned = await plan(id);
-    if (held.value) return view(store, id, planned.ok ? planned.value.plan : undefined);
+    if (held.value) {
+      if (planned.ok) return view(store, id, planned.value.plan);
+      const v = view(store, id, undefined, await decidedExtras(store, id));
+      // A decided packet v1 refuses to plan is the expected case; an OPEN one draws bare ids and
+      // empty media on a desk still taking verdicts, and v1's reason must survive somewhere.
+      if (v.ok && v.value.view.state === "open") console.error(`[board] ${id}: open, and v1 does not plan it: ${planned.error.message}`);
+      return v;
+    }
     // Not in the kernel: open it from v1 - or say, in v1's words, why it cannot be.
     if (!planned.ok) return planned.error.code === "not-found" ? planned : err(planned.error.code, `board: ${id}: ${planned.error.message}`, { cause: planned.error });
     const p = planned.value.plan;
@@ -143,6 +182,15 @@ export function makeRealBoard(deps: Deps): ServerBoard {
     // v1's piles not opened yet, opened lazily when the operator opens one. A bare aggregate
     // is shown only while no pile of its base is open: the open one is that pile.
     const weir = await deps.weir();
+    // The page is cut at 100 rows: a decided packet past it whose pile v1 still lists (a stuck apply)
+    // is held all the same, so the Weir's ids are asked of the kernel directly.
+    if (listed.value.truncated) {
+      for (const w of weir) {
+        if (w.packetId === undefined || held.has(w.packetId)) continue;
+        const there = exists(k.value, w.packetId);
+        if (there.ok && there.value) held.add(w.packetId);
+      }
+    }
     const unopened: PacketSummary[] = [];
     for (const w of weir) {
       if (w.packetId === undefined || held.has(w.packetId) || openIds.some((o) => o.startsWith(`${w.packetId}/`))) continue;
@@ -175,12 +223,13 @@ export function makeRealBoard(deps: Deps): ServerBoard {
     return c.ok ? ok(c.value.consequence) : c;
   }
 
-  async function commit({ id, token, ticket }: { readonly id: string; readonly rev: number; readonly token: string; readonly ticket: string }, who?: Who) {
+  async function commit({ id, token, ticket, undecidedAs }: { readonly id: string; readonly rev: number; readonly token: string; readonly ticket: string; readonly undecidedAs?: "leave" }, who?: Who) {
     const k = deps.store();
     if (!k.ok) return k;
     const store = k.value;
     const packetId = pid(id);
     if (!packetId.ok) return packetId;
+    if (undecidedAs !== undefined && !partialOf(id)) return err("refused", `board: packet ${id} commits only whole; its source does not commit in parts`);
     const at = store.read((r) => ({ head: head(r, id), decisions: currentDecisions(r, id).decisions }));
     if (!at.ok) return at;
     // A decided packet is not re-read from v1 (it may refuse now that the outcome landed):
@@ -193,13 +242,14 @@ export function makeRealBoard(deps: Deps): ServerBoard {
       if (!fresh.ok) return fresh;
       v1Digest = fresh.value.v1Digest;
     }
-    const done = store.tx((t) => kernelCommit(t, { ...author(who), packetId: packetId.value, ticket, token, v1Digest }));
+    const done = store.tx((t) => kernelCommit(t, { ...author(who), packetId: packetId.value, ticket, token, v1Digest, ...(undecidedAs === undefined ? {} : { undecidedAs }) }));
     if (!done.ok) return done;
     const r = done.value;
     if (!r.ok) return r;
     deps.kick(store, packetId.value);
     const apply = store.read((rd) => applyStatus(rd, id));
-    return ok({ packetId: id, rev: r.value.rev, kept: r.value.kept.length, rejected: r.value.rejected.length, at: r.value.at, ...(apply.ok && apply.value !== undefined ? { apply: apply.value } : {}) });
+    const later = r.value.undecided.length;
+    return ok({ packetId: id, rev: r.value.rev, kept: r.value.kept.length, rejected: r.value.rejected.length, ...(later === 0 ? {} : { undecided: later }), at: r.value.at, ...(apply.ok && apply.value !== undefined ? { apply: apply.value } : {}) });
   }
 
   async function returnPacket({ id, rev, plan: editPlan }: { readonly id: string; readonly rev: number; readonly plan: Parameters<ServerBoard["returnPacket"]>[0]["plan"] }, who?: Who) {

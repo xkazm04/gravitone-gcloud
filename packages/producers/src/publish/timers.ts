@@ -1,4 +1,5 @@
 import type { Holder } from "@gt/domain/job";
+import { LOAD_SAMPLE_MS } from "@gt/domain/load";
 import { statusIn } from "@gt/kernel/lease";
 import type { Alive } from "@gt/kernel/lease-core";
 import type { Reader } from "@gt/kernel/store";
@@ -17,7 +18,8 @@ import type { Reader } from "@gt/kernel/store";
 // are `timer.*` events on the same subject; a quiet healthy tick writes no event, because a
 // thirty-second loop that announced itself would bury the ledger in "still here".
 
-export const TIMER_NAMES = ["publish-tick", "metrics-refresh"] as const;
+// `load-sample` (spark night-load-band): the box's load, one reading a minute, for a night's band.
+export const TIMER_NAMES = ["publish-tick", "metrics-refresh", "load-sample"] as const;
 export type TimerName = (typeof TIMER_NAMES)[number];
 
 export type TimerSpec = {
@@ -34,6 +36,9 @@ export type TimerSpec = {
 export const PUBLISH_TICK: TimerSpec = { name: "publish-tick", everyMs: 30_000, deadlineMs: 30 * 60_000, firstDelayMs: 0 };
 /** Lifetime statistics change slowly and spend quota; four reads a day. */
 export const METRICS_REFRESH: TimerSpec = { name: "metrics-refresh", everyMs: 6 * 60 * 60_000, deadlineMs: 10 * 60_000, firstDelayMs: 60_000 };
+/** One reading of the box a minute (a night's summary counts a waiting job one cadence per sample). A probe
+ *  takes ~1 s; past half a cadence it is hung, not slow. First at ~5 s, after the publish tick's boot. */
+export const LOAD_SAMPLE: TimerSpec = { name: "load-sample", everyMs: LOAD_SAMPLE_MS, deadlineMs: 30_000, firstDelayMs: 5_000 };
 
 /** A stretch a timer was not ticking: from its last heartbeat to the tick that noticed. */
 export type Gap = { readonly from: string; readonly to: string };

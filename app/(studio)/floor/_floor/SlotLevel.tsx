@@ -28,6 +28,7 @@ import type { ActionResult } from "../../../_server/actionCore.ts";
 import { useShell } from "../../_shell/Providers.tsx";
 import type { CalendarPort } from "../_calendar/contract.ts";
 import s from "./Floor.module.css";
+import { settle } from "./settle.ts";
 
 export type SlotRead = { readonly id: string; readonly r: ActionResult<SlotView> };
 
@@ -58,7 +59,7 @@ export function SlotLevel({ id, port, nowMs, initial, cal, onClose, onFloor, onL
   useEffect(() => {
     if (read !== null && read.id === id) return;
     let live = true;
-    void port.detail({ id }).then((r) => {
+    void settle(port.detail({ id })).then((r) => {
       if (live) setRead({ id, r });
     });
     return () => {
@@ -73,13 +74,13 @@ export function SlotLevel({ id, port, nowMs, initial, cal, onClose, onFloor, onL
     armed.current = true;
     setBusy(verb);
     setError(undefined);
-    void call().then((r) => {
+    void settle(call()).then((r) => {
       armed.current = false;
       setBusy(null);
       if (!r.ok) {
         setError(r.error.error);
         // Moved under the operator: draw the slot as it now is, the refusal beside it.
-        if (r.error.code === "conflict") void port.detail({ id }).then((fresh) => (fresh.ok ? setRead({ id, r: fresh }) : undefined));
+        if (r.error.code === "conflict") void settle(port.detail({ id })).then((fresh) => (fresh.ok ? setRead({ id, r: fresh }) : undefined));
         return;
       }
       setRead({ id, r });

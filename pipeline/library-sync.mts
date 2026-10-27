@@ -49,8 +49,8 @@ if (process.env["GRAVITONE_STORE_PATH"] === undefined && !flag("--real")) {
 
 const { openKernel } = await import("../packages/kernel/src/kernel.ts");
 const { blobStore } = await import("../packages/kernel/src/blob.ts");
-const { storeLocation } = await import("../lib/kernelStore.ts");
-const { LIBRARY_FEEDS, blobRootFor, libraryCtx, queueLibraryFacts } = await import("../lib/library/fresh.ts");
+const { blobRootOf, storeLocation } = await import("../lib/kernelStore.ts");
+const { LIBRARY_FEEDS, libraryCtx, queueLibraryFacts } = await import("../lib/library/fresh.ts");
 const { syncLibrary } = await import("../lib/library/project.ts");
 const { ffmpegProbe } = await import("../lib/producers/media-facts.ts");
 
@@ -61,7 +61,7 @@ if (!k.ok) {
   process.exit(2);
 }
 const facts = flag("--no-probe") ? {} : flag("--inline") ? { probe: ffmpegProbe(), probeLimit: limit } : { queue: queueLibraryFacts };
-const report = await syncLibrary(k.value.store, blobStore(blobRootFor(location)), LIBRARY_FEEDS, libraryCtx(k.value.store), facts);
+const report = await syncLibrary(k.value.store, blobStore(blobRootOf(k.value.store)), LIBRARY_FEEDS, libraryCtx(k.value.store), facts);
 k.value.close();
 if (!report.ok) {
   console.error(`library-sync: ${report.error.message}`);

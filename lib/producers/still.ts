@@ -1,25 +1,29 @@
-import { ok } from "@gt/domain/errors";
+import { ok, type Result } from "@gt/domain/errors";
+import type { EventData } from "@gt/domain/event";
 import type { BlobStore } from "@gt/kernel/blob";
 import type { ResourceLane } from "@gt/domain/lane";
-import type { Producer } from "@gt/kernel/job-core";
+import type { Producer, StepContext } from "@gt/kernel/job-core";
 import { lookWords } from "@gt/producers/frames/look";
+import { landPart } from "@gt/producers/research/partJob";
 import { defineStill, stillPlan } from "@gt/producers/still/define";
 
 import { NEGATIVE_PROMPT, compilePrompt } from "@/lib/stylePrompt";
 
-import { imageFailure, kernelBlobs, LIVE_IMAGING, lookImages, meteredImages, putImage, type ImagingEngines } from "./frames.ts";
-import { asData, must, partFacts, priceOf, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
-import { madeFree, madePaid } from "@gt/producers/research/partAct";
+import { imageFailure, jobBlobs, LIVE_IMAGING, lookImages, meteredImages, putImage, type ImagingEngines } from "./frames.ts";
+import { asData, must, partFacts, priceOf, recOf, written, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
+import { madeFree, madePaid, type ActPlan } from "@gt/producers/research/partAct";
+import type { PartSnapshot } from "@gt/kernel/parts/driver";
 import { ImagingError } from "@/lib/imaging/errors";
 
 // THE STILL PRODUCER, BOUND (Phase 4 wave C, L37) - an album still part's takes through the
 // imaging router (`generate`, one paid image per unit, metered with a dry stand-in), each take's
 // pixels a blob.
 //
-// WHERE THE TAKES LIVE, SAID: a still part has no step record (@gt/domain/steps registers the six
-// film kinds; the parts driver refuses any other), so this job's `land` writes nothing and the
-// takes are the job's booked outputs - `{ n, blob, model, costUsd? }` per `unit:take:<n>` - until a
-// `still` record exists (L39 is defining its shape). The project title is the prompt's subject
+// WHERE THE TAKES LIVE, SAID: each take lands on the STILL record (@gt/domain/steps/still.ts: takes
+// as blob refs, appended under the job's id so a second run adds takes beside the first) and stays
+// the job's booked output as well - `{ n, blob, model, costUsd? }` per `unit:take:<n>`, which the
+// mv still step reads today. The adopted take is the gate packet's pick, so landing never moves
+// it. The project title is the prompt's subject
 // (the album recipe has no research part to write one), drawn under the project's look the way a
 // frames plate is (./frames.ts, Phase 5 L56): its style's block and references, or the named
 // default with its miss on the receipt - an album project carries no style today, so that is
@@ -34,7 +38,22 @@ export const stillUnits: UnitsFn = (_s, f, ask) => {
   return plan.ok ? ok({ ...plan.value, about: lookWords(f.look) }) : plan;
 };
 
-export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING, blobs: () => BlobStore = kernelBlobs): Producer {
+/** The STILL record after the job's takes: each drawn unit appended once (a refused one has no
+ *  blob), `adopted` and every sibling field left as they were. */
+export function landStill(jobId: string, plan: ActPlan, made: ReadonlyMap<string, EventData>, s: PartSnapshot): Result<Record<string, unknown>> {
+  const rec = recOf(s, "still");
+  const held = Array.isArray(rec["takes"]) ? written<{ id: string }[]>(rec["takes"]) : [];
+  const have = new Set(held.map((t) => t.id));
+  const added = plan.units.flatMap((u) => {
+    const m = made.get(u.name);
+    const id = `${jobId}:${u.name}`;
+    if (m === undefined || m["blob"] === undefined || have.has(id)) return [];
+    return [{ id, blob: m["blob"], prompt: String(u.input["prompt"] ?? ""), ...(typeof m["model"] === "string" ? { model: m["model"] } : {}), ...(typeof m["costUsd"] === "number" ? { costUsd: m["costUsd"] } : {}) }];
+  });
+  return ok({ still: { ...rec, takes: asData({ takes: [...held, ...added] })["takes"] } });
+}
+
+export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING, blobs: (ctx: StepContext) => BlobStore = jobBlobs): Producer {
   return defineStill(lane, {
     // Held at the release, not failed by the worker, while its act waits on a human act (L45).
     preflight: preflightFrom(stillUnits),
@@ -46,7 +65,7 @@ export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHoo
       try {
         const { look } = must(partFacts(ctx));
         const prompt = compilePrompt(look.block, String(unit.input["prompt"] ?? ""));
-        const references = await lookImages(look, blobs);
+        const references = await lookImages(look, () => blobs(ctx));
         const got = await meteredImages(ctx, unit, { prompt, negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1, ...(references.length === 0 ? {} : { references }) }, engines, look.refs);
         const img = got.images[0];
         if (img === undefined) return { kind: "vendor-failure", message: "the imaging router answered with no image" };
@@ -59,8 +78,9 @@ export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHoo
         return imageFailure(e);
       }
     },
-    // No still record to land in (see the header): the takes stay the job's outputs.
-    land: async () => ok({ rev: 0, unchanged: true }),
+    async land(job, plan, made, ctx) {
+      return landPart(ctx, plan.act, (s) => landStill(job.id, plan, made, s));
+    },
     ...(hooks.onSettled === undefined ? {} : { settled: hooks.onSettled }),
   });
 }

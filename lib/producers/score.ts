@@ -12,7 +12,7 @@ import { defineScore, scorePlan, type CueView, type ScoreView } from "@gt/produc
 
 import { adBedRequest, DEFAULT_HOLD_S } from "@/lib/score/ads/bed";
 import { bindTake, cueTakeRequest, revisionRequest, sectionsOf } from "@/lib/score/takes";
-import type { AdBrief, AdScenario } from "@/lib/ads/types";
+import type { AdBrief } from "@/lib/ads/types";
 import type { PictureUnit } from "@/lib/frames/picture/unit";
 import { MusicError } from "@/lib/music/errors";
 import { pictureFromUnits } from "@/lib/score/picture";
@@ -22,6 +22,7 @@ import { createTake, getTake } from "@/lib/sound/takes";
 import type { GenerateRequest, SoundTake } from "@/lib/sound/types";
 import { cuesFrom, type SpottingCue } from "@/lib/studio/score";
 
+import { pickedScenario } from "./frames.ts";
 import { asData, field, must, partFacts, priceOf, recOf, text, withRecords, written, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
 
 // THE SCORE PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/score's ports over
@@ -60,12 +61,6 @@ const unitsOf = (s: PartSnapshot): PictureUnit[] => {
   return Array.isArray(u) ? written<PictureUnit[]>(u) : [];
 };
 
-/** The picked ads scenario, if any. */
-export function pickedScenario(s: PartSnapshot): AdScenario | undefined {
-  const r = recOf(s, "ads-scenarios");
-  const picked = text(r["pickedId"]);
-  return (Array.isArray(r["options"]) ? written<AdScenario[]>(r["options"]) : []).find((o) => o.id === picked);
-}
 
 /** The project's cues: its spots on its own picture, and the spots that cannot be cues, with why. */
 function cuesOf(s: PartSnapshot, f: PartFacts): { cues: SpottingCue[]; unspottable: { id: string; why: string }[] } {

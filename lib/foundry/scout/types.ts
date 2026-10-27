@@ -23,7 +23,9 @@
 // as a reference - a clip animates OUR replica still, never a source frame
 // (visual-style-locking / style-onboarding-from-sample).
 
-import type { AssetId, MeshBrief } from "../mesh/types";
+import type { Aspect } from "../../imaging/types";
+import type { CharacterCard, MuseJudge } from "./muse";
+import type { AssetId, ExportProject, MeshBrief } from "../mesh/types";
 
 /* ── Ids and limits ──────────────────────────────────────────────────────── */
 
@@ -44,8 +46,73 @@ export const DEFAULT_TARGET = 20;
 export const DEFAULT_CLIP_CAP = 2;
 /** Game assets a night briefs while every 3D engine is still being profiled (spark game-3d-assets, wave 3). */
 export const DEFAULT_ASSET_CAP = 3;
+/** Idea artboards a night draws in the Leonardo studio beside its plan (spark scout-idea-artboards: "always 20-30 ideas"). */
+export const DEFAULT_IDEA_CAP = 25;
+export const MAX_IDEA_CAP = 40;
+/** An idea's title is its headline on the Board (question taste 2026-08-30: claim = headline <= 90 chars). */
+export const IDEA_TITLE_MAX = 90;
+export const IDEA_PROMPT_MAX = 1500;
+/** What a kept idea becomes on the next night, through the act of that name. `stats` (spark stats-reels): a
+ *  data video authored in code - kept, the next night researches its real data and renders the full strip.
+ *  `character` (spark scout-muse, the muse wing only): a fictional adult woman's card - kept, it joins
+ *  knowledge/scout-muse/characters.md and later nights draw her in other looks and situations. */
+export const IDEA_TARGETS = ["scene", "style", "asset3d", "stats", "character"] as const;
+export type IdeaTarget = (typeof IDEA_TARGETS)[number];
+/** Where an idea came from: a watchlist line, a registry gap (registry.md), or neither (`free`). */
+export const IDEA_ANCHORS = ["watch", "gap", "free"] as const;
+export type IdeaAnchorKind = (typeof IDEA_ANCHORS)[number];
+/** Stats-reel ideas a night authors beside its artboards (spark stats-reels, wave 1: "up to 6"). They count
+ *  toward this cap only - not the idea cap, the ~20-row target or the clip cap. */
+export const DEFAULT_REEL_CAP = 6;
+export const MAX_REEL_CAP = 12;
+/** The one inline block a reel's strip holds ALL its numbers in, so a kept reel's real data swaps in whole. */
+export const REEL_DATA_ID = "strip-data";
+/** A reel brief's data shapes (the strips fixtures' two race kinds, and three a stats reel also tells). */
+export const REEL_KINDS = ["level-race", "cumulative-race", "counter", "ranking", "share"] as const;
+export type ReelKind = (typeof REEL_KINDS)[number];
+/** The strips vocabulary a reel's approach is written in (lib/foundry/strips/types.ts), less `webgl`: the
+ *  harness's chromium runs --disable-gpu and draws it black. One list for the ideas door and the reel step. */
+export const REEL_MEDIA = ["svg", "canvas", "dom", "css3d"] as const;
+export const REEL_GRAMMARS = ["draw-on", "morph", "camera", "stepped", "particle", "reflow", "type"] as const;
+export const REEL_DENSITIES = ["low", "mid", "high"] as const;
+
+/**
+ * What every night's work is FOR (operator, 2026-10-23): a YouTube video - a Short (~30 s) or a short
+ * video (up to 5 minutes). A style is only ever the baseline look of such a video; nothing here is
+ * made to be printed, hung or sold as an image.
+ */
+export const VIDEO_FORMATS = ["short", "video"] as const;
+export type VideoFormat = (typeof VIDEO_FORMATS)[number];
+/** A direction's premise: the story or the bit in a sentence or two. */
+export const PREMISE_MAX = 280;
+export const GENRE_MAX = 80;
 /** Hailuo takes 5 or 10 (lib/imaging/video/types.ts CLIP_DURATIONS); the night renders the short one. */
 export const CLIP_SECONDS = 5;
+
+/** Suno tracks a night makes from kept music seeds (spark scout-decision-graph): one create each, ~4 clips. */
+export const DEFAULT_TRACK_CAP = 4;
+export const MAX_TRACK_CAP = 8;
+/** Full-song visualizers a night renders from kept track clips (~20-30 min each on box.render). */
+export const DEFAULT_VISUALIZER_CAP = 2;
+export const MAX_VISUALIZER_CAP = 4;
+
+/** Storyboards a night draws from kept ideas (spark scout-storyboards): up to five local Flux stills each, ~8 GPU min.
+ *  Raised 2026-10-25 (spark scout-vision, the operator: "raise max to 20") - storyboards are the free local work the
+ *  night develops its backlog with. */
+export const DEFAULT_STORYBOARD_CAP = 12;
+export const MAX_STORYBOARD_CAP = 20;
+
+/** THE BACKLOG GATE (spark scout-vision). While BACKLOG_GATE or more kept ideas wait for their next step
+ *  (./backlog.ts backlogOf), a seed batch takes its child seeds and at most GATED_FRESH_SEEDS fresh ones: the night
+ *  proves what was approved before it spreads further. */
+export const BACKLOG_GATE = 20;
+export const GATED_FRESH_SEEDS = 20;
+/** A storyboard's frames: at most five stills, the operator's number. */
+export const STORYBOARD_PANELS_MAX = 5;
+export const STORYBOARD_PARAGRAPH_MAX = 480;
+export const STORYBOARD_BULLETS_MIN = 3;
+export const STORYBOARD_BULLETS_MAX = 6;
+export const STORYBOARD_BULLET_MAX = 140;
 
 /** A finding is a headline, not a paragraph; its quote is the evidence, verbatim. */
 export const CLAIM_MAX = 140;
@@ -53,6 +120,13 @@ export const QUOTE_MAX = 400;
 export const WHY_MAX = 200;
 /** A run's USE: the content it can serve (a children's cartoon series, a music video, an explainer), one line. */
 export const USE_MAX = 140;
+/** A brief's application (what the output is for), a closed list; its specific target rides beside it. */
+export const USE_APPS = ["videogame", "dating-sim", "roleplay", "companion-chat", "genre-video", "short", "other"] as const;
+export type UseApp = (typeof USE_APPS)[number];
+/** WHY the run was chosen, one free sentence (not the prompt). */
+export const AIM_MAX = 200;
+/** A look direction's slug, the key of the muse repeat guard. */
+export const LOOK_SLUG = /^[a-z0-9-]{3,40}$/;
 export const MAX_SOURCES_PER_NIGHT = 60;
 
 /* ── The night ───────────────────────────────────────────────────────────── */
@@ -77,6 +151,16 @@ export type Night = {
    * still). Absent on a night opened before 2026-10-22: DEFAULT_ASSET_CAP.
    */
   readonly assetCap?: number;
+  /** Idea artboards the night may draw (`idea` candidates). Absent on a night opened before 2026-10-23: DEFAULT_IDEA_CAP. */
+  readonly ideaCap?: number;
+  /** Stats-reel ideas the night may author (`idea` candidates with target `stats`). Absent: DEFAULT_REEL_CAP. */
+  readonly reelCap?: number;
+  /** Suno tracks the night may make (`track` candidates). Absent on a night opened before 2026-10-23: DEFAULT_TRACK_CAP. */
+  readonly trackCap?: number;
+  /** Visualizers the night may render (`visualizer` candidates). Absent: DEFAULT_VISUALIZER_CAP. */
+  readonly visualizerCap?: number;
+  /** Storyboards the night may draw (`storyboard` candidates). Absent on a night opened before 2026-10-24: DEFAULT_STORYBOARD_CAP. */
+  readonly storyboardCap?: number;
   /** A dry night ran on stand-ins; its packet can be triaged but commits nothing. */
   readonly dry: boolean;
   readonly state: NightState;
@@ -102,6 +186,16 @@ export type NightCommit = {
   readonly notes: Readonly<Record<string, string>>;
   /** True when the night was dry: the verdicts are recorded and nothing else was written. */
   readonly dry: boolean;
+  /**
+   * A commit in PARTS (spark scout-storyboards): the cell ids still undecided after the last part - they
+   * wait on the remainder packet (`<packetId>:<n>`). Absent or empty: every cell is decided and the night
+   * is `committed`. kept/rejected/reasons/notes above are the union of every part so far.
+   */
+  readonly open?: readonly string[];
+  /** How many parts have committed (absent: one). */
+  readonly parts?: number;
+  /** The instant of parts 2..n, in order (`at` is part 1's). Merged by ./parts.ts mergePart. */
+  readonly partAt?: readonly string[];
 };
 
 /* ── Sources ─────────────────────────────────────────────────────────────── */
@@ -121,10 +215,22 @@ export type ScoutSource = {
   readonly channel?: string;
   /** Why the skill picked it - one line, the skill's own words. */
   readonly why: string;
-  readonly found: "watchlist" | "search";
+  /** `idea`: one of OUR kept idea artboards, brought in to be developed (`fromIdea`). */
+  readonly found: "watchlist" | "search" | "idea";
   /** The watchlist line that led here, verbatim, when `found` is `watchlist`. */
   readonly watch?: string;
-  readonly rights: "reference-only";
+  /**
+   * Set when the source teaches a whole mechanism, not one finding: the skill's line on what (spark
+   * registry-feedback-loop). A keep from it queues a `source-rich` lead nominating the URL to the
+   * registry's /intake.
+   */
+  readonly rich?: string;
+  /** `ours` only for a kept idea's artboard (`fromIdea`): we drew it, so it may be a replica's input. */
+  readonly rights: "reference-only" | "ours";
+  /** `<night>/<c-id>` of the kept idea artboard this source IS (spark scout-idea-artboards WP-I4). */
+  readonly fromIdea?: string;
+  /** The kept idea's seed, copied when the idea is brought in, so what develops it inherits the branch (spark scout-decision-graph). */
+  readonly fromSeed?: SeedRef;
   readonly status: SourceStatus;
   readonly error?: string;
   /** Night-relative files: the picture, or a video's gated keyframes (`sources/s-01/k-003.jpg`). */
@@ -137,7 +243,7 @@ export type ScoutSource = {
 
 /* ── Candidates ──────────────────────────────────────────────────────────── */
 
-export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d"] as const;
+export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer", "storyboard"] as const;
 export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
 
 export const CANDIDATE_STATUSES = ["pending", "rendered", "failed"] as const;
@@ -154,6 +260,20 @@ type CandidateBase = {
    *  no purpose is a mindless output). Rejected with the `use case` reason, it steers the next nights
    *  away from that direction (taste.ts). Absent on runs from before the field. */
   readonly use?: string;
+  /** The application `use` names (the closed list); absent on runs from before spark scout-use-aim. */
+  readonly app?: UseApp;
+  /** Why this run was chosen: the question `use` raises answered in one sentence. The image prompt is NOT the aim. */
+  readonly aim?: string;
+  /** The look direction as a slug (muse character briefs): two briefs sharing one are a repeat. */
+  readonly look?: string;
+  /** `<night>/<c-id>` of the kept idea this candidate develops - it takes the idea off the to-develop list (taste.ts). */
+  readonly fromIdea?: string;
+  /**
+   * The kept SEED this candidate grows from (spark scout-decision-graph): `<batch>/sd-NNN`. Set by the door
+   * that takes it (ideas, track, direction) and copied from the idea onto whatever develops it, so every
+   * run's effort rolls up to a branch. Absent on work from before seeds existed ("before seeds").
+   */
+  readonly fromSeed?: SeedRef;
 };
 
 /** A still style: an ordinary extract run over this candidate's source pictures/keyframes. */
@@ -218,6 +338,12 @@ export type FindingCandidate = CandidateBase & {
   readonly claim: string;
   /** The source's words (a transcript line, a caption) or the skill's measurement, verbatim. */
   readonly quote: string;
+  /**
+   * `<night>/<candidate>` of a finding an earlier night KEPT that this one says again from another
+   * source (spark registry-feedback-loop): kept, it is the second observation (n=2) and queues a
+   * `finding-restated` lead.
+   */
+  readonly restates?: string;
 };
 
 /** A line the skill proposes for knowledge/scout/watchlist.md. */
@@ -233,16 +359,328 @@ export type WatchCandidate = CandidateBase & {
  * concepts and hands off to the mesh store (lib/foundry/mesh/); `rendered` means that hand-off
  * happened, and what the mesh and finish jobs then made is read off the asset, never copied here.
  */
+/**
+ * What a game asset is FOR (operator, 2026-10-23, after rejecting every asset of the first 3D nights for having no
+ * stated use: "we cannot create assets without purpose ... either to create new type of project, or helping
+ * existing"): an existing game project it helps (the export targets, lib/foundry/mesh/types.ts EXPORT_PROJECTS),
+ * or a new kind of project it would open. Absent on assets briefed before the field.
+ */
+export type AssetServes = { readonly project: ExportProject } | { readonly newProject: string };
+
 export type Asset3dCandidate = CandidateBase & {
   readonly kind: "asset3d";
   readonly brief: MeshBrief;
+  readonly serves?: AssetServes;
   /** Night-relative concept images, OURS (`assets/c-05/concept-1.png`), in the request's order. */
   readonly concepts: readonly string[];
   /** The mesh asset the hand-off wrote (lib/foundry/mesh/store.ts), once it did. */
   readonly assetId?: AssetId;
 };
 
-export type Candidate = StyleCandidate | SceneCandidate | FindingCandidate | WatchCandidate | Asset3dCandidate;
+/**
+ * A rough intent drawn in the operator's Leonardo studio (spark scout-idea-artboards): one artboard,
+ * no source - the brief is OUR words, anchored to a watchlist line or a registry gap. Kept, the next
+ * night builds it into its `target` through that act; blocked, its title and reasons are banned from
+ * the next ideation (taste.ts). The studio generation is deleted once the pixels are held.
+ */
+export type IdeaCandidate = CandidateBase & {
+  readonly kind: "idea";
+  readonly title: string;
+  readonly target: IdeaTarget;
+  /** The studio prompt, verbatim. */
+  readonly prompt: string;
+  /** The genre it tries (`animated comedy sketch`, `music video`, `data explainer`): what the night spreads across. Absent on the first batch. */
+  readonly genre?: string;
+  readonly anchor: { readonly kind: IdeaAnchorKind; readonly ref: string };
+  /** Night-relative artboard, OURS (`ideas/c-12.png`), once drawn. A stats idea's is its strip's frame 120. */
+  readonly image?: string;
+  /** A stats idea's strip and its inputs, night-relative under `ideas/<c-id>/` (present only on target `stats`). */
+  readonly reel?: ReelFiles;
+  /** The still's aspect when it is not the scout wing's 16:9 (a muse portrait is 9:16). Absent: 16:9. */
+  readonly aspect?: Aspect;
+  /** A character idea's card (muse wing, target `character`). */
+  readonly card?: CharacterCard;
+  /** The eye's read of the drawn still (muse wing). A still that failed it was deleted; the candidate says why. */
+  readonly judge?: MuseJudge;
+};
+
+/**
+ * What the skill writes for a stats idea (the `ideas` door's `reel` field, spark stats-reels). The brief is
+ * ILLUSTRATIVE on the night that proposes it (wave 2: triage ideas, not datasets) - plausible numbers in the
+ * shape a real fixture would have (pipeline/strips/data/*.json), the source line on screen saying so. The
+ * approach is the seat's own design (wave 2: topic + free design), in a strips approach card's fields.
+ */
+export type ReelBrief = {
+  readonly brief: {
+    readonly case: string;
+    readonly title: string;
+    readonly hook: string;
+    readonly unit: string;
+    readonly kind: ReelKind;
+    /** The numbers, in the fixture's shape: free JSON the strip reads from its REEL_DATA_ID block. */
+    readonly data: unknown;
+    readonly steps?: readonly string[];
+    readonly illustrative: true;
+  };
+  readonly approach: {
+    readonly name: string;
+    readonly medium: (typeof REEL_MEDIA)[number];
+    readonly grammar: (typeof REEL_GRAMMARS)[number];
+    readonly density: (typeof REEL_DENSITIES)[number];
+    readonly direction: string;
+    readonly falsifier: string;
+  };
+};
+
+/** Where a stats idea's files live, night-relative. */
+export type ReelFiles = {
+  readonly brief: string;
+  readonly approach: string;
+  /** Present once the author turn wrote a strip that passed the lint. */
+  readonly strip?: string;
+};
+
+/**
+ * A DIRECTION to confirm (operator, 2026-10-23: "using Notes more as confirmation of direction - we
+ * are going with animated comedy sketch, with xy artstyle, dark humor for adults, story around xy,
+ * based on the approved decisions"). Words, no render: kept, it is a confirmed direction the next
+ * nights work inside (taste.ts); rejected, a refused one they steer away from.
+ */
+export type DirectionCandidate = CandidateBase & {
+  readonly kind: "direction";
+  /** The direction in one headline: `Animated comedy sketch, dark humour for adults`. */
+  readonly title: string;
+  readonly format: VideoFormat;
+  readonly genre: string;
+  /** The look: a kept style's name, or a style in words. */
+  readonly style: string;
+  /** The register: `deadpan, dark`. */
+  readonly tone: string;
+  readonly audience: string;
+  /** The story or the bit, in a sentence or two. */
+  readonly premise: string;
+  /** The committed cells it rests on (`<night>/<cell id>`), at least one. */
+  readonly basedOn: readonly string[];
+};
+
+/** One Suno clip of a track, held in the night (`tracks/c-NN/a1.mp3`). Part `a1`..`a4` is its packet cell. */
+export type TrackClip = {
+  readonly part: string;
+  readonly path: string;
+  /** The Suno model that rendered it (`v6`, `v6-wild`). */
+  readonly model: string;
+  readonly title: string;
+  readonly durationS?: number;
+  /** suno.json's clip id (`sc-...`): what a visualizer enqueues from. */
+  readonly clipId: string;
+};
+
+/**
+ * A kept music seed made into a TRACK (spark scout-decision-graph): one Suno create from the seed's
+ * sentence (both models, ~4 clips), each clip a cell in the audio tab. Kept, a clip is the next night's
+ * visualizer; the video starts only once the song is final (registry music-video-production).
+ */
+export type TrackCandidate = CandidateBase & {
+  readonly kind: "track";
+  /** The seed's sentence, verbatim: what Suno was asked for. */
+  readonly sentence: string;
+  /** The Suno job (`suno.json` `sj-...`) the create ran as. */
+  readonly sunoJobId?: string;
+  readonly clips: readonly TrackClip[];
+};
+
+/**
+ * A kept track clip rendered as a full-song VISUALIZER (the music-video pipeline: one still, particles,
+ * low-band edge light, 1080p). Kept, it is the first rung of the music ladder (sibling spark
+ * music-video-ladder builds the full video and its Short on top).
+ */
+export type VisualizerCandidate = CandidateBase & {
+  readonly kind: "visualizer";
+  /** `<night>/<c-id>/<part>` of the kept track clip it plays. */
+  readonly track: string;
+  /** The mv record (`lib/sound/mv` queue id) the render ran as. */
+  readonly mvId?: string;
+  /** Night-relative mp4 (`visualizers/c-NN/visualizer.mp4`) once collected. */
+  readonly video?: string;
+  /** The still it used: a kept idea artboard under the same seed (ours), or the studio's (`visualizers/c-NN/still.png`). */
+  readonly still?: string;
+  readonly durationS?: number;
+};
+
+/**
+ * A kept idea composed as a video before any video is made (spark scout-storyboards): up to five rough
+ * frames drawn by the local Flux model from OUR words (the idea's artboard is read as words, never as a
+ * reference - the frames are a plan, not the final video's baseline), a paragraph and bullets saying the
+ * vision. Judged whole; kept, it is the root any full-video act must name (`keptStoryboardFor`).
+ */
+export type StoryboardCandidate = CandidateBase & {
+  readonly kind: "storyboard";
+  /** `<night>/<c-id>` of the kept idea it composes - required. */
+  readonly fromIdea: string;
+  readonly title: string;
+  readonly paragraph: string;
+  readonly bullets: readonly string[];
+  /** One Flux prompt per frame, in order (1..STORYBOARD_PANELS_MAX), seat-written. */
+  readonly panels: readonly string[];
+  /** The frames' aspect: the idea's. Absent: 16:9. */
+  readonly aspect?: Aspect;
+  /** Night-relative stills (`storyboards/c-NN/panel-1.png`), by panel index; null where that panel failed. */
+  readonly images?: readonly (string | null)[];
+  /** The Flux seed each panel drew with, by panel index. */
+  readonly seeds?: readonly number[];
+  /** The execution technique the night researched and the panels apply (spark scout-vision); a kept storyboard files
+   *  it as a finding. Omitted when the brief names none. */
+  readonly technique?: StoryboardTechnique;
+};
+
+/** A researched way of executing the genre (pacing, shot grammar, a prompt technique) - FindingCandidate's shape, so
+ *  a keep lands in the same PATTERNS.md step a finding would. */
+export type StoryboardTechnique = {
+  /** What a director could act on, <= 140 chars. */
+  readonly claim: string;
+  /** The source's words, verbatim. */
+  readonly quote: string;
+  /** The public page it was read on. */
+  readonly url: string;
+  /** `knowledge/templates/<template>/steps/<step>/` - an existing step directory. */
+  readonly template: string;
+  readonly step: string;
+};
+
+export type Candidate =
+  | StyleCandidate
+  | SceneCandidate
+  | FindingCandidate
+  | WatchCandidate
+  | Asset3dCandidate
+  | IdeaCandidate
+  | DirectionCandidate
+  | TrackCandidate
+  | VisualizerCandidate
+  | StoryboardCandidate;
+
+/**
+ * A scout track's Suno job (`sj-scout-<night>-<c-id>`, lib/foundry/scout/track.ts): its clips and the visualizer
+ * rendered from one are judged on the night's packet, so the suno and mv piles leave them out (spark
+ * scout-decision-graph - one place a night's music is judged).
+ */
+export const isScoutSunoJob = (sunoJobId: string | null | undefined): boolean => sunoJobId?.startsWith("sj-scout-") === true;
+
+/* ── Seeds ───────────────────────────────────────────────────────────────── */
+
+/**
+ * A SEED (spark scout-decision-graph): one sentence naming a genre, a subgenre, a type of content, an
+ * audience and a format - the cheapest question the loop asks. ~100 a batch, triaged on their own packet
+ * `pkt:seeds:<batch>`, every reject with a reason. A kept seed is a branch root: the next night derives
+ * 2-3 narrower child seeds (`parent`) and draws 1-2 idea artboards on it (`fromSeed`), and everything
+ * built from those records it. Words only: a batch is written by the seat, no job, no spend.
+ *
+ * Stored under `<scoutRoot>/seeds/<batch>/batch.json` (./seedStore.ts). A batch id is a night-shaped id
+ * (`YYYY-MM-DD`, `-2`...), its own sequence; listNights never sees it (NIGHT_ID_RE on the root only).
+ */
+export type SeedBatchId = string;
+/** `sd-001`, `sd-002`, ... in the batch's order. */
+export type SeedId = string;
+/** `<batch>/sd-NNN`. */
+export type SeedRef = string;
+
+export const SEED_BATCH_ID_RE = NIGHT_ID_RE;
+export const SEED_ID_RE = /^sd-\d{3}$/;
+export const SEED_REF_RE = /^\d{4}-\d{2}-\d{2}(-\d{1,2})?\/sd-\d{3}$/;
+export const seedRef = (batch: SeedBatchId, seed: SeedId): SeedRef => `${batch}/${seed}`;
+
+/** Who a seed is for - the graph's first grouping and the split's first level (wave 3: "children content vs other"). */
+export const SEED_AUDIENCES = ["kids", "family", "adult"] as const;
+export type SeedAudience = (typeof SEED_AUDIENCES)[number];
+export const SEED_SENTENCE_MAX = 200;
+
+/** The seed types that make a song first (a track, then a visualizer or a music clip): the only seeds the track door
+ *  takes, and the ones a new batch must give `music` facets (spark scout-vision). */
+export const MUSIC_TYPES = ["music video", "lyric video", "visualizer"] as const;
+export const SEED_VOCALS = ["instrumental", "female", "male", "duet", "choir"] as const;
+export type SeedVocals = (typeof SEED_VOCALS)[number];
+export const MUSIC_INSTRUMENTS_MAX = 6;
+export const MUSIC_TEMPO_MIN = 40;
+export const MUSIC_TEMPO_MAX = 220;
+
+/** What a track's prompt is written from beside the sentence: the song's preparation step, as the idea artboard is
+ *  the video lane's. */
+export type SeedMusic = {
+  /** 1..MUSIC_INSTRUMENTS_MAX instruments, plain words (`nylon guitar`, `808 bass`). */
+  readonly instruments: readonly string[];
+  /** Beats per minute, MUSIC_TEMPO_MIN..MUSIC_TEMPO_MAX. */
+  readonly tempo: number;
+  /** One or two words (`melancholic`, `driving`). */
+  readonly mood: string;
+  readonly vocals: SeedVocals;
+};
+export const DEFAULT_SEED_BATCH = 100;
+export const MAX_SEED_BATCH = 150;
+
+export type Seed = {
+  readonly id: SeedId;
+  /** The one sentence: the seed as the operator reads it on the Board. */
+  readonly sentence: string;
+  readonly genre: string;
+  readonly subgenre: string;
+  /** The type of content (`animated comedy sketch`, `music video`, `lyric video`, `data explainer`). */
+  readonly type: string;
+  readonly audience: SeedAudience;
+  readonly format: VideoFormat;
+  /** The kept seed this one narrows (a child seed); absent on a fresh one. */
+  readonly parent?: SeedRef;
+  /** A music seed's song (MUSIC_TYPES): required on a new one, absent on seeds written before 2026-10-25. */
+  readonly music?: SeedMusic;
+};
+
+export type SeedCommit = {
+  readonly at: string;
+  readonly by: string;
+  /** Seed ids (the packet's cell ids). */
+  readonly kept: readonly SeedId[];
+  readonly rejected: readonly SeedId[];
+  /** Every rejected seed's reasons (the `seeds` source requires at least one). */
+  readonly reasons: Readonly<Record<SeedId, readonly string[]>>;
+  readonly notes: Readonly<Record<SeedId, string>>;
+  readonly dry: boolean;
+  /** Seed ids still undecided after the last part (NightCommit.open's rule). */
+  readonly open?: readonly SeedId[];
+  readonly parts?: number;
+  /** The instant of parts 2..n (NightCommit.partAt's rule). */
+  readonly partAt?: readonly string[];
+};
+
+export type SeedBatch = {
+  readonly id: SeedBatchId;
+  readonly createdAt: string;
+  /** The night that wrote it at its start, absent for a batch written by day (`/scout seeds`). */
+  readonly night?: NightId;
+  /** A dry batch is triaged like any other and its verdicts kept, but nothing derives from it. */
+  readonly dry: boolean;
+  readonly seeds: readonly Seed[];
+  /** Written by the Board's apply (lib/decision/v1/sources/seeds.ts). */
+  readonly committed?: SeedCommit;
+};
+
+/**
+ * THE OPERATOR'S STEER (spark scout-decision-graph waves 2-4), `<scoutRoot>/steer.json` (./steer.ts):
+ * an ADVISORY split of a night's runs - shares per audience (summing to 100) and per genre within an
+ * audience (summing to 100) - that the next night's brief carries, and the branches PAUSED (a seed ref;
+ * the doors that take a seed refuse one under it). Every change is appended to `history`, so a split can
+ * be read back and re-applied a month later (registry budget-reallocation-prescription).
+ */
+export type SteerSplit = {
+  readonly audience: Readonly<Partial<Record<SeedAudience, number>>>;
+  readonly genre?: Readonly<Partial<Record<SeedAudience, Readonly<Record<string, number>>>>>;
+};
+export type SteerEntry =
+  | { readonly at: string; readonly by: string; readonly act: "split"; readonly split: SteerSplit }
+  | { readonly at: string; readonly by: string; readonly act: "pause" | "resume"; readonly ref: SeedRef };
+export type Steer = {
+  readonly split?: SteerSplit;
+  readonly paused: readonly SeedRef[];
+  readonly history: readonly SteerEntry[];
+};
 
 /* ── Packet cells ────────────────────────────────────────────────────────── */
 

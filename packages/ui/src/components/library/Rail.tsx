@@ -18,7 +18,7 @@ import { FacetRow } from "../facet/FacetRow.tsx";
 import { Fold } from "../fold/Fold.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { SrOnly } from "../a11y/SrOnly.tsx";
-import { foldValues, orderValues, count, type FacetValue, type LibraryState } from "./library.ts";
+import { foldValues, orderValues, count, STATE_ORDER, type FacetValue } from "./library.ts";
 import { KINDS, LibraryGlyph, kindShort, type KindId } from "./LibraryGlyph.tsx";
 import tile from "./LibraryTile.module.css";
 import s from "./Rail.module.css";
@@ -44,7 +44,9 @@ export type RailProps = {
   readonly onMore: (group: string, all: boolean) => void;
 };
 
-const STATES: ReadonlySet<string> = new Set<LibraryState>(["reference", "candidate", "ratified", "rejected", "unjudged"]);
+// The states with a dot: the contract's list (STATE_ORDER is @gt/domain/library LIBRARY_STATES), never a
+// copy - a state added there gets its dot here (faceting-and-filters, one-authority-per-vocabulary).
+const STATES: ReadonlySet<string> = new Set<string>(STATE_ORDER);
 
 /** The state's own dot, as the tiles draw it (library.css `.frow .sd`). */
 function StateDot({ state }: { readonly state: string }) {

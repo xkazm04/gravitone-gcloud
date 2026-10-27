@@ -39,7 +39,7 @@ here releases the planned jobs behind it in the finishing transaction (kernel_re
 
 A STEP BOOKS NO MONEY. A step is booked at $0 real and the record's spend re-projected from the
 meter (`meter_of`), so spend reconciles for a Python job by construction; a priced call made
-under a job goes through kernel_meter.py (reserve, call, settle), never through a step's book.
+under a job goes through kernel_meter.py (refuse first, call, book once), never through a step's book.
 """
 import json
 import os
@@ -50,12 +50,12 @@ import uuid
 _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.append(_HERE)  # behind the caller's entries: job_record.py says why
-from job_record import (BREAKER_LIMIT, DEFAULT_TTL_S, ERROR_CODES, HOLD_SENTENCE, FenceConflict, JobError,  # noqa: E402,F401
+from job_record import (BREAKER_LIMIT, DEFAULT_TTL_S, ERROR_CODES, HOLD_SENTENCE, FenceConflict, JobError, beat_once, heartbeat_loop,  # noqa: E402,F401
                         LaneHeld, LeaseError, LeaseLost, NotQueued, Refused, SlotsBusy, Stopped, Tx, assert_fence,
                         claim_in, connect, dry_only_from, fence_loss, heartbeat_in, interrupt, job_event, lane_hold,
                         lane_slots, load, meter_of, move, ms, outputs_of, pid_alive, process_holder, put, read_row,
                         release_in, running_on, without_stage)
-from verify_events import canonical  # noqa: E402
+from verify_events import canonical, usage  # noqa: E402
 from kernel_records import release_held_in  # noqa: E402
 import job_settle  # noqa: E402
 
@@ -184,18 +184,11 @@ class JobRun:
         every = every_s if every_s is not None else max(1.0, self.ttl_s / 3.0)
         stop = threading.Event()
 
+        def lost(e):
+            self._lost = LeaseLost("job %s lost %s: %s" % (self.job_id, self.slot, e))
+
         def beat():
-            conn = connect(self.jobs.path)
-            try:
-                while not stop.wait(every):
-                    try:
-                        with Tx(conn, self.jobs.clock) as t:
-                            heartbeat_in(t, self.slot, self.fence)
-                    except LeaseLost as e:
-                        self._lost = LeaseLost("job %s lost %s: %s" % (self.job_id, self.slot, e))
-                        return
-            finally:
-                conn.close()
+            heartbeat_loop(self.jobs.path, self.jobs.clock, self.slot, self.fence, every, stop, lost)
 
         th = threading.Thread(target=beat, name="job-heartbeat-%s" % self.job_id, daemon=True)
         th.start()
@@ -392,7 +385,7 @@ def main(argv):
         finally:
             jobs.close()
         return 0
-    print(__doc__.strip().splitlines()[3].strip(), file=sys.stderr)  # the usage line
+    print(usage(__doc__), file=sys.stderr)
     return 2
 
 

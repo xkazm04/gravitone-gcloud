@@ -7,6 +7,8 @@ import { runMachine, runStateSchema } from "../src/run.ts";
 import { slotMachine, slotStateSchema } from "../src/slot.ts";
 import { styleMachine, styleStatusSchema } from "../src/style.ts";
 import type { Machine } from "../src/transitions.ts";
+import { partStatesOf, projectStateOf, runStateOf, type PartFacts, type PlanNode } from "../src/plan.ts";
+import type { RunState } from "../src/run.machine.ts";
 import * as jobTable from "../src/job.machine.ts";
 import * as packetTable from "../src/packet.machine.ts";
 import * as partTable from "../src/part.machine.ts";
@@ -119,5 +121,98 @@ describe("one table, two doors", () => {
     expectTypeOf<jobTable.JobState>().toEqualTypeOf<z.output<typeof jobStateSchema>>();
     expectTypeOf<slotTable.SlotState>().toEqualTypeOf<z.output<typeof slotStateSchema>>();
     expectTypeOf<styleTable.StyleStatus>().toEqualTypeOf<z.output<typeof styleStatusSchema>>();
+  });
+});
+
+// A part's and a project's state are DERIVED (plan.ts), so the table is the only written statement
+// of which moves exist (registry job-coordination/job-state-machines: the legal-transition table
+// lives next to the vocabulary). Walk the derivation through a plan's real life - a work part, the
+// gate that judges it, the calendar slot after it - and every move it makes must be one the table
+// declares, or the table describes a machine nobody runs.
+describe("the derived states move along the table", () => {
+  const plan: PlanNode[] = [
+    { id: "cut", kind: "cut", after: [] },
+    { id: "gate:cut", kind: "gate", after: ["cut"] },
+    { id: "slot", kind: "slot", after: ["gate:cut"] },
+  ];
+  type Step = { readonly launched: boolean; readonly cut?: JobState; readonly packet?: "open" | "committed" | "rejected"; readonly slotted?: boolean };
+  const life = (steps: readonly Step[]) => {
+    const moves: string[] = [];
+    let prev: Map<string, string> | undefined;
+    let prevProject: string | undefined;
+    for (const s of steps) {
+      const facts = new Map<string, PartFacts>([
+        ["cut", s.cut === undefined ? {} : { job: s.cut }],
+        ["gate:cut", s.packet === undefined ? {} : { packet: s.packet }],
+        ["slot", { slotted: s.slotted === true }],
+      ]);
+      const now = partStatesOf(plan, facts, s.launched);
+      const project = projectStateOf([...now.values()].map((state) => ({ state })));
+      for (const [id, to] of now) {
+        const from = prev?.get(id);
+        if (from !== undefined && from !== to && !partMachine.can(from as never, to)) moves.push(`part ${id}: ${from} -> ${to}`);
+      }
+      if (prevProject !== undefined && prevProject !== project && !projectMachine.can(prevProject as never, project)) moves.push(`project: ${prevProject} -> ${project}`);
+      prev = now;
+      prevProject = project;
+    }
+    return moves;
+  };
+
+  it("a plan that ships: launch, run, the gate commits, the slot is placed", () => {
+    expect(
+      life([
+        { launched: false },
+        { launched: true, cut: "planned" },
+        { launched: true, cut: "queued" },
+        { launched: true, cut: "running" },
+        { launched: true, cut: "paused" },
+        { launched: true, cut: "running" },
+        { launched: true, cut: "done" },
+        { launched: true, cut: "done", packet: "open" },
+        { launched: true, cut: "done", packet: "committed" },
+        { launched: true, cut: "done", packet: "committed", slotted: true },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("a plan that stumbles: the job fails and is re-queued, the gate rejects", () => {
+    expect(
+      life([
+        { launched: true, cut: "running" },
+        { launched: true, cut: "failed" },
+        { launched: true, cut: "queued" },
+        { launched: true, cut: "running" },
+        { launched: true, cut: "done", packet: "open" },
+        { launched: true, cut: "done", packet: "rejected" },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("a placed slot that is missed, failed or cancelled puts the part back at its gate (slots/read.ts slottedIn)", () => {
+    expect(
+      life([
+        { launched: true, cut: "done", packet: "committed", slotted: true },
+        { launched: true, cut: "done", packet: "committed", slotted: false },
+        { launched: true, cut: "done", packet: "committed", slotted: true },
+      ]),
+    ).toEqual([]);
+  });
+});
+
+// A Floor run's state is derived from its one job (plan.ts runStateOf), so every edge of the job
+// table, read through the derivation, must be an edge of the run table. A run's pile has a packet
+// only once its job is done, so the job's moves are walked without one and the Weir's after.
+describe("a run's derived state moves along the run table", () => {
+  it("every job edge, as the run reads it, is declared", () => {
+    const undeclared: string[] = [];
+    const check = (why: string, from: RunState, to: RunState) => {
+      if (from !== to && !runMachine.can(from, to)) undeclared.push(`${why}: run ${from} -> ${to}`);
+    };
+    for (const from of jobMachine.states) for (const to of jobMachine.next(from)) check(`job ${from} -> ${to}`, runStateOf(from), runStateOf(to));
+    check("the pile is opened", runStateOf("done"), runStateOf("done", "open"));
+    check("the pile is committed", runStateOf("done", "open"), runStateOf("done", "committed"));
+    check("the pile is rejected", runStateOf("done", "open"), runStateOf("done", "rejected"));
+    expect(undeclared).toEqual([]);
   });
 });

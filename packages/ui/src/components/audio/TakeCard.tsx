@@ -15,9 +15,9 @@ import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
 import { Wave } from "../wave/Wave.tsx";
-import { fmtDur } from "./audio.ts";
 import { PlayMark } from "./AudioPreview.tsx";
 import { versionNumber, type ArrangeTake, type Stack } from "./arrange.ts";
+import { lengthOf } from "./hunt.ts";
 import s from "./Arrange.module.css";
 
 /** What a card draws of a take, beside what the board's rules read. */
@@ -84,7 +84,9 @@ export function TakeCard({ stack, focused, pending, playing, open, onFocus, onPo
         <Wave peaks={h.peaks} width={W} height={H} tone={finalized ? "emerald" : "cyan"} stretch />
       </div>
       <div className={s.cardMeta}>
-        <span>{fmtDur(h.lengthS)}</span>
+        {/* The hunt's spelling, so a crowned effect reads the same length here as on the map it
+            won (0.6 s, not m:ss rounded to 0:01). */}
+        <span>{h.lengthS === null ? "–" : lengthOf(h.lengthS)}</span>
         {finalized && <Chip label={h.label ?? ""} casing="lower" tone="emerald" />}
       </div>
       {open && (

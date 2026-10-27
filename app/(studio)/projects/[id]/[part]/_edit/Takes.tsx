@@ -59,8 +59,10 @@ export function AdsTakesEditor({ frame, send, busy, error, act, data: d }: Edito
   const w = useShotWalk(d.shots);
   const shot = w.shot;
   const adopted = d.shots.filter((x) => x.adopted !== null).length;
+  // One fact list for the dispatcher and the legend: the legend drew "takes" for a shot with none.
+  const facts = [...(shot === undefined ? [] : ["unit"]), ...((shot?.takes.length ?? 0) > 0 ? ["takes"] : [])];
   useKeys(
-    "part.frames",
+    "part.takes",
     {
       item: ({ index }) => {
         const next = w.next(index === 0 ? 1 : -1);
@@ -79,13 +81,13 @@ export function AdsTakesEditor({ frame, send, busy, error, act, data: d }: Edito
         send({ op: "adopt-image", shotId: shot.id, takeId: take.id });
       },
     },
-    { facts: [...(shot === undefined ? [] : ["unit"]), ...((shot?.takes.length ?? 0) > 0 ? ["takes"] : [])] },
+    { facts },
   );
   return (
     <PartWorkspace
       {...frame}
-      mode="part.frames"
-      facts={shot === undefined ? [] : ["unit", "takes"]}
+      mode="part.takes"
+      facts={facts}
       rail={{
         label: "shots",
         children: (
@@ -161,7 +163,7 @@ export function AdsTakesEditor({ frame, send, busy, error, act, data: d }: Edito
                 label={shot.takes.length === 0 ? "3 takes" : "3 more takes"}
                 size="sm"
                 tone="cyan"
-                shortcut={{ mode: "part.frames", verb: "render" }}
+                shortcut={{ mode: "part.takes", verb: "render" }}
                 onPress={() => act("image-takes", `takes ${shot.id}`, shot.id)}
               />
             </div>
@@ -175,6 +177,9 @@ export function AdsClipsEditor({ frame, send, busy, error, act, data: d }: Edito
   const w = useShotWalk(d.shots);
   const shot = w.shot;
   const adopted = d.shots.filter((x) => x.adopted !== null).length;
+  // One fact list for the dispatcher and the legend: the legend drew "moving" and "clips" for a
+  // shot with no still to animate and no clip to adopt.
+  const facts = [...(shot?.still != null ? ["moving"] : []), ...((shot?.clips.length ?? 0) > 0 ? ["clips"] : [])];
   useKeys(
     "part.motion",
     {
@@ -190,13 +195,13 @@ export function AdsClipsEditor({ frame, send, busy, error, act, data: d }: Edito
         send({ op: "adopt-clip", shotId: shot.id, clipId: c.id });
       },
     },
-    { facts: [...(shot?.still != null ? ["moving"] : []), ...((shot?.clips.length ?? 0) > 0 ? ["clips"] : [])] },
+    { facts },
   );
   return (
     <PartWorkspace
       {...frame}
       mode="part.motion"
-      facts={shot === undefined ? [] : ["moving", "clips"]}
+      facts={facts}
       rail={{
         label: "shots",
         children: (

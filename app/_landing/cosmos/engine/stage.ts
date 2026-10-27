@@ -89,6 +89,7 @@ export function renderStage(cx: Cx, kind: "tpl" | "cat", idx: number, flip: DOMR
   const mk = (it: { label: string } | undefined, ic: string, dir: number) => {
     const b = el("button", "", nav);
     b.type = "button";
+    b.dataset.dir = String(dir);
     if (!it) b.style.visibility = "hidden";
     b.setAttribute("aria-label", (dir < 0 ? "Previous: " : "Next: ") + (it ? it.label : ""));
     b.innerHTML = dir < 0 ? ic + "<span></span>" : "<span></span>" + ic;
@@ -114,10 +115,18 @@ export function renderStage(cx: Cx, kind: "tpl" | "cat", idx: number, flip: DOMR
 export function stageGo(cx: Cx, i: number): void {
   const { SV, ST } = cx;
   if (i < 0 || i >= SV.list.length || !SV.kind) return;
+  // the Previous / Next a keyboard user just pressed is rebuilt below; without a successor the
+  // focus falls to <body> and the next Tab starts from the top of the page
+  const was = document.activeElement as HTMLElement | null,
+    dir = was && cx.els.stageView.contains(was) ? was.dataset.dir : undefined;
   if (SV.kind === "tpl") {
     ST.tpl = SV.list[i].id;
     syncCarousel(cx, i);
   } else ST.cat = SV.list[i].id;
   renderStage(cx, SV.kind, i, null);
   renderNav(cx);
+  if (dir) {
+    const live = [...cx.els.stageView.querySelectorAll<HTMLButtonElement>(".sv-nav button")].filter((b) => !b.disabled);
+    (live.find((b) => b.dataset.dir === dir) ?? live[0])?.focus({ preventScroll: true });
+  }
 }

@@ -143,4 +143,17 @@ describe("the drop is a decision until the commit", () => {
     expect(r.ok ? "ok" : r.error.code).toBe("refused");
     expect(has("mv/mj-a/video.mp4")).toBe(true);
   });
+
+  it("a refusal on a later video deletes nothing of an earlier drop", async () => {
+    const flow = await decided();
+    must(flow.commit());
+    const claim = flow.claim();
+    // mj-b, kept here, was dropped in Settled since; mj-a's drop sorts first.
+    const jobs = onDisk().map((j) => (j.id === "mj-b" ? { ...j, verdict: "drop" as const } : j));
+    writeFileSync(path.join(SOUND, "mv.json"), JSON.stringify({ version: 1, queue: { running: false }, jobs, imports: [], progress: {} }));
+    const r = await mvAdapter.apply(claim);
+    expect(r.ok ? "ok" : r.error.code).toBe("refused");
+    expect(["mv/mj-a/audio.mp3", "mv/mj-a/still.png", "mv/mj-a/video.mp4"].map(has)).toEqual([true, true, true]);
+    expect(onDisk().find((j) => j.id === "mj-a")?.verdict).toBeNull();
+  });
 });

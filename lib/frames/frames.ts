@@ -21,6 +21,7 @@
 // picture: it is a picture plus what that picture DOES. See `FrameClip` — and
 // read the honesty note on it before drawing anything from it.
 
+import type { BlobRef } from "@gt/domain/blob";
 import type { ClipStatus } from "@/lib/studio/projectTypes";
 
 import { templateOf, type Discipline, type TemplateId } from "@gt/catalog/projects";
@@ -109,17 +110,16 @@ export const pendingReceipt = (plate: Plate): string | undefined =>
 /* ── The clip ─────────────────────────────────────────────────────────────── */
 
 /**
- * What the plate DOES — the fourth layer, and the only one nothing in this app
- * can render.
+ * What the plate DOES — the fourth layer.
  *
- * HONESTY, and it is the whole design of this type: there is no video provider
- * here. `lib/imagingClient.ts` exposes generate / edit / recognize and all three
- * return stills. So a clip in this app is AUTHORED, never rendered, and
- * `status` can only ever hold `"not-started"`. The field exists anyway, typed
- * against the SAME `ClipStatus` the lifecycle fixtures use rather than a second
- * private enum, so that the day a render seam is built the model does not have
- * to be reshaped around it — but until that day, every surface reading this must
- * say "not rendered" and mean it. No progress bar. No fake preview.
+ * HONESTY, and it is the whole design of this type: this file AUTHORS a clip
+ * and never renders one - it only ever seeds `status: "not-started"`. The
+ * render seam this type was shaped for now exists: the motion producer
+ * (lib/producers/motion.ts) moves `status` to `"rendered"` when a clip lands,
+ * which is why the field is typed against the SAME `ClipStatus` the lifecycle
+ * fixtures use rather than a second private enum. A surface reads the status it
+ * finds and says "not rendered" for anything short of `"rendered"`, and means
+ * it. No progress bar. No fake preview.
  *
  * There is deliberately NO duration field. A frame already knows how long it
  * holds — `durationOf()` derives it from the gap to the next beat, which is a
@@ -135,15 +135,14 @@ export interface FrameClip {
   motion: string;
   /** One honest sentence when there is one to say. */
   note?: string;
+  /** The rendered clip's bytes: landed by the motion producer, absent until a render. */
+  blob?: BlobRef;
+  /** The model that rendered it (the dry stand-in names itself). */
+  model?: string;
 }
 
 /** A clip nobody has authored yet. Absence, stated. */
 export const emptyClip = (): FrameClip => ({ status: "not-started", motion: "" });
-
-/** A clip is authored when it says what moves. Nothing else can be true of it
- *  yet — see the note on `FrameClip`. */
-export const isAuthoredClip = (f: Frame) => Boolean(f.clip?.motion.trim());
-export const authoredClipCount = (fs: Frame[]) => fs.filter(isAuthoredClip).length;
 
 // Cuts stored before the clip layer existed have no `clip` key at all. That
 // used to be filled here, by hand, at every read (`withClips`); it is now a
@@ -183,8 +182,9 @@ export interface Frame {
  * The art-direction pass's spend, persisted with the step.
  *
  * It exists because the header used to show a dollar figure that omitted the
- * single most expensive call in the step: `/api/frames` computes and returns the
- * pass's cost, and the client dropped it on the floor. A money number that
+ * single most expensive call in the step: v1's `/api/frames` computed and
+ * returned the pass's cost, and its client dropped it on the floor. The
+ * direction turn's bill now lands through `addDirectionSpend` (./direction.ts). A money number that
  * silently undercounts is worse than no number.
  *
  * It ACCUMULATES across passes, because the money did. And `unpriced` is why
@@ -206,14 +206,6 @@ export interface DirectionSpend {
 }
 
 export const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
-
-/** A duration a human reads at a glance. Minutes are spelled out because the
- *  direction pass is the one call in this step measured in them, and "251s" is
- *  a number the reader has to do arithmetic on. */
-export function humanMs(ms: number): string {
-  const s = Math.round(ms / 1000);
-  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
-}
 
 /**
  * "m:ss" or "h:mm:ss" → seconds, or NULL when the string is not a timecode.
@@ -325,11 +317,11 @@ export function framesLane(
  *
  * WHICH FIXTURE ARRIVES HERE IS THE PROJECT'S OWN CHOICE NOW. The record this
  * comment used to name as missing exists: `ScriptAdoptionStepData` under phase
- * key `"script-adopted"`, written by the Candidates duel and resolved by the
- * ONE rule in `app/_phases/script/candidates/adoption.ts`
- * (`resolveExplainerRender` — absent, cleared and unknown all fall back to the
- * positional default, `RENDERS[0]`, so a project that never adopted keeps the
- * behaviour this slice always had). Picking by `project.template` instead
+ * key `"script-adopted"`, written by the Candidates duel and resolved by ONE
+ * rule, `adoptedOf` in lib/producers/frames.ts: the adopted candidate out of
+ * `script-versions`, and with none adopted no explainer units at all (v1's
+ * `resolveExplainerRender` fell back to `RENDERS[0]`; it retired with
+ * app/_phases). Picking by `project.template` instead
  * would still be wrong for the same reason as before: `short-form-clip`
  * matches `derived-short`, six beats rather than sixteen, and an explainer's
  * frame count changing UNDER a project that decided nothing is the one thing
@@ -448,6 +440,28 @@ export const PROBLEM_OF: Record<BeatKind, string> = {
   close: "reframe",
 };
 
+/** One spelled number word. Teens included: "sixteen months" is a number. */
+const NUMBER_WORD =
+  "(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)";
+const SCALE_WORD = "(?:hundred|thousand|million|billion)";
+
+/** A spelled magnitude: two or more number words, `point` and `percent`
+ *  included. "and" joins only after a scale word ("a hundred AND twenty"),
+ *  because between two plain numbers it is a list ("candidates one, two and
+ *  three"), and a lone trailing "and" ("two and a half") is not a number at all.
+ *  A leading "a" before a scale word is part of the magnitude: "a hundred and
+ *  twenty six thousand" is 126,000, and dropping the "a hundred and" read it as
+ *  26,000. */
+const SPELLED_FIGURE = new RegExp(
+  `(?:\\ba[\\s-]+(?=${SCALE_WORD}\\b))?\\b${NUMBER_WORD}\\b` +
+    `(?:(?:(?<=${SCALE_WORD})[\\s-]+and)?[\\s-]+(?:${NUMBER_WORD}|point|percent)\\b)+`,
+  "i",
+);
+
+/** A digit figure: the number, then its unit when it has one. Never part of a
+ *  word or an ordinal ("6th"), and never with the sentence's comma on it. */
+const DIGIT_FIGURE = /(?<![\w.,])\d+(?:[.,]\d+)*(?:\s*%|\s*(?:percent|million|billion|thousand)\b)?(?![\w%])/gi;
+
 /** Pull the first hard number out of a line, if it has one. What a figure layer
  *  is FOR — and the thing that must never be drawn by a model. */
 function figureIn(text: string): string | null {
@@ -457,17 +471,19 @@ function figureIn(text: string): string | null {
   // hit one hundred and twenty six thousand dollars", which is the date rather
   // than the number the sentence is about. Spelled-out magnitudes are what this
   // script's own style guide asks for, so they are searched for first.
-  const spelled = text.match(
-    /\b(?:one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[\s-]+(?:and|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|point|percent))+\b/i,
-  );
-  if (spelled) return spelled[0].trim().replace(/\s+/g, " ").slice(0, 30);
+  //
+  // Not truncated: a cap of 30 characters drew "one hundred and twenty six tho".
+  const spelled = text.match(SPELLED_FIGURE);
+  if (spelled) return spelled[0].trim().replace(/\s+/g, " ");
 
-  // Bare digits, but never an ordinal date ("6th") and never a bare year.
-  const digits = text.match(/\b\d[\d,.]*\s*(?:percent|%|million|billion|thousand)?\b/i);
-  if (!digits) return null;
-  const raw = digits[0].trim();
-  if (/^(19|20)\d{2}$/.test(raw)) return null;
-  return raw.slice(0, 30);
+  // Bare digits, never a bare year. A year is SKIPPED, not the end of the
+  // search: "By 2024 there were 21 million" has a figure, and it is the second
+  // number in the line.
+  for (const m of text.matchAll(DIGIT_FIGURE)) {
+    const raw = m[0].trim().replace(/\s+/g, " ");
+    if (!/^(19|20)\d{2}$/.test(raw)) return raw;
+  }
+  return null;
 }
 
 /** A short kicker from the beat's own label — never invented prose. */
@@ -507,7 +523,7 @@ export function framesFromRender(render: ScriptRender): Frame[] {
       device: b.device,
       plate: { state: "empty" as PlateState },
       // Seeded empty on purpose. A motion guessed from the beat's kind is the
-      // same lookup table `/api/frames` exists to replace — nine roles, nine
+      // same lookup table the direction pass exists to replace — nine roles, nine
       // canned moves — and it would read as authored when nobody authored it.
       clip: emptyClip(),
       elements,
@@ -537,11 +553,3 @@ export function subjectFor(frame: Frame): string {
   };
   return `${shape[base] ?? shape.statement} Large simple shapes, generous empty space, nothing in the lower third.`;
 }
-
-/** A layer reference — which array, which index. Selection and every layer
- *  operation speak this, so the canvas and the panel cannot disagree about
- *  what is selected. */
-export type LayerRef = { type: "element" | "text"; id: string } | null;
-
-export const isComposed = (f: Frame) => f.plate.state === "ready";
-export const composedCount = (fs: Frame[]) => fs.filter(isComposed).length;

@@ -9,7 +9,7 @@ import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { Field } from "../field/Field.tsx";
 import { Toggle } from "../toggle/Toggle.tsx";
-import { batchPrompt, batchSeconds, COUNT, DURATION, TECHNIQUES, type BatchForm as Form, type BatchKind } from "./batch.ts";
+import { batchPrompt, batchSeconds, COUNT, DURATION, TECHNIQUES, TEMPO, type BatchForm as Form, type BatchKind } from "./batch.ts";
 import s from "./BatchForm.module.css";
 
 export type BatchFormProps = {
@@ -75,7 +75,7 @@ export function BatchForm({ kind, form, onForm, problem, engine, busy, onPrice }
           <Text label="mood" value={form.mood} onChange={(v) => set("mood", v)} />
           <Text label="instrument" value={form.instrument} onChange={(v) => set("instrument", v)} />
           <Text label="exclude" value={form.negative} onChange={(v) => set("negative", v)} />
-          <Num label="tempo bpm" value={form.tempoBpm} min={40} max={220} step={1} onChange={(n) => set("tempoBpm", n)} />
+          <Num label="tempo bpm" value={form.tempoBpm} min={TEMPO.min} max={TEMPO.max} step={1} onChange={(n) => set("tempoBpm", n)} />
           <Text label="key" value={form.key ?? ""} onChange={(v) => set("key", v.trim() === "" ? null : v)} />
         </div>
       )}

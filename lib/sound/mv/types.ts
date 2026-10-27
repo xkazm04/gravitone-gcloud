@@ -177,46 +177,29 @@ export interface MvDriverHealth {
   reason?: string;
 }
 
-/** GET /api/sound/mv */
+// The JSON routes these shapes were once the bodies of (/api/sound/mv, its
+// jobs/<id>, import and calendar) retired with the v1 Pipeline canvas (Phase 6
+// L70, calendar at L75); only jobs/<id>/file is still served. What remains here
+// is what the lib functions in ./queue.ts and ./importFolder.ts answer.
+
+/** ./queue.ts mvSnapshot: the records with their jobs' running state on them. */
 export interface MvSnapshot {
   jobs: MvJob[];
   queue: MvQueueState;
   driver: MvDriverHealth;
 }
 
-/** POST /api/sound/mv - a track per source; a source already holding a live
- *  (queued/active) job is skipped, not doubled. */
-export interface MvEnqueueRequest {
-  sources: MvSource[];
-}
-
-/** POST /api/sound/mv/jobs/<id> - Regenerate. `prompt` only with part
- *  `image`: the still is made from it as written, and no treatment turn runs. */
-export interface MvRegenerateRequest {
-  part: MvPart;
-  note?: string;
-  prompt?: string;
-}
-
-/** PATCH /api/sound/mv/jobs/<id> */
+/** ./queue.ts patchMv's metadata half (./metadata.ts applyMetadataPatch). */
 export interface MvPatchRequest {
   verdict?: MvVerdict | null;
   metadata?: Partial<Pick<MvMetadata, "title" | "description" | "tags">>;
 }
 
-/** POST /api/sound/mv/import - every audio file directly in `dir` becomes a
- *  finalized take; a file already imported (same path and size) is skipped. */
-export interface MvImportRequest {
-  dir: string;
-}
+/** ./importFolder.ts importFolder: every audio file directly in the folder
+ *  becomes a finalized take; a file already imported (same path and size), an
+ *  empty one, or one past the upload cap is skipped. */
 export interface MvImportResult {
   added: number;
   skipped: number;
   takeIds: string[];
-}
-
-/** POST /api/sound/mv/jobs/<id>/calendar - a dry-run YouTube slot. */
-export interface MvCalendarRequest {
-  /** ISO 8601. */
-  publishAt: string;
 }

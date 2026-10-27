@@ -1,15 +1,16 @@
 import "server-only";
 
 import { err, type Result } from "@gt/domain/errors";
+import type { ActorKind } from "@gt/domain/event";
 
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { stripsKernel } from "../../../../lib/producers/strips.ts";
 import type { ProducePort } from "./contract.ts";
-import type { LaneHoldView, ProduceJob } from "./contract.ts";
+import type { ActOutcome, LaneHoldView, ProduceJob } from "./contract.ts";
 import * as acts from "./fixtureActs.ts";
 import { universe } from "./fixture.ts";
 import { composeChoices, composerChoices, holdsView, jobsView, planView, projectList } from "./fixtureRead.ts";
-import { makeRealProduce } from "./real.ts";
+import { actorOf, makeRealProduce } from "./real.ts";
 
 // THE SEAM: which produce side the Floor composers, the Plan, Compose and the Runs acts answer
 // from. ONE switch, `SIDE`, the Board's shape (../../board/_port/port.ts).
@@ -32,15 +33,20 @@ import { makeRealProduce } from "./real.ts";
 
 type Value<R> = R extends Promise<{ readonly ok: true; readonly value: infer T } | { readonly ok: false }> ? T : never;
 
-/** Who acts, as the ledger names the operator. A principal without a uid is the operator. */
-export type Who = { readonly who?: string };
+/** Who acts, as the ledger names them. A principal without a uid is the operator; `kind` is set by a
+ *  caller that is not the operator (the MCP door names an agent: `{who: "athena", kind: "agent"}`). */
+export type Who = { readonly who?: string; readonly kind?: ActorKind };
 
 type Later = "composerReceipt" | "launchRun";
 type Verb<K extends keyof ProducePort> = (...args: [...Parameters<ProducePort[K]>, Who?]) => K extends Later ? Result<Value<ReturnType<ProducePort[K]>>> | Promise<Result<Value<ReturnType<ProducePort[K]>>>> : Result<Value<ReturnType<ProducePort[K]>>>;
 
 export type ServerProduce = { readonly [K in keyof ProducePort]: Verb<K> } & {
   readonly listJobs: () => Result<readonly ProduceJob[]>;
+  /** The Floor runs not yet done: the projects page's count, read without a full jobs view. */
+  readonly floorRunsOpen: () => Result<number>;
   readonly listHolds: () => Result<readonly LaneHoldView[]>;
+  /** The kernel's cancel (job.ts), for the agent door; no browser verb calls it (spark athena-control-mcp). */
+  readonly cancelJob: (i: { readonly jobId: string }, w?: Who) => Result<ActOutcome>;
 };
 
 export const SIDE: "fixture" | "real" = process.env["GRAVITONE_PRODUCE_SIDE"] === "fixture" ? "fixture" : "real";
@@ -75,13 +81,15 @@ const fixture: ServerProduce = {
   launchPlan: ({ id, rev, token, ceilingUsd, mode }) => dryOnly(mode, () => acts.launchPlan(u(), id, rev, token, now(), ceilingUsd)),
   pauseJob: ({ jobId }) => acts.pauseJob(u(), jobId, now()),
   resumeJob: ({ jobId }) => acts.resumeJob(u(), jobId, now()),
-  retryJob: ({ jobId, ceilingUsd }) => acts.retryJob(u(), jobId, now(), ceilingUsd),
+  retryJob: ({ jobId, ceilingUsd }, w) => acts.retryJob(u(), jobId, now(), ceilingUsd, actorOf(w)),
   moveJob: ({ jobId, dir }) => acts.moveJob(u(), jobId, dir, now()),
   rerouteOptions: ({ jobId }) => acts.rerouteOptions(u(), jobId, now()),
-  reroute: ({ jobId, option, token, ceilingUsd }) => acts.reroute(u(), jobId, option, now(), token, ceilingUsd),
-  ackLane: ({ lane }) => acts.ackLane(u(), lane),
+  reroute: ({ jobId, option, token, ceilingUsd }, w) => acts.reroute(u(), jobId, option, now(), token, ceilingUsd, actorOf(w)),
+  ackLane: ({ lane }, w) => acts.ackLane(u(), lane, actorOf(w)),
   listJobs: () => ({ ok: true, value: jobsView(u(), now()) }),
+  floorRunsOpen: () => ({ ok: true, value: jobsView(u(), now()).filter((j) => j.projectId === undefined && j.state !== "done").length }),
   listHolds: () => ({ ok: true, value: holdsView(u()) }),
+  cancelJob: () => err("unavailable", "the fixture universe holds no kernel job to cancel"),
 };
 
 const real: ServerProduce = makeRealProduce({

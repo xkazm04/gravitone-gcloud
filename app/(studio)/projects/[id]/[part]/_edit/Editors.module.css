@@ -43,7 +43,6 @@
 .cardTop{display:flex;align-items:center;gap:var(--sp-1);min-width:0;overflow:hidden;font:600 var(--fs-micro)/1 var(--mono);color:var(--faint)}
 .tag{white-space:nowrap;padding:var(--sp-hair) var(--sp-2);border-radius:var(--r-xs);border:1px solid var(--hair-2);color:var(--muted)}
 .tag.lb{color:var(--cyan);border-color:color-mix(in srgb,var(--cyan) 35%,transparent)}
-.tag.req{color:var(--violet);border-color:color-mix(in srgb,var(--violet) 35%,transparent)}
 .tag.leap{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 35%,transparent)}
 .tag.wound{color:var(--rose);border-color:color-mix(in srgb,var(--rose) 45%,transparent)}
 .tag.moved{color:var(--amber);border-style:dashed}

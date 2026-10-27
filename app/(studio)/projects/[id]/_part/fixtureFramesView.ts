@@ -5,7 +5,8 @@ import type { AdShotTakes, FactOption, FramesData, LayerView, PartVerdict, Plate
 import { STEP_RECORDS } from "@gt/domain/steps/registry";
 import { shotsFromRender, type Shot } from "@/lib/frames/shots";
 import { promptsForShots } from "@/lib/frames/shotPrompt";
-import { trailerRender } from "@/lib/frames/frames";
+import { isStalePlate, trailerRender } from "@/lib/frames/frames";
+import { frameOfUnit } from "@/lib/frames/picture/unit";
 import { recipeById } from "@gt/catalog/recipes";
 import { derive } from "@/lib/script/trailer/ops";
 import type { AdScenario } from "@/lib/ads/types";
@@ -14,7 +15,7 @@ import { blobRouteUrl } from "@/lib/parts/gates";
 import { partVerdict } from "@/lib/parts/verdict";
 
 import { cardsOf } from "./fixtureResearch.ts";
-import { chainOf, subjectOf, unitsOf, type FramesRec, type UnitRec } from "./fixtureFrames.ts";
+import { chainOf, dryPreset, subjectOf, unitsOf, type FramesRec, type UnitRec } from "./fixtureFrames.ts";
 import type { KCtx, Obj } from "./kinds.ts";
 
 // What the frames editor DRAWS, from the working record (./fixtureFrames.ts) and the v1 functions
@@ -43,12 +44,12 @@ export function takeUrl(id: string, blobs: Readonly<Record<string, BlobRef>> | u
   const b = blobs?.[id];
   if (b !== undefined) return blobRouteUrl(b);
   const m = /^dry:.*:(\d+)$/.exec(id);
-  return m === null ? null : `/clips/presets/${["signal-ledger", "blueprint", "newsprint-cutout", "paper-relief", "data-neon", "chalk-argument"][Number(m[1]) % 6] ?? "signal-ledger"}.jpg`;
+  return m === null ? null : dryPreset(Number(m[1]), "jpg");
 }
 
 export function plateView(u: UnitRec): PlateView {
   const p = u.plate;
-  const stale = p.state === "ready" && p.renderedSubject !== undefined && p.subject !== undefined && p.subject.trim() !== p.renderedSubject.trim();
+  const stale = isStalePlate(frameOfUnit(u));
   return {
     state: p.rejected !== undefined ? "rejected" : p.state,
     url: p.state === "ready" ? plateUrl(p) : null,

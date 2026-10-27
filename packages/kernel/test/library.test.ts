@@ -3,7 +3,7 @@ import type { MediaFacts } from "@gt/domain/library";
 import type { LibraryItemInput } from "@gt/domain/libraryItem";
 import { events } from "./library.fixtures.ts";
 import { bucketPeaks, ftsExpression, type IndexContext, type LibraryEntry } from "../src/library/core.ts";
-import { chooseCover, libraryDetail } from "../src/library/detail.ts";
+import { chooseCover, libraryDetail, styleCovers } from "../src/library/detail.ts";
 import { queryLibrary } from "../src/library/query.ts";
 import { actOnItem, factsMissing, pruneFeed, putMediaFacts, upsertItems } from "../src/library/write.ts";
 import { openKernel, type Kernel } from "../src/kernel.ts";
@@ -145,6 +145,18 @@ describe("pruneFeed", () => {
     expect(page(s, { limit: 10 }).items.map((i) => i.id).sort()).toEqual(["a1", "p1"]);
     expect(page(s, { q: "p2", limit: 10 }).total).toBe(0);
   });
+  it("drops the vocabulary no surviving item carries, and keeps what one does", () => {
+    const s = store();
+    const values = () => must(s.read((r) => r.all("SELECT grp, value FROM library_values WHERE grp NOT IN ('pin', 'project') ORDER BY grp, value"))).map((x) => `${String(x["grp"])}:${String(x["value"])}`);
+    must(upsertItems(s, [plate("p1"), audio("a1", ["tense", "dark"]), audio("a2", ["warm"])], CTX));
+    expect(values()).toContain("mood:warm");
+    must(pruneFeed(s, "test", new Set(["p1", "a1"])));
+    expect(values()).not.toContain("mood:warm");
+    expect(values()).toContain("mood:tense");
+    expect(page(s, { facets: { mood: ["tense"] }, limit: 5 }).items.map((i) => i.id)).toEqual(["a1"]);
+    must(pruneFeed(s, "test", new Set()));
+    expect(values()).toEqual([]);
+  });
 });
 
 describe("media facts", () => {
@@ -164,6 +176,14 @@ describe("media facts", () => {
     // A re-probe that decodes clears it, by the same trigger.
     must(putMediaFacts(s, [facts(SHA("b"))]));
     expect(page(s, { kind: "plate", facets: { attention: ["unreadable"] }, limit: 10 }).total).toBe(0);
+  });
+  it("queues a blob once, however many items name it and under whatever mime", () => {
+    const s = store();
+    const twin = plate("twin", { media: { sha256: SHA("a"), bytes: 10, mime: "image/x-png" } });
+    must(upsertItems(s, [plate("one", {}, SHA("a")), twin, plate("other", {}, SHA("b"))], CTX));
+    expect(must(factsMissing(s, 10)).map((f) => f.sha).sort()).toEqual([SHA("a"), SHA("b")]);
+    // The limit counts blobs, not items: a limit of 2 is the whole queue here.
+    expect(must(factsMissing(s, 2))).toHaveLength(2);
   });
   it("holds nearBlack to the luma rule and an undecodable blob to its words", () => {
     const s = store();
@@ -259,5 +279,74 @@ describe("libraryDetail", () => {
     expect(must(libraryDetail(s, "style:painted-3d")).extras.prompt).toBe("painted");
     const missing = libraryDetail(s, "nope");
     expect(!missing.ok && missing.error.code).toBe("not-found");
+  });
+  it("resolves each lineage pointer with one statement", () => {
+    const s = store();
+    const style: LibraryEntry = {
+      item: { kind: "style", id: "style:painted-3d", title: "Painted 3D", state: "ratified", collections: [], origin: "extract", rights: { use: "publishable" }, source: "real", lineage: [], vocabulary: { styleId: "painted-3d", derivation: "readback" } },
+      meta: "animation",
+      extras: {},
+      feed: "test",
+    };
+    must(upsertItems(s, [plate("src"), plate("p1", { source: "derived", lineage: [{ kind: "library-item", id: "src" }, { kind: "library-item", id: "gone" }, { kind: "run", id: "run-1" }] }), style], CTX));
+    const sql: string[] = [];
+    const counted: Store = { ...s, tx: (fn) => s.tx(fn), read: (fn) => s.read((r) => fn({ at: r.at, get: (q, ...p) => (sql.push(q), r.get(q, ...p)), all: (q, ...p) => (sql.push(q), r.all(q, ...p)) })) };
+    const d = must(libraryDetail(counted, "p1"));
+    expect(d.lineage.map((n) => [n.role, n.label, n.itemId ?? null])).toEqual([
+      ["derived from", "Plate src", "src"],
+      ["derived from", "gone", null],
+      ["run", "run-1", null],
+      ["this", "Plate p1", null],
+      ["style", "Painted 3D", "style:painted-3d"],
+    ]);
+    // Three pointers that name an item (src, gone, the style): three lookups.
+    expect(sql.filter((q) => /FROM library_docs WHERE id = \?/.test(q))).toHaveLength(3);
+  });
+  it("gives every style its cover from ONE read, one statement a style", () => {
+    const s = store();
+    const at = (h: number) => `2026-10-0${h}T00:00:00.000Z`;
+    must(upsertItems(s, [plate("p1", { at: at(1) }, SHA("a")), plate("p2", { at: at(2) }, SHA("b")), plate("q1", { vocabulary: { station: "forge", styleId: "ink", mechanism: "text" } }, SHA("c"))], CTX));
+    must(putMediaFacts(s, [facts(SHA("a")), facts(SHA("b"), { meanLuma: 3, nearBlack: true }), facts(SHA("c"))]));
+    let reads = 0;
+    let statements = 0;
+    const counted: Store = {
+      ...s,
+      tx: (fn) => s.tx(fn),
+      read: (fn) => {
+        reads++;
+        return s.read((r) => fn({ at: r.at, get: (q, ...p) => (statements++, r.get(q, ...p)), all: (q, ...p) => (statements++, r.all(q, ...p)) }));
+      },
+    };
+    const covers = must(styleCovers(counted, ["painted-3d", "ink", "none"]));
+    // p2 is newer but near-black: the bright p1 leads.
+    expect(covers.get("painted-3d")?.blobSha).toBe(SHA("a"));
+    expect(covers.get("ink")?.blobSha).toBe(SHA("c"));
+    expect(covers.has("none")).toBe(false);
+    expect({ reads, statements }).toEqual({ reads: 1, statements: 3 });
+  });
+  it("draws the detail's card with the chips the grid draws for the same item", () => {
+    const s = store();
+    must(upsertItems(s, [plate("p1"), audio("a1", ["tense", "calm"])], CTX));
+    for (const [id, kind] of [["p1", "plate"], ["a1", "audio"]] as const) {
+      const grid = page(s, { kind, limit: 10 }).items.find((x) => x.id === id);
+      expect(grid?.chips.length).toBeGreaterThan(0);
+      expect(must(libraryDetail(s, id)).row.chips).toEqual(grid?.chips);
+    }
+  });
+});
+
+describe("a corrupt index row", () => {
+  it("fails a filtered page whole, naming the row, rather than dropping it while the bare rail still counts it", () => {
+    const s = store();
+    must(upsertItems(s, [audio("a1", ["calm"]), audio("a2", ["calm"])], CTX));
+    expect(counts(s, "audio")["mood"]).toEqual({ calm: 2 });
+    expect(page(s, { kind: "audio", facets: { mood: ["calm"] }, limit: 5 }).total).toBe(2);
+    must(s.tx((t) => t.run("UPDATE library_items SET vids = ? WHERE seq = (SELECT seq FROM library_docs WHERE id = ?)", "corrupt", "a2")));
+    const r = queryLibrary(s, { kind: "audio", facets: { mood: ["calm"] }, limit: 5 });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.code).toBe("internal");
+      expect(r.error.message).toMatch(/library row \d+: vids is not a blob/);
+    }
   });
 });

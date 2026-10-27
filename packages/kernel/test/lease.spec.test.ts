@@ -11,7 +11,7 @@ import { eventsMigrations } from "../src/events.ts";
 import { assertFence, claimIn, heartbeatIn, leaseMigrations, leaveIn, releaseIn, statusIn } from "../src/lease.ts";
 import { migrate } from "../src/migrate.ts";
 import { openStore, type Tx } from "../src/store.ts";
-import { must, scratch } from "./helpers.ts";
+import { findPython, must, scratch } from "./helpers.ts";
 
 // spec/lease.json is the lease's behaviour as a table, and it binds two
 // implementations: this file runs it against src/lease.ts, then spawns
@@ -121,13 +121,6 @@ describe("spec/lease.json against the Node implementation", () => {
   }
 });
 
-function findPython(): string | undefined {
-  for (const bin of ["python", "python3", "py"]) {
-    const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
-    if (r.status === 0 && r.stdout.trim() === "3") return bin;
-  }
-  return undefined;
-}
 const python = findPython();
 if (python === undefined) console.warn("[lease.spec] SKIPPED: no Python 3 on PATH; the Python half of the lease spec did not run");
 

@@ -59,7 +59,7 @@ async function walk(dir: string, rel = ""): Promise<string[]> {
  *  items still run); the rendered items are then `not-measured`. */
 export async function runCheck(
   runDir: string,
-  opts: { render?: boolean; now?: () => Date } = {},
+  opts: { render?: boolean; screenshots?: boolean; now?: () => Date } = {},
 ): Promise<CheckReport> {
   const postDir = path.join(runDir, "post");
   const [html, md] = await Promise.all([readMaybe(path.join(postDir, "index.html")), readMaybe(path.join(postDir, "post.md"))]);
@@ -80,7 +80,7 @@ export async function runCheck(
   items.push(critiqueCheckItem(await readCritiqueDetail(runDir)));
   let screenshots: string[] = [];
   if (html && opts.render !== false) {
-    const r = await renderedItems(postDir, path.join(runDir, "check"));
+    const r = await renderedItems(postDir, path.join(runDir, "check"), { screenshots: opts.screenshots !== false });
     items.push(...r.items);
     screenshots = r.screenshots.map((s) => path.relative(runDir, s).split(path.sep).join("/"));
   } else {

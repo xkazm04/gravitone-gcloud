@@ -52,6 +52,11 @@ describe("the step record doors (v1 registry rules)", () => {
     expect(Object.hasOwn(up as object, "frames")).toBe(false);
     const inline = decodeRecord("frames", { v: 2, renderId: "r", units: [unit("data:image/png;base64,AAAA")], frames: [] });
     expect(inline.ok ? "" : inline.error.message).toMatch(/base64 bytes/);
+    // A browser reads `DATA:` and ` data:` as the same inline bytes: neither walks up, neither is written.
+    for (const src of ["DATA:image/png;base64,AAAA", " data:image/png;base64,AAAA"]) {
+      expect(decodeRecord("frames", { v: 2, renderId: "r", units: [unit(src)], frames: [] }).ok).toBe(false);
+      expect(encodeRecord("frames", { renderId: "r", units: [unit(src)] }).ok).toBe(false);
+    }
     expect(encodeRecord("frames", { renderId: "r", units: [], frames: [] }).ok).toBe(false);
     expect(decodeRecord("frames", { renderId: "r", units: [] }).ok).toBe(false);
   });

@@ -1,9 +1,11 @@
 // THE RESEARCH STEP'S RECORD SHAPES, and GuidedModeStepData, which the Research
 // and Script steps both persist.
 //
-// Types only. Split out of the stepStore.ts door so the shapes sit apart from the
-// IndexedDB read/write path. stepStore.ts re-exports every name here, so importers
-// keep using the door.
+// Types only. Split out of v1's stepStore.ts so the shapes sit apart from the
+// IndexedDB read/write path. The door, index.ts, re-exports every name here, so
+// importers keep using it. Paths under `_shared/`, `research/` and `app/_phases/`
+// below name v1's step editors, retired in Phase 6; the shapes are still what v1
+// rows hold (packages/domain/src/steps/research.ts cites them for the import).
 
 export interface ResearchStepData {
   topic: string;
@@ -20,7 +22,7 @@ export interface ResearchStepData {
  *  and what four harness scripts drive. Folding a real notebook into that boolean
  *  would make the one bit downstream reads mean two different things — a replayed
  *  fixture and a creator's own reasoned notebook — which is the exact
- *  indistinguishability app/_phases/research/guided/RunStage.tsx's `StandInNote`
+ *  indistinguishability v1's app/_phases/research/guided/RunStage.tsx's `StandInNote`
  *  exists to prevent.
  *
  *  So the two paths write two records, and WHICH RECORD A NOTEBOOK CAME FROM IS
@@ -37,10 +39,10 @@ export interface ResearchStepData {
  *  the creator discarded a notebook here, and re-adopting one on the next mount
  *  would silently undo their clear.
  *
- *  Typed loosely on purpose. `Notebook` lives in `_shared/notebook/types.ts` and
+ *  Typed loosely on purpose. `Notebook` lived in v1's `_shared/notebook/types.ts` and
  *  importing it here would put the whole fixture-adjacent type graph into every
  *  module that touches the step store, including five that never see a notebook.
- *  The one consumer (`research/run/live.ts`) casts at its own boundary, which is
+ *  The one v1 consumer (`research/run/live.ts`) cast at its own boundary, which is
  *  also the boundary where `lib/notebook/validate.ts` has already checked it. */
 export interface ResearchNotebookStepData {
   /** The topic as the creator typed it — the authority on what was asked. */
@@ -68,11 +70,11 @@ export interface ScopeStepData {
   scope: Record<string, { descoped: boolean; liked: boolean; deepen: boolean }>;
   confirmed: Record<string, { descoped: boolean; liked: boolean; deepen: boolean }> | null;
   /** The `digest` of the NotebookSource these decisions were made on
-   *  (_shared/notebook/source.ts), stamped on every save since
+   *  (v1's _shared/notebook/source.ts), stamped on every save since
    *  research-scope-board-A stage 3. A scope is a set of verdicts on card ids,
    *  and two notebooks can share an id while meaning different cards — so a
    *  scope whose digest is not the dealt source's is ORPHANED and applies
-   *  nothing (research/useScope.ts). Absent on every record written before the
+   *  nothing (v1's research/useScope.ts). Absent on every record written before the
    *  stamp, and every one of those was written against the fixture: absent
    *  means the fixture's digest. */
   digest?: string;

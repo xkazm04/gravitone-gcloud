@@ -86,6 +86,16 @@ describe("figures", () => {
     expect(optionCost(SUNO, 2).unpricedReason).toBe("Suno bills subscription credits");
   });
 
+  test("a band is a bound: its ends round outward, under $10 in cents, and a sub-dollar band never reads $0–0", () => {
+    // strips TURN_ESTIMATE [1.7, 6.8] a turn; a stats reel is two turns, four reels eight.
+    expect(costWords({ usd: 3.2, usdRange: [1.7, 6.8] })).toBe("$1.70–6.80");
+    expect(costWords({ usd: 30.6, usdRange: [6.8, 54.4] })).toBe("$6.80–55");
+    expect(costWords({ usd: 0.08, usdRange: [0.04, 0.12] })).toBe("$0.04–0.12");
+    expect(costWords({ usd: 0.07, usdRange: [0.07, 0.07] })).toBe("$0.07–0.07");
+    expect(costWords({ usd: 0.01, usdRange: [0.004, 0.02] })).toBe("<$0.01–0.02");
+    expect(costWords({ usd: 69.5, usdRange: [47.6, 91.2] })).toBe("$47–92");
+  });
+
   test("an unpriced figure is drawn by its kind; the reason is its name, never the cell's text", () => {
     expect([unpricedKind("billed to the text seat"), unpricedKind("Suno bills subscription credits"), unpricedKind(undefined)]).toEqual(["seat", "credits", "no price"]);
     const html = renderToStaticMarkup(h(Estimate, { receipt: receipt([line("score", SUNO, 1, 1, 0)]), noun: "prompt" }));
@@ -116,9 +126,42 @@ describe("the receipt's changes", () => {
   test("a re-routed line marks its lane, model, time and cost; added and removed lines are named", () => {
     const b = receipt([line("frames", NANO, 24, 1, 10), line("cut", FLUX, 1, 1, 50)], { token: "t2" });
     const c = receiptChanges(a, b);
-    expect([...(c.lines.get("frames") ?? [])].sort()).toEqual(["cost", "lane", "model", "queuePos", "seconds"]);
+    expect([...(c.lines.get("frames") ?? [])].sort()).toEqual(["cost", "lane", "model", "queuePos", "seconds", "src"]);
     expect(c.added).toEqual(["cut"]);
-    expect(c.removed).toEqual(["score"]);
+    expect(c.removed).toEqual([{ key: "score", label: "score" }]);
+  });
+
+  test("a removed line is named by its label, never by its key (a part key is <projectId>/<part>)", () => {
+    const named = (key: string, label: string): ReceiptLine => ({ ...line(key, FLUX, 24, 1, 10), label });
+    const before = receipt([named("prj_7f3a/frames", "frames"), named("prj_7f3a/score", "score")]);
+    const after = receipt([named("prj_7f3a/frames", "frames")], { token: "t2" });
+    const c = receiptChanges(before, after);
+    expect(c.removed).toEqual([{ key: "prj_7f3a/score", label: "score" }]);
+    const html = renderToStaticMarkup(h(Receipt, { receipt: after, changes: c, ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(html).toContain("− score");
+    expect(html).not.toContain("− prj_7f3a");
+  });
+
+  test("a confirm's typed ceiling comes back as a receipt read at it: that is the one change, and it is marked", () => {
+    const read = receipt([line("frames", FLUX, 24, 2, 10)]);
+    const fresh = { ...read, ceilingUsd: 20 };
+    const c = receiptChanges(read, fresh);
+    expect([...c.totals]).toEqual(["ceiling"]);
+    expect(changeCount(c)).toBe(1);
+    const html = renderToStaticMarkup(h(Receipt, { receipt: fresh, changes: c, ceiling: "20", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(html).toContain("1 changes since you read it");
+    expect(changeCount(receiptChanges(fresh, { ...fresh, token: "t2" }))).toBe(0);
+  });
+
+  test("a figure's source and an unpriced line's kind are what the operator reads, so a move in either is marked", () => {
+    const measured = { ...line("frames", FLUX, 24, 2, 10), src: "real" as const };
+    const b = receipt([measured, { ...line("score", SUNO, 2, 1, 10), unpricedReason: "billed to the text seat" }], { token: "t2", totals: { ...a.totals, src: "real" } });
+    const c = receiptChanges(a, b);
+    expect([...(c.lines.get("frames") ?? [])]).toEqual(["src"]);
+    expect([...(c.lines.get("score") ?? [])]).toEqual(["cost"]);
+    expect([...c.totals]).toEqual(["src"]);
+    const html = renderToStaticMarkup(h(Receipt, { receipt: b, changes: c, ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(html.match(/\(changed\)/g)?.length).toBe(3);
   });
 });
 
@@ -150,6 +193,13 @@ describe("markup", () => {
     expect(html).toContain("#2");
   });
 
+  test("an estimate over a seat line and a credits line draws both kinds, once each", () => {
+    const SEAT = opt("article/claude-seat/c4", "seat.text", "lib/articles", 2280, null, { unpricedReason: "billed to the text seat" });
+    const html = renderToStaticMarkup(h(Estimate, { receipt: receipt([line("score", SUNO, 1, 1, 0), line("article", SEAT, 1, 1, 0), line("score2", SUNO, 1, 1, 0)]), noun: "run" }));
+    expect(html.match(/unpriced · credits/g)?.length).toBe(1);
+    expect(html.match(/unpriced · seat/g)?.length).toBe(1);
+  });
+
   test("an unpriced estimate says unpriced and speaks its reason; it never prints a dollar", () => {
     const html = renderToStaticMarkup(h(Estimate, { receipt: receipt([line("score", SUNO, 1, 1, 0)]), noun: "prompt" }));
     expect(html).toContain("unpriced");
@@ -157,12 +207,40 @@ describe("markup", () => {
     expect(html).not.toContain("$");
   });
 
+  test("an all-unpriced receipt draws no cost total: credits work never reads $0", () => {
+    const credits = receipt([line("score", SUNO, 2, 1, 0)]);
+    const html = renderToStaticMarkup(h(Receipt, { receipt: credits, ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(html).toContain("unpriced");
+    expect(html).not.toMatch(/\$\d/);
+    const mixed = renderToStaticMarkup(h(Receipt, { receipt: receipt([line("frames", NANO, 24, 1, 0), line("score", SUNO, 2, 1, 0)]), ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(mixed).toContain("$0.96");
+  });
+
   test("a stale receipt marks its moved cells for every reader, and counts them", () => {
     const a = receipt([line("frames", FLUX, 24, 2, 10)]);
     const b = receipt([line("frames", FLUX, 24, 3, 40)], { token: "t2", queuePos: 3 });
     const html = renderToStaticMarkup(h(Receipt, { receipt: b, changes: receiptChanges(a, b), ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
-    expect(html.match(/\(changed\)/g)?.length).toBe(2);
+    // two line cells (queue, start) and the totals' queue: every mark the eye gets, a reader gets.
+    expect(html.match(/\(changed\)/g)?.length).toBe(3);
     expect(html).toContain('aria-label="2 changes since you read it"');
+  });
+
+  test("every moved total speaks its mark, not only the ring: mode, work, cost, queue, eta", () => {
+    const a = receipt([line("frames", NANO, 24, 2, 10)]);
+    const b = receipt([line("frames", NANO, 48, 2, 10)], { token: "t2", mode: "live", queuePos: 4, etaAt: at(240), totals: { seconds: 21 * 48, usd: 1.92, unpriced: 0, src: "illustrative" } });
+    const c = receiptChanges(a, b);
+    expect([...c.totals].sort()).toEqual(["cost", "etaAt", "mode", "queuePos", "seconds"]);
+    const html = renderToStaticMarkup(h(Receipt, { receipt: b, changes: c, ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    // the line's units, time and cost cells, plus the five totals.
+    expect(html.match(/\(changed\)/g)?.length).toBe(3 + 5);
+  });
+
+  test("at the ceiling the receipt was read at, the mark is the server's overCeiling, not a second computation", () => {
+    const cheap = receipt([line("frames", NANO, 1, 1, 0)], { ceilingUsd: 20, overCeiling: true });
+    const marked = renderToStaticMarkup(h(Receipt, { receipt: cheap, ceiling: "20", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(marked).toContain("may stop at ceiling");
+    const typedElsewhere = renderToStaticMarkup(h(Receipt, { receipt: cheap, ceiling: "30", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(typedElsewhere).not.toContain("may stop at ceiling");
   });
 
   test("a ceiling under the worst case is a stop point: the confirm stays armed and the receipt says may stop", () => {
@@ -174,6 +252,11 @@ describe("markup", () => {
     const under = renderToStaticMarkup(h(Receipt, { receipt: banded, ceiling: "92", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
     expect(under).not.toContain("may stop at ceiling");
     expect(under).toContain('data-mode="dry"');
+    expect(under).toContain('aria-label="receipt, 1 line, dry"');
+    // four reels' band tops out at $54.40: a $54.20 ceiling is crossed, and the name says by what.
+    const reels = receipt([line("reels", ARTICLE, 1, 1, 0)], { totals: { seconds: 1, usd: 30.6, usdRange: [6.8, 54.4], unpriced: 0, src: "model" } });
+    const close = renderToStaticMarkup(h(Receipt, { receipt: reels, ceiling: "54.20", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(close).toContain('aria-label="worst case $54.40 over the ceiling $54.20"');
     const bad = renderToStaticMarkup(h(Receipt, { receipt: banded, ceiling: "ten", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
     expect(bad).toMatch(/<button[^>]*aria-disabled="true"[^>]*>Confirm/);
   });
@@ -200,6 +283,18 @@ describe("markup", () => {
     expect(launched).not.toContain('type="number"');
   });
 
+  test("a part with an editor is a link in the plan: every editor row carries one anchor, a gate or slot none", () => {
+    const parts: PlanPart[] = [
+      { id: "f", label: "frames", after: [], state: "draft", kind: "frames", units: 24, unitNoun: "plate", unitsRange: [1, 200], options: [FLUX, NANO], chosen: FLUX.key, estimate: { seconds: 2304, usd: 0, src: "model" } },
+      { id: "g", label: "verdict · frames", after: ["f"], state: "draft", kind: "gate", judges: "f", verdict: "matrix-cull" },
+      { id: "s", label: "slot", after: ["g"], state: "draft", kind: "slot" },
+    ];
+    const html = renderToStaticMarkup(h(PlanTable, { parts, selectedId: null, draft: true, nowMs: NOW, onModel: noop, onUnits: noop, hrefOf: (id: string) => (id === "f" ? "/projects/p/f" : null) }));
+    expect(html.match(/<a /g)?.length).toBe(1);
+    expect(html).toMatch(/<a [^>]*href="\/projects\/p\/f"[^>]*>frames<\/a>/);
+    expect(html).toContain("◆ frames<");
+  });
+
   test("the re-route list draws the current route dashed and unchoosable, the rest with their deltas", () => {
     const options: RerouteOption[] = [
       { option: FLUX, current: true, dEtaS: 0, dUsd: 0, queuePos: 2 },
@@ -211,9 +306,23 @@ describe("markup", () => {
     expect(html).toContain("current");
   });
 
+  test("a delta's tone is read off its words: a ±$0 / ±0 delta is never coloured dearer or later", () => {
+    const tone = (dEtaS: number, dUsd: number): string =>
+      renderToStaticMarkup(h(RerouteList, { options: [{ option: NANO, current: false, dEtaS, dUsd, queuePos: 1 }], units: 24, onPick: noop, busy: null }));
+    const even = tone(59.5, 0.0045);
+    expect(even).toContain("eta ±0");
+    expect(even).toContain("±$0");
+    expect(even).not.toMatch(/_bad_/);
+    const dearer = tone(65 * 60, 0.96);
+    expect(dearer.match(/_bad_/g)?.length).toBe(2);
+    expect(tone(-65 * 60, -0.96).match(/_good_/g)?.length).toBe(2);
+  });
+
   test("a held lane says v1's sentence verbatim and offers one act", () => {
     const html = renderToStaticMarkup(h(LaneHold, { lane: "box.chrome", job: "Hunt", stage: "submit · 2 of 4", nowMs: NOW, onAck: noop, busy: false }));
     expect(html).toContain(HOLD_SENTENCE);
+    // the group is named as its chip draws the lane, never by the lane's id.
+    expect(html).toContain('aria-label="Render box · Chrome on hold"');
     expect(HOLD_SENTENCE).toBe("credits may be spent - look first");
     expect(html).toContain("Acknowledge");
   });
@@ -225,6 +334,18 @@ describe("markup", () => {
     );
     expect(html.match(/<kbd[^>]*>[123]<\/kbd>/g)?.length).toBe(3);
     expect(html).toContain('data-recipe="d"');
+  });
+
+  test("compose draws an empty source as a shape, never as an empty select", () => {
+    const recipes = [{ id: "a", label: "A", sub: "x", icon: "video" as const }];
+    const base = { open: true, specimen: true, onClose: noop, recipes, value: { styleId: "", takeId: "", topic: "" }, onValue: noop, onRecipe: noop, busy: false };
+    const empty = renderToStaticMarkup(h(ComposeDialog, { ...base, styles: [], takes: [], topics: [] }));
+    expect(empty).not.toContain("<select");
+    for (const label of ["no style", "no take", "no topic"]) expect(empty).toContain(label);
+    const one = [{ value: "v", label: "V" }];
+    const full = renderToStaticMarkup(h(ComposeDialog, { ...base, styles: one, takes: one, topics: one }));
+    expect(full.match(/<select/g)?.length).toBe(3);
+    expect(full).not.toContain("no style");
   });
 });
 

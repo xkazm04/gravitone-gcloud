@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import type { BlobRef } from "@gt/domain/blob";
+import type { FrameClip } from "@/lib/frames/frames";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 import type { ResourceLane } from "@gt/domain/lane";
@@ -21,10 +22,10 @@ import { readClip, startClip } from "@/lib/imaging/video/clips";
 import { clipPath } from "@/lib/imaging/video/store";
 
 import { adsShotsFor, imageFailure, LIVE_IMAGING, pickedScenario, unitsOf, type ImagingEngines } from "./frames.ts";
-import { adTemplateOf, asData, blobRootOf, field, must, partFacts, priceOf, stepKernel, text, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
+import { adTemplateOf, asData, field, jobBlobRoot, must, partFacts, priceOf, recOf, text, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
 
 // THE MOTION PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/motion's ports over
-// v1's engines: the two recognize passes of app/_phases/motion/direction.ts `directMotion` (READ,
+// v1's engines: the two recognize passes of lib/motion/direction.ts `directMotion` (READ,
 // PROPOSE and the code-side filter, called as written - only its `recognize` is the job's,
 // metered per pass), and a clip renderer per the part's option: Leonardo image-to-video through
 // lib/imaging/video/clips.ts (`startClip`, its own pre-gate hold and record kept), or Wan i2v on
@@ -103,8 +104,6 @@ const blobOf = (plate: object): BlobRef | undefined => {
   const b = field(written<Record<string, unknown>>(plate)["blob"]);
   return b === undefined ? undefined : written<BlobRef>(b);
 };
-
-const recOf = (s: PartSnapshot, key: string): Readonly<Record<string, unknown>> => s.records.get(key) ?? {};
 
 function motionUnitsOf(s: PartSnapshot, f: PartFacts, ask: Pick<ActAsk, "act" | "target">): Result<ActPlan> {
   return motionPlan(motionView(s, f), { act: ask.act, ...(ask.target === undefined ? {} : { target: ask.target }) }, { read: READ_PRICE, clip: priceOf(f.option) });
@@ -215,14 +214,17 @@ function landMotion(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Part
   const byUnit = new Map([...made.values()].map((m) => [text(m["unitId"]) ?? "", m]));
   const units = u.units.map((x) => {
     const m = byUnit.get(x.id);
-    return m === undefined ? x : { ...x, clip: { ...x.clip, status: "rendered", blob: m["blob"], model: m["model"] } };
+    if (m === undefined) return x;
+    const clip: FrameClip = { ...x.clip, status: "rendered", blob: written<BlobRef>(m["blob"]), model: text(m["model"]) };
+    return { ...x, clip };
   });
   // Motion GROWS the frames record (v1's Motion wrote clip fields into it; @gt/domain/steps GROWS).
   return ok({ frames: { ...recOf(s, "frames"), units: asData({ u: units })["u"], renderId: u.renderId } });
 }
 
 export function motionProducer(lane: ResourceLane = "gpu.local", hooks: DriveHooks = {}, engines: MotionEngines = LIVE_MOTION, blobs?: BlobStore): Producer {
-  const store = (): BlobStore => blobs ?? blobStore(blobRootOf(stepKernel().store));
+  // The job's own store's blobs (research.ts `jobBlobRoot`), unless a test hands its own.
+  const store = (ctx: StepContext): BlobStore => blobs ?? blobStore(jobBlobRoot(ctx));
   return defineMotion(lane, {
     // Held at the release, not failed by the worker, while its act waits on a human act (L45).
     preflight: preflightFrom(motionUnits),
@@ -235,7 +237,7 @@ export function motionProducer(lane: ResourceLane = "gpu.local", hooks: DriveHoo
     },
     async perform(_job, _plan, unit, ctx) {
       try {
-        return await performMotion(ctx, unit, engines, store());
+        return await performMotion(ctx, unit, engines, store(ctx));
       } catch (e) {
         // A refused clip or read is the vendor's sentence on this unit's job, not a retry.
         if (e instanceof ImagingError && e.kind === "refused") return { kind: "fatal", code: "refused", message: e.message };

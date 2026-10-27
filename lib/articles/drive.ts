@@ -19,7 +19,7 @@ import { checkedBetween } from "./checkLoop";
 import { checkStep } from "./checkStep";
 import { critiqueStep } from "./critiqueStep";
 import { land } from "./landing";
-import { resumePoint } from "./resume";
+import { resumed } from "./resume";
 import { draftAtGate } from "./mediumDraft";
 import { StepError } from "./stepFailure";
 
@@ -124,12 +124,6 @@ export async function walk(id: string, deps: EngineDeps, until?: StepName | "lan
         return until !== "land" ? { ok: true, run, skipped: !ran } : { ok: false, run, message: `run ${id} is ${run.status}; only an approved run lands` };
     }
   }
-}
-
-function resumed(r: ArticleRun): ArticleRun {
-  const out: ArticleRun = { ...r, status: resumePoint(r) };
-  delete out.error;
-  return out;
 }
 
 const setStatus = (id: string, status: ArticleStatus, deps: EngineDeps) => updateRun(id, (r) => ({ ...r, status }), deps.now);

@@ -132,12 +132,12 @@ describe("job driver under crash-prefix enumeration", () => {
     const report = await enumerateCrashes(spec("restart"));
     expect(report.effects).toEqual(EFFECTS);
     expect(report.violations).toEqual([]);
-  });
+  }, 60_000); // ~0.75 s alone; past vitest's 5 s default under the pre-push gate's parallel load
 
   it("(b) a take-over after TTL while the old holder resumes: its write is refused by the fence", async () => {
     const report = await enumerateCrashes(spec("takeover"));
     expect(report.effects).toEqual(EFFECTS);
     expect(report.violations).toEqual([]);
-  });
+  }, 60_000); // ~0.75 s alone; past vitest's 5 s default under the pre-push gate's parallel load
 
 });

@@ -24,6 +24,13 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+// How often the real side reads every job to name what Runs shows (a passthrough: nothing is stubbed).
+const reads = vi.hoisted(() => ({ jobsView: 0 }));
+vi.mock("../../app/(studio)/projects/_port/realRead.ts", async (importOriginal) => {
+  const m = await importOriginal<typeof import("../../app/(studio)/projects/_port/realRead.ts")>();
+  return { ...m, jobsView: (...a: Parameters<typeof m.jobsView>) => (reads.jobsView++, m.jobsView(...a)) };
+});
+
 const ROOT = vi.hoisted(() => {
   const fs = process.getBuiltinModule("node:fs");
   const os = process.getBuiltinModule("node:os");
@@ -143,6 +150,12 @@ const runRows = (): number => row<{ c: number }>("SELECT count(*) AS c FROM runs
 const article: ComposerInput = { lane: "article", text: "The budget is a clock, not a pool. It runs out.", topic: "media-generation/visual-style-locking" };
 
 describe("the real produce port", () => {
+  it("answers no held lane without reading a job to name one", async () => {
+    const before = reads.jobsView;
+    expect(await v(port.listHolds())).toEqual([]);
+    expect(reads.jobsView - before).toBe(0);
+  });
+
   it("offers what the stores hold", async () => {
     const c = await v(port.composerChoices());
     expect(c.image.proven.map((s) => s.value)).toEqual(["ink-graphic-novel"]);
@@ -418,5 +431,15 @@ describe("a plan, launched, and the Runs acts", () => {
     expect(jobs().some((j) => j.id === `${render}~2`)).toBe(false);
     expect((await v(port.loadPlan({ id: album }))).parts.find((x) => x.id === `${album}/render`)).toMatchObject({ chosen: draft.option.key });
     expect(existsSync(path.join(ROOT, "store.sqlite"))).toBe(true);
+  });
+
+  it("counts the Floor runs still open without reading a job view, and agrees with the view it replaces", async () => {
+    const all = await v(port.listJobs());
+    const viewCount = all.filter((j) => j.projectId === undefined && j.state !== "done").length;
+    expect(all.some((j) => j.projectId !== undefined), "the store holds project jobs the count must leave out").toBe(true);
+    expect(viewCount, "the store holds open Floor runs").toBeGreaterThan(0);
+    const before = reads.jobsView;
+    expect(await v(port.floorRunsOpen())).toBe(viewCount);
+    expect(reads.jobsView - before).toBe(0);
   });
 });

@@ -9,7 +9,7 @@
 // run them under bare `tsx`.
 
 import type { TrailerCut } from "@/lib/script/trailer/types";
-import type { StructureReport } from "@/lib/script/trailer/report";
+import { findingKeys, type StructureReport } from "@/lib/script/trailer/report";
 import type { StructureRule } from "@/lib/script/trailer/structureTypes";
 
 export type TrailerNoteKind =
@@ -54,18 +54,20 @@ function kindFor(rule: StructureRule, raisesMany: boolean): TrailerNoteKind {
  *  rows propose nothing: an unmeasured row is not a defect, and suggesting a
  *  fix for it would turn "could not check" into "wrong".
  *
- *  Ids are derived from rule and subject, so recomputing over the same report
- *  yields the same ids and a dismissed suggestion stays dismissed. `cut` is
+ *  Ids are derived from rule and subject (`findingKeys`), so recomputing over
+ *  the same report yields the same ids and a dismissed suggestion stays
+ *  dismissed. `cut` is
  *  optional and only sharpens `escalation`: a rung that raises several
  *  variables is `collapse-raises`; the other escalation violations are not. */
 export function notesFromFindings(report: StructureReport, cut?: TrailerCut): TrailerNote[] {
   const beats = new Map((cut?.beats ?? []).map((b) => [b.id, b]));
-  return report.findings
-    .filter((f) => f.verdict === "violation")
-    .map((f): TrailerNote => {
+  const violations = report.findings.filter((f) => f.verdict === "violation");
+  const keys = findingKeys(violations);
+  return violations
+    .map((f, i): TrailerNote => {
       const raisesMany = !!f.beatId && (beats.get(f.beatId)?.raises?.length ?? 0) > 1;
       const note: TrailerNote = {
-        id: `suggest-${f.rule}-${f.subject}`,
+        id: `suggest-${keys[i].replace("/", "-")}`,
         kind: kindFor(f.rule, raisesMany),
         text: f.detail,
         fromFinding: f.rule,

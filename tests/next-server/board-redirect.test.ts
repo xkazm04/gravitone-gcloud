@@ -20,4 +20,22 @@ describe("a v1 Board address", () => {
     expect(v1BoardTarget({ i: "cull:no-separator" })).toBe("/floor");
     expect(v1BoardTarget({})).toBe("/floor");
   });
+
+  // v1's Board sources, as lib/board/sources/ held them at the cutover (ed151a11^, less the two
+  // helper modules projects.ts and foundryErrors.ts): each lands where its work waits now.
+  it("every v1 source alone opens its lane", () => {
+    const lanes: Readonly<Record<string, string>> = {
+      cull: "/floor?lane=image",
+      extract: "/floor?lane=image",
+      dojo: "/floor?lane=image",
+      proof: "/floor?lane=image",
+      adoption: "/floor?lane=image",
+      alternative: "/floor?lane=image",
+      articles: "/floor?lane=article",
+      audio: "/floor?lane=audio",
+      publish: "/floor?cal=1",
+      triage: "/floor",
+    };
+    for (const [src, to] of Object.entries(lanes)) expect([src, v1BoardTarget({ src })]).toEqual([src, to]);
+  });
 });

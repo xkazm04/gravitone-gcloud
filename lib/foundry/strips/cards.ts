@@ -1,6 +1,6 @@
 // WHICH CARDS A STRIP RUN AUTHORS - the selection pipeline/strips/run.mts made from its
-// flags before Phase 4, moved here so the CLI and POST /api/foundry/strips select the same
-// cards from the same words (the route could not import a script). Pure, but for
+// flags before Phase 4, moved here so the CLI and the strip job's entry (lib/producers/strips.ts)
+// select the same cards from the same words (a server module could not import a script). Pure, but for
 // `loadApproaches`, which reads pipeline/strips/approaches.json.
 //
 // Kept from v1 to the letter: the lane and `--only` filter the approach cards; a

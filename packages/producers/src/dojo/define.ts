@@ -77,8 +77,17 @@ async function metered<T>(ctx: StepContext, kind: "generate" | "recognize", usd:
     stand,
   };
   const r = await ctx.meter.paid(JOB_USD, usd, intent, async () => {
-    const served = await live();
-    return { value: served, entries: entriesOf(served, kind, usd) };
+    try {
+      const served = await live();
+      return { value: served, entries: entriesOf(served, kind, usd) };
+    } catch (e) {
+      // "Failures are spend" (cost-metering): a call that reached the provider and threw leaves a row with
+      // its reason, so the breaker's retries are visible. A refusal for money never reached it (money-stop below).
+      if (e instanceof Error && !(isAppError(e) && e.code === "budget")) {
+        ctx.meter.book(JOB_USD, { amount: undefined, outcome: "failed", basis: "estimate", axes: { call: kind }, reason: `dojo ${kind} failed after the call was made: ${e.message}` });
+      }
+      throw e;
+    }
   });
   if (!r.ok) throw r.error;
   return r.value;
@@ -115,8 +124,12 @@ export function defineDojoGoogle(ports: DojoGooglePorts): Producer {
         } catch (e) {
           return failureOf(e);
         }
-        if (served.value.length !== count) return { kind: "vendor-failure", message: `generate ${key}: ${served.model} returned ${served.value.length} of ${count} image(s)` };
         stillHeld(ctx);
+        if (served.value.length !== count) {
+          // Paid for and kept (v1's never-re-spend rule); a retry of the step would buy all `count` again, so a human decides.
+          if (served.value.length > 0) await ports.writeImages(cycleId, key, served.value);
+          return { kind: "fatal", code: "unavailable", message: `generate ${key}: ${served.model} returned ${served.value.length} of ${count} image(s)` };
+        }
         await ports.writeImages(cycleId, key, served.value);
         return { kind: "produced", output: { key, images: count, model: served.model } };
       }

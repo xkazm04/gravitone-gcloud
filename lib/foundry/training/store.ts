@@ -37,6 +37,7 @@ import {
   containedIn,
   foundryFile,
   listManifests,
+  type ManifestWarning,
   readJson,
   readManifestFile,
   runRoot,
@@ -53,7 +54,7 @@ import {
   type BlindState,
   type ImprovementBlind,
 } from "./blind";
-import { normalizeLedger, replaceCycleRows } from "./ledger";
+import { keeperThumb, replaceCycleRows } from "./ledger";
 import type {
   CycleManifest,
   Improvement,
@@ -62,7 +63,6 @@ import type {
   TrainingCycleDetail,
   TrainingCycleSummary,
   TrainingLedgerRow,
-  TrainingLedgerRowV2,
   TrainingVerdict,
   TrainingVerdicts,
 } from "./types";
@@ -70,20 +70,24 @@ import {
   patchVerdictMap,
   readVerdictState,
   replaceVerdictMap,
+  unreadableVerdicts,
   withRunLock,
   type VerdictPatch,
   type VerdictSpec,
   type VerdictState,
 } from "../verdictLog";
 
-const OUT_ROOT = outPath("training");
+/** The Dojo's store in this process's universe: TRAINING_STORE_DIR (a test's temp root), else
+ *  `<out>/training`. Read per call, as the strips store reads STRIPS_STORE_DIR. */
+export function trainingRoot(): string {
+  const o = process.env.TRAINING_STORE_DIR?.trim();
+  return o ? path.resolve(o) : outPath("training");
+}
 /** The blind gate's picks, beside verdicts.json (lib/foundry/training/blind.ts). */
 const BLIND_FILE = "blind.json";
-/** Ledger `thumb` paths are repo-relative with forward slashes on every OS. */
-const THUMBS_REL = "pipeline/foundry/training/thumbs";
 
 function cycleDir(id: string): string {
-  return runRoot(OUT_ROOT, id, "cycle");
+  return runRoot(trainingRoot(), id, "cycle");
 }
 
 /** Containment only — the commit must also unlink video files, which are
@@ -109,16 +113,30 @@ export async function readCycle(id: string): Promise<CycleManifest> {
 }
 
 async function readTrainingVerdicts(id: string): Promise<TrainingVerdicts> {
-  return readJson<TrainingVerdicts>(path.join(cycleDir(id), "verdicts.json"), {});
+  return readJson<TrainingVerdicts>(path.join(cycleDir(id), "verdicts.json"), {}).catch((e: unknown) => {
+    throw e instanceof SyntaxError ? unreadableVerdicts(cycleDir(id)) : e;
+  });
 }
 
 const decidedCount = (v: TrainingVerdicts) => Object.values(v).filter((x) => x === "approve" || x === "reject").length;
 
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
-export async function listCycles(): Promise<TrainingCycleSummary[]> {
-  const { items } = await listManifests<CycleManifest, TrainingCycleSummary>(OUT_ROOT, "cycle.json", async (name, m) => {
-    const v = await readJson<TrainingVerdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
+/** The shelf and the runs it could not read (a run.json that does not parse), so a feed can
+ *  hold those runs instead of pruning them as gone. `listCycles` is the list alone. */
+export async function scanCycles(): Promise<{ items: TrainingCycleSummary[]; warnings: ManifestWarning[] }> {
+  const { items, warnings } = await listManifests<CycleManifest, TrainingCycleSummary>(trainingRoot(), "cycle.json", async (name, m) => {
+    let v: TrainingVerdicts;
+    try {
+      v = await readJson<TrainingVerdicts>(path.join(trainingRoot(), name, "verdicts.json"), {});
+    } catch (e) {
+      // Listed and named, never a failure of the whole list. Still LISTED: the Library's dojo
+      // feed holds a listed cycle whose detail read (getCycle, a 503 here) fails, and would prune
+      // one the list dropped (lib/library/feeds/foundry.ts `held`).
+      if (!(e instanceof SyntaxError)) throw e;
+      console.warn(`[foundry] ${name}: verdicts.json is unreadable — listed with nothing decided`);
+      v = {};
+    }
     return {
       id: m.id,
       at: m.at,
@@ -130,7 +148,11 @@ export async function listCycles(): Promise<TrainingCycleSummary[]> {
       decided: decidedCount(v),
     };
   });
-  return items.sort((a, b) => (a.at < b.at ? 1 : -1));
+  return { items: items.sort((a, b) => (a.at < b.at ? 1 : -1)), warnings };
+}
+
+export async function listCycles(): Promise<TrainingCycleSummary[]> {
+  return (await scanCycles()).items;
 }
 
 /** blind.json merged with the seeded A/B map; a cycle with no file reads as untouched. */
@@ -171,28 +193,34 @@ function verdictSpec(id: string): VerdictSpec<CycleManifest, TrainingVerdict | n
 /** The blind gate's one rule for a claim verdict: an approve/reject may only be
  *  saved once every pair is picked blind, or the improvement is anchored. The
  *  Board and the whole-map PUT decide with the media in view, so they are
- *  anchored by construction (`anchor`) rather than refused. */
-async function guardClaims(id: string, claims: Record<string, unknown>, anchor: boolean): Promise<void> {
+ *  anchored by construction (`anchor`) rather than refused. Returns the anchoring
+ *  edits, to be written only AFTER the verdict write they guard succeeds: a write
+ *  the kernel refuses (stale base) must leave the improvement un-anchored. */
+async function guardClaims(id: string, claims: Record<string, unknown>, anchor: boolean): Promise<BlindEdit[]> {
   const decided = Object.entries(claims).filter(([, v]) => v === "approve" || v === "reject");
-  if (!decided.length) return;
+  if (!decided.length) return [];
   const cycle = await readCycle(id);
   const blind = await readBlind(id, cycle);
   const open = cycle.improvements.filter((i) => decided.some(([key]) => key === i.id) && !claimAllowed(i, blind.improvements[i.id]));
-  if (!open.length) return;
+  if (!open.length) return [];
   if (!anchor) throw new FoundryError(`Pick every pair blind (or skip blind) before deciding the claim: ${open.map((i) => i.technique).join(", ")}.`, 409);
-  await patchBlind(id, open.map((i) => ({ imp: i.id, anchored: true })));
+  return open.map((i) => ({ imp: i.id, anchored: true }));
 }
 
 /** PUT: the whole map, written through the kernel as the diff it amounts to. */
 export async function putTrainingVerdicts(id: string, verdicts: TrainingVerdicts): Promise<TrainingVerdicts> {
-  await guardClaims(id, verdicts, true);
-  return (await replaceVerdictMap(verdictSpec(id), verdicts)).verdicts;
+  const anchors = await guardClaims(id, verdicts, true);
+  const saved = (await replaceVerdictMap(verdictSpec(id), verdicts)).verdicts;
+  if (anchors.length) await patchBlind(id, anchors);
+  return saved;
 }
 
 /** PATCH: keyed changes against a revision; 409 on a stale base. */
 export async function patchTrainingVerdicts(id: string, patch: VerdictPatch): Promise<VerdictState<TrainingVerdict | null>> {
-  await guardClaims(id, patch.set ?? {}, patch.surface === "board");
-  return patchVerdictMap(verdictSpec(id), patch);
+  const anchors = await guardClaims(id, patch.set ?? {}, patch.surface === "board");
+  const saved = await patchVerdictMap(verdictSpec(id), patch);
+  if (anchors.length) await patchBlind(id, anchors);
+  return saved;
 }
 
 /** PATCH the blind gate, run-locked like the verdicts and refused once committed. */
@@ -205,7 +233,7 @@ export function patchBlind(id: string, edits: BlindEdit[]): Promise<BlindState> 
       const imp = cycle.improvements.find((i) => i.id === e.imp);
       if (!imp) throw new FoundryError(`No improvement called ${e.imp} in this cycle.`, 400);
       if (e.pair !== undefined) {
-        if (!(imp.pairs ?? []).some((p) => p.id === e.pair)) throw new FoundryError(`No pair called ${e.pair} in ${e.imp}.`, 400);
+        if (!pairsOf(imp).some((p) => p.id === e.pair)) throw new FoundryError(`No pair called ${e.pair} in ${e.imp}.`, 400);
         if (e.pick !== null && e.pick !== "A" && e.pick !== "B" && e.pick !== "tie") throw new FoundryError("A blind pick is A, B or tie.", 400);
       }
       state = applyBlindEdit(state, e);
@@ -215,16 +243,21 @@ export function patchBlind(id: string, edits: BlindEdit[]): Promise<BlindState> 
   });
 }
 
+/** An improvement's pairs. The loop writes them only after judging, so a cycle
+ *  that failed first carries an improvement with none: zero pairs, never a throw. */
+const pairsOf = (imp: Improvement): Improvement["pairs"] => imp.pairs ?? [];
+
 /** Fraction of an improvement's pairs where the chokepoint picked the challenger. */
 function judgePickRate(imp: Improvement): number {
-  if (!imp.pairs.length) return 0;
-  return imp.pairs.filter((p) => p.judge_pick === "challenger").length / imp.pairs.length;
+  const pairs = pairsOf(imp);
+  if (!pairs.length) return 0;
+  return pairs.filter((p) => p.judge_pick === "challenger").length / pairs.length;
 }
 
 /** Fraction of Gemini-judged pairs where Gemini agreed with the chokepoint;
  *  undefined when Gemini judged none. */
 function geminiAgreement(imp: Improvement): number | undefined {
-  const judged = imp.pairs.filter((p) => p.gemini_pick !== undefined);
+  const judged = pairsOf(imp).filter((p) => p.gemini_pick !== undefined);
   if (!judged.length) return undefined;
   return judged.filter((p) => p.gemini_pick === p.judge_pick).length / judged.length;
 }
@@ -256,7 +289,7 @@ function findingsMarkdown(cycle: CycleManifest, verdicts: TrainingVerdicts, deci
   for (const imp of decided) {
     const gem = geminiAgreement(imp);
     rows.push(
-      `- **${imp.technique}** (${imp.id}): human ${verdicts[imp.id] === "approve" ? "approved" : "rejected"}, judge picked the challenger on ${pct(judgePickRate(imp))} of ${imp.pairs.length} pair(s)${gem !== undefined ? `, gemini agreed with the judge on ${pct(gem)}` : ""}.`,
+      `- **${imp.technique}** (${imp.id}): human ${verdicts[imp.id] === "approve" ? "approved" : "rejected"}, judge picked the challenger on ${pct(judgePickRate(imp))} of ${pairsOf(imp).length} pair(s)${gem !== undefined ? `, gemini agreed with the judge on ${pct(gem)}` : ""}.`,
     );
   }
   const undecided = cycle.improvements.filter((i) => !decided.includes(i));
@@ -311,17 +344,17 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
     const thumbs: string[] = [];
     const trackedThumb = new Map<string, string>();
     for (const imp of decided) {
-      if (verdicts[imp.id] !== "approve" || !imp.thumbnail) continue;
-      const fileName = `${id}--${imp.id}${path.extname(imp.thumbnail).toLowerCase()}`;
-      const rel = `${THUMBS_REL}/${fileName}`;
-      const dst = path.join(thumbsDir, fileName);
+      const keeper = verdicts[imp.id] === "approve" ? keeperThumb(id, imp) : undefined;
+      if (keeper === undefined) continue;
+      const { rel } = keeper;
+      const dst = path.join(thumbsDir, keeper.name);
       // existsSync's semantics: any stat failure reads as "absent".
       const present = await fs.stat(dst).then(
         () => true,
         () => false,
       );
       if (!present) {
-        const src = resolveInCycle(id, imp.thumbnail);
+        const src = resolveInCycle(id, keeper.src);
         await fs.copyFile(src, dst);
       }
       trackedThumb.set(imp.id, rel);
@@ -366,7 +399,7 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
     // commitRun has always counted this way.
     let deleted = 0;
     for (const imp of decided) {
-      for (const pair of imp.pairs) {
+      for (const pair of pairsOf(imp)) {
         for (const ref of [pair.baseline, pair.challenger]) {
           if (ref.deleted) continue;
           for (const rel of mediaFiles(ref)) {
@@ -390,10 +423,4 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
 
     return { deleted, thumbs, ledger_rows: decided.length };
   }));
-}
-
-/** The tracked ledger as schema-2 rows, whichever shape each row was written in. */
-export async function readTrainingLedger(file = foundryFile("training-ledger.json")): Promise<TrainingLedgerRowV2[]> {
-  const doc = await readJson<{ rows?: unknown[] }>(file, {});
-  return normalizeLedger(doc.rows);
 }

@@ -137,8 +137,17 @@ describe("the night, dry, end to end", () => {
     vi.stubGlobal("fetch", WEB);
     const r = await cli(["style", id, "--sources", "s-01"]);
     expect(r.code).toBe(1);
-    expect(r.err).toMatch(/worst case \$0\.\d\d is over the night's remaining \$0\.01 of \$0\.01 \(settled \$0\.00, held \$0\.00\)/);
+    expect(r.err).toMatch(/worst case \$0\.\d\d is over the night's remaining \$0\.01 of \$0\.01 Gemini \(settled \$0\.00, held \$0\.00\)/);
     expect((await readNight(id)).candidates).toEqual([]);
+  });
+
+  it("a URL an earlier night held but launched nothing from is taken by the next night", async () => {
+    // The refused launch above left its night with s-01 ingested and no candidate from it.
+    const next = String((await cli(["open", "--json"])).doc["night"]);
+    const r = await cli(["add-source", next, "--json", file("held.json", [{ ...SOURCES[0], url: "https://art.example/one.png?v=2" }])]);
+    expect(r.code).toBe(0);
+    expect(r.doc["skipped"]).toEqual([]);
+    expect((r.doc["added"] as { url: string }[]).map((s) => s.url)).toEqual(["https://art.example/one.png?v=2"]);
   });
 
   it("a URL an earlier night holds is skipped by add-source", async () => {
@@ -153,7 +162,7 @@ describe("the night, dry, end to end", () => {
   it("close settles, stops at sources-exhausted under target, and prints the morning; a closed night launches nothing", async () => {
     const r = await cli(["close", night, "--json"]);
     expect(r.code, r.err).toBe(0);
-    expect(r.doc).toMatchObject({ packet: `pkt:scout:${night}`, state: "closed", stop: "sources-exhausted", settledUsd: 0, heldUsd: 0 });
+    expect(r.doc).toMatchObject({ packet: `pkt:scout:${night}`, state: "closed", stop: "sources-exhausted", settledUsd: 0, uncappedUsd: 0, heldUsd: 0 });
     expect(r.doc["byKind"]).toMatchObject({ style: { rendered: 1 }, scene: { failed: 1 }, finding: { rendered: 1 }, watch: { rendered: 1 } });
     const again = await cli(["style", night, "--sources", "s-01"]);
     expect(again.code).toBe(1);
@@ -171,7 +180,7 @@ describe("the night, dry, end to end", () => {
   it("status reads one night with its budget, and the list", async () => {
     const one = await cli(["status", night, "--json"]);
     expect(one.code).toBe(0);
-    expect(one.doc["budget"]).toEqual({ ceilingUsd: 15, settledUsd: 0, heldUsd: 0, remainingUsd: 15, clipsUsed: 0, clipCap: 2 });
+    expect(one.doc["budget"]).toEqual({ ceilingUsd: 15, settledUsd: 0, uncappedUsd: 0, heldUsd: 0, remainingUsd: 15, clipsUsed: 0, clipCap: 2 });
     const all = await cli(["status", "--json"]);
     expect((all.doc["nights"] as { id: string }[]).map((x) => x.id)).toContain(night);
   });

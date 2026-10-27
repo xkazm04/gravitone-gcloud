@@ -2,7 +2,7 @@
 // real for a specialty-lane cut too; what changes is that `malformed` refuses to
 // render a verdict over them. Split out of `../structure.ts` (the door re-exports it).
 
-import { SPINE_ORDER, type TrailerBeat, type TrailerCut } from "@/lib/script/trailer/types";
+import { SPINE_ORDER, SPINE_RANK, type Movement, type TrailerBeat, type TrailerCut } from "@/lib/script/trailer/types";
 import { CITE, type StructureFinding } from "@/lib/script/trailer/structureTypes";
 import { chain, kindsOf, movementById, requiredRoles, where } from "@/lib/script/trailer/readers";
 import { LEGAL_KINDS } from "@/lib/script/trailer/thresholds";
@@ -11,6 +11,8 @@ import { LEGAL_KINDS } from "@/lib/script/trailer/thresholds";
    Diagnostic, never a gate — see the header. The findings are real for a
    specialty-lane cut too; what changes is that `malformed` refuses to render a
    verdict over them. */
+
+const ranked = (m: Movement) => Object.hasOwn(SPINE_RANK, m.role);
 
 export function checkSpine(cut: TrailerCut): StructureFinding[] {
   const out: StructureFinding[] = [];
@@ -32,10 +34,12 @@ export function checkSpine(cut: TrailerCut): StructureFinding[] {
 
   // Order. Repeats are allowed (two escalation movements is a shape, not a
   // defect); going backwards is not.
-  const ordered = [...cut.movements].sort((a, b) => a.ordinal - b.ordinal);
+  // Unranked roles are checkGraph's violation; here they are skipped, not read
+  // as rank -1 ("sorts before the cold open") - see SPINE_RANK in ../types.ts.
+  const ordered = [...cut.movements].filter(ranked).sort((a, b) => a.ordinal - b.ordinal);
   for (let i = 1; i < ordered.length; i++) {
-    const prevIdx = SPINE_ORDER.indexOf(ordered[i - 1].role);
-    const thisIdx = SPINE_ORDER.indexOf(ordered[i].role);
+    const prevIdx = SPINE_RANK[ordered[i - 1].role];
+    const thisIdx = SPINE_RANK[ordered[i].role];
     if (thisIdx < prevIdx) {
       out.push({
         rule: "spine", subject: ordered[i].id, verdict: "violation",
@@ -68,7 +72,7 @@ export function checkSpine(cut: TrailerCut): StructureFinding[] {
   let illegal = 0;
   for (const b of beats) {
     const m = byId.get(b.movement);
-    if (!m) continue;
+    if (!m || !ranked(m)) continue;
     if (!LEGAL_KINDS[m.role].includes(b.kind)) {
       illegal++;
       out.push({

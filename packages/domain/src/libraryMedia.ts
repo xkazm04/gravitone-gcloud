@@ -1,12 +1,14 @@
 // THE LIBRARY'S MEDIA AND EXTRAS - what a probe measured about an item's bytes (MediaFacts) and
 // the per-kind facts its detail shows (LibraryExtras), split out of ./library.ts, which re-exports
 // every name here, so `@gt/domain/library` stays the one door a reader imports from. A leaf: it
-// imports nothing, so ./library.ts can hold its detail type over these without a cycle.
+// imports only a type (./libraryCharacter.ts, itself a leaf), so ./library.ts can hold its detail type over these without a cycle.
 //
 // THE MODEL KIND (spark game-3d-assets): a game asset's finished variant - a TRELLIS.2 mesh
 // finished in Blender to its class's triangle budget - as a glb (Draco off: PoF's viewer cannot
 // decode it). Its closed sets are lib/foundry/mesh/types.ts's, restated here because a package
 // cannot import lib/; tests/next-server/library-model.test.ts holds the two equal.
+
+import type { CharacterExtras } from "./libraryCharacter.ts";
 
 /** The bytes of a model item: binary glTF. */
 export const MODEL_MIME = "model/gltf-binary";
@@ -122,6 +124,8 @@ export type LibraryExtras = {
   readonly captions?: number;
   /** Present on model items only. */
   readonly model?: ModelExtras;
+  /** Present on character items only. */
+  readonly character?: CharacterExtras;
 };
 
 

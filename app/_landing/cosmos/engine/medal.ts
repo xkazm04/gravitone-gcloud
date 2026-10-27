@@ -66,12 +66,3 @@ export function drawMedal(ctx: Ctx2D, R: number, spec: TypeSpec, opts?: { sil?: 
 
 /** the CSS box a medallion of diameter D occupies, shadow room included */
 export const medalBox = (D: number): number => D + D * 0.16 * 2;
-
-/** paints a medallion centred in a canvas of medalBox(D)*rs pixels */
-export function paintMedal(c: Ctx2D, spec: TypeSpec, D: number, rs: number): void {
-  const box = medalBox(D);
-  c.scale(rs, rs);
-  c.translate(box / 2, box / 2);
-  c.rotate((spec.tilt * Math.PI) / 180);
-  drawMedal(c, D / 2, spec);
-}

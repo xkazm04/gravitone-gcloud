@@ -18,7 +18,7 @@
 // _shared/notebook/cards.ts.
 
 import { buildCards, type Card } from "@/lib/notebook/cards";
-import { DIMENSIONS } from "@/lib/notebook/dimensions";
+import { columnsFor, DIMENSIONS, UNTAGGED_DIMENSION_ID } from "@/lib/notebook/dimensions";
 import { fixtureSource, type NotebookSource } from "@/lib/notebook/source";
 
 export { buildCards, DIMENSIONS };
@@ -128,7 +128,8 @@ export function scopeSummary(cards: Card[], scope: Scope, source: NotebookSource
   const out = cards.filter((c) => st(c.id).descoped);
   const wounds = woundsOf(cards, scope, optIn, new Set((source.notebook.killed ?? []).map((k) => k.id)));
   const requiredGone = cards.filter((c) => c.required && st(c.id).descoped);
-  const byDim = source.dimensions.map((d) => ({
+  const hasUntagged = cards.some((c) => c.dimension === UNTAGGED_DIMENSION_ID);
+  const byDim = columnsFor({ derived: source.dimensions, hasUntagged }).map((d) => ({
     ...d,
     total: cards.filter((c) => c.dimension === d.id).length,
     kept: kept.filter((c) => c.dimension === d.id).length,

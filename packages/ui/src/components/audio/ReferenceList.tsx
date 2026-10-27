@@ -53,7 +53,9 @@ export function ReferenceList({ refs, onSeed }: { readonly refs: readonly Refere
                     <Chip label={e.kind} tone={e.ok ? "emerald" : "rose"} casing="lower" />
                     <span className={s.methodVal}>{m.key}</span>
                     <Chip label={k} tone={k === "exact" ? "emerald" : k === "relative" ? "amber" : "rose"} casing="lower" />
-                    <Button label="Seed" size="sm" onPress={() => onSeed(r, m)} />
+                    <span role="group" aria-label={`${m.label} ${m.tempo.toFixed(1)} bpm ${m.key}`}>
+                      <Button label="Seed" size="sm" onPress={() => onSeed(r, m)} />
+                    </span>
                   </li>
                 );
               })}

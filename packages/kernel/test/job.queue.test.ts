@@ -135,6 +135,26 @@ describe("queue order and position", () => {
     expect(ids(must(w.store.read((r) => queueOf(r, "gpu.local"))))).toEqual(["b", "a"]);
     w.store.close();
   });
+
+  // The line is (ord, n): a mover that took its neighbour's order sorted by its enqueue number
+  // among everyone else at that order, so it jumped a whole tie, not one place.
+  it("a move passes exactly one neighbour, whatever ties the orders around it hold", () => {
+    const w = world();
+    for (const id of ["a", "b", "c"]) put(w, id, "gpu.local", { order: 1 });
+    must(move(w.store, jobId("c"), "earlier", operator));
+    expect(ids(must(w.store.read((r) => queueOf(r, "gpu.local"))))).toEqual(["a", "c", "b"]);
+    must(move(w.store, jobId("a"), "later", operator));
+    expect(ids(must(w.store.read((r) => queueOf(r, "gpu.local"))))).toEqual(["c", "a", "b"]);
+    // An older job behind a tie (a re-route lands with the order it had on its old lane).
+    put(w, "z", "seat.text", { order: 4 });
+    put(w, "x", "seat.text", { order: 3 });
+    put(w, "y", "seat.text", { order: 3 });
+    must(move(w.store, jobId("z"), "earlier", operator));
+    expect(ids(must(w.store.read((r) => queueOf(r, "seat.text"))))).toEqual(["x", "z", "y"]);
+    must(move(w.store, jobId("x"), "later", operator));
+    expect(ids(must(w.store.read((r) => queueOf(r, "seat.text"))))).toEqual(["z", "x", "y"]);
+    w.store.close();
+  });
 });
 
 describe("lane slots (decision 5)", () => {

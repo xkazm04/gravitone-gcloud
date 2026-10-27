@@ -13,6 +13,9 @@
 //    routes' access-header half retired with them.
 // 8. GUARD (declared, green before): commitRun(id, 'leave') still leaves undecided candidates' files on disk and out of ledger.json.
 // 9. (Critic revision): Bind confirm to preview via token: token = (await previewCommit(run)).token (or previewExtractCommit); if verdicts/manifest change before commit, e.g. putVerdicts flips one keep to reject, calling commitRun(run, 'reject', token) rejects with FoundryError 409 and candidate files, ledger.json and styles.json remain byte-identical.
+// 10. (sweep 2026-10-24) the token sees WHO kept: a model's keep becoming a human's changes the
+//     plan's promotions, so it must change the token too, or a preview that showed no promotion
+//     commits one; a record with no `by` and one with by:"human" (both a human's) keep one token.
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -24,9 +27,10 @@ import { EXTRACT_ROOT, commitExtractRun, previewExtractCommit } from "@/lib/foun
 import { OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
 import type { ExtractManifest, ExtractedStyle, Observables } from "@/lib/foundry/extract/types";
 import { OUT_ROOT, resolveInRun, FoundryError, commitRun, previewCommit, putVerdicts } from "@/lib/foundry/store";
-import type { Candidate, RunManifest, StyleDef, Verdicts } from "@/lib/foundry/types";
+import type { Candidate, LedgerRow, RunManifest, StyleDef, Verdicts } from "@/lib/foundry/types";
+import { deriveForgeCommit, planForgeCommit } from "@/lib/foundry/commitPlan";
 
-import { keepEnv, probeFoundryDir } from "./_helpers";
+import { keepEnv, probeFoundryDir, stripComments } from "./_helpers";
 
 const ENV_KEYS = [ACCESS_SECRET_VAR] as const;
 keepEnv(ENV_KEYS);
@@ -454,4 +458,57 @@ test("Case 9: Bind confirm to preview via token: token = (await previewCommit(ru
   } finally {
     cleanupRun(runId);
   }
+});
+
+test("Case 10: the token changes when a model's keep becomes a human's, because the promotions do", () => {
+  const cand = (scene: string): Candidate => ({ id: `${scene}/haze--text--s1`, scene, style: "haze", mechanism: "text", seed: 1, file: `${scene}.png`, sidecar: `${scene}.json`, status: "graded", grade: null, error: null });
+  const run = { id: "probe-token-by", status: "done", candidates: [cand("sc1")] } as unknown as RunManifest;
+  // One human keep of `haze` on another run's scene already: a second human-kept scene proves it.
+  const haze: StyleDef = { ...styleDef("haze"), evidence: [{ run: "older", scene: "sc0", mechanism: "text", verdict: "keep", at: "t0" }] };
+  const plan = (by?: "human" | "model") => planForgeCommit(run, { "sc1/haze--text--s1": { verdict: "keep", at: "t1", ...(by ? { by } : {}) } }, { styles: [haze], ledger: [] }, "leave");
+
+  const model = plan("model");
+  const human = plan("human");
+  const legacy = plan();
+  console.log(`[token] model promotions=${model.promotions.join(",") || "none"} human promotions=${human.promotions.join(",") || "none"} same token=${model.token === human.token}`);
+  expect(model.promotions).toEqual([]);
+  expect(human.promotions).toEqual(["haze"]);
+  expect(human.token, "a by-only change that moves the promotions must move the token").not.toBe(model.token);
+  expect(legacy.token, "no `by` reads as a human's: one token, as before").toBe(human.token);
+});
+
+test("Case 11: commitRun writes the rows the plan projected (minus the stamp) and holds none of the plan's rules itself", async () => {
+  writeFileSync(path.join(foundryDir(), "styles.json"), JSON.stringify({ styles: [styleDef("haze")] }), "utf8");
+  writeFileSync(path.join(foundryDir(), "ledger.json"), JSON.stringify({ rows: [] }), "utf8");
+  const runId = `probe-case11-${Date.now().toString(36)}`;
+  forgeRun(runId, [
+    { scene: "sc0", style: "haze", verdict: "keep" },
+    { scene: "sc1", style: "haze", verdict: "reject" },
+    { scene: "sc2", style: "haze" }, // undecided -> auto-rejected
+  ]);
+  try {
+    const plan = await previewCommit(runId, "reject");
+    expect(plan.ledgerRows.length).toBe(3);
+    // The projection takes the commit's stamp: the same rows, one `at`.
+    const run = JSON.parse(readFileSync(path.join(OUT_ROOT, runId, "run.json"), "utf8")) as RunManifest;
+    const stamped = deriveForgeCommit(run, { "sc0/haze--ref--s0": { verdict: "keep", at: "v" } }, { styles: [styleDef("haze")], ledger: [] }, "reject", "T");
+    expect(stamped.plan.ledgerRows.map((r) => r.at)).toEqual(["T", "T", "T"]);
+    expect(stamped.autoRejected.length).toBe(2);
+    const res = await commitRun(runId, "reject");
+    const written = (JSON.parse(readFileSync(path.join(foundryDir(), "ledger.json"), "utf8")) as { rows: LedgerRow[] }).rows.filter((r) => r.run === runId);
+    const bare = (rows: LedgerRow[]) => rows.map(({ at: _at, ...r }) => r);
+    expect(bare(written)).toEqual(bare(plan.ledgerRows));
+    const committedAt = (JSON.parse(readFileSync(path.join(OUT_ROOT, runId, "run.json"), "utf8")) as RunManifest).committed?.at;
+    expect(res.deleted).toBe(plan.counts.deleted);
+    expect(written.map((r) => r.at), "every committed row carries the commit's time").toEqual(written.map(() => committedAt));
+  } finally {
+    cleanupRun(runId);
+  }
+
+  // One rule site: the plan's three rules are not spelled again in commitRun (comments stripped).
+  const src = stripComments(readFileSync(path.join(process.cwd(), "lib", "foundry", "store.ts"), "utf8"));
+  const body = src.slice(src.indexOf("export async function commitRun"));
+  expect(body, "the withFile filter").not.toMatch(/status !== "pending"/);
+  expect(body, "the auto-reject").not.toMatch(/verdict: "reject", at/);
+  expect(body, "the ledger row builder").not.toMatch(/ledger\.rows\.push\(\s*{/);
 });

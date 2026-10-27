@@ -7,14 +7,14 @@
 //   edit       an image + an instruction                   → adjusted image
 //   recognize  an image + a question                       → text, or JSON
 //
-// The vendor split is an ENVIRONMENT decision, not a code decision (see
-// router.ts): dev generates and edits on Google with Leonardo behind it as the
-// re-route target, and recognises on Qwen; production runs on Google
-// throughout. A surface that imported a vendor directly would nail that
-// decision into the UI, so nothing outside lib/imaging/ may.
+// The vendor split is an ENVIRONMENT decision, not a code decision: router.ts
+// PLAN holds it per capability for dev and prod. A surface that imported a
+// vendor directly would nail that decision into the UI, so nothing outside
+// lib/imaging/ may.
 //
 // SERVER ONLY. Every provider holds an API key. Nothing here may be imported
-// from a component — the seam is app/api/imaging/*.
+// from a component — the studio reaches imaging through kernel jobs (the
+// producers call router.ts), never through an import.
 
 // Type-only, and it must stay that way: errors.ts imports this file back, so a
 // value import here would be a runtime cycle. `import type` is erased.
@@ -82,6 +82,9 @@ export interface GenerateRequest extends ProviderSteer {
    *  capped by the provider's own reference window (Google's is 14). */
   references?: ImageRef[];
   seed?: number;
+  /** The studio's quality setting (spark scout-muse: "quality Low to spare credits"). Honoured by
+   *  leonardo-studio only; every other provider ignores it. Absent: the studio's default (medium). */
+  quality?: "low" | "medium";
 }
 
 export interface EditRequest extends ProviderSteer {
@@ -104,7 +107,7 @@ export interface RecognizeRequest extends ProviderSteer {
 
 /** The vendor roster, as a value: a request may name a vendor, so validation
  *  needs the list at runtime and there may be exactly one copy of it. */
-export const PROVIDER_IDS = ["leonardo", "google", "qwen", "ollama", "agy", "leonardo-studio", "leonardo-flare"] as const;
+export const PROVIDER_IDS = ["leonardo", "google", "qwen", "ollama", "agy", "leonardo-studio", "leonardo-flare", "comfy-flux2"] as const;
 
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 
@@ -188,6 +191,10 @@ export interface Provenance {
    *  Absent on the ordinary single-hop call — its PRESENCE is the re-route,
    *  which is how "why is this plate from Leonardo?" stays answerable later. */
   reroutedFrom?: RerouteStep[];
+  /** Present iff a multi-candidate call returned fewer images than it asked for:
+   *  the candidates the vendor refused or failed on, while the others were kept.
+   *  Absent on a full batch, so its presence IS the short batch. */
+  shortBatch?: { asked: number; returned: number; refused: number; failed: number };
 }
 
 export interface GeneratedImages {

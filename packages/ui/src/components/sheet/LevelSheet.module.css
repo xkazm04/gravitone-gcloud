@@ -14,3 +14,5 @@
 /* A sheet that hugs its body (Phase 4 receipt): anchored to the bottom edge, as tall as it needs. */
 .fit{top:auto;max-height:calc(100vh - var(--hdr-h) - var(--sp-5))}
 .fit .body{flex:0 1 auto}
+/* Reduced motion: the sheet is there, it does not travel the height of the screen to arrive. */
+@media (prefers-reduced-motion: reduce){.sheet{transition:none}}

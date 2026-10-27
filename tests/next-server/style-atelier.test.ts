@@ -6,6 +6,8 @@
 // that adopt -> generate (dry) -> judge -> lock runs end to end.
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,9 +18,12 @@ import { ok, type Result } from "@gt/domain/errors";
 import { STYLE_TRIALS } from "@gt/domain/style.ratchet";
 import type { StyleAct, StyleOp, StyleOpOutcome, StyleView } from "@gt/domain/styleView";
 
-import { loadStyle, opStyle, resetStyles, type Media } from "../../app/(studio)/library/style/_port/fixture.ts";
+import { land, loadStyle, opStyle, recOf, resetStyles, type Media } from "../../app/(studio)/library/style/_port/fixture.ts";
 import { actReceipt, confirmAct } from "../../app/(studio)/library/style/_port/fixtureActs.ts";
 import { ADOPT_SEEDS, DRY_GRID, SEEDS, presetPlate } from "../../app/(studio)/library/style/_port/fixtureData.ts";
+import { styleActSchema } from "../../app/(studio)/library/style/_port/schema.ts";
+import { styleJobId } from "../../lib/producers/styleLaunch.ts";
+import { stripComments } from "../golden-path/_pure.ts";
 
 const media: Media = async (file): Promise<Result<BlobRef>> => ok({ sha256: createHash("sha256").update(file).digest("hex"), bytes: file.length, mime: "image/jpeg" });
 const NOW = Date.parse("2026-10-16T12:00:00.000Z");
@@ -60,6 +65,25 @@ it("names only committed pictures, for every seed and every dry render it can la
   expect(files.filter((f) => !tracked.has(`public${f}`))).toEqual([]);
 });
 
+// ARIA 1.2 prohibits naming a generic (b, i, span, div, p with no role): a screen reader drops the
+// label, so a glyph named that way says nothing (tests/next-server/landing-cosmos-engine.test.ts).
+it("names no generic element of the atelier with an aria-label", () => {
+  const dir = path.join(process.cwd(), "app/(studio)/library/style/[id]/_atelier");
+  const files = readdirSync(dir).filter((f) => f.endsWith(".tsx"));
+  expect(files.length, "the walk read the atelier's components").toBeGreaterThanOrEqual(2);
+  const bad: string[] = [];
+  let tags = 0;
+  for (const f of files) {
+    const src = stripComments(readFileSync(path.join(dir, f), "utf8"));
+    for (const m of src.matchAll(/<(b|i|span|div|p|strong|em)\b[^>]*>/g)) {
+      tags++;
+      if (/\baria-label=/.test(m[0]) && !/\brole=/.test(m[0])) bad.push(`${f}: ${m[0]}`);
+    }
+  }
+  expect(tags, "the walk found the atelier's plain elements").toBeGreaterThan(3);
+  expect(bad).toEqual([]);
+});
+
 describe("the seeded universe reads through the one ratchet", () => {
   it("draws each place on the ratchet with the gate's own sentence", async () => {
     const painted = await view("painted-3d");
@@ -81,6 +105,15 @@ describe("the seeded universe reads through the one ratchet", () => {
     expect(agent.length).toBeGreaterThan(0);
     expect(agent.every((e) => !e.counts)).toBe(true);
   });
+});
+
+// Two first requests at once (a page read beside an action) seed the world once, not twice.
+it("keeps an op that landed while a second first read was still seeding", async () => {
+  const slow: Media = (file) => new Promise((done) => setTimeout(() => void media(file).then(done), 0));
+  const renamed = opStyle({ styleId: "soft-backlit-bokeh", baseRev: 1, op: { kind: "rename", name: "Bokeh, renamed" } }, who, slow);
+  const read = loadStyle("chalk-argument", slow);
+  expect((await renamed).ok && (await read).ok).toBe(true);
+  expect(await view("soft-backlit-bokeh")).toMatchObject({ name: "Bokeh, renamed", rev: 2 });
 });
 
 describe("an op at a rev", () => {
@@ -113,6 +146,17 @@ describe("an op at a rev", () => {
     expect((await view("newsprint-cutout")).proofs.some((p) => p.id === "pr-nc-flywheel")).toBe(true);
   });
 
+  // An act's landing is a write like an op's: the ratchet holds there too (nothing unlocks).
+  it("refuses an act's landing that would unlock a style, and writes nothing", async () => {
+    const bp = await recOf("blueprint", media);
+    if (!bp.ok) throw bp.error;
+    const { lock: _lock, ...unlocked } = bp.value.style;
+    void _lock;
+    const out = land("blueprint", bp.value.rev, { ...unlocked, status: "proven" }, who.at, "job:style:blueprint:seeded");
+    expect(out.ok ? null : out.error.code).toBe("refused");
+    expect(await view("blueprint")).toMatchObject({ status: "locked", rev: bp.value.rev });
+  });
+
   it("freezes a locked block; duplicate is the way on, with the look and none of the sheet", async () => {
     const bp = await view("blueprint");
     if (bp.block === null) throw new Error("blueprint has a block");
@@ -132,8 +176,8 @@ describe("acts: a receipt, then a confirm", () => {
     const v = await view("chalk-argument");
     const act: StyleAct = { kind: "generate-proofs", styleId: v.id, baseRev: v.rev, trialIds: ["peak-and-fall", "flywheel"] };
     const rc = await actReceipt(act, "dry", NOW, media);
-    expect(rc.ok && rc.value.lines.map((l) => [l.key, l.usd])).toEqual([["peak-and-fall", 0.045], ["flywheel", 0.045]]);
-    expect(rc.ok && rc.value.totals.usd).toBe(0.09);
+    expect(rc.ok && rc.value.lines.map((l) => [l.key, l.usd])).toEqual([["peak-and-fall", 0.05], ["flywheel", 0.05]]);
+    expect(rc.ok && rc.value.totals.usd).toBe(0.1);
     const live = await actReceipt(act, "live", NOW, media);
     expect(live.ok ? null : live.error.code).toBe("refused");
   });
@@ -147,6 +191,57 @@ describe("acts: a receipt, then a confirm", () => {
     const done = await confirmAct(act, "dry", rc.value.token, NOW, media);
     expect(done.ok && done.value.kind).toBe("stale");
     expect((await view("chalk-argument")).proofs).toEqual([]);
+  });
+
+  // The real side's rule (lib/producers/styleLaunch.ts actRefusal) and the view's `sheet.full`:
+  // an approval rendered under an earlier block is not in the reference window.
+  it("counts the reference window as the view does: a stale approval leaves room", async () => {
+    const trials = STYLE_TRIALS.map((t) => t.id);
+    for (const ids of [trials, trials, trials.slice(0, 2)]) {
+      const v = await view("newsprint-cutout");
+      await run({ kind: "generate-proofs", styleId: v.id, baseRev: v.rev, trialIds: ids });
+    }
+    const pending = (await view("newsprint-cutout")).proofs.filter((p) => p.state === "pending" && p.id !== "pr-nc-booking");
+    for (const p of pending.slice(0, 11)) expect((await op("newsprint-cutout", { kind: "judge-proof", proofId: p.id, state: "approved" })).kind).toBe("applied");
+    const v = await view("newsprint-cutout");
+    expect(v.proofs.filter((p) => p.state === "approved").length).toBe(14);
+    expect(v.sheet.full).toBe(false);
+    const rc = await actReceipt({ kind: "generate-proofs", styleId: v.id, baseRev: v.rev, trialIds: ["flywheel"] }, "dry", NOW, media);
+    expect(rc.ok ? null : rc.error.message).toBeNull();
+  });
+
+  it("names a render's plates afresh after an undecided plate left the sheet", async () => {
+    const v = await view("chalk-argument");
+    const first = await run({ kind: "generate-proofs", styleId: v.id, baseRev: v.rev, trialIds: ["peak-and-fall", "wish-list"] });
+    const gone = first.proofs[0];
+    if (gone === undefined) throw new Error("a plate was rendered");
+    expect((await op("chalk-argument", { kind: "remove-proof", proofId: gone.id })).kind).toBe("applied");
+    const after = await view("chalk-argument");
+    const again = await run({ kind: "generate-proofs", styleId: after.id, baseRev: after.rev, trialIds: ["flywheel"] });
+    expect(again.proofs.map((p) => p.trialId)).toEqual(["wish-list", "flywheel"]);
+    expect(new Set(again.proofs.map((p) => p.id)).size).toBe(2);
+  });
+
+  // lib/producers/styleLaunch.ts: one confirm, one job - a second confirm of one token finds it.
+  it("answers a second confirm of one receipt with the job the first made, and renders nothing more", async () => {
+    const v = await view("chalk-argument");
+    const act: StyleAct = { kind: "generate-proofs", styleId: v.id, baseRev: v.rev, trialIds: ["flywheel"] };
+    const rc = await actReceipt(act, "dry", NOW, media);
+    if (!rc.ok) throw rc.error;
+    const first = await confirmAct(act, "dry", rc.value.token, NOW, media);
+    const second = await confirmAct(act, "dry", rc.value.token, NOW, media);
+    if (!first.ok || first.value.kind !== "launched") throw new Error("the first confirm launched");
+    expect(first.value.jobId).toBe(styleJobId(v.id, rc.value.token));
+    expect(second.ok && second.value).toMatchObject({ kind: "launched", jobId: first.value.jobId, view: { rev: first.value.view.rev } });
+    expect((await view("chalk-argument")).proofs).toHaveLength(1);
+  });
+
+  // A trial named twice is two priced plates under one id: the landing's door refuses the second
+  // after both were paid for. The act's door refuses it before any price.
+  it("admits a render's trials at the door only once each", async () => {
+    const act = { kind: "generate-proofs", styleId: "chalk-argument", baseRev: 1, trialIds: ["flywheel", "flywheel"] };
+    expect(styleActSchema.safeParse(act).success).toBe(false);
+    expect(styleActSchema.safeParse({ ...act, trialIds: ["flywheel", "the-exit"] }).success).toBe(true);
   });
 
   it("refuses to adopt a candidate (v1's 409, kept)", async () => {

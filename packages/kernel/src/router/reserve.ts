@@ -22,7 +22,8 @@ import type { Facts, MediumTable, Posture, Refused, RouteRequest, Routed, Router
 //          the gate may guess and errs high; the settle books what happened.
 //   video  a cloud clip holds its price, or $0.75/s when unpriced
 //          (lib/imaging/video/pricing.ts gateHoldUsd, "a clip is dollars, not
-//          cents, so the gate errs high"). A clip rendered on this box's own
+//          cents, so the gate errs high"), 10 s per clip when the request
+//          names no duration. A clip rendered on this box's own
 //          GPU is not billed by anyone and holds nothing.
 //   audio  SECONDS of audio requested, the unit music has always been metered
 //          in (lib/music/budget.ts), for the cloud vendor; the Suno queue spends
@@ -40,6 +41,8 @@ export type SpendClasses = Readonly<Record<SpendClassId, SpendClass>>;
 
 /** v1's hold for an unpriced clip, per second of video. */
 export const UNPRICED_CLIP_HOLD_USD_PER_S = 0.75;
+/** The longest clip unit the price table knows (`clip-10s`). */
+const LONGEST_CLIP_S = 10;
 
 const CLASS_OF: Readonly<Record<RouterMedium, SpendClassId | null>> = { image: "imaging-usd", video: "video-usd", audio: "music-audio-s", text: null };
 
@@ -54,7 +57,10 @@ export function holdFor(req: RouteRequest, routed: Routed, now: string): { spend
   }
   if (c.transport !== "cloud") return null;
   if (req.medium === "audio") return { spendClass, amount: req.usage?.["audio-second"] ?? req.units };
-  const clipSeconds = 5 * (req.usage?.["clip-5s"] ?? 0) + 10 * (req.usage?.["clip-10s"] ?? 0);
+  const declared = 5 * (req.usage?.["clip-5s"] ?? 0) + 10 * (req.usage?.["clip-10s"] ?? 0);
+  // A clip whose duration the request does not say is held at the longest the table
+  // prices, per unit: an unknown duration erring to zero would hold nothing for dollars.
+  const clipSeconds = declared > 0 ? declared : LONGEST_CLIP_S * Math.max(req.units, 1);
   return { spendClass, amount: c.quote.usd ?? UNPRICED_CLIP_HOLD_USD_PER_S * clipSeconds };
 }
 
@@ -89,7 +95,11 @@ export type RouteAndReserveInput = {
  * Decide and hold, in `t`. A refusal is a VALUE, recorded as `router.refused`
  * and committed with the caller's transaction: "which model served this call,
  * and why" includes "none, and why" (model-routing: the decision record). A
- * budget refusal from the spend port throws and rolls everything back.
+ * ceiling refusal is a value too (`over-budget`): the spend port's refusal
+ * counter and its `spend.refused` event commit with the caller's transaction,
+ * and a `router.refused` (reason `over-budget`, naming the provider the route
+ * chose) is written beside it. Any other spend error throws and rolls
+ * everything back.
  */
 export function routeAndReserve(t: Tx, input: RouteAndReserveInput, classes: SpendClasses): RouteReservation {
   const { req, facts, mode, actor, subject } = input;
@@ -105,6 +115,15 @@ export function routeAndReserve(t: Tx, input: RouteAndReserveInput, classes: Spe
     const r = reserve(t, classes[want.spendClass], { id: input.reservationId, amount: want.amount, owner: actor.id });
     if (!r.ok) {
       if (r.error.code !== "budget") throw r.error;
+      // The route WAS decided and the ceiling refused its hold: the record names the provider the
+      // money stopped (spend.refused carries totals, not the routing). `router.refused`, not
+      // `router.routed`: no vendor was claimed, and routed events pair one to one with claims.
+      append(t, {
+        actor,
+        type: "router.refused",
+        subject,
+        data: { medium: req.medium, capability: req.capability, reason: "over-budget", message: r.error.message, provider: out.choice.provider, model: out.choice.model, rung: out.choice.rung, lane: out.choice.lane, trail, mode: mode.kind },
+      });
       return { kind: "over-budget", routed: out, error: r.error };
     }
     hold = r.value;

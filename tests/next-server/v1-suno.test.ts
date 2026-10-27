@@ -76,6 +76,12 @@ describe("suno projection", () => {
   it("unjudged clips are one triage pile", () => {
     expect(projectSuno(file(), ctx()).weir).toEqual([{ source: "suno", id: "suno/triage", title: "suno clips to judge", media: "audio", kind: "cull", since: "2026-10-15T09:00:00.000Z", decided: 1, pending: 1, href: "/board" }]);
   });
+
+  it("a scout take is in neither half of the pile: not pending, and not decided either", () => {
+    const scout = (id: string, verdict: "keep" | null) => ({ id, origin: "queue", jobId: "sj-scout-2026-10-15-a", model: "v6", createdAt: T + 7000, verdict, title: "night take", durationS: 120 });
+    const clips = [...file().clips, scout("sc-3", null), scout("sc-4", null), scout("sc-5", "keep")];
+    expect(projectSuno(file({ clips }), ctx()).weir.map((w) => [w.decided, w.pending])).toEqual([[1, 1]]);
+  });
 });
 
 describe("suno reader", () => {

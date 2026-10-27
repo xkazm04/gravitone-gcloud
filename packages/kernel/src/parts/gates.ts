@@ -27,20 +27,30 @@ export const stepPacketId = (gatePartId: string): string => `pkt:step:${gatePart
  * own row) kept exactly one candidate: a rejected plate owes a re-render, so that attempt failed.
  */
 export function gatePacketFact(r: Reader, gatePartId: string): PacketFact | undefined {
-  const base = stepPacketId(gatePartId);
-  let best: { id: string; n: number; state: string; mode: string } | undefined;
-  for (const row of r.all("SELECT id, state, mode FROM packets WHERE id = ? OR substr(id, 1, ?) = ?", base, base.length + 1, `${base}#`)) {
-    const id = String(row["id"]);
-    const n = id === base ? 1 : Number(id.slice(base.length + 1));
-    if (Number.isInteger(n) && (best === undefined || n > best.n)) best = { id, n, state: String(row["state"]), mode: String(row["mode"]) };
-  }
+  const best = latestGatePacket(r, gatePartId);
   if (best === undefined) return undefined;
   if (best.state === "returned") return "rejected";
   if (best.state !== "committed") return "open";
   return best.mode !== "matrix-cull" || cullRatifies(r, best.id) ? "committed" : "rejected";
 }
 
-function cullRatifies(r: Reader, packetId: string): boolean {
+/** The gate's newest packet row (attempt `n`, 1 for the bare id), found by the primary-key range below. */
+export function latestGatePacket(r: Reader, gatePartId: string): { readonly id: string; readonly n: number; readonly state: string; readonly mode: string } | undefined {
+  const base = stepPacketId(gatePartId);
+  let best: { id: string; n: number; state: string; mode: string } | undefined;
+  // `<base>` or `<base>#...` as a range on the primary key (`#` is 0x23, `$` the next code point):
+  // two index seeks, where a substr() match scanned every packet ever opened, once per gate part
+  // per plan read (packets are never deleted).
+  for (const row of r.all("SELECT id, state, mode FROM packets WHERE id = ? OR (id >= ? AND id < ?)", base, `${base}#`, `${base}$`)) {
+    const id = String(row["id"]);
+    const n = id === base ? 1 : Number(id.slice(base.length + 1));
+    if (Number.isInteger(n) && (best === undefined || n > best.n)) best = { id, n, state: String(row["state"]), mode: String(row["mode"]) };
+  }
+  return best;
+}
+
+/** Did this committed cull ratify? Every row (a candidate with no row is a row of its own) holds exactly one keep. */
+export function cullRatifies(r: Reader, packetId: string): boolean {
   const res = committedResult(r, packetId);
   if (res === undefined || !res.ok) return false;
   const kept = new Set<string>(res.value.kept);
@@ -65,16 +75,11 @@ export function gateFacts(now: number): ReadContext {
   return { now, packetOf: (partId, r) => gatePacketFact(r, partId), slottedOf: (partId, r) => slottedIn(r, partId) };
 }
 
-/** `gateFacts` for a caller already inside a snapshot; the reader comes with each lookup. */
-export function gateContext(_r: Reader, now: number): ReadContext {
-  return gateFacts(now);
-}
-
 /**
  * Release what a gate held: inside ONE transaction, read the gates' packets and move every
  * planned job whose upstream is now ratified to queued (records/write.ts `releaseHeldIn`). Called
  * by the step packet's apply after its commit; idempotent (a released job is no longer planned).
  */
 export function releaseAfterGate(store: Store, projectId: string, actor: Actor, now: number): Result<string[]> {
-  return store.tx((t) => releaseHeldIn(t, projectId, actor, gateContext(t, now)));
+  return store.tx((t) => releaseHeldIn(t, projectId, actor, gateFacts(now)));
 }

@@ -2,16 +2,23 @@
 // fold, the blocks a window asks for, what each key does to the selection, the Esc cascade - and
 // what the parts expose, rendered with react-dom/server (Vitest runs without a DOM; the route is
 // driven live in tests/live/library.live.spec.ts).
-import { createElement as h } from "react";
+import { readFileSync } from "node:fs";
+
+import { LIBRARY_STATES } from "@gt/domain/library";
+import { createElement as h, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { DetailFacets } from "../../src/components/library/DetailPanel.tsx";
+import { DetailFacets, DetailPanel } from "../../src/components/library/DetailPanel.tsx";
 import { backStep, blocksFor, BLOCK, foldValues, layoutFor, orderValues, SIZES, stepTo, tileBox, type FacetValue } from "../../src/components/library/library.ts";
 import { LibraryRow } from "../../src/components/library/LibraryRow.tsx";
+import rowCss from "../../src/components/library/LibraryRow.module.css";
 import { cardName, LibraryTile, type LibraryCard } from "../../src/components/library/LibraryTile.tsx";
+import { KINDS, LibraryGlyph } from "../../src/components/library/LibraryGlyph.tsx";
 import { Lineage } from "../../src/components/library/Lineage.tsx";
+import { LookStrip } from "../../src/components/library/LookStrip.tsx";
 import { Rail, type RailGroup } from "../../src/components/library/Rail.tsx";
+import { SetSummary } from "../../src/components/library/SetSummary.tsx";
 import { columnsFor, windowOf } from "../../src/window/core.ts";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
@@ -63,9 +70,30 @@ describe("the rail's values", () => {
     expect(foldValues(nine, false)).toMatchObject({ hidden: 0, canFold: false });
     const ten = [...nine, fv("v9", 0, true)];
     const f = foldValues(ten, false);
-    expect(f.shown.map((v) => v.value)).toEqual(["v0", "v1", "v2", "v3", "v4", "v5", "v6", "v9"]);
-    expect(f.hidden).toBe(2);
-    expect(foldValues(ten, true)).toMatchObject({ hidden: 0, canFold: true });
+    // A pressed value pulled forward leaves two hidden: the rule says never "+2 more".
+    expect(f.shown.map((v) => v.value)).toEqual(ten.map((v) => v.value));
+    expect(f).toMatchObject({ hidden: 0, canFold: false });
+    expect(foldValues(ten, true)).toMatchObject({ hidden: 0, canFold: false });
+    const twelve = [...nine, fv("v9", 0), fv("v10", 0), fv("v11", 0, true)];
+    const g = foldValues(twelve, false);
+    expect(g.shown.map((v) => v.value)).toEqual(["v0", "v1", "v2", "v3", "v4", "v5", "v6", "v11"]);
+    expect(g).toMatchObject({ hidden: 4, canFold: false });
+    expect(foldValues(twelve, true)).toMatchObject({ hidden: 0, canFold: true });
+  });
+
+  test("every Library state has its dot on the rail and in a tile, and its segment in the set's bar", () => {
+    // One authority per vocabulary (faceting-and-filters): the states are @gt/domain/library's,
+    // and each place that colours a state must carry a class for every one of them.
+    const css = (f: string): string => readFileSync(new URL(`../../src/components/library/${f}`, import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const f of ["LibraryTile.module.css", "SetSummary.module.css"]) {
+      const text = css(f);
+      expect(text.length).toBeGreaterThan(0);
+      for (const st of LIBRARY_STATES) expect(text, `${f} .${st}`).toMatch(new RegExp(`\\.${st}\\{`));
+    }
+    const all: RailGroup = { key: "state", label: "state", section: "state", values: LIBRARY_STATES.map((st) => fv(st, 1)) };
+    const out = html(h(Rail, { kind: "all", kindCounts: {}, groups: [all], closed: new Set<string>(), expanded: new Set<string>(), onKind: noop, onToggle: noop, onFold: noop, onMore: noop }));
+    const leads = out.match(/<span class="[^"]*"><\/span>/g) ?? [];
+    expect(leads.length).toBe(LIBRARY_STATES.length);
   });
 
   test("Attention appears only while something needs attention; the vocabulary heads its kind", () => {
@@ -125,11 +153,119 @@ describe("what the parts expose", () => {
     }
   });
 
+  test("a locked style's option names the lock the tile draws", () => {
+    const style: LibraryCard = { ...c, id: "style-0001", kind: "style", state: "ratified", locked: true, chips: [] };
+    expect(cardName(style)).toBe("Peak and Fall · ad spot 8, style, ratified, locked, media unreadable");
+    expect(cardName({ ...style, locked: false })).not.toContain("locked");
+  });
+
+  test("the options are memoized and hand their id to the handlers, so a selection step re-renders only the two it changes", () => {
+    const memo = Symbol.for("react.memo");
+    expect(LibraryTile.$$typeof).toBe(memo);
+    expect(LibraryRow.$$typeof).toBe(memo);
+    for (const Opt of [LibraryTile, LibraryRow]) {
+      const picked: string[] = [];
+      const opened: string[] = [];
+      const el = Opt.type({ card: c, selected: false, domId: "o", onSelect: (id: string) => void picked.push(id), onOpen: (id: string) => void opened.push(id) });
+      const { onClick, onDoubleClick }: { onClick: unknown; onDoubleClick: unknown } = el.props;
+      if (typeof onClick !== "function" || typeof onDoubleClick !== "function") throw new Error("the option takes no press");
+      onClick();
+      onDoubleClick();
+      expect(picked).toEqual([c.id]);
+      expect(opened).toEqual([c.id]);
+    }
+  });
+
+  test("a locked style wears its lock in the list as the grid does; an unlocked one wears none", () => {
+    const style: LibraryCard = { ...c, id: "style-0001", kind: "style", state: "ratified", locked: true, chips: [] };
+    const row = (card: LibraryCard): string => html(h(LibraryRow, { card, selected: false, domId: "r", onSelect: noop, onOpen: noop }));
+    expect(row(style)).toContain(`class="${rowCss.lock}"`);
+    expect(row({ ...style, locked: false })).not.toContain(rowCss.lock);
+  });
+
+  test("a row's facet chips keep distinct keys when two groups share a label (plate: family collage, render_mode collage)", () => {
+    // The fixture corpus has 382 of 5,000 rows like this; keyed by label, React drops or duplicates a chip on update.
+    const keysUnder = (node: unknown, out: string[][] = []): string[][] => {
+      if (Array.isArray(node)) {
+        out.push(node.flatMap((n) => (isValidElement(n) && n.key !== null ? [n.key] : [])));
+        for (const n of node) keysUnder(n, out);
+      } else if (isValidElement<{ children?: unknown }>(node)) keysUnder(node.props.children, out);
+      return out;
+    };
+    const plate: LibraryCard = { ...c, id: "plate-0004", kind: "plate", chips: ["collage", "collage", "forge"] };
+    const lists = keysUnder(LibraryRow.type({ card: plate, selected: false, domId: "z", onSelect: noop, onOpen: noop }));
+    const chipKeys = lists.find((l) => l.length === 3);
+    expect(chipKeys).toBeDefined();
+    expect(new Set(chipKeys).size).toBe(3);
+  });
+
   test("a detail facet chip says when it is in the filter; a lineage node of the item is current", () => {
     const facets = html(h(DetailFacets, { lines: [{ group: "format", label: "format", values: [{ value: "ad", label: "ad", pressed: true }] }], onPress: noop }));
     expect(facets).toContain('aria-pressed="true"');
     expect(facets).toContain("format: ad, in the filter");
     const lin = html(h(Lineage, { nodes: [{ role: "project", refs: [{ kind: "facet", group: "project", value: "p", label: "Peak and Fall" }] }, { role: "this", self: true, refs: [{ kind: "text", label: "video" }] }], onItem: noop, onFacet: noop }));
     expect(lin).toContain('aria-current="true"');
+  });
+});
+
+describe("the set and the detail head", () => {
+  const sum = { total: 1204, of: 5000, newest: [], onState: noop, onKind: noop, onItem: noop };
+
+  test("a state with no items is no door, and the bar names what it holds - or that it holds nothing", () => {
+    const out = html(h(SetSummary, { ...sum, kind: "plate", states: { ratified: 1200, rejected: 4, unjudged: 0 }, kinds: { plate: 1204 } }));
+    expect(out).toContain('aria-label="ratified 1200, rejected 4"');
+    expect(out).toContain('aria-label="filter: ratified, 1200"');
+    expect(out).not.toContain("filter: unjudged");
+    expect(out).toContain("1,204");
+    expect(out).not.toContain('aria-label="Kinds"');
+    expect(html(h(SetSummary, { ...sum, total: 0, kind: "plate", states: {}, kinds: {} }))).toContain('aria-label="no items"');
+  });
+
+  test("the kinds' bars appear on All only, one per kind that holds something", () => {
+    const out = html(h(SetSummary, { ...sum, kind: "all", states: { ratified: 1204 }, kinds: { all: 1204, plate: 1200, doc: 4, audio: 0 } }));
+    expect(out).toContain('aria-label="Kinds"');
+    expect(out).toContain("Plates");
+    expect(out).toContain("Documents");
+    expect(out).not.toContain("Audio");
+  });
+
+  test("the detail head counts from one and offers previous / next only when it can step", () => {
+    const stepping = html(h(DetailPanel, { kind: "plate", position: { index: 2, total: 1204 }, onStep: noop, onClose: noop, children: null }));
+    expect(stepping).toContain("3 / 1,204");
+    expect(stepping).toContain('aria-label="previous item"');
+    const still = html(h(DetailPanel, { kind: "set", onClose: noop, children: null }));
+    expect(still).not.toContain('aria-label="next item"');
+    expect(still).toContain('aria-label="close detail"');
+  });
+});
+
+describe("a character's looks (spark scout-use-aim)", () => {
+  const looks = [
+    { key: "risograph-two-colour", image: "/a.png", label: "risograph-two-colour", sub: "risograph two-colour print" },
+    { key: "35mm-anamorphic", image: "/b.png", label: "35mm-anamorphic", pressed: true },
+    { key: "2026-10-23-2", image: "/c.png", label: "2026-10-23-2", inert: true },
+  ];
+
+  test("a look is a door that says when it is pressed; a night that kept no look is a figure, never a door", () => {
+    const out = html(h(LookStrip, { looks, onPress: noop }));
+    expect(out.match(/<button/g)).toHaveLength(2);
+    expect(out.match(/<figure/g)).toHaveLength(1);
+    expect(out).toContain('aria-pressed="true"');
+    expect(out).toContain('aria-pressed="false"');
+  });
+
+  test("with no door at all every look is a figure, and the picture is named by its look and genre rung", () => {
+    const out = html(h(LookStrip, { looks }));
+    expect(out).not.toContain("<button");
+    expect(out.match(/<figure/g)).toHaveLength(3);
+    expect(out).toContain('alt="risograph-two-colour · risograph two-colour print"');
+    expect(out).toContain('alt="35mm-anamorphic"');
+  });
+
+  test("the character kind has a mark, a rail row and a word", () => {
+    expect(KINDS.at(-1)).toEqual({ id: "character", label: "Characters", short: "character" });
+    const out = html(h(LibraryGlyph, { name: "character" }));
+    expect(out).toContain("<svg");
+    expect(out).toContain('aria-hidden="true"');
   });
 });

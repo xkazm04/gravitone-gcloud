@@ -12,7 +12,7 @@ import { err, ok, type Result } from "./errors.ts";
 import type { CandidateId, PacketId, PartId, RunId } from "./ids.ts";
 import type { MediaLane } from "./lane.ts";
 import type { PacketState } from "./packet.machine.ts";
-import type { PacketMode, PacketSource } from "./source.ts";
+import type { PacketMode, PacketSource, ReasonVocabulary } from "./source.ts";
 
 /* ── blind pairs ───────────────────────────────────────────────────────────── */
 
@@ -199,8 +199,9 @@ export type PacketView = {
   readonly undecided: number;
   /** An act newer than the import is left to take back. */
   readonly canUndo: boolean;
-  /** The source's vocabulary: reasons in key order, how many a verdict may carry, the note bound. */
-  readonly reasons: { readonly list: readonly string[]; readonly max: number; readonly noteMax: number };
+  /** The source's vocabulary: reasons in key order, how many a verdict may carry, the note bound,
+   *  each reason's meaning (@gt/domain/source reasonVocabulary). */
+  readonly reasons: ReasonVocabulary;
   /** Blind pair only. */
   readonly pairs: readonly PairView[];
   /** A returned review's plan. */

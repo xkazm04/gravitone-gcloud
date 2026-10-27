@@ -4,6 +4,7 @@ import { AUDIO_PROFILE_IDS } from "../audio.accept.ts";
 import { fxChainSchema } from "../audio.fx.ts";
 import { blobRefSchema } from "../blob.ts";
 import { RENDER_RES } from "../partView.album.ts";
+import { RECEIPT_MODES } from "../produce.ts";
 import { defineStepRecord, engineField, textOrNull, versionField } from "./record.ts";
 
 // THE ALBUM AND EXPLAINER PARTS' RECORDS (Phase 4 wave D, L43). v1 had no such steps: a music
@@ -22,7 +23,7 @@ import { defineStepRecord, engineField, textOrNull, versionField } from "./recor
 // editor's own seeds: a record written by an older build that never held one reads as untouched.
 
 const RES = z.enum(RENDER_RES);
-const mode = z.enum(["dry", "live"]);
+const mode = z.enum(RECEIPT_MODES);
 const tags = z.array(z.string());
 
 export const WORDS = defineStepRecord({

@@ -26,13 +26,15 @@ import { SrOnly } from "../a11y/SrOnly.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import { BADGE_CHANNELS } from "../channel/ChannelBadge.tsx";
 import { vars } from "../vars.ts";
-import { MONTHS, WEEK, byDay, clock, dayKey, dayLabel, isBad, monthCells, needsDecision, type RailSlot, type YearMonth } from "./calendar.ts";
+import { MONTHS, WEEK, byDay, clock, dayKey, dayLabel, isBad, monthCells, railOf, type RailSlot, type YearMonth } from "./calendar.ts";
 import { ChannelReadiness, STATE_WORDS } from "./ChannelReadiness.tsx";
 import type { ChannelReady, PublishTick } from "./schedule.ts";
 import { SlotMark, SlotRow } from "./SlotRow.tsx";
 import s from "./MonthCalendar.module.css";
 
 export const MAX_PER_DAY = 3;
+/** How many of Next the month agenda draws; its tally counts them all. */
+const AGENDA_NEXT = 8;
 
 const STATES: readonly RailSlot["status"][] = ["scheduled", "publishing", "published", "failed", "missed", "cancelled"];
 
@@ -84,8 +86,13 @@ export function MonthCalendar(p: MonthCalendarProps) {
   const href = (id: string) => (slotHref === undefined ? {} : { href: slotHref(id), ...(onOpenSlot === undefined ? {} : { onOpen: onOpenSlot }) });
   const title = `${MONTHS[month.m] ?? ""} ${month.y}`;
   const selected = day === null ? null : (days.get(day) ?? []);
-  const failed = inMonth.filter(needsDecision).sort((a, b) => b.publishAt.localeCompare(a.publishAt));
-  const upcoming = shown.filter((x) => Date.parse(x.publishAt) >= nowMs && (x.status === "scheduled" || x.status === "publishing") && !needsDecision(x)).slice(0, 8);
+  // The agenda is the rail's (./calendar.ts railOf), whichever page is open: what is owed
+  // (failed, missed, drifted) newest first, a failure from last month or a drift on next month's
+  // slot included; and Next earliest first, a slot past its hour that no tick has settled kept at
+  // the head rather than in no section, and counted in full.
+  const rail = railOf(shown, nowMs);
+  const failed = rail.failed;
+  const upcoming = rail.next.flatMap((g) => g.slots.filter((x) => x.status !== "cancelled")).slice(0, AGENDA_NEXT);
   const close = capsFor("calendar", "rail")[0];
   return (
     <section className={s.month} data-component="MonthCalendar" aria-label={`Calendar, ${title}`} ref={panelRef} tabIndex={-1}>
@@ -141,6 +148,9 @@ export function MonthCalendar(p: MonthCalendarProps) {
             {cells.map((c) => {
               const list = days.get(c.key) ?? [];
               const fails = list.filter(isBad).length;
+              // Missed is not failed: no platform refused it, the tick never fired it. Each state under its own word.
+              const tally = [["failed", list.filter((x) => x.status === "failed").length], ["missed", list.filter((x) => x.status === "missed").length]] as const;
+              const said = tally.filter(([, n]) => n > 0).map(([w, n]) => `${n} ${w}`);
               const more = list.length - MAX_PER_DAY;
               return (
                 <div
@@ -149,13 +159,13 @@ export function MonthCalendar(p: MonthCalendarProps) {
                   data-day={c.key}
                   tabIndex={day === c.key || (day === null && c.key === today) ? 0 : -1}
                   aria-selected={day === c.key}
-                  aria-label={`${dayLabel(c.key)}, ${list.length} slots${fails > 0 ? `, ${fails} failed` : ""}`}
+                  aria-label={`${dayLabel(c.key)}, ${list.length} ${list.length === 1 ? "slot" : "slots"}${said.length > 0 ? `, ${said.join(", ")}` : ""}`}
                   className={cx(s.day, c.out && s.out, c.key < today && s.past, c.key === today && s.today, day === c.key && s.sel, fails > 0 && s.hasFail)}
                   onClick={() => onDay(day === c.key ? null : c.key)}
                 >
                   <span className={s.dayHead} aria-hidden="true">
                     <span className={s.dn}>{c.date}</span>
-                    {fails > 0 && <span className={s.fail}>{fails} failed</span>}
+                    {fails > 0 && <span className={s.fail}>{said.join(" · ")}</span>}
                     {list.length > 0 && <span className={s.count}>{list.length}</span>}
                   </span>
                   <span className={s.list}>
@@ -200,7 +210,7 @@ export function MonthCalendar(p: MonthCalendarProps) {
                 <SlotRow key={x.id} slot={x} {...href(x.id)} />
               ))}
               <div className={cx(s.sideHead, s.next)}>
-                next <Tally value={upcoming.length} />
+                next <Tally value={rail.nextCount} />
               </div>
               {upcoming.map((x) => (
                 <SlotRow key={x.id} slot={x} showError={false} {...href(x.id)} />

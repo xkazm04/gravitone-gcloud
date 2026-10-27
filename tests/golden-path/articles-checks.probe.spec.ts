@@ -44,7 +44,7 @@ ${figs}
 </main></body></html>`;
 }
 
-const md = `# Title\n\n*Sub*\n\n${PARA} The count is a measured effect, not an estimate.\n\nThe measurement shows the gap holds across scripts [2]. It does not depend on the corpus.\n\n| Tool | Field |\n|---|---|\n| a | b |\n\n## Sources\n\n1. x\n`;
+const md = `# Title\n\n*Sub*\n\n${PARA} The count is a measured effect, not an estimate.\n\nThe measurement shows the gap holds across scripts [2]. It does not depend on the corpus.\n\n| Tool | Field |\n|---|---|\n| a | b |\n\n## Sources\n\n${SOURCES.map((s) => `${s.n}. ${s.title}`).join("\n")}\n`;
 const files = (n = 5) => new Set(Array.from({ length: n }, (_, i) => `figures/0${i + 1}-f.svg`));
 const svg = (words: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text>${words}</text></svg>`;
 const figures = (n = 5, label = "Step one") => Array.from({ length: n }, (_, i) => ({ name: `0${i + 1}-f.svg`, svg: svg(label) }));
@@ -252,7 +252,12 @@ test("static: the cheap measures fail their own items and the stated limits are 
   expect(sn.status).toBe("fail");
   expect(String(sn.value)).toMatch(/gaps in the list: 3/);
   expect(byId(staticItems({ ...base, md: gap.replace("4. d", "3. d"), sources: SOURCES.filter((s) => s.n !== 5) }), "source-numbering").status).toBe("fail");
-  expect(byId(staticItems({ ...base, md: gap.replace("4. d", "3. d") }), "source-numbering").status).toBe("pass");
+  // a clean list that stops short of sources.json is a source the reader cannot find
+  expect(byId(staticItems({ ...base, md: gap.replace("4. d", "3. d") }), "source-numbering")).toMatchObject({ status: "fail", value: expect.stringMatching(/post\.md lists 3 of 8/) });
+  const full = gap.replace("1. a\n2. b\n4. d", sources(8));
+  expect(byId(staticItems({ ...base, md: full }), "source-numbering").status).toBe("pass");
+  const unanchored = byId(staticItems({ ...base, md: full, html: page().replace('<li id="src-8">', "<li>") }), "source-numbering");
+  expect(unanchored).toMatchObject({ status: "fail", value: expect.stringMatching(/no #src-n in index\.html for: 8/) });
 
   // the thresholds the prompts quote are the ones the checks use
   expect(THRESHOLDS.maxWordsBeforeFirstSection).toBe(450);
@@ -356,4 +361,25 @@ test("trial items: runCheck measures them when run.json carries a trial, and onl
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// The page's prose is read once per entity: `&amp;lt;` is the text "&lt;", not "<"; a hex or a
+// named dash reads as the dash; an entity naming no character is left as written instead of
+// throwing out of the whole check (String.fromCodePoint refuses past U+10FFFF).
+test("entities: decoded once, hex and dash names read, an impossible code point left as text", () => {
+  expect(htmlProse("<p>&amp;lt;tag&amp;gt; and &amp;amp;</p>")).toBe("&lt;tag&gt; and &amp;");
+  expect(htmlProse("<p>a&#x2014;b &#8212; c &mdash; d &ndash; e &#39;f&#x27;</p>")).toBe("a\u2014b \u2014 c \u2014 d \u2013 e 'f'");
+  expect(() => htmlProse("<p>x &#99999999; y</p>")).not.toThrow();
+  expect(htmlProse("<p>x &#99999999; y &#x110000; z</p>")).toBe("x &#99999999; y &#x110000; z");
+});
+
+// The no-em-dash rule reads what renders: a dash spelled as an entity is the same dash.
+test("no em dash: an entity-spelled dash in the page, the Markdown or a figure fails the item", () => {
+  const base = { md, sources: SOURCES, claims: [{ text: "x", source: 1 }], figures: figures(), postFiles: files() };
+  const page1 = byId(staticItems({ ...base, html: page().replace("holds across", "holds &mdash; across") }), "no-em-dash");
+  expect(page1).toMatchObject({ status: "fail", detail: ["index.html: 1"] });
+  expect(byId(staticItems({ ...base, html: page().replace("holds across", "holds &#x2013; across") }), "no-em-dash").status).toBe("fail");
+  expect(byId(staticItems({ ...base, html: page(), md: md.replace("holds across", "holds &#8212; across") }), "no-em-dash").status).toBe("fail");
+  expect(byId(staticItems({ ...base, html: page(), figures: figures(5, "a &ndash; b") }), "no-em-dash").status).toBe("fail");
+  expect(byId(staticItems({ ...base, html: page() }), "no-em-dash").status).toBe("pass");
 });

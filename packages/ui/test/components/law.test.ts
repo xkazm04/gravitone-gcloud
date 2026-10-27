@@ -73,6 +73,27 @@ describe("the twelve-word rule", () => {
     expect([ok, long, empty]).toHaveLength(3);
   });
 
+  test("type level: the type counts as hintWords does, and a union is as long as its longest member", () => {
+    const lines = "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\ntwelve\nthirteen";
+    const crlf = "one\ttwo three four five six seven eight nine ten eleven twelve\r\nthirteen";
+    const spaced = "one  two  three  four  five  six  seven  eight  nine  ten  eleven  twelve";
+    const padded = `  ${twelve}  `;
+    expectTypeOf<OverTwelve<typeof lines>>().toEqualTypeOf<true>();
+    expectTypeOf<OverTwelve<typeof crlf>>().toEqualTypeOf<true>();
+    expectTypeOf<OverTwelve<typeof spaced>>().toEqualTypeOf<false>();
+    expectTypeOf<OverTwelve<typeof padded>>().toEqualTypeOf<false>();
+    expectTypeOf<OverTwelve<"">>().toEqualTypeOf<false>();
+    expect([lines, crlf, spaced, padded].map(hintWords)).toEqual([13, 13, 12, 12]);
+    const either = Math.random() < 2 ? "no events match" : thirteen;
+    // @ts-expect-error - a ternary shows one branch at a time, so the long branch is the label
+    const empty = createElement(Empty<typeof either>, { label: either });
+    // @ts-expect-error - the same union behind a glyph
+    const hint = createElement(Hint<typeof either>, { text: either, name: "spend" });
+    const short = Math.random() < 2 ? "no events match" : "no runs yet";
+    const fine = createElement(Empty<typeof short>, { label: short });
+    expect([empty, hint, fine]).toHaveLength(3);
+  });
+
   test("the runtime counter agrees with the type at the boundary", () => {
     expect(hintWords(twelve)).toBe(HINT_WORDS);
     expect(hintWords(thirteen)).toBe(HINT_WORDS + 1);

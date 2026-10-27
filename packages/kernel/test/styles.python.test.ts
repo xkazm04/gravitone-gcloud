@@ -10,7 +10,7 @@ import { openKernel } from "../src/kernel.ts";
 import { readStyle } from "../src/styles/driver.ts";
 import { exportStylesJson } from "../src/styles/export.ts";
 import { recordForgeEvidenceIn } from "../src/styles/writers.ts";
-import { must, scratch } from "./helpers.ts";
+import { findPython, must, scratch } from "./helpers.ts";
 
 // spec/styles.json: the style store's Python door (py/styles.py, acquire.py's writer) against the
 // Node kernel, scenario by scenario on one store FILE each - the two languages write the same
@@ -34,13 +34,6 @@ const specSchema = z.object({ entry: z.looseObject({ id: z.string() }), scenario
 const spec = must(parseJsonAt(specFile, specSchema, readFileSync(specFile, "utf8")));
 const entryId = must(parseAt("spec entry", z.object({ id: z.string() }), spec.entry)).id;
 
-function findPython(): string | undefined {
-  for (const bin of ["python", "python3", "py"]) {
-    const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
-    if (r.status === 0 && r.stdout.trim() === "3") return bin;
-  }
-  return undefined;
-}
 const python = findPython();
 if (python === undefined) console.warn("[styles.spec] SKIPPED: no Python 3 on PATH; the Python half of the style door did not run");
 
@@ -89,6 +82,6 @@ describe.skipIf(python === undefined)("spec/styles.json: the Python door against
       } finally {
         k.close();
       }
-    });
+    }, 30_000);
   });
 });

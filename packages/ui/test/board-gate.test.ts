@@ -44,7 +44,7 @@ function fakePort() {
         decisions,
         undecided: IDS.length - decisions.length,
         canUndo: state.acts.some((a) => !a.undone),
-        reasons: { list: ["style"], max: 1, noteMax: 0 },
+        reasons: { list: ["style"], max: 1, noteMax: 0, meaning: {} },
         pairs: [],
       },
       present: { items: {}, rows: [] },
@@ -189,6 +189,29 @@ describe("the commit", () => {
       { id: PID, rev: 1, token: "tok-1", ticket: "ticket-1" },
     ]);
   });
+
+  test("a packet committing in parts sends the sweep only when its preview counted cells undecided (spark scout-storyboards)", async () => {
+    for (const [partial, undecided, sweep] of [[true, 2, true], [true, 0, false], [false, 2, false]] as const) {
+      const f = fakePort();
+      const port: BoardPort = {
+        ...f.port,
+        loadPacket: async (i) => {
+          const r = await f.port.loadPacket(i);
+          return r.ok && partial ? { ok: true, value: { ...r.value, present: { ...r.value.present, partial: true } } } : r;
+        },
+        preview: async (i) => {
+          const r = await f.port.preview(i);
+          return r.ok ? { ok: true, value: { ...r.value, counts: { kept: 1, rejected: 0, undecided } } } : r;
+        },
+      };
+      const gate = createGate(createBoardGate(port, () => undefined, () => "ticket-1").gatePort, { windowMs: 30 });
+      await gate.select(PID);
+      gate.decide("a", keep);
+      await gate.prepareCommit();
+      await gate.commit();
+      expect(f.calls.commit, `partial ${partial}, ${undecided} undecided`).toEqual([{ id: PID, rev: 1, token: "tok-1", ticket: "ticket-1", ...(sweep ? { undecidedAs: "leave" } : {}) }]);
+    }
+  });
 });
 
 describe("a closing tab", () => {
@@ -211,5 +234,22 @@ describe("a closing tab", () => {
         ],
       },
     ]);
+  });
+});
+
+describe("a closing tab with a large flush", () => {
+  /** What a user agent does: a beacon body past 64 KiB is refused, so nothing of it is delivered. */
+  const delivered = (list: readonly { rev: number; changes: readonly VerdictChange[] }[]): number =>
+    list.reduce((n, b) => n + (new TextEncoder().encode(JSON.stringify({ rev: b.rev, changes: b.changes })).length > 65_536 ? 0 : b.changes.length), 0);
+
+  test("40 noted verdicts all arrive: no single beacon body passes the 64 KiB cap", async () => {
+    beacons.length = 0;
+    const { gate } = setup();
+    await gate.select(PID);
+    for (let i = 0; i < 40; i++) gate.decide(`c${i}`, { verdict: "reject", reasons: [], note: "n".repeat(2000) });
+    gate.flushOnHide();
+    await tick(60);
+    expect(delivered(beacons)).toBe(40);
+    expect(beacons.flatMap((b) => b.changes.map((c) => c.candidate))).toEqual(Array.from({ length: 40 }, (_, i) => `c${i}`));
   });
 });

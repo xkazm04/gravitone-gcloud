@@ -8,6 +8,7 @@ import { kernel } from "../../../../lib/kernelStore.ts";
 import { liveBlock, renderInFlight } from "../../../../lib/sound/huntRender.ts";
 import { listLessons } from "../../../../lib/sound/lessons.ts";
 import { readHunts, readTakes } from "../../../../lib/sound/store.ts";
+import { takeFileHref } from "../../../../lib/sound/takeHref.ts";
 import { TECHNIQUES, type Hunt, type HuntNode, type SoundTake } from "../../../../lib/sound/types.ts";
 import { deskEngines } from "../_audio/arrangeRead.ts";
 import type { Kind } from "../_audio/desk.ts";
@@ -34,6 +35,8 @@ export type HuntDeskView = {
   readonly liveBlock: string | null;
   /** The kind's technique slugs: the only ones a lesson may rest on. */
   readonly known: readonly string[];
+  /** Why the open hunt's signed lesson could not be read, when it could not: never "no lesson". */
+  readonly lessonError: string | null;
 };
 
 const leafOf = (n: HuntNode): HuntLeafView => ({
@@ -73,7 +76,7 @@ function auditionOf(t: SoundTake, m: AudioMeasureRow | undefined): HuntOpenView[
   return {
     id: t.id,
     title: t.title,
-    src: t.file === null ? null : `/api/sound/takes/${encodeURIComponent(t.id)}/file`,
+    src: t.file === null ? null : takeFileHref(t.id),
     peaks: ok && m.peaks.length > 0 ? [...m.peaks] : [...(t.peaks ?? [])],
     lengthS: (ok ? m.durationS : null) ?? t.measured?.durationS ?? t.durationS,
     verdict: t.verdict,
@@ -85,7 +88,7 @@ export async function readHunt(kind: Kind, h: string | null): Promise<HuntDeskVi
   const reg = deskEngines();
   const block = liveBlock(reg, kind) ?? null;
   const reach: Record<string, Reach> = { elevenlabs: "render", suno: "hand", local: "none" };
-  const base = { kind, reach, liveBlock: block, known: TECHNIQUES[kind] };
+  const base = { kind, reach, liveBlock: block, known: TECHNIQUES[kind], lessonError: null };
   let hunts: Hunt[];
   let takes: SoundTake[];
   try {
@@ -114,6 +117,7 @@ export async function readHunt(kind: Kind, h: string | null): Promise<HuntDeskVi
   const lesson = one.hunt.lessonId === null || !lessons.ok ? null : (lessons.value.find((l) => l.id === one.hunt.lessonId) ?? null);
   return {
     ...base,
+    lessonError: lessons.ok ? null : `lessons: ${lessons.error.message}`,
     hunts: { ok: true, value: cards },
     open: {
       ok: true,
@@ -126,7 +130,7 @@ export async function readHunt(kind: Kind, h: string | null): Promise<HuntDeskVi
         nodes: one.nodes,
         takes: Object.fromEntries(mine.map((t) => [t.id, auditionOf(t, by.get(`audio:${t.id}`))])),
         lesson: lesson === null ? null : { id: lesson.id, claim: lesson.claim, technique: [...lesson.technique], n: lesson.evidence.n, keepRate: lesson.evidence.keepRate, confirmedAt: lesson.confirmedAt },
-        inFlight: squared.find((s) => s.hunt.id === h)?.nodes.some((n) => n.state === "rendering") ?? false,
+        inFlight: one.nodes.some((n) => n.state === "rendering"),
         measures: m.ok ? null : m.error.message,
       },
     },

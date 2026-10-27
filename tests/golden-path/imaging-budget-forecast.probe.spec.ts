@@ -24,7 +24,7 @@ import {
   recordSpend,
   __resetBudget,
 } from "@/lib/imaging/budget";
-import { budgetQuote } from "@/lib/imaging/budgetForecast";
+import { budgetQuote, earliestExpiry } from "@/lib/imaging/budgetForecast";
 import { ImagingError } from "@/lib/imaging/errors";
 import { errorResponse } from "@/lib/imaging/api";
 import { budgetHandler } from "@/lib/imaging/handlers";
@@ -144,6 +144,25 @@ test("6. errorResponse(new ImagingError('budget', ...)) has HTTP status 402, cod
   expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
 });
 
+test("10. the 402's Retry-After and budgetQuote's resumeAt are one answer: the moment the refused image fits", async () => {
+  process.env[BUDGET_VAR] = "1.00";
+  process.env[WINDOW_VAR] = "60000";
+  const T = 1_000_000;
+  // $0.001 ages out at T+1s, $0.989 at T+59s; one image is $0.045, so it fits at T+59s, not T+1s.
+  await book(0.001, T - 59_000);
+  await book(0.989, T - 1_000);
+
+  const quote = await budgetQuote({ images: 1, now: T });
+  expect(quote.verdict).toBe("blocked");
+  expect(quote.resumeAt).toBe(T + 59_000);
+
+  const res = errorResponse(new ImagingError("budget", "over-budget"), T);
+  expect(res.status).toBe(402);
+  expect(((await res.json()) as Record<string, unknown>)["retryAt"]).toBe(T + 59_000);
+  expect(res.headers.get("retry-after")).toBe("59");
+  expect(earliestExpiry(T)).toBe(T + 59_000);
+});
+
 test("8. budgetHandler answers the window and the quote, and asking it spends nothing", async () => {
   const res = await budgetHandler(new Request("http://localhost/api/imaging/budget?images=16"));
   expect(res.status).toBe(200);
@@ -153,4 +172,17 @@ test("8. budgetHandler answers the window and the quote, and asking it spends no
   for (let i = 0; i < 40; i++) expect((await budgetHandler(new Request("http://localhost/api/imaging/budget"))).status).toBe(200);
   const after = (await (await budgetHandler(new Request("http://localhost/api/imaging/budget"))).json()) as Record<string, unknown>;
   expect(after["spentUsd"]).toBe(before);
+});
+
+test("9. budgetHandler answers a ledger it cannot open in the routes' one error shape, not a thrown promise", async () => {
+  const prev = process.env.SPEND_STORE;
+  process.env.SPEND_STORE = "probe-not-a-store";
+  try {
+    const res = await budgetHandler(new Request("http://localhost/api/imaging/budget"));
+    expect(res.status).toBe(502);
+    expect(((await res.json()) as Record<string, unknown>)["code"]).toBe("failed");
+  } finally {
+    if (prev === undefined) delete process.env.SPEND_STORE;
+    else process.env.SPEND_STORE = prev;
+  }
 });

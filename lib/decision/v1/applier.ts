@@ -40,7 +40,10 @@ import { adapterFor } from "./registry.ts";
 export const APPLY_CLAIM = "decision-apply";
 /** How often a reader may start a sweep. Shorter than the first backoff (30 s): a failed row is retried by the next render after it is due. */
 export const APPLY_INTERVAL_MS = 15_000;
-/** How long a sweep may hold the claim before it counts as dead: a full drain at the lease each. */
+/** How long a sweep may hold the claim before it counts as dead: two leases, NOT a full drain at
+ *  the lease each (RENDER_MAX x LEASE_MS would be 16 min). A sweep slower than this loses the claim
+ *  and another reader may sweep beside it - safe, each row is claimed on its own - and the late
+ *  close is logged; a crashed reader holds the renders' sweeps off for 4 min, not 16. */
 const APPLY_TTL_MS = LEASE_MS * 2;
 /** Rows one render's sweep tries (bounded-enumeration: a render must return). */
 export const RENDER_MAX = 8;
@@ -111,6 +114,9 @@ export function reconcileApplies(store: Store, opts: Omit<DrainOptions, "packetI
     const report = r.ok ? r.value.map((x) => ({ packetId: x.packetId, attempt: x.attempt, result: x.result })) : { error: r.error.message };
     const closed = finishClaim(store, APPLY_CLAIM, owner, APPLY_INTERVAL_MS, report);
     if (!closed.ok) console.error(`[decision-apply] the sweep claim could not be closed: ${closed.error.message}`);
+    // finishClaim matched no row: the claim passed its TTL mid-sweep and another reader took it, so
+    // two sweeps ran at once (safe - each row is claimed on its own - but the rate limit failed).
+    else if (!closed.value) console.error(`[decision-apply] the sweep outlived its claim (${APPLY_TTL_MS / 1000} s); another reader holds ${APPLY_CLAIM} now`);
     logged("sweep")(r);
     return r;
   });

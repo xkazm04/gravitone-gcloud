@@ -27,7 +27,7 @@ function store(): Store {
   return k.value.store;
 }
 
-type Spec = { kind?: ActorKind; type?: string; subject?: string; run?: string; at: string; key?: string; note?: string; lane?: string };
+type Spec = { kind?: ActorKind; type?: string; subject?: string; run?: string; at: string; key?: string; note?: string; lane?: string; project?: string };
 
 function fill(s: Store, specs: readonly Spec[]): void {
   const r = s.tx((t) => {
@@ -37,7 +37,7 @@ function fill(s: Store, specs: readonly Spec[]): void {
         type: x.type ?? "run.log",
         subject: { kind: "run", id: x.subject ?? "r1" },
         ...(x.lane === undefined ? {} : { lane: x.lane }),
-        data: { ...(x.run === undefined ? {} : { runId: x.run }), ...(x.note === undefined ? {} : { note: x.note }), src: "fixture" },
+        data: { ...(x.run === undefined ? {} : { runId: x.run }), ...(x.note === undefined ? {} : { note: x.note }), ...(x.project === undefined ? {} : { projectId: x.project }), src: "fixture" },
         occurredAt: x.at,
         atSrc: "recorded",
         key: x.key ?? `forge:${x.subject ?? "r1"}:f${i}`,
@@ -120,6 +120,30 @@ describe("readPage", () => {
     expect(r.value.events.map((e) => e.subject.id).sort()).toEqual(["Cycle-07", "Cycle-07/imp-1"]);
   });
 
+  it("continues a lone-id page by the same index: page 2 answers the id, never a substring of it", () => {
+    const s = store();
+    // `r10` is a different record whose id CONTAINS `r1`; its acts are older than all of r1's.
+    fill(s, [
+      ...Array.from({ length: 20 }, (_, i) => ({ at: minute(i), subject: "r10" })),
+      ...Array.from({ length: PAGE + 5 }, (_, i) => ({ at: minute(i + 20), subject: "r1" })),
+    ]);
+    const one = readPage(s, f({ q: "r1" }));
+    if (!one.ok) throw one.error;
+    expect(one.value.byId).toBe(true);
+    expect(one.value.capped).toBe(true);
+    if (one.value.cursor === undefined) throw new Error("a capped page carries its cursor");
+    const two = readPage(s, f({ q: "r1" }), one.value.cursor);
+    if (!two.ok) throw two.error;
+    expect(two.value.byId).toBe(true);
+    expect(two.value.events.map((e) => e.subject.id)).toEqual(Array.from({ length: 5 }, () => "r1"));
+    expect(two.value.exhausted).toBe(true);
+    expect(two.value.cursor).toBeUndefined();
+    // A word that is no record's id still continues as the text scan it started as.
+    const scan = readPage(s, f({ q: "r" }));
+    if (!scan.ok) throw scan.error;
+    expect(scan.value.byId).toBe(false);
+  });
+
   it("applies every indexed facet in the store, not over the page", () => {
     const s = store();
     fill(s, [
@@ -161,6 +185,25 @@ describe("readFacets", () => {
     expect(facetMap(direct.value, "type")).toEqual(Object.fromEntries(r.value.type.values.map((v) => [v.value, v.n])));
     expect(r.value.head).toBe(4);
   });
+
+  it("counts each project the filter holds on its own - one or several", () => {
+    const s = store();
+    fill(s, [
+      { at: minute(0), project: "p1" },
+      { at: minute(1), project: "p1" },
+      { at: minute(2), project: "p2" },
+      { at: minute(3), project: "p3" },
+    ]);
+    const two = readFacets(s, f({ project: ["p1", "p2"] }));
+    if (!two.ok) throw two.error;
+    expect(two.value.project).toEqual({ p1: 2, p2: 1 });
+    const one = readFacets(s, f({ project: ["p1"] }));
+    if (!one.ok) throw one.error;
+    expect(one.value.project).toEqual({ p1: 2 });
+    const none = readFacets(s, f());
+    if (!none.ok) throw none.error;
+    expect(none.value.project).toEqual({});
+  });
 });
 
 describe("readStrip", () => {
@@ -182,6 +225,23 @@ describe("readStrip", () => {
     const actorOnly = readStrip(s, f({ actor: "machine" }), now);
     if (!actorOnly.ok) throw actorOnly.error;
     expect(actorOnly.value.days.find((x) => x.day === "2026-10-14")).toEqual({ day: "2026-10-14", operator: 0, agent: 0, machine: 1 });
+    // Two kinds by token: the bars hold those two, never the kind the list leaves out.
+    const two = readStrip(s, f({ q: "actor:agent,machine" }), now);
+    if (!two.ok) throw two.error;
+    expect(two.value.days.find((x) => x.day === "2026-10-14")).toEqual({ day: "2026-10-14", operator: 0, agent: 0, machine: 1 });
+    expect(two.value.days.find((x) => x.day === "2026-10-15")).toEqual({ day: "2026-10-15", operator: 0, agent: 1, machine: 0 });
+  });
+});
+
+describe("readStrip statements", () => {
+  it("reads 4 statements a past day (total, head, the actor facet and its sum), none for a later day", () => {
+    const s = store();
+    fill(s, [{ at: "2026-10-14T09:00:00.000Z", kind: "operator" }]);
+    let stmts = 0;
+    const counted = { ...s, read: (fn) => s.read((r) => fn({ ...r, get: (q, ...p) => (stmts++, r.get(q, ...p)), all: (q, ...p) => (stmts++, r.all(q, ...p)) })) } as Store;
+    const r = readStrip(counted, f({}), Date.parse("2026-10-15T12:00:00.000Z"));
+    if (!r.ok) throw r.error;
+    expect(stmts).toBe(84 * 4);
   });
 });
 

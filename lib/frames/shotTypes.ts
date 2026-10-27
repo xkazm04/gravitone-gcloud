@@ -168,7 +168,7 @@ export interface Shot {
    * DERIVED, NEVER AUTHORED, and that is the whole reason this field may exist
    * where `FrameClip` refuses one: it is the beat's own span — a real number
    * from the script — divided by the shot count. No constant is added to it and
-   * no default stands in for it. `frames.ts:93-96` refuses to invent a clip
+   * no default stands in for it. `frames.ts#FrameClip` refuses to invent a clip
    * length; this does not invent one either.
    */
   holdS: number;
@@ -280,7 +280,7 @@ export const SIZE_LADDER: Readonly<Record<TrailerRole, readonly ShotSize[]>> = {
  * ─── AND THE SEAM WITH THE BEAT LANE, WHICH IS ONE DECLARATION NOW ──────────
  *
  * This paragraph used to carry a merge-time TODO: `ShotSourceBeat` is the shape
- * `app/_phases/script/trailer/types.ts` exports as `ShotLaneBeat`, "THE TWO ARE
+ * `lib/script/trailer/types.ts` exports as `ShotLaneBeat`, "THE TWO ARE
  * NOT YET THE SAME DECLARATION and must be made one on merge". The branches
  * merged long ago and the unification did not happen, because the TODO asked for
  * something that would have been wrong: delete `ShotSourceBeat` and import

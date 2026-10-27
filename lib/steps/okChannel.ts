@@ -1,24 +1,19 @@
-// THE OK CHANNEL: the listeners that hear every successful store operation, and
-// noteStorageOk, which notifies them and lets a success resolve the published trouble.
+// THE OK CHANNEL: noteStorageOk, which lets a successful store operation resolve the
+// published trouble.
 //
-// `okListeners` is owned by this file and nowhere else. noteStorageOk clears the
-// trouble slot through resolveTroubleWhere in troubleChannel.ts, because the slot
-// and its listener Set are owned there. Split out of the stepStore.ts door.
+// noteStorageOk clears the trouble slot through resolveTroubleWhere in
+// troubleChannel.ts, because the slot and its listener Set are owned there. Split
+// out of v1's stepStore.ts; the door is now index.ts.
+//
+// It used to also keep a set of ok-listeners (`onStorageOk`) for the v1 bell's
+// trouble ledger, which had to learn which of its accumulated troubles a success
+// resolved. That ledger retired with the v1 shell and nothing subscribed any more,
+// so the set went (2026-10-25); a listener that threw inside withStore's success
+// path would have turned a landed write into a reported failure.
 
 import { resolveTroubleWhere } from "./troubleChannel";
 
 /* ─────────────────────── and when it stops going wrong ──────────────────── */
-
-export type StorageOkListener = (op: "read" | "write", projectId: string, phase: string) => void;
-const okListeners = new Set<StorageOkListener>();
-
-/** Hear every successful store operation. For a surface that has accumulated
- *  troubles of its own (the bell's ledger, components/ui/storageRemedy.ts) and
- *  must learn which of them a success resolves — the `latest` slot holds one. */
-export function onStorageOk(listener: StorageOkListener): () => void {
-  okListeners.add(listener);
-  return () => void okListeners.delete(listener);
-}
 
 /**
  * Evidence that a scope works again: an operation of this `op` on this project
@@ -26,16 +21,15 @@ export function onStorageOk(listener: StorageOkListener): () => void {
  * op, project and step, and only a storage-shaped one.
  *
  * SCOPED, NOT GLOBAL, because the slot has many producers: an asset blob that
- * hit the quota (reportStorageTrouble from lib/assets, projectId "") must not be
+ * hit the quota (reportStorageTrouble from v1's lib/assets, projectId "") must not be
  * declared fixed by a 200-byte step record saving somewhere else — that would be
  * the same false resolution `dismiss` used to commit, made by a keystroke. And
  * `non-storage` is never resolved by a save: nothing about it was a save.
  *
  * Called on withStore's success path, so it runs on every keystroke's write. The
- * cost is one Set walk and three string compares.
+ * cost is three string compares.
  */
 export function noteStorageOk(op: "read" | "write", projectId: string, phase: string): void {
-  okListeners.forEach((l) => l(op, projectId, phase));
   resolveTroubleWhere(
     (t) => t.kind !== "non-storage" && t.op === op && t.projectId === projectId && t.phase === phase,
   );

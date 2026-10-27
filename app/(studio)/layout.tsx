@@ -14,6 +14,7 @@
 // root ELEMENT, `[data-world="next"]`, and every global rule this world brings is scoped to
 // it (./_shell/world.css). What v1 leaks into it is measured and recorded in the Lot 9 report.
 
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
@@ -23,10 +24,15 @@ import { principal } from "../_server/principal.ts";
 // The generated tokens (`:root` custom properties), through the package's own export.
 import "@gt/ui/tokens.css";
 import "./_shell/world.css";
+import { AgentNav } from "./_shell/AgentNav.tsx";
 import { Handoff } from "./_shell/Handoff.tsx";
 import { Providers } from "./_shell/Providers.tsx";
 import { StudioHeader } from "./_shell/StudioHeader.tsx";
 import s from "./_shell/Shell.module.css";
+
+// The page's identity for an agent's page bridge (athena-portable packages/athena-bridge/protocol.md
+// `page`): its tools are catalogued as `host.gravitone.<name>` (./_shell/AgentNav.tsx).
+export const metadata: Metadata = { other: { "athena:app": "gravitone", "athena:app-name": "Gravitone Studio" } };
 
 // `sheet` is the Board's slot (./@sheet): a soft navigation to /board/<packet> draws the Board
 // there, over the page `children` keeps mounted; every other address draws nothing in it.
@@ -54,6 +60,7 @@ export default async function StudioLayout({ children, sheet }: { readonly child
             {children}
           </main>
           {sheet}
+          <AgentNav />
         </Providers>
       )}
     </div>

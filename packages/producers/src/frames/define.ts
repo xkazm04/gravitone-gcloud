@@ -7,7 +7,7 @@ import { definePartAct, refuse, unitOf, type ActPlan, type PartActPorts, type Un
 // names (the editor's contract):
 //   direct-cut          ONE scene-direction turn over the whole cut (v1 POST /api/frames,
 //                       lib/turns/kinds/frames.ts). Its answer lands as a PROPOSAL
-//                       (app/_phases/frames/direction/plan.ts planFromSpecs), never applied: v1
+//                       (lib/frames/directionPlan.ts planFromSpecs), never applied: v1
 //                       applied it wholesale (`applySceneSpecs`) and erased human layers with no
 //                       undo; accepting it is the operator's op, human layers kept;
 //   render-plates       every plate that is empty, refused or behind its subject, one paid image
@@ -37,8 +37,10 @@ export type FramesView = {
 
 export type FramesPrices = { readonly image: UnitPrice; readonly turn: UnitPrice };
 
-/** A plate this act would (re)render: absent, refused, or behind its subject. A plate the batch is
- *  `generating` belongs to a job in flight and is not bought twice. */
+/** A plate this act would (re)render: absent, refused, or behind its subject. A `generating` plate is
+ *  skipped: no v2 writer sets that state, so it is a v1-imported plate whose render's receipt key
+ *  (lib/frames `pendingReceipt`) may already have been paid; the batch does not re-buy it, an explicit
+ *  render of its unit does. */
 export const needsPlate = (u: FramesUnitView): boolean => u.plate === "empty" || u.plate === "refused" || (u.plate === "ready" && u.stale);
 
 export const framesDefaultAct = (v: FramesView): FramesAct => (v.face === "ads" ? "image-takes" : "render-plates");

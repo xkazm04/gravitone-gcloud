@@ -76,6 +76,27 @@ test("log: a failed turn prints its kind and never a cost", () => {
 
 /* ── the scrubber ─────────────────────────────────────────────────────────── */
 
+test("log: the three example lines in lib/text/log.ts's header are what formatTurn prints", () => {
+  const header = readFileSync(resolve("lib/text/log.ts"), "utf8")
+    .split(/\r?\n/)
+    .map((l) => /^\/\/\s+(\[text\] .*)$/.exec(l)?.[1])
+    .filter((l): l is string => Boolean(l));
+  expect(header, "the header's examples were not found").toHaveLength(3);
+  const printed = [
+    formatTurn({ turn: "edit-plan", env: "local", ms: 184320, promptChars: 40384, provider: "claude-cli", model: "claude-opus-5", rung: "preferred", costUsd: 0.8412, schema: "prompted" }),
+    formatTurn({
+      turn: "scene-direction", env: "local", ms: 41100, promptChars: 31207, provider: "google", model: "gemini-3.6-flash", rung: "alternate",
+      schema: "native", tried: [{ provider: "claude-cli", why: "managed-platform" }],
+    }),
+    formatTurn({
+      turn: "edit-plan", env: "local", ms: 8, promptChars: 40384, kind: "not-installed",
+      tried: [{ provider: "claude-cli", why: "not-installed" }, { provider: "google", why: "no-key" }],
+      message: "No reasoning engine could serve this edit-plan turn.",
+    }),
+  ];
+  expect(header).toEqual(printed);
+});
+
 test("scrub: a live key is removed BY VALUE, wherever it appears", () => {
   process.env.GOOGLE_AI_API_KEY = GOOGLE_KEY;
   // By value rather than by field name: a leak is caught even when the vendor

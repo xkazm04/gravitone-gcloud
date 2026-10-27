@@ -116,7 +116,9 @@ export function StrengthTable({ kind, cells, facet, sort, picked, onFacet, onSor
                 {PROVIDER_NAME[p]}
               </span>
             ))}
-            <span role="columnheader" className={s.head} />
+            <span role="columnheader" className={s.head}>
+              n
+            </span>
           </div>
           {[0, 1, 2].map((i) => (
             <div key={i} className={s.row} style={grid} aria-hidden="true">

@@ -15,6 +15,7 @@ import { readSuno } from "../../sound/suno/store.ts";
 import { sunoModelLabel } from "../../suno/types.ts";
 import { filePathAbs } from "../../sound/store.ts";
 import { listTakes } from "../../sound/takes.ts";
+import { takeFileHref } from "../../sound/takeHref.ts";
 import { isoOf, words, type Feed, type FeedItem, type FeedRead } from "./types.ts";
 
 // THE SOUND STORE, THE MUSIC VIDEOS AND THE REGISTRY, AS LIBRARY ITEMS.
@@ -32,9 +33,15 @@ export const takesFeed: Feed = {
   id: "takes",
   async read(ctx): Promise<FeedRead> {
     const items: FeedItem[] = [];
+    const skipped: { id: string; reason: string }[] = [];
     for (const t of await listTakes()) {
       const durationS = t.measured?.durationS ?? t.durationS;
-      if (durationS === null || durationS <= 0) continue;
+      // The suno feed's rule for the same gap: an audio item without a length is not drawn, and
+      // the take is named in the report rather than vanishing from it.
+      if (durationS === null || durationS <= 0) {
+        skipped.push({ id: t.id, reason: "the take has no length, asked or measured" });
+        continue;
+      }
       const fixture = ctx.universe === "fixture" || t.origin === "fixture";
       const at = isoOf(t.createdAt);
       const group = t.group ?? t.terms.sfxCategory ?? undefined;
@@ -77,13 +84,13 @@ export const takesFeed: Feed = {
                   : { tempoBpm: t.measured.tempoBpm, key: t.measured.key, durationS: t.measured.durationS, lufs: t.measured.lufs, truePeakDb: t.measured.truePeakDb, energy: t.measured.energy },
             },
             peaks: (t.peaks ?? []).map((p) => Math.max(0, Math.min(1, p))),
-            src: t.file === null ? null : `/api/sound/takes/${encodeURIComponent(t.id)}/file`,
+            src: t.file === null ? null : takeFileHref(t.id),
           },
         },
         ...(t.file === null ? {} : { file: { abs: filePathAbs(t.file.path), mime: t.file.mime } }),
       });
     }
-    return { items, skipped: [] };
+    return { items, skipped };
   },
 };
 

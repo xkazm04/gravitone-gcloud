@@ -22,7 +22,7 @@
 // carries the schedule as the verdict's note. The applier makes the slot from that note in the
 // commit's own apply; nothing is scheduled before the commit, and a schedule changed after the
 // preview is a stale preview like any other decision.
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import type { EditDirective, EditNote as Note } from "@gt/domain/board";
 
@@ -34,6 +34,7 @@ import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
+import { Tip } from "../hint/Tip.tsx";
 import { Keycaps } from "../keycaps/Keycaps.tsx";
 import { PipRow } from "../piprow/PipRow.tsx";
 import { ApproveSchedule } from "./ApproveSchedule.tsx";
@@ -55,6 +56,19 @@ export type PacketReviewProps = {
   readonly nowMs?: number;
 };
 
+/** The verdict an approve gives: a scheduled source carries the schedule (and the notes inside it)
+ *  as its note; a source that only keeps a note (a step review) carries the notes themselves; a
+ *  source that keeps none (noteMax 0, a Dojo review) and an approve with nothing attached stay bare. */
+export function keepVerdictOf(schedule: ScheduleIntent | null, notes: string, noteMax: number): BoardVerdict {
+  if (schedule === null) return notes === "" || noteMax <= 0 ? { verdict: "keep", reasons: [] } : { verdict: "keep", reasons: [], note: notes.slice(0, noteMax) };
+  return { verdict: "keep", reasons: [], note: encodeSchedule({ ...schedule, ...(notes === "" ? {} : { notes }) }).slice(0, noteMax) };
+}
+
+/** The keymap facts a review holds: a draft to annotate, and a calendar slot the approve fills. */
+function reviewFacts(draft: boolean, calendar: boolean): string[] {
+  return [...(draft ? ["draft"] : []), ...(calendar ? ["calendar"] : [])];
+}
+
 export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, busy = false, announce = () => undefined, keys = true, nowMs }: PacketReviewProps) {
   const { view, present } = packet;
   const doc = present.review;
@@ -75,8 +89,14 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
     return first === undefined ? null : { channel: first, publishAt: proposeAt(nowMs ?? Date.now()) };
   });
 
+  // A section the reader walks to is brought into view; the first render is not a walk, and the
+  // query stays inside this review (the kit mounts one far down a page that scrolls inside its body).
+  const root = useRef<HTMLDivElement>(null);
+  const walked = useRef(focus);
   useEffect(() => {
-    document.querySelector(`[data-sec="${focus}"]`)?.scrollIntoView({ block: "nearest" });
+    if (walked.current === focus) return;
+    walked.current = focus;
+    root.current?.querySelector(`[data-sec="${focus}"]`)?.scrollIntoView({ block: "nearest" });
   }, [focus]);
 
   const openNote = (i: number) => {
@@ -113,12 +133,10 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
   };
   const nameOf = (i: number) => view.items[i] === undefined ? "" : (present.items[view.items[i].id]?.label ?? view.items[i].id);
   // The attached notes ride with the approve, as the prototype's decide({notes}) kept them.
-  const keepVerdict = () => {
-    if (schedule === null) return { verdict: "keep" as const, reasons: [] };
-    const notes = plan.map((p) => `§${sectionNo(p.section)} ${p.directive}: ${p.text}`).join("\n");
-    return { verdict: "keep" as const, reasons: [], note: encodeSchedule({ ...schedule, ...(notes === "" ? {} : { notes }) }).slice(0, view.reasons.noteMax) };
-  };
+  const keepVerdict = () => keepVerdictOf(schedule, plan.map((p) => `§${sectionNo(p.section)} ${p.directive}: ${p.text}`).join("\n"), view.reasons.noteMax);
   const send = () => {
+    // The same door as a verdict: returning the packet while its commit is in flight races it.
+    if (busy) return;
     if (plan.length === 0) {
       announce("edit plan · attach a note first");
       return;
@@ -139,7 +157,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
       attach,
       "cancel-note": () => setEditing(null),
     },
-    { facts: doc === undefined ? [] : ["draft"], enabled: keys },
+    { facts: reviewFacts(doc !== undefined, channels.length > 0), enabled: keys },
   );
 
   const toggle = (r: string) =>
@@ -153,7 +171,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
       marks={present.oracle !== undefined && <OracleStrip oracle={present.oracle} />}
       foot={
         <>
-          <Keycaps mode="board.review" label="review keys" facts={new Set(doc === undefined ? [] : ["draft"])} />
+          <Keycaps mode="board.review" label="review keys" facts={new Set(reviewFacts(doc !== undefined, channels.length > 0))} />
           <div className={s.ends}>
             <Button label="Reject" tone="rose" shortcut={{ mode: "board.review", verb: "reject" }} onPress={() => verdict("reject")} />
             <Button label={`Edit plan · ${plan.length}`} tone="amber" shortcut={{ mode: "board.review", verb: "send-edit-plan" }} onPress={send} />
@@ -162,7 +180,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
         </>
       }
     >
-      <div className={s.review} data-component="PacketReview">
+      <div ref={root} className={s.review} data-component="PacketReview">
         <div className={s.pageWrap}>
           {doc === undefined ? (
             <article className={s.article}>
@@ -234,9 +252,17 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
             <>
               <CapsHeading text="reject reasons" />
               <div className={s.reasons} role="group" aria-label="reject reasons">
-                {view.reasons.list.map((r) => (
-                  <Chip key={r} label={r} casing="lower" tone={reasons.includes(r) ? "rose" : "neutral"} pressed={reasons.includes(r)} onPress={() => toggle(r)} />
-                ))}
+                {view.reasons.list.map((r) => {
+                  const chip = (describedBy?: string) => <Chip label={r} casing="lower" tone={reasons.includes(r) ? "rose" : "neutral"} pressed={reasons.includes(r)} onPress={() => toggle(r)} {...(describedBy === undefined ? {} : { describedBy })} />;
+                  const meaning = view.reasons.meaning[r];
+                  return meaning === undefined ? (
+                    <Fragment key={r}>{chip()}</Fragment>
+                  ) : (
+                    <Tip key={r} text={meaning} above>
+                      {chip}
+                    </Tip>
+                  );
+                })}
               </div>
             </>
           )}

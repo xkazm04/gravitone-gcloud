@@ -32,7 +32,11 @@ export type RailListProps<T> = {
   readonly tall?: boolean;
 };
 
-const domId = (label: string, id: string): string => `rail-${label.replace(/\W+/g, "-")}-${id.replace(/\W+/g, "-")}`;
+// Letters and digits stay; every other character is spelled by its code point, so two ids that
+// differ only in punctuation ("s1:b", "s1-b") stay two DOM ids. Collapsing \W to "-" made them one,
+// and aria-activedescendant then named whichever row came first.
+const esc = (v: string): string => v.replace(/[^A-Za-z0-9]/g, (c) => `_${(c.codePointAt(0) ?? 0).toString(16)}_`);
+const domId = (label: string, id: string): string => `rail-${esc(label)}-${esc(id)}`;
 
 export function RailList<T>({ label, items, idOf, selected, onSelect, row, listKey, tall = false }: RailListProps<T>) {
   const rowHeight = tall ? RAIL_TALL : RAIL_ROW;

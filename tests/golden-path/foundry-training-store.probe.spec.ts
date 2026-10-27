@@ -19,13 +19,13 @@ import { FoundryError } from "@/lib/foundry/store";
 import { commitCycle, listCycles, readCycle } from "@/lib/foundry/training/store";
 import type { CycleManifest, CycleStatus } from "@/lib/foundry/training/types";
 
-import { probeFoundryDir } from "./_helpers";
+import { probeFoundryDir, probeTrainingDir } from "./_helpers";
 
 const foundryDir = probeFoundryDir();
-const TRAINING_ROOT = path.join(process.cwd(), "foundry-out", "training");
+const trainingDir = probeTrainingDir();
 
 function setupProbeCycle(id: string, status: CycleStatus = "awaiting-gate") {
-  const dir = path.join(TRAINING_ROOT, id);
+  const dir = path.join(trainingDir(), id);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(path.join(dir, "pairs", "imp-1"), { recursive: true });
 
@@ -78,7 +78,7 @@ function setupProbeCycle(id: string, status: CycleStatus = "awaiting-gate") {
 
 test("listCycles: a corrupt cycle.json is skipped with warning, returning valid runs without 500ing", async () => {
   const corruptId = `probe-corrupt-${Date.now().toString(36)}`;
-  const dir = path.join(TRAINING_ROOT, corruptId);
+  const dir = path.join(trainingDir(), corruptId);
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, "cycle.json"), '{"id": "damaged-json', "utf8");
 
@@ -96,9 +96,43 @@ test("listCycles: a corrupt cycle.json is skipped with warning, returning valid 
   }
 });
 
+test("a damaged verdicts.json: listCycles lists and names the cycle, the commit answers a FoundryError 503", async () => {
+  // The forge's 503 for the file beside the manifest (0e371252). The list keeps the cycle, so the
+  // Library's dojo feed can hold its items (its getCycle fails) instead of pruning them.
+  const id = `probe-torn-verdicts-${Date.now().toString(36)}`;
+  const { dir } = setupProbeCycle(id);
+  writeFileSync(path.join(dir, "verdicts.json"), '{"imp-1": "appr', "utf8");
+  const warned: string[] = [];
+  const orig = console.warn;
+  console.warn = (...args: unknown[]) => warned.push(args.map(String).join(" "));
+  try {
+    let listed: string;
+    try {
+      const cycles = await listCycles();
+      listed = cycles.some((c) => c.id === id && c.decided === 0) ? "listed" : "skipped";
+    } catch (e) {
+      listed = `threw ${(e as Error).name}`;
+    }
+    let committed: string;
+    try {
+      await commitCycle(id);
+      committed = "committed";
+    } catch (e) {
+      committed = e instanceof FoundryError ? `FoundryError ${e.status}` : `bare ${(e as Error).name}`;
+    }
+    console.log(`[training] torn verdicts.json -> list ${listed}, commit ${committed}`);
+    expect(listed, "one damaged map never fails the whole list").toBe("listed");
+    expect(warned.some((w) => w.includes(id) && w.includes("verdicts.json is unreadable"))).toBe(true);
+    expect(committed).toBe("FoundryError 503");
+  } finally {
+    console.warn = orig;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("readCycle: malformed cycle.json throws FoundryError with status 503", async () => {
   const corruptId = `probe-corrupt-manifest-${Date.now().toString(36)}`;
-  const dir = path.join(TRAINING_ROOT, corruptId);
+  const dir = path.join(trainingDir(), corruptId);
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, "cycle.json"), '{"id": "damaged-manifest', "utf8");
 
@@ -143,6 +177,41 @@ test("commitCycle: with FOUNDRY_DIR=<tmp>, writes ledger and copies keeper thumb
     const trackedLedgerAfter = existsSync(trackedLedger) ? readFileSync(trackedLedger, "utf8") : null;
     expect(trackedLedgerAfter).toBe(trackedLedgerBefore);
     expect(existsSync(path.join(trackedThumbsDir, `${id}--imp-1.png`))).toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("commitCycle: a video cycle keeps its approved arm's poster, the image the thumbnail's webm cannot be", async () => {
+  // The loop (pipeline/foundry/dojo_judge.py) names the challenger's FILE as the thumbnail, and on a
+  // video cycle that file is a .webm: resolveInCycle serves images only, so the keeper copy refused.
+  const tmpDir = foundryDir();
+  const id = `probe-commit-video-${Date.now().toString(36)}`;
+  const { dir, cycle } = setupProbeCycle(id);
+  const arm = (a: string) => ({ file: `pairs/imp-1/p1--${a}.webm`, poster: `pairs/imp-1/p1--${a}--t1.png`, kind: "video" as const });
+  for (const a of ["baseline", "challenger"]) {
+    writeFileSync(path.join(dir, arm(a).file), `${a}-webm`, "utf8");
+    writeFileSync(path.join(dir, arm(a).poster), `${a}-poster`, "utf8");
+  }
+  const imp = cycle.improvements[0];
+  const video: CycleManifest = { ...cycle, media: "video", improvements: [{ ...imp, thumbnail: arm("challenger").file, pairs: imp.pairs.map((p) => ({ ...p, baseline: arm("baseline"), challenger: arm("challenger") })) }] };
+  writeFileSync(path.join(dir, "cycle.json"), JSON.stringify(video, null, 2), "utf8");
+
+  try {
+    let res: Awaited<ReturnType<typeof commitCycle>> | undefined;
+    let refused = "";
+    try {
+      res = await commitCycle(id);
+    } catch (e) {
+      refused = e instanceof Error ? e.message : String(e);
+    }
+    console.log(`[training] video commit -> ${refused ? `refused: ${refused}` : `thumbs ${res?.thumbs.join(", ")}, deleted ${res?.deleted}`}`);
+    expect(refused, "an approved video improvement commits").toBe("");
+    expect(res?.thumbs).toEqual([`pipeline/foundry/training/thumbs/${id}--imp-1.png`]);
+    expect(readFileSync(path.join(tmpDir, "training", "thumbs", `${id}--imp-1.png`), "utf8"), "the challenger's poster is the keeper").toBe("challenger-poster");
+    expect(res?.deleted, "both arms' webm and poster").toBe(4);
+    const row = JSON.parse(readFileSync(path.join(tmpDir, "training-ledger.json"), "utf8")).rows[0];
+    expect(row.thumb).toBe(`pipeline/foundry/training/thumbs/${id}--imp-1.png`);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -204,6 +273,30 @@ test("commitCycle: re-commit after reset replaces ledger row, holding 1 row not 
     const ledgerContent = JSON.parse(readFileSync(tmpLedgerPath, "utf8"));
     const matchingRows = ledgerContent.rows.filter((r: { cycle: string }) => r.cycle === id);
     expect(matchingRows.length).toBe(1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("commitCycle: a failed cycle whose improvement was never judged (no pairs) commits one ledger row, not a TypeError", async () => {
+  const id = `probe-pairless-${Date.now().toString(36)}`;
+  const { dir } = setupProbeCycle(id, "failed");
+  const file = path.join(dir, "cycle.json");
+  const cycle = JSON.parse(readFileSync(file, "utf8")) as { improvements: { pairs?: unknown }[] };
+  delete cycle.improvements[0].pairs;
+  writeFileSync(file, JSON.stringify(cycle, null, 2), "utf8");
+  writeFileSync(path.join(dir, "verdicts.json"), JSON.stringify({ "imp-1": "reject" }), "utf8");
+  try {
+    let out: string;
+    try {
+      out = `ledger_rows ${(await commitCycle(id)).ledger_rows}`;
+    } catch (e) {
+      out = `threw ${(e as Error).name}`;
+    }
+    console.log(`[training] pairless improvement, reject -> ${out}`);
+    expect(out).toBe("ledger_rows 1");
+    const rows = (JSON.parse(readFileSync(path.join(foundryDir(), "training-ledger.json"), "utf8")) as { rows: { cycle: string; judge_pick_rate?: number }[] }).rows.filter((r) => r.cycle === id);
+    expect(rows).toHaveLength(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

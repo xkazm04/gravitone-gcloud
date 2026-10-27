@@ -52,8 +52,36 @@ const one = (p: Params, k: string): string => {
 };
 const list = (raw: string): string[] => [...new Set(raw.split(",").map((x) => x.trim()).filter((x) => x !== ""))];
 
+/** The longest search string the older-page action's door takes (actions.ts reads this same
+ *  number). The page and the action read one filter with one parser, so the parser holds the
+ *  filter to what the door accepts - and keeps room for the ev, order and view a page appends. */
+export const SEARCH_MAX = 4000;
+const SEARCH_ROOM = 48;
+
+/** Trims a filter until its search string fits: the free text first (by whole characters, never
+ *  through a surrogate pair), then the tail of the longest list. */
+function fit(f: LedgerFilter): LedgerFilter {
+  let g = f;
+  while (toSearch(g).length > SEARCH_MAX - SEARCH_ROOM) {
+    if (g.q !== "") {
+      const chars = Array.from(g.q);
+      g = { ...g, q: chars.slice(0, Math.floor(chars.length * 0.75)).join("").trim() };
+      continue;
+    }
+    const lists = (["type", "lane", "project", "src"] as const).filter((k) => g[k].length > 0);
+    const longest = lists.reduce((a, k) => (g[k].join(",").length > g[a].join(",").length ? k : a), lists[0] ?? "type");
+    if (g[longest].length === 0) break;
+    g = { ...g, [longest]: g[longest].slice(0, -1) };
+  }
+  return g;
+}
+
 /** The URL's params, read leniently into a filter. */
 export function parseParams(p: Params): LedgerFilter {
+  return fit(readParams(p));
+}
+
+function readParams(p: Params): LedgerFilter {
   const actor = one(p, "actor");
   let from: string | null = isDay(one(p, "from")) ? one(p, "from") : null;
   let to: string | null = isDay(one(p, "to")) ? one(p, "to") : null;

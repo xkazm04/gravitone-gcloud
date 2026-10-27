@@ -37,6 +37,8 @@
 // Every write happens inside a store transaction (./store.ts withStore), so the
 // ledger and the take it describes cannot disagree after a crash.
 
+import { CLAIM_MAX } from "@gt/ui/components/audio/lesson.ts";
+
 import type { DefectCode, Lesson, ProviderId, SoundKind, SoundOp, SoundTake, SoundTerms, TakeOrigin } from "./types";
 import { RUBRIC } from "./types";
 import { mintId, SoundError, type StoreTx } from "./store";
@@ -151,7 +153,7 @@ export function parseLessonInput(body: unknown): Omit<Lesson, "id" | "confirmedA
   const b = body as Record<string, unknown>;
   const claim = typeof b.claim === "string" ? b.claim.trim() : "";
   if (!claim) throw new SoundError("a lesson needs a claim: one sentence, \"when X, brief Y, because Z\"", 400);
-  if (claim.length > 600) throw new SoundError("a lesson's claim is one sentence; this one is over 600 characters", 400);
+  if (claim.length > CLAIM_MAX) throw new SoundError(`a lesson's claim is one sentence; this one is over ${CLAIM_MAX} characters`, 400);
   const kind = b.kind === "sfx" ? "sfx" : b.kind === "music" ? "music" : null;
   if (!kind) throw new SoundError('a lesson needs a kind: "music" or "sfx"', 400);
   const source = b.source === "hunt" ? "hunt" : "triage";

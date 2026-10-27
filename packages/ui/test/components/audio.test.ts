@@ -8,10 +8,14 @@ import { describe, expect, test } from "vitest";
 
 import { disagreements, energyBand, fmtDur, measureCells, type AudioFacts } from "../../src/components/audio/audio.ts";
 import { AudioMeasures } from "../../src/components/audio/AudioMeasures.tsx";
-import { AudioPreview, mediaErrorWords } from "../../src/components/audio/AudioPreview.tsx";
+import { AudioPreview, mediaErrorWords, pressPlay } from "../../src/components/audio/AudioPreview.tsx";
 import { AudioPrompt } from "../../src/components/audio/AudioPrompt.tsx";
 import { DraftList } from "../../src/components/audio/DraftList.tsx";
-import { BLANK_SEED, addTo, compose, fitTo, handsOf, removeFrom, sortTerms, sunoFieldsOf, termId, type Seed, type Term } from "../../src/components/audio/recipe.ts";
+import { SeedComposer } from "../../src/components/audio/SeedComposer.tsx";
+import { TermRail } from "../../src/components/audio/TermRail.tsx";
+import { VariationList } from "../../src/components/audio/VariationList.tsx";
+import { ReferenceList } from "../../src/components/audio/ReferenceList.tsx";
+import { BLANK_SEED, addTo, avoidFloats, compose, fitTo, handsOf, preferredFloats, removeFrom, sortTerms, sunoCut, sunoFieldsOf, termId, type Seed, type Term } from "../../src/components/audio/recipe.ts";
 import { conceptFor, keyRelation, tempoError, variationsOfSeed } from "../../src/components/audio/variations.ts";
 
 const term = (facet: Term["facet"], t: string, n: number, kept: number, over: Partial<Term> = {}): Term => ({
@@ -46,6 +50,13 @@ describe("measured beside asked", () => {
     expect(disagreements(half)).toBe(1);
     expect(measureCells(facts({ tempoBpm: 123.5 })).find((c) => c.key === "bpm")?.asked).toBeUndefined();
     expect(measureCells(facts({ tempoBpm: 124 })).find((c) => c.key === "bpm")?.asked).toBe("120");
+  });
+
+  test("a key is one key in any spelling the brief typed; a real miss still names what was asked", () => {
+    const keyOf = (asked: string, measured: string) => measureCells({ ...facts({ key: measured }), asked: { tempoBpm: null, key: asked, durationS: null } }).find((c) => c.key === "key");
+    // The tracker writes "Ab major" / "A minor"; a person types "G# major", "Am", "A♭ maj".
+    expect([keyOf("Am", "A minor"), keyOf("G# major", "Ab major"), keyOf("A♭ maj", "Ab major"), keyOf("Cmaj", "C major")].map((c) => c?.asked)).toEqual([undefined, undefined, undefined, undefined]);
+    expect(keyOf("A major", "A minor")).toMatchObject({ value: "A minor", asked: "A major" });
   });
 
   test("nothing measured draws the brief, marked as asked; nothing at all is a dash", () => {
@@ -95,13 +106,32 @@ describe("the recipe", () => {
   test("the two dialects (v1 compose), each phrased through the hand", () => {
     const hands = handsOf(terms);
     expect(compose(SEED, "elevenlabs", hands)).toBe("Light chamber instrumental, 108 BPM, G major. Built on plucked strings and kazoo.");
-    expect(compose({ ...SEED, avoid: ["brass"] }, "suno", hands).split("\n")).toEqual(["Style: chamber, light, plucked strings, kazoo, 108 BPM, G major", "Exclude: brass", "", "[Instrumental]"]);
+    expect(compose({ ...SEED, avoid: ["brass"] }, "suno", hands).split("\n")).toEqual(["Style: chamber, light, plucked strings, kazoo, 108 bpm, G major", "Exclude: brass", "", "[Instrumental]"]);
+  });
+
+  test("the Suno prompt drawn is the form sent: the same style line and fence, cut to the same limits", () => {
+    const hands = handsOf(terms);
+    const long = { ...SEED, instruments: Array.from({ length: 40 }, (_, i) => `instrument-${i}`), avoid: Array.from({ length: 40 }, (_, i) => `fence-${i}`) };
+    for (const seed of [SEED, { ...SEED, avoid: ["brass"] }, long]) {
+      const f = sunoFieldsOf(seed, hands);
+      const lines = compose(seed, "suno", hands).split("\n");
+      expect(lines[0]).toBe(`Style: ${f?.style ?? ""}`);
+      expect(lines.find((l) => l.startsWith("Exclude: "))).toBe(f?.exclude === undefined ? undefined : `Exclude: ${f.exclude}`);
+    }
+    // A seed of fences alone still draws its fence, though there is no style to send.
+    expect(compose({ ...BLANK_SEED, avoid: ["vocals"] }, "suno", {}).split("\n")).toEqual(["Style: ", "Exclude: vocals", "", "[Instrumental]"]);
   });
 
   test("a word is added once and removed by name; the keep rate is smoothed", () => {
     expect(addTo(addTo(SEED, "moods", "tense"), "moods", "tense").moods).toEqual(["light", "tense"]);
     expect(addTo(SEED, "moods", "  ").moods).toEqual(["light"]);
     expect(removeFrom(SEED, "instruments", "kazoo").instruments).toEqual(["pizzicato"]);
+    // The same word in another case is the same term (termId lower-cases): never a second chip, never a second float.
+    expect(addTo(SEED, "instruments", "Kazoo ").instruments).toEqual(["pizzicato", "kazoo"]);
+    expect(addTo({ ...SEED, avoid: ["Vocals"] }, "avoid", "vocals").avoid).toEqual(["Vocals"]);
+    const piano = term("instrument", "piano", 5, 4, { stance: "prefer" });
+    const vox = term("instrument", "vocals", 5, 0, { stance: "avoid" });
+    expect([preferredFloats([piano], "instrument", ["Piano"]), avoidFloats([vox], ["Vocals"])]).toEqual([[], []]);
     const one = term("genre", "solo", 1, 1);
     const nine = term("genre", "steady", 10, 9);
     expect(sortTerms([one, nine], "rate").map((t) => t.term)).toEqual(["steady", "solo"]);
@@ -145,6 +175,17 @@ describe("variations and references", () => {
     expect([keyRelation("A minor", "A minor"), keyRelation("D minor", "F major"), keyRelation("G minor", "F major")]).toEqual(["exact", "relative", "wrong"]);
   });
 
+  test("every key the tracker can write has its relative, and a relative in another spelling is still relative", () => {
+    // lib/sound/measure.ts NOTES x major/minor: the 24 keys a measured reference or take can carry.
+    const notes = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+    const keys = notes.flatMap((n) => [`${n} major`, `${n} minor`]);
+    const withRelative = keys.filter((k) => variationsOfSeed({ ...SEED, key: k }, []).some((x) => x.axis === "key"));
+    expect(withRelative).toEqual(keys);
+    expect(variationsOfSeed({ ...SEED, key: "F# minor" }, []).find((x) => x.axis === "key")?.seed.key).toBe("A major");
+    expect(variationsOfSeed({ ...SEED, key: "E major" }, []).find((x) => x.axis === "key")?.seed.key).toBe("C# minor");
+    expect([keyRelation("F# minor", "A major"), keyRelation("C# major", "Db major"), keyRelation("Bb minor", "Db major"), keyRelation("A minor", "E minor")]).toEqual(["relative", "exact", "relative", "wrong"]);
+  });
+
   test("a reference's concept: proven counts double, a rejection counts against", () => {
     const t = (verdict: "kept" | "rejected", proven: boolean, genre: string[]) => ({ referenceTrackId: "ref-a", verdict, proven, terms: { genre, mood: [], instrument: [] } });
     const c = conceptFor("ref-a", { tempo: 112.3, key: "G minor" }, [t("kept", true, ["house"]), t("kept", false, ["disco"]), t("rejected", false, ["disco", "trance"]), { ...t("kept", true, ["polka"]), referenceTrackId: "other" }]);
@@ -164,6 +205,54 @@ describe("the detail components' markup", () => {
     expect(file).toContain("2:34");
   });
 
+  // A press against a fake element: play() hangs until the case settles it, as a source still
+  // loading does, so the order of presses and the promise's answer are the case's to choose.
+  const transport = () => {
+    let paused = true;
+    const settle: { reject: (e: unknown) => void }[] = [];
+    const log = { armed: 0, failed: [] as string[] };
+    const el = {
+      get paused() {
+        return paused;
+      },
+      pause() {
+        paused = true;
+      },
+      play() {
+        paused = false;
+        return new Promise<void>((_, reject) => settle.push({ reject }));
+      },
+    };
+    const port = { el, arm: () => void (log.armed = 1), calm: () => void (log.armed = 0), fail: (w: string) => void log.failed.push(w) };
+    return { port, settle, log, seq: { n: 0 } };
+  };
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  const abort = Object.assign(new Error("The play() request was interrupted by a call to pause()."), { name: "AbortError" });
+
+  test("a take paused while it loads is the user's stillness: no watchdog left armed, no failure", async () => {
+    const t = transport();
+    pressPlay(t.port, t.seq);
+    expect(t.log.armed).toBe(1);
+    pressPlay(t.port, t.seq);
+    expect(t.log.armed).toBe(0);
+    t.settle[0]?.reject(abort);
+    await tick();
+    expect(t.log.failed).toEqual([]);
+  });
+
+  test("a play superseded by a newer press keeps its rejection to itself; the newest one speaks", async () => {
+    const t = transport();
+    pressPlay(t.port, t.seq);
+    pressPlay(t.port, t.seq);
+    pressPlay(t.port, t.seq);
+    t.settle[0]?.reject(new Error("late"));
+    await tick();
+    expect(t.log).toEqual({ armed: 1, failed: [] });
+    t.settle[1]?.reject(Object.assign(new Error("play() failed because the user didn't interact with the document first."), { name: "NotAllowedError" }));
+    await tick();
+    expect(t.log).toEqual({ armed: 0, failed: ["NotAllowedError · play() failed because the user didn't interact with the document first."] });
+  });
+
   test("a media error reads in the element's own code", () => {
     expect(mediaErrorWords(4, "/api/sound/takes/st-1/file?k=secret")).toBe("MEDIA_ERR_SRC_NOT_SUPPORTED · /api/sound/takes/st-1/file");
     expect(mediaErrorWords(undefined, "/x")).toBe("MEDIA_ERR · /x");
@@ -176,6 +265,9 @@ describe("the detail components' markup", () => {
     expect(html).toContain("tempo-instability");
     expect(html).toContain("broken-ending");
     expect(renderToStaticMarkup(h(AudioPrompt, { prompt: "", reasons: [] }))).toContain("no prompt recorded");
+    // The rose minus is spoken as "excluded" through the sr-only channel; an aria-label on a role-less <b> is not read.
+    expect(html).not.toContain('<b aria-label=');
+    expect(html).toMatch(/<span class="[^"]*sr[^"]*">excluded<\/span>/);
   });
 
   test("a draft's returns link to the triage that judges them; nothing here keeps or rejects", () => {
@@ -188,5 +280,52 @@ describe("the detail components' markup", () => {
     expect(html).toContain('href="/board"');
     expect(html).toContain("returned");
     expect(html).not.toMatch(/>\s*(Keep|Reject)\s*</);
+    const fenced = renderToStaticMarkup(h(DraftList, { triageHref: "/board", drafts: [{ id: "sp-2", title: "t", style: "strings", exclude: "vocals", origin: "custom", state: "proposed", at: "2026-10-16T09:00:00.000Z", clips: [] }] }));
+    expect(fenced).toMatch(/<span class="[^"]*sr[^"]*">excluded<\/span>/);
+  });
+});
+
+describe("the composer's markup", () => {
+  const props = { terms: [], hands: {}, from: "blank", onSeed: () => {}, onSend: () => {}, busy: false, onCopy: () => {}, keys: [] };
+  test("a seed past Suno's limits says how many of its words the form drops", () => {
+    const long = { ...SEED, instruments: Array.from({ length: 40 }, (_, i) => `instrument-${i}`) };
+    const n = sunoCut(long, {});
+    // 40 instruments of ~13 chars against 200: most of them, plus the tempo and key after them.
+    expect(n).toBeGreaterThan(20);
+    expect(sunoFieldsOf(long, {})?.style.split(", ").length).toBe(long.genres.length + long.moods.length + long.instruments.length + 2 - n);
+    expect(/>cut<b[^>]*>(\d+)<\/b>/.exec(renderToStaticMarkup(h(SeedComposer, { ...props, seed: long })))?.[1]).toBe(String(n));
+    expect(sunoCut(SEED, {})).toBe(0);
+    expect(renderToStaticMarkup(h(SeedComposer, { ...props, seed: SEED }))).not.toContain(">cut<");
+  });
+
+  test("a tempo the batch would refuse is refused here too: Send waits and says why, and no variation steps past it", () => {
+    const send = (seed: Seed): string => /<button[^>]*>Send to Suno[\s\S]*?<\/button>/.exec(renderToStaticMarkup(h(SeedComposer, { ...props, seed })))?.[0] ?? "";
+    expect(send({ ...SEED, bpm: 999 })).toContain('aria-disabled="true"');
+    expect(send({ ...SEED, bpm: 999 })).toContain("tempo 40–220");
+    expect(send({ ...SEED, bpm: 120 })).not.toContain('aria-disabled="true"');
+    const bpms = [218, 42, 220, 40].flatMap((bpm) => variationsOfSeed({ ...SEED, bpm }, []).filter((v) => v.axis === "tempo").map((v) => v.seed.bpm ?? 0));
+    expect(bpms.filter((b) => b < 40 || b > 220)).toEqual([]);
+    expect(variationsOfSeed({ ...SEED, bpm: 218 }, []).filter((v) => v.axis === "tempo").map((v) => v.diff[0])).toEqual(["-6 BPM"]);
+  });
+});
+
+describe("the term rail's markup", () => {
+  test("a word the seed can carry is a press that adds it; an effect category is no press at all", () => {
+    const html = renderToStaticMarkup(h(TermRail, { terms: [term("instrument", "cello", 4, 3), term("sfxCategory", "impact", 3, 2)], onPick: () => {}, onHand: () => {} }));
+    expect(html).toContain('aria-label="add cello to the seed"');
+    expect(html).not.toContain('aria-label="add impact to the seed"');
+    expect(html).toContain("impact");
+  });
+});
+
+describe("repeated acts carry what they act on", () => {
+  test("each variation's Load and Send, and each reference method's Seed, sit in a group named for its row", () => {
+    const vars = renderToStaticMarkup(h(VariationList, { list: variationsOfSeed(SEED, []), onLoad: () => {}, onSend: () => {}, busy: false }));
+    const groups = [...vars.matchAll(/role="group" aria-label="([^"]*)"/g)].map((m) => m[1]);
+    expect(groups).toEqual(["tempo -6 BPM", "tempo +6 BPM", "key G major → E minor"]);
+    const refs = renderToStaticMarkup(
+      h(ReferenceList, { refs: [{ id: "r1", artist: "A", title: "T", truth: { tempo: 120, key: "A minor" }, methods: [{ id: "m1", label: "onset", tempo: 60, key: "C major" }, { id: "m2", label: "chroma", tempo: 121, key: "A minor" }], kept: 1, rejected: 0 }], onSeed: () => {} }),
+    );
+    expect([...refs.matchAll(/role="group" aria-label="([^"]*)"/g)].map((m) => m[1])).toEqual(["onset 60.0 bpm C major", "chroma 121.0 bpm A minor"]);
   });
 });

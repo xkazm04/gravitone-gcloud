@@ -1,6 +1,6 @@
 /* The kit page's own layout (prototype kit.css). Specimens are drawn by @gt/ui's modules;
    this file only places them on the sheet. Where kit.css used a value no token holds, the
-   nearest rung is used and the delta is in the Lot 9 report; the three marked PAGE MEASURE
+   nearest rung is used and the delta is in the Lot 9 report; the two marked PAGE MEASURE
    are typographic lengths (em) waiting on the Director's local-constant ruling. */
 
 .kit{flex:1;min-height:0;display:grid;grid-template-columns:max-content minmax(0,1fr)}
@@ -10,9 +10,19 @@
 .nav a{display:flex;justify-content:space-between;gap:var(--sp-5);padding:var(--sp-2) var(--sp-4);border-radius:var(--r-sm);font-size:var(--fs-ui);color:var(--muted)}
 .nav a:hover{background:var(--wash);color:var(--ink-bright)}
 .nav a[aria-current=location]{color:var(--ink-bright);background:color-mix(in srgb,var(--cyan) 8%,transparent);box-shadow:inset var(--stroke-mark) 0 0 var(--cyan)}
-.count{font:500 var(--fs-micro)/1.5 var(--mono);color:var(--faint)}
 
 .body{overflow:auto;padding:var(--sp-6) var(--sp-7) calc(var(--sp-7) * 5);scroll-behavior:smooth}
+/* globals.css's reduced-motion rule reaches `html` and every animation, never this scroller. */
+@media (prefers-reduced-motion:reduce){.body{scroll-behavior:auto}}
+/* A phone: the index folds to a scrolling row above the sheet, and the specimens take the width.
+   The contract frames keep their own --frame widths and scroll inside .body. */
+@media (max-width:700px){
+  .kit{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .nav{display:flex;align-items:center;gap:var(--sp-2);overflow:auto hidden;border-right:0;border-bottom:1px solid var(--hair);padding:var(--sp-2) var(--sp-3)}
+  .nav a,.grp{flex:none;white-space:nowrap}
+  .grp{padding:0 var(--sp-2)}
+  .body{padding:var(--sp-5) var(--sp-4) calc(var(--sp-7) * 5)}
+}
 /* PAGE MEASURE: kit.css capped a section at 1400px. */
 .sec{max-width:93em;margin:0 auto calc(var(--sp-6) * 2);scroll-margin-top:var(--sp-5)}
 .sec>h2{display:flex;align-items:baseline;gap:var(--sp-5);font:600 var(--fs-h2)/1.2 var(--sans);color:var(--ink-bright);padding-bottom:var(--sp-4);margin-bottom:var(--sp-loose);border-bottom:1px solid var(--hair)}
@@ -55,7 +65,7 @@
 .motion button{width:calc(var(--h-control) * 3.33);height:calc(var(--h-control) * 1.67);border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-2);font:600 var(--fs-micro)/1.3 var(--mono);color:var(--muted)}
 .motion button:hover{border-color:var(--hair-3);color:var(--ink-bright)}
 .playLock{animation:lockIn .9s var(--ease)}
-.playFade{animation:fadeUp .35s var(--ease)}
+.playFade{animation:fadeUp .22s var(--ease)}
 .playMoved{animation:moved .9s var(--ease)}
 .playShake{animation:shake .4s}
 @keyframes lockIn{0%{transform:scale(.8);box-shadow:0 0 0 0 color-mix(in srgb,var(--emerald) 80%,transparent)}50%{transform:scale(1.05);box-shadow:0 0 0 var(--sp-3) transparent,0 0 calc(var(--sp-4) * 3) color-mix(in srgb,var(--emerald) 60%,transparent)}100%{transform:none}}

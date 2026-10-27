@@ -40,13 +40,17 @@ import {
   type FramesRender,
 } from "@/lib/frames/frames";
 import { shotsFromBeats, type ShotSourceBeat } from "@/lib/frames/shots";
-import { framesV1ToV2, parseFramesRecord } from "@/lib/frames/picture/migrate";
+import { stageStep } from "@/lib/import/steps";
+import type { Sink } from "@/lib/import/bytes";
+import { STEP_RECORDS } from "@gt/domain/steps/registry";
 import { pictureFromFrames } from "@/lib/score/picture";
 import { RENDERS } from "@/lib/script/renders";
 
 /* ──────────────────────────────── fixtures ────────────────────────────────── */
 
 /** Strip the one field the card allows to differ. */
+const STEP_KINDS = [...new Set(Object.values(STEP_RECORDS).map((d) => d.owner))];
+
 const sansId = <T extends { id: string }>(x: T): Omit<T, "id"> => {
   const { id: _drop, ...rest } = x;
   void _drop;
@@ -183,12 +187,18 @@ test("case 3: a v1 record walks up to v2 units - plates kept, emptyClip filled, 
   // framesV1ToV2, then the v2 door), so the walk and the door are what is held here. The
   // read-is-not-a-write half went with the seam: the importer writes the kernel's record, never
   // the v1 one.
-  const r = parseFramesRecord(framesV1ToV2(v1Record()));
-  if ("refused" in r) throw new Error(`refused: ${r.refused}`);
-  const { units } = r;
+  // The importer's own path: framesV1ToV2 -> the plate bytes as a blob ref -> @gt/domain's FRAMES door.
+  const sink: Sink = new Map();
+  const staged = stageStep({ phase: "frames", data: v1Record() }, new Set(STEP_KINDS), sink);
+  if (staged.loss !== undefined) throw new Error(`refused: ${staged.loss.reason}`);
+  const record = staged.held?.record as { units: Array<{ id: string; holdS: number; plate: { blob?: unknown; src?: unknown; costUsd?: number }; clip: unknown }> } | undefined;
+  if (record === undefined) throw new Error("not held");
+  const { units } = record;
   expect(units).toHaveLength(RENDERS[0].beats.length);
-  expect(units[0].plate.src, "the paid plate survives the migration").toBe("data:image/png;base64,UEFJRA==");
+  expect(units[0].plate.blob, "the paid plate survives the migration, as a blob ref").toBeDefined();
+  expect(units[0].plate.src).toBeUndefined();
   expect(units[0].plate.costUsd).toBe(0.04);
+  expect([...sink.values()].map((b) => Buffer.from(b.bytes).toString()), "the plate's bytes are staged").toEqual(["PAID"]);
   expect(units.every((u) => JSON.stringify(u.clip) === JSON.stringify(emptyClip())), "every unit has a clip").toBe(true);
   // Identity is NOT rewritten by a migration: kept alternatives, Score spots and
   // board items all point at these ids, and a v1 record is only ever reused for

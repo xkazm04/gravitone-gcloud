@@ -84,6 +84,8 @@ import {
   type Refusal,
   type Resolution,
 } from "./principal";
+import { localEntryAvailable } from "./localEntry";
+import { localEntryChosen } from "./localMode";
 
 export const ACCESS_SECRET_VAR = "IMAGING_ACCESS_SECRET";
 /** Who may still present the shared secret on a money route: `any` | `browser`. */
@@ -519,7 +521,9 @@ export async function resolvePrincipal(
     if (verdict === "ok" && (opts.use ?? "money") === "money" && sharedSecretCallers() === "browser" && !browserMarked(req)) {
       return refuse("shared-secret-cli");
     }
-    if (verdict === "ok") return process.env.NEXT_PUBLIC_LOCAL_MODE === "1" ? LOCAL_OWNER : SHARED_SECRET;
+    // The local owner: the build posture, or the landing's runtime local entry judged for this request (lib/localEntry.ts).
+    const local = process.env.NEXT_PUBLIC_LOCAL_MODE === "1" || (localEntryChosen(req.headers.get("cookie") ?? "") && localEntryAvailable(req.headers.get("host")));
+    if (verdict === "ok") return local ? LOCAL_OWNER : SHARED_SECRET;
     return { kind: "refused", code: verdict, status: 401, detail: LEGACY_DETAIL[verdict] };
   }
   return resolveVerified(req, {

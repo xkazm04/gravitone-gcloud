@@ -43,6 +43,10 @@ describe("parseSearch", () => {
     expect(parseSearch("Café NOIR-ish")).toEqual({ words: ["cafe", "noir", "ish"], tokens: [] });
     expect(normText("Ŝtrâße_09")).toBe("straße 09");
   });
+  it("folds a key's case the same way whether its value is quoted or not", () => {
+    expect(parseSearch('Mood:"dark ambient"')).toEqual({ words: [], tokens: [{ key: "mood", value: "dark ambient" }] });
+    expect(parseSearch('STYLE:"painted 3d" Mood:tense')).toEqual(parseSearch('style:"painted 3d" mood:tense'));
+  });
   it("keeps an unknown key as a free word, so 16:9 and a url are searchable text", () => {
     expect(parseSearch("aspect:16:9 ratio:16")).toEqual({ words: ["ratio", "16"], tokens: [{ key: "aspect", value: "16 9" }] });
     expect(parseSearch("16:9").tokens).toEqual([]);
@@ -80,7 +84,7 @@ describe("the rail", () => {
     expect(Object.keys(VOCAB_GROUPS).sort()).toEqual(["all", ...LIBRARY_KINDS].sort());
   });
   it("bands a doc's technique count", () => {
-    expect([1, 4, 5, 8, 9, 15, 16, 40].map(techniqueBand)).toEqual(["1–4", "1–4", "5–8", "5–8", "9–15", "9–15", "16+", "16+"]);
+    expect([0, 1, 4, 5, 8, 9, 15, 16, 40].map(techniqueBand)).toEqual(["0", "1–4", "1–4", "5–8", "5–8", "9–15", "9–15", "16+", "16+"]);
   });
 });
 

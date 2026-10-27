@@ -35,7 +35,7 @@ import { fixtureDraft, draftOf, impactOf, type DraftRender, type ScriptDraft } f
 import { IMPACT, ATTRIBUTION } from "@/lib/script/impact";
 import { RENDERS, RENDER_BY_ID } from "@/lib/script/renders";
 import { EDIT_PLAN_SCHEMA, editPlanSchema, parseEditPlan, PlanError } from "@/lib/script/editPlan";
-import { runGate, PROBES, probesFor, type Verdict } from "@/lib/script/gate";
+import { gateDraft, runGate, PROBES, probesFor, type Verdict } from "@/lib/script/gate";
 import { CONSTRAINT_LEDGER, ledgerFor } from "@/lib/script/constraints";
 import { NOTEBOOK } from "@/lib/notebook/notebook";
 import { fixtureSource, sourceOf } from "@/lib/notebook/source";
@@ -245,6 +245,26 @@ test("draft/4c: validation refuses an unknown whose probe pattern does not compi
   expect(found.some((f) => f.rule.includes("u-bad-probe") && f.path.endsWith(".probe"))).toBe(true);
   const good = { ...NOTEBOOK, unknowns: [...NOTEBOOK.unknowns, { id: "u-ok-probe", what: "x", why: "y", impact: "z", probe: NO_NINETIES }] };
   expect(shapeFindings(good as never).filter((f) => f.rule.includes("u-ok-probe"))).toEqual([]);
+});
+
+// A RegExp with `g` or `y` is STATEFUL under `.test()`: `lastIndex` survives a
+// match, so the same compiled forbid pattern, reused across a draft's renders
+// by gateDraft, starts its next search mid-string and misses a figure an
+// earlier render already tripped on (`g`), or only ever looks at index 0 (`y`).
+// A research run that writes `{source, flags: "gi"}` is a prohibition that
+// silently lapses on the second candidate. Measured before the fix: "g" and
+// "gi" tripped 2 of 3 identical renders, "y" 0 of 3.
+test("draft/4e: a forbid pattern's flags cannot make it lapse - every render carrying the figure trips it", () => {
+  const u: Unknown = { id: "u-flagged", what: "x", why: "y", impact: "never state a $6x,xxx spot figure" };
+  const beat = { ...RENDERS[0].beats[0], text: "Bitcoin trades at $63,400 today, they say." };
+  const renders = ["a", "b", "c"].map((id) => ({ id, beats: [beat] }));
+  const source = { notebook: { facts: [], unknowns: [u], scaleConversions: [] }, conclusions: [] };
+  for (const flags of ["", "i", "g", "gi", "y", "gy"]) {
+    const probes = { "u-flagged": { tests: "no spot figure", forbid: [{ source: "\\$6\\d,\\d{3}", flags }] } };
+    const roll = gateDraft(renders, source, { probes });
+    const tripped = Object.values(roll.byRender).filter((r) => r.findings.some((f) => f.subject === "u-flagged" && f.verdict === "violation"));
+    expect(tripped.map((r) => r.renderId), `flags "${flags}"`).toEqual(["a", "b", "c"]);
+  }
 });
 
 test("draft/4d: a fixture notebook with no probes scores exactly as before", () => {

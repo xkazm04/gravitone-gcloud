@@ -66,7 +66,9 @@ async function mount(page: Page) {
   await page.addScriptTag({ content: js });
   await page.getByRole("button", { name: "About" }).waitFor();
 }
-const isOpen = (page: Page) => page.getByRole("tooltip").evaluate((n) => getComputedStyle(n).opacity === "1");
+// By attribute, not role: a closed tip is out of the accessibility tree, which getByRole honours.
+const tip = (page: Page) => page.locator('[role="tooltip"]');
+const isOpen = (page: Page) => tip(page).evaluate((n) => getComputedStyle(n).opacity === "1");
 const settle = (page: Page) => page.waitForTimeout(300);
 
 test("a mouse click on the glyph leaves the disclosure open until the pointer leaves", async () => {
@@ -133,5 +135,42 @@ test("keyboard: focus opens, Escape closes, blur closes", async () => {
   await page.keyboard.press("Tab"); // out of the group
   await settle(page);
   expect(await isOpen(page)).toBe(false);
+  await b.close();
+});
+
+test("a closed tip is out of the accessibility tree and still the glyph's description", async () => {
+  const b = await chromium.launch();
+  const page = await (await b.newContext()).newPage();
+  await mount(page);
+  const glyph = page.getByRole("button", { name: "About" });
+  expect(await page.getByRole("tooltip").count()).toBe(0);
+  await expect(glyph).toHaveAccessibleDescription("a bar is 4 beats");
+  await glyph.hover();
+  await settle(page);
+  expect(await page.getByRole("tooltip").count()).toBe(1);
+  await expect(page.getByRole("tooltip")).toBeVisible();
+  await page.mouse.move(600, 400);
+  await settle(page);
+  expect(await page.getByRole("tooltip").count()).toBe(0);
+  await b.close();
+});
+
+test("a tip opened by a glyph near the right edge of a phone screen stays inside the viewport", async () => {
+  const b = await chromium.launch();
+  const page = await (await b.newContext({ viewport: { width: 375, height: 700 } })).newPage();
+  await mount(page);
+  // The glyph's left edge sits 40px from the right edge of the 375px screen.
+  await page.evaluate(() => {
+    (document.querySelector("#root > div") as HTMLElement).style.padding = "120px 0 0 320px";
+    (document.querySelector("#outside") as HTMLElement).style.display = "none";
+  });
+  await page.getByRole("button", { name: "About" }).focus();
+  await settle(page);
+  const box = await tip(page).boundingBox();
+  expect(box).not.toBeNull();
+  const edges = { left: box!.x, right: box!.x + box!.width };
+  expect(edges.left).toBeGreaterThanOrEqual(0);
+  expect(edges.right).toBeLessThanOrEqual(375);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
   await b.close();
 });

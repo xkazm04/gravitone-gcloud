@@ -3,9 +3,9 @@
 //
 // The catalogue holds no palette and a StyleBlock needs three coloured roles,
 // so the palette is READ off one plate a human kept (the style's first kept
-// ledger row, which is the row the card shows: proven styles have no exemplars,
-// so heroOf takes kept[0]). One plate, never a merge: three plates' palettes
-// averaged is a colour nobody saw.
+// ledger row, `palettePlate` below, which the Library's style port also reads
+// to say whether a style can be adopted at all). One plate, never a merge:
+// three plates' palettes averaged is a colour nobody saw.
 //
 // NO PALETTE, NO THEME. A recognizer that throws, a plate that is not on this
 // machine, a reply that is not exactly one entry per role — each is a draft
@@ -98,7 +98,8 @@ const sidecarRel = (r: LedgerRow): string => plateRel(r).replace(/\.png$/, ".jso
 /** The style's kept text-lane forge plates as pending proofs, ledger order,
  *  capped. Ref-early plates were conditioned on a franchise frame and approved
  *  proofs become pinned references, so they are never seeded. A plate whose
- *  PNG or sidecar does not read is skipped, never guessed. */
+ *  PNG or sidecar does not read is skipped, never guessed - and counted in `leftOut`
+ *  when the read threw (an absent plate or a non-text-lane sidecar is no failure). */
 export async function seedProofs(
   ledger: LedgerRow[],
   styleId: string,
@@ -107,6 +108,8 @@ export async function seedProofs(
 ): Promise<{ proofs: SeedProof[]; leftOut?: { count: number; reason: string } }> {
   const seen = new Set<string>();
   const eligible: SeedProof[] = [];
+  let unread = 0;
+  let firstUnread = "";
   for (const r of ledger) {
     if (r.style !== styleId || r.verdict !== "keep") continue;
     const rel = plateRel(r);
@@ -128,8 +131,9 @@ export async function seedProofs(
         model,
         createdAt: now,
       });
-    } catch {
-      continue;
+    } catch (e) {
+      if (!unread) firstUnread = e instanceof Error ? e.message : String(e);
+      unread++;
     }
   }
   const proofs: SeedProof[] = [];
@@ -144,12 +148,12 @@ export async function seedProofs(
     proofs.push(p);
     bytes += size;
   }
-  const count = eligible.length - proofs.length;
-  if (!count) return { proofs };
-  const reason = byteHit
-    ? `the next plate would pass the ${SEED_BYTE_CAP.toLocaleString("en-US")}-byte image cap`
-    : `at most ${SEED_CAP} plates are seeded`;
-  return { proofs, leftOut: { count, reason } };
+  const capped = eligible.length - proofs.length;
+  if (!capped && !unread) return { proofs };
+  const why: string[] = [];
+  if (capped) why.push(byteHit ? `the next plate would pass the ${SEED_BYTE_CAP.toLocaleString("en-US")}-byte image cap` : `at most ${SEED_CAP} plates are seeded`);
+  if (unread) why.push(`${unread} ${unread === 1 ? "plate" : "plates"} did not read: ${firstUnread}`);
+  return { proofs, leftOut: { count: capped + unread, reason: why.join("; ") } };
 }
 
 /** The one plate the palette is read from: the first kept row, ledger order. */

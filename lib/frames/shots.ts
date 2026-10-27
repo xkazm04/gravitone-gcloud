@@ -22,7 +22,7 @@
 //
 //   ART DIRECTION is not.     What the shot shows and what moves in it. A move
 //                             guessed from a beat's role is the same canned
-//                             lookup `frames.ts:266-268` refused for exactly
+//                             lookup `frames.ts#framesFromRender` refused for exactly
 //                             this reason: it reads as authored when nobody
 //                             authored it. `Shot.motion` is therefore seeded
 //                             EMPTY, like `emptyClip()`, and stays empty until
@@ -152,10 +152,9 @@ export const isTrailerFormat = (template: string) => TRAILER_TEMPLATES.has(templ
 /**
  * "m:ss" or "h:mm:ss" → seconds, or null.
  *
- * Deliberately NOT `frames.ts#secondsOf`, and deliberately identical in
- * behaviour to the beat lane's `atSeconds()`: an unparseable position is
- * reported, never defaulted to 0. Reconcile to that one function when the two
- * branches merge — one parser, not two.
+ * The beat lane's `atSeconds()`, which `frames.ts#secondsOf` delegates to as
+ * well - ONE parser: an unparseable position is reported, never defaulted
+ * to 0.
  */
 export function beatSeconds(b: ShotSourceBeat): number | null {
   // The beat layer already did this, including deciding it was unparseable.
@@ -163,8 +162,8 @@ export function beatSeconds(b: ShotSourceBeat): number | null {
   // Otherwise defer to the beat layer's parser rather than keeping a copy.
   // This body WAS a verbatim duplicate of `atSeconds` until the two lanes were
   // merged. Two identical parsers of the same format is one drift away from the
-  // exact defect this function exists to avoid: `frames.ts#secondsOf` folds an
-  // unparseable position to 0 and silently steals the next beat's span.
+  // exact defect this function exists to avoid - `frames.ts#secondsOf` once
+  // folded an unparseable position to 0 and silently stole the next beat's span.
   //
   // This is the ONLY edge from this layer to the beat layer, and it is a
   // FUNCTION, not the beat vocabulary — so the reason `ShotSourceBeat.kind`
@@ -332,7 +331,7 @@ export function shotsFromBeats(beats: readonly ShotSourceBeat[], totalS: number)
         angle: null,
         direction: directionFor(role),
         placement: placementFor(holdS),
-        // Art direction. Empty, for the reason `frames.ts:266-268` gives — and
+        // Art direction. Empty, for the reason `frames.ts#framesFromRender` gives — and
         // `subject` is left off entirely rather than set to "", so that
         // "nobody has written one" is absence rather than an empty string
         // somebody might read as a decision.

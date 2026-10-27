@@ -28,6 +28,18 @@ import s from "./Pair.module.css";
 
 /** How long a revealed pick stays up before the next pair (the prototype's 1150 ms; 500 reduced). */
 export const REVEAL_MS = 1150;
+export const REVEAL_REDUCED_MS = 500;
+
+/** A pick lands on an unjudged pair only: not mid-reveal, not already judged, not while the packet's write or commit is in flight. */
+export function canPick(state: { readonly pair: unknown; readonly revealing: string | null; readonly judged: boolean; readonly busy: boolean }): boolean {
+  return state.pair !== undefined && state.revealing === null && !state.judged && !state.busy;
+}
+
+/** The reveal time the viewer's motion setting asks for; the full reveal where there is no media query (server, tests). */
+export function defaultRevealMs(): number {
+  const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return reduced ? REVEAL_REDUCED_MS : REVEAL_MS;
+}
 
 export type BlindPairProps = {
   readonly packet: BoardPacket;
@@ -37,11 +49,11 @@ export type BlindPairProps = {
   readonly busy?: boolean;
   readonly announce?: (message: string) => void;
   readonly keys?: boolean;
-  /** Reveal time; 0 shows the next pair at once (tests, reduced motion is the caller's). */
+  /** Reveal time; 0 shows the next pair at once (tests). Unset, it follows prefers-reduced-motion. */
   readonly revealMs?: number;
 };
 
-export function BlindPair({ packet, onPick, undo, onCommit, busy = false, announce = () => undefined, keys = true, revealMs = REVEAL_MS }: BlindPairProps) {
+export function BlindPair({ packet, onPick, undo, onCommit, busy = false, announce = () => undefined, keys = true, revealMs }: BlindPairProps) {
   const { view, present } = packet;
   const pairs = view.pairs;
   const [revealing, setRevealing] = useState<string | null>(null);
@@ -56,7 +68,7 @@ export function BlindPair({ packet, onPick, undo, onCommit, busy = false, announ
   // The reveal lasts one beat, then the next pair comes up.
   useEffect(() => {
     if (revealing === null) return;
-    const t = setTimeout(() => setRevealing(null), revealMs);
+    const t = setTimeout(() => setRevealing(null), revealMs ?? defaultRevealMs());
     return () => clearTimeout(t);
   }, [revealing, revealMs]);
   // A reveal arrives with the server's answer: say what the machine thought, once per answer.
@@ -74,7 +86,7 @@ export function BlindPair({ packet, onPick, undo, onCommit, busy = false, announ
   }, [revealWords]);
 
   const pick = (outcome: PickOutcome) => {
-    if (pair === undefined || revealing !== null || pair.outcome !== null) return;
+    if (pair === undefined || !canPick({ pair, revealing, judged: pair.outcome !== null, busy })) return;
     setRevealing(pair.row);
     onPick(pair.row, outcome);
   };

@@ -39,6 +39,8 @@ export const SCREENS = {
   "studio-outputs": { url: `/projects/${PROJECT}` },
   "library": { url: "/library" },
   "library-detail": { url: "/library?kind=style&sel=style-0006" },
+  // a muse character's detail (spark scout-use-aim): her card chips, the looks she was kept in, the core prompt
+  "library-character": { url: "/library?kind=character&sel=character%3Amuse%3Asofia" },
   // a game asset's detail (spark game-3d-assets): the fixture's rigged hero, its 3D viewer, gates and export
   "library-model": { url: "/library?kind=model&sel=model%3Amesh%3Ahooded-archer%3At2-a" },
   // `playground` and `foundry` retired in Phase 6 wave C with their pages: each URL is a redirect
@@ -102,6 +104,13 @@ export const SCREENS = {
   //               pile, so - like `board` - it photographs whichever closed night THIS machine's
   //               scout store holds, and refuses when it holds none.
   "board-scout": { url: "/floor", follow: { selector: "a[href^='/board/pkt%3Ascout%3A']", nav: "goto" } },
+  // scout          the scout's decision graph (spark scout-decision-graph): every branch's bands, stage columns,
+  //                effort and the split. Reads the produce port's side: the fixture universe on the fixture lane.
+  scout: { url: "/scout" },
+  // scout-muse     the same graph on the muse wing (spark scout-muse): its own nights, the wing Seg on muse.
+  "scout-muse": { url: "/scout?wing=muse" },
+  // scout-runs   the Runs tab: every scout night and seed batch on the rail, the newest open one on the Board desk.
+  "scout-runs": { url: "/scout/runs" },
   ledger: { url: "/ledger" },
   runs: { url: "/projects/runs" },
   "library-style": { url: "/library/style/painted-3d" },

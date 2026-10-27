@@ -6,7 +6,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { needsDecision, railOf, type RailSlot } from "../../src/components/floor/calendar.ts";
+import { needsDecision, railOf, whenUtc, type RailSlot } from "../../src/components/floor/calendar.ts";
 import { MonthCalendar } from "../../src/components/floor/MonthCalendar.tsx";
 import { SlotConfirm } from "../../src/components/floor/SlotConfirm.tsx";
 import { SlotDetail, type SlotView } from "../../src/components/floor/SlotDetail.tsx";
@@ -77,6 +77,12 @@ describe("words from fields", () => {
   test("a missed slot says when its window closed, from missedAt", () => {
     expect(missedWords({ missedAt: "2026-10-12T18:15:00.000Z" })).toBe("missed 18:15 UTC");
     expect(missedWords({})).toBeNull();
+    expect(missedWords({ missedAt: "later" })).toBeNull();
+  });
+
+  test("an instant reads as its UTC day and hour, and a text that is not one reads as itself", () => {
+    expect(whenUtc("2026-10-15T09:12:00.000Z")).toBe("Thu 15 Oct · 09:12 UTC");
+    expect(whenUtc("soon")).toBe("soon");
   });
 
   test("the publish chain breaks where the sentence says: credentials at auth, quota and interruption at upload", () => {
@@ -84,6 +90,23 @@ describe("words from fields", () => {
     expect(breakOf("upload: 403 quotaExceeded")).toBe(2);
     expect(breakOf("interrupted before the publish finished")).toBe(2);
     expect(breakOf("the platform rejected the video after processing")).toBe(3);
+  });
+
+  test("the adapter's own refusals before any request break at upload: the platform never answered", () => {
+    // Verbatim from lib/publish/youtube.ts (snippetProblem, uploadVideo), lib/producers/publish.ts
+    // (plan) and @gt/producers/publish/adapter.ts adapterFor.
+    for (const said of [
+      "title is empty",
+      "title exceeds 100 characters",
+      "title/description may not contain '<' or '>'",
+      "description exceeds 5000 bytes",
+      "tags exceed 500 characters",
+      "video file is empty: C:/exports/a.mp4",
+      "video:export:a is not an export; youtube publishes exports",
+      "export a no longer exists",
+      "youtube has no publishing adapter",
+    ])
+      expect(breakOf(said), said).toBe(2);
   });
 
   test("null is unmeasured, never 0; a figure over gaps is a floor", () => {
@@ -147,6 +170,16 @@ describe("the slot's record", () => {
     expect(html).not.toContain("Cancel slot");
   });
 
+  test("a refusal stays drawn when the slot it was refused on has no verb left (a tick took it mid-press)", () => {
+    const { error: _e, ...ok } = view().slot;
+    const refused = "a publishing slot cannot be cancelled";
+    for (const status of ["publishing", "published", "cancelled"] as const) {
+      const html = renderToStaticMarkup(h(SlotDetail, { view: view({ slot: { ...ok, status } }), nowMs: NOW, busy: null, error: refused, onMove: () => undefined, onCancel: () => undefined, onPublishNow: () => undefined }));
+      expect(html, status).not.toContain("Cancel slot");
+      expect(html, status).toContain(refused);
+    }
+  });
+
   test("the confirm names the object and the consequence, never just asks", () => {
     const html = renderToStaticMarkup(h(SlotConfirm, { verb: "Cancel slot", object: "Chokepoint explainer · youtube", consequences: ["final · it never publishes"], tone: "rose", busy: false, onConfirm: () => undefined, onCancel: () => undefined, specimen: true }));
     expect(html).toContain("Chokepoint explainer · youtube");
@@ -167,6 +200,16 @@ describe("rows and the month", () => {
     expect(html).toContain('data-slot="sl-a"');
   });
 
+  test("the month's next agenda is the rail's Next: an overdue slot kept first, the count not capped by the rows", () => {
+    // Twelve waiting slots, given latest first; the earliest is past its hour and no tick has settled it.
+    const slots = Array.from({ length: 12 }, (_, i) => slot(`n${11 - i}`, new Date(Date.UTC(2026, 9, 15, 8 + (11 - i))).toISOString(), "scheduled"));
+    const html = renderToStaticMarkup(h(MonthCalendar, { slots, nowMs: NOW, month: { y: 2026, m: 9 }, day: null, channelsOff: new Set<string>(), onMonth: () => undefined, onToday: () => undefined, onDay: () => undefined, onChannel: () => undefined, onClose: () => undefined }));
+    const agenda = html.slice(html.indexOf('aria-label="month agenda"'));
+    const ids = [...agenda.matchAll(/data-slot="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toEqual(["n0", "n1", "n2", "n3", "n4", "n5", "n6", "n7"]);
+    expect(agenda).toMatch(/>next <span[^>]*><span aria-hidden="true">12</);
+  });
+
   test("the month hides a toggled-off channel and draws a cancelled slot's error", () => {
     const slots = [slot("yt", "2026-10-14T06:00:00.000Z", "cancelled", { title: "struck", error: "upload: 400 invalid_container" }), slot("tt", "2026-10-14T07:00:00.000Z", "scheduled", { channel: "tiktok", title: "vertical cut" })];
     const props = { slots, nowMs: NOW, month: { y: 2026, m: 9 }, day: null, onMonth: () => undefined, onToday: () => undefined, onDay: () => undefined, onChannel: () => undefined, onClose: () => undefined };
@@ -174,5 +217,19 @@ describe("rows and the month", () => {
     expect(on).toContain("upload: 400 invalid_container");
     expect(on).toContain("vertical cut");
     expect(renderToStaticMarkup(h(MonthCalendar, { ...props, channelsOff: new Set(["tiktok"]) }))).not.toContain("vertical cut");
+  });
+
+  test("the month's owed agenda is the rail's: last month's failure and next month's drift are on it", () => {
+    const slots = [slot("sep", "2026-09-30T22:00:00.000Z", "failed", { error: "upload: 403 quotaExceeded" }), slot("nov", "2026-11-05T10:00:00.000Z", "scheduled", { drift: "export_missing" }), slot("oct", "2026-10-02T10:00:00.000Z", "missed", { missedAt: "2026-10-02T11:00:00.000Z" })];
+    const html = renderToStaticMarkup(h(MonthCalendar, { slots, nowMs: NOW, month: { y: 2026, m: 9 }, day: null, channelsOff: new Set<string>(), onMonth: () => undefined, onToday: () => undefined, onDay: () => undefined, onChannel: () => undefined, onClose: () => undefined }));
+    const agenda = html.slice(html.indexOf('aria-label="month agenda"'));
+    expect([...agenda.matchAll(/data-slot="([^"]+)"/g)].map((m) => m[1])).toEqual(["nov", "oct", "sep"]);
+  });
+
+  test("a day speaks its count in the singular for one slot", () => {
+    const props = { slots: [slot("one", "2026-10-20T06:00:00.000Z", "scheduled")], nowMs: NOW, month: { y: 2026, m: 9 }, day: null, channelsOff: new Set<string>(), onMonth: () => undefined, onToday: () => undefined, onDay: () => undefined, onChannel: () => undefined, onClose: () => undefined };
+    const html = renderToStaticMarkup(h(MonthCalendar, props));
+    expect(html).toContain('aria-label="Tue 20 Oct, 1 slot"');
+    expect(html).toContain('aria-label="Wed 21 Oct, 0 slots"');
   });
 });

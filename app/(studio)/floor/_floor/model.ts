@@ -8,6 +8,7 @@ import { FLOOR_LANES, isFloorLane } from "@gt/ui/components/floor/floor.ts";
 
 import type { LiveJob, WeirItem } from "../../../../lib/ledger/v1/types.ts";
 import { pileOrder } from "../../_shell/facts.ts";
+import type { ProduceJob } from "../../projects/_port/contract.ts";
 
 export type LaneWork = { readonly jobs: readonly LiveJob[]; readonly piles: readonly WeirItem[] };
 
@@ -24,6 +25,20 @@ export function byLane(jobs: readonly LiveJob[], weir: readonly WeirItem[]): Rea
   for (const w of weir) if (w.pending > 0) out[w.media].piles.push(w);
   for (const l of FLOOR_LANES) out[l.id].piles.sort(pileOrder);
   return out;
+}
+
+/**
+ * The runs the Floor's composers launched, as their lane's Foundry column draws them beside v1's
+ * live work (./load.ts): a run with no medium has no lane to stand in, a project's run is the
+ * project's (Runs shows it there), and a done or cancelled run is no longer work on the floor.
+ * Each is a door to its job in Runs.
+ */
+export function floorRunsOf(jobs: readonly ProduceJob[]): LiveJob[] {
+  return jobs.flatMap((j) =>
+    j.media === undefined || j.projectId !== undefined || j.state === "done" || j.state === "cancelled"
+      ? []
+      : [{ source: "produce", id: j.id, title: j.title, lane: j.lane, media: j.media, state: j.state, ...(j.state === "running" ? { startedAt: new Date(j.s).toISOString() } : {}), attempt: j.attempt, ...(j.error === undefined ? {} : { error: j.error }), href: `/projects/runs?job=${encodeURIComponent(`kernel:${j.id}`)}` }],
+  );
 }
 
 export type FloorUrl = {
@@ -67,6 +82,16 @@ export function floorSearch(u: FloorUrl): string {
   if (u.schedule !== null && u.schedule.item !== null) q.set("item", u.schedule.item);
   const s = q.toString();
   return s === "" ? "" : `?${s.replace(/%2C/g, ",")}`;
+}
+
+/**
+ * Whether a level is over the Floor, so the Floor's own keys are not live: the month, a slot's
+ * record, or the schedule sheet - which is drawn only when the calendar's side could say what
+ * each channel can do (`calendarRead`). A `?new=1` the sheet could not open is not a level: the
+ * month closed over it must hand the keys back.
+ */
+export function levelOver(u: FloorUrl, calendarRead: boolean): boolean {
+  return u.cal || u.slot !== null || (u.schedule !== null && calendarRead);
 }
 
 /** The slot level's address: the month stays open beneath it when it was. */

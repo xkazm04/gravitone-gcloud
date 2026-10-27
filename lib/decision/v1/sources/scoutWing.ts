@@ -1,0 +1,117 @@
+import "server-only";
+
+import { err, ok, type Result } from "@gt/domain/errors";
+import type { ConsequenceItem } from "@gt/domain/board";
+
+import { CHARACTERS_HEADING, FINDINGS_HEADING, MUSE_CHARACTERS_REL, WATCH_HEADING, findingRelOf, knowledgeState, markerOf, watchlistRelOf } from "../../../foundry/scout/knowledge.ts";
+import { partRunId } from "../../../foundry/scout/parts.ts";
+import { storyboardVerdict } from "../../../foundry/scout/storyboardKept.ts";
+import type { Candidate, IdeaCandidate, Night, NightCommit, NightId, StoryboardTechnique } from "../../../foundry/scout/types.ts";
+import { parseWingRunId, wingRunId, wingWord, type ScoutWing } from "../../../foundry/scout/wing.ts";
+import { activeWing, withWing } from "../../../foundry/scout/wingScope.ts";
+import { v1Call, type DecisionAdapter } from "../types.ts";
+
+// THE SCOUT PACKET'S WING (spark scout-muse) - what ./scout.ts needs to decide a night of either wing, kept
+// here so the adapter does not grow past its bound.
+//
+// A RUN ID NAMES ITS WING: the scout wing's is the bare night (every packet minted before the wings keeps its
+// id), the muse wing's `muse:<night>` - so `pkt:scout:muse:2026-10-24`. A run id naming no wing is refused
+// before anything is read. Every entry of the adapter then runs inside that wing's scope (wingScope.ts), so
+// every store it touches - the night, its files, the seeds, the leads, the knowledge files - is the wing's own
+// root, and two Board requests for the two wings never see each other's.
+//
+// THE FILE ROUTE carries the run id, not the bare night: app/api/foundry/file parses it back into the wing.
+//
+// A REMAINDER PACKET (spark scout-storyboards) names its part after the night - `2026-10-24:2`,
+// `muse:2026-10-24:2` (lib/foundry/scout/parts.ts): the wrapper strips the wing and hands the adapter
+// `<night>:<n>`, which ./scout.ts splits; every file it serves is still the bare night's.
+
+export type WingRef = { readonly wing: ScoutWing; readonly night: string; readonly part: number };
+
+/** The wing, night and part a scout run id names; a wing this build does not know is not found. */
+export function wingOfRun(runId: string): Result<WingRef> {
+  const w = parseWingRunId(runId);
+  return w === null ? err("not-found", `scout: ${runId} names no scout wing`) : ok({ wing: w.wing, night: w.night, part: w.part ?? 1 });
+}
+
+/** The night of a run id the wrapper below already admitted (its part dropped). */
+export const nightOfRun = (runId: string): NightId => parseWingRunId(runId)?.night ?? runId;
+
+/** The part a run id names: 1 for the night's own packet, n for its remainder `<run>:<n>`. */
+export const partOfRun = (runId: string): number => parseWingRunId(runId)?.part ?? 1;
+
+/** v1's file route for a night file of the ACTIVE wing (app/api/foundry/file `kind=scout`, lib/foundry/scout/store.ts scoutFileStat). */
+export function scoutFileUrl(night: string, rel: string): string {
+  return `/api/foundry/file?${new URLSearchParams({ run: wingRunId(activeWing(), night), path: rel, kind: "scout" }).toString()}`;
+}
+
+/** `scout · 9 sources`, `muse · 25 ideas`: a muse night is ideas drawn from its own briefs, not found sources. */
+export function packetMeta(wing: ScoutWing, n: Night): string {
+  const ideas = n.candidates.filter((c) => c.kind === "idea").length;
+  return `${wingWord(wing)} · ${wing === "muse" ? `${ideas} ideas` : `${n.sources.length} sources`}${n.dry ? " · dry" : ""}`;
+}
+
+/** What a muse idea's cell meta adds: the character's name and age, and what the eye read - `read 34 · covered`. */
+export function museFacts(c: Pick<IdeaCandidate, "card" | "judge">): string[] {
+  const card = c.card === undefined ? [] : [`${c.card.name}, ${c.card.age}`];
+  return c.judge === undefined ? card : [...card, `read ${c.judge.apparentAge ?? "unread"} · ${c.judge.clothing}`];
+}
+
+/** A character idea: kept, its card becomes a line in the muse wing's characters.md. */
+export const isCharacter = (c: Candidate): c is IdeaCandidate & Required<Pick<IdeaCandidate, "card">> => c.kind === "idea" && c.target === "character" && c.card !== undefined;
+
+/** The knowledge file a candidate's kept line lands in, for the active wing; undefined when it writes none. Throws on a bad template or step. */
+function knowledgeRelOf(c: Candidate): string | undefined {
+  if (c.kind === "finding") return findingRelOf(activeWing(), c.template, c.step);
+  if (c.kind === "watch") return watchlistRelOf(activeWing());
+  if (c.kind === "storyboard") return c.technique === undefined ? undefined : findingRelOf(activeWing(), c.technique.template, c.technique.step);
+  return isCharacter(c) ? MUSE_CHARACTERS_REL : undefined;
+}
+
+export type KnowledgeAt = { readonly rel: string; readonly exists: boolean; readonly holds: boolean };
+
+/** By candidate id: each line-writing candidate's knowledge file as it stands now. A finding with nowhere to land is left out (its cell is a loss). */
+export async function knowledgeOf(night: Night): Promise<Result<Record<string, KnowledgeAt>>> {
+  const out: Record<string, KnowledgeAt> = {};
+  for (const c of night.candidates) {
+    const r = await v1Call(async () => knowledgeRelOf(c));
+    if (!r.ok || r.value === undefined) continue;
+    const rel = r.value;
+    const s = await v1Call(() => knowledgeState(rel, markerOf(night.id, c.id)));
+    if (!s.ok) return s;
+    out[c.id] = { rel, ...s.value };
+  }
+  return ok(out);
+}
+
+/** The preview's line for a kept finding, watch line, character or storyboard technique. */
+export function knowledgeWrite(root: string, c: Candidate, k: KnowledgeAt, cell: string): ConsequenceItem & { readonly kind: "file" } {
+  const heading = c.kind === "finding" || c.kind === "storyboard" ? FINDINGS_HEADING : c.kind === "watch" ? WATCH_HEADING : CHARACTERS_HEADING;
+  return { kind: "file", target: `${root}/${k.rel}`, candidate: cell, detail: k.holds ? "already holds this line" : `${k.exists ? "" : "new file · "}a line under ${heading}` };
+}
+
+/**
+ * The technique a storyboard files on this commit (spark scout-vision), or undefined: kept as a whole by `record` - this
+ * part's verdicts (lib/foundry/scout/storyboardKept.ts storyboardVerdict) - and carrying one. A dry record keeps nothing.
+ */
+export function keptTechnique(n: Night, record: NightCommit, c: Candidate): StoryboardTechnique | undefined {
+  return c.kind === "storyboard" && c.technique !== undefined && storyboardVerdict({ ...n, committed: record }, c) === "kept" ? c.technique : undefined;
+}
+
+/** The adapter with every entry inside the wing its run id names: read and apply parse it, packet and consequence carry it on the read. */
+export function inWing<V extends { readonly wing: ScoutWing }>(a: DecisionAdapter<V>): DecisionAdapter<V> {
+  return {
+    source: a.source,
+    ...(a.partial === true ? { partial: true as const } : {}),
+    read: async (ref) => {
+      const w = wingOfRun(ref.runId);
+      return w.ok ? withWing(w.value.wing, () => a.read({ ...ref, runId: partRunId(w.value.night, w.value.part) })) : w;
+    },
+    packet: (v1) => withWing(v1.wing, () => a.packet(v1)),
+    consequence: (v1, at) => withWing(v1.wing, () => a.consequence(v1, at)),
+    apply: async (claim) => {
+      const w = wingOfRun(claim.packet.runId ?? "");
+      return w.ok ? withWing(w.value.wing, () => a.apply(claim)) : w;
+    },
+  };
+}

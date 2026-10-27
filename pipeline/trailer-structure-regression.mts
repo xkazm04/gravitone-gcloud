@@ -1,18 +1,20 @@
 // REGRESSION CONTROL for the trailer structural checker
-// (app/_phases/script/trailer/structure.ts).
+// (lib/script/trailer/structure.ts and its rules/).
 //
 // Run:  npx tsx pipeline/trailer-structure-regression.mts
 //
 // Shaped like `gate-regression.mts`: a line per case, a count at the end, a
-// non-zero exit if anything is broken. There is no test framework in this repo
-// and this is not the place to introduce one (`integration-imaging.mts:8`).
+// non-zero exit if anything is broken. It runs as `npm run check:trailer-structure`,
+// in `verify` and in CI (.github/workflows/gates.yml); the Playwright probe
+// `tests/golden-path/trailer-structure-honesty.probe.spec.ts` pins a subset under
+// `npm test`.
 //
 // WHY THIS FILE EXISTS, and what it is a control ON.
 //
-// `app/_phases/script/renders.ts:46-58` hand-types a `checks` array onto each
+// `lib/script/renders.ts` hand-types a `checks` array onto each
 // render — eleven sentences a human wrote ABOUT the chain. One of them reads
 // "but/therefore between adjacent beats, no AND THEN · pass". Nothing computed
-// that. `../app/_phases/script/gate.ts` was built to end exactly that pattern for
+// that. `lib/script/gate.ts` was built to end exactly that pattern for
 // the EPISTEMIC layer (forbidden figures, dropped qualifiers, causal upgrades) and
 // its six checks cover none of the beat chain's SHAPE.
 //
@@ -23,12 +25,15 @@
 // this" into "fine", trains its user to ignore it — and a checker nobody believes
 // is worth less than none.
 
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   runStructureCheck,
   type StructureFinding,
   type StructureReport,
 } from "../lib/script/trailer/structure";
 import { notesFromFindings } from "../lib/script/trailer/notes";
+import { countFaults } from "../lib/script/trailer/thresholds";
 import {
   parseTrailerPlan,
   replayTrailerPlan,
@@ -327,6 +332,13 @@ const CASES: Case[] = [
     expect: { kind: "violation", rule: "promise" },
   },
   {
+    name: "a promise the cut spends is surfaced as its own advisory row",
+    cut: withBeat(baseline(), "b2", {
+      promises: [{ id: "p1", sentence: "They are enemies.", source: "assembly", payer: "b9", spentByTheCut: true }],
+    }),
+    expect: { kind: "unmeasured", rule: "promise", subject: "p1:spent" },
+  },
+  {
     name: "spending an asset the budget HOLDS",
     cut: withBeat(baseline(), "b7", { spends: ["a-turn"] }),
     budget: { campaignId: "c1", assets: [{ id: "a-turn", kind: "turn", name: "the reversal", allowance: "hold" }] },
@@ -475,6 +487,63 @@ if (unroutable.length) {
   );
 }
 
+/* ── params.json's `consumed_by` resolves ───────────────────────────────────
+ * The params file says each value's `consumed_by` is "the code that reads this
+ * value". After the Phase 0.4 move 23 of its 24 path claims named
+ * app/_phases/script/trailer/*, which no longer exists, and nothing noticed. So:
+ * every claim that opens with a path names a file that exists, and the symbol
+ * after the path, when there is one, is a word in that file. */
+{
+  const root = fileURLToPath(new URL("..", import.meta.url));
+  const params: unknown = JSON.parse(readFileSync(`${root}knowledge/templates/trailer/steps/01-script/params.json`, "utf8"));
+  const claims: string[] = [];
+  const walk = (v: unknown) => {
+    if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object")
+      for (const [k, x] of Object.entries(v)) {
+        if (k === "consumed_by" && typeof x === "string") claims.push(x);
+        else walk(x);
+      }
+  };
+  walk(params);
+  const PATH_CLAIM = /^((?:app|lib|packages|pipeline)\/[\w./()[\]-]+\.(?:ts|tsx|mts|json))(?:\s+([A-Za-z_]\w*))?/;
+  const pathed = claims.map((c) => PATH_CLAIM.exec(c)).filter((m): m is RegExpExecArray => m !== null);
+  const broken = pathed.filter(([, file, symbol]) => {
+    if (!existsSync(`${root}${file}`)) return true;
+    return symbol !== undefined && !new RegExp(`\\b${symbol}\\b`).test(readFileSync(`${root}${file}`, "utf8"));
+  });
+  if (pathed.length === 0 || broken.length) {
+    bad++;
+    console.log(`FAIL  seam           · params consumed_by: ${pathed.length} path claim(s), ${broken.length} unresolved: ${broken.map((m) => m[0]).join(" | ")}`);
+  } else {
+    console.log(`OK    seam           · params consumed_by: all ${pathed.length} path claims name a file and symbol that exist`);
+  }
+}
+
+/* ── the counts are checked against each other, not only one by one ─────────
+ * Each count was validated alone, so `reset.tooManyAt: 1` loaded and told every
+ * one-reset cut to "remove all but one". The shipped set has no fault; each
+ * drifted set below has exactly the one it was built to carry. */
+{
+  const shipped = { raisesPerRung: 1, structuralResets: 1, tooManyAt: 3, holdsPerReset: 1 };
+  const drifts: [string, Partial<typeof shipped>][] = [
+    ["reset.tooManyAt", { tooManyAt: 1 }],
+    ["reset.structuralResets", { structuralResets: 0 }],
+    ["escalation.raisedVariablesPerRung", { raisesPerRung: 0 }],
+    ["reset.holdsPerReset", { holdsPerReset: 0 }],
+  ];
+  const missed = drifts.filter(([field, d]) => {
+    const f = countFaults({ ...shipped, ...d });
+    return f.length !== 1 || f[0].field !== field;
+  });
+  if (countFaults(shipped).length || missed.length) {
+    bad++;
+    console.log(`FAIL  seam           · threshold relations: shipped faults=${countFaults(shipped).length}, drifts missed: ${missed.map(([f]) => f).join(", ")}`);
+  } else {
+    console.log(`OK    seam           · threshold relations: the shipped counts agree, and each of ${drifts.length} drifted sets is refused`);
+  }
+}
+
 /* ───────────────────── notes and the edit plan (session 1) ─────────────────── */
 
 const planCheck = (name: string, ok: boolean, why: string) => {
@@ -530,6 +599,42 @@ const planCheck = (name: string, ok: boolean, why: string) => {
     planCheck("opening plan: 1 opened, 0 closed", d.opened.length === 1 && d.opened[0] === "escalation/b4" && d.closed.length === 0, JSON.stringify(d));
   }
 
+  // 4b. two violations sharing a rule and a subject stay two: distinct note ids,
+  //     and a plan that closes one of them reads as 1 closed. Keyed by
+  //     rule/subject alone, 2 notes shared one id and the delta read 0 closed.
+  const twice = withBeat(base, "b6", { resetHolds: ["line", "image"], cueMark: "zz" });
+  const twiceReport = runStructureCheck(twice);
+  const twiceNotes = notesFromFindings(twiceReport, twice);
+  planCheck(
+    "two violations on one rule/subject yield two distinct note ids",
+    twiceNotes.filter((n) => n.beatId === "b6" && n.fromFinding === "reset").length === 2 &&
+      new Set(twiceNotes.map((n) => n.id)).size === twiceNotes.length,
+    JSON.stringify(twiceNotes.map((n) => n.id)),
+  );
+  const oneFixed = structureDelta(twiceReport, runStructureCheck(withBeat(twice, "b6", { resetHolds: ["line"] })));
+  planCheck("closing one of two such violations reads as 1 closed", oneFixed.closed.length === 1 && oneFixed.opened.length === 0, JSON.stringify(oneFixed));
+
+  // 5. every wrong-typed value of every declared patch field is refused. The
+  //    fields are read off the schema, so a field added there is walked here.
+  //    Before the door checked types, 48 of these were accepted and 15 of those
+  //    threw inside runStructureCheck (`raises: "scale"` reached `.filter`).
+  const patchProps = trailerEditPlanSchema(base).properties.ops.items.properties.patch.properties as Record<string, unknown>;
+  const WRONG: unknown[] = [42, null, true, {}, [1], "SO", ["warp"]];
+  const legal = (f: string, v: unknown) =>
+    f === "label" || f === "text" ? typeof v === "string"
+    : f === "connector" ? v === "BUT" || v === "THEREFORE" || v === "AND THEN"
+    : f === "spends" ? Array.isArray(v) && v.every((x) => typeof x === "string")
+    : f === "raises" ? Array.isArray(v) && v.every((x) => ["scale", "threat", "speed", "intimacy", "cost"].includes(x as string))
+    : false;
+  const letIn = Object.keys(patchProps).flatMap((f) =>
+    WRONG.filter((v) => !legal(f, v))
+      .filter((v) => parseTrailerPlan(base, { ops: [{ beatId: "b4", patch: { [f]: v }, why: "w" }], summary: "s" }).ok)
+      .map((v) => `${f}=${JSON.stringify(v)}`),
+  );
+  planCheck("refuses every wrong-typed value of every declared patch field", letIn.length === 0, letIn.join(" "));
+  const promise = parseTrailerPlan(base, { ops: [{ beatId: "b4", patch: { promises: [] }, why: "w" }], summary: "s" });
+  planCheck("refuses a promises patch the schema never offered", !promise.ok, JSON.stringify(promise));
+
   // the schema enumerates the cut's actual beat ids.
   const enumIds = (trailerEditPlanSchema(base).properties.ops.items.properties.beatId as { enum: string[] }).enum;
   planCheck("schema beatId enum is the cut's beat ids", enumIds.join() === base.beats.map((b) => b.id).join(), enumIds.join());
@@ -538,6 +643,6 @@ const planCheck = (name: string, ok: boolean, why: string) => {
 console.log(
   bad
     ? `\n${bad} REGRESSION FAILURE(S)`
-    : `\nall ${CASES.length} cases, 6 invariants, 5 seam checks and the plan cases behave correctly`,
+    : `\nall ${CASES.length} cases, 6 invariants, 7 seam checks and the plan cases behave correctly`,
 );
 process.exit(bad ? 1 : 0);

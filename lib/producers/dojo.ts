@@ -33,6 +33,7 @@ import { DEFAULT_CALL_ESTIMATE_USD } from "@gt/producers/extract/units";
 import { z } from "zod";
 
 import { OUT_DIRNAME } from "../fixtures/mode.ts";
+import { blobRootOf } from "../kernelProcess.ts";
 import { estimatePerImage } from "../imaging/pricing.ts";
 import { launchTarget, newestJob } from "./forge.ts";
 
@@ -296,8 +297,9 @@ export function launchDojo(store: Store, cycleId: string, opts: LaunchDojoOption
 
 /* ── Drive (the google stack) ─────────────────────────────────────────────── */
 
-export function effectsFor(store: Store, location: string): Effects {
-  return liveEffects(store, blobStore(location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(location), "blobs")));
+/** `_location` is the path `store` was opened at (kept for the callers); the blobs are beside it. */
+export function effectsFor(store: Store, _location: string): Effects {
+  return liveEffects(store, blobStore(blobRootOf(store)));
 }
 
 /** Drive a google cycle's job in this process (kernel runJob), as extract's CLI drives its own. */

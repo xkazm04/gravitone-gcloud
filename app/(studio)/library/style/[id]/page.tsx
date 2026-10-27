@@ -10,6 +10,7 @@
 // another style standing in (v1 `projectStyle`: "an unannounced stand-in is the bug").
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { serverStyle, styleNow } from "../_port/port.ts";
 import { STYLE_PORT } from "../_port/wire.ts";
@@ -26,14 +27,19 @@ const decoded = (raw: string): string => {
   }
 };
 
+/** One read of the style per request: the tab's title and the page both take it. */
+const readStyle = cache((id: string) => serverStyle().loadStyle({ id }));
+
 export async function generateMetadata({ params }: { readonly params: Params }): Promise<Metadata> {
-  const { id } = await params;
-  return { title: `Gravitone · ${decoded(id)}` };
+  const id = decoded((await params).id);
+  const view = await readStyle(id);
+  // A read that failed titles the tab by the id: the page raises its own 404 or error.
+  return { title: `Gravitone · ${view.ok ? view.value.name : id}` };
 }
 
 export default async function StylePage({ params }: { readonly params: Params }) {
   const { id } = await params;
-  const view = await serverStyle().loadStyle({ id: decoded(id) });
+  const view = await readStyle(decoded(id));
   if (!view.ok) {
     if (view.error.code === "not-found") notFound();
     throw view.error;

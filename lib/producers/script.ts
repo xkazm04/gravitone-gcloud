@@ -1,6 +1,3 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 import type { ResourceLane } from "@gt/domain/lane";
@@ -22,8 +19,7 @@ import { admitCompose, composePrompt, type ComposeRun } from "@/lib/script/compo
 import { draftOf } from "@/lib/script/draft";
 import { RENDERS } from "@/lib/script/renders";
 import { composeCut } from "@/lib/script/trailer/cut";
-import { derive, newLog, rebase, type CutLog } from "@/lib/script/trailer/ops";
-import type { TrailerCut, WithholdingBudget } from "@/lib/script/trailer/types";
+import { derive, logFromRecord, newLog, rebase, type CutLog } from "@/lib/script/trailer/ops";
 import type { ScriptRender } from "@/lib/script/types";
 import { parseDraft } from "@/lib/script/validate";
 import { BASELINE, type Note, type Version } from "@/lib/script/versions";
@@ -32,7 +28,7 @@ import type { TextProvenance, TextRequest } from "@/lib/text/types";
 import { recalibrateRefusal, type RecalibrateInput } from "@/lib/turns/assemble/recalibrate";
 import { RECALIBRATE_SPEC, type RecalibrateResult } from "@/lib/turns/kinds/recalibrate";
 
-import { activeSourceOf, adTemplateOf, asData, briefOf, disciplineFor, engineView, field, meteredText, must, partFacts, priceOf, recOf, shortDigest, text, textFailure, written, enginesOf, type DriveHooks, type Engines, type PartFacts, preflightFrom, withRecords } from "./research.ts";
+import { activeSourceOf, adTemplateOf, asData, briefOf, disciplineFor, engineView, field, meteredText, must, partFacts, priceOf, promptDoc, recOf, shortDigest, text, textFailure, written, enginesOf, type DriveHooks, type Engines, type PartFacts, preflightFrom, withRecords } from "./research.ts";
 
 // THE SCRIPT PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/script's ports over
 // v1's turns: the COMPOSE turn (lib/script/compose.ts, lifted out of app/api/script/route.ts for
@@ -170,7 +166,7 @@ async function scenariosUnit(ctx: StepContext, unit: ActUnit, s: PartSnapshot, f
   if (brief === undefined || idea === undefined) return { kind: "fatal", code: "refused", message: "generate scenarios needs a picked idea" };
   const template = adTemplateOf(f.plan.project.recipe);
   const request = { brief, template, targetS: template === "ad-spot-30" ? 30 : 15, idea };
-  const doc = await readFile(path.join(process.cwd(), "pipeline", "ADS-SCENARIOS-PROMPT.md"), "utf8");
+  const doc = await promptDoc("ADS-SCENARIOS-PROMPT.md");
   const req: TextRequest = { prompt: scenariosPrompt(doc, request), turn: "ad-scenarios", schema: SCENARIOS_SCHEMA };
   const answer = await meteredText<{ raw: unknown; provenance?: TextProvenance }>(ctx, unit, req, () => ({ raw: scenariosStandIn(idea, template, brief.cta) }), async () => {
     const served = await engine.reason(req);
@@ -183,11 +179,10 @@ async function scenariosUnit(ctx: StepContext, unit: ActUnit, s: PartSnapshot, f
 
 /* ── landing ──────────────────────────────────────────────────────────────── */
 
-function cutLogOf(s: PartSnapshot): CutLog | null {
+export function cutLogOf(s: PartSnapshot): CutLog | null {
   const st = s.records.get("script-trailer");
   if (st === undefined) return null;
-  if (field(st["origin"]) !== undefined) return written<CutLog>({ origin: st["origin"], originBudget: st["originBudget"], ops: st["ops"] ?? [], head: st["head"] ?? 0 });
-  return newLog(written<TrailerCut>(st["cut"]), written<WithholdingBudget>(st["budget"]));
+  return logFromRecord(written<Parameters<typeof logFromRecord>[0]>(st));
 }
 
 function landScript(job: { readonly id: string }, plan: ActPlan, made: ReadonlyMap<string, EventData>, s: PartSnapshot, f: PartFacts, at: number): Result<Record<string, unknown>> {

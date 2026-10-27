@@ -2,7 +2,8 @@
 // closes it in a finally, and turns every failure into a published trouble. `key` is
 // the `${projectId}:${phase}` record id that every reader and writer shares.
 //
-// Split out of the stepStore.ts door. Nothing here is exported on the door.
+// Split out of v1's stepStore.ts; the door is now index.ts. Nothing here is exported
+// on the door.
 
 import { errorMessage } from "@gt/domain/errors";
 
@@ -17,24 +18,26 @@ import { report } from "./troubleChannel";
 
 export const key = (projectId: string, phase: string) => `${projectId}:${phase}`;
 
-/** The steps store is created lazily rather than in the projects upgrade path,
- *  so an existing browser DB does not need a version bump to gain it.
+/** The steps store is created in openDb's upgrade (lib/studioDb.ts) beside the
+ *  other stores; the `missing-store` check below reports a database that opened
+ *  without it.
  *
  *  THE CONNECTION IS OWNED HERE, and it used to leak. `openDb()` is not cached —
  *  it calls `indexedDB.open` fresh every time — so every caller owns the handle
  *  it gets back and has to close it. Every other call site in the data layer
  *  does, wrapping the work in `try { db = await openDb(); … } finally {
  *  db?.close(); }`. This was the one that did not — while being by a wide margin
- *  the most frequently called of them, because every caller above it fires
+ *  the most frequently called of them, because every v1 caller above it fired
  *  `void saveStep(...)` on a keystroke.
  *
  *  THE COUNT IS NOT WRITTEN HERE ANY MORE, and that is the point. It said
- *  "thirteen other call sites… `lib/assets.ts` (3)"; measured 2026-09-06 there
- *  were twenty-one across five files and assets.ts held eight. The property was
+ *  "thirteen other call sites… `lib/assets.ts` (3)" (v1's, since retired);
+ *  measured 2026-09-06 there were twenty-one across five files and assets.ts
+ *  held eight. The property was
  *  still true and the number had been wrong for long enough that nobody could
  *  have said when it stopped. The population is walked and the rule is gated in
- *  tests/golden-path/shared-notebook-contracts.probe.spec.ts — which is also
- *  where the one file that still does not close is listed, with its reason.
+ *  tests/golden-path/shared-notebook-contracts.probe.spec.ts, whose exemption
+ *  map is empty since lib/identityEviction.ts was fixed (2026-10-06).
  *
  *  The cost was not abstract. The latest-wins ticket below abandons a write only
  *  when a later save for the same key is ISSUED before the earlier one reaches

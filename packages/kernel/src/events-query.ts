@@ -40,7 +40,11 @@ const PATTERN = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)*(\.\*)?$/;
 const LANE = /^[^*]+(\.\*)?$/;
 const SOURCE = /^[a-z][a-z0-9-]*$/;
 
-const cursorSchema = z.object({ t: z.iso.datetime(), seq: z.number().int().positive() });
+// `t` is compared as TEXT, and every stored instant is toISOString's shape (ms, Z). A bound written
+// another way - "12:00:00Z" - sorts before "12:00:00.000Z" ('Z' > '.'), so it would drop the rows
+// AT its instant from `since` and keep them under `until`. Bounds are rewritten to the stored shape.
+const instant = z.iso.datetime().transform((s) => new Date(s).toISOString());
+const cursorSchema = z.object({ t: instant, seq: z.number().int().positive() });
 export type TimeCursor = z.output<typeof cursorSchema>;
 
 export const eventQuerySchema = z
@@ -57,8 +61,8 @@ export const eventQuerySchema = z
     project: z.string().min(1).optional(),
     /** `data.runId`, likewise: every act about a run, whatever its subject. */
     run: z.string().min(1).optional(),
-    since: z.iso.datetime().optional(),
-    until: z.iso.datetime().optional(),
+    since: instant.optional(),
+    until: instant.optional(),
     by: z.enum(["seq", "time"]).optional(),
     after: z.number().int().nonnegative().optional(),
     before: z.number().int().positive().optional(),

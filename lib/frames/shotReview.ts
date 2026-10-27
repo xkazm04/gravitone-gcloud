@@ -27,7 +27,7 @@
 //
 // ─── WHAT IS DELIBERATELY NOT CHECKED ───────────────────────────────────────
 //
-// `sceneSpec.ts:129-133` already refused a verb whitelist and a duration
+// `sceneSpec.ts#parseScene` already refused a verb whitelist and a duration
 // validator over impressions — "Nothing has measured those, and a validator
 // built on an impression rejects good direction with total confidence." That
 // refusal is inherited verbatim and extended: this file does not grade a
@@ -143,27 +143,32 @@ export function reviewShotList(
   block?: StyleBlock,
 ): ShotListReport {
   const checks: ShotCheck[] = [];
-  const beats = new Set(shots.map((s) => s.beatAt)).size;
+  // A beat is named by its id where it has one, its position only where it
+  // has none - the identity rule `unitId` (./picture/unit.ts) writes. Positions
+  // repeat: keyed on `beatAt` alone, two reset beats at one second read as one
+  // reset "carrying two shots" and the beat counts came up short.
+  const beatOf = (s: Shot) => s.beatId ?? s.beatAt;
+  const groups = new Map<string, Shot[]>();
+  for (const s of shots) groups.set(beatOf(s), [...(groups.get(beatOf(s)) ?? []), s]);
+  const beats = groups.size;
 
   /* 1 — the reset holds one thing.
      [R] dynamic-reset: "Fill the silence with one thing. A line, an image, a
      breath. A reset that holds two ideas has spent its whole value carrying
      neither." */
   {
-    const resets = byRole(shots, "reset");
-    const beatsWithResets = new Map<string, Shot[]>();
-    for (const s of resets) beatsWithResets.set(s.beatAt, [...(beatsWithResets.get(s.beatAt) ?? []), s]);
-    const overloaded = [...beatsWithResets.values()].filter((g) => g.length > 1);
+    const resetBeats = [...groups.values()].map((g) => g.filter((s) => s.role === "reset")).filter((g) => g.length > 0);
+    const overloaded = resetBeats.filter((g) => g.length > 1);
     checks.push(
       finalise({
         rule: "reset-holds-one-thing",
         tests: "a reset beat decomposes into exactly one shot",
-        examined: beatsWithResets.size,
+        examined: resetBeats.length,
         verdict: overloaded.length ? "violation" : "pass",
         shots: overloaded.flat().map((s) => s.id),
         detail: overloaded.length
           ? `${overloaded.length} reset beat(s) carry more than one shot`
-          : `${beatsWithResets.size} reset beat(s), each one shot`,
+          : `${resetBeats.length} reset beat(s), each one shot`,
       }),
     );
   }
@@ -174,7 +179,7 @@ export function reviewShotList(
   {
     const firstPeak = shots.findIndex((s) => s.role === "peak");
     const before = firstPeak === -1 ? [] : shots.slice(0, firstPeak).filter((s) => s.role === "reset");
-    const beatsBefore = new Set(before.map((s) => s.beatAt));
+    const beatsBefore = new Set(before.map(beatOf));
     checks.push(
       finalise({
         rule: "one-reset-before-the-peak",
@@ -385,12 +390,12 @@ export function reviewShotList(
      beat layer declared, and a beat with neither was never decomposed. */
   {
     const undeclared = shots.filter((s) => !s.roleDeclared);
-    const undeclaredBeats = new Set(undeclared.map((s) => s.beatAt));
+    const undeclaredBeats = new Set(undeclared.map(beatOf));
     checks.push(
       finalise({
         rule: "beat-roles-were-declared",
         tests: "every beat carried a structural role from the beat layer rather than a hint",
-        examined: new Set(shots.map((s) => s.beatAt)).size,
+        examined: beats,
         verdict: undeclared.length ? "unmeasured" : "pass",
         shots: undeclared.map((s) => s.id),
         detail: undeclared.length
@@ -508,7 +513,7 @@ export function reviewShotList(
  * report covered, and does not.
  */
 export const NOT_CHECKED: readonly string[] = [
-  // Inherited verbatim from `sceneSpec.ts:129-133`.
+  // Inherited verbatim from `sceneSpec.ts#parseScene`.
   "whether a shot's motion is a good move — no verb whitelist, no easing vocabulary. Nothing has measured those.",
   // The refusal `FrameClip` makes, unchanged: the atlas measures how long real
   // trailers HOLD, not how long a generated clip should RUN.

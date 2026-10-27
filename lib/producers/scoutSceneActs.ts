@@ -133,7 +133,9 @@ async function readAct(e: SceneEngines, req: SceneRequest, k: number, ctx: StepC
   if (file === undefined) return fatal("internal", `${c.id} has no keyframe ${k} on its request`);
   const n = req.keyframes.length;
   const timing = sceneTiming(night, { ...c, keyframes: req.keyframes });
-  const deny = denylistOf(night.sources.filter((s) => c.sourceIds.includes(s.id)));
+  // Our own kept idea (rights `ours`) is not a found source: its title is our words, and a recipe read
+  // off our own artboard may say them (spark scout-idea-artboards WP-I4).
+  const deny = denylistOf(night.sources.filter((s) => c.sourceIds.includes(s.id) && s.rights !== "ours"));
   const prior: SceneDraft[] = [];
   for (let i = 1; i < k; i++) {
     const d = draftOf(ctx.outputs.get(readStep(i))?.value["draft"], deny);
@@ -156,7 +158,7 @@ async function readAct(e: SceneEngines, req: SceneRequest, k: number, ctx: StepC
     live: async () => {
       const r = await e.recognize({ image, instruction, schema: SCENE_SCHEMA, prefer: "google" });
       const p = r.provenance;
-      return { value: r.json, ...(p.costUsd === undefined ? { unpriced: `${p.provider} reported no cost for a scene readback` } : { usd: p.costUsd }) };
+      return { value: r.json, served: `${p.provider}/${p.model}`, ...(p.costUsd === undefined ? { unpriced: `${p.provider} reported no cost for a scene readback` } : { usd: p.costUsd }) };
     },
   });
   const where = `${c.id} keyframe ${k}/${n}`;
@@ -189,7 +191,7 @@ async function replicateAct(e: SceneEngines, req: SceneRequest, k: number, ctx: 
     live: async () => {
       const out = await e.generate(gen);
       const p = out.provenance;
-      return { value: { images: out.images, provenance: p }, ...(p.costUsd === undefined ? { unpriced: `${p.provider} reported no cost for the replica still` } : { usd: p.costUsd }) };
+      return { value: { images: out.images, provenance: p }, served: `${p.provider}/${p.model}`, ...(p.costUsd === undefined ? { unpriced: `${p.provider} reported no cost for the replica still` } : { usd: p.costUsd }) };
     },
   });
   const img = got.images[0];

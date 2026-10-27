@@ -77,10 +77,11 @@ const COLOUR = ["ground", "signal", "actors", "roles-surface", "roles-text", "ro
 const TYPE = ["type", "roles-type"];
 const BARS = ["space", "roles-space", "roles-size", "roles-stroke"];
 const RADII = ["radii", "roles-shape", "roles-corner"];
-const ROWS = ["motion", "frame", "roles-layer", "roles-component", "board", "library"];
+const MOTION = ["motion"];
+const FRAME = ["frame", "roles-layer", "board", "library"];
 
 /** Every group id the sections below draw; the page checks the source holds no other. */
-export const DRAWN_GROUPS: readonly string[] = [...COLOUR, ...TYPE, ...BARS, ...RADII, ...ROWS];
+export const DRAWN_GROUPS: readonly string[] = [...COLOUR, ...TYPE, ...BARS, ...RADII, ...MOTION, ...FRAME];
 
 export function TokenSections({ groups }: { readonly groups: Groups }) {
   return (
@@ -129,7 +130,7 @@ export function TokenSections({ groups }: { readonly groups: Groups }) {
         <Spec names={["acts"]} source="lockIn · fadeUp · moved · shake" wide tokens>
           <Motion />
         </Spec>
-        {pick(groups, ["motion"]).map((g) => (
+        {pick(groups, MOTION).map((g) => (
           <Spec key={g.id} names={[g.id]} source={`${g.tokens.length} tokens`} tokens>
             <div className={k.col}>
               {g.tokens.map((t) => (
@@ -144,7 +145,7 @@ export function TokenSections({ groups }: { readonly groups: Groups }) {
         ))}
       </Section>
       <Section id="frame">
-        {pick(groups, ["frame", "roles-layer", "roles-component", "board", "library"]).map((g) => (
+        {pick(groups, FRAME).map((g) => (
           <Spec key={g.id} names={[g.id]} source={`${g.tokens.length} tokens`} tokens>
             <div className={k.col}>
               {g.tokens.map((t) => (

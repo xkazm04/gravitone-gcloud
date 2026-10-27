@@ -7,8 +7,8 @@ import { definePartAct, refuse, unitOf, type ActPlan, type PartActPorts, type Un
 //   still-takes  N takes through the imaging router (default 4), each its own paid unit, its pixels
 //                a blob. The pick is the gate packet's (STEPS-DESIGN §2: still -> pick); the mv
 //                producer's still step reads the adopted take.
-// A still part has NO step record yet (@gt/domain/steps covers the six film kinds only), so the
-// takes live as the job's booked outputs until a `still` record exists - said, not hidden.
+// The `still` step record (@gt/domain/steps/still.ts: the takes as blob refs and the adopted one)
+// receives each take when the binding lands (lib/producers/still.ts); the pick stays the gate's.
 
 export const STILL_ACTS = ["still-takes"] as const;
 export const STILL_TAKES_DEFAULT = 4;

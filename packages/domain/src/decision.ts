@@ -3,6 +3,7 @@ import { z } from "zod";
 import { checkEditPlan, EDIT_DIRECTIVES, PICK_OUTCOMES, type EditPlan } from "./board.ts";
 import type { Parsed } from "./door.ts";
 import type { CandidateId, PacketId } from "./ids.ts";
+import { SOURCES } from "./source.ts";
 
 // A DECISION: one changed verdict on one item of a packet (plan §2.2). This is
 // a line of v1's append-only verdict log (lib/foundry/verdictLog.ts
@@ -27,15 +28,22 @@ export function decisionKey(packet: PacketId, candidate: CandidateId): string {
   return `${packet}::${candidate}`;
 }
 
+// The record's bounds are the WIDEST any source allows, read off the table rather than copied
+// from it (they were the literals 11 and 2000): a source that grows its list or its note would
+// otherwise pass checkVerdict and then be refused at this door. checkVerdict holds the exact one.
+const SPECS = Object.values(SOURCES);
+const REASONS_MAX = Math.max(...SPECS.map((s) => s.maxReasons));
+const NOTE_MAX = Math.max(...SPECS.map((s) => s.noteMax));
+
 export const decisionSchema = z
   .object({
     key: decisionKeySchema,
     /** `null` is "not judged yet" — an undecide (the Board's U) is a decision too. */
     verdict: z.enum(["keep", "reject"]).nullable(),
     /** The source's words for a reject, in its list's order; empty otherwise. */
-    reasons: z.array(z.string().min(1)).max(11),
+    reasons: z.array(z.string().min(1)).max(REASONS_MAX),
     /** The operator's note, where the source keeps one (SOURCES[source].noteMax). */
-    note: z.string().min(1).max(2000).optional(),
+    note: z.string().min(1).max(NOTE_MAX).optional(),
     /** The packet's verdict revision this write produced. A write that changes
      *  nothing bumps nothing (v1), so every logged decision has rev >= 1. */
     rev: z.number().int().positive(),

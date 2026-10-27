@@ -10,6 +10,8 @@ import type { ItemWords, RowWords } from "@gt/ui/board/port";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { patchMv } from "../../../sound/mv/queue.ts";
 import { DROPPED_FILES, readMv, trackTitle } from "../../../sound/mv/store.ts";
+import { readSuno } from "../../../sound/suno/store.ts";
+import { isScoutSunoJob } from "../../../foundry/scout/types.ts";
 import type { MvJob, MvVerdict } from "../../../sound/mv/types.ts";
 import { filePathAbs, SoundError } from "../../../sound/store.ts";
 import {
@@ -78,7 +80,11 @@ async function read(ref: AdapterRef): Promise<Result<MvV1>> {
   if (!pile.ok) return pile;
   const file = await v1Call(() => readMv());
   if (!file.ok) return file;
-  const jobs = file.value.jobs;
+  // A scout visualizer (an mv record over a scout track's clip) is judged on its night's packet, never here.
+  const suno = await v1Call(() => readSuno());
+  if (!suno.ok) return suno;
+  const scout = new Set(suno.value.clips.filter((c) => isScoutSunoJob(c.jobId)).map((c) => c.id));
+  const jobs = file.value.jobs.filter((j) => !(j.source.kind === "clip" && scout.has(j.source.id)));
   const cutoff = cutoffOf(pile.value, jobs.filter(pending).map(finishedAt));
   if (cutoff === undefined) return err("not-found", "no finished video is waiting for a verdict");
   const files: { key: string; abs: string }[] = [];
@@ -177,15 +183,24 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
   const file = await v1Call(() => readMv());
   if (!file.ok) return file;
   const now = new Map(file.value.jobs.map((j) => [j.id, j.verdict]));
+  const marks = [...claim.decisions]
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .flatMap((d) => {
+      const v = verdictOf(d);
+      return v === undefined ? [] : [{ id: candidateOf(d), v }];
+    });
+  // Every job is checked BEFORE the first is written: a permanent refusal (a job gone, or marked
+  // otherwise since) parks the row stuck, and a drop that sorted before the refused job would
+  // already have deleted its render files for an outcome v1 never took whole.
+  for (const { id, v } of marks) {
+    if (!now.has(id)) return fromV1(new SoundError(`no music-video job ${id}`, 404));
+    const held = now.get(id);
+    if (held !== null && held !== undefined && held !== v) return fromV1(new SoundError(`video ${id} is marked ${held} in Settled; this packet would mark it ${v} - judge it there`, 403));
+  }
   // Job by job, as v1's Settled verbs wrote them; a redelivery finds the jobs
   // it already marked and skips them (a drop's files are gone with the first).
-  for (const d of [...claim.decisions].sort((a, b) => a.key.localeCompare(b.key))) {
-    const id = candidateOf(d);
-    const v = verdictOf(d);
-    if (v === undefined) continue;
-    const held = now.get(id);
-    if (held === v) continue;
-    if (held !== null && held !== undefined) return fromV1(new SoundError(`video ${id} is marked ${held} in Settled; this packet would mark it ${v} - judge it there`, 403));
+  for (const { id, v } of marks) {
+    if (now.get(id) === v) continue;
     const r = await v1Call(() => patchMv(id, { verdict: v }));
     if (!r.ok) return r;
   }

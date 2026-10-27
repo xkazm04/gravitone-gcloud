@@ -2,6 +2,8 @@
 // to. Rendered with react-dom/server (Vitest runs without a DOM).
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { Chip } from "../../src/components/chip/Chip.tsx";
 import chip from "../../src/components/chip/Chip.module.css";
@@ -12,11 +14,13 @@ import { PipRow, pipClasses } from "../../src/components/piprow/PipRow.tsx";
 import pip from "../../src/components/piprow/PipRow.module.css";
 import { SourceTag } from "../../src/components/source/SourceTag.tsx";
 import src from "../../src/components/source/SourceTag.module.css";
-import { ChannelBadge } from "../../src/components/channel/ChannelBadge.tsx";
+import { BADGE_CHANNELS, ChannelBadge } from "../../src/components/channel/ChannelBadge.tsx";
+import { CHANNELS } from "@gt/domain/slot";
 import { Ghost } from "../../src/components/ghost/Ghost.tsx";
 import { UpstreamBreak, nodeStates } from "../../src/components/upstream/UpstreamBreak.tsx";
 import ub from "../../src/components/upstream/UpstreamBreak.module.css";
 import { Provenance } from "../../src/components/provenance/Provenance.tsx";
+import { Facts } from "../../src/components/facts/Facts.tsx";
 import { ErrorLine } from "../../src/components/errorline/ErrorLine.tsx";
 import { LedgerLink } from "../../src/components/ledgerlink/LedgerLink.tsx";
 import { waveBars } from "../../src/components/wave/wave.ts";
@@ -24,6 +28,8 @@ import { Wave } from "../../src/components/wave/Wave.tsx";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
 const count = (s: string, re: RegExp): number => (s.match(re) ?? []).length;
+/** The React keys of an element's child array (a duplicate is a row React may drop or repeat). */
+const keysOf = (el: unknown): readonly (string | null)[] => ((el as { props: { children: readonly { key: string | null }[] } }).props.children).map((c) => c.key);
 
 describe("Chip", () => {
   test.each(TONES.filter((t) => t !== "neutral"))("tone %s maps to its class", (t) => {
@@ -52,6 +58,30 @@ describe("Tally", () => {
 
   test("a bare count speaks the count", () => {
     expect(html(h(Tally, { value: 20 }))).toMatch(/>20<\/span><\/span>$/);
+  });
+
+  test("a number groups its thousands, in the drawing and the spoken sentence; a string is the caller's", () => {
+    const t = html(h(Tally, { value: 12345, of: 20000, label: "events" }));
+    expect(t).toContain(`<span aria-hidden="true">12,345/20,000</span>`);
+    expect(t).toMatch(/>events 12,345 of 20,000<\/span><\/span>$/);
+    expect(html(h(Tally, { value: "48.2k" }))).toContain(`aria-hidden="true">48.2k<`);
+  });
+
+  test("one number formatter in @gt/ui: Tally, the floor's figures, the library's counts and the model chips share it", () => {
+    const files: string[] = [];
+    const walk = (dir: string): void => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (/\.(ts|tsx)$/.test(name)) files.push(full);
+      }
+    };
+    walk(join(import.meta.dirname, "../../src"));
+    const sites = files.flatMap((f) => {
+      const code = readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      return code.match(/toLocaleString\(|Intl\.NumberFormat/g)?.map(() => f) ?? [];
+    });
+    expect(sites).toHaveLength(1);
   });
 });
 
@@ -94,6 +124,10 @@ describe("SourceTag, ChannelBadge, Ghost, ErrorLine, LedgerLink", () => {
     expect(c).toContain(">youtube</span>");
   });
 
+  test("the badge channels are the domain's CHANNELS, member for member and in order", () => {
+    expect(BADGE_CHANNELS).toEqual(CHANNELS);
+  });
+
   test("a ghost draws its outlines hidden and speaks its label", () => {
     const g = html(h(Ghost, { count: 3, label: "no projects yet" }));
     expect(count(g, /aria-hidden="true"/g)).toBe(3);
@@ -105,6 +139,8 @@ describe("SourceTag, ChannelBadge, Ghost, ErrorLine, LedgerLink", () => {
     expect(html(h(ErrorLine, { message: msg }))).not.toContain("role=");
     expect(html(h(ErrorLine, { message: msg, live: true }))).toContain(`role="alert"`);
     expect(html(h(ErrorLine, { message: msg }))).toContain(`<span>${msg}</span>`);
+    expect(html(h(ErrorLine, { message: msg }))).toMatch(/>error<\/span><span>publish/);
+    expect(html(h(ErrorLine, { message: msg, live: true }))).not.toContain(">error</span>");
   });
 
   test("a ledger link names its subject", () => {
@@ -122,6 +158,20 @@ describe("UpstreamBreak", () => {
     expect(u).toContain(`${ub.node} ${ub.brk}`);
     expect(u).toContain(">, broke</span>");
     expect(u).toContain(">OAuth token expired</div>");
+  });
+
+  test("a chain naming one step twice draws two nodes with two keys (two upstream parts of one name)", () => {
+    const el = UpstreamBreak({ steps: ["image", "image", "edit"], brokeAt: 0, detail: "image · image not ready" }) as { props: { children: readonly unknown[] } };
+    const keys = keysOf(el.props.children[0]);
+    expect(keys).toHaveLength(3);
+    expect(new Set(keys).size).toBe(3);
+  });
+});
+
+describe("Facts", () => {
+  test("two facts with one term are two rows with two keys (a Ledger event's data may repeat an envelope term)", () => {
+    const keys = keysOf(Facts({ facts: [{ term: "lane", value: "image" }, { term: "lane", value: "image.flux" }] }));
+    expect(new Set(keys).size).toBe(2);
   });
 });
 

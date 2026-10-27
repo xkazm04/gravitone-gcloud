@@ -49,7 +49,7 @@ import { FoundryComposer, initialDrafts, inputOf, type LaneDraft } from "./Compo
 import type { FloorData } from "./load.ts";
 import { Foundry, ShelfFor, Weir, pileHref, shelfCount } from "./LaneCells.tsx";
 import { Month } from "./Month.tsx";
-import { byLane, floorSearch, slotHref, type FloorUrl } from "./model.ts";
+import { byLane, floorSearch, levelOver, slotHref, type FloorUrl } from "./model.ts";
 import { ScheduleLevel } from "./ScheduleLevel.tsx";
 import { SlotLevel, type SlotRead } from "./SlotLevel.tsx";
 import s from "./Floor.module.css";
@@ -158,10 +158,10 @@ export function Floor({ data, initial, produce, calendar, slot, choices }: Floor
       unfocus: () => focus(null),
       launch: () => (active === null ? false : launch(active)),
     },
-    { facts: url.lane === null ? [] : ["lane-focused"], enabled: !url.cal && url.slot === null && url.schedule === null },
+    { facts: url.lane === null ? [] : ["lane-focused"], enabled: !levelOver(url, data.calendar !== null) },
   );
 
-  const rows = laneRows(url.lane, (l) => (shelfCount(l, data.shelf) ?? 0) > 0);
+  const rows = laneRows(url.lane, (l) => shelfCount(l, data.shelf) > 0);
 
   return (
     <div className={s.floor} data-component="Floor" data-hydrated={hydrated ? "" : undefined}>
@@ -198,7 +198,6 @@ export function Floor({ data, initial, produce, calendar, slot, choices }: Floor
               lane={l}
               state={state}
               onFocus={() => focus(l.id)}
-              shelfEmpty={(shelfCount(l.id, data.shelf) ?? 1) === 0}
               foundry={
                 <Foundry
                   work={lanes[l.id]}

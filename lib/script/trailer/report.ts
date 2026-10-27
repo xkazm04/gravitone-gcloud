@@ -27,6 +27,22 @@ export interface StructureReport {
   malformedNote: string;
 }
 
+/** One key per finding, `rule/subject`, with `#2`, `#3` ... on a repeat. Two
+ *  violations can share both (a reset that holds two things AND names a mark the
+ *  cue lacks; a rung that raises two variables AND repeats its predecessor), and
+ *  keyed by `rule/subject` alone they collapse into one: two suggested notes
+ *  carried one id, and a plan closing one of the two read as closing neither.
+ *  The first occurrence keeps the bare key, so existing ids do not move. */
+export function findingKeys(findings: readonly StructureFinding[]): string[] {
+  const seen = new Map<string, number>();
+  return findings.map((f) => {
+    const k = `${f.rule}/${f.subject}`;
+    const n = (seen.get(k) ?? 0) + 1;
+    seen.set(k, n);
+    return n === 1 ? k : `${k}#${n}`;
+  });
+}
+
 export interface StructureOptions {
   /** The shot layer's seam. Without it every magnitude rule reports unmeasured. */
   magnitudeOf?: MagnitudeOf;

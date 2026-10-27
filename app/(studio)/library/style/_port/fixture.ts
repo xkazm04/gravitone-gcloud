@@ -36,17 +36,20 @@ export function door<T extends Parameters<typeof withStatus>[0]>(draft: T): Resu
 }
 
 type Rec = { rev: number; style: Style; at: string };
-type World = { readonly styles: Map<string, Rec>; seq: number; seeded: boolean };
+/** `jobs`: the job ids acts have landed as (one confirm, one job - a second confirm finds it).
+ *  `seeding`: the one seeding in flight or done, shared by every first request (null: not begun,
+ *  or failed and to be tried again). */
+type World = { readonly styles: Map<string, Rec>; readonly jobs: Set<string>; seeding: Promise<Result<void>> | null };
 
 declare global {
   var __gtStyleFixture: World | undefined;
 }
 
-const world = (): World => (globalThis.__gtStyleFixture ??= { styles: new Map(), seq: 0, seeded: false });
+const world = (): World => (globalThis.__gtStyleFixture ??= { styles: new Map(), jobs: new Set(), seeding: null });
 
 /** Start the style universe over (the live lane's reset, beside `resetProduce`). */
 export function resetStyles(): void {
-  globalThis.__gtStyleFixture = { styles: new Map(), seq: 0, seeded: false };
+  globalThis.__gtStyleFixture = { styles: new Map(), jobs: new Set(), seeding: null };
 }
 
 async function recordOf(seed: Seed, media: Media): Promise<Result<Style>> {
@@ -77,16 +80,24 @@ async function recordOf(seed: Seed, media: Media): Promise<Result<Style>> {
   });
 }
 
-async function seeded(media: Media): Promise<Result<World>> {
-  const w = world();
-  if (w.seeded) return ok(w);
+async function seedInto(w: World, media: Media): Promise<Result<void>> {
   for (const seed of SEEDS) {
     const r = await recordOf(seed, media);
     if (!r.ok) return err(r.error.code, `fixture seed ${seed.id}: ${r.error.message}`);
     w.styles.set(seed.id, { rev: 1, style: r.value, at: seed.lock?.at ?? seed.proofs.at(-1)?.at ?? "2026-08-27T07:13:28.768Z" });
   }
-  w.seeded = true;
-  return ok(w);
+  return ok(undefined);
+}
+
+// Two first requests at once (the page's read beside an action) await ONE seeding: a second loop
+// would write every seed back at rev 1 over an op the first had already landed.
+async function seeded(media: Media): Promise<Result<World>> {
+  const w = world();
+  const seeding = (w.seeding ??= seedInto(w, media));
+  const r = await seeding;
+  if (r.ok) return ok(w);
+  if (w.seeding === seeding) w.seeding = null;
+  return r;
 }
 
 const viewOfRec = (r: Rec): StyleView => styleView(r.style, r.rev, r.at);
@@ -135,15 +146,21 @@ export async function recOf(id: string, media: Media): Promise<Result<{ readonly
   return r === undefined ? err("not-found", `no style ${id}`) : ok({ rev: r.rev, style: r.style });
 }
 
-/** An act's landing: one write through the door at the rev the act was priced against. */
-export function land(id: string, rev: number, next: Style, at: string): Result<{ readonly view: StyleView; readonly jobId: string }> {
+/** Whether an act's job has landed already (its confirm is answered by that job, not run again). */
+export const landedJob = (jobId: string): boolean => world().jobs.has(jobId);
+
+/** An act's landing as job `jobId`: one write through the door at the rev the act was priced against. */
+export function land(id: string, rev: number, next: Style, at: string, jobId: string): Result<{ readonly view: StyleView; readonly jobId: string }> {
   const w = world();
   const r = w.styles.get(id);
   if (r === undefined) return err("not-found", `no style ${id}`);
   if (r.rev !== rev) return err("conflict", `${r.style.name} changed while the act was priced — read its receipt again`);
+  // The ratchet holds on a landing as on an op (the real driver's putStyleIn runs it on every write).
+  const blocked = ratchetBlocker(r.style, next);
+  if (blocked !== null) return err("refused", blocked);
   r.style = next;
   r.rev += 1;
   r.at = at;
-  w.seq += 1;
-  return ok({ view: viewOfRec(r), jobId: `job:style-${id}-${w.seq}` });
+  w.jobs.add(jobId);
+  return ok({ view: viewOfRec(r), jobId });
 }

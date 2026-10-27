@@ -12,6 +12,9 @@
 //   · THE TICKET. A commit carries an idempotency ticket minted once per preview token, so a
 //     retried commit whose first attempt landed gets the first answer back, never a second
 //     commit (kernel decision/driver.ts `commit`).
+//   · A COMMIT IN PARTS (spark scout-storyboards). A packet whose source commits in parts (`present.partial`)
+//     is committed with `undecidedAs: "leave"` when the preview the operator confirmed counted cells undecided -
+//     they go on to the remainder packet. Any other packet sends no sweep, and the kernel refuses its undecided.
 //   · THE BEACON. A Server Action cannot outlive its page; the pagehide flush goes out
 //     through `beacon` (navigator.sendBeacon to the board's keepalive route).
 
@@ -25,6 +28,33 @@ import { candidateOfKey, type BoardPacket, type BoardPort, type CommitReceipt, t
 export type BoardVerdict = { readonly verdict: "keep" | "reject"; readonly reasons: readonly string[]; readonly note?: string };
 
 export type Beacon = (id: string, rev: number, changes: readonly VerdictChange[]) => void;
+
+/** A user agent refuses a beacon whose queued data passes 64 KiB; a chunk's body stays under this. */
+export const BEACON_CAP_BYTES = 60_000;
+const encoder = new TextEncoder();
+
+/**
+ * A flush split so that each chunk's `{rev, changes}` body fits one beacon, order kept. The keepalive
+ * route applies each chunk on the packet's current revision, so the chunks are independent writes.
+ */
+export function beaconChunks(rev: number, changes: readonly VerdictChange[], cap: number = BEACON_CAP_BYTES): VerdictChange[][] {
+  const head = encoder.encode(JSON.stringify({ rev, changes: [] })).length;
+  const chunks: VerdictChange[][] = [];
+  let cur: VerdictChange[] = [];
+  let size = head;
+  for (const c of changes) {
+    const n = encoder.encode(JSON.stringify(c)).length + 1;
+    if (cur.length > 0 && size + n > cap) {
+      chunks.push(cur);
+      cur = [];
+      size = head;
+    }
+    cur.push(c);
+    size += n;
+  }
+  if (cur.length > 0) chunks.push(cur);
+  return chunks;
+}
 
 export type BoardGate = {
   readonly gatePort: GatePort<BoardPacket, BoardVerdict, Consequence, CommitReceipt>;
@@ -62,10 +92,14 @@ export function createBoardGate(port: BoardPort, beacon: Beacon, mintTicket: () 
   const revs = new Map<string, number>();
   const previews = new Map<string, Consequence>();
   const tickets = new Map<string, string>();
+  /** The packets whose source commits in parts, from their last load. */
+  const partial = new Set<string>();
 
   const load = async (id: string): Promise<BoardPacket> => {
     const p = value(await port.loadPacket({ id }));
     revs.set(id, p.view.rev);
+    if (p.present.partial === true) partial.add(id);
+    else partial.delete(id);
     return p;
   };
   const revOf = async (id: string): Promise<number> => revs.get(id) ?? (await load(id)).view.rev;
@@ -88,7 +122,8 @@ export function createBoardGate(port: BoardPort, beacon: Beacon, mintTicket: () 
       await revised(id, (baseRev) => port.patch({ id, baseRev, changes: list }));
     },
     keepalive(id, changes) {
-      beacon(id, revs.get(id) ?? 0, [...changes].map(([k, v]) => toChange(k, v)));
+      const rev = revs.get(id) ?? 0;
+      for (const chunk of beaconChunks(rev, [...changes].map(([k, v]) => toChange(k, v)))) beacon(id, rev, chunk);
     },
     stateOf: (v) => ({ verdict: v?.verdict ?? null, reasons: v?.reasons ?? [], note: v?.note ?? null }),
     async previewCommit(id) {
@@ -101,7 +136,8 @@ export function createBoardGate(port: BoardPort, beacon: Beacon, mintTicket: () 
       if (token === undefined || seen === undefined || seen.token !== token) throw new AppError("refused", "commit: preview the consequence first");
       const ticket = tickets.get(token) ?? mintTicket();
       tickets.set(token, ticket);
-      return value(await port.commit({ id, rev: seen.rev, token, ticket }));
+      const leave = partial.has(id) && seen.counts.undecided > 0;
+      return value(await port.commit({ id, rev: seen.rev, token, ticket, ...(leave ? { undecidedAs: "leave" as const } : {}) }));
     },
     history: {
       async undo(id) {

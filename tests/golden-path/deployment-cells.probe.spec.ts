@@ -203,14 +203,22 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/events/stream/route.ts": { door: "access", ok: { GET: "2xx" } },
   // A run file with no run and no path: the store refuses the address.
   "app/api/foundry/file/route.ts": { door: "access", ok: { GET: "4xx" } },
+  // One frame or clip from GRAVITONE_LOCAL_DRAWS: an empty run id (or the folder unset) is the input door's 4xx.
+  "app/api/local-draws/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/import/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
   // The ledger as JSON Lines for agents (app/api/ledger/route.ts). `format=jsonl` is required,
   // and drive() sends no query, so an admitted caller meets the input door's 400.
   "app/api/ledger/route.ts": { door: "access", ok: { GET: "4xx" } },
+  // The agent door (app/api/mcp/route.ts): only a presented CLI token speaks there, so every
+  // authorised caller this lane has (the shared secret, the dev fixture) is refused 403
+  // `mcp-needs-token` before the body is read. No GET: Next answers it 405.
+  "app/api/mcp/route.ts": { door: "access", ok: { POST: "4xx" } },
   // The door a session is made at: public by necessity, so it guards itself.
   // GET answers {kind: "none"} with no cookie, DELETE clears one either way,
   // and POST refuses an empty body as `invalid` before any token is judged.
-  "app/api/session/route.ts": { door: "public", ok: { GET: "2xx", POST: "4xx", DELETE: "2xx" } },
+  // PUT is the landing's "Enter locally" (lib/localEntry.ts): it needs a loopback Host header, which
+  // this probe's requests do not carry, so every cell refuses it; tests/next-server/session.test.ts holds the grant.
+  "app/api/session/route.ts": { door: "public", ok: { GET: "2xx", POST: "4xx", PUT: "4xx", DELETE: "2xx" } },
   "app/api/sound/mv/jobs/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/sound/takes/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
 

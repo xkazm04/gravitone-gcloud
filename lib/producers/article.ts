@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { parseAt } from "@gt/domain/door";
 import { err, errorMessage, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
@@ -12,7 +10,7 @@ import { liveEffects, type Effects } from "@gt/kernel/effects";
 import type { Producer } from "@gt/kernel/job-core";
 import { ackLane, laneHold } from "@gt/kernel/job-queue";
 import { runJob, type RunOptions, type RunReport } from "@gt/kernel/job-run";
-import { enqueue, list, retry } from "@gt/kernel/job";
+import { enqueue, get, list, retry } from "@gt/kernel/job";
 import { processKernel, storeLocation } from "@gt/kernel/process";
 import { launchRun, runReceipt } from "@gt/kernel/records/launch";
 import { loadRun } from "@gt/kernel/records/schema";
@@ -34,6 +32,7 @@ import { cappedTurn, depsThrough, describeTurn, liveTurn, refusedTurn, standInTu
 import { landBlogOnKernel } from "@/lib/decision/v1/sources/articleSlot";
 import { WORKING, type ArticleRun, type ArticleTopic, type CreateRunInput } from "@/lib/articles/types";
 import { OUT_DIRNAME } from "@/lib/fixtures/mode";
+import { blobRootOf } from "@/lib/kernelProcess";
 
 // THE ARTICLE PRODUCER, BOUND (Phase 4, L30) - packages/producers/src/article's ports tied to
 // lib/articles' engine, and the acts every entry point shares: the CLI, the routes, the loop
@@ -66,8 +65,7 @@ export function articleKernel(): Result<ArticleKernel> {
   const location = storeLocation(OUT_DIRNAME);
   const k = processKernel(location);
   if (!k.ok) return k;
-  const blobs = blobStore(location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(location), "blobs"));
-  return ok({ store: k.value.store, fx: liveEffects(k.value.store, blobs) });
+  return ok({ store: k.value.store, fx: liveEffects(k.value.store, blobStore(blobRootOf(k.value.store))) });
 }
 
 const kernelOf = (b: ArticleBinding): Result<ArticleKernel> => (b.kernel === undefined ? articleKernel() : ok(b.kernel));
@@ -184,15 +182,36 @@ export function articleJobsOf(runId: string, store: Store): Result<Job[]> {
   return ok(all.value.filter((j) => j.producer === "article" && j.of.kind === "run" && j.of.id === runId));
 }
 
+/** One job of this run by its id: one row, not the store. Another run's or producer's job under that id is none. */
+function articleJobOf(runId: string, id: string, store: Store): Result<Job | undefined> {
+  const jid = parseAt("job id", jobIdSchema, id);
+  if (!jid.ok) return jid;
+  const r = get(store, jid.value);
+  if (!r.ok) return r.error.code === "not-found" ? ok(undefined) : r;
+  const j = r.value.job;
+  return ok(j.producer === "article" && j.of.kind === "run" && j.of.id === runId ? j : undefined);
+}
+
 const HOLDING: readonly JobState[] = ["queued", "running"];
+
+/** The article jobs at work (queued or running), read off those states only. */
+function holdingJobs(store: Store): Result<Job[]> {
+  const out: Job[] = [];
+  for (const state of HOLDING) {
+    const r = list(store, { state });
+    if (!r.ok) return r;
+    out.push(...r.value.filter((j) => j.producer === "article" && j.of.kind === "run"));
+  }
+  return ok(out);
+}
 
 /** The runs something holds - what v1's readers asked `driverAlive`: a job queued or running, or a live
  *  `.driver` a v1 build left. A store that cannot be read holds nothing, and `unread` says so. */
 export async function heldRuns(runIds: readonly string[], b: ArticleBinding = {}): Promise<{ held: ReadonlySet<string>; unread?: string }> {
   const held = new Set<string>();
   const k = kernelOf(b);
-  const all = k.ok ? list(k.value.store) : k;
-  for (const j of all.ok ? all.value : []) if (j.producer === "article" && j.of.kind === "run" && HOLDING.includes(j.state)) held.add(j.of.id);
+  const all = k.ok ? holdingJobs(k.value.store) : k;
+  for (const j of all.ok ? all.value : []) held.add(j.of.id);
   for (const id of runIds) if (!held.has(id) && (await legacyDriverAlive(id))) held.add(id);
   return all.ok ? { held } : { held, unread: all.error.message };
 }
@@ -207,18 +226,18 @@ export function actOf(run: ArticleRun): ArticleAct {
 /** Enqueue the job for `act` unless it exists: re-delivering an act finds the job it made. */
 function enqueueAct(store: Store, run: ArticleRun, act: ArticleAct, mode: RunMode, actor: Actor, ceilingUsd: number | undefined): Result<string> {
   const id = articleJobId(run.id, act);
-  const jobs = articleJobsOf(run.id, store);
-  if (!jobs.ok) return jobs;
-  if (jobs.value.some((j) => j.id === id)) return ok(id);
+  const held = articleJobOf(run.id, id, store);
+  if (!held.ok) return held;
+  if (held.value !== undefined) return ok(id);
   const r = enqueue(store, { id, of: { kind: "run", id: run.id }, producer: "article", lane: "seat.text", mode, ...(ceilingUsd === undefined ? {} : { ceilingUsd }), correlation: { runId: run.id } }, actor);
   return r.ok ? ok(id) : r;
 }
 
 /** The mode a follow-on act inherits: a dry run's post is the stub's and never lands or spends live. */
 function followMode(store: Store, run: ArticleRun, o: ActOptions, why: string): Result<{ mode: RunMode; ceilingUsd?: number }> {
-  const jobs = articleJobsOf(run.id, store);
-  if (!jobs.ok) return jobs;
-  const gate = jobs.value.find((j) => j.id === articleJobId(run.id, { kind: "gate" }));
+  const found = articleJobOf(run.id, articleJobId(run.id, { kind: "gate" }), store);
+  if (!found.ok) return found;
+  const gate = found.value;
   if (gate?.mode.kind === "dry") return ok({ mode: DRY, ...(gate.ceilingUsd === undefined ? {} : { ceilingUsd: gate.ceilingUsd }) });
   const m = modeOf(o, why);
   if (!m.ok) return m;
@@ -329,9 +348,9 @@ export async function resumeArticle(runId: string, o: ActOptions): Promise<Resul
   const before = await v1(() => readRun(runId));
   if (!before.ok) return before;
   const id = articleJobId(runId, actOf(before.value));
-  const jobs = articleJobsOf(runId, store);
-  if (!jobs.ok) return jobs;
-  const job = jobs.value.find((j) => j.id === id);
+  const found = articleJobOf(runId, id, store);
+  if (!found.ok) return found;
+  const job = found.value;
   if (job?.state === "running") return err("conflict", `run ${runId} is being driven right now (job ${id})`, { detail: "busy" });
   if (job === undefined) {
     // No job to retry: v1's refusal for a run that is not resumable (rejected, landed, at the gate) and its rewind.
@@ -393,8 +412,8 @@ export function loopDriver(o: ActOptions): LoopDriver {
     async driven(runId) {
       const k = kernelOf(o.binding ?? {});
       if (!k.ok) return false;
-      const jobs = articleJobsOf(runId, k.value.store);
-      return jobs.ok && jobs.value.some((j) => j.state === "running" || j.state === "queued");
+      const jobs = holdingJobs(k.value.store);
+      return jobs.ok && jobs.value.some((j) => j.of.id === runId);
     },
   };
 }

@@ -147,7 +147,7 @@ test("a pending proof on the Board, approved there, reads approved in the atelie
   expect(n).toBe(3);
   for (let i = 0; i < n; i++) {
     await tiles(page).nth(i).click();
-    await page.keyboard.press("k");
+    await page.keyboard.press("1");
   }
   await landed(page);
   await page.keyboard.press("Enter");

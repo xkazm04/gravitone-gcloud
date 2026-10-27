@@ -36,18 +36,17 @@ import { claimProblem, evidenceKey, evidenceOf, handLesson, huntLessonBlock, typ
 
 import { fill, LESSON_SCHEMA, promptFile, type ReasonFn } from "./hunt.ts";
 import { rubricMean } from "./ledger.ts";
-import { readHunts, readLedger, readTakes, SoundError, withStore } from "./store.ts";
+import { readHunts, readLedger, readTakes, soundFailure, withStore } from "./store.ts";
 import { TECHNIQUES, type Hunt, type Lesson, type ProviderId, type SoundKind, type SoundTake } from "./types.ts";
 
 export const LESSON_OP_RE = /^[a-z0-9]{6,40}$/;
 const PROVIDERS: readonly ProviderId[] = ["elevenlabs", "suno", "local"];
 
-async function inStore<T>(fn: () => Promise<Result<T>>): Promise<Result<T>> {
+export async function inStore<T>(fn: () => Promise<Result<T>>): Promise<Result<T>> {
   try {
     return await fn();
   } catch (e) {
-    if (e instanceof SoundError) return err(e.status === 404 ? "not-found" : e.status === 400 ? "invalid" : e.status === 409 ? "conflict" : "unavailable", e.message);
-    return err("internal", errorMessage(e), { cause: e });
+    return soundFailure(e);
   }
 }
 

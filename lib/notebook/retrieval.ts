@@ -60,7 +60,10 @@ function citedUrls(sources: readonly { url?: string; locator?: string }[] | unde
   const out: string[] = [];
   for (const s of sources ?? []) {
     if (typeof s.url === "string" && /^https?:\/\//i.test(s.url.trim())) out.push(s.url.trim());
-    if (typeof s.locator === "string") for (const m of s.locator.matchAll(/https?:\/\/[^\s)"'<>]+/gi)) out.push(m[0]);
+    // A locator is prose, so the sentence's own punctuation after an address
+    // ("…/report, p. 4", "…/report.") is not part of the page's path.
+    if (typeof s.locator === "string")
+      for (const m of s.locator.matchAll(/https?:\/\/[^\s)"'<>]+/gi)) out.push(m[0].replace(/[.,;:!?]+$/, ""));
   }
   return [...new Set(out)];
 }
@@ -92,11 +95,21 @@ export function crossCheckRetrieval(
 ): { notebook: Notebook; findings: string[] } {
   if (receipts.length === 0) {
     const g0 = nb.researchGaps?.[0] ?? "";
+    // Addressed like every shape finding, and carrying the answer as its draft:
+    // the turn records a refusal's draft, and a bare string had no path to repair.
     if (!NAMES_MISSING_SEARCH.test(g0))
-      throw new NotebookError([
-        `This run fetched nothing, so researchGaps[0] must say that no search was run (it reads: "${g0.slice(0, 120)}"). ` +
-          `A notebook with no fetched source that does not say so reads as researched.`,
-      ]);
+      throw new NotebookError(
+        [
+          {
+            path: "researchGaps[0]",
+            rule:
+              `This run fetched nothing, so researchGaps[0] must say that no search was run (it reads: "${g0.slice(0, 120)}"). ` +
+              `A notebook with no fetched source that does not say so reads as researched.`,
+            observed: g0.slice(0, 120),
+          },
+        ],
+        nb,
+      );
   }
 
   const fetched = new Set(receipts.map((r) => sameAddress(r.url)));

@@ -1,6 +1,8 @@
 // The Board desks' pure halves: where the cull's cursor goes, what a reason key does under each
 // source's list (1-9, 0, −), the undecided jump, how a blind pick draws, and the commit flow's
 // table. Literal cells and verdicts in, values out.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 import type { PairView } from "@gt/domain/board";
@@ -52,40 +54,39 @@ describe("the matrix", () => {
   });
 });
 
-describe("reason keys follow the source's list in order", () => {
-  test("1-9, 0 and − are the eleven slots; the minus sign is the hyphen", () => {
-    expect(["1", "2", "9", "0", "-", "−"].map(reasonSlot)).toEqual([0, 1, 8, 9, 10, 10]);
-    expect(reasonSlot("K")).toBe(-1);
+describe("reject keys 2-4 follow the run's reason order", () => {
+  test("2, 3 and 4 are the three slots; every other cap is none", () => {
+    expect(["2", "3", "4"].map(reasonSlot)).toEqual([0, 1, 2]);
+    for (const cap of ["1", "5", "0", "-", "K"]) expect(reasonSlot(cap), cap).toBe(-1);
   });
 
-  test("audio's eleven defects: 0 is the tenth, − the eleventh", () => {
+  test("audio's first three defects are the keys; the other eight are the chips'", () => {
     const a = SOURCES.audio;
-    const zero = reasonAct(a.reasons, a.maxReasons, "0", undefined);
-    const minus = reasonAct(a.reasons, a.maxReasons, "−", undefined);
-    expect(zero).toEqual({ kind: "mark", verdict: { verdict: "reject", reasons: ["off-brief"] }, advance: true });
-    expect(minus.kind === "mark" && minus.verdict.reasons).toEqual(["wrong-event"]);
+    expect(reasonAct(a.reasons, a.maxReasons, "2", undefined)).toEqual({ kind: "mark", verdict: { verdict: "reject", reasons: ["smeared-transients"] }, then: "advance" });
+    const four = reasonAct(a.reasons, a.maxReasons, "4", undefined);
+    expect(four.kind === "mark" && four.verdict.reasons).toEqual(["section-bleed"]);
   });
 
   test("on a fresh tile a reason rejects and moves on; on a standing reject it toggles and stays", () => {
     const s = SOURCES.strips;
-    const first = reasonAct(s.reasons, s.maxReasons, "2", undefined);
-    expect(first).toEqual({ kind: "mark", verdict: { verdict: "reject", reasons: ["legibility"] }, advance: true });
-    const added = reasonAct(s.reasons, s.maxReasons, "1", { verdict: "reject", reasons: ["legibility"] });
+    const first = reasonAct(s.reasons, s.maxReasons, "3", undefined);
+    expect(first).toEqual({ kind: "mark", verdict: { verdict: "reject", reasons: ["legibility"] }, then: "advance" });
+    const added = reasonAct(s.reasons, s.maxReasons, "2", { verdict: "reject", reasons: ["legibility"] });
     // Kept in the list's order, not the order pressed.
-    expect(added).toEqual({ kind: "mark", verdict: { verdict: "reject", reasons: ["concept", "legibility"] }, advance: false });
-    const removed = reasonAct(s.reasons, s.maxReasons, "2", { verdict: "reject", reasons: ["concept", "legibility"] });
-    expect(removed).toEqual({ kind: "mark", verdict: { verdict: "reject", reasons: ["concept"] }, advance: false });
+    expect(added).toEqual({ kind: "mark", verdict: { verdict: "reject", reasons: ["concept", "legibility"] }, then: "stay" });
+    const removed = reasonAct(s.reasons, s.maxReasons, "3", { verdict: "reject", reasons: ["concept", "legibility"] });
+    expect(removed).toEqual({ kind: "mark", verdict: { verdict: "reject", reasons: ["concept"] }, then: "stay" });
   });
 
   test("past the source's cap the key is refused, never silently dropped", () => {
-    const s = SOURCES.strips;
-    const full: BoardVerdict = { verdict: "reject", reasons: ["concept", "legibility", "motion"] };
-    expect(reasonAct(s.reasons, s.maxReasons, "4", full)).toEqual({ kind: "refuse", why: "at most 3 reasons" });
+    const s = SOURCES.seeds;
+    const full: BoardVerdict = { verdict: "reject", reasons: ["generic", "not for us"] };
+    expect(reasonAct(s.reasons, s.maxReasons, "4", full)).toEqual({ kind: "refuse", why: "at most 2 reasons" });
   });
 
-  test("a key past the list, or a source with no reasons, refuses", () => {
-    expect(reasonAct(SOURCES.forge.reasons, 4, "5", undefined).kind).toBe("refuse");
-    expect(reasonAct(SOURCES.mv.reasons, 0, "1", undefined)).toEqual({ kind: "refuse", why: "no reasons for this source" });
+  test("a slot past the list is a plain reject that moves on; a cap that is no reject key refuses", () => {
+    expect(reasonAct(SOURCES.mv.reasons, 0, "2", undefined)).toEqual({ kind: "mark", verdict: { verdict: "reject", reasons: [] }, then: "advance" });
+    expect(reasonAct(SOURCES.forge.reasons, 4, "5", undefined)).toEqual({ kind: "refuse", why: "key 5 names no reason" });
   });
 });
 
@@ -143,5 +144,19 @@ describe("the commit flow", () => {
     expect(cycleDirective("more_weight", true)).toBe("free_text");
     expect(noteText("less_weight", "  ")).toBe("less weight");
     expect(noteText("remove", " cut the anecdote ")).toBe("cut the anecdote");
+  });
+});
+
+// The cut review on a phone: the stylesheet is the only place its columns are decided, so the source is the instrument
+// (measured in a 390px page: the player was 36px wide beside the 300px beats column, 354px once stacked).
+describe("the cut review's columns", () => {
+  const css = readFileSync(join(import.meta.dirname, "../src/components/cut/Cut.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  test("stack under the player at the desk's own phone width", () => {
+    expect(css).toMatch(/@media\s*\(max-width:\s*900px\)\s*\{[^}]*\.cut\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  });
+
+  test("keep the side column beside the player above it", () => {
+    expect(css).toMatch(/^\.cut\{[^}]*minmax\(var\(--w-desk-side\),\s*1fr\)/m);
   });
 });

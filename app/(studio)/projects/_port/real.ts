@@ -10,7 +10,7 @@ import type { LaunchedProject, ReceiptMode } from "@gt/domain/produce";
 import { projectSchema } from "@gt/domain/project";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
 import type { Effects } from "@gt/kernel/effects";
-import { get, pause, resume, retry } from "@gt/kernel/job";
+import { cancel, get, pause, resume, retry } from "@gt/kernel/job";
 import { ackLane, move } from "@gt/kernel/job-queue";
 import { launchProject, planReceipt, rerouteOptions } from "@gt/kernel/records/launch";
 import { listProjects, readProject, type ReadContext } from "@gt/kernel/records/read";
@@ -22,9 +22,10 @@ import type { Store } from "@gt/kernel/store";
 
 import type { Confirmed } from "./contract.ts";
 import type { ServerProduce, Who } from "./port.ts";
+import { slug } from "./names.ts";
 import { composeChoices, composerChoices, keptTakes, registryTopics } from "./realChoices.ts";
 import { LANE_DOORS, mintSuffix, type LaunchContext } from "./realLaunch.ts";
-import { holdsView, jobsView } from "./realRead.ts";
+import { floorRunsOpen, holdsView, jobsView } from "./realRead.ts";
 import { confirmReroute, rerouteReceipt } from "./realReroute.ts";
 
 // THE REAL PRODUCE PORT - the ProducePort over L26's records module, L25's jobs and the
@@ -39,8 +40,9 @@ import { confirmReroute, rerouteReceipt } from "./realReroute.ts";
 //   confirms  the receipt is recomputed from what the confirm reads and its token compared
 //             before anything is written (records/launch.ts, one transaction): a stale token
 //             answers the fresh receipt and launches nothing;
-//   acts      pause, resume, retry, earlier/later and acknowledge are the kernel's verbs
-//             (job.ts, job-queue.ts), as the operator: their events name who acted.
+//   acts      pause, resume, retry, earlier/later, acknowledge and cancel are the kernel's verbs
+//             (job.ts, job-queue.ts), as whoever acts (the operator, or the MCP door's agent):
+//             their events name who acted.
 // Nothing here performs a step. The worker (`npm run worker`) or a producer's CLI drives what a
 // launch enqueued; a part whose kind no producer binds yet waits queued, reported by the worker
 // as `unknown` (the kernel's word for work nobody here can do), never failed by it.
@@ -60,7 +62,8 @@ export type RealDeps = {
   readonly mint?: () => string;
 };
 
-const actorOf = (w: Who | undefined): Actor => ({ kind: "operator", id: w?.who ?? "operator" });
+/** Who acts, as the kernel's events name them: the operator unless the caller names another. */
+export const actorOf = (w: Who | undefined): Actor => ({ kind: w?.kind ?? "operator", id: w?.who ?? "operator" });
 
 /** Run `fn`, keeping a thrown AppError's code (a records read throws not-found for a missing project). */
 function guard<T>(fn: () => Result<T>): Result<T> {
@@ -76,14 +79,6 @@ function guard<T>(fn: () => Result<T>): Result<T> {
 function outcome<T, U>(o: { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: AppError }, then: (v: T) => Result<U>): Result<U> {
   return o.ok ? then(o.value) : { ok: false, error: o.error };
 }
-
-const slug = (s: string): string =>
-  s
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40)
-    .replace(/-+$/g, "") || "project";
 
 export function makeRealProduce(deps: RealDeps): ServerProduce {
   const cwd = deps.cwd ?? (() => process.cwd());
@@ -240,10 +235,12 @@ export function makeRealProduce(deps: RealDeps): ServerProduce {
         const line = s.read((r) => r.all("SELECT id FROM jobs WHERE lane = ? AND state IN ('queued', 'planned') ORDER BY ord, n", before.value.lane).map((x) => String(x["id"])));
         if (!line.ok) return line;
         const at = line.value.indexOf(raw);
-        const other = line.value[dir === "earlier" ? at - 1 : at + 1];
-        if (at < 0 || other === undefined) return err("refused", "end of the lane queue");
+        const other = at < 0 ? undefined : line.value[dir === "earlier" ? at - 1 : at + 1];
+        if (at >= 0 && other === undefined) return err("refused", "end of the lane queue");
+        // A job out of the line (running, paused, failed) is the kernel's move to refuse, in its words.
         const r = move(s, id.value, dir, actorOf(who));
         if (!r.ok) return r;
+        if (other === undefined) return err("internal", `job ${raw} moved with no neighbour in its line`);
         const otherId = jobId(other);
         const o = otherId.ok ? jobOf(s, otherId.value) : otherId;
         const name = o.ok ? titleOf(o.value) : other;
@@ -263,10 +260,21 @@ export function makeRealProduce(deps: RealDeps): ServerProduce {
         const r = ackLane(s, lane, actorOf(who));
         if (!r.ok) return r;
         const first = r.value[0];
-        return first === undefined ? err("refused", `${lane} is not held`) : ok({ jobId: first.jobId, note: `${lane} hold acknowledged` });
+        return first === undefined ? err("refused", `lane ${lane} is not held`) : ok({ jobId: first.jobId, note: `${lane} hold acknowledged` });
       }),
 
     listJobs: () => withStore((s) => s.read((r) => jobsView(r, deps.now()))),
-    listHolds: () => withStore((s) => s.read((r) => holdsView(r, new Map(jobsView(r, deps.now()).map((j) => [j.id, j.title]))))),
+    floorRunsOpen: () => withStore((s) => s.read((r) => floorRunsOpen(r))),
+    listHolds: () => withStore((s) => s.read((r) => holdsView(r, () => new Map(jobsView(r, deps.now()).map((j) => [j.id, j.title]))))),
+    // The kernel's cancel (job.ts), refused by its machine for a job that already ended.
+    cancelJob: ({ jobId: raw }, who) =>
+      withStore((s) => {
+        const id = jobId(raw);
+        if (!id.ok) return id;
+        const before = jobOf(s, id.value);
+        if (!before.ok) return before;
+        const r = cancel(s, id.value, actorOf(who));
+        return r.ok ? ok({ jobId: raw, note: `cancelled · was ${before.value.state}` }) : r;
+      }),
   };
 }

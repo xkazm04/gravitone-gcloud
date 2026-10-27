@@ -17,7 +17,9 @@ import type { RunJob, RunWeir, RunsModel } from "./model.ts";
 const STUCK: ReadonlySet<JobState> = new Set(["failed", "interrupted", "cancelled"]);
 /** States that hold a lane now. */
 const HOLDING: ReadonlySet<JobState> = new Set(["running"]);
-const WAITING: ReadonlySet<JobState> = new Set(["queued", "planned", "paused", "interrupted"]);
+/** An interrupted job waits on the operator's look, not on its lane: it is counted with the failed. */
+const WAITING: ReadonlySet<JobState> = new Set(["queued", "planned", "paused"]);
+const NEEDS: ReadonlySet<JobState> = new Set(["failed", "interrupted"]);
 
 /** `14:05` today, `Wed 15 Oct 14:05` otherwise; `≈` when the time is derived. UTC, as the axis is. */
 export function when(t: number, now: number, approx = false): string {
@@ -138,6 +140,17 @@ export function projectsOf(m: RunsModel): { readonly id: string; readonly jobs: 
   return [...ids].sort().map((id) => ({ id, jobs: m.jobs.filter((j) => j.projectId === id).length, slots: m.pins.filter((p) => p.projectId === id).length }));
 }
 
+/** What failed, or was interrupted, and is not the ledger's past: the totals' count and the inspector's list. */
+export const failedOf = (m: RunsModel): RunJob[] => m.jobs.filter((j) => j.from !== "ledger" && NEEDS.has(j.state));
+
+/** The "All lanes" row's floor runs, by the rule Plan counts them with (projects/page.tsx): the
+ *  produce jobs no project owns that are not done - so the row reads the same number on both tabs. */
+export const floorRunsOf = (m: RunsModel): number => m.jobs.filter((j) => j.act !== undefined && j.act.projectId === undefined && j.state !== "done").length;
+
+const counted = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? "" : "s"}`;
+/** A v1-only project's row in the composition list: its bars, counted. */
+export const projectMeta = (p: { readonly jobs: number; readonly slots: number }): string => `${counted(p.jobs, "job")} · ${counted(p.slots, "slot")}`;
+
 export type Totals = { readonly running: number; readonly waiting: number; readonly weir: number; readonly failed: number };
 
 export function totalsOf(m: RunsModel): Totals {
@@ -146,7 +159,7 @@ export function totalsOf(m: RunsModel): Totals {
     running: live.filter((j) => HOLDING.has(j.state)).length,
     waiting: live.filter((j) => WAITING.has(j.state)).length,
     weir: m.weir.filter((w) => !w.done).length,
-    failed: live.filter((j) => j.state === "failed").length,
+    failed: failedOf(m).length,
   };
 }
 
@@ -167,4 +180,10 @@ export function heldMoney(m: RunsModel): { readonly usd: number; readonly audioS
     else audioS += h.amount;
   }
   return { usd, audioS, n: m.holds.length };
+}
+
+/** The held chip's figure: every unit that holds something, so audio seconds are not hidden behind dollars. */
+export function heldLabel(h: { readonly usd: number; readonly audioS: number }): string {
+  const parts = [...(h.usd > 0 ? [`$${h.usd.toFixed(2)}`] : []), ...(h.audioS > 0 ? [`${Math.round(h.audioS)} s`] : [])];
+  return parts.length === 0 ? "$0.00" : parts.join(" · ");
 }

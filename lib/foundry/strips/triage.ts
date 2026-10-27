@@ -1,6 +1,6 @@
 // THE STRIPS TRIAGE WIRE TYPES — the app's half. Shared by the disk layer
-// (./store.ts, server only), the /api/foundry/strips/* routes and the /foundry
-// Strips tab (client). Nothing here imports Node.
+// (./store.ts, server only), the Board's strips packet and the Ledger's strips
+// source (lib/{decision,ledger}/v1/sources/strips.ts). Nothing here imports Node.
 //
 // ./types.ts is the PIPELINE's contract (run.json, the card, the verdict) and
 // is co-owned with pipeline/strips/*; these shapes exist only between the app

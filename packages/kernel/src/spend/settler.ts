@@ -1,5 +1,7 @@
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, ok, type AppError, type Result } from "@gt/domain/errors";
 import type { Effects } from "../effects.ts";
+import { append } from "../events.ts";
+import type { Tx } from "../store.ts";
 import type { SpendClass } from "./core.ts";
 import { bump, release, reserve, settle, type Reservation, type SettleEntry } from "./ledger.ts";
 
@@ -17,11 +19,29 @@ import { bump, release, reserve, settle, type Reservation, type SettleEntry } fr
 // Upgraded: v1 kept a list of closures; here a pending settle is DATA (the
 // reservation id and the entries), and `settle` is idempotent on the
 // reservation, so replaying one that did land after all books nothing twice.
+// A pending settle that can NEVER apply (its reservation was released, expired or is gone) is
+// dropped from the queue, counted in `droppedWrites` and written to the chain as `spend.dropped`
+// (usage-ledgers: count every dropped write); left queued it would poison every later settle.
+//
 // A pending settle that never lands - the process dies first - is the crash
 // case, and the reservation stays `held` until its owner is lapsed, still
 // counted at its estimate (core.ts).
 
 export type Pending = { readonly cls: SpendClass; readonly id: string; readonly entries: readonly SettleEntry[] };
+
+/** A settle that cannot apply because its reservation is closed or gone; retrying it cannot change that. */
+export const unappliable = (e: AppError): boolean => e.code === "refused" || e.code === "not-found";
+
+/** Drop a vendor's figure that can no longer be booked: counted and on the chain, never silent. */
+export function dropPending(t: Tx, p: Pending, why: AppError): void {
+  bump(t, p.cls.id, "droppedWrites", 1);
+  append(t, {
+    actor: { kind: "machine", id: `spend:${p.cls.id}` },
+    type: "spend.dropped",
+    subject: { kind: "reservation", id: p.id },
+    data: { class: p.cls.id, unit: p.cls.unit, entries: p.entries.length, why: why.message },
+  });
+}
 
 export type Settler = {
   /** Settle now, or keep it for the next transaction when the store is busy. */
@@ -40,7 +60,11 @@ export function createSettler(fx: Effects): Settler {
     const r = fx.tx("spend.settle", (t) => {
       for (const p of taken) {
         const s = settle(t, p.cls, { id: p.id, entries: p.entries });
-        if (!s.ok) throw s.error;
+        if (!s.ok) {
+          if (!unappliable(s.error)) throw s.error;
+          dropPending(t, p, s.error);
+          continue;
+        }
         if (!s.value.already) bump(t, p.cls.id, "lateWrites", 1);
       }
       if (extra !== undefined) {

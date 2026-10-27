@@ -89,6 +89,21 @@ async function openStrip(browser: Browser, htmlPath: string, lane: StripLane): P
   return page;
 }
 
+/**
+ * ONE frame of a strip, cold: a fresh page, `renderFrameAt(i)`, a screenshot - nothing encoded, no gate run
+ * (spark stats-reels: a stats idea's tile is its strip's frame 120, the frame renderStrip's poster is). The
+ * same three flags and the same page setup as a full render, so the frame is the one the reel would show.
+ */
+export async function renderFrame(opts: { browser: Browser; htmlPath: string; lane: StripLane; i: number }): Promise<Buffer> {
+  const page = await openStrip(opts.browser, opts.htmlPath, opts.lane);
+  try {
+    await drawFrame(page, opts.i);
+    return await shot(page);
+  } finally {
+    await page.close();
+  }
+}
+
 async function drawFrame(page: Page, i: number): Promise<void> {
   await page.evaluate(
     async ({ i, ms }) => {

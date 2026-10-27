@@ -153,10 +153,20 @@ const renderText = (r: GateSubject) => r.beats.map((b) => b.text).join(" ");
 const sentences = (s: string) =>
   s.split(/(?<=[.!?])\s+/).filter(Boolean);
 
-const has = (hay: string, needle: string | RegExp) =>
-  typeof needle === "string"
-    ? hay.toLowerCase().includes(needle.toLowerCase())
-    : needle.test(hay);
+/** "Does this text contain it" - a question with no memory. A RegExp carrying
+ *  `g` or `y` answers a different one under `.test()`: `lastIndex` survives a
+ *  match, so the same compiled forbid pattern, reused across beats and across a
+ *  draft's renders, resumed mid-string and missed a figure (`g`), or looked only
+ *  at index 0 (`y`). A research run writing `flags: "gi"` is ordinary, so the
+ *  two flags are dropped here rather than trusted (script-draft probe 4e). */
+const stateless = new WeakMap<RegExp, RegExp>();
+const has = (hay: string, needle: string | RegExp) => {
+  if (typeof needle === "string") return hay.toLowerCase().includes(needle.toLowerCase());
+  if (!needle.global && !needle.sticky) return needle.test(hay);
+  let plain = stateless.get(needle);
+  if (!plain) stateless.set(needle, (plain = new RegExp(needle.source, needle.flags.replace(/[gy]/g, ""))));
+  return plain.test(hay);
+};
 
 /** Numerals as a viewer hears them, plus spelled-out numbers, because scripts
  *  are spoken. "one hundred and twenty six thousand" is a figure. */
@@ -522,7 +532,7 @@ export function runGate(
     filedOrAdmitted?: ReadonlySet<string>;
     /** The notebook's own felt conversions. Absent = the fixture's, which is
      *  right only for the fixture notebook — a composed render is gated against
-     *  the notebook it was written from (`/api/script`). */
+     *  the notebook it was written from (`gateDraft`, `source`). */
     scaleConversions?: readonly ScaleConversion[];
     /** Run the connector law (`checkConnectors`). Opt-in so the fixture chains'
      *  pinned figures (pipeline/gate-regression.mts, the script probes) do not
@@ -607,8 +617,9 @@ export function gateChains(
 }
 
 /* ──────────────── the gate over a composed draft (server-safe) ──────────────
-   /api/script's entry, and the reason the opts above grew `scaleConversions`
-   and `connectors`. Every rule reads the notebook the renders were WRITTEN
+   The compose-time entry (v1's /api/script ran it on every candidate; the
+   route retired, and today only the compose probe calls it), and the reason
+   the opts above grew `scaleConversions` and `connectors`. Every rule reads the notebook the renders were WRITTEN
    FROM — its facts, its unknowns, its felt conversions, its conclusions —
    rather than the fixture each default names, and the connector law runs.
    Probes resolve as everywhere else (`probesFor`): the draft's own, else the

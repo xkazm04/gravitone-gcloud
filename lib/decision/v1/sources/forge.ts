@@ -34,6 +34,7 @@ import {
   mediaRefs,
   mintPacket,
   runIdOf,
+  sameVerdict,
   v1By,
   v1Call,
   v1DigestOf,
@@ -149,9 +150,6 @@ export function importVerdict(rec: VerdictRecord): Imported {
   return { verdict: rec.verdict, reasons: known, ...(kept === "" ? {} : { note: kept }), lost, cut };
 }
 
-const sameDecision = (a: { verdict: string | null; reasons: readonly string[]; note?: string }, b: { verdict: string | null; reasons: readonly string[]; note?: string }): boolean =>
-  a.verdict === b.verdict && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "");
-
 /** The v1 record a kernel decision writes: reasons back into the note's leading line. */
 function recordOf(d: Decision): VerdictRecord {
   const note = encodeNote(d.verdict === "reject" ? d.reasons : [], d.note ?? null);
@@ -264,7 +262,8 @@ function packet(v1: ForgeV1): Result<OpenPlan> {
     if (rec === undefined || (rec.verdict !== "keep" && rec.verdict !== "reject")) continue;
     const imp = importVerdict(rec);
     const when = instantOr(rec.at, v1.verdictsAt);
-    if (imp.lost.length > 0) losses.push({ candidate: c.id, grade: "approximate", reason: `v1 reason(s) ${imp.lost.join(", ")} are not forge reasons; kept in the note` });
+    // On a keep EVERY reason is lost (the door gives reasons to a reject only), forge words included.
+    if (imp.lost.length > 0) losses.push({ candidate: c.id, grade: "approximate", reason: rec.verdict === "reject" ? `v1 reason(s) ${imp.lost.join(", ")} are not forge reasons; kept in the note` : `v1 reason(s) on a keep (${imp.lost.join(", ")}) ride in the note; only a reject carries reasons` });
     if (imp.cut) losses.push({ candidate: c.id, grade: "approximate", reason: `v1's note is longer than ${SPEC.noteMax} characters; the packet holds it cut, v1 keeps it whole` });
     if (!when.exact) losses.push({ candidate: c.id, grade: "approximate", reason: `v1 recorded no readable instant (${JSON.stringify(rec.at)}); the verdict map's write time stands in` });
     initial.push({ candidate: c.id, verdict: imp.verdict, reasons: imp.reasons, ...(imp.note === undefined ? {} : { note: imp.note }), by: byOf(rec.by), surface: "v1", at: when.at });
@@ -385,7 +384,7 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
       continue;
     }
     // The operator left the imported verdict as it was: v1's record stays byte-identical.
-    if (current !== undefined && sameDecision(importVerdict(current), d)) continue;
+    if (current !== undefined && sameVerdict(importVerdict(current), d)) continue;
     set[c] = recordOf(d);
   }
   if (Object.keys(set).length > 0 || clear.length > 0) {

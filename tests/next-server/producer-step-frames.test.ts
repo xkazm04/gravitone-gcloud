@@ -10,6 +10,13 @@ import path from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+// The text router is never a test's engine: a drive handed its own (DriveHooks.reason) must ask that one.
+vi.mock("../../lib/text/router.ts", async (load) => ({
+  ...(await load<typeof import("../../lib/text/router.ts")>()),
+  reason: async () => {
+    throw new Error("the text router was asked; the drive's own engine was skipped");
+  },
+}));
 
 import { ok, type Result } from "@gt/domain/errors";
 import type { Holder } from "@gt/domain/job";
@@ -22,11 +29,13 @@ import { compose } from "@gt/kernel/records/write";
 import { reconcileJobSpend } from "@gt/kernel/spend/projection";
 import type { Store } from "@gt/kernel/store";
 
+import { actionFor } from "../../lib/frames/shotPrompt.ts";
 import { framesProducer, framesUnits, type ImagingEngines } from "../../lib/producers/frames.ts";
 import { driveStep, effectsOf, launchPartAct, partActReceipt } from "../../lib/producers/research.ts";
 import { partVerdict } from "../../lib/parts/verdict.ts";
 import { ImagingError } from "../../lib/imaging/errors.ts";
 import type { GenerateRequest, GeneratedImages } from "../../lib/imaging/types.ts";
+import type { TextRequest, TextResult } from "../../lib/text/types.ts";
 
 const dirs: string[] = [];
 afterAll(() => {
@@ -180,6 +189,77 @@ describe("render plates", () => {
   });
 });
 
+// A trailer's units are SHOTS: each plate is asked for its own staged subject (lib/frames/shotPrompt
+// actionFor over the unit's staging), never the explainer's one-emblem "statement" shape.
+const shotUnit = (id: string, at: string, role: string, size: string, plate: Record<string, unknown> = { state: "empty" }) => ({
+  ...unit(id, at, plate),
+  kind: "shot",
+  beatKind: role,
+  plate,
+  staging: { role, roleDeclared: true, pace: "held", size, angle: null, direction: "screen-left", placement: "thirds", seeded: true, basis: "role" },
+});
+
+describe("render plates, a trailer's shots", () => {
+  it("each unsubjected shot plate is booked with its own staged subject, never the statement emblem", async () => {
+    const { store } = universe("fs", [shotUnit("s1", "0:00", "setup", "EWS"), shotUnit("s2", "0:05", "peak", "ECU"), shotUnit("s3", "0:10", "reset", "EWS"), shotUnit("s4", "0:15", "peak", "MS")]);
+    must(await driveStep(framesProducer, store, await confirm(store, "fs", "render-plates"), { dryOnly: true }));
+    const subjects = framesOf(store, "fs").units.map((u) => String(u.plate["subject"]));
+    expect(new Set(subjects).size).toBe(4);
+    for (const x of subjects) expect(x).not.toContain("One large simple emblem");
+    expect(subjects[1]).toContain(actionFor({ role: "peak", size: "ECU", angle: null, direction: "screen-left", placement: "thirds", motion: "" }));
+  });
+
+  it("a stored plate subject keeps priority over the staged one", async () => {
+    const { store } = universe("ft", [shotUnit("s1", "0:00", "peak", "ECU", { state: "empty", subject: "a hand on a lever" })]);
+    must(await driveStep(framesProducer, store, await confirm(store, "ft", "render-plates"), { dryOnly: true }));
+    expect(framesOf(store, "ft").units[0]?.plate["subject"]).toBe("a hand on a lever");
+  });
+});
+
+// A trailer with a composed spine and NO stored frames record: the producer derives the same shot
+// units the editor offers (lib/frames/picture/unit.ts trailerChain), so the act it offers is priced.
+describe("render plates, a trailer's derived shots", () => {
+  const cut = {
+    form: "trailer",
+    id: "cut-tr1",
+    title: "a teaser",
+    rung: "long-cut",
+    lane: "wide-release",
+    movements: [],
+    beats: [
+      { id: "b1", at: "0:00", kind: "cold-open", label: "one light", text: "a light", role: "setup" },
+      { id: "b2", at: "0:16", kind: "rung", label: "closer", text: "closer", role: "rung" },
+      { id: "b3", at: "0:30", kind: "reset", label: "quiet", text: "quiet", role: "reset" },
+      { id: "b4", at: "0:34", kind: "climax", label: "climax", text: "climax", role: "peak" },
+    ],
+  };
+
+  function trailer(id: string): Store {
+    const dir = mkdtempSync(path.join(tmpdir(), "gt-step-frames-"));
+    dirs.push(dir);
+    const k = openKernel(path.join(dir, "k.sqlite"));
+    if (!k.ok) throw k.error;
+    open.push(k.value);
+    const store = k.value.store;
+    must(compose(store, { recipe: "film/trailer" }, OP, { id }));
+    must(writePart(store, { projectId: id, partId: `${id}/script`, baseRev: "current", act: "land", op: { seed: true }, label: "seed", by: { kind: "machine", id: "test" }, next: () => ok({ "script-trailer": { cut, ops: [], head: 0 } }) }));
+    return store;
+  }
+
+  it("the receipt prices one plate per derived shot (not a refusal), and the dry job lands them", async () => {
+    const store = trailer("tr1");
+    const r = must(partActReceipt(store, { projectId: "tr1", partId: "tr1/frames", act: "render-plates" }, framesUnits, { mode: "dry", now: NOW }));
+    expect(r).toMatchObject({ subject: { kind: "part", act: "render-plates" } });
+    const jobId = await confirm(store, "tr1", "render-plates");
+    const run = must(await driveStep(framesProducer, store, jobId, { dryOnly: true }));
+    if (run.outcome !== "done") throw new Error(String(must(get(store, jobId as never)).job.error?.message));
+    expect(run.outcome).toBe("done");
+    const units = framesOf(store, "tr1").units;
+    expect(units.length).toBeGreaterThan(4);
+    expect(units.every((u) => u.plate["state"] === "ready")).toBe(true);
+  });
+});
+
 describe("direct the cut", () => {
   it("a dry pass lands a PROPOSAL and its spend; nothing on the units is applied", async () => {
     const { store } = universe("fd", [unit("u1", "0:00"), unit("u2", "0:05")]);
@@ -189,6 +269,20 @@ describe("direct the cut", () => {
     expect(fr.proposal?.units.length).toBe(2);
     expect(fr.direction?.runs).toBe(1);
     expect(fr.units).toEqual(before);
+  });
+
+  it("LIVE, the direction turn asks the engine the drive was handed (DriveHooks.reason), never the router", async () => {
+    const { store } = universe("fl", [unit("u1", "0:00"), unit("u2", "0:05")]);
+    const asked: string[] = [];
+    const reason = async (req: TextRequest): Promise<TextResult> => {
+      asked.push(req.turn);
+      const scenes = ["0:00", "0:05"].map((beatAt) => ({ beatAt, subject: "a wide quiet plate of soft shapes in even light, nothing in focus", motion: "a slow drift of the shapes toward the right edge", rationale: "fake engine", elements: [], texts: [] }));
+      return { text: JSON.stringify({ scenes }), provenance: { provider: "anthropic", model: "fake-direction", transport: "cloud-api", rung: "primary", turn: "scene-direction", schemaEnforcement: "none", durationMs: 1, costUsd: 0.01 } } as unknown as TextResult;
+    };
+    const jobId = await confirm(store, "fl", "direct-cut", { live: true });
+    const run = must(await driveStep(framesProducer, store, jobId, { dryOnly: false, hooks: { reason } }));
+    expect(run.outcome === "done" ? asked : must(get(store, jobId as never)).job.error?.message).toEqual(["scene-direction"]);
+    expect(framesOf(store, "fl").proposal?.units.length).toBe(2);
   });
 
   it("an act the part cannot do is refused on its receipt, before anything is priced to run", () => {

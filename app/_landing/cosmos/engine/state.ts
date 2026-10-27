@@ -3,7 +3,7 @@
 // strict-mode remount, a return to `/`) starts clean.
 
 import type { Galaxy, GalaxyCategory, GalaxyFamily, GalaxyTemplate, GalaxyType } from "../types";
-import type { CosmosOptions, CosmosTier } from "./index";
+import type { CosmosTier } from "./index";
 import type { CarMetrics, Geo, Layout } from "./layout";
 import type { Life } from "./life";
 import type { Governor } from "./perf";
@@ -55,7 +55,6 @@ export interface Cx {
   root: HTMLElement;
   els: Els;
   life: Life;
-  opts: CosmosOptions;
   tier: CosmosTier;
   /** calm motion: reduced motion (read once at mount) or the still tier */
   RM: boolean;
@@ -126,6 +125,8 @@ export interface Cx {
   hotEl: HTMLElement | null;
   lastPtr: string;
   searchOpen: boolean;
+  /** what had the focus when the search slip opened; it gets it back when the slip closes unpicked */
+  searchFrom: HTMLElement | null;
   SIDX: SearchEntry[] | null;
   sel: number;
   sres: SearchEntry[];
@@ -135,7 +136,7 @@ export interface Cx {
   coverT: ReturnType<typeof setTimeout> | 0;
 }
 
-export function createCx(root: HTMLElement, galaxy: Galaxy, life: Life, opts: CosmosOptions, tier: CosmosTier, els: Els, raster: Raster, RM: boolean): Cx {
+export function createCx(root: HTMLElement, galaxy: Galaxy, life: Life, tier: CosmosTier, els: Els, raster: Raster, RM: boolean): Cx {
   const types = galaxy.types || [],
     templates = galaxy.templates || [],
     library = galaxy.library || [],
@@ -149,7 +150,6 @@ export function createCx(root: HTMLElement, galaxy: Galaxy, life: Life, opts: Co
     root,
     els,
     life,
-    opts,
     tier,
     RM,
     raster,
@@ -192,6 +192,7 @@ export function createCx(root: HTMLElement, galaxy: Galaxy, life: Life, opts: Co
     hotEl: null,
     lastPtr: "mouse",
     searchOpen: false,
+    searchFrom: null,
     SIDX: null,
     sel: 0,
     sres: [],

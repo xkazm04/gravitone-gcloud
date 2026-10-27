@@ -17,8 +17,8 @@
 
 import { test, expect } from "@playwright/test";
 
-import { acceptInto, restoreAs, resumeStaged, stagedOf } from "@/lib/script/history";
-import { BASELINE, engineRunWith, receiptOf, type Note, type Version } from "@/lib/script/versions";
+import { acceptInto, restoreAs } from "@/lib/script/history";
+import { BASELINE, engineRunWith, overrideFrom, overrideLineOf, receiptOf, type Note, type Version } from "@/lib/script/versions";
 import { IMPACT } from "@/lib/script/impact";
 import { recalibrate, recalibrateFromPlan } from "@/lib/script/recalibrate";
 import { chainOf } from "@/lib/script/chainBase";
@@ -88,18 +88,6 @@ test("case 4: a restored version's receipt says so — not the simulated-fallbac
   expect(line).not.toContain("simulated");
 });
 
-test("case 6: a staged run whose baseline moved, or that is damaged, is reported lost with its reason", () => {
-  const candidate = recalibrate(v3, [note("f", "descope", 4)], "v4", 7, ctx());
-  const moved = resumeStaged(stagedOf(candidate, "v3"), { baselineId: "v4" });
-  expect(moved).toMatchObject({ lost: "baseline-moved", label: candidate.label, notes: 1 });
-  expect(resumeStaged({ baselineId: "v3", candidate: { id: 4 } }, { baselineId: "v3" })).toMatchObject({ lost: "unreadable" });
-  expect(resumeStaged("nonsense", { baselineId: "v3" })).toMatchObject({ lost: "unreadable" });
-  // A staged run built on another notebook is not resumed onto this one.
-  expect(resumeStaged(stagedOf(candidate, "v3", "D1"), { baselineId: "v3", digest: "D2" })).toMatchObject({
-    lost: "notebook-moved",
-  });
-});
-
 test("case 7: history only grows — accepting a restore appends it and truncates nothing", () => {
   const out = acceptInto([v2, v3], restoreAs(v2, v3, "v4", 9)!);
   expect(out.map((v) => v.id)).toEqual(["v2", "v3", "v4"]);
@@ -108,3 +96,24 @@ test("case 7: history only grows — accepting a restore appends it and truncate
   expect(out[0].override).toEqual(override);
 });
 
+
+// THE OVERRIDE RECEIPT (versions.ts GateOverride), which nothing pinned: the
+// Part's accept-over-gate writes `overrideFrom(gate, at)` onto the version and
+// the version list draws `overrideLineOf(v)`. Its stated rules are "FROZEN AT
+// THE CLICK, never recomputed" and a stamp that is "UTC and fixed-width, not
+// localised". Measured before this case, over the 26 golden specs that import
+// lib/script: two seeded breaks of those rules - aliasing the rollup's blocking
+// list, a local-time stamp - survived every one of them.
+test("case 8: an override receipt is frozen at the click, stamped in UTC, and absent without an override", () => {
+  const gate = { byRender: {}, violations: 1, unmeasured: 0, enforced: 40, blocked: true, blocking: ["reversal-chain"] };
+  const at = Date.UTC(2026, 9, 25, 7, 5);
+  const o = overrideFrom(gate, at);
+  gate.blocking.push("adjudication");
+  gate.violations = 3;
+  expect(o, "the receipt moved with the rollup after the click").toEqual({ at, violations: 1, blocking: ["reversal-chain"], enforced: 40 });
+  expect(overrideLineOf({ ...v4, override: o })).toBe(
+    "accepted over the gate — 1 blocking finding on reversal-chain, 40% of the gate enforced · overridden 2026-10-25 07:05 UTC",
+  );
+  expect(overrideLineOf({ ...v4, override: { ...o, violations: 2, blocking: ["a", "b"] } })).toContain("2 blocking findings on a, b");
+  expect(overrideLineOf(v4), "a version with no override carries no receipt line").toBeNull();
+});

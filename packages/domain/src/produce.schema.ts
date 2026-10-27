@@ -2,23 +2,34 @@ import { UNIT_INPUTS } from "@gt/catalog/recipes";
 import { z } from "zod";
 
 import { usdSchema } from "./estimate.ts";
-import type { ComposerInput, NativeProducer } from "./produce.ts";
+import { IMAGE_MECHANISMS, RECEIPT_MODES, type ComposerInput, type NativeProducer } from "./produce.ts";
 
 // THE DOORS for the produce contract (./produce.ts, zod-free). Kept apart so a client that only
 // holds the shapes never loads zod; a server action parses here before the kernel sees anything.
 // The composer union is pinned to its contract type by `satisfies`; the two optional-field shapes
 // cannot be (zod's output spells an optional as `T | undefined`, which exactOptionalPropertyTypes
-// keeps apart from an absent key), so test/produce.test.ts holds them to the contract instead.
+// keeps apart from an absent key), so test/plan.test.ts holds them to the contract instead.
 
 const text = z.string().trim().min(1).max(4000);
 
-export const composerInputSchema = z.union([
-  z.object({ lane: z.literal("image"), text, mechanisms: z.array(z.enum(["text", "ref-early"])).min(1), styleId: z.string().min(1) }).strict(),
-  z.object({ lane: z.literal("image"), text, mechanisms: z.array(z.enum(["text", "ref-early"])).min(1), sweep: z.literal(true) }).strict(),
-  z.object({ lane: z.literal("article"), text, topic: z.string().trim().min(1) }).strict(),
-  z.object({ lane: z.literal("audio"), text, kind: z.enum(["music", "sfx"]) }).strict(),
-  z.object({ lane: z.literal("video"), text, subject: z.string().trim().min(1) }).strict(),
-]) satisfies z.ZodType<ComposerInput>;
+// The five composers, written once over the sentence rule each door takes: the launch's and the
+// estimate's unions held two copies of every branch, and a branch dropped from one was invisible
+// to tsc and to every test.
+const mechanisms = z.array(z.enum(IMAGE_MECHANISMS)).min(1);
+const composers = (sentence: z.ZodString) =>
+  z.union([
+    z.object({ lane: z.literal("image"), text: sentence, mechanisms, styleId: z.string().min(1) }).strict(),
+    z.object({ lane: z.literal("image"), text: sentence, mechanisms, sweep: z.literal(true) }).strict(),
+    z.object({ lane: z.literal("article"), text: sentence, topic: z.string().trim().min(1) }).strict(),
+    z.object({ lane: z.literal("audio"), text: sentence, kind: z.enum(["music", "sfx"]) }).strict(),
+    z.object({ lane: z.literal("video"), text: sentence, subject: z.string().trim().min(1) }).strict(),
+  ]);
+
+export const composerInputSchema = composers(text) satisfies z.ZodType<ComposerInput>;
+
+/** The estimate's door: the composer union with the sentence allowed empty (the receipt is drawn before
+ *  a word is typed; the launch takes `composerInputSchema`). Shared by the Floor's action and the MCP door. */
+export const composerEstimateSchema = composers(z.string().max(4000)) satisfies z.ZodType<ComposerInput>;
 
 /**
  * A producer's own launch (./produce.ts `ProducerRunInput`). Not pinned by `satisfies`: every
@@ -27,6 +38,8 @@ export const composerInputSchema = z.union([
  */
 const ref = z.string().trim().min(1).max(400);
 const soundId = z.string().regex(/^[A-Za-z0-9_-]{1,80}$/, "a sound-store id is letters, digits, _ and -");
+/** The most leaves one hunt render asks for (the desk's render ask): the run input and the desk's own door both read it. */
+export const HUNT_RENDER_MAX = 48;
 const knob = (max: number) => z.number().int().positive().max(max);
 export const producerRunInputSchema = z.union([
   z
@@ -49,7 +62,7 @@ export const producerRunInputSchema = z.union([
   z.object({ producer: z.literal("forge"), plan: ref }).strict(),
   z.object({ producer: z.literal("dojo"), cycle: ref }).strict(),
   // The sound store's id grammar (lib/sound/store.ts), and at most the desk's render ask (48).
-  z.object({ producer: z.literal("hunt"), hunt: soundId, kind: z.enum(["music", "sfx"]), leaves: z.array(soundId).min(1).max(48) }).strict(),
+  z.object({ producer: z.literal("hunt"), hunt: soundId, kind: z.enum(["music", "sfx"]), leaves: z.array(soundId).min(1).max(HUNT_RENDER_MAX) }).strict(),
 ]);
 
 export const NATIVE_PRODUCERS = ["extract", "article", "mv", "suno", "strips", "forge", "dojo", "hunt"] as const satisfies readonly NativeProducer[];
@@ -76,4 +89,4 @@ export const partPatchSchema = z
   .refine((p) => p.option !== undefined || p.units !== undefined, { message: "a part change names an option, units, or both" });
 
 export const ceilingUsdSchema = usdSchema.positive().max(10_000);
-export const receiptModeSchema = z.enum(["dry", "live"]);
+export const receiptModeSchema = z.enum(RECEIPT_MODES);

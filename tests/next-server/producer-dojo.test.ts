@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -14,7 +14,7 @@ import { retry } from "@gt/kernel/job";
 import type { Kernel } from "@gt/kernel/kernel";
 import { assertReconciled, reconcileJobSpend } from "@gt/kernel/spend/projection";
 import { defineDojoGoogle, type DojoGooglePorts } from "@gt/producers/dojo/define";
-import { dojoLocalSteps, runnerOf } from "@gt/producers/dojo/plan";
+import { dojoLocalSteps, localOrder, runnerOf } from "@gt/producers/dojo/plan";
 import type { Served } from "@gt/producers/extract/define";
 
 import { dojoGooglePorts, driveDojo, effectsFor, launchDojo } from "../../lib/producers/dojo.ts";
@@ -77,6 +77,22 @@ describe.skipIf(PYTHON === undefined)("the local plan is one function in two lan
   });
 });
 
+describe.skipIf(PYTHON === undefined)("the serial-lane render order is one rule in two languages", () => {
+  // An arm whose engine is null or "" is the default engine (wan) on both sides: the plan's units are "in the runner's own render order".
+  const spec = { stack: "local", media: "video", pairs: [{ id: "p1", baseline: { prompt: "a", engine: null }, challenger: { prompt: "b", engine: "h3-ref2va" } }, { id: "p2", baseline: { prompt: "c", engine: "" }, challenger: { prompt: "d", engine: "wan" } }] };
+  const want = ["p1--baseline", "p2--baseline", "p2--challenger", "p1--challenger"];
+
+  it("Node's localOrder and Python's dojo_video_h3.order agree on a null or empty engine", () => {
+    expect(localOrder(spec, "video-serial-lanes").map((u) => `${u.pair}--${u.arm}`)).toEqual(want);
+    const script = ["import json, sys", "sys.path.insert(0, 'pipeline/foundry')", "import dojo_video_h3", `spec = json.loads(${JSON.stringify(JSON.stringify(spec))})`, "print(json.dumps([p['id'] + '--' + a for p, a in dojo_video_h3.order(spec)]))"].join("\n");
+    const r = py(universe(), ["-c", script]);
+    expect(r.status, r.stderr).toBe(0);
+    const got = parseJsonAt("python order", z.array(z.string()), r.stdout.trim());
+    if (!got.ok) throw got.error;
+    expect(got.value).toEqual(want);
+  });
+});
+
 describe.skipIf(PYTHON === undefined)("stack purity: a cycle names its bill, or nothing runs", () => {
   it("a spec with no stack is refused in v1's words - by runnerOf, by the launcher before any receipt, by dojo_run.py with exit 1", () => {
     const r = runnerOf({ media: "image", pairs: [] });
@@ -96,6 +112,21 @@ describe.skipIf(PYTHON === undefined)("stack purity: a cycle names its bill, or 
     const direct = py(u, ["-c", ["import sys", "sys.path.insert(0, 'pipeline/foundry')", "import dojo_job", "try:", "    print(dojo_job.runner_of({'media': 'image', 'pairs': []}))", "except SystemExit as e:", "    print('REFUSED', e.code)"].join("\n")]);
     expect(direct.stdout).toContain("REFUSED");
     expect(direct.stdout).toContain("never guesses which bill");
+  });
+
+  it("a refusal names the actual cause, in both languages: only google video is 'no lane'", () => {
+    const say = (r: ReturnType<typeof runnerOf>) => (r.ok ? "" : r.error.message);
+    const local = say(runnerOf({ stack: "local", media: "audio", pairs: [] }));
+    expect(local).toContain("no runner for stack=local media=audio");
+    expect(local).not.toContain("google video");
+    expect(say(runnerOf({ stack: "google", media: "video", pairs: [] }))).toContain("google video has no lane");
+    const script = ["import sys", "sys.path.insert(0, 'pipeline/foundry')", "import dojo_job", "for spec in ({'stack': 'local', 'media': 'audio'}, {'stack': 'google', 'media': 'video'}):", "    try:", "        dojo_job.runner_of(spec)", "    except SystemExit as e:", "        print('REFUSED', e.code)"].join("\n");
+    const r = py(universe(), ["-c", script]);
+    expect(r.status, r.stderr).toBe(0);
+    const [loc, goog] = r.stdout.trim().split(/\r?\n/);
+    expect(loc).toContain("no runner for stack=local media=audio");
+    expect(loc).not.toContain("google video");
+    expect(goog).toContain("google video has no lane");
   });
 
   it("the stack decides the lane: local is gpu.local, google is cloud.google", () => {
@@ -206,7 +237,7 @@ const hostB: Holder = { bootId: "boot-b", pid: 502, host: "box" };
 const RUN = { holder: hostA, alive: () => true, sleep: async () => {} } as const;
 
 type Fake = { calls: string[]; ports: DojoGooglePorts };
-function fakeGoogle(root: string, script: { readonly generateUsd?: number; readonly unpricedReadback?: boolean; readonly overBudget?: boolean } = {}): Fake {
+function fakeGoogle(root: string, script: { readonly generateUsd?: number; readonly unpricedReadback?: boolean; readonly overBudget?: boolean; readonly throwGenerate?: string; readonly shortBy?: number } = {}): Fake {
   const calls: string[] = [];
   const disk = dojoGooglePorts(root);
   const ports: DojoGooglePorts = {
@@ -214,7 +245,8 @@ function fakeGoogle(root: string, script: { readonly generateUsd?: number; reado
     async generate({ prompt, count }): Promise<Served<readonly string[]>> {
       calls.push(`generate:${prompt}`);
       if (script.overBudget === true) throw new AppError("budget", "The imaging spend ceiling for this window is reached.");
-      return { value: Array.from({ length: count }, () => PNG.toString("base64")), model: "google/fake-pixels", costUsd: script.generateUsd ?? 0.09 };
+      if (script.throwGenerate !== undefined) throw new Error(script.throwGenerate);
+      return { value: Array.from({ length: count - (script.shortBy ?? 0) }, () => PNG.toString("base64")), model: "google/fake-pixels", costUsd: script.generateUsd ?? 0.09 };
     },
     async recognize(): Promise<Served<unknown>> {
       calls.push("recognize");
@@ -285,6 +317,42 @@ describe("a google cycle as a job, every call metered", () => {
     expect(job.error?.code).toBe("budget");
     expect(job.failStreak).toBe(0);
     expect(fake.calls).toHaveLength(1);
+    expect(job.spend.unpriced, "a refusal never reached the vendor").toBe(0);
+    k.close();
+  });
+
+  it("a generate that throws after reaching the vendor books a row for every call", async () => {
+    const u = universe();
+    cycle(u, "gt", GOOGLE);
+    const k = kernelOf(u);
+    const id = await launchGoogle(k, u, "gt", "live");
+    const fake = fakeGoogle(u.training, { throwGenerate: "socket hang up after the request was accepted" });
+    const r = await driveDojo(k.store, u.store, id, { ...RUN, producer: defineDojoGoogle(fake.ports) });
+    expect(r.ok).toBe(true);
+    const job = jobOf(k, id);
+    expect(job.state).toBe("failed");
+    expect(fake.calls.length).toBeGreaterThan(0);
+    expect(job.spend.unpriced, "one unpriced row per failed call").toBe(fake.calls.length);
+    const why = k.store.read((t) => t.all("SELECT reason FROM spend_unpriced WHERE job_id = ?", id));
+    expect(why.ok && why.value.every((row) => String(row["reason"]).includes("socket hang up"))).toBe(true);
+    expect(k.store.read((t) => assertReconciled(t, id)).ok).toBe(true);
+    k.close();
+  });
+
+  it("a short generate keeps what it paid for and stops for a human: the breaker never re-buys the arm", async () => {
+    const u = universe();
+    const dir = cycle(u, "gs", { ...GOOGLE, repeats: 3 });
+    const k = kernelOf(u);
+    const id = await launchGoogle(k, u, "gs", "live");
+    const fake = fakeGoogle(u.training, { shortBy: 1 });
+    const r = await driveDojo(k.store, u.store, id, { ...RUN, producer: defineDojoGoogle(fake.ports) });
+    expect(r.ok).toBe(true);
+    const job = jobOf(k, id);
+    expect(job.state).toBe("failed");
+    expect(job.error?.message).toContain("returned 2 of 3");
+    expect(fake.calls.filter((c) => c.startsWith("generate:")), "generate calls until the job ends").toHaveLength(1);
+    const kept = ["r1", "r2", "r3"].map((r) => existsSync(path.join(dir, "pairs", `g1--baseline--${r}.png`)));
+    expect(kept, "images kept").toEqual([true, true, false]);
     k.close();
   });
 

@@ -105,6 +105,36 @@
       "owner": "gravity"
     },
     {
+      "key": "text.research",
+      "name": "Research a subject for a project part",
+      "description": "A research turn: a prompt and optional schema in, a sourced answer out; served by the retrieval rung when TEXT_RETRIEVE=1 and by the reasoning door otherwise, plus the follow-up questions on an active research document.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/producers/research.ts -> lib/turns/kinds/research.ts -> lib/text/router.ts::retrieve()/reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.1-pro-preview"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.ad-ideas",
+      "name": "Draft ad ideas from a research document",
+      "description": "Turns a research document and the operator request into a set of ad ideas against IDEAS_SCHEMA.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/producers/research.ts -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.1-pro-preview"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.ad-scenarios",
+      "name": "Draft ad scenarios from a research document",
+      "description": "Turns a research document and the operator request into ad scenarios against SCENARIOS_SCHEMA.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/producers/script.ts -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.1-pro-preview"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.voice-fx",
       "name": "Write a voice-fx chain from a description",
       "description": "Turns the operator's words for a character voice (an echo, a ghost, a broken radio) into ONE effect chain of at most eight stages (pipeline/VOICE-FX-PROMPT.md), held to @gt/domain/audio.fx's stage kinds and bounds at the door - an out-of-bounds answer is refused with its path, never clamped - and rendered by the audio sidecar as a new take on the same line.",

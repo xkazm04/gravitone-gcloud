@@ -76,6 +76,30 @@ describe("relaunchIn - another lane", () => {
   });
 });
 
+describe("relaunchIn - who may put a failed job back in a queue", () => {
+  const agent: Actor = { kind: "agent", id: "athena" };
+  it.each(["failed", "interrupted"] as const)("refuses an agent's re-route of a %s job onto another lane, moves nothing, and lets the operator", (state) => {
+    const s = store();
+    launched(s, "film/trailer");
+    const id = "job:part:p1/research";
+    const key = "research/google/gemini-3.1-pro-preview";
+    const ended = state === "failed" ? { error: { code: "internal" as const, message: "the step refused its input" } } : { interruption: { at: "2026-10-16T08:30:00.000Z", holder: { bootId: "boot-a", pid: 1, host: "box" } } };
+    must(s.tx((t) => putJob(t, { ...loadJob(t, id).job, state, ...ended })));
+    const refused = s.tx((t) => moveRouteIn(t, { jobId: id, key, now: NOW }, agent));
+    expect(refused.ok ? "moved" : `${refused.error.code}: ${refused.error.message}`).toBe(`refused: job ${id}: only an operator re-routes a ${state} job; agent athena may not`);
+    expect(job(s, id).state).toBe(state);
+    expect(must(s.read((r) => r.get("SELECT 1 AS x FROM jobs WHERE id = ?", `${id}~2`)))).toBeUndefined();
+    const moved = must(s.tx((t) => relaunchIn(t, { jobId: id, key, now: NOW }, OP)));
+    expect(moved.jobId).toBe(`${id}~2`);
+  });
+  it("lets an agent move a waiting job onto another lane", () => {
+    const s = store();
+    launched(s, "film/trailer");
+    const moved = must(s.tx((t) => relaunchIn(t, { jobId: "job:part:p1/research", key: "research/google/gemini-3.1-pro-preview", now: NOW }, agent)));
+    expect(moved.jobId).toBe("job:part:p1/research~2");
+  });
+});
+
 describe("rerouteIn - the same lane", () => {
   it("steers the job in place and moves the row's option, in the caller's transaction: a rollback leaves neither", () => {
     const s = store();

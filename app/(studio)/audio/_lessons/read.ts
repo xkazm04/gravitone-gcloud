@@ -14,14 +14,17 @@ import type { Read } from "../_audio/read.ts";
 // problem the lesson answered, and the link back to the map. Nothing pending is read: there is
 // nothing pending to read (an engine draft is never stored).
 
-export type LessonsView = { readonly kind: Kind; readonly lessons: Read<readonly LessonRow[]> };
+/** `hunts`: why the hunt store did not read, when it did not - the rows then carry no idea. */
+export type LessonsView = { readonly kind: Kind; readonly lessons: Read<readonly LessonRow[]>; readonly hunts: string | null };
 
 export async function readLessons(kind: Kind): Promise<LessonsView> {
   const [l, h] = await Promise.all([listLessons(kind), readHunts().then((f) => ({ ok: true as const, value: f.hunts }), (e: unknown) => ({ ok: false as const, error: errorMessage(e) }))]);
-  if (!l.ok) return { kind, lessons: { ok: false, error: l.error.message } };
+  const hunts = h.ok ? null : `hunts: ${h.error}`;
+  if (!l.ok) return { kind, lessons: { ok: false, error: l.error.message }, hunts };
   const ideas = new Map(h.ok ? h.value.map((x) => [x.id, x.idea] as const) : []);
   return {
     kind,
+    hunts,
     lessons: {
       ok: true,
       value: l.value.map((x) => ({

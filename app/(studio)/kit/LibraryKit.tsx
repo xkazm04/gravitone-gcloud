@@ -16,6 +16,7 @@ import { LibraryGlyph, KINDS } from "@gt/ui/components/library/LibraryGlyph.tsx"
 import { ColumnsHead, LibraryColumns, LibraryRow, RowList } from "@gt/ui/components/library/LibraryRow.tsx";
 import { LibraryTile, TileGrid, TileSlot, type LibraryCard } from "@gt/ui/components/library/LibraryTile.tsx";
 import { Lineage } from "@gt/ui/components/library/Lineage.tsx";
+import { LookStrip, type LookThumb } from "@gt/ui/components/library/LookStrip.tsx";
 import { FacetGroup, Rail, type RailGroup } from "@gt/ui/components/library/Rail.tsx";
 import { SetSummary } from "@gt/ui/components/library/SetSummary.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
@@ -29,13 +30,20 @@ const card = (id: string, over: Partial<LibraryCard> & Pick<LibraryCard, "kind" 
 
 const CARDS: readonly LibraryCard[] = [
   card("image-0001", { kind: "image", title: "The exit · frame 0546", meta: "import · the-exit", state: "reference", face: { kind: "image", url: "/deck-art/template-cinematic.webp" }, chips: ["the exit", "deck-art"] }),
-  card("plate-0256", { kind: "plate", title: "Chalk Argument · build key flip", meta: "prompt-only · s450", state: "ratified", face: { kind: "image", url: "/trials/google/chalk-argument/flywheel.jpg" }, chips: ["hand made", "chalk", "dojo"] }),
+  card("plate-0256", { kind: "plate", title: "Chalk Argument · build key flip", meta: "prompt-only · s450", state: "ratified", face: { kind: "image", url: "/presets/chalk-argument.jpg" }, chips: ["hand made", "chalk", "dojo"] }),
   card("style-0006", { kind: "style", title: "Data Neon", meta: "graphic · extracted", state: "ratified", locked: true, face: { kind: "image", url: "/presets/data-neon.jpg" }, chips: ["graphic", "flat vector", "saturated vivid"] }),
   card("style-0008", { kind: "style", title: "Glass Harbor", meta: "cinematic · readback", state: "candidate", face: { kind: "swatch", name: "Glass Harbor", sub: "photoreal · complementary split", palette: ["#6a2d1f", "#1f5a43"] }, chips: ["cinematic", "photoreal"] }),
   card("audio-0457", { kind: "audio", title: "Melancholic risers · take 8", meta: "0:02", state: "ratified", source: "derived", face: { kind: "wave", peaks: Array.from({ length: 48 }, (_, i) => 0.25 + 0.7 * Math.abs(Math.sin(i * 0.41) * Math.cos(i * 0.13))) }, chips: ["melancholic", "sfx"] }),
   card("doc-0017", { kind: "doc", title: "Czech · note 17", meta: "localization · 17 techniques", state: "reference", date: null, face: { kind: "paper", title: "Czech · note 17", foot: "localization" }, chips: ["localization", "16+"] }),
   card("motion-0031", { kind: "motion", title: "Physics · E42 · clip", meta: "webm · edu-physics", face: { kind: "poster", url: "/clips/presets/blueprint.jpg", video: "/clips/presets/blueprint.webm" }, chips: ["physics", "clip"] }),
+  card("character-0002", { kind: "character", title: "Sofia", meta: "aged 29 · slim build · 2 looks", state: "ratified", face: { kind: "image", url: "/presets/paper-relief.jpg" }, chips: ["under 30", "slim", "dating sim"] }),
   card("video-0003", { kind: "video", title: "Peak and Fall · ad spot 8", meta: "video-0003 · captions vtt", state: "rejected", attention: "unreadable", face: { kind: "designed", lead: "video", name: "Peak and Fall · ad spot 8", tail: "video-0003 · captions vtt", palette: ["#6a4220", "#1d3d63"] }, chips: ["ad", "vtt"] }),
+];
+
+const LOOKS: readonly LookThumb[] = [
+  { key: "risograph-two-colour", image: "/presets/paper-relief.jpg", label: "risograph-two-colour", sub: "risograph two-colour print" },
+  { key: "35mm-anamorphic", image: "/presets/newsprint-cutout.jpg", label: "35mm-anamorphic", sub: "ultra-photoreal portrait" },
+  { key: "2026-10-23-2", image: "/presets/chalk-argument.jpg", label: "2026-10-23-2", sub: "ultra-photoreal portrait", inert: true },
 ];
 
 const v = (value: string, count: number, selected = false) => ({ value, label: value.replace(/-/g, " "), count, selected });
@@ -47,6 +55,9 @@ const GROUPS: readonly RailGroup[] = [
   { key: "project", label: "projects", section: "collections", values: [{ value: "prj-night-drive", label: "Night Drive · album video", count: 40, selected: false }] },
   { key: "source", label: "source", section: "origin", values: [v("fixture", 1013), v("derived", 112)] },
 ];
+
+/** One set's kinds, for the rail and the summary alike, as the screen hands both page.kindCounts. */
+const KIND_COUNTS = { all: 4875, image: 850, plate: 1841, style: 9, motion: 350, audio: 1125, video: 150, doc: 550 };
 
 const LINEAGE = [
   { role: "run", refs: [{ kind: "facet" as const, group: "run", value: "2026-09-01-dojo-cycle-7", label: "2026-09-01-dojo-cycle-7", ledger: "/ledger?q=2026-09-01-dojo-cycle-7", mono: true }] },
@@ -61,14 +72,15 @@ export function LibrarySection() {
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set(["mood"]));
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [pressed, setPressed] = useState(false);
-  const face: Face = { kind: "image", url: "/trials/google/chalk-argument/flywheel.jpg" };
+  const [look, setLook] = useState("35mm-anamorphic");
+  const face: Face = { kind: "image", url: "/presets/chalk-argument.jpg" };
   return (
     <Section id="library">
       <Spec names={["Rail", "FacetGroup", "LibraryGlyph"]} source="library/Rail.tsx">
         <div className={k.frame} data-role="lib-rail" style={{ ["--frame" as string]: "17em" }}>
           <Rail
             kind={kind}
-            kindCounts={{ all: 4875, image: 850, plate: 1841, style: 9, motion: 350, audio: 1125, video: 150, doc: 0 }}
+            kindCounts={KIND_COUNTS}
             groups={GROUPS}
             closed={closed}
             expanded={expanded}
@@ -156,13 +168,20 @@ export function LibrarySection() {
             of={4875}
             kind="all"
             states={{ reference: 1400, candidate: 3, ratified: 961, rejected: 1132, unjudged: 1379 }}
-            kinds={{ image: 850, plate: 1841, style: 9, motion: 350, audio: 1125, video: 150, doc: 550 }}
+            kinds={KIND_COUNTS}
             newest={CARDS.flatMap((c) => (c.face.kind === "image" ? [{ id: c.id, title: c.title, url: c.face.url }] : []))}
             onState={() => {}}
             onKind={setKind}
             onItem={setSel}
           />
         </div>
+      </Spec>
+      <Spec names={["LookStrip"]} source="library/LookStrip.tsx" wide>
+        <Row label="doors · figure">
+          <div data-role="lib-looks" style={{ width: "25em" }}>
+            <LookStrip looks={LOOKS.map((l) => (l.key === look ? { ...l, pressed: true } : l))} onPress={(key) => setLook((x) => (x === key ? "" : key))} />
+          </div>
+        </Row>
       </Spec>
       <Spec names={["FaceView"]} source="library/Face.tsx" wide>
         <Row label="preview">

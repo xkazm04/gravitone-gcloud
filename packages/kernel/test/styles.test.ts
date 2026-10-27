@@ -11,10 +11,8 @@ import { verify } from "../src/events.ts";
 import { openKernel, type Kernel } from "../src/kernel.ts";
 import type { Store } from "../src/store.ts";
 import type { StyleDraft } from "../src/styles/core.ts";
-import { applyStyleOp, catalogueRevIn, putStyleIn, readStyle } from "../src/styles/driver.ts";
-import { draftFromV1Theme, importV1ThemeIn } from "../src/styles/v1theme.ts";
+import { applyStyleOp, catalogueRevIn, readStyle } from "../src/styles/driver.ts";
 import { exportStylesJson, writeStylesExport } from "../src/styles/export.ts";
-import { draftFromV1, importV1In, readV1Catalogue } from "../src/styles/v1.ts";
 import { addProofsIn, adoptStyleIn, createStyleIn, recordForgeEvidenceIn } from "../src/styles/writers.ts";
 import { must, scratch, steppingClock } from "./helpers.ts";
 
@@ -95,6 +93,19 @@ describe("the forge commit's catalogue half (v1 commitRun, kept)", () => {
     expect(must(readStyle(s, "a")).style.evidence).toHaveLength(2);
     expect(count(s, "SELECT count(*) AS n FROM events")).toBe(events);
   });
+  it("a retry after ANOTHER run committed is still the same write: no revision, no event, the order kept", () => {
+    const s = store();
+    must(s.tx((t) => createStyleIn(t, draft("a"), FORGE, { kind: "test", replace: false })));
+    must(s.tx((t) => recordForgeEvidenceIn(t, "run-1", t.at, [keep("a", "x")], FORGE)));
+    must(s.tx((t) => recordForgeEvidenceIn(t, "run-2", t.at, [keep("a", "y")], FORGE)));
+    const before = must(readStyle(s, "a"));
+    const events = count(s, "SELECT count(*) AS n FROM events");
+    const again = must(s.tx((t) => recordForgeEvidenceIn(t, "run-1", t.at, [keep("a", "x")], FORGE)));
+    expect(again.touched).toEqual([]);
+    expect(must(readStyle(s, "a")).rev).toBe(before.rev);
+    expect(must(readStyle(s, "a")).style.evidence.map((e) => e.run)).toEqual(["run-1", "run-2"]);
+    expect(count(s, "SELECT count(*) AS n FROM events")).toBe(events);
+  });
   it("refuses a commit naming a style the store does not hold, writing nothing", () => {
     const s = store();
     const r = s.tx((t) => recordForgeEvidenceIn(t, "run-1", t.at, [keep("ghost", "x")], FORGE));
@@ -135,6 +146,20 @@ describe("adopt, in place (v1 adopt.ts)", () => {
     adopted(s, "p");
     const again = s.tx((t) => adoptStyleIn(t, "p", { block: BLOCK, proofs: [] }, OP));
     expect(again.ok ? "" : again.error.message).toContain("duplicate it");
+  });
+});
+
+describe("a judgement that changes nothing", () => {
+  it("is refused as unchanged when only the note's whitespace differs, or an empty note meets none", () => {
+    const s = store();
+    adopted(s, "p", 2);
+    op(s, "p", { kind: "judge-proof", proofId: "p0", state: "approved", note: "reads as one scene" });
+    for (const [proofId, note] of [["p0", "  reads as one scene "], ["p1", ""]] as const) {
+      const rev = must(readStyle(s, "p")).rev;
+      const r = applyStyleOp(s, { styleId: "p", baseRev: rev, op: { kind: "judge-proof", proofId, state: proofId === "p0" ? "approved" : "pending", note } }, OP);
+      expect(r.ok ? r.value.kind : r.error.code).toBe("invalid");
+      expect(must(readStyle(s, "p")).rev).toBe(rev);
+    }
   });
 });
 
@@ -224,40 +249,6 @@ describe("the lock gate (v1 canLock / lockBlocker), refused at the write", () =>
   });
 });
 
-describe("a v1 theme in (the wave B import's entry point)", () => {
-  const theme = (over: Record<string, unknown> = {}) => ({
-    id: "th-1", name: "Ink", origin: "preset", presetId: "flat-vector", block: BLOCK, elements: ["chart"], createdAt: 0, updatedAt: 0,
-    proofs: [{ id: "old", label: "v1", state: "approved", createdAt: Date.parse("2026-09-01T00:00:00.000Z") }],
-    ...over,
-  });
-  it("a theme v1 already locked imports LOCKED, grandfathered, under the id projects already name", () => {
-    const s = store();
-    const d = must(draftFromV1Theme(theme({ lockedAt: Date.parse("2026-09-02T00:00:00.000Z") }), () => BLOB(3)));
-    expect(must(s.tx((t) => importV1ThemeIn(t, d, OP)))).toBe("created");
-    const row = must(readStyle(s, "v1-theme:th-1"));
-    expect(row.style).toMatchObject({ status: "locked", lock: { by: "v1", grandfathered: true }, origin: { kind: "preset", presetId: "flat-vector" } });
-    expect(must(s.tx((t) => importV1ThemeIn(t, d, OP)))).toBe("same");
-    const ev = must(s.read((r) => r.get("SELECT data FROM events WHERE type = 'style.imported'")));
-    expect(String(ev?.["data"])).toContain('"grandfathered":true');
-  });
-  it("a theme not yet locked imports as a draft and meets the new gate", () => {
-    const s = store();
-    const d = must(draftFromV1Theme(theme(), () => BLOB(3)));
-    must(s.tx((t) => importV1ThemeIn(t, d, OP)));
-    const out = op(s, "v1-theme:th-1", { kind: "lock" });
-    expect(out.kind === "refused" ? out.reason : out.kind).toContain("cannot lock: approve 3 more problems");
-    expect(out.view).toMatchObject({ status: "candidate", lock: { legacySheet: true } });
-  });
-  it("a lock made here never claims the grandfather rule, and a write cannot add it", () => {
-    const s = store();
-    const d = must(draftFromV1Theme(theme({ lockedAt: Date.parse("2026-09-02T00:00:00.000Z") }), () => BLOB(3)));
-    must(s.tx((t) => importV1ThemeIn(t, d, OP)));
-    const before = must(readStyle(s, "v1-theme:th-1"));
-    const r = s.tx((t) => putStyleIn(t, before, { ...before.style, lock: { at: before.style.lock?.at ?? "", by: "v1" } }, { kind: "x", op: null, by: OP, type: "style.edited", data: {} }));
-    expect(r.ok ? "" : r.error.message).toContain("a lock is one-way");
-  });
-});
-
 describe("one transaction, one event, one revision", () => {
   it("a stale base writes nothing and answers the truth", () => {
     const s = store();
@@ -330,32 +321,37 @@ describe("the git export (styles.json for the Python readers)", () => {
       dir.dispose();
     }
   });
-});
-
-describe("v1's catalogue in (the one-time import, and the hand-edit path after it)", () => {
-  const v1 = JSON.stringify({
-    styles: [
-      { id: "painted-3d", name: "Painted 3D", family: "animation", status: "proven", origin: { kind: "readback" }, observables: { render_mode: "painterly" }, recipe: "Paint.", negative: "photo",
-        evidence: [{ run: "r1", scene: "a", mechanism: "m", verdict: "keep", at: "2026-08-26T18:21:52.962Z" }, { run: "r2", scene: "b", mechanism: "m", verdict: "keep", at: "" }] },
-      { id: "x", name: "X", family: "f", status: "candidate", origin: { kind: "extracted", source: "e1" }, observables: {}, recipe: "R.", negative: "", evidence: [],
-        exemplars: [{ kind: "extract", run: "e1", file: "sources/s01.png", role: "source" }, { kind: "extract", run: "e1", file: "gone.png", role: "replica", settled: "no-usable-fix" }] },
-      { id: "broken", name: "" },
-    ],
-  });
-  it("creates, then is idempotent, then carries a hand edit of the catalogue half only", () => {
+  it("answers a file it cannot write as `unavailable`, never a throw, and leaves no temp", () => {
     const s = store();
-    const cat = must(readV1Catalogue(v1));
-    expect(cat.refused.map((r) => r.index)).toEqual([2]);
-    const media = (run: string, file: string) => (file === "gone.png" ? undefined : BLOB(run.length + file.length));
-    const reports = cat.styles.map((x) => draftFromV1(x, media, "2026-10-17T00:00:00.000Z"));
-    expect(reports[1]?.missing).toEqual(["e1/gone.png"]);
-    expect(must(s.tx((t) => importV1In(t, reports, OP))).map((o) => o.result)).toEqual(["created", "created"]);
-    expect(must(readStyle(s, "painted-3d")).style).toMatchObject({ status: "proven", evidence: [{ by: "operator" }, { by: "operator", at: "2026-10-17T00:00:00.000Z" }] });
-    expect(must(s.tx((t) => importV1In(t, reports, OP))).map((o) => o.result)).toEqual(["same", "same"]);
-    const edited = must(readV1Catalogue(v1.replace('"recipe":"Paint."', '"recipe":"Paint, thicker."').replace('"evidence":[{"run":"r1"', '"evidence":[{"run":"r9"')));
-    const out = must(s.tx((t) => importV1In(t, edited.styles.map((x) => draftFromV1(x, media, "2026-10-17T00:00:00.000Z")), OP)));
-    expect(out.map((o) => o.result)).toEqual(["edited", "same"]);
-    expect(must(readStyle(s, "painted-3d")).style).toMatchObject({ recipe: "Paint, thicker.", evidence: [{ run: "r1" }, { run: "r2" }] });
+    adopted(s, "p", 1);
+    const dir = scratch("styles-export-unwritable");
+    try {
+      const file = path.join(dir.dir, "no-such-dir", "styles.json");
+      const r = writeStylesExport(s, file);
+      expect(r.ok ? "" : `${r.error.code}: ${r.error.message}`).toBe(`unavailable: cannot write ${file}`);
+      expect(existsSync(path.dirname(file))).toBe(false);
+    } finally {
+      dir.dispose();
+    }
+  });
+  it("reads the catalogue once per export: one list, one revision", () => {
+    const s = store();
+    adopted(s, "p", 1);
+    must(s.tx((t) => createStyleIn(t, draft("q"), FORGE, { kind: "test", replace: false })));
+    const dir = scratch("styles-export-reads");
+    try {
+      const file = path.join(dir.dir, "styles.json");
+      const sql: string[] = [];
+      const spy: Store = {
+        ...s,
+        tx: (fn) => s.tx((t) => fn({ ...t, at: t.at, get: (q, ...p) => (sql.push(q), t.get(q, ...p)), all: (q, ...p) => (sql.push(q), t.all(q, ...p)) })),
+      };
+      expect(must(writeStylesExport(spy, file))).toMatchObject({ changed: true, styles: 2 });
+      expect(readFileSync(file, "utf8")).toBe(must(exportStylesJson(s)));
+      expect(sql.filter((q) => q.includes("FROM styles"))).toHaveLength(1);
+      expect(sql.filter((q) => q.includes("FROM style_ops"))).toHaveLength(1);
+    } finally {
+      dir.dispose();
+    }
   });
 });
-

@@ -11,11 +11,13 @@
 // exist yet must not be a destination: a 404 behind a nav entry is the "hidden entry with a
 // reachable destination" app-shell entitlement-gating forbids, from the other side. The
 // Floor (Phase 3, `/floor`, plan §8.6) and the Ledger (Phase 2) flipped to `built: true` in
-// the changes that shipped their pages. Projects and Library are v1's routes until their phases
-// replace them, and are links out of this world until then.
+// the changes that shipped their pages. Every section is a (studio) route since Phase 6 wave C
+// retired v1's pages, so none is a link out of this world any more.
+
+import { SCOUT_PILE_SOURCES } from "./facts.ts";
 
 export type Section = {
-  readonly id: "floor" | "projects" | "runs" | "library" | "audio" | "ledger" | "kit";
+  readonly id: "floor" | "projects" | "runs" | "scout" | "library" | "audio" | "ledger" | "kit";
   readonly label: string;
   readonly href: string;
   readonly built: boolean;
@@ -29,14 +31,22 @@ export const SECTIONS: readonly Section[] = [
   // Runs is a Projects view (plan §2.1) the prototype's header also named on its own; it is
   // built in Phase 2 at /projects/runs while /projects is still v1's list.
   { id: "runs", label: "Runs", href: "/projects/runs", built: true, group: "work" },
+  // The Scout module (operator, 2026-10-23: "add item in header menu to access the route"): /scout is the
+  // decision graph over every night and seed batch, linking the packets waiting for triage (../scout/page.tsx).
+  { id: "scout", label: "Scout", href: "/scout", built: true, group: "work" },
   { id: "library", label: "Library", href: "/library", built: true, group: "record" },
   { id: "audio", label: "Audio", href: "/audio", built: true, group: "record" },
   { id: "ledger", label: "Ledger", href: "/ledger", built: true, group: "record" },
   { id: "kit", label: "Kit", href: "/kit", built: true, group: "system" },
 ];
 
+/** A scout night's or seed batch's packet address: the sources are facts.ts SCOUT_PILE_SOURCES, the one set. */
+const SCOUT_PACKET = new RegExp(`^/board/pkt(:|%3A)(${[...SCOUT_PILE_SOURCES].join("|")})(:|%3A)`);
+
 /** The section a pathname is in: the longest href that prefixes it on a segment boundary. */
 export function sectionOf(pathname: string): Section["id"] | null {
+  // A scout night's packet and a seed batch's live on the Board's address, and are the Scout section's pages.
+  if (SCOUT_PACKET.test(pathname)) return "scout";
   let best: Section | null = null;
   for (const s of SECTIONS) {
     const hit = pathname === s.href || pathname.startsWith(`${s.href}/`);

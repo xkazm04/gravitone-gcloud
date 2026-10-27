@@ -7,7 +7,7 @@
 // receipt, and it stays disarmed - naming what it needs - until product, proposition and CTA are
 // written (v1's button looked enabled over an empty brief). Picking is an op, and it can be
 // changed or undone like any other (v1 could not unpick).
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { AdBriefField, PartView, ResearchData } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
@@ -36,19 +36,30 @@ const FIELDS: readonly { readonly f: AdBriefField; readonly label: string; reado
   { f: "mustInclude", label: "must include", wide: true },
 ];
 
+/** What a draft is written as: the must-include list is comma separated. */
+const fieldOf = (f: AdBriefField, draft: string): string | readonly string[] => (f === "mustInclude" ? draft.split(",").map((x) => x.trim()).filter((x) => x !== "") : draft);
 const asText = (v: string | readonly string[]): string => (typeof v === "string" ? v : v.join(", "));
 
-function BriefField({ f, label, value, missing, onCommit }: { readonly f: AdBriefField; readonly label: string; readonly value: string | readonly string[]; readonly missing: boolean; readonly onCommit: (v: string | readonly string[]) => void }) {
+function BriefField({ f, label, value, missing, busy, onCommit }: { readonly f: AdBriefField; readonly label: string; readonly value: string | readonly string[]; readonly missing: boolean; readonly busy: boolean; readonly onCommit: (v: string | readonly string[]) => void }) {
   const [draft, setDraft] = useState(asText(value));
   const [base, setBase] = useState(value);
   if (base !== value) {
     setBase(value);
     setDraft(asText(value));
   }
+  // The island declines a write while another is in flight (PartEditor `write`): a blur that lands
+  // inside a round trip is held and sent when the trip ends, not shown as saved and dropped.
+  const held = useRef(false);
   const commit = (): void => {
     if (draft === asText(value)) return;
-    onCommit(f === "mustInclude" ? draft.split(",").map((x) => x.trim()).filter((x) => x !== "") : draft);
+    if (busy) held.current = true;
+    else onCommit(fieldOf(f, draft));
   };
+  useEffect(() => {
+    if (!held.current || busy) return;
+    held.current = false;
+    if (draft !== asText(value)) onCommit(fieldOf(f, draft));
+  }, [busy, f, draft, value, onCommit]);
   return (
     <label className={cx(missing && s.missing)}>
       {label}
@@ -122,7 +133,7 @@ export function AdsBriefEditor({ frame, send, busy, error, data: d }: EditorProp
             <div className={s.brief} aria-label="brief" role="group">
               {FIELDS.map((x) => (
                 <div key={x.f} className={x.wide === true ? s.wide : undefined}>
-                  <BriefField f={x.f} label={x.label} value={d.brief[x.f]} missing={d.missing.includes(x.f)} onCommit={(value) => send({ op: "set-brief", field: x.f, value })} />
+                  <BriefField f={x.f} label={x.label} value={d.brief[x.f]} missing={d.missing.includes(x.f)} busy={busy} onCommit={(value) => send({ op: "set-brief", field: x.f, value })} />
                 </div>
               ))}
             </div>
@@ -189,7 +200,7 @@ export function AdsBriefEditor({ frame, send, busy, error, data: d }: EditorProp
               )}
               <p className={s.risk}>{`risk — ${idea.risk}`}</p>
               <div className={s.acts}>
-                {idea.id === d.picked ? <Chip label="picked" tone="emerald" casing="lower" /> : <Button label="pick" size="sm" tone="emerald" shortcut={{ mode: "part.research", verb: "open" }} onPress={() => pick(idea.id)} />}
+                {idea.id === d.picked ? <Chip label="picked" tone="emerald" casing="lower" /> : <Button label="pick" size="sm" tone="emerald" shortcut={{ mode: "part.research", verb: "open" }} disabled={busy} onPress={() => pick(idea.id)} />}
               </div>
             </>
           ),

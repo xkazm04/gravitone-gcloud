@@ -2,7 +2,7 @@
 // movement that does not exist would otherwise fall out of every craft rule and
 // report nothing. Split out of `../structure.ts` (the door re-exports it).
 
-import type { TrailerCut } from "@/lib/script/trailer/types";
+import { SPINE_RANK, type TrailerCut } from "@/lib/script/trailer/types";
 import { CITE, type StructureFinding } from "@/lib/script/trailer/structureTypes";
 import { movementById, where } from "@/lib/script/trailer/readers";
 
@@ -48,6 +48,19 @@ export function checkGraph(cut: TrailerCut): StructureFinding[] {
         rule: "graph", subject: b.id, verdict: "violation",
         detail: `Beat names movement "${b.movement}", which does not exist. Beats belong to a movement — that is the whole point of the container — so this beat is outside every act-level rule.`,
         ...where(b), cites: CITE.graph,
+      });
+    }
+  }
+
+  // A role the spine does not rank is a stored record the type no longer
+  // describes. checkSpine used to index LEGAL_KINDS with it and throw; it now
+  // skips the movement, and this row is where the defect is reported.
+  for (const m of cut.movements) {
+    if (!Object.hasOwn(SPINE_RANK, m.role)) {
+      out.push({
+        rule: "graph", subject: m.id, verdict: "violation",
+        detail: `Movement "${m.label}" declares role "${m.role}", which is not a part of the spine (${Object.keys(SPINE_RANK).join(" / ")}). No act-level rule can place it.`,
+        cites: CITE.graph,
       });
     }
   }

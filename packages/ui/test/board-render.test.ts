@@ -1,6 +1,7 @@
 // The desks' markup, rendered with react-dom/server: what a tile says aloud, that a blind pair
 // draws no label and no machine pick before the operator's pick, that the commit button names
 // what is still open, and that the consequence panel shows every outward act verbatim.
+import { readFileSync } from "node:fs";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
@@ -8,17 +9,21 @@ import { describe, expect, test } from "vitest";
 import type { Consequence, PacketView, PairView } from "@gt/domain/board";
 import { parseAt } from "@gt/domain/door";
 import { candidateIdSchema, packetIdSchema } from "@gt/domain/ids";
-import { SOURCES } from "@gt/domain/source";
+import { MEDIA_LANES } from "@gt/domain/lane";
+import { reasonVocabulary } from "@gt/domain/source";
 import type { Result } from "@gt/domain/errors";
 
 import type { BoardPacket } from "../src/board/port.ts";
 import { ConsequencePanel } from "../src/components/consequence/ConsequencePanel.tsx";
+import { cullFacts } from "../src/components/cull/CullFoot.tsx";
 import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
 import { IdeaList } from "../src/components/cull/IdeaList.tsx";
 import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
 import { VariantCard } from "../src/components/cull/VariantCard.tsx";
+import { beatNote, CutReview, seekTo, verdictNote, withNote } from "../src/components/cut/CutReview.tsx";
+import { CommitButton } from "../src/components/desk/Desk.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
-import { BlindPair } from "../src/components/pair/BlindPair.tsx";
+import { BlindPair, canPick, defaultRevealMs, REVEAL_MS } from "../src/components/pair/BlindPair.tsx";
 
 const must = <T>(r: Result<T>): T => {
   if (!r.ok) throw r.error;
@@ -29,7 +34,6 @@ const PID = must(parseAt("test", packetIdSchema, "pkt:test:1"));
 const img = (id: string, row: string) => ({ id: cid(id), row, url: `/${id}.png`, media: { sha256: "0".repeat(64), bytes: 1, mime: "image/png" }, grades: [] });
 
 function packet(over: Partial<PacketView>, present: BoardPacket["present"]): BoardPacket {
-  const spec = SOURCES[over.source ?? "strips"];
   return {
     view: {
       id: PID,
@@ -42,7 +46,7 @@ function packet(over: Partial<PacketView>, present: BoardPacket["present"]): Boa
       decisions: [],
       undecided: 0,
       canUndo: false,
-      reasons: { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax },
+      reasons: reasonVocabulary(over.source ?? "strips"),
       pairs: [],
       ...over,
     },
@@ -58,7 +62,7 @@ describe("the matrix cull", () => {
     // A variant in the opened run: its verdict spoken in its name, and decided by click - keep and
     // reject as pressed buttons, the source's reasons as toggles once rejected.
     const card = (v?: { verdict: "keep" | "reject"; reasons: string[] }) =>
-      renderToStaticMarkup(h(VariantCard, { index: 0, words: { label: "poster a" }, media: { url: "/a.png", mime: "image/png" }, verdict: v, current: false, nudged: false, reasons: SOURCES.strips.reasons, maxReasons: 3, onFocus: noop, onVerdict: noop }));
+      renderToStaticMarkup(h(VariantCard, { index: 0, words: { label: "poster a" }, media: { url: "/a.png", mime: "image/png" }, verdict: v, current: false, nudged: false, reasons: reasonVocabulary("strips"), onFocus: noop, onVerdict: noop }));
     const rejected = card({ verdict: "reject", reasons: ["concept", "motion"] });
     expect(rejected).toContain('aria-label="poster a, reject: concept, motion"');
     expect(rejected).toMatch(/aria-pressed="true"[^>]*>(<span[^>]*><\/span>)?reject/);
@@ -80,8 +84,7 @@ describe("the matrix cull", () => {
         wordsOf: () => ({ label: "Hold the wide until the subject settles.", prompt: "the push-in reads once the figure stops", meta: "cinematic · 02-frames" }),
         cur: 0,
         nudged: new Set<number>(),
-        reasons: [],
-        maxReasons: 0,
+        reasons: reasonVocabulary("suno"),
         onFocus: noop,
         onVerdict: noop,
       }),
@@ -91,12 +94,26 @@ describe("the matrix cull", () => {
     expect(html).toMatch(/aria-pressed="true"[^>]*>(<span[^>]*><\/span>)?keep/);
   });
 
-  test("the key legend draws only the reason keys this source binds: four for a forge plate, none for Suno", () => {
-    const keysOf = (html: string) => [...(/<span[^>]*>((?:<kbd[^>]*>[^<]*<\/kbd>)+) reason<\/span>/.exec(html)?.[1] ?? "").matchAll(/<kbd[^>]*>([^<]*)<\/kbd>/g)].map((m) => m[1]);
+  test("the key legend draws only the reason keys that name a reason: 2-4 for a forge plate, none for Suno", () => {
+    // A reason cap is wrapped in its tip (Tip): unwrap it, and drop the tip's words, to read the row.
+    const bare = (html: string) => html.replace(/<span[^>]*role="tooltip"[^>]*>.*?<\/span>/g, "").replace(/<span class="[^"]*"[^>]*>(<kbd[^>]*>[^<]*<\/kbd>)<\/span>/g, "$1");
+    const keysOf = (html: string) => [...(/<span[^>]*>((?:<kbd[^>]*>[^<]*<\/kbd>)+) reason<\/span>/.exec(bare(html))?.[1] ?? "").matchAll(/<kbd[^>]*>([^<]*)<\/kbd>/g)].map((m) => m[1]);
     const forge = packet({ source: "forge", items: [img("a", "r")] }, { items: {}, rows: [] });
-    expect(keysOf(renderToStaticMarkup(h(MatrixCull, { packet: forge, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false })))).toEqual(["1", "2", "3", "4"]);
+    expect(keysOf(renderToStaticMarkup(h(MatrixCull, { packet: forge, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false })))).toEqual(["2", "3", "4"]);
     const suno = packet({ source: "suno", lane: "audio", items: [img("a", "r")] }, { items: {}, rows: [] });
     expect(renderToStaticMarkup(h(MatrixCull, { packet: suno, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false }))).not.toContain(" reason</span>");
+  });
+
+  test("the legend draws the keys the desk answers: an audio packet draws no Space play and no M spawn MV", () => {
+    // useRunDesk binds no `play` and no `spawn-mv`, and arms its keys with the facts cullFacts names:
+    // the legend reads the same facts, so it cannot draw a key that does nothing.
+    const suno = packet({ source: "suno", lane: "audio", items: [img("a", "r")] }, { items: {}, rows: [] });
+    const html = renderToStaticMarkup(h(MatrixCull, { packet: suno, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false }));
+    expect(html).not.toContain("spawn MV");
+    expect(html).not.toMatch(/<kbd[^>]*>Space<\/kbd>/);
+    expect(html).toMatch(/<kbd[^>]*>1<\/kbd>/);
+    expect(cullFacts({ noteMax: 0 })).toEqual([]);
+    expect(cullFacts({ noteMax: 120 })).toEqual(["notes"]);
   });
 
   test("the mosaic files the run under its category and says how much of it is decided", () => {
@@ -112,6 +129,29 @@ describe("the matrix cull", () => {
   });
 });
 
+describe("the commit button", () => {
+  // A refused press replays the shake. A changed `key` would replay it by REMOUNTING the button,
+  // and the node holding focus would be destroyed: a keyboard press refused drops focus to the
+  // document (registry accessibility/keyboard-navigation-models). The button keeps its identity
+  // across refusals and restarts the animation by alternating its class instead.
+  type Btn = { readonly key: string | null; readonly props: { readonly className: string } };
+  const at = (refusals: number): Btn => {
+    const b = CommitButton({ mode: "board.cull", waiting: "3 undecided", refusals, onPress: noop });
+    const className: unknown = b.props.className;
+    if (typeof className !== "string") throw new Error("the commit button wears no class");
+    return { key: b.key, props: { className } };
+  };
+
+  test("a refusal replays the shake without remounting the button", () => {
+    expect([0, 1, 2, 3].map((n) => at(n).key)).toEqual([null, null, null, null]);
+    expect(at(0).props.className).not.toMatch(/refuse/);
+    expect(at(1).props.className).toMatch(/refuse/);
+    expect(at(2).props.className).toMatch(/refuse/);
+    expect(at(1).props.className).not.toBe(at(2).props.className);
+    expect(at(1).props.className).toBe(at(3).props.className);
+  });
+});
+
 describe("the blind pair", () => {
   const pairs: PairView[] = [{ row: "p1", a: cid("p1/a"), b: cid("p1/b"), outcome: null }];
   const p = packet({ source: "dojo", mode: "blind-pair", items: [img("p1/a", "p1"), img("p1/b", "p1")], pairs }, { items: {}, rows: [{ id: "p1", label: "pair 1" }], questions: { p1: "Which is lit?" } });
@@ -124,6 +164,110 @@ describe("the blind pair", () => {
     expect(html).toContain("machine pick ▒▒ masked");
     expect(html).toContain("Which is lit?");
     expect(html).toContain('aria-label="commit packet, 1 left"');
+  });
+});
+
+describe("the blind pair's reveal follows the viewer's motion setting", () => {
+  const withMedia = (matches: boolean, run: () => void) => {
+    const was = (globalThis as { matchMedia?: unknown }).matchMedia;
+    (globalThis as { matchMedia?: unknown }).matchMedia = (q: string) => ({ matches: matches && q.includes("prefers-reduced-motion"), media: q });
+    try {
+      run();
+    } finally {
+      (globalThis as { matchMedia?: unknown }).matchMedia = was;
+    }
+  };
+
+  test("reduced motion reveals for 500 ms, otherwise 1150, and with no media query the full reveal", () => {
+    withMedia(true, () => expect(defaultRevealMs()).toBe(500));
+    withMedia(false, () => expect(defaultRevealMs()).toBe(REVEAL_MS));
+    expect(defaultRevealMs()).toBe(1150);
+  });
+
+  test("the reveal timer reads it when the caller passes no revealMs", () => {
+    const code = readFileSync(new URL("../src/components/pair/BlindPair.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toMatch(/setTimeout\(\(\) => setRevealing\(null\), revealMs \?\? defaultRevealMs\(\)\)/);
+  });
+});
+
+describe("a blind pair's pick during a write", () => {
+  const free = { pair: {}, revealing: null, judged: false, busy: false };
+
+  test("a pick lands on a free pair and is refused mid-reveal, on a judged pair, with no pair, or while a write or commit is in flight", () => {
+    expect(canPick(free)).toBe(true);
+    expect(canPick({ ...free, revealing: "p1" })).toBe(false);
+    expect(canPick({ ...free, judged: true })).toBe(false);
+    expect(canPick({ ...free, pair: undefined })).toBe(false);
+    expect(canPick({ ...free, busy: true })).toBe(false);
+  });
+
+  test("the pick handler asks canPick with the busy flag", () => {
+    const code = readFileSync(new URL("../src/components/pair/BlindPair.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toMatch(/canPick\(\{ pair, revealing, judged: pair\.outcome !== null, busy \}\)/);
+  });
+});
+
+describe("the cut review", () => {
+  test("a beat's note is set by its words and taken back by a blank one, as a cull note is", () => {
+    const noted = withNote({}, 1, "  tighter  ");
+    expect(noted).toEqual({ 1: "tighter" });
+    expect(withNote(noted, 1, "   ")).toEqual({});
+    expect(withNote(noted, 0, "")).toEqual({ 1: "tighter" });
+    expect(beatNote([{ t0: 0 }, { t0: 4.2 }], withNote(noted, 1, " "))).toBeUndefined();
+    expect(beatNote([{ t0: 0 }, { t0: 4.2 }], noted)).toBe("beat 2 (0:04): tighter");
+  });
+
+  const cut = packet(
+    { source: "step", mode: "packet-review", lane: "video", items: [{ ...img("c", "cut"), media: { sha256: "0".repeat(64), bytes: 1, mime: "video/mp4" } }] },
+    { items: {}, rows: [], cut: { video: "/c.mp4", beats: [{ t0: 0, t1: 3, text: "the record high" }, { t0: 3, t1: 6, text: "half of it gone" }], channels: [] } },
+  );
+  const review = (busy: boolean) => renderToStaticMarkup(h(CutReview, { packet: cut, decide: noop, onCommit: noop, busy, keys: false }));
+
+  test("a verdict in flight draws its buttons disabled, as the proof sheet's do", () => {
+    const disabled = (html: string) => html.split('aria-disabled="true"').length - 1;
+    expect(disabled(review(true))).toBe(2);
+    expect(disabled(review(false))).toBe(0);
+  });
+
+  test("the beat under the cursor is named to a screen reader, not only tinted", () => {
+    const html = review(false);
+    expect(html.split('aria-current="true"').length - 1).toBe(1);
+    expect(html).toMatch(/aria-current="true"[^>]*><span[^>]*>0:00–0:03<\/span>/);
+  });
+});
+
+describe("the cut player follows the focused beat", () => {
+  const src = () => readFileSync(new URL("../src/components/cut/CutReview.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  test("a video without metadata is not sought; once it has some, the same call seeks to the beat", () => {
+    const v = { readyState: 0, currentTime: 0 };
+    expect(seekTo(v, { t0: 4.2 })).toBe(false);
+    expect(v.currentTime).toBe(0);
+    v.readyState = 1;
+    expect(seekTo(v, { t0: 4.2 })).toBe(true);
+    expect(v.currentTime).toBe(4.2);
+    expect(seekTo(null, { t0: 1 })).toBe(false);
+    expect(seekTo(v, undefined)).toBe(false);
+  });
+
+  test("the player seeks again when its metadata arrives", () => {
+    expect(src()).toMatch(/onLoadedMetadata=\{\(\) => seekTo\(player\.current, beats\[focus\]\)\}/);
+  });
+});
+
+describe("a verdict with a beat note still open", () => {
+  const beats = [{ t0: 0 }, { t0: 4.2 }];
+
+  test("the draft in the field rides on the verdict; a blank draft or none changes nothing", () => {
+    expect(verdictNote(beats, {}, 1, "tighter")).toBe("beat 2 (0:04): tighter");
+    expect(verdictNote(beats, { 0: "slow" }, 1, "  tighter ")).toBe("beat 1 (0:00): slow\nbeat 2 (0:04): tighter");
+    expect(verdictNote(beats, { 0: "slow" }, null, "ignored")).toBe("beat 1 (0:00): slow");
+    expect(verdictNote(beats, {}, 1, "  ")).toBeUndefined();
+  });
+
+  test("end() builds its note from the open draft", () => {
+    const code = readFileSync(new URL("../src/components/cut/CutReview.tsx", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toMatch(/verdictNote\(beats, notes, editing, text\)/);
   });
 });
 
@@ -156,6 +300,26 @@ describe("the consequence panel", () => {
     const html = renderToStaticMarkup(h(ConsequencePanel, { consequence: c, refreshed: true, busy: false, onConfirm: noop, onCancel: noop, specimen: true }));
     expect(html).toContain("moved · fresh preview");
   });
+
+  test("a preview that failed to read says why, and no longer says it is reading", () => {
+    const html = renderToStaticMarkup(h(ConsequencePanel, { consequence: null, refreshed: false, busy: false, error: "could not prepare the commit plan", onConfirm: noop, onCancel: noop, specimen: true }));
+    expect(html).toContain("could not prepare the commit plan");
+    expect(html).not.toContain("reading the consequence");
+    expect(html).not.toContain('aria-busy="true"');
+  });
+
+  test("a preview still reading says so", () => {
+    const html = renderToStaticMarkup(h(ConsequencePanel, { consequence: null, refreshed: false, busy: true, onConfirm: noop, onCancel: noop, specimen: true }));
+    expect(html).toContain("reading the consequence");
+    expect(html).toContain('aria-busy="true"');
+  });
+
+  test("the button says Committing only for a commit, not while the preview reads", () => {
+    const reading = renderToStaticMarkup(h(ConsequencePanel, { consequence: null, refreshed: false, busy: true, onConfirm: noop, onCancel: noop, specimen: true }));
+    expect(reading).not.toContain("Committing");
+    const committing = renderToStaticMarkup(h(ConsequencePanel, { consequence: c, refreshed: false, busy: true, onConfirm: noop, onCancel: noop, specimen: true }));
+    expect(committing).toContain("Committing");
+  });
 });
 
 describe("the packet rail", () => {
@@ -166,6 +330,11 @@ describe("the packet rail", () => {
       ["image", 1, ["pkt:x:1", "pkt:x:2"]],
       ["audio", 1, ["pkt:x:3"]],
     ]);
+  });
+
+  test("every media lane the domain names has a rail group: the rail's own list is not the ground truth", () => {
+    const g = railGroups(MEDIA_LANES.map((lane, i) => ({ id: must(parseAt("test", packetIdSchema, `pkt:x:${i}`)), lane, source: "forge" as const, mode: "matrix-cull" as const, state: "open" as const, rev: 0, items: 1, decided: 0, openedAt: "2026-10-15T08:00:00.000Z" })));
+    expect(g.map((x) => x.lane.id)).toEqual([...MEDIA_LANES]);
   });
 });
 

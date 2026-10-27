@@ -11,11 +11,11 @@
 // THE REQUEST POSTURE. Every write is the server's, through one Server Action per gesture, and
 // the page re-reads after it (router.refresh): the island holds only what is not the store's - the
 // selection, the open lesson draft, which crowns are in flight. v1 held the hunt's whole node list
-// here and PATCHed it back per gesture, which is how two gestures overwrote each other.
+// here and PATCHed it back per gesture, which is how two gestures overwrote each other. A write
+// whose round trip fails rejects; each one waits through ./settled.ts, so its busy flag still clears.
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { errorMessage } from "@gt/domain/errors";
 import { carryFrom, HuntAudition, stepTake } from "@gt/ui/components/audio/HuntAudition.tsx";
 import { HuntMap, type PickMods } from "@gt/ui/components/audio/HuntMap.tsx";
 import { HuntRenderBar } from "@gt/ui/components/audio/HuntRenderBar.tsx";
@@ -31,12 +31,14 @@ import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import { useShell } from "../../_shell/Providers.tsx";
+import { copyText } from "../../_shell/clipboard.ts";
 import { outcomeOf, useReceipt } from "../../projects/_plan/receipt.tsx";
 import { useTransport } from "../_audio/useTransport.ts";
 import type { confirmLessonAct } from "../_lessons/acts.ts";
 import type { crownTake, draftHuntLesson, draftHuntMap, renderLeaves } from "./acts.ts";
 import type { HuntDeskView } from "./read.ts";
 import { uploadLeafReturn } from "./returnClient.ts";
+import { settled } from "./settled.ts";
 import { huntHref } from "./url.ts";
 import s from "./hunt.module.css";
 
@@ -78,7 +80,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
     if (t.src !== null) transport.toggle(t.id, t.src);
   };
   const step = (by: -1 | 1): void => {
-    const id = stepTake(heard, transport.playing, by);
+    const id = stepTake(heard, transport.playing, by, hunt.takes);
     const t = id === undefined ? undefined : hunt.takes[id];
     if (t !== undefined && t.src !== null) transport.toggle(t.id, t.src, carryFrom(linked, transport.playing, t.id, transport.position()));
   };
@@ -131,7 +133,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
   const crown = (leaf: HuntLeafView, takeId: string, on: boolean): void => {
     if (crowning.has(leaf.id)) return;
     setCrowning((c) => new Set(c).add(leaf.id));
-    void acts.crownTake({ huntId: hunt.id, nodeId: leaf.id, takeId, on, opId: opId() }).then((r) => {
+    void settled(acts.crownTake({ huntId: hunt.id, nodeId: leaf.id, takeId, on, opId: opId() })).then((r) => {
       setCrowning((c) => {
         const n = new Set(c);
         n.delete(leaf.id);
@@ -151,7 +153,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
     if (asking) return;
     setAsking(true);
     setSignError(null);
-    void acts.draftHuntLesson({ huntId: hunt.id, engine }).then((r) => {
+    void settled(acts.draftHuntLesson({ huntId: hunt.id, engine })).then((r) => {
       setAsking(false);
       if (r.ok) setDraft(r.value);
       else setRefusal(r.error.error);
@@ -162,7 +164,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
     if (signing) return;
     setSigning(true);
     const p = d.proposal;
-    void acts.confirmLessonAct({ kind: p.kind, source: p.source, provider: p.provider, huntId: p.huntId, claim, technique: [...technique], evidence: { ...p.evidence, takeIds: [...p.evidence.takeIds] }, opId: opId(), key: d.key }).then((r) => {
+    void settled(acts.confirmLessonAct({ kind: p.kind, source: p.source, provider: p.provider, huntId: p.huntId, claim, technique: [...technique], evidence: { ...p.evidence, takeIds: [...p.evidence.takeIds] }, opId: opId(), key: d.key })).then((r) => {
       setSigning(false);
       if (!r.ok) {
         setSignError(r.error.error);
@@ -192,7 +194,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
         onCrown={crown}
         returning={returning}
         onReturn={fileBack}
-        onCopy={(text) => void navigator.clipboard.writeText(text).then(() => toast("prompt copied"), (e: unknown) => toast(`clipboard refused: ${errorMessage(e)}`))}
+        onCopy={(text) => void copyText(text).then((r) => toast(r.ok ? "prompt copied" : `clipboard refused: ${r.error}`))}
       />
       <HuntRenderBar plan={plan} picked={sel.ids.length} busy={flow.reading || hunt.inFlight} liveBlock={view.liveBlock} onRender={render} onClear={() => setSel(EMPTY_SELECTION)} />
       {heard.length > 0 && (
@@ -210,6 +212,8 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
         <CapsHeading text="lesson" level={3} />
         {hunt.lesson !== null ? (
           <LessonList lessons={[{ id: hunt.lesson.id, claim: hunt.lesson.claim, source: "hunt", provider: null, technique: hunt.lesson.technique, n: hunt.lesson.n, keepRate: hunt.lesson.keepRate, meanScore: null, confirmedAt: hunt.lesson.confirmedAt }]} huntHref={(id) => huntHref(view.kind, id)} />
+        ) : view.lessonError !== null ? (
+          <ErrorLine message={view.lessonError} />
         ) : draft !== null ? (
           <LessonForm key={draft.key + (draft.draftedBy ?? "hand")} proposal={draft.proposal} axes={ev.axes} techniques={ev.techniques} known={view.known} draftedBy={draft.draftedBy} engineError={draft.engineError} busy={signing} error={signError} onSign={(c, t) => sign(draft, c, t)} onDiscard={() => setDraft(null)} />
         ) : block !== null ? (
@@ -237,7 +241,7 @@ export function Hunt({ view, acts, nowMs }: { readonly view: HuntDeskView; reado
     if (drafting) return;
     setDrafting(true);
     setError(null);
-    void acts.draftHuntMap({ kind: view.kind, idea, opId: opId() }).then((r) => {
+    void settled(acts.draftHuntMap({ kind: view.kind, idea, opId: opId() })).then((r) => {
       setDrafting(false);
       if (!r.ok) {
         setError(r.error.error);

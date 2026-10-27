@@ -131,4 +131,6 @@ export const MV_LOOK_NOTES: Record<MvLookId, string> = {
     "the album's own cover art: a keyboardist in a dark Tokyo garage beside a black sports car, red taillight glow in the haze and on the wet floor, red light trails shaping ghostly guitar, bass and violin players; the light builds with the track",
 };
 export const MV_LOOK_IDS = Object.keys(MV_LOOKS) as MvLookId[];
-export const isLookId = (v: unknown): v is MvLookId => typeof v === "string" && v in MV_LOOKS;
+// Own keys only: `in` also answers for "toString", "constructor" and every other
+// name an object inherits, and the caller then reads MV_LOOKS[name] as a look.
+export const isLookId = (v: unknown): v is MvLookId => typeof v === "string" && Object.hasOwn(MV_LOOKS, v);

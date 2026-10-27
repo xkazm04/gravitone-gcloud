@@ -1,23 +1,26 @@
 "use client";
 
 // THE MATRIX CULL - a packet of runs, decided (operator, 2026-10-22). The runs are filed by the KIND
-// of content into tabs - images, videos, audio, ideas - each drawn in the component its content
+// of content into tabs - images, videos, audio, ideas, storyboards - each drawn in the component its content
 // reads best in: a mosaic of square stills, 16:9 clips that play, waveforms, and a dense list of the
-// runs that are only words, decided in place. A picture, clip or take run opens across the whole
+// runs that are only words, decided in place, under the night's idea artboards (square tiles, as
+// stills are: spark scout-idea-artboards). Any tab draws its words-only runs as that list under its mosaic:
+// a dry night's storyboard is its words alone (spark scout-storyboards). A picture, clip or take run opens across the whole
 // screen (RunModal): its brief, its variants at most three to a row, a verdict by click under each
 // and on the whole run, a clip with its own bar. Every act is also a key (bindings.ts `board.cull`):
-// K / X / a reason on a run in the mosaic judge it whole, inside a run each variant; ← → ↑ ↓ walk;
+// 1 / 2-4 / 5 on a run judge it whole, ⇧1 / ⇧2 inside a run each variant; ← → ↑ ↓ walk;
 // Z or a click opens; ⌫ undoes; ⏎ commits - refusing while anything is open, and taking the cursor
-// (and the tab) to the first open variant.
+// (and the tab) to the first open variant. Where the source keeps a note, E writes one on the decision
+// under the cursor: in place on a words row, in the opened run's head on a picture run.
 import { useEffect, useRef, useState } from "react";
 
-import type { BoardVerdict } from "../../board/boardGate.ts";
 import { cullCells, tallyOf } from "../../board/cull.ts";
-import { categoriesOf, categoryOf, columnsOf, runsOf, tabOf, tabsOf, type Run, type Tab } from "../../board/runs.ts";
+import { categoriesOf, categoryOf, columnsOf, inWordsCard, runsOf, runVerdictOf, tabOf, tabsOf, wordsOnly, type Run, type Tab } from "../../board/runs.ts";
 import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { Seg } from "../seg/Seg.tsx";
 import { CullFoot } from "./CullFoot.tsx";
 import { IdeaList } from "./IdeaList.tsx";
+import { NoteField, NoteText } from "./NoteField.tsx";
 import type { MatrixCullProps } from "./props.ts";
 import { RunModal } from "./RunModal.tsx";
 import { RunMosaic } from "./RunMosaic.tsx";
@@ -27,13 +30,6 @@ import { useRunDesk } from "./useRunDesk.ts";
 import s from "./Runs.module.css";
 
 export type { MatrixCullProps } from "./props.ts";
-
-/** The whole run's verdict, when every variant holds the same one. */
-function runVerdict(run: Run, ids: (i: number) => string, verdicts: Readonly<Record<string, BoardVerdict>>): BoardVerdict | undefined {
-  const vs = run.members.map((i) => verdicts[ids(i)]);
-  const first = vs[0];
-  return first !== undefined && vs.every((v) => v?.verdict === first.verdict) ? { verdict: first.verdict, reasons: first.reasons } : undefined;
-}
 
 export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = false, announce = () => undefined, keys = true }: MatrixCullProps) {
   const { view, present } = packet;
@@ -49,12 +45,16 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
   // open variant, takes the tab with it. The cursor walks its own tab's runs.
   const tabOfRun = (r: Run | undefined): Tab => (r === undefined ? (tabs[0]?.tab ?? "images") : tabOf(categoryOf(r, firstMime(r))));
   const orderOf = (t: Tab) => (tabs.find((x) => x.tab === t)?.categories ?? []).flatMap((c) => c.runs.map((r) => r.at));
-  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns: () => cols, arrange: (runs, at) => orderOf(tabOfRun(runs[at])) });
+  const wordy = (r: Run) => wordsOnly(firstMime(r));
+  // A words-only run is one line of a list: ↑ ↓ move a line, whatever the tiles above it measure.
+  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns: () => (d.run !== undefined && wordy(d.run) ? 1 : cols), arrange: (runs, at) => orderOf(tabOfRun(runs[at])), wordy });
   const tab = tabOfRun(d.run);
   const here = tabs.find((t) => t.tab === tab) ?? tabs[0];
   const { setOpen } = d;
   // A words-only run never opens: it is decided where it lies.
-  const open = d.open && tab !== "ideas";
+  const open = d.open && d.run !== undefined && !wordy(d.run);
+  /** The shown tab's categories, only the runs that are (or are not) words. */
+  const shown = (words: boolean) => (here?.categories ?? []).map((c) => ({ ...c, runs: c.runs.filter((x) => wordy(x.run) === words) })).filter((c) => c.runs.length > 0);
 
   useEffect(() => {
     const el = grid.current;
@@ -65,9 +65,12 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
     return () => ro.disconnect();
   }, [tab]);
 
-  const reasons = view.reasons.list;
-  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasons={reasons.length} audio={view.lane === "audio"} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
-  const idOf = (i: number) => d.cells[i]?.id ?? "";
+  const reasons = view.reasons;
+  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasonless={d.reasonless} later={d.later} reasons={reasons} {...(d.run === undefined ? {} : { group: d.run.group })} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
+  const note = d.note;
+  const noteField =
+    note === undefined ? undefined : <NoteField key={note.cell} label={d.wordsOf(d.cells[note.cell]?.id ?? "").label} value={note.draft} max={note.max} onChange={note.setDraft} onSave={note.save} />;
+  const curNote = verdicts[d.cells[d.cur]?.id ?? ""]?.note;
   const pick = (t: Tab) => {
     const first = tabs.find((x) => x.tab === t)?.categories[0]?.runs[0];
     if (first !== undefined) d.setCur(first.run.members[0] ?? 0);
@@ -77,6 +80,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
     <DeskFrame
       title={view.title ?? view.id}
       {...(present.meta !== undefined ? { meta: present.meta } : {})}
+      {...(present.load !== undefined ? { load: present.load } : {})}
       marks={
         <>
           {present.oracle !== undefined && <OracleStrip oracle={present.oracle} />}
@@ -92,17 +96,22 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             position={`${d.runIx + 1}/${d.runs.length}`}
             {...(run.words?.use !== undefined ? { use: run.words.use } : {})}
             {...(run.words?.aim !== undefined ? { aim: run.words.aim } : {})}
+            {...(run.words?.prompt !== undefined && !inWordsCard(run, d.cells, (id) => mediaOf(id).mime, d.wordsOf, run.words.prompt) ? { prompt: run.words.prompt } : {})}
             {...(run.words?.ref !== undefined ? { reference: run.words.ref } : {})}
             {...(run.words?.checks !== undefined ? { checks: run.words.checks } : {})}
-            runVerdict={runVerdict(run, idOf, verdicts)}
-            reasons={reasons}
-            maxReasons={view.reasons.max}
+            runVerdict={runVerdictOf(run, d.cells, verdicts)}
+            reasons={d.reasonsFor(run)}
+            ask={d.ask}
             onRunVerdict={(v) => d.decideCells(run.members, v, run.words?.label ?? run.row)}
-            onClose={() => setOpen(false)}
+            {...(note !== undefined && run.members.includes(note.cell) ? { note: noteField } : curNote !== undefined ? { note: <NoteText text={curNote} /> } : {})}
+            onClose={() => {
+              setOpen(false);
+              d.cancelNote();
+            }}
             live={keys}
             foot={foot}
           >
-            <RunView run={run} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideCells([i], v)} />
+            <RunView run={run} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={d.reasonsFor(run)} onFocus={d.setCur} onVerdict={(i, v) => d.decideItem(i, v)} />
           </RunModal>
         ) : undefined
       }
@@ -112,11 +121,27 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
           <Seg label="content" options={tabs.map((t) => ({ value: t.tab, label: t.tab, count: t.categories.reduce((n, c) => n + c.runs.length, 0) }))} value={here?.tab ?? tab} onChange={pick} />
         </div>
       )}
-      {here?.tab === "ideas" ? (
-        <IdeaList categories={here.categories} cells={d.cells} verdicts={verdicts} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideCells([i], v)} />
-      ) : here !== undefined ? (
-        <RunMosaic tab={here.tab} categories={here.categories} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />
-      ) : null}
+      {here !== undefined && (
+        <>
+          {shown(false).length > 0 && <RunMosaic tab={here.tab} categories={shown(false)} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />}
+          {shown(true).length > 0 && (
+            <IdeaList
+              categories={shown(true)}
+              cells={d.cells}
+              verdicts={verdicts}
+              wordsOf={d.wordsOf}
+              cur={d.cur}
+              nudged={d.nudged}
+              reasons={reasons}
+              label={here.tab}
+              {...(d.ask && run !== undefined ? { asked: run.members[0] ?? -1 } : {})}
+              onFocus={d.setCur}
+              onVerdict={(i, v) => d.decideItem(i, v)}
+              {...(note === undefined ? {} : { noting: { cell: note.cell, field: noteField } })}
+            />
+          )}
+        </>
+      )}
     </DeskFrame>
   );
 }

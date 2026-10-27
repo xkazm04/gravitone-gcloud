@@ -20,7 +20,7 @@ import { ShelfCell, ShelfGrid, ShelfList, ShelfRow, ShelfStyle } from "@gt/ui/co
 import { SlotConfirm } from "@gt/ui/components/floor/SlotConfirm.tsx";
 import { SlotDetail, type SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 import { SlotMark, SlotRow } from "@gt/ui/components/floor/SlotRow.tsx";
-import { railOf, type RailSlot } from "@gt/ui/components/floor/calendar.ts";
+import { railOf, shiftMonth, type RailSlot, type YearMonth } from "@gt/ui/components/floor/calendar.ts";
 import { FLOOR_LANES, type FloorLane } from "@gt/ui/components/floor/floor.ts";
 import { LedgerDelta, NextButton, SpendChip } from "@gt/ui/components/header/HeaderChips.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
@@ -58,6 +58,7 @@ const ITEMS: readonly ScheduleItem[] = [
   { id: "video:export:chokepoint", title: "Chokepoint explainer", meta: "film · 63.5 MB", poster: "/clips/presets/blueprint.jpg" },
   { id: "video:export:quiet-tariff", title: "The quiet tariff", meta: "ad · 9.1 MB", poster: "/clips/presets/chalk-argument.jpg" },
   { id: "video:export:river-steps", title: "Two hundred days of rain", meta: "music-video · 54.0 MB" },
+  { id: "video:export:radar-sweep", title: "Radar sweep · cut A", meta: "film · 41.2 MB" },
 ];
 
 const FAILED: SlotView = {
@@ -85,8 +86,12 @@ const POST: SlotView = {
   mode: "dry",
 };
 
+/** NOW's month (m is 0-based). */
+const MONTH: YearMonth = { y: 2026, m: 9 };
+
 export function FloorSection() {
   const [focus, setFocus] = useState(false);
+  const [month, setMonth] = useState<YearMonth>(MONTH);
   const [day, setDay] = useState<string | null>(null);
   const [off, setOff] = useState<ReadonlySet<string>>(() => new Set());
   const rail = railOf(SLOTS, NOW);
@@ -133,7 +138,7 @@ export function FloorSection() {
         </div>
         <Row label="marks">
           {(["image", "article", "audio", "video", "matrix-cull", "blind-pair", "packet-review", "lock", "expand", "collapse", "chevL", "chevR"] as const).map((n) => (
-            <span key={n} className={k.glyphCell} title={n}>
+            <span key={n} className={k.glyphCell} role="img" aria-label={n}>
               <FloorGlyph name={n} className={k.glyph} />
             </span>
           ))}
@@ -200,7 +205,7 @@ export function FloorSection() {
       </Spec>
 
       <Spec names={["ScheduleForm"]} source="floor/ScheduleForm.tsx · v1 app/calendar/Composer.tsx" wide>
-        <ScheduleForm items={{ kind: "read", items: ITEMS }} channels={CHANNELS} slots={SLOTS} nowMs={NOW} day="2026-10-16" item={null} lastChannel="youtube" busy={false} refusal="video:export:chokepoint is already on youtube (slot s5, scheduled for 2026-10-16T12:00:00.000Z)" onSchedule={() => undefined} />
+        <ScheduleForm items={{ kind: "read", items: ITEMS }} channels={CHANNELS} slots={SLOTS} nowMs={NOW} day="2026-10-16" item={null} lastChannel="youtube" busy={false} refusal="video:export:radar-sweep is already on youtube (slot s1, scheduled for 2026-10-15T07:00:00.000Z)" onSchedule={() => undefined} />
       </Spec>
 
       <Spec names={["ChannelReadiness"]} source="floor/ChannelReadiness.tsx · v1 app/calendar/ChannelsTab.tsx">
@@ -212,11 +217,17 @@ export function FloorSection() {
           <MonthCalendar
             slots={SLOTS}
             nowMs={NOW}
-            month={{ y: 2026, m: 9 }}
+            month={month}
             day={day}
             channelsOff={off}
-            onMonth={() => undefined}
-            onToday={() => setDay("2026-10-15")}
+            onMonth={(by) => {
+              setMonth((m) => shiftMonth(m, by));
+              setDay(null);
+            }}
+            onToday={() => {
+              setMonth(MONTH);
+              setDay("2026-10-15");
+            }}
             onDay={setDay}
             onChannel={(c) =>
               setOff((cur) => {

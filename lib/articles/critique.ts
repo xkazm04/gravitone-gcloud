@@ -153,10 +153,14 @@ export function isWebUrl(s: unknown): s is string {
 
 /** A machine home path never leaves this machine in a review: the registry's
  *  privacy rule fails a publication that carries one, and a reviewer may quote
- *  its workspace path. Replaced, not rejected — the content stays. */
+ *  its workspace path. Replaced, not rejected — the content stays.
+ *  Wider than the registry gate's two patterns (its check-publications.mjs PROFILE): a Windows
+ *  profile path is case-blind, and a reviewer's shell may print it Git Bash style
+ *  (`/c/Users/<name>/`) or WSL style (`/mnt/c/Users/<name>/`), neither of which the gate sees. */
 export function scrubHomePaths(s: string): string {
   return s
-    .replace(/(?<![A-Za-z])[A-Za-z]:[\\/]{1,2}Users[\\/]{1,2}[^\\/\s`'"<>|:*?]+[\\/]/g, "~/")
+    .replace(/(?<![A-Za-z])[A-Za-z]:[\\/]{1,2}Users[\\/]{1,2}[^\\/\s`'"<>|:*?]+[\\/]/gi, "~/")
+    .replace(/(?<![\w.~:/-])(?:\/mnt)?\/[A-Za-z]\/Users\/[^/\s`'"<>|:*?]+\//gi, "~/")
     .replace(/(?<![\w.~:-])\/(?:home|Users)\/[^/\s`'"<>|:*?]+\//g, "~/");
 }
 
@@ -364,7 +368,9 @@ export function critiqueCheckItem(detail: CritiqueDetail | undefined): CheckItem
   if (!detail || !detail.rounds.length) return { ...base, status: "fail", value: "no critique record", expected };
   const problems: string[] = [];
   const perRound = detail.rounds.map((r) => {
-    const done = r.receipts.filter((x) => x.outcome === "completed").length;
+    // The round closed on review files (critiqueReviews.ts reviewRound), so the check counts the
+    // same artefact: a crash between a review and its receipt must not fail a quorum the step passed.
+    const done = r.reviews.length;
     if (done < detail.minCompleted) problems.push(`round ${r.round}: ${done} of ${detail.reviewers.length} reviewers completed`);
     return `r${r.round} ${done}/${detail.reviewers.length}`;
   });

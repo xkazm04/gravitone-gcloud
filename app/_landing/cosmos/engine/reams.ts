@@ -5,6 +5,7 @@
 
 import { el, ICON } from "./dom";
 import { reamTone } from "./diorama";
+import { famItems } from "./layout";
 import { tr } from "./rasterJobs";
 import { clamp, hash32 } from "./rng";
 import type { Cx } from "./state";
@@ -16,16 +17,7 @@ export function buildReams(cx: Cx, host: HTMLElement): void {
   host.innerHTML = "";
   cx.reamEls.length = 0;
   const { portrait } = cx.g;
-  const items = cx.library.map((f) => {
-    let t = 0,
-      known = false;
-    for (const c of f.categories)
-      if (typeof c.items === "number" && c.items > 0) {
-        t += c.items;
-        known = true;
-      }
-    return known ? t : null;
-  });
+  const items = cx.library.map(famItems);
   const maxI = Math.max(1, ...items.map((v) => v || 0));
   const dpr = clamp(cx.g.DPR, 1, 2);
   cx.library.forEach((f, i) => {

@@ -14,6 +14,7 @@ import {
   readToken,
   revokeToken,
   scopeAdmits,
+  TOKEN_SCOPES,
   tokenMigrations,
   touchToken,
   verifyToken,
@@ -75,9 +76,12 @@ describe("token mint", () => {
     expect(parseTtl("1w").ok).toBe(false);
   });
 
-  it("refuses a name that is not a caller name, a scope that is not money|read, and a short random source", () => {
+  it("refuses a name that is not a caller name, a scope that is not money|read|act, and a short random source", () => {
     expect(mintPlan({ ...MONEY, name: "Has Spaces" }, NOW, counting()).ok).toBe(false);
     expect(mintPlan({ ...MONEY, name: "" }, NOW, counting()).ok).toBe(false);
+    const scope = mintPlan({ ...MONEY, scope: "admin" as "money" }, NOW, counting());
+    expect(!scope.ok && scope.error.message).toBe('token scope "admin" is not money|read|act');
+    expect(mintPlan({ name: "athena", scope: "act" }, NOW, counting()).ok).toBe(true);
     const short = mintPlan(MONEY, NOW, () => new Uint8Array(0));
     expect(short.ok).toBe(false);
   });
@@ -127,11 +131,13 @@ describe("token verify", () => {
     expect(!ghost.ok && ghost.error.code).toBe("not-found");
   });
 
-  it("a read token admits a read door only; a money token admits both", () => {
-    expect(scopeAdmits("money", "money")).toBe(true);
-    expect(scopeAdmits("money", "read")).toBe(true);
-    expect(scopeAdmits("read", "read")).toBe(true);
-    expect(scopeAdmits("read", "money")).toBe(false);
+  it("money admits every door; act admits act and read doors; read admits read doors only", () => {
+    const table = TOKEN_SCOPES.map((scope) => [scope, (["money", "act", "read"] as const).map((use) => scopeAdmits(scope, use))]);
+    expect(table).toEqual([
+      ["money", [true, true, true]],
+      ["read", [false, false, true]],
+      ["act", [false, true, true]],
+    ]);
   });
 
   it("a corrupt row refuses (err), it never reads as a token with no limits", () => {
@@ -141,6 +147,20 @@ describe("token verify", () => {
     must(s.tx((t) => t.exec(`DROP TRIGGER tokens_fixed_at_mint; UPDATE tokens SET hash = '${"Z".repeat(64)}' WHERE id = '${record.id}';`)));
     const r = verifyToken(s, token, t0);
     expect(r.ok).toBe(false);
+  });
+
+  it("an expiry that is not an instant refuses: it never reads as a token that never ends", () => {
+    const s = tpl.fresh();
+    const { record, token } = mint(s);
+    // 'never' > '2026-...' as text, so the schema's CHECK (expires_at > created_at) lets it through.
+    must(s.tx((t) => t.exec(`DROP TRIGGER tokens_fixed_at_mint; UPDATE tokens SET expires_at = 'never' WHERE id = '${record.id}';`)));
+    const r = verifyToken(s, token, t0 + MAX_TTL_MS * 10);
+    // Corruption refuses at the door (err), as a damaged hash does.
+    expect(r.ok).toBe(false);
+    const plan = must(mintPlan(MONEY, NOW, counting()));
+    const secret = parseToken(plan.token)?.secret ?? "";
+    expect(judge({ ...plan.record, expiresAt: "never" }, secret, t0).ok).toBe(false);
+    expect(judge(plan.record, secret, Number.NaN).ok).toBe(false);
   });
 
   it("judge is pure over the stored record, the secret and the clock", () => {

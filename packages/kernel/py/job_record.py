@@ -7,6 +7,7 @@ a reader holds at once; job.py re-exports what a worker catches.
 
 import json
 import os
+import sqlite3
 import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -25,7 +26,7 @@ DEFAULT_TTL_S, FenceConflict, LeaseError, LeaseLost, Tx = _lease.DEFAULT_TTL_S, 
 assert_fence, claim_in, connect, fence_loss, heartbeat_in = _lease.assert_fence, _lease.claim_in, _lease.connect, _lease.fence_loss, _lease.heartbeat_in
 ms, process_holder, read_row, release_in = _lease.ms, _lease.process_holder, _lease.read_row, _lease.release_in
 
-# @gt/domain/lane LANE_CAPACITY and LANE_PAYS (spec/job.json's slot scenarios hold them equal).
+# @gt/domain/lane LANE_CAPACITY and LANE_PAYS; these tables and lease.py's are compared whole by test/job.python.test.ts.
 LANE_CAPACITY = {"gpu.local": 1, "box.render": 1, "box.blender": 1, "box.chrome": 1, "seat.text": 4,
                  "cloud.google": 3, "cloud.elevenlabs": 2, "cloud.leonardo": 2, "cloud.qwen": 1}
 LANE_PAYS = {"gpu.local": False, "box.render": False, "box.blender": False, "box.chrome": True, "seat.text": True,
@@ -69,6 +70,44 @@ class Stopped(JobError):
     def __init__(self, job):
         super().__init__("job %s is %s; the drive stops and gives its slot back" % (job["id"], job["state"]))
         self.state = job["state"]
+
+
+def beat_once(conn, clock, slot, fence):
+    """One beat of a run's heartbeat thread (job.py `start_heartbeat`), as lease-renewal has it:
+    a store busy past its timeout misses this beat (False) and the next renews - the ttl/3 cadence
+    is that margin; a lost slot raises LeaseLost; so does any other failure, naming it, because a
+    slot that cannot be renewed is lost to the run (Node's beat carries a throw to its loop too)."""
+    try:
+        with Tx(conn, clock) as t:
+            heartbeat_in(t, slot, fence)
+    except LeaseLost:
+        raise
+    except Exception as e:  # noqa: BLE001 - classified here, never swallowed
+        if isinstance(e, sqlite3.OperationalError) and ("locked" in str(e) or "busy" in str(e)):
+            return False
+        raise LeaseLost("the heartbeat on %s failed: %s" % (slot, e)) from e
+    return True
+
+
+def heartbeat_loop(path, clock, slot, fence, every_s, stop, lost):
+    """The body of a run's heartbeat thread (job.py `start_heartbeat`): its own connection, a beat
+    every `every_s` until `stop` is set. Whatever ends the renewing - a lost slot, or a connection
+    the thread cannot open - is handed to `lost`, so the run's next call raises instead of writing
+    on while nothing renews its slot."""
+    try:
+        conn = connect(path)
+    except Exception as e:  # noqa: BLE001 - handed to the run, never swallowed
+        lost(LeaseLost("the heartbeat on %s could not open the store: %s" % (slot, e)))
+        return
+    try:
+        while not stop.wait(every_s):
+            try:
+                beat_once(conn, clock, slot, fence)  # busy misses one beat; a loss raises
+            except LeaseLost as e:
+                lost(e)
+                return
+    finally:
+        conn.close()
 
 
 def lane_slots(lane):

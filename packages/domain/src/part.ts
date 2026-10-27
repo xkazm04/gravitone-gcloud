@@ -59,4 +59,6 @@ export type Part = z.output<typeof partSchema>;
 export type PartInput = z.input<typeof partSchema>;
 export type WorkPart = z.output<typeof workPartSchema>;
 
-export const isWork = (p: Part): p is WorkPart => p.kind !== "gate" && p.kind !== "slot";
+const OPERATOR: ReadonlySet<string> = new Set(OPERATOR_KINDS);
+/** A work part, by the catalogue's own list of the kinds that are not (gate, slot, ...). */
+export const isWork = (p: Part): p is WorkPart => !OPERATOR.has(p.kind);

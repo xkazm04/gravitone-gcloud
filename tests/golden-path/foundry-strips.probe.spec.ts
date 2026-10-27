@@ -25,25 +25,28 @@
 // FOUNDRY_DIR's motion-styles, rejected media are gone, every decided strip
 // has a ledger row, findings print n beside every rate, the token fences it.
 
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { GET as fileGET } from "@/app/api/foundry/file/route";
-import { commitStripRun, previewStripCommit, putStripVerdicts, stripPageFile } from "@/lib/foundry/strips/store";
+import { triage, type Capture } from "@/lib/foundry/strips/steps";
+import { commitStripRun, listStripRuns, previewStripCommit, putStripVerdicts, stripPageFile, stripsRoot } from "@/lib/foundry/strips/store";
 import { verdictErrorResponse } from "@/lib/foundry/verdictLog";
 import type { MotionStylesDoc, StripCommitPlan, StripCommitResult, StripsLedgerDoc } from "@/lib/foundry/strips/triage";
 import type { StripCard, StripRun } from "@/lib/foundry/strips/types";
 
 import { keepEnv, probeFoundryDir } from "./_helpers";
 
-keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH"]);
+keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", "STRIPS_STORE_DIR"]);
 const foundryDir = probeFoundryDir();
 
 const SECRET = "strips-probe-secret";
-const ROOT = path.join(process.cwd(), "foundry-out", "strips");
+/** This test's strips store (STRIPS_STORE_DIR, which stripsRoot() reads per call): a temp root. */
+let ROOT = "";
 const AUTH = { authorization: `Bearer ${SECRET}` };
 
 /** A store door's answer as the retired route spoke it: 200 and the value, or the
@@ -71,7 +74,12 @@ function card(id: string, over: Partial<StripCard> = {}): StripCard {
 test.beforeEach(() => {
   process.env[ACCESS_SECRET_VAR] = SECRET;
   delete process.env.NEXT_PUBLIC_DEV_AUTH;
+  ROOT = mkdtempSync(path.join(tmpdir(), "strips-probe-"));
+  process.env.STRIPS_STORE_DIR = ROOT;
   runId = `probe-strips-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
+  // The store these doors drive is never the operator's: the Board, the Ledger and the Library
+  // list every run under foundry-out/strips, a probe's included, while it lives.
+  expect(path.relative(path.join(process.cwd(), "foundry-out"), stripsRoot()).startsWith(".."), `strips store ${stripsRoot()}`).toBe(true);
   const dir = path.join(ROOT, runId);
   const cards = [
     card("edu-edu-01--E01", { gates: { seek: { ok: true, detail: "0 px" }, legibility: { ok: false, detail: "18 px (bar 26)" }, motion: { ok: true, detail: "8/8 s" }, length: { ok: true, detail: "240" } } }),
@@ -110,7 +118,8 @@ test.beforeEach(() => {
 });
 
 test.afterEach(() => {
-  if (runId) rmSync(path.join(ROOT, runId), { recursive: true, force: true });
+  if (ROOT) rmSync(ROOT, { recursive: true, force: true });
+  ROOT = "";
 });
 
 /** The retired PUT's own check came first: no verdicts object is a 400. */
@@ -293,4 +302,71 @@ test("commit: kept into motion-styles, rejected media gone, a ledger row per dec
   const motion = JSON.parse(readFileSync(path.join(fdir, "motion-styles.json"), "utf8")) as { _rev?: number };
   expect(motion._rev ?? 0).toBeGreaterThanOrEqual(1);
   expect(existsSync(path.join(fdir, "catalogue-journal.jsonl")), "no journal is written any more").toBe(false);
+});
+
+test("a damaged verdicts.json: the list names the run, the preview and the commit answer 503", async () => {
+  // The forge's 503 for the file beside the manifest (0e371252). The list keeps the run (the
+  // Library's strips feed holds it), and names it: the read used to be swallowed in silence.
+  writeFileSync(path.join(ROOT, runId, "verdicts.json"), '{"edu-edu-01--E01": {"verdict": "ke', "utf8");
+  const warned: string[] = [];
+  const orig = console.warn;
+  console.warn = (...args: unknown[]) => warned.push(args.map(String).join(" "));
+  try {
+    const listed = (await listStripRuns()).find((r) => r.id === runId);
+    const preview = await answer(() => previewStripCommit(runId)).catch((e: Error) => ({ status: `bare ${e.name}` }));
+    const commit = await answer(() => commitStripRun(runId)).catch((e: Error) => ({ status: `bare ${e.name}` }));
+    console.log(`[strips] torn verdicts.json -> list ${listed ? `listed (decided ${listed.decided})` : "skipped"}, preview ${preview.status}, commit ${commit.status}`);
+    expect(listed?.decided, "listed, so the Library feed holds it rather than pruning it").toBe(0);
+    expect(warned.some((w) => w.includes(runId) && w.includes("verdicts.json is unreadable"))).toBe(true);
+    expect(preview.status).toBe(503);
+    expect(commit.status).toBe(503);
+  } finally {
+    console.warn = orig;
+  }
+});
+
+test("commit: a replica whose sheet matched its original's (noise 0) still commits, and the findings say so", async () => {
+  // The triage step divides by the replica's distance; at 0 the ratio has no finite value, and
+  // run.json (JSON) cannot hold Infinity - it reads back as null, which the findings formatted.
+  const runFile = path.join(ROOT, runId, "run.json");
+  const run = JSON.parse(readFileSync(runFile, "utf8")) as StripRun;
+  run.cards.push(card("edu-edu-01--E01--r2", { replicaOf: "edu-edu-01--E01" }));
+  writeFileSync(runFile, JSON.stringify(run, null, 2));
+  const capture = async (): Promise<Capture> => ({
+    render: async () => ({ ok: true, files: {}, renderMs: 0 }),
+    distances: async (sheets) => sheets.map((_, i) => sheets.map((__, j) => (i === j || i + j === 1 ? 0 : 4))),
+  });
+  await triage(runId, { dry: false, stillHeld: () => {} }, capture);
+  const triaged = JSON.parse(readFileSync(runFile, "utf8")) as StripRun;
+  console.log(`[strips] noise-0 discrimination on disk -> ${JSON.stringify(triaged.discrimination)}`);
+  expect(triaged.status).toBe("awaiting-triage");
+  expect(Object.keys(triaged.discrimination ?? {})).toEqual(["E01"]);
+
+  expect((await put({ verdicts: { "edu-edu-01--E01": { verdict: "reject", at: "2026-10-06T00:00:00Z" } } })).status).toBe(200);
+  const res = await answer(() => commitStripRun(runId));
+  console.log(`[strips] commit after a noise-0 triage -> ${res.status} ${res.detail ?? ""}`);
+  expect(res.status, "the commit lands").toBe(200);
+  expect(JSON.parse(readFileSync(runFile, "utf8")).status).toBe("committed");
+  expect(readFileSync(path.join(ROOT, runId, "findings.md"), "utf8")).toMatch(/^- E01: no noise floor/m);
+});
+
+test("commit: a verdict stands only on a card that is still rendered (the verdict door's own rule)", async () => {
+  expect((await put({ verdicts: { "edu-edu-01--E01": { verdict: "keep", at: "2026-10-06T00:00:00Z" }, "edu-edu-01--E02": { verdict: "reject", at: "2026-10-06T00:00:01Z" } } })).status).toBe(200);
+  // A retry re-rendered both after the operator judged them.
+  const runFile = path.join(ROOT, runId, "run.json");
+  const run = JSON.parse(readFileSync(runFile, "utf8")) as StripRun;
+  run.cards.find((c) => c.id === "edu-edu-01--E01")!.status = "render-failed";
+  run.cards.find((c) => c.id === "edu-edu-01--E02")!.status = "lint-failed";
+  writeFileSync(runFile, JSON.stringify(run, null, 2));
+
+  const plan = await previewStripCommit(runId);
+  console.log(`[strips] stale verdicts on unrendered cards -> ${JSON.stringify(plan.counts)} styles ${plan.styles.length} delete ${plan.delete.length}`);
+  expect(plan.counts).toEqual({ kept: 0, rejected: 0, undecided: 4 });
+  expect(plan.styles).toEqual([]);
+  expect(plan.delete).toEqual([]);
+
+  const res = await answer(() => commitStripRun(runId, plan.token));
+  expect(res.status).toBe(200);
+  expect(existsSync(path.join(foundryDir(), "motion-styles", `${runId}--edu-edu-01--E01`)), "nothing promoted").toBe(false);
+  expect(existsSync(path.join(ROOT, runId, "edu-edu-01--E02", "strip.webm")), "nothing deleted").toBe(true);
 });

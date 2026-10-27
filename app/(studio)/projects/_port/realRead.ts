@@ -17,6 +17,7 @@ import { loadParts, loadProject, type PartRow } from "@gt/kernel/records/schema"
 import type { Reader } from "@gt/kernel/store";
 
 import type { LaneHoldView, ProduceJob } from "./contract.ts";
+import { firstSentence } from "./names.ts";
 
 // THE REAL SIDE'S READS - the kernel's jobs as Runs draws and acts on them, and the lanes a
 // crash holds. Every figure is derived at read from the records (a part's option and units, a
@@ -37,12 +38,6 @@ const dayOf = (now: number): string => new Date(now).toISOString().slice(0, 10);
 
 /** The media lane of a job no Run row describes: the producer's own (records/runplan.ts NATIVE). */
 const MEDIA_OF: Readonly<Record<string, MediaLane>> = { extract: "image", forge: "image", dojo: "image", article: "article", mv: "video", strips: "video", suno: "audio" };
-
-/** The first sentence of a composer's text: a Floor run's name, as the fixture and the prototype drew it. */
-export function firstSentence(text: string, fallback: string): string {
-  const t = text.trim().split(/(?<=[.!?…])\s/)[0]?.trim() ?? "";
-  return t === "" ? fallback : t.length > 80 ? `${t.slice(0, 79)}…` : t;
-}
 
 type Times = { start?: number; end?: number };
 
@@ -131,6 +126,20 @@ function statusOf(state: JobState): SchedItem["status"] {
   if (state === "done" || state === "cancelled") return "done";
   if (state === "queued" || state === "planned") return "pending";
   return "stuck";
+}
+
+/**
+ * How many of the newest JOBS_CAP jobs are a Floor run that has not finished: the count the
+ * projects page draws, without serving, pricing or placing one job. A job a project's part owns
+ * (a `parts` row names it) is the project's, not the Floor's; a cancelled or failed run is still
+ * open, as `jobsView` counted it. One query, answered from the jobs and parts indexes.
+ */
+export function floorRunsOpen(r: Reader, cap = JOBS_CAP): number {
+  const row = r.get(
+    "SELECT count(*) AS c FROM (SELECT id, state FROM jobs ORDER BY n DESC LIMIT ?) j WHERE j.state != 'done' AND NOT EXISTS (SELECT 1 FROM parts p WHERE p.job_id = j.id)",
+    cap,
+  );
+  return typeof row?.["c"] === "number" ? row["c"] : 0;
 }
 
 /** The newest jobs, each served, priced and placed. */
@@ -222,11 +231,14 @@ export function jobsView(r: Reader, now: number, cap = JOBS_CAP): ProduceJob[] {
   });
 }
 
-/** Every held lane: the oldest hold names the job (as Runs names it) and the stage that may have spent. */
-export function holdsView(r: Reader, titles: ReadonlyMap<string, string> = new Map()): LaneHoldView[] {
+/** Every held lane: the oldest hold names the job (as Runs names it) and the stage that may have spent.
+ *  The names are asked for only once a lane holds: most reads find none, and naming is a jobs read. */
+export function holdsView(r: Reader, titlesOf: () => ReadonlyMap<string, string> = () => new Map()): LaneHoldView[] {
+  let titles: ReadonlyMap<string, string> | undefined;
   return RESOURCE_LANES.flatMap((lane): LaneHoldView[] => {
     const h = laneHold(r, lane);
     if (h === undefined) return [];
+    titles ??= titlesOf();
     let title = titles.get(h.jobId);
     if (title === undefined) {
       // A hold older than the newest JOBS_CAP jobs: read its job alone.

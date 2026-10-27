@@ -26,7 +26,7 @@
 // verdicts.rev.json; a map with no such file is revision 0. A write that
 // changes nothing bumps nothing and logs nothing.
 
-import { appendFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import { acquireLock } from "../diskTx";
@@ -118,8 +118,21 @@ export async function readVerdictRev(dir: string): Promise<number> {
   return typeof doc.rev === "number" && Number.isInteger(doc.rev) && doc.rev >= 0 ? doc.rev : 0;
 }
 
+/** The refusal for a verdicts.json that exists and does not parse: the manifest
+ *  rule (store.ts readManifest), so a route answers it instead of a bare 500. */
+export function unreadableVerdicts(dir: string): FoundryError {
+  return new FoundryError(`The verdicts of ${path.basename(dir)} are unreadable — ${VERDICTS_FILE} is damaged. Inspect ${path.join(dir, VERDICTS_FILE)}.`, 503);
+}
+
 export async function readVerdictState<R>(dir: string): Promise<VerdictState<R>> {
-  const [verdicts, rev] = await Promise.all([foundryFs().readJson<Record<string, R>>(path.join(dir, VERDICTS_FILE), {}), readVerdictRev(dir)]);
+  const [verdicts, rev] = await Promise.all([
+    foundryFs()
+      .readJson<Record<string, R>>(path.join(dir, VERDICTS_FILE), {})
+      .catch((e: unknown) => {
+        throw e instanceof SyntaxError ? unreadableVerdicts(dir) : e;
+      }),
+    readVerdictRev(dir),
+  ]);
   return { rev, verdicts };
 }
 
@@ -159,11 +172,19 @@ async function apply<M, R>(
   const who: VerdictBy = by ?? "human";
   // The log leads: a line whose map write never landed is a decision recorded
   // and not applied, which a reader can see; the reverse is history lost.
-  const lines = changes.map((c) => JSON.stringify({ at, rev, op: c.op, key: c.key, ...(c.op === "set" ? { value: c.value } : {}), by: who, surface } satisfies VerdictLogLine<R>));
-  await appendFile(path.join(spec.dir, VERDICT_LOG), lines.join("\n") + "\n", "utf8");
+  // A record that names its own decider (a model keep the Board applied on a human's behalf) is
+  // logged as the record says, so the log and verdicts.json never disagree on who decided.
+  const byOf = (c: { op: "set" | "clear"; value?: R }): VerdictBy => {
+    const own = c.op === "set" ? (c.value as { by?: unknown } | undefined)?.by : undefined;
+    return own === "human" || own === "model" ? own : who;
+  };
+  const lines = changes.map((c) => JSON.stringify({ at, rev, op: c.op, key: c.key, ...(c.op === "set" ? { value: c.value } : {}), by: byOf(c), surface } satisfies VerdictLogLine<R>));
   const fs = foundryFs();
-  await fs.writeJsonAtomic(path.join(spec.dir, VERDICTS_FILE), next);
+  await fs.appendFile(path.join(spec.dir, VERDICT_LOG), lines.join("\n") + "\n");
+  // The revision lands before the map: a death between the two leaves a revision ahead of its map,
+  // which a stale client reads as a 409, where the reverse order let it overwrite a change it never saw.
   await fs.writeJsonAtomic(path.join(spec.dir, VERDICT_REV), { rev });
+  await fs.writeJsonAtomic(path.join(spec.dir, VERDICTS_FILE), next);
   return { rev, verdicts: next };
 }
 

@@ -29,6 +29,9 @@ export type FeedRead = {
   readonly items: readonly FeedItem[];
   /** Records the feed could not map, with the reason: reported, never dropped silently. */
   readonly skipped: readonly { readonly id: string; readonly reason: string }[];
+  /** Item-id prefixes of records the feed listed and could not read this time (`plate:forge:<run>:`):
+   *  the sync keeps what the index holds under them instead of pruning it as gone. */
+  readonly held?: readonly string[];
   /** The styles a plate's family and observables are read through (the styles feed only). */
   readonly styles?: ReadonlyMap<string, StyleFacets>;
 };

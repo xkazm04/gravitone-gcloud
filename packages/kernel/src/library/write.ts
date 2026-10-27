@@ -50,7 +50,7 @@ function vidOf(t: Tx, grp: string, value: string, label: string): number {
   return Number(t.get("SELECT vid FROM library_values WHERE grp = ? AND value = ?", grp, value)?.["vid"]);
 }
 
-/** Pack value ids as uint32 little-endian (counts.ts `unpack` reads them). */
+/** Pack value ids as uint32 little-endian (counts.ts `fromScope` reads them back, a DataView over the blob). */
 export function packVids(ids: readonly number[]): Uint8Array {
   const out = new Uint8Array(ids.length * 4);
   const view = new DataView(out.buffer);
@@ -138,6 +138,15 @@ export function pruneFeed(store: Store, feed: string, keep: ReadonlySet<string>)
       t.run("DELETE FROM library_items WHERE seq = ?", r["seq"] ?? null);
       n++;
     }
+    // The vocabulary follows the items: a value no facet row and no item column carries
+    // is dropped in the same transaction (live items' packed vids reference only live
+    // values). The operator's marks (pin, project) keep theirs: a pruned item that
+    // returns gets its mark facets back without a value row being minted.
+    if (n > 0) {
+      t.run(
+        "DELETE FROM library_values WHERE grp NOT IN ('pin', 'project') AND NOT EXISTS (SELECT 1 FROM library_facets f WHERE f.grp = library_values.grp AND f.value = library_values.value) AND (grp, value) NOT IN (SELECT grp, value FROM library_counts WHERE grp IN ('state', 'origin', 'source') UNION SELECT 'kind', kind FROM library_counts)",
+      );
+    }
     return n;
   });
 }
@@ -200,12 +209,14 @@ export function putMediaFacts(store: Store, facts: readonly MediaFacts[]): Resul
 
 export type FactsWanted = { readonly sha: string; readonly mime: string };
 
-/** Blobs an item points at that have no facts yet: the media-facts producer's queue. */
+/** Blobs an item points at that have no facts yet: the media-facts producer's queue. One row a
+ *  blob (./measures.ts `measuresMissing`'s shape): a DISTINCT over (sha, mime) queued the same
+ *  bytes twice when two items named them under two mimes, and the limit counted items. */
 export function factsMissing(store: Store, limit: number): Result<FactsWanted[]> {
   return store.read((r) =>
     r
       .all(
-        "SELECT DISTINCT d.media_sha AS sha, d.media_mime AS mime FROM library_docs d WHERE d.media_sha IS NOT NULL AND NOT EXISTS (SELECT 1 FROM media_facts f WHERE f.sha = d.media_sha) LIMIT ?",
+        "SELECT d.media_sha AS sha, max(d.media_mime) AS mime FROM library_docs d WHERE d.media_sha IS NOT NULL AND NOT EXISTS (SELECT 1 FROM media_facts f WHERE f.sha = d.media_sha) GROUP BY d.media_sha LIMIT ?",
         limit,
       )
       .map((row) => ({ sha: String(row["sha"]), mime: String(row["mime"] ?? "application/octet-stream") })),

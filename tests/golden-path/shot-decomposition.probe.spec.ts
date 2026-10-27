@@ -403,6 +403,27 @@ test("two beats at the same timecode stay two groups — a position is not an id
   console.log(`[shots] same-timecode beats -> ${groups.length} groups, keys ${keys.join(",")}`);
 });
 
+test("the review names a beat by its id, not its timecode — two resets at one second are two beats", () => {
+  // The same rule as the grouping case above, held on the REVIEW: keyed on
+  // `beatAt`, two one-shot reset beats sharing a second read as one reset
+  // "carrying two shots" (a false violation) and the beat counts came up short.
+  const chain: ShotSourceBeat[] = [
+    { id: "b1", at: "0:00", kind: "setup", label: "open", text: "t", role: "setup" },
+    { id: "b2", at: "0:30", kind: "reset", label: "the stop", text: "t", role: "reset" },
+    { id: "b3", at: "0:30", kind: "reset", label: "a second stop, same second", text: "t", role: "reset" },
+    { id: "b4", at: "0:34", kind: "peak", label: "climax", text: "t", role: "peak" },
+  ];
+  const shots = shotsFromBeats(chain, 40);
+  const report = reviewShotList(shots);
+  const check = (rule: string) => report.checks.find((c) => c.rule === rule)!;
+  expect(report.beats).toBe(4);
+  expect(check("reset-holds-one-thing").verdict).toBe("pass");
+  expect(check("reset-holds-one-thing").examined).toBe(2);
+  // Two reset beats before the peak IS the device overused, and now it is seen.
+  expect(check("one-reset-before-the-peak").verdict).toBe("violation");
+  expect(check("beat-roles-were-declared").examined).toBe(4);
+});
+
 test("every kind the beat lane can emit resolves to a role — no key is dead", () => {
   // TrailerBeatKind, as declared on `trailer/story-model`. If that union grows,
   // this list and ROLE_HINTS are the one line each that reconciles it.

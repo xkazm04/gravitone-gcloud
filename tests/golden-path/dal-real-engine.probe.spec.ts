@@ -44,6 +44,7 @@ import {
   loadStep,
   lastStorageTrouble,
   onStorageTrouble,
+  patchStep,
   readStep,
   SCHEMA_VERSION,
   saveStep,
@@ -274,6 +275,35 @@ test("latest-wins: through the REAL store, the newer keystroke is what lands", a
   expect("superseded" in a && a.superseded).toBe(true);
 });
 
+test("latest-wins: a save superseded while it waits its turn never opens the database", async () => {
+  // saveStep's early out is the promise that an overtaken save "does not even open
+  // the database". Checked at CALL time it can never fire (the slot was claimed one
+  // line earlier), so the check has to run when the save's turn in the issue-order
+  // chain comes up. Three saves in one tick: the first two are overtaken while queued.
+  const factory = globalThis.indexedDB;
+  const real = factory.open.bind(factory);
+  let opens = 0;
+  factory.open = ((...args: Parameters<IDBFactory["open"]>) => {
+    opens++;
+    return real(...args);
+  }) as IDBFactory["open"];
+  try {
+    const outcomes = await Promise.all([
+      saveStep("p1", "script", { topic: "one" }),
+      saveStep("p1", "script", { topic: "two" }),
+      saveStep("p1", "script", { topic: "three" }),
+    ]);
+    const landed = opens;
+    console.log(`[dal] three saves in one tick opened the database ${landed} time(s)`);
+    expect(outcomes.map((o) => o.ok && "superseded" in o && o.superseded === true)).toEqual([true, true, false]);
+    expect(landed, "only the save still newest at its turn may open a connection").toBe(1);
+  } finally {
+    delete (factory as unknown as { open?: unknown }).open;
+  }
+  const read = await readStep<{ topic: string }>("p1", "script");
+  expect(read.ok && read.data?.topic).toBe("three");
+});
+
 test("eviction: through the REAL store, one account's rows go and the other's stay", async () => {
   const db = await openDb();
   await runTx(db, [PROJECTS_STORE, THEMES_STORE, ASSETS_STORE], "readwrite", (projects, tx) => {
@@ -415,4 +445,122 @@ test("versioning: a written record carries its schema version, alongside savedAt
   expect(out.data?.savedAt, "savedAt is still stamped").toBeGreaterThan(0);
   expect(out.data?.v, "the record names its schema version").toBe(SCHEMA_VERSION);
   console.log(`[dal] written record: v=${out.data?.v}, savedAt=${out.data?.savedAt}`);
+});
+
+// ── The issue-order chain (lib/steps/saveOrder.ts inIssueOrder) ──────────────
+
+const merge = (extra: object) => (stored: unknown) => ({ put: { ...(stored as object), ...extra } });
+
+/** Run `body` with the FIRST indexedDB.open slowed by 20ms (its success handler is held back). A
+ *  save issued first then reaches its transaction after an operation issued second could, so only
+ *  the chain keeps the issue order; without a slow first open the engine happens to be FIFO and
+ *  the chain is never exercised. */
+async function slowFirstOpen<T>(body: () => Promise<T>): Promise<T> {
+  const factory = globalThis.indexedDB;
+  const real = factory.open.bind(factory);
+  let n = 0;
+  factory.open = ((...args: Parameters<IDBFactory["open"]>) => {
+    const req = real(...args);
+    if (n++ === 0) {
+      let held: ((this: IDBOpenDBRequest, ev: Event) => unknown) | null = null;
+      Object.defineProperty(req, "onsuccess", { configurable: true, get: () => null, set: (fn) => void (held = fn) });
+      req.addEventListener("success", (ev) => void setTimeout(() => held?.call(req, ev), 20));
+    }
+    return req;
+  }) as IDBFactory["open"];
+  try {
+    return await body();
+  } finally {
+    delete (factory as unknown as { open?: unknown }).open;
+  }
+}
+
+test("issue order: a patch issued in the same tick as a save merges onto what the save wrote", async () => {
+  const { s, p } = await slowFirstOpen(async () => {
+    const save = saveStep("p-order", "script", { a: 1 });
+    const patch = patchStep("p-order", "script", merge({ b: 2 }));
+    const [s, p] = await Promise.all([save, patch]);
+    return { s, p };
+  });
+  expect(s.ok && p.ok).toBe(true);
+  const read = await readStep<{ a?: number; b?: number }>("p-order", "script");
+  expect(read.ok && { a: read.data?.a, b: read.data?.b }).toEqual({ a: 1, b: 2 });
+});
+
+test("issue order: two patches issued in one tick, behind a save, both land", async () => {
+  const [x, y] = await slowFirstOpen(async () => {
+    void saveStep("p-two", "script", { base: true });
+    return Promise.all([patchStep("p-two", "script", merge({ x: 1 })), patchStep("p-two", "script", merge({ y: 2 }))]);
+  });
+  expect(x).toEqual({ ok: true, wrote: true });
+  expect(y).toEqual({ ok: true, wrote: true });
+  const read = await readStep<{ base?: boolean; x?: number; y?: number }>("p-two", "script");
+  expect(read.ok && { base: read.data?.base, x: read.data?.x, y: read.data?.y }).toEqual({ base: true, x: 1, y: 2 });
+});
+
+test("patch: a decide that throws writes nothing and reports a failed trouble", async () => {
+  await saveStep("p-throw", "script", { keep: "me" });
+  const out = await patchStep("p-throw", "script", () => {
+    throw new Error("decide refused");
+  });
+  expect(out.ok).toBe(false);
+  if (!out.ok) expect(out.trouble.kind).toBe("failed");
+  expect(lastStorageTrouble()?.kind).toBe("failed");
+  const read = await readStep<{ keep?: string }>("p-throw", "script");
+  expect(read.ok && read.data?.keep).toBe("me");
+});
+
+test("issue order: a read issued after a save in the same tick sees the save", async () => {
+  // Twenty keys: the read-your-write claim is about call order, not one lucky run.
+  const misses: string[] = [];
+  for (let i = 0; i < 20; i++) {
+    const k = `p-ryw-${i}`;
+    void saveStep(k, "script", { n: i });
+    const r = await readStep<{ n?: number }>(k, "script");
+    if (!(r.ok && r.data?.n === i)) misses.push(k);
+  }
+  expect(misses).toEqual([]);
+});
+
+
+// A SUBSCRIBER THAT THROWS IS NOT THE WRITER'S PROBLEM. saveStep never rejects, and a write
+// that landed is not reported as one that failed because a listener threw while being told.
+test("listeners: a throwing trouble listener neither rejects a failed save nor fails a landed one", async () => {
+  const realOpen = indexedDB.open.bind(indexedDB);
+  const quiet = console.error;
+  console.error = () => {};
+  const stop = onStorageTrouble(() => {
+    throw new Error("listener refused");
+  });
+  try {
+    // @ts-expect-error — deliberately replacing the engine entrypoint for one call.
+    indexedDB.open = () => {
+      const req: Record<string, unknown> = { error: new Error("write failed — the engine refused"), result: undefined };
+      queueMicrotask(() => (req.onerror as (() => void) | undefined)?.());
+      return req;
+    };
+    let rejected = false;
+    let failed: Awaited<ReturnType<typeof saveStep>> | undefined;
+    try {
+      failed = await saveStep("p-listener", "script", { n: 1 });
+    } catch {
+      rejected = true;
+    } finally {
+      indexedDB.open = realOpen;
+    }
+    expect(rejected, "a failed save resolves, it does not reject").toBe(false);
+    expect(failed?.ok).toBe(false);
+    expect(lastStorageTrouble()?.projectId).toBe("p-listener");
+    // The next write to the same step lands and clears the trouble: the listener is told, throws,
+    // and the outcome is still the write's.
+    const landed = await saveStep("p-listener", "script", { n: 2 });
+    expect(landed).toEqual({ ok: true });
+    expect(lastStorageTrouble()).toBeNull();
+    const read = await readStep<{ n?: number }>("p-listener", "script");
+    expect(read.ok && read.data?.n).toBe(2);
+  } finally {
+    indexedDB.open = realOpen;
+    console.error = quiet;
+    stop();
+  }
 });

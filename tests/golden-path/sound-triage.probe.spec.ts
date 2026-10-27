@@ -10,9 +10,10 @@
 //   1. THE QUEUE (lib/sound/triageOrder.ts, the Board pile's order). Agents'
 //      takes first (the main inflow, via pipeline/sound.mts generate), oldest
 //      first within an origin; judged takes and fixture rows never wait in it.
-//   2. THE KEYS (@gt/ui keymap, mode board.cull). K keeps and X rejects, the
-//      number row names the audio defects in their order (1-9, 0, -), and the
-//      legend may not name a key the table does not bind. v1's judge-only keys
+//   2. THE KEYS (@gt/ui keymap, mode board.cull). The number row decides: 1
+//      keeps, 2-4 reject with the first three audio defects in their order, 5
+//      rejects bare (spark scout-storyboards); the other defects are chips, and
+//      the legend may not name a key the table does not bind. v1's judge-only keys
 //      (N/P to walk, 1-0 to score) are the desk's rubric now.
 //   3. THE CELL (@gt/ui audio/strengths.ts). A strengths cell under n=3 carries
 //      no rate and no mean — not a rounded one, not a zero — and a missing
@@ -23,7 +24,7 @@
 
 import { test, expect } from "@playwright/test";
 
-import { reasonForKey, SOURCES } from "@gt/domain/source";
+import { keyedReason, reasonVocabulary, SOURCES } from "@gt/domain/source";
 import { batchBrief, batchProblem, blankBatch, composeSfxPrompt, priceSeconds } from "@gt/ui/components/audio/batch.ts";
 import { briefCheck } from "@gt/ui/components/audio/brief.ts";
 import { dimsFor, isProven, rubricMean } from "@gt/ui/components/audio/rubric.ts";
@@ -61,15 +62,16 @@ test("queue: agents first, oldest first within an origin, judged and fixture row
 
 const cull = (verb: string) => KEYMAP.rows.filter((r) => r.binding.mode === "board.cull" && r.binding.verb === verb);
 
-test("keys: K keeps, X rejects, U undecides on the Board's cull, and the number row names the audio defects in order", () => {
-  expect(cull("keep").flatMap((r) => r.caps)).toEqual(["K"]);
-  expect(cull("reject").flatMap((r) => r.caps)).toEqual(["X"]);
+test("keys: 1 keeps, 5 rejects, U undecides on the Board's cull, and 2-4 name the first audio defects in order", () => {
+  expect(cull("keep").flatMap((r) => r.caps)).toEqual(["1"]);
+  expect(cull("reject").flatMap((r) => r.caps)).toEqual(["5"]);
   expect(cull("undecide").flatMap((r) => r.caps)).toEqual(["U"]);
-  expect(cull("reason").flatMap((r) => r.caps)).toEqual(["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"]);
-  // Eleven defects, eleven keys: every audio reason is reachable, in v1's order.
+  expect(cull("reason").flatMap((r) => r.caps)).toEqual(["2", "3", "4"]);
+  // Eleven defects in v1's order: the first three on keys, every one on a chip.
   expect(SOURCES.audio.reasons).toHaveLength(11);
-  expect(reasonForKey("audio", "1")).toBe("smeared-transients");
-  expect(reasonForKey("audio", "-")).toBe("wrong-event");
+  expect(keyedReason(reasonVocabulary("audio"), undefined, "2")).toBe("smeared-transients");
+  expect(keyedReason(reasonVocabulary("audio"), undefined, "4")).toBe("section-bleed");
+  expect(keyedReason(reasonVocabulary("audio"), undefined, "-")).toBeUndefined();
   expect(cull("play").map((r) => [r.caps, r.binding.when])).toEqual([[["Space"], "audio"]]);
   expect(KEYMAP.problems).toEqual([]);
 });

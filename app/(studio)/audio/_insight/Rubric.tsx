@@ -11,7 +11,10 @@
 // pile until the next success. Writes to one take chain (v1 useTriage's rule, and lib/sound/
 // takes.ts merges the bag for the same reason): two fast keys on one take cannot race each
 // other out of it. The pile keeps the order it was served in until the page is read again, so a
-// take does not jump away from under the hand that just scored it.
+// take does not jump away from under the hand that just scored it. A write whose round trip
+// fails rejects; it waits through ../_hunt/settled.ts, so its step goes back and its dimension
+// stops being busy, and the take's chain waits for each write to SETTLE, so one failed write
+// never stops the next key on that take from being sent.
 import { useMemo, useRef, useState } from "react";
 
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
@@ -23,6 +26,7 @@ import { useKeys } from "@gt/ui/keymap/dispatch";
 
 import { useShell } from "../../_shell/Providers.tsx";
 import { useTransport } from "../_audio/useTransport.ts";
+import { settled } from "../_hunt/settled.ts";
 import type { scoreTake } from "./acts.ts";
 import type { RubricTake, RubricView } from "./read.ts";
 import s from "./insight.module.css";
@@ -32,6 +36,13 @@ export const RUBRIC_MODE = "audio.rubric";
 const opId = (): string => crypto.randomUUID().replace(/-/g, "").slice(0, 20);
 
 type Busy = ReadonlyMap<string, readonly string[]>;
+
+/** Queue `job` behind the take's last write, run once that write has settled either way. */
+export function chainOn(chains: Map<string, Promise<void>>, id: string, job: () => Promise<void>): Promise<void> {
+  const run = (chains.get(id) ?? Promise.resolve()).catch(() => undefined).then(job);
+  chains.set(id, run);
+  return run;
+}
 
 export function RubricDesk({ view, acts }: { readonly view: RubricView; readonly acts: { readonly scoreTake: typeof scoreTake } }) {
   const { toast } = useShell();
@@ -68,9 +79,8 @@ export function RubricDesk({ view, acts }: { readonly view: RubricView; readonly
     const before = mine.get(t.id)?.[d] ?? t.ratings[d] ?? null;
     setMine((cur) => new Map(cur).set(t.id, { ...(cur.get(t.id) ?? {}), [d]: value }));
     mark(t.id, d, true);
-    const prior = chains.current.get(t.id) ?? Promise.resolve();
-    const run = prior.then(async () => {
-      const r = await acts.scoreTake({ id: t.id, ratings: { [d]: value }, opId: opId() });
+    void chainOn(chains.current, t.id, async () => {
+      const r = await settled(acts.scoreTake({ id: t.id, ratings: { [d]: value }, opId: opId() }));
       mark(t.id, d, false);
       if (r.ok) {
         setRefusal(null);
@@ -81,7 +91,6 @@ export function RubricDesk({ view, acts }: { readonly view: RubricView; readonly
       setRefusal(`${t.title} · refused · ${r.error.error}`);
       toast(`${t.title} · score refused`);
     });
-    chains.current.set(t.id, run);
   };
 
   const at = focused === null ? -1 : takes.findIndex((t) => t.id === focused);

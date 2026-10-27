@@ -31,7 +31,9 @@ const probeSchema = z.object({
   format: z.object({ duration: z.string().optional(), format_name: z.string().optional() }).optional(),
 });
 
-export type ProbeRead = { readonly ok: true; readonly json: string } | { readonly ok: false; readonly error: string };
+/** `unavailable`: the tool itself did not run on this box (absent, or killed at its bound). That is
+ *  a fact about the box, not about the blob, so the driver reports it failed and writes no row. */
+export type ProbeRead = { readonly ok: true; readonly json: string } | { readonly ok: false; readonly error: string; readonly unavailable?: true };
 
 const positive = (s: string | undefined): number | null => {
   const n = s === undefined ? Number.NaN : Number(s);

@@ -55,6 +55,17 @@ export function parseFollowUp(raw: unknown, nb: FollowUpNotebook): Result<Follow
   const facts = new Set(nb.facts.map((f) => f.id));
   const unknowns = new Set(nb.unknowns.map((u) => u.id));
   const stray = p.value.effects.flatMap((e) => (e.kind === "adds-fact" ? (facts.has(e.factId) ? [`${e.factId} already exists`] : []) : (e.kind === "resolves-unknown" ? unknowns : facts).has(e.targetId) ? [] : [`${e.targetId} is not in this notebook`]));
+  // The SET is checked as well as each effect (op-grammar-allowlisting: a create carries its
+  // identity, a relative op is the dangerous class). Two adds of one new id would land the first
+  // and drop the second as "already-there" (lib/research/revisions.ts) - a partial apply - and two
+  // downgrades of one fact step it down two rungs, where an effect may only ever claim one.
+  const seen = new Set<string>();
+  for (const e of p.value.effects) {
+    const key = e.kind === "adds-fact" ? `add:${e.factId}` : e.kind === "downgrades" ? `down:${e.targetId}` : undefined;
+    if (key === undefined) continue;
+    if (seen.has(key)) stray.push(e.kind === "adds-fact" ? `${e.factId} is added twice` : `${e.targetId} is downgraded twice`);
+    seen.add(key);
+  }
   if (stray.length > 0) return err("invalid", `The engine returned effects this notebook cannot hold (${stray.join("; ")}). Nothing was changed.`);
   return ok({ ...p.value, effects: p.value.effects.map((e) => (e.kind === "adds-fact" ? { kind: e.kind, factId: e.factId, claim: e.claim, confidence: e.confidence, source: e.source, ...(e.note === undefined ? {} : { note: e.note }) } : e)) });
 }

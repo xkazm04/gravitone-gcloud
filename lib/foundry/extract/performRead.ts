@@ -6,6 +6,7 @@ import type { EngineIO } from "./engine";
 import { tripped } from "./breaker";
 import { log } from "./journal";
 import { isReadback, logOffVocabulary, msg, passDeath, setStage } from "./performCommon";
+import { placeLate } from "./performGroup";
 import { readbackInstruction, singletonInstruction } from "./prompts";
 import { READBACK_SCHEMA, SINGLETON_SCHEMA } from "./vocabulary";
 import { book, isOverBudget, stopFor } from "./spend";
@@ -26,6 +27,8 @@ export async function performRead(m: ExtractManifest, io: EngineIO, unit: Extrac
     m.engines.vision = r.model;
     logOffVocabulary(m, io, `read ${s.id}`, s.readback);
     log(m, io, `read ${s.id} (${s.name}): ${s.readback.render_mode}, ${s.readback.palette_strategy}`);
+    // A retry can read a source the run grouped without (performGroup.ts placeLate).
+    placeLate(m, io, { id: s.id, name: s.name, readback: s.readback });
   } catch (e) {
     passDeath(e);
     if (isOverBudget(e)) {

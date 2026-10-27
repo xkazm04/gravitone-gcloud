@@ -4,7 +4,8 @@ import { jobIdSchema } from "@gt/domain/ids";
 import { cancel, enqueue, loadJob, putJob } from "../src/job.ts";
 import { openKernel, type Kernel } from "../src/kernel.ts";
 import { launchProject, launchRun, planReceipt, rerouteOptions, runReceipt } from "../src/records/launch.ts";
-import { listProjects, readProject } from "../src/records/read.ts";
+import { listProjects, readProject, readQueue } from "../src/records/read.ts";
+import { quotedSecondsOf } from "../src/records/schema.ts";
 import { compose, discard, releaseHeld, rename, setPart } from "../src/records/write.ts";
 import type { Store } from "../src/store.ts";
 import { must, steppingClock } from "./helpers.ts";
@@ -120,6 +121,17 @@ describe("launch: a receipt, then a confirm", () => {
     expect(must(readProject(s, "p1", ctx)).project.launched).toBe(false);
   });
 
+  it("a confirm with a ceiling the read did not carry is answered with the receipt read at that ceiling", () => {
+    const s = store();
+    ok(compose(s, { recipe: "article/post", topic: "provider routing" }, OP, { id: "a1" }));
+    const read = must(planReceipt(s, "a1", { mode: "dry" }, ctx));
+    const r = launchProject(s, { id: "a1", baseRev: 1, token: read.token, mode: "dry", ceilingUsd: 20 }, OP, lctx);
+    expect(r).toMatchObject({ ok: false, error: { code: "conflict", detail: "stale-receipt" }, fresh: { ceilingUsd: 20 } });
+    expect(jobCount(s)).toBe(0);
+    const fresh = must(planReceipt(s, "a1", { mode: "dry", ceilingUsd: 20 }, ctx));
+    ok(launchProject(s, { id: "a1", baseRev: 1, token: fresh.token, mode: "dry", ceilingUsd: 20 }, OP, lctx));
+  });
+
   it("launches a receipt over its ceiling - a stop point, not a refusal - with the ceiling on the job", () => {
     const s = store();
     ok(compose(s, { recipe: "article/post", topic: "provider routing" }, OP, { id: "a1" }));
@@ -203,5 +215,35 @@ describe("Floor runs", () => {
     const nano = frames.find((o) => o.option.provider === "google");
     expect(nano?.dEtaS).toBeLessThan(0);
     expect(nano?.dUsd).toBeCloseTo(24 * 0.045);
+  });
+});
+
+describe("the queue read", () => {
+  it("reads the live jobs' quoted seconds in a number of statements that does not grow with the queue", () => {
+    const s = store();
+    const statements = (): number => {
+      let n = 0;
+      must(
+        s.read((r) => {
+          readQueue({ at: r.at, get: (sql, ...p) => (n++, r.get(sql, ...p)), all: (sql, ...p) => (n++, r.all(sql, ...p)) });
+        }),
+      );
+      return n;
+    };
+    const launch = (id: string) => {
+      ok(compose(s, { recipe: "film/trailer" }, OP, { id }));
+      const receipt = must(planReceipt(s, id, { mode: "dry" }, ctx));
+      ok(launchProject(s, { id, baseRev: 1, token: receipt.token, mode: "dry" }, OP, lctx));
+    };
+    launch("q1");
+    const one = statements();
+    for (const id of ["q2", "q3", "q4", "q5"]) launch(id);
+    const five = statements();
+    expect(five).toBe(one);
+    // the batch answers what the per-job lookup answers, job by job
+    const q = must(s.read((r) => ({ queue: readQueue(r), each: new Map(r.all("SELECT id FROM jobs WHERE state IN ('queued', 'running')").map((x) => [`job:${String(x["id"])}`, quotedSecondsOf(r, String(x["id"]))])) })));
+    expect(q.queue.others.length).toBeGreaterThanOrEqual(5);
+    expect(q.queue.others.some((o) => o.seconds > 0)).toBe(true);
+    for (const o of q.queue.others) expect(o.seconds).toBe(q.each.get(o.key));
   });
 });

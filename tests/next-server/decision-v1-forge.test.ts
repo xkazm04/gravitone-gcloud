@@ -162,6 +162,13 @@ describe("forge adapter - the packet (pure)", () => {
     expect(importVerdict({ verdict: "keep", at: "x", note: "reasons: style\nfine" })).toMatchObject({ reasons: [], note: "reasons: style\nfine" });
   });
 
+  it("a keep's reasons are disclosed as a keep's, never as words outside the forge list", () => {
+    const keep = "sc0/haze--ref--s0";
+    const plan = must(forgeAdapter.packet(literal({ verdicts: { ...VERDICTS, [keep]: { verdict: "keep", at: "2026-10-14T11:00:00.000Z", note: "reasons: style\nfine", by: "human" } } })));
+    expect(plan.losses.filter((l) => l.candidate === keep).map((l) => l.reason)).toEqual(["v1 reason(s) on a keep (style) ride in the note; only a reject carries reasons"]);
+    expect(plan.losses.find((l) => l.candidate === "sc0/haze--txt--s0")?.reason).toBe("v1 reason(s) motion are not forge reasons; kept in the note");
+  });
+
   it("refuses a run v1 itself would not commit, in v1's words", () => {
     const running = forgeAdapter.packet(literal({ run: manifest({ status: "grading" }) }));
     expect(running.ok ? "" : running.error.message).toContain("The forge is still running this run.");

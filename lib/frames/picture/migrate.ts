@@ -3,27 +3,25 @@
 // v1 (`{ frames, renderId, direction? }`, no `v`) held a list of frames whose
 // identity was their index. v2 holds the same cut as PICTURE UNITS (./unit.ts):
 // each with an identity and its own place on the film. The `frames` list stays
-// in the record as a read-only SHADOW of the BEAT units, written beside the
-// units on every save, because two readers have not moved to units yet — the
-// board's alternatives source (lib/board/sources/alternative.ts) and Motion
-// (motion/useMotion.ts) — and both move onto the def in phase-shared-A's
-// lineage stage. Score and Cut read units since frames-phase-A stage 2
-// (./read.ts).
+// in the record as a read-only SHADOW of the BEAT units, which v1 wrote beside
+// the units on every save for its readers that had not moved to units.
 //
-// THIS RUNS ON READ ONLY. `decodeRecord` (../../_shared/records/registry.ts)
-// walks a stored v1 object through `framesV1ToV2` in memory and hands the hook
-// v2; nothing is written back. A record that is money (plates) is rewritten when
-// somebody edits it, not when somebody opens it — `useFrames`' save is skipped
-// while the cut on screen is still exactly what was read.
+// WHO RUNS THIS NOW: the importer. `lib/import/steps.ts` walks a v1 export's
+// `frames` row through `framesV1ToV2`, drops the shadow, and hands the result to
+// @gt/domain's FRAMES door (v3, packages/domain/src/steps/frames.ts). It is
+// pure and in memory; v1 ran it at its own read seam (`decodeRecord`, retired
+// with app/_phases); the probe that pins the walk (tests/golden-path/picture-unit.probe.spec.ts)
+// asserts through the importer's path, so there is one door for the record, @gt/domain's.
 //
 // `withClips` — the hand migration `frames.ts` used to run inline at the read,
 // "because there is no migration seam to hang this off" — is folded in here,
 // because now there is one.
 //
-// TWO WRITERS STILL WRITE v1, and that is handled rather than forbidden. The
-// board's `decide` and Motion's accept save `{ ...stored, frames }` through the
-// def-less store, which stamps `v: 1` — so a v2 record they touch comes back as
-// "v1 with units riding along". The two kinds of unit are treated differently:
+// TWO v1 WRITERS WROTE v1 OVER v2, so an export can carry it, and that is
+// handled rather than forbidden. v1's board `decide` and Motion accept saved
+// `{ ...stored, frames }` through the def-less store, which stamped `v: 1` — so
+// a v2 record they touched reads as "v1 with units riding along". The two
+// kinds of unit are treated differently:
 //
 //   · BEAT units are re-derived from `frames`, never trusted from the object.
 //     The writer edited `frames` (Motion's accepted line lives only there), and
@@ -33,17 +31,17 @@
 //     only. They are KEPT from the object when they were derived from the chain
 //     the object names (`sourceId === renderId`); without that, the next v1
 //     write would erase every shot a trailer saved. A shot from a different
-//     chain is stale and is dropped, as the hook would drop it.
+//     chain is stale and is dropped, as v1's hook would drop it.
 //
-// Stage 3 gives shots plates of their own; by then the board and Motion should
-// write through the def, and this branch becomes a reader of old records only.
+// Those writers retired with app/_phases, so this branch reads old records
+// only.
 
 import { RENDER_BY_ID } from "@/lib/script/renders";
 import type { ScriptRender } from "@/lib/script/types";
-import { isPlainObject, malformed, type RecordRefusal } from "@/lib/steps/recordRegistry";
 import { emptyClip, type Frame } from "@/lib/frames/frames";
-import type { FramesStepData } from "@/lib/frames/stepData";
-import { framesFromUnits, unitsFromFrames, type PictureUnit } from "@/lib/frames/picture/unit";
+import { unitsFromFrames, type PictureUnit } from "@/lib/frames/picture/unit";
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** The length of the chain a stored `renderId` names, when it names a shipped
  *  explainer render — the number `durationOf` closes the last beat with. An id
@@ -64,8 +62,8 @@ function framesIn(raw: Record<string, unknown>): Frame[] {
   return (list as Frame[]).map(withClip);
 }
 
-/** v1 → v2. Pure; throws on a v1 object it cannot read, which the registry
- *  turns into a `malformed` refusal (and so into no write). */
+/** v1 → v2. Pure; throws on a v1 object it cannot read, which the importer
+ *  (lib/import/steps.ts lift) turns into a data-only loss. */
 export function framesV1ToV2(raw: Record<string, unknown>): Record<string, unknown> {
   const frames = framesIn(raw);
   const renderId = typeof raw.renderId === "string" ? raw.renderId : "";
@@ -88,23 +86,4 @@ function shotsRiding(units: unknown, renderId: string): PictureUnit[] {
       Array.isArray(u.elements) &&
       Array.isArray(u.texts),
   );
-}
-
-/** A v2 object → the record. Units are the authority; the shadow is rebuilt
- *  from them, so a reader of the record cannot be handed two cuts that
- *  disagree. */
-export function parseFramesRecord(raw: Record<string, unknown>): FramesStepData | RecordRefusal {
-  if (typeof raw.renderId !== "string") return malformed("frames.renderId is not a string");
-  if (!Array.isArray(raw.units)) return malformed("frames.units is not a list");
-  for (const [i, u] of raw.units.entries())
-    if (
-      !isPlainObject(u) ||
-      typeof u.id !== "string" ||
-      !isPlainObject(u.plate) ||
-      !Array.isArray(u.elements) ||
-      !Array.isArray(u.texts)
-    )
-      return malformed(`frames.units[${i}] is not a picture unit`);
-  const units = (raw.units as PictureUnit[]).map((u) => (u.clip ? u : { ...u, clip: emptyClip() }));
-  return { ...raw, renderId: raw.renderId, units, frames: framesFromUnits(units) } as FramesStepData;
 }

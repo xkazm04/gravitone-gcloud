@@ -88,6 +88,21 @@ test("the cut lays the same cue on its lanes, nudges a block by the keys, and ex
   await expect(page.getByText(/^animatic \d/)).toBeVisible();
 });
 
+test("the cut plays: the timecode and the needle follow the clock, and pause holds them", async ({ page }) => {
+  await ready(page, "/projects/glass-harbor-trailer/cut");
+  const needle = page.locator('[class*="needle"]');
+  const read = page.locator('[class*="read"]').first();
+  const left = async () => Number.parseFloat(await needle.evaluate((el) => (el as HTMLElement).style.left));
+  const at = await read.textContent();
+  await page.getByRole("button", { name: "play" }).click();
+  await expect.poll(left).toBeGreaterThan(0);
+  await expect(read).not.toHaveText(at ?? "");
+  await page.getByRole("button", { name: "pause" }).click();
+  const held = await read.textContent();
+  await page.waitForTimeout(400);
+  await expect(read).toHaveText(held ?? "");
+});
+
 test("the explainer writes, draws and records, and its cut reaches READY with no music rows", async ({ page }) => {
   const id = "provider-routing-explainer";
   await ready(page, `/projects/${id}/article`);

@@ -13,6 +13,7 @@ import type { EngineDef } from "../../../../lib/sound/engines.ts";
 import { computeInsights } from "../../../../lib/sound/insights.ts";
 import { readLedger } from "../../../../lib/sound/store.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
+import { takeFileHref } from "../../../../lib/sound/takeHref.ts";
 import type { SoundTake } from "../../../../lib/sound/types.ts";
 import type { Kind } from "../_audio/desk.ts";
 import type { Read } from "../_audio/read.ts";
@@ -33,7 +34,8 @@ export type StrengthsView = {
   readonly cells: Read<readonly StrengthCell[]>;
   /** Takes the ledger holds a verdict on, of this kind: the only total the table has. */
   readonly judged: number;
-  readonly evidence: readonly EvidenceTake[];
+  /** The judged takes behind the cells; unread, a cell has no evidence to sign on. */
+  readonly evidence: Read<readonly EvidenceTake[]>;
   readonly lessons: Read<readonly LessonRow[]>;
 };
 
@@ -82,14 +84,13 @@ export const evidenceOf = (t: SoundTake): EvidenceTake => ({
 });
 
 export async function readStrengths(kind: Kind): Promise<StrengthsView> {
-  const ledger = await read(() => readLedger());
-  const insights = ledger.ok ? computeInsights(ledger.value.verdicts, kind) : null;
-  const takes = await read(() => listTakes({ kind, fixtures: false }));
+  const [ledger, takes] = await Promise.all([read(() => readLedger()), read(() => listTakes({ kind, fixtures: false }))]);
+  const insights = ledger.ok ? { ok: true as const, value: computeInsights(ledger.value.verdicts, kind) } : ledger;
   return {
     kind,
-    cells: ledger.ok && insights !== null ? { ok: true, value: insights.cells } : { ok: false, error: ledger.ok ? "no insights" : ledger.error },
-    judged: insights?.judged ?? 0,
-    evidence: takes.ok ? takes.value.filter(judged).map(evidenceOf) : [],
+    cells: insights.ok ? { ok: true, value: insights.value.cells } : insights,
+    judged: insights.ok ? insights.value.judged : 0,
+    evidence: takes.ok ? { ok: true, value: takes.value.filter(judged).map(evidenceOf) } : takes,
     lessons: ledger.ok
       ? {
           ok: true,
@@ -121,7 +122,7 @@ export function rubricTake(t: SoundTake & { verdict: "kept" | "rejected" }, m: A
     provider: t.provider,
     verdict: t.verdict,
     loop: t.loop,
-    src: t.file === null ? null : `/api/sound/takes/${encodeURIComponent(t.id)}/file`,
+    src: t.file === null ? null : takeFileHref(t.id),
     prompt: t.prompt,
     rubric: readRubric(t),
     ratings: t.ratings,
@@ -152,7 +153,10 @@ export async function readRubricPile(kind: Kind): Promise<RubricView> {
 
 /** How many judged takes of a kind still have a dimension unscored: the rubric tab's tally. */
 export async function unscoredCount(kind: Kind): Promise<Read<number>> {
-  return read(async () => (await listTakes({ kind, fixtures: FIXTURE_MODE })).filter(judged).filter((t) => readRubric(t).scored < readRubric(t).of).length);
+  return read(async () => (await listTakes({ kind, fixtures: FIXTURE_MODE })).filter(judged).filter((t) => {
+    const r = readRubric(t);
+    return r.scored < r.of;
+  }).length);
 }
 
 export function readBatch(kind: Kind, reg: readonly EngineDef[]): BatchView {

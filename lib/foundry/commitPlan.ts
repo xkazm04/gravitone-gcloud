@@ -36,6 +36,19 @@ import { nearDuplicates } from "./extract/vocabulary";
  *  the same rule, so preview equals commit. */
 export const humanKeep = (e: { verdict: string; by?: string }): boolean => e.verdict === "keep" && e.by !== "model";
 
+/** What a forge commit decides, once: the plan and the pieces commitRun
+ *  acts on, so the commit applies the rules the preview showed instead of
+ *  re-deriving them. `at` stamps the auto-rejects and every ledger row (the
+ *  commit's own time); a preview passes none and its rows carry the verdict's. */
+export interface ForgeDerivation {
+  plan: ForgeCommitPlan;
+  /** The candidates the cull judges and the verdicts they carry, auto-rejects included. */
+  decided: RunManifest["candidates"];
+  verdicts: Verdicts;
+  /** Ids the commit rejects for the operator ("reject" mode, no verdict yet). */
+  autoRejected: string[];
+}
+
 /**
  * Pure projection of what `commitRun` will do to the filesystem and catalogue.
  */
@@ -45,15 +58,27 @@ export function planForgeCommit(
   catalogue: Catalogue,
   undecidedAs: "reject" | "leave",
 ): ForgeCommitPlan {
+  return deriveForgeCommit(run, verdicts, catalogue, undecidedAs).plan;
+}
+
+export function deriveForgeCommit(
+  run: RunManifest,
+  verdicts: Verdicts,
+  catalogue: Catalogue,
+  undecidedAs: "reject" | "leave",
+  at?: string,
+): ForgeDerivation {
   const withFile = run.candidates.filter(
     (c) => c.status !== "pending" && c.status !== "failed" && !c.deleted,
   );
 
   const effectiveVerdicts: Verdicts = { ...verdicts };
+  const autoRejected: string[] = [];
   if (undecidedAs === "reject") {
     for (const c of withFile) {
       if (!effectiveVerdicts[c.id]) {
-        effectiveVerdicts[c.id] = { verdict: "reject", at: "" };
+        effectiveVerdicts[c.id] = { verdict: "reject", at: at ?? "" };
+        autoRejected.push(c.id);
       }
     }
   }
@@ -85,7 +110,7 @@ export function planForgeCommit(
     craft: c.grade?.craft?.score ?? null,
     style_score: c.grade?.style?.score ?? null,
     has_text: c.grade?.veto?.has_text ?? null,
-    at: effectiveVerdicts[c.id].at || "",
+    at: at ?? (effectiveVerdicts[c.id].at || ""),
     ...graderStamp(c.grade),
   }));
 
@@ -120,9 +145,13 @@ export function planForgeCommit(
     }
   }
 
+  // WHO kept is part of the plan: a model's keep is evidence, a human's a vote
+  // (humanKeep), so a by-only change moves `promotions` and must move the token.
+  // Only `model` is spelled: absent and `human` both read as a human's, so a map
+  // with no model verdict keeps the token it had before `by` was bound.
   const verdictPayload = Object.keys(verdicts)
     .sort()
-    .map((k) => `${k}:${verdicts[k]?.verdict}`)
+    .map((k) => `${k}:${verdicts[k]?.verdict}${verdicts[k]?.by === "model" ? ":model" : ""}`)
     .join("|");
   const candidatePayload = run.candidates
     .map((c) => `${c.id}:${c.status}:${c.deleted ? 1 : 0}:${c.file}`)
@@ -136,12 +165,17 @@ export function planForgeCommit(
     .digest("hex");
 
   return {
-    counts: { kept, deleted, undecided },
-    delete: deleteFiles,
-    ledgerRows,
-    evidence,
-    promotions,
-    token,
+    plan: {
+      counts: { kept, deleted, undecided },
+      delete: deleteFiles,
+      ledgerRows,
+      evidence,
+      promotions,
+      token,
+    },
+    decided,
+    verdicts: effectiveVerdicts,
+    autoRejected,
   };
 }
 

@@ -6,23 +6,24 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { parseJsonAt } from "@gt/domain/door";
-import type { Result } from "@gt/domain/errors";
+import type { AppErrorCode, Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
-import { holderSchema, type Holder } from "@gt/domain/job";
-import { resourceLaneSchema } from "@gt/domain/lane";
+import { holderSchema, jobMachine, type Holder } from "@gt/domain/job";
+import { LANE_CAPACITY, LANE_PAYS, RESOURCE_LANES, resourceLaneSchema } from "@gt/domain/lane";
 import { blobStore } from "../src/blob.ts";
 import { verify } from "../src/events.ts";
 import { liveEffects, type Effects } from "../src/effects.ts";
-import type { Producer, StepOutcome } from "../src/job-core.ts";
+import { BREAKER_LIMIT, type Producer, type StepOutcome } from "../src/job-core.ts";
 import { ackLane } from "../src/job-queue.ts";
 import { recover, runJob, type RunReport } from "../src/job-run.ts";
 import { enqueue, loadJob, loadOutputs, pause, release, retry } from "../src/job.ts";
 import { openKernel } from "../src/kernel.ts";
+import { DEFAULT_TTL_S } from "../src/lease-core.ts";
 import { launchProject, planReceipt } from "../src/records/launch.ts";
 import { compose } from "../src/records/write.ts";
 import { reconcileJobSpend } from "../src/spend/projection.ts";
 import type { Store } from "../src/store.ts";
-import { must, scratch } from "./helpers.ts";
+import { findPython, must, scratch } from "./helpers.ts";
 import { eventTypes, jobId } from "./job-fixture.ts";
 
 // spec/job.json is the job protocol across two languages as a table. A
@@ -76,13 +77,6 @@ type Step = z.output<typeof stepSchema>;
 const spec = must(parseJsonAt("spec/job.json", specSchema, readFileSync(specFile, "utf8")));
 const operator: Actor = { kind: "operator", id: "spec" };
 
-function findPython(): string | undefined {
-  for (const bin of ["python", "python3", "py"]) {
-    const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
-    if (r.status === 0 && r.stdout.trim() === "3") return bin;
-  }
-  return undefined;
-}
 const python = findPython();
 if (python === undefined) console.warn("[job.python] SKIPPED: no Python 3 on PATH; the cross-language job protocol did not run");
 
@@ -262,4 +256,140 @@ describe.skipIf(python === undefined)("spec/job.json: Node and Python drive jobs
       }
     }, 30_000);
   }
+});
+
+// job.py's heartbeat is a daemon thread (lease-renewal: every ttl/3, never per unit). Two ways it
+// can meet the store, measured from Python with the thread's own beats counted:
+//   - busy (`database is locked`): one beat missed is what the ttl/3 cadence is for; the thread
+//     beats again, and the run never hears of it;
+//   - anything else (`disk I/O error`, or a connection the thread cannot open): the slot can no
+//     longer be renewed, so the run's next call raises - the loss reaches the work loop, as Node's
+//     beat carries a throw (job-run.ts).
+// A thread that died on either one stopped renewing while the run went on writing, unwarned.
+describe.skipIf(python === undefined)("the Python heartbeat meets a store error", () => {
+  const cases = [
+    { name: "a busy store misses one beat and the thread keeps renewing", error: "database is locked", expect: "BEATING" },
+    { name: "any other store error stops the run at its next call", error: "disk I/O error", expect: "STOPPED" },
+    { name: "a store the thread cannot open stops the run at its next call", error: "unable to open database file", expect: "STOPPED", onConnect: true },
+  ] as const;
+  for (const [n, c] of cases.entries()) {
+    it(c.name, () => {
+      const db = path.join(tmp.dir, `heartbeat-${n}.sqlite`);
+      copyFileSync(template, db);
+      const k = must(openKernel(db, { snapshotDir: tmp.dir }));
+      must(enqueue(k.store, { id: "hb", of: { kind: "run", id: "run-hb" }, producer: "forge", lane: "gpu.local" }, operator));
+      k.close();
+      const code = [
+        "import sqlite3, sys, time",
+        `sys.path.append(${JSON.stringify(path.join(here, "..", "py"))})`,
+        "import job, job_record",
+        "calls = []",
+        "real = job_record.heartbeat_in",
+        "def flaky(*a):",
+        "    calls.append(1)",
+        `    if ${c.expect === "BEATING" ? "len(calls) == 1" : "True"}:`,
+        `        raise sqlite3.OperationalError(${JSON.stringify(c.error)})`,
+        "    return real(*a)",
+        ...("onConnect" in c ? [] : ["job.heartbeat_in = job_record.heartbeat_in = flaky"]),
+        `jobs = job.Jobs(${JSON.stringify(db)})`,
+        "run = jobs.claim('hb', dry_only=True)",
+        ...("onConnect" in c ? ["def refuse(*a):", `    raise sqlite3.OperationalError(${JSON.stringify(c.error)})`, "job.connect = job_record.connect = refuse"] : []),
+        "run.start_heartbeat(every_s=0.02)",
+        "time.sleep(1.0)",
+        "alive = run._beat[1].is_alive()",
+        "try:",
+        "    run.start('a')",
+        "    print('BEATING' if alive and len(calls) > 2 else 'DEAD after %d beat(s)' % len(calls))",
+        "except job.LeaseError as e:",
+        "    print('STOPPED' if not alive else 'RAISED with the thread alive: %s' % e)",
+        "run._stop_heartbeat()",
+        "jobs.close()",
+      ].join("\n");
+      const r = spawnSync(python ?? "python", ["-I", "-c", code], { encoding: "utf8", timeout: 30_000 });
+      expect({ out: r.stdout.trim(), traceback: r.stderr.includes("Traceback") }).toEqual({ out: c.expect, traceback: false });
+    }, 30_000);
+  }
+});
+
+// THE TABLES PYTHON COPIES (job_record.py, lease.py). spec/job.json's scenarios reach four of the
+// nine lanes, so a capacity or a pays bit could drift on the other five with every table green -
+// measured: cloud.google 3 -> 2 and box.chrome pays -> free passed all 88 Python-driving cases.
+// Here each copy is read from the module and compared whole with the one it copies. The error
+// codes are spelled as an exhaustive record, so a code added to @gt/domain/errors fails tsc here
+// until it is added (and then this comparison, until Python has it).
+const CODES: { readonly [K in AppErrorCode]: K } = {
+  invalid: "invalid",
+  "not-found": "not-found",
+  conflict: "conflict",
+  unauthenticated: "unauthenticated",
+  refused: "refused",
+  unavailable: "unavailable",
+  budget: "budget",
+  internal: "internal",
+};
+describe.skipIf(python === undefined)("the tables the Python protocol copies equal the ones it copies", () => {
+  it("lanes, capacities, pays, the job machine, the error codes, the breaker and the TTL", () => {
+    const code = [
+      "import json, sys",
+      `sys.path.append(${JSON.stringify(path.join(here, "..", "py"))})`,
+      "import job_record",
+      "from kernel_store import kernel_lease",
+      "lease = kernel_lease()",
+      "print(json.dumps({'lanes': list(lease.RESOURCE_LANES), 'capacity': job_record.LANE_CAPACITY, 'pays': job_record.LANE_PAYS,",
+      "                  'machine': {k: list(v) for k, v in job_record.MACHINE.items()}, 'codes': sorted(job_record.ERROR_CODES),",
+      "                  'breaker': job_record.BREAKER_LIMIT, 'ttl': lease.DEFAULT_TTL_S, 'leaseTtl': job_record.DEFAULT_TTL_S}))",
+    ].join("\n");
+    const r = spawnSync(python ?? "python", ["-I", "-c", code], { encoding: "utf8" });
+    expect(r.stderr).toBe("");
+    const got = must(parseJsonAt("python tables", z.unknown(), r.stdout.trim()));
+    expect(got).toEqual({
+      lanes: [...RESOURCE_LANES],
+      capacity: { ...LANE_CAPACITY },
+      pays: { ...LANE_PAYS },
+      machine: Object.fromEntries(jobMachine.states.map((st) => [st, [...jobMachine.next(st)]])),
+      codes: Object.keys(CODES).sort(),
+      breaker: BREAKER_LIMIT,
+      ttl: DEFAULT_TTL_S,
+      leaseTtl: DEFAULT_TTL_S,
+    });
+  }, 30_000);
+});
+
+// job_settle.py `settle` after an ending committed: the producer is told, then `job.settled` (or
+// `job.settle-failed`) is recorded in a transaction of its own. When the store refuses THAT
+// write, the ending already stands - Node's settleAfter keeps the drive's outcome and carries both
+// sentences (8d6075db). Python let the store's error escape the call that ended the job: a run
+// whose finish() committed `done` raised to its worker as if the finish had failed, and a claim()
+// that settled a taken-over orphan lost the granted run it had just committed (the job stayed
+// `running` on its slot until the TTL).
+describe.skipIf(python === undefined)("a settle the ledger cannot record", () => {
+  it("leaves the ending and the call that made it standing, and says so on stderr", () => {
+    const db = path.join(tmp.dir, "settle-unrecorded.sqlite");
+    copyFileSync(template, db);
+    const k = must(openKernel(db, { snapshotDir: tmp.dir }));
+    must(enqueue(k.store, { id: "su", of: { kind: "run", id: "run-su" }, producer: "forge", lane: "gpu.local" }, operator));
+    k.close();
+    const code = [
+      "import sqlite3, sys",
+      `sys.path.append(${JSON.stringify(path.join(here, "..", "py"))})`,
+      "import job, job_settle",
+      "told = []",
+      "def refused(*a, **kw):",
+      "    raise sqlite3.OperationalError('database is locked')",
+      "job_settle.job_event = refused",
+      `jobs = job.Jobs(${JSON.stringify(db)}, settles={'forge': lambda j, ending: told.append(ending)})`,
+      "run = jobs.claim('su', dry_only=True)",
+      "run.start('a')",
+      "run.book('a', {'made': 'a'})",
+      "try:",
+      "    run.finish()",
+      "    print('FINISHED %s told=%s' % (jobs.get('su')['state'], ','.join(told)))",
+      "except Exception as e:",
+      "    print('RAISED %s: %s' % (type(e).__name__, e))",
+      "jobs.close()",
+    ].join("\n");
+    const r = spawnSync(python ?? "python", ["-I", "-c", code], { encoding: "utf8", timeout: 30_000 });
+    expect(r.stdout.trim()).toBe("FINISHED done told=done");
+    expect(r.stderr).toContain("job.settled was not recorded: database is locked");
+  }, 30_000);
 });
