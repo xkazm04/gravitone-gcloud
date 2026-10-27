@@ -1612,8 +1612,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "real-launch-always-live",
     test: "tests/next-server/parts-act-mode.test.ts",
     file: "app/(studio)/projects/[id]/_part/real.ts",
-    find: "{ mode: modeOf(kind, act), now, token, actor: OPERATOR }",
-    replace: "{ mode: \"live\", now, token, actor: OPERATOR }",
+    find: "{ mode: modeOf(kind, act), now, token, actor }",
+    replace: "{ mode: \"live\", now, token, actor }",
     why: "Every part act's confirm launches live: a dry receipt's token no longer matches and nothing the editors offer can run.",
   },
   {
