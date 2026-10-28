@@ -7,7 +7,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { keyPitch } from "@gt/ui/components/audio/brief.ts";
 import { ATLAS, AUDITION_KEY, atlasById, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
 
-import { renderAudition, renderSketch, type AuditionFacts } from "./sidecar.ts";
+import { renderAuditionWarm, renderSketchWarm } from "./renderWorker.ts";
 
 // THE ATLAS ON THIS MACHINE - which of @gt/ui's atlas instruments the local sample libraries can
 // play, and the audition phrase each one renders.
@@ -161,7 +161,7 @@ export async function sketchFile(ask: SketchAsk, env: NodeJS.ProcessEnv = proces
   const dir = auditionDir(env);
   const tag = createHash("sha1").update(JSON.stringify([ask.ids, ask.levels, ask.bpm, k.pc, k.minor, voices.map((v) => filesTag(v.files))])).digest("hex").slice(0, 16);
   const out = path.join(dir, `sketch-${RENDER}-${tag}.wav`);
-  return cachedOr(out, () => renderSketch({ voices, levels: ask.levels, bpm: ask.bpm, tonic: k.pc, minor: k.minor, lufs: AUDITION_LUFS, cacheDir: dir }, out, { timeoutMs: RENDER_TIMEOUT_MS }));
+  return cachedOr(out, () => renderSketchWarm({ voices, levels: ask.levels, bpm: ask.bpm, tonic: k.pc, minor: k.minor, lufs: AUDITION_LUFS, cacheDir: dir }, out, RENDER_TIMEOUT_MS));
 }
 
 /** The audition file for one instrument at one tempo and key: from the cache, or rendered once. */
@@ -176,5 +176,5 @@ export async function auditionFile(ask: AuditionAsk, env: NodeJS.ProcessEnv = pr
   if (files === undefined) return err("unavailable", `${entry.term}: no library under ${SAMPLE_ROOTS_ENV} files it`);
   const dir = auditionDir(env);
   const out = path.join(dir, `${entry.id}-${RENDER}-${filesTag(files)}-${ask.bpm}-${k.pc}${k.minor ? "m" : ""}.wav`);
-  return cachedOr(out, (): Promise<Result<AuditionFacts>> => renderAudition({ files, bpm: ask.bpm, tonic: k.pc, minor: k.minor, role: entry.role, lufs: AUDITION_LUFS, cacheDir: dir }, out, { timeoutMs: RENDER_TIMEOUT_MS }));
+  return cachedOr(out, () => renderAuditionWarm({ files, bpm: ask.bpm, tonic: k.pc, minor: k.minor, role: entry.role, lufs: AUDITION_LUFS, cacheDir: dir }, out, RENDER_TIMEOUT_MS));
 }

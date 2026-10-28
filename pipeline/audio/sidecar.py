@@ -212,6 +212,12 @@ def cmd_audition(a):
     run(a, emit, Failure)
 
 
+def cmd_serve(_a):
+    from audition import serve
+
+    serve(sys.stdin, sys.stdout)
+
+
 def cmd_sketch(a):
     from audition import cmd_audition as run
     from sketch import render_sketch
@@ -240,12 +246,14 @@ def main(argv):
     au.add_argument("--spec", required=True)
     au.add_argument("--out", required=True)
     au.add_argument("--json", action="store_true")
+    sv = sub.add_parser("serve")
+    sv.add_argument("--json", action="store_true")
     sk = sub.add_parser("sketch")
     sk.add_argument("--spec", required=True)
     sk.add_argument("--out", required=True)
     sk.add_argument("--json", action="store_true")
     a = p.parse_args(argv)
-    run = {"measure": cmd_measure, "fx": cmd_fx, "triage": cmd_triage, "doctor": cmd_doctor, "audition": cmd_audition, "sketch": cmd_sketch}[a.verb]
+    run = {"measure": cmd_measure, "fx": cmd_fx, "triage": cmd_triage, "doctor": cmd_doctor, "audition": cmd_audition, "sketch": cmd_sketch, "serve": cmd_serve}[a.verb]
     try:
         run(a)
     except Failure as e:

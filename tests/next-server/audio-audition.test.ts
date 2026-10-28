@@ -17,6 +17,7 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 vi.setConfig({ testTimeout: 90_000 });
 
 import { auditionFile, familiesOf } from "../../lib/audio/atlas.ts";
+import { stopWorkers } from "../../lib/audio/renderWorker.ts";
 import { contourOf } from "../../lib/audio/reference.ts";
 import { measureFile, SIDECAR_SCRIPT } from "../../lib/audio/sidecar.ts";
 
@@ -28,7 +29,10 @@ const ready = ((): string | null => {
 if (ready !== null) console.warn(`audition render lane skipped: ${ready}`);
 
 const TMP = mkdtempSync(path.join(tmpdir(), "gt-audition-"));
-afterAll(() => rmSync(TMP, { recursive: true, force: true }));
+afterAll(() => {
+  stopWorkers();
+  rmSync(TMP, { recursive: true, force: true });
+});
 
 /** A 16-bit mono PCM WAV. */
 function wav16(file: string, rate: number, x: Float32Array): void {

@@ -316,6 +316,46 @@ def _loudness(x):
     return -0.691 + 10 * math.log10(float(np.mean(kept if len(kept) else above)))
 
 
+def render_to(spec, out, render_fn=None):
+    """Render `spec` into `out` (16-bit WAV, swapped in whole) and answer the facts."""
+    import soundfile as sf
+
+    y, facts = (render_fn or render)(spec)
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    tmp = f"{out}.{os.getpid()}.part.wav"
+    sf.write(tmp, y, SR, subtype="PCM_16")
+    os.replace(tmp, out)
+    return facts
+
+
+def serve(stdin, stdout):
+    """One request per line, one answer per line, until stdin ends: {id, verb, spec, out} ->
+    {id, ok, ...facts} or {id, ok: false, error, kind}. A render costs about a second; starting
+    Python and importing NumPy costs three more on a loaded box, so the Node side keeps this
+    running (lib/audio/sidecar.ts) instead of spawning one per audition."""
+    from sketch import render_sketch
+
+    fns = {"audition": None, "sketch": render_sketch}
+    for line in stdin:
+        line = line.strip()
+        if not line:
+            continue
+        rid = None
+        try:
+            req = json.loads(line)
+            rid = req.get("id")
+            if req.get("verb") not in fns:
+                raise AuditionError(f"no verb {req.get('verb')!r} here (audition, sketch)")
+            facts = render_to(req["spec"], req["out"], fns[req["verb"]])
+            doc = {"id": rid, "ok": True, **facts}
+        except AuditionError as e:
+            doc = {"id": rid, "ok": False, "error": str(e), "kind": "refused"}
+        except Exception as e:  # the tool's own sentence; the loop goes on for the next request
+            doc = {"id": rid, "ok": False, "error": str(e) or type(e).__name__, "kind": "failed"}
+        stdout.write(json.dumps(doc) + "\n")
+        stdout.flush()
+
+
 def cmd_audition(a, emit, failure, render_fn=None):
     import soundfile as sf
 

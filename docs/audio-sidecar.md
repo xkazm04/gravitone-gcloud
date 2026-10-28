@@ -188,6 +188,11 @@ about timbre and not about level. Node reaches them through `lib/audio/sidecar.t
   WAV, so their `data` chunk is decoded as Ogg, to a bound (the stream reports no length).
 - **A kit plays a groove, not the phrase** (`drums.py`): pieces are named from file names, and
   every kit plays the same four bars, thinning with the level.
+- **Warm workers** (`lib/audio/renderWorker.ts`): `sidecar.py serve` takes one JSON request per
+  line (`{id, verb: audition|sketch, spec, out}`) and answers one line, its imports kept warm. Node
+  keeps two running, bounds every request, kills an overrunning worker, and falls back to one
+  process per render when none can start. Starting Python and importing NumPy was 3 s of a 4 s
+  render on a loaded box; through a warm worker an uncached audition or sketch takes about 0.6 s.
 - Measured 2026-10-28 on this box: 25 instruments at 96 bpm, D minor, each rendered at
   -20.0 LUFS (one kit at -20.6), 11.22 s long, and byte-identical when rendered a second time. A
   first render is 2 to 7 s; a cached one is a file read.
