@@ -31,6 +31,8 @@ import { editRows, moveCard } from "./_audio/arrangeActs.ts";
 import { deskEngines, engineRows, finalizedCount, readArrange } from "./_audio/arrangeRead.ts";
 import { AudioLane } from "./_audio/AudioLane.tsx";
 import { deskHref, KINDS, parseDeskUrl, SECTIONS } from "./_audio/desk.ts";
+import { auditionLocalInstrumentAct, localScoreReceiptAct, promoteLocalTakeAct, renderLocalScoreAct, swapLocalStemAct } from "./_audio/localActs.ts";
+import { readLocalBand } from "./_audio/localRead.ts";
 import { audioNow, readAudio } from "./_audio/read.ts";
 import { crownTake, draftHuntLesson, draftHuntMap, renderLeaves } from "./_hunt/acts.ts";
 import { Hunt } from "./_hunt/Hunt.tsx";
@@ -73,9 +75,20 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   else if (url.kind === "music") {
     const audible = await audibleIds();
     if (audible.length > 0) warmWorkers(); // the first play mark pressed answers like the tenth
-    body = <AudioLane view={await readAudio()} nowMs={audioNow()} acts={{ setHand, sunoReceipt, sunoConfirm }} engines={engineRows(registry)} canSend={makersOf(registry, "music").some((e) => e.id === "suno")} audible={audible} />;
-  }
-  else
+    const [audioView, localBand] = await Promise.all([readAudio(), readLocalBand()]);
+    body = (
+      <AudioLane
+        view={audioView}
+        nowMs={audioNow()}
+        acts={{ setHand, sunoReceipt, sunoConfirm }}
+        engines={engineRows(registry)}
+        canSend={makersOf(registry, "music").some((e) => e.id === "suno")}
+        audible={audible}
+        localBand={localBand}
+        localActs={{ localScoreReceiptAct, renderLocalScoreAct, swapLocalStemAct, auditionLocalInstrumentAct, promoteLocalTakeAct }}
+      />
+    );
+  } else
     body = (
       <section className={s.makers} aria-label="effects">
         <CapsHeading text="effects" tally={{ value: makersOf(registry, "sfx").length, label: "engines" }} level={2} />

@@ -260,6 +260,7 @@ Where this port moved from the prototype:
 | `ArrangeBoard`, `TakeCard`, `RowHead`/`RowFoot`, `LabelPrompt`, `RoundTrip`, `EngineList` (+ `arrange.ts`, `arrangeGroups.ts`) | app/playground/arrange/*, engines.ts | /audio | card provisional/pending, vN versions open, finalized label; cell lit on drag; withheld op with reason |
 | `StrengthTable`/`StrengthHead`, `RubricCard`, `BriefDelta`, `BatchForm` (+ `strengths.ts`, `rubric.ts`, `brief.ts`, `batch.ts`) | app/playground/triage/{Strengths,Judge,Batch}.tsx, shared/Rubric.tsx | /audio, Board audio tile | cell measured/waiting/empty, heat ±2; dim scored/unscored/busy, proven; axis held/missed/octave/unmeasured; batch music/sfx, problem badge |
 | `HuntShelf`/`HuntIdea`, `HuntMap`, `HuntRenderBar`, `HuntAudition`, `AskedChips`, `LessonForm`, `LessonList` (+ `hunt.ts`, `lesson.ts`) | app/playground/hunt/*, hunt/Lesson.tsx | /audio | idea / drafting / map; leaf idle-selected-rendering-rendered-crowned; render bar priced in audio-seconds; audition side by side; lesson draft / hand / signed, refused without "because" or under three takes |
+| `LocalBandStudio` (+ `localBand.ts`) | none (D6 + A2 + C6 local band) | /audio, /kit | style templates, non-musician steering sliders, 4-stem mixer with mute/solo/fx presets, bit-exact stem swapper, $0 receipt door, A0 instrument gate |
 
 ## Model (spark game-3d-assets WP3)
 

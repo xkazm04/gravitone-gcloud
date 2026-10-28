@@ -20,6 +20,13 @@ import { versionNumber, type ArrangeTake, type Stack } from "./arrange.ts";
 import { lengthOf } from "./hunt.ts";
 import s from "./Arrange.module.css";
 
+export type CardStem = {
+  readonly role: string;
+  readonly instrumentName: string;
+  readonly src: string;
+  readonly reused?: boolean;
+};
+
 /** What a card draws of a take, beside what the board's rules read. */
 export type CardTake = ArrangeTake & {
   readonly verdict: string;
@@ -32,6 +39,7 @@ export type CardTake = ArrangeTake & {
   readonly prompt: string;
   readonly origin: string;
   readonly fileName: string | null;
+  readonly stems?: readonly CardStem[];
 };
 
 export type TakeCardProps = {
@@ -87,8 +95,24 @@ export function TakeCard({ stack, focused, pending, playing, open, onFocus, onPo
         {/* The hunt's spelling, so a crowned effect reads the same length here as on the map it
             won (0.6 s, not m:ss rounded to 0:01). */}
         <span>{h.lengthS === null ? "–" : lengthOf(h.lengthS)}</span>
+        {h.stems !== undefined && h.stems.length > 0 && <Chip label={`${h.stems.length} stems`} casing="lower" tone="cyan" />}
         {finalized && <Chip label={h.label ?? ""} casing="lower" tone="emerald" />}
       </div>
+      {h.stems !== undefined && h.stems.length > 0 && (
+        <ul className={s.versions} aria-label={`stems of ${h.title}`}>
+          {h.stems.map((st) => {
+            const stemTake: CardTake = { ...h, id: `${h.id}:${st.role}`, title: `${h.title} · ${st.role}`, src: st.src };
+            return (
+              <li key={st.role} className={s.version}>
+                <PlayButton take={stemTake} on={playing === stemTake.id} onPlay={onPlay} />
+                <b>{st.role}</b>
+                <span className={s.versionFrom}>{st.instrumentName}</span>
+                {st.reused && <Chip label="reused" casing="lower" tone="cyan" />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
       {open && (
         <ol className={s.versions} aria-label={`versions of ${h.title}`}>
           {stack.versions.map((v) => (

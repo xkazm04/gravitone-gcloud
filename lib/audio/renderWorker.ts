@@ -7,7 +7,8 @@ import { parseJsonAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 
 import { canSpawnLocalBinaries } from "../deployment.ts";
-import { renderAudition, renderSketch, SIDECAR_SCRIPT, type AuditionSpec, type SketchSpec } from "./sidecar.ts";
+import { SIDECAR_SCRIPT } from "./sidecar.ts";
+import { renderAudition, renderSketch, type AuditionSpec, type SketchSpec } from "./sidecarPhrase.ts";
 
 // WARM RENDERERS - the audition and sketch renders through long-lived `sidecar.py serve` processes.
 //

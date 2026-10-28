@@ -30,6 +30,7 @@ import { playableAxes } from "@gt/ui/components/audio/duel.ts";
 import { SayIt } from "@gt/ui/components/audio/SayIt.tsx";
 import { useEar } from "@gt/ui/components/audio/useEar.ts";
 import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
+import { LocalBandStudio } from "@gt/ui/components/audio/LocalBandStudio.tsx";
 import { TermRail } from "@gt/ui/components/audio/TermRail.tsx";
 import { VariationList } from "@gt/ui/components/audio/VariationList.tsx";
 import { conceptFor, variationsOfSeed } from "@gt/ui/components/audio/variations.ts";
@@ -48,11 +49,21 @@ import { useDuel } from "./duelState.tsx";
 import { useShape } from "./shapeState.tsx";
 import { useTrack } from "./trackState.tsx";
 import { explainAudition, useSteer } from "./steer.tsx";
+import type { auditionLocalInstrumentAct, localScoreReceiptAct, promoteLocalTakeAct, renderLocalScoreAct, swapLocalStemAct } from "./localActs.ts";
+import type { LocalBandView } from "./localRead.ts";
+import { useLocalBand } from "./localBandState.tsx";
 import s from "./audio.module.css";
 
 /** The page's Server Actions, handed over as props: a reference per action crosses to the client,
  *  never the module (the Board's and the Floor's wire shape, ../../projects/_port/wire.ts). */
 export type AudioActs = { readonly setHand: typeof setHand; readonly sunoReceipt: typeof sunoReceipt; readonly sunoConfirm: typeof sunoConfirm };
+export type LocalBandActs = {
+  readonly localScoreReceiptAct?: typeof localScoreReceiptAct;
+  readonly renderLocalScoreAct: typeof renderLocalScoreAct;
+  readonly swapLocalStemAct: typeof swapLocalStemAct;
+  readonly auditionLocalInstrumentAct: typeof auditionLocalInstrumentAct;
+  readonly promoteLocalTakeAct: typeof promoteLocalTakeAct;
+};
 
 const DOORS = [
   { value: "words", label: "say it" },
@@ -63,8 +74,27 @@ const LIST_OF: Readonly<Record<string, SeedList>> = { genre: "genres", mood: "mo
 const BLANK = "__blank";
 
 /** `engines`: the desk's registry rows (lib/sound/engines.ts); `canSend`: the registry says Suno composes here;
- *  `audible`: the atlas instruments this machine's sample libraries can audition (lib/audio/atlas.ts). */
-export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { readonly view: AudioView; readonly nowMs: number; readonly acts: AudioActs; readonly engines: readonly EngineRow[]; readonly canSend: boolean; readonly audible: readonly string[] }) {
+ *  `audible`: the atlas instruments this machine's sample libraries can audition (lib/audio/atlas.ts);
+ *  `localBand` / `localActs`: the local-band engine's catalog, takes and Server Actions (./localRead.ts, ./localActs.ts). */
+export function AudioLane({
+  view,
+  nowMs,
+  acts,
+  engines,
+  canSend,
+  audible,
+  localBand,
+  localActs,
+}: {
+  readonly view: AudioView;
+  readonly nowMs: number;
+  readonly acts: AudioActs;
+  readonly engines: readonly EngineRow[];
+  readonly canSend: boolean;
+  readonly audible: readonly string[];
+  readonly localBand?: LocalBandView;
+  readonly localActs?: LocalBandActs;
+}) {
   const { setHand, sunoReceipt, sunoConfirm } = acts;
   const router = useRouter();
   const { toast } = useShell();
@@ -72,9 +102,6 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
   const takes: readonly SeedTake[] = view.takes.ok ? view.takes.value : [];
   const [seed, setSeed] = useState<Seed>(() => takes[0]?.seed ?? BLANK_SEED);
   const [from, setFrom] = useState<string>(() => takes[0]?.id ?? BLANK);
-  // The hand a person just set, laid over the server's terms until the refresh brings it back;
-  // a hand the store refused (or whose request never came back) is taken off again, so the rail
-  // never draws a stance the store does not hold.
   const [mine, setMine] = useState<Readonly<Record<string, Hand>>>({});
   const terms: readonly Term[] = useMemo(() => {
     const base = view.terms.ok ? view.terms.value : [];
@@ -86,7 +113,6 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
   const hands = useMemo(() => handsOf(terms), [terms]);
   const variations = useMemo(() => variationsOfSeed(seed, terms), [seed, terms]);
   const take = takes.find((t) => t.id === from);
-  // What the seed was last loaded from: a take's title, a variation's axis, a reference.
   const [loaded, setLoaded] = useState<string | null>(null);
   const fromLabel = loaded ?? take?.title ?? "blank";
   // One ear for the whole composer: a chip, a strip row and the sketch never sound at once.
@@ -187,6 +213,8 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
     setSeed(t === undefined ? BLANK_SEED : t.seed);
   };
 
+  const { localTakes, localBusy, localError, localAudition, onLocalRender, onLocalReceipt, onLocalSwap, onLocalAudition, onLocalPromote } = useLocalBand(localBand, localActs, flow);
+
   return (
     <div className={s.lane}>
       <aside className={s.rail} aria-label="terms">
@@ -230,6 +258,22 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
           onCopy={copy}
         />
         {steer.failed !== null && <ErrorLine message={`audition: ${steer.failed}`} />}
+        {localBand !== undefined && (
+          <LocalBandStudio
+            templates={localBand.templates}
+            catalog={localBand.catalog}
+            takes={localTakes}
+            seed={seed}
+            busy={localBusy}
+            error={localError}
+            audition={localAudition}
+            onRender={onLocalRender}
+            {...(localActs?.localScoreReceiptAct ? { onReceipt: onLocalReceipt } : {})}
+            onSwapStem={onLocalSwap}
+            onAudition={onLocalAudition}
+            onPromote={onLocalPromote}
+          />
+        )}
         <VariationList
           list={variations}
           busy={flow.reading || !canSend}

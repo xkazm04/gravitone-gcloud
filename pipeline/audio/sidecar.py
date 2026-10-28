@@ -1,4 +1,4 @@
-"""The audio sidecar: measure a file, or render a voice-fx chain over it.
+"""The audio sidecar: measure a file, render a voice-fx chain, triage a take, render a ScoreSpec, or audition.
 
     python pipeline/audio/sidecar.py measure --in <wav|mp3|m4a|...> --json
       -> {"ok":true,"measure":{integratedLufs,truePeakDb,lra,clippedSamples,leadSilenceS,tailSilenceS,durationS}}
@@ -6,6 +6,15 @@
       -> {"ok":true,"durationS":n,"gainDb":g,"truePeakDb":tp,"rate":r,"channels":c,"notes":[...]}
     python pipeline/audio/sidecar.py triage --in <file> --context <context.json> --json
       -> {"ok":true,"triage":{"version":1,"findings":[{check,defect?,verdict,value,threshold,unit,atS?,note?}],"flagged":n}}
+    python pipeline/audio/sidecar.py render-score --spec <spec.json> --out-dir <dir> [--cache-dir <dir>] [--verify-determinism] --json
+      -> {"ok":true,"title":...,"mixPath":...,"mixSha256":...,"measure":{...},"triage":{...},"stems":[...],"determinism":...}
+    python pipeline/audio/sidecar.py audition-instrument --instrument <id> [--out <wav>] --json
+      -> {"ok":true,"id":...,"audition":{...}}   (one catalog instrument, the local-band engine)
+    python pipeline/audio/sidecar.py render|render-midi|render-stem --midi <mid> --instrument <id> --out <wav> [--brightness b] --json
+    python pipeline/audio/sidecar.py sketch-score [--style s] --out-dir <dir> [--seed n] [--bpm b] [--key k] [--verify-determinism] --json
+    python pipeline/audio/sidecar.py audition --spec <spec.json> --out <wav> --json   (one atlas family's phrase)
+    python pipeline/audio/sidecar.py sketch --spec <spec.json> --out <wav> --json     (painted energy levels)
+    python pipeline/audio/sidecar.py serve   (the warm worker: one JSON request per stdin line, lib/audio/renderWorker.ts)
     python pipeline/audio/sidecar.py doctor --json
       -> {"ok":true,"python":"<sys.version>","modules":[...],"missing":[...],"errors":{...},"versions":{...},"ffmpeg":path|null}
 
@@ -55,12 +64,15 @@ TARGET_DBTP = -1.1
 class Failure(Exception):
     def __init__(self, message, kind="failed"):
         super().__init__(message)
-        self.kind = kind
+        this_kind = kind
+        self.kind = this_kind
 
 
 def emit(doc, code=0):
     print(json.dumps(doc), flush=True)
-    sys.exit(code)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)
 
 
 def fail(message, kind="failed"):
@@ -182,6 +194,63 @@ def cmd_triage(a):
     emit({"ok": True, "triage": triage.run(data, rate, ctx)})
 
 
+def cmd_render_score(a):
+    import render_score
+
+    try:
+        with open(a.spec, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as e:
+        raise Failure(f"spec file: {e}", "refused") from None
+    try:
+        spec_doc = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise Failure(f"spec is not JSON: {e}", "refused") from None
+    try:
+        res = render_score.render_score(
+            spec_doc,
+            a.out_dir,
+            cache_dir=a.cache_dir,
+            verify_determinism=bool(a.verify_determinism),
+        )
+    except render_score.ScoreRefused as e:
+        raise Failure(f"score spec: {e}", "refused") from None
+    emit(res)
+
+
+def cmd_audition_instrument(a):
+    import score_instruments
+
+    try:
+        res = score_instruments.audition_instrument(a.instrument, out_path=a.out)
+    except ValueError as e:
+        raise Failure(str(e), "refused") from None
+    emit(res)
+
+
+def cmd_render_midi(a):
+    import render_score
+
+    try:
+        res = render_score.render_midi_file(a.midi, a.instrument, a.out, brightness=float(a.brightness))
+    except render_score.ScoreRefused as e:
+        raise Failure(str(e), "refused") from None
+    emit(res)
+
+
+def cmd_sketch_score(a):
+    import render_score
+
+    try:
+        res = render_score.sketch_score(
+            style=a.style, out_dir=a.out_dir, seed=a.seed, tempo_bpm=a.bpm, key=a.key,
+            verify_determinism=bool(a.verify_determinism),
+        )
+    except render_score.ScoreRefused as e:
+        raise Failure(f"sketch: {e}", "refused") from None
+    emit(res)
+
+
 def _dist_version(name):
     from importlib import metadata
 
@@ -244,6 +313,31 @@ def main(argv):
     t.add_argument("--in", dest="input", required=True)
     t.add_argument("--context", required=True)
     t.add_argument("--json", action="store_true")
+    rs = sub.add_parser("render-score")
+    rs.add_argument("--spec", required=True)
+    rs.add_argument("--out-dir", dest="out_dir", required=True)
+    rs.add_argument("--cache-dir", dest="cache_dir", default=None)
+    rs.add_argument("--verify-determinism", dest="verify_determinism", action="store_true")
+    rs.add_argument("--json", action="store_true")
+    au = sub.add_parser("audition-instrument")
+    au.add_argument("--instrument", required=True)
+    au.add_argument("--out", default=None)
+    au.add_argument("--json", action="store_true")
+    for rverb in ("render", "render-midi", "render-stem"):
+        rm = sub.add_parser(rverb)
+        rm.add_argument("--midi", required=True)
+        rm.add_argument("--instrument", required=True)
+        rm.add_argument("--out", required=True)
+        rm.add_argument("--brightness", default=0.5, type=float)
+        rm.add_argument("--json", action="store_true")
+    sk = sub.add_parser("sketch-score")
+    sk.add_argument("--style", default="chill-hiphop")
+    sk.add_argument("--out-dir", dest="out_dir", required=True)
+    sk.add_argument("--seed", default=None, type=int)
+    sk.add_argument("--bpm", default=None, type=float)
+    sk.add_argument("--key", default=None)
+    sk.add_argument("--verify-determinism", dest="verify_determinism", action="store_true")
+    sk.add_argument("--json", action="store_true")
     d = sub.add_parser("doctor")
     d.add_argument("--json", action="store_true")
     au = sub.add_parser("audition")
@@ -257,7 +351,21 @@ def main(argv):
     sk.add_argument("--out", required=True)
     sk.add_argument("--json", action="store_true")
     a = p.parse_args(argv)
-    run = {"measure": cmd_measure, "fx": cmd_fx, "triage": cmd_triage, "doctor": cmd_doctor, "audition": cmd_audition, "sketch": cmd_sketch, "serve": cmd_serve}[a.verb]
+    run = {
+        "measure": cmd_measure,
+        "fx": cmd_fx,
+        "triage": cmd_triage,
+        "render-score": cmd_render_score,
+        "audition-instrument": cmd_audition_instrument,
+        "render": cmd_render_midi,
+        "render-midi": cmd_render_midi,
+        "render-stem": cmd_render_midi,
+        "sketch-score": cmd_sketch_score,
+        "audition": cmd_audition,
+        "sketch": cmd_sketch,
+        "serve": cmd_serve,
+        "doctor": cmd_doctor,
+    }[a.verb]
     try:
         run(a)
     except Failure as e:
