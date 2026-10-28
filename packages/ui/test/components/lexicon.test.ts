@@ -185,6 +185,13 @@ describe("translate: a sentence compiled into a seed", () => {
     expect(translate("drum and bass").seed.bpm).toBe(170);
     expect(dnb.pulls.map((p) => [p.a.says, p.b.says])).toEqual([["75–90 bpm", "165–174 bpm"]]);
     expect(translate("heist movie but chill").pulls).toEqual([]);
+    // A word never pulls against itself: not a genre against a word in its own name, not one row's
+    // two moods - and a word leaning both ways sits on neither side.
+    expect(translate("psychedelic rock").pulls).toEqual([]);
+    expect(translate("ambient electronic").pulls).toEqual([]);
+    expect(translate("halloween").pulls).toEqual([]);
+    const both = translate("sad but hopeful halloween").pulls.find((p) => p.kind === "mode");
+    expect([both?.a.from, both?.b.from]).toEqual([[0], [2]]);
     expect(translate("sad piano for a breakup").pulls).toEqual([]);
     expect(translate("a lullaby for a rave, 63 bpm").pulls).toEqual([]);
   });

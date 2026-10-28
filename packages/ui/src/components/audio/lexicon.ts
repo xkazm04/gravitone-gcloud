@@ -223,7 +223,8 @@ export function translate(sentence: string): Translation {
           for (const t of own.g ?? []) produced.push({ list: "genres", term: t, from: [k] });
           for (const t of own.m ?? []) produced.push({ list: "moods", term: t, from: [k] });
           if (c.own === true) for (const t of own.i ?? []) produced.push({ list: "instruments", term: t, from: [k] });
-          if (own.bpm !== undefined) ranges.push({ lo: own.bpm[0], hi: own.bpm[1], from: [k] });
+          // A name with a tempo of its own ("drum and bass") keeps it; its words' tempos do not join.
+          if (own.bpm !== undefined && c.row.bpm === undefined) ranges.push({ lo: own.bpm[0], hi: own.bpm[1], from: [k] });
         }
     }
     negate = -1;
@@ -354,23 +355,29 @@ function tempoOf(ranges: readonly { lo: number; hi: number; from: number[] }[]):
 // vocabulary they would have needed - a bpm and a mode said outright beat every row's lean.
 const PULL_BPM = 30;
 function tempoPull(ranges: readonly { lo: number; hi: number; from: number[] }[]): Pull[] {
-  if (ranges.length < 2) return [];
-  const slow = ranges.reduce((a, r) => (r.hi < a.hi ? r : a));
-  const fast = ranges.reduce((a, r) => (r.lo > a.lo ? r : a));
-  if (fast.lo - slow.hi < PULL_BPM) return [];
+  // The widest gap between two readings from different words: a word never pulls against itself.
+  let best: { slow: (typeof ranges)[number]; fast: (typeof ranges)[number] } | null = null;
+  for (const slow of ranges)
+    for (const fast of ranges)
+      if (fast.lo - slow.hi >= PULL_BPM && !slow.from.some((i) => fast.from.includes(i)) && (best === null || fast.lo - slow.hi > best.fast.lo - best.slow.hi)) best = { slow, fast };
+  if (best === null) return [];
   const side = (r: { lo: number; hi: number; from: number[] }): PullSide => {
     const bpm = Math.round((r.lo + r.hi) / 2);
     return { from: r.from, says: `${r.lo}–${r.hi} bpm`, settle: `${bpm} bpm`, bpm, key: null };
   };
-  return [{ kind: "tempo", a: side(slow), b: side(fast) }];
+  return [{ kind: "tempo", a: side(best.slow), b: side(best.fast) }];
 }
 function modePull(terms: readonly Produced[]): Pull[] {
   const moods = terms.filter((p) => p.list === "moods");
-  const minor = moods.filter((p) => MINOR.has(p.term));
-  const major = moods.filter((p) => MAJOR.has(p.term));
-  if (minor.length === 0 || major.length === 0) return [];
-  const side = (ps: readonly Produced[], says: string, settle: string): PullSide => ({ from: [...new Set(ps.flatMap((p) => p.from))], says, settle, bpm: null, key: says });
-  return [{ kind: "mode", a: side(minor, MINOR_KEY, "in minor"), b: side(major, MAJOR_KEY, "in major") }];
+  const tokens = (set: ReadonlySet<string>): number[] => [...new Set(moods.filter((p) => set.has(p.term)).flatMap((p) => p.from))];
+  const minor = tokens(MINOR);
+  const major = tokens(MAJOR);
+  // A word that leans both ways ("halloween": eerie and playful) is on neither side.
+  const a = minor.filter((i) => !major.includes(i));
+  const b = major.filter((i) => !minor.includes(i));
+  if (a.length === 0 || b.length === 0) return [];
+  const side = (from: number[], key: string, settle: string): PullSide => ({ from, says: key, settle, bpm: null, key });
+  return [{ kind: "mode", a: side(a, MINOR_KEY, "in minor"), b: side(b, MAJOR_KEY, "in major") }];
 }
 
 /** The tokens that produced one seed word, for the provenance underline; [] when the sentence did not. */
