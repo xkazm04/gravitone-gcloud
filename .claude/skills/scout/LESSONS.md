@@ -262,3 +262,7 @@ run 3's clusters + run 2's rows are complementary evidence over the same gallery
   failing lines, and when suno is the only one the night goes on.
 - The pre-push gate's next-unit failed on scout-graph (3 cases) because tests/next-server/scout-cli-harness.ts never
   set SCOUT_MUSE_STORE_DIR: on this box the test read the operator's foundry-out/scout-muse, empty in CI. Fixed.
+- The night finished 12 storyboards and 2 reels (0 failed), but all 7 `draft` plan items expired at the deadline:
+  night-fill waits for 15 minutes under 60%, and the storyboards (11 `/free` unloads, about one board per 40 min)
+  held the box above that until 05:30Z. A night with a full storyboard batch leaves no room for the queue. Drafts are
+  small, so launch them on the seat or before the storyboards rather than queueing them behind a busy GPU lane.
