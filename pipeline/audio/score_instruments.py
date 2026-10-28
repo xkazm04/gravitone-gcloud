@@ -48,6 +48,7 @@ CATALOG = {
 }
 
 _VITAL_CACHE = None
+_VITAL_PARAMS = None
 _SAMPLE_CACHE = {}
 
 
@@ -90,8 +91,7 @@ def write_smf_midi(events, bpm, out_path):
         raw.append((t0, 1, bytes([0x90, int(midi_note) & 0x7F, max(1, min(127, int(vel)))])))
         raw.append((t1, 0, bytes([0x80, int(midi_note) & 0x7F, 0])))
     raw.sort(key=lambda x: (x[0], x[1]))
-    body = bytearray()
-    body += _vlq(0) + b"\xFF\x51\x03" + us_per_beat.to_bytes(3, "big")
+    body = bytearray(_vlq(0) + b"\xFF\x51\x03" + us_per_beat.to_bytes(3, "big"))
     last_tick = 0
     for tick, _kind, msg in raw:
         body += _vlq(tick - last_tick) + msg
@@ -172,9 +172,6 @@ def _find_drum_samples(kit_id):
     return found
 
 
-_VITAL_PARAMS = None
-
-
 def _get_vital(vst_override=None):
     global _VITAL_CACHE, _VITAL_PARAMS
     if vst_override == "off" or os.environ.get("GRAVITONE_VST3_DISABLE") == "1":
@@ -207,14 +204,9 @@ def _configure_vital_patch(inst, inst_id, brightness=0.5):
         "vital-glass-lead": (0.20, 0.45, 0.70, 0.35, 0.25),
     }
     att, dec, sus, rel, morph = presets.get(inst_id, (0.08, 0.4, 0.6, 0.25, 0.2))
-    if "envelope_1_attack" in p:
-        p["envelope_1_attack"].raw_value = att
-    if "envelope_1_decay" in p:
-        p["envelope_1_decay"].raw_value = dec
-    if "envelope_1_sustain" in p:
-        p["envelope_1_sustain"].raw_value = sus
-    if "envelope_1_release" in p:
-        p["envelope_1_release"].raw_value = rel
+    for k_name, val in (("envelope_1_attack", att), ("envelope_1_decay", dec), ("envelope_1_sustain", sus), ("envelope_1_release", rel)):
+        if k_name in p:
+            p[k_name].raw_value = val
     if "oscillator_1_wave_frame" in p:
         p["oscillator_1_wave_frame"].raw_value = min(1.0, max(0.0, morph + 0.2 * float(brightness)))
     inst.reset()
@@ -243,10 +235,8 @@ def _synth_voice(events, duration_s, inst_id, brightness=0.5):
         harmonics = (1, 2, 3, 4) if char in ("warm", "soft", "deep") else (1, 2, 3, 4, 5, 6)
         falloff = 1.6 - 0.5 * float(brightness)
         body = sum(np.sin(2.0 * math.pi * freq * h * t) / (h ** falloff) for h in harmonics)
-        side_l = np.sin(2.0 * math.pi * freq * 1.0015 * t + 0.3) * 0.22
-        side_r = np.sin(2.0 * math.pi * freq * 0.9985 * t - 0.3) * 0.22
-        out[i0:i0 + length, 0] += ((body + side_l) * env * amp).astype(np.float32)
-        out[i0:i0 + length, 1] += ((body + side_r) * env * amp).astype(np.float32)
+        out[i0:i0 + length, 0] += ((body + np.sin(2.0 * math.pi * freq * 1.0015 * t + 0.3) * 0.22) * env * amp).astype(np.float32)
+        out[i0:i0 + length, 1] += ((body + np.sin(2.0 * math.pi * freq * 0.9985 * t - 0.3) * 0.22) * env * amp).astype(np.float32)
     cutoff = min(18000.0, max(400.0, (1200.0 if role == "bass" else 3200.0) + 6000.0 * float(brightness)))
     sos = signal.butter(2, cutoff, "lowpass", fs=RATE, output="sos")
     return signal.sosfilt(sos, out, axis=0).astype(np.float32), "scipy-synth"
@@ -270,10 +260,9 @@ def render_instrument_events(inst_id, events, duration_s, brightness=0.5):
             t_k = np.arange(int(0.28 * RATE)) / RATE
             kick = (np.sin(2 * np.pi * np.cumsum(48 + 95 * np.exp(-t_k * 32)) / RATE) * np.exp(-t_k * 9.5))[:, None].repeat(2, axis=1).astype(np.float32)
             rng = np.random.default_rng(108)
-            t_s = np.arange(int(0.18 * RATE)) / RATE
+            t_s, t_h = np.arange(int(0.18 * RATE)) / RATE, np.arange(int(0.06 * RATE)) / RATE
             sn_noise = signal.sosfilt(signal.butter(2, (900, 5200), "bandpass", fs=RATE, output="sos"), rng.standard_normal(len(t_s)))
             snare = ((sn_noise * np.exp(-t_s * 24) + 0.45 * np.sin(2 * np.pi * 185 * t_s) * np.exp(-t_s * 28)) * 0.55)[:, None].repeat(2, axis=1).astype(np.float32)
-            t_h = np.arange(int(0.06 * RATE)) / RATE
             hat_n = signal.sosfilt(signal.butter(2, 6800, "highpass", fs=RATE, output="sos"), rng.standard_normal(len(t_h)))
             hat = (hat_n * np.exp(-t_h * 75) * 0.35)[:, None].repeat(2, axis=1).astype(np.float32)
             samples = {"kick": kick, "snare": snare, "hat": hat, "clap": snare * 0.8}
@@ -339,8 +328,7 @@ def render_instrument_events(inst_id, events, duration_s, brightness=0.5):
                 rel_n = min(dur_frames, int(0.08 * RATE))
                 if rel_n > 0:
                     seg[-rel_n:] *= np.linspace(1.0, 0.0, rel_n, dtype=np.float32)[:, None]
-                gain = (float(vel) / 127.0) ** 1.2 * 0.48
-                out[i0:i0 + dur_frames] += seg * gain
+                out[i0:i0 + dur_frames] += seg * ((float(vel) / 127.0) ** 1.2 * 0.48)
             return out, "local-multisample"
 
     return _synth_voice(events, duration_s, inst_id, brightness=brightness)
@@ -382,21 +370,12 @@ def audition_instrument(inst_id, out_path=None):
         os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
         sf.write(out_path, a1, RATE, subtype="PCM_16", format="WAV")
     return {
-        "ok": True,
-        "id": inst_id,
-        "name": entry["name"],
-        "role": role,
-        "source": source_used,
+        "ok": True, "id": inst_id, "name": entry["name"], "role": role, "source": source_used,
         "outPath": os.path.abspath(out_path) if out_path else None,
         "audition": {
-            "status": "ready",
-            "noteOnWorks": True,
-            "lufsAtVel100": meas["integratedLufs"],
-            "truePeakDb": meas["truePeakDb"],
-            "tailS": meas["tailSilenceS"],
-            "renderMs": int(round((t1 - t0) * 1000)),
-            "deterministic": max_diff == 0.0,
-            "maxDiff": round(max_diff, 8),
-            "refusalReason": None,
+            "status": "ready", "noteOnWorks": True, "lufsAtVel100": meas["integratedLufs"],
+            "truePeakDb": meas["truePeakDb"], "tailS": meas["tailSilenceS"],
+            "renderMs": int(round((t1 - t0) * 1000)), "deterministic": max_diff == 0.0,
+            "maxDiff": round(max_diff, 8), "refusalReason": None,
         },
     }

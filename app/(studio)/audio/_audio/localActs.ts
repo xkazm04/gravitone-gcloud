@@ -1,23 +1,45 @@
 "use server";
 
-// LOCAL BAND SERVER ACTIONS — render 4-stem local ScoreSpec ($0), swap a single stem in ~1s
-// (reusing the other 3 stems bit-for-bit), audition a catalog instrument, and promote to Arrange.
+// LOCAL BAND SERVER ACTIONS — $0 receipt door, render 4-stem local ScoreSpec ($0), swap/remix a
+// single stem in ~1s (reusing the other 3 stems bit-for-bit), audition a catalog instrument, and
+// promote to Arrange.
 
 import { z } from "zod";
 
+import { fxChainSchema } from "@gt/domain/audio.fx";
 import { SCORE_ROLES } from "@gt/domain/audio.score";
 import { ok, type Result } from "@gt/domain/errors";
+import type { Receipt } from "@gt/domain/produce";
+import { ceilingUsdSchema, receiptModeSchema } from "@gt/domain/produce.schema";
 import type { LocalAuditionState, LocalTakeView } from "@gt/ui/components/audio/localBand.ts";
 
 import { action } from "../../../_server/action.ts";
 import type { ActionResult } from "../../../_server/actionCore.ts";
 import {
   auditionLocalInstrument,
+  buildLocalScoreReceipt,
   promoteLocalTakeToArrange,
   renderLocalScore,
   swapLocalTakeStem,
 } from "../../../../lib/sound/localScore.ts";
 import { toLocalTakeView } from "./localRead.ts";
+
+const receiptInputSchema = z.object({
+  spec: z.unknown(),
+  mode: receiptModeSchema.optional(),
+  ceilingUsd: ceilingUsdSchema.optional(),
+});
+
+const localScoreReceiptAction = action(
+  "audio local score receipt",
+  receiptInputSchema,
+  async (i): Promise<Result<Receipt>> => {
+    return buildLocalScoreReceipt(i.spec, {
+      ...(i.mode === undefined ? {} : { mode: i.mode }),
+      ...(i.ceilingUsd === undefined ? {} : { ceilingUsd: i.ceilingUsd }),
+    });
+  },
+);
 
 const renderInputSchema = z.object({
   spec: z.unknown(),
@@ -37,6 +59,9 @@ const swapInputSchema = z.object({
   takeId: z.string().trim().min(1).max(80),
   role: z.enum(SCORE_ROLES),
   instrumentId: z.string().trim().min(1).max(80),
+  muted: z.boolean().optional(),
+  solo: z.boolean().optional(),
+  fx: fxChainSchema.optional(),
 });
 
 const swapLocalStemAction = action(
@@ -47,6 +72,9 @@ const swapLocalStemAction = action(
       takeId: i.takeId,
       role: i.role,
       instrumentId: i.instrumentId,
+      ...(i.muted === undefined ? {} : { muted: i.muted }),
+      ...(i.solo === undefined ? {} : { solo: i.solo }),
+      ...(i.fx === undefined ? {} : { fx: i.fx }),
     });
     if (!r.ok) return r;
     return ok(toLocalTakeView(r.value.take, r.value.plan));
@@ -91,6 +119,10 @@ const promoteLocalTakeAction = action(
     return ok({ takeId: r.value.id, stage: r.value.stage });
   },
 );
+
+export async function localScoreReceiptAct(input: z.input<typeof receiptInputSchema>): Promise<ActionResult<Receipt>> {
+  return localScoreReceiptAction(input);
+}
 
 export async function renderLocalScoreAct(input: z.input<typeof renderInputSchema>): Promise<ActionResult<LocalTakeView>> {
   return renderLocalScoreAction(input);

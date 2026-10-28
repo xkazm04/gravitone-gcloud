@@ -29,7 +29,7 @@ import { editRows, moveCard } from "./_audio/arrangeActs.ts";
 import { deskEngines, engineRows, finalizedCount, readArrange } from "./_audio/arrangeRead.ts";
 import { AudioLane } from "./_audio/AudioLane.tsx";
 import { deskHref, KINDS, parseDeskUrl, SECTIONS } from "./_audio/desk.ts";
-import { auditionLocalInstrumentAct, promoteLocalTakeAct, renderLocalScoreAct, swapLocalStemAct } from "./_audio/localActs.ts";
+import { auditionLocalInstrumentAct, localScoreReceiptAct, promoteLocalTakeAct, renderLocalScoreAct, swapLocalStemAct } from "./_audio/localActs.ts";
 import { readLocalBand } from "./_audio/localRead.ts";
 import { audioNow, readAudio } from "./_audio/read.ts";
 import { crownTake, draftHuntLesson, draftHuntMap, renderLeaves } from "./_hunt/acts.ts";
@@ -80,7 +80,7 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
         engines={engineRows(registry)}
         canSend={makersOf(registry, "music").some((e) => e.id === "suno")}
         localBand={localBand}
-        localActs={{ renderLocalScoreAct, swapLocalStemAct, auditionLocalInstrumentAct, promoteLocalTakeAct }}
+        localActs={{ localScoreReceiptAct, renderLocalScoreAct, swapLocalStemAct, auditionLocalInstrumentAct, promoteLocalTakeAct }}
       />
     );
   } else

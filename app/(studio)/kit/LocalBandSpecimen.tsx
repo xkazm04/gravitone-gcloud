@@ -93,6 +93,7 @@ export function LocalBandSpecimen() {
         catalog={SPECIMEN_CATALOG}
         takes={SPECIMEN_TAKES}
         onRender={inert}
+        onReceipt={inert}
         onSwapStem={inert}
         onAudition={inert}
         onPromote={inert}

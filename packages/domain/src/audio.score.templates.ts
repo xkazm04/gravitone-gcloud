@@ -50,7 +50,7 @@ export function triageContextFromScore(spec: ScoreSpec): TriageContext {
     durationS: scoreDurationS(spec),
     tempoBpm: spec.tempoBpm,
     ...(spec.loop === undefined ? {} : { loop: spec.loop }),
-    ...(sections.length >= 2 ? { sections: [...sections] } : {}),
+    ...(sections.length >= 2 && spec.loop !== true ? { sections: [...sections] } : {}),
   };
 }
 

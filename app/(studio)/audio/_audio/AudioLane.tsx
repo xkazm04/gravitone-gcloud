@@ -28,7 +28,7 @@ import { ReferenceList } from "@gt/ui/components/audio/ReferenceList.tsx";
 import { BLANK_SEED, FACET_OF, addTo, handsOf, sunoFieldsOf, type Hand, type Seed, type SeedList, type Term } from "@gt/ui/components/audio/recipe.ts";
 import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
 import { LocalBandStudio } from "@gt/ui/components/audio/LocalBandStudio.tsx";
-import type { LocalAuditionState, LocalRole, LocalScoreDraft, LocalTakeView } from "@gt/ui/components/audio/localBand.ts";
+import type { LocalAuditionState, LocalFxChain, LocalRole, LocalScoreDraft, LocalTakeView } from "@gt/ui/components/audio/localBand.ts";
 import { TermRail } from "@gt/ui/components/audio/TermRail.tsx";
 import { VariationList } from "@gt/ui/components/audio/VariationList.tsx";
 import { conceptFor, variationsOfSeed } from "@gt/ui/components/audio/variations.ts";
@@ -41,7 +41,7 @@ import { useShell } from "../../_shell/Providers.tsx";
 import { copyText } from "../../_shell/clipboard.ts";
 import type { AudioView, SeedTake } from "./read.ts";
 import type { setHand, sunoConfirm, sunoReceipt } from "./actions.ts";
-import type { auditionLocalInstrumentAct, promoteLocalTakeAct, renderLocalScoreAct, swapLocalStemAct } from "./localActs.ts";
+import type { auditionLocalInstrumentAct, localScoreReceiptAct, promoteLocalTakeAct, renderLocalScoreAct, swapLocalStemAct } from "./localActs.ts";
 import type { LocalBandView } from "./localRead.ts";
 import s from "./audio.module.css";
 
@@ -49,6 +49,7 @@ import s from "./audio.module.css";
  *  never the module (the Board's and the Floor's wire shape, ../../projects/_port/wire.ts). */
 export type AudioActs = { readonly setHand: typeof setHand; readonly sunoReceipt: typeof sunoReceipt; readonly sunoConfirm: typeof sunoConfirm };
 export type LocalBandActs = {
+  readonly localScoreReceiptAct?: typeof localScoreReceiptAct;
   readonly renderLocalScoreAct: typeof renderLocalScoreAct;
   readonly swapLocalStemAct: typeof swapLocalStemAct;
   readonly auditionLocalInstrumentAct: typeof auditionLocalInstrumentAct;
@@ -83,9 +84,6 @@ export function AudioLane({
   const takes: readonly SeedTake[] = view.takes.ok ? view.takes.value : [];
   const [seed, setSeed] = useState<Seed>(() => takes[0]?.seed ?? BLANK_SEED);
   const [from, setFrom] = useState<string>(() => takes[0]?.id ?? BLANK);
-  // The hand a person just set, laid over the server's terms until the refresh brings it back;
-  // a hand the store refused (or whose request never came back) is taken off again, so the rail
-  // never draws a stance the store does not hold.
   const [mine, setMine] = useState<Readonly<Record<string, Hand>>>({});
   const terms: readonly Term[] = useMemo(() => {
     const base = view.terms.ok ? view.terms.value : [];
@@ -97,7 +95,6 @@ export function AudioLane({
   const hands = useMemo(() => handsOf(terms), [terms]);
   const variations = useMemo(() => variationsOfSeed(seed, terms), [seed, terms]);
   const take = takes.find((t) => t.id === from);
-  // What the seed was last loaded from: a take's title, a variation's axis, a reference.
   const [loaded, setLoaded] = useState<string | null>(null);
   const fromLabel = loaded ?? take?.title ?? "blank";
 
@@ -186,29 +183,63 @@ export function AudioLane({
     );
   };
 
-  const onLocalSwap = (takeId: string, role: LocalRole, instrumentId: string): void => {
+  const onLocalReceipt = (spec: LocalScoreDraft): void => {
+    if (!localActs?.localScoreReceiptAct || flow.reading || localBusy) return;
+    void flow.open({
+      trail: [{ label: "Audio", href: "/audio" }],
+      here: "render local 4-stem score ($0)",
+      read: (mode) => localActs.localScoreReceiptAct!({ spec, mode }),
+      armable: false,
+      confirm: async () =>
+        outcomeOf(await localActs.renderLocalScoreAct({ spec }), (v) => {
+          setLocalTakes((cur) => [v, ...cur.filter((x) => x.id !== v.id)]);
+          return { kind: "done", note: `local · rendered ${v.title} (${v.lufs?.toFixed(1) ?? "-14.0"} LUFS · $0)` };
+        }),
+      done: (note) => {
+        toast(note);
+        router.refresh();
+      },
+      failed: (message) => toast(message),
+    });
+  };
+
+  const onLocalSwap = (
+    takeId: string,
+    role: LocalRole,
+    instrumentId: string,
+    opts?: { readonly muted?: boolean; readonly solo?: boolean; readonly fx?: LocalFxChain },
+  ): void => {
     if (!localActs || localBusy) return;
     setLocalBusy(true);
     setLocalError(null);
-    void localActs.swapLocalStemAct({ takeId, role, instrumentId }).then(
-      (r) => {
-        setLocalBusy(false);
-        if (!r.ok) {
-          setLocalError(r.error.error);
-          toast(r.error.error);
-        } else {
-          setLocalTakes((cur) => [r.value, ...cur.filter((x) => x.id !== r.value.id)]);
-          toast(`local · swapped ${role} (${r.value.reusedRoles.length} stems reused bit-exact · ${r.value.totalRenderMs}ms)`);
-          router.refresh();
-        }
-      },
-      (e: unknown) => {
-        setLocalBusy(false);
-        const msg = errorMessage(e);
-        setLocalError(msg);
-        toast(msg);
-      },
-    );
+    void localActs
+      .swapLocalStemAct({
+        takeId,
+        role,
+        instrumentId,
+        ...(opts?.muted === undefined ? {} : { muted: opts.muted }),
+        ...(opts?.solo === undefined ? {} : { solo: opts.solo }),
+        ...(opts?.fx === undefined ? {} : { fx: opts.fx }),
+      })
+      .then(
+        (r) => {
+          setLocalBusy(false);
+          if (!r.ok) {
+            setLocalError(r.error.error);
+            toast(r.error.error);
+          } else {
+            setLocalTakes((cur) => [r.value, ...cur.filter((x) => x.id !== r.value.id)]);
+            toast(`local · swapped ${role} (${r.value.reusedRoles.length} stems reused bit-exact · ${r.value.totalRenderMs}ms)`);
+            router.refresh();
+          }
+        },
+        (e: unknown) => {
+          setLocalBusy(false);
+          const msg = errorMessage(e);
+          setLocalError(msg);
+          toast(msg);
+        },
+      );
   };
 
   const onLocalAudition = (instrumentId: string): void => {
@@ -301,6 +332,7 @@ export function AudioLane({
             error={localError}
             audition={localAudition}
             onRender={onLocalRender}
+            {...(localActs?.localScoreReceiptAct ? { onReceipt: onLocalReceipt } : {})}
             onSwapStem={onLocalSwap}
             onAudition={onLocalAudition}
             onPromote={onLocalPromote}

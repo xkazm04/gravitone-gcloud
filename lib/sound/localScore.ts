@@ -1,11 +1,7 @@
-// LOCAL SCORE SERVICE — deterministic score compilation, stem caching, single-stem swaps,
-// instrument audition previews, and SoundTake filing under `provider: "local"`.
-//
-// Zero vendor spend ($0): every render runs locally via `pipeline/audio/render_score.py`,
-// caches content-addressed stems in `<SOUND_STORE_DIR>/local-stem-cache`, writes the mastered
-// -14 LUFS mix + 4 stem WAVs + per-stem `.mid` + REAPER `.rpp` into `<SOUND_STORE_DIR>/files/`,
-// and records ground-truth 10-detector triage and bit-exact determinism in `take.plan`.
+// LOCAL SCORE SERVICE — deterministic score compilation, $0 receipt generation, stem caching,
+// single-stem swaps, instrument audition previews, and SoundTake filing under `provider: "local"`.
 
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -13,7 +9,9 @@ import path from "node:path";
 import type { FxChain } from "@gt/domain/audio.fx";
 import {
   INSTRUMENT_CATALOG,
+  SCORE_KEYS,
   SCORE_ROLES,
+  STYLE_TEMPLATES,
   instrumentById,
   parseScoreSpec,
   swapRoleInstrument,
@@ -21,9 +19,10 @@ import {
   type ScoreRole,
   type ScoreSpec,
 } from "@gt/domain/audio.score";
-import { scoreSectionsMs } from "@gt/domain/audio.score.templates";
+import { scoreSectionsMs, scoreTotalBars } from "@gt/domain/audio.score.templates";
 import type { Triage } from "@gt/domain/audio.triage";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
+import type { Receipt, ReceiptLine, ReceiptMode } from "@gt/domain/produce";
 
 import {
   auditionInstrument,
@@ -32,6 +31,7 @@ import {
   type DeterminismReport,
   type RenderedStem,
 } from "../audio/sidecar";
+import { fill, promptFile } from "./hunt";
 import { measureSignal } from "./measure";
 import { mintId, safeId, soundFailure, storeRoot, writeBytesAtomic } from "./store";
 import { createTake, getTake, listTakes, patchTake } from "./takes";
@@ -60,6 +60,53 @@ export type LocalScorePlan = {
   readonly costUsd: 0;
 };
 
+/** Price a closed ScoreSpec as a $0 local Receipt on `box.render` before rendering. */
+export function buildLocalScoreReceipt(
+  specIn: unknown,
+  opts: { readonly mode?: ReceiptMode; readonly nowMs?: number; readonly ceilingUsd?: number } = {},
+): Result<Receipt> {
+  const parsed = parseScoreSpec(specIn);
+  if (!parsed.ok) return parsed;
+  const spec = parsed.value;
+  const now = opts.nowMs ?? Date.now();
+  const totalBars = scoreTotalBars(spec);
+  let cursorMs = now;
+  const lines: ReceiptLine[] = spec.tracks.map((tr, idx) => {
+    const inst = instrumentById(tr.instrument)!;
+    const sec = Math.max(1, Math.round((inst.audition.loadMs * (idx === 0 ? 1 : 0.15) + inst.audition.renderMs) / 1000));
+    const start = new Date(cursorMs).toISOString();
+    cursorMs += sec * 1000;
+    return {
+      key: `stem:${tr.role}`,
+      label: `${tr.role} · ${inst.name}`,
+      lane: "box.render",
+      provider: "local",
+      model: inst.engine,
+      units: totalBars,
+      seconds: sec,
+      usd: 0,
+      src: "real",
+      queuePos: idx + 1,
+      start,
+      end: new Date(cursorMs).toISOString(),
+    };
+  });
+  const totalSeconds = lines.reduce((acc, l) => acc + l.seconds, 0);
+  const token = `local:${createHash("sha256").update(JSON.stringify(spec)).digest("hex").slice(0, 24)}`;
+  return ok({
+    token,
+    subject: { kind: "run", lane: "audio" },
+    mode: opts.mode ?? "dry",
+    lines,
+    totals: { seconds: totalSeconds, usd: 0, unpriced: 0, src: "real" },
+    queuePos: 1,
+    etaAt: new Date(now + totalSeconds * 1000).toISOString(),
+    ...(opts.ceilingUsd === undefined ? {} : { ceilingUsd: opts.ceilingUsd }),
+    overCeiling: false,
+    readAt: new Date(now).toISOString(),
+  });
+}
+
 /** Decode a 16-bit PCM RIFF WAV buffer into mono Float32 samples for waveform peak & RMS measurement. */
 export function wavToMonoFloat32(wavBytes: Uint8Array): { readonly samples: Float32Array; readonly sampleRate: number } {
   const view = new DataView(wavBytes.buffer, wavBytes.byteOffset, wavBytes.byteLength);
@@ -69,12 +116,7 @@ export function wavToMonoFloat32(wavBytes: Uint8Array): { readonly samples: Floa
   let bitsPerSample = 16;
   let offset = 12;
   while (offset + 8 <= wavBytes.byteLength) {
-    const tag = String.fromCharCode(
-      wavBytes[offset] ?? 0,
-      wavBytes[offset + 1] ?? 0,
-      wavBytes[offset + 2] ?? 0,
-      wavBytes[offset + 3] ?? 0,
-    );
+    const tag = String.fromCharCode(wavBytes[offset] ?? 0, wavBytes[offset + 1] ?? 0, wavBytes[offset + 2] ?? 0, wavBytes[offset + 3] ?? 0);
     const size = view.getUint32(offset + 4, true);
     const body = offset + 8;
     if (tag === "fmt " && size >= 16 && body + 16 <= wavBytes.byteLength) {
@@ -90,10 +132,7 @@ export function wavToMonoFloat32(wavBytes: Uint8Array): { readonly samples: Floa
       for (let i = 0; i < frames; i++) {
         let acc = 0;
         const base = body + i * frameBytes;
-        for (let c = 0; c < channels; c++) {
-          const sampleOff = base + c * bytesPerSample;
-          acc += view.getInt16(sampleOff, true) / 32768;
-        }
+        for (let c = 0; c < channels; c++) acc += view.getInt16(base + c * bytesPerSample, true) / 32768;
         out[i] = acc / channels;
       }
       return { samples: out, sampleRate };
@@ -164,10 +203,13 @@ export async function renderLocalScore(
     const sig = measureSignal(samples, sampleRate, true);
     const sectionsMs = scoreSectionsMs(spec);
     const styleTag = spec.style ?? "local-band";
-    const chunks = sectionsMs.map((s, idx) => ({
-      text: `[${s.name}] ${styleTag} (${spec.sections[idx]?.bars ?? 2} bars, energy ${spec.sections[idx]?.energy ?? 0.5})`,
-      duration_ms: Math.max(100, s.endMs - s.startMs),
-    }));
+    const chunks =
+      spec.loop === true
+        ? [{ text: `[loop] ${styleTag} (${scoreTotalBars(spec)} bars seamless loop)`, duration_ms: Math.max(100, Math.round(res.durationS * 1000)) }]
+        : sectionsMs.map((s, idx) => ({
+            text: `[${s.name}] ${styleTag} (${spec.sections[idx]?.bars ?? 2} bars, energy ${spec.sections[idx]?.energy ?? 0.5})`,
+            duration_ms: Math.max(100, s.endMs - s.startMs),
+          }));
 
     const plan: LocalScorePlan = {
       kind: "local-score",
@@ -198,12 +240,7 @@ export async function renderLocalScore(
         origin: "lab",
         technique: ["local-score", styleTag, ...spec.tracks.map((t) => `${t.role}:${t.instrument}`)],
         prompt,
-        terms: {
-          genre: [styleTag],
-          mood: ["deterministic", "local-band"],
-          instrument: spec.tracks.map((t) => t.instrument),
-          sfxCategory: null,
-        },
+        terms: { genre: [styleTag], mood: ["deterministic", "local-band"], instrument: spec.tracks.map((t) => t.instrument), sfxCategory: null },
         tempoBpm: spec.tempoBpm,
         key: spec.key,
         durationS: res.durationS,
@@ -247,10 +284,8 @@ export type SwapLocalStemInput = {
   readonly fx?: FxChain;
 };
 
-/** Swap one stem's instrument on an existing local take, reusing the other 3 stems bit-for-bit. */
-export async function swapLocalTakeStem(
-  input: SwapLocalStemInput,
-): Promise<Result<{ readonly take: SoundTake; readonly plan: LocalScorePlan }>> {
+/** Swap one stem's instrument, FX chain, or mute/solo state on an existing local take, reusing unchanged stems bit-for-bit. */
+export async function swapLocalTakeStem(input: SwapLocalStemInput): Promise<Result<{ readonly take: SoundTake; readonly plan: LocalScorePlan }>> {
   if (!SCORE_ROLES.includes(input.role)) return err("invalid", `unknown stem role: ${String(input.role)}`);
   let parent: SoundTake;
   try {
@@ -267,13 +302,7 @@ export async function swapLocalTakeStem(
     ...swapped.value,
     tracks: swapped.value.tracks.map((t) =>
       t.role === input.role
-        ? {
-            ...t,
-            ...(input.gainDb !== undefined ? { gainDb: input.gainDb } : {}),
-            ...(input.pan !== undefined ? { pan: input.pan } : {}),
-            ...(input.muted !== undefined ? { muted: input.muted } : {}),
-            ...(input.solo !== undefined ? { solo: input.solo } : {}),
-          }
+        ? { ...t, ...(input.gainDb !== undefined ? { gainDb: input.gainDb } : {}), ...(input.pan !== undefined ? { pan: input.pan } : {}), ...(input.muted !== undefined ? { muted: input.muted } : {}), ...(input.solo !== undefined ? { solo: input.solo } : {}) }
         : t,
     ),
   };
@@ -282,23 +311,13 @@ export async function swapLocalTakeStem(
     parentId: parent.id,
     op: "section-edit",
     group: parent.group,
-    variation: {
-      axis: `stem:${input.role}`,
-      diff: [`${prevTrack?.instrument ?? "previous"} -> ${input.instrumentId}`],
-    },
+    variation: { axis: `stem:${input.role}`, diff: [`${prevTrack?.instrument ?? "previous"} -> ${input.instrumentId}`] },
   });
 }
 
 /** Render a short audition preview WAV for a ready catalog instrument, or refuse with its measured A0 gate reason. */
 export async function auditionLocalInstrument(instrumentId: string): Promise<
-  Result<{
-    readonly instrumentId: string;
-    readonly name: string;
-    readonly role: ScoreRole;
-    readonly audioUrl: string;
-    readonly audition: AuditionResult["audition"];
-    readonly source: string;
-  }>
+  Result<{ readonly instrumentId: string; readonly name: string; readonly role: ScoreRole; readonly audioUrl: string; readonly audition: AuditionResult["audition"]; readonly source: string }>
 > {
   const cat = instrumentById(instrumentId);
   if (!cat) return err("invalid", `unknown instrument: ${instrumentId}`);
@@ -340,13 +359,7 @@ export async function promoteLocalTakeToArrange(input: {
     const current = await getTake(input.takeId);
     const label = (input.label ?? current.label ?? current.title).trim() || "local-band-cue";
     const group = (input.group ?? current.group ?? "electronic").trim() || "electronic";
-    const updated = await patchTake(input.takeId, {
-      verdict: "kept",
-      stage: input.finalize ? "finalized" : "pending",
-      group,
-      label,
-    });
-    return ok(updated);
+    return ok(await patchTake(input.takeId, { verdict: "kept", stage: input.finalize ? "finalized" : "pending", group, label }));
   } catch (e) {
     return soundFailure(e);
   }
@@ -357,14 +370,24 @@ export async function listLocalScoreTakes(limit = 12): Promise<readonly { readon
   const out: { readonly take: SoundTake; readonly plan: LocalScorePlan }[] = [];
   for (const t of all) {
     const plan = readLocalScorePlan(t);
-    if (plan) {
-      out.push({ take: t, plan });
-      if (out.length >= limit) break;
-    }
+    if (plan && out.push({ take: t, plan }) >= limit) break;
   }
   return out;
 }
 
 export function listInstrumentCatalog(): readonly InstrumentCatalogEntry[] {
   return INSTRUMENT_CATALOG;
+}
+
+/** Build the A2 text-to-score prompt from `pipeline/SCORE-PROMPT.md` with A0-ready catalog slots. */
+export async function buildScorePrompt(idea: string): Promise<string> {
+  const sections = await promptFile("SCORE-PROMPT.md");
+  const readyLines = SCORE_ROLES.map((role) => {
+    const items = INSTRUMENT_CATALOG.filter((i) => i.role === role && i.audition.status === "ready").map(
+      (i) => `${i.id} (${i.plainLabel}, MIDI ${i.pitchRange[0]}..${i.pitchRange[1]})`,
+    );
+    return `- ${role}: ${items.join("; ")}`;
+  }).join("\n");
+  const slots = { IDEA: idea.trim(), STYLES: STYLE_TEMPLATES.join(", "), KEYS: SCORE_KEYS.join(", "), READY_INSTRUMENTS: readyLines };
+  return [fill(sections.shared, slots), sections.music ? fill(sections.music, slots) : ""].filter(Boolean).join("\n\n");
 }

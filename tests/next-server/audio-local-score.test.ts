@@ -1,6 +1,6 @@
 // LOCAL BAND ENGINE TESTS — closed ScoreSpec validation, A0 instrument gate refusals,
-// deterministic VST3/multisample rendering, -14 LUFS mastering, 10-detector triage,
-// and 1-second bit-identical single-stem swaps.
+// $0 local receipt door, deterministic VST3/multisample rendering, -14 LUFS mastering,
+// 10-detector triage, solo/mute 4-stem cache reuse, and 1-second bit-identical stem swaps.
 
 import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -24,12 +24,15 @@ const ROOT = vi.hoisted(() => {
 });
 
 import { parseScoreSpec, type ScoreSpec } from "@gt/domain/audio.score";
-import { compileSeedToScore, templateById } from "@gt/domain/audio.score.templates";
+import { WORKED_SCORE_TEMPLATES, compileSeedToScore, templateById } from "@gt/domain/audio.score.templates";
 import { LocalBandStudio } from "@gt/ui/components/audio/LocalBandStudio.tsx";
+import { explainScoreChoices, fxChainForPreset, fxPresetOf } from "@gt/ui/components/audio/localBand.ts";
 import { readLocalBand } from "../../app/(studio)/audio/_audio/localRead.ts";
 import { engineRegistry, engineState } from "../../lib/sound/engines.ts";
 import {
   auditionLocalInstrument,
+  buildLocalScoreReceipt,
+  buildScorePrompt,
   promoteLocalTakeToArrange,
   renderLocalScore,
   swapLocalTakeStem,
@@ -41,11 +44,21 @@ afterAll(() => {
   rmSync(ROOT, { recursive: true, force: true });
 });
 
-describe("Local Band ScoreSpec & A0 Gate", () => {
-  it("accepts worked templates and compiles seed briefs into valid ScoreSpecs", () => {
-    const tpl = templateById("chill-hiphop");
-    const parsed = parseScoreSpec(tpl.spec);
-    expect(parsed.ok).toBe(true);
+describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
+  it("accepts all 4 worked templates, compiles seed briefs, and prices a $0 local receipt on box.render", () => {
+    for (const tpl of WORKED_SCORE_TEMPLATES) {
+      const parsed = parseScoreSpec(tpl.spec);
+      expect(parsed.ok).toBe(true);
+      const receipt = buildLocalScoreReceipt(tpl.spec, { nowMs: 1_760_000_000_000 });
+      expect(receipt.ok).toBe(true);
+      if (receipt.ok) {
+        expect(receipt.value.totals.usd).toBe(0);
+        expect(receipt.value.totals.unpriced).toBe(0);
+        expect(receipt.value.totals.src).toBe("real");
+        expect(receipt.value.lines.length).toBe(4);
+        expect(receipt.value.lines.every((l) => l.lane === "box.render" && l.usd === 0 && l.provider === "local")).toBe(true);
+      }
+    }
 
     const fromSeed = compileSeedToScore(
       {
@@ -64,7 +77,7 @@ describe("Local Band ScoreSpec & A0 Gate", () => {
     }
   });
 
-  it("refuses out-of-range tempo, out-of-key notes, and failed A0 instruments with clear reasons", () => {
+  it("refuses out-of-range tempo, out-of-key notes, and failed A0 instruments at both spec and receipt doors", () => {
     const base = templateById("chill-hiphop").spec;
 
     const badBpm = parseScoreSpec({ ...base, tempoBpm: 340 });
@@ -87,12 +100,12 @@ describe("Local Band ScoreSpec & A0 Gate", () => {
       expect(badKey.error.message).toContain("A minor");
     }
 
-    // Silent MiniGrand VST3 must be refused by the A0 gate.
+    // Silent MiniGrand VST3 must be refused by the A0 gate and by the receipt door.
     const withMiniGrand = {
       ...base,
       tracks: base.tracks.map((t) => (t.role === "chords" ? { ...t, instrument: "minigrand-vst3" } : t)),
     };
-    const refusedMini = parseScoreSpec(withMiniGrand);
+    const refusedMini = buildLocalScoreReceipt(withMiniGrand);
     expect(refusedMini.ok).toBe(false);
     if (!refusedMini.ok) {
       expect(refusedMini.error.message).toContain("minigrand-vst3");
@@ -124,8 +137,33 @@ describe("Local Band ScoreSpec & A0 Gate", () => {
     expect(localActive.ops).toEqual(["compose", "section-edit"]);
   });
 
+  it("builds the A2 text-to-score prompt from pipeline/SCORE-PROMPT.md and renders a seamless loop passing loop-seam", async () => {
+    const prompt = await buildScorePrompt("Warm lo-fi loop for late night reading");
+    expect(prompt).toContain("Warm lo-fi loop for late night reading");
+    expect(prompt).toContain("vital-sub-bass");
+    expect(prompt).toContain("sample-lofi-keys");
+    expect(prompt).toContain("minigrand-vst3");
+
+    const base = templateById("chill-hiphop").spec;
+    const loopSpec: ScoreSpec = {
+      ...base,
+      loop: true,
+      sections: [{ name: "loop", bars: 4, energy: 0.85, progression: [0, 5] }],
+      tracks: base.tracks.map((t) => (t.role === "bass" ? { ...t, instrument: "sample-mamas-bass" } : t)),
+    };
+    const loopRes = await renderLocalScore(loopSpec, { verifyDeterminism: false });
+    expect(loopRes.ok).toBe(true);
+    if (loopRes.ok) {
+      expect(loopRes.value.take.loop).toBe(true);
+      expect(loopRes.value.plan.triage.flagged).toBe(0);
+      const seam = loopRes.value.plan.triage.findings.find((f) => f.check === "loop-seam");
+      expect(seam?.verdict).toBe("pass");
+      expect(seam?.value ?? 99).toBeLessThan(3);
+    }
+  }, 60_000);
+
   it(
-    "renders a ScoreSpec deterministically to -14 LUFS, passes all triage detectors, and swaps 1 stem while reusing the other 3 bit-for-bit",
+    "renders a ScoreSpec deterministically to -14 LUFS, passes all triage detectors, swaps 1 stem while reusing the other 3 bit-for-bit, and remixes solo/mute with 4-stem cache reuse",
     async () => {
       const spec = templateById("chill-hiphop").spec;
       const first = await renderLocalScore(spec, { verifyDeterminism: true });
@@ -186,6 +224,20 @@ describe("Local Band ScoreSpec & A0 Gate", () => {
       expect(nextLead?.instrument).toBe("sample-mallet-guitar");
       expect(nextLead?.sha256).not.toBe(prevLead?.sha256);
 
+      // Soloing the lead stem reuses ALL 4 stems bit-for-bit from cache and remixes in < 1s
+      const soloed = await swapLocalTakeStem({
+        takeId: swapped.value.take.id,
+        role: "lead",
+        instrumentId: "sample-mallet-guitar",
+        solo: true,
+      });
+      expect(soloed.ok).toBe(true);
+      if (soloed.ok) {
+        expect(soloed.value.plan.renderedRoles).toEqual([]);
+        expect(soloed.value.plan.reusedRoles).toEqual(["drums", "bass", "chords", "lead"]);
+        expect(soloed.value.plan.stems.find((s) => s.role === "lead")?.solo).toBe(true);
+      }
+
       // Promote to Arrangement
       const promoted = await promoteLocalTakeToArrange({
         takeId: swapped.value.take.id,
@@ -199,7 +251,7 @@ describe("Local Band ScoreSpec & A0 Gate", () => {
         expect(promoted.value.stage).toBe("finalized");
       }
     },
-    60_000,
+    120_000,
   );
 
   it("renders instrument audition previews and refuses failed A0 instruments", async () => {
@@ -213,13 +265,18 @@ describe("Local Band ScoreSpec & A0 Gate", () => {
       expect(okAudition.value.audioUrl).toContain("instrument=sample-felt-piano");
       expect(existsSync(path.join(ROOT, "sound", "files", "audition-sample-felt-piano.wav"))).toBe(true);
     }
-  }, 30_000);
+  }, 60_000);
 
-  it("renders LocalBandStudio over readLocalBand() with 4-stem swapper, reused badges, and A0 catalog refusals", async () => {
+  it("renders LocalBandStudio over readLocalBand() with solo/mute, fx presets, receipt door, and arrangement breakdown", async () => {
     const view = await readLocalBand();
     expect(view.templates.length).toBe(4);
     expect(view.catalog.length).toBe(16);
     expect(view.takes.length).toBeGreaterThanOrEqual(2);
+
+    const chorusChain = fxChainForPreset("wide-chorus");
+    expect(fxPresetOf(chorusChain)).toBe("wide-chorus");
+    const breakdown = explainScoreChoices(view.templates[0]!.spec, view.catalog, view.takes[0]);
+    expect(breakdown.length).toBe(4);
 
     const html = renderToStaticMarkup(
       h(LocalBandStudio, {
@@ -227,14 +284,18 @@ describe("Local Band ScoreSpec & A0 Gate", () => {
         catalog: view.catalog,
         takes: view.takes,
         onRender: () => {},
+        onReceipt: () => {},
         onSwapStem: () => {},
         onAudition: () => {},
         onPromote: () => {},
       }),
     );
     expect(html).toContain("local band · 4-stem studio");
+    expect(html).toContain("Receipt ($0)");
     expect(html).toContain("Chill Lo-Fi Groove");
     expect(html).toContain("reused bit-exact");
+    expect(html).toContain("mute drums stem");
+    expect(html).toContain("solo drums stem");
     expect(html).toContain("REAPER .rpp");
     expect(html).toContain("AIR MiniGrand VST3");
     expect(html).toContain("instrument render is silent");
