@@ -1,8 +1,0 @@
-/* The placeholder variant's frame (spark audio-agent-studio WP1); its builder replaces this folder. Tokens only. */
-.wrap{display:grid;grid-template-columns:minmax(0,1fr) var(--w-detail);gap:var(--sp-6);align-content:start}
-.wrap > :first-child{grid-column:1 / -1}
-.col{display:grid;gap:var(--sp-3);align-content:start;min-width:0}
-.piece{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);padding:var(--sp-3) var(--sp-4);border:1px solid var(--hair);border-radius:var(--r);font-size:var(--fs-ui);color:var(--text)}
-.stem{display:inline-flex;align-items:center;gap:var(--sp-2);padding-left:var(--sp-3);color:var(--muted);font-size:var(--fs-meta)}
-.note{color:var(--muted);font-size:var(--fs-ui)}
-@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}}

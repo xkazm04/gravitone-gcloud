@@ -1,59 +1,108 @@
-// PLACEHOLDER for the "desk" variant (stem lanes on a section timeline). Its builder replaces this
-// folder. It lists the visible turn's pieces and proposals by kind, with play marks wired through
-// `dispatch`, so the host is exercised end to end before a real layout lands.
-import { STUDIO_ACTION_GOES } from "@gt/domain/audio.studio.kinds";
-import { Button } from "@gt/ui/components/button/Button.tsx";
-import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
-import { EarButton } from "@gt/ui/components/audio/EarButton.tsx";
-import { SourceTag } from "@gt/ui/components/source/SourceTag.tsx";
-import { TransportRow } from "@gt/ui/components/audio/TransportRow.tsx";
+// THE STUDIO DESK (spark audio-agent-studio, variant "desk"): a calm DAW-lite for someone who has
+// never opened one. Above, one sentence strip: what the agent heard and any two wishes that pull
+// apart. The main frame is a timeline - the transport (with the duel as an A/B switch), the
+// sections ruler, the track as the master lane, one lane per part beneath with a "try instead"
+// drawer docked to the part it would replace - and one playhead across all of it. The arrangement
+// stays on the desk until a newer answer replaces it. Right: next steps, and what works without
+// the agent. Every piece is drawn through the kind registry (./registry.tsx); nothing runs because
+// it rendered.
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
-import { localPlay, nodeSound } from "../../_host/press.ts";
+import { sectionSpans } from "@gt/ui/components/audio/mix.ts";
+import { droppedWords } from "@gt/ui/components/dock/dock.ts";
+import { axisTemplate, deskAxis, deskPieces, fracAt } from "@gt/ui/components/studio-desk/desk.ts";
+
 import type { VariantProps } from "../../_host/types.ts";
-import s from "./placeholder.module.css";
+import { deskPresses, deskSound, type DeskCtx } from "./ctx.ts";
+import { stemsOnDesk } from "./Lanes.tsx";
+import { TransportBar } from "./Master.tsx";
+import { NextSteps } from "./NextSteps.tsx";
+import { drawKind, extras } from "./registry.tsx";
+import { usePlayhead } from "./usePlayhead.ts";
+import lanes from "./lanes.module.css";
+import s from "./desk.module.css";
 
-export function Variant({ session, dispatch, transport }: VariantProps) {
-  const t = session.visible?.turn;
-  if (t === undefined) return <p className={s.note}>The agent has not answered yet.</p>;
-  const now = transport.sounding;
+export function Variant(v: VariantProps) {
+  const { session, transport, dock } = v;
+  const visible = session.visible;
+  const desk = useMemo(() => deskPieces(session.turns, visible?.turn.id ?? null), [session.turns, visible]);
+  const timeline = useRef<HTMLDivElement>(null);
+  const [measured, setMeasured] = useState<Readonly<Record<string, number>>>({});
+
+  const track = desk.track[0];
+  const sections = desk.sections[0];
+  const all = deskSound(v, desk);
+  const mixKey = track === undefined ? null : `${track.turnId}/${track.node.id}`;
+  const key = transport.sounding?.key ?? null;
+  // The arrangement sounds: every part, one part, the finished mix, or a whole-track comparison; not a candidate on its own.
+  const arrangement = key !== null && transport.state === "playing" && !key.endsWith(":alone") && !key.includes("/side");
+  const mixHref = track?.node.mix.href;
+  const length = transport.duration;
+  // The track's length, learned the first time it sounds (React's adjust-state-while-rendering pattern).
+  if (mixHref !== undefined && length !== null && key !== null && measured[mixHref] === undefined && (key === mixKey || (all !== null && key.startsWith(all.key)))) {
+    setMeasured({ ...measured, [mixHref]: length });
+  }
+
+  const totalS = track?.node.lengthS ?? (mixHref === undefined ? undefined : measured[mixHref]) ?? null;
+  const spans = sections === undefined ? null : sectionSpans(sections.node.rows, track?.node.bpm);
+  const axis = sections === undefined ? null : deskAxis(sections.node.rows, spans, totalS);
+
+  const hrefs = useMemo(() => [...(desk.track[0] === undefined ? [] : [desk.track[0].node.mix.href]), ...(desk.stems[0]?.node.rows.flatMap((r) => (r.audio === undefined ? [] : [r.audio.href])) ?? [])], [desk]);
+  const { decode } = transport;
+  useEffect(() => {
+    if (hrefs.length > 0) decode(hrefs);
+  }, [decode, hrefs]);
+
+  usePlayhead(timeline, arrangement, transport.position, transport.duration, transport.clock, axis?.audio ?? 1);
+
+  if (visible === null) return <p className={s.waiting}>The agent has not answered yet.</p>;
+
+  const ctx: DeskCtx = {
+    v,
+    desk,
+    visibleId: visible.turn.id,
+    actions: visible.turn.actions,
+    axis,
+    totalS,
+    agentOpen: dock.state === "listening",
+    head: arrangement ? fracAt(transport.clock, transport.duration) : null,
+    slot: (kind, only) => drawKind(kind, ctx, only),
+    ...deskPresses(v, desk),
+  };
+  const onDesk = stemsOnDesk(desk.stems[0]?.node);
+  const notes = droppedWords(v.dropped);
+  const more = extras(ctx);
+  const strip = desk.heard.length + desk.pull.length > 0;
+
   return (
-    <div className={s.wrap} data-variant="desk">
-      <TransportRow name={now?.name ?? "the first piece"} state={transport.state} clock={transport.clock} duration={transport.duration} failed={transport.failed} onToggle={() => (now === null ? dispatch(localPlay(t.show.find((n) => nodeSound(t, n) !== null)?.id ?? "track")) : transport.stop())} onSeek={transport.seek} onStop={transport.stop} />
-      <section className={s.col} aria-label="pieces">
-        <CapsHeading text="desk placeholder: pieces" tally={{ value: t.show.length, label: "shown" }} />
-        {t.show.map((n) => {
-          const snd = nodeSound(t, n);
-          return (
-            <div key={n.id} className={s.piece} data-kind={n.kind}>
-              {snd !== null && <EarButton state={transport.stateOf(snd.key)} name={snd.name} onPress={() => dispatch(localPlay(n.id))} />}
-              <b>{n.kind}</b>
-              <span>{n.title ?? n.id}</span>
-              {n.source !== undefined && <SourceTag kind={n.source} />}
-              {n.kind === "stems" &&
-                n.rows.map((r) => {
-                  const one = nodeSound(t, n, r.id);
-                  return one === null ? (
-                    <span key={r.id} className={s.stem}>{`${r.label} (no audio yet)`}</span>
-                  ) : (
-                    <span key={r.id} className={s.stem}>
-                      <EarButton state={transport.stateOf(one.key)} name={r.label} onPress={() => dispatch(localPlay(n.id, r.id))} />
-                      {r.label}
-                    </span>
-                  );
-                })}
-            </div>
-          );
-        })}
-      </section>
-      <section className={s.col} aria-label="next steps">
-        <CapsHeading text="next steps" tally={{ value: t.actions.length, label: "proposed" }} />
-        {t.actions.map((a) => (
-          <div key={a.id} className={s.piece} data-kind={a.kind}>
-            <Button label={a.label} size="sm" tone={STUDIO_ACTION_GOES[a.kind] === "agent" ? "cyan" : "neutral"} onPress={() => dispatch(a)} />
-            <span>{`${a.kind}${a.why === undefined ? "" : ` · ${a.why}`}`}</span>
-          </div>
-        ))}
-      </section>
+    <div className={s.desk} data-variant="desk">
+      <div className={s.main}>
+        {strip && (
+          <section className={s.strip} aria-label="what I heard">
+            {ctx.slot("heard")}
+            {ctx.slot("pull")}
+          </section>
+        )}
+        <div ref={timeline} className={`${s.timeline} ${lanes.axis}`} style={{ "--desk-cols": axisTemplate(axis) } as CSSProperties} data-playing={arrangement}>
+          <TransportBar ctx={ctx} />
+          {ctx.slot("sections")}
+          {ctx.slot("track")}
+          {ctx.slot("stems")}
+          {ctx.slot("candidates", (c) => c.kind === "candidates" && !("stem" in c.for && onDesk.has(c.for.stem)))}
+        </div>
+        {(notes !== null || more.length > 0) && (
+          <section className={s.notes} aria-label="desk notes">
+            <span className={s.kicker}>desk notes</span>
+            {notes !== null && <b className={s.noteHead}>{notes.summary}</b>}
+            <ul className={s.noteList}>
+              {[...(notes?.rows ?? []), ...more].map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+      <NextSteps ctx={ctx} />
     </div>
   );
 }

@@ -1,0 +1,14 @@
+/* The studio desk's frame (spark audio-agent-studio, variant "desk"): the main column (sentence
+   strip, timeline, desk notes) beside the next-steps side. Tokens only. */
+.desk{display:grid;grid-template-columns:minmax(0,1fr) var(--w-next);gap:var(--sp-6);align-items:start}
+.main{display:grid;gap:var(--sp-5);min-width:0;align-content:start}
+.strip{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:var(--sp-4) var(--sp-7);padding:var(--sp-5) var(--sp-6);border:1px solid var(--hair);border-radius:var(--r-lg);background:var(--panel-ground)}
+.strip > :only-child{grid-column:1 / -1}
+.timeline{display:grid;border:1px solid var(--hair-2);border-radius:var(--r-lg);background:var(--ink-1);overflow:hidden}
+.notes{display:grid;gap:var(--sp-2);padding:var(--sp-4) var(--sp-5);border:1px dashed color-mix(in srgb,var(--amber) 45%,transparent);border-radius:var(--r);background:var(--amber-a);font:500 var(--fs-meta)/1.4 var(--sans);color:var(--text)}
+.kicker{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.noteHead{color:var(--ink-bright)}
+.noteList{margin:0;padding-left:var(--sp-6);display:grid;gap:var(--sp-1)}
+.waiting{color:var(--muted);font-size:var(--fs-ui)}
+.broken{margin:0;padding:var(--sp-3) var(--sp-4);font:500 var(--fs-meta)/1.4 var(--sans);color:var(--error-text);background:var(--rose-a);border-radius:var(--r-sm)}
+@media (max-width:1180px){.desk{grid-template-columns:minmax(0,1fr)}.strip{grid-template-columns:minmax(0,1fr)}}

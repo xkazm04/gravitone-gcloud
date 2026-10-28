@@ -1,0 +1,37 @@
+/* A performer tile (spark audio-agent-studio, stage). Tokens only. `--halo` (0..1) is set per tile from
+   the part's loudness at the playhead; the halo follows it with a short ease, and holds still under
+   reduced motion (the value still shows, as brightness, never as movement). */
+.performer{--halo:0;position:relative;display:grid;gap:var(--sp-2);align-content:start;min-width:0;padding:var(--sp-4);border:1px solid var(--hair-2);border-radius:var(--r-tile);background:var(--ink-2);color:var(--text);transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.head{display:flex;align-items:center;gap:var(--sp-4);min-width:0}
+.disc{position:relative;flex:none;width:calc(var(--size-play) * 1.4);height:calc(var(--size-play) * 1.4);display:grid;place-items:center;border-radius:50%;background:var(--ink-4);border:1px solid var(--hair-3);color:var(--ink-bright)}
+.halo{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--cyan) 55%,transparent) 0%,transparent 70%);opacity:calc(var(--halo) * .9);transform:scale(calc(1 + var(--halo) * .5));transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease);pointer-events:none}
+.mark{position:relative;width:calc(var(--size-glyph-btn) * 1.4);height:calc(var(--size-glyph-btn) * 1.4)}
+.words{display:grid;gap:var(--sp-1);min-width:0}
+.label{font:600 var(--fs-ui)/1.25 var(--sans);color:var(--ink-bright);overflow-wrap:anywhere}
+.role{font:500 var(--fs-micro)/1.2 var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.status{display:flex;flex-wrap:wrap;gap:var(--sp-1) var(--sp-3);font:500 var(--fs-meta)/1.3 var(--sans);color:var(--muted)}
+.waiting{color:var(--amber)}
+.pips{display:flex;gap:var(--sp-1)}
+.pip{flex:1;height:var(--h-meter);border-radius:var(--r-meter);background:var(--hair-2)}
+.pip[data-on]{background:color-mix(in srgb,var(--amber) 70%,transparent)}
+.pip[data-picked]{outline:1px solid var(--ink-bright);outline-offset:1px}
+.controls{display:grid;gap:var(--sp-2);min-width:0}
+
+.performer[data-lit]{border-color:color-mix(in srgb,var(--cyan) 45%,transparent)}
+.performer[data-resting]{opacity:.45}
+.resting{color:var(--ink-bright)}
+.standIn{color:var(--cyan)}
+.performer[data-presence="out"]{opacity:.42;transform:translateY(calc(var(--sp-3) * -1)) scale(.95)}
+.performer[data-presence="dim"]{opacity:.55}
+.performer[data-presence="soon"]{border-style:dashed;border-color:color-mix(in srgb,var(--amber) 55%,transparent);background:var(--hatch-future)}
+.performer[data-presence="soon"] .disc{background:transparent;border-style:dashed;color:var(--faint)}
+.performer[data-presence="soon"] .label{color:var(--illustrative-text)}
+.performer[data-presence="soon"] .status{color:var(--illustrative-text)}
+.performer[data-spot]{border-color:var(--wall-hi);box-shadow:0 0 0 var(--ring-halo) color-mix(in srgb,var(--wall-hi) 22%,transparent)}
+.cone{position:absolute;left:15%;right:15%;bottom:100%;height:calc(var(--sp-7) * 2);background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--wall-hi) 30%,transparent));clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);pointer-events:none}
+
+@media (prefers-reduced-motion: reduce){
+  .performer,.halo{transition:none}
+  .halo{transform:none}
+  .performer[data-presence="out"]{transform:none}
+}

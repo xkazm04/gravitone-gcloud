@@ -1,0 +1,67 @@
+/* The conversation canvas (spark audio-agent-studio WP3): versions rail | card stack | next steps,
+   each column its own scroll inside the host's frame, so the newest card and the panel that speaks
+   for it are on screen together. Tokens only; motion is dropped under reduced motion. */
+.canvas{height:100%;display:grid;grid-template-columns:var(--w-rail) minmax(0,1fr) var(--w-next);grid-template-rows:minmax(0,1fr);gap:var(--sp-6)}
+.rail,.stack,.next{min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain}
+.rail{display:flex;flex-direction:column;gap:var(--sp-4)}
+.railList{list-style:none;margin:0;padding:0;display:grid;gap:var(--sp-1)}
+.railItem{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-sm);border:1px solid transparent}
+.railItem[aria-current]{border-color:color-mix(in srgb,var(--cyan) 30%,transparent);background:var(--wash)}
+.railJump{flex:1;min-width:0;display:flex;align-items:center;gap:var(--sp-3);padding:0;border:0;background:none;color:var(--muted);font:500 var(--fs-ui)/1.3 var(--sans);text-align:left;cursor:pointer}
+.railJump:hover,.railItem[aria-current] .railJump{color:var(--ink-bright)}
+.railJump:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge);border-radius:var(--r-xs)}
+.railTitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.num{flex:none;display:inline-grid;place-items:center;min-width:var(--h-chip);height:var(--h-chip);padding:0 var(--sp-1);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:700 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.noEar{flex:none;width:var(--size-glyph-btn);height:var(--size-glyph-btn)}
+
+.stack{display:flex;flex-direction:column;gap:var(--sp-5);padding-right:var(--sp-2)}
+.cardSlot{flex:none;scroll-margin-top:0;min-width:0}
+.card{display:grid;gap:var(--sp-6);padding:var(--sp-6) var(--sp-7);border-radius:var(--r-lg);border:1px solid var(--hair-2);background:var(--ink-2)}
+.card[data-latest]{border-color:color-mix(in srgb,var(--cyan) 30%,transparent);background:var(--ink-3)}
+.card[data-pending]{border-style:dashed;background:var(--ink-1)}
+.cardHead{display:flex;align-items:flex-start;gap:var(--sp-4)}
+.headBody{flex:1;min-width:0;display:grid;gap:var(--sp-3)}
+.ask{margin:0;font:500 var(--fs-read)/1.5 var(--sans);color:var(--ink-bright)}
+.youSaid{display:block;font:600 var(--fs-micro)/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.reply{margin:0;font:400 var(--fs-ui)/1.5 var(--sans);color:var(--muted)}
+.slot{display:grid;gap:var(--sp-5);min-width:0}
+.slot[data-slot="band"]{margin-top:calc(var(--sp-2) - var(--sp-6))}
+.slot[data-slot="footer"]{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3);padding-top:var(--sp-4);border-top:1px solid var(--hair)}
+.notes{flex-basis:100%;font:500 var(--fs-meta)/1.4 var(--sans);color:var(--amber)}
+.notes summary{cursor:pointer}
+.notes ul{margin:var(--sp-2) 0 0;padding-left:var(--sp-6);color:var(--muted)}
+.working{margin:0;font:500 var(--fs-ui)/1.4 var(--sans);color:var(--muted)}
+.skeleton{display:grid;gap:var(--sp-3)}
+.skeleton span{display:block;height:var(--h-row);border-radius:var(--r-sm);background:var(--wash-hi);animation:breathe 1.2s ease-in-out infinite}
+.skeleton span:first-child{height:var(--h-strip)}
+.skeleton span:last-child{width:60%}
+
+.strip{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) var(--sp-5);border-radius:var(--r);border:1px solid var(--hair);background:var(--ink-1)}
+.stripTitle{flex:none;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 var(--fs-ui)/1.2 var(--sans);color:var(--text)}
+.stripAsk{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 var(--fs-meta)/1.2 var(--sans);color:var(--faint)}
+.stripNote{flex:none;font:500 var(--fs-micro)/1 var(--mono);color:var(--amber)}
+
+.next{display:flex;flex-direction:column;gap:var(--sp-4)}
+.nowPlaying,.steps{display:grid;gap:var(--sp-3);padding:var(--sp-5);border-radius:var(--r);border:1px solid var(--hair);background:var(--panel-ground)}
+.stepList{list-style:none;margin:0;padding:0;display:grid;gap:var(--sp-5)}
+.step{display:grid;gap:var(--sp-1);padding-left:var(--sp-3);border-left:var(--stroke-mark) solid var(--hair-2)}
+.step[data-goes="agent"]{border-left-color:color-mix(in srgb,var(--cyan) 50%,transparent)}
+.step[data-blocked]{opacity:.75}
+.stepHead{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3)}
+.why{margin:0;font:400 var(--fs-meta)/1.4 var(--sans);color:var(--text)}
+.does{margin:0;font:500 var(--fs-micro)/1.4 var(--mono);color:var(--faint)}
+.offline{margin:0;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-sm);border:1px dashed var(--hair-3);font:500 var(--fs-meta)/1.4 var(--sans);color:var(--text)}
+.always{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.quiet{margin:0;font:400 var(--fs-meta)/1.4 var(--sans);color:var(--muted)}
+
+@keyframes breathe{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.skeleton span{animation:none}}
+@media (max-width:1280px){
+  .canvas{grid-template-columns:minmax(0,1fr) var(--w-next);grid-template-rows:auto minmax(0,1fr)}
+  .rail{grid-column:1 / -1;overflow:visible}
+  .railList{display:flex;flex-wrap:wrap}
+}
+@media (max-width:900px){
+  .canvas{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+  .rail,.stack,.next{overflow:visible}
+}
