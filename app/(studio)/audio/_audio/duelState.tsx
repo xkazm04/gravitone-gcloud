@@ -8,9 +8,10 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { sketchHref } from "@gt/ui/components/audio/atlas.ts";
 import { DuelCard } from "@gt/ui/components/audio/DuelCard.tsx";
-import { compileDuel, nextAxis, playableAxes, type Answer, type DuelSound } from "@gt/ui/components/audio/duel.ts";
+import { compileDuel, DUEL_MODE, nextAxis, playableAxes, type Answer, type DuelSound } from "@gt/ui/components/audio/duel.ts";
 import type { Seed } from "@gt/ui/components/audio/recipe.ts";
 import type { Ear } from "@gt/ui/components/audio/useEar.ts";
+import { useKeys } from "@gt/ui/keymap/dispatch";
 
 import { warm } from "./steer.tsx";
 
@@ -26,6 +27,18 @@ export function useDuel(ear: Ear, can: ReadonlySet<string>, open: boolean, onUse
   useEffect(() => {
     if (key !== "") warm(key.split(" "));
   }, [key]);
+  const answer = (a: Answer): false | undefined => {
+    if (at === null) return false;
+    ear.stop();
+    setAnswers((m) => ({ ...m, [at.id]: a }));
+    return undefined;
+  };
+  const play = (side: "a" | "b"): false | undefined => {
+    if (at === null) return false;
+    ear.toggle(hrefOf(at[side].sound));
+    return undefined;
+  };
+  useKeys(DUEL_MODE, { "play-a": () => play("a"), "play-b": () => play("b"), "pick-a": () => answer("a"), "pick-b": () => answer("b"), same: () => answer("skip") }, { enabled: open && at !== null });
   if (!open || axes.length === 0) return null;
   return (
     <DuelCard

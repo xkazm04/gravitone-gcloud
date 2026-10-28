@@ -303,6 +303,13 @@ const audio: Binding[] = [
   { mode: "audio.rubric", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"], verb: "score", does: "score", when: "take" },
   { mode: "audio.rubric", keys: ["U"], verb: "clear", does: "clear", when: "take" },
   { mode: "audio.rubric", keys: ["Space"], verb: "play", does: "play", when: "take" },
+  // Steer by ear (2026-10-28) - the duel is a listening game: A and L sit under the two hands, a
+  // digit picks, 0 says no difference (B3: "keyboard A/L to choose, space to replay").
+  { mode: "audio.duel", keys: ["A"], verb: "play-a", does: "play A" },
+  { mode: "audio.duel", keys: ["L"], verb: "play-b", does: "play B" },
+  { mode: "audio.duel", keys: ["1"], verb: "pick-a", does: "pick A" },
+  { mode: "audio.duel", keys: ["2"], verb: "pick-b", does: "pick B" },
+  { mode: "audio.duel", keys: ["0"], verb: "same", does: "no difference" },
 ];
 
 export const BINDINGS: readonly Binding[] = [...floor, ...calendar,

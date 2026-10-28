@@ -27,6 +27,9 @@ export type DuelAxis = { readonly id: string; readonly name: string; readonly a:
 
 export type Answer = "a" | "b" | "skip";
 
+/** The duel's keymap mode (packages/ui/src/keymap/bindings.ts): A/L play, 1/2 pick, 0 no difference. */
+export const DUEL_MODE = "audio.duel";
+
 const BASE: DuelSound = { ids: ["grand-piano"], levels: [1], bpm: 90, key: "C major" };
 const with_ = (over: Partial<DuelSound>): DuelSound => ({ ...BASE, ...over });
 

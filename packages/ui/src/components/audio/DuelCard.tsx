@@ -7,9 +7,10 @@
 // to the composer.
 import { Button } from "../button/Button.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
+import { Keycaps } from "../keycaps/Keycaps.tsx";
 import { PipRow } from "../piprow/PipRow.tsx";
 import type { Look } from "../status/status.ts";
-import { compileDuel, nextAxis, type Answer, type DuelAxis, type DuelSound } from "./duel.ts";
+import { compileDuel, DUEL_MODE, nextAxis, type Answer, type DuelAxis, type DuelSound } from "./duel.ts";
 import { EarButton } from "./EarButton.tsx";
 import type { EarState } from "./useEar.ts";
 import s from "./Ear.module.css";
@@ -74,6 +75,7 @@ export function DuelCard({ axes, answers, hrefOf, stateOf, onPlay, onAnswer, onU
         {pad("a")}
         {pad("b")}
       </div>
+      <Keycaps mode={DUEL_MODE} label="duel keys" />
     </section>
   );
 }
