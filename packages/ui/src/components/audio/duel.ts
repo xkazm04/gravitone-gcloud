@@ -21,6 +21,8 @@ export type DuelPole = {
   readonly moods?: readonly string[];
   readonly instruments?: readonly string[];
   readonly bpm?: number;
+  /** The key this side was heard in, when the key IS the difference (colour: major or minor). */
+  readonly key?: string;
 };
 
 export type DuelAxis = { readonly id: string; readonly name: string; readonly a: DuelPole; readonly b: DuelPole };
@@ -35,7 +37,7 @@ const with_ = (over: Partial<DuelSound>): DuelSound => ({ ...BASE, ...over });
 
 export const AXES: readonly DuelAxis[] = [
   { id: "pace", name: "pace", a: { plain: "slow", sound: with_({ bpm: 70 }), moods: ["calm"], bpm: 72 }, b: { plain: "quick", sound: with_({ bpm: 124 }), moods: ["energetic"], bpm: 120 } },
-  { id: "colour", name: "colour", a: { plain: "bright", sound: with_({ key: "C major" }), moods: ["hopeful", "bright"] }, b: { plain: "shadowed", sound: with_({ key: "C minor" }), moods: ["melancholic", "moody"] } },
+  { id: "colour", name: "colour", a: { plain: "bright", sound: with_({ key: "C major" }), moods: ["hopeful", "bright"], key: "C major" }, b: { plain: "shadowed", sound: with_({ key: "C minor" }), moods: ["melancholic", "moody"], key: "C minor" } },
   { id: "touch", name: "touch", a: { plain: "plucked", sound: with_({ ids: ["nylon-guitar"] }), instruments: ["nylon guitar"] }, b: { plain: "bowed", sound: with_({ ids: ["string-section"] }), instruments: ["string section"] } },
   { id: "material", name: "material", a: { plain: "acoustic", sound: with_({ ids: ["upright-piano"] }), genres: ["acoustic"], instruments: ["upright piano"] }, b: { plain: "electronic", sound: with_({ ids: ["analog-synth"] }), genres: ["electronic"], instruments: ["analog synth"] } },
   { id: "warmth", name: "warmth", a: { plain: "warm", sound: with_({ ids: ["rhodes"] }), moods: ["warm"], instruments: ["rhodes"] }, b: { plain: "glassy", sound: with_({ ids: ["electric-piano"] }), moods: ["crisp"], instruments: ["electric piano"] } },
@@ -59,13 +61,14 @@ export function nextAxis(axes: readonly DuelAxis[], answers: Readonly<Record<str
   return axes.find((x) => answers[x.id] === undefined) ?? null;
 }
 
-export type DuelReason = { readonly list: "genres" | "moods" | "instruments" | "bpm"; readonly term: string; readonly why: string };
+export type DuelReason = { readonly list: "genres" | "moods" | "instruments" | "bpm" | "key"; readonly term: string; readonly why: string };
 
 /** The seed the answers make, every word with the pair that decided it; a skipped axis decides nothing. */
 export function compileDuel(axes: readonly DuelAxis[], answers: Readonly<Record<string, Answer>>): { readonly seed: Seed; readonly reasons: readonly DuelReason[] } {
   const reasons: DuelReason[] = [];
   const pick = { genres: [] as string[], moods: [] as string[], instruments: [] as string[] };
   let bpm: number | null = null;
+  let key: string | null = null;
   for (const x of axes) {
     const ans = answers[x.id];
     if (ans === undefined || ans === "skip") continue;
@@ -82,7 +85,12 @@ export function compileDuel(axes: readonly DuelAxis[], answers: Readonly<Record<
       bpm = won.bpm;
       reasons.push({ list: "bpm", term: `${won.bpm} bpm`, why });
     }
+    // The mode was heard, not named: the seed keeps the key the pair was played in.
+    if (won.key !== undefined) {
+      key = won.key;
+      reasons.push({ list: "key", term: won.key, why });
+    }
   }
-  const seed: Seed = { ...BLANK_SEED, genres: pick.genres.slice(0, 2), moods: pick.moods.slice(0, 3), instruments: pick.instruments.slice(0, 4), bpm };
-  return { seed, reasons: reasons.filter((r) => r.list === "bpm" || seed[r.list].includes(r.term)) };
+  const seed: Seed = { ...BLANK_SEED, genres: pick.genres.slice(0, 2), moods: pick.moods.slice(0, 3), instruments: pick.instruments.slice(0, 4), bpm, key };
+  return { seed, reasons: reasons.filter((r) => r.list === "bpm" || r.list === "key" || seed[r.list].includes(r.term)) };
 }

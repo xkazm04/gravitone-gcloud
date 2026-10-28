@@ -37,6 +37,12 @@ describe("answers into a seed", () => {
     expect(reasons.find((r) => r.term === "rhodes")?.why).toBe("warm over glassy");
     expect(reasons.find((r) => r.term === "72 bpm")?.why).toBe("slow over quick");
   });
+  test("the key the colour pair was heard in is the seed's key, with its pair", () => {
+    const { seed, reasons } = compileDuel(AXES, { colour: "b" });
+    expect(seed.key).toBe("C minor");
+    expect(reasons.find((r) => r.list === "key")?.why).toBe("shadowed over bright");
+    expect(compileDuel(AXES, { pace: "a" }).seed.key).toBeNull();
+  });
   test("a skipped axis decides nothing", () => {
     const { seed, reasons } = compileDuel(AXES, { pace: "skip", colour: "skip" });
     expect(seed.bpm).toBeNull();
@@ -46,6 +52,6 @@ describe("answers into a seed", () => {
   test("caps hold, and no reason names a word the seed dropped", () => {
     const all = compileDuel(AXES, Object.fromEntries(AXES.map((x) => [x.id, "a"])));
     expect(all.seed.moods.length).toBeLessThanOrEqual(3);
-    for (const r of all.reasons) if (r.list !== "bpm") expect(all.seed[r.list]).toContain(r.term);
+    for (const r of all.reasons) if (r.list !== "bpm" && r.list !== "key") expect(all.seed[r.list]).toContain(r.term);
   });
 });
