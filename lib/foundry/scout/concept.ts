@@ -21,10 +21,11 @@ import { deflateSync, crc32 } from "node:zlib";
 import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
-import { ok, type Result } from "@gt/domain/errors";
+import { err, ok, type Result } from "@gt/domain/errors";
 import type { ConceptDesign } from "@gt/producers/scout-asset/define";
 
-import { ASSET_CLASSES, BUDGETS, EXPORT_PROJECTS, TECHNIQUES, type AssetClass, type MeshBrief, type Technique } from "../mesh/types";
+import { ASSET_CLASSES, BUDGETS, EXPORT_PROJECTS, isRetired, RETIRED_WHY, TECHNIQUES, type AssetClass, type MeshBrief, type Technique } from "../mesh/types";
+import { NEED_ID_RE } from "./needs";
 import { USE_MAX, type AssetServes } from "./types";
 
 /* ── The brief's door ─────────────────────────────────────────────────────── */
@@ -46,19 +47,36 @@ const briefSchema = z
      *  without purpose"); every scout run states its use (types.ts USE_MAX). */
     use: words(USE_MAX),
     serves: servesSchema,
+    /** The project's need it answers (`need-<slug>`, POF's asset-needs/<project>.json): REQUIRED for a project
+     *  brief, checked against the file by ./needs.ts withNeed, which the act runs (spark scout-vision S4). */
+    need: z.string().regex(NEED_ID_RE, { message: "need-<slug>, an id from the project's asset needs" }).optional(),
     /** A weapon's kind (sword, mace, axe, staff): the M1 touch-up keys on it. */
     kind: words(40).optional(),
     techniques: z.array(z.enum(TECHNIQUES)).min(1).max(TECHNIQUES.length).optional(),
   })
   .strict();
 
-export type BriefInput = { readonly brief: MeshBrief; readonly techniques?: readonly Technique[]; readonly use: string; readonly serves: AssetServes };
+export type BriefInput = { readonly brief: MeshBrief; readonly techniques?: readonly Technique[]; readonly use: string; readonly serves: AssetServes; readonly need?: string };
 
-/** The skill's brief JSON as a MeshBrief: the class's budget, and a character rigged onto UE5 Mannequin chains. */
+/** A retired project named in `serves` (mage-arena, spark scout-vision S4), said in its own sentence before the door's enum hides it. */
+function retiredIn(raw: unknown): string | undefined {
+  const serves = typeof raw === "object" && raw !== null ? (raw as { serves?: unknown }).serves : undefined;
+  const p = typeof serves === "object" && serves !== null ? (serves as { project?: unknown }).project : undefined;
+  return typeof p === "string" && isRetired(p) ? RETIRED_WHY[p] : undefined;
+}
+
+/**
+ * The skill's brief JSON as a MeshBrief: the class's budget, and a character rigged onto UE5 Mannequin chains. A
+ * project brief's `need` is only shaped here; the act checks it against the project's needs file (./needs.ts
+ * withNeed), which also sets the need's budget.
+ */
 export function parseBrief(raw: unknown): Result<BriefInput> {
+  const retired = retiredIn(raw);
+  if (retired !== undefined) return err("invalid", `asset brief: serves: ${retired}`);
   const r = parseAt("asset brief", briefSchema, raw);
   if (!r.ok) return r;
   const b = r.value;
+  if (b.need !== undefined && !("project" in b.serves)) return err("invalid", `asset brief: need: a need is a project's; a newProject brief names none`);
   const kind = b.class === "weapon" ? b.kind : undefined;
   const brief: MeshBrief = {
     class: b.class,
@@ -69,7 +87,7 @@ export function parseBrief(raw: unknown): Result<BriefInput> {
     ...(b.class === "character" ? { rig: "ue5-mannequin" as const } : {}),
   };
   const serves: AssetServes = "project" in b.serves ? { project: b.serves.project } : { newProject: b.serves.newProject };
-  return ok({ brief, ...(b.techniques === undefined ? {} : { techniques: b.techniques }), use: b.use, serves });
+  return ok({ brief, ...(b.techniques === undefined ? {} : { techniques: b.techniques }), use: b.use, serves, ...(b.need === undefined ? {} : { need: b.need }) });
 }
 
 /* ── The prompts ──────────────────────────────────────────────────────────── */

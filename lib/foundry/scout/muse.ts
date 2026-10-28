@@ -32,9 +32,25 @@ export const CARD_PERSONALITY_MAX = 200;
 export type CharacterCard = {
   readonly name: string;
   readonly age: number;
+  /** IDENTITY only - what never varies: face, hair, build, skin, one signature garment (restated verbatim when cast). */
   readonly look: string;
+  /** STATE - the line a scene plays her by; never restated as identity. */
   readonly personality: string;
+  /** spark scout-vision S3 - absent on a muse card (read as an original adult). */
+  readonly kind?: CardKind;
+  /** A parody's original, named in words (`the plumber hero of a 1980s platform game`, or its title): parody only. */
+  readonly origin?: string;
+  /** How the character is drawn; an under-18 character must be `stylised`. */
+  readonly render?: CardRender;
+  /** Who the character is for - its seed's audience. Absent on a muse card: adult. */
+  readonly audience?: "kids" | "family" | "adult";
 };
+
+/** An invented character, or a popular fictional one restyled for parody / what-if (spark scout-vision S3). */
+export const CARD_KINDS = ["original", "parody"] as const;
+export type CardKind = (typeof CARD_KINDS)[number];
+export const CARD_RENDERS = ["photoreal", "stylised"] as const;
+export type CardRender = (typeof CARD_RENDERS)[number];
 
 export const JUDGE_ADULT = ["yes", "no", "unsure"] as const;
 export const JUDGE_CLOTHING = ["covered", "revealing", "nude"] as const;
@@ -54,11 +70,17 @@ export type MuseJudge = {
   readonly notes: string;
 };
 
-/** The first field that fails the line, or null when the still clears it. `hands` is a taste, never a gate. */
-export function judgeFailure(j: MuseJudge): string | null {
-  if (j.adult !== "yes") return `adult ${j.adult}`;
-  if (j.apparentAge === null) return "apparent age unread";
-  if (j.apparentAge < MUSE_MIN_APPARENT_AGE) return `apparent age ${j.apparentAge}`;
+/**
+ * The first field that fails the line, or null when the still clears it. `hands` is a taste, never a gate.
+ * `minors: true` (spark scout-vision S3) is a kids/family character's still: she may be a child, so the adult read
+ * and the apparent-age floor do not apply - nudity and a real person's likeness fail it all the same.
+ */
+export function judgeFailure(j: MuseJudge, o: { readonly minors?: boolean } = {}): string | null {
+  if (o.minors !== true) {
+    if (j.adult !== "yes") return `adult ${j.adult}`;
+    if (j.apparentAge === null) return "apparent age unread";
+    if (j.apparentAge < MUSE_MIN_APPARENT_AGE) return `apparent age ${j.apparentAge}`;
+  }
   if (j.clothing === "nude") return "clothing nude";
   if (j.realPerson !== "no") return `real person ${j.realPerson}`;
   return null;

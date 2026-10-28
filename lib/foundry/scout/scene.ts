@@ -26,7 +26,9 @@ import { z } from "zod";
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 
+import { studioShaped } from "../../imaging/studio/still";
 import type { GenerateRequest } from "../../imaging/types";
+import { replicaGenerator, type ReplicaGenerator } from "./stillEngine";
 import { SHOT_SIZES, type Night, type SceneCandidate, type SceneRecipe, type ScoutSource } from "./types";
 
 /* ── Limits ──────────────────────────────────────────────────────────────── */
@@ -151,15 +153,21 @@ export function denylistOf(sources: readonly Pick<ScoutSource, "title" | "channe
  * word that does not start a sentence (the prompt asks for lower case everywhere else). A
  * deterministic check, so it misses a name that opens a sentence and is not in the title - the
  * prompt's rule 2 is the other half.
+ *
+ * `allow` (spark scout-vision S3) - the names a storyboard panel may carry: its cast's names and their declared parody
+ * origins. A capital mid-sentence whose every capitalised part is a word of one of them passes; anything else still
+ * refuses. A scene recipe passes [] - it names nobody.
  */
-export function namesIn(fields: readonly string[], deny: readonly string[]): string[] {
+export function namesIn(fields: readonly string[], deny: readonly string[], allow: readonly string[]): string[] {
   const denied = new Set(deny);
+  const allowed = new Set(allow.flatMap((a) => words(a)).flatMap((w) => w.split(/['’-]/)).map((p) => p.toLowerCase()));
+  const declared = (w: string): boolean => allowed.size > 0 && w.split(/['’-]/).every((p) => !/^\p{Lu}/u.test(p) || allowed.has(p.toLowerCase()));
   const found = new Set<string>();
   for (const f of fields) {
     for (const sentence of f.split(/(?<=[.!?;:])\s+/)) {
       words(sentence).forEach((w, i) => {
         if (w.split(/['’-]/).some((p) => denied.has(p.toLowerCase()))) found.add(`"${w}" (the source's title or channel)`);
-        else if (i > 0 && /^\p{Lu}/u.test(w) && !ALLOWED_CAPS.has(w)) found.add(`"${w}" (a capital mid-sentence)`);
+        else if (i > 0 && /^\p{Lu}/u.test(w) && !ALLOWED_CAPS.has(w) && !declared(w)) found.add(`"${w}" (a capital mid-sentence)`);
       });
     }
   }
@@ -241,7 +249,7 @@ export function draftOf(raw: unknown, deny: readonly string[]): Result<SceneDraf
   const d = parseAt("scene recipe", draftSchema, raw);
   if (!d.ok) return d;
   const v = d.value;
-  const names = namesIn([v.camera, v.motion, v.composition, v.lighting, v.rhythm, v.prompt, ...v.palette.map((p) => p.colour)], deny);
+  const names = namesIn([v.camera, v.motion, v.composition, v.lighting, v.rhythm, v.prompt, ...v.palette.map((p) => p.colour)], deny, []);
   if (names.length > 0) return err("refused", `the scene recipe names ${names.join(", ")}: craft, not content`);
   return ok(v);
 }
@@ -266,23 +274,18 @@ export function recipeOf(raw: unknown, ctx: { readonly deny: readonly string[]; 
 
 /* ── Replicas and the clip ───────────────────────────────────────────────── */
 
-/** The imaging vendor a replica still asks for: GPT Image 2.5 Flare, LOW (operator, 2026-10-22). It is
- *  prefer-only in the router, so naming it is the whole chain: a Flare refusal is the candidate's sentence,
- *  never a quiet Nano Banana bill. The readback stays on Google (scoutSceneActs.ts `prefer: "google"`). */
-export const REPLICA_GENERATOR = "leonardo-flare" as const;
-/** The engines a replica or a concept may be drawn by: Flare over the API, or Flux 2 on this box's ComfyUI. */
-export const REPLICA_GENERATORS = [REPLICA_GENERATOR, "comfy-flux2"] as const;
-/**
- * The replica and concept generator for this process (operator, 2026-10-25, the API pool empty until its
- * renewal): `SCOUT_REPLICA_GENERATOR=comfy-flux2` draws them on the local Flux model at $0; absent or any
- * other value, Flare as before.
- */
-export const replicaGenerator = (env: Readonly<Record<string, string | undefined>> = process.env): (typeof REPLICA_GENERATORS)[number] =>
-  env["SCOUT_REPLICA_GENERATOR"]?.trim() === "comfy-flux2" ? "comfy-flux2" : REPLICA_GENERATOR;
+// The engine a replica still is drawn by - the Leonardo studio at Low by default, Flare or local Flux 2 by
+// SCOUT_REPLICA_GENERATOR - and the lane its job waits on are ./stillEngine.ts's; re-exported here, where
+// the replica's callers have always found them. Each is prefer-only in the router, so naming it is the whole
+// chain. The readback stays on Google (scoutSceneActs.ts `prefer: "google"`).
+export { REPLICA_GENERATOR, REPLICA_GENERATORS, replicaGenerator, stillLane, type ReplicaGenerator } from "./stillEngine";
 
-/** A replica still: the recipe's prompt verbatim, and NO reference image - the source never conditions it. */
-export function replicaRequest(recipe: SceneRecipe, k: number): GenerateRequest {
-  return { prompt: recipe.prompt, negativePrompt: REPLICA_NEGATIVE, aspect: "16:9", count: 1, prefer: replicaGenerator(), seed: k };
+/**
+ * A replica still: the recipe's prompt verbatim (cut to the studio's box when the studio draws it), and
+ * NO reference image - the source never conditions it.
+ */
+export function replicaRequest(recipe: SceneRecipe, k: number, generator: ReplicaGenerator = replicaGenerator()): GenerateRequest {
+  return studioShaped({ prompt: recipe.prompt, negativePrompt: REPLICA_NEGATIVE, aspect: "16:9", count: 1, prefer: generator, seed: k });
 }
 
 const EXT: Readonly<Record<string, string>> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };

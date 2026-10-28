@@ -7,6 +7,8 @@ import type { Job } from "@gt/domain/job";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
 
+import { studioCredit } from "../scout-ideas/define.ts";
+
 // A NIGHT'S GAME ASSET, BRIEFED (spark game-3d-assets WP4) - one /scout `asset3d` candidate's
 // cloud half as the steps of ONE kernel job, priced on a receipt before it runs:
 //
@@ -69,7 +71,9 @@ export const parseAssetRequest = (raw: unknown): Result<AssetRequest> => parseAt
 
 /** What is still missing, in order. Pure: the request and what the job has booked. */
 export function assetPlan(req: AssetRequest, outputs: Outputs): MissingStep[] {
-  const steps: MissingStep[] = [...req.concepts.map((_, i) => ({ name: conceptStep(i + 1), estimate: req.estimates.concept })), { name: HANDOFF_STEP, estimate: HANDOFF_ESTIMATE }];
+  // A studio concept is paid in studio credits (spark scout-vision S6): admitted under the job's USD ceiling, booked unpriced.
+  const concept = { estimate: req.estimates.concept, ...studioCredit(req.estimates.concept) };
+  const steps: MissingStep[] = [...req.concepts.map((_, i) => ({ name: conceptStep(i + 1), ...concept })), { name: HANDOFF_STEP, estimate: HANDOFF_ESTIMATE }];
   return steps.filter((s) => !outputs.has(s.name));
 }
 

@@ -14,6 +14,7 @@ import type { ExtractUpload } from "../extract/types.ts";
 import { nightBudget, type NightBudget } from "./budget.ts";
 import { fromIdeaOf, originWith, splitRef, type Origin } from "./direction.ts";
 import { MAX_PICTURE_BYTES } from "./ingest.ts";
+import { replicaGenerator } from "./stillEngine.ts";
 import { mutateNight, nextCandidateId, nightDir, readNight, resolveInNight, withCandidate } from "./store.ts";
 import { CANDIDATE_KINDS, CANDIDATE_STATUSES, STOP_REASONS, type Candidate, type CandidateId, type Night, type NightId, type SceneCandidate, type SeedRef, type StopReason, type StyleCandidate } from "./types.ts";
 import { activeWing } from "./wingScope";
@@ -149,9 +150,6 @@ export async function addCandidate<C extends Candidate>(id: NightId, make: (cid:
 const MIME: Readonly<Record<string, ExtractUpload["mime"]>> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 const EXTRACT_MAX_SOURCES = 60;
 
-/** The imaging vendor a night's style replicas prefer (prefer-only in the router: nothing else is asked). */
-export const STYLE_GENERATOR = "leonardo-flare" as const;
-
 export type StyleResult = { readonly candidate: StyleCandidate; readonly outcome?: string };
 
 /** An extract run over the named sources' pictures and keyframes, as one style candidate. */
@@ -173,8 +171,9 @@ export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly
   }
   if (uploads.length === 0) throw new Refusal(`sources ${sourceIds.join(",")} hold no picture extract can read`);
   const b = money(ctx, night);
-  // The replicas and transfers are drawn on Flare (operator, 2026-10-22); the reads stay on the plan.
-  const target = { kind: "gallery" as const, slug: slug ?? `scout-${id}-${sourceIds.join("-")}`, uploads, options: { generator: STYLE_GENERATOR }, folder: nightDir(id) };
+  // The replicas and transfers are drawn by the night's still engine (./stillEngine.ts: the studio at Low
+  // unless SCOUT_REPLICA_GENERATOR names Flare or local Flux), prefer-only in the router; the reads stay on the plan.
+  const target = { kind: "gallery" as const, slug: slug ?? `scout-${id}-${sourceIds.join("-")}`, uploads, options: { generator: replicaGenerator() }, folder: nightDir(id) };
   const opts = { mode, actor: ctx.actor, dryOnly: ctx.dryOnly, ...(b.remainingUsd > 0 ? { ceilingUsd: b.remainingUsd } : {}) };
   const r0 = await launchExtract(ctx.store, target, opts);
   if (!r0.ok) throw new Refusal(r0.error.message);
@@ -309,12 +308,14 @@ export const isStopReason = (s: string): s is StopReason => (STOP_REASONS as rea
  * Settle the night's style candidates from their runs, then close it: the given stop, else target or
  * sources-exhausted. The target counts the plan's rows only: idea artboards are drawn beside it (up
  * to `ideaCap`), and twenty-five drawn ideas are not a night that studied twenty things; storyboards
- * likewise (up to `storyboardCap`): they compose earlier keeps, they study nothing new.
+ * likewise (up to `storyboardCap`): they compose earlier keeps, they study nothing new - and so do a genre's piece and the
+ * night's genre and venture proposals (spark scout-vision S2).
  */
 export async function closeAct(ctx: Pick<ActContext, "store" | "now">, id: NightId, stop?: StopReason): Promise<Morning> {
   for (const c of (await readNight(id)).candidates) if (c.kind === "style") await settleStyle(id, c).catch(() => c);
   const n = await readNight(id);
-  const rendered = n.candidates.filter((c) => c.kind !== "idea" && c.kind !== "storyboard" && c.status === "rendered").length;
+  const beside = new Set<string>(["idea", "storyboard", "piece", "genre", "venture"]);
+  const rendered = n.candidates.filter((c) => !beside.has(c.kind) && c.status === "rendered").length;
   const closed = await closeWith(id, stop ?? (rendered >= n.target ? "target" : "sources-exhausted"), ctx.now?.() ?? new Date());
   return morning(closed, money(ctx, closed));
 }

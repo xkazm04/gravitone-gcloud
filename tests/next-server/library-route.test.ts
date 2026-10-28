@@ -23,7 +23,7 @@ describe("the fixture index keeps the index's rules", () => {
     expect(fixtureEverything()).toBe(5000);
     const all = page(fixtureQuery({ limit: 0 }));
     expect(all.total).toBe(5000);
-    for (const k of ["image", "plate", "style", "motion", "audio", "video", "doc", "model", "character"] as const) expect(all.kindCounts[k]).toBeGreaterThan(0);
+    for (const k of ["image", "plate", "style", "motion", "audio", "video", "doc", "model", "character", "genre", "venture"] as const) expect(all.kindCounts[k]).toBeGreaterThan(0);
   });
 
   test("OR within a group, AND across groups", () => {

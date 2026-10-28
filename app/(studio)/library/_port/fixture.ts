@@ -123,7 +123,7 @@ export function fixtureQuery(input: LibraryQuery): Result<LibraryPage> {
   const active = Object.entries(q.facets ?? {}).flatMap(([g, vs]) => (vs !== undefined && vs.length > 0 ? [[g, new Set(vs)] as const] : []));
   const rail = railGroups(kind ?? "all");
   const counts = new Map<string, Map<string, number>>(rail.map((g) => [g.key, new Map()]));
-  const kindCounts: Record<LibraryKindName | "all", number> = { all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0, model: 0, character: 0 };
+  const kindCounts: Record<LibraryKindName | "all", number> = { all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0, model: 0, character: 0, genre: 0, venture: 0 };
   const list: FixtureRecord[] = [];
   for (const x of ordered(u, q.sort ?? "newest")) {
     if (!matches(x, parsed)) continue;
@@ -190,7 +190,7 @@ export function fixtureDetail(id: string): Result<LibraryItemDetail> {
   const keys = Object.keys(x.f).filter((key) => !COLUMNS.has(key) && (x.f[key] ?? []).length > 0).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   const vocabulary = keys.map((key) => ({ key, label: groupLabel(key), values: [...(x.f[key] ?? [])].sort().map((value) => ({ value, label: labelOf(key, value) })) }));
   const pinned = (x.f["pin"] ?? []).includes(DEFAULT_PIN);
-  return ok({ item: item.value, row: x.row, vocabulary, lineage: resolveLineage(item.value, (other) => universe().byId.get(other)?.raw.title), extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", "use-in-project", ...(x.row.kind === "model" ? (["export"] as const) : [])] });
+  return ok({ item: item.value, row: x.row, vocabulary, lineage: resolveLineage(item.value, (other) => universe().byId.get(other)?.raw.title), extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", ...(x.row.kind === "genre" || x.row.kind === "venture" ? [] : (["use-in-project"] as const)), ...(x.row.kind === "model" ? (["export"] as const) : [])] });
 }
 
 /** Presentation extras the index does not carry on a row (a take's peaks, a face's palette, a player's address). */

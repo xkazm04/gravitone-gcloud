@@ -20,17 +20,25 @@
 // has tiles above its words, and the gate a loss with the vendor's sentence. Each idea tries a genre, and
 // the night proposes one DIRECTION standing on the committed night's kept replica (a words cell in notes).
 // And it composed a STORYBOARD (spark scout-storyboards) from the committed night's kept idea: four local
-// Flux frames, a paragraph and four bullets - the rung a full video must grow from.
+// Flux frames, a paragraph and four bullets - the rung a full video must grow from. The committed night kept a storyboard
+// of its own (spark scout-vision S2), and yesterday's night proposes a GENRE resting on it: a words row under `genres`.
+// Yesterday's night also drew a TRIAL of a live genre - a storyboard whose panels were each clipped on LTX, one clip
+// refused - and cut that genre's PIECE: its clips as video cells in the trial's run, the piece one video row under `pieces`.
 //
 // THE MUSE WING (spark scout-muse) has its own root, fixtures-out/scout-muse/, and one CLOSED night on the
 // same day as yesterday's scout night - two packets, pkt:scout:<night> and pkt:scout:muse:<night>, one day:
 // a style poster, a scene and a character with her card, each still read by the judge as an adult, covered.
+// Since the wings merged (spark scout-vision S3) that root is the read-only ARCHIVE, and the committed scout night
+// holds a kept character of its own, grown from a kept `character` seed. Her neutral REFERENCE SHEET was kept on the
+// same night (a `sheets` image row), and yesterday's night CAST her into a storyboard: every panel leads with her
+// identity block, verbatim, then the panel's own words.
 
 import { rmSync } from "node:fs";
 
 import { standConcept } from "../../lib/foundry/scout/concept";
+import { castPrompt } from "../../lib/foundry/scout/characters";
 import type { MuseJudge } from "../../lib/foundry/scout/muse";
-import type { Asset3dCandidate, DirectionCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource, Seed, SeedBatch, SeedMusic, StoryboardCandidate } from "../../lib/foundry/scout/types";
+import type { Asset3dCandidate, DirectionCandidate, GenreProposalCandidate, IdeaCandidate, Night, PieceCandidate, SceneCandidate, ScoutSource, Seed, SeedBatch, SeedMusic, SheetCandidate, StoryboardCandidate } from "../../lib/foundry/scout/types";
 import { DAY, HOUR, NOW, outFile, plate, writeBytes, writeJson } from "./kit";
 
 const PALETTE = ["#1d2b3a", "#e0a458", "#5c8a8a", "#f2e8cf"];
@@ -127,7 +135,7 @@ function direction(id: string, basedOn: readonly string[]): DirectionCandidate {
   };
 }
 
-function storyboard(night: string, id: string, fromIdea: string): StoryboardCandidate {
+function storyboard(night: string, id: string, fromIdea: string, over: Partial<StoryboardCandidate> = {}): StoryboardCandidate {
   const images = [1, 2, 3, 4].map((k) => `storyboards/${id}/panel-${k}.png`);
   for (const f of images) writeBytes(outFile("scout", night, f), plate(`scout:${night}:${f}`, IDEA_PALETTE, 384, 216));
   return {
@@ -155,7 +163,53 @@ function storyboard(night: string, id: string, fromIdea: string): StoryboardCand
     app: "short",
     images,
     seeds: [118, 2307, 4410, 9003],
+    ...over,
   };
+}
+
+/** The night's proposal to birth a genre from the committed night's kept storyboard (spark scout-vision S2). */
+function genreProposal(id: string, fromStoryboard: string): GenreProposalCandidate {
+  return {
+    id,
+    kind: "genre",
+    sourceIds: [],
+    status: "rendered",
+    name: "Quiet one-light mysteries, painted slate",
+    fromStoryboard,
+    look: "warm amber against cold slate, one held light, deep shadow below",
+    grammar: ["the light moves first", "the chase, one landing a beat", "the last landing goes dark", "the reveal opens outward"],
+    basedOn: [`${fromStoryboard}/words`],
+    use: "short: a slow-reveal mystery Short",
+    aim: "two kept boards share one light and one climb: a genre the nights can trial",
+  };
+}
+
+/** The live genre the trial and the piece belong to (the Library fixture's piece-due genre). */
+const TRIAL_GENRE = "gn-kitchen-table-science-chalk-diagram";
+/** Not a video: a placeholder the Board names by its .mp4 path (the foundry fixtures' rule). */
+const MP4 = Buffer.from("fixture-mp4-placeholder");
+
+/** A trial of the live genre: the storyboard's frames, each panel clipped on LTX, clip 3 refused by the engine. */
+function trial(night: string, id: string, fromIdea: string): StoryboardCandidate {
+  const clips = [1, 2, 3, 4].map((k) => (k === 3 ? null : { path: `storyboards/${id}/clip-${k}.mp4`, durationS: 5, from: `storyboards/${id}/panel-${k}.png`, engine: "ltx-local" as const, usd: 0 }));
+  for (const c of clips) if (c !== null) writeBytes(outFile("scout", night, c.path), MP4);
+  return storyboard(night, id, fromIdea, {
+    jobId: `job:scout-storyboard:${night}:${id}`,
+    title: "Why the kettle sings before it boils",
+    paragraph: "A chalk diagram grows on the kitchen table while the kettle heats: bubbles, a pressure arrow, and the note the steam plays.",
+    genre: TRIAL_GENRE,
+    clips,
+    error: "clip 3: ComfyUI LTXVSampler (node 40) failed: out of memory",
+  });
+}
+
+/** The genre's piece: the committed night's kept board cut whole, 20 s with the clips' own audio. */
+function piece(night: string, id: string, fromTrial: string): PieceCandidate {
+  const video = `pieces/${id}/piece.mp4`;
+  writeBytes(outFile("scout", night, video), MP4);
+  const clips = [1, 2, 3, 4].map((k) => ({ path: `pieces/${id}/clip-${k}.mp4`, durationS: 5, from: `${fromTrial.slice(0, fromTrial.indexOf("/"))}/storyboards/${fromTrial.slice(fromTrial.indexOf("/") + 1)}/panel-${k}.png`, engine: "ltx-local" as const, usd: 0 }));
+  for (const c of clips) writeBytes(outFile("scout", night, c.path), MP4);
+  return { id, kind: "piece", sourceIds: [], status: "rendered", jobId: `job:scout-piece:${night}:${id}`, genre: TRIAL_GENRE, fromTrial, title: "Why the kettle sings before it boils", clips, video, durationS: 20, use: "short: a 20 s chalk-diagram explainer" };
 }
 
 function closedNight(): Night {
@@ -185,8 +239,12 @@ function closedNight(): Night {
       idea(id, "c-08", { title: "Rain on a neon market awning", target: "scene", genre: "title opener", anchor: { kind: "watch", ref: "tag: neon noir" }, prompt: "rain sheeting off a striped market awning under neon signs", use: "genre-video: neon-noir title opener", app: "genre-video", aim: "harden the neon-noir style with a rain scene", status: "failed", error: "leonardo answered 429: generation quota exhausted for this hour" }),
       direction("c-09", [`${dayOf(2 * DAY)}/c-01/replica-1`]),
       storyboard(id, "c-10", `${dayOf(2 * DAY)}/c-03`),
+      genreProposal("c-11", `${dayOf(2 * DAY)}/c-04`),
+      trial(id, "c-12", `${dayOf(2 * DAY)}/c-03`),
+      piece(id, "c-13", `${dayOf(2 * DAY)}/c-04`),
+      castStoryboard(id, "c-14", `${dayOf(2 * DAY)}/c-03`),
     ],
-    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-asset:${id}:c-04`, `job:scout-ideas:${id}`, `job:scout-storyboard:${id}:c-10`],
+    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-asset:${id}:c-04`, `job:scout-ideas:${id}`, `job:scout-storyboard:${id}:c-10`, `job:scout-storyboard:${id}:c-12`, `job:scout-piece:${id}:c-13`, `job:scout-storyboard:${id}:c-14`],
   };
 }
 
@@ -208,9 +266,12 @@ function committedNight(): Night {
       scene(id, "c-01", s1, false),
       { id: "c-02", kind: "watch", sourceIds: [s1.id], status: "rendered", entry: "site: fixture-gallery.example", why: "one coherent look" },
       idea(id, "c-03", { title: "A lantern that climbs the stairs ahead of a watchman", target: "scene", genre: "animated mystery short", anchor: { kind: "free", ref: "" }, prompt: "rough frame, a watchman on a stairwell, a lantern glowing three steps above him, warm amber against cold slate", use: "short: a slow-reveal mystery Short", app: "short", aim: "see whether one moving light carries a whole short" }),
+      storyboard(id, "c-04", `${dayOf(4 * DAY)}/c-02`, { title: "The candle that walks the cellar first", paragraph: "A cellar keeper follows a candle down the steps; it is always one step lower than his hand, until the last step opens on a flooded vault lit from below." }),
+      keptCharacterIdea(id, "c-05"),
+      keptSheet(id, "c-06", `${id}/c-05`),
     ],
-    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-ideas:${id}`],
-    committed: { at: at(NOW - DAY - 12 * HOUR), by: "operator", kept: ["c-01/replica-1", "c-03/board"], rejected: ["c-01/replica-2", "c-02/text"], reasons: { "c-02/text": ["generic"] }, notes: {}, dry: false },
+    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-ideas:${id}`, `job:scout-storyboard:${id}:c-04`, `job:scout-sheet:${id}:c-06`],
+    committed: { at: at(NOW - DAY - 12 * HOUR), by: "operator", kept: ["c-01/replica-1", "c-03/board", "c-04/words", "c-05/board", "c-06/sheet"], rejected: ["c-01/replica-2", "c-02/text"], reasons: { "c-02/text": ["generic"] }, notes: {}, dry: false },
   };
 }
 
@@ -272,6 +333,63 @@ const seed = (id: string, sentence: string, genre: string, subgenre: string, typ
   ...(music === undefined ? {} : { music }),
 });
 
+/*
+ * A KEPT CHARACTER on a SCOUT night (spark scout-vision S3): the first batch kept a `character` seed (a dating-sim
+ * cast of one), and the committed night drew and kept a character idea grown from it - her card v2 with the seed's
+ * audience, her 9:16 artboard at studio quality low, read by the eye. lib/foundry/scout/characters.ts keptCharacters
+ * finds her here (the archive's Mara Venn sits on a night still closed, so she is not kept yet).
+ */
+const CHARACTER_SEED: Seed = { ...seed("sd-004", "A lighthouse keeper who answers every message in tide tables.", "romance", "slow burn", "character", "adult", "short"), character: { for: "dating-sim", cast: "one" } };
+
+function keptCharacterIdea(night: string, id: string): IdeaCandidate {
+  return idea(night, id, {
+    title: "Ysolde Marr, lighthouse keeper",
+    target: "character",
+    genre: "character poster",
+    anchor: { kind: "free", ref: "" },
+    prompt: "character poster of Ysolde Marr, a woman aged 38, salt-white braid, weathered oilskin coat, brass spyglass at her hip, on a lighthouse gallery at dusk, painterly",
+    use: "dating-sim: first-meeting greeting card",
+    app: "dating-sim",
+    aim: "a character whose trade is her whole silhouette",
+    look: "painterly-oilskin",
+    aspect: "9:16",
+    fromSeed: `${dayOf(3 * DAY)}/${CHARACTER_SEED.id}`,
+    card: { name: "Ysolde Marr", age: 38, look: "salt-white braid, grey eyes, weathered oilskin coat, brass spyglass at her hip", personality: "answers in tide tables, warms slowly", kind: "original", render: "stylised", audience: "adult" },
+    judge: read(37, "painterly, cold dusk key, the spyglass reads"),
+  });
+}
+
+/*
+ * HER REFERENCE SHEET AND A CAST STORYBOARD (spark scout-vision S3 WP3): the committed night drew and kept Ysolde
+ * Marr's neutral 1:1 sheet from her kept portrait (cell `c-06/sheet`, so keptCharacters gives her `sheet`), and
+ * yesterday's night cast her into a storyboard of the committed night's kept lantern idea - its panels compiled as her
+ * identity block verbatim, then each panel's own words (lib/foundry/scout/characters.ts castPrompt).
+ */
+const SHEET_PALETTE = ["#6b7078", "#c9c3b8", "#3c4048", "#a39e93"];
+
+function keptSheet(night: string, id: string, fromPortrait: string): SheetCandidate {
+  const image = `sheets/${id}.png`;
+  writeBytes(outFile("scout", night, image), plate(`scout:${night}:${image}`, SHEET_PALETTE, 384, 384));
+  return { id, kind: "sheet", sourceIds: [], status: "rendered", jobId: `job:scout-sheet:${night}:${id}`, character: "ysolde marr", name: "Ysolde Marr", fromPortrait, image, seed: 5150 };
+}
+
+function castStoryboard(night: string, id: string, fromIdea: string): StoryboardCandidate {
+  const card = keptCharacterIdea(dayOf(2 * DAY), "c-05").card;
+  const states = [
+    "rough storyboard frame, she climbs the lighthouse stair after a lantern that keeps three steps ahead, cold slate walls",
+    "rough storyboard frame, she pauses on a dark landing, the lantern's warm pool of light above her",
+    "rough storyboard frame, at the gallery rail she watches the lantern hang outside over the night sea",
+  ];
+  return storyboard(night, id, fromIdea, {
+    title: "The keeper follows her own light",
+    paragraph: "Ysolde Marr climbs her lighthouse after a lantern that will not wait for her, and finds it hanging outside the gallery, over the sea she keeps.",
+    panels: states.map((s) => (card === undefined ? s : castPrompt([card], s))),
+    images: [1, 2, 3].map((k) => `storyboards/${id}/panel-${k}.png`),
+    seeds: [3101, 3102, 3103],
+    cast: ["Ysolde Marr"],
+  });
+}
+
 function seedBatches(): SeedBatch[] {
   const first = dayOf(3 * DAY);
   const next = dayOf(DAY);
@@ -284,8 +402,9 @@ function seedBatches(): SeedBatch[] {
         seed("sd-001", "A slow tango danced by two coats on a coat rack after the ball.", "music", "tango", "music video", "adult", "video"),
         seed("sd-002", "A shy cloud that rains only on the one flower nobody waters.", "kids animation", "nature friendship", "animated short", "kids", "video"),
         seed("sd-003", "A city skyline at sunset with the title over it.", "trailer", "teaser", "title opener", "family", "short"),
+        CHARACTER_SEED,
       ],
-      committed: { at: at(NOW - 2 * DAY - 6 * HOUR), by: "operator", kept: ["sd-001", "sd-002"], rejected: ["sd-003"], reasons: { "sd-003": ["generic"] }, notes: { "sd-003": "every channel opens on this" }, dry: false },
+      committed: { at: at(NOW - 2 * DAY - 6 * HOUR), by: "operator", kept: ["sd-001", "sd-002", CHARACTER_SEED.id], rejected: ["sd-003"], reasons: { "sd-003": ["generic"] }, notes: { "sd-003": "every channel opens on this" }, dry: false },
     },
     {
       id: next,

@@ -25,11 +25,11 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 // request - each idea's candidate and prompt, and one still's estimate - as an event beside the
 // enqueue, in one transaction.
 //
-// A MUSE BATCH (spark scout-muse) says so on its request, because the worker runs its steps in
-// another process and the request is the only thing that reaches it: `wing: "muse"` (absent: the
-// scout wing, every request written before the wings), the studio quality it draws at, and each
-// idea's aspect when it is not 16:9. The bound acts run every step inside that wing and judge each
-// still before it is kept.
+// The worker runs its steps in another process and the request is the only thing that reaches it: each
+// idea's aspect when it is not 16:9 and its studio quality when it is not the studio's default (a
+// character, or an idea that casts one, draws at low - spark scout-vision S3). A muse-wing request
+// (spark scout-muse, before the wings merged) said `wing: "muse"` and one batch-wide `quality`; both
+// still parse, so a job in an archive night resumes in its root, but a new request names neither.
 
 export const SCOUT_IDEAS = "scout-ideas";
 /** The event that carries an ideas job's request (subject: the job). */
@@ -40,6 +40,11 @@ export const ideaStep = (k: number): string => `idea:${k}`;
 /** What a studio step costs instead of dollars (kernel job-core `MissingStep.credit`). */
 export const STUDIO_CREDIT = "studio credits, prepaid";
 
+/** A step's `credit` when its estimate is a studio still's (unpriced for STUDIO_CREDIT), else nothing: any
+ *  other unpriced estimate still stops under a ceiling (kernel job-core `next`). */
+export const studioCredit = (e: { readonly usd: number | null; readonly unpricedReason?: string }): { readonly credit?: string } =>
+  e.usd === null && e.unpricedReason === STUDIO_CREDIT ? { credit: STUDIO_CREDIT } : {};
+
 const id = z.string().min(1).max(200);
 
 /** The most ideas one scout-wing request draws (lib/foundry/scout/types.ts MAX_IDEA_CAP). */
@@ -48,19 +53,21 @@ export const SCOUT_REQUEST_MAX = 40;
 export const MUSE_REQUEST_MAX = 50;
 /** The imaging contract's aspects (lib/imaging/types.ts Aspect). */
 export const IDEA_ASPECTS = ["16:9", "9:16", "1:1", "4:5"] as const;
+/** The studio's quality settings (absent: its default). */
+export const STUDIO_QUALITIES = ["low", "medium"] as const;
 
 export const ideasRequestSchema = z
   .object({
     nightId: id,
-    /** The scout wing's request names none. */
+    /** A muse-wing request's (legacy); a new request names none. */
     wing: z.literal("muse").optional(),
-    /** The ideas the receipt priced, in step order; each one's aspect when it is not 16:9. */
+    /** The ideas the receipt priced, in step order; each one's aspect when it is not 16:9 and its studio quality when not the default. */
     ideas: z
-      .array(z.object({ candidateId: id, prompt: z.string().min(1).max(1500), aspect: z.enum(IDEA_ASPECTS).optional() }).strict())
+      .array(z.object({ candidateId: id, prompt: z.string().min(1).max(1500), aspect: z.enum(IDEA_ASPECTS).optional(), quality: z.enum(STUDIO_QUALITIES).optional() }).strict())
       .min(1)
       .max(MUSE_REQUEST_MAX),
-    /** The studio's quality setting (absent: its default). */
-    quality: z.enum(["low", "medium"]).optional(),
+    /** The whole batch's studio quality (a muse-wing request's, legacy); an idea's own wins. */
+    quality: z.enum(STUDIO_QUALITIES).optional(),
     /** One still's estimate: unpriced, its reason the studio's prepaid credits. */
     estimates: z.object({ idea: estimateSchema }).strict(),
     by: id,

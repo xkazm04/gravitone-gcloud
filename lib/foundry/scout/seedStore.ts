@@ -1,5 +1,5 @@
 // THE SEED STORE - server only (spark scout-decision-graph). One directory per batch under
-// <scoutRoot>/seeds/<batchId>/batch.json (./types.ts SeedBatch). The root is the active wing's, read per call
+// <homeRoot>/seeds/<batchId>/batch.json (./types.ts SeedBatch). The root is the active wing's, read per call
 // as the night store does (its env var redirects it), so a test or a rehearsal never writes the checkout's.
 //
 // A batch is written WHOLE by one door call (./seeds.ts) and then only its `committed` changes (the Board's
@@ -12,13 +12,13 @@ import path from "node:path";
 
 import { FoundryError, readManifestFile, writeJsonAtomic } from "../runStore";
 import { withRunLock } from "../verdictLog";
-import { scoutRoot } from "./store";
+import { homeRoot } from "./store";
 import { SEED_BATCH_ID_RE, SEED_REF_RE, type Seed, type SeedBatch, type SeedBatchId, type SeedRef } from "./types";
 
 const BATCH_FILE = "batch.json";
 
 export function seedsRoot(): string {
-  return path.join(scoutRoot(), "seeds");
+  return path.join(homeRoot(), "seeds");
 }
 
 export function batchDir(id: SeedBatchId): string {

@@ -17,7 +17,7 @@ import { Select } from "@gt/ui/components/field/Field.tsx";
 import s from "./library.module.css";
 
 const VERDICT_TONE = { pass: "emerald", warn: "amber", fail: "rose", unmeasured: "neutral" } as const;
-const PROJECT_LABEL: { readonly [P in ModelExportProject]: string } = { pof: "PoF", "mage-arena": "Mage Arena", bp: "bp" };
+const PROJECT_LABEL: { readonly [P in ModelExportProject]: string } = { pof: "PoF", bp: "bp" };
 const fmt = (n: number): string => n.toLocaleString("en-US");
 
 export function ModelFacts({ model, mesh }: { readonly model: ModelExtras; readonly mesh: MeshFacts | undefined }) {

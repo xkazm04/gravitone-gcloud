@@ -148,6 +148,7 @@ export const TURN_CLASSES = [
   "ad-scenarios",
   "repair",
   "voice-fx",
+  "draft",
   "probe",
 ] as const;
 export type TurnClass = (typeof TURN_CLASSES)[number];
@@ -189,10 +190,24 @@ export const TEXT_TABLE: MediumTable = {
       models: { retrieve: "claude-opus-5" },
       credential: "the `claude` CLI, installed and logged in (probed)",
     },
+    {
+      // lib/text/providers/ollama.ts: the local daemon leads the `draft` turn
+      // alone (spark scout-vision S6); the address is the credential.
+      provider: "ollama",
+      capabilities: ["reason"],
+      lane: "gpu.local",
+      transport: "local-daemon",
+      honours: [],
+      models: { "reason/draft": "qwen3.8:27b" },
+      credential: "OLLAMA_HOST",
+    },
   ],
   plans: {
-    local: { ...perTurn((turn) => (turn === "probe" ? ["claude-cli"] : ["claude-cli", "google"])), "retrieve/research": ["claude-cli-retrieve"] },
-    cloud: perTurn(() => ["google"]),
+    local: {
+      ...perTurn((turn) => (turn === "probe" ? ["claude-cli"] : turn === "draft" ? ["ollama", "claude-cli"] : ["claude-cli", "google"])),
+      "retrieve/research": ["claude-cli-retrieve"],
+    },
+    cloud: perTurn((turn) => (turn === "draft" ? ["ollama"] : ["google"])),
   },
 };
 

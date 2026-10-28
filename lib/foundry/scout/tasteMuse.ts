@@ -1,15 +1,25 @@
 import { readFile } from "node:fs/promises";
 
 import { containedIn } from "../runStore";
-import { CHARACTERS_HEADING, FINDINGS_HEADING, MUSE_CHARACTERS_REL, MUSE_TECHNIQUES_REL, knowledgeRoot, type KnowledgeOptions } from "./knowledge";
+import { keptCharacters, type KeptCharacter, type RootedNight } from "./characters";
+import { alreadyDrawn } from "./ideaRepeat";
+import { CHARACTERS_HEADING, FINDINGS_HEADING, MUSE_TECHNIQUES_REL, knowledgeRoot, type KnowledgeOptions } from "./knowledge";
 
-// THE MUSE WING'S OWN TASTE (spark scout-muse): what its brief reads besides the nights. The nights
-// teach a verdict per still; the knowledge files hold what outlived one night - the characters the
-// operator kept (each card is restated verbatim when she is drawn again, so the brief carries the card
-// whole) and the technique findings kept into techniques.md. Read here, never written: the Board's
-// apply is the only writer (./knowledge.ts).
+// THE CHARACTER SECTIONS OF THE ONE TASTE BRIEF (spark scout-vision S3; until then the muse wing's own brief, spark
+// scout-muse). The wings merged: every night reads one brief, and the characters join it from both roots - the scout
+// nights and the muse ARCHIVE - read here, never written:
+//
+//   ## Kept characters      keptCharacters over both roots, one line each: name, age, look, audience and kind, and whether
+//                           her reference sheet is kept (a cast brief restates her card verbatim, ./characters.ts)
+//   ## Technique findings   knowledge/scout-muse/techniques.md's `## Scout findings`, read as legacy (a new night's
+//                           findings land in the scout homes, ./knowledge.ts)
+//   ## Already drawn        every character idea of both roots (./ideaRepeat.ts alreadyDrawn): the names the next author
+//                           must not draw again unless she was kept
+//
+// knowledge/scout-muse/characters.md stays the file a keep appends to (./knowledge.ts appendCharacter); the brief reads the
+// nights instead, where her sheet and her newest card are.
 
-/** The brief's name for techniques.md's `## Scout findings`: in taste.md they are the muse's craft, not the scout's. */
+/** The brief's name for techniques.md's `## Scout findings`: in taste.md they are the character craft, not a template's. */
 export const MUSE_FINDINGS_HEADING = "## Technique findings";
 const NONE_YET = "- none yet";
 
@@ -36,9 +46,29 @@ async function readOrNull(rel: string, o: KnowledgeOptions): Promise<string | nu
   }
 }
 
-/** `## Kept characters` (characters.md) and `## Technique findings` (techniques.md's `## Scout findings`); `none yet` when absent. */
-export async function museSections(o: KnowledgeOptions = {}): Promise<string[]> {
-  const kept = linesUnder(await readOrNull(MUSE_CHARACTERS_REL, o), CHARACTERS_HEADING);
+const flat = (s: string): string => s.replace(/\s+/g, " ").trim().replace(/\.$/, "");
+
+/** One kept character: `- Mara Venn, aged 34 - auburn bob · adult · original · sheet kept (2026-10-26/c-04)`. A muse card reads as an original adult. */
+export function keptCharacterLine(k: KeptCharacter): string {
+  const c = k.card;
+  const kind = c.kind === "parody" && c.origin !== undefined ? `parody of ${flat(c.origin)}` : (c.kind ?? "original");
+  const sheet = k.sheet === undefined ? "no sheet yet" : `sheet kept (${k.sheet.ref})`;
+  return `- ${flat(c.name)}, aged ${c.age} - ${flat(c.look)} · ${c.audience ?? "adult"} · ${kind}${c.render === undefined ? "" : ` · ${c.render}`} · ${sheet} · last kept ${k.portrait.ref}`;
+}
+
+/** `## Kept characters`, `## Technique findings` and `## Already drawn`, each `none yet` when empty. */
+export async function characterSections(nights: readonly RootedNight[], o: KnowledgeOptions = {}): Promise<string[]> {
+  const kept = keptCharacters(nights).map(keptCharacterLine);
   const found = linesUnder(await readOrNull(MUSE_TECHNIQUES_REL, o), FINDINGS_HEADING);
-  return [CHARACTERS_HEADING, "", ...(kept.length === 0 ? [NONE_YET] : kept), "", MUSE_FINDINGS_HEADING, "", ...(found.length === 0 ? [NONE_YET] : found), ""];
+  return [
+    CHARACTERS_HEADING,
+    "",
+    ...(kept.length === 0 ? [NONE_YET] : kept),
+    "",
+    MUSE_FINDINGS_HEADING,
+    "",
+    ...(found.length === 0 ? [NONE_YET] : found),
+    "",
+    ...alreadyDrawn(nights.map((r) => r.night)),
+  ];
 }

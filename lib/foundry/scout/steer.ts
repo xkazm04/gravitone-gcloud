@@ -1,4 +1,4 @@
-// THE OPERATOR'S STEER - server only (spark scout-decision-graph). `<scoutRoot>/steer.json` (./types.ts Steer):
+// THE OPERATOR'S STEER - server only (spark scout-decision-graph). `<homeRoot>/steer.json` (./types.ts Steer):
 // the advisory split of a night's runs by audience, then genre, and the branches paused. Written by the /scout
 // screen's actions, read by the graph (lib/foundry/scout/graph.ts), the next night's brief (taste.ts) and the
 // doors that take a seed (pausedUnder). Nothing here enforces the split: the operator chose advisory (wave 1).
@@ -6,6 +6,9 @@
 // Every change APPENDS a history entry beside the current state, so a split set a month ago can be read back
 // and set again (registry marketing/budget-reallocation-prescription: a prescription that cannot be read back
 // is a button that once did something). A missing file is the empty steer: no split, nothing paused.
+//
+// READ-ONLY SINCE THE BASELINE (spark project-baseline): the file stays in the pre-baseline root (store.ts homeRoot)
+// and every write answers ./baseline.ts ARCHIVED_DOOR while the archive is on - the steer split a spread that stopped.
 
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
@@ -14,13 +17,14 @@ import { err, ok, type Result } from "@gt/domain/errors";
 
 import { FoundryError, readManifestFile, writeJsonAtomic } from "../runStore";
 import { withRunLock } from "../verdictLog";
-import { scoutRoot } from "./store";
+import { archivedDoor } from "./baseline";
+import { homeRoot } from "./store";
 import { GENRE_MAX, SEED_AUDIENCES, SEED_REF_RE, type SeedAudience, type SeedRef, type Steer, type SteerEntry, type SteerSplit } from "./types";
 
 const STEER_FILE = "steer.json";
 export const EMPTY_STEER: Steer = { paused: [], history: [] };
 
-const steerFile = (): string => path.join(scoutRoot(), STEER_FILE);
+const steerFile = (): string => path.join(homeRoot(), STEER_FILE);
 
 export async function readSteer(): Promise<Steer> {
   const s = await readManifestFile<Steer>(steerFile(), "steer", "steer");
@@ -29,8 +33,8 @@ export async function readSteer(): Promise<Steer> {
 }
 
 async function mutateSteer(fn: (s: Steer) => Steer): Promise<Steer> {
-  await mkdir(scoutRoot(), { recursive: true });
-  return withRunLock(scoutRoot(), async () => {
+  await mkdir(homeRoot(), { recursive: true });
+  return withRunLock(homeRoot(), async () => {
     const before = await readSteer();
     const after = fn(before);
     if (after !== before) await writeJsonAtomic(steerFile(), after);
@@ -67,6 +71,8 @@ export function checkSplit(split: SteerSplit): Result<SteerSplit> {
 }
 
 export async function setSplit(split: SteerSplit, by: string, now: Date = new Date()): Promise<Result<Steer>> {
+  const shut = archivedDoor();
+  if (shut !== undefined) return err("refused", shut);
   const c = checkSplit(split);
   if (!c.ok) return c;
   const entry: SteerEntry = { at: now.toISOString(), by, act: "split", split: c.value };
@@ -77,6 +83,8 @@ export async function setSplit(split: SteerSplit, by: string, now: Date = new Da
 
 export async function pauseBranch(ref: SeedRef, by: string, now: Date = new Date()): Promise<Result<Steer>> {
   if (!SEED_REF_RE.test(ref)) return err("invalid", `not a seed ref: ${ref} (want <batch>/sd-NNN)`);
+  const shut = archivedDoor();
+  if (shut !== undefined) return err("refused", shut);
   return ok(
     await mutateSteer((s) => (s.paused.includes(ref) ? s : { ...s, paused: [...s.paused, ref], history: [...s.history, { at: now.toISOString(), by, act: "pause", ref }] })),
   );
@@ -84,6 +92,8 @@ export async function pauseBranch(ref: SeedRef, by: string, now: Date = new Date
 
 export async function resumeBranch(ref: SeedRef, by: string, now: Date = new Date()): Promise<Result<Steer>> {
   if (!SEED_REF_RE.test(ref)) return err("invalid", `not a seed ref: ${ref} (want <batch>/sd-NNN)`);
+  const shut = archivedDoor();
+  if (shut !== undefined) return err("refused", shut);
   return ok(
     await mutateSteer((s) =>
       s.paused.includes(ref) ? { ...s, paused: s.paused.filter((r) => r !== ref), history: [...s.history, { at: now.toISOString(), by, act: "resume", ref }] } : s,

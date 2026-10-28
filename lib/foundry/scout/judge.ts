@@ -7,10 +7,11 @@ import { recognize as routerRecognize } from "../../imaging/router.ts";
 import type { ImageRef, RecognizeRequest } from "../../imaging/types.ts";
 import { JUDGE_ADULT, JUDGE_CLOTHING, JUDGE_HANDS, JUDGE_LIKENESS, type MuseJudge } from "./muse.ts";
 
-// THE MUSE WING'S EYE (spark scout-muse WP2) - one vision read of a drawn still, answering exactly
-// the fields of ./muse.ts MuseJudge, so judgeFailure() can throw the still before the operator ever
-// sees it. The prompt stated an adult age (./museDoor.ts); this is the read of what was DRAWN, which
-// is what a look that drifts young or a garment that slipped is caught by.
+// THE EYE (spark scout-muse WP2) - one vision read of a drawn still of a character idea or a cast brief, answering
+// exactly the fields of ./muse.ts MuseJudge, so judgeFailure() can throw the still before the operator ever sees it.
+// The prompt stated her age (./museDoor.ts); this is the read of what was DRAWN, which is what a look that drifts
+// young or a garment that slipped is caught by. A brief that declares a parody card adds PARODY_CLAUSE: the eye still
+// answers the real-person field, but a declared fictional character is not counted as one.
 //
 // Through the imaging router's recognize (lib/imaging/router.ts): the local eye first, Google when it
 // is down. A refused, unparsable or out-of-shape answer is an err, never a guess - the caller deletes
@@ -51,6 +52,15 @@ export const JUDGE_INSTRUCTION = [
   "Judge only what is drawn. When in doubt about age or nudity, answer the cautious value.",
 ].join("\n");
 
+/** Added only when the brief declares a parody card (spark scout-vision S3): the real-actor test above still stands. */
+export const PARODY_CLAUSE = "A declared fictional character from media is not a real person - only a living person's likeness counts.";
+
+/** What the brief declares about whom the still draws. */
+export type JudgeAsk = { readonly parody?: boolean };
+
+/** The instruction one read asks: the base, and the parody clause when the brief draws a declared parody. */
+export const judgeInstruction = (o: JudgeAsk = {}): string => (o.parody === true ? `${JUDGE_INSTRUCTION}\n${PARODY_CLAUSE}` : JUDGE_INSTRUCTION);
+
 const answerSchema = z
   .object({
     adult: z.enum(JUDGE_ADULT),
@@ -75,11 +85,11 @@ export function parseJudge(raw: unknown): Result<MuseJudge> {
 }
 
 /** One still, read by the eye. An eye that cannot be reached, refuses, or answers out of shape is an err with its sentence. */
-export async function judgeStill(image: ImageRef, deps: JudgeDeps = {}): Promise<Result<MuseJudge>> {
+export async function judgeStill(image: ImageRef, deps: JudgeDeps = {}, ask: JudgeAsk = {}): Promise<Result<MuseJudge>> {
   const recognize = deps.recognize ?? routerRecognize;
   let json: unknown;
   try {
-    json = (await recognize({ image, instruction: JUDGE_INSTRUCTION, schema: JUDGE_SCHEMA as unknown as Record<string, unknown> })).json;
+    json = (await recognize({ image, instruction: judgeInstruction(ask), schema: JUDGE_SCHEMA as unknown as Record<string, unknown> })).json;
   } catch (e) {
     return err("unavailable", errorMessage(e));
   }

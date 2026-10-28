@@ -22,6 +22,12 @@
 //   never handed to the model as a reference. The candidate copies the idea's `fromSeed`, and its aspect: a
 //   portrait idea (9:16, 4:5) draws 9:16 frames, any other 16:9.
 //
+//   OR A CHANNEL EPISODE (spark project-baseline): `fromEpisode: "F1-03"` in place of `fromIdea` - exactly one of the
+//   two. The episode must be `outline-kept` in the channel store and no night may hold a live storyboard of it
+//   (./storyboardEpisode.ts); the seat writes the panels from its beats, the channel lends `use` and `aim` when the brief
+//   leaves them out, and it is drawn 16:9. Its state follows the candidate (./episodeMoves.ts): in production at the
+//   launch, back to outline-kept when the storyboard fails, made when it renders, kept or thrown by the packet's verdict.
+//
 //   ONE STORYBOARD PER IDEA. A brief for an idea some night already holds a storyboard for is refused, unless
 //   that one failed (a failed storyboard drew nothing to judge).
 //
@@ -35,6 +41,21 @@
 //   the storyboard files it as one line in that step's PATTERNS.md, exactly as a kept finding is filed
 //   (./knowledge.ts appendTechnique); not kept, nothing is written.
 //
+//   A TRIAL, OPTIONAL (spark scout-vision S2): `genre: "gn-..."` makes the storyboard a trial of that genre. The
+//   genre must be LIVE in the kernel (./genres.ts: perfecting or piece-due - never retired, never publishable), and a
+//   night takes at most TRIALS_PER_GENRE trials of each (./genres.ts trialSlots), counted under the lock with the cap.
+//   Trials come FIRST from the cap: a plain storyboard may not take a place a live genre's unused trial slot still
+//   holds. Any kept idea may become a trial of any live genre - one trial per idea per genre, and a plain storyboard
+//   and a trial of one idea never refuse each other. A trial's job clips every drawn panel on LTX after its frames
+//   (lib/producers/scoutStoryboardActs.ts), the clips judged as `c-NN/clip-N` cells beside the frames.
+//
+//   A CAST, OPTIONAL (spark scout-vision S3): `cast: [<name>]` - kept characters (./cast.ts castOf: each kept, the
+//   audience rule read off the idea's seed). Their names and declared parody origins may stand mid-sentence in the
+//   panels (./scene.ts namesIn `allow`); every panel is then COMPILED here - each member's identity block verbatim,
+//   then the panel's own words (./characters.ts castPrompt) - and that is what the candidate holds and Flux draws. A member
+//   with a kept sheet rides it as a late-admitted reference (lib/producers/scoutStoryboardActs.ts); one without is
+//   identity block only, and the receipt line says which.
+//
 //   A DRY NIGHT DRAWS NOTHING. Its storyboards are written `rendered` with no frame (`images: []`), so the
 //   Board triages the words alone, and no job is launched - a dry night spends nothing, and a stand-in frame
 //   would be judged as if it were the plan.
@@ -45,18 +66,27 @@ import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
+import { EPISODE_ID_RE } from "@gt/domain/channel";
+import { GENRE_ID_RE, TRIALS_PER_GENRE, VENTURE_ID_RE } from "@gt/domain/genre";
 import type { Store } from "@gt/kernel/store";
 import { get } from "@gt/kernel/job";
 import { jobIdSchema } from "@gt/domain/ids";
 
 import { kernel } from "../../kernelProcess.ts";
 import { driveStoryboard, launchStoryboard } from "../../producers/scoutStoryboard.ts";
-import { settledBoard, type StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
+import { settledBoard, type StoryboardClip, type StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
 import { launchable, Refusal, type ActContext } from "./acts";
+import { archivedFromIdea } from "./baseline";
+import { castAllow, castLine, castOf, CAST_MAX, CAST_PROMPT_MAX, rootedNights } from "./cast";
+import { castPrompt, keptCharacters, type KeptCharacter } from "./characters";
 import { IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
+import { followEpisodes } from "./episodeMoves";
+import { genreViews, headsOf, takesTrials, trialSlots, trialsOn, ventureRefusal, type GenreView } from "./genres";
 import { STEP_NAME_RE, STEP_RULE, TEMPLATE_NAME_RE, TEMPLATE_RULE, templateProblem } from "./knowledge";
 import { namesIn } from "./scene";
+import { listSeedBatches, seedOf } from "./seedStore";
 import { mutateNight, nextCandidateId, readAllNights, readNight, withCandidate } from "./store";
+import { dueEpisode, episodeBoardOf, episodeUseAim, type EpisodeHeld } from "./storyboardEpisode";
 import { storyboardOf } from "./storyboardKept";
 import { activeWing } from "./wingScope";
 import {
@@ -84,6 +114,8 @@ export { keptStoryboardFor } from "./storyboardKept";
 export type StoryboardEngines = {
   /** Draw one frame: the PNG bytes and the seed it drew with. */
   readonly draw?: StoryboardDraw;
+  /** Clip one panel still (a trial's): the mp4 bytes and their length. */
+  readonly clip?: StoryboardClip;
 };
 
 export type StoryboardResult = {
@@ -112,8 +144,10 @@ const line = (max: number) =>
 
 const briefSchema = z
   .object({
-    /** `<night>/<c-id>` of the kept idea it composes. */
-    fromIdea: z.string().trim().regex(IDEA_REF_RE, "a kept idea's <night>/<c-id>"),
+    /** `<night>/<c-id>` of the kept idea it composes - or, in its place, `fromEpisode`. */
+    fromIdea: z.string().trim().regex(IDEA_REF_RE, "a kept idea's <night>/<c-id>").optional(),
+    /** The channel episode it storyboards (spark project-baseline), `F1-03`. */
+    fromEpisode: z.string().trim().regex(EPISODE_ID_RE, "a channel episode's id (F1-03)").optional(),
     title: line(IDEA_TITLE_MAX),
     /** The vision, one short paragraph. */
     paragraph: z.string().trim().min(1).max(STORYBOARD_PARAGRAPH_MAX),
@@ -134,14 +168,24 @@ const briefSchema = z
       })
       .strict()
       .optional(),
+    /** The live venture the storyboard is made inside (spark scout-vision S2). */
+    venture: z.string().trim().regex(VENTURE_ID_RE, "a venture id vn-...").optional(),
+    /** The live genre this storyboard is a TRIAL of (spark scout-vision S2): its panels are clipped. */
+    genre: z.string().trim().regex(GENRE_ID_RE, "a genre id gn-...").optional(),
+    /** Kept characters it casts, by name (spark scout-vision S3): each panel leads with their identity blocks. */
+    cast: z.array(line(80)).min(1).max(CAST_MAX).optional(),
   })
-  .strict();
+  .strict()
+  .refine((b) => (b.fromIdea === undefined) !== (b.fromEpisode === undefined), { message: "a brief names exactly one of fromIdea (a kept idea) and fromEpisode (a channel episode)", path: ["fromEpisode"] });
 
 export type StoryboardBrief = z.output<typeof briefSchema>;
 
-/** The skill's batch as briefs, or the first bad brief's place and reason; nothing is read or written here. */
-export function parseStoryboards(raw: unknown): Result<StoryboardBrief[]> {
-  if (!Array.isArray(raw)) return err("invalid", "storyboard: the input is a JSON array of briefs {fromIdea, title, paragraph, bullets, panels, use?, aim?, technique?}");
+/**
+ * The skill's batch as briefs, or the first bad brief's place and reason; nothing is read or written here. `kept` (the
+ * kept characters) only widens the panels' name rule to a brief's cast and their parody origins.
+ */
+export function parseStoryboards(raw: unknown, kept: readonly KeptCharacter[] = []): Result<StoryboardBrief[]> {
+  if (!Array.isArray(raw)) return err("invalid", "storyboard: the input is a JSON array of briefs {fromIdea | fromEpisode, title, paragraph, bullets, panels, use?, aim?, technique?, venture?, genre?, cast?}");
   if (raw.length === 0) return err("invalid", "storyboard: the batch holds no brief");
   const out: StoryboardBrief[] = [];
   for (const [i, item] of raw.entries()) {
@@ -151,10 +195,14 @@ export function parseStoryboards(raw: unknown): Result<StoryboardBrief[]> {
     const b = r.value;
     // The panel prompts are what the model draws, so a name there is refused; the title, paragraph and bullets are read by
     // the operator only and follow the idea door's rule (the skill writes them, docs/scout.md holds it to that).
-    const names = namesIn(b.panels, []);
+    const names = namesIn(b.panels, [], castAllow(b.cast ?? [], kept));
     if (names.length > 0) return err("refused", `${at}: the panels name ${names.join(", ")}: craft, not content (no person, studio or franchise)`);
-    const twice = out.findIndex((x) => x.fromIdea === b.fromIdea);
-    if (twice >= 0) return err("invalid", `${at}: fromIdea: ${b.fromIdea} is storyboard ${twice + 1}'s too; one storyboard per idea`);
+    if (b.fromEpisode !== undefined) {
+      const again = out.findIndex((x) => x.fromEpisode === b.fromEpisode);
+      if (again >= 0) return err("invalid", `${at}: fromEpisode: ${b.fromEpisode} is storyboard ${again + 1}'s too; one storyboard per episode`);
+    }
+    const twice = b.fromIdea === undefined ? -1 : out.findIndex((x) => x.fromIdea === b.fromIdea && x.genre === b.genre);
+    if (twice >= 0) return err("invalid", `${at}: fromIdea: ${b.fromIdea} is storyboard ${twice + 1}'s too; one ${b.genre === undefined ? "storyboard" : `trial of ${b.genre}`} per idea`);
     out.push(b);
   }
   return ok(out);
@@ -163,10 +211,61 @@ export function parseStoryboards(raw: unknown): Result<StoryboardBrief[]> {
 /** The aspect a storyboard draws at, from its idea's: a portrait idea (9:16, 4:5) is drawn 9:16, any other 16:9. */
 export const boardAspect = (ideaAspect: string | undefined): "16:9" | "9:16" => (ideaAspect === "9:16" || ideaAspect === "4:5" ? "9:16" : "16:9");
 
-/** Why a brief for `ref` cannot be written over `nights`, or undefined: one storyboard per idea. */
-function heldFor(nights: readonly Night[], ref: string, place: number): string | undefined {
-  const had = storyboardOf(nights, ref);
+/** The trial of `genre` some night already holds for `ref` (any status but failed): one trial per idea per genre. */
+function trialOf(nights: readonly Night[], ref: string, genre: string): { readonly night: NightId; readonly candidate: StoryboardCandidate } | undefined {
+  for (const n of nights) for (const c of n.candidates) if (c.kind === "storyboard" && c.fromIdea === ref && c.genre === genre && c.status !== "failed") return { night: n.id, candidate: c };
+  return undefined;
+}
+
+/** Why a brief cannot be written over `nights`, or undefined: one plain storyboard per idea, one trial per idea per genre. */
+function heldFor(nights: readonly Night[], b: Pick<StoryboardBrief, "fromIdea" | "fromEpisode" | "genre">, place: number): string | undefined {
+  if (b.fromEpisode !== undefined) {
+    const had = episodeBoardOf(nights, b.fromEpisode);
+    return had === undefined ? undefined : `storyboard ${place}: episode ${b.fromEpisode} already has storyboard ${had.night}/${had.candidate.id} (${had.candidate.status}); one storyboard per episode, unless that one failed`;
+  }
+  const ref = b.fromIdea ?? "";
+  if (b.genre !== undefined) {
+    const had = trialOf(nights, ref, b.genre);
+    return had === undefined ? undefined : `storyboard ${place}: idea ${ref} already has trial ${had.night}/${had.candidate.id} of ${b.genre} (${had.candidate.status}); one trial per idea per genre, unless that one failed`;
+  }
+  const plain = nights.map((n) => ({ ...n, candidates: n.candidates.filter((c) => c.kind !== "storyboard" || c.genre === undefined) }));
+  const had = storyboardOf(plain, ref);
   return had === undefined ? undefined : `storyboard ${place}: idea ${ref} already has storyboard ${had.night}/${had.candidate.id} (${had.candidate.status}); one storyboard per idea, unless that one failed`;
+}
+
+/** Why the briefs' genres cannot take trials, or undefined: each names a genre the kernel holds that is still live. */
+function genreRefusal(briefs: readonly StoryboardBrief[], views: readonly GenreView[]): string | undefined {
+  for (const [i, b] of briefs.entries()) {
+    if (b.genre === undefined) continue;
+    const v = views.find((x) => x.id === b.genre);
+    if (v === undefined) return `storyboard ${i + 1}: genre: no genre ${b.genre}`;
+    if (!takesTrials(v.state)) return `storyboard ${i + 1}: genre: ${b.genre} is ${v.state}${v.retiredAt === undefined ? "" : ` (${v.retiredAt.slice(0, 10)})`}; only a perfecting or piece-due genre takes trials`;
+  }
+  return undefined;
+}
+
+/**
+ * Why the batch does not fit night `n`, or undefined: the cap, each genre's trial slots, and the places the live genres'
+ * unused slots hold (trials come first: a plain storyboard takes only what the cap has left past them).
+ */
+function capRefusal(n: Night, briefs: readonly StoryboardBrief[], slots: ReadonlyMap<string, number>): string | undefined {
+  const used = storyboardsUsed(n);
+  const cap = storyboardCapOf(n);
+  const left = Math.max(0, cap - used);
+  if (briefs.length > left) return `night ${n.id} holds ${used} of its ${cap} storyboards; ${left} left, and the batch has ${briefs.length} - nothing was drawn`;
+  const asked = new Map<string, number>();
+  for (const b of briefs) if (b.genre !== undefined) asked.set(b.genre, (asked.get(b.genre) ?? 0) + 1);
+  for (const [g, want] of asked) {
+    const free = slots.get(g) ?? 0;
+    if (want > free) return `genre ${g} holds ${trialsOn(n, g)} of its ${TRIALS_PER_GENRE} trials on night ${n.id}; ${free} left, and the batch has ${want} - nothing was drawn`;
+  }
+  const held = [...slots.values()].reduce((a, x) => a + x, 0);
+  const plain = briefs.length - [...asked.values()].reduce((a, x) => a + x, 0);
+  if (plain > Math.max(0, left - held)) {
+    const which = [...slots].filter(([, x]) => x > 0).map(([g, x]) => `${g} ${x}`).join(", ");
+    return `night ${n.id} holds ${used} of its ${cap} storyboards; ${left} left, ${Math.min(held, left)} of them held for genre trials (${which}), and the batch has ${plain} plain - nothing was drawn`;
+  }
+  return undefined;
 }
 
 /* ── The act ──────────────────────────────────────────────────────────────── */
@@ -186,57 +285,84 @@ async function failPending(id: NightId, cid: CandidateId, why: string): Promise<
 /** The `storyboard` act: briefs (JSON, one per kept idea) through the door, each drawn as one gpu.local job. */
 export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown, engines: StoryboardEngines = {}): Promise<StoryboardResult> {
   if (activeWing() !== "scout") throw new Refusal(`the ${activeWing()} wing draws no storyboard`);
-  const parsed = parseStoryboards(input);
+  const shut = archivedFromIdea(id, input); // a kept idea's storyboard is the spread's (spark project-baseline); an episode's is not
+  if (shut !== undefined) throw new Refusal(shut);
+  // The kept characters are read only for a batch that casts: a plain batch never touches the archive.
+  const casts = Array.isArray(input) && input.some((x) => typeof x === "object" && x !== null && "cast" in x);
+  const kept = casts ? keptCharacters(await rootedNights()) : [];
+  const parsed = parseStoryboards(input, kept);
   if (!parsed.ok) throw new Refusal(parsed.error.message);
   const briefs = parsed.value;
   for (const [i, b] of briefs.entries()) {
     const nowhere = b.technique === undefined ? undefined : await templateProblem(b.technique.template);
     if (nowhere !== undefined) throw new Refusal(`storyboard ${i + 1}: technique: ${nowhere}`);
+    const unborn = b.venture === undefined ? undefined : ventureRefusal(b.venture, ctx.store);
+    if (unborn !== undefined) throw new Refusal(`storyboard ${i + 1}: venture: ${unborn}`);
   }
   const cache = new Map<NightId, Night | string>();
-  const ideas: KeptIdea[] = [];
+  const ideas: (KeptIdea | undefined)[] = [];
+  const episodes: (EpisodeHeld | undefined)[] = [];
   for (const [i, b] of briefs.entries()) {
+    const held = b.fromEpisode === undefined ? undefined : await dueEpisode(`storyboard ${i + 1}`, b.fromEpisode);
+    // A data channel's episode is made as a real-data reel, never as Flux frames (the reel door refuses the mirror case).
+    if (held !== undefined && held.channel.medium !== "storyboard") throw new Refusal(`storyboard ${i + 1}: fromEpisode: ${held.episode.id} is channel ${held.channel.id}'s, made as a ${held.channel.medium}; only a storyboard channel's episode is storyboarded`);
+    episodes.push(held);
+    if (b.fromIdea === undefined) {
+      ideas.push(undefined);
+      continue;
+    }
     const k = await keptIdea(b.fromIdea, cache);
     if (!k.ok) throw new Refusal(`storyboard ${i + 1}: fromIdea: ${k.error.message}`);
     ideas.push(k.value);
   }
-  const others = (await readAllNights()).filter((n) => n.id !== id);
+  const casted = await castPanels(briefs, ideas, kept);
+  const all = await readAllNights();
+  const others = all.filter((n) => n.id !== id);
   for (const [i, b] of briefs.entries()) {
-    const held = heldFor(others, b.fromIdea, i + 1);
+    const held = heldFor(others, b, i + 1);
     if (held !== undefined) throw new Refusal(held);
   }
+  // The kernel's genres: every live one holds its trial slots, so a plain batch reads them too.
+  const heads = headsOf(ctx.store);
+  if (!heads.ok) throw new Refusal(`storyboard: the genres did not read: ${heads.error.message}`);
+  const genres = heads.value.genres;
+  const unfit = genreRefusal(briefs, genreViews(all, genres));
+  if (unfit !== undefined) throw new Refusal(unfit);
   const { mode } = await launchable(ctx, id);
 
   let made: StoryboardCandidate[] = [];
   let full: string | undefined;
   await mutateNight(id, (n) => {
-    full = briefs.map((b, i) => heldFor([n], b.fromIdea, i + 1)).find((x) => x !== undefined);
-    const used = storyboardsUsed(n);
-    const cap = storyboardCapOf(n);
-    const left = Math.max(0, cap - used);
-    if (full === undefined && briefs.length > left) full = `night ${id} holds ${used} of its ${cap} storyboards; ${left} left, and the batch has ${briefs.length} - nothing was drawn`;
+    full = briefs.map((b, i) => heldFor([n], b, i + 1)).find((x) => x !== undefined) ?? capRefusal(n, briefs, trialSlots([...others, n], genres, id));
     if (full !== undefined) return n;
     let next = n;
     made = [];
     for (const [i, b] of briefs.entries()) {
       const idea = ideas[i]?.idea;
+      const lent = episodes[i] === undefined ? undefined : episodeUseAim(episodes[i], b);
       const aspect = boardAspect(idea?.aspect);
-      const use = b.use !== undefined ? { use: b.use } : { ...(idea?.use === undefined ? {} : { use: idea.use }), ...(idea?.app === undefined ? {} : { app: idea.app }) };
+      const cast = casted[i];
+      const aim = lent?.aim ?? b.aim;
+      const use = lent !== undefined ? { use: lent.use } : b.use !== undefined ? { use: b.use } : { ...(idea?.use === undefined ? {} : { use: idea.use }), ...(idea?.app === undefined ? {} : { app: idea.app }) };
       const c: StoryboardCandidate = {
         id: nextCandidateId(next),
         kind: "storyboard",
         sourceIds: [],
         status: n.dry ? "rendered" : "pending",
-        fromIdea: b.fromIdea,
+        ...(b.fromIdea === undefined ? {} : { fromIdea: b.fromIdea }),
+        ...(b.fromEpisode === undefined ? {} : { fromEpisode: b.fromEpisode }),
         ...(idea?.fromSeed === undefined ? {} : { fromSeed: idea.fromSeed }),
         title: b.title,
         paragraph: b.paragraph,
         bullets: b.bullets,
-        panels: b.panels,
+        panels: cast?.panels ?? b.panels,
         ...(aspect === "16:9" ? {} : { aspect }),
         ...use,
-        ...(b.aim === undefined ? {} : { aim: b.aim }),
+        ...(aim === undefined ? {} : { aim }),
         ...(b.technique === undefined ? {} : { technique: { claim: b.technique.claim, quote: b.technique.quote, url: b.technique.url, template: b.technique.template, step: b.technique.step } }),
+        ...(b.venture === undefined ? {} : { venture: b.venture }),
+        ...(b.genre === undefined ? {} : { genre: b.genre }),
+        ...(cast === undefined ? {} : { cast: cast.members.map((m) => m.card.name) }),
         ...(n.dry ? { images: [] } : {}),
       };
       next = { ...next, candidates: [...next.candidates, c] };
@@ -247,6 +373,11 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   if (full !== undefined) throw new Refusal(full);
   if (made.length === 0) throw new Error(`night ${id}: the storyboard candidates were not written`);
   const cids = made.map((c) => c.id);
+  await followEpisodes(id, cids);
+  made.forEach((c, i) => {
+    const cast = casted[i];
+    if (cast !== undefined) ctx.say(`${c.id} cast: ${castLine(cast.members)}`);
+  });
   if (mode === "dry") {
     ctx.say(`night ${id} is dry: ${made.length} storyboard(s) written as words only; no frame is drawn and nothing is launched`);
     return { candidates: await batchOf(id, cids), jobIds: [], dry: true };
@@ -277,16 +408,42 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
     ctx.say(`launched ${c.id} as ${r1.value.jobId}`);
     jobIds.push(r1.value.jobId);
   }
+  if (refused.length > 0) await followEpisodes(id, cids);
   if (refused.length > 0) throw new Refusal([...refused, ...jobIds.map((j) => `${j} launched`)].join("; "));
   if (ctx.detach) return { candidates: await batchOf(id, cids), jobIds, outcome: "detached" };
 
   let outcome = "done";
   for (const jobId of jobIds) {
-    const d = await driveStoryboard(ctx.store, ctx.location, jobId, { dryOnly: ctx.dryOnly, ...(engines.draw === undefined ? {} : { engines: { draw: engines.draw } }) });
+    const d = await driveStoryboard(ctx.store, ctx.location, jobId, { dryOnly: ctx.dryOnly, ...(engines.draw === undefined ? {} : { engines: { draw: engines.draw, ...(engines.clip === undefined ? {} : { clip: engines.clip }) } }) });
     const o = d.ok ? d.value.outcome : d.error.message;
     if (outcome === "done" && o !== "done") outcome = o;
   }
+  await followEpisodes(id, cids);
   return { candidates: await batchOf(id, cids), jobIds, outcome };
+}
+
+/* ── The cast ─────────────────────────────────────────────────────────────── */
+
+/**
+ * Each brief's cast (by place; undefined: none) and its COMPILED panels - every member's identity block verbatim, then
+ * the panel's own words. Refused - nothing written - when a member is not kept, breaks the audience rule (the work's
+ * audience is its idea's seed's), or a compiled panel is past what Flux takes.
+ */
+async function castPanels(briefs: readonly StoryboardBrief[], ideas: readonly (KeptIdea | undefined)[], kept: readonly KeptCharacter[]): Promise<({ readonly members: readonly KeptCharacter[]; readonly panels: readonly string[] } | undefined)[]> {
+  if (!briefs.some((b) => b.cast !== undefined)) return briefs.map(() => undefined);
+  const batches = await listSeedBatches();
+  return briefs.map((b, i) => {
+    if (b.cast === undefined) return undefined;
+    const ref = ideas[i]?.idea.fromSeed;
+    const audience = ref === undefined ? undefined : seedOf(batches, ref)?.seed.audience;
+    const members = castOf(b.cast, kept, audience);
+    if (!members.ok) throw new Refusal(`storyboard ${i + 1}: ${members.error.message}`);
+    const cards = members.value.map((m) => m.card);
+    const panels = b.panels.map((p) => castPrompt(cards, p));
+    const long = panels.findIndex((p) => p.length > CAST_PROMPT_MAX);
+    if (long >= 0) throw new Refusal(`storyboard ${i + 1}: panel ${long + 1} with its cast's identity blocks is ${panels[long]?.length} characters; a Flux prompt is at most ${CAST_PROMPT_MAX}`);
+    return { members: members.value, panels };
+  });
 }
 
 /* ── Collect ──────────────────────────────────────────────────────────────── */
@@ -323,5 +480,6 @@ export async function collectStoryboards(id: NightId, o: { readonly store?: Stor
       return next === null ? m : withCandidate(m, next);
     });
   }
+  await followEpisodes(id, out);
   return batchOf(id, out);
 }

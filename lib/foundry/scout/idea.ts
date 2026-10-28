@@ -2,20 +2,24 @@ import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
+import { VENTURE_ID_RE } from "@gt/domain/genre";
 
 import { writeJsonAtomic } from "../runStore.ts";
 import { driveIdeas, launchIdeas, LIVE_IDEA_ENGINES } from "../../producers/scoutIdea.ts";
 import type { IdeaEngines } from "../../producers/scoutIdeaActs.ts";
 import { launchReels, reelFiles, SCOUT_REELS_LANE } from "../../producers/scoutReel.ts";
 import { launchable, Refusal, type ActContext } from "./acts.ts";
-import { ASPECTS, cardSchema, WING_ASPECT, wingRefusal } from "./museDoor.ts";
-import { listSeedBatches } from "./seedStore.ts";
+import { archivedDoor } from "./baseline.ts";
+import { ventureRefusal } from "./genres.ts";
+import { CAST_MAX, castOf, rootedNights } from "./cast.ts";
+import { castPrompt, keptCharacters, type KeptCharacter } from "./characters.ts";
+import { CARD_NAME_MAX } from "./muse.ts";
+import { ASPECTS, briefRefusal, cardSchema, CHARACTER_ASPECT, characterRefusal, drawsSomeone, IDEA_ASPECT } from "./museDoor.ts";
+import { listSeedBatches, seedOf } from "./seedStore.ts";
 import { repeatRefusal } from "./ideaRepeat.ts";
 import { seedsInForce, usableSeed } from "./seeds.ts";
-import { mutateNight, nextCandidateId, readAllNights, readNight, resolveInNight, withCandidate } from "./store.ts";
-import { activeWing } from "./wingScope.ts";
-import type { ScoutWing } from "./wing.ts";
-import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, SEED_REF_RE, USE_MAX, USE_APPS, AIM_MAX, LOOK_SLUG, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief, type SeedRef } from "./types.ts";
+import { mutateNight, nextCandidateId, readNight, resolveInNight, withCandidate } from "./store.ts";
+import { CHARACTER_SEED_TYPE, DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, SEED_REF_RE, SOURCE_ID_RE, USE_MAX, USE_APPS, AIM_MAX, LOOK_SLUG, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief, type SeedBatch, type SeedRef } from "./types.ts";
 
 // THE NIGHT'S IDEAS - what `pipeline/scout.mts ideas <night> --json <file|->` does (spark
 // scout-idea-artboards WP-I2, stats-reels WP-R2). The skill writes a batch of briefs in its own words -
@@ -57,10 +61,13 @@ import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSI
 //   - an idea from nowhere would be work the branch graph cannot place. Checked with the rest of the door,
 //   before a candidate exists.
 //
-//   THE MUSE WING HAS ITS OWN LINE (spark scout-muse). In the muse wing a brief must also clear
-//   ./museDoor.ts - its targets, a character's card, a stated adult age, no youth or nudity word -
-//   and its still is drawn 9:16 at studio quality low and judged by the eye before it is kept. A
-//   brief may name its `aspect` in either wing; absent, each wing draws its own default.
+//   A BRIEF THAT DRAWS SOMEONE HAS ITS OWN LINE (spark scout-muse; spark scout-vision S3 moved it from the muse
+//   wing to the brief). A `character` idea - on any night - carries her card and grows from a kept CHARACTER seed,
+//   whose audience and app set the card's rules (./museDoor.ts); a brief may `cast` kept characters (either root,
+//   ./characters.ts keptCharacters), each one's identity block VERBATIM at the head of its studio prompt, then the
+//   brief's own words; a brief may cite `source: s-NN`, a source of THIS night, in words only - nothing of the
+//   source reaches the studio. Such a still is drawn at studio quality low and judged by the eye before it is kept
+//   (lib/producers/scoutIdeaActs.ts). A character draws 9:16 unless its brief names an aspect, every other idea 16:9.
 //
 // NO MONEY REFUSAL. The studio bills prepaid credits and the seat is reported uncapped; the night's
 // ceiling caps Gemini only (./budget.ts), so a batch is never refused for the dollars the night has
@@ -125,58 +132,104 @@ const ideaSchema = z
     appTarget: text(USE_MAX).refine((s) => !/[\r\n]/.test(s), { message: "one line" }),
     /** WHY this run was chosen, one sentence; never the image prompt. */
     aim: text(AIM_MAX),
-    /** The look direction's slug: required on a muse character, the key of the repeat guard (./ideaRepeat.ts). */
+    /** The look direction's slug: required on a character, the key of the repeat guard (./ideaRepeat.ts). */
     look: z.string().trim().regex(LOOK_SLUG, "a slug of 3 to 40 lower-case letters, digits and hyphens").optional(),
     /** The kept seed this idea grows from (spark scout-decision-graph); required once a seed has been kept. */
     seed: z.string().trim().regex(SEED_REF_RE, "a kept seed's <batch>/sd-NNN").optional(),
     /** A stats idea's illustrative brief and its approach: required on target `stats`, refused on any other. */
     reel: reelSchema.optional(),
-    /** The still's aspect; absent, the wing's own (./museDoor.ts WING_ASPECT). */
+    /** The still's aspect; absent, a character's 9:16 or the video frame's 16:9 (./museDoor.ts). */
     aspect: z.enum(ASPECTS).optional(),
-    /** A character idea's card (the muse wing's, ./museDoor.ts). */
+    /** A character idea's card (./museDoor.ts). */
     card: cardSchema.optional(),
+    /** Kept characters the brief casts, by name (spark scout-vision S3). */
+    cast: z.array(z.string().trim().min(1).max(CARD_NAME_MAX)).min(1).max(CAST_MAX).optional(),
+    /** A source of the same night the idea is cited from - words only (spark scout-vision S3). */
+    source: z.string().trim().regex(SOURCE_ID_RE, "a source of this night, s-NN").optional(),
+    /** The live venture the idea is made inside (spark scout-vision S2): ideas in a venture's frame are its variations. */
+    venture: z.string().trim().regex(VENTURE_ID_RE, "a venture id vn-...").optional(),
   })
   .strict()
   .refine((b) => !sameWords(b.aim, b.prompt), { message: "the aim says why the run was chosen; it is not the image prompt", path: ["aim"] })
   .refine((b) => b.target !== "stats" || b.reel !== undefined, { message: "a stats idea carries its reel: {brief, approach}", path: ["reel"] })
   .refine((b) => b.target === "stats" || b.reel === undefined, { message: "only a stats idea carries a reel", path: ["reel"] });
 
-export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use" | "app" | "aim" | "look" | "aspect" | "card"> & { readonly genre: string; readonly reel?: ReelBrief; readonly seed?: SeedRef };
+export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use" | "app" | "aim" | "look" | "aspect" | "card" | "cast" | "source" | "venture"> & { readonly genre: string; readonly reel?: ReelBrief; readonly seed?: SeedRef };
 
-/** The skill's batch as briefs for `wing` (absent: the active one), or the first bad brief's place and reason; nothing is written here. */
-export function parseIdeas(raw: unknown, wing: ScoutWing = activeWing()): Result<IdeaBrief[]> {
-  if (!Array.isArray(raw)) return err("invalid", "ideas: the input is a JSON array of briefs {title, target, genre, prompt, anchor: {kind, ref}, app, appTarget, aim, look?, reel?}");
+/** The skill's batch as briefs, or the first bad brief's place and reason; nothing is read or written here. */
+export function parseIdeas(raw: unknown): Result<IdeaBrief[]> {
+  if (!Array.isArray(raw)) return err("invalid", "ideas: the input is a JSON array of briefs {title, target, genre, prompt, anchor: {kind, ref}, app, appTarget, aim, look?, reel?, card?, cast?, source?}");
   if (raw.length === 0) return err("invalid", "ideas: the batch holds no brief");
   const out: IdeaBrief[] = [];
   for (const [i, item] of raw.entries()) {
     const r = parseAt(`idea ${i + 1}`, ideaSchema, item);
     if (!r.ok) return r;
     const b = r.value;
-    const refused = wingRefusal(b, wing);
+    const refused = briefRefusal(b);
     if (refused !== null) return err("invalid", `idea ${i + 1}: ${refused.path}: ${refused.message}`, { detail: `idea ${i + 1}` });
-    // The candidate holds an aspect only when it is not the scout frame's: every older idea reads 16:9.
-    const aspect = b.aspect ?? WING_ASPECT[wing];
-    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, use: `${b.app}: ${b.appTarget}`, app: b.app, aim: b.aim, ...(b.look === undefined ? {} : { look: b.look }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }), ...(b.seed === undefined ? {} : { seed: b.seed }), ...(aspect === "16:9" ? {} : { aspect }), ...(b.card === undefined ? {} : { card: b.card }) });
+    // The candidate holds an aspect only when it is not the video frame's: every older idea reads 16:9.
+    const aspect = b.aspect ?? (b.target === "character" ? CHARACTER_ASPECT : IDEA_ASPECT);
+    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, use: `${b.app}: ${b.appTarget}`, app: b.app, aim: b.aim, ...(b.look === undefined ? {} : { look: b.look }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }), ...(b.seed === undefined ? {} : { seed: b.seed }), ...(aspect === IDEA_ASPECT ? {} : { aspect }), ...(b.card === undefined ? {} : { card: b.card }), ...(b.cast === undefined ? {} : { cast: b.cast }), ...(b.source === undefined ? {} : { source: b.source }), ...(b.venture === undefined ? {} : { venture: b.venture }) });
   }
   return ok(out);
 }
 
-/**
- * Every brief's seed through the seed door, and - once a seed has been kept on a live batch - a seed on every
- * brief; the first refused one's place and why. Reads the seed batches and the steer; writes nothing.
- */
-export async function checkIdeaSeeds(briefs: readonly IdeaBrief[]): Promise<Result<void>> {
-  const batches = await listSeedBatches();
+/** The briefs' seeds against `batches`: the seed door, a seed once one is in force, and a character's own kind of seed. */
+async function seedsChecked(briefs: readonly IdeaBrief[], batches: readonly SeedBatch[]): Promise<Result<void>> {
   const required = seedsInForce(batches);
   for (const [i, b] of briefs.entries()) {
     if (b.seed === undefined) {
+      if (b.target === "character") return err("invalid", `idea ${i + 1}: names no seed; a character idea grows from a kept ${CHARACTER_SEED_TYPE} seed (seed: <batch>/sd-NNN)`);
       if (required) return err("invalid", `idea ${i + 1}: names no seed; a kept seed is in force, so every idea grows from one (seed: <batch>/sd-NNN)`);
       continue;
     }
     const u = await usableSeed(b.seed, batches);
     if (!u.ok) return err(u.error.code, `idea ${i + 1}: seed: ${u.error.message}`);
+    const s = seedOf(batches, b.seed)?.seed;
+    if (b.target === "character" && (s?.type !== CHARACTER_SEED_TYPE || s.character === undefined)) return err("refused", `idea ${i + 1}: seed: ${b.seed} is a ${s?.type ?? "missing"} seed; a character idea grows from a ${CHARACTER_SEED_TYPE} seed`);
   }
   return ok(undefined);
+}
+
+/**
+ * Every brief's seed through the seed door, and - once a seed has been kept on a live batch - a seed on every
+ * brief; a character idea's seed always, of type `character`. The first refused one's place and why. Reads the seed
+ * batches and the steer; writes nothing.
+ */
+export async function checkIdeaSeeds(briefs: readonly IdeaBrief[]): Promise<Result<void>> {
+  return seedsChecked(briefs, await listSeedBatches());
+}
+
+/** What the character door reads beyond the brief: the seed batches, the kept characters, and the night written to. */
+export type CharacterWorld = { readonly batches: readonly SeedBatch[]; readonly kept: readonly KeptCharacter[]; readonly night: Pick<Night, "id" | "sources"> };
+
+/**
+ * The briefs that draw someone, held to their seed's audience and app and to the characters they cast (./museDoor.ts);
+ * a cited source must be one of the night's. Ok: the briefs as the candidates take them - a character's card with her
+ * seed's audience, a cast by its kept cards' names and its prompt led by their identity blocks. Pure.
+ */
+export function checkCharacters(briefs: readonly IdeaBrief[], w: CharacterWorld): Result<IdeaBrief[]> {
+  const out: IdeaBrief[] = [];
+  for (const [i, b] of briefs.entries()) {
+    const at = `idea ${i + 1}`;
+    if (b.source !== undefined && !w.night.sources.some((s) => s.id === b.source)) return err("invalid", `${at}: source: ${b.source} is not a source of night ${w.night.id}`);
+    if (!drawsSomeone(b)) {
+      out.push(b);
+      continue;
+    }
+    const seed = b.seed === undefined ? undefined : seedOf(w.batches, b.seed)?.seed;
+    // One cast door for ideas, storyboards and trials (./cast.ts castOf): kept, none twice, the audience rule.
+    const casting = castOf(b.cast ?? [], w.kept, seed?.audience);
+    if (!casting.ok) return err(casting.error.code, `${at}: ${casting.error.message}`);
+    const cast = casting.value;
+    const audience = seed?.audience ?? "adult";
+    const refused = characterRefusal(b, { audience, ...(seed?.character === undefined ? {} : { app: seed.character.for }), cast: cast.map((k) => k.card) });
+    if (refused !== null) return err("invalid", `${at}: ${refused.path}: ${refused.message}`, { detail: at });
+    const prompt = cast.length === 0 ? b.prompt : castPrompt(cast.map((k) => k.card), b.prompt);
+    if (prompt.length > IDEA_PROMPT_MAX) return err("invalid", `${at}: cast: the identity blocks and the prompt run to ${prompt.length} characters; a studio prompt holds ${IDEA_PROMPT_MAX}`);
+    out.push({ ...b, prompt, ...(b.card === undefined ? {} : { card: { ...b.card, audience } }), ...(cast.length === 0 ? {} : { cast: cast.map((k) => k.card.name) }) });
+  }
+  return ok(out);
 }
 
 const isReel = (c: Pick<IdeaCandidate, "target">): boolean => c.target === "stats";
@@ -186,8 +239,8 @@ export const ideasUsed = (n: Pick<Night, "candidates">): number => n.candidates.
 
 export const ideaCapOf = (n: Pick<Night, "ideaCap">): number => n.ideaCap ?? DEFAULT_IDEA_CAP;
 
-/** Stats ideas the night holds, whatever became of them. */
-export const reelsUsed = (n: Pick<Night, "candidates">): number => n.candidates.filter((c) => c.kind === "idea" && isReel(c)).length;
+/** Stats ideas the night holds, whatever became of them - and its real reels and their cuts (spark scout-vision S5: one cap). */
+export const reelsUsed = (n: Pick<Night, "candidates">): number => n.candidates.filter((c) => (c.kind === "idea" && isReel(c)) || c.kind === "reel" || c.kind === "reel-cut").length;
 
 export const reelCapOf = (n: Pick<Night, "reelCap">): number => n.reelCap ?? DEFAULT_REEL_CAP;
 
@@ -223,14 +276,25 @@ async function failPending(id: NightId, cids: readonly CandidateId[], why: strin
 type Launched = { readonly jobId: string } | { readonly why: string };
 
 export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engines: IdeasEngines = {}): Promise<IdeasResult> {
+  const shut = archivedDoor(id);
+  if (shut !== undefined) throw new Refusal(shut);
   const parsed = parseIdeas(raw);
   if (!parsed.ok) throw new Refusal(parsed.error.message);
-  const briefs = parsed.value;
-  const seeded = await checkIdeaSeeds(briefs);
+  const batches = await listSeedBatches();
+  const seeded = await seedsChecked(parsed.value, batches);
   if (!seeded.ok) throw new Refusal(seeded.error.message);
-  const wingNow = activeWing();
-  const others = (await readAllNights()).filter((n) => n.id !== id);
-  const repeated = repeatRefusal(briefs, [...others, await readNight(id)], wingNow);
+  for (const [i, b] of parsed.value.entries()) {
+    const unborn = b.venture === undefined ? undefined : ventureRefusal(b.venture, ctx.store);
+    if (unborn !== undefined) throw new Refusal(`idea ${i + 1}: venture: ${unborn}`);
+  }
+  const roots = await rootedNights();
+  const tonight = await readNight(id);
+  const held = checkCharacters(parsed.value, { batches, kept: keptCharacters(roots), night: tonight });
+  if (!held.ok) throw new Refusal(held.error.message);
+  const briefs = held.value;
+  // Every new night is a scout night: tonight is read fresh under the lock below, the rest as they are now.
+  const others = roots.filter((r) => !(r.root === "scout" && r.night.id === id));
+  const repeated = repeatRefusal(briefs, [...others, { root: "scout", night: tonight }]);
   if (repeated !== undefined) throw new Refusal(repeated);
   const { mode } = await launchable(ctx, id);
   const askedReels = briefs.filter(isReel).length;
@@ -238,7 +302,7 @@ export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engin
   let made: IdeaCandidate[] = [];
   let full: string | undefined;
   await mutateNight(id, (n) => {
-    full = repeatRefusal(briefs, [...others, n], wingNow) ?? over(id, "ideas", ideasUsed(n), ideaCapOf(n), briefs.length - askedReels) ?? over(id, "stats reels", reelsUsed(n), reelCapOf(n), askedReels);
+    full = repeatRefusal(briefs, [...others, { root: "scout", night: n }]) ?? over(id, "ideas", ideasUsed(n), ideaCapOf(n), briefs.length - askedReels) ?? over(id, "stats reels", reelsUsed(n), reelCapOf(n), askedReels);
     if (full !== undefined) return n;
     let next = n;
     made = [];
@@ -273,12 +337,11 @@ export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engin
     throw new Refusal(why);
   }
 
-  // The request is the only carrier of the wing to the worker: a muse batch names it, and draws at
-  // the studio's low quality (each idea's aspect rides on its candidate).
-  const wing = activeWing();
+  // Each idea's aspect and studio quality ride on its candidate (lib/producers/scoutIdea.ts reads them): a new
+  // request names no wing.
   const launchStudio = async (): Promise<Launched> => {
     const span = spanOf(studio);
-    const target = { nightId: id, candidateIds: studio, ...(wing === "muse" ? { wing, quality: "low" as const } : {}) };
+    const target = { nightId: id, candidateIds: studio };
     const r0 = await launchIdeas(ctx.store, target, opts);
     if (!r0.ok) return { why: r0.error.message };
     if (r0.value.kind !== "receipt") return { why: `ideas launch answered ${r0.value.kind} before its receipt` };

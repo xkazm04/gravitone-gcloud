@@ -17,6 +17,8 @@ const ROOT = vi.hoisted(() => {
   process.env["SCOUT_STORE_DIR"] = path.join(dir, "scout");
   process.env["EXTRACT_STORE_DIR"] = path.join(dir, "extract");
   process.env["GRAVITONE_STORE_PATH"] = path.join(dir, "kernel.sqlite");
+  // The still engine's default is pinned here, whatever the operator's shell carries.
+  delete process.env["SCOUT_REPLICA_GENERATOR"];
   return dir;
 });
 
@@ -38,6 +40,7 @@ import type { SceneCandidate, ScoutSource } from "../../lib/foundry/scout/types.
 import { ImagingError } from "../../lib/imaging/errors.ts";
 import type { GeneratedImages, Recognition } from "../../lib/imaging/types.ts";
 import type { ClipRequest } from "../../lib/producers/motion.ts";
+import type { ReplicaGenerator } from "../../lib/foundry/scout/stillEngine.ts";
 import { clipEngineFrom, driveScene, launchScene, SCOUT_SCENE_LANES, scoutSceneProducer, type ClipEngine, type SceneEngines, type SceneLaunch, type SceneTarget } from "../../lib/producers/scoutScene.ts";
 
 const LOC = path.join(ROOT, "kernel.sqlite");
@@ -116,9 +119,11 @@ const NEVER: SceneEngines = {
 };
 
 type Mode = "dry" | "live";
-async function launch(t: SceneTarget, o: { clip: boolean; mode?: Mode; ceilingUsd?: number; engine?: ClipEngine }): Promise<{ receipt: Extract<SceneLaunch, { kind: "receipt" }>["receipt"]; jobId: string }> {
+/** `generator` absent: Flare, the engine these lanes and prices were pinned on; null: the process default (the studio). */
+async function launch(t: SceneTarget, o: { clip: boolean; mode?: Mode; ceilingUsd?: number; engine?: ClipEngine; generator?: ReplicaGenerator | null }): Promise<{ receipt: Extract<SceneLaunch, { kind: "receipt" }>["receipt"]; jobId: string }> {
   const mode = o.mode ?? "dry";
-  const base = { mode, ceilingUsd: o.ceilingUsd ?? 15, clip: o.clip, actor: OP, dryOnly: mode === "dry", ...(o.engine === undefined ? {} : { clipEngine: o.engine }) };
+  const generator = o.generator === undefined ? "leonardo-flare" : o.generator;
+  const base = { mode, ceilingUsd: o.ceilingUsd ?? 15, clip: o.clip, actor: OP, dryOnly: mode === "dry", ...(o.engine === undefined ? {} : { clipEngine: o.engine }), ...(generator === null ? {} : { generator }) };
   const r = must(await launchScene(k.store, t, base));
   if (r.kind !== "receipt") throw new Error(`expected a receipt, got ${r.kind}`);
   const l = must(await launchScene(k.store, t, { ...base, token: r.receipt.token }));
@@ -128,7 +133,7 @@ async function launch(t: SceneTarget, o: { clip: boolean; mode?: Mode; ceilingUs
 
 it("binds as the worker carries it: one producer per lane a scene can wait on", () => {
   const set = must(producerSet(SCOUT_SCENE_LANES.map((lane) => ({ name: "scout-scene" as const, producer: scoutSceneProducer(lane) }))));
-  expect([...set.keys()].sort()).toEqual(["scout-scene@cloud.google", "scout-scene@cloud.leonardo", "scout-scene@gpu.local"]);
+  expect([...set.keys()].sort()).toEqual(["scout-scene@box.chrome", "scout-scene@cloud.google", "scout-scene@cloud.leonardo", "scout-scene@gpu.local"]);
 });
 
 it("reads the clip engine from SCOUT_CLIP_ENGINE: unset is ltx-local, an unknown word is refused", () => {
@@ -141,10 +146,10 @@ it("reads the clip engine from SCOUT_CLIP_ENGINE: unset is ltx-local, an unknown
 describe("a dry scene, end to end", () => {
   it("on a local clip: waits on gpu.local, prices the clip at $0, and its dry would-call names ComfyUI, never the card", async () => {
     const t = await seed(true);
-    const { receipt, jobId } = await launch(t, { clip: true });
+    const { receipt, jobId } = await launch(t, { clip: true, generator: null });
     expect(receipt.lines.map((l) => [l.label, l.lane, l.provider, l.model, l.usd])).toEqual([
       ["read-scene · 2 keyframe(s)", "gpu.local", "google", expect.any(String), 0],
-      ["replicate-scene · 2 still(s)", "gpu.local", "leonardo-flare", "openai/gpt-image-2.5-flare", 0.03],
+      ["replicate-scene · 2 still(s)", "gpu.local", "leonardo-studio", expect.any(String), null],
       ["render-clip · 5 s", "gpu.local", "comfyui", "ltx-2.5-distilled", 0],
     ]);
     expect(jobOf(jobId).lane).toBe("gpu.local");
@@ -386,5 +391,61 @@ describe("a live scene, on fakes", () => {
     expect(c.error).toBe(said);
     expect(c.replicas).toEqual(["scenes/c-01/replica-1.png"]);
     expect(c.clip).toBeUndefined();
+  });
+});
+
+/* ── the still engine: the lane and the price are the stills' engine's ─────── */
+
+describe("a scene's still engine (spark scout-vision S6)", () => {
+  it("by default draws on the studio: the job waits on box.chrome, its replicas unpriced in studio credits, and it runs under its ceiling", async () => {
+    const t = await seed(true);
+    const { receipt, jobId } = await launch(t, { clip: false, generator: null });
+    expect(receipt.lines.map((l) => [l.label, l.lane, l.provider, l.usd])).toEqual([
+      ["read-scene · 2 keyframe(s)", "box.chrome", "google", 0],
+      ["replicate-scene · 2 still(s)", "box.chrome", "leonardo-studio", null],
+    ]);
+    expect(jobOf(jobId).lane).toBe("box.chrome");
+    const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: true, engines: NEVER }));
+    expect(report.outcome).toBe("done");
+    expect(calls).toEqual({ recognize: 0, generate: 0, clip: 0, localClip: 0 });
+  });
+
+  it("a live studio replica asks for the studio at Low, and books it unpriced", async () => {
+    const t = await seed(false);
+    const { jobId } = await launch(t, { clip: false, mode: "live", generator: "leonardo-studio" });
+    const asked: { prefer?: string; quality?: string; aspect?: string }[] = [];
+    const f = fakes();
+    const engines: SceneEngines = {
+      ...f.engines,
+      generate: async (req) => {
+        asked.push({ prefer: req.prefer, quality: req.quality, aspect: req.aspect });
+        return { images: [{ base64: PNG(req.seed ?? 0), mime: "image/png" }], provenance: { provider: "leonardo-studio", model: "gpt-image-2.5-sunburst", modelBasis: "requested", durationMs: 0, costBasis: "unpriced" } };
+      },
+    };
+    const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: false, engines }));
+    expect(report.outcome).toBe("done");
+    expect(asked).toEqual([
+      { prefer: "leonardo-studio", quality: "low", aspect: "16:9" },
+      { prefer: "leonardo-studio", quality: "low", aspect: "16:9" },
+    ]);
+    const meter = k.store.read((r) => meterOf(r, jobId));
+    expect(meter.ok ? [meter.value.usd, meter.value.unpriced] : null).toEqual([0.002, 2]);
+  });
+
+  it("comfy-flux2 waits on gpu.local, admitted by the comfy engine, its stills free", async () => {
+    const t = await seed(true);
+    const { receipt, jobId } = await launch(t, { clip: false, generator: "comfy-flux2" });
+    expect(receipt.lines.map((l) => [l.label, l.lane, l.provider, l.usd])).toEqual([
+      ["read-scene · 2 keyframe(s)", "gpu.local", "google", 0],
+      ["replicate-scene · 2 still(s)", "gpu.local", "comfy-flux2", 0],
+    ]);
+    expect(jobOf(jobId).lane).toBe("gpu.local");
+    expect(scoutSceneProducer("gpu.local").engine).toBe("comfy");
+  });
+
+  it("comfy-flux2 replicas with a hosted clip are refused: no lane holds both", async () => {
+    const t = await seed(true);
+    const r = await launchScene(k.store, t, { mode: "dry", ceilingUsd: 15, clip: true, clipEngine: "hailuo", generator: "comfy-flux2", actor: OP, dryOnly: true });
+    expect(r.ok ? null : r.error.message).toMatch(/comfy-flux2 replicas and a hailuo clip share no lane/);
   });
 });

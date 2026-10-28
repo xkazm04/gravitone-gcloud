@@ -22,13 +22,14 @@ import { TURN_ESTIMATE } from "@gt/producers/strips/plan";
 
 import { runAgent } from "../agent/cliSeam.ts";
 import { mutateNight, readNightNow, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
-import type { CandidateId, IdeaCandidate, Night, NightId, ReelFiles } from "../foundry/scout/types.ts";
+import type { CandidateId, Night, NightId, ReelFiles } from "../foundry/scout/types.ts";
 import { FoundryError } from "../foundry/runStore.ts";
 import type { StripLane } from "../foundry/strips/types.ts";
 import { kernel } from "../kernelProcess.ts";
 import { MODEL } from "../model.ts";
 import { effectsFor } from "./extract.ts";
 import { reelActs, type ReelEngines } from "./scoutReelActs.ts";
+import { realReelFiles, realReelTile, reelCutFiles, reelCutPoster, reelCutVideo, type ReelHolder } from "./scoutReelKinds.ts";
 
 // THE SCOUT REELS PRODUCER, BOUND (spark stats-reels WP-R1) - one /scout batch of stats ideas (`idea`
 // candidates with target `stats`) as one kernel job on the Claude seat: per idea, the strips author
@@ -52,6 +53,11 @@ import { reelActs, type ReelEngines } from "./scoutReelActs.ts";
 // seat is the operator's plan, REPORTED and never capped. The job carries no ceiling and no Run row,
 // so the night holds none of its remainder for it (budget.ts `promiseOf`), and every turn it books
 // names `claude-seat/<model>` on its model axis, so its dollars read as uncapped.
+//
+// A KEPT IDEA ON REAL DATA, A FULL CUT (spark scout-vision S5): lib/foundry/scout/reel.ts launches a batch of `reel`
+// or `reel-cut` candidates through this same launch - their inputs under reels/<c-NN>/ or cuts/<c-NN>/
+// (./scoutReelKinds.ts) - and the request names each step's kind. A cut's line is priced apart: its turns and its whole
+// render, at an illustrative per-frame figure until one is measured.
 //
 // ONE JOB PER BATCH, on seat.text: `job:scout-reels:<night>:<first c-NN>`. night.json names it on every
 // idea of the batch and on `night.jobs` once the job exists.
@@ -100,6 +106,15 @@ const round6 = (x: number): number => Math.round(x * 1e6) / 1e6;
 const REEL_USD = round6(REEL_TURNS * (TURN_ESTIMATE.usd ?? 0));
 const REEL_USD_RANGE: readonly [number, number] = [round6(TURN_ESTIMATE.usdRange?.[0] ?? 0), round6(REEL_TURNS * (TURN_ESTIMATE.usdRange?.[1] ?? 0))];
 
+/** Seconds one captured frame of a full render takes (capture, then its share of the encode). Illustrative, not measured. */
+const CUT_FRAME_SECONDS = 0.5;
+const cutSeconds = (frames: number): number => REEL_SECONDS + Math.ceil(frames * CUT_FRAME_SECONDS);
+
+function cutOption(frames: number): ModelOption {
+  const o = reelOption();
+  return { ...o, key: `scout-reel-cuts/claude-seat/${MODEL}`, label: "full reel cut · worst case", secondsPerUnit: cutSeconds(frames), basis: { ...o.basis, seconds: { src: "model", note: `the turns at strips-r1's figure, plus ${frames} frames at an unmeasured ${CUT_FRAME_SECONDS} s each` } } };
+}
+
 function reelOption(): ModelOption {
   return {
     key: `scout-reels/claude-seat/${MODEL}`,
@@ -120,18 +135,21 @@ function reelOption(): ModelOption {
 
 /* ── The candidates a launch may price ────────────────────────────────────── */
 
-/** Why the batch cannot be launched in `night`; its stats ideas, in order, when it can. */
-export function checkReelCandidates(night: Night, cids: readonly string[], mode: ReceiptMode): Result<IdeaCandidate[]> {
+/** A step's inputs, night-relative: a stats idea's by the layout, a real reel's or a cut's as the door wrote them. */
+const inputsOf = (c: ReelHolder): Required<ReelFiles> => (c.kind === "idea" ? reelFiles(c.id) : c.kind === "reel" ? realReelFiles(c.id) : reelCutFiles(c.id));
+
+/** Why the batch cannot be launched in `night`; its candidates (stats ideas, real reels, cuts), in order, when it can. */
+export function checkReelCandidates(night: Night, cids: readonly string[], mode: ReceiptMode): Result<ReelHolder[]> {
   if (night.state === "committed") return err("refused", `night ${night.id} is committed; nothing more renders into it`);
   if (night.dry && mode === "live") return err("refused", `night ${night.id} is dry; a live reel would spend on a packet that commits nothing`);
   if (cids.length === 0) return err("invalid", "a reels batch names at least one idea");
-  const out: IdeaCandidate[] = [];
+  const out: ReelHolder[] = [];
   for (const cid of cids) {
     const c = night.candidates.find((x) => x.id === cid);
     if (c === undefined) return err("not-found", `no candidate ${cid} in night ${night.id}`);
-    if (c.kind !== "idea") return err("refused", `${cid} is a ${c.kind} candidate, not an idea`);
-    if (c.target !== "stats") return err("refused", `${cid} is a ${c.target} idea, not a stats reel`);
-    const f = reelFiles(c.id);
+    if (c.kind !== "idea" && c.kind !== "reel" && c.kind !== "reel-cut") return err("refused", `${cid} is a ${c.kind} candidate, not an idea`);
+    if (c.kind === "idea" && c.target !== "stats") return err("refused", `${cid} is a ${c.target} idea, not a stats reel`);
+    const f = inputsOf(c);
     for (const rel of [f.brief, f.approach]) if (!existsSync(resolveInNight(night.id, rel))) return err("not-found", `${cid}: ${rel} is not in night ${night.id}`);
     out.push(c);
   }
@@ -160,14 +178,21 @@ function readIn(r: Reader, t: ReelsTarget, o: ReadAsk): Result<{ readonly receip
   // The key names the batch AT its inputs: a brief or approach that changed since the receipt is a different line.
   const h = createHash("sha256");
   for (const c of ideas.value) {
-    const f = reelFiles(c.id);
+    const f = inputsOf(c);
     h.update(`${c.id}\n`).update(readFileSync(resolveInNight(night.value.id, f.brief))).update(readFileSync(resolveInNight(night.value.id, f.approach)));
   }
   const at = `reels:${night.value.id}/${t.candidateIds[0] ?? ""}@${h.digest("hex").slice(0, 12)}`;
-  const n = ideas.value.length;
-  const line: PlanLine = { key: `${at}/reel`, label: `reel · ${n} stats reel(s)`, lane: SCOUT_REELS_LANE, units: n, option: reelOption(), after: [], order: 0, status: "pending" };
-  const receipt = receiptFor({ subject: { kind: "run", lane: "video" }, lines: [line], plan: [line], queue: readQueue(r), capacity: LANE_CAPACITY, now: o.now, mode: o.mode });
-  return ok({ receipt, request: { nightId: night.value.id, reels: ideas.value.map((c) => ({ candidateId: c.id })), estimates: { reel: { seconds: REEL_SECONDS, usd: REEL_USD, usdRange: [...REEL_USD_RANGE] } } } });
+  const cuts = ideas.value.filter((c) => c.kind === "reel-cut");
+  const n = ideas.value.length - cuts.length;
+  const frames = Math.max(0, ...cuts.map((c) => (c.kind === "reel-cut" ? c.frames : 0)));
+  const lines: PlanLine[] = [
+    ...(n === 0 ? [] : [{ key: `${at}/reel`, label: `reel · ${n} stats reel(s)`, lane: SCOUT_REELS_LANE, units: n, option: reelOption(), after: [], order: 0, status: "pending" as const }]),
+    ...(cuts.length === 0 ? [] : [{ key: `${at}/cut`, label: `reel cut · ${cuts.length} full reel(s), up to ${frames} frames`, lane: SCOUT_REELS_LANE, units: cuts.length, option: cutOption(frames), after: [], order: 0, status: "pending" as const }]),
+  ];
+  const receipt = receiptFor({ subject: { kind: "run", lane: "video" }, lines, plan: lines, queue: readQueue(r), capacity: LANE_CAPACITY, now: o.now, mode: o.mode });
+  const reels = ideas.value.map((c) => ({ candidateId: c.id, ...(c.kind === "idea" ? {} : { kind: c.kind }), ...(c.kind === "reel-cut" ? { frames: c.frames } : {}) }));
+  const cut = cuts.length === 0 ? {} : { cut: { seconds: cutSeconds(frames), usd: REEL_USD, usdRange: [REEL_USD_RANGE[0], REEL_USD_RANGE[1]] as [number, number] } };
+  return ok({ receipt, request: { nightId: night.value.id, reels, estimates: { reel: { seconds: REEL_SECONDS, usd: REEL_USD, usdRange: [...REEL_USD_RANGE] }, ...cut } } });
 }
 
 /* ── Launch: receipt, then confirm ────────────────────────────────────────── */
@@ -208,7 +233,7 @@ export async function launchReels(store: Store, target: ReelsTarget, opts: Launc
   const ids = new Set(target.candidateIds);
   await mutateNight(target.nightId, (n) => {
     let m = n;
-    for (const c of n.candidates) if (ids.has(c.id) && c.kind === "idea") m = withCandidate(m, { ...c, jobId });
+    for (const c of n.candidates) if (ids.has(c.id) && (c.kind === "idea" || c.kind === "reel" || c.kind === "reel-cut")) m = withCandidate(m, { ...c, jobId });
     return m.jobs.includes(jobId) ? m : { ...m, jobs: [...m.jobs, jobId] };
   });
   return out.value;
@@ -227,9 +252,21 @@ async function realFrame(htmlPath: string, lane: StripLane, i: number): Promise<
   }
 }
 
-export const LIVE_REEL_ENGINES: ReelEngines = { seat: runAgent, frame: realFrame };
+/** The real full render of a cut: renderStrip at the cut's frames, its mp4 and poster into `outDir`; a failed render throws its sentence. */
+async function realRender(htmlPath: string, lane: StripLane, frames: number, outDir: string): Promise<void> {
+  const r = await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ "../../pipeline/strips/render.mts");
+  const browser = await r.launchHeadless();
+  try {
+    const out = await r.renderStrip({ browser, htmlPath, outDir, lane, frames });
+    if (!out.ok) throw new Error(out.error ?? "the full render failed with no sentence");
+  } finally {
+    await browser.close();
+  }
+}
 
-const LAYOUT = { files: reelFiles, tile: reelTile, frame: REEL_TILE_FRAME };
+export const LIVE_REEL_ENGINES: ReelEngines = { seat: runAgent, frame: realFrame, render: realRender };
+
+const LAYOUT = { files: reelFiles, tile: reelTile, frame: REEL_TILE_FRAME, real: { files: realReelFiles, tile: realReelTile }, cut: { files: reelCutFiles, video: reelCutVideo, poster: reelCutPoster } };
 
 /** The request a reels job carries: the event its launch wrote beside the enqueue. */
 export function reelsRequestOf(store: Store, jobId: string): Result<ReelsRequest> {

@@ -20,9 +20,13 @@ import { collectTurn, prepareTurn, standInPage, standInTurn, type StripTurn } fr
 import { DEFAULT_OPTIONS, DEFAULT_SELECTION } from "../foundry/strips/cards.ts";
 import { formatLint, lintStrip, stripDataRule } from "../foundry/strips/lint.ts";
 import type { Approach, MotionGrammar, StripLane, StripMedium, SupportAsset } from "../foundry/strips/types.ts";
+import { followEpisodes } from "../foundry/scout/episodeMoves.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
-import { REEL_DATA_ID, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, type CandidateId, type IdeaCandidate, type ReelFiles } from "../foundry/scout/types.ts";
+import { REEL_DATA_ID, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, type ReelFiles } from "../foundry/scout/types.ts";
 import { standIdea } from "./scoutIdeaActs.ts";
+import { cutOutDir, isHolder, renderedAs, subjectOf, type ReelHolder, type ReelLayout } from "./scoutReelKinds.ts";
+
+export type { ReelLayout } from "./scoutReelKinds.ts";
 
 // THE REELS' ACTS - the ports of packages/producers/src/scout-reels/define.ts over the strips author
 // seam, the lint, the headless frame and the night store.
@@ -36,6 +40,11 @@ import { standIdea } from "./scoutIdeaActs.ts";
 //          real strip) and a stand-in tile, OUR picture: no seat, no browser.
 //   ended  a failed job's sentence on every idea of it still pending, verbatim
 //
+// A KEPT IDEA ON REAL DATA and A FULL CUT (spark scout-vision S5) are the same step over a `reel` or a `reel-cut`
+// candidate (./scoutReelKinds.ts says where each lives): the lint holds a cut's page to its own frame count, and a cut
+// ends in a whole render to mp4 (`render`, pipeline/strips/render.mts renderStrip) instead of one frame - its poster
+// the tile. A dry cut renders nothing: its strip is its record.
+//
 // LANDING IS THE MARKER (the strips steps' rule). The author turn's page is copied to
 // ideas/<c-NN>/strip.html as soon as the turn leaves it, before the lint: a drive that died after a
 // paid turn finds the page there and lints it instead of buying the turn again. The candidate's
@@ -48,13 +57,8 @@ export type ReelEngines = {
   readonly seat: (input: RunAgentInput) => Promise<AgentResult>;
   /** Frame `i` of the strip at `htmlPath`, drawn cold in a fresh page (pipeline/strips/render.mts renderFrame). */
   readonly frame: (htmlPath: string, lane: StripLane, i: number) => Promise<Buffer>;
-};
-
-/** Where a reel lives, night-relative - lib/producers/scoutReel.ts's contract, handed in so the two files do not import each other. */
-export type ReelLayout = {
-  readonly files: (cid: CandidateId) => Required<ReelFiles>;
-  readonly tile: (cid: CandidateId) => string;
-  readonly frame: number;
+  /** A full cut's whole render: strip.mp4 and poster.jpg written into `outDir`; throws the render's sentence. Absent: a cut fails saying so. */
+  readonly render?: (htmlPath: string, lane: StripLane, frames: number, outDir: string) => Promise<void>;
 };
 
 /* ── The card the strips turn takes ───────────────────────────────────────── */
@@ -94,8 +98,8 @@ export function approachOf(a: ReelApproachIn, kase: string): Result<Approach> {
   return ok({ id: REEL_APPROACH_ID, lane: REEL_LANE, case: kase, name: a.name, medium: medium.value, grammar: grammar.value, density: density.value, leonardo: REEL_SUPPORT, direction: a.direction, falsifier: a.falsifier });
 }
 
-/** The lint a reel answers to: the strips frame-purity lint and the data-block rule, as one list of lines. */
-export const reelLint = (html: string): string[] => formatLint([...lintStrip(html), ...stripDataRule(html, REEL_DATA_ID)]);
+/** The lint a reel answers to: the strips frame-purity lint (a cut's at its own frame count) and the data-block rule, as one list of lines. */
+export const reelLint = (html: string, frames?: number): string[] => formatLint([...lintStrip(html, frames === undefined ? {} : { frames }), ...stripDataRule(html, REEL_DATA_ID)]);
 
 /* ── The night ────────────────────────────────────────────────────────────── */
 
@@ -109,20 +113,20 @@ function fence(ctx: StepContext): void {
   if (!r.ok) throw r.error;
 }
 
-const isIdea = (cid: string) => (x: { readonly id: string; readonly kind: string }): x is IdeaCandidate => x.id === cid && x.kind === "idea";
-
-async function writeIdeas(req: ReelsRequest, jobId: string, which: readonly string[], fn: (c: IdeaCandidate) => IdeaCandidate): Promise<void> {
+async function writeIdeas(req: ReelsRequest, jobId: string, which: readonly string[], fn: (c: ReelHolder) => ReelHolder): Promise<void> {
   await mutateNight(req.nightId, (n) => {
     let m = n;
     for (const cid of which) {
-      const c = m.candidates.find(isIdea(cid));
+      const c = m.candidates.find(isHolder(cid));
       if (c !== undefined) m = withCandidate(m, { ...fn(c), jobId });
     }
     return m.jobs.includes(jobId) ? m : { ...m, jobs: [...m.jobs, jobId] };
   });
+  // A channel episode's reel moves its episode: made, or back to outline-kept (lib/foundry/scout/episodeMoves.ts).
+  await followEpisodes(req.nightId, which);
 }
 
-const failed = (why: string) => (c: IdeaCandidate): IdeaCandidate => ({ ...c, status: "failed", error: why });
+const failed = (why: string) => (c: ReelHolder): ReelHolder => ({ ...c, status: "failed", error: why });
 
 /** One idea failed with its sentence, and its step booked: the batch goes on. */
 async function failOne(req: ReelsRequest, ctx: StepContext, cid: string, why: string): Promise<StepOutcome> {
@@ -157,13 +161,13 @@ function seatEntry(r: AgentResult, cid: string, turn: TurnKind, model: string): 
 }
 
 /** The dry answer: the strips stand-in, its page holding the brief's numbers in the data block. */
-async function standReel(t: StripTurn, numbers: unknown): Promise<AgentResult> {
+async function standReel(t: StripTurn, numbers: unknown, frames: number): Promise<AgentResult> {
   const r = await standInTurn(t);
-  if (!t.fix) await writeFile(path.join(t.ws, "out", "strip.html"), standInPage(t.lane, numbers));
+  if (!t.fix) await writeFile(path.join(t.ws, "out", "strip.html"), standInPage(t.lane, numbers, frames));
   return r;
 }
 
-async function seatTurn(e: ReelEngines, ctx: StepContext, t: StripTurn, cid: string, turn: TurnKind, numbers: unknown): Promise<AgentResult> {
+async function seatTurn(e: ReelEngines, ctx: StepContext, t: StripTurn, cid: string, turn: TurnKind, numbers: unknown, frames: number): Promise<AgentResult> {
   const { model, effort, prompt } = t.agent;
   const intent: CallIntent<Promise<AgentResult>> = {
     provider: "claude-seat",
@@ -172,7 +176,7 @@ async function seatTurn(e: ReelEngines, ctx: StepContext, t: StripTurn, cid: str
     quote: { usd: null, basis: "unpriced", note: SEAT_NOTE },
     payload: { turn: `reel-${turn}`, idea: cid, model, effort, promptChars: prompt.length },
     subject: { kind: "job", id: ctx.job.id },
-    stand: () => standReel(t, numbers),
+    stand: () => standReel(t, numbers, frames),
   };
   // No ceiling to lower the writer's budget to: the seat is reported, never capped (19b0b8e1).
   const r = await ctx.meter.paid(JOB_USD, 0, intent, async () => {
@@ -191,7 +195,7 @@ async function everyones(req: ReelsRequest, k: number, ctx: StepContext, r: Agen
   const sentence = why || "the text seat is unavailable";
   fence(ctx);
   const night = await readNight(req.nightId);
-  const open = req.reels.slice(k - 1).map((x) => x.candidateId).filter((cid) => night.candidates.find(isIdea(cid))?.status !== "rendered");
+  const open = req.reels.slice(k - 1).map((x) => x.candidateId).filter((cid) => night.candidates.find(isHolder(cid))?.status !== "rendered");
   await writeIdeas(req, ctx.job.id, open, failed(sentence));
   return fatal("unavailable", sentence);
 }
@@ -213,14 +217,47 @@ function feedbackText(findings: readonly string[]): string {
 
 /* ── reel ─────────────────────────────────────────────────────────────────── */
 
+/** The subject's last move: frame 120 as the tile, or - a full cut - the whole render to mp4 with its poster as the tile. */
+async function draw(e: ReelEngines, req: ReelsRequest, c: ReelHolder, s: ReturnType<typeof subjectOf>, stripAbs: string, k: number, at: ReelLayout, ctx: StepContext): Promise<Result<{ tile?: string; video?: string }>> {
+  if (c.kind === "reel-cut") {
+    // A dry cut renders nothing: its strip, linted at its own length, is its record.
+    if (ctx.job.mode.kind === "dry") return ok({});
+    const out = cutOutDir(req.nightId, s);
+    if (e.render === undefined || out === undefined || s.video === undefined) return err("unavailable", "no full-cut renderer is bound to this process");
+    try {
+      await e.render(stripAbs, REEL_LANE, s.frames, out);
+    } catch (x) {
+      if (!(x instanceof Error)) throw x;
+      return err("unavailable", errorMessage(x));
+    }
+    return ok({ video: s.video, ...(existsSync(resolveInNight(req.nightId, s.tile)) ? { tile: s.tile } : {}) });
+  }
+  let png: Buffer;
+  if (ctx.job.mode.kind === "dry") png = standIdea(k);
+  else {
+    try {
+      png = await e.frame(stripAbs, REEL_LANE, at.frame);
+    } catch (x) {
+      if (!(x instanceof Error)) throw x;
+      return err("unavailable", errorMessage(x));
+    }
+  }
+  fence(ctx);
+  const abs = resolveInNight(req.nightId, s.tile);
+  await mkdir(path.dirname(abs), { recursive: true });
+  await writeFile(abs, png);
+  return ok({ tile: s.tile });
+}
+
 async function reelAct(e: ReelEngines, at: ReelLayout, req: ReelsRequest, k: number, ctx: StepContext): Promise<StepOutcome> {
   const ask = req.reels[k - 1];
   if (ask === undefined) return fatal("internal", `the reels request has no reel ${k}`);
-  const c = (await readNight(req.nightId)).candidates.find(isIdea(ask.candidateId));
+  const c = (await readNight(req.nightId)).candidates.find(isHolder(ask.candidateId));
   if (c === undefined) return fatal("not-found", `no idea ${ask.candidateId} in night ${req.nightId}`);
-  const files = at.files(c.id);
-  // A drive that died between the tile and the booking: the reel is the idea's.
-  if (c.status === "rendered" && c.image !== undefined && c.reel?.strip !== undefined) return madePaid(data({ reel: c.id, file: c.image, held: true }), ctx);
+  const s = subjectOf(at, req.nightId, c);
+  const files = s.files;
+  // A drive that died between the tile and the booking: the reel is the candidate's.
+  if (s.held) return madePaid(data({ reel: c.id, file: c.image ?? files.strip, held: true }), ctx);
 
   const inputs = await inputsOf(req.nightId, files);
   if (!inputs.ok) return failOne(req, ctx, c.id, inputs.error.message);
@@ -237,61 +274,47 @@ async function reelAct(e: ReelEngines, at: ReelLayout, req: ReelsRequest, k: num
     effort: REEL_EFFORT,
     timeoutMin: DEFAULT_OPTIONS.authorTimeoutMin,
     addendum: { inputs: [path.join(process.cwd(), "pipeline", "strips", "REEL.md")], prompt: REEL_PROMPT },
+    ...(s.styleRef === undefined ? {} : { styleRef: s.styleRef }),
   };
 
   // The author turn, unless a paid one already landed its page (see LANDING above).
   if (!existsSync(stripAbs)) {
     const t = await prepareTurn(turnIn);
-    const r = await seatTurn(e, ctx, t, c.id, "author", numbers);
+    const r = await seatTurn(e, ctx, t, c.id, "author", numbers, s.frames);
     const stop = await everyones(req, k, ctx, r);
     if (stop !== undefined) return stop;
     if (r.outcome !== "completed" || !(await landTurn(ctx, t, stripAbs))) return failOne(req, ctx, c.id, `${r.outcome}: ${r.errors.join(" | ") || "no out/strip.html written"}`);
   }
 
-  let findings = reelLint(await readFile(stripAbs, "utf8"));
+  let findings = reelLint(await readFile(stripAbs, "utf8"), s.frames);
   if (findings.length > 0) {
     const t = await prepareTurn({ ...turnIn, feedback: { text: feedbackText(findings), current: stripAbs, ...(existsSync(styleAbs) ? { style: styleAbs } : {}) } });
-    const r = await seatTurn(e, ctx, t, c.id, "fix", numbers);
+    const r = await seatTurn(e, ctx, t, c.id, "fix", numbers, s.frames);
     const stop = await everyones(req, k, ctx, r);
     if (stop !== undefined) return stop;
     // A fix that failed or changed nothing leaves the page it was shown: the lint says what is still wrong.
     if (r.outcome === "completed") await landTurn(ctx, t, stripAbs);
-    findings = reelLint(await readFile(stripAbs, "utf8"));
+    findings = reelLint(await readFile(stripAbs, "utf8"), s.frames);
     if (findings.length > 0) return failOne(req, ctx, c.id, `lint: ${findings.join(" | ")}`);
   }
 
-  let png: Buffer;
-  if (ctx.job.mode.kind === "dry") png = standIdea(k);
-  else {
-    try {
-      png = await e.frame(stripAbs, REEL_LANE, at.frame);
-    } catch (x) {
-      if (!(x instanceof Error)) throw x;
-      return failOne(req, ctx, c.id, errorMessage(x));
-    }
-  }
-  const tile = at.tile(c.id);
+  const drawn = await draw(e, req, c, s, stripAbs, k, at, ctx);
+  if (!drawn.ok) return failOne(req, ctx, c.id, drawn.error.message);
   fence(ctx);
-  const abs = resolveInNight(req.nightId, tile);
-  await mkdir(path.dirname(abs), { recursive: true });
-  await writeFile(abs, png);
-  await writeIdeas(req, ctx.job.id, [c.id], (x) => {
-    const { error: _e, ...base } = x;
-    return { ...base, status: "rendered", image: tile, reel: { brief: files.brief, approach: files.approach, strip: files.strip } };
-  });
-  return madePaid(data({ reel: c.id, file: tile, strip: files.strip, dry: ctx.job.mode.kind === "dry" }), ctx);
+  await writeIdeas(req, ctx.job.id, [c.id], (x) => renderedAs(x, s, drawn.value));
+  return madePaid(data({ reel: c.id, ...(drawn.value.tile === undefined ? {} : { file: drawn.value.tile }), ...(drawn.value.video === undefined ? {} : { video: drawn.value.video }), strip: files.strip, dry: ctx.job.mode.kind === "dry" }), ctx);
 }
 
 /* ── The ending ───────────────────────────────────────────────────────────── */
 
-/** A failed job's sentence on every idea of its request that is still pending and still this job's. */
+/** A failed job's sentence on every candidate of its request that is still pending and still this job's. */
 async function ended(req: ReelsRequest, job: Job, ending: string): Promise<void> {
   if (ending !== "failed") return;
   const why = job.error?.message ?? `job ${job.id} failed`;
   const night = await readNight(req.nightId);
   const open = req.reels
-    .map((i) => night.candidates.find(isIdea(i.candidateId)))
-    .filter((c): c is IdeaCandidate => c !== undefined && c.status === "pending" && (c.jobId === undefined || c.jobId === job.id))
+    .map((i) => night.candidates.find(isHolder(i.candidateId)))
+    .filter((c): c is ReelHolder => c !== undefined && c.status === "pending" && (c.jobId === undefined || c.jobId === job.id))
     .map((c) => c.id);
   if (open.length > 0) await writeIdeas(req, job.id, open, failed(why));
 }

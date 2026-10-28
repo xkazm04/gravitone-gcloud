@@ -17,9 +17,16 @@
 // THE BRANCH. A candidate inherits its `fromSeed` seed's facets and sits under that seed's pause; with no
 // seed it is BEFORE_SEEDS. The groups are audience, then `<audience>/<genre>`, then BEFORE_SEEDS last.
 //
-// ONE GRAPH PER WING (spark scout-muse). A wing is a root with its own nights, seeds and steer, so each graph is
-// built inside its wing's scope and never joins the other's: the groups, the open packets and the shares are the
-// wing's own. A muse node carries `wing: "muse"` and is decided on `pkt:scout:muse:<night>`.
+// ONE GRAPH, AND THE ARCHIVE (spark scout-vision S3). The muse wing folded into the one loop: every new night is a scout
+// night, and the four muse nights are a read-only ARCHIVE drawn in the same graph. Their ids COLLIDE with scout nights
+// (2026-10-23 is in both), so an archive node is keyed by its run id - `cand:muse:<night>/<c-id>` - and every ref inside an
+// archive night (fromIdea, restates, basedOn) is read in the archive. An archive node carries `archive: true` and is decided
+// on `pkt:scout:muse:<night>`. The seeds, the steer, the shares and the open night are the scout root's: the archive has none.
+//
+// THE VENTURE (spark scout-vision S2). A node made inside a venture carries it: the candidate's own `venture`, else - for a
+// trial (a storyboard with a `genre`) or a piece - the venture its genre produces for (Genre.ventureId, from the kernel
+// when a store is handed in). A genre or venture PROPOSAL is a run, linked from the cells it stands on; a piece is an
+// output, linked from the trial it renders. A kept proposal leaves no `out:` node: what it births is a kernel head.
 
 import {
   BEFORE_SEEDS,
@@ -33,16 +40,18 @@ import {
   type GraphState,
   type ScoutGraph,
 } from "@gt/domain/scoutGraph";
+import type { Genre } from "@gt/domain/genre";
 import type { Store } from "@gt/kernel/store";
+import { listGenres } from "@gt/kernel/ventures/store";
 
 import { effortOf, sumEffort } from "./effort";
 import { nextPart, openOf, partRunId } from "./parts";
 import { ancestryOf, listSeedBatches, seedOf, seedsPacketId } from "./seedStore";
 import { pausedUnder, readSteer } from "./steer";
-import { readAllNights } from "./store";
+import { readAllNights, readArchiveNights } from "./store";
 import { parseCellId, SEED_AUDIENCES, SEED_REF_RE, seedRef, type Candidate, type Night, type SeedBatch, type Steer } from "./types";
-import { DEFAULT_WING, SCOUT_WINGS, wingRunId, type ScoutWing } from "./wing";
-import { activeWing, withWing } from "./wingScope";
+import { wingRunId } from "./wing";
+import { withWing } from "./wingScope";
 
 export type GraphOptions = {
   /** The kernel store effort is read from (spend rows, job events); absent: no node carries effort. */
@@ -58,41 +67,46 @@ export type GraphInput = {
   /** By `<night>/<c-id>` (./effort.ts effortOf). */
   readonly effort?: ReadonlyMap<string, GraphEffort>;
   readonly now: Date;
-  /** Whose nights these are; absent: the scout wing's. */
-  readonly wing?: ScoutWing;
+  /** The muse ARCHIVE's nights (store.ts readArchiveNights), drawn beside the scout nights, never merged by id; absent: none. */
+  readonly archive?: readonly Night[];
+  /** The archive's effort, by its own `<night>/<c-id>` (effortOf over the archive nights). */
+  readonly archiveEffort?: ReadonlyMap<string, GraphEffort>;
+  /** The kernel's genres, for the venture a trial or a piece inherits from its genre; absent: none inherited. */
+  readonly genres?: readonly Genre[];
 };
 
 /** The nights a group's actual share is read over: the newest live ones. */
 export const SHARE_NIGHTS = 7;
 
 /** Where a night's open cells are decided: its own packet, or - committed in part - its remainder (./parts.ts). */
-const nightPacket = (wing: ScoutWing, id: string, part = 1): string => `pkt:scout:${wingRunId(wing, id, part)}`;
+const nightPacket = (archive: boolean, id: string, part = 1): string => `pkt:scout:${wingRunId(archive ? "muse" : "scout", id, part)}`;
+/** A `<night>/<rest>` ref as a node key: the archive's carry their run id, `muse:<night>/<rest>`, so colliding ids stay apart. */
+const keyIn = (archive: boolean, ref: string): string => (archive ? `muse:${ref}` : ref);
 /** Where a batch's open seeds are decided: its own packet, or its remainder. */
 const batchPacket = (b: SeedBatch): string => seedsPacketId(partRunId(b.id, nextPart(b.committed) ?? 1));
 const stageAt = (s: GraphStage): number => GRAPH_STAGES.indexOf(s);
 
+/** The one graph: the scout root's nights, seeds and steer, and the archive's nights beside them. */
 export async function buildGraph(o: GraphOptions = {}): Promise<ScoutGraph> {
   const now = o.now ?? new Date();
-  const [nights, batches, steer] = await Promise.all([readAllNights(), listSeedBatches(), readSteer()]);
-  const wing = activeWing();
-  if (o.store === undefined) return graphOf({ nights, batches, steer, now, wing });
+  const [[nights, batches, steer], archive] = await Promise.all([withWing("scout", () => Promise.all([readAllNights(), listSeedBatches(), readSteer()])), readArchiveNights()]);
+  if (o.store === undefined) return graphOf({ nights, batches, steer, now, archive });
   const effort = effortOf(o.store, nights, now);
   if (!effort.ok) throw effort.error;
-  return graphOf({ nights, batches, steer, now, wing, effort: effort.value });
-}
-
-/** Every wing's graph, each built inside its own wing's scope. */
-export async function buildGraphs(o: GraphOptions = {}): Promise<Record<ScoutWing, ScoutGraph>> {
-  const now = o.now ?? new Date();
-  const built = await Promise.all(SCOUT_WINGS.map((w) => withWing(w, () => buildGraph({ ...o, now }))));
-  return Object.fromEntries(SCOUT_WINGS.map((w, i) => [w, built[i]])) as Record<ScoutWing, ScoutGraph>;
+  const archiveEffort = effortOf(o.store, archive, now);
+  if (!archiveEffort.ok) throw archiveEffort.error;
+  const genres = o.store.read((r) => listGenres(r));
+  if (!genres.ok) throw genres.error;
+  return graphOf({ nights, batches, steer, now, archive, effort: effort.value, archiveEffort: archiveEffort.value, genres: genres.value });
 }
 
 /* ── Nodes ───────────────────────────────────────────────────────────────── */
 
 function stageKind(c: Candidate): { readonly stage: GraphStage; readonly kind: GraphKind } {
-  if (c.kind === "idea") return { stage: "idea", kind: c.target === "stats" ? "reel" : "idea" };
+  if (c.kind === "idea") return { stage: "idea", kind: c.target === "stats" ? "reel" : c.target === "character" ? "character" : "idea" };
   if (c.kind === "visualizer") return { stage: "output", kind: "visualizer" };
+  // A genre's piece (spark scout-vision S2): kept, it is the output a published video is made of.
+  if (c.kind === "piece" || c.kind === "reel-cut") return { stage: "output", kind: c.kind };
   // A kept idea composed as frames + words before any full video (spark scout-storyboards): its own column.
   if (c.kind === "storyboard") return { stage: "board", kind: "storyboard" };
   return { stage: "run", kind: c.kind };
@@ -136,6 +150,11 @@ function labelOf(c: Candidate, n: Night, nights: readonly Night[]): string {
       return c.use ?? c.brief.subject;
     case "visualizer":
       return c.use ?? trackTitle(nights, c.track) ?? c.track;
+    case "genre":
+    case "venture":
+      return c.name;
+    case "piece":
+      return c.title;
     default:
       return c.use ?? source ?? `${c.kind} ${c.id}`;
   }
@@ -151,23 +170,30 @@ function outputKind(n: Night, c: Candidate, state: GraphState): { readonly kind:
     const cell = `${c.id}/clip`;
     return n.committed?.kept.includes(cell) === true ? { kind: "clip", cell } : undefined;
   }
+  // A piece IS the output (stageKind), and a kept genre or venture proposal births a kernel head (the Library's), not a file.
   return undefined;
 }
 
-/** `cand:<night>/<c-id>` (or `seed:<ref>`) of a committed cell named `<night>/<cell id>`. */
-function cellNode(ref: string): string | undefined {
+/** The venture a node is made inside: its own, else - a trial or a piece - its genre's. */
+function ventureOf(c: Candidate, genres: readonly Genre[] | undefined): string | undefined {
+  if (c.venture !== undefined) return c.venture;
+  const genre = c.kind === "piece" || c.kind === "storyboard" ? c.genre : undefined;
+  return genre === undefined ? undefined : genres?.find((g) => g.id === genre)?.ventureId;
+}
+
+/** `cand:<night>/<c-id>` (or `seed:<ref>`) of a committed cell named `<night>/<cell id>`, read in the archive when `archive`. */
+function cellNode(ref: string, archive: boolean): string | undefined {
   if (SEED_REF_RE.test(ref)) return `seed:${ref}`;
   const i = ref.indexOf("/");
   const cell = i < 0 ? null : parseCellId(ref.slice(i + 1));
-  return cell === null ? undefined : `cand:${ref.slice(0, i)}/${cell.candidate}`;
+  return cell === null ? undefined : `cand:${keyIn(archive, ref.slice(0, i))}/${cell.candidate}`;
 }
 
 /* ── The builder ─────────────────────────────────────────────────────────── */
 
 export function graphOf(input: GraphInput): ScoutGraph {
   const { nights, batches, steer } = input;
-  const wing = input.wing ?? DEFAULT_WING;
-  const own = wing === "scout" ? {} : { wing };
+  const archive = input.archive ?? [];
   const oldest = <T extends { readonly id: string }>(xs: readonly T[], at: (x: T) => string): T[] => [...xs].sort((a, b) => at(a).localeCompare(at(b)) || a.id.localeCompare(b.id));
   const nodes: GraphNode[] = [];
   const links: GraphEdge[] = [];
@@ -201,33 +227,38 @@ export function graphOf(input: GraphInput): ScoutGraph {
     }
   }
 
-  for (const n of oldest(nights, (x) => x.startedAt)) {
+  const rooted = [...oldest(nights, (x) => x.startedAt).map((n) => [false, n] as const), ...oldest(archive, (x) => x.startedAt).map((n) => [true, n] as const)];
+  for (const [inArchive, n] of rooted) {
+    const cand = (ref: string): string => `cand:${keyIn(inArchive, ref)}`;
     for (const c of n.candidates) {
-      const key = `${n.id}/${c.id}`;
+      const key = keyIn(inArchive, `${n.id}/${c.id}`);
       const id = `cand:${key}`;
       const state = candidateState(n, c);
-      const effort = input.effort?.get(key);
+      const effort = (inArchive ? input.archiveEffort : input.effort)?.get(`${n.id}/${c.id}`);
       const branch = {
         ...(pausedAt(c.fromSeed) ? { paused: true as const } : {}),
         at: n.id,
-        packet: nightPacket(wing, n.id, state === "open" ? (nextPart(n.committed) ?? 1) : 1),
-        ...own,
+        packet: nightPacket(inArchive, n.id, state === "open" ? (nextPart(n.committed) ?? 1) : 1),
+        ...(inArchive ? { archive: true as const } : {}),
         ...facetsOf(c.fromSeed),
         ...(c.fromSeed === undefined ? {} : { seed: c.fromSeed }),
       };
-      const label = labelOf(c, n, nights);
-      nodes.push({ id, ...stageKind(c), label, state, ...branch, ...(effort === undefined ? {} : { effort }) });
+      const label = labelOf(c, n, inArchive ? archive : nights);
+      const venture = ventureOf(c, input.genres);
+      nodes.push({ id, ...stageKind(c), label, state, ...branch, ...(effort === undefined ? {} : { effort }), ...(venture === undefined ? {} : { venture }) });
 
-      if (c.fromIdea !== undefined) links.push({ from: `cand:${c.fromIdea}`, to: id });
-      else if (c.fromSeed !== undefined && c.kind !== "visualizer") links.push({ from: `seed:${c.fromSeed}`, to: id });
-      if (c.kind === "direction") for (const ref of c.basedOn) {
-        const from = cellNode(ref);
+      if (c.fromIdea !== undefined) links.push({ from: cand(c.fromIdea), to: id });
+      else if (c.fromSeed !== undefined && c.kind !== "visualizer" && c.kind !== "reel-cut") links.push({ from: `seed:${c.fromSeed}`, to: id });
+      if (c.kind === "direction" || c.kind === "genre" || c.kind === "venture") for (const ref of c.basedOn) {
+        const from = cellNode(ref, inArchive);
         if (from !== undefined) links.push({ from, to: id });
       }
-      if (c.kind === "finding" && c.restates !== undefined) links.push({ from: `cand:${c.restates}`, to: id });
+      if (c.kind === "finding" && c.restates !== undefined) links.push({ from: cand(c.restates), to: id });
+      if (c.kind === "genre") links.push({ from: cand(c.fromStoryboard), to: id });
+      if (c.kind === "piece" || c.kind === "reel-cut") links.push({ from: cand(c.kind === "piece" ? c.fromTrial : c.fromReel), to: id });
       if (c.kind === "visualizer") {
         const [night, cid] = c.track.split("/");
-        links.push({ from: `cand:${night ?? ""}/${cid ?? ""}`, to: id });
+        links.push({ from: cand(`${night ?? ""}/${cid ?? ""}`), to: id });
       }
 
       const out = outputKind(n, c, state);
@@ -255,11 +286,11 @@ export function graphOf(input: GraphInput): ScoutGraph {
     nodes,
     edges,
     groups: groupsOf(nodes, nights, batches, steer),
-    nights: nights.length,
+    nights: nights.length + archive.length,
     batches: batches.length,
     open: {
       ...(openBatch === undefined ? {} : { seeds: { packet: batchPacket(openBatch), undecided: openBatch.committed === undefined ? openBatch.seeds.length : openOf(openBatch.committed).length } }),
-      ...(openNight === undefined ? {} : { night: { packet: nightPacket(wing, openNight.id, nextPart(openNight.committed) ?? 1), undecided: openNight.committed === undefined ? openNight.candidates.filter((c) => c.status === "rendered").length : openOf(openNight.committed).length } }),
+      ...(openNight === undefined ? {} : { night: { packet: nightPacket(false, openNight.id, nextPart(openNight.committed) ?? 1), undecided: openNight.committed === undefined ? openNight.candidates.filter((c) => c.status === "rendered").length : openOf(openNight.committed).length } }),
     },
     paused: [...steer.paused],
   };

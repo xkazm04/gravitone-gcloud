@@ -106,6 +106,7 @@ describe("a dry import reports what the wet one will do", () => {
 });
 
 describe("a dry import over a populated store", () => {
+  // Seeds 5,000 jobs first: under the pre-push gate's parallel load the seeding runs past vitest's 5 s default; the budget below times the dry import alone.
   it("answers 500 runs against 5,000 jobs from one read of the jobs, not one scan per run", () => {
     const s = store();
     const T = Date.parse("2026-10-16T09:00:00Z");
@@ -121,7 +122,7 @@ describe("a dry import over a populated store", () => {
     expect(dry.ok && dry.value.filter((x) => x.outcome === "skipped").map((x) => x.reason)).toEqual(Array(10).fill("a job already serves this id"));
     expect(dry.ok && dry.value.filter((x) => x.outcome === "would-import")).toHaveLength(490);
     expect(ms).toBeLessThan(JOBS_SCAN_BUDGET_MS);
-  });
+  }, 60_000);
 });
 
 describe("the v1 stores the importer reads", () => {

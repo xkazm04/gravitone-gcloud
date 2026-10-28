@@ -1,8 +1,9 @@
 // THE USE / AIM / LOOK DOOR AND THE REPEAT GUARD (spark scout-use-aim WP1) - a brief names its `app` (a
-// closed list), its specific `appTarget`, the one-sentence `aim` (never the prompt) and, for a muse
-// character, her `look` slug; the candidate stores `use` as `<app>: <appTarget>`. A muse character whose
-// card name or look an earlier character of the wing already used is refused with the whole batch,
-// unless that earlier one was kept; the scout wing is unaffected. Every store is a temp directory.
+// closed list), its specific `appTarget`, the one-sentence `aim` (never the prompt) and, for a
+// character, her `look` slug; the candidate stores `use` as `<app>: <appTarget>`. A character whose
+// card name or look an earlier character already used - on a scout night or in the muse archive (spark
+// scout-vision S3) - is refused with the whole batch, unless that earlier one was kept. Every store is a
+// temp directory.
 
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,6 +15,7 @@ const ROOT = vi.hoisted(() => {
   const path = process.getBuiltinModule("node:path");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gt-scout-use-aim-"));
   process.env["SCOUT_STORE_DIR"] = path.join(dir, "scout");
+  process.env["SCOUT_CHANNELS_DIR"] = path.join(dir, "scout-channels");
   process.env["SCOUT_MUSE_STORE_DIR"] = path.join(dir, "scout-muse");
   process.env["SCOUT_KNOWLEDGE_DIR"] = path.join(dir, "knowledge");
   process.env["EXTRACT_STORE_DIR"] = path.join(dir, "extract");
@@ -27,13 +29,14 @@ const ROOT = vi.hoisted(() => {
   return dir;
 });
 
-import { rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { closeProcessKernel } from "@gt/kernel/process";
 
 import { runCli, type CliPorts } from "../../pipeline/scout.mts";
-import { parseIdeas } from "../../lib/foundry/scout/idea.ts";
+import type { RootedNight } from "../../lib/foundry/scout/characters.ts";
+import { checkCharacters, parseIdeas } from "../../lib/foundry/scout/idea.ts";
 import { alreadyDrawn, repeatRefusal } from "../../lib/foundry/scout/ideaRepeat.ts";
 import { readNight } from "../../lib/foundry/scout/store.ts";
 import { tasteBrief, tasteOf } from "../../lib/foundry/scout/taste.ts";
@@ -94,8 +97,22 @@ const batch = (body: unknown): string => {
   writeFileSync(p, JSON.stringify(body), "utf8");
   return p;
 };
-const openMuse = async (): Promise<string> => String((await cli(["--wing", "muse", "open", "--json"])).doc["night"]);
-const ideasOf = async (night: string): Promise<IdeaCandidate[]> => withWing("muse", async () => (await readNight(night)).candidates.filter((c): c is IdeaCandidate => c.kind === "idea"));
+const openNight = async (): Promise<string> => String((await cli(["open", "--json"])).doc["night"]);
+const ideasOf = async (night: string): Promise<IdeaCandidate[]> => (await readNight(night)).candidates.filter((c): c is IdeaCandidate => c.kind === "idea");
+const writeJson = (p: string, v: unknown): void => {
+  mkdirSync(path.dirname(p), { recursive: true });
+  writeFileSync(p, JSON.stringify(v), "utf8");
+};
+/** A kept character seed (a dating-sim cast of one): a character idea grows from one (spark scout-vision S3). */
+const SEED_BATCH = "2026-09-01";
+const SEED = `${SEED_BATCH}/sd-001`;
+const seedBatch = {
+  id: SEED_BATCH,
+  createdAt: `${SEED_BATCH}T00:00:00.000Z`,
+  dry: false,
+  seeds: [{ id: "sd-001", sentence: "A visual novel's first meeting, told in one look.", genre: "romance", subgenre: "slow burn", type: "character", audience: "adult", format: "short", character: { for: "dating-sim", cast: "one" } }],
+  committed: { at: `${SEED_BATCH}T08:00:00.000Z`, by: "operator", kept: ["sd-001"], rejected: [], reasons: {}, notes: {}, dry: false },
+};
 
 const card = (name: string) => ({ name, age: 34, look: "auburn bob, freckles, green wool coat", personality: "dry wit, never hurries" });
 const brief = (title: string, o: Record<string, unknown> = {}) => ({
@@ -110,14 +127,14 @@ const brief = (title: string, o: Record<string, unknown> = {}) => ({
   ...o,
 });
 const character = (name: string, look: string, o: Record<string, unknown> = {}) => brief(name, { target: "character", card: card(name), look, prompt: `${name}, aged 34, auburn bob, photoreal portrait.`, ...o });
-const reason = (raw: unknown, wing: "scout" | "muse" = "scout"): string => {
-  const r = parseIdeas(raw, wing);
+const reason = (raw: unknown): string => {
+  const r = parseIdeas(raw);
   return r.ok ? "ok" : r.error.message;
 };
 
 describe("the brief's app, appTarget, aim and look", () => {
   it("stores use as <app>: <appTarget> beside app, aim and look, and omits look when absent", () => {
-    const r = parseIdeas([brief("a", { look: "painterly-noir" }), brief("b")], "scout");
+    const r = parseIdeas([brief("a", { look: "painterly-noir" }), brief("b")]);
     expect(r.ok && r.value[0]).toMatchObject({ use: "dating-sim: visual novel, first-meeting greeting card", app: "dating-sim", aim: "extract a new artstyle: painterly finish", look: "painterly-noir" });
     expect(r.ok && r.value[1]).not.toHaveProperty("look");
   });
@@ -133,10 +150,12 @@ describe("the brief's app, appTarget, aim and look", () => {
     expect(reason([{ ...b, aim: `to see ${b.prompt} drawn` }])).toMatch(/^idea 1: aim: the aim says why/);
   });
 
-  it("requires a look on a muse character, and scans appTarget and aim for youth and nudity words", () => {
-    expect(reason([character("Mara Veil", "x", { look: undefined })], "muse")).toMatch(/^idea 1: look: a character idea names her look/);
-    expect(reason([brief("a", { aim: "a teen look study" })], "muse")).toMatch(/^idea 1: aim: "teen" is a youth word/);
-    expect(reason([brief("a", { appTarget: "nsfw pin-up" })], "muse")).toMatch(/^idea 1: appTarget: "nsfw" is a nudity or sexual word/);
+  it("requires a look on a character, and scans her appTarget and aim for youth and nudity words", () => {
+    expect(reason([character("Mara Veil", "x", { look: undefined })])).toMatch(/^idea 1: look: a character idea names her look/);
+    const world = { batches: [], kept: [], night: { id: "2026-10-25", sources: [] } };
+    const aim = parseIdeas([character("Mara Veil", "painterly-noir", { aim: "a teen look study" })]);
+    expect(aim.ok && checkCharacters(aim.value, world)).toMatchObject({ ok: false, error: { message: expect.stringMatching(/^idea 1: aim: "teen" is a youth word/) } });
+    expect(reason([character("Mara Veil", "painterly-noir", { appTarget: "nsfw pin-up" })])).toMatch(/^idea 1: appTarget: "nsfw" is a nudity or sexual word/);
   });
 });
 
@@ -156,68 +175,78 @@ const night = (id: string, candidates: Candidate[], committed?: { kept: string[]
 });
 const mara = (id: string, look?: string, over: Partial<IdeaCandidate> = {}) => idea(id, { target: "character", card: card("Mara Veil"), ...(look === undefined ? {} : { look }), ...over });
 const ask = (name: string, look: string) => ({ target: "character", card: { name }, look });
+/** Scout nights, as the guard reads them beside the archive. */
+const scout = (...nights: Night[]): RootedNight[] => nights.map((night) => ({ root: "scout", night }));
 
 describe("the repeat guard", () => {
   it("refuses a card name seen before, case-blind, naming where and what became of her", () => {
     const old = night("2026-10-23", [mara("c-05", "painterly-soft-key")], { kept: [], rejected: [cellId("c-05", "board")] });
-    expect(repeatRefusal([ask("mara veil", "new-look")], [old], "muse")).toBe("idea 1: card mara veil already drawn in 2026-10-23/c-05 (rejected)");
+    expect(repeatRefusal([ask("mara veil", "new-look")], scout(old))).toBe("idea 1: card mara veil already drawn in 2026-10-23/c-05 (rejected)");
   });
 
   it("refuses a look seen before, and says undecided for a night with no verdict", () => {
     const old = night("2026-10-23", [mara("c-05", "painterly-soft-key")]);
-    expect(repeatRefusal([ask("Ines", "painterly-soft-key")], [old], "muse")).toBe("idea 1: look painterly-soft-key already drawn in 2026-10-23/c-05 (undecided)");
+    expect(repeatRefusal([ask("Ines", "painterly-soft-key")], scout(old))).toBe("idea 1: look painterly-soft-key already drawn in 2026-10-23/c-05 (undecided)");
   });
 
   it("lets a kept character come again, and a scene through; a failed earlier card never drew", () => {
     const kept = night("2026-10-23", [mara("c-05", "painterly-soft-key")], { kept: [cellId("c-05", "board")], rejected: [] });
-    expect(repeatRefusal([ask("Mara Veil", "painterly-soft-key")], [kept], "muse")).toBeUndefined();
+    expect(repeatRefusal([ask("Mara Veil", "painterly-soft-key")], scout(kept))).toBeUndefined();
     const old = night("2026-10-23", [mara("c-05", "painterly-soft-key")]);
-    expect(repeatRefusal([{ target: "scene" }], [old], "muse")).toBeUndefined();
+    expect(repeatRefusal([{ target: "scene" }], scout(old))).toBeUndefined();
     const failed = night("2026-10-23", [mara("c-05", "painterly-soft-key", { status: "failed" })]);
-    expect(repeatRefusal([ask("Mara Veil", "painterly-soft-key")], [failed], "muse")).toBeUndefined();
+    expect(repeatRefusal([ask("Mara Veil", "painterly-soft-key")], scout(failed))).toBeUndefined();
   });
 
   it("catches a repeat inside the batch, and a legacy candidate with no look on her name alone", () => {
-    expect(repeatRefusal([ask("Ines", "a-look"), ask("Ines", "b-look")], [], "muse")).toBe("idea 2: card Ines already drawn in idea 1 (this batch)");
-    expect(repeatRefusal([ask("Ines", "a-look"), ask("Tove", "a-look")], [], "muse")).toBe("idea 2: look a-look already drawn in idea 1 (this batch)");
+    expect(repeatRefusal([ask("Ines", "a-look"), ask("Ines", "b-look")], [])).toBe("idea 2: card Ines already drawn in idea 1 (this batch)");
+    expect(repeatRefusal([ask("Ines", "a-look"), ask("Tove", "a-look")], [])).toBe("idea 2: look a-look already drawn in idea 1 (this batch)");
     const legacy = night("2026-10-22", [mara("c-01")]);
-    expect(repeatRefusal([ask("Ines", "any-look")], [legacy], "muse")).toBeUndefined();
-    expect(repeatRefusal([ask("Mara Veil", "any-look")], [legacy], "muse")).toMatch(/already drawn in 2026-10-22\/c-01/);
+    expect(repeatRefusal([ask("Ines", "any-look")], scout(legacy))).toBeUndefined();
+    expect(repeatRefusal([ask("Mara Veil", "any-look")], scout(legacy))).toMatch(/already drawn in 2026-10-22\/c-01/);
   });
 
-  it("leaves the scout wing alone", () => {
-    const old = night("2026-10-23", [mara("c-05", "painterly-soft-key")]);
-    expect(repeatRefusal([ask("Mara Veil", "painterly-soft-key")], [old], "scout")).toBeUndefined();
+  it("reads the muse archive beside the scout nights: the same night id in both is two nights, the archive's named muse:<night>", () => {
+    const old = night("2026-10-23", [mara("c-05", "painterly-soft-key")], { kept: [], rejected: [cellId("c-05", "board")] });
+    const kept = night("2026-10-23", [mara("c-05", "painterly-soft-key")], { kept: [cellId("c-05", "board")], rejected: [] });
+    expect(repeatRefusal([ask("Mara Veil", "painterly-soft-key")], [{ root: "archive", night: old }])).toBe("idea 1: card Mara Veil already drawn in muse:2026-10-23/c-05 (rejected)");
+    // Kept in either root, she comes again.
+    expect(repeatRefusal([ask("Mara Veil", "painterly-soft-key")], [{ root: "archive", night: old }, { root: "scout", night: kept }])).toBeUndefined();
   });
 });
 
 describe("the ideas act refuses a repeat with nothing written", () => {
+  // Spawns child processes: under the pre-push gate's parallel load (and a box drawing at night) it runs past vitest's 5 s default.
   it("a later night repeating a card, a look, or a card twice in one batch writes no candidate", async () => {
-    const first = await openMuse();
-    const ok = await cli(["--wing", "muse", "ideas", first, "--json", batch([character("Mara Veil", "painterly-soft-key")])]);
+    writeJson(path.join(ROOT, "scout", "seeds", SEED_BATCH, "batch.json"), seedBatch);
+    const seeded = (b: Record<string, unknown>) => ({ ...b, seed: SEED });
+    const first = await openNight();
+    const ok = await cli(["ideas", first, "--json", batch([seeded(character("Mara Veil", "painterly-soft-key"))])]);
     expect(ok.code, ok.err).toBe(0);
     expect((await ideasOf(first)).map((c) => [c.look, c.app, c.use])).toEqual([["painterly-soft-key", "dating-sim", "dating-sim: visual novel, first-meeting greeting card"]]);
 
-    const second = await openMuse();
-    const byCard = await cli(["--wing", "muse", "ideas", second, "--json", batch([brief("fine"), character("MARA VEIL", "other-look")])]);
+    const second = await openNight();
+    const byCard = await cli(["ideas", second, "--json", batch([seeded(brief("fine")), seeded(character("MARA VEIL", "other-look"))])]);
     expect(byCard.code).toBe(1);
     expect(byCard.err).toBe(`idea 2: card MARA VEIL already drawn in ${first}/c-01 (undecided)`);
-    const byLook = await cli(["--wing", "muse", "ideas", second, "--json", batch([character("Ines Roca", "painterly-soft-key")])]);
+    const byLook = await cli(["ideas", second, "--json", batch([seeded(character("Ines Roca", "painterly-soft-key"))])]);
     expect(byLook.err).toBe(`idea 1: look painterly-soft-key already drawn in ${first}/c-01 (undecided)`);
-    const twice = await cli(["--wing", "muse", "ideas", second, "--json", batch([character("Ines Roca", "a-look"), character("Ines Roca", "b-look")])]);
+    const twice = await cli(["ideas", second, "--json", batch([seeded(character("Ines Roca", "a-look")), seeded(character("Ines Roca", "b-look"))])]);
     expect(twice.err).toBe("idea 2: card Ines Roca already drawn in idea 1 (this batch)");
     expect(await ideasOf(second)).toEqual([]);
 
-    const good = await cli(["--wing", "muse", "ideas", second, "--json", batch([character("Ines Roca", "a-look")])]);
+    const good = await cli(["ideas", second, "--json", batch([seeded(character("Ines Roca", "a-look"))])]);
     expect(good.code, good.err).toBe(0);
-    const same = await cli(["--wing", "muse", "ideas", second, "--json", batch([character("Ines Roca", "c-look")])]);
+    const same = await cli(["ideas", second, "--json", batch([seeded(character("Ines Roca", "c-look"))])]);
     expect(same.err).toBe(`idea 1: card Ines Roca already drawn in ${second}/c-01 (undecided)`);
     expect(await ideasOf(second)).toHaveLength(1);
-  });
+  }, 60_000);
 });
 
 describe("the taste brief", () => {
   it("names every muse character already drawn, decided or not, and the look beside each idea; a legacy idea reads", async () => {
+    // A muse night of the archive, written as the muse wing left it.
+    writeJson(path.join(ROOT, "scout-muse", "2026-10-20", "night.json"), night("2026-10-20", [mara("c-01", "painterly-soft-key")]));
     const md = await withWing("muse", () => tasteBrief());
     expect(md).toContain("## Already drawn");
     expect(md).toContain("- Mara Veil · look: painterly-soft-key (");

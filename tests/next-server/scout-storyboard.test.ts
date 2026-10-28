@@ -245,14 +245,14 @@ describe("a dry night - words only", () => {
     expect(there.err).toContain(`already has storyboard ${night}/c-02`);
   });
 
-  it("--collect on a night with nothing waiting says so; the muse wing has no storyboard command", async () => {
+  it("--collect on a night with nothing waiting says so; --wing muse refuses it (the wing merged, spark scout-vision S3)", async () => {
     const night = await open([], DRY);
     const r = await cli(["storyboard", night, "--collect", "--json"]);
     expect(r.code, r.err).toBe(0);
     expect(r.doc).toMatchObject({ ok: true, night, candidates: [] });
     const muse = await cli(["storyboard", night, "--wing", "muse", "--json", file([brief(`${KEPT}/c-07`)])]);
     expect(muse.code).toBe(3);
-    expect(muse.err).toMatch(/^storyboard is not in the muse wing/);
+    expect(muse.err).toMatch(/^the muse wing is merged into \/scout/);
   });
 
   it("a batch over the night's cap says how many are left and writes nothing", async () => {

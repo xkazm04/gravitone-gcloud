@@ -5,24 +5,30 @@ import path from "node:path";
 import type { BlobRef } from "@gt/domain/blob";
 import type { ConsequenceItem } from "@gt/domain/board";
 import type { Decision } from "@gt/domain/decision";
+import type { Actor } from "@gt/domain/event";
+import type { Genre } from "@gt/domain/genre";
 import type { LoadSummary } from "@gt/domain/load";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { ApplyClaim } from "@gt/kernel/decision/apply";
+import type { Store } from "@gt/kernel/store";
+import { bornGenre, bornVenture, listGenres } from "@gt/kernel/ventures/store";
 
 import { planExtractCommit } from "../../../foundry/commitPlan.ts";
 import { getExtractRun, patchExtractVerdicts } from "../../../foundry/extract/store.ts";
 import type { ExtractVerdictRecord } from "../../../foundry/extract/types.ts";
-import { leadCell, leadEventsOf, readRestated, verifiedRestates } from "../../../foundry/scout/leadEvents.ts";
+import { genreLead, leadCell, leadEventsOf, readRestated, verifiedRestates, type LeadDraft } from "../../../foundry/scout/leadEvents.ts";
 import { leadsFile, queueEvents, readQueue } from "../../../foundry/scout/leads.ts";
 import { processNightLoad } from "../../../foundry/scout/load.ts";
 import { appendCharacter, appendFinding, appendTechnique, appendWatch, knowledgeRoot } from "../../../foundry/scout/knowledge.ts";
 import { meshRoot, mutateAsset, readAsset, resolveInAsset, withVariant } from "../../../foundry/mesh/store.ts";
 import { deskAbs, deskCellUrl, readDeskNight, saveDeskNight } from "../../../foundry/local-draws/desk.ts";
+import { followNight } from "../../../foundry/scout/episodeMoves.ts";
 import { openOf, remainderLine, splitPart } from "../../../foundry/scout/parts.ts";
-import { mutateNight, nightDir, readNight, resolveInNight, scoutRoot } from "../../../foundry/scout/store.ts";
-import type { Night, NightId } from "../../../foundry/scout/types.ts";
+import { mutateNight, nightDir, nightRoot, readNight, resolveInNight } from "../../../foundry/scout/store.ts";
+import type { GenreProposalCandidate, Night, NightId, VentureProposalCandidate } from "../../../foundry/scout/types.ts";
 import { wingRunId, type ScoutWing } from "../../../foundry/scout/wing.ts";
 import { activeWing } from "../../../foundry/scout/wingScope.ts";
+import { kernel } from "../../../kernelStore.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { modelItemId } from "../../../library/feeds/mesh.ts";
 import { sceneShelf } from "../../../library/feeds/scout.ts";
@@ -44,7 +50,9 @@ import {
   type Preview,
 } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
-import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, STORYBOARD_VERDICT, build, commitOf, extractDecisions, ideaCell, meshKey, sameOutcome, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, PROPOSAL_REJECTED, STORYBOARD_VERDICT, bornLine, build, commitOf, extractDecisions, ideaCell, meshKey, pieceCell, pieceVerdictLine, sameOutcome, sheetCellOf, sheetVerdictLine, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { reelCutVerdictLine, reelVerdictLine } from "./scoutReelCells.ts";
+import { reelCell, reelCutCell } from "../../../foundry/scout/reelTaste.ts";
 import { musicOf } from "./scoutMusic.ts";
 import { nightRefusal, partOfBuilt, partWords, settledPart, withPart } from "./scoutPart.ts";
 import { inWing, isCharacter, keptTechnique, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta, partOfRun } from "./scoutWing.ts";
@@ -72,6 +80,11 @@ import { inWing, isCharacter, keptTechnique, knowledgeOf, knowledgeWrite, nightO
 //   storyboard  nothing of its own either (spark scout-storyboards): kept whole, the record makes it the root a
 //            full-video act names (keptStoryboardFor); the preview says so on its words cell. One that carries
 //            a technique (spark scout-vision) files it as a finding's line in its step's PATTERNS.md, same marker.
+//   genre    (spark scout-vision S2) a kept proposal BIRTHS its genre or venture in the kernel (packages/kernel/src/
+//   venture  ventures/ bornGenre, bornVenture - idempotent on the proposal `<night>/<c-id>`, so a redelivery births
+//            nothing twice); the preview names the birth. A rejected one is the record alone: its reasons ban it.
+//   piece    a kept piece queues its genre's `genre-publishable` registry lead (leadEvents.ts genreLead) with the leads;
+//            the genre's publishable state is derived from the record (lib/foundry/scout/genres.ts), never written.
 //   leads    what the keeps EARNED for the ai-registry (../../../foundry/scout/
 //            leadEvents.ts) into the lead queue, once by key; the preview names each.
 //   all      every verdict, its reasons and its note into `night.committed`,
@@ -102,11 +115,50 @@ import { inWing, isCharacter, keptTechnique, knowledgeOf, knowledgeWrite, nightO
 const rel = (abs: string): string => path.relative(process.cwd(), abs).replace(/\\/g, "/");
 
 /** The read, with what the registry leads are derived from (the nights its findings restate, the keys queued) and the night's load (never digested). */
-type ScoutRead = ScoutV1 & { readonly wing: ScoutWing; readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[]; readonly load?: LoadSummary; readonly desk?: true; /** The part this read opens (absent: 1, the night's own packet). */ readonly part?: number };
+type ScoutRead = ScoutV1 & { readonly wing: ScoutWing; readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[]; readonly load?: LoadSummary; readonly desk?: true; /** The part this read opens (absent: 1, the night's own packet). */ readonly part?: number; /** The kernel's genres, read when the night holds a piece (its lead names the genre). */ readonly genres?: readonly Genre[] };
+
+/** The kernel a kept proposal is born into and a piece's genre is read from; the process's (lib/kernelStore.ts) when absent. */
+export type ScoutAdapterDeps = { readonly store?: () => Result<Store> };
+
+const processStore = (): Result<Store> => {
+  const k = kernel();
+  return k.ok ? ok(k.value.store) : k;
+};
+
+/** The kernel's genres, when the night holds a piece; none read otherwise. */
+function genresFor(night: Night, storeOf: () => Result<Store>): Result<readonly Genre[] | undefined> {
+  if (!night.candidates.some((c) => c.kind === "piece")) return ok(undefined);
+  const s = storeOf();
+  return s.ok ? s.value.read((r) => listGenres(r)) : s;
+}
+
+/** The `genre-publishable` lead each kept piece queues (spark scout-vision S2), for a genre the kernel holds. */
+function pieceLeads(night: Night, kept: Iterable<string>, genres: readonly Genre[] | undefined): LeadDraft[] {
+  const keeps = new Set(kept);
+  const out: LeadDraft[] = [];
+  for (const c of night.candidates) {
+    const cell = `${c.id}/video`;
+    const g = c.kind === "piece" && keeps.has(cell) ? genres?.find((x) => x.id === c.genre) : undefined;
+    if (g !== undefined) out.push(genreLead(night.id, { id: g.id, name: g.name, use: g.use, cells: [cell] }));
+  }
+  return out;
+}
+
+/** A kept proposal's birth in one kernel transaction; a second delivery of the same proposal births nothing. */
+function birthOf(storeOf: () => Result<Store>, night: NightId, c: GenreProposalCandidate | VentureProposalCandidate, actor: Actor): Result<void> {
+  const s = storeOf();
+  if (!s.ok) return s;
+  const proposal = `${night}/${c.id}`;
+  const r =
+    c.kind === "genre"
+      ? s.value.tx((t) => bornGenre(t, { name: c.name, bornFrom: c.fromStoryboard, proposal, use: c.use ?? "", look: c.look, grammar: c.grammar }, actor))
+      : s.value.tx((t) => bornVenture(t, { name: c.name, kind: c.ventureKind, frame: c.frame, proposal }, actor));
+  return r.ok ? ok(undefined) : err(r.error.code, `${c.kind} ${c.id} (${c.name}): ${r.error.message}`, { cause: r.error });
+}
 
 /* ── read ──────────────────────────────────────────────────────────────────── */
 
-async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
+async function read(ref: AdapterRef, storeOf: () => Result<Store>): Promise<Result<ScoutRead>> {
   const { run: id, part } = splitPart(ref.runId);
   const wing = activeWing();
   const got = await v1Call(() => readNight(id));
@@ -162,9 +214,21 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
           return fromV1(e);
         }
       }
-    } else if (c.kind === "track" || c.kind === "visualizer" || c.kind === "storyboard") {
-      // Every cell file must be listed here, or media misses it: a storyboard's frames too (a failed panel is null).
-      const own = c.kind === "track" ? c.clips.map((x) => x.path) : c.kind === "storyboard" ? (c.images ?? []).map((f) => f ?? undefined) : [c.video, c.still];
+    } else if (c.kind === "track" || c.kind === "visualizer" || c.kind === "storyboard" || c.kind === "piece" || c.kind === "sheet" || c.kind === "reel" || c.kind === "reel-cut") {
+      // Every cell file must be listed here, or media misses it: a storyboard's frames and a trial's clips too (a failed
+      // panel or clip is null), a piece's cut, and a character's reference sheet (spark scout-vision S3).
+      const own =
+        c.kind === "track"
+          ? c.clips.map((x) => x.path)
+          : c.kind === "storyboard"
+            ? [...(c.images ?? []).map((f) => f ?? undefined), ...(c.clips ?? []).map((x) => x?.path)]
+            : c.kind === "piece"
+              ? [c.video]
+              : c.kind === "sheet" || c.kind === "reel"
+                ? [c.image]
+                : c.kind === "reel-cut"
+                  ? [c.video]
+                : [c.video, c.still];
       try {
         for (const f of own) if (f !== undefined) files.push({ key: f, abs: locate(f) });
       } catch (e) {
@@ -180,7 +244,9 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
   const load = processNightLoad(night);
   const music = await musicOf(night);
   if (!music.ok) return music;
-  return ok({ ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...(part === 1 ? {} : { part }), ...music.value, wing, night, styles, assets, media: Object.fromEntries(media.value), knowledge: knowledge.value, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
+  const genres = genresFor(night, storeOf);
+  if (!genres.ok) return genres;
+  return ok({ ...(genres.value === undefined ? {} : { genres: genres.value }), ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...(part === 1 ? {} : { part }), ...music.value, wing, night, styles, assets, media: Object.fromEntries(media.value), knowledge: knowledge.value, at: { scout: rel(nightRoot(night.id)), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
@@ -341,10 +407,31 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
       if (verdict !== undefined) parts.writes.push({ ...nightFile, candidate: words, detail: STORYBOARD_VERDICT[verdict] });
       const k = v1.knowledge[c.id];
       if (verdict === "keep" && k !== undefined) parts.writes.push(knowledgeWrite(v1.at.knowledge, c, k, words));
+    } else if (c.kind === "genre" || c.kind === "venture") {
+      const words = wordsCell(c.id);
+      const d = byCell.get(words)?.verdict;
+      if (d === "keep") parts.promotions.push({ target: c.kind === "genre" ? "genres" : "ventures", candidate: words, detail: bornLine(c) });
+      else if (d === "reject") parts.writes.push({ ...nightFile, candidate: words, detail: PROPOSAL_REJECTED });
+    } else if (c.kind === "piece") {
+      // Kept, the genre is publishable - derived from this record, nothing else written; its lead is named below.
+      const cell = pieceCell(c.id);
+      const d = byCell.get(cell)?.verdict;
+      if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: pieceVerdictLine(c, d) });
+    } else if (c.kind === "sheet") {
+      // Kept, it is her reference - derived from this record (characters.ts keptCharacters), nothing else written.
+      const cell = sheetCellOf(c.id);
+      const d = byCell.get(cell)?.verdict;
+      if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: sheetVerdictLine(c, d) });
+    } else if (c.kind === "reel" || c.kind === "reel-cut") {
+      // Kept, a reel makes its full cut due (taste `## Reels to cut`) and a cut is the output - derived from this record.
+      const cell = c.kind === "reel" ? reelCell(c.id) : reelCutCell(c.id);
+      const d = byCell.get(cell)?.verdict;
+      if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: c.kind === "reel" ? reelVerdictLine(d) : reelCutVerdictLine(d) });
     }
   }
   // What the keeps earn, over every part's keeps; a later part names only the leads it adds.
-  for (const e of leadEventsOf({ night: n, kept: new Set([...kept, ...(n.committed?.kept ?? [])]), earlier: v1.earlier })) {
+  const allKept = new Set([...kept, ...(n.committed?.kept ?? [])]);
+  for (const e of [...leadEventsOf({ night: n, kept: allKept, earlier: v1.earlier }), ...pieceLeads(n, allKept, v1.genres)]) {
     const cell = leadCell(e);
     const queued = v1.queued.includes(e.key);
     if (queued && part > 1) continue;
@@ -433,7 +520,7 @@ async function applyAsset(assetId: string, cid: string, record: Pick<Night["comm
   return r.ok ? ok(undefined) : err(r.error.code, `game asset ${cid} (mesh asset ${assetId}): ${r.error.message}`, { cause: r.error });
 }
 
-async function apply(claim: ApplyClaim): Promise<Result<void>> {
+async function apply(claim: ApplyClaim, storeOf: () => Result<Store>): Promise<Result<void>> {
   const done = committedOutcome(claim);
   if (!done.ok) return done;
   const runId = runIdOf(claim);
@@ -463,6 +550,8 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
 
   const settled = (n: Night): Result<void> | undefined => settledPart(id, n.committed, record, part);
   const before = settled(night);
+  // A redelivery of a part already merged still walks the episodes: a crash between the record and the moves is made up here.
+  if (before?.ok === true) await followNight(night);
   if (before !== undefined) return before;
   if (night.state === "open") return err("conflict", `scout night ${id}: The night is still running.`);
 
@@ -470,6 +559,8 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
     const kept = new Set(record.kept);
     const earlier = await readRestated(night, readNight);
     const restated = verifiedRestates(night, earlier);
+    // A kept proposal is born by the operator's keep; a record no operator decided is the agent's, delivered by this holder.
+    const actor: Actor = record.by === "operator" ? { kind: "operator", id: "board" } : { kind: "machine", id: claim.holder };
     for (const c of night.candidates) {
       if (c.kind === "style" && c.extractRunId !== undefined) {
         const holding = items.some((it) => it.startsWith(`${c.id}/`) && held.has(it));
@@ -494,10 +585,16 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
       } else if (c.kind === "asset3d" && c.assetId !== undefined) {
         const r = await applyAsset(c.assetId, c.id, record);
         if (!r.ok) return r;
+      } else if ((c.kind === "genre" || c.kind === "venture") && kept.has(wordsCell(c.id))) {
+        const r = birthOf(storeOf, id, c, actor);
+        if (!r.ok) return r;
       }
     }
     // Then what the keeps earned, over every part's keeps: once by key, so a redelivery queues nothing.
-    const leads = leadEventsOf({ night, kept: [...(night.committed?.kept ?? []), ...record.kept], earlier });
+    const allKept = [...(night.committed?.kept ?? []), ...record.kept];
+    const genres = genresFor(night, storeOf);
+    if (!genres.ok) return genres;
+    const leads = [...leadEventsOf({ night, kept: allKept, earlier }), ...pieceLeads(night, allKept, genres.value)];
     const queued = leads.length === 0 ? ok([]) : await v1Call(() => queueEvents(leads));
     if (!queued.ok) return queued;
   }
@@ -505,7 +602,15 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
   // `committed` only once nothing is left open.
   const after = await v1Call(() => mutateNight(id, (n) => withPart(n, record, part)));
   if (!after.ok) return after;
+  // The verdict ends a channel episode's candidate: kept, or thrown (lib/foundry/scout/episodeMoves.ts; never fails the commit).
+  await followNight(after.value);
   return settled(after.value) ?? err("internal", `scout night ${id}: the commit record did not land in ${nightDir(id)}`);
 }
 
-export const scoutAdapter: DecisionAdapter<ScoutRead> = inWing<ScoutRead>({ source: "scout", partial: true, read, packet, consequence, apply });
+/** The scout adapter over a kernel (a test hands its own; production the process's). */
+export function makeScoutAdapter(deps: ScoutAdapterDeps = {}): DecisionAdapter<ScoutRead> {
+  const storeOf = deps.store ?? processStore;
+  return inWing<ScoutRead>({ source: "scout", partial: true, read: (ref) => read(ref, storeOf), packet, consequence, apply: (claim) => apply(claim, storeOf) });
+}
+
+export const scoutAdapter: DecisionAdapter<ScoutRead> = makeScoutAdapter();

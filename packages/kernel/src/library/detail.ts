@@ -133,7 +133,9 @@ export function libraryDetail(store: Store, id: string): Result<LibraryItemDetai
     if (!rec.ok) throw rec.error;
     const vocabulary = vocabularyOf(r, seq, rec.value.item);
     const pinned = r.get("SELECT 1 AS x FROM library_marks WHERE item_id = ? AND kind = 'pin' AND ref = ?", id, DEFAULT_PIN) !== undefined;
-    const acts: LibraryActName[] = [pinned ? "unpin" : "pin", "use-in-project", ...(rec.value.item.kind === "model" ? (["export"] as const) : [])];
+    // A genre or a venture is a frame, not footage: nothing to use in a production project (spark scout-vision S2).
+    const usable = rec.value.item.kind !== "genre" && rec.value.item.kind !== "venture";
+    const acts: LibraryActName[] = [pinned ? "unpin" : "pin", ...(usable ? (["use-in-project"] as const) : []), ...(rec.value.item.kind === "model" ? (["export"] as const) : [])];
     // The operator's marks are collections of the item as the detail shows it.
     const marks = r.all("SELECT kind, ref FROM library_marks WHERE item_id = ? ORDER BY kind, ref", id);
     const collections = [...rec.value.item.collections];

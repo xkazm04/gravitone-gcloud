@@ -131,14 +131,14 @@ describe("the export", () => {
     expect(Object.keys(m["sha256"] as object).sort()).toEqual(["concept.png", "evidence/poster.png", "final.glb"]);
   });
 
-  it("mage-arena: export/<SK|SM>_<Name>.glb under characters, and its T38 manifest of items", async () => {
+  it("mage-arena is retired (spark scout-vision S4): the export is refused with its sentence, nothing written", async () => {
     await onDisk(asset());
     const r = root("mage-arena");
-    await exportVariant("hooded-archer", "t2-a", "mage-arena", { root: r, now: "2026-10-22T12:00:00.000Z" });
-    const dir = path.join(r, "apps", "vr", "art", "characters", "hooded-archer-t2-a");
-    expect(files(dir)).toEqual(["export/HoodedArcher_poster.png", "export/SK_HoodedArcher.glb", "manifest.json"]);
-    const m = JSON.parse(readFileSync(path.join(dir, "manifest.json"), "utf8")) as { items: { asset: string; path: string; bytes: number }[] };
-    expect(m.items[0]).toMatchObject({ asset: "SK_HoodedArcher", path: "apps/vr/art/characters/hooded-archer-t2-a/export/SK_HoodedArcher.glb", bytes: GLB.byteLength });
+    const why = "mage-arena is developed on another device; gravitone no longer briefs for it (spark scout-vision S4)";
+    await expect(exportVariant("hooded-archer", "t2-a", "mage-arena", { root: r, now: "2026-10-22T12:00:00.000Z" })).rejects.toThrow(why);
+    await expect(planExport(asset(), "t2-a", "mage-arena", { root: r, now: "2026-10-22T12:00:00.000Z" })).rejects.toThrow(why);
+    expect(readdirSync(r)).toEqual([]);
+    expect([...EXPORT_PROJECTS]).toEqual(["pof", "bp"]);
   });
 
   it("refuses an absent checkout and writes nothing", async () => {
@@ -158,7 +158,7 @@ describe("the export", () => {
   it("refuses a variant that is not finished, and names the roots from the environment", async () => {
     await expect(planExport(asset(), "t1-b", "pof", { root: tmp, now: "2026-10-22T12:00:00.000Z" })).rejects.toThrow("Variant hooded-archer/t1-b is failed, not finished: there is no glb to hand off.");
     expect(exportRoot("bp", { EXPORT_ROOT_BP: "D:/bp" })).toBe("D:/bp");
-    expect(exportRoot("mage-arena", {})).toBe(path.resolve(process.cwd(), "..", "mage-arena"));
+    expect(exportRoot("pof", {})).toBe(path.resolve(process.cwd(), "..", "pof"));
   });
 });
 

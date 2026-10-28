@@ -33,6 +33,7 @@ import {
   standStill,
   type SceneDraft,
 } from "../foundry/scout/scene.ts";
+import { generatorOnLane } from "../foundry/scout/stillEngine.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
 import { CLIP_SECONDS, type Night, type SceneCandidate, type SceneClip } from "../foundry/scout/types.ts";
 import { imageFailure } from "./frames.ts";
@@ -180,12 +181,13 @@ async function readAct(e: SceneEngines, req: SceneRequest, k: number, ctx: StepC
 async function replicateAct(e: SceneEngines, req: SceneRequest, k: number, ctx: StepContext): Promise<StepOutcome> {
   const { c } = await load(req);
   if (c.recipe === undefined) return fatal("refused", `${c.id} has no recipe to replicate`);
-  const gen = replicaRequest(c.recipe, k);
+  // The engine is the lane's where the lane names one (stillEngine.ts `generatorOnLane`): the launch priced it.
+  const gen = replicaRequest(c.recipe, k, generatorOnLane(ctx.job.lane));
   const got = await meteredCall<{ images: ImageRef[]; provenance?: GeneratedImages["provenance"] }>(ctx, {
     provider: "imaging-router",
     model: "generate",
     // No `references`: the replica is drawn from the recipe's words alone.
-    payload: { prompt: gen.prompt, negativePrompt: gen.negativePrompt, aspect: gen.aspect, count: gen.count, prefer: gen.prefer, seed: gen.seed },
+    payload: { prompt: gen.prompt, negativePrompt: gen.negativePrompt, aspect: gen.aspect, count: gen.count, prefer: gen.prefer, seed: gen.seed, ...(gen.quality === undefined ? {} : { quality: gen.quality }) },
     estimate: req.estimates.replica,
     stand: () => ({ images: [standStill()] }),
     live: async () => {

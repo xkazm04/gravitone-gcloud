@@ -70,7 +70,7 @@ export function storyboardSections(judged: readonly Night[], nights: readonly Ni
   for (const n of nights) {
     for (const c of n.candidates) {
       if (c.kind !== "storyboard" || storyboardVerdict(n, c) !== "kept") continue;
-      ready.push(`- ${c.fromIdea} · storyboard ${n.id}/${c.id} · ${c.title}`, `  ${c.paragraph}`);
+      ready.push(`- ${c.fromIdea ?? `episode ${c.fromEpisode ?? "-"}`} · storyboard ${n.id}/${c.id} · ${c.title}`, `  ${c.paragraph}`);
     }
   }
   const none = (xs: readonly string[]): readonly string[] => (xs.length === 0 ? ["- none"] : xs);

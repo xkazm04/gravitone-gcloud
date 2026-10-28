@@ -1,11 +1,13 @@
-// THE MUSE WING'S IDEAS (spark scout-muse WP2) - `pipeline/scout.mts --wing muse ideas` end to end,
-// every store a temp directory set below before any lib/ module loads: the muse door (its targets, the
-// card, the stated age, the refused words) beside the unchanged scout door; the eye's judge over a fake
-// recognize; and the scout-ideas job of a muse night - its own job id, its stills drawn 9:16 at quality
-// low, each one judged before it is written, a failing still never kept. No vendor, no browser, no
-// network: the fake studio records, the eye is scripted, and fetch throws.
+// THE MUSE LINE, ON A SCOUT NIGHT (spark scout-muse WP2; re-pointed by spark scout-vision S3, when the muse rules moved
+// from the WING to the BRIEF) - `pipeline/scout.mts ideas` end to end, every store a temp directory set below before
+// any lib/ module loads: a character idea on any night (her card, her stated age, the refused words) beside briefs that
+// draw nobody and read none of it; the eye's judge over a fake recognize; and the scout-ideas job of a scout night -
+// its bare job id, a character drawn 9:16 at quality low and judged before it is written, a failing still never kept,
+// the idea that draws nobody drawn at the studio's default and never judged. No vendor, no browser, no network: the
+// fake studio records, the eye is scripted, and fetch throws. The card rules by audience and app, the cast and the
+// source are tests/next-server/scout-characters.test.ts.
 
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -28,18 +30,17 @@ const ROOT = vi.hoisted(() => {
   return dir;
 });
 
-import { existsSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { closeProcessKernel } from "@gt/kernel/process";
 
 import { runCli, type CliPorts } from "../../pipeline/scout.mts";
-import { parseIdeas } from "../../lib/foundry/scout/idea.ts";
-import { judgeStill, STAND_JUDGE } from "../../lib/foundry/scout/judge.ts";
+import { checkCharacters, parseIdeas } from "../../lib/foundry/scout/idea.ts";
+import { judgeInstruction, judgeStill, JUDGE_INSTRUCTION, PARODY_CLAUSE, STAND_JUDGE } from "../../lib/foundry/scout/judge.ts";
 import { judgeFailure, type MuseJudge } from "../../lib/foundry/scout/muse.ts";
 import { readNight, resolveInNight } from "../../lib/foundry/scout/store.ts";
-import type { IdeaCandidate } from "../../lib/foundry/scout/types.ts";
-import { withWing } from "../../lib/foundry/scout/wingScope.ts";
+import type { IdeaCandidate, Seed, SeedBatch } from "../../lib/foundry/scout/types.ts";
 import { __resetBudget } from "../../lib/imaging/budget.ts";
 import { FAKE_LEONARDO_STUDIO, resetFakeLeonardoStudio } from "../../lib/imaging/providers/leonardoStudio.ts";
 import { generate } from "../../lib/imaging/router.ts";
@@ -51,6 +52,22 @@ const LIVE = (() => {
   return rest;
 })();
 
+// One kept character seed (an adult roleplay cast of one) and one kept seed of another kind: once a seed is kept,
+// every brief grows from one, and a character from the first.
+const BATCH = "2026-09-01";
+const SEEDS: Seed[] = [
+  { id: "sd-001", sentence: "A cartographer who flirts in map projections.", genre: "romance", subgenre: "slow burn", type: "character", audience: "adult", format: "short", character: { for: "roleplay", cast: "one" } },
+  { id: "sd-002", sentence: "A harbour at dusk told in five flat tones.", genre: "mood piece", subgenre: "harbour", type: "animated short", audience: "adult", format: "short" },
+];
+const SEED_BATCH: SeedBatch = { id: BATCH, createdAt: `${BATCH}T00:00:00.000Z`, dry: false, seeds: SEEDS, committed: { at: `${BATCH}T08:00:00.000Z`, by: "operator", kept: ["sd-001", "sd-002"], rejected: [], reasons: {}, notes: {}, dry: false } };
+const CHARACTER_SEED = `${BATCH}/sd-001`;
+const OTHER_SEED = `${BATCH}/sd-002`;
+
+beforeAll(() => {
+  const p = path.join(ROOT, "scout", "seeds", BATCH, "batch.json");
+  mkdirSync(path.dirname(p), { recursive: true });
+  writeFileSync(p, JSON.stringify(SEED_BATCH), "utf8");
+});
 beforeEach(() => {
   resetFakeLeonardoStudio();
   __resetBudget();
@@ -102,89 +119,75 @@ const brief = (title: string, o: Record<string, unknown> = {}) => ({
   appTarget: "avatar portrait for a companion",
   aim: "extract a new artstyle: painterly finish",
   look: "painterly-noir",
+  seed: OTHER_SEED,
   ...o,
 });
-const MUSE = [
-  brief("Gouache noir detective"),
-  brief("Rain-lit station farewell", { target: "scene", prompt: "Two women aged 29 and 41 share an umbrella on a rain-lit platform, anime cel shading, wide frame." }),
-  brief("Mara Veil", { target: "character", card: CARD, prompt: "Mara Veil, aged 34, auburn bob, grey eyes, freckles, long camel trench coat, photoreal portrait." }),
-];
-// The live night draws a woman the dry night did not: the repeat guard (lib/foundry/scout/ideaRepeat.ts) refuses a card or look drawn on an earlier night.
-const LIVE_MUSE = [MUSE[0], MUSE[1], brief("Ines Roca", { target: "character", card: { ...CARD, name: "Ines Roca" }, look: "painterly-ines", prompt: "Ines Roca, aged 34, auburn bob, grey eyes, freckles, long camel trench coat, photoreal portrait." })];
-const SCOUT = [brief("Lantern fishers at low tide", { target: "scene", prompt: "Lantern fishers at low tide, loose gouache thumbnail, wide frame." })];
+const character = (name: string, o: Record<string, unknown> = {}) => brief(name, { target: "character", card: { ...CARD, name }, seed: CHARACTER_SEED, prompt: `${name}, aged 34, auburn bob, grey eyes, freckles, long camel trench coat, photoreal portrait.`, ...o });
+const IDEAS = [brief("Gouache noir detective"), brief("Rain-lit station farewell", { target: "scene", prompt: "Two women share an umbrella on a rain-lit platform, anime cel shading, wide frame." }), character("Mara Veil")];
+// The live night draws a character the dry night did not: the repeat guard (lib/foundry/scout/ideaRepeat.ts) refuses a card or look drawn on an earlier night.
+const LIVE_IDEAS = [IDEAS[0], character("Ines Roca", { look: "painterly-ines" }), character("Tove Lind", { look: "painterly-tove" }), character("Asta Moor", { look: "painterly-asta" })];
 
-const refusal = (raw: unknown, wing: "scout" | "muse"): string => {
-  const r = parseIdeas(raw, wing);
+const WORLD = { batches: [SEED_BATCH], kept: [], night: { id: "2026-09-20", sources: [] } };
+const refusal = (raw: unknown): string => {
+  const p = parseIdeas(raw);
+  const r = p.ok ? checkCharacters(p.value, WORLD) : p;
   return r.ok ? "ok" : r.error.message;
 };
-const muse = (o: Record<string, unknown>, k = 2): string => refusal([MUSE[0], ...Array<unknown>(k - 2).fill(MUSE[0]), brief("x", o)], "muse");
+const at2 = (o: Record<string, unknown>, k = 2): string => refusal([IDEAS[0], ...Array<unknown>(k - 2).fill(IDEAS[0]), character("Mara Veil", o)]);
 
-describe("the muse door", () => {
-  it("accepts a batch of style, scene and character; each idea draws 9:16 unless it names its aspect, and a character carries her card", () => {
-    const r = parseIdeas([...MUSE, brief("Wide establishing look", { aspect: "16:9" })], "muse");
+describe("the character door on any night", () => {
+  it("accepts style, scene and character in one batch: a character draws 9:16 unless it names its aspect, the rest 16:9, and she carries her card", () => {
+    const r = parseIdeas([...IDEAS, character("Ines Roca", { aspect: "16:9" })]);
     expect(r.ok, r.ok ? "" : r.error.message).toBe(true);
     if (!r.ok) return;
     expect(r.value.map((b) => [b.target, b.aspect])).toEqual([
-      ["style", "9:16"],
-      ["scene", "9:16"],
-      ["character", "9:16"],
       ["style", undefined],
+      ["scene", undefined],
+      ["character", "9:16"],
+      ["character", undefined],
     ]);
     expect(r.value[2]?.card).toEqual(CARD);
   });
 
-  it("refuses a target the wing does not draw", () => {
-    expect(muse({ target: "asset3d", app: "videogame", appTarget: "a game's armoury" })).toBe("idea 2: target: asset3d is not drawn in the muse wing (it draws style, scene, character)");
-    const reel = { brief: { case: "c", title: "t", hook: "h", unit: "u", kind: "counter", data: [1], illustrative: true }, approach: { name: "n", medium: "svg", grammar: "stepped", density: "low", direction: "d", falsifier: "f" } };
-    const stats = muse({ target: "stats", reel });
-    expect(stats.startsWith("idea 2: reel.") ? "the reel fixture no longer parses" : stats).toBe("idea 2: target: stats is not drawn in the muse wing (it draws style, scene, character)");
-  });
-
-  it("refuses a character without her card, a card on any other idea, and a card's age outside 25..50", () => {
-    expect(muse({ target: "character" })).toBe("idea 2: card: a character idea carries her card {name, age, look, personality}");
-    expect(muse({ card: CARD })).toBe("idea 2: card: only a character idea carries a card");
+  it("refuses a character without her card, a card on any other idea, a studio aspect it does not draw, and her age off her seed's rules", () => {
+    expect(at2({ card: undefined })).toBe("idea 2: card: a character idea carries her card {name, age, look, personality}");
+    expect(refusal([brief("x", { card: CARD })])).toBe("idea 1: card: only a character idea carries a card");
     // The studio's page offers 16:9, 1:1 and 9:16 only (read 2026-10-23): a 4:5 brief would fail at the radio.
-    expect(muse({ aspect: "4:5" })).toBe("idea 2: aspect: the studio draws 16:9, 1:1, 9:16; it has no 4:5");
-    expect(muse({ target: "character", card: { ...CARD, age: 24 } })).toBe("idea 2: card.age: her age is a whole number from 25 to 50");
-    expect(muse({ target: "character", card: { ...CARD, age: 51 } })).toBe("idea 2: card.age: her age is a whole number from 25 to 50");
+    expect(at2({ aspect: "4:5" })).toBe("idea 2: aspect: the studio draws 16:9, 1:1, 9:16; it has no 4:5");
+    expect(at2({ card: { ...CARD, age: 24 }, prompt: "Mara Veil, aged 24." })).toBe("idea 2: card.age: an adult-audience character is 25 or older; 24 is under");
+    // A roleplay seed holds her to 50 (the operator, 2026-10-24).
+    expect(at2({ card: { ...CARD, age: 51 }, prompt: "Mara Veil, aged 51." })).toBe("idea 2: card.age: a roleplay character is 50 or younger; 51 is over");
   });
 
-  it("refuses a prompt that states no age, an age under 25 or over 50, and a character prompt whose age is not her card's", () => {
-    expect(muse({ prompt: "A poster of a woman in a trench coat, painterly." })).toBe('idea 2: prompt: states no age; a muse prompt says "aged NN", 25 or older');
-    expect(muse({ prompt: "A poster of a woman aged 22, painterly." })).toBe('idea 2: prompt: "aged 22" is under 25, the youngest a muse prompt may state');
-    expect(muse({ prompt: "Two women aged 30 and aged 19, painterly." })).toBe('idea 2: prompt: "aged 19" is under 25, the youngest a muse prompt may state');
-    expect(muse({ prompt: "A poster of a woman aged 55, painterly." })).toBe('idea 2: prompt: "aged 55" is over 50, the oldest a muse prompt may state');
-    expect(muse({ target: "character", card: CARD, prompt: "Mara Veil, aged 31, auburn bob." })).toBe('idea 2: prompt: "aged 31" is not her card\'s age, 34');
-    expect(muse({ prompt: "A woman Aged 40, painterly." })).toBe("ok");
+  it("refuses a character prompt that states no age or another age than her card's; the case of `Aged` does not matter", () => {
+    expect(at2({ prompt: "Mara Veil in a trench coat, painterly." })).toBe('idea 2: prompt: states no age; a character prompt says "aged 34", her card\'s age');
+    expect(at2({ prompt: "Mara Veil, aged 31, auburn bob." })).toBe('idea 2: prompt: "aged 31" is not her card\'s age, 34');
+    expect(at2({ prompt: "Mara Veil and a friend aged 30 and aged 19, painterly." })).toBe('idea 2: prompt: "aged 30" is not her card\'s age, 34');
+    expect(at2({ prompt: "Mara Veil, Aged 34, painterly." })).toBe("ok");
   });
 
-  it("refuses a youth word and a nudity or sexual word anywhere in the brief, whole-word and case-blind; girlfriend passes", () => {
-    expect(muse({ title: "Teen detective" })).toBe('idea 2: title: "Teen" is a youth word; the muse wing draws adult women only');
-    expect(muse({ prompt: "A woman aged 30 in a school  uniform, painterly." })).toBe('idea 2: prompt: "school  uniform" is a youth word; the muse wing draws adult women only');
-    expect(muse({ genre: "schoolgirl drama" })).toMatch(/^idea 2: genre: "schoolgirl" is a youth word/);
-    expect(muse({ target: "character", card: { ...CARD, look: "petite girl, freckles" }, prompt: "Mara Veil, aged 34." })).toMatch(/^idea 2: card\.look: "petite girl" is a youth word/);
-    expect(muse({ prompt: "A woman aged 30 in lingerie, painterly." })).toBe('idea 2: prompt: "lingerie" is a nudity or sexual word; the muse wing is SFW');
-    expect(muse({ appTarget: "an NSFW pin-up" })).toMatch(/^idea 2: appTarget: "NSFW" is a nudity or sexual word/);
-    expect(muse({ anchor: { kind: "watch", ref: "- look: topless beach" } })).toMatch(/^idea 2: anchor\.ref: "topless" is a nudity or sexual word/);
-    expect(muse({ prompt: "His girlfriend, aged 33, laughs at a kidney-shaped pool, painterly." })).toBe("ok");
+  it("refuses a youth word and a nudity or sexual word anywhere in a character's brief, whole-word and case-blind; girlfriend passes", () => {
+    expect(at2({ title: "Teen detective" })).toBe('idea 2: title: "Teen" is a youth word; only a stylised kids or family character under 18 takes one');
+    expect(at2({ prompt: "Mara Veil, aged 34, in a school  uniform, painterly." })).toBe('idea 2: prompt: "school  uniform" is a youth word; only a stylised kids or family character under 18 takes one');
+    expect(at2({ genre: "schoolgirl drama" })).toMatch(/^idea 2: genre: "schoolgirl" is a youth word/);
+    expect(at2({ card: { ...CARD, look: "petite girl, freckles" } })).toMatch(/^idea 2: card\.look: "petite girl" is a youth word/);
+    expect(at2({ prompt: "Mara Veil, aged 34, in lingerie, painterly." })).toBe('idea 2: prompt: "lingerie" is a nudity or sexual word; every brief is SFW');
+    expect(at2({ appTarget: "an NSFW pin-up" })).toMatch(/^idea 2: appTarget: "NSFW" is a nudity or sexual word/);
+    expect(at2({ anchor: { kind: "watch", ref: "- look: topless beach" } })).toMatch(/^idea 2: anchor\.ref: "topless" is a nudity or sexual word/);
+    expect(at2({ prompt: "Mara Veil, aged 34, laughs with her girlfriend at a kidney-shaped pool, painterly." })).toBe("ok");
   });
 
   it("one bad brief refuses the batch, naming its place", () => {
-    expect(muse({ prompt: "A woman aged 30, nude, painterly." }, 3)).toMatch(/^idea 3: prompt: "nude"/);
+    expect(at2({ prompt: "Mara Veil, aged 34, nude, painterly." }, 3)).toMatch(/^idea 3: prompt: "nude"/);
   });
 
-  it("leaves the scout door as it was, and refuses a card or a character there", () => {
-    const r = parseIdeas(SCOUT, "scout");
-    expect(r.ok && r.value[0]).toEqual({ title: SCOUT[0]?.title, target: "scene", genre: "character poster", prompt: SCOUT[0]?.prompt, anchor: SCOUT[0]?.anchor, use: "roleplay: avatar portrait for a companion", app: "roleplay", aim: "extract a new artstyle: painterly finish", look: "painterly-noir" });
-    expect(refusal([brief("a", { target: "character", card: CARD })], "scout")).toBe("idea 1: target: character is the muse wing's target (--wing muse)");
-    expect(refusal([brief("a", { card: CARD })], "scout")).toBe("idea 1: card: a character card is the muse wing's (--wing muse)");
-    // No age and a refused word pass on the scout wing: its line is its own.
-    expect(refusal([brief("a", { prompt: "A teen band on a stage, gouache." })], "scout")).toBe("ok");
-    const wide = parseIdeas([brief("a", { aspect: "9:16" })], "scout");
+  it("leaves a brief that draws nobody as it was: no age, no word list, any aspect", () => {
+    const r = parseIdeas([brief("Lantern fishers", { target: "scene", prompt: "Lantern fishers at low tide, loose gouache thumbnail, wide frame." })]);
+    expect(r.ok && r.value[0]).toEqual({ title: "Lantern fishers", target: "scene", genre: "character poster", prompt: "Lantern fishers at low tide, loose gouache thumbnail, wide frame.", anchor: { kind: "watch", ref: "- look: painterly portraits" }, use: "roleplay: avatar portrait for a companion", app: "roleplay", aim: "extract a new artstyle: painterly finish", look: "painterly-noir", seed: OTHER_SEED });
+    expect(refusal([brief("a", { prompt: "A teen band on a stage, gouache." })])).toBe("ok");
+    expect(refusal([brief("a", { aspect: "4:5" })])).toBe("ok");
+    const wide = parseIdeas([brief("a", { aspect: "9:16" })]);
     expect(wide.ok && wide.value[0]?.aspect).toBe("9:16");
-    // Outside any scope the door is the scout wing's.
-    expect(parseIdeas([brief("a", { card: CARD })]).ok).toBe(false);
-    expect(withWing("muse", () => parseIdeas(MUSE)).ok).toBe(true);
   });
 });
 
@@ -196,10 +199,10 @@ describe("the judge", () => {
   it("passes an adult, covered, fictional still, and fails each field of the line by name", async () => {
     const ok = await judgeStill(IMG, { recognize: eye(read()) });
     expect(ok.ok && judgeFailure(ok.value)).toBe(null);
-    const fail = async (j: Partial<MuseJudge>): Promise<string | null> => {
+    const fail = async (j: Partial<MuseJudge>, o: { minors?: boolean } = {}): Promise<string | null> => {
       const r = await judgeStill(IMG, { recognize: eye(read(j)) });
       if (!r.ok) throw r.error;
-      return judgeFailure(r.value);
+      return judgeFailure(r.value, o);
     };
     expect(await fail({ adult: "unsure" })).toBe("adult unsure");
     expect(await fail({ adult: "no" })).toBe("adult no");
@@ -209,17 +212,24 @@ describe("the judge", () => {
     expect(await fail({ realPerson: "maybe" })).toBe("real person maybe");
     expect(await fail({ clothing: "revealing", hands: "bad" })).toBe(null);
     expect(judgeFailure(STAND_JUDGE)).toBe(null);
+    // A kids or family character's still: the adult read stands down; nudity and likeness never do.
+    expect(await fail({ adult: "no", apparentAge: 9 }, { minors: true })).toBe(null);
+    expect(await fail({ adult: "no", apparentAge: 9, clothing: "nude" }, { minors: true })).toBe("clothing nude");
+    expect(await fail({ adult: "no", apparentAge: 9, realPerson: "maybe" }, { minors: true })).toBe("real person maybe");
   });
 
-  it("asks for exactly the judge's fields, and an answer out of shape, absent or thrown is an err", async () => {
-    let asked: RecognizeRequest | undefined;
-    await judgeStill(IMG, {
-      recognize: async (r) => {
-        asked = r;
-        return { json: read() };
-      },
-    });
-    expect(asked?.schema?.["required"]).toEqual(["adult", "apparentAge", "clothing", "realPerson", "hands", "notes"]);
+  it("asks for exactly the judge's fields, the parody clause only when asked, and an answer out of shape, absent or thrown is an err", async () => {
+    const asked: RecognizeRequest[] = [];
+    const record = async (r: RecognizeRequest) => {
+      asked.push(r);
+      return { json: read() };
+    };
+    await judgeStill(IMG, { recognize: record });
+    await judgeStill(IMG, { recognize: record }, { parody: true });
+    expect(asked[0]?.schema?.["required"]).toEqual(["adult", "apparentAge", "clothing", "realPerson", "hands", "notes"]);
+    expect(asked.map((a) => a.instruction)).toEqual([JUDGE_INSTRUCTION, `${JUDGE_INSTRUCTION}\n${PARODY_CLAUSE}`]);
+    // The real-actor test stays in both.
+    expect(judgeInstruction({ parody: true })).toContain('realPerson: "maybe" if any face resembles a specific real, recognisable person');
     const { notes: _n, ...short } = read();
     expect((await judgeStill(IMG, { recognize: eye(short) })).ok).toBe(false);
     expect((await judgeStill(IMG, { recognize: eye({ ...read(), adult: "probably" }) })).ok).toBe(false);
@@ -235,14 +245,14 @@ describe("the judge", () => {
 
 const ideasOf = async (night: string): Promise<IdeaCandidate[]> => (await readNight(night)).candidates.filter((c): c is IdeaCandidate => c.kind === "idea");
 
-async function openIn(wing: "scout" | "muse", env: Record<string, string | undefined>, args: string[] = []): Promise<string> {
-  const r = await cli(["--wing", wing, "open", "--json", ...args], { env });
+async function open(env: Record<string, string | undefined>, args: string[] = []): Promise<string> {
+  const r = await cli(["open", "--json", ...args], { env });
   expect(r.code, r.err).toBe(0);
   return String(r.doc["night"]);
 }
 
-describe("a muse night's ideas job", () => {
-  it("dry: its own job id, the stand-in judged as STAND_JUDGE, no studio and no eye asked; a scout batch the same day keeps its id", async () => {
+describe("a scout night's character ideas job", () => {
+  it("dry: a bare job id, the character's stand-in judged as STAND_JUDGE and the rest unjudged, no studio and no eye asked, nothing in the archive", async () => {
     const never: CliPorts = {
       ideas: {
         generate: async () => {
@@ -253,28 +263,23 @@ describe("a muse night's ideas job", () => {
         },
       },
     };
-    const night = await openIn("muse", DRY);
-    const r = await cli(["--wing", "muse", "ideas", night, "--json", batch(MUSE)], { ports: never });
+    const night = await open(DRY);
+    const r = await cli(["ideas", night, "--json", batch(IDEAS)], { ports: never });
     expect(r.code, r.err).toBe(0);
-    expect(r.doc["jobId"]).toBe(`job:scout-ideas:muse:${night}:c-01`);
-    const ideas = await withWing("muse", () => ideasOf(night));
-    expect(ideas.map((c) => [c.status, c.aspect, c.judge])).toEqual(Array(3).fill(["rendered", "9:16", STAND_JUDGE]));
-    expect(ideas[2]?.card).toEqual(CARD);
+    expect(r.doc["jobId"]).toBe(`job:scout-ideas:${night}:c-01`);
+    const ideas = await ideasOf(night);
+    expect(ideas.map((c) => [c.status, c.aspect, c.judge])).toEqual([
+      ["rendered", undefined, undefined],
+      ["rendered", undefined, undefined],
+      ["rendered", "9:16", STAND_JUDGE],
+    ]);
+    expect(ideas[2]?.card).toEqual({ ...CARD, audience: "adult" });
     expect(FAKE_LEONARDO_STUDIO.calls).toEqual([]);
-
-    // Each wing numbers its own nights: the same day's first night in each is the same id.
-    const scout = await openIn("scout", DRY);
-    expect(scout).toBe(night);
-    const s = await cli(["ideas", scout, "--json", batch(SCOUT)], { ports: never });
-    expect(s.code, s.err).toBe(0);
-    expect(s.doc["jobId"]).toBe(`job:scout-ideas:${scout}:c-01`);
-    const kept = await ideasOf(scout);
-    expect(kept.map((c) => [c.status, c.aspect, c.judge])).toEqual([["rendered", undefined, undefined]]);
-    expect(existsSync(path.join(ROOT, "scout-muse", night, "ideas", "c-03.png"))).toBe(true);
-    expect(existsSync(path.join(ROOT, "scout", night, "ideas", "c-03.png"))).toBe(false);
+    expect(existsSync(path.join(ROOT, "scout", night, "ideas", "c-03.png"))).toBe(true);
+    expect(existsSync(path.join(ROOT, "scout-muse", night))).toBe(false);
   }, 60_000); // a night's ideas job: ~1 s alone, past vitest's 5 s default under the pre-push gate's load
 
-  it("live on the fake studio: drawn 9:16 at quality low; a failing or unread still is never written, its candidate failed `judge: ...`", async () => {
+  it("live on the fake studio: a character drawn 9:16 at quality low; a failing or unread still is never written, its candidate failed `judge: ...`", async () => {
     const seen: GenerateRequest[] = [];
     const answers: (() => Promise<Recognition>)[] = [
       async () => ({ text: "", json: read(), provenance: { provider: "ollama", model: "eye", modelBasis: "requested", durationMs: 1 } }),
@@ -291,31 +296,30 @@ describe("a muse night's ideas job", () => {
         },
         recognize: async () => {
           const next = answers.shift();
-          if (next === undefined) throw new Error("the eye was asked more often than the batch has stills");
+          if (next === undefined) throw new Error("the eye was asked more often than the batch has characters");
           return next();
         },
       },
     };
-    const night = await openIn("muse", LIVE, ["--live"]);
-    const r = await cli(["--wing", "muse", "ideas", night, "--json", batch(LIVE_MUSE)], { env: LIVE, ports });
+    const night = await open(LIVE, ["--live"]);
+    const r = await cli(["ideas", night, "--json", batch(LIVE_IDEAS)], { env: LIVE, ports });
     expect(r.code, r.err).toBe(0);
-    expect(seen.map((g) => [g.aspect, g.quality, g.prefer])).toEqual(Array(3).fill(["9:16", "low", "leonardo-studio"]));
-    expect(FAKE_LEONARDO_STUDIO.calls.map((c) => c.aspect)).toEqual(["9:16", "9:16", "9:16"]);
+    expect(seen.map((g) => [g.aspect, g.quality, g.prefer])).toEqual([["16:9", undefined, "leonardo-studio"], ...Array(3).fill(["9:16", "low", "leonardo-studio"])]);
     // Every studio generation is deleted once held, whatever the eye then said.
-    expect(FAKE_LEONARDO_STUDIO.deletes).toEqual(["fake-gen-0001", "fake-gen-0002", "fake-gen-0003"]);
-    await withWing("muse", async () => {
-      const ideas = await ideasOf(night);
-      expect(ideas.map((c) => [c.status, c.image, c.error])).toEqual([
-        ["rendered", "ideas/c-01.png", undefined],
-        ["failed", undefined, "judge: adult unsure"],
-        ["failed", undefined, "judge: unavailable - no recognize provider answered"],
-      ]);
-      expect(ideas[0]?.judge).toEqual(read());
-      expect(ideas[1]?.judge).toMatchObject({ adult: "unsure", apparentAge: 20 });
-      expect(ideas[2]?.judge).toBeUndefined();
-      expect(existsSync(resolveInNight(night, "ideas/c-01.png"))).toBe(true);
-      expect(existsSync(resolveInNight(night, "ideas/c-02.png"))).toBe(false);
-      expect(existsSync(resolveInNight(night, "ideas/c-03.png"))).toBe(false);
-    });
+    expect(FAKE_LEONARDO_STUDIO.deletes).toEqual(["fake-gen-0001", "fake-gen-0002", "fake-gen-0003", "fake-gen-0004"]);
+    const ideas = await ideasOf(night);
+    expect(ideas.map((c) => [c.status, c.image, c.error])).toEqual([
+      ["rendered", "ideas/c-01.png", undefined],
+      ["rendered", "ideas/c-02.png", undefined],
+      ["failed", undefined, "judge: adult unsure"],
+      ["failed", undefined, "judge: unavailable - no recognize provider answered"],
+    ]);
+    expect(ideas[0]?.judge).toBeUndefined();
+    expect(ideas[1]?.judge).toEqual(read());
+    expect(ideas[2]?.judge).toMatchObject({ adult: "unsure", apparentAge: 20 });
+    expect(ideas[3]?.judge).toBeUndefined();
+    expect(existsSync(resolveInNight(night, "ideas/c-02.png"))).toBe(true);
+    expect(existsSync(resolveInNight(night, "ideas/c-03.png"))).toBe(false);
+    expect(existsSync(resolveInNight(night, "ideas/c-04.png"))).toBe(false);
   }, 60_000); // a night's ideas job: ~1 s alone, past vitest's 5 s default under the pre-push gate's load
 });

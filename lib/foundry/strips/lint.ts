@@ -14,6 +14,8 @@
 // between calls. The seek gate (render.mts) catches those by rendering cold
 // and out of order; the two are complementary, not redundant.
 
+import { STRIP_FRAMES } from "./types";
+
 export interface LintFinding {
   rule: string;
   excerpt: string;
@@ -130,7 +132,10 @@ export function withoutComments(html: string): string {
   return out + markup(html.slice(last));
 }
 
-export function lintStrip(page: string): LintFinding[] {
+/** What the lint holds a page to beyond purity: its frame count (absent: STRIP_FRAMES, the contract's 240). */
+export type LintOptions = { readonly frames?: number };
+
+export function lintStrip(page: string, o: LintOptions = {}): LintFinding[] {
   const out: LintFinding[] = [];
   const html = withoutComments(page);
   for (const r of RULES) {
@@ -149,7 +154,20 @@ export function lintStrip(page: string): LintFinding[] {
   }
   if (!/STRIP_READY/.test(page)) out.push({ rule: "api: window.STRIP_READY is never set", excerpt: "" });
   if (!/strip-frame/.test(page)) out.push({ rule: "api: no strip-frame message listener", excerpt: "" });
-  return out;
+  return [...out, ...stripFramesRule(page, o.frames)];
+}
+
+/**
+ * THE FRAME COUNT (spark scout-vision S5: a full reel is 30 s - 2 min, so the count is the brief's, not a constant).
+ * `window.STRIP.frames` must equal `frames`; a page that does not declare it is read as STRIP_FRAMES, so every strip
+ * written to the 240-frame contract passes as it did, and a longer brief's page must say its own count.
+ */
+export function stripFramesRule(page: string, frames: number = STRIP_FRAMES): LintFinding[] {
+  const decl = /window\.STRIP\s*=\s*\{([^}]*)\}/.exec(withoutComments(page))?.[1];
+  const said = decl === undefined ? undefined : /\bframes\s*:\s*(\d+)/.exec(decl)?.[1];
+  const n = said === undefined ? STRIP_FRAMES : Number(said);
+  if (n === frames) return [];
+  return [{ rule: `frames: window.STRIP.frames is ${frames} for this brief`, excerpt: said === undefined ? `not declared (read as ${STRIP_FRAMES})` : `declared ${said}` }];
 }
 
 /**

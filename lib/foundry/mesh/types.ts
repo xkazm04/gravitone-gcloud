@@ -117,8 +117,21 @@ export type MeshAsset = {
 
 /* ── The hand-off to a game project ───────────────────────────────────────── */
 
-export const EXPORT_PROJECTS = ["pof", "mage-arena", "bp"] as const;
+export const EXPORT_PROJECTS = ["pof", "bp"] as const;
 export type ExportProject = (typeof EXPORT_PROJECTS)[number];
+
+/** Projects gravitone once briefed and exported for, and no longer does (spark scout-vision S4: mage-arena is
+ *  developed on another device). Kept as a READ type only: old nights' candidates still carry the name. */
+export const RETIRED_PROJECTS = ["mage-arena"] as const;
+export type RetiredProject = (typeof RETIRED_PROJECTS)[number];
+/** Any project an asset was ever briefed for: what an old candidate's `serves.project` may hold. */
+export type ServedProject = ExportProject | RetiredProject;
+
+/** The refusal a brief or an export for a retired project meets. */
+export const RETIRED_WHY: { readonly [P in RetiredProject]: string } = {
+  "mage-arena": "mage-arena is developed on another device; gravitone no longer briefs for it (spark scout-vision S4)",
+};
+export const isRetired = (p: string): p is RetiredProject => (RETIRED_PROJECTS as readonly string[]).includes(p);
 
 /** What travels beside the glb into a game project: enough to import it and to know what judged it. */
 export type Sidecar = {

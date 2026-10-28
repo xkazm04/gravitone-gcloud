@@ -207,3 +207,62 @@ run 3's clusters + run 2's rows are complementary evidence over the same gallery
 - With Flux (~53 GB) and LTX loaded, the commit charge sits above the admission mark (95 GB of 112) and the worker holds
   every gpu.local job, while physical RAM is ~50%. One night should not mix many storyboards and clips; run boards, unload,
   then clips. Argues a look at packages/kernel admission (commit vs resident) - not a cap change.
+
+## 2026-10-25 night (scout 2.3.0)
+
+- The skill's music pause says `open --tracks 0`, but the CLI's `num()` refuses 0 ("--tracks needs a positive number"), and `doctor` FAILs
+  the suno line unless `--tracks` > 0 is accepted. The paused music seeds keep their doors shut, so the night ran on the
+  default cap with the doctor's one expected FAIL. Argues pipeline/scout.mts `num` accepting 0 for caps (tracks, visualizers)
+  and the doctor skipping suno at tracks 0.
+- 2026-10-26 (spark scout-vision S6): stills are studio-first now, but `.env.local` still carried
+  `SCOUT_REPLICA_GENERATOR=comfy-flux2` from the night the API pool ran dry (line 199 above). That line overrides
+  the new default: remove it (or set `leonardo-studio`) for studio-first; leave it only to keep scenes on local Flux.
+- 2026-10-26 (measurement night, operator: "measure clearly how efficient is our resource balancing"):
+  - **A worker restart mid-night interrupts every job on a paid lane and HOLDS that lane** until an operator acks it
+    (packages/kernel/src/job-queue.ts holdLaneIn). Three style runs on cloud.google sat held behind one restart, and
+    seat.text had been held since 2026-10-24 by an interrupted reels job - no reel or draft ran for two nights. Preflight
+    should read the lane holds; never restart the worker while cloud.* or seat.text jobs run.
+  - **Commit charge, not RAM or GPU, is the binding resource.** ComfyUI with Flux resident holds ~56 GB of commit (RAM
+    working set ~2 GB), Ollama's qwen3.8:27b ~26 GB while loaded (the style runs' vision recognize loads it), the rest of
+    the box ~39 GB, against a 119-125 GB limit - commit sat at 96-123 GB with 20 GB of physical RAM free. ComfyUI `/free`
+    releases RAM, not commit (so S6's unload-on-hold does not lift a commit hold); only a ComfyUI restart did (95 -> 43 GB).
+  - **Admission deadlocked gpu.local twice**: the hysteresis held until commit < 75%, unreachable while ComfyUI is
+    resident; then the 6.6 GB ComfyUI job charge landed on a reading that already holds ComfyUI's peak (101.8 vs 101.0 GB).
+    Tonight ran on MACHINE_MEM_HIGH=0.9 / MACHINE_MEM_LOW=0.9 in .env.local (revert after). The lasting fix is a
+    resident-aware charge for comfy jobs (lib/resources/profiles + packages/domain/src/resource.ts admit).
+  - **The night-fill's band test is all-resources**: with the GPU at 96% it launched nothing all night, while CPU sat at
+    ~20% and the 12 queued Ollama drafts (CPU/unified-memory work) waited. A per-lane or per-resource test would fill it.
+- 2026-10-26 night (first channel night): **never restart ComfyUI under a live worker.** A watchdog restarted ComfyUI to
+  clear its resident commit charge in the gap after admission let a storyboard start; that storyboard and the next 17
+  failed in under a minute ("ComfyUI is not reachable"), because the storyboard producer fails a panel at once when
+  ComfyUI does not answer and the gpu.local queue then drains through every job. Failed storyboards still count to the
+  night's storyboardCap, so the episodes (back to outline-kept, nothing lost) had to be relaunched on a second night.
+  The admission deadlock it tried to work around is real (MACHINE_MEM_HIGH 0.9 against a commit limit that shrank from
+  ~124 to 112 GB: 102 projected vs 100.8 mark); the fixes belong in code - a resident-aware ComfyUI charge in
+  admission, and a storyboard that waits for ComfyUI rather than failing on a short outage
+  (lib/imaging/local/flux2.ts reachability, lib/producers/scoutStoryboardActs.ts).
+  Stopping the background task did NOT stop it: TaskStop ended the harness's handle, but the `bash watchdog.sh`
+  process lived on and restarted ComfyUI again at 00:52, failing 14 more storyboards on the second night. A
+  background loop that acts on the box is killed by its process id (find it by command line), and its script is
+  renamed so nothing re-runs it; then check its log stops growing. Better: never start a loop that acts on the box.
+  Restarting the worker: `schtasks /End /TN "Gravitone worker"` ends the PowerShell wrapper, not `node
+  workers\runner.mts` - after `/Run` two runners were live, the old one still on the night's env. After a restart,
+  list `runner.mts` processes and kill any whose start time predates the restart (only when no job runs).
+
+## 2026-10-27-2 night
+
+- **GPU memory deadlocks the storyboards, not commit.** nvidia-smi reports a 62.5 GB GPU on this unified-memory box
+  (ComfyUI sees 117.8 GB). After a board, ComfyUI keeps Flux resident (~50 GB); admission adds the next board's
+  charge on top (56.5 projected vs the 53.1 mark) and then holds gpu.local until under 46.9 GB, which a resident Flux
+  never reaches. One board ran per ComfyUI `/free`. Tonight ran a bounded helper that POSTs `/free` only while
+  ComfyUI's queue is empty and the worker's last line says a gpu.local job waits on vram (never a restart). Lasting
+  fixes: `MACHINE_VRAM_GB` from ComfyUI's `vram_total` in lib/resources/probe.ts, and the resident-aware ComfyUI
+  charge in packages/domain/src/resource.ts admit already named above.
+- `doctor` exits 1 on the suno line whenever music is paused, and `--tracks 0` is a usage error (exit 2): read the
+  failing lines, and when suno is the only one the night goes on.
+- The pre-push gate's next-unit failed on scout-graph (3 cases) because tests/next-server/scout-cli-harness.ts never
+  set SCOUT_MUSE_STORE_DIR: on this box the test read the operator's foundry-out/scout-muse, empty in CI. Fixed.
+- The night finished 12 storyboards and 2 reels (0 failed), but all 7 `draft` plan items expired at the deadline:
+  night-fill waits for 15 minutes under 60%, and the storyboards (11 `/free` unloads, about one board per 40 min)
+  held the box above that until 05:30Z. A night with a full storyboard batch leaves no room for the queue. Drafts are
+  small, so launch them on the seat or before the storyboards rather than queueing them behind a busy GPU lane.

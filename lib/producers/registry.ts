@@ -32,9 +32,11 @@ import { SCOUT_SCENE_LANES, scoutSceneProducer } from "./scoutScene.ts";
 import { profileProducer } from "./profile.ts";
 import { meshProducer } from "./mesh.ts";
 import { finishProducer } from "./finish.ts";
-import { scoutAssetProducer } from "./scoutAsset.ts";
+import { SCOUT_ASSET_LANES, scoutAssetProducer } from "./scoutAsset.ts";
 import { scoutIdeasProducer } from "./scoutIdea.ts";
 import { scoutReelsProducer } from "./scoutReel.ts";
+import { scoutPieceProducer } from "./scoutPiece.ts";
+import { scoutSheetProducer } from "./scoutSheet.ts";
 import { scoutStoryboardProducer } from "./scoutStoryboard.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
@@ -123,7 +125,8 @@ export const BOUND: readonly Bound[] = [
   { name: "style", producer: styleJobProducer() },
   // The /scout night's ingest (spark media-training-loop): a found picture, page or video brought onto this box.
   { name: "scout-ingest", producer: scoutIngestProducer() },
-  // A /scout scene: one job per candidate, on the lane of its expensive half (a local clip: gpu.local; else Leonardo's, for the Flare stills and a hosted clip).
+  // A /scout scene: one job per candidate, on the lane of its expensive half (a local clip: gpu.local; else its stills' engine's:
+  // box.chrome for the studio, gpu.local for local Flux, cloud.leonardo for Flare - lib/foundry/scout/stillEngine.ts).
   ...SCOUT_SCENE_LANES.map((lane): Bound => ({ name: "scout-scene", producer: scoutSceneProducer(lane) })),
   // The desk's effect batch (Phase 6, L66): one run of N clips through the metered call.
   ...lanesOf("sfx").map((lane): Bound => ({ name: "sfx", producer: sfxProducer(lane) })),
@@ -136,9 +139,9 @@ export const BOUND: readonly Bound[] = [
   // then the Blender finish on box.blender (engine blender) - two jobs, each admitted by its own engine.
   { name: "mesh", producer: meshProducer() },
   { name: "finish", producer: finishProducer() },
-  // A /scout night's game asset (spark game-3d-assets WP4): its concepts on Leonardo's Flare, then the
-  // hand-off that writes the mesh asset and queues the mesh job above.
-  { name: "scout-asset", producer: scoutAssetProducer() },
+  // A /scout night's game asset (spark game-3d-assets WP4): its concepts on the night's still engine's lane
+  // (the studio's box.chrome by default), then the hand-off that writes the mesh asset and queues the mesh job above.
+  ...SCOUT_ASSET_LANES.map((lane): Bound => ({ name: "scout-asset", producer: scoutAssetProducer({ lane }) })),
   // A /scout night's idea artboards (spark scout-idea-artboards): one batch, one rough still per idea in the
   // operator's Leonardo studio, on box.chrome - the lane the studio's browser is.
   { name: "scout-ideas", producer: scoutIdeasProducer() },
@@ -148,6 +151,12 @@ export const BOUND: readonly Bound[] = [
   // A /scout night's storyboards (spark scout-storyboards): one job per kept idea's storyboard, its frames drawn by Flux 2
   // on this box's ComfyUI, on gpu.local (engine comfy).
   { name: "scout-storyboard", producer: scoutStoryboardProducer() },
+  // A genre's piece (spark scout-vision S2): its best kept trial's rejected clips re-made on LTX and every clip cut with
+  // ffmpeg, one job per piece on gpu.local (engine comfy).
+  { name: "scout-piece", producer: scoutPieceProducer() },
+  // A kept character's reference sheet (spark scout-vision S3): one Flux 2 still, her kept portrait as a late reference,
+  // one job per sheet on gpu.local (engine comfy).
+  { name: "scout-sheet", producer: scoutSheetProducer() },
   ...stepsBound(),
 ];
 

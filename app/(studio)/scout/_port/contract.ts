@@ -5,7 +5,6 @@
 import type { ScoutGraph } from "@gt/domain/scoutGraph";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
-import type { ScoutWing } from "../../../../lib/foundry/scout/wing.ts";
 
 /** The steer's split as the editor sends it: whole percents per audience, and per genre inside an audience. */
 export type SplitInput = {
@@ -14,11 +13,20 @@ export type SplitInput = {
 };
 
 /**
- * What the screen draws: one graph per wing (spark scout-muse - each wing's nights, seeds and steer are its own
- * root, so the graphs never join), and the split the scout wing's steer holds now (absent: none set). The steer's
- * acts are the scout wing's: the muse wing has no seeds to pause and no audiences to split.
+ * What the screen draws: ONE graph (spark scout-vision S3 - the muse wing merged into the loop; its four nights are
+ * archive nodes in the same graph, GraphNode.archive), and the split the steer holds now (absent: none set).
  */
-export type ScoutView = { readonly graphs: Readonly<Record<ScoutWing, ScoutGraph>>; readonly split?: SplitInput; readonly backlog?: ScoutBacklog };
+export type ScoutView = {
+  readonly graph: ScoutGraph;
+  readonly split?: SplitInput;
+  readonly backlog?: ScoutBacklog;
+  /** The live ventures (spark scout-vision S2) the nodes may carry (GraphNode.venture), oldest birth
+   *  first; omitted when there is none, and then no venture filter is drawn. */
+  readonly ventures?: readonly ScoutVenture[];
+};
+
+/** A venture as the filter names it. */
+export type ScoutVenture = { readonly id: string; readonly name: string };
 
 /**
  * The scout wing's backlog (spark scout-vision; lib/foundry/scout/backlog.ts backlogOf) as numbers: kept ideas

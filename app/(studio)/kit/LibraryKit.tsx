@@ -22,7 +22,10 @@ import { SetSummary } from "@gt/ui/components/library/SetSummary.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { StatusPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { SourceTag } from "@gt/ui/components/source/SourceTag.tsx";
+import type { GenreExtras, VentureExtras } from "@gt/domain/library";
 
+import { GenreFacts } from "../library/_library/GenreDetail.tsx";
+import { VentureFacts } from "../library/_library/VentureDetail.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
 import k from "./kit.module.css";
 
@@ -37,6 +40,8 @@ const CARDS: readonly LibraryCard[] = [
   card("doc-0017", { kind: "doc", title: "Czech · note 17", meta: "localization · 17 techniques", state: "reference", date: null, face: { kind: "paper", title: "Czech · note 17", foot: "localization" }, chips: ["localization", "16+"] }),
   card("motion-0031", { kind: "motion", title: "Physics · E42 · clip", meta: "webm · edu-physics", face: { kind: "poster", url: "/clips/presets/blueprint.jpg", video: "/clips/presets/blueprint.webm" }, chips: ["physics", "clip"] }),
   card("character-0002", { kind: "character", title: "Sofia", meta: "aged 29 · slim build · 2 looks", state: "ratified", face: { kind: "image", url: "/presets/paper-relief.jpg" }, chips: ["under 30", "slim", "dating sim"] }),
+  card("genre:gn-deadpan-office-satire-painted-3d", { kind: "genre", title: "deadpan office satire, painted 3D", meta: "publishable · 4/4 trials", state: "ratified", face: { kind: "image", url: "/presets/paper-relief.jpg" }, chips: ["publishable", "Quiet Desk"] }),
+  card("venture:vn-quiet-desk", { kind: "venture", title: "Quiet Desk", meta: "channel · 1 genre", state: "ratified", face: { kind: "designed", lead: "venture", name: "Quiet Desk", tail: "channel · 1 genre" }, chips: ["channel"] }),
   card("video-0003", { kind: "video", title: "Peak and Fall · ad spot 8", meta: "video-0003 · captions vtt", state: "rejected", attention: "unreadable", face: { kind: "designed", lead: "video", name: "Peak and Fall · ad spot 8", tail: "video-0003 · captions vtt", palette: ["#6a4220", "#1d3d63"] }, chips: ["ad", "vtt"] }),
 ];
 
@@ -45,6 +50,28 @@ const LOOKS: readonly LookThumb[] = [
   { key: "35mm-anamorphic", image: "/presets/newsprint-cutout.jpg", label: "35mm-anamorphic", sub: "ultra-photoreal portrait" },
   { key: "2026-10-23-2", image: "/presets/chalk-argument.jpg", label: "2026-10-23-2", sub: "ultra-photoreal portrait", inert: true },
 ];
+
+/** A genre on the third rung and the channel born from it - the fixture library's words. */
+const GENRE: GenreExtras = {
+  state: "piece-due",
+  use: "a 45 s Short: one household experiment and the law it proves",
+  look: "chalk on slate, hand-drawn arrows over live objects",
+  grammar: ["the question on the table", "the setup in three objects", "the surprise", "the law drawn over it"],
+  keptTrials: ["2026-10-17/c-05", "2026-10-19/c-12", "2026-10-22/c-08", "2026-10-24/c-04"],
+  piece: { ref: "2026-10-24/c-16", verdict: "open" },
+  bornFrom: { ref: "2026-10-15/c-09", image: "/presets/chalk-argument.jpg" },
+  proposal: "2026-10-15/c-14",
+  venture: { id: "vn-quiet-desk", name: "Quiet Desk" },
+};
+const VENTURE: VentureExtras = {
+  kind: "channel",
+  tone: "deadpan, dry",
+  audience: "office workers, 25-40",
+  format: "a 30 s vertical Short",
+  look: "painted 3D, soft key light, muted teal and mustard",
+  genres: [{ id: "gn-deadpan-office-satire-painted-3d", name: "deadpan office satire, painted 3D" }],
+  proposal: "2026-10-24/c-15",
+};
 
 const v = (value: string, count: number, selected = false) => ({ value, label: value.replace(/-/g, " "), count, selected });
 const GROUPS: readonly RailGroup[] = [
@@ -180,6 +207,18 @@ export function LibrarySection() {
         <Row label="doors · figure">
           <div data-role="lib-looks" style={{ width: "25em" }}>
             <LookStrip looks={LOOKS.map((l) => (l.key === look ? { ...l, pressed: true } : l))} onPress={(key) => setLook((x) => (x === key ? "" : key))} />
+          </div>
+        </Row>
+      </Spec>
+      <Spec names={["GenreFacts", "VentureFacts"]} source="app library/_library/GenreDetail.tsx · VentureDetail.tsx" wide>
+        <Row label="genre · piece due">
+          <div style={{ width: "25em" }}>
+            <GenreFacts genre={GENRE} onItem={setSel} />
+          </div>
+        </Row>
+        <Row label="venture · channel">
+          <div style={{ width: "25em" }}>
+            <VentureFacts venture={VENTURE} onItem={setSel} />
           </div>
         </Row>
       </Spec>

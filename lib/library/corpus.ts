@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { LibraryExtras, MediaFacts } from "@gt/domain/library";
-import { LIBRARY_KINDS, NEAR_BLACK_LUMA } from "@gt/domain/library";
+import { genreLibraryState, LIBRARY_KINDS, NEAR_BLACK_LUMA } from "@gt/domain/library";
 import { AppError } from "@gt/domain/errors";
 import type { LibraryItemInput as LibraryItem } from "@gt/domain/libraryItem";
 import type { IndexContext, LibraryEntry, StyleFacets } from "@gt/kernel/library/core";
@@ -36,6 +36,9 @@ export const KIND_SHARE: readonly (readonly [LibraryItem["kind"], number])[] = [
   ["model", 0.005],
   // Not the prototype's either: the kept muse characters (spark scout-use-aim).
   ["character", 0.003],
+  // And the scout's genres and ventures (spark scout-vision S2): a handful each, as a real store holds.
+  ["genre", 0.001],
+  ["venture", 0.0005],
 ];
 
 /** The prototype's PRNG (library-data.js `rnd`), seeded. */
@@ -76,6 +79,8 @@ const MUSE_NAMES = ["Mara", "Sofia", "Hana", "Nadia", "Iris", "Leila", "Katya", 
 const MUSE_BUILDS = ["slim", "slender", "athletic", "lean", "curvy"];
 const MUSE_LOOKS = ["risograph-two-colour", "anime-cel", "gouache-portrait", "35mm-anamorphic", "real-time-3d", "ink-wash"];
 const MUSE_APPS = ["videogame", "dating-sim", "roleplay", "companion-chat", "genre-video", "short"];
+const GENRE_NAMES = ["deadpan office satire", "kitchen-table science", "rooftop noir", "tiny-town documentary", "painted folk tale", "desk-toy physics"];
+const LADDER = ["perfecting", "perfecting", "piece-due", "publishable", "retired"] as const;
 const PROJECTS = Array.from({ length: 12 }, (_, i) => `proj-${String(i + 1).padStart(2, "0")}`);
 
 const T0 = Date.parse("2025-11-03T00:00:00Z");
@@ -264,6 +269,14 @@ export function generateCorpus(n = 50_000, seed = CORPUS_SEED): Corpus {
         meta = `aged ${age} · ${build} build`;
         const m = media(id, "image/png");
         item = { kind, ...shared(id, pick(MUSE_NAMES), "ratified", "scout", false), vocabulary: { age, build, looks, applications: some(MUSE_APPS, 1, 2) }, lineage: [], ...(m === undefined ? {} : { media: m }) };
+      } else if (kind === "genre") {
+        const ladder = pick(LADDER);
+        meta = `${ladder.replace("-", " ")} · ${Math.floor(rnd() * 5)}/4 trials`;
+        item = { kind, ...shared(id, pick(GENRE_NAMES), genreLibraryState(ladder), "scout", false), vocabulary: { ladder }, lineage: [] };
+      } else if (kind === "venture") {
+        const type = rnd() < 0.8 ? ("channel" as const) : ("album" as const);
+        meta = `${type} · ${1 + Math.floor(rnd() * 3)} genres`;
+        item = { kind, ...shared(id, `${cap(pick(GENRE_NAMES))} ${type}`, "ratified", "scout", false), vocabulary: { type }, lineage: [] };
       } else {
         const bundle = pick(BUNDLES);
         const subject = `${pick(TOPIC_WORDS)}-${pick(TOPIC_WORDS)}`;

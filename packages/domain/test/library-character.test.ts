@@ -10,12 +10,13 @@ import { AGE_BANDS, ageBand, buildOf, corePrompt, CHIP_GROUPS, FIXED_ORDER, KIND
 
 describe("the kind", () => {
   it("is appended last, so no stored kind_ord shifts, and is a media kind with its own rail and chips", () => {
-    expect(LIBRARY_KINDS.at(-1)).toBe("character");
+    // Appended after model; the scout's genre and venture (spark scout-vision S2) were appended after it.
+    expect(LIBRARY_KINDS.at(LIBRARY_KINDS.indexOf("model") + 1)).toBe("character");
     expect(LIBRARY_KINDS.slice(0, 8)).toEqual(["image", "plate", "style", "motion", "audio", "video", "doc", "model"]);
     expect(MEDIA_KINDS).toContain("character");
     expect(VOCAB_GROUPS.character).toEqual(["age", "build", "look", "application"]);
     expect(CHIP_GROUPS.character).toEqual(["age", "build", "application"]);
-    expect(KIND_LABELS.at(-1)).toEqual({ kind: "character", label: "Characters", short: "character" });
+    expect(KIND_LABELS.find((k) => k.kind === "character")).toEqual({ kind: "character", label: "Characters", short: "character" });
     expect(railGroups("character").slice(0, 4).map((g) => g.key)).toEqual(["age", "build", "look", "application"]);
   });
   it("names its groups as search keys, so look:risograph is a token and not a word", () => {

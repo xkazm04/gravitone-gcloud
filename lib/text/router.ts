@@ -63,6 +63,7 @@ import { emitLightTrack } from "./lighttrack";
 import { claudeCliProvider } from "./providers/claudeCli";
 import { claudeCliRetrieveProvider } from "./providers/claudeCliRetrieve";
 import { googleProvider } from "./providers/google";
+import { ollamaProvider } from "./providers/ollama";
 import type {
   LadderRung,
   ProbeResult,
@@ -108,6 +109,9 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "ad-scenarios": ["claude-cli", "google"],
     repair: ["claude-cli", "google"],
     "voice-fx": ["claude-cli", "google"],
+    // The one turn the local daemon leads (spark scout-vision S6): free, so worth
+    // writing at all; the seat behind it, never the metered key.
+    draft: ["ollama", "claude-cli"],
     probe: ["claude-cli"],
   },
   cloud: {
@@ -126,6 +130,9 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "ad-scenarios": ["google"],
     repair: ["google"],
     "voice-fx": ["google"],
+    // A hosted box has no seat, and a draft is not worth a metered call: the
+    // daemon where OLLAMA_HOST names one, an honest no-key refusal where not.
+    draft: ["ollama"],
     probe: ["google"],
   },
 };
@@ -134,7 +141,13 @@ const PROVIDERS: Record<TextProviderId, () => TextProvider> = {
   "claude-cli": claudeCliProvider,
   google: googleProvider,
   "claude-cli-retrieve": claudeCliRetrieveProvider,
+  ollama: ollamaProvider,
 };
+
+/** The night-fill's draft turn (lib/foundry/scout/plan.ts `draft` items): a
+ *  prompt in, markdown out, never a candidate. Named here so a caller spells it
+ *  once. */
+export const DRAFT_TURN = "draft" satisfies TurnClass;
 
 /**
  * WHO MAY SEARCH AND FETCH FOR WHICH TURN — the `retrieve` capability's plan,
@@ -222,6 +235,9 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // One sentence in, one chain of at most eight stages out: the smallest
   // answer any turn writes, so the sound turns' ceiling is generous.
   "voice-fx": 300_000,
+  // A draft is one short piece of markdown, but the daemon may have to load a
+  // 17 GB model off disk before its first token - minutes on a cold card.
+  draft: 300_000,
   probe: 30_000,
 };
 

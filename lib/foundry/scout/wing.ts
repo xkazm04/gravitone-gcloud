@@ -1,11 +1,12 @@
-// A SCOUT WING (spark scout-muse): one nightly loop's own store, taste and knowledge, beside the
-// others on the same code. `scout` is the YouTube-video loop (/scout); `muse` is the SFW study of how
-// fictional adult women are drawn as characters, poster and scene, photoreal to anime to 3D (/scout-muse).
+// A SCOUT WING (spark scout-muse): a ROOT of nights, `scout` (foundry-out/scout-nights) or `muse`
+// (foundry-out/scout-muse). Absent anywhere means `scout`: every record written before the wings existed is
+// the scout wing's.
 //
-// A wing is a ROOT, not a tag: every cross-night rule (taste, seed bans, steer, source dedupe, leads)
-// reads one root, so the two loops never see each other's verdicts. The readers that show both - the
-// /scout screen, the Board, the Floor - ask for each wing by name. Absent anywhere means `scout`: every
-// record written before the wings existed is the scout wing's.
+// MERGED (spark scout-vision S3): there is one loop now. Every new night is a scout night; the four muse nights
+// are a read-only ARCHIVE whose run ids `muse:<night>` - its packets pkt:scout:muse:<night>, its files, its
+// Library links - decode here forever. A wing is no longer a rule's scope: character rules key on the
+// candidate's own target and card. `withWing("muse")` survives for archive READS only (the Board, the file
+// route, the ledger, the graph, the Library, `status --wing muse`).
 //
 // Pure and client-safe: no Node. The scope that picks the active root is wingScope.ts (server).
 
@@ -18,8 +19,12 @@ export const DEFAULT_WING: ScoutWing = "scout";
 
 export const isWing = (s: unknown): s is ScoutWing => typeof s === "string" && (SCOUT_WINGS as readonly string[]).includes(s);
 
-/** The wing's folder under the out dir (`foundry-out/scout`, `foundry-out/scout-muse`). */
-export const WING_OUT_DIR: Readonly<Record<ScoutWing, string>> = { scout: "scout", muse: "scout-muse" };
+/**
+ * The wing's folder under the out dir (`foundry-out/scout-nights`, `foundry-out/scout-muse`). The scout wing's moved
+ * from `scout` to `scout-nights` at the baseline (spark project-baseline, 2026-10-26): `foundry-out/scout` is the
+ * PRE-BASELINE archive now, read beside the new root under the same bare night ids (store.ts preBaselineRoot).
+ */
+export const WING_OUT_DIR: Readonly<Record<ScoutWing, string>> = { scout: "scout-nights", muse: "scout-muse" };
 /** The wing's folder under `knowledge/` (watchlist; muse also techniques.md and characters.md). */
 export const WING_KNOWLEDGE_DIR: Readonly<Record<ScoutWing, string>> = { scout: "scout", muse: "scout-muse" };
 

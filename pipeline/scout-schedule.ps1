@@ -51,6 +51,19 @@ function Confirm-Comfy {
   Write-Output "ComfyUI did not answer at $url within 3 minutes - clips will be refused by doctor"
 }
 
+# The night's drafts are written by the local model (qwen3.8:27b on Ollama, spark scout-vision S6) and
+# the eye reads frames with it. pipeline/ollama-up.ps1 starts the daemon when it is down; OLLAMA_HOST goes
+# into this run's environment only when it answers, so a dead daemon reads as a doctor note and both
+# routers step over it (drafts to the claude CLI, the eye to Gemini) instead of failing a call each.
+function Confirm-Ollama {
+  $url = if ($env:OLLAMA_HOST) { $env:OLLAMA_HOST } else { "http://127.0.0.1:11434" }
+  $ErrorActionPreference = "Continue"
+  & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "ollama-up.ps1") -Url $url
+  $up = $LASTEXITCODE -eq 0
+  $ErrorActionPreference = "Stop"
+  if ($up) { $env:OLLAMA_HOST = $url } else { Remove-Item Env:OLLAMA_HOST -ErrorAction SilentlyContinue }
+}
+
 # The CLI finds ffmpeg through FFMPEG/FFPROBE in .env.local, but the seat also runs `ffmpeg` itself
 # (a contact sheet), and a winget install is not on PATH: the first live night (2026-10-22) stopped
 # at doctor for it. The folder of the configured binary goes on this run's PATH.
@@ -66,6 +79,7 @@ function Add-FfmpegPath {
 function Invoke-Night {
   Add-FfmpegPath
   Confirm-Comfy
+  Confirm-Ollama
   $claude = (Get-Command claude -ErrorAction SilentlyContinue).Source
   if (-not $claude) { throw "claude is not on PATH for this user - install Claude Code or add it to PATH." }
   # A rehearsal points SCOUT_STORE_DIR at a temp root; its logs go there, never into foundry-out/.
@@ -109,6 +123,7 @@ else {
   Write-Output "when:      daily at $At (missed runs start when the machine is next available)"
   Write-Output "runs:      powershell -NoProfile -ExecutionPolicy Bypass -File $self -Run -Until $Until   (in $repo)"
   Write-Output "seat:      claude -p `"/scout night --until $Until`" --permission-mode dontAsk (no seat budget)"
+  Write-Output "before:    ComfyUI and Ollama started when down (OLLAMA_HOST=http://127.0.0.1:11434 set when Ollama answers)"
   Write-Output "tools:     $($allowed -join ', ')"
   Write-Output "install:   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Install -At $At"
 }

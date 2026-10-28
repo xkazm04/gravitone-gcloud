@@ -6,7 +6,7 @@ import path from "node:path";
 
 import { FoundryError } from "../runStore";
 import { readAsset, resolveInAsset } from "./store";
-import { BUDGETS, TECHNIQUE_LABEL, type ExportProject, type MeshAsset, type MeshVariant, type Sidecar } from "./types";
+import { BUDGETS, isRetired, RETIRED_WHY, TECHNIQUE_LABEL, type ExportProject, type MeshAsset, type MeshVariant, type RetiredProject, type Sidecar } from "./types";
 
 // THE HAND-OFF TO A GAME PROJECT (spark game-3d-assets WP3, the Library's `export` act) - one
 // finished variant's glb, and what travels beside it, written into a game project's checkout.
@@ -21,18 +21,23 @@ import { BUDGETS, TECHNIQUE_LABEL, type ExportProject, type MeshAsset, type Mesh
 //               bp's own ArtSource manifests (studio-desk-lamp: id, class, budget_tris, tris,
 //               generator, licence, gates {pass, note, date}, file_bytes, sha256). bp has no LFS:
 //               every file under 10 MB, refused with its size when one is over.
-//   mage-arena  apps/vr/art/<characters|props>/<asset>-<variant>/export/<SK|SM>_<Name>.glb +
-//               manifest.json, the shape of its T38 hand-offs (characters/brennic: generated,
-//               note, items [{asset, path, sha256, bytes}]). Its .gitattributes routes *.fbx and
-//               *.png through LFS, not *.glb - the owner's call, said in the manifest's note.
 //
-// Each project's root: EXPORT_ROOT_POF / EXPORT_ROOT_MAGE_ARENA / EXPORT_ROOT_BP, else the
-// sibling checkout of this one (`../pof` from the working directory).
+// mage-arena had a third adapter (apps/vr/art/<characters|props>/.../export/<SK|SM>_<Name>.glb and
+// its T38 items manifest) until spark scout-vision S4: it is developed on another device, so an
+// export for it is refused with types.ts RETIRED_WHY, and nothing is written into that repo.
+//
+// Each project's root: EXPORT_ROOT_POF / EXPORT_ROOT_BP, else the sibling checkout of this one
+// (`../pof` from the working directory).
 
 export const BP_FILE_CAP = 10 * 1024 * 1024;
 
-const REPO: { readonly [P in ExportProject]: string } = { pof: "pof", "mage-arena": "mage-arena", bp: "bp" };
-const ENV: { readonly [P in ExportProject]: string } = { pof: "EXPORT_ROOT_POF", "mage-arena": "EXPORT_ROOT_MAGE_ARENA", bp: "EXPORT_ROOT_BP" };
+const REPO: { readonly [P in ExportProject]: string } = { pof: "pof", bp: "bp" };
+const ENV: { readonly [P in ExportProject]: string } = { pof: "EXPORT_ROOT_POF", bp: "EXPORT_ROOT_BP" };
+
+/** An export for a retired project, refused before anything is read or written. */
+function refuseRetired(project: ExportProject | RetiredProject): asserts project is ExportProject {
+  if (isRetired(project)) throw new FoundryError(RETIRED_WHY[project], 400);
+}
 
 /** Where a project's checkout is on this machine (not checked here). */
 export function exportRoot(project: ExportProject, env: Readonly<Record<string, string | undefined>> = process.env): string {
@@ -65,7 +70,6 @@ type Copy = { readonly from: string; readonly to: string; readonly bytes: number
 export type ExportPlan = { readonly project: ExportProject; readonly root: string; readonly dir: string; readonly copies: readonly Copy[]; readonly manifest: { readonly to: string; readonly json: unknown } };
 export type Exported = { readonly project: ExportProject; readonly dir: string; readonly wrote: readonly string[] };
 
-const pascal = (s: string): string => s.split(/[^a-z0-9]+/i).filter((w) => w !== "").map((w) => w[0]?.toUpperCase() + w.slice(1)).join("");
 const day = (iso: string): string => iso.slice(0, 10);
 
 async function measured(abs: string, to: string): Promise<Copy> {
@@ -87,7 +91,8 @@ async function optional(a: MeshAsset, rel: string | undefined, to: string): Prom
 const gateNote = (g: Sidecar["gates"][number]): string => [g.score === undefined ? undefined : `score ${g.score}`, ...g.fails.map((f) => `fail: ${f}`), ...g.warns.map((w) => `warn: ${w}`), g.gradedAs].filter((x) => x !== undefined).join("; ") || g.verdict;
 
 /** The files and manifest an export would write, every size checked; nothing is written. */
-export async function planExport(a: MeshAsset, variantId: string, project: ExportProject, opts: { readonly root: string; readonly now: string; readonly commit?: string }): Promise<ExportPlan> {
+export async function planExport(a: MeshAsset, variantId: string, project: ExportProject | RetiredProject, opts: { readonly root: string; readonly now: string; readonly commit?: string }): Promise<ExportPlan> {
+  refuseRetired(project);
   const v = a.variants.find((x) => x.id === variantId);
   if (v === undefined) throw new FoundryError(`Asset ${a.id} has no variant ${variantId}.`, 404);
   if (v.status !== "finished") throw new FoundryError(`Variant ${a.id}/${v.id} is ${v.status}, not finished: there is no glb to hand off.`, 409);
@@ -96,7 +101,6 @@ export async function planExport(a: MeshAsset, variantId: string, project: Expor
   const glb = resolveInAsset(a.id, rel);
   const side = sidecarOf(a, v, opts.commit);
   const folder = `${a.id}-${v.id}`;
-  const rigged = v.files.rigged !== undefined;
   let dir: string;
   let copies: Copy[];
   let manifest: { to: string; json: unknown };
@@ -104,7 +108,7 @@ export async function planExport(a: MeshAsset, variantId: string, project: Expor
     dir = path.join(opts.root, "generated", "gravitone", folder);
     copies = [await measured(glb, `${folder}.glb`)];
     manifest = { to: `${folder}.gravitone.json`, json: side };
-  } else if (project === "bp") {
+  } else {
     dir = path.join(opts.root, "apps", "vr", "ArtSource", folder);
     copies = [await measured(glb, "final.glb"), ...(await optional(a, a.concept, "concept.png")), ...(await optional(a, v.files.poster, "evidence/poster.png"))];
     const over = copies.find((c) => c.bytes > BP_FILE_CAP);
@@ -124,27 +128,13 @@ export async function planExport(a: MeshAsset, variantId: string, project: Expor
         gravitone: side,
       },
     };
-  } else {
-    const shelf = a.brief.class === "character" ? "characters" : "props";
-    dir = path.join(opts.root, "apps", "vr", "art", shelf, folder);
-    const name = `${rigged ? "SK" : "SM"}_${pascal(a.id)}`;
-    copies = [await measured(glb, `export/${name}.glb`), ...(await optional(a, v.files.poster, `export/${pascal(a.id)}_poster.png`))];
-    const repoRel = (to: string): string => ["apps", "vr", "art", shelf, folder, to].join("/");
-    manifest = {
-      to: "manifest.json",
-      json: {
-        generated: day(opts.now),
-        note: `${a.brief.subject}: ${a.brief.class}, ${v.technique} ${TECHNIQUE_LABEL[v.technique]}, exported from Gravitone as GLB (no FBX). .gitattributes does not route *.glb through LFS.`,
-        items: copies.map((c) => ({ asset: path.posix.basename(c.to, path.posix.extname(c.to)), path: repoRel(c.to), sha256: c.sha256, bytes: c.bytes })),
-        gravitone: side,
-      },
-    };
   }
   return { project, root: opts.root, dir, copies, manifest };
 }
 
 /** Plan, then write: the root must exist, every file must fit, and only then is anything copied. */
-export async function exportVariant(assetId: string, variantId: string, project: ExportProject, opts: { readonly root?: string; readonly now?: string; readonly commit?: string } = {}): Promise<Exported> {
+export async function exportVariant(assetId: string, variantId: string, project: ExportProject | RetiredProject, opts: { readonly root?: string; readonly now?: string; readonly commit?: string } = {}): Promise<Exported> {
+  refuseRetired(project);
   const root = opts.root ?? exportRoot(project);
   try {
     if (!(await stat(root)).isDirectory()) throw new Error("not a directory");

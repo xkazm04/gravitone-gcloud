@@ -153,6 +153,9 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], () => string> = {
   repair: flash,
   // Flash: one sentence in, one closed chain out, every bound checked at the door.
   "voice-fx": flash,
+  // No plan row sends a draft here (router.ts PLAN); the entry keeps this table
+  // total, and a `prefer: "google"` is dropped because google is not planned.
+  draft: flash,
   probe: flash,
 };
 

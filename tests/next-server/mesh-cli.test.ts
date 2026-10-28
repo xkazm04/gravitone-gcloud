@@ -155,6 +155,7 @@ describe("a live `new` over the fake engines", () => {
     finish: () => ({ command: blender.command, scripts: path.join("pipeline", "mesh", "blender"), ffmpeg: path.join(ROOT, "no-ffmpeg.exe"), stepTimeoutMs: 30_000, root: process.cwd() }),
   });
 
+  // Spawns child processes: under the pre-push gate's parallel load (and a box drawing at night) it runs past vitest's 5 s default.
   it("TRELLIS through ComfyUI, then the Blender chain: both jobs live, every variant finished", async () => {
     blender.control({});
     const r = await newAsset(k.store, LOC, { id: "hero-live", cls: "character", subject: "monk", concept: concept("good.png"), rig: true, live: true, actor: OP, dryOnly: false }, engines(comfy.base));
@@ -165,7 +166,7 @@ describe("a live `new` over the fake engines", () => {
     expect([jobOf("job:run:mesh:hero-live")?.mode.kind, jobOf("job:run:finish:hero-live")?.mode.kind]).toEqual(["live", "live"]);
     expect(comfy.seen.filter((s) => s === "POST /prompt").length).toBe(2);
     expect(comfy.seen.some((s) => /\/(free|interrupt)$/.test(s))).toBe(false);
-  });
+  }, 60_000);
 
   it("a ComfyUI that does not answer leaves the job queued (unhealthy) and the variants pending; no finish job", async () => {
     const r = await newAsset(k.store, LOC, { id: "hero-down", cls: "character", subject: "monk", concept: concept("good.png"), live: true, actor: OP, dryOnly: false }, engines("http://127.0.0.1:9"));

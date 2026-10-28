@@ -13,5 +13,9 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "tests/next-gates/fixtures/**"],
     environment: "node",
     passWithNoTests: false,
+    // Half the cores off CI. At vitest's default (20 workers on the 20-core box) the files that spawn tsx CLIs and
+    // Chromium starve each other: 2026-10-28 every full run failed, each time on a different timed case (5 s defaults,
+    // a 60 s browser launch); at 10 workers two runs were green in 215 s against 186 s. CI keeps its default.
+    ...(process.env["CI"] ? {} : { maxWorkers: "50%" }),
   },
 });

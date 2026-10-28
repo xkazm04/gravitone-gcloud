@@ -1,0 +1,91 @@
+{
+  "schema": "asset-needs/1",
+  "project": "bp",
+  "generatedAt": "2026-10-25T23:00:00.000Z",
+  "source": {
+    "repo": "bp",
+    "commit": "181154a308b74229786aeb0d7bc2e4b71e70406d",
+    "pofCommit": "d5d38b7c2a6844d7c6d48ec838df81083a1fb3a6"
+  },
+  "rules": {
+    "notes": [
+      "Fidelity pass rule: \"Pass: no element below 2\" (docs/concepts/vr-light-table/art-breakdown.md:72)",
+      "Poly budget is per asset: tris at or under the manifest's budget_tris (scripts/check-art.mjs (c))"
+    ]
+  },
+  "inventory": [
+    {
+      "id": "studio-desk-lamp",
+      "name": "Studio desk lamp",
+      "class": "studio-kit",
+      "gravitoneClass": "prop",
+      "tris": 5800,
+      "budgetTris": 6000,
+      "gates": {
+        "input": true,
+        "mesh_acceptance": true,
+        "scale": true,
+        "finishing": true,
+        "poly_budget": true
+      },
+      "score": {
+        "value": 1,
+        "of": 3,
+        "source": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:52"
+      }
+    },
+    {
+      "id": "survey-pin",
+      "name": "Survey pin",
+      "class": "prop-instanced",
+      "gravitoneClass": "prop",
+      "tris": 480,
+      "budgetTris": 500,
+      "gates": {
+        "input": true,
+        "poly_budget": true
+      }
+    },
+    {
+      "id": "blueprint-paper",
+      "name": "Blueprint paper",
+      "class": "material",
+      "gates": {
+        "tiling": true
+      }
+    }
+  ],
+  "needs": [
+    {
+      "id": "need-amber-pins-with-tags",
+      "kind": "scored-low",
+      "subject": "Amber pins with paper tags",
+      "class": "prop-instanced",
+      "gravitoneClass": "prop",
+      "why": "Not built (L5)",
+      "evidence": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:45",
+      "budgetTris": 500,
+      "priority": 1,
+      "assetId": "survey-pin"
+    },
+    {
+      "id": "need-lamp-agent",
+      "kind": "scored-low",
+      "subject": "The lamp agent: head, two-joint arm, base",
+      "class": "character-prop",
+      "gravitoneClass": "character",
+      "why": "Reads as a desk lamp",
+      "evidence": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:52",
+      "priority": 1
+    },
+    {
+      "id": "need-scan-line",
+      "kind": "scored-low",
+      "subject": "The cyan scan line sweeping across a wing",
+      "class": "shader",
+      "why": "Not built (L5)",
+      "evidence": "docs/concepts/vr-light-table/runs/2026-10-24-lynx-l34.md:46",
+      "priority": 2
+    }
+  ]
+}

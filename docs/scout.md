@@ -10,6 +10,28 @@ that packet's commit admits anything into the Library or `knowledge/`.
 
 The skill reads and writes words; the CLI and the kernel do everything that spends or writes files.
 
+## The channel baseline (spark project-baseline, 2026-10-26)
+
+The nights stopped spreading across genres and serve six CHANNELS the operator designed in session (D1 Came From
+Nowhere, D2 The What-If Machine - real-data reels; F1 While It Works, F2 Across the Centuries - impossible-camera
+documentary storyboards; S1 It Builds Itself - spec ads; K1 Small Night Stories - bedtime shorts). Adult comedy is cut
+until the operator brings reference videos. What follows the sections below about seeds, idea artboards, genres,
+ventures, characters and music describes the spread era and is archived (`.claude/skills/scout/ARCHIVE-2.4.0.md`).
+
+- **Channels and episodes** live in `foundry-out/scout-channels/<id>.json` (`SCOUT_CHANNELS_DIR`; a shell that moves
+  `SCOUT_STORE_DIR` gets one beside it). An episode is a premise and a five-beat outline decided in session; only an
+  accepted outline is imported (`episodes import --outlines <file> --report <file>`), and moves outline-kept ->
+  in-production -> made -> kept | thrown as its night's candidate is launched, rendered and judged on the packet
+  (lib/foundry/scout/channels.ts, episodeMoves.ts). `channel list`, `channel show <id>`, `episodes due`.
+- **The night's doors take episodes**: `storyboard` takes `{fromEpisode, title, paragraph, bullets, panels}` for a
+  storyboard channel (one panel per beat; use/aim default from the channel); `reel` takes `{fromEpisode, brief,
+  approach, source, data, cut}` for a data channel. The taste brief opens with `## Episodes due`.
+- **The archive**: new nights live in `foundry-out/scout-nights/`; `foundry-out/scout/` is the read-only pre-baseline
+  archive (`SCOUT_PREBASELINE_STORE_DIR`), read under the same night ids - its packets still open and commit on the
+  Board, and kept characters, Library styles and knowledge stay. A new night on an archived date is `<date>-2`. On a
+  new night `seeds new`, `ideas`, `propose`, `add-source` from an idea, `storyboard` from an idea and the steer refuse:
+  "archived: the scout now serves channels (spark project-baseline); this door reopens only when the operator says so".
+
 ## The night
 
 ```
@@ -42,7 +64,7 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 | `ingest <night> [--source s-NN] [--retry] [--detach]` | launches the `scout-ingest` job over the pending sources and drives it here; `--retry` first puts the failed sources in scope back to pending | no |
 | `style <night> --sources s-01,s-03 --use "<content>" [--slug x] [--seed <batch>/sd-NNN] [--detach]` | an ordinary extract run (`launchExtract`, a gallery of those sources' pictures and keyframes) as one style candidate; its run id and job id go on the candidate | yes |
 | `scene <night> --source s-NN --use "<content>" [--frames k-012.jpg] [--seed <batch>/sd-NNN] [--detach]` | a scene candidate read from the chosen keyframe (default the first; ingest keeps one frame per cut, so neighbouring keyframes are different shots), launched through `launchScene` (`lib/producers/scoutScene.ts`) with a clip while the night's clip cap allows | yes |
-| `asset <night> --brief <file\|-> [--seed <batch>/sd-NNN] [--detach]` | one game asset from `{class, subject, use, serves: {project: pof|mage-arena|bp} | {newProject}, style?, kind?, techniques?, fromIdea?}` - `use` and `serves` required: an asset helps an existing game or opens a new kind of project, and its 3D row leads with both: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
+| `asset <night> --brief <file\|-> [--seed <batch>/sd-NNN] [--detach]` | one game asset from `{class, subject, use, serves: {project: bp} | {newProject}, need?, style?, kind?, techniques?, fromIdea?}` - `use` and `serves` required: an asset helps an existing game or opens a new kind of project, and its 3D row leads with both; a game brief names the `need` it answers (`## Game asset needs`) and takes the game's own budget for it: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
 | `ideas <night> --json <file\|-> [--detach]` | `[{title, target: scene\|style\|asset3d\|stats, genre, prompt, anchor: {kind: watch\|gap\|free, ref}, seed?, use?, reel?}]` (`genre` required, <= 80 chars; `seed` required once any live batch kept a seed - the candidate's `fromSeed`), one `idea` candidate each. Scene, style and 3d-asset ideas are ONE `scout-ideas` job drawing a rough artboard each in the Leonardo studio (driven here unless `--detach`); stats ideas carry `reel` and are ONE `scout-reels` job on the Claude seat, always queued for the worker (below, "A stats reel"). One bad brief refuses the batch with its place; a batch over `ideaCap` or `reelCap` writes nothing | studio credits, the seat |
 | `direction <night> --json <file\|->` | `{title, format: short\|video, genre, style, tone, audience, premise, basedOn: [<night>/<cell id>], use?}`: one `direction` candidate, words, rendered at once. Every `basedOn` entry must be a cell a LIVE night kept; the refusal names the entry and why | no |
 | `seeds new --json <file\|-> [--dry]` | `[{sentence, genre, subgenre, type, audience: kids\|family\|adult, format: short\|video, parent?: <batch>/sd-NNN}]`, 1..150 seeds written whole as `seeds/<batch>/batch.json` and decided on `/board/pkt:seeds:<batch>` (below, "Seeds"). One bad seed refuses the batch with its place: a facet over its bound or on two lines, a sentence any batch already holds (case- and whitespace-folded), a `parent` the seed door refuses | no |
@@ -190,12 +212,13 @@ The song is the clock: a track is made and judged on one night, and its visualiz
 
 ## What the nights are for
 
-**The ladder (spark scout-vision, 2026-10-25).** Every night climbs one: **spread** genres while no project
+**The ladder (spark scout-vision, 2026-10-25).** Every night climbs one: **spread** genres while no venture
 exists; **prove** a kept idea can be executed (a storyboard on local Flux that applies a researched execution
-technique, then trial clips, then an assembled 15-30 s piece kept as "would publish"); and only then a **project**
-born on the Board - a channel from a publishable genre, an album from kept tracks, a game from its asset catalogue.
-The genre and project records, the merge of the muse wing into this one and the game projects' asset needs are
-later stages of the same spark; stage 1 shipped the purpose, the order and the gate below.
+technique, then a genre's trials with every panel clipped, then a 15-30 s piece kept as "would publish"); and only
+then a **venture** born on the Board - a channel from a publishable genre, an album from kept tracks, a game from its
+asset catalogue (S4). Stage 1 shipped the purpose, the order and the gate below; stage 2 the genres and ventures
+(`## Genres and ventures`); the merge of the muse wing (S3), the game asset needs (S4) and a stats reel's real data
+(S5) are later stages of the same spark.
 
 **Prove before you spread - the backlog gate.** `backlog.ts` counts the kept `scene`/`style` ideas of live
 committed nights that no storyboard (failed ones aside) composes yet, and the kept, unpaused seeds no idea grows
@@ -216,6 +239,15 @@ source (`add-source {fromIdea}`) and the act its target names builds it. The tas
 ideation's bans) and `## Genres`.
 
 ## The money
+
+- **Stills come from the studio pool** (spark scout-vision S6; operator, 2026-10-26: "Leonardo studio still has
+  plenty of credits"). Style replicas and transfers, scene replicas and asset concepts draw in the Leonardo
+  studio at Low (8 credits, unpriced) by default; `SCOUT_REPLICA_GENERATOR=leonardo-flare|comfy-flux2` moves them.
+  Studio jobs wait on box.chrome, Flux on gpu.local, Flare on cloud.leonardo (lib/foundry/scout/stillEngine.ts);
+  a scene whose clip renders locally runs on gpu.local either way. One studio tab at a time across processes
+  (`foundry-out/leonardo-studio.lock`, stale after 5 min). The studio holds no seed and no 4:5 (drawn 9:16); a
+  prompt past 1500 characters is cut at a sentence. The doctor reads the API pool (apiSubscriptionTokens +
+  apiPaidTokens) and the studio balance apart.
 
 - **The night's ceiling** (`--ceiling`, default $15, the operator's standing grant for this loop) is a
   promise, not a stop point. `lib/foundry/scout/budget.ts` reads it from the kernel's own records over
@@ -354,9 +386,25 @@ Per idea it authors the strip (`ideas/<c-NN>/strip.html`), lints it, and renders
 `ideas/<c-NN>.png`, the idea's tile; a failed turn fails that idea with its sentence, and the batch goes on.
 
 **In the packet** a stats idea is one tile in the ideas tab like an artboard, its meta `stats reel ·
-<anchor>`. `K` records the keep (`develops next night as a stats reel`); developing it - the real data
-researched into a fixture, the block swapped, the full 240-frame render with its gates - is not built yet.
-`X` blocks it. Both land in `night.committed` with their reasons.
+<anchor>`. `K` makes its real data due; `X` blocks it. Both land in `night.committed` with their reasons.
+
+### Real data, then the full cut (spark scout-vision S5)
+
+The operator, 2026-10-26: "Do not stick with public datasets, we often need one wiki table, an article, or
+derived data from 'what if' fantasy scenarios." Two acts on the same scout-reels job, each approved before the next:
+
+- **`reel <night> --json`** `[{fromIdea, source: {kind: table|article|what-if, title, url?, quote?, premise?}, data,
+  cut}]` - a kept stats idea re-authored as an 8 s strip on real data keeping the beats in `cut` (1-12). A table or
+  article needs its https url, an article its words verbatim (<= 400), a what-if its premise (<= 400). The source
+  line reads `Source: <title>` or `What if: <premise> (fiction)`. Refused: an idea not kept on a live committed
+  night, not stats, or already holding a live real reel (lib/foundry/scout/reel.ts, reelDoor.ts). Cell `c-NN/reel`,
+  the images tab, group `reels`; files under `reels/<c-NN>/`.
+- **`reel-cut <night> --json`** `[{fromReel, seconds: 30-120}]` - a kept reel (taste `## Reels to cut`) re-authored
+  at seconds * 30 frames (CONTRACT.md `window.STRIP.frames`; 240 stays the default) and rendered to mp4. Cell
+  `c-NN/video`, the videos tab, group `reel cuts`; files under `cuts/<c-NN>/`. A cut's receipt uses an unmeasured
+  0.5 s per rendered frame until a real cut is timed.
+
+Reels and cuts count toward the night's `reelCap` with its stats ideas. `reel <night> --collect` settles detached ones.
 
 ## Storyboards
 
@@ -411,6 +459,30 @@ storyboard does not take its idea off `## Ideas to develop`: the idea's scene, s
 independent of it. On the graph a storyboard sits in its own `board` column between idea and run, linked
 from its idea; a kept one leaves no output node (nothing real exists until the video is made).
 
+## Genres and ventures
+
+Spark scout-vision S2. **The kernel holds the heads, the nights hold the evidence.** The kernel module `ventures`
+(`packages/kernel/src/ventures/`) keeps `genres` and `ventures` - who was born from which kept proposal, which genre
+produces for which channel, who was retired - and an append-only `venture_ops` log; events `genre.born`,
+`venture.born`, `genre.retired`, `venture.retired`. What a genre has PROVEN is derived from the nights on read
+(`lib/foundry/scout/genres.ts`): its kept trials (storyboards carrying its id, kept by the storyboard rule on live
+committed nights) and its newest piece's verdict. State (`@gt/domain/genre` `genreStateOf`): **perfecting** ->
+**piece-due** (4 kept trials) -> **publishable** (piece kept); **retired** by the operator's act.
+
+| command | what it does |
+|---|---|
+| `propose <night> --json <file\|->` | Words-only proposals, one bad brief refuses the batch. A **genre** `{kind: "genre", name, fromStoryboard, look, grammar, use?, aim?}` stands on a storyboard KEPT on a live committed night (one proposal per storyboard; a live genre's name refused). A **venture** `{kind: "venture", name, ventureKind: "channel"\|"album", frame: {tone, audience, format, look, genres}, basedOn}`: a channel names publishable genres with their kept piece cell in `basedOn`; an album stands on 4 kept track clips of music seeds; `game` waits for S4. Rows in the packet group `genres` (reasons generic, use case, story); a KEPT proposal births the head from the Board's apply (idempotent on the proposal ref), a rejected one births nothing. |
+| `storyboard <night> --json` with `genre: "gn-..."` | A **trial**: up to 2 per live genre a night, reserved first from `storyboardCap`; the door refuses a retired or publishable genre or a trial past its slots, naming the numbers. The job clips every drawn panel on LTX after the frames (`storyboards/c-NN/clip-N.mp4`, `clips[]` by panel, null where a clip failed - that panel's alone); clip cells `c-NN/clip-N` sit in the trial's run. |
+| `piece <night> [--genre gn-...] [--detach]` · `piece <night> --collect` | For every piece-due genre (or one): its best kept trial (most kept clips, ties to the newest) rendered in full - only the clips the operator rejected or that failed are re-made, the kept ones copied - and cut with their own audio into `pieces/c-NN/piece.mp4` (producer `scout-piece`, gpu.local, $0). A row in `pieces` (story, craft, motion); kept, the genre is publishable and the `genre-publishable` registry lead queues once. A dry night writes the piece as words. |
+| `genre list \| retire <gn-id>` · `venture list \| retire <vn-id>` | The heads with their derived state; retiring is the operator's act (an agent actor is refused) and terminal. |
+
+Ideas, seeds and storyboards carry an optional `venture: "vn-..."` (refused when unknown or retired). The taste
+brief carries `## Genre ladder` (live genres, kept trials n/4, next step) and `## Ventures` (live frames); `## Genres`
+stays the idea genres the operator kept and threw. The Library has kinds `genre` and `venture` (facets `ladder`,
+`venture`, `type`) with their own detail pages; /scout draws a venture filter above the bands once a venture exists.
+Trials and pieces load the GPU: ~10 trials x (Flux frames + ~4 LTX clips) is about 2.5 GPU hours a night at five
+live genres, governed by the worker's admission and the 60-80% load band.
+
 ## The morning
 
 A closed, non-dry night with anything rendered is one pile in the Floor's image lane and one packet,
@@ -454,6 +526,32 @@ look for the remainder, its decided looks written as verdicts only and imported 
 union: taste, the graph (a candidate with a cell in `open` is open, and points at the remainder), the
 Library, a kept seed (usable from the part that kept it). The ledger records `commit` for part 1 and
 `commit.<n>` for each later part.
+
+## The plan queue and the night-fill (spark scout-vision S6)
+
+The night of 2026-10-25 ended hours before its `until` while the box idled. The seat now writes the night's
+remaining work as a queue and ends its turn with the night open:
+
+- **`plan <night> --json`** `[{kind: storyboards|ideas|extract|scenes|assets|sheets|reels|draft, payload, why}]` -
+  each payload validated by its door's own parser, appended to `<night>/plan.json` as `pl-NN`, nothing spent.
+  Refused on a night that is not open, has no `until`, or is past it (lib/foundry/scout/plan.ts, planDoors.ts).
+- **The `night-fill` timer** (worker, every 5 min, lib/foundry/scout/nightFill.ts): for the newest open scout
+  night with a plan and a future `until`, when every resource of the last 15 minutes of load samples averages
+  under 60% (no samples: no launch), it launches the oldest queued item whose lane has nothing queued or running,
+  through the same door the CLI calls, in the night's mode, detached. One launch a tick; a door's refusal is
+  `refused`, any other error `failed`, neither retried. At `until` the rest become `expired` and the timer runs
+  the same close as `close --stop deadline`.
+- **`draft` items** `{title, prompt}` run the `draft` text turn - local Ollama (`qwen3.8:27b`, $0) first, the
+  claude CLI behind it, never Gemini - and write `<night>/drafts/<pl-NN>.md`; the next taste brief lists them
+  under `## Drafts from the night`. Never a candidate. They wait for gpu.local (the model shares the card with
+  ComfyUI). `pipeline/ollama-up.ps1` starts the daemon; the night schedule and the worker service call it and
+  set `OLLAMA_HOST` when it answers. The doctor's `ollama` line is a note.
+
+**gpu.local no longer starves on one held head** (packages/kernel/src/resources/starve.ts): a head admission has
+held for `GPU_SKIP_AHEAD_MS` (10 min) lets the next queued job that admission passes go first
+(`job.skipped-ahead`); a gpu.local head held on commit charge for `COMFY_UNLOAD_AFTER_MS` (15 min), with no
+gpu.local job running and ComfyUI's own queue empty, unloads ComfyUI's models once per held episode via `/free`
+(`resource.freed`).
 
 ## The load
 
@@ -521,37 +619,60 @@ It never keeps or commits. `pipeline/scout-schedule.ps1` registers the nightly r
 The scheduled run is `claude -p "/scout night --until 06:30"` with its tools fenced to search, read,
 the CLI and committing `knowledge/` and `.ai/registry-leads.jsonl`; logs land in `foundry-out/scout/logs/`.
 
-## Muse
+## Game asset needs
 
-The loop's second wing (spark `scout-muse`, 2026-10-23; skill `/scout-muse`): an SFW study of how
-fictional adult women are drawn as characters - ultra-photoreal portrait, cinematic still, fashion
-editorial, semi-real painterly, anime/cel, stylised 3D, real-time 3D companion, toon-shaded 3D - crossed
-with character cards as 9:16 posters and 16:9 roleplay-situation scenes. Craft notes:
-`knowledge/scout-muse/techniques.md`.
+Spark scout-vision S4 (2026-10-26). A game asset answers a need the GAME states, at the game's own budget, or it is
+not briefed. POF writes one tracked file per onboarded game - `npx tsx scripts/asset-needs.ts <project>` in pof ->
+`../pof/asset-needs/<project>.json`, contract `asset-needs/1` (pof's `docs/asset-needs.md`): the inventory (each
+asset's class, tris by the game's own rule, budget, gates, and the game's own 0-3 score where its scorecard names
+it) and the NEEDS - `scored-low` (below the game's pass threshold) and `missing` (a roster entry with no model) -
+each with the game's words for why, its evidence line, a priority and, when the game states one, its budget. A need
+with a `gravitoneClass` is briefable.
 
-- **A wing is a root.** `foundry-out/scout-muse/` (`SCOUT_MUSE_STORE_DIR`) beside `foundry-out/scout/`;
-  every CLI line takes `--wing muse` (`lib/foundry/scout/wing.ts`, the active wing in `wingScope.ts`).
-  Taste, ideas blocked, steer, source dedupe and leads never cross wings. The `/scout` screen switches
-  wings (`/scout?wing=muse`); the Board packet is `pkt:scout:muse:<night>`; a Floor pile reads `muse <night>`.
-- **What the muse wing runs:** doctor, open, add-source, ideas, finding, direction, watch, close, status,
-  style. Ingest, scenes, clips, assets, reels, seeds and music are refused under `--wing muse`.
-- **Ideas** take `target: style | scene | character`, an `aspect` (muse default 9:16; the studio draws only 16:9, 1:1 and 9:16) and, for a character,
-  a `card` `{name, age 25-50, look, personality}`. The door refuses a prompt without `aged NN` (25+), a
-  character prompt whose age is not her card's, and youth or nudity words.
-- **The eye.** After the pixels are held, `lib/foundry/scout/judge.ts` reads adult / apparent age /
-  clothing / real-person / hands (`muse.ts` `judgeFailure`). Not adult, read under 21, nude, or a possible
-  real person: the still is deleted and the candidate fails `judge: <field>`. The eye is local first.
-- **Money.** Studio credits at quality Low (refused over 25 credits a still); `--ideas` default 25, max 50;
-  the night's Gemini ceiling defaults to $2 (only a judge fallback spends it). A refused studio generation
-  is deleted like a delivered one.
-- **Landing.** A kept `style` idea develops through the extract into the SHARED catalogue (either wing may
-  use the look); kept findings land in `knowledge/scout-muse/techniques.md`, kept watch lines in its
-  `watchlist.md`, kept characters in `characters.md` (`appendCharacter`). Muse stills are not Library
-  material through the scout feed; kept characters reach the Library as the `character` kind
-  (`lib/library/feeds/character.ts`), one item per woman, her stills as its looks.
-- **Reasons.** The scout source binds all eleven Board keys, so muse throws ride `craft` (anatomy),
-  `rights` (likeness), `subject` (young, drift - in the note), `style` (plastic - in the note), `generic`.
-- Not scheduled: `pipeline/scout-schedule.ps1` runs `/scout night` only.
+`lib/foundry/scout/needs.ts readNeeds` reads it (root `EXPORT_ROOT_POF`, else `../pof`); a file missing, malformed or
+older than 7 days reads as unreadable with the command that refreshes it. The taste brief carries `## Asset needs`.
+The asset door: a `serves: {project: "bp"}` brief must name an OPEN briefable `need` of a fresh file, in the need's
+class; its `budgetTris` becomes the need's; the candidate and its 3D row carry the need. **Onboarded: bp** (first file
+2026-10-26: 18 assets, 7 needs, all scored-low - the lamp agent, pins and furniture briefable). **pof** is refused -
+its UE project is gone, nothing to measure. **mage-arena is retired as a target** (operator, 2026-10-25: developed on
+another device): the door refuses it, the Library's export offers pof and bp only, old candidates that served it
+still read.
+
+## Characters (the muse wing, merged)
+
+Spark scout-vision S3 (2026-10-25) folded the muse wing (spark `scout-muse`, 2026-10-23) into the one loop. **Every
+new night is a scout night.** The four muse nights (`foundry-out/scout-muse/2026-10-23`, `-2`, `-3`, `2026-10-24`) are
+a READ-ONLY ARCHIVE: their ids collide with scout nights, so every reader keys nights by (root, id), an archive night's
+run id is `muse:<night>` forever, and its packets (`pkt:scout:muse:<night>`), files and Library items keep resolving.
+`status --wing muse` lists the archive; any other command under `--wing muse` refuses, naming /scout.
+`store.ts readArchiveNights` / `readRootedNights` are the readers.
+
+**Where a character comes from.** A character SEED (`type: "character"`, `character: {for: <app>, cast: one |
+ensemble | parody}`, `for` one of the idea apps - `dating-sim`, `companion-chat`, `roleplay`, `videogame`,
+`genre-video`, `short`) - and a character IDEA that grows from a kept one: an `ideas` brief with `target:
+"character"`, a card and a look slug, drawn 9:16 at studio quality Low, cleared by the eye. It may cite a web source of
+the night (`source: "s-NN"`, its words only).
+
+**The card** (`muse.ts CharacterCard`): `{name, age, look, personality, kind?: original|parody, origin?, render?:
+photoreal|stylised, audience?}` - `look` is IDENTITY (face, hair, build, skin, one signature garment), `personality`
+is STATE. Rules (`museDoor.ts briefRefusal` / `characterRefusal`): every brief is SFW (the nudity/sexual word floor
+holds for EVERY idea brief); an adult character is a stated adult (age 25+, at most 50 for companion-chat, dating-sim
+and roleplay), the eye reads 21+; a kids/family character may be any age, but under 18 is `render: stylised` and is
+never cast into adult work; a parody names its `origin` in words - popular fictional characters may be named for
+parody, never a real person, never a source picture. The eye (`judge.ts`) runs on character ideas, cast stills and
+sheets; a parody card adds the clause that a declared fictional character is not a real person.
+
+**Kept characters** (`characters.ts keptCharacters`, over scout + archive): a kept `character` idea grouped by its
+folded name, her newest card and portrait, her newest KEPT sheet. The taste brief carries `## Kept characters`,
+`## Already drawn` (the one-of-one guard over both roots), `## Technique findings` (the archive's techniques.md) and
+`## Sheets to draw`. A keep still appends her line to `knowledge/scout-muse/characters.md`. The Library character
+feed reads the same reader: a character first kept on the archive keeps `character:muse:<name>`, a new one
+`character:<name>`.
+
+| command | what it does |
+|---|---|
+| `sheet <night> [--character <name>] [--detach]` · `sheet <night> --collect` | Her REFERENCE SHEET: for every kept character with no kept sheet and none in flight, one neutral 1:1 still on local Flux - her identity block plus neutral framing (rest expression, three-quarter head, even light, plain grey field, the signature garment only) - with her kept portrait admitted LATE as the reference (`flux2.ts` reference graph ported from `pipeline/vlm-probe/consistency.py`, `REFERENCE_LATE` 0.25 from the probe's measured lane). Producer `scout-sheet`, gpu.local, $0. One cell `c-NN/sheet` in the packet group `sheets` (style, craft, subject); kept = her reference, rejected = drawn again (the reasons in `## Sheets to draw`). |
+| `cast: [<name>]` on a storyboard / trial, a character scene idea, an idea artboard | Each name a kept character (`cast.ts castOf`, at most 3, the audience rule). Every prompt leads with her identity block VERBATIM (`characters.ts castPrompt`; registry identity-split-from-state). On Flux (storyboards, trials) her kept sheet also rides as a late reference through the one guard `castStillOf` (only her own kept portrait or sheet, never a source file or a brief's path); without a kept sheet the panel is identity block only. The studio (scene stills, artboards) takes no reference: identity block only. `namesIn` exempts cast names and parody origins in storyboard panels; scene recipes keep the no-names rule. |
 
 ## Files on disk
 

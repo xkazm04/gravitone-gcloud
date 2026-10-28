@@ -142,6 +142,7 @@ describe.skipIf(PYTHON === undefined)("a dry forge job end to end", () => {
 });
 
 describe.skipIf(PYTHON === undefined)("the CLI, the launcher and the worker act on one job", () => {
+  // Spawns child processes: under the pre-push gate's parallel load (and a box drawing at night) it runs past vitest's 5 s default.
   it("forge.py --detach enqueues; the Node launcher and launchForge find that job, never a second; worker.py --once drives it", () => {
     const u = universe();
     const d = py(u, [FORGE, plan(u), "--run-id", "r3", "--dry", "--detach", "--json"]);
@@ -158,7 +159,7 @@ describe.skipIf(PYTHON === undefined)("the CLI, the launcher and the worker act 
     expect(w.status, w.stderr).toBe(0);
     expect(linesOf(w)).toEqual([{ jobId: "job:run:forge:r3", lane: "gpu.local", producer: "forge", outcome: "done", state: "done" }]);
     expect(runJson(u, "r3").status).toBe("done");
-  });
+  }, 60_000);
 });
 
 describe.skipIf(PYTHON === undefined)("a SIGKILL at a step boundary", () => {

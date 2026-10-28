@@ -363,7 +363,7 @@
         "kernel-store-and-events"
       ],
       "db_tables": [],
-      "description": "The Library's kernel side: asset schema, write path, queries with clause builders, counts, detail and measures. Serves the Library screens from the kernel store.",
+      "description": "The Library's kernel side: asset schema, write path, queries with clause builders, counts, detail and measures, plus the ventures schema and store. Serves the Library screens from the kernel store.",
       "entry_points": [
         "packages/kernel/src/library/core.ts",
         "packages/kernel/src/library/query.ts"
@@ -377,20 +377,20 @@
         "packages/kernel/src/library/measures.ts",
         "packages/kernel/src/library/query.ts",
         "packages/kernel/src/library/schema.ts",
-        "packages/kernel/src/library/write.ts"
+        "packages/kernel/src/library/write.ts",
+        "packages/kernel/src/ventures/schema.ts",
+        "packages/kernel/src/ventures/store.ts"
       ],
       "group": "Domain Kernel Model",
       "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
       "id": "4b7d0aa8-b99a-48cb-86b7-986a7c99f9d5",
       "keywords": [
         "library",
-        "asset",
+        "ventures",
         "query",
-        "counts",
-        "detail",
-        "measures"
+        "schema"
       ],
-      "last_written_at": "2026-10-25T15:57:03.048174500+00:00",
+      "last_written_at": "2026-10-26T08:37:01.637762600+00:00",
       "name": "asset-library-store",
       "pinned": false,
       "tech_stack": [
@@ -565,7 +565,7 @@
         "ui-status-provenance"
       ],
       "db_tables": [],
-      "description": "The audio studio's hunt and arrange surfaces: auditioning takes, mapping the hunt, rendering, and arranging takes into groups. Pure models (hunt.ts, arrange.ts, arrangeGroups.ts) feed the React boards that the audio route reads through its port. Depends on the Wave and Chip primitives for waveform and verdict display.",
+      "description": "The audio studio's hunt and arrange surfaces: auditioning takes, mapping the hunt, rendering, and arranging takes into named groups. Pure models (hunt.ts, arrange.ts, arrangeGroups.ts, arrangeNames.ts) feed the React boards that the audio route reads through its port. Depends on the Wave and Chip primitives for waveform and verdict display.",
       "entry_points": [
         "packages/ui/src/components/audio/HuntMap.tsx",
         "packages/ui/src/components/audio/ArrangeBoard.tsx"
@@ -575,6 +575,7 @@
         "packages/ui/src/components/audio/ArrangeBoard.tsx",
         "packages/ui/src/components/audio/arrange.ts",
         "packages/ui/src/components/audio/arrangeGroups.ts",
+        "packages/ui/src/components/audio/arrangeNames.ts",
         "packages/ui/src/components/audio/Hunt.module.css",
         "packages/ui/src/components/audio/HuntAudition.tsx",
         "packages/ui/src/components/audio/HuntMap.tsx",
@@ -589,16 +590,13 @@
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
       "id": "35c4885c-477a-4fa4-8e6d-356b3af05959",
       "keywords": [
+        "audio",
         "hunt",
         "arrange",
-        "audition",
-        "take",
-        "audio",
-        "render",
-        "round-trip",
+        "takes",
         "groups"
       ],
-      "last_written_at": "2026-10-25T15:57:03.048925600+00:00",
+      "last_written_at": "2026-10-26T08:37:01.638421300+00:00",
       "name": "audio-hunt-arrange",
       "pinned": false,
       "tech_stack": [
@@ -880,7 +878,7 @@
         "ledger-v1-sources"
       ],
       "db_tables": [],
-      "description": "Board decision adapters and ledger projections for scout and spend: scout brief, music, part, plan and wing packets, seeds, and spend requests with their live view and wording. They apply the operator's verdicts back to the scout and spend stores and project their events into the ledger.",
+      "description": "Board decision adapters and ledger projections for scout and spend: scout brief, music, part, plan, wing and reel-cell packets, seeds, and spend requests with their live view and wording. They apply the operator's verdicts back to the scout and spend stores and project their events into the ledger.",
       "entry_points": [
         "lib/decision/v1/sources/scout.ts"
       ],
@@ -890,6 +888,7 @@
         "lib/decision/v1/sources/scoutMusic.ts",
         "lib/decision/v1/sources/scoutPart.ts",
         "lib/decision/v1/sources/scoutPlan.ts",
+        "lib/decision/v1/sources/scoutReelCells.ts",
         "lib/decision/v1/sources/scoutWing.ts",
         "lib/decision/v1/sources/seeds.ts",
         "lib/decision/v1/sources/spend.ts",
@@ -902,14 +901,14 @@
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
       "id": "eb8e4f16-65ba-445e-9299-2e00abf63aaa",
       "keywords": [
-        "packet",
-        "verdict",
+        "board",
         "scout",
+        "reel",
         "seeds",
-        "spend-request",
-        "ledger"
+        "spend",
+        "verdict"
       ],
-      "last_written_at": "2026-10-25T16:01:26.392199800+00:00",
+      "last_written_at": "2026-10-26T08:37:01.633839100+00:00",
       "name": "board-scout-spend-sources",
       "pinned": false,
       "tech_stack": [
@@ -1897,7 +1896,7 @@
         "imaging-gateway-and-spend"
       ],
       "db_tables": [],
-      "description": "Vendor adapters for image generation (Google, Leonardo, Ollama, Qwen, agy) including a browser-driven Leonardo Studio driver with selectors and a fake for tests, plus the Leonardo video clip pipeline with its own store, pricing and budget. The router in the gateway selects among these; each call is priced and receipted before spend.",
+      "description": "Vendor adapters for image generation (Google, Leonardo, Ollama, Qwen, agy) including a browser-driven Leonardo Studio driver with selectors, a fake for tests, and the studio's still, lock and balance helpers, plus the Leonardo video clip pipeline with its own store, pricing and budget. The router in the gateway selects among these; each call is priced and receipted before spend.",
       "entry_points": [
         "lib/imaging/providers/leonardo.ts",
         "lib/imaging/studio/driver.ts",
@@ -1915,6 +1914,9 @@
         "lib/imaging/studio/fake.ts",
         "lib/imaging/studio/selectors.ts",
         "lib/imaging/studio/types.ts",
+        "lib/imaging/studio/balance.ts",
+        "lib/imaging/studio/lock.ts",
+        "lib/imaging/studio/still.ts",
         "lib/imaging/video/budget.ts",
         "lib/imaging/video/clips.ts",
         "lib/imaging/video/errors.ts",
@@ -1928,16 +1930,13 @@
       "id": "1eb57510-dcfa-4549-97ed-56f3f97519ec",
       "keywords": [
         "leonardo",
-        "google",
-        "ollama",
-        "qwen",
-        "provider",
         "studio",
-        "playwright",
-        "video",
+        "still",
+        "lock",
+        "balance",
         "clips"
       ],
-      "last_written_at": "2026-10-25T15:57:03.093721100+00:00",
+      "last_written_at": "2026-10-26T08:37:01.634382700+00:00",
       "name": "imaging-vendor-providers-and-video",
       "pinned": false,
       "tech_stack": [
@@ -2571,7 +2570,7 @@
         "library-projection-feeds"
       ],
       "db_tables": [],
-      "description": "Library support for characters and 3D models: detail views, fixture characters and models, the look strip, the 3D model viewer and stage, and the character, mesh and scout feeds that index them.",
+      "description": "Library support for characters, genres, ventures and 3D models: detail views, fixture characters, genres and models, the look strip, the 3D model viewer and stage, and the character, mesh and scout feeds that index them, with the genre and library-genre domain types.",
       "entry_points": [
         "app/(studio)/library/_library/CharacterDetail.tsx",
         "lib/library/feeds/character.ts"
@@ -2579,7 +2578,10 @@
       "file_paths": [
         "app/(studio)/library/_library/CharacterDetail.tsx",
         "app/(studio)/library/_library/ModelDetail.tsx",
+        "app/(studio)/library/_library/GenreDetail.tsx",
+        "app/(studio)/library/_library/VentureDetail.tsx",
         "app/(studio)/library/_port/fixtureCharacters.ts",
+        "app/(studio)/library/_port/fixtureGenres.ts",
         "app/(studio)/library/_port/fixtureModels.ts",
         "packages/ui/src/components/library/LookStrip.tsx",
         "packages/ui/src/components/library/LookStrip.module.css",
@@ -2591,20 +2593,22 @@
         "lib/library/feeds/mesh.ts",
         "lib/library/feeds/scout.ts",
         "packages/domain/src/libraryCharacter.ts",
-        "packages/domain/src/libraryMedia.ts"
+        "packages/domain/src/libraryMedia.ts",
+        "packages/domain/src/genre.ts",
+        "packages/domain/src/libraryGenre.ts"
       ],
       "group": "Production Pipeline",
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
       "id": "993f34a7-f7ba-42ea-ba8a-7de795b2032d",
       "keywords": [
-        "character",
-        "model",
-        "glb",
-        "viewer",
         "library",
-        "feed"
+        "characters",
+        "genres",
+        "ventures",
+        "model",
+        "viewer"
       ],
-      "last_written_at": "2026-10-25T16:01:26.392823800+00:00",
+      "last_written_at": "2026-10-26T08:37:01.634987200+00:00",
       "name": "library-characters-models",
       "pinned": false,
       "tech_stack": [
@@ -2669,7 +2673,7 @@
         "library_items",
         "media_facts"
       ],
-      "description": "Builds the Library's searchable index of everything the studio has made. Each feed (foundry styles, forge, extract, dojo and strips; sound suno, takes, registry and music-video; studio clips and exports; kernel items) is read, its file media is ingested into blobs, and its items are upserted into the kernel Library index. Feeds that no longer hold an item are pruned, and new media is probed for facts. It also holds the seeded 50k fixture corpus, the p95 latency probe that measures it, the style trial set, and the media route helpers.",
+      "description": "Builds the Library's searchable index of everything the studio has made. Each feed (foundry styles, forge, extract, dojo and strips; sound suno, takes, registry and music-video; studio clips and exports; genres; kernel items) is read, its file media is ingested into blobs, and its items are upserted into the kernel Library index. Feeds that no longer hold an item are pruned, and new media is probed for facts. It also holds the seeded 50k fixture corpus, the p95 latency probe, the style trial set, and the media route helpers.",
       "entry_points": [
         "lib/library/project.ts",
         "lib/library/fresh.ts",
@@ -2683,6 +2687,7 @@
         "lib/library/project.ts",
         "lib/library/trials.ts",
         "lib/library/feeds/foundry.ts",
+        "lib/library/feeds/genre.ts",
         "lib/library/feeds/kernel.ts",
         "lib/library/feeds/sound.ts",
         "lib/library/feeds/studio.ts",
@@ -2693,17 +2698,13 @@
       "id": "04e4702a-4221-4673-9cfa-130cbd21f93e",
       "keywords": [
         "library",
-        "feed",
-        "projection",
-        "ingest",
-        "blob",
+        "feeds",
         "index",
+        "genre",
         "corpus",
-        "latency",
-        "media-facts",
-        "prune"
+        "blobs"
       ],
-      "last_written_at": "2026-10-25T15:57:03.094793700+00:00",
+      "last_written_at": "2026-10-26T08:37:01.636258800+00:00",
       "name": "library-projection-feeds",
       "pinned": false,
       "tech_stack": [
@@ -3580,7 +3581,7 @@
         "job-queue-and-leases"
       ],
       "db_tables": [],
-      "description": "Resource profiles and gates in the kernel, the resource domain type, the machine probe, GPU leases (including the legacy path), lane doors, and the capability and deployment cells that say what this box can do.",
+      "description": "Resource profiles and gates in the kernel, including the starvation rule, the resource domain type, the machine probe, the ComfyUI-free check, GPU leases (including the legacy path), lane doors, and the capability and deployment cells that say what this box can do.",
       "entry_points": [
         "packages/kernel/src/resources/gate.ts"
       ],
@@ -3588,8 +3589,10 @@
         "packages/kernel/src/resources/gate.ts",
         "packages/kernel/src/resources/load.ts",
         "packages/kernel/src/resources/profiles.ts",
+        "packages/kernel/src/resources/starve.ts",
         "packages/domain/src/resource.ts",
         "lib/resources/probe.ts",
+        "lib/resources/comfyFree.ts",
         "lib/gpu/lease.ts",
         "lib/gpu/legacy.ts",
         "lib/produce/laneDoors.ts",
@@ -3604,11 +3607,12 @@
       "keywords": [
         "gpu",
         "lease",
-        "resource",
-        "capability",
-        "profile"
+        "starve",
+        "comfy",
+        "profiles",
+        "capabilities"
       ],
-      "last_written_at": "2026-10-25T16:01:26.393477100+00:00",
+      "last_written_at": "2026-10-26T08:37:01.637280100+00:00",
       "name": "resource-gates-and-gpu",
       "pinned": false,
       "tech_stack": [
@@ -3882,7 +3886,7 @@
         "board-scout-spend-sources"
       ],
       "db_tables": [],
-      "description": "Core of the nightly scout loop: the store, types, graph, load and registry, source ingestion, leads and lead events, knowledge, budget and effort, steering, judging, wings and the doctor. It brings material onto the box and holds the night's state that producers and the Board read.",
+      "description": "Core of the nightly scout loop: the store, types, graph, load and registry, source ingestion, leads and lead events, knowledge, budget and effort, steering, judging, wings and the doctor (including the local Ollama check). It also holds the night plan with its doors, the proposal pass, the backlog of kept work, the asset needs and the night-fill rebalancer. It brings material onto the box and holds the night's state that producers and the Board read.",
       "entry_points": [
         "lib/foundry/scout/store.ts",
         "lib/foundry/scout/graph.ts"
@@ -3891,6 +3895,7 @@
         "lib/foundry/scout/acts.ts",
         "lib/foundry/scout/budget.ts",
         "lib/foundry/scout/doctor.ts",
+        "lib/foundry/scout/doctorOllama.ts",
         "lib/foundry/scout/effort.ts",
         "lib/foundry/scout/graph.ts",
         "lib/foundry/scout/ingest.ts",
@@ -3906,21 +3911,29 @@
         "lib/foundry/scout/store.ts",
         "lib/foundry/scout/types.ts",
         "lib/foundry/scout/wing.ts",
-        "lib/foundry/scout/wingScope.ts"
+        "lib/foundry/scout/wingScope.ts",
+        "lib/foundry/scout/backlog.ts",
+        "lib/foundry/scout/needs.ts",
+        "lib/foundry/scout/nightFill.ts",
+        "lib/foundry/scout/plan.ts",
+        "lib/foundry/scout/planDoors.ts",
+        "lib/foundry/scout/propose.ts"
       ],
       "group": "Production Pipeline",
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
       "id": "67420468-b503-4a5c-bf04-0e24a9bbc225",
       "keywords": [
         "scout",
-        "leads",
         "night",
-        "wing",
-        "budget",
-        "knowledge",
-        "judge"
+        "plan",
+        "backlog",
+        "night-fill",
+        "doctor",
+        "ollama",
+        "leads",
+        "registry"
       ],
-      "last_written_at": "2026-10-25T16:01:26.391731100+00:00",
+      "last_written_at": "2026-10-26T08:37:01.631839700+00:00",
       "name": "scout-engine-core",
       "pinned": false,
       "tech_stack": [
@@ -3937,7 +3950,7 @@
         "scout-producers"
       ],
       "db_tables": [],
-      "description": "The creative stages of the scout loop: seeds and seed store, ideas and repeats, concepts, scenes, storyboards, direction, tracks and visualizers, assets, taste models and the muse wing with its door. Each stage turns kept material into the next artefact and feeds the scout producers.",
+      "description": "The creative stages of the scout loop: seeds and seed store, ideas and repeats, concepts, scenes, storyboards, direction, tracks and visualizers, assets, taste models and the muse wing with its door. It also covers characters and their cast, genres, pieces, reference sheets, stats reels with their door and taste, the local still engine and taste drafts. Each stage turns kept material into the next artefact and feeds the scout producers.",
       "entry_points": [
         "lib/foundry/scout/idea.ts",
         "lib/foundry/scout/seeds.ts"
@@ -3959,7 +3972,18 @@
         "lib/foundry/scout/taste.ts",
         "lib/foundry/scout/tasteMuse.ts",
         "lib/foundry/scout/track.ts",
-        "lib/foundry/scout/visualizer.ts"
+        "lib/foundry/scout/visualizer.ts",
+        "lib/foundry/scout/cast.ts",
+        "lib/foundry/scout/characters.ts",
+        "lib/foundry/scout/draft.ts",
+        "lib/foundry/scout/genres.ts",
+        "lib/foundry/scout/piece.ts",
+        "lib/foundry/scout/reel.ts",
+        "lib/foundry/scout/reelDoor.ts",
+        "lib/foundry/scout/reelTaste.ts",
+        "lib/foundry/scout/sheet.ts",
+        "lib/foundry/scout/stillEngine.ts",
+        "lib/foundry/scout/tasteDrafts.ts"
       ],
       "group": "Production Pipeline",
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
@@ -3968,12 +3992,14 @@
         "seeds",
         "ideas",
         "storyboard",
-        "muse",
+        "characters",
+        "genres",
+        "reel",
+        "sheet",
         "taste",
-        "visualizer",
-        "scene"
+        "muse"
       ],
-      "last_written_at": "2026-10-25T16:01:26.391880900+00:00",
+      "last_written_at": "2026-10-26T08:37:01.632171+00:00",
       "name": "scout-engine-creative",
       "pinned": false,
       "tech_stack": [
@@ -4033,7 +4059,7 @@
         "scout-engine-core"
       ],
       "db_tables": [],
-      "description": "Kernel producers for the scout loop: ingest, ideas, scenes, storyboards, reels and 3D assets. Pure definitions in packages/producers plan and price each job; the bound files in lib/producers run them with their acts, and loadSample supplies sample loads.",
+      "description": "Kernel producers for the scout loop: ingest, ideas, scenes, storyboards, reels, pieces, reference sheets and 3D assets, plus the night-fill producer and the studio still option. Pure definitions in packages/producers plan and price each job; the bound files in lib/producers run them with their acts, and loadSample supplies sample loads.",
       "entry_points": [
         "lib/producers/scoutIngest.ts"
       ],
@@ -4045,10 +4071,17 @@
         "lib/producers/scoutIngest.ts",
         "lib/producers/scoutReel.ts",
         "lib/producers/scoutReelActs.ts",
+        "lib/producers/scoutReelKinds.ts",
         "lib/producers/scoutScene.ts",
         "lib/producers/scoutSceneActs.ts",
         "lib/producers/scoutStoryboard.ts",
         "lib/producers/scoutStoryboardActs.ts",
+        "lib/producers/scoutPiece.ts",
+        "lib/producers/scoutPieceActs.ts",
+        "lib/producers/scoutSheet.ts",
+        "lib/producers/scoutSheetActs.ts",
+        "lib/producers/scoutStillOption.ts",
+        "lib/producers/nightFill.ts",
         "lib/producers/loadSample.ts",
         "packages/producers/src/scout-asset/define.ts",
         "packages/producers/src/scout-ideas/define.ts",
@@ -4057,20 +4090,23 @@
         "packages/producers/src/scout-reels/define.ts",
         "packages/producers/src/scout-scene/define.ts",
         "packages/producers/src/scout-storyboard/define.ts",
+        "packages/producers/src/scout-piece/define.ts",
+        "packages/producers/src/scout-sheet/define.ts",
         "packages/domain/src/scoutGraph.ts"
       ],
       "group": "Production Pipeline",
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
       "id": "ce5ef2e0-d944-4b79-a500-32f8a081923f",
       "keywords": [
-        "producer",
         "scout",
+        "producer",
+        "piece",
+        "sheet",
+        "night-fill",
         "reel",
-        "storyboard",
-        "ingest",
-        "receipt"
+        "storyboard"
       ],
-      "last_written_at": "2026-10-25T16:01:26.392030900+00:00",
+      "last_written_at": "2026-10-26T08:37:01.633111100+00:00",
       "name": "scout-producers",
       "pinned": false,
       "tech_stack": [
@@ -4849,7 +4885,7 @@
       "category": "lib",
       "cross_refs": [],
       "db_tables": [],
-      "description": "The single chokepoint for every LLM reasoning call in the app. The router walks a capability-, transport- and key-aware provider chain (Claude CLI, Google) with no silent eliminations, and a repair turn hands a validator-rejected answer back to the model with the exact failing paths. Each settled turn feeds a console log, a bounded duration/cost stats ring for dispatch previews, an opt-in LightTrack usage sink, and a count-only text-usd spend ledger (it books vendor-reported cost and never refuses a turn).",
+      "description": "The single chokepoint for every LLM reasoning call in the app. The router walks a capability-, transport- and key-aware provider chain (Claude CLI, Google, local Ollama) with no silent eliminations, and a repair turn hands a validator-rejected answer back to the model with the exact failing paths. Each settled turn feeds a console log, a bounded stats ring, an opt-in LightTrack usage sink, and a count-only text-usd spend ledger.",
       "entry_points": [
         "lib/text/router.ts",
         "lib/text/types.ts",
@@ -4866,6 +4902,7 @@
         "lib/text/providers/claudeCli.ts",
         "lib/text/providers/claudeCliRetrieve.ts",
         "lib/text/providers/google.ts",
+        "lib/text/providers/ollama.ts",
         "lib/text/repair.ts",
         "lib/text/router.ts",
         "lib/text/spend.ts",
@@ -4878,17 +4915,12 @@
       "keywords": [
         "llm",
         "router",
-        "reasoning",
-        "provider-chain",
+        "ollama",
         "claude-cli",
-        "gemini",
-        "repair-turn",
-        "spend",
-        "pricing",
-        "turn-stats",
-        "lighttrack"
+        "repair",
+        "pricing"
       ],
-      "last_written_at": "2026-10-25T15:57:03.097003800+00:00",
+      "last_written_at": "2026-10-26T08:37:01.638237800+00:00",
       "name": "text-reasoning-engine",
       "pinned": false,
       "tech_stack": [
@@ -5518,7 +5550,7 @@
       ]
     }
   ],
-  "generated_at": "2026-10-25T16:01:29.491377100+00:00",
+  "generated_at": "2026-10-26T08:37:02.569809500+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -5542,12 +5574,12 @@
     "root": "C:/Users/kazda/kiro/gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "2b29bbbcdfa5429fa6ed3aae2421e50847597075",
-    "git_commit_count": 2778
+    "git_commit": "095c9eb975b3ad664e891ccd1de03cd3b1b5d8a8",
+    "git_commit_count": 2841
   },
   "stats": {
     "contexts": 108,
-    "files": 1483,
+    "files": 1526,
     "groups": 2,
     "use_cases": 0
   },

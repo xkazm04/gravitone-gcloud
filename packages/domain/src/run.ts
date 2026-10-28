@@ -65,6 +65,12 @@ export const PRODUCERS = [
   // A /scout night's storyboards (spark scout-storyboards): a kept idea's frames drawn by Flux 2 on this
   // box's ComfyUI, one job per storyboard (lib/producers/scoutStoryboard.ts).
   "scout-storyboard",
+  // A genre's piece (spark scout-vision S2): its best kept trial's rejected clips re-made on LTX and the clips cut into
+  // one video with ffmpeg on this box, one job per piece (lib/producers/scoutPiece.ts).
+  "scout-piece",
+  // A kept character's reference sheet (spark scout-vision S3): one neutral 1:1 Flux 2 still on this box's ComfyUI, her
+  // kept portrait admitted late as the reference, one job per sheet (lib/producers/scoutSheet.ts).
+  "scout-sheet",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

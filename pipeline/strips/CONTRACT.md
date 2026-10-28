@@ -33,13 +33,15 @@ Write exactly two files:
 ## Frame size and timing
 
 - The edu lane is 1920×1080. The stat lane is 1080×1920 (vertical).
-- 30 fps, 240 frames (`i = 0..239`, `t = i / 30` seconds).
+- 30 fps, 240 frames (`i = 0..239`, `t = i / 30` seconds) - unless
+  `inputs/brief.json` carries `frames`: then that many (`i = 0..frames-1`),
+  and every "8 seconds" below reads as `frames / 30` seconds.
 - No audio.
 
 ## The page API (required)
 
 ```js
-window.STRIP = { width: W, height: H, fps: 30, frames: 240 };
+window.STRIP = { width: W, height: H, fps: 30, frames: 240 }; // or the brief's `frames`
 
 // Draw frame i completely. Must be a PURE function of i: same i, same pixels,
 // whatever was rendered before, in any order. May return a Promise.

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { blobRefSchema } from "./blob.ts";
 import { libraryItemIdSchema, styleIdSchema } from "./ids.ts";
+import { GENRE_STATES, VENTURE_ID_RE, VENTURE_KINDS } from "./genre.ts";
 import { LIBRARY_KINDS, LIBRARY_ORIGINS, LIBRARY_SOURCES, LIBRARY_STATES, MODEL_CLASSES, MODEL_TECHNIQUES, type LibraryDetail } from "./library.ts";
 
 // The closed sets live in ./library.ts (zod-free, so the Library route holds them);
@@ -97,6 +98,19 @@ const characterVocabulary = z.object({
   applications: z.array(word),
 });
 
+/** A genre (lib/library/feeds/genre.ts): its own state on the ladder, and the venture it produces for (id and name,
+ *  so the facet reads as the venture's name). */
+const genreVocabulary = z.object({
+  ladder: z.enum(GENRE_STATES),
+  venture: z.string().regex(VENTURE_ID_RE).optional(),
+  ventureName: word.optional(),
+});
+
+/** A venture: a channel, an album or a game. */
+const ventureVocabulary = z.object({
+  type: z.enum(VENTURE_KINDS),
+});
+
 /** What the operator may do with it. A screenshot of somebody's game read for
  *  its look is `reference-only`: it may teach a style, never ship in a cut. */
 export const rightsSchema = z.object({
@@ -137,6 +151,8 @@ export const libraryItemSchema = z
     z.object({ kind: z.literal("doc"), vocabulary: docVocabulary, ...shared }),
     z.object({ kind: z.literal("model"), vocabulary: modelVocabulary, ...shared }),
     z.object({ kind: z.literal("character"), vocabulary: characterVocabulary, ...shared }),
+    z.object({ kind: z.literal("genre"), vocabulary: genreVocabulary, ...shared }),
+    z.object({ kind: z.literal("venture"), vocabulary: ventureVocabulary, ...shared }),
   ])
   .superRefine((it, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });

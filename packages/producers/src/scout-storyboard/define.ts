@@ -12,6 +12,9 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 //
 //   panel:1..N  one Flux 2 dev frame per panel prompt (OUR words, no reference image), drawn on this box's
 //               ComfyUI (lib/imaging/local/flux2.ts), written to storyboards/<c-NN>/panel-N.png in the night
+//   clip:1..N   a TRIAL's only (spark scout-vision S2: a storyboard with a genre): after every panel, one LTX clip
+//               of each drawn panel still, its prompt the motion line, written to storyboards/<c-NN>/clip-N.mp4.
+//               A plain storyboard's request carries no `clips` and plans no clip step.
 //
 // ONE JOB, THE CARD'S LANE. Every step is the local model, so the job waits on `gpu.local` (capacity 1) and
 // names the `comfy` engine, so admission waits on the ComfyUI queue (the scene producer's clip rule).
@@ -19,7 +22,8 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 // ONE PANEL'S FAILURE IS THAT PANEL'S (the ideas producer's rule). A ComfyUI sentence for one prompt leaves
 // that panel empty with the sentence recorded, and the step is booked: the storyboard goes on, and a resumed
 // job never redraws a panel it already drew or already failed. A storyboard that ends with no frame at all
-// is a loss (lib/producers/scoutStoryboardActs.ts `ended`).
+// is a loss (lib/producers/scoutStoryboardActs.ts `ended`). ONE CLIP'S FAILURE IS THAT CLIP'S, the same way: a
+// clip the engine refused (or a panel that drew no still) leaves its index null, and the frames stand.
 //
 // THE PAUSE HOLDS WHAT THE RESUME NEEDS. The launch records the request - each panel's prompt and the seed
 // it will draw with (chosen at launch, so a retry draws the same frame), the aspect, one frame's estimate -
@@ -30,6 +34,7 @@ export const SCOUT_STORYBOARD = "scout-storyboard";
 export const STORYBOARD_REQUEST = "scout.storyboard-requested";
 
 export const panelStep = (k: number): string => `panel:${k}`;
+export const clipStep = (k: number): string => `clip:${k}`;
 
 /** The most frames one storyboard draws (lib/foundry/scout/types.ts STORYBOARD_PANELS_MAX, the operator's five). */
 export const STORYBOARD_REQUEST_PANELS_MAX = 5;
@@ -47,8 +52,14 @@ export const storyboardRequestSchema = z
       .array(z.object({ prompt: z.string().min(1).max(2000), seed: z.number().int().min(0).max(2 ** 48 - 1) }).strict())
       .min(1)
       .max(STORYBOARD_REQUEST_PANELS_MAX),
-    /** One frame's estimate: $0, a local model. */
-    estimates: z.object({ panel: estimateSchema }).strict(),
+    /** A trial's clips, one per panel in order: the seed each LTX clip renders with (chosen at launch). Absent: no clip step. */
+    clips: z
+      .array(z.object({ seed: z.number().int().min(0).max(2 ** 48 - 1) }).strict())
+      .min(1)
+      .max(STORYBOARD_REQUEST_PANELS_MAX)
+      .optional(),
+    /** One frame's estimate, and a trial's one clip's: $0 each, local models. */
+    estimates: z.object({ panel: estimateSchema, clip: estimateSchema.optional() }).strict(),
     by: id,
   })
   .strict();
@@ -58,7 +69,11 @@ export const parseStoryboardRequest = (raw: unknown): Result<StoryboardRequest> 
 
 /** What is still missing, in order. Pure: the request and what the job has booked. */
 export function storyboardPlan(req: StoryboardRequest, outputs: Outputs): MissingStep[] {
-  return req.panels.map((_, i) => ({ name: panelStep(i + 1), estimate: req.estimates.panel })).filter((s) => !outputs.has(s.name));
+  const panels = req.panels.map((_, i) => ({ name: panelStep(i + 1), estimate: req.estimates.panel }));
+  const clip = req.estimates.clip;
+  // Every panel first, then a trial's clips: the card loads Flux once, then LTX once.
+  const clips = req.clips === undefined || clip === undefined ? [] : req.clips.map((_, i) => ({ name: clipStep(i + 1), estimate: clip }));
+  return [...panels, ...clips].filter((s) => !outputs.has(s.name));
 }
 
 /** The world, bound by lib/producers/scoutStoryboard.ts. */
@@ -66,6 +81,8 @@ export type StoryboardPorts = {
   /** The job's request (its event), read outside the drive's transactions. */
   readonly request: (job: Job) => Result<StoryboardRequest>;
   readonly panel: (req: StoryboardRequest, k: number, ctx: StepContext) => Promise<StepOutcome>;
+  /** A trial's clip of panel `k`'s still. */
+  readonly clip: (req: StoryboardRequest, k: number, ctx: StepContext) => Promise<StepOutcome>;
   /** The candidate told the job's ending: rendered with its frames, or failed with every panel's sentence. */
   readonly ended: (req: StoryboardRequest, job: Job, ending: Ending) => Promise<void>;
 };
@@ -97,6 +114,8 @@ export function defineScoutStoryboard(lane: ResourceLane, ports: StoryboardPorts
       if (!req.ok) return { kind: "fatal", code: req.error.code, message: req.error.message };
       const k = step.name.startsWith("panel:") ? Number(step.name.slice("panel:".length)) : NaN;
       if (Number.isInteger(k) && k >= 1 && k <= req.value.panels.length) return ports.panel(req.value, k, ctx);
+      const c = step.name.startsWith("clip:") ? Number(step.name.slice("clip:".length)) : NaN;
+      if (Number.isInteger(c) && c >= 1 && c <= (req.value.clips?.length ?? 0)) return ports.clip(req.value, c, ctx);
       return { kind: "fatal", code: "internal", message: `a storyboard job has no step ${step.name}` };
     },
     async settle(job, ending) {

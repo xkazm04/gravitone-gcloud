@@ -49,7 +49,9 @@ export type WorkOptions = {
   /**
    * Admit by the machine's measured load (spark game-3d-assets): every pick whose producer names an
    * engine is asked `admit` (@gt/domain/resource) before its drive starts. Absent, nothing is asked
-   * and the loop is the one it was before admission existed.
+   * and the loop is the one it was before admission existed. A head it holds is timed on `now`
+   * (./resources/starve.ts): past its skip-ahead a fitting job behind it runs, past its unload
+   * ComfyUI is asked to let go.
    */
   readonly admission?: AdmissionSource;
   /** Called with every pick admission refused, at every look that refused it. */
@@ -125,7 +127,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
     now: () => (opts.signal.aborted ? Number.POSITIVE_INFINITY : clock()),
   };
 
-  const gate = opts.admission === undefined ? undefined : admissionGate(fx, producers, opts.admission, holder, opts.onWait);
+  const gate = opts.admission === undefined ? undefined : admissionGate(fx, producers, opts.admission, holder, opts.onWait, clock);
 
   let recovered = swept.value.length;
   while (!opts.signal.aborted) {
@@ -156,7 +158,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
     let launched = 0;
     let picks = decided.picks;
     if (gate !== undefined) {
-      const admitted = await gate.filter(picks, [...inFlight.values()].map((f) => f.pick));
+      const admitted = await gate.filter(picks, [...inFlight.values()].map((f) => f.pick), seen.value);
       if (!admitted.ok) return admitted;
       picks = admitted.value;
     }

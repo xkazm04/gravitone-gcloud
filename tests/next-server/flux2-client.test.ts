@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { drawFlux, FLUX_FILES, fluxGraph, missingFluxModels, type FluxFetch } from "../../lib/imaging/local/flux2.ts";
+import { drawFlux, FLUX_FILES, fluxGraph, missingFluxModels, REFERENCE_LATE, type FluxFetch } from "../../lib/imaging/local/flux2.ts";
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 9, 9]);
 type Graph = Record<string, { class_type: string; inputs: Record<string, unknown> }>;
@@ -17,6 +17,10 @@ function comfy(o: { refuse?: string; error?: string; never?: boolean; image?: Ui
     const u = new URL(url);
     asked.push(`${init?.method ?? "GET"} ${u.pathname}`);
     if (u.pathname === "/system_stats") return Response.json({ system: { comfyui_version: "0.42.1" } });
+    if (u.pathname === "/upload/image") {
+      const file = (init?.body as FormData).get("image") as File;
+      return Response.json({ name: file.name, subfolder: "gravitone", type: "input" });
+    }
     if (u.pathname === "/prompt") {
       if (o.refuse !== undefined) return new Response(o.refuse, { status: 400 });
       posted.push((JSON.parse(String(init?.body)) as { prompt: Graph }).prompt);
@@ -84,6 +88,51 @@ describe("drawFlux", () => {
     const quiet = comfy();
     await expect(drawFlux({ prompt: "  " }, { fetch: quiet.f })).rejects.toThrow("a Flux frame needs a prompt");
     await expect(drawFlux({ prompt: "p", seed: -1 }, { fetch: quiet.f })).rejects.toThrow(/a Flux seed is a whole number/);
+    expect(quiet.asked).toEqual([]);
+  });
+});
+
+// spark scout-vision S3: the probe's reference graph, admitted late - and with no reference, the graph as it was.
+describe("fluxGraph with references", () => {
+  /** The text-only graph as fluxGraph built it before references existed, serialised (captured 2026-10-25). */
+  const TEXT_ONLY =
+    '{"1":{"class_type":"UNETLoader","inputs":{"unet_name":"flux2_dev_fp8mixed.safetensors","weight_dtype":"default"}},"2":{"class_type":"CLIPLoader","inputs":{"clip_name":"mistral_3_small_flux2_fp8.safetensors","type":"flux2","device":"default"}},"3":{"class_type":"VAELoader","inputs":{"vae_name":"flux2-vae.safetensors"}},"4":{"class_type":"CLIPTextEncode","inputs":{"clip":["2",0],"text":"a lantern"}},"5":{"class_type":"FluxGuidance","inputs":{"conditioning":["4",0],"guidance":4}},"6":{"class_type":"EmptyFlux2LatentImage","inputs":{"width":1280,"height":720,"batch_size":1}},"7":{"class_type":"Flux2Scheduler","inputs":{"steps":20,"width":1280,"height":720}},"8":{"class_type":"KSamplerSelect","inputs":{"sampler_name":"euler"}},"9":{"class_type":"RandomNoise","inputs":{"noise_seed":7}},"10":{"class_type":"BasicGuider","inputs":{"model":["1",0],"conditioning":["5",0]}},"11":{"class_type":"SamplerCustomAdvanced","inputs":{"noise":["9",0],"guider":["10",0],"sampler":["8",0],"sigmas":["7",0],"latent_image":["6",0]}},"12":{"class_type":"VAEDecode","inputs":{"samples":["11",0],"vae":["3",0]}},"13":{"class_type":"SaveImage","inputs":{"images":["12",0],"filename_prefix":"gravitone/flux2-7"}}}';
+  const base = { prompt: "a lantern", seed: 7, width: 1280, height: 720, prefix: "gravitone/flux2-7" };
+
+  it("no refs: byte-identical to the text-only graph (refs [] and a late with no refs too)", () => {
+    expect(JSON.stringify(fluxGraph(base))).toBe(TEXT_ONLY);
+    expect(JSON.stringify(fluxGraph({ ...base, refs: [], late: REFERENCE_LATE }))).toBe(TEXT_ONLY);
+  });
+
+  it("refs: LoadImage -> VAEEncode -> ReferenceLatent chained after the text, then the late admission, then guidance", () => {
+    const g = fluxGraph({ ...base, refs: ["gravitone/ref-a.png", "gravitone/ref-b.png"], late: 0.25 });
+    expect(g["200"]).toEqual({ class_type: "LoadImage", inputs: { image: "gravitone/ref-a.png" } });
+    expect(g["210"]).toEqual({ class_type: "VAEEncode", inputs: { pixels: ["200", 0], vae: ["3", 0] } });
+    expect(g["220"]).toEqual({ class_type: "ReferenceLatent", inputs: { conditioning: ["4", 0], latent: ["210", 0] } });
+    expect(g["221"]).toEqual({ class_type: "ReferenceLatent", inputs: { conditioning: ["220", 0], latent: ["211", 0] } });
+    expect(g["30"]).toEqual({ class_type: "ConditioningSetTimestepRange", inputs: { conditioning: ["4", 0], start: 0, end: 0.25 } });
+    expect(g["31"]).toEqual({ class_type: "ConditioningSetTimestepRange", inputs: { conditioning: ["221", 0], start: 0.25, end: 1 } });
+    expect(g["32"]).toEqual({ class_type: "ConditioningCombine", inputs: { conditioning_1: ["30", 0], conditioning_2: ["31", 0] } });
+    expect(g["5"]?.inputs).toEqual({ conditioning: ["32", 0], guidance: 4 });
+    // late 0: the reference is always on - the chain feeds guidance directly (the probe's `if refs and late`).
+    const always = fluxGraph({ ...base, refs: ["gravitone/ref-a.png"], late: 0 });
+    expect(always["30"]).toBeUndefined();
+    expect(always["5"]?.inputs["conditioning"]).toEqual(["220", 0]);
+  });
+
+  it("drawFlux uploads each reference by its bytes and draws the late-admitted graph; a bad reference is refused before anything is sent", async () => {
+    expect(REFERENCE_LATE).toBe(0.25);
+    const c = comfy();
+    await drawFlux({ prompt: "Ilse Marrow, aged 36: a sheet", aspect: "1:1", seed: 3, refs: [PNG] }, { fetch: c.f, base: "http://comfy.test" });
+    expect(c.asked).toEqual(["GET /system_stats", "POST /upload/image", "POST /prompt", "GET /history/p-1", "GET /view"]);
+    const g = c.posted[0] ?? {};
+    expect(g["200"]?.inputs["image"]).toMatch(/^gravitone\/ref-[0-9a-f]{16}\.png$/);
+    expect(g["30"]?.inputs["end"]).toBe(REFERENCE_LATE);
+    expect(g["6"]?.inputs).toMatchObject({ width: 1024, height: 1024 });
+    const quiet = comfy();
+    await expect(drawFlux({ prompt: "p", refs: [new Uint8Array([1, 2, 3])] }, { fetch: quiet.f })).rejects.toThrow("reference 1 is not a PNG");
+    await expect(drawFlux({ prompt: "p", refs: [PNG, PNG, PNG, PNG] }, { fetch: quiet.f })).rejects.toThrow("at most 3 reference stills");
+    await expect(drawFlux({ prompt: "p", refs: [PNG], late: 1 }, { fetch: quiet.f })).rejects.toThrow("a reference joins at 0 to under 1");
     expect(quiet.asked).toEqual([]);
   });
 });

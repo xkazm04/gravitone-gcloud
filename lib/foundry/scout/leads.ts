@@ -17,14 +17,14 @@
 //
 // APPEND-ONLY BY KEY. `<kind>:<ref>` names an event once: a redelivered apply queues
 // nothing, a second `lead` of a filed key writes nothing. The file sits beside the
-// nights (`<scoutRoot>/leads.json`) and is written under its own lock file.
+// nights (`<homeRoot>/leads.json`, the pre-baseline root since spark project-baseline) and is written under its own lock file.
 
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { FoundryError, readManifestFile, writeJsonAtomic } from "../runStore";
 import { withRunLock } from "../verdictLog";
-import { scoutRoot } from "./store";
+import { homeRoot } from "./store";
 import type { NightId } from "./types";
 
 export const LEAD_EVENT_KINDS = ["style-proven", "genre-publishable", "finding-restated", "source-rich"] as const;
@@ -65,7 +65,7 @@ export const leadMark = (key: string): string => `[scout:${key}]`;
 export const leadKey = (kind: LeadEventKind, ref: string): string => `${kind}:${ref}`;
 
 export function leadsFile(): string {
-  return path.join(scoutRoot(), "leads.json");
+  return path.join(homeRoot(), "leads.json");
 }
 
 /** The queue, or an empty one when no commit has queued anything yet. */
@@ -79,8 +79,8 @@ export async function readQueue(): Promise<LeadQueue> {
 
 async function mutateQueue(fn: (q: LeadQueue) => LeadQueue): Promise<LeadQueue> {
   // The lock is a file in the root, so the root must exist before it is taken.
-  await mkdir(scoutRoot(), { recursive: true });
-  return withRunLock(scoutRoot(), async () => {
+  await mkdir(homeRoot(), { recursive: true });
+  return withRunLock(homeRoot(), async () => {
     const before = await readQueue();
     const after = fn(before);
     if (after !== before) await writeJsonAtomic(leadsFile(), after);

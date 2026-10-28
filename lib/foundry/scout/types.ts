@@ -23,9 +23,10 @@
 // as a reference - a clip animates OUR replica still, never a source frame
 // (visual-style-locking / style-onboarding-from-sample).
 
+import type { VentureFrame } from "@gt/domain/genre";
 import type { Aspect } from "../../imaging/types";
 import type { CharacterCard, MuseJudge } from "./muse";
-import type { AssetId, ExportProject, MeshBrief } from "../mesh/types";
+import type { AssetId, MeshBrief, ServedProject } from "../mesh/types";
 
 /* ── Ids and limits ──────────────────────────────────────────────────────── */
 
@@ -243,7 +244,7 @@ export type ScoutSource = {
 
 /* ── Candidates ──────────────────────────────────────────────────────────── */
 
-export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer", "storyboard"] as const;
+export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer", "storyboard", "piece", "genre", "venture", "sheet", "reel", "reel-cut"] as const;
 export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
 
 export const CANDIDATE_STATUSES = ["pending", "rendered", "failed"] as const;
@@ -274,6 +275,9 @@ type CandidateBase = {
    * run's effort rolls up to a branch. Absent on work from before seeds existed ("before seeds").
    */
   readonly fromSeed?: SeedRef;
+  /** The live venture (`vn-...`) this run is made inside (spark scout-vision S2): set by the idea and storyboard
+   *  doors, which refuse an unknown or retired one. Omitted on work made for no venture. */
+  readonly venture?: string;
 };
 
 /** A still style: an ordinary extract run over this candidate's source pictures/keyframes. */
@@ -363,14 +367,18 @@ export type WatchCandidate = CandidateBase & {
  * What a game asset is FOR (operator, 2026-10-23, after rejecting every asset of the first 3D nights for having no
  * stated use: "we cannot create assets without purpose ... either to create new type of project, or helping
  * existing"): an existing game project it helps (the export targets, lib/foundry/mesh/types.ts EXPORT_PROJECTS),
- * or a new kind of project it would open. Absent on assets briefed before the field.
+ * or a new kind of project it would open. Absent on assets briefed before the field. A RETIRED project (mage-arena,
+ * spark scout-vision S4) is never briefed again but still reads on an old night's candidate.
  */
-export type AssetServes = { readonly project: ExportProject } | { readonly newProject: string };
+export type AssetServes = { readonly project: ServedProject } | { readonly newProject: string };
 
 export type Asset3dCandidate = CandidateBase & {
   readonly kind: "asset3d";
   readonly brief: MeshBrief;
   readonly serves?: AssetServes;
+  /** The project's need it answers (`need-<slug>`, POF's asset-needs/<project>.json, spark scout-vision S4): set on
+   *  every brief for an existing project since S4, absent on newProject briefs and older ones. */
+  readonly need?: string;
   /** Night-relative concept images, OURS (`assets/c-05/concept-1.png`), in the request's order. */
   readonly concepts: readonly string[];
   /** The mesh asset the hand-off wrote (lib/foundry/mesh/store.ts), once it did. */
@@ -398,8 +406,12 @@ export type IdeaCandidate = CandidateBase & {
   readonly reel?: ReelFiles;
   /** The still's aspect when it is not the scout wing's 16:9 (a muse portrait is 9:16). Absent: 16:9. */
   readonly aspect?: Aspect;
-  /** A character idea's card (muse wing, target `character`). */
+  /** A character idea's card (target `character`). */
   readonly card?: CharacterCard;
+  /** Kept characters this artboard casts, by name (spark scout-vision S3): each one's identity block leads the prompt. */
+  readonly cast?: readonly string[];
+  /** The web source of the same night a character idea is cited from (`s-NN`) - words only, never its pixels. */
+  readonly source?: SourceId;
   /** The eye's read of the drawn still (muse wing). A still that failed it was deleted; the candidate says why. */
   readonly judge?: MuseJudge;
 };
@@ -430,6 +442,25 @@ export type ReelBrief = {
     readonly direction: string;
     readonly falsifier: string;
   };
+};
+
+/**
+ * Where a REAL reel's numbers come from (spark scout-vision S5, operator 2026-10-26: "Do not stick with public datasets,
+ * we often need one wiki table, an article, or derived data from 'what if' fantasy scenarios"). A table or an article is
+ * cited by its https page (an article by its words, verbatim, too); a what-if is a premise, labelled fiction on screen.
+ */
+export const REEL_SOURCE_KINDS = ["table", "article", "what-if"] as const;
+export type ReelSourceKind = (typeof REEL_SOURCE_KINDS)[number];
+
+export type ReelSource = {
+  readonly kind: ReelSourceKind;
+  readonly title: string;
+  /** https; required on table and article. */
+  readonly url?: string;
+  /** The page's words verbatim (<= 400); required on article. */
+  readonly quote?: string;
+  /** The what-if premise (<= 400); required on what-if, labelled fiction on screen. */
+  readonly premise?: string;
 };
 
 /** Where a stats idea's files live, night-relative. */
@@ -515,8 +546,10 @@ export type VisualizerCandidate = CandidateBase & {
  */
 export type StoryboardCandidate = CandidateBase & {
   readonly kind: "storyboard";
-  /** `<night>/<c-id>` of the kept idea it composes - required. */
-  readonly fromIdea: string;
+  /** `<night>/<c-id>` of the kept idea it composes. Exactly one of `fromIdea` and `fromEpisode` is present. */
+  readonly fromIdea?: string;
+  /** The channel episode it storyboards (spark project-baseline): `F1-03`. */
+  readonly fromEpisode?: string;
   readonly title: string;
   readonly paragraph: string;
   readonly bullets: readonly string[];
@@ -531,6 +564,117 @@ export type StoryboardCandidate = CandidateBase & {
   /** The execution technique the night researched and the panels apply (spark scout-vision); a kept storyboard files
    *  it as a finding. Omitted when the brief names none. */
   readonly technique?: StoryboardTechnique;
+  /** The genre this storyboard is a TRIAL of (spark scout-vision S2): `gn-...`. Omitted on a plain storyboard. */
+  readonly genre?: string;
+  /** A trial's clips, by panel index: one LTX clip of each panel still (`storyboards/c-NN/clip-1.mp4`), null where
+   *  that clip failed. Omitted on a plain storyboard and before the clip step ran. Packet cells `c-NN/clip-N`. */
+  readonly clips?: readonly (SceneClip | null)[];
+  /** Kept characters it casts, by name (spark scout-vision S3): every panel leads with each one's identity block, and
+   *  a character with a kept sheet rides it as a late-admitted Flux reference. */
+  readonly cast?: readonly string[];
+};
+
+/**
+ * A kept stats idea ON REAL DATA (spark scout-vision S5): the idea's own approach and brief shape, its numbers replaced
+ * by data from a cited `source`, authored as an 8 s strip that keeps only the beats in `cut`. The approval unit: one
+ * image cell `c-NN/reel` (its strip's frame 120). Kept, a full reel is due (`reel-cut`). Counts toward the night's reelCap.
+ */
+export type ReelCandidate = CandidateBase & {
+  readonly kind: "reel";
+  /** `<night>/<c-id>` of the kept stats idea. Exactly one of `fromIdea` and `fromEpisode` is present. */
+  readonly fromIdea?: string;
+  /** The data-channel episode it makes (spark project-baseline): `D1-03`. */
+  readonly fromEpisode?: string;
+  readonly title: string;
+  readonly source: ReelSource;
+  /** The beats the 8 s strip keeps, in order (1..12). */
+  readonly cut: readonly string[];
+  /** Night-relative, under `reels/<c-id>/`; `strip` once the author turn wrote one that passed the lint. */
+  readonly files: ReelFiles;
+  /** Night-relative tile (`reels/c-NN.png`): the strip's frame 120, once drawn. */
+  readonly image?: string;
+};
+
+/**
+ * A kept real reel CUT IN FULL (spark scout-vision S5): the strip re-authored at `seconds` * 30 frames from the kept
+ * reel's strip and data, rendered to mp4. One video cell `c-NN/video`. Counts toward the night's reelCap.
+ */
+export type ReelCutCandidate = CandidateBase & {
+  readonly kind: "reel-cut";
+  /** `<night>/<c-id>` of the kept reel it cuts - required. */
+  readonly fromReel: string;
+  readonly title: string;
+  readonly source: ReelSource;
+  readonly seconds: number;
+  /** seconds * 30: the strip's window.STRIP.frames. */
+  readonly frames: number;
+  /** Night-relative, under `cuts/<c-id>/`. */
+  readonly files: ReelFiles;
+  /** Night-relative mp4 (`cuts/c-NN/strip.mp4`) and its poster, once rendered. */
+  readonly video?: string;
+  readonly image?: string;
+};
+
+/**
+ * A kept character's REFERENCE SHEET (spark scout-vision S3): one neutral 1:1 still drawn by local Flux with her kept
+ * portrait as a late-admitted reference - rest expression, three-quarter head, even light, plain field, invariant
+ * wardrobe (registry character-identity-continuity / reference-shows-only-invariants). Judged on the Board (cell
+ * `c-NN/sheet`); kept, it is her reference for every Flux frame she is cast in.
+ */
+export type SheetCandidate = CandidateBase & {
+  readonly kind: "sheet";
+  /** The character key (characters.ts characterKey). */
+  readonly character: string;
+  /** The card's name as written. */
+  readonly name: string;
+  /** `<runId>/<c-id>` of the kept portrait it is drawn from (runId `muse:<night>` for an archive night). */
+  readonly fromPortrait: string;
+  /** Night-relative still (`sheets/c-NN.png`), once drawn. */
+  readonly image?: string;
+  readonly seed?: number;
+};
+
+/**
+ * A genre's PIECE (spark scout-vision S2): the best kept trial rendered in full and cut into one 15-30 s video with
+ * the clips' own LTX audio. Only the clips the operator rejected on that trial are re-made. Packet cell `c-NN/video`;
+ * kept, the genre is publishable.
+ */
+export type PieceCandidate = CandidateBase & {
+  readonly kind: "piece";
+  /** `gn-...` */
+  readonly genre: string;
+  /** `<night>/<c-id>` of the kept trial it renders. */
+  readonly fromTrial: string;
+  readonly title: string;
+  /** The clips in cut order, by panel index; null where a clip could not be made. */
+  readonly clips: readonly (SceneClip | null)[];
+  /** The cut, night-relative (`pieces/c-NN/piece.mp4`); omitted until it is cut. */
+  readonly video?: string;
+  readonly durationS?: number;
+};
+
+/** A night's proposal to birth a GENRE from a kept storyboard; the operator's keep births it (spark scout-vision S2). */
+export type GenreProposalCandidate = CandidateBase & {
+  readonly kind: "genre";
+  /** The genre in plain words: `deadpan office satire, painted 3D`. */
+  readonly name: string;
+  /** `<night>/<c-id>` of the kept storyboard it is born from. */
+  readonly fromStoryboard: string;
+  readonly look: string;
+  /** The beats a video of the genre moves through. */
+  readonly grammar: readonly string[];
+  /** The committed cells it rests on (`<night>/<cell id>`), the storyboard's among them. */
+  readonly basedOn: readonly string[];
+};
+
+/** A night's proposal to birth a VENTURE (a channel from a publishable genre, an album from kept tracks). */
+export type VentureProposalCandidate = CandidateBase & {
+  readonly kind: "venture";
+  readonly name: string;
+  readonly ventureKind: "channel" | "album";
+  readonly frame: VentureFrame;
+  /** The committed cells it rests on: the genre's kept piece for a channel, the kept track clips for an album. */
+  readonly basedOn: readonly string[];
 };
 
 /** A researched way of executing the genre (pacing, shot grammar, a prompt technique) - FindingCandidate's shape, so
@@ -557,7 +701,13 @@ export type Candidate =
   | DirectionCandidate
   | TrackCandidate
   | VisualizerCandidate
-  | StoryboardCandidate;
+  | StoryboardCandidate
+  | PieceCandidate
+  | GenreProposalCandidate
+  | VentureProposalCandidate
+  | SheetCandidate
+  | ReelCandidate
+  | ReelCutCandidate;
 
 /**
  * A scout track's Suno job (`sj-scout-<night>-<c-id>`, lib/foundry/scout/track.ts): its clips and the visualizer
@@ -598,6 +748,13 @@ export const SEED_SENTENCE_MAX = 200;
  *  takes, and the ones a new batch must give `music` facets (spark scout-vision). */
 export const MUSIC_TYPES = ["music video", "lyric video", "visualizer"] as const;
 export const SEED_VOCALS = ["instrumental", "female", "male", "duet", "choir"] as const;
+
+/** The seed type that grows characters (spark scout-vision S3): such a seed carries `character`. */
+export const CHARACTER_SEED_TYPE = "character";
+export const CHARACTER_CASTS = ["one", "ensemble", "parody"] as const;
+export type CharacterCast = (typeof CHARACTER_CASTS)[number];
+/** What a character seed is FOR: the application its characters serve, and how many / whose. */
+export type SeedCharacter = { readonly for: UseApp; readonly cast: CharacterCast };
 export type SeedVocals = (typeof SEED_VOCALS)[number];
 export const MUSIC_INSTRUMENTS_MAX = 6;
 export const MUSIC_TEMPO_MIN = 40;
@@ -631,6 +788,10 @@ export type Seed = {
   readonly parent?: SeedRef;
   /** A music seed's song (MUSIC_TYPES): required on a new one, absent on seeds written before 2026-10-25. */
   readonly music?: SeedMusic;
+  /** A character seed's WHY (spark scout-vision S3): required when `type` is CHARACTER_SEED_TYPE, refused otherwise. */
+  readonly character?: SeedCharacter;
+  /** The live venture (`vn-...`) the seed is written inside (spark scout-vision S2); omitted for none. */
+  readonly venture?: string;
 };
 
 export type SeedCommit = {

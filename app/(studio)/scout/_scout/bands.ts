@@ -7,6 +7,7 @@
 // neither; the node panel names what a node grew from.
 
 import { BEFORE_SEEDS, type GraphEdge, type GraphGroup, type GraphNode, type ScoutGraph } from "@gt/domain/scoutGraph";
+import { isDeadNode } from "@gt/ui/components/graph/stageGraph.ts";
 
 import type { SplitInput } from "../_port/contract.ts";
 
@@ -75,6 +76,37 @@ export function steerRefOf(g: ScoutGraph, n: GraphNode): { readonly ref: string;
 
 /** The node a link names, when the graph holds it. */
 export const nodeOf = (g: ScoutGraph, id: string): GraphNode | undefined => g.nodes.find((n) => n.id === id);
+
+/* ── The venture filter (spark scout-vision S2) ─────────────────────────── */
+
+/** The filter's value for every node, whatever its venture. A venture id is `vn-...`, so it never collides. */
+export const ALL_VENTURES = "all";
+
+/**
+ * The graph narrowed to one venture's nodes (GraphNode.venture), the links between them, and the groups that still
+ * hold a node with their node counts recounted - so a band reads as that venture's. `all` is the graph itself. The
+ * split editor and the node panel read the whole graph: a venture filter narrows what is drawn, not the steer.
+ */
+export function byVenture(g: ScoutGraph, venture: string): ScoutGraph {
+  if (venture === ALL_VENTURES) return g;
+  const nodes = g.nodes.filter((n) => n.venture === venture);
+  const ids = new Set(nodes.map((n) => n.id));
+  const tally = new Map<string, { nodes: number; dead: number }>();
+  const count = (key: string, dead: boolean): void => {
+    const t = tally.get(key) ?? { nodes: 0, dead: 0 };
+    tally.set(key, { nodes: t.nodes + 1, dead: t.dead + (dead ? 1 : 0) });
+  };
+  for (const n of nodes) {
+    const dead = isDeadNode(n);
+    count(bandKey(n), dead);
+    if (n.audience !== undefined && n.genre !== undefined) count(n.audience, dead);
+  }
+  const groups = g.groups.flatMap((x) => {
+    const t = tally.get(x.key);
+    return t === undefined ? [] : [{ ...x, nodes: t.nodes, live: t.nodes - t.dead, dead: t.dead }];
+  });
+  return { ...g, nodes, edges: g.edges.filter((e) => ids.has(e.from) && ids.has(e.to)), groups };
+}
 
 /* ── The split editor ────────────────────────────────────────────────────── */
 

@@ -263,9 +263,19 @@ describe("a character's looks (spark scout-use-aim)", () => {
   });
 
   test("the character kind has a mark, a rail row and a word", () => {
-    expect(KINDS.at(-1)).toEqual({ id: "character", label: "Characters", short: "character" });
+    expect(KINDS.find((k) => k.id === "character")).toEqual({ id: "character", label: "Characters", short: "character" });
     const out = html(h(LibraryGlyph, { name: "character" }));
     expect(out).toContain("<svg");
     expect(out).toContain('aria-hidden="true"');
+  });
+
+  test("the genre and venture kinds (spark scout-vision S2) close the rail, each with its own mark", () => {
+    expect(KINDS.slice(-2)).toEqual([
+      { id: "genre", label: "Genres", short: "genre" },
+      { id: "venture", label: "Ventures", short: "venture" },
+    ]);
+    const marks = (["genre", "venture", "character"] as const).map((name) => html(h(LibraryGlyph, { name })));
+    for (const m of marks) expect(m).toContain('aria-hidden="true"');
+    expect(new Set(marks).size).toBe(3);
   });
 });

@@ -45,7 +45,7 @@ describe("admitPicks", () => {
     for (const load of [{}, { commitUsedGb: 99, vramUsedGb: 64, cpuBusy: 1, comfyQueue: 9 }] satisfies MachineLoad[]) {
       for (const tight of [false, true]) {
         const r = admitPicks(picks, engineOf, costs, [{ engine: "unreal" }], load, M, tight);
-        expect(r).toEqual({ admitted: picks, waiting: [], tight });
+        expect(r).toEqual({ admitted: picks, waiting: [], tight, skipped: [] });
       }
     }
   });

@@ -8,8 +8,8 @@ import "server-only";
 // developed from kept ideas (a scene whose clip was kept, a style, a game asset, a direction resting on a kept
 // cell, a finding), two storyboards composed from kept ideas (one kept, one thrown: the board column), a track
 // and its visualizer, a night still open with a pending and a failed render, and one family branch paused. Scale N repeats the universe N times under fresh batch and night ids (`-2`, `-3`...): the
-// 10x measure (`SCOUT_FIXTURE_SCALE=10`, read by ./fixture.ts). The muse wing (spark scout-muse) is its own small
-// root beside it, never scaled: a committed night of posters and scenes with a kept character and a still the
+// 10x measure (`SCOUT_FIXTURE_SCALE=10`, read by ./fixture.ts). The muse ARCHIVE (spark scout-vision S3) is drawn in the
+// same graph, never scaled, its night ids colliding with the universe's on purpose: a committed night of posters and scenes with a kept character and a still the
 // judge threw, and a closed night still waiting for its morning.
 
 import type { GraphEffort } from "@gt/domain/scoutGraph";
@@ -206,7 +206,7 @@ function universe(x: Ids): { readonly batches: SeedBatch[]; readonly nights: Nig
  */
 export const FIXTURE_BACKLOG: ScoutBacklog = { waiting: 52, seedsWaiting: 89, gated: true, freshAllowed: 20 };
 
-/** The muse wing's nights: ideas only, each a style, a scene or a character poster at 9:16. */
+/** The muse archive's nights: ideas only, each a style, a scene or a character poster at 9:16. */
 export function fixtureMuse(): Night[] {
   const judge = (apparentAge: number, clothing: "covered" | "revealing") => ({ adult: "yes" as const, apparentAge, clothing, realPerson: "no" as const, hands: "ok" as const, notes: "painterly, warm rim light" });
   const muse = (i: number, nid: string, over: Pick<IdeaCandidate, "title" | "target"> & Partial<IdeaCandidate>): Candidate => ({ id: cid(i), kind: "idea", sourceIds: [], status: "rendered", prompt: "p", anchor: { kind: "free", ref: "" }, aspect: "9:16", jobId: `job:scout-ideas:muse:${nid}`, ...over });

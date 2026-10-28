@@ -66,11 +66,17 @@ test.beforeEach(() => {
 /* ── the plan table ───────────────────────────────────────────────────────── */
 
 test("plan: local tries the seat first and the cloud behind it; cloud is Google alone", () => {
-  for (const turn of REAL_TURNS) {
+  // `draft` is the one turn the local daemon leads (spark scout-vision S6), held by its own case below.
+  for (const turn of REAL_TURNS.filter((t) => t !== "draft")) {
     expect(planFor(turn, "local"), `${turn} in local posture`).toEqual(["claude-cli", "google"]);
     expect(planFor(turn, "cloud"), `${turn} in cloud posture`).toEqual(["google"]);
   }
   console.log(`[ladder] local plan: ${planFor("edit-plan", "local").join(" -> ")}`);
+});
+
+test("plan: a draft is the local daemon's, the seat behind it, and never a metered key", () => {
+  expect(planFor("draft", "local")).toEqual(["ollama", "claude-cli"]);
+  expect(planFor("draft", "cloud")).toEqual(["ollama"]);
 });
 
 test("plan: a probe turn is single-entry in BOTH postures", () => {

@@ -7,6 +7,8 @@ import type { Job } from "@gt/domain/job";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
 
+import { studioCredit } from "../scout-ideas/define.ts";
+
 // A FOUND SCENE AS A JOB (spark media-training-loop WP2) - one /scout scene candidate's three acts
 // as the steps of ONE kernel job, priced on a receipt before it runs:
 //
@@ -18,8 +20,9 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 //
 // ONE JOB, ONE LANE, THE EXPENSIVE HALF'S (extract's rule: packages/producers/src/extract/define.ts
 // "ONE LANE FOR A JOB THAT CALLS TWO KINDS OF VENDOR"). Since 2026-10-22 a scene's clip renders on
-// this box (LTX-2.5 through ComfyUI, free) and its stills on Leonardo's Flare, so a scene with a
-// local clip waits on the card's gpu.local slot and one without on cloud.leonardo; the reads route
+// this box (LTX-2.5 through ComfyUI, free), so a scene with a local clip waits on the card's gpu.local
+// slot; one without waits on its stills' engine's lane (spark scout-vision S6: box.chrome for the
+// Leonardo studio, the default; gpu.local for local Flux; cloud.leonardo for Flare); the reads route
 // inside the step (lib/producers/scoutScene.ts `sceneLane`). cloud.google stays bound for a scene
 // queued before that change. One job per scene keeps the night's
 // arithmetic simple - one job id per candidate on `night.jobs`, one ceiling, one ending - and a
@@ -66,7 +69,8 @@ export const parseSceneRequest = (raw: unknown): Result<SceneRequest> => parseAt
 export function scenePlan(req: SceneRequest, outputs: Outputs): MissingStep[] {
   const steps: MissingStep[] = [
     ...req.keyframes.map((_, i) => ({ name: readStep(i + 1), estimate: req.estimates.read })),
-    ...Array.from({ length: req.replicas }, (_, i) => ({ name: replicaStep(i + 1), estimate: req.estimates.replica })),
+    // A studio still is paid in studio credits (spark scout-vision S6): admitted under the job's USD ceiling, booked unpriced.
+    ...Array.from({ length: req.replicas }, (_, i) => ({ name: replicaStep(i + 1), estimate: req.estimates.replica, ...studioCredit(req.estimates.replica) })),
     ...(req.clip ? [{ name: CLIP_STEP, estimate: req.estimates.clip }] : []),
   ];
   return steps.filter((s) => !outputs.has(s.name));

@@ -59,8 +59,9 @@ interface TextModelPrice {
 /**
  * The table. One row per model this app can actually reach.
  *
- * Every row in service is unpriced (gemini-3.8-flash, priced from the vendor's
- * own announcement, is not in service), and each says why in its own words rather
+ * Every metered row in service is unpriced (gemini-3.8-flash, priced from the vendor's
+ * own announcement, is not in service; the local Ollama row is $0 because nobody
+ * bills it), and each says why in its own words rather
  * than sharing one apologetic footnote — because the reasons differ, and the
  * work needed to fix each one differs with them.
  */
@@ -134,6 +135,17 @@ const PRICES: TextModelPrice[] = [
       "over: at an unchanged per-token rate that ratio is the whole cost story.",
     checked: "2026-09-02",
     validUntil: "2026-12-31",
+  },
+  {
+    provider: "ollama",
+    model: "qwen3.8:27b",
+    usdPerMInput: 0,
+    usdPerMOutput: 0,
+    source:
+      "Local inference (Ollama on this box's own GPU), lib/imaging/pricing.ts's row for the same " +
+      "model. The electricity is real but nobody invoices it; $0 is the vendor-billed truth and the " +
+      "point of the provider. A different OLLAMA_TEXT_MODEL has no row and reads unpriced until one is added.",
+    checked: "2026-10-26",
   },
 ];
 
