@@ -26,22 +26,27 @@ const ROOT = vi.hoisted(() => {
 import { parseScoreSpec, type ScoreSpec } from "@gt/domain/audio.score";
 import { WORKED_SCORE_TEMPLATES, compileSeedToScore, templateById } from "@gt/domain/audio.score.templates";
 import { LocalBandStudio } from "@gt/ui/components/audio/LocalBandStudio.tsx";
-import { applyTasteSteer, describeStemChoice, explainScoreChoices, fxChainForPreset, fxPresetOf } from "@gt/ui/components/audio/localBand.ts";
+import { applyTasteSteer, describeStemChoice, explainScoreChoices, fxChainForPreset, fxPresetOf, sketchDraftFromBrief } from "@gt/ui/components/audio/localBand.ts";
 import { readLocalBand } from "../../app/(studio)/audio/_audio/localRead.ts";
 import { renderMidi } from "../../lib/audio/sidecar.ts";
+import { closeKernel } from "../../lib/kernelStore.ts";
 import { engineRegistry, engineState } from "../../lib/sound/engines.ts";
 import {
   auditionLocalInstrument,
   buildLocalScoreReceipt,
   buildScorePrompt,
+  draftScoreFromBrief,
   promoteLocalTakeToArrange,
+  proposeScoreSpec,
   renderLocalScore,
   swapLocalTakeStem,
 } from "../../lib/sound/localScore.ts";
 import { filePathAbs } from "../../lib/sound/store.ts";
+import { getTake } from "../../lib/sound/takes.ts";
 import { triageContextOf } from "../../lib/sound/triageContext.ts";
 
 afterAll(() => {
+  closeKernel();
   rmSync(ROOT, { recursive: true, force: true });
 });
 
@@ -138,14 +143,43 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     expect(localActive.ops).toEqual(["compose", "section-edit"]);
   });
 
-  it("builds the A2 text-to-score prompt from pipeline/SCORE-PROMPT.md and renders a seamless loop passing loop-seam", async () => {
+  it("builds the A2 text-to-score prompt from pipeline/SCORE-PROMPT.md, drafts briefs via proposeScoreSpec/draftScoreFromBrief, and renders a seamless loop passing loop-seam", async () => {
     const prompt = await buildScorePrompt("Warm lo-fi loop for late night reading");
     expect(prompt).toContain("Warm lo-fi loop for late night reading");
     expect(prompt).toContain("vital-sub-bass");
     expect(prompt).toContain("sample-lofi-keys");
     expect(prompt).toContain("minigrand-vst3");
 
+    const drafted = draftScoreFromBrief("chill hip-hop, 84 bpm, A minor, warm keys and thumb bell");
+    expect(drafted.ok).toBe(true);
+    if (drafted.ok) {
+      expect(drafted.value.spec.tempoBpm).toBe(84);
+      expect(drafted.value.spec.key).toBe("A minor");
+      expect(drafted.value.spec.tracks.find((t) => t.role === "chords")?.instrument).toBe("sample-lofi-keys");
+      expect(drafted.value.spec.tracks.find((t) => t.role === "lead")?.instrument).toBe("sample-ikembe-bell");
+    }
+
     const base = templateById("chill-hiphop").spec;
+    const outOfKeyProposal = await proposeScoreSpec("chill hip-hop in A minor", async (req) => ({
+      text: "{}",
+      json: {
+        ...base,
+        tracks: base.tracks.map((t) => (t.role === "lead" ? { ...t, notes: [{ bar: 1, beat: 0, durationBeats: 1, midi: 61, velocity: 90 }] } : t)),
+      },
+      provenance: {
+        provider: "claude-cli",
+        model: "stub",
+        transport: "local-subprocess",
+        rung: "preferred",
+        turn: req.turn,
+        schemaEnforcement: "prompted",
+        durationMs: 1,
+        costBasis: "unpriced",
+        promptChars: req.prompt.length,
+      },
+    }));
+    expect(outOfKeyProposal.ok).toBe(false);
+    if (!outOfKeyProposal.ok) expect(outOfKeyProposal.error.message).toContain("leaves declared key A minor in bar 1");
     const loopSpec: ScoreSpec = {
       ...base,
       loop: true,
@@ -174,6 +208,8 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
       const { take, plan } = first.value;
       expect(take.provider).toBe("local");
       expect(take.op).toBe("compose");
+      expect(take.use).toContain("local 4-stem score cue");
+      expect(take.aim).toContain("84 BPM in A minor");
       expect(take.measured?.lufs).not.toBeNull();
       expect(Math.abs((take.measured?.lufs ?? 0) - -14.0)).toBeLessThanOrEqual(0.8);
       expect(take.measured?.truePeakDb ?? 0).toBeLessThanOrEqual(-1.0);
@@ -239,7 +275,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
         expect(soloed.value.plan.stems.find((s) => s.role === "lead")?.solo).toBe(true);
       }
 
-      // Promote to Arrangement
+      // Promote to Arrangement (marks head finalized and parent take kept in stack)
       const promoted = await promoteLocalTakeToArrange({
         takeId: swapped.value.take.id,
         group: "hip hop",
@@ -250,6 +286,8 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
       if (promoted.ok) {
         expect(promoted.value.verdict).toBe("kept");
         expect(promoted.value.stage).toBe("finalized");
+        const parentAfter = await getTake(take.id);
+        expect(parentAfter.verdict).toBe("kept");
       }
     },
     120_000,
@@ -307,6 +345,16 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     expect(steered.swapChoice.drums).toBe("kit-acoustic-brush");
     expect(steered.swapChoice.chords).toBe("sample-felt-piano");
     expect(steered.summary).toContain("1–4 kHz");
+
+    const sketched = sketchDraftFromBrief(
+      "calm bed, 60 seconds, gentle lift in the middle, C major, felt piano",
+      view.templates,
+      steered.swapChoice,
+      view.templates[0]!.spec,
+    );
+    expect(sketched.draft.style).toBe("calm-bed");
+    expect(sketched.draft.key).toBe("C major");
+    expect(sketched.swapChoice.chords).toBe("sample-felt-piano");
 
     const swapDesc = describeStemChoice("vital-pluck-lead", view.takes[0]!.stems.find((s) => s.role === "lead") ?? null, view.catalog);
     expect(swapDesc.tone).toBe("cyan");

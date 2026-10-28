@@ -21,6 +21,7 @@ import { WORKED_SCORE_TEMPLATES, templateById } from "@gt/domain/audio.score.tem
 import {
   auditionLocalInstrument,
   buildLocalScoreReceipt,
+  draftScoreFromBrief,
   renderLocalScore,
   swapLocalTakeStem,
 } from "../lib/sound/localScore";
@@ -184,6 +185,51 @@ async function main(argv: readonly string[]): Promise<number> {
       return 1;
     }
     console.log(JSON.stringify({ ok: true, ...res.value }, null, 2));
+    return 0;
+  }
+
+  if (cmd === "sketch") {
+    if (argv.includes("--seed-fixtures")) seedFixturesIfEmpty();
+    const brief = flagOf(argv, "--brief") ?? "chill hip-hop, 84 bpm, A minor, warm keys";
+    const verifyDeterminism = argv.includes("--verify-determinism");
+    const drafted = draftScoreFromBrief(brief);
+    if (!drafted.ok) {
+      console.error(JSON.stringify({ ok: false, error: drafted.error }, null, 2));
+      return 1;
+    }
+    const res = await renderLocalScore(drafted.value.spec, { verifyDeterminism });
+    if (!res.ok) {
+      console.error(JSON.stringify({ ok: false, error: res.error }, null, 2));
+      return 1;
+    }
+    const { take, plan } = res.value;
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          brief,
+          summary: drafted.value.summary,
+          takeId: take.id,
+          title: take.title,
+          provider: take.provider,
+          durationS: take.durationS,
+          measured: take.measured,
+          determinism: plan.determinism,
+          triageFlagged: plan.triage.flagged,
+          mixSha256: plan.mixSha256,
+          stems: plan.stems.map((s) => ({
+            role: s.role,
+            instrument: s.instrument,
+            source: s.source,
+            sha256: s.sha256,
+            renderMs: s.renderMs,
+          })),
+          costUsd: plan.costUsd,
+        },
+        null,
+        2,
+      ),
+    );
     return 0;
   }
 

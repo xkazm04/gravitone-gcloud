@@ -334,3 +334,66 @@ export function describeStemChoice(
   }
   return { tone: "emerald", text: meta?.plainLabel ?? selectedId };
 }
+
+const BRIEF_ROLES: readonly (readonly [RegExp, LocalRole, string])[] = [
+  [/\b(?:909|electronic\s+kit|tight\s+kit)\b/i, "drums", "kit-909-pulse"],
+  [/\b(?:brush|acoustic\s+kit|soft\s+drums)\b/i, "drums", "kit-acoustic-brush"],
+  [/\b(?:808|boom[\s-]?bap)\b/i, "drums", "kit-808-warm"],
+  [/\b(?:pulse\s+bass|analog\s+bass|synth\s+bass)\b/i, "bass", "vital-pulse-bass"],
+  [/\b(?:finger\s+bass|picked\s+bass|warm\s+bass)\b/i, "bass", "sample-mamas-bass"],
+  [/\b(?:sub\s+bass|deep\s+bass)\b/i, "bass", "vital-sub-bass"],
+  [/\b(?:felt\s+piano|upright\s+piano|piano)\b/i, "chords", "sample-felt-piano"],
+  [/\b(?:grand\s+piano|concert\s+piano)\b/i, "chords", "sample-grand-piano"],
+  [/\b(?:warm\s+keys|electric\s+keys|lofi\s+keys|lo-fi\s+keys)\b/i, "chords", "sample-lofi-keys"],
+  [/\b(?:pad|warm\s+pad|synth\s+pad)\b/i, "chords", "vital-warm-pad"],
+  [/\b(?:bell|kalimba|thumb\s+piano)\b/i, "lead", "sample-ikembe-bell"],
+  [/\b(?:guitar|mallet\s+guitar|acoustic\s+guitar)\b/i, "lead", "sample-mallet-guitar"],
+  [/\b(?:flute|airy|glass\s+lead)\b/i, "lead", "vital-glass-lead"],
+  [/\b(?:pluck|synth\s+pluck|arp\s+lead)\b/i, "lead", "vital-pluck-lead"],
+];
+
+/** Translate a plain-English non-musician brief into a LocalScoreDraft and swapChoice map. */
+export function sketchDraftFromBrief(
+  brief: string,
+  templates: readonly LocalTemplateView[],
+  currentSwap: Readonly<Record<LocalRole, string>>,
+  current: LocalScoreDraft,
+): { readonly draft: LocalScoreDraft; readonly swapChoice: Readonly<Record<LocalRole, string>>; readonly summary: string } {
+  const words = brief.trim();
+  if (words === "") return { draft: current, swapChoice: currentSwap, summary: "brief unchanged" };
+  const lower = words.toLowerCase();
+  const styleId: LocalTemplateView["id"] =
+    /\b(?:synth|pulse|cyber|electronic|909|drive)\b/.test(lower)
+      ? "synthwave-pulse"
+      : /\b(?:calm|bed|narrative|quiet|voiceover|ambient|gentle)\b/.test(lower)
+        ? "calm-bed"
+        : /\b(?:acoustic|folk|workshop|sunlight|guitar)\b/.test(lower)
+          ? "warm-acoustic"
+          : "chill-hiphop";
+  const base = (templates.find((t) => t.id === styleId) ?? templates[0])?.spec ?? current;
+  const bpmM = /\b(\d{2,3})\s*bpm\b/i.exec(words);
+  const tempoBpm = bpmM ? Math.max(40, Math.min(220, Number(bpmM[1]))) : base.tempoBpm;
+  const key = LOCAL_KEYS.find((k) => new RegExp(`\\b${k.replace("#", "\\#")}\\b`, "i").test(words)) ?? base.key;
+  const loop = /\b(?:loop|seamless|repeating)\b/i.test(words);
+  const secM = /\b(\d{1,3})\s*(?:s|sec|seconds)\b/i.exec(words);
+  const totalBars = secM ? Math.max(2, Math.min(64, Math.round(Math.max(4, Number(secM[1])) / (240 / tempoBpm)))) : base.sections.reduce((a, s) => a + s.bars, 0);
+  const hasLift = /\b(?:lift|build|middle|swell)\b/i.test(words);
+  const sections = loop
+    ? [{ name: "loop", bars: Math.min(32, totalBars), energy: 0.82, progression: [0, 5, 3, 4] }]
+    : secM
+      ? [
+          { name: "intro", bars: Math.max(1, Math.floor(totalBars * 0.25)), energy: 0.34, progression: [0, 4, 5, 3] },
+          { name: "lift", bars: Math.max(2, totalBars - 2 * Math.max(1, Math.floor(totalBars * 0.25))), energy: hasLift ? 0.88 : 0.82, progression: [3, 0, 4, 5] },
+          { name: "outro", bars: Math.max(1, Math.floor(totalBars * 0.25)), energy: 0.35, progression: [0, 3, 0, 0] },
+        ]
+      : base.sections;
+  const nextSwap: Record<LocalRole, string> = { ...currentSwap };
+  for (const tr of base.tracks) nextSwap[tr.role] = tr.instrument;
+  for (const [re, role, instId] of BRIEF_ROLES) if (re.test(words)) nextSwap[role] = instId;
+  const tracks = base.tracks.map((tr) => ({ ...tr, instrument: nextSwap[tr.role] ?? tr.instrument }));
+  return {
+    draft: { ...base, title: words.slice(0, 64), style: styleId, tempoBpm, key, loop, sections, tracks },
+    swapChoice: nextSwap,
+    summary: `sketched ${styleId} · ${tempoBpm} bpm · ${key} (${sections.reduce((a, s) => a + s.bars, 0)} bars${loop ? " loop" : ""})`,
+  };
+}

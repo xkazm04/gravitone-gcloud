@@ -9,9 +9,7 @@ import path from "node:path";
 import type { FxChain } from "@gt/domain/audio.fx";
 import {
   INSTRUMENT_CATALOG,
-  SCORE_KEYS,
   SCORE_ROLES,
-  STYLE_TEMPLATES,
   instrumentById,
   parseScoreSpec,
   swapRoleInstrument,
@@ -23,19 +21,18 @@ import { scoreSectionsMs, scoreTotalBars } from "@gt/domain/audio.score.template
 import type { Triage } from "@gt/domain/audio.triage";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Receipt, ReceiptLine, ReceiptMode } from "@gt/domain/produce";
+import { putAudioMeasures } from "@gt/kernel/library/measures";
+import { putTriage, triageDigest } from "@gt/kernel/library/triage";
 
-import {
-  auditionInstrument,
-  renderScore,
-  type AuditionResult,
-  type DeterminismReport,
-  type RenderedStem,
-} from "../audio/sidecar";
-import { fill, promptFile } from "./hunt";
+import { auditionInstrument, renderScore, type AuditionResult, type DeterminismReport, type RenderedStem } from "../audio/sidecar";
 import { measureSignal } from "./measure";
+import { buildScorePrompt, draftScoreFromBrief, proposeScoreSpec } from "./scorePropose";
 import { mintId, safeId, soundFailure, storeRoot, writeBytesAtomic } from "./store";
 import { createTake, getTake, listTakes, patchTake } from "./takes";
+import { triageContextOf } from "./triageContext";
 import type { SoundTake, Stage, Verdict } from "./types";
+
+export { buildScorePrompt, draftScoreFromBrief, proposeScoreSpec };
 
 export type LocalScoreStemMeta = RenderedStem & {
   readonly fileRel: string;
@@ -184,22 +181,16 @@ export async function renderLocalScore(
     const stemMetas: LocalScoreStemMeta[] = [];
     for (const st of res.stems) {
       const role = st.role;
-      const stemBytes = new Uint8Array(await readFile(st.wavPath));
-      const stemRel = await writeBytesAtomic(path.join("files", `${safeId(id)}-${role}.wav`), stemBytes);
-      const midiBytes = new Uint8Array(await readFile(st.midiPath));
-      const midiRel = await writeBytesAtomic(path.join("files", `${safeId(id)}-${role}.mid`), midiBytes);
+      const stemRel = await writeBytesAtomic(path.join("files", `${safeId(id)}-${role}.wav`), new Uint8Array(await readFile(st.wavPath)));
+      const midiRel = await writeBytesAtomic(path.join("files", `${safeId(id)}-${role}.mid`), new Uint8Array(await readFile(st.midiPath)));
       stemMetas.push({
-        ...st,
-        fileRel: stemRel,
-        midiRel,
+        ...st, fileRel: stemRel, midiRel,
         audioUrl: `/api/sound/takes/${encodeURIComponent(id)}/file?stem=${encodeURIComponent(role)}`,
         midiUrl: `/api/sound/takes/${encodeURIComponent(id)}/file?artifact=midi&stem=${encodeURIComponent(role)}`,
       });
     }
 
-    const rppBytes = new Uint8Array(await readFile(res.reaperProjectPath));
-    const rppRel = await writeBytesAtomic(path.join("files", `${safeId(id)}.rpp`), rppBytes);
-
+    const rppRel = await writeBytesAtomic(path.join("files", `${safeId(id)}.rpp`), new Uint8Array(await readFile(res.reaperProjectPath)));
     const { samples, sampleRate } = wavToMonoFloat32(mixBytes);
     const sig = measureSignal(samples, sampleRate, true);
     const sectionsMs = scoreSectionsMs(spec);
@@ -213,23 +204,16 @@ export async function renderLocalScore(
           }));
 
     const plan: LocalScorePlan = {
-      kind: "local-score",
-      chunks,
-      spec,
-      stems: stemMetas,
-      triage: res.triage,
-      determinism: res.determinism ?? opts.fallbackDeterminism ?? null,
-      mixSha256: res.mixSha256,
-      rppRel,
-      rppUrl: `/api/sound/takes/${encodeURIComponent(id)}/file?artifact=rpp`,
-      reusedRoles: res.reusedRoles,
-      renderedRoles: res.renderedRoles,
-      totalRenderMs: res.totalRenderMs,
-      costUsd: 0,
+      kind: "local-score", chunks, spec, stems: stemMetas, triage: res.triage,
+      determinism: res.determinism ?? opts.fallbackDeterminism ?? null, mixSha256: res.mixSha256,
+      rppRel, rppUrl: `/api/sound/takes/${encodeURIComponent(id)}/file?artifact=rpp`,
+      reusedRoles: res.reusedRoles, renderedRoles: res.renderedRoles, totalRenderMs: res.totalRenderMs, costUsd: 0,
     };
 
     const instrumentsSummary = stemMetas.map((s) => `${s.role}: ${s.instrumentName}`).join(" · ");
     const prompt = `${spec.title} — ${styleTag} in ${spec.key} at ${spec.tempoBpm} BPM (${instrumentsSummary})`;
+    const use = spec.loop === true ? `seamless loop bed (${styleTag})` : `local 4-stem score cue (${styleTag})`;
+    const aim = `${spec.tempoBpm} BPM in ${spec.key}; sections [${spec.sections.map((s) => `${s.name}:${s.bars}b`).join(", ")}]; mastered -14 LUFS, 0 triage flags`;
 
     const created = await createTake(
       {
@@ -255,6 +239,8 @@ export async function renderLocalScore(
           lufs: res.measure.integratedLufs,
           truePeakDb: res.measure.truePeakDb,
         },
+        use,
+        aim,
         verdict: opts.verdict ?? "unjudged",
         stage: opts.stage ?? null,
         group: opts.group ?? null,
@@ -266,6 +252,22 @@ export async function renderLocalScore(
       },
       { bytes: mixBytes, mime: "audio/wav", name: `${safeId(id)}.wav` },
     );
+
+    try {
+      const { kernel } = await import("../kernelStore");
+      const k = kernel();
+      if (k.ok) {
+        putAudioMeasures(k.value.store, [{
+          sha: res.mixSha256, peaks: [...sig.peaks], energy: sig.energy, durationS: res.durationS,
+          tempoBpm: spec.tempoBpm, key: spec.key, measuredAt: created.take.createdAt, error: null,
+          lufs: res.measure.integratedLufs, truePeakDb: res.measure.truePeakDb, lra: res.measure.lra,
+          clippedSamples: res.measure.clippedSamples, tailSilenceS: res.measure.tailSilenceS,
+        }]);
+        putTriage(k.value.store, [{ sha: res.mixSha256, contextDigest: triageDigest(triageContextOf(created.take)), triage: res.triage, at: created.take.createdAt }]);
+      }
+    } catch {
+      // Headless tsx CLI runs without Next's server-only shim; sound store files and measures are already persisted.
+    }
     return ok({ take: created.take, plan });
   } catch (e) {
     return soundFailure(e);
@@ -334,8 +336,7 @@ export async function auditionLocalInstrument(instrumentId: string): Promise<
     if (res.value.audition.status !== "ready" || !res.value.outPath) {
       return err("invalid", `${cat.name} refused: ${res.value.audition.refusalReason ?? "silent render"}`);
     }
-    const wavBytes = new Uint8Array(await readFile(res.value.outPath));
-    await writeBytesAtomic(path.join("files", `audition-${safeId(cat.id)}.wav`), wavBytes);
+    await writeBytesAtomic(path.join("files", `audition-${safeId(cat.id)}.wav`), new Uint8Array(await readFile(res.value.outPath)));
     return ok({
       instrumentId: cat.id,
       name: cat.name,
@@ -361,6 +362,18 @@ export async function promoteLocalTakeToArrange(input: {
     const current = await getTake(input.takeId);
     const label = (input.label ?? current.label ?? current.title).trim() || "local-band-cue";
     const group = (input.group ?? current.group ?? "electronic").trim() || "electronic";
+    let parentId = current.parentId;
+    const seen = new Set<string>([current.id]);
+    while (parentId && !seen.has(parentId)) {
+      seen.add(parentId);
+      try {
+        const p = await getTake(parentId);
+        if (p.verdict !== "kept") await patchTake(p.id, { verdict: "kept", stage: "pending", group });
+        parentId = p.parentId;
+      } catch {
+        break;
+      }
+    }
     return ok(await patchTake(input.takeId, { verdict: "kept", stage: input.finalize ? "finalized" : "pending", group, label }));
   } catch (e) {
     return soundFailure(e);
@@ -377,19 +390,4 @@ export async function listLocalScoreTakes(limit = 12): Promise<readonly { readon
   return out;
 }
 
-export function listInstrumentCatalog(): readonly InstrumentCatalogEntry[] {
-  return INSTRUMENT_CATALOG;
-}
-
-/** Build the A2 text-to-score prompt from `pipeline/SCORE-PROMPT.md` with A0-ready catalog slots. */
-export async function buildScorePrompt(idea: string): Promise<string> {
-  const sections = await promptFile("SCORE-PROMPT.md");
-  const readyLines = SCORE_ROLES.map((role) => {
-    const items = INSTRUMENT_CATALOG.filter((i) => i.role === role && i.audition.status === "ready").map(
-      (i) => `${i.id} (${i.plainLabel}, MIDI ${i.pitchRange[0]}..${i.pitchRange[1]})`,
-    );
-    return `- ${role}: ${items.join("; ")}`;
-  }).join("\n");
-  const slots = { IDEA: idea.trim(), STYLES: STYLE_TEMPLATES.join(", "), KEYS: SCORE_KEYS.join(", "), READY_INSTRUMENTS: readyLines };
-  return [fill(sections.shared, slots), sections.music ? fill(sections.music, slots) : ""].filter(Boolean).join("\n\n");
-}
+export const listInstrumentCatalog = (): readonly InstrumentCatalogEntry[] => INSTRUMENT_CATALOG;

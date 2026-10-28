@@ -24,6 +24,7 @@ import {
   explainScoreChoices,
   fxChainForPreset,
   fxPresetOf,
+  sketchDraftFromBrief,
   type LocalAuditionState,
   type LocalControls,
   type LocalFxChain,
@@ -86,6 +87,7 @@ export function LocalBandStudio({
   const defaultSpec = takes[0]?.spec ?? templates[0]?.spec;
   const [draft, setDraft] = useState<LocalScoreDraft>(() => defaultSpec!);
   const [selectedTakeId, setSelectedTakeId] = useState<string>(() => takes[0]?.id ?? "");
+  const [briefText, setBriefText] = useState<string>("chill hip-hop, 84 bpm, A minor, warm keys");
   const [steerNote, setSteerNote] = useState<string | null>(null);
   const [swapChoice, setSwapChoice] = useState<Readonly<Record<LocalRole, string>>>(() => ({
     drums: defaultSpec?.tracks.find((t) => t.role === "drums")?.instrument ?? "kit-808-warm",
@@ -169,6 +171,19 @@ export function LocalBandStudio({
 
       <div className={s.controlsBar} role="group" aria-label="plain-language taste steering">
         <CapsHeading text="taste steer" variant="section" level={4} />
+        <Field label="plain brief" value={briefText} disabled={busy} onChange={setBriefText} />
+        <Button
+          label="Sketch brief"
+          size="sm"
+          tone="cyan"
+          disabled={busy}
+          onPress={() => {
+            const sketched = sketchDraftFromBrief(briefText, templates, swapChoice, draft);
+            setDraft(sketched.draft);
+            setSwapChoice(sketched.swapChoice);
+            setSteerNote(sketched.summary);
+          }}
+        />
         {LOCAL_TASTE_STEERS.map((st) => (
           <Button key={st.id} label={st.label} size="sm" disabled={busy} onPress={() => pickTasteSteer(st.id)} />
         ))}
