@@ -218,7 +218,7 @@ export function LocalBandStudio({
               <Select label="rendered local takes" options={takes.map((t) => ({ value: t.id, label: `${t.title} (${t.id})` }))} value={activeTake.id} onChange={selectTake} />
             )}
             <span className={s.grow} />
-            <a className={s.linkBtn} href="/board/pkt%3Aaudio%3Aaudio%2Ftriage">Board triage</a>
+            <Chip label="board" value="triage" tone="cyan" casing="lower" href="/board/pkt%3Aaudio%3Aaudio%2Ftriage" />
             <a className={s.linkBtn} href={activeTake.rppUrl} download={`${activeTake.id}.rpp`}>REAPER .rpp</a>
             <Button label={activeTake.stage === "finalized" ? "In Arrange (finalized)" : "Send to Arrange"} size="sm" tone="emerald" disabled={busy || activeTake.stage === "finalized"} onPress={() => onPromote(activeTake.id)} />
           </div>
