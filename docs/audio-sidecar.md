@@ -168,6 +168,30 @@ corpus measured against the first cuts of `broken-ending` and `loop-seam`. Measu
 (2026-10-24, the box loaded by other jobs), a 5-minute mp3 triages in 7.8 to 8.9 s against
 5.9 s for `measure`. Most of that time is the decode and the loudness.
 
+### audition and sketch
+
+`python pipeline/audio/sidecar.py audition --spec <spec.json> --out <wav> --json` plays ONE fixed
+four-bar phrase (I-V-vi-IV in a major key, i-VI-III-VII in a minor one) on one sampled instrument
+at a tempo and key, and answers `{ok, durationS, lufs, notes, range, measured}`. `sketch` plays
+the same phrase for several instruments over a painted shape, one level per four bars, the
+voices thickening with the level, and answers `{ok, durationS, lufs, voices, columns}`. Both set
+the integrated loudness to the spec's `lufs` (the composer asks for -20), so a comparison is
+about timbre and not about level. Node reaches them through `lib/audio/sidecar.ts`
+`renderAudition` / `renderSketch`, and `lib/audio/atlas.ts` feeds them from the sample roots in
+`GRAVITONE_SAMPLE_ROOTS` and caches what they render in `GRAVITONE_AUDITION_DIR`.
+
+- **Pitches are measured, not read off names** (`audition.py`, YIN): FL Studio numbers its
+  multisamples and Ableton names notes with its own octave rule, so a file's note name is used
+  only when it has one, and a measured pitch is kept to the cent so a sharp sample is resampled
+  back into tune. The map is cached per file list.
+- **FL Studio's packs are Ogg Vorbis in a RIFF** (format tag 0x674F). libsndfile refuses them as
+  WAV, so their `data` chunk is decoded as Ogg, to a bound (the stream reports no length).
+- **A kit plays a groove, not the phrase** (`drums.py`): pieces are named from file names, and
+  every kit plays the same four bars, thinning with the level.
+- Measured 2026-10-28 on this box: 25 instruments at 96 bpm, D minor, each rendered at
+  -20.0 LUFS (one kit at -20.6), 11.22 s long, and byte-identical when rendered a second time. A
+  first render is 2 to 7 s; a cached one is a file read.
+
 ## The stage map
 
 | `kind` | Params (bounds) | Rendered by |
