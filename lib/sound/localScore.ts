@@ -150,6 +150,7 @@ export function readLocalScorePlan(take: Pick<SoundTake, "plan">): LocalScorePla
 
 export type RenderLocalScoreOpts = {
   readonly verifyDeterminism?: boolean;
+  readonly fallbackDeterminism?: DeterminismReport | null;
   readonly parentId?: string | null;
   readonly op?: "compose" | "section-edit";
   readonly group?: string | null;
@@ -217,7 +218,7 @@ export async function renderLocalScore(
       spec,
       stems: stemMetas,
       triage: res.triage,
-      determinism: res.determinism,
+      determinism: res.determinism ?? opts.fallbackDeterminism ?? null,
       mixSha256: res.mixSha256,
       rppRel,
       rppUrl: `/api/sound/takes/${encodeURIComponent(id)}/file?artifact=rpp`,
@@ -308,6 +309,7 @@ export async function swapLocalTakeStem(input: SwapLocalStemInput): Promise<Resu
   };
   return renderLocalScore(nextSpec, {
     verifyDeterminism: false,
+    fallbackDeterminism: prevPlan.determinism,
     parentId: parent.id,
     op: "section-edit",
     group: parent.group,

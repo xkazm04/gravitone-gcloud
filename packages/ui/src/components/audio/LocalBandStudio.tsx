@@ -17,7 +17,10 @@ import {
   LOCAL_FX_PRESETS,
   LOCAL_KEYS,
   LOCAL_ROLES,
+  LOCAL_TASTE_STEERS,
   applySeedToDraft,
+  applyTasteSteer,
+  describeStemChoice,
   explainScoreChoices,
   fxChainForPreset,
   fxPresetOf,
@@ -29,6 +32,7 @@ import {
   type LocalRole,
   type LocalScoreDraft,
   type LocalTakeView,
+  type LocalTasteSteerId,
   type LocalTemplateView,
 } from "./localBand.ts";
 import s from "./LocalBand.module.css";
@@ -82,6 +86,7 @@ export function LocalBandStudio({
   const defaultSpec = takes[0]?.spec ?? templates[0]?.spec;
   const [draft, setDraft] = useState<LocalScoreDraft>(() => defaultSpec!);
   const [selectedTakeId, setSelectedTakeId] = useState<string>(() => takes[0]?.id ?? "");
+  const [steerNote, setSteerNote] = useState<string | null>(null);
   const [swapChoice, setSwapChoice] = useState<Readonly<Record<LocalRole, string>>>(() => ({
     drums: defaultSpec?.tracks.find((t) => t.role === "drums")?.instrument ?? "kit-808-warm",
     bass: defaultSpec?.tracks.find((t) => t.role === "bass")?.instrument ?? "vital-sub-bass",
@@ -93,9 +98,17 @@ export function LocalBandStudio({
 
   const pickTemplate = (tpl: LocalTemplateView): void => {
     setDraft(tpl.spec);
+    setSteerNote(null);
     const nextSwap: Record<LocalRole, string> = { ...swapChoice };
     for (const tr of tpl.spec.tracks) nextSwap[tr.role] = tr.instrument;
     setSwapChoice(nextSwap);
+  };
+
+  const pickTasteSteer = (steerId: LocalTasteSteerId): void => {
+    const applied = applyTasteSteer(draft, swapChoice, steerId);
+    setDraft(applied.draft);
+    setSwapChoice(applied.swapChoice);
+    setSteerNote(applied.summary);
   };
 
   const setControl = (k: keyof LocalControls, v: number): void => {
@@ -104,10 +117,7 @@ export function LocalBandStudio({
 
   const setRoleInstrument = (role: LocalRole, instId: string): void => {
     setSwapChoice((cur) => ({ ...cur, [role]: instId }));
-    setDraft((cur) => ({
-      ...cur,
-      tracks: cur.tracks.map((t) => (t.role === role ? { ...t, instrument: instId } : t)),
-    }));
+    setDraft((cur) => ({ ...cur, tracks: cur.tracks.map((t) => (t.role === role ? { ...t, instrument: instId } : t)) }));
   };
 
   const patchDraftTrack = (role: LocalRole, patch: { readonly muted?: boolean; readonly solo?: boolean; readonly fx?: LocalFxChain }): void => {
@@ -141,9 +151,7 @@ export function LocalBandStudio({
         {seed !== undefined && (
           <Button label="Load from seed" size="sm" disabled={busy} onPress={() => setDraft((cur) => applySeedToDraft(seed, templates, catalog, cur))} />
         )}
-        {onReceipt !== undefined && (
-          <Button label="Receipt ($0)" size="sm" disabled={busy} onPress={() => onReceipt(draft)} />
-        )}
+        {onReceipt !== undefined && <Button label="Receipt ($0)" size="sm" disabled={busy} onPress={() => onReceipt(draft)} />}
         <Button label={busy ? "Rendering…" : "Render 4-stem take ($0)"} tone="cyan" disabled={busy} onPress={() => onRender(draft)} />
       </div>
 
@@ -157,6 +165,14 @@ export function LocalBandStudio({
             <span className={s.tplSub}>{tpl.plainIntent}</span>
           </button>
         ))}
+      </div>
+
+      <div className={s.controlsBar} role="group" aria-label="plain-language taste steering">
+        <CapsHeading text="taste steer" variant="section" level={4} />
+        {LOCAL_TASTE_STEERS.map((st) => (
+          <Button key={st.id} label={st.label} size="sm" disabled={busy} onPress={() => pickTasteSteer(st.id)} />
+        ))}
+        {steerNote !== null && <Chip label="why" value={steerNote} tone="cyan" casing="lower" />}
       </div>
 
       <div className={s.controlsBar}>
@@ -208,22 +224,11 @@ export function LocalBandStudio({
           <div className={s.head}>
             <CapsHeading text={`mastered mix · ${activeTake.title}`} variant="section" level={4} />
             {takes.length > 1 && (
-              <Select
-                label="rendered local takes"
-                options={takes.map((t) => ({ value: t.id, label: `${t.title} (${t.id})` }))}
-                value={activeTake.id}
-                onChange={setSelectedTakeId}
-              />
+              <Select label="rendered local takes" options={takes.map((t) => ({ value: t.id, label: `${t.title} (${t.id})` }))} value={activeTake.id} onChange={setSelectedTakeId} />
             )}
             <span className={s.grow} />
             <a className={s.linkBtn} href={activeTake.rppUrl} download={`${activeTake.id}.rpp`}>REAPER .rpp</a>
-            <Button
-              label={activeTake.stage === "finalized" ? "In Arrange (finalized)" : "Send to Arrange"}
-              size="sm"
-              tone="emerald"
-              disabled={busy || activeTake.stage === "finalized"}
-              onPress={() => onPromote(activeTake.id)}
-            />
+            <Button label={activeTake.stage === "finalized" ? "In Arrange (finalized)" : "Send to Arrange"} size="sm" tone="emerald" disabled={busy || activeTake.stage === "finalized"} onPress={() => onPromote(activeTake.id)} />
           </div>
 
           <AudioPreview src={activeTake.mixUrl} peaks={activeTake.peaks} title={activeTake.title} durationS={activeTake.durationS} />
@@ -232,21 +237,9 @@ export function LocalBandStudio({
             <Chip label="mastered" value={activeTake.lufs !== null ? `${activeTake.lufs.toFixed(1)} LUFS` : "n/a"} tone="emerald" casing="lower" />
             <Chip label="true peak" value={activeTake.truePeakDb !== null ? `${activeTake.truePeakDb.toFixed(2)} dBTP` : "n/a"} tone="emerald" casing="lower" />
             {activeTake.bitIdentical !== null && (
-              <Chip
-                label="determinism"
-                value={activeTake.bitIdentical ? `bit-identical · diff ${(activeTake.maxAbsDiff ?? 0).toFixed(6)}` : "drift"}
-                tone={activeTake.bitIdentical ? "emerald" : "rose"}
-                casing="lower"
-                dot
-              />
+              <Chip label="determinism" value={activeTake.bitIdentical ? `bit-identical · diff ${(activeTake.maxAbsDiff ?? 0).toFixed(6)}` : "drift"} tone={activeTake.bitIdentical ? "emerald" : "rose"} casing="lower" dot />
             )}
-            <Chip
-              label="triage"
-              value={`${activeTake.triageFlagged} flagged / ${activeTake.triageFindings.filter((f) => f.verdict !== "skip").length} checks`}
-              tone={activeTake.triageFlagged === 0 ? "emerald" : "rose"}
-              casing="lower"
-              dot
-            />
+            <Chip label="triage" value={`${activeTake.triageFlagged} flagged / ${activeTake.triageFindings.filter((f) => f.verdict !== "skip").length} checks`} tone={activeTake.triageFlagged === 0 ? "emerald" : "rose"} casing="lower" dot />
             <Chip label="mix sha256" value={activeTake.mixSha256.slice(0, 10)} casing="lower" />
             <Chip label="render time" value={`${activeTake.totalRenderMs} ms`} casing="lower" />
           </div>
@@ -281,9 +274,10 @@ export function LocalBandStudio({
           const isMuted = draftTrack?.muted ?? stem?.muted ?? false;
           const isSolo = draftTrack?.solo ?? stem?.solo ?? false;
           const fxPreset = fxPresetOf(draftTrack?.fx);
+          const guidance = describeStemChoice(currentInstId, stem, catalog);
           const stemDirty =
             stem !== null &&
-            (stem.instrument !== currentInstId || stem.muted !== isMuted || stem.solo !== isSolo || fxPreset !== fxPresetOf(activeTake?.spec.tracks.find((t) => t.role === role)?.fx));
+            (stem.instrument !== currentInstId || guidance.tone === "rose" || stem.muted !== isMuted || stem.solo !== isSolo || fxPreset !== fxPresetOf(activeTake?.spec.tracks.find((t) => t.role === role)?.fx));
 
           return (
             <div key={role} className={s.stemCard} data-reused={stem?.reused === true ? "true" : "false"}>
@@ -291,18 +285,29 @@ export function LocalBandStudio({
                 <span className={s.roleTag}>{role}</span>
                 <span className={s.instName}>{stem?.instrumentName ?? currentMeta?.name ?? currentInstId}</span>
                 <span className={s.grow} />
-                <Toggle label="mute" name={`mute ${role} stem`} on={isMuted} onToggle={(muted) => patchDraftTrack(role, { muted })} />
-                <Toggle label="solo" name={`solo ${role} stem`} on={isSolo} onToggle={(solo) => patchDraftTrack(role, { solo })} />
+                <Toggle
+                  label="mute"
+                  name={`mute ${role} stem`}
+                  on={isMuted}
+                  onToggle={(muted) => {
+                    patchDraftTrack(role, { muted });
+                    if (activeTake !== null) onSwapStem(activeTake.id, role, currentInstId, { muted, solo: isSolo, ...(draftTrack?.fx === undefined ? {} : { fx: draftTrack.fx }) });
+                  }}
+                />
+                <Toggle
+                  label="solo"
+                  name={`solo ${role} stem`}
+                  on={isSolo}
+                  onToggle={(solo) => {
+                    patchDraftTrack(role, { solo });
+                    if (activeTake !== null) onSwapStem(activeTake.id, role, currentInstId, { muted: isMuted, solo, ...(draftTrack?.fx === undefined ? {} : { fx: draftTrack.fx }) });
+                  }}
+                />
                 {stem !== null && (
-                  <Chip
-                    label={stem.reused ? "reused bit-exact" : "rendered"}
-                    value={stem.reused ? stem.sha256.slice(0, 8) : `${stem.renderMs}ms · ${stem.sha256.slice(0, 8)}`}
-                    tone={stem.reused ? "cyan" : "emerald"}
-                    casing="lower"
-                  />
+                  <Chip label={stem.reused ? "reused bit-exact" : "rendered"} value={stem.reused ? stem.sha256.slice(0, 8) : `${stem.renderMs}ms · ${stem.sha256.slice(0, 8)}`} tone={stem.reused ? "cyan" : "emerald"} casing="lower" />
                 )}
               </div>
-              {currentMeta !== undefined && <p className={s.plainDesc}>{currentMeta.plainLabel}</p>}
+              <p className={guidance.tone === "rose" ? s.refusalText : s.plainDesc}>{guidance.text}</p>
               {stem !== null && (
                 <>
                   <span className={s.stemMeta}>
@@ -314,10 +319,7 @@ export function LocalBandStudio({
               <div className={s.swapRow}>
                 <Select
                   label={`${role} instrument`}
-                  options={roleInstruments.map((inst) => ({
-                    value: inst.id,
-                    label: `${inst.name} ${inst.status === "refused" ? "[refused]" : `(${inst.engine})`}`,
-                  }))}
+                  options={roleInstruments.map((inst) => ({ value: inst.id, label: `${inst.name} ${inst.status === "refused" ? "[refused]" : `(${inst.engine})`}` }))}
                   value={currentInstId}
                   onChange={(instId) => setRoleInstrument(role, instId)}
                 />
@@ -337,18 +339,10 @@ export function LocalBandStudio({
                     size="sm"
                     tone="cyan"
                     disabled={busy || !stemDirty}
-                    onPress={() =>
-                      onSwapStem(activeTake.id, role, currentInstId, {
-                        muted: isMuted,
-                        solo: isSolo,
-                        ...(draftTrack?.fx === undefined ? {} : { fx: draftTrack.fx }),
-                      })
-                    }
+                    onPress={() => onSwapStem(activeTake.id, role, currentInstId, { muted: isMuted, solo: isSolo, ...(draftTrack?.fx === undefined ? {} : { fx: draftTrack.fx }) })}
                   />
                 )}
-                {stem !== null && (
-                  <a className={s.linkBtn} href={stem.midiUrl} download={`${activeTake?.id ?? "stem"}-${role}.mid`}>.mid</a>
-                )}
+                {stem !== null && <a className={s.linkBtn} href={stem.midiUrl} download={`${activeTake?.id ?? "stem"}-${role}.mid`}>.mid</a>}
               </div>
             </div>
           );

@@ -24,10 +24,26 @@ import {
   renderLocalScore,
   swapLocalTakeStem,
 } from "../lib/sound/localScore";
+import { renderMidi } from "../lib/audio/sidecar";
+import { ledgerPath, storeRoot } from "../lib/sound/store";
 
 function flagOf(args: readonly string[], name: string): string | null {
   const i = args.indexOf(name);
   return i >= 0 && i + 1 < args.length ? (args[i + 1] ?? null) : null;
+}
+
+function seedFixturesIfEmpty(): void {
+  const dstRoot = storeRoot();
+  const dstLedger = ledgerPath();
+  const srcRoot = path.resolve(process.cwd(), "fixtures-out", "sound");
+  const srcLedger = path.resolve(process.cwd(), "fixtures-out", "sound-ledger.json");
+  if (!fs.existsSync(path.join(dstRoot, "takes.json")) && fs.existsSync(path.join(srcRoot, "takes.json"))) {
+    fs.cpSync(srcRoot, dstRoot, { recursive: true });
+  }
+  if (!fs.existsSync(dstLedger) && fs.existsSync(srcLedger)) {
+    fs.mkdirSync(path.dirname(dstLedger), { recursive: true });
+    fs.copyFileSync(srcLedger, dstLedger);
+  }
 }
 
 async function main(argv: readonly string[]): Promise<number> {
@@ -65,6 +81,7 @@ async function main(argv: readonly string[]): Promise<number> {
   }
 
   if (cmd === "render") {
+    if (argv.includes("--seed-fixtures")) seedFixturesIfEmpty();
     const specFile = flagOf(argv, "--spec");
     const templateId = (flagOf(argv, "--template") ?? "chill-hiphop") as StyleTemplateId;
     const verifyDeterminism = argv.includes("--verify-determinism");
@@ -167,6 +184,23 @@ async function main(argv: readonly string[]): Promise<number> {
       return 1;
     }
     console.log(JSON.stringify({ ok: true, ...res.value }, null, 2));
+    return 0;
+  }
+
+  if (cmd === "render-midi" || cmd === "render-stem") {
+    const midiFile = flagOf(argv, "--midi");
+    const instrumentId = flagOf(argv, "--instrument");
+    const outFile = flagOf(argv, "--out");
+    if (!midiFile || !instrumentId || !outFile) {
+      console.error(JSON.stringify({ ok: false, error: `${cmd} requires --midi <file.mid> --instrument <id> --out <out.wav>` }));
+      return 2;
+    }
+    const res = await renderMidi(path.resolve(midiFile), instrumentId, path.resolve(outFile));
+    if (!res.ok) {
+      console.error(JSON.stringify({ ok: false, error: res.error }, null, 2));
+      return 1;
+    }
+    console.log(JSON.stringify(res.value, null, 2));
     return 0;
   }
 

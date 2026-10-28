@@ -26,8 +26,9 @@ const ROOT = vi.hoisted(() => {
 import { parseScoreSpec, type ScoreSpec } from "@gt/domain/audio.score";
 import { WORKED_SCORE_TEMPLATES, compileSeedToScore, templateById } from "@gt/domain/audio.score.templates";
 import { LocalBandStudio } from "@gt/ui/components/audio/LocalBandStudio.tsx";
-import { explainScoreChoices, fxChainForPreset, fxPresetOf } from "@gt/ui/components/audio/localBand.ts";
+import { applyTasteSteer, describeStemChoice, explainScoreChoices, fxChainForPreset, fxPresetOf } from "@gt/ui/components/audio/localBand.ts";
 import { readLocalBand } from "../../app/(studio)/audio/_audio/localRead.ts";
+import { renderMidi } from "../../lib/audio/sidecar.ts";
 import { engineRegistry, engineState } from "../../lib/sound/engines.ts";
 import {
   auditionLocalInstrument,
@@ -254,7 +255,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     120_000,
   );
 
-  it("renders instrument audition previews and refuses failed A0 instruments", async () => {
+  it("renders instrument audition previews, renders SMF .mid files via renderMidi, and refuses failed A0 instruments", async () => {
     const refused = await auditionLocalInstrument("minigrand-vst3");
     expect(refused.ok).toBe(false);
 
@@ -265,9 +266,29 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
       expect(okAudition.value.audioUrl).toContain("instrument=sample-felt-piano");
       expect(existsSync(path.join(ROOT, "sound", "files", "audition-sample-felt-piano.wav"))).toBe(true);
     }
+
+    const view = await readLocalBand();
+    const leadStem = view.takes[0]?.stems.find((s) => s.role === "lead");
+    expect(leadStem).toBeDefined();
+    const midiFiles = existsSync(path.join(ROOT, "sound", "files"));
+    expect(midiFiles).toBe(true);
+    const outMidiWav = path.join(ROOT, "rendered-midi-stem.wav");
+    const firstTakeId = view.takes[0]!.id;
+    const midiPath = path.join(ROOT, "sound", "files", `${firstTakeId}-lead.mid`);
+    const midiRes = await renderMidi(midiPath, "sample-mallet-guitar", outMidiWav);
+    expect(midiRes.ok).toBe(true);
+    if (midiRes.ok) {
+      expect(midiRes.value.id).toBe("sample-mallet-guitar");
+      expect(midiRes.value.noteCount).toBeGreaterThan(0);
+      expect(midiRes.value.measure.integratedLufs).not.toBeNull();
+      expect(existsSync(outMidiWav)).toBe(true);
+    }
+    const refusedMidi = await renderMidi(midiPath, "minigrand-vst3", outMidiWav);
+    expect(refusedMidi.ok).toBe(false);
+    if (!refusedMidi.ok) expect(refusedMidi.error.message).toContain("silent");
   }, 60_000);
 
-  it("renders LocalBandStudio over readLocalBand() with solo/mute, fx presets, receipt door, and arrangement breakdown", async () => {
+  it("renders LocalBandStudio over readLocalBand() with taste steering, solo/mute, fx presets, receipt door, and arrangement breakdown", async () => {
     const view = await readLocalBand();
     expect(view.templates.length).toBe(4);
     expect(view.catalog.length).toBe(16);
@@ -277,6 +298,23 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     expect(fxPresetOf(chorusChain)).toBe("wide-chorus");
     const breakdown = explainScoreChoices(view.templates[0]!.spec, view.catalog, view.takes[0]);
     expect(breakdown.length).toBe(4);
+
+    const steered = applyTasteSteer(
+      view.templates[0]!.spec,
+      { drums: "kit-808-warm", bass: "vital-sub-bass", chords: "sample-lofi-keys", lead: "sample-ikembe-bell" },
+      "softer-voice",
+    );
+    expect(steered.swapChoice.drums).toBe("kit-acoustic-brush");
+    expect(steered.swapChoice.chords).toBe("sample-felt-piano");
+    expect(steered.summary).toContain("1–4 kHz");
+
+    const swapDesc = describeStemChoice("vital-pluck-lead", view.takes[0]!.stems.find((s) => s.role === "lead") ?? null, view.catalog);
+    expect(swapDesc.tone).toBe("cyan");
+    expect(swapDesc.text).toContain("bit-identical");
+
+    const refusedDesc = describeStemChoice("minigrand-vst3", null, view.catalog);
+    expect(refusedDesc.tone).toBe("rose");
+    expect(refusedDesc.text).toContain("silent");
 
     const html = renderToStaticMarkup(
       h(LocalBandStudio, {
@@ -292,6 +330,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     );
     expect(html).toContain("local band · 4-stem studio");
     expect(html).toContain("Receipt ($0)");
+    expect(html).toContain("softer under voiceover");
     expect(html).toContain("Chill Lo-Fi Groove");
     expect(html).toContain("reused bit-exact");
     expect(html).toContain("mute drums stem");

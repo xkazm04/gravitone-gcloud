@@ -289,6 +289,39 @@ export async function auditionInstrument(instrumentId: string, outPath?: string,
   return r.ok ? ok(r.value as AuditionResult) : r;
 }
 
+const renderMidiAnswerSchema = z.object({
+  ok: z.literal(true),
+  id: z.string(),
+  name: z.string(),
+  role: z.enum(SCORE_ROLES),
+  source: z.string(),
+  outPath: z.string(),
+  sha256: z.string(),
+  noteCount: z.number().int().nonnegative(),
+  tempoBpm: z.number().positive(),
+  renderMs: z.number().int().nonnegative(),
+  durationS: z.number().nonnegative(),
+  measure: measureObjSchema,
+});
+export type RenderMidiResult = z.output<typeof renderMidiAnswerSchema>;
+
+/**
+ * Render an SMF .mid file through a catalog instrument (A0 render verb) with peak protection.
+ */
+export async function renderMidi(
+  midiPath: string,
+  instrumentId: string,
+  outPath: string,
+  opts: SidecarOptions & { readonly brightness?: number } = {},
+): Promise<Result<RenderMidiResult>> {
+  const args = ["--midi", midiPath, "--instrument", instrumentId, "--out", outPath];
+  if (opts.brightness !== undefined) args.push("--brightness", String(opts.brightness));
+  const r = await call("render", args, renderMidiAnswerSchema, opts.timeoutMs ?? TIMEOUT_MS);
+  return r.ok ? ok(r.value as RenderMidiResult) : r;
+}
+
+export const renderStem = renderMidi;
+
 /**
  * Is the sidecar runnable here: which interpreter, and which of its modules import.
  */

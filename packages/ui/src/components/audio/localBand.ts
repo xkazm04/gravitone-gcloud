@@ -253,3 +253,84 @@ export function applySeedToDraft(
     }),
   };
 }
+
+export type LocalTasteSteerId = "softer-voice" | "warmer-organic" | "punchier-drive" | "brighter-lift";
+
+export type LocalTasteSteer = {
+  readonly id: LocalTasteSteerId;
+  readonly label: string;
+  readonly summary: string;
+  readonly roles: Partial<Readonly<Record<LocalRole, string>>>;
+  readonly controls: Partial<LocalControls>;
+};
+
+export const LOCAL_TASTE_STEERS: readonly LocalTasteSteer[] = [
+  {
+    id: "softer-voice",
+    label: "softer under voiceover",
+    summary: "brushed kit + upright felt piano + muted guitar clear 1–4 kHz so speech sits clean on top",
+    roles: { drums: "kit-acoustic-brush", chords: "sample-felt-piano", lead: "sample-mallet-guitar" },
+    controls: { density: 0.38, brightness: 0.35, lift: 0.65 },
+  },
+  {
+    id: "warmer-organic",
+    label: "warmer & acoustic",
+    summary: "sampled finger bass + lo-fi electric keys + kalimba bell replace synthetic harmonics with natural body",
+    roles: { bass: "sample-mamas-bass", chords: "sample-lofi-keys", lead: "sample-ikembe-bell" },
+    controls: { brightness: 0.42, swing: 0.16, humanise: 0.35 },
+  },
+  {
+    id: "punchier-drive",
+    label: "punchier synth drive",
+    summary: "909 kit + Vital analog pulse bass + Vital synth pluck lock 16th-note pulse across bass and lead",
+    roles: { drums: "kit-909-pulse", bass: "vital-pulse-bass", chords: "vital-warm-pad", lead: "vital-pluck-lead" },
+    controls: { density: 0.72, brightness: 0.7, lift: 0.82, swing: 0 },
+  },
+  {
+    id: "brighter-lift",
+    label: "brighter melodic lift",
+    summary: "concert grand piano + airy Vital lead open the upper harmonic register in the middle lift",
+    roles: { chords: "sample-grand-piano", lead: "vital-glass-lead" },
+    controls: { brightness: 0.72, lift: 0.85 },
+  },
+];
+
+export function applyTasteSteer(
+  draft: LocalScoreDraft,
+  currentSwap: Readonly<Record<LocalRole, string>>,
+  steerId: LocalTasteSteerId,
+): { readonly draft: LocalScoreDraft; readonly swapChoice: Readonly<Record<LocalRole, string>>; readonly summary: string } {
+  const steer = LOCAL_TASTE_STEERS.find((x) => x.id === steerId) ?? LOCAL_TASTE_STEERS[0]!;
+  const nextSwap: Record<LocalRole, string> = { ...currentSwap };
+  const nextTracks = draft.tracks.map((tr) => {
+    const picked = steer.roles[tr.role];
+    if (picked !== undefined) {
+      nextSwap[tr.role] = picked;
+      return { ...tr, instrument: picked };
+    }
+    return tr;
+  });
+  return {
+    draft: { ...draft, controls: { ...draft.controls, ...steer.controls }, tracks: nextTracks },
+    swapChoice: nextSwap,
+    summary: steer.summary,
+  };
+}
+
+export function describeStemChoice(
+  selectedId: string,
+  activeStem: LocalStemView | null,
+  catalog: readonly LocalInstrumentView[],
+): { readonly tone: "emerald" | "cyan" | "rose"; readonly text: string } {
+  const meta = catalog.find((c) => c.id === selectedId);
+  if (meta?.status === "refused") {
+    return { tone: "rose", text: `refused by A0 gate: ${meta.refusalReason ?? "audition failed"}` };
+  }
+  if (activeStem !== null && activeStem.instrument !== selectedId && meta !== undefined) {
+    return {
+      tone: "cyan",
+      text: `swap ${activeStem.instrumentName} → ${meta.name}: ${meta.plainLabel.toLowerCase()} (other 3 stems stay bit-identical)`,
+    };
+  }
+  return { tone: "emerald", text: meta?.plainLabel ?? selectedId };
+}

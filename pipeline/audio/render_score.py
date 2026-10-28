@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import os
+import struct
 import time
 
 import numpy as np
@@ -202,3 +203,146 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False, _s
         "triage": triage_res, "stems": stems_info, "reusedRoles": reused_roles, "renderedRoles": rendered_roles,
         "totalRenderMs": int(round((time.time() - t_start) * 1000)), "determinism": determinism,
     }
+
+
+def _read_vlq(buf, idx):
+    val = 0
+    while idx < len(buf):
+        b = buf[idx]
+        idx += 1
+        val = (val << 7) | (b & 0x7F)
+        if not (b & 0x80):
+            break
+    return val, idx
+
+
+def read_smf_midi(mid_path):
+    """Parse a Standard MIDI File (.mid) into ([(start_s, end_s, midi, vel)], bpm, duration_s)."""
+    if not os.path.isfile(mid_path):
+        raise ScoreRefused(f"no such midi file: {mid_path}")
+    with open(mid_path, "rb") as f:
+        data = f.read()
+    if len(data) < 14 or data[:4] != b"MThd":
+        raise ScoreRefused(f"not a valid SMF MIDI file: {mid_path}")
+    hdr_len, _fmt, _ntrks, division = struct.unpack(">IHHH", data[4:14])
+    tpb = max(1, int(division & 0x7FFF))
+    pos = 8 + hdr_len
+    us_per_beat = 500_000
+    events, active = [], {}
+    max_tick = 0
+    while pos + 8 <= len(data):
+        tag = data[pos:pos + 4]
+        trk_len = struct.unpack(">I", data[pos + 4:pos + 8])[0]
+        end = min(len(data), pos + 8 + trk_len)
+        idx, tick, running = pos + 8, 0, 0
+        while idx < end:
+            delta, idx = _read_vlq(data, idx)
+            tick += delta
+            max_tick = max(max_tick, tick)
+            if idx >= end:
+                break
+            status = data[idx]
+            if status < 0x80:
+                status = running
+            else:
+                idx += 1
+                if status < 0xF0:
+                    running = status
+            if status == 0xFF:
+                if idx >= end:
+                    break
+                mtype = data[idx]
+                mlen, idx = _read_vlq(data, idx + 1)
+                if mtype == 0x51 and mlen == 3 and idx + 3 <= end:
+                    us_per_beat = int.from_bytes(data[idx:idx + 3], "big") or 500_000
+                idx += mlen
+            elif status in (0xF0, 0xF7):
+                slen, idx = _read_vlq(data, idx)
+                idx += slen
+            elif (status & 0xF0) in (0x80, 0x90):
+                if idx + 2 > end:
+                    break
+                note, vel = data[idx] & 0x7F, data[idx + 1] & 0x7F
+                idx += 2
+                if (status & 0xF0) == 0x90 and vel > 0:
+                    active.setdefault(note, []).append((tick, vel))
+                else:
+                    stack = active.get(note)
+                    if stack:
+                        t0, v0 = stack.pop(0)
+                        sec_per_tick = (us_per_beat / 1_000_000.0) / float(tpb)
+                        events.append((round(t0 * sec_per_tick, 6), round(max(t0 + 1, tick) * sec_per_tick, 6), note, v0))
+            elif (status & 0xF0) in (0xA0, 0xB0, 0xE0):
+                idx += 2
+            elif (status & 0xF0) in (0xC0, 0xD0):
+                idx += 1
+            else:
+                break
+        pos = end
+    bpm = 60_000_000.0 / float(us_per_beat)
+    sec_per_tick = (us_per_beat / 1_000_000.0) / float(tpb)
+    dur_s = max((e[1] for e in events), default=max_tick * sec_per_tick)
+    events.sort(key=lambda x: (x[0], x[2]))
+    return events, bpm, max(0.5, float(dur_s))
+
+
+def render_midi_file(mid_path, inst_id, out_path, brightness=0.5):
+    """Render an SMF .mid file through a catalog instrument (A0 render verb) with peak protection."""
+    if inst_id not in inst_lib.CATALOG:
+        raise ScoreRefused(f"unknown instrument {inst_id!r}")
+    entry = inst_lib.CATALOG[inst_id]
+    if not entry["licence"].strip():
+        raise ScoreRefused(f"instrument {inst_id} refused: licence note is empty ({entry['refusalReason'] or 'no licence'})")
+    if entry["status"] != "ready":
+        raise ScoreRefused(f"instrument {inst_id} refused: {entry['refusalReason'] or 'audition failed'}")
+    events, bpm, dur_s = read_smf_midi(mid_path)
+    if not events:
+        raise ScoreRefused(f"midi file {mid_path} contains no note events")
+    t0 = time.time()
+    buf, source_used = inst_lib.render_instrument_events(inst_id, events, dur_s + 0.35, brightness=float(brightness))
+    render_ms = int(round((time.time() - t0) * 1000))
+    tp = loudness.true_peak_db(buf, inst_lib.RATE)
+    if tp is not None and tp > CEILING_DBTP:
+        buf = (buf * (10.0 ** ((CEILING_DBTP - tp) / 20.0))).astype(np.float32)
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    sf.write(out_path, buf, inst_lib.RATE, subtype="PCM_16", format="WAV")
+    written, _ = sf.read(out_path, dtype="float32", always_2d=True)
+    meas = loudness.measure(written, inst_lib.RATE)
+    if meas["integratedLufs"] is None:
+        raise ScoreRefused(f"instrument {inst_id} render is silent")
+    return {
+        "ok": True, "id": inst_id, "name": entry["name"], "role": entry["role"], "source": source_used,
+        "outPath": os.path.abspath(out_path), "sha256": _sha256_file(out_path), "noteCount": len(events),
+        "tempoBpm": round(bpm, 2), "renderMs": render_ms, "durationS": meas["durationS"], "measure": meas,
+    }
+
+
+SKETCH_TEMPLATES = {
+    "chill-hiphop": ("Midnight Study Loop", 108, 84, "A minor", ("kit-808-warm", "boom-bap"), ("vital-sub-bass", "root-fifth"), ("sample-lofi-keys", "warm-voicing"), ("sample-ikembe-bell", "call-response")),
+    "calm-bed": ("Quiet Horizon Bed", 42, 92, "C major", ("kit-acoustic-brush", "gentle-pulse"), ("sample-mamas-bass", "warm-anchor"), ("sample-felt-piano", "arpeggio-bed"), ("vital-glass-lead", "sparse-motif")),
+    "synthwave-pulse": ("Neon Grid Runner", 777, 112, "D minor", ("kit-909-pulse", "four-floor"), ("vital-pulse-bass", "eighth-drive"), ("vital-warm-pad", "wide-pad"), ("vital-pluck-lead", "arp-lead")),
+    "warm-acoustic": ("Morning Workshop", 204, 104, "G major", ("kit-acoustic-brush", "studio-groove"), ("sample-mamas-bass", "walking-root"), ("sample-grand-piano", "open-chords"), ("sample-mallet-guitar", "plucked-hook")),
+}
+
+
+def sketch_score(style="chill-hiphop", out_dir=".", seed=None, tempo_bpm=None, key=None, verify_determinism=False):
+    """Build and render a 4-stem sketch from a style template + optional seed/tempo/key overrides (C6)."""
+    if style not in SKETCH_TEMPLATES:
+        raise ScoreRefused(f"unknown style {style!r}; expected one of {sorted(SKETCH_TEMPLATES)}")
+    title, def_seed, def_bpm, def_key, d_tr, b_tr, c_tr, l_tr = SKETCH_TEMPLATES[style]
+    spec = {
+        "v": 1, "title": title, "style": style,
+        "seed": int(seed) if seed is not None else def_seed,
+        "tempoBpm": float(tempo_bpm) if tempo_bpm is not None else def_bpm,
+        "key": str(key) if key is not None else def_key,
+        "loop": False,
+        "controls": {"density": 0.55, "brightness": 0.5, "lift": 0.72, "swing": 0.14 if style == "chill-hiphop" else 0.05, "humanise": 0.3},
+        "sections": [{"name": "intro", "bars": 2, "energy": 0.35, "progression": [0, 5, 3, 4]}, {"name": "lift", "bars": 4, "energy": 0.85, "progression": [0, 5, 2, 6]}, {"name": "outro", "bars": 2, "energy": 0.38, "progression": [0, 3, 4, 0]}],
+        "tracks": [
+            {"role": "drums", "instrument": d_tr[0], "gainDb": -1.5, "pan": 0.0, "pattern": d_tr[1]},
+            {"role": "bass", "instrument": b_tr[0], "gainDb": -2.0, "pan": 0.0, "pattern": b_tr[1]},
+            {"role": "chords", "instrument": c_tr[0], "gainDb": -2.8, "pan": -0.1, "pattern": c_tr[1]},
+            {"role": "lead", "instrument": l_tr[0], "gainDb": -3.2, "pan": 0.12, "pattern": l_tr[1]},
+        ],
+    }
+    return render_score(spec, out_dir, verify_determinism=verify_determinism)

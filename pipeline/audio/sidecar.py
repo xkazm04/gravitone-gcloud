@@ -201,6 +201,29 @@ def cmd_audition(a):
     emit(res)
 
 
+def cmd_render_midi(a):
+    import render_score
+
+    try:
+        res = render_score.render_midi_file(a.midi, a.instrument, a.out, brightness=float(a.brightness))
+    except render_score.ScoreRefused as e:
+        raise Failure(str(e), "refused") from None
+    emit(res)
+
+
+def cmd_sketch(a):
+    import render_score
+
+    try:
+        res = render_score.sketch_score(
+            style=a.style, out_dir=a.out_dir, seed=a.seed, tempo_bpm=a.bpm, key=a.key,
+            verify_determinism=bool(a.verify_determinism),
+        )
+    except render_score.ScoreRefused as e:
+        raise Failure(f"sketch: {e}", "refused") from None
+    emit(res)
+
+
 def _dist_version(name):
     from importlib import metadata
 
@@ -250,6 +273,21 @@ def main(argv):
     au.add_argument("--instrument", required=True)
     au.add_argument("--out", default=None)
     au.add_argument("--json", action="store_true")
+    for rverb in ("render", "render-midi", "render-stem"):
+        rm = sub.add_parser(rverb)
+        rm.add_argument("--midi", required=True)
+        rm.add_argument("--instrument", required=True)
+        rm.add_argument("--out", required=True)
+        rm.add_argument("--brightness", default=0.5, type=float)
+        rm.add_argument("--json", action="store_true")
+    sk = sub.add_parser("sketch")
+    sk.add_argument("--style", default="chill-hiphop")
+    sk.add_argument("--out-dir", dest="out_dir", required=True)
+    sk.add_argument("--seed", default=None, type=int)
+    sk.add_argument("--bpm", default=None, type=float)
+    sk.add_argument("--key", default=None)
+    sk.add_argument("--verify-determinism", dest="verify_determinism", action="store_true")
+    sk.add_argument("--json", action="store_true")
     d = sub.add_parser("doctor")
     d.add_argument("--json", action="store_true")
     a = p.parse_args(argv)
@@ -259,6 +297,10 @@ def main(argv):
         "triage": cmd_triage,
         "render-score": cmd_render_score,
         "audition": cmd_audition,
+        "render": cmd_render_midi,
+        "render-midi": cmd_render_midi,
+        "render-stem": cmd_render_midi,
+        "sketch": cmd_sketch,
         "doctor": cmd_doctor,
     }[a.verb]
     try:
