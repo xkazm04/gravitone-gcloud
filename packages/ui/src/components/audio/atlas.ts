@@ -106,9 +106,9 @@ function ringOf(role: Role, not: string | null, audible: ReadonlySet<string>, ha
  * keys). Unknown: no offer, rather than a guess.
  */
 const NEAR: Readonly<Record<string, Role>> = {
-  saxophone: "winds", sax: "winds", harmonica: "winds", whistle: "winds", "tin whistle": "winds", flute: "winds",
+  saxophone: "winds", sax: "winds", harmonica: "winds", whistle: "winds", "tin whistle": "winds",
   "muted trumpet": "brass", trumpet: "brass", trombone: "brass", tuba: "brass",
-  harp: "strings", pizzicato: "strings", "pizzicato strings": "strings", cello: "strings",
+  harp: "strings", pizzicato: "strings", "pizzicato strings": "strings",
   sitar: "guitar", ukulele: "guitar", banjo: "guitar", lute: "guitar", oud: "guitar", "distorted guitar": "guitar", mandolin: "guitar",
   organ: "keys", accordion: "keys", harpsichord: "keys", "felt piano": "keys",
   marimba: "mallets", xylophone: "mallets", vibraphone: "mallets", celesta: "mallets", glockenspiel: "mallets", "steel drums": "mallets", "sleigh bells": "mallets", "singing bowls": "mallets", bell: "mallets", bells: "mallets",

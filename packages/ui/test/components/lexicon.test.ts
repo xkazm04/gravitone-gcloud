@@ -94,6 +94,14 @@ describe("translate: a sentence compiled into a seed", () => {
     }
   });
 
+  test("an instrument's name keeps the reading of the words inside it", () => {
+    const t = translate("slow jazz guitar");
+    expect(t.seed.instruments).toContain("jazz guitar");
+    expect(t.seed.genres).toContain("jazz");
+    expect(t.seed.bpm).not.toBeNull();
+    expect(translate("rock drums").seed.genres).toContain("rock");
+  });
+
   test("an empty sentence is a blank seed", () => {
     const t = translate("   ");
     expect(t.tokens).toEqual([]);

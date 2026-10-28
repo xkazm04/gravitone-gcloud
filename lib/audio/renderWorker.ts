@@ -37,7 +37,9 @@ const KEEP_STDERR = 4096;
 const START_FAILURES = 2;
 // Versioned: a dev reload keeps globalThis, and a pool left by an older shape of this module (one
 // without a queue, say) would otherwise be taken up by the new code and fail every render.
-const g = globalThis as typeof globalThis & { __gtAuditionPoolV2?: Pool };
+const g = globalThis as typeof globalThis & { __gtAuditionPoolV2?: Pool; __gtAuditionPool?: { workers?: { child?: ChildProcess }[] } };
+for (const w of g.__gtAuditionPool?.workers ?? []) if (w.child?.exitCode === null) w.child.kill();
+delete g.__gtAuditionPool;
 const pool = (): Pool => (g.__gtAuditionPoolV2 ??= { workers: [], queue: [], seq: 0, broken: null, failedStarts: 0 });
 const python = (): string => process.env["PYTHON"] ?? (process.platform === "win32" ? "python" : "python3");
 

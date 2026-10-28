@@ -117,7 +117,9 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
     setSeed(next);
     setFrom(BLANK);
     setLoaded("by ear");
-    sound(next, null);
+    steer.learnTerms(next.instruments);
+    const href = shape.sketchOf(next);
+    if (href !== null) ear.play(href);
   });
   // A track keeps the seed's words and gives it the track's tempo, key and shape.
   const track = useTrack((read) => {
@@ -125,7 +127,7 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
     setSeed(next);
     shape.adoptLevels(read.levels);
     setLoaded(`track · ${read.name}`);
-    sound(next, read.levels.length > 0 ? read.levels : null);
+    sound(next, read.levels.length > 0 ? read.levels.slice(0, 32) : null);
   });
 
   const send = (s0: Seed, label: string): void => {

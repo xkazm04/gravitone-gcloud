@@ -86,6 +86,8 @@ export type Steer = {
   readonly onTrace: (list: TermList, term: string | null) => void;
   readonly strip: ReactNode;
   readonly failed: string | null;
+  /** Instruments chosen by another door (the duel) join the learned row too. */
+  readonly learnTerms: (terms: readonly string[]) => void;
 };
 
 /** `onSaid` names where the seed came from when a sentence is composed into it. */
@@ -138,7 +140,8 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
     onSpare: (p: Produced) => setSeed(addTo(seed, p.list, p.term)),
     examples: EXAMPLES,
     learned: learned.map((e) => ({ term: e.term, plain: e.plain.join(" · ") })),
-    onLearned: (term: string) => setSentence((cur) => (cur.toLowerCase().includes(term) ? cur : cur.trim() === "" ? term : `${cur.trim().replace(/[,.]$/, "")}, ${term}`)),
+    // Said already means the compiler hears it as an instrument - not a substring ("no rhodes", "choirs").
+    onLearned: (term: string) => setSentence((cur) => (translate(cur).seed.instruments.includes(term) ? cur : cur.trim() === "" ? term : `${cur.trim().replace(/[,.]$/, "")}, ${term}`)),
     onExample: (x: string) => {
       setSentence(x);
       composeFrom(translate(x));
@@ -230,5 +233,11 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
     onTrace: (list, term) => setLit(term === null || live === null ? NONE : new Set(provenanceOf(live, list, term))),
     strip,
     failed: ear.failed,
+    learnTerms: (terms) => {
+      for (const t of terms) {
+        const e = entryOf(t);
+        if (e !== undefined) learn(e);
+      }
+    },
   };
 }

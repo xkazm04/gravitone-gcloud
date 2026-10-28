@@ -54,14 +54,22 @@ export const CAPS: Readonly<Record<TermList, number>> = { genres: 2, moods: 3, i
 
 const fold = (s: string): string => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-type Cue = { readonly words: readonly string[]; readonly row: LexRow };
+type Cue = { readonly words: readonly string[]; readonly row: LexRow; readonly atlas?: true };
 
 /** Every cue as its token list, longest first: "rainy cafe" is tried before "rain". */
 // Every instrument the atlas can play is a word the lexicon hears as itself ("slap bass" -> slap
 // bass): a term learned by ear and then typed must compile back to the sound it was chosen as. The
-// written rows come first, so where both name a word the row's reading stands.
+// written rows come first, so where both name a word the row's reading stands - and where an
+// instrument's name holds a word with a reading of its own ("JAZZ guitar", "ROCK drums"), that
+// word's genre, mood and tempo are kept beside the instrument.
 const ATLAS_ROWS: readonly LexRow[] = ATLAS.map((e) => ({ cue: [e.term, ...e.aka].map((c) => c.toLowerCase()), i: [e.term] }));
-const CUES: readonly Cue[] = [...ROWS, ...ATLAS_ROWS].flatMap((row) => row.cue.map((c) => ({ words: c.split(" "), row }))).sort((a, b) => b.words.length - a.words.length);
+const CUES: readonly Cue[] = [
+  ...ROWS.flatMap((row) => row.cue.map((c): Cue => ({ words: c.split(" "), row }))),
+  ...ATLAS_ROWS.flatMap((row) => row.cue.map((c): Cue => ({ words: c.split(" "), row, atlas: true }))),
+].sort((a, b) => b.words.length - a.words.length);
+/** A single word's own written row ("jazz" -> the jazz row), for the words inside an instrument's name. */
+const WORD_ROW = new Map<string, LexRow>();
+for (const r of ROWS) for (const c of r.cue) if (!c.includes(" ") && !WORD_ROW.has(c)) WORD_ROW.set(c, r);
 const MAX_CUE = CUES[0]?.words.length ?? 1;
 const BY_HEAD = new Map<string, Cue[]>();
 for (const c of CUES) {
@@ -156,6 +164,14 @@ export function translate(sentence: string): Translation {
       for (const t of c.row.m ?? []) produced.push({ list: "moods", term: t, from });
       for (const t of c.row.i ?? []) produced.push({ list: "instruments", term: t, from });
       if (c.row.bpm !== undefined) ranges.push({ lo: c.row.bpm[0], hi: c.row.bpm[1], from });
+      if (c.atlas === true)
+        for (const k of from.slice(0, -1)) {
+          const own = WORD_ROW.get(words[k] ?? "");
+          if (own === undefined || (own.g === undefined && own.m === undefined)) continue;
+          for (const t of own.g ?? []) produced.push({ list: "genres", term: t, from: [k] });
+          for (const t of own.m ?? []) produced.push({ list: "moods", term: t, from: [k] });
+          if (own.bpm !== undefined) ranges.push({ lo: own.bpm[0], hi: own.bpm[1], from: [k] });
+        }
     }
     negate = -1;
     i += c.words.length;
