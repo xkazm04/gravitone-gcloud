@@ -87,7 +87,9 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
   const fields = sunoFieldsOf(seed, hands);
   const cut = target === "suno" ? sunoCut(seed, hands) : 0;
   const tempoRefused = tempoProblem(seed.bpm === null ? null : Math.round(seed.bpm));
-  const trace = (list: SeedList | "avoid", t: string) => (onTrace === undefined ? {} : { onMouseEnter: () => onTrace(list, t), onMouseLeave: () => onTrace(list, null) });
+  // Pointer and keyboard both trace a term to its sentence words: focus on a chip's controls bubbles here.
+  const trace = (list: SeedList | "avoid", t: string) =>
+    onTrace === undefined ? {} : { onMouseEnter: () => onTrace(list, t), onMouseLeave: () => onTrace(list, null), onFocus: () => onTrace(list, t), onBlur: () => onTrace(list, null) };
   const row = (list: SeedList, label: string) => (
     <div className={s.facet} key={list}>
       <span className={s.facetLabel}>{label}</span>

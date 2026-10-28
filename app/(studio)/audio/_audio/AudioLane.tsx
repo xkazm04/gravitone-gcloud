@@ -26,6 +26,7 @@ import { DraftList } from "@gt/ui/components/audio/DraftList.tsx";
 import { EngineList, type EngineRow } from "@gt/ui/components/audio/EngineList.tsx";
 import { ReferenceList } from "@gt/ui/components/audio/ReferenceList.tsx";
 import { BLANK_SEED, FACET_OF, addTo, handsOf, sunoFieldsOf, type Hand, type Seed, type SeedList, type Term } from "@gt/ui/components/audio/recipe.ts";
+import { playableAxes } from "@gt/ui/components/audio/duel.ts";
 import { SayIt } from "@gt/ui/components/audio/SayIt.tsx";
 import { useEar } from "@gt/ui/components/audio/useEar.ts";
 import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
@@ -44,7 +45,7 @@ import type { AudioView, SeedTake } from "./read.ts";
 import type { setHand, sunoConfirm, sunoReceipt } from "./actions.ts";
 import { useDuel } from "./duelState.tsx";
 import { useShape } from "./shapeState.tsx";
-import { useSteer } from "./steer.tsx";
+import { explainAudition, useSteer } from "./steer.tsx";
 import s from "./audio.module.css";
 
 /** The page's Server Actions, handed over as props: a reference per action crosses to the client,
@@ -86,7 +87,7 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
   const [loaded, setLoaded] = useState<string | null>(null);
   const fromLabel = loaded ?? take?.title ?? "blank";
   // One ear for the whole composer: a chip, a strip row and the sketch never sound at once.
-  const ear = useEar();
+  const ear = useEar(explainAudition);
   const can = useMemo(() => new Set(audible), [audible]);
   const shape = useShape(seed, ear, can);
   const steer = useSteer(
@@ -102,6 +103,8 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
   );
   // Two doors into the one seed: a sentence, or pairs heard by ear.
   const [door, setDoor] = useState<"words" | "ear">("words");
+  // The ear door opens only where this machine can play both sides of at least one pair.
+  const canDuel = playableAxes(can).length > 0;
   const duel = useDuel(ear, can, door === "ear", (next) => {
     setSeed(next);
     setFrom(BLANK);
@@ -182,9 +185,11 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
           />
           {!view.takes.ok && <ErrorLine message={`takes: ${view.takes.error}`} />}
         </div>
-        <div className={s.from}>
-          <Seg label="start from" options={DOORS} value={door} onChange={setDoor} />
-        </div>
+        {canDuel && (
+          <div className={s.from}>
+            <Seg label="start from" options={DOORS} value={door} onChange={setDoor} />
+          </div>
+        )}
         {door === "words" || duel === null ? <SayIt {...steer.say} /> : duel}
         <SeedComposer
           seed={seed}

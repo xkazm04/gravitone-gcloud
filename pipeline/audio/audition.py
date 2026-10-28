@@ -129,7 +129,7 @@ def named_midi(path):
 
 
 def measure_pitches(files):
-    """[(path, midi int)] for every file whose pitch could be settled."""
+    """[(path, midi)] for every file whose pitch could be settled: a named note exactly, a measured one to the cent."""
     out = []
     for path in files:
         named = named_midi(path)
@@ -144,16 +144,18 @@ def measure_pitches(files):
             continue
         heard, conf = yin_midi(x, rate)
         if heard is not None and conf >= 0.5 and 12 <= heard <= 120:
-            out.append((path, int(round(heard))))
+            # Kept fractional: a sample recorded 20 cents sharp is resampled 20 cents down, so the
+            # chord it joins is in tune (rounding left FL's choir up to 40 cents out).
+            out.append((path, round(float(heard), 2)))
     return out
 
 
 def _pitch_map(files, cache_dir):
     key = hashlib.sha1("\n".join(sorted(files)).encode("utf8")).hexdigest()[:16]
-    cached = os.path.join(cache_dir, f"pitches-{key}.json") if cache_dir else None
+    cached = os.path.join(cache_dir, f"pitches-v2-{key}.json") if cache_dir else None
     if cached and os.path.isfile(cached):
         with open(cached, "r", encoding="utf8") as f:
-            return [(p, int(m)) for p, m in json.load(f)]
+            return [(p, float(m)) for p, m in json.load(f)]
     pairs = measure_pitches(sorted(files))
     if cached:
         os.makedirs(cache_dir, exist_ok=True)

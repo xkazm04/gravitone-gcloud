@@ -41,7 +41,13 @@ function load(a: HTMLAudioElement, href: string, on: Handlers): void {
   a.src = href;
 }
 
-export function useEar(): Ear {
+/**
+ * `explain`: the source's own words for a failed play. An <audio> element that receives an error
+ * envelope instead of a WAV reports only MEDIA_ERR_SRC_NOT_SUPPORTED; the route said why (a
+ * library that files no such instrument, a sample whose pitch could not be measured), and that
+ * sentence is the one to show.
+ */
+export function useEar(explain?: (href: string) => Promise<string | null>): Ear {
   const el = useRef<HTMLAudioElement | null>(null);
   const dog = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [at, setAt] = useState<string | null>(null);
@@ -102,6 +108,9 @@ export function useEar(): Ear {
           setFailed(mediaErrorWords(code, href));
           setAt(null);
           setState("idle");
+          void explain?.(href).then((words) => {
+            if (words !== null) setFailed(words);
+          });
         },
       });
       setAt(href);
@@ -122,7 +131,7 @@ export function useEar(): Ear {
         setState("idle");
       });
     },
-    [at, state, stop],
+    [at, state, stop, explain],
   );
 
   const stateOf = useCallback((href: string): EarState => (href === at ? state : "idle"), [at, state]);

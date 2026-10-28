@@ -12,8 +12,11 @@
 // The seed itself stays the lane's (./AudioLane.tsx): this hook only ever writes it through the
 // setter it is handed, so the composer, the variations and the receipt all read one seed.
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { z } from "zod";
 
-import { ATLAS, atlasFor, auditionHref, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
+import { parseJsonAt } from "@gt/domain/door";
+
+import { ATLAS, atlasFor, AUDITION_BPM, AUDITION_KEY, auditionHref, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
 import { EarStrip } from "@gt/ui/components/audio/EarStrip.tsx";
 import { provenanceOf, translate, type Produced, type TermList, type Translation } from "@gt/ui/components/audio/lexicon.ts";
 import { addTo, type Seed } from "@gt/ui/components/audio/recipe.ts";
@@ -25,6 +28,20 @@ type Open = { readonly kind: "swap"; readonly term: string } | { readonly kind: 
 type Move = { readonly minus: string; readonly plus: string };
 
 const NONE: ReadonlySet<number> = new Set();
+
+const envelope = z.object({ error: z.string() });
+
+/** A failed audition's own sentence, read off the route's error envelope (useEar's `explain`). */
+export async function explainAudition(href: string): Promise<string | null> {
+  try {
+    const r = await fetch(href);
+    if (r.ok) return null;
+    const doc = parseJsonAt("audition", envelope, await r.text());
+    return doc.ok ? doc.value.error : null;
+  } catch {
+    return null; // the element's own code is already on screen; nothing better was said
+  }
+}
 
 // WARMING. A first audition is rendered on request (seconds); a second is a file read. So what the
 // person is about to compare - the seed's instruments, and a strip's candidates the moment it
@@ -142,7 +159,8 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
   }, [toWarm]);
 
   let strip: ReactNode = null;
-  const common = { stateOf: (e: AtlasEntry) => ear.stateOf(href(e)), onPlay: (e: AtlasEntry) => ear.toggle(href(e)), onClose: () => setOpen(null), blind, onBlind: setBlind };
+  const held = ["4 bars", seed.key ?? AUDITION_KEY, `${Math.round(seed.bpm ?? AUDITION_BPM)} bpm`, "−20 LUFS"];
+  const common = { stateOf: (e: AtlasEntry) => ear.stateOf(href(e)), onPlay: (e: AtlasEntry) => ear.toggle(href(e)), onClose: () => setOpen(null), blind, onBlind: setBlind, held };
   if (open?.kind === "swap") {
     const now = entryOf(open.term);
     if (now !== undefined) {

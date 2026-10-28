@@ -24,6 +24,8 @@ import { renderAudition, renderSketch, type AuditionFacts } from "./sidecar.ts";
 
 const AUDIO_EXT = new Set([".wav", ".aif", ".aiff", ".flac", ".ogg"]);
 const MAX_DEPTH = 9;
+/** Bumped when the renderer changes what a file sounds like, so a cached render of the old one is never served. */
+const RENDER = "r2";
 /** The phrase's loudness: every audition sits here, so a choice is about timbre, not level. */
 export const AUDITION_LUFS = -20;
 
@@ -144,7 +146,8 @@ export async function sketchFile(ask: SketchAsk, env: NodeJS.ProcessEnv = proces
   }
   const dir = auditionDir(env);
   const tag = createHash("sha1").update(JSON.stringify([ask.ids, ask.levels, ask.bpm, k.pc, k.minor])).digest("hex").slice(0, 16);
-  return cachedOr(path.join(dir, `sketch-${tag}.wav`), () => renderSketch({ voices, levels: ask.levels, bpm: ask.bpm, tonic: k.pc, minor: k.minor, lufs: AUDITION_LUFS, cacheDir: dir }, path.join(dir, `sketch-${tag}.wav`)));
+  const out = path.join(dir, `sketch-${RENDER}-${tag}.wav`);
+  return cachedOr(out, () => renderSketch({ voices, levels: ask.levels, bpm: ask.bpm, tonic: k.pc, minor: k.minor, lufs: AUDITION_LUFS, cacheDir: dir }, out));
 }
 
 /** The audition file for one instrument at one tempo and key: from the cache, or rendered once. */
@@ -158,6 +161,6 @@ export async function auditionFile(ask: AuditionAsk, env: NodeJS.ProcessEnv = pr
   const files = (await machineAtlas(env)).get(entry.id);
   if (files === undefined) return err("unavailable", `${entry.term}: no library under ${SAMPLE_ROOTS_ENV} files it`);
   const dir = auditionDir(env);
-  const out = path.join(dir, `${entry.id}-${ask.bpm}-${k.pc}${k.minor ? "m" : ""}.wav`);
+  const out = path.join(dir, `${entry.id}-${RENDER}-${ask.bpm}-${k.pc}${k.minor ? "m" : ""}.wav`);
   return cachedOr(out, (): Promise<Result<AuditionFacts>> => renderAudition({ files, bpm: ask.bpm, tonic: k.pc, minor: k.minor, role: entry.role, lufs: AUDITION_LUFS, cacheDir: dir }, out));
 }
