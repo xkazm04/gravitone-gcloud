@@ -27,6 +27,8 @@ import { EngineList, type EngineRow } from "@gt/ui/components/audio/EngineList.t
 import { ReferenceList } from "@gt/ui/components/audio/ReferenceList.tsx";
 import { BLANK_SEED, FACET_OF, addTo, handsOf, sunoFieldsOf, type Hand, type Seed, type SeedList, type Term } from "@gt/ui/components/audio/recipe.ts";
 import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
+import { LocalBandStudio } from "@gt/ui/components/audio/LocalBandStudio.tsx";
+import type { LocalAuditionState, LocalRole, LocalScoreDraft, LocalTakeView } from "@gt/ui/components/audio/localBand.ts";
 import { TermRail } from "@gt/ui/components/audio/TermRail.tsx";
 import { VariationList } from "@gt/ui/components/audio/VariationList.tsx";
 import { conceptFor, variationsOfSeed } from "@gt/ui/components/audio/variations.ts";
@@ -39,17 +41,41 @@ import { useShell } from "../../_shell/Providers.tsx";
 import { copyText } from "../../_shell/clipboard.ts";
 import type { AudioView, SeedTake } from "./read.ts";
 import type { setHand, sunoConfirm, sunoReceipt } from "./actions.ts";
+import type { auditionLocalInstrumentAct, promoteLocalTakeAct, renderLocalScoreAct, swapLocalStemAct } from "./localActs.ts";
+import type { LocalBandView } from "./localRead.ts";
 import s from "./audio.module.css";
 
 /** The page's Server Actions, handed over as props: a reference per action crosses to the client,
  *  never the module (the Board's and the Floor's wire shape, ../../projects/_port/wire.ts). */
 export type AudioActs = { readonly setHand: typeof setHand; readonly sunoReceipt: typeof sunoReceipt; readonly sunoConfirm: typeof sunoConfirm };
+export type LocalBandActs = {
+  readonly renderLocalScoreAct: typeof renderLocalScoreAct;
+  readonly swapLocalStemAct: typeof swapLocalStemAct;
+  readonly auditionLocalInstrumentAct: typeof auditionLocalInstrumentAct;
+  readonly promoteLocalTakeAct: typeof promoteLocalTakeAct;
+};
 
 const LIST_OF: Readonly<Record<string, SeedList>> = { genre: "genres", mood: "moods", instrument: "instruments" };
 const BLANK = "__blank";
 
 /** `engines`: the desk's registry rows (lib/sound/engines.ts); `canSend`: the registry says Suno composes here. */
-export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly view: AudioView; readonly nowMs: number; readonly acts: AudioActs; readonly engines: readonly EngineRow[]; readonly canSend: boolean }) {
+export function AudioLane({
+  view,
+  nowMs,
+  acts,
+  engines,
+  canSend,
+  localBand,
+  localActs,
+}: {
+  readonly view: AudioView;
+  readonly nowMs: number;
+  readonly acts: AudioActs;
+  readonly engines: readonly EngineRow[];
+  readonly canSend: boolean;
+  readonly localBand?: LocalBandView;
+  readonly localActs?: LocalBandActs;
+}) {
   const { setHand, sunoReceipt, sunoConfirm } = acts;
   const router = useRouter();
   const { toast } = useShell();
@@ -130,6 +156,110 @@ export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly vi
     setSeed(t === undefined ? BLANK_SEED : t.seed);
   };
 
+  const [localTakes, setLocalTakes] = useState<readonly LocalTakeView[]>(() => localBand?.takes ?? []);
+  const [localBusy, setLocalBusy] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [localAudition, setLocalAudition] = useState<LocalAuditionState | null>(null);
+
+  const onLocalRender = (spec: LocalScoreDraft): void => {
+    if (!localActs || localBusy) return;
+    setLocalBusy(true);
+    setLocalError(null);
+    void localActs.renderLocalScoreAct({ spec }).then(
+      (r) => {
+        setLocalBusy(false);
+        if (!r.ok) {
+          setLocalError(r.error.error);
+          toast(r.error.error);
+        } else {
+          setLocalTakes((cur) => [r.value, ...cur.filter((x) => x.id !== r.value.id)]);
+          toast(`local · rendered ${r.value.title} (${r.value.lufs?.toFixed(1) ?? "-14.0"} LUFS · $0)`);
+          router.refresh();
+        }
+      },
+      (e: unknown) => {
+        setLocalBusy(false);
+        const msg = errorMessage(e);
+        setLocalError(msg);
+        toast(msg);
+      },
+    );
+  };
+
+  const onLocalSwap = (takeId: string, role: LocalRole, instrumentId: string): void => {
+    if (!localActs || localBusy) return;
+    setLocalBusy(true);
+    setLocalError(null);
+    void localActs.swapLocalStemAct({ takeId, role, instrumentId }).then(
+      (r) => {
+        setLocalBusy(false);
+        if (!r.ok) {
+          setLocalError(r.error.error);
+          toast(r.error.error);
+        } else {
+          setLocalTakes((cur) => [r.value, ...cur.filter((x) => x.id !== r.value.id)]);
+          toast(`local · swapped ${role} (${r.value.reusedRoles.length} stems reused bit-exact · ${r.value.totalRenderMs}ms)`);
+          router.refresh();
+        }
+      },
+      (e: unknown) => {
+        setLocalBusy(false);
+        const msg = errorMessage(e);
+        setLocalError(msg);
+        toast(msg);
+      },
+    );
+  };
+
+  const onLocalAudition = (instrumentId: string): void => {
+    if (!localActs || localBusy) return;
+    setLocalBusy(true);
+    setLocalError(null);
+    void localActs.auditionLocalInstrumentAct({ instrumentId }).then(
+      (r) => {
+        setLocalBusy(false);
+        if (!r.ok) {
+          setLocalError(r.error.error);
+          toast(r.error.error);
+        } else {
+          setLocalAudition(r.value);
+          toast(`audition · ${r.value.name}`);
+        }
+      },
+      (e: unknown) => {
+        setLocalBusy(false);
+        const msg = errorMessage(e);
+        setLocalError(msg);
+        toast(msg);
+      },
+    );
+  };
+
+  const onLocalPromote = (takeId: string): void => {
+    if (!localActs || localBusy) return;
+    setLocalBusy(true);
+    setLocalError(null);
+    void localActs.promoteLocalTakeAct({ takeId }).then(
+      (r) => {
+        setLocalBusy(false);
+        if (!r.ok) {
+          setLocalError(r.error.error);
+          toast(r.error.error);
+        } else {
+          setLocalTakes((cur) => cur.map((t) => (t.id === takeId ? { ...t, stage: r.value.stage, verdict: "kept" } : t)));
+          toast(`local · sent ${takeId} to Arrange`);
+          router.refresh();
+        }
+      },
+      (e: unknown) => {
+        setLocalBusy(false);
+        const msg = errorMessage(e);
+        setLocalError(msg);
+        toast(msg);
+      },
+    );
+  };
+
   return (
     <div className={s.lane}>
       <aside className={s.rail} aria-label="terms">
@@ -161,6 +291,21 @@ export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly vi
           onSend={() => send(seed, fromLabel)}
           onCopy={copy}
         />
+        {localBand !== undefined && (
+          <LocalBandStudio
+            templates={localBand.templates}
+            catalog={localBand.catalog}
+            takes={localTakes}
+            seed={seed}
+            busy={localBusy}
+            error={localError}
+            audition={localAudition}
+            onRender={onLocalRender}
+            onSwapStem={onLocalSwap}
+            onAudition={onLocalAudition}
+            onPromote={onLocalPromote}
+          />
+        )}
         <VariationList
           list={variations}
           busy={flow.reading || !canSend}

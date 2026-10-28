@@ -37,12 +37,15 @@ TARGET_DBTP = -1.1
 class Failure(Exception):
     def __init__(self, message, kind="failed"):
         super().__init__(message)
-        self.kind = kind
+        this_kind = kind
+        self.kind = this_kind
 
 
 def emit(doc, code=0):
     print(json.dumps(doc), flush=True)
-    sys.exit(code)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)
 
 
 def fail(message, kind="failed"):

@@ -316,8 +316,9 @@ def write_reaper_rpp(spec, stems_info, out_path):
         f.write("\n".join(lines) + "\n")
 
 
-def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False):
+def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False, _skip_triage=False):
     """Compile and render ScoreSpec -> stems, mix.wav, triage, and optional determinism report."""
+    from scipy import signal
     import soundfile as sf
 
     t_start = time.time()
@@ -368,7 +369,8 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False):
                 buf = np.vstack([shaped, np.zeros((total_frames - len(shaped), 2), dtype=np.float32)])
             else:
                 buf = shaped[:total_frames]
-            st_tp = loudness.true_peak_db(buf, inst_lib.RATE)
+            st_max = float(np.max(np.abs(buf))) if buf.size > 0 else 0.0
+            st_tp = round(20.0 * math.log10(st_max), 2) if st_max > 0 else None
             if st_tp is not None and st_tp > CEILING_DBTP:
                 buf = (buf * (10.0 ** ((CEILING_DBTP - st_tp) / 20.0))).astype(np.float32)
             sf.write(wav_path, buf, inst_lib.RATE, subtype="PCM_16", format="WAV")
@@ -381,13 +383,15 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False):
 
         render_ms = int(round((time.time() - t0) * 1000))
         stem_buffers[role] = buf
-        meas = loudness.measure(buf, inst_lib.RATE)
+        st_peak_lin = float(np.max(np.abs(buf))) if buf.size > 0 else 0.0
+        st_lufs = loudness.integrated_lufs(buf, inst_lib.RATE) if not _skip_triage else None
         stems_info.append({
             "role": role, "instrument": inst_id, "instrumentName": inst_lib.CATALOG[inst_id]["name"], "source": source_used,
             "wavPath": os.path.abspath(wav_path), "midiPath": os.path.abspath(mid_path), "sha256": _sha256_file(wav_path),
             "trackHash": thash, "reused": role in reused_roles, "muted": bool(tr.get("muted", False)), "solo": bool(tr.get("solo", False)),
             "gainDb": float(tr.get("gainDb", 0.0)), "pan": float(tr.get("pan", 0.0)), "noteCount": len(events),
-            "renderMs": render_ms, "durationS": meas["durationS"], "integratedLufs": meas["integratedLufs"], "truePeakDb": meas["truePeakDb"],
+            "renderMs": render_ms, "durationS": round(len(buf) / float(inst_lib.RATE), 4),
+            "integratedLufs": st_lufs, "truePeakDb": round(20.0 * math.log10(st_peak_lin), 2) if st_peak_lin > 0 else None,
         })
 
     mix = np.zeros((total_frames, 2), dtype=np.float32)
@@ -395,7 +399,7 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False):
     if "drums" in stem_buffers:
         d_abs = np.max(np.abs(stem_buffers["drums"]), axis=1)
         win = max(1, int(0.025 * inst_lib.RATE))
-        drum_env = np.convolve(d_abs, np.ones(win, dtype=np.float32) / win, mode="same")
+        drum_env = signal.fftconvolve(d_abs, np.ones(win, dtype=np.float32) / win, mode="same")
 
     for tr in spec["tracks"]:
         role = tr["role"]
@@ -431,9 +435,11 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False):
     mix_path = os.path.join(out_dir, "mix.wav")
     sf.write(mix_path, mix, inst_lib.RATE, subtype="PCM_16", format="WAV")
     written_mix, _ = sf.read(mix_path, dtype="float32", always_2d=True)
-    mix_measure = loudness.measure(written_mix, inst_lib.RATE)
     mix_sha = _sha256_file(mix_path)
+    if _skip_triage:
+        return {"ok": True, "mixPath": os.path.abspath(mix_path), "mixSha256": mix_sha}
 
+    mix_measure = loudness.measure(written_mix, inst_lib.RATE)
     sections_ctx, at_b = [], 0
     for s in spec["sections"]:
         s_ms = int(round(at_b * bar_s * 1000))
@@ -451,7 +457,7 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False):
     if verify_determinism:
         import tempfile
         with tempfile.TemporaryDirectory(prefix="gt-score-det-") as tmp2:
-            second = render_score(spec_doc, tmp2, cache_dir=None, verify_determinism=False)
+            second = render_score(spec_doc, tmp2, cache_dir=None, verify_determinism=False, _skip_triage=True)
             mix2, _ = sf.read(second["mixPath"], dtype="float32", always_2d=True)
             max_diff = float(np.max(np.abs(written_mix - mix2)))
             rms_diff = float(np.sqrt(np.mean(np.square(written_mix - mix2))))

@@ -32,12 +32,26 @@ const python = (): string => process.env["PYTHON"] ?? (process.platform === "win
 
 type Spawned = { readonly code: number | null; readonly stdout: string; readonly stderr: string; readonly timedOut: boolean; readonly error?: string };
 
+const lastLine = (s: string): string => s.trim().split(/\r?\n/).at(-1)?.trim() ?? "";
+const stderrTail = (s: string): string => s.trim().split(/\r?\n/).slice(-3).join(" | ");
+
 function spawnSidecar(args: readonly string[], timeoutMs: number): Promise<Spawned> {
   return new Promise((resolve) => {
     let out = "";
     let errText = "";
     let timedOut = false;
+    let settled = false;
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
     let child: ReturnType<typeof spawn>;
+    const finish = (res: Spawned): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (flushTimer !== null) clearTimeout(flushTimer);
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      resolve(res);
+    };
     try {
       child = spawn(python(), [path.resolve(SIDECAR_SCRIPT), ...args], { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
     } catch (e) {
@@ -46,27 +60,42 @@ function spawnSidecar(args: readonly string[], timeoutMs: number): Promise<Spawn
     }
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill();
+      try {
+        child.kill();
+      } catch {
+        // ignore kill error
+      }
+      finish({ code: null, stdout: out, stderr: errText, timedOut: true });
     }, timeoutMs);
     child.stdout?.on("data", (b: Buffer) => {
       out = (out + b.toString("utf8")).slice(-KEEP_BYTES);
+      if (out.endsWith("\n")) {
+        const line = lastLine(out);
+        if (line.startsWith('{"ok":') && line.endsWith("}")) {
+          if (flushTimer !== null) clearTimeout(flushTimer);
+          flushTimer = setTimeout(() => {
+            const okLine = line.startsWith('{"ok": true') || line.startsWith('{"ok":true');
+            try {
+              child.kill();
+            } catch {
+              // ignore
+            }
+            finish({ code: child.exitCode ?? (okLine ? 0 : 1), stdout: out, stderr: errText, timedOut });
+          }, 150);
+        }
+      }
     });
     child.stderr?.on("data", (b: Buffer) => {
       errText = (errText + b.toString("utf8")).slice(-KEEP_BYTES);
     });
     child.on("error", (e) => {
-      clearTimeout(timer);
-      resolve({ code: null, stdout: out, stderr: errText, timedOut, error: e.message });
+      finish({ code: null, stdout: out, stderr: errText, timedOut, error: e.message });
     });
     child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve({ code, stdout: out, stderr: errText, timedOut });
+      finish({ code, stdout: out, stderr: errText, timedOut });
     });
   });
 }
-
-const lastLine = (s: string): string => s.trim().split(/\r?\n/).at(-1)?.trim() ?? "";
-const stderrTail = (s: string): string => s.trim().split(/\r?\n/).slice(-3).join(" | ");
 
 const failSchema = z.object({ ok: z.literal(false), error: z.string(), kind: z.string().optional() });
 

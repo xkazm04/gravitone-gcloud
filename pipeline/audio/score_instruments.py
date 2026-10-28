@@ -108,10 +108,16 @@ def _load_sample(path):
     if path in _SAMPLE_CACHE:
         return _SAMPLE_CACHE[path]
     import soundfile as sf
-    data, sr = sf.read(path, dtype="float32", always_2d=True)
-    if sr != RATE:
-        g = math.gcd(int(sr), RATE)
-        data = signal.resample_poly(data, RATE // g, int(sr) // g, axis=0).astype(np.float32)
+    info = sf.info(path)
+    max_frames = int(min(info.frames, round(3.2 * info.samplerate)))
+    data, sr = sf.read(path, frames=max_frames, dtype="float32", always_2d=True)
+    if sr != RATE and len(data) > 1:
+        new_n = max(2, int(round(len(data) * float(RATE) / float(sr))))
+        idx = np.linspace(0, len(data) - 1, new_n)
+        lo = np.floor(idx).astype(np.int32)
+        hi = np.minimum(len(data) - 1, lo + 1)
+        frac = (idx - lo)[:, None].astype(np.float32)
+        data = (data[lo] * (1.0 - frac) + data[hi] * frac).astype(np.float32)
     if data.shape[1] == 1:
         data = np.repeat(data, 2, axis=1)
     peak = float(np.max(np.abs(data))) if data.size else 0.0
@@ -166,8 +172,11 @@ def _find_drum_samples(kit_id):
     return found
 
 
+_VITAL_PARAMS = None
+
+
 def _get_vital(vst_override=None):
-    global _VITAL_CACHE
+    global _VITAL_CACHE, _VITAL_PARAMS
     if vst_override == "off" or os.environ.get("GRAVITONE_VST3_DISABLE") == "1":
         return None
     if _VITAL_CACHE is not None:
@@ -179,13 +188,14 @@ def _get_vital(vst_override=None):
     try:
         import pedalboard as pb
         _VITAL_CACHE = pb.load_plugin(vital_path)
+        _VITAL_PARAMS = _VITAL_CACHE.parameters
         return _VITAL_CACHE
     except Exception:
         return None
 
 
 def _configure_vital_patch(inst, inst_id, brightness=0.5):
-    p = inst.parameters
+    p = _VITAL_PARAMS if _VITAL_PARAMS is not None else inst.parameters
     for k in ("oscillator_1_phase_randomization", "oscillator_2_phase_randomization", "oscillator_3_phase_randomization", "sample_random_phase"):
         if k in p:
             p[k].raw_value = 0.0
@@ -308,21 +318,24 @@ def render_instrument_events(inst_id, events, duration_s, brightness=0.5):
                     continue
                 nearest = min(roots, key=lambda r: abs(r - midi_note))
                 base_wav = _load_sample(ms[nearest])
+                want_frames = min(n_frames - i0, int(round((end_s - start_s + 0.35) * RATE)))
+                if want_frames <= 0:
+                    continue
                 semis = float(midi_note - nearest)
                 if abs(semis) < 0.01:
-                    shifted = base_wav
+                    seg = base_wav[:want_frames].copy()
                 else:
                     ratio = 2.0 ** (-semis / 12.0)
-                    new_len = max(16, int(round(len(base_wav) * ratio)))
-                    idx = np.linspace(0, len(base_wav) - 1, new_len)
+                    new_len = min(want_frames, max(16, int(round(len(base_wav) * ratio))))
+                    max_src = min(len(base_wav) - 1, max(1, int(round(new_len / ratio))))
+                    idx = np.linspace(0, max_src, new_len)
                     idx_lo = np.floor(idx).astype(np.int32)
                     idx_hi = np.minimum(len(base_wav) - 1, idx_lo + 1)
                     frac = (idx - idx_lo)[:, None].astype(np.float32)
-                    shifted = base_wav[idx_lo] * (1.0 - frac) + base_wav[idx_hi] * frac
-                dur_frames = min(n_frames - i0, len(shifted), int(round((end_s - start_s + 0.35) * RATE)))
+                    seg = (base_wav[idx_lo] * (1.0 - frac) + base_wav[idx_hi] * frac).astype(np.float32)
+                dur_frames = len(seg)
                 if dur_frames <= 0:
                     continue
-                seg = shifted[:dur_frames].copy()
                 rel_n = min(dur_frames, int(0.08 * RATE))
                 if rel_n > 0:
                     seg[-rel_n:] *= np.linspace(1.0, 0.0, rel_n, dtype=np.float32)[:, None]

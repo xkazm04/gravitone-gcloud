@@ -4,6 +4,8 @@
 
 import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -23,6 +25,8 @@ const ROOT = vi.hoisted(() => {
 
 import { parseScoreSpec, type ScoreSpec } from "@gt/domain/audio.score";
 import { compileSeedToScore, templateById } from "@gt/domain/audio.score.templates";
+import { LocalBandStudio } from "@gt/ui/components/audio/LocalBandStudio.tsx";
+import { readLocalBand } from "../../app/(studio)/audio/_audio/localRead.ts";
 import { engineRegistry, engineState } from "../../lib/sound/engines.ts";
 import {
   auditionLocalInstrument,
@@ -210,4 +214,30 @@ describe("Local Band ScoreSpec & A0 Gate", () => {
       expect(existsSync(path.join(ROOT, "sound", "files", "audition-sample-felt-piano.wav"))).toBe(true);
     }
   }, 30_000);
+
+  it("renders LocalBandStudio over readLocalBand() with 4-stem swapper, reused badges, and A0 catalog refusals", async () => {
+    const view = await readLocalBand();
+    expect(view.templates.length).toBe(4);
+    expect(view.catalog.length).toBe(16);
+    expect(view.takes.length).toBeGreaterThanOrEqual(2);
+
+    const html = renderToStaticMarkup(
+      h(LocalBandStudio, {
+        templates: view.templates,
+        catalog: view.catalog,
+        takes: view.takes,
+        onRender: () => {},
+        onSwapStem: () => {},
+        onAudition: () => {},
+        onPromote: () => {},
+      }),
+    );
+    expect(html).toContain("local band · 4-stem studio");
+    expect(html).toContain("Chill Lo-Fi Groove");
+    expect(html).toContain("reused bit-exact");
+    expect(html).toContain("REAPER .rpp");
+    expect(html).toContain("AIR MiniGrand VST3");
+    expect(html).toContain("instrument render is silent");
+    expect(html).toContain("AIR Hybrid 3 VST3");
+  });
 });

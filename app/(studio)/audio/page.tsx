@@ -29,6 +29,8 @@ import { editRows, moveCard } from "./_audio/arrangeActs.ts";
 import { deskEngines, engineRows, finalizedCount, readArrange } from "./_audio/arrangeRead.ts";
 import { AudioLane } from "./_audio/AudioLane.tsx";
 import { deskHref, KINDS, parseDeskUrl, SECTIONS } from "./_audio/desk.ts";
+import { auditionLocalInstrumentAct, promoteLocalTakeAct, renderLocalScoreAct, swapLocalStemAct } from "./_audio/localActs.ts";
+import { readLocalBand } from "./_audio/localRead.ts";
 import { audioNow, readAudio } from "./_audio/read.ts";
 import { crownTake, draftHuntLesson, draftHuntMap, renderLeaves } from "./_hunt/acts.ts";
 import { Hunt } from "./_hunt/Hunt.tsx";
@@ -68,8 +70,20 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   else if (url.section === "strengths") body = <StrengthsDesk key={url.kind} view={await readStrengths(url.kind)} lessonDoor={confirmLessonAct} />;
   else if (url.section === "rubric") body = <RubricDesk key={url.kind} view={await readRubricPile(url.kind)} acts={{ scoreTake }} />;
   else if (url.section === "batch") body = <BatchDesk key={url.kind} view={readBatch(url.kind, registry)} nowMs={audioNow()} acts={{ batchReceipt, batchConfirm }} />;
-  else if (url.kind === "music") body = <AudioLane view={await readAudio()} nowMs={audioNow()} acts={{ setHand, sunoReceipt, sunoConfirm }} engines={engineRows(registry)} canSend={makersOf(registry, "music").some((e) => e.id === "suno")} />;
-  else
+  else if (url.kind === "music") {
+    const [audioView, localBand] = await Promise.all([readAudio(), readLocalBand()]);
+    body = (
+      <AudioLane
+        view={audioView}
+        nowMs={audioNow()}
+        acts={{ setHand, sunoReceipt, sunoConfirm }}
+        engines={engineRows(registry)}
+        canSend={makersOf(registry, "music").some((e) => e.id === "suno")}
+        localBand={localBand}
+        localActs={{ renderLocalScoreAct, swapLocalStemAct, auditionLocalInstrumentAct, promoteLocalTakeAct }}
+      />
+    );
+  } else
     body = (
       <section className={s.makers} aria-label="effects">
         <CapsHeading text="effects" tally={{ value: makersOf(registry, "sfx").length, label: "engines" }} level={2} />

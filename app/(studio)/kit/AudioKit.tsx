@@ -43,6 +43,7 @@ import { cellKey, type Facet, type Sort, type StrengthCell } from "@gt/ui/compon
 import { StrengthHead, StrengthTable } from "@gt/ui/components/audio/Strengths.tsx";
 
 import { inert } from "./ContractHooks.tsx";
+import { LocalBandSpecimen } from "./LocalBandSpecimen.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
 
 /** A quarter second of silence as a WAV data URL: a source the browser can open, so the play control is real. */
@@ -488,6 +489,7 @@ export function AudioSection() {
       <StrengthSpecimen />
       <HuntSpecimen />
       <LessonSpecimen />
+      <LocalBandSpecimen />
     </Section>
   );
 }
