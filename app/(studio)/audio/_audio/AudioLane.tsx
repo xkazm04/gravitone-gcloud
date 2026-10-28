@@ -26,6 +26,7 @@ import { DraftList } from "@gt/ui/components/audio/DraftList.tsx";
 import { EngineList, type EngineRow } from "@gt/ui/components/audio/EngineList.tsx";
 import { ReferenceList } from "@gt/ui/components/audio/ReferenceList.tsx";
 import { BLANK_SEED, FACET_OF, addTo, handsOf, sunoFieldsOf, type Hand, type Seed, type SeedList, type Term } from "@gt/ui/components/audio/recipe.ts";
+import { SayIt } from "@gt/ui/components/audio/SayIt.tsx";
 import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
 import { TermRail } from "@gt/ui/components/audio/TermRail.tsx";
 import { VariationList } from "@gt/ui/components/audio/VariationList.tsx";
@@ -39,6 +40,7 @@ import { useShell } from "../../_shell/Providers.tsx";
 import { copyText } from "../../_shell/clipboard.ts";
 import type { AudioView, SeedTake } from "./read.ts";
 import type { setHand, sunoConfirm, sunoReceipt } from "./actions.ts";
+import { useSteer } from "./steer.tsx";
 import s from "./audio.module.css";
 
 /** The page's Server Actions, handed over as props: a reference per action crosses to the client,
@@ -48,8 +50,9 @@ export type AudioActs = { readonly setHand: typeof setHand; readonly sunoReceipt
 const LIST_OF: Readonly<Record<string, SeedList>> = { genre: "genres", mood: "moods", instrument: "instruments" };
 const BLANK = "__blank";
 
-/** `engines`: the desk's registry rows (lib/sound/engines.ts); `canSend`: the registry says Suno composes here. */
-export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly view: AudioView; readonly nowMs: number; readonly acts: AudioActs; readonly engines: readonly EngineRow[]; readonly canSend: boolean }) {
+/** `engines`: the desk's registry rows (lib/sound/engines.ts); `canSend`: the registry says Suno composes here;
+ *  `audible`: the atlas instruments this machine's sample libraries can audition (lib/audio/atlas.ts). */
+export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { readonly view: AudioView; readonly nowMs: number; readonly acts: AudioActs; readonly engines: readonly EngineRow[]; readonly canSend: boolean; readonly audible: readonly string[] }) {
   const { setHand, sunoReceipt, sunoConfirm } = acts;
   const router = useRouter();
   const { toast } = useShell();
@@ -74,6 +77,10 @@ export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly vi
   // What the seed was last loaded from: a take's title, a variation's axis, a reference.
   const [loaded, setLoaded] = useState<string | null>(null);
   const fromLabel = loaded ?? take?.title ?? "blank";
+  const steer = useSteer(seed, setSeed, audible, (said) => {
+    setFrom(BLANK);
+    setLoaded(said === "" ? "blank" : `“${said}”`);
+  });
 
   const send = (s0: Seed, label: string): void => {
     const fields = sunoFieldsOf(s0, hands, label === "blank" ? undefined : label);
@@ -147,8 +154,13 @@ export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly vi
           />
           {!view.takes.ok && <ErrorLine message={`takes: ${view.takes.error}`} />}
         </div>
+        <SayIt {...steer.say} />
         <SeedComposer
           seed={seed}
+          ear={steer.ear}
+          isLit={steer.isLit}
+          onTrace={steer.onTrace}
+          strip={steer.strip}
           terms={terms}
           hands={hands}
           from={fromLabel}
@@ -161,6 +173,7 @@ export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly vi
           onSend={() => send(seed, fromLabel)}
           onCopy={copy}
         />
+        {steer.failed !== null && <ErrorLine message={`audition: ${steer.failed}`} />}
         <VariationList
           list={variations}
           busy={flow.reading || !canSend}

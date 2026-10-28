@@ -206,6 +206,12 @@ def cmd_doctor(_a):
           "versions": versions, "ffmpeg": shutil.which(ffmpeg_bin())})
 
 
+def cmd_audition(a):
+    from audition import cmd_audition as run
+
+    run(a, emit, Failure)
+
+
 def main(argv):
     p = Args(prog="sidecar.py")
     sub = p.add_subparsers(dest="verb", required=True)
@@ -223,8 +229,12 @@ def main(argv):
     t.add_argument("--json", action="store_true")
     d = sub.add_parser("doctor")
     d.add_argument("--json", action="store_true")
+    au = sub.add_parser("audition")
+    au.add_argument("--spec", required=True)
+    au.add_argument("--out", required=True)
+    au.add_argument("--json", action="store_true")
     a = p.parse_args(argv)
-    run = {"measure": cmd_measure, "fx": cmd_fx, "triage": cmd_triage, "doctor": cmd_doctor}[a.verb]
+    run = {"measure": cmd_measure, "fx": cmd_fx, "triage": cmd_triage, "doctor": cmd_doctor, "audition": cmd_audition}[a.verb]
     try:
         run(a)
     except Failure as e:

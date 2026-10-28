@@ -230,7 +230,7 @@ const view = { terms: { ok: true, value: [term] }, takes: { ok: true, value: [] 
 async function lane(setHand: AudioActs["setHand"]) {
   toasts.length = 0;
   const acts = { setHand, sunoReceipt: vi.fn(), sunoConfirm: vi.fn() } as unknown as AudioActs;
-  const h = harness(() => AudioLane({ view, nowMs: 0, acts, engines: [], canSend: true }), { settleWhen: "stable" });
+  const h = harness(() => AudioLane({ view, nowMs: 0, acts, engines: [], canSend: true, audible: [] }), { settleWhen: "stable" });
   const rail = async (): Promise<Rail> => {
     const r = railOf(await h.settleUp());
     if (r === null) throw new Error("no TermRail in the lane");

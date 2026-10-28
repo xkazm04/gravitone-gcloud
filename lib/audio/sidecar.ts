@@ -181,3 +181,47 @@ export async function sidecarDoctor(): Promise<Result<{ readonly python: string;
   }
   return ok({ python: version, modules });
 }
+
+const auditionSchema = z.object({
+  ok: z.literal(true),
+  durationS: z.number().nonnegative(),
+  lufs: z.number(),
+  notes: z.number().int().nonnegative(),
+  range: z.tuple([z.number(), z.number()]),
+  measured: z.number().int().nonnegative(),
+});
+
+/** What an audition render settled: its length, its loudness, the notes it played, the pitches it measured. */
+export type AuditionFacts = Omit<z.output<typeof auditionSchema>, "ok">;
+
+/** The phrase the sidecar renders (pipeline/audio/audition.py): sample files, tempo, key, register. */
+export type AuditionSpec = {
+  readonly files: readonly string[];
+  readonly bpm: number;
+  readonly tonic: number;
+  readonly minor: boolean;
+  readonly role: string;
+  readonly lufs: number;
+  /** Where the measured pitch map of a file list is kept between renders. */
+  readonly cacheDir: string;
+};
+
+/**
+ * One fixed four-bar phrase played on one sampled instrument into `outPath` (16-bit mono WAV,
+ * loudness-matched to `spec.lufs`). The spec goes as a temp file, never argv: a sample family
+ * is a hundred paths, applyChain's reason.
+ */
+export async function renderAudition(spec: AuditionSpec, outPath: string, opts: SidecarOptions = {}): Promise<Result<AuditionFacts>> {
+  if (!canSpawnLocalBinaries()) return err("unavailable", `audio sidecar audition: ${describePosture()}`);
+  const dir = await mkdtemp(path.join(os.tmpdir(), "gt-audition-"));
+  try {
+    const file = path.join(dir, "spec.json");
+    await writeFile(file, JSON.stringify(spec), "utf8");
+    const r = await call("audition", ["--spec", file, "--out", outPath], auditionSchema, opts.timeoutMs ?? TIMEOUT_MS);
+    if (!r.ok) return r;
+    const { ok: _ok, ...facts } = r.value;
+    return ok(facts);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}

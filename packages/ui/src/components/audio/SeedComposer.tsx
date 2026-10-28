@@ -12,13 +12,15 @@
 // drawn and copyable - a person may take it elsewhere - but it launches nothing: no producer runs
 // a free ElevenLabs seed as a job in this checkout, and a press that bills with no receipt is the
 // defect the receipt exists to remove.
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { Seg } from "../seg/Seg.tsx";
 import { TEMPO, tempoProblem } from "./batch.ts";
+import { EarButton } from "./EarButton.tsx";
+import type { EarState } from "./useEar.ts";
 import { addTo, avoidFloats, BLANK_SEED, compose, FACET_OF, preferredFloats, removeFrom, SEED_LISTS, sunoCut, sunoFieldsOf, type Hand, type Seed, type SeedList, type Target, type Term } from "./recipe.ts";
 import s from "./Composer.module.css";
 
@@ -51,6 +53,21 @@ export type SeedComposerProps = {
   readonly onCopy: (text: string) => void;
   /** Keys the store's takes were asked or measured in: the key field's suggestions (v1 read them off the ledger). */
   readonly keys: readonly string[];
+  /** Play and swap on an instrument chip this machine can audition; absent, a chip is its word. */
+  readonly ear?: SeedEar;
+  /** Is a term lit (its sentence words are under the pointer); and report the term under it. */
+  readonly isLit?: (list: SeedList | "avoid", term: string) => boolean;
+  readonly onTrace?: (list: SeedList | "avoid", term: string | null) => void;
+  /** Drawn under the instrument row: the strip a swap or an add by ear opens. */
+  readonly strip?: ReactNode;
+};
+
+export type SeedEar = {
+  readonly playable: (term: string) => boolean;
+  readonly stateOf: (term: string) => EarState;
+  readonly onPlay: (term: string) => void;
+  readonly onSwap: (term: string) => void;
+  readonly onAdd: () => void;
 };
 
 const TARGETS = [
@@ -58,30 +75,42 @@ const TARGETS = [
   { value: "elevenlabs", label: "elevenlabs" },
 ] as const satisfies readonly { readonly value: Target; readonly label: string }[];
 
-export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, onCopy, keys }: SeedComposerProps) {
+export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, onCopy, keys, ear, isLit, onTrace, strip }: SeedComposerProps) {
   const [target, setTarget] = useState<Target>("suno");
   const dl = (f: string): string => `audio-composer-${f}`;
   const text = compose(seed, target, hands);
   const fields = sunoFieldsOf(seed, hands);
   const cut = target === "suno" ? sunoCut(seed, hands) : 0;
   const tempoRefused = tempoProblem(seed.bpm === null ? null : Math.round(seed.bpm));
+  const trace = (list: SeedList | "avoid", t: string) => (onTrace === undefined ? {} : { onMouseEnter: () => onTrace(list, t), onMouseLeave: () => onTrace(list, null) });
   const row = (list: SeedList, label: string) => (
     <div className={s.facet} key={list}>
       <span className={s.facetLabel}>{label}</span>
       <div className={s.chips}>
-        {seed[list].map((t) => (
-          <span key={t} className={s.seedChip} data-stance={terms.find((x) => x.facet === FACET_OF[list] && x.term === t)?.stance ?? "none"}>
-            {t}
-            <button type="button" className={s.x} aria-label={`remove ${t}`} onClick={() => onSeed(removeFrom(seed, list, t))}>
-              ×
-            </button>
-          </span>
-        ))}
+        {seed[list].map((t) => {
+          const audible = list === "instruments" && ear !== undefined && ear.playable(t);
+          return (
+            <span key={t} className={s.seedChip} data-lit={isLit?.(list, t) ?? false} data-stance={terms.find((x) => x.facet === FACET_OF[list] && x.term === t)?.stance ?? "none"} {...trace(list, t)}>
+              {audible && <EarButton state={ear.stateOf(t)} name={t} onPress={() => ear.onPlay(t)} />}
+              {t}
+              {audible && (
+                <button type="button" className={s.x} aria-label={`swap ${t}`} onClick={() => ear.onSwap(t)}>
+                  ⇄
+                </button>
+              )}
+              <button type="button" className={s.x} aria-label={`remove ${t}`} onClick={() => onSeed(removeFrom(seed, list, t))}>
+                ×
+              </button>
+            </span>
+          );
+        })}
         {preferredFloats(terms, FACET_OF[list], seed[list]).map((t) => (
           <Chip key={t.id} label={`★ ${t.term}`} casing="lower" tone="emerald" ghost name={`add preferred ${t.term}`} onPress={() => onSeed(addTo(seed, list, t.term))} />
         ))}
+        {list === "instruments" && ear !== undefined && <Chip label="+ by ear" casing="lower" tone="cyan" ghost name="add an instrument by ear" onPress={ear.onAdd} />}
         <AddWord label={`add ${label} term`} list={dl(FACET_OF[list])} onAdd={(w) => onSeed(addTo(seed, list, w))} />
       </div>
+      {list === "instruments" && strip !== undefined && strip !== null && <div className={s.stripSlot}>{strip}</div>}
     </div>
   );
   return (
@@ -98,7 +127,7 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
         <span className={s.facetLabel}>exclude</span>
         <div className={s.chips}>
           {seed.avoid.map((t) => (
-            <span key={t} className={s.seedChip} data-stance="avoid">
+            <span key={t} className={s.seedChip} data-stance="avoid" data-lit={isLit?.("avoid", t) ?? false} {...trace("avoid", t)}>
               {t}
               <button type="button" className={s.x} aria-label={`remove ${t}`} onClick={() => onSeed(removeFrom(seed, "avoid", t))}>
                 ×
