@@ -86,6 +86,14 @@ describe("translate: a sentence compiled into a seed", () => {
     expect(translate("120 beats per minute").seed.bpm).toBe(120);
   });
 
+  test("every atlas instrument is heard as itself: a term learned by ear and typed compiles back", () => {
+    for (const e of ATLAS) {
+      const t = translate(e.term);
+      expect(t.seed.instruments, e.term).toContain(e.term);
+      expect(t.unheard, e.term).toEqual([]);
+    }
+  });
+
   test("an empty sentence is a blank seed", () => {
     const t = translate("   ");
     expect(t.tokens).toEqual([]);

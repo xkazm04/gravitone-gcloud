@@ -180,7 +180,8 @@ export const ROWS: readonly LexRow[] = [
   // instruments said by name (their atlas terms, so the chip can play)
   { cue: ["piano", "pianos", "keys"], i: ["grand piano"] },
   { cue: ["upright piano", "old piano", "home piano", "honky tonk"], i: ["upright piano"] },
-  { cue: ["rhodes", "electric piano", "ep", "wurlitzer"], i: ["rhodes"] },
+  { cue: ["rhodes", "fender rhodes"], i: ["rhodes"] },
+  { cue: ["electric piano", "ep", "wurlitzer", "e-piano"], i: ["electric piano"] },
   { cue: ["guitar", "guitars", "acoustic guitar", "classical guitar", "nylon guitar"], i: ["nylon guitar"] },
   { cue: ["electric guitar", "clean guitar"], i: ["clean electric guitar"] },
   { cue: ["bass", "bass guitar", "bassline"], i: ["electric bass"] },

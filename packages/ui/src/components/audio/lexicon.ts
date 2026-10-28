@@ -12,6 +12,7 @@
 // are tried off when the word as typed matches nothing ("rainy nights" -> night, "stealing" -> steal). A negator before a cue ("no drums", "without vocals")
 // fences the cue's own words and drops every instrument that carries them ("brushed drums"). Tempo is the mean of
 // the matched rows' ranges, unless the sentence says a number with "bpm".
+import { ATLAS } from "./atlas.ts";
 import { BLANK_SEED, type Seed } from "./recipe.ts";
 import { FILLER, NEGATORS, ROWS, type LexRow } from "./lexicon.rows.ts";
 
@@ -56,7 +57,11 @@ const fold = (s: string): string => s.normalize("NFD").replace(/[̀-ͯ]/g, "").t
 type Cue = { readonly words: readonly string[]; readonly row: LexRow };
 
 /** Every cue as its token list, longest first: "rainy cafe" is tried before "rain". */
-const CUES: readonly Cue[] = ROWS.flatMap((row) => row.cue.map((c) => ({ words: c.split(" "), row }))).sort((a, b) => b.words.length - a.words.length);
+// Every instrument the atlas can play is a word the lexicon hears as itself ("slap bass" -> slap
+// bass): a term learned by ear and then typed must compile back to the sound it was chosen as. The
+// written rows come first, so where both name a word the row's reading stands.
+const ATLAS_ROWS: readonly LexRow[] = ATLAS.map((e) => ({ cue: [e.term, ...e.aka].map((c) => c.toLowerCase()), i: [e.term] }));
+const CUES: readonly Cue[] = [...ROWS, ...ATLAS_ROWS].flatMap((row) => row.cue.map((c) => ({ words: c.split(" "), row }))).sort((a, b) => b.words.length - a.words.length);
 const MAX_CUE = CUES[0]?.words.length ?? 1;
 const BY_HEAD = new Map<string, Cue[]>();
 for (const c of CUES) {

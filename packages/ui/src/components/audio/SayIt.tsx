@@ -23,12 +23,15 @@ export type SayItProps = {
   readonly onTrace: (tokens: readonly number[] | null) => void;
   readonly onCompose: () => void;
   readonly onSpare: (p: Produced) => void;
+  /** Instruments chosen by ear this visit, with the plain words that won them: a press says it. */
+  readonly learned?: readonly { readonly term: string; readonly plain: string }[];
+  readonly onLearned?: (term: string) => void;
   /** Sentences offered while the field is empty: a press fills it and composes. */
   readonly examples?: readonly string[];
   readonly onExample?: (sentence: string) => void;
 };
 
-export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare, examples = [], onExample }: SayItProps) {
+export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare, examples = [], onExample, learned = [], onLearned }: SayItProps) {
   const groupOf = (i: number): number[] => [...new Set(heard.terms.filter((p) => p.from.includes(i)).flatMap((p) => p.from))];
   const used = heard.terms.length;
   return (
@@ -77,6 +80,14 @@ export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare
           {heard.unheard.length > 0 && <Chip label="unheard" value={heard.unheard.join(" · ")} tone="amber" casing="lower" />}
           {heard.spare.map((p) => (
             <Chip key={`${p.list}:${p.term}`} label={`+ ${p.term}`} casing="lower" ghost name={`add ${p.term}`} onPress={() => onSpare(p)} />
+          ))}
+        </div>
+      )}
+      {learned.length > 0 && onLearned !== undefined && (
+        <div className={s.meta} aria-label="learned by ear">
+          <Tally value={learned.length} label="learned" />
+          {learned.map((l) => (
+            <Chip key={l.term} label={l.term} value={l.plain} casing="lower" ghost name={`say ${l.term}`} onPress={() => onLearned(l.term)} />
           ))}
         </div>
       )}

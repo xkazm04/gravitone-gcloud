@@ -21,6 +21,10 @@ import { inert } from "./ContractHooks.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
 
 const NONE: ReadonlySet<number> = new Set();
+const LEARNED = [
+  { term: "slap bass", plain: "snappy · funky" },
+  { term: "rhodes", plain: "warm · bell-soft" },
+];
 const BASSES = ATLAS.filter((e) => e.role === "bass" || e.role === "synth");
 
 function SaySpecimen() {
@@ -29,7 +33,7 @@ function SaySpecimen() {
   const [lit, setLit] = useState<ReadonlySet<number>>(NONE);
   return (
     <Spec names={["SayIt"]} source="audio/SayIt.tsx · lexicon.ts" wide>
-      <SayIt value={v} onChange={setV} heard={heard} lit={lit} onTrace={(t) => setLit(t === null ? NONE : new Set(t))} onCompose={inert} onSpare={inert} />
+      <SayIt value={v} onChange={setV} heard={heard} lit={lit} onTrace={(t) => setLit(t === null ? NONE : new Set(t))} onCompose={inert} onSpare={inert} learned={LEARNED} onLearned={(t) => setV((cur) => `${cur}, ${t}`)} />
     </Spec>
   );
 }

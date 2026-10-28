@@ -97,6 +97,9 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
   // In the mix: a candidate plays with the rest of the seed (one full four bars of the sketch)
   // instead of alone - the swap heard where it will live.
   const [inMix, setInMix] = useState(false);
+  // What was chosen by ear this visit: the words a person can now say for what they heard.
+  const [learned, setLearned] = useState<readonly AtlasEntry[]>([]);
+  const learn = (e: AtlasEntry): void => setLearned((l) => (l.some((x) => x.id === e.id) ? l : [...l, e]));
   const [move, setMove] = useState<Move | null>(null);
 
   const href = (e: AtlasEntry): string => auditionHref(e.id, seed.bpm, seed.key);
@@ -132,6 +135,8 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
     onCompose: compose,
     onSpare: (p: Produced) => setSeed(addTo(seed, p.list, p.term)),
     examples: EXAMPLES,
+    learned: learned.map((e) => ({ term: e.term, plain: e.plain.join(" · ") })),
+    onLearned: (term: string) => setSentence((cur) => (cur.toLowerCase().includes(term) ? cur : cur.trim() === "" ? term : `${cur.trim().replace(/[,.]$/, "")}, ${term}`)),
     onExample: (x: string) => {
       setSentence(x);
       composeFrom(translate(x));
@@ -139,6 +144,7 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
   };
 
   const swapTo = (old: string, e: AtlasEntry): void => {
+    learn(e);
     setSeed({ ...seed, instruments: seed.instruments.map((x) => (x === old ? e.term : x)) });
     setMove({ minus: old, plus: e.term });
     setOpen({ kind: "swap", term: e.term });
@@ -203,6 +209,7 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
         title="add by ear"
         candidates={stripFor}
         onPick={(e) => {
+          learn(e);
           setSeed(addTo(seed, "instruments", e.term));
           setOpen(null);
         }}
