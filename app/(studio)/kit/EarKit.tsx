@@ -56,7 +56,7 @@ const VOICES = ["rhodes", "upright bass", "brushed drums"];
 
 function DuelSpecimen() {
   const [answers, setAnswers] = useState<Readonly<Record<string, Answer>>>({ pace: "a", colour: "skip" });
-  const done: Readonly<Record<string, Answer>> = { pace: "a", colour: "b", touch: "a", material: "a", warmth: "a", density: "skip" };
+  const done: Readonly<Record<string, Answer>> = Object.fromEntries(AXES.map((x, i) => [x.id, i === AXES.length - 1 ? "skip" : i % 3 === 1 ? "b" : "a"]));
   const href = (x: { readonly ids: readonly string[] }): string => x.ids.join("+");
   return (
     <Spec names={["DuelCard"]} source="audio/DuelCard.tsx · duel.ts" wide>
