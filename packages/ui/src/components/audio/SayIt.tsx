@@ -23,9 +23,12 @@ export type SayItProps = {
   readonly onTrace: (tokens: readonly number[] | null) => void;
   readonly onCompose: () => void;
   readonly onSpare: (p: Produced) => void;
+  /** Sentences offered while the field is empty: a press fills it and composes. */
+  readonly examples?: readonly string[];
+  readonly onExample?: (sentence: string) => void;
 };
 
-export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare }: SayItProps) {
+export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare, examples = [], onExample }: SayItProps) {
   const groupOf = (i: number): number[] => [...new Set(heard.terms.filter((p) => p.from.includes(i)).flatMap((p) => p.from))];
   const used = heard.terms.length;
   return (
@@ -38,10 +41,17 @@ export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare
         }}
       >
         <div className={s.sentence}>
-          <Field label="the music, in your words" value={value} placeholder="like a rainy café at night" maxLength={300} onChange={onChange} />
+          <Field label="the music, in your words" value={value} placeholder="something like a heist movie but chill" maxLength={300} onChange={onChange} />
         </div>
         <Button label="Compose" tone="cyan" submit disabled={used === 0 && heard.bpm === null} />
       </form>
+      {heard.tokens.length === 0 && onExample !== undefined && examples.length > 0 && (
+        <div className={s.meta}>
+          {examples.map((x) => (
+            <Chip key={x} label={x} casing="lower" ghost name={`compose: ${x}`} onPress={() => onExample(x)} />
+          ))}
+        </div>
+      )}
       {heard.tokens.length > 0 && (
         <p className={s.echo} aria-label="as heard">
           {heard.tokens.map((t, i) => (

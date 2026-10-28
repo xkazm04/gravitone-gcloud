@@ -26,6 +26,9 @@ type Move = { readonly minus: string; readonly plus: string };
 
 const NONE: ReadonlySet<number> = new Set();
 
+/** Sentences offered on an empty field: one each of a scene, a use with a length, a story, a feeling. */
+const EXAMPLES: readonly string[] = ["like a rainy café at night", "a 60 second trailer, epic but hopeful", "a sneaky cat stealing food", "lofi beats to study to"];
+
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
 /** A failed audition's own sentence, read off the route's error envelope through a narrow check
@@ -101,15 +104,16 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
   // Provenance is drawn only while the sentence on screen is the one the seed was composed from.
   const live = said !== null && said.sentence === sentence ? said : null;
 
-  const compose = (): void => {
+  const composeFrom = (t: Translation): void => {
     ear.stop();
     setOpen(null);
     setMove(null);
-    setSaid(heard);
-    setSeed(heard.seed);
-    onHeard(heard);
-    onSaid(sentence.trim());
+    setSaid(t);
+    setSeed(t.seed);
+    onHeard(t);
+    onSaid(t.sentence.trim());
   };
+  const compose = (): void => composeFrom(heard);
 
   const say: SayItProps = {
     value: sentence,
@@ -119,6 +123,11 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
     onTrace: (t) => setLit(t === null ? NONE : new Set(t)),
     onCompose: compose,
     onSpare: (p: Produced) => setSeed(addTo(seed, p.list, p.term)),
+    examples: EXAMPLES,
+    onExample: (x: string) => {
+      setSentence(x);
+      composeFrom(translate(x));
+    },
   };
 
   const swapTo = (old: string, e: AtlasEntry): void => {
