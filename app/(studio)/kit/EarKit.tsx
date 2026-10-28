@@ -30,7 +30,7 @@ const LEARNED = [
 const BASSES = ATLAS.filter((e) => e.role === "bass" || e.role === "synth");
 
 function SaySpecimen() {
-  const [v, setV] = useState("something like a heist movie but chill, no drums");
+  const [v, setV] = useState("sad but hopeful lullaby for a rave, no drums");
   const heard = useMemo(() => translate(v), [v]);
   const [lit, setLit] = useState<ReadonlySet<number>>(NONE);
   return (

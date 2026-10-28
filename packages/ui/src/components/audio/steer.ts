@@ -23,6 +23,9 @@ export type SteerBrief = {
   readonly near: readonly { readonly word: string; readonly to: string }[];
   /** The key the moods lean to, with the sentence words behind it; null when they do not lean. */
   readonly key: { readonly value: string; readonly from: readonly string[] } | null;
+  /** Where two of the sentence's words pull the tempo or the mode apart: each side's words, what they
+   *  alone would make, and the words that settle it ("62 bpm", "in minor"). */
+  readonly pulls: readonly { readonly kind: string; readonly sides: readonly { readonly words: readonly string[]; readonly says: string; readonly settle: string }[] }[];
   readonly seed: Seed;
   /** null when the sentence produced no style word: a seed with no words is not a prompt. */
   readonly suno: SunoFieldsDraft | null;
@@ -54,6 +57,7 @@ export function steerBrief(ask: SteerAsk): SteerBrief {
     unheard: t.unheard,
     near: t.near.map((n) => ({ word: t.tokens[n.token]?.text ?? "", to: n.to })),
     key: t.key === null ? null : { value: t.key.value, from: t.key.from.map((i) => t.tokens[i]?.text ?? "") },
+    pulls: t.pulls.map((p) => ({ kind: p.kind, sides: [p.a, p.b].map((x) => ({ words: x.from.map((i) => t.tokens[i]?.text ?? ""), says: x.says, settle: x.settle })) })),
     seed: t.seed,
     suno,
     levels,

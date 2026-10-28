@@ -5,13 +5,15 @@
 // nothing matched struck through - shown, not hidden, so what was ignored is as legible as what
 // was used. Hovering a heard word lights the seed terms it produced (`onTrace`); a term's own
 // hover lights its words back (`lit`). What a cue produced past a list's cap waits as a ghost
-// chip to add.
+// chip to add. Where two of the words pull the tempo or the mode apart, both sides stand as chips
+// with what each alone would make; a press settles it by saying so ("62 bpm", "in minor") in the
+// sentence itself, so the words that would have avoided the compromise are learned by using them.
 import type { ReactNode } from "react";
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { Field } from "../field/Field.tsx";
 import { Tally } from "../tally/Tally.tsx";
-import type { Produced, Translation } from "./lexicon.ts";
+import type { Produced, PullSide, Translation } from "./lexicon.ts";
 import s from "./Ear.module.css";
 
 export type SayItProps = {
@@ -41,6 +43,10 @@ export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare
       {chip}
     </span>
   );
+  const wordsOf = (from: readonly number[]): string => from.map((i) => heard.tokens[i]?.text ?? "").join(" ");
+  const say = (more: string): string => (value.trim() === "" ? more : `${value.trim().replace(/[,.]$/, "")}, ${more}`);
+  const side = (x: PullSide): ReactNode =>
+    traced(x.from, <Chip label={wordsOf(x.from)} value={x.says} tone="amber" casing="lower" ghost name={`settle on ${x.settle}`} onPress={() => onChange(say(x.settle))} />);
   return (
     <section className={s.say} aria-label="say it">
       <form
@@ -85,6 +91,15 @@ export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare
           {heard.bpm !== null && traced(heard.bpm.from, <Chip label="tempo" value={`${heard.bpm.value} bpm`} casing="lower" />)}
           {heard.key !== null && traced(heard.key.from, <Chip label="key" value={heard.key.value} casing="lower" />)}
           {heard.lengthS !== null && traced(heard.lengthS.from, <Chip label="length" value={`${heard.lengthS.value} s`} casing="lower" />)}
+          {heard.pulls.map((p) => (
+            <span key={p.kind} className={s.pull} role="group" aria-label={`${p.kind}, two ways`}>
+              {side(p.a)}
+              <span className={s.versus} aria-hidden="true">
+                ↔
+              </span>
+              {side(p.b)}
+            </span>
+          ))}
           {heard.unheard.length > 0 && <Chip label="unheard" value={heard.unheard.join(" · ")} tone="amber" casing="lower" />}
           {heard.near.map((n) => {
             const t = heard.tokens[n.token];

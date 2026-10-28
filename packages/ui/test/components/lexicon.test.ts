@@ -167,6 +167,25 @@ describe("translate: a sentence compiled into a seed", () => {
     expect(translate("piano").key).toBeNull();
   });
 
+  test("words that pull the tempo or the mode apart are said with each side, and saying a side settles it", () => {
+    const t = translate("sad but hopeful lullaby for a rave");
+    const words = (from: readonly number[]): string => from.map((i) => t.tokens[i]?.text).join(" ");
+    const tempo = t.pulls.find((p) => p.kind === "tempo");
+    const mode = t.pulls.find((p) => p.kind === "mode");
+    expect([words(tempo?.a.from ?? []), tempo?.a.says, words(tempo?.b.from ?? []), tempo?.b.says]).toEqual(["lullaby", "55–70 bpm", "rave", "120–128 bpm"]);
+    expect([words(mode?.a.from ?? []), mode?.a.says, words(mode?.b.from ?? []), mode?.b.says]).toEqual(["sad", "A minor", "hopeful", "C major"]);
+    for (const p of t.pulls)
+      for (const side of [p.a, p.b]) {
+        const settled = translate(`${t.sentence}, ${side.settle}`);
+        expect(settled.pulls.map((q) => q.kind)).not.toContain(p.kind);
+        if (p.kind === "tempo") expect(String(settled.seed.bpm)).toBe(side.settle.replace(" bpm", ""));
+        else expect(settled.seed.key).toBe(side.says);
+      }
+    expect(translate("heist movie but chill").pulls).toEqual([]);
+    expect(translate("sad piano for a breakup").pulls).toEqual([]);
+    expect(translate("a lullaby for a rave, 63 bpm").pulls).toEqual([]);
+  });
+
   test("an empty sentence is a blank seed", () => {
     const t = translate("   ");
     expect(t.tokens).toEqual([]);

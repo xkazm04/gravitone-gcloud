@@ -12,6 +12,8 @@
 .tok[data-lit="true"]{background:color-mix(in srgb,var(--cyan) 22%,transparent);color:var(--ink-bright)}
 .meta{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}
 .traced{display:inline-flex}
+.pull{display:inline-flex;gap:var(--sp-1);align-items:center}
+.versus{color:var(--amber)}
 
 .ear{flex:none;width:var(--size-glyph-btn);height:var(--size-glyph-btn);border-radius:50%;display:inline-grid;place-items:center;padding:0;border:1px solid color-mix(in srgb,var(--cyan) 45%,transparent);background:color-mix(in srgb,var(--cyan) 14%,transparent);color:var(--cyan);cursor:pointer}
 .ear:hover{background:color-mix(in srgb,var(--cyan) 26%,transparent)}

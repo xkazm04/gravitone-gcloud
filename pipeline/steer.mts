@@ -75,6 +75,7 @@ if (flag("--json")) {
   for (const n of b.near) console.log(`${pad("did you mean")} ${n.word} -> ${n.to}`);
   if (b.seed.bpm !== null) console.log(`${pad("tempo")} ${b.seed.bpm} bpm`);
   if (b.key !== null) console.log(`${pad("key")} ${b.key.value.padEnd(24)} <- ${b.key.from.join(" ")}`);
+  for (const p of b.pulls) console.log(`${pad(`${p.kind} pulls`)} ${p.sides.map((x) => `${x.words.join(" ")} ${x.says} (say "${x.settle}")`).join("  <->  ")}`);
   console.log("");
   if (b.suno === null) console.log("suno       (no style words: nothing to send)");
   else {

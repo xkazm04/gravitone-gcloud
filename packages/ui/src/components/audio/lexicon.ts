@@ -35,11 +35,9 @@ export type Produced = {
   readonly from: readonly number[];
 };
 
-export type Pull = {
-  readonly kind: "tempo" | "mode";
-  readonly a: { readonly from: readonly number[]; readonly says: string };
-  readonly b: { readonly from: readonly number[]; readonly says: string };
-};
+/** One side of a pull: the words behind it, what they alone would make, and the words that settle it their way. */
+export type PullSide = { readonly from: readonly number[]; readonly says: string; readonly settle: string };
+export type Pull = { readonly kind: "tempo" | "mode"; readonly a: PullSide; readonly b: PullSide };
 
 export type Translation = {
   readonly sentence: string;
@@ -339,22 +337,24 @@ function tempoOf(ranges: readonly { lo: number; hi: number; from: number[] }[]):
 }
 
 // A mean of 60-75 and 140-170 is a tempo neither word asked for. Said, not resolved: the person
-// chooses which side they meant, by deleting the other word or writing a bpm.
+// chooses which side they meant, and the words that settle it ("62 bpm", "in minor") are the
+// vocabulary they would have needed - a bpm and a mode said outright beat every row's lean.
 const PULL_BPM = 30;
 function tempoPull(ranges: readonly { lo: number; hi: number; from: number[] }[]): Pull[] {
   if (ranges.length < 2) return [];
   const slow = ranges.reduce((a, r) => (r.hi < a.hi ? r : a));
   const fast = ranges.reduce((a, r) => (r.lo > a.lo ? r : a));
   if (fast.lo - slow.hi < PULL_BPM) return [];
-  return [{ kind: "tempo", a: { from: slow.from, says: `${slow.lo}–${slow.hi}` }, b: { from: fast.from, says: `${fast.lo}–${fast.hi}` } }];
+  const side = (r: { lo: number; hi: number; from: number[] }): PullSide => ({ from: r.from, says: `${r.lo}–${r.hi} bpm`, settle: `${Math.round((r.lo + r.hi) / 2)} bpm` });
+  return [{ kind: "tempo", a: side(slow), b: side(fast) }];
 }
 function modePull(terms: readonly Produced[]): Pull[] {
   const moods = terms.filter((p) => p.list === "moods");
   const minor = moods.filter((p) => MINOR.has(p.term));
   const major = moods.filter((p) => MAJOR.has(p.term));
   if (minor.length === 0 || major.length === 0) return [];
-  const side = (ps: readonly Produced[]) => ({ from: [...new Set(ps.flatMap((p) => p.from))], says: ps.map((p) => p.term).join(" · ") });
-  return [{ kind: "mode", a: side(minor), b: side(major) }];
+  const side = (ps: readonly Produced[], says: string, settle: string): PullSide => ({ from: [...new Set(ps.flatMap((p) => p.from))], says, settle });
+  return [{ kind: "mode", a: side(minor, MINOR_KEY, "in minor"), b: side(major, MAJOR_KEY, "in major") }];
 }
 
 /** The tokens that produced one seed word, for the provenance underline; [] when the sentence did not. */
