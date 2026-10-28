@@ -51,7 +51,7 @@
 .fileInput{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .trackRead{display:grid;gap:var(--sp-2)}
 .contour{display:flex;align-items:flex-end;gap:var(--sp-hair);height:var(--h-field)}
-.bar{flex:1;border-radius:var(--r-xs);background:color-mix(in srgb,var(--cyan) 30%,transparent);height:25%}
-.bar[data-level="1"]{height:50%;background:color-mix(in srgb,var(--cyan) 45%,transparent)}
-.bar[data-level="2"]{height:75%;background:color-mix(in srgb,var(--cyan) 65%,transparent)}
+.bar{flex:1;border-radius:var(--r-xs);background:color-mix(in srgb,var(--cyan) 46%,transparent);height:25%}
+.bar[data-level="1"]{height:50%;background:color-mix(in srgb,var(--cyan) 60%,transparent)}
+.bar[data-level="2"]{height:75%;background:color-mix(in srgb,var(--cyan) 78%,transparent)}
 .bar[data-level="3"]{height:100%;background:var(--cyan)}

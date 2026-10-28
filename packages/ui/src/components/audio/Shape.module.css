@@ -1,4 +1,5 @@
 /* The shape strip: section labels over painted four-bar columns, presets and length under them.
+   The quietest fill is cyan at 46% over ink-2: 3.5:1, a mark that holds the 3:1 a mark needs.
    A level is drawn as height AND as the cyan's strength, so it reads without colour too. */
 .shape{display:grid;gap:var(--sp-2);min-width:0}
 .secs{display:grid;gap:var(--sp-hair)}
@@ -9,9 +10,9 @@
 .cols{display:grid;gap:var(--sp-hair);height:calc(var(--h-field) * 3);touch-action:none;cursor:crosshair;user-select:none}
 .col{position:relative;display:flex;align-items:flex-end;border-radius:var(--r-xs);background:var(--ink-2);border:1px solid var(--hair)}
 .col:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
-.fill{display:block;width:100%;border-radius:var(--r-xs);background:color-mix(in srgb,var(--cyan) 30%,transparent);pointer-events:none}
-.col[data-level="1"] .fill{background:color-mix(in srgb,var(--cyan) 45%,transparent)}
-.col[data-level="2"] .fill{background:color-mix(in srgb,var(--cyan) 65%,transparent)}
+.fill{display:block;width:100%;border-radius:var(--r-xs);background:color-mix(in srgb,var(--cyan) 46%,transparent);pointer-events:none}
+.col[data-level="1"] .fill{background:color-mix(in srgb,var(--cyan) 60%,transparent)}
+.col[data-level="2"] .fill{background:color-mix(in srgb,var(--cyan) 78%,transparent)}
 .col[data-level="3"] .fill{background:var(--cyan)}
 .foot{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}
 .grow{flex:1}
