@@ -154,13 +154,20 @@ def _pitch_map(files, cache_dir):
     key = hashlib.sha1("\n".join(sorted(files)).encode("utf8")).hexdigest()[:16]
     cached = os.path.join(cache_dir, f"pitches-v2-{key}.json") if cache_dir else None
     if cached and os.path.isfile(cached):
-        with open(cached, "r", encoding="utf8") as f:
-            return [(p, float(m)) for p, m in json.load(f)]
+        try:
+            with open(cached, "r", encoding="utf8") as f:
+                return [(p, float(m)) for p, m in json.load(f)]
+        except (ValueError, OSError):
+            pass  # another render's half-written map, or a stale one: measured again below
     pairs = measure_pitches(sorted(files))
     if cached:
+        # Written beside and swapped in whole: two renders of one family (a duel pair, a sketch and
+        # an audition warming together) must never read each other's half-written map.
         os.makedirs(cache_dir, exist_ok=True)
-        with open(cached, "w", encoding="utf8") as f:
+        tmp = f"{cached}.{os.getpid()}.part"
+        with open(tmp, "w", encoding="utf8") as f:
             json.dump(pairs, f)
+        os.replace(tmp, cached)
     return pairs
 
 

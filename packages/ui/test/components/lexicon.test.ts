@@ -3,7 +3,7 @@
 // or title names in what a row EMITS (a cue may name a film; that is how people talk).
 import { describe, expect, test } from "vitest";
 
-import { ATLAS, atlasFor, auditionHref, swapsFor } from "../../src/components/audio/atlas.ts";
+import { ATLAS, atlasFor, auditionHref, sketchHref, swapsFor } from "../../src/components/audio/atlas.ts";
 import { provenanceOf, translate } from "../../src/components/audio/lexicon.ts";
 import { ROWS } from "../../src/components/audio/lexicon.rows.ts";
 
@@ -80,6 +80,12 @@ describe("translate: a sentence compiled into a seed", () => {
     expect(translate("sad piano").lengthS).toBeNull();
   });
 
+  test("a tempo is heard only where it can be played: 40-220 bpm, and 'beats' only as 'beats per'", () => {
+    expect(translate("a 300 bpm gabber track").seed.bpm).not.toBe(300);
+    expect(translate("a loop of 16 beats").seed.bpm).toBeNull();
+    expect(translate("120 beats per minute").seed.bpm).toBe(120);
+  });
+
   test("an empty sentence is a blank seed", () => {
     const t = translate("   ");
     expect(t.tokens).toEqual([]);
@@ -153,8 +159,13 @@ describe("the atlas", () => {
     expect(swapsFor(rhodes, new Set(["rhodes"]))).toEqual([]);
   });
 
-  test("an audition is addressed by instrument, whole tempo and key", () => {
+  test("an audition is addressed by instrument, whole tempo and key; a tempo it cannot play falls back", () => {
     expect(auditionHref("rhodes", 91.6, "A minor")).toBe("/audio/audition?id=rhodes&bpm=92&key=A+minor");
     expect(auditionHref("rhodes", null, null)).toBe("/audio/audition?id=rhodes&bpm=90");
+    expect(auditionHref("rhodes", 300, null)).toBe("/audio/audition?id=rhodes&bpm=90");
+  });
+
+  test("a sketch names each instrument once", () => {
+    expect(sketchHref(["grand-piano", "grand-piano", "rhodes"], [0, 3], 90, null)).toBe("/audio/sketch?ids=grand-piano%2Crhodes&levels=03&bpm=90");
   });
 });

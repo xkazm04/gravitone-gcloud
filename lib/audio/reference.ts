@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { err, ok, type Result } from "@gt/domain/errors";
-import { groupSeconds, levelsOfContour, MAX_COLUMNS, type Level } from "@gt/ui/components/audio/shape.ts";
+import { groupSeconds, levelsOfContour, MAX_COLUMNS, MIN_COLUMNS, type Level } from "@gt/ui/components/audio/shape.ts";
 
 import { keyOf, MEASURE_RATE, samplesOf, tempoOf, windowOf } from "../sound/measure.ts";
 import { ffmpegDecode, type Decode } from "../sound/measureRun.ts";
@@ -26,7 +26,8 @@ export type ReferenceRead = {
 
 /** RMS of each four-bar group of `x` at `bpm`, at most MAX_COLUMNS groups (a longer track is read whole, grouped wider). */
 export function contourOf(x: Float32Array, rate: number, bpm: number): number[] {
-  const n0 = Math.max(1, Math.floor(x.length / (groupSeconds(bpm) * rate)));
+  const n0 = Math.floor(x.length / (groupSeconds(bpm) * rate));
+  if (n0 < MIN_COLUMNS) return []; // under eight bars: a tempo and a key, but no shape to read
   const groups = Math.min(n0, MAX_COLUMNS);
   const size = Math.floor(x.length / groups);
   const out: number[] = [];
@@ -50,7 +51,8 @@ export async function readReference(name: string, bytes: Uint8Array, decode: Dec
     const w = windowOf(x, MEASURE_RATE);
     const bpm = tempoOf(w, MEASURE_RATE);
     const key = keyOf(w, MEASURE_RATE);
-    const levels = bpm === null ? [] : levelsOfContour(contourOf(x, MEASURE_RATE, bpm));
+    const contour = bpm === null ? [] : contourOf(x, MEASURE_RATE, bpm);
+    const levels = contour.length === 0 ? [] : levelsOfContour(contour);
     return ok({ name, durationS: Math.round((x.length / MEASURE_RATE) * 10) / 10, bpm: bpm === null ? null : Math.round(bpm), key, levels });
   } finally {
     await rm(dir, { recursive: true, force: true });

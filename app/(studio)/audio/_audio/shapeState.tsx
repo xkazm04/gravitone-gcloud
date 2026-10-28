@@ -9,7 +9,7 @@
 // measured) - quoted only: the desk has no ElevenLabs producer (lib/sound/engines.ts), and DRY.
 import { useState, type ReactNode } from "react";
 
-import { atlasFor, AUDITION_BPM, sketchHref } from "@gt/ui/components/audio/atlas.ts";
+import { atlasFor, playableBpm, sketchHref } from "@gt/ui/components/audio/atlas.ts";
 import { EarButton } from "@gt/ui/components/audio/EarButton.tsx";
 import type { Translation } from "@gt/ui/components/audio/lexicon.ts";
 import type { Seed } from "@gt/ui/components/audio/recipe.ts";
@@ -39,7 +39,7 @@ export type ShapeState = {
 
 export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeState {
   const [levels, setLevels] = useState<Level[] | null>(null);
-  const bpm = seed.bpm !== null && seed.bpm >= 40 ? seed.bpm : AUDITION_BPM;
+  const bpm = playableBpm(seed.bpm);
   // The sketch: the seed's playable instruments together, over the shape, or one full four bars
   // while Suno still decides the form. Free and local; the same ear as every audition.
   const ids = [...new Set(seed.instruments.map((t) => atlasFor(t)?.id).filter((id): id is string => id !== undefined && can.has(id)))].slice(0, 5);
@@ -61,7 +61,7 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
     if (t.lengthS === null && preset === undefined) return;
     const fallback = PRESETS[0];
     const p = preset ?? fallback;
-    if (p !== undefined) startWith(p, columnsFor(t.lengthS?.value ?? DEFAULT_LENGTH_S, t.seed.bpm ?? bpm));
+    if (p !== undefined) startWith(p, columnsFor(t.lengthS?.value ?? DEFAULT_LENGTH_S, playableBpm(t.seed.bpm)));
   };
 
   const adoptLevels = (next: readonly Level[]): void => setLevels(next.length === 0 ? null : next.slice(0, 32));

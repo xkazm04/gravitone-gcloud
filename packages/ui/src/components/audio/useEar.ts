@@ -50,6 +50,8 @@ function load(a: HTMLAudioElement, href: string, on: Handlers): void {
 export function useEar(explain?: (href: string) => Promise<string | null>): Ear {
   const el = useRef<HTMLAudioElement | null>(null);
   const dog = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** The newest press: an explanation that lands after a newer press is about a sound no longer asked for. */
+  const press = useRef(0);
   const [at, setAt] = useState<string | null>(null);
   const [state, setState] = useState<EarState>("idle");
   const [failed, setFailed] = useState<string | null>(null);
@@ -87,6 +89,7 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
         return;
       }
       calm();
+      const mine = ++press.current;
       let a = el.current;
       if (a === null) {
         a = new Audio();
@@ -109,7 +112,7 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
           setAt(null);
           setState("idle");
           void explain?.(href).then((words) => {
-            if (words !== null) setFailed(words);
+            if (words !== null && press.current === mine) setFailed(words);
           });
         },
       });

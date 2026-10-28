@@ -61,14 +61,15 @@ def render_sketch(spec):
     bpm = float(spec["bpm"])
     beat = 60.0 / bpm
     def even(x):
-        return x * (0.1 / max(float(np.sqrt(np.mean(x * x))), 1e-9))
+        rms = float(np.sqrt(np.mean(x * x)))
+        return x if rms < 1e-9 else x * (0.1 / rms)  # a silent column stays silent
 
     # A melodic voice is one phrase; a kit is its groove at each level (./drums.py), so a quiet
     # column has the hats and a full one the crash.
     parts = []
     for v in voices:
         if v.get("role") == "drums":
-            parts.append({lv: even(groove_at(v["files"], bpm, lv)[0]) for lv in sorted(set(levels))})
+            parts.append({lv: even(groove_at(v["files"], bpm, lv, strict=False)[0]) for lv in sorted(set(levels))})
         else:
             x, _ = voice(v["files"], bpm, spec["tonic"], spec["minor"], v.get("role", "keys"), spec.get("cacheDir"))
             parts.append(even(x))

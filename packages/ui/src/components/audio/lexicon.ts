@@ -106,7 +106,7 @@ export function translate(sentence: string): Translation {
   let negate = -1;
   for (let i = 0; i < words.length; ) {
     const w = words[i] ?? "";
-    if (/^\d{2,3}$/.test(w) && (words[i + 1] === "bpm" || words[i + 1] === "beats")) {
+    if (/^\d{2,3}$/.test(w) && Number(w) >= 40 && Number(w) <= 220 && (words[i + 1] === "bpm" || (words[i + 1] === "beats" && words[i + 2] === "per"))) {
       explicit = { value: Number(w), from: [i, i + 1] };
       kinds[i] = "cue";
       kinds[i + 1] = "cue";

@@ -8,7 +8,7 @@
 // --hear renders, locally and free, one audition per playable instrument and the sketch of them
 // together over the shape (pipeline/audio/audition.py, sketch.py) from the sample libraries named
 // by GRAVITONE_SAMPLE_ROOTS, and prints the WAV paths. No store is opened.
-import { AUDITION_BPM } from "@gt/ui/components/audio/atlas.ts";
+import { playableBpm } from "@gt/ui/components/audio/atlas.ts";
 import { clock, LEVEL_WORDS, PRESETS } from "@gt/ui/components/audio/shape.ts";
 import { steerBrief } from "@gt/ui/components/audio/steer.ts";
 
@@ -48,7 +48,7 @@ if (flag("--hear")) {
     process.exit(1);
   }
   const can = new Set(await audibleIds());
-  const bpm = Math.round(b.seed.bpm ?? AUDITION_BPM);
+  const bpm = playableBpm(b.seed.bpm);
   for (const i of b.instruments) {
     if (i.atlas === null || !can.has(i.atlas)) {
       heard.auditions.push({ term: i.term, file: null, why: "no library here files it" });
@@ -57,7 +57,7 @@ if (flag("--hear")) {
     const r = await auditionFile({ id: i.atlas, bpm, key: b.seed.key });
     heard.auditions.push(r.ok ? { term: i.term, file: r.value } : { term: i.term, file: null, why: r.error.message });
   }
-  const ids = b.instruments.flatMap((i) => (i.atlas !== null && can.has(i.atlas) ? [i.atlas] : [])).slice(0, 5);
+  const ids = [...new Set(b.instruments.flatMap((i) => (i.atlas !== null && can.has(i.atlas) ? [i.atlas] : [])))].slice(0, 5);
   if (ids.length > 0) {
     const r = await sketchFile({ ids, levels: b.levels ?? [3], bpm, key: b.seed.key });
     if (r.ok) heard.sketch = r.value;

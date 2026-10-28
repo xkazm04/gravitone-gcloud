@@ -13,7 +13,7 @@
 // setter it is handed, so the composer, the variations and the receipt all read one seed.
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { ATLAS, atlasFor, AUDITION_BPM, AUDITION_KEY, auditionHref, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
+import { ATLAS, atlasFor, AUDITION_KEY, auditionHref, playableBpm, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
 import { EarStrip } from "@gt/ui/components/audio/EarStrip.tsx";
 import { provenanceOf, translate, type Produced, type TermList, type Translation } from "@gt/ui/components/audio/lexicon.ts";
 import { addTo, type Seed } from "@gt/ui/components/audio/recipe.ts";
@@ -147,8 +147,8 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
   // What to warm: the seed's playable instruments, then the open strip's candidates. Keyed by
   // their hrefs, which carry tempo and key, so a tempo typed digit by digit warms once it settles.
   const playable = seed.instruments.map(entryOf).filter((e): e is AtlasEntry => e !== undefined);
-  const stripFor: readonly AtlasEntry[] =
-    open?.kind === "swap" ? swapsFor(entryOf(open.term) ?? playable[0] ?? (ATLAS[0] as AtlasEntry), can, seed.instruments) : open?.kind === "add" ? ATLAS.filter((e) => can.has(e.id)) : [];
+  const swapping = open?.kind === "swap" ? entryOf(open.term) : undefined;
+  const stripFor: readonly AtlasEntry[] = swapping !== undefined ? swapsFor(swapping, can, seed.instruments) : open?.kind === "add" ? ATLAS.filter((e) => can.has(e.id)) : [];
   const toWarm = [...playable, ...stripFor].map(href).join(" ");
   useEffect(() => {
     if (toWarm === "") return;
@@ -157,7 +157,7 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
   }, [toWarm]);
 
   let strip: ReactNode = null;
-  const held = ["4 bars", seed.key ?? AUDITION_KEY, `${Math.round(seed.bpm ?? AUDITION_BPM)} bpm`, "−20 LUFS"];
+  const held = ["4 bars", seed.key ?? AUDITION_KEY, `${playableBpm(seed.bpm)} bpm`, "−20 LUFS"];
   const common = { stateOf: (e: AtlasEntry) => ear.stateOf(href(e)), onPlay: (e: AtlasEntry) => ear.toggle(href(e)), onClose: () => setOpen(null), blind, onBlind: setBlind, held };
   if (open?.kind === "swap") {
     const now = entryOf(open.term);

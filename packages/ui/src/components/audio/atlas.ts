@@ -95,9 +95,12 @@ export function swapsFor(entry: AtlasEntry, audible: ReadonlySet<string>, have: 
   return out.slice(0, max);
 }
 
+/** The tempo an audition plays at: the seed's when the renderer can play it (40-220), else the default. */
+export const playableBpm = (bpm: number | null): number => (bpm !== null && Number.isFinite(bpm) && Math.round(bpm) >= 40 && Math.round(bpm) <= 220 ? Math.round(bpm) : AUDITION_BPM);
+
 /** The audition phrase's address: one instrument, one tempo, one key - the cache key too. */
 export function auditionHref(id: string, bpm: number | null, key: string | null): string {
-  const q = new URLSearchParams({ id, bpm: String(Math.round(bpm ?? AUDITION_BPM)) });
+  const q = new URLSearchParams({ id, bpm: String(playableBpm(bpm)) });
   if (key !== null && key.trim() !== "") q.set("key", key.trim());
   return `/audio/audition?${q.toString()}`;
 }
@@ -108,7 +111,7 @@ export const AUDITION_KEY = "C major";
 
 /** The sketch's address: the instruments together over the shape's levels (one digit per four bars). */
 export function sketchHref(ids: readonly string[], levels: readonly number[], bpm: number | null, key: string | null): string {
-  const q = new URLSearchParams({ ids: ids.join(","), levels: levels.join(""), bpm: String(Math.round(bpm ?? AUDITION_BPM)) });
+  const q = new URLSearchParams({ ids: [...new Set(ids)].join(","), levels: levels.join(""), bpm: String(playableBpm(bpm)) });
   if (key !== null && key.trim() !== "") q.set("key", key.trim());
   return `/audio/sketch?${q.toString()}`;
 }

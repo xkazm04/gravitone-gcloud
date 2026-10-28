@@ -101,6 +101,12 @@ export async function audibleIds(env: NodeJS.ProcessEnv = process.env): Promise<
 export type AuditionAsk = { readonly id: string; readonly bpm: number; readonly key: string | null };
 
 const inflight = new Map<string, Promise<Result<string>>>();
+/** A render that failed answers its failure for a while rather than running again: a failed play is
+ *  asked twice (the <audio> element, then explainAudition for the words) and each is a full render. */
+const failed = new Map<string, { readonly at: number; readonly r: Result<string> }>();
+const FAILED_FOR_MS = 120_000;
+/** Inside the routes' 60 s (their deadline fires at 55): a render past this is the sidecar's refusal, in words. */
+export const RENDER_TIMEOUT_MS = 50_000;
 
 /** A cached file, or the one render of it already running, or a new render (deduped by path). */
 async function cachedOr(out: string, render: () => Promise<Result<unknown>>): Promise<Result<string>> {
@@ -109,12 +115,17 @@ async function cachedOr(out: string, render: () => Promise<Result<unknown>>): Pr
     () => false,
   );
   if (have) return ok(out);
+  const recent = failed.get(out);
+  if (recent !== undefined && Date.now() - recent.at < FAILED_FOR_MS) return recent.r;
   const running = inflight.get(out);
   if (running !== undefined) return running;
   const job = (async (): Promise<Result<string>> => {
     await mkdir(path.dirname(out), { recursive: true });
     const r = await render();
-    return r.ok ? ok(out) : r;
+    if (r.ok) return ok(out);
+    const refused: Result<string> = r;
+    failed.set(out, { at: Date.now(), r: refused });
+    return refused;
   })();
   inflight.set(out, job);
   try {
@@ -123,6 +134,9 @@ async function cachedOr(out: string, render: () => Promise<Result<unknown>>): Pr
     inflight.delete(out);
   }
 }
+
+/** A short hash of the sample files a render reads: a library that changes renders anew. */
+const filesTag = (files: readonly string[]): string => createHash("sha1").update(files.join("\n")).digest("hex").slice(0, 8);
 
 export type SketchAsk = { readonly ids: readonly string[]; readonly levels: readonly number[]; readonly bpm: number; readonly key: string | null };
 
@@ -145,9 +159,9 @@ export async function sketchFile(ask: SketchAsk, env: NodeJS.ProcessEnv = proces
     voices.push({ files, role: e.role });
   }
   const dir = auditionDir(env);
-  const tag = createHash("sha1").update(JSON.stringify([ask.ids, ask.levels, ask.bpm, k.pc, k.minor])).digest("hex").slice(0, 16);
+  const tag = createHash("sha1").update(JSON.stringify([ask.ids, ask.levels, ask.bpm, k.pc, k.minor, voices.map((v) => filesTag(v.files))])).digest("hex").slice(0, 16);
   const out = path.join(dir, `sketch-${RENDER}-${tag}.wav`);
-  return cachedOr(out, () => renderSketch({ voices, levels: ask.levels, bpm: ask.bpm, tonic: k.pc, minor: k.minor, lufs: AUDITION_LUFS, cacheDir: dir }, out));
+  return cachedOr(out, () => renderSketch({ voices, levels: ask.levels, bpm: ask.bpm, tonic: k.pc, minor: k.minor, lufs: AUDITION_LUFS, cacheDir: dir }, out, { timeoutMs: RENDER_TIMEOUT_MS }));
 }
 
 /** The audition file for one instrument at one tempo and key: from the cache, or rendered once. */
@@ -161,6 +175,6 @@ export async function auditionFile(ask: AuditionAsk, env: NodeJS.ProcessEnv = pr
   const files = (await machineAtlas(env)).get(entry.id);
   if (files === undefined) return err("unavailable", `${entry.term}: no library under ${SAMPLE_ROOTS_ENV} files it`);
   const dir = auditionDir(env);
-  const out = path.join(dir, `${entry.id}-${RENDER}-${ask.bpm}-${k.pc}${k.minor ? "m" : ""}.wav`);
-  return cachedOr(out, (): Promise<Result<AuditionFacts>> => renderAudition({ files, bpm: ask.bpm, tonic: k.pc, minor: k.minor, role: entry.role, lufs: AUDITION_LUFS, cacheDir: dir }, out));
+  const out = path.join(dir, `${entry.id}-${RENDER}-${filesTag(files)}-${ask.bpm}-${k.pc}${k.minor ? "m" : ""}.wav`);
+  return cachedOr(out, (): Promise<Result<AuditionFacts>> => renderAudition({ files, bpm: ask.bpm, tonic: k.pc, minor: k.minor, role: entry.role, lufs: AUDITION_LUFS, cacheDir: dir }, out, { timeoutMs: RENDER_TIMEOUT_MS }));
 }

@@ -29,7 +29,7 @@ export const STEER_OPS: readonly McpToolSpec[] = [
     run: async (a) => {
       const b = steerBrief({ sentence: a.sentence, ...(a.shape === undefined ? {} : { shape: a.shape }), ...(a.length_s === undefined ? {} : { lengthS: a.length_s }) });
       const can = new Set(await audibleIds());
-      const playable = b.instruments.flatMap((i) => (i.atlas !== null && can.has(i.atlas) ? [i.atlas] : []));
+      const playable = [...new Set(b.instruments.flatMap((i) => (i.atlas !== null && can.has(i.atlas) ? [i.atlas] : [])))];
       const quote = b.plan === null ? null : priceCall({ op: "compose", seconds: b.planSeconds });
       return ok({
         heard: b.heard,

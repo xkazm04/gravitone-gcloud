@@ -57,12 +57,13 @@ def groove(level):
     return hits
 
 
-def beat(files, bpm, level=3):
-    """One kit playing the groove: 16 beats and one more of ring, unnormalised, mono."""
+def beat(files, bpm, level=3, strict=True):
+    """One kit playing the groove: 16 beats and one more of ring, unnormalised, mono. `strict` (an
+    audition) refuses a kit that cannot be heard; a sketch column a kit has no piece for is silence."""
     import numpy as np
 
     kit = pieces([f for f in files if os.path.isfile(f)])
-    if "kick" not in kit and "snare" not in kit:
+    if strict and "kick" not in kit and "snare" not in kit:
         raise AuditionError("no kick or snare could be named among the kit's files")
     beat_s = 60.0 / float(bpm)
     total = int(SR * (17 * beat_s + 0.6))
@@ -80,6 +81,6 @@ def beat(files, bpm, level=3):
         n = min(len(x), total - at, int(2.5 * SR))
         if n > 0:
             mix[at:at + n] += GAIN[piece] * x[:n]
-    if float(np.sqrt(np.mean(mix * mix))) < 1e-5:
+    if strict and float(np.sqrt(np.mean(mix * mix))) < 1e-5:
         raise AuditionError("the kit renders silent")
     return mix, {"notes": len(groove(level)), "range": [0, 0], "measured": len(kit)}
