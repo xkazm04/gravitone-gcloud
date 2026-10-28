@@ -35,6 +35,12 @@ export type Produced = {
   readonly from: readonly number[];
 };
 
+export type Pull = {
+  readonly kind: "tempo" | "mode";
+  readonly a: { readonly from: readonly number[]; readonly says: string };
+  readonly b: { readonly from: readonly number[]; readonly says: string };
+};
+
 export type Translation = {
   readonly sentence: string;
   readonly tokens: readonly Token[];
@@ -48,6 +54,9 @@ export type Translation = {
   /** The mode the seed's moods lean to ("sad" -> A minor), with the words behind those moods; null when they do not lean. */
   readonly key: { readonly value: string; readonly from: readonly number[] } | null;
   readonly unheard: readonly string[];
+  /** Where the sentence pulls two ways - a tempo split past 30 bpm, moods leaning both minor and
+   *  major - with the words on each side: the reason a compromise may fit neither. */
+  readonly pulls: readonly Pull[];
   /** Unheard words one slip from a word the lexicon hears ("melancolic" -> melancholic): offered, never applied. */
   readonly near: readonly { readonly token: number; readonly to: string }[];
   readonly seed: Seed;
@@ -240,8 +249,9 @@ export function translate(sentence: string): Translation {
   });
   const pick = (list: TermList): string[] => terms.filter((p) => p.list === list).map((p) => p.term);
   const key = explicitKey ?? keyOf(terms);
+  const pulls = [...(explicit === null ? tempoPull(ranges) : []), ...(explicitKey === null ? modePull(terms) : [])];
   const seed: Seed = { ...BLANK_SEED, genres: pick("genres"), moods: pick("moods"), instruments: pick("instruments"), avoid: pick("avoid"), bpm: bpm?.value ?? null, key: key?.value ?? null };
-  return { sentence, tokens, terms, spare, bpm, lengthS, key, unheard, near, seed };
+  return { sentence, tokens, terms, spare, bpm, lengthS, key, pulls, unheard, near, seed };
 }
 
 // A slip of the keyboard is not a word nobody taught the lexicon. One edit away (two for long
@@ -326,6 +336,25 @@ function tempoOf(ranges: readonly { lo: number; hi: number; from: number[] }[]):
   if (ranges.length === 0) return null;
   const mid = ranges.reduce((a, r) => a + (r.lo + r.hi) / 2, 0) / ranges.length;
   return { value: Math.round(mid), from: [...new Set(ranges.flatMap((r) => r.from))] };
+}
+
+// A mean of 60-75 and 140-170 is a tempo neither word asked for. Said, not resolved: the person
+// chooses which side they meant, by deleting the other word or writing a bpm.
+const PULL_BPM = 30;
+function tempoPull(ranges: readonly { lo: number; hi: number; from: number[] }[]): Pull[] {
+  if (ranges.length < 2) return [];
+  const slow = ranges.reduce((a, r) => (r.hi < a.hi ? r : a));
+  const fast = ranges.reduce((a, r) => (r.lo > a.lo ? r : a));
+  if (fast.lo - slow.hi < PULL_BPM) return [];
+  return [{ kind: "tempo", a: { from: slow.from, says: `${slow.lo}–${slow.hi}` }, b: { from: fast.from, says: `${fast.lo}–${fast.hi}` } }];
+}
+function modePull(terms: readonly Produced[]): Pull[] {
+  const moods = terms.filter((p) => p.list === "moods");
+  const minor = moods.filter((p) => MINOR.has(p.term));
+  const major = moods.filter((p) => MAJOR.has(p.term));
+  if (minor.length === 0 || major.length === 0) return [];
+  const side = (ps: readonly Produced[]) => ({ from: [...new Set(ps.flatMap((p) => p.from))], says: ps.map((p) => p.term).join(" · ") });
+  return [{ kind: "mode", a: side(minor), b: side(major) }];
 }
 
 /** The tokens that produced one seed word, for the provenance underline; [] when the sentence did not. */
