@@ -1,0 +1,6 @@
+{
+  "use": "puzzle game menu",
+  "mood": ["calm", "curious"],
+  "lengthS": 60,
+  "loop": true
+}

@@ -1,0 +1,9 @@
+{
+  "use": "terminal app background",
+  "mood": ["night", "focused"],
+  "instruments": ["synth pad", "sub bass"],
+  "lengthS": 90,
+  "loop": true,
+  "bpm": 84,
+  "key": "A minor"
+}

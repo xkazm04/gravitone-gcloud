@@ -1,0 +1,325 @@
+{
+  "compiler": "audio-intent-v1",
+  "hash": "ai-v1-679727af81da456e",
+  "canonicalIntent": {
+    "use": "trailer cue",
+    "mood": [
+      "driving",
+      "epic"
+    ],
+    "lengthS": 120,
+    "avoid": [
+      "ukulele"
+    ],
+    "energy": "driving",
+    "vocals": "none"
+  },
+  "seed": {
+    "genres": [
+      "electronic",
+      "cinematic"
+    ],
+    "moods": [
+      "driving",
+      "epic"
+    ],
+    "instruments": [
+      "analog synth",
+      "soft brass",
+      "sub bass",
+      "drums"
+    ],
+    "bpm": 122,
+    "key": null,
+    "avoid": [
+      "ukulele",
+      "vocals",
+      "singing"
+    ]
+  },
+  "paletteId": "palette-analog-synth",
+  "suno": {
+    "style": "electronic, cinematic, driving, epic, analog synth, soft brass, sub bass, drums, 122 bpm",
+    "lyrics": "[Instrumental]",
+    "exclude": "ukulele, vocals, singing"
+  },
+  "elevenlabsSentence": "Driving, epic electronic / cinematic instrumental, 122 BPM. Built on analog synth, soft brass, sub bass and drums. No ukulele, no vocals, no singing.",
+  "sections": [
+    {
+      "name": "intro",
+      "durationS": 16,
+      "durationMs": 16000,
+      "positiveStyles": [
+        "electronic",
+        "cinematic",
+        "driving",
+        "epic",
+        "analog synth",
+        "122 bpm",
+        "instrumental",
+        "sparse opening"
+      ],
+      "negativeStyles": [
+        "ukulele",
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "opens the piece"
+      ]
+    },
+    {
+      "name": "build",
+      "durationS": 31,
+      "durationMs": 31000,
+      "positiveStyles": [
+        "electronic",
+        "cinematic",
+        "driving",
+        "epic",
+        "analog synth",
+        "soft brass",
+        "sub bass",
+        "122 bpm",
+        "instrumental",
+        "rising energy"
+      ],
+      "negativeStyles": [
+        "ukulele",
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "carries the piece"
+      ]
+    },
+    {
+      "name": "main",
+      "durationS": 43,
+      "durationMs": 43000,
+      "positiveStyles": [
+        "electronic",
+        "cinematic",
+        "driving",
+        "epic",
+        "analog synth",
+        "soft brass",
+        "sub bass",
+        "drums",
+        "122 bpm",
+        "instrumental",
+        "fullest section"
+      ],
+      "negativeStyles": [
+        "ukulele",
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "carries the piece"
+      ]
+    },
+    {
+      "name": "lift",
+      "durationS": 16,
+      "durationMs": 16000,
+      "positiveStyles": [
+        "electronic",
+        "cinematic",
+        "driving",
+        "epic",
+        "analog synth",
+        "soft brass",
+        "sub bass",
+        "drums",
+        "122 bpm",
+        "instrumental",
+        "lift, brightest section"
+      ],
+      "negativeStyles": [
+        "ukulele",
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "carries the piece"
+      ]
+    },
+    {
+      "name": "outro",
+      "durationS": 14,
+      "durationMs": 14000,
+      "positiveStyles": [
+        "electronic",
+        "cinematic",
+        "driving",
+        "epic",
+        "analog synth",
+        "soft brass",
+        "122 bpm",
+        "instrumental",
+        "arrival, hard ending on the beat"
+      ],
+      "negativeStyles": [
+        "ukulele",
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "ends the piece"
+      ]
+    }
+  ],
+  "plan": {
+    "positiveGlobalStyles": [
+      "electronic",
+      "cinematic",
+      "driving",
+      "epic",
+      "analog synth",
+      "soft brass",
+      "sub bass",
+      "drums",
+      "122 bpm",
+      "instrumental"
+    ],
+    "negativeGlobalStyles": [
+      "ukulele",
+      "vocals",
+      "singing"
+    ],
+    "sections": [
+      {
+        "name": "intro",
+        "durationS": 16,
+        "durationMs": 16000,
+        "positiveStyles": [
+          "electronic",
+          "cinematic",
+          "driving",
+          "epic",
+          "analog synth",
+          "122 bpm",
+          "instrumental",
+          "sparse opening"
+        ],
+        "negativeStyles": [
+          "ukulele",
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "opens the piece"
+        ]
+      },
+      {
+        "name": "build",
+        "durationS": 31,
+        "durationMs": 31000,
+        "positiveStyles": [
+          "electronic",
+          "cinematic",
+          "driving",
+          "epic",
+          "analog synth",
+          "soft brass",
+          "sub bass",
+          "122 bpm",
+          "instrumental",
+          "rising energy"
+        ],
+        "negativeStyles": [
+          "ukulele",
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "carries the piece"
+        ]
+      },
+      {
+        "name": "main",
+        "durationS": 43,
+        "durationMs": 43000,
+        "positiveStyles": [
+          "electronic",
+          "cinematic",
+          "driving",
+          "epic",
+          "analog synth",
+          "soft brass",
+          "sub bass",
+          "drums",
+          "122 bpm",
+          "instrumental",
+          "fullest section"
+        ],
+        "negativeStyles": [
+          "ukulele",
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "carries the piece"
+        ]
+      },
+      {
+        "name": "lift",
+        "durationS": 16,
+        "durationMs": 16000,
+        "positiveStyles": [
+          "electronic",
+          "cinematic",
+          "driving",
+          "epic",
+          "analog synth",
+          "soft brass",
+          "sub bass",
+          "drums",
+          "122 bpm",
+          "instrumental",
+          "lift, brightest section"
+        ],
+        "negativeStyles": [
+          "ukulele",
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "carries the piece"
+        ]
+      },
+      {
+        "name": "outro",
+        "durationS": 14,
+        "durationMs": 14000,
+        "positiveStyles": [
+          "electronic",
+          "cinematic",
+          "driving",
+          "epic",
+          "analog synth",
+          "soft brass",
+          "122 bpm",
+          "instrumental",
+          "arrival, hard ending on the beat"
+        ],
+        "negativeStyles": [
+          "ukulele",
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "ends the piece"
+        ]
+      }
+    ]
+  },
+  "lint": [
+    {
+      "code": "palette-applied",
+      "level": "note",
+      "message": "no instruments were named, so palette-analog-synth was applied (Analog synth, Soft brass, Sub bass, Driving drums); hear them with audio_palette before sending"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "compiler": "audio-intent-v1",
+  "hash": "ai-v1-157b19f601509ad6",
+  "canonicalIntent": {
+    "use": "logo sting",
+    "mood": [
+      "bright",
+      "playful"
+    ],
+    "instruments": [
+      "music-box"
+    ],
+    "lengthS": 8
+  },
+  "seed": {
+    "genres": [
+      "indie pop"
+    ],
+    "moods": [
+      "bright",
+      "playful"
+    ],
+    "instruments": [
+      "music box"
+    ],
+    "bpm": 96,
+    "key": null,
+    "avoid": [
+      "vocals",
+      "singing"
+    ]
+  },
+  "paletteId": null,
+  "suno": {
+    "style": "indie pop, bright, playful, music box, 96 bpm",
+    "lyrics": "[Instrumental]",
+    "exclude": "vocals, singing"
+  },
+  "elevenlabsSentence": "Bright, playful indie pop instrumental, 96 BPM. Built on music box. No vocals, no singing.",
+  "sections": [
+    {
+      "name": "intro",
+      "durationS": 3,
+      "durationMs": 3000,
+      "positiveStyles": [
+        "indie pop",
+        "bright",
+        "playful",
+        "music box",
+        "96 bpm",
+        "instrumental",
+        "sparse opening"
+      ],
+      "negativeStyles": [
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "opens the piece"
+      ]
+    },
+    {
+      "name": "main",
+      "durationS": 5,
+      "durationMs": 5000,
+      "positiveStyles": [
+        "indie pop",
+        "bright",
+        "playful",
+        "music box",
+        "96 bpm",
+        "instrumental",
+        "fullest section"
+      ],
+      "negativeStyles": [
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "carries the piece"
+      ]
+    }
+  ],
+  "plan": {
+    "positiveGlobalStyles": [
+      "indie pop",
+      "bright",
+      "playful",
+      "music box",
+      "96 bpm",
+      "instrumental"
+    ],
+    "negativeGlobalStyles": [
+      "vocals",
+      "singing"
+    ],
+    "sections": [
+      {
+        "name": "intro",
+        "durationS": 3,
+        "durationMs": 3000,
+        "positiveStyles": [
+          "indie pop",
+          "bright",
+          "playful",
+          "music box",
+          "96 bpm",
+          "instrumental",
+          "sparse opening"
+        ],
+        "negativeStyles": [
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "opens the piece"
+        ]
+      },
+      {
+        "name": "main",
+        "durationS": 5,
+        "durationMs": 5000,
+        "positiveStyles": [
+          "indie pop",
+          "bright",
+          "playful",
+          "music box",
+          "96 bpm",
+          "instrumental",
+          "fullest section"
+        ],
+        "negativeStyles": [
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "carries the piece"
+        ]
+      }
+    ]
+  },
+  "lint": []
+}

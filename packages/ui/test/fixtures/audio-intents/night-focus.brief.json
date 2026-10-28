@@ -1,0 +1,178 @@
+{
+  "compiler": "audio-intent-v1",
+  "hash": "ai-v1-7f64df7423ae2b8f",
+  "canonicalIntent": {
+    "use": "terminal app background",
+    "mood": [
+      "night",
+      "focused"
+    ],
+    "instruments": [
+      "synth pad",
+      "sub bass"
+    ],
+    "lengthS": 90,
+    "loop": true,
+    "bpm": 84,
+    "key": "A minor"
+  },
+  "seed": {
+    "genres": [
+      "downtempo",
+      "minimal electronic"
+    ],
+    "moods": [
+      "night",
+      "focused"
+    ],
+    "instruments": [
+      "synth pad",
+      "sub bass"
+    ],
+    "bpm": 84,
+    "key": "A minor",
+    "avoid": [
+      "vocals",
+      "singing",
+      "fade-out ending"
+    ]
+  },
+  "paletteId": null,
+  "suno": {
+    "style": "downtempo, minimal electronic, night, focused, synth pad, sub bass, 84 bpm, A minor",
+    "lyrics": "[Instrumental]",
+    "exclude": "vocals, singing, fade-out ending"
+  },
+  "elevenlabsSentence": "Night, focused downtempo / minimal electronic instrumental, 84 BPM, A minor. Built on synth pad and sub bass. No vocals, no singing, no fade-out ending.",
+  "sections": [
+    {
+      "name": "loop a",
+      "durationS": 45,
+      "durationMs": 45000,
+      "positiveStyles": [
+        "downtempo",
+        "minimal electronic",
+        "night",
+        "focused",
+        "synth pad",
+        "sub bass",
+        "84 bpm",
+        "A minor",
+        "instrumental",
+        "loop body, no ending"
+      ],
+      "negativeStyles": [
+        "vocals",
+        "singing",
+        "fade-out ending",
+        "fade-out ending",
+        "ending sting"
+      ],
+      "directions": [
+        "loops back to the first bar without a gap"
+      ]
+    },
+    {
+      "name": "loop b",
+      "durationS": 45,
+      "durationMs": 45000,
+      "positiveStyles": [
+        "downtempo",
+        "minimal electronic",
+        "night",
+        "focused",
+        "synth pad",
+        "sub bass",
+        "84 bpm",
+        "A minor",
+        "instrumental",
+        "loop body, variation, no ending"
+      ],
+      "negativeStyles": [
+        "vocals",
+        "singing",
+        "fade-out ending",
+        "fade-out ending",
+        "ending sting"
+      ],
+      "directions": [
+        "loops back to the first bar without a gap"
+      ]
+    }
+  ],
+  "plan": {
+    "positiveGlobalStyles": [
+      "downtempo",
+      "minimal electronic",
+      "night",
+      "focused",
+      "synth pad",
+      "sub bass",
+      "84 bpm",
+      "A minor",
+      "instrumental"
+    ],
+    "negativeGlobalStyles": [
+      "vocals",
+      "singing",
+      "fade-out ending"
+    ],
+    "sections": [
+      {
+        "name": "loop a",
+        "durationS": 45,
+        "durationMs": 45000,
+        "positiveStyles": [
+          "downtempo",
+          "minimal electronic",
+          "night",
+          "focused",
+          "synth pad",
+          "sub bass",
+          "84 bpm",
+          "A minor",
+          "instrumental",
+          "loop body, no ending"
+        ],
+        "negativeStyles": [
+          "vocals",
+          "singing",
+          "fade-out ending",
+          "fade-out ending",
+          "ending sting"
+        ],
+        "directions": [
+          "loops back to the first bar without a gap"
+        ]
+      },
+      {
+        "name": "loop b",
+        "durationS": 45,
+        "durationMs": 45000,
+        "positiveStyles": [
+          "downtempo",
+          "minimal electronic",
+          "night",
+          "focused",
+          "synth pad",
+          "sub bass",
+          "84 bpm",
+          "A minor",
+          "instrumental",
+          "loop body, variation, no ending"
+        ],
+        "negativeStyles": [
+          "vocals",
+          "singing",
+          "fade-out ending",
+          "fade-out ending",
+          "ending sting"
+        ],
+        "directions": [
+          "loops back to the first bar without a gap"
+        ]
+      }
+    ]
+  },
+  "lint": []
+}

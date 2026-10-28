@@ -1,0 +1,312 @@
+{
+  "compiler": "audio-intent-v1",
+  "hash": "ai-v1-fabbea4c4df1d78d",
+  "canonicalIntent": {
+    "use": "video bed under narration",
+    "sentence": "hopeful 45 second bed without vocals",
+    "mood": [
+      "hopeful",
+      "warm"
+    ],
+    "lengthS": 45,
+    "avoid": [
+      "drums"
+    ]
+  },
+  "seed": {
+    "genres": [
+      "indie folk"
+    ],
+    "moods": [
+      "hopeful",
+      "warm"
+    ],
+    "instruments": [
+      "acoustic guitar",
+      "electric piano",
+      "warm bass guitar",
+      "hand percussion"
+    ],
+    "bpm": 96,
+    "key": null,
+    "avoid": [
+      "drums",
+      "vocals",
+      "singing"
+    ]
+  },
+  "paletteId": "palette-acoustic-guitar",
+  "suno": {
+    "style": "indie folk, hopeful, warm, acoustic guitar, electric piano, warm bass guitar, hand percussion, 96 bpm",
+    "lyrics": "[Instrumental]",
+    "exclude": "drums, vocals, singing"
+  },
+  "elevenlabsSentence": "Hopeful, warm indie folk instrumental, 96 BPM. Built on acoustic guitar, electric piano, warm bass guitar and hand percussion. No drums, no vocals, no singing.",
+  "sections": [
+    {
+      "name": "intro",
+      "durationS": 6,
+      "durationMs": 6000,
+      "positiveStyles": [
+        "indie folk",
+        "hopeful",
+        "warm",
+        "acoustic guitar",
+        "96 bpm",
+        "instrumental",
+        "sparse opening"
+      ],
+      "negativeStyles": [
+        "drums",
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "opens the piece"
+      ]
+    },
+    {
+      "name": "build",
+      "durationS": 11,
+      "durationMs": 11000,
+      "positiveStyles": [
+        "indie folk",
+        "hopeful",
+        "warm",
+        "acoustic guitar",
+        "electric piano",
+        "warm bass guitar",
+        "96 bpm",
+        "instrumental",
+        "rising energy"
+      ],
+      "negativeStyles": [
+        "drums",
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "carries the piece"
+      ]
+    },
+    {
+      "name": "main",
+      "durationS": 17,
+      "durationMs": 17000,
+      "positiveStyles": [
+        "indie folk",
+        "hopeful",
+        "warm",
+        "acoustic guitar",
+        "electric piano",
+        "warm bass guitar",
+        "hand percussion",
+        "96 bpm",
+        "instrumental",
+        "fullest section"
+      ],
+      "negativeStyles": [
+        "drums",
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "carries the piece"
+      ]
+    },
+    {
+      "name": "lift",
+      "durationS": 6,
+      "durationMs": 6000,
+      "positiveStyles": [
+        "indie folk",
+        "hopeful",
+        "warm",
+        "acoustic guitar",
+        "electric piano",
+        "warm bass guitar",
+        "hand percussion",
+        "96 bpm",
+        "instrumental",
+        "lift, brightest section"
+      ],
+      "negativeStyles": [
+        "drums",
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "carries the piece"
+      ]
+    },
+    {
+      "name": "outro",
+      "durationS": 5,
+      "durationMs": 5000,
+      "positiveStyles": [
+        "indie folk",
+        "hopeful",
+        "warm",
+        "acoustic guitar",
+        "electric piano",
+        "96 bpm",
+        "instrumental",
+        "arrival, hard ending on the beat"
+      ],
+      "negativeStyles": [
+        "drums",
+        "vocals",
+        "singing"
+      ],
+      "directions": [
+        "ends the piece"
+      ]
+    }
+  ],
+  "plan": {
+    "positiveGlobalStyles": [
+      "indie folk",
+      "hopeful",
+      "warm",
+      "acoustic guitar",
+      "electric piano",
+      "warm bass guitar",
+      "hand percussion",
+      "96 bpm",
+      "instrumental"
+    ],
+    "negativeGlobalStyles": [
+      "drums",
+      "vocals",
+      "singing"
+    ],
+    "sections": [
+      {
+        "name": "intro",
+        "durationS": 6,
+        "durationMs": 6000,
+        "positiveStyles": [
+          "indie folk",
+          "hopeful",
+          "warm",
+          "acoustic guitar",
+          "96 bpm",
+          "instrumental",
+          "sparse opening"
+        ],
+        "negativeStyles": [
+          "drums",
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "opens the piece"
+        ]
+      },
+      {
+        "name": "build",
+        "durationS": 11,
+        "durationMs": 11000,
+        "positiveStyles": [
+          "indie folk",
+          "hopeful",
+          "warm",
+          "acoustic guitar",
+          "electric piano",
+          "warm bass guitar",
+          "96 bpm",
+          "instrumental",
+          "rising energy"
+        ],
+        "negativeStyles": [
+          "drums",
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "carries the piece"
+        ]
+      },
+      {
+        "name": "main",
+        "durationS": 17,
+        "durationMs": 17000,
+        "positiveStyles": [
+          "indie folk",
+          "hopeful",
+          "warm",
+          "acoustic guitar",
+          "electric piano",
+          "warm bass guitar",
+          "hand percussion",
+          "96 bpm",
+          "instrumental",
+          "fullest section"
+        ],
+        "negativeStyles": [
+          "drums",
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "carries the piece"
+        ]
+      },
+      {
+        "name": "lift",
+        "durationS": 6,
+        "durationMs": 6000,
+        "positiveStyles": [
+          "indie folk",
+          "hopeful",
+          "warm",
+          "acoustic guitar",
+          "electric piano",
+          "warm bass guitar",
+          "hand percussion",
+          "96 bpm",
+          "instrumental",
+          "lift, brightest section"
+        ],
+        "negativeStyles": [
+          "drums",
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "carries the piece"
+        ]
+      },
+      {
+        "name": "outro",
+        "durationS": 5,
+        "durationMs": 5000,
+        "positiveStyles": [
+          "indie folk",
+          "hopeful",
+          "warm",
+          "acoustic guitar",
+          "electric piano",
+          "96 bpm",
+          "instrumental",
+          "arrival, hard ending on the beat"
+        ],
+        "negativeStyles": [
+          "drums",
+          "vocals",
+          "singing"
+        ],
+        "directions": [
+          "ends the piece"
+        ]
+      }
+    ]
+  },
+  "lint": [
+    {
+      "code": "palette-applied",
+      "level": "note",
+      "message": "no instruments were named, so palette-acoustic-guitar was applied (Acoustic guitar, Electric piano, Warm bass, Hand percussion); hear them with audio_palette before sending"
+    }
+  ]
+}
