@@ -33,7 +33,7 @@ import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
 import { TermRail } from "@gt/ui/components/audio/TermRail.tsx";
 import { VariationList } from "@gt/ui/components/audio/VariationList.tsx";
 import { conceptFor, variationsOfSeed } from "@gt/ui/components/audio/variations.ts";
-import { atlasFor, playableIds } from "@gt/ui/components/audio/atlas.ts";
+import { atlasFor, playableIds, sketchHref } from "@gt/ui/components/audio/atlas.ts";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Select } from "@gt/ui/components/field/Field.tsx";
@@ -108,16 +108,24 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
   const [door, setDoor] = useState<"words" | "ear" | "track">("words");
   // The ear door opens only where this machine can play both sides of at least one pair.
   const canDuel = playableAxes(can).length > 0;
+  // Every door answers with its sound, as Compose does: the new seed's sketch over the shape it has.
+  const sound = (next: Seed, levels: readonly number[] | null): void => {
+    const ids = playableIds(next.instruments, can);
+    if (ids.length > 0) ear.play(sketchHref(ids, levels ?? [3], next.bpm, next.key));
+  };
   const duel = useDuel(ear, can, door === "ear", (next) => {
     setSeed(next);
     setFrom(BLANK);
     setLoaded("by ear");
+    sound(next, null);
   });
   // A track keeps the seed's words and gives it the track's tempo, key and shape.
   const track = useTrack((read) => {
-    setSeed((cur) => ({ ...cur, bpm: read.bpm ?? cur.bpm, key: read.key ?? cur.key }));
+    const next = { ...seed, bpm: read.bpm ?? seed.bpm, key: read.key ?? seed.key };
+    setSeed(next);
     shape.adoptLevels(read.levels);
     setLoaded(`track · ${read.name}`);
+    sound(next, read.levels.length > 0 ? read.levels : null);
   });
 
   const send = (s0: Seed, label: string): void => {
