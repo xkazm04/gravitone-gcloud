@@ -3,7 +3,7 @@
 // THE EAR STRIP - instruments heard in turn, each playing the SAME phrase at the seed's tempo and
 // key (the audition route renders it), so the only thing that differs between two rows is the
 // instrument. Plain words first, the term Suno reads second: the audition is the input, the term
-// is what it teaches. `blind` hides the terms until one is chosen, so a pick is made by ear.
+// is what it teaches. `blind` hides every word until one is chosen, so a pick is made by ear alone.
 //
 // `swap` lists one instrument's candidates with the instrument itself on top (`now`), so the
 // comparison always has its reference; `add` lists what the seed does not hold yet.
@@ -34,11 +34,18 @@ export function EarStrip({ title, now, candidates, stateOf, onPlay, onPick, onCl
     return (
       <li key={e.id} className={s.cand} data-now={isNow} data-sounding={st !== "idle"}>
         <EarButton state={st} name={blind && !isNow ? `sound ${i + 1}` : e.term} onPress={() => onPlay(e)} />
-        <span className={s.words}>
-          <span className={s.plain}>{e.plain.join(" · ")}</span>
-          {blind && !isNow ? <span className={s.hidden}>{`#${i + 1}`}</span> : <span className={s.termWord}>{e.term}</span>}
-        </span>
-        <span className={s.termWord}>{e.role}</span>
+        {blind && !isNow ? (
+          <span className={s.words}>
+            <span className={s.plain}>{`sound ${i + 1}`}</span>
+            <span className={s.hidden}>· · ·</span>
+          </span>
+        ) : (
+          <span className={s.words}>
+            <span className={s.plain}>{e.plain.join(" · ")}</span>
+            <span className={s.termWord}>{e.term}</span>
+          </span>
+        )}
+        <span className={s.termWord}>{blind && !isNow ? "" : e.role}</span>
         {isNow ? <span className={s.termWord}>now</span> : <Button label="Use" size="sm" onPress={() => onPick(e)} />}
       </li>
     );

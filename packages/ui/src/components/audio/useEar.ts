@@ -29,6 +29,18 @@ export type Ear = {
   readonly stop: () => void;
 };
 
+type Handlers = { readonly playing: () => void; readonly ended: () => void; readonly error: (code: number | undefined) => void };
+
+/** Point the one element at a new source, its events at this press. Outside the hook: the element is
+ *  an external system the hook drives, not a value React renders from. */
+function load(a: HTMLAudioElement, href: string, on: Handlers): void {
+  a.onplaying = on.playing;
+  a.onended = on.ended;
+  a.onerror = () => on.error(a.error?.code);
+  a.pause();
+  a.src = href;
+}
+
 export function useEar(): Ear {
   const el = useRef<HTMLAudioElement | null>(null);
   const dog = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,22 +88,22 @@ export function useEar(): Ear {
         el.current = a;
       }
       const me = a;
-      me.onplaying = () => {
-        calm();
-        setState("playing");
-      };
-      me.onended = () => {
-        setAt(null);
-        setState("idle");
-      };
-      me.onerror = () => {
-        calm();
-        setFailed(mediaErrorWords(me.error?.code, href));
-        setAt(null);
-        setState("idle");
-      };
-      me.pause();
-      me.src = href;
+      load(me, href, {
+        playing: () => {
+          calm();
+          setState("playing");
+        },
+        ended: () => {
+          setAt(null);
+          setState("idle");
+        },
+        error: (code) => {
+          calm();
+          setFailed(mediaErrorWords(code, href));
+          setAt(null);
+          setState("idle");
+        },
+      });
       setAt(href);
       setState("loading");
       setFailed(null);

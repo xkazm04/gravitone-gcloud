@@ -18,6 +18,7 @@ import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { parseSource, type TokenSource } from "@gt/ui/tokenSource";
 
 import { AudioSection } from "./AudioKit.tsx";
+import { EarSection } from "./EarKit.tsx";
 import { BoardSection } from "./BoardKit.tsx";
 import { boardKitData } from "./boardKitData.ts";
 import { ContractSection } from "./Contract.tsx";
@@ -74,6 +75,7 @@ export default function KitPage() {
         <ProduceSection />
         <PartSection />
         <AudioSection />
+        <EarSection />
         <GraphSection />
         <LibrarySection />
         <StyleSection />

@@ -11,7 +11,7 @@
 //            (`-rhodes +grand piano`) on the strip.
 // The seed itself stays the lane's (./AudioLane.tsx): this hook only ever writes it through the
 // setter it is handed, so the composer, the variations and the receipt all read one seed.
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ATLAS, atlasFor, auditionHref, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
 import { EarStrip } from "@gt/ui/components/audio/EarStrip.tsx";
@@ -25,6 +25,39 @@ type Open = { readonly kind: "swap"; readonly term: string } | { readonly kind: 
 type Move = { readonly minus: string; readonly plus: string };
 
 const NONE: ReadonlySet<number> = new Set();
+
+// WARMING. A first audition is rendered on request (seconds); a second is a file read. So what the
+// person is about to compare - the seed's instruments, and a strip's candidates the moment it
+// opens - is requested ahead, three renders at a time, each href once per page life. A press
+// on one still warming joins its render (the server dedupes in-flight renders by file).
+const warmed = new Set<string>();
+const queue: string[] = [];
+let running = 0;
+const WARM_AT_ONCE = 3;
+
+function pump(): void {
+  while (running < WARM_AT_ONCE && queue.length > 0) {
+    const href = queue.shift();
+    if (href === undefined) break;
+    running++;
+    void fetch(href)
+      .then((r) => r.arrayBuffer())
+      .catch(() => undefined) // a warm that fails is retried by the press itself, in words
+      .finally(() => {
+        running--;
+        pump();
+      });
+  }
+}
+
+function warm(hrefs: readonly string[]): void {
+  for (const h of hrefs) {
+    if (warmed.has(h)) continue;
+    warmed.add(h);
+    queue.push(h);
+  }
+  pump();
+}
 
 export type Steer = {
   readonly say: SayItProps;
@@ -96,6 +129,18 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, audible: rea
     },
     onAdd: () => setOpen(open?.kind === "add" ? null : { kind: "add" }),
   };
+
+  // What to warm: the seed's playable instruments, then the open strip's candidates. Keyed by
+  // their hrefs, which carry tempo and key, so a tempo typed digit by digit warms once it settles.
+  const playable = seed.instruments.map(entryOf).filter((e): e is AtlasEntry => e !== undefined);
+  const stripFor: readonly AtlasEntry[] =
+    open?.kind === "swap" ? swapsFor(entryOf(open.term) ?? playable[0] ?? (ATLAS[0] as AtlasEntry), can, seed.instruments) : open?.kind === "add" ? ATLAS.filter((e) => can.has(e.id)) : [];
+  const toWarm = [...playable, ...stripFor].map(href).join(" ");
+  useEffect(() => {
+    if (toWarm === "") return;
+    const t = setTimeout(() => warm(toWarm.split(" ")), 700);
+    return () => clearTimeout(t);
+  }, [toWarm]);
 
   let strip: ReactNode = null;
   const common = { stateOf: (e: AtlasEntry) => ear.stateOf(href(e)), onPlay: (e: AtlasEntry) => ear.toggle(href(e)), onClose: () => setOpen(null), blind, onBlind: setBlind };
