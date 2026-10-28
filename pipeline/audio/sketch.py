@@ -6,9 +6,9 @@ Every four-bar column of the shape plays the audition phrase (./audition.py) onc
 its level carries: the quietest level the first instrument alone, the fullest every one - the
 same rule the composer writes into the ElevenLabs plan (@gt/ui shape.ts `voicesAt`), so what is
 heard here is what the plan asks for. Each voice is brought to the same RMS before mixing, so no
-instrument wins by being sampled louder. From the third level a soft synthesised pulse (a pitch-
-swept sine kick, a filtered-noise tick on the off-beats at the fullest) keeps time: it is a click,
-not a drummer, and the brief does not ask for it.
+instrument wins by being sampled louder. At the fullest level a soft synthesised pulse (a pitch-
+swept sine kick, a filtered-noise tick on the off-beats) keeps time: it is a click, not a
+drummer, and the brief does not ask for it.
 
 Spec: {"voices": [{"files": [...], "role": "keys"}], "levels": [0..3, ...], "bpm", "tonic",
        "minor", "lufs", "cacheDir"}. Answer: {"ok": true, "durationS", "lufs", "voices", "columns"}.
@@ -23,12 +23,12 @@ MAX_VOICES = 5
 
 
 def _pulse(beat, level):
-    """One four-bar group of the click at `level` (silent under the third level)."""
+    """One four-bar group of the click at `level` (silent under the fullest)."""
     import numpy as np
 
     n = int(16 * beat * SR)
     out = np.zeros(n, dtype="float64")
-    if level < 2:
+    if level < 3:
         return out
     k = int(0.18 * SR)
     t = np.arange(k) / SR
@@ -41,7 +41,7 @@ def _pulse(beat, level):
         if b % 2 == 0:
             m = max(0, min(k, n - at))
             out[at:at + m] += 0.9 * kick[:m]
-        if level >= 3:
+        if b % 2 == 1:
             off = int((b + 0.5) * beat * SR)
             m = max(0, min(h, n - off))
             out[off:off + m] += 0.12 * noise[:m]

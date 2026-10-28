@@ -50,7 +50,7 @@ function pump(): void {
   }
 }
 
-function warm(hrefs: readonly string[]): void {
+export function warm(hrefs: readonly string[]): void {
   for (const h of hrefs) {
     if (warmed.has(h)) continue;
     warmed.add(h);

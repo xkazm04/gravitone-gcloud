@@ -35,12 +35,14 @@ import { conceptFor, variationsOfSeed } from "@gt/ui/components/audio/variations
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Select } from "@gt/ui/components/field/Field.tsx";
+import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 
 import { outcomeOf, useReceipt } from "../../projects/_plan/receipt.tsx";
 import { useShell } from "../../_shell/Providers.tsx";
 import { copyText } from "../../_shell/clipboard.ts";
 import type { AudioView, SeedTake } from "./read.ts";
 import type { setHand, sunoConfirm, sunoReceipt } from "./actions.ts";
+import { useDuel } from "./duelState.tsx";
 import { useShape } from "./shapeState.tsx";
 import { useSteer } from "./steer.tsx";
 import s from "./audio.module.css";
@@ -49,6 +51,10 @@ import s from "./audio.module.css";
  *  never the module (the Board's and the Floor's wire shape, ../../projects/_port/wire.ts). */
 export type AudioActs = { readonly setHand: typeof setHand; readonly sunoReceipt: typeof sunoReceipt; readonly sunoConfirm: typeof sunoConfirm };
 
+const DOORS = [
+  { value: "words", label: "say it" },
+  { value: "ear", label: "by ear" },
+] as const;
 const LIST_OF: Readonly<Record<string, SeedList>> = { genre: "genres", mood: "moods", instrument: "instruments" };
 const BLANK = "__blank";
 
@@ -94,6 +100,13 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
     },
     shape.adopt,
   );
+  // Two doors into the one seed: a sentence, or pairs heard by ear.
+  const [door, setDoor] = useState<"words" | "ear">("words");
+  const duel = useDuel(ear, can, door === "ear", (next) => {
+    setSeed(next);
+    setFrom(BLANK);
+    setLoaded("by ear");
+  });
 
   const send = (s0: Seed, label: string): void => {
     const base = sunoFieldsOf(s0, hands, label === "blank" ? undefined : label);
@@ -169,7 +182,10 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
           />
           {!view.takes.ok && <ErrorLine message={`takes: ${view.takes.error}`} />}
         </div>
-        <SayIt {...steer.say} />
+        <div className={s.from}>
+          <Seg label="start from" options={DOORS} value={door} onChange={setDoor} />
+        </div>
+        {door === "words" || duel === null ? <SayIt {...steer.say} /> : duel}
         <SeedComposer
           seed={seed}
           ear={steer.ear}

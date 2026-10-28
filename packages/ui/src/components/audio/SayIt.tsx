@@ -8,6 +8,7 @@
 // chip to add.
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
+import { Field } from "../field/Field.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import type { Produced, Translation } from "./lexicon.ts";
 import s from "./Ear.module.css";
@@ -36,7 +37,9 @@ export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare
           onCompose();
         }}
       >
-        <input className={s.sentence} value={value} placeholder="like a rainy café at night" aria-label="the music, in your words" onChange={(e) => onChange(e.currentTarget.value)} />
+        <div className={s.sentence}>
+          <Field label="the music, in your words" value={value} placeholder="like a rainy café at night" maxLength={300} onChange={onChange} />
+        </div>
         <Button label="Compose" tone="cyan" submit disabled={used === 0 && heard.bpm === null} />
       </form>
       {heard.tokens.length > 0 && (
