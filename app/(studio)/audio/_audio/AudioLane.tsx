@@ -33,7 +33,7 @@ import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
 import { TermRail } from "@gt/ui/components/audio/TermRail.tsx";
 import { VariationList } from "@gt/ui/components/audio/VariationList.tsx";
 import { conceptFor, variationsOfSeed } from "@gt/ui/components/audio/variations.ts";
-import { atlasFor } from "@gt/ui/components/audio/atlas.ts";
+import { atlasFor, playableIds } from "@gt/ui/components/audio/atlas.ts";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Select } from "@gt/ui/components/field/Field.tsx";
@@ -234,8 +234,9 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
             // machine has no samples for would play the seed minus its old instrument, a lie.
             stateOf: (v) => {
               const href = shape.sketchOf(v.seed);
+              const heard = playableIds(v.seed.instruments, can);
               const added = v.seed.instruments.filter((t) => !seed.instruments.includes(t));
-              if (href === null || href === shape.sketchOf(seed) || added.some((t) => !can.has(atlasFor(t)?.id ?? ""))) return null;
+              if (href === null || href === shape.sketchOf(seed) || added.some((t) => !heard.includes(atlasFor(t)?.id ?? ""))) return null;
               return ear.stateOf(href);
             },
             onPlay: (v) => {

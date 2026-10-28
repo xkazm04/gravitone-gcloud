@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { ok } from "@gt/domain/errors";
-import { auditionHref, sketchHref } from "@gt/ui/components/audio/atlas.ts";
+import { auditionHref, playableIds, sketchHref } from "@gt/ui/components/audio/atlas.ts";
 import { PRESETS } from "@gt/ui/components/audio/shape.ts";
 import { steerBrief } from "@gt/ui/components/audio/steer.ts";
 
@@ -29,7 +29,7 @@ export const STEER_OPS: readonly McpToolSpec[] = [
     run: async (a) => {
       const b = steerBrief({ sentence: a.sentence, ...(a.shape === undefined ? {} : { shape: a.shape }), ...(a.length_s === undefined ? {} : { lengthS: a.length_s }) });
       const can = new Set(await audibleIds());
-      const playable = [...new Set(b.instruments.flatMap((i) => (i.atlas !== null && can.has(i.atlas) ? [i.atlas] : [])))];
+      const playable = playableIds(b.seed.instruments, can);
       const quote = b.plan === null ? null : priceCall({ op: "compose", seconds: b.planSeconds });
       return ok({
         heard: b.heard,
@@ -39,7 +39,7 @@ export const STEER_OPS: readonly McpToolSpec[] = [
         sections: b.sections.map((s) => ({ name: s.label, start_s: Math.round(s.startS * 10) / 10, end_s: Math.round(s.endS * 10) / 10, bars: s.bars, level: s.level })),
         elevenlabs: b.plan === null ? null : { plan: b.plan, seconds: Math.round(b.planSeconds), credits: quote?.credits ?? null, basis: quote?.basis ?? "unpriced", dry: true },
         auditions: b.instruments.map((i) => ({ term: i.term, path: i.atlas !== null && can.has(i.atlas) ? auditionHref(i.atlas, b.seed.bpm, b.seed.key) : null })),
-        sketch: playable.length === 0 ? null : sketchHref(playable.slice(0, 5), b.levels ?? [3], b.seed.bpm, b.seed.key),
+        sketch: playable.length === 0 ? null : sketchHref(playable, b.levels ?? [3], b.seed.bpm, b.seed.key),
       });
     },
   }),

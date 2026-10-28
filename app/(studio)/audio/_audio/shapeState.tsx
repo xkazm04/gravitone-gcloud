@@ -9,7 +9,7 @@
 // measured) - quoted only: the desk has no ElevenLabs producer (lib/sound/engines.ts), and DRY.
 import { useState, type ReactNode } from "react";
 
-import { atlasFor, playableBpm, sketchHref } from "@gt/ui/components/audio/atlas.ts";
+import { playableBpm, playableIds, sketchHref } from "@gt/ui/components/audio/atlas.ts";
 import { EarButton } from "@gt/ui/components/audio/EarButton.tsx";
 import type { Translation } from "@gt/ui/components/audio/lexicon.ts";
 import type { Seed } from "@gt/ui/components/audio/recipe.ts";
@@ -44,7 +44,7 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
   const bpm = playableBpm(seed.bpm);
   // The sketch: the seed's playable instruments together, over the shape, or one full four bars
   // while Suno still decides the form. Free and local; the same ear as every audition.
-  const ids = [...new Set(seed.instruments.map((t) => atlasFor(t)?.id).filter((id): id is string => id !== undefined && can.has(id)))].slice(0, 5);
+  const ids = playableIds(seed.instruments, can);
   const hear = (cols: readonly Level[]): ReactNode => {
     if (ids.length === 0) return null;
     const href = sketchHref(ids, cols, bpm, seed.key);
@@ -68,7 +68,7 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
 
   const adoptLevels = (next: readonly Level[]): void => setLevels(next.length === 0 ? null : next.slice(0, 32));
   const sketchOf = (s0: Seed): string | null => {
-    const v = [...new Set(s0.instruments.map((t) => atlasFor(t)?.id).filter((id): id is string => id !== undefined && can.has(id)))].slice(0, 5);
+    const v = playableIds(s0.instruments, can);
     return v.length === 0 ? null : sketchHref(v, levels ?? [3], playableBpm(s0.bpm), s0.key);
   };
 

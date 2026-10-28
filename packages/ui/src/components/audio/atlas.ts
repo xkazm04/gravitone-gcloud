@@ -95,6 +95,20 @@ export function swapsFor(entry: AtlasEntry, audible: ReadonlySet<string>, have: 
   return out.slice(0, max);
 }
 
+/** The most instruments a sketch carries (lib/audio/atlas.ts refuses more). */
+export const SKETCH_VOICES = 5;
+
+/**
+ * The atlas ids a seed's instruments name that this machine can play, once each, in seed order,
+ * at most SKETCH_VOICES - the ONE spelling of "the seed's playable instruments" the shape's sketch,
+ * a variation's sketch, a swap heard in the mix and the agent door all use. `must` is kept in.
+ */
+export function playableIds(instruments: readonly string[], audible: ReadonlySet<string>, must?: string): string[] {
+  const ids = [...new Set(instruments.map((t) => atlasFor(t)?.id).filter((id): id is string => id !== undefined && audible.has(id)))];
+  if (must === undefined) return ids.slice(0, SKETCH_VOICES);
+  return [must, ...ids.filter((id) => id !== must)].slice(0, SKETCH_VOICES);
+}
+
 /** The tempo an audition plays at: the seed's when the renderer can play it (40-220), else the default. */
 export const playableBpm = (bpm: number | null): number => (bpm !== null && Number.isFinite(bpm) && Math.round(bpm) >= 40 && Math.round(bpm) <= 220 ? Math.round(bpm) : AUDITION_BPM);
 

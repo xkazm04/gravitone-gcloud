@@ -8,7 +8,7 @@
 // --hear renders, locally and free, one audition per playable instrument and the sketch of them
 // together over the shape (pipeline/audio/audition.py, sketch.py) from the sample libraries named
 // by GRAVITONE_SAMPLE_ROOTS, and prints the WAV paths. No store is opened.
-import { playableBpm } from "@gt/ui/components/audio/atlas.ts";
+import { playableBpm, playableIds } from "@gt/ui/components/audio/atlas.ts";
 import { clock, LEVEL_WORDS, PRESETS } from "@gt/ui/components/audio/shape.ts";
 import { steerBrief } from "@gt/ui/components/audio/steer.ts";
 
@@ -57,7 +57,7 @@ if (flag("--hear")) {
     const r = await auditionFile({ id: i.atlas, bpm, key: b.seed.key });
     heard.auditions.push(r.ok ? { term: i.term, file: r.value } : { term: i.term, file: null, why: r.error.message });
   }
-  const ids = [...new Set(b.instruments.flatMap((i) => (i.atlas !== null && can.has(i.atlas) ? [i.atlas] : [])))].slice(0, 5);
+  const ids = playableIds(b.seed.instruments, can);
   if (ids.length > 0) {
     const r = await sketchFile({ ids, levels: b.levels ?? [3], bpm, key: b.seed.key });
     if (r.ok) heard.sketch = r.value;

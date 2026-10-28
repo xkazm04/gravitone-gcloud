@@ -213,9 +213,13 @@ def cmd_audition(a):
 
 
 def cmd_serve(_a):
+    import io
+
     from audition import serve
 
-    serve(sys.stdin, sys.stdout)
+    # UTF-8 both ways, whatever the console's code page: a request carries sample paths, and Node
+    # writes them as UTF-8 (a "Cafe Keys" folder with an accent read as cp1252 is a missing file).
+    serve(io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8"), io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", line_buffering=True))
 
 
 def cmd_sketch(a):

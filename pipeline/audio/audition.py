@@ -297,7 +297,9 @@ def _loudness(x):
     n = len(x)
     if n < int(0.4 * SR):
         return 20.0 * math.log10(max(float(np.sqrt(np.mean(x * x))) if n else 0.0, 1e-9))
-    nfft = 1 << (n - 1).bit_length()  # a power of two: a ragged length made the FFT 10x slower
+    # A power of two (a ragged length made the FFT 10x slower), past the signal by half a second
+    # so the 38 Hz high-pass's tail does not wrap round onto its start.
+    nfft = 1 << (n + SR // 2 - 1).bit_length()
     spec = np.fft.rfft(x, nfft)
     w = 2 * math.pi * np.fft.rfftfreq(nfft, 1.0 / SR) / SR
     g2 = _biquad_gain2("high_shelf", 4.0, 1 / math.sqrt(2), 1500.0, w) * _biquad_gain2("high_pass", 0.0, 0.5, 38.0, w)
@@ -332,7 +334,7 @@ def serve(stdin, stdout):
     """One request per line, one answer per line, until stdin ends: {id, verb, spec, out} ->
     {id, ok, ...facts} or {id, ok: false, error, kind}. A render costs about a second; starting
     Python and importing NumPy costs three more on a loaded box, so the Node side keeps this
-    running (lib/audio/sidecar.ts) instead of spawning one per audition."""
+    running (lib/audio/renderWorker.ts) instead of spawning one per audition."""
     from sketch import render_sketch
 
     fns = {"audition": None, "sketch": render_sketch}

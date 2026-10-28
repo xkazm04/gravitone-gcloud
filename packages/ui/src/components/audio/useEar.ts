@@ -73,6 +73,7 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
     if (a !== null) a.pause();
     setAt(null);
     setState("idle");
+    setClock(0);
   }, []);
 
   useEffect(() => {
@@ -114,7 +115,9 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
           setClock(0);
         },
         time: (t) => {
-          if (press.current === mine) setClock(t);
+          // Twice a second is enough for a playhead over four-bar columns, and every write
+          // re-renders the composer.
+          if (press.current === mine) setClock((c) => (Math.abs(t - c) >= 0.5 ? t : c));
         },
         error: (code) => {
           calm();
