@@ -104,7 +104,8 @@ describe("the unit mutant registry", () => {
   test("every entry is live: find exactly once, unique id, a real test file", () => {
     const found = problems(MUTANTS, readRepo, collected);
     expect(found, `registry problems:\n  ${found.join("\n  ")}`).toEqual([]);
-  });
+    // Reads every registered source and test file: under the pre-push gate's parallel load it ran 10 s, past vitest's 5 s default.
+  }, 60_000);
 
   test(`every package test file has a mutant (budget ${UNGUARDED_TEST_BUDGET})`, () => {
     const open = unguarded(testFiles, MUTANTS);
