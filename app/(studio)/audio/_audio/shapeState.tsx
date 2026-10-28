@@ -32,7 +32,8 @@ export type ShapeState = {
   /** The ElevenLabs plan's sections as lines (name, seconds, styles); undefined with no shape. */
   readonly plan: string | undefined;
   /** A composed sentence that says a length or a use reshapes the piece. */
-  readonly adopt: (t: Translation) => void;
+  /** Answers the shape the piece now has (null: Suno decides the form), so the compose can play it. */
+  readonly adopt: (t: Translation) => readonly Level[] | null;
   /** A reference track's contour becomes the painted levels. */
   readonly adoptLevels: (levels: readonly Level[]) => void;
   /** The sketch of any seed over this shape (one full four bars while there is none); null when it has nothing this machine plays. */
@@ -56,14 +57,17 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
       </span>
     );
   };
-  const startWith = (p: Preset, columns?: number): void => setLevels(p.levels(columns ?? levels?.length ?? columnsFor(DEFAULT_LENGTH_S, bpm)));
+  const startWith = (p: Preset, columns?: number): Level[] => {
+    const next = p.levels(columns ?? levels?.length ?? columnsFor(DEFAULT_LENGTH_S, bpm));
+    setLevels(next);
+    return next;
+  };
 
-  const adopt = (t: Translation): void => {
+  const adopt = (t: Translation): readonly Level[] | null => {
     const preset = presetForWords(t.tokens.filter((x) => x.kind === "cue").map((x) => x.text.toLowerCase()));
-    if (t.lengthS === null && preset === undefined) return;
-    const fallback = PRESETS[0];
-    const p = preset ?? fallback;
-    if (p !== undefined) startWith(p, columnsFor(t.lengthS?.value ?? DEFAULT_LENGTH_S, playableBpm(t.seed.bpm)));
+    if (t.lengthS === null && preset === undefined) return levels;
+    const p = preset ?? PRESETS[0];
+    return p === undefined ? levels : startWith(p, columnsFor(t.lengthS?.value ?? DEFAULT_LENGTH_S, playableBpm(t.seed.bpm)));
   };
 
   const adoptLevels = (next: readonly Level[]): void => setLevels(next.length === 0 ? null : next.slice(0, 32));
@@ -77,7 +81,7 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
       <div className={s.row}>
         {hear([3])}
         {PRESETS.map((p) => (
-          <Chip key={p.id} label={p.label} casing="lower" ghost name={`shape: ${p.label}`} onPress={() => startWith(p)} />
+          <Chip key={p.id} label={p.label} casing="lower" ghost name={`shape: ${p.label}`} onPress={() => void startWith(p)} />
         ))}
       </div>
     );
@@ -98,7 +102,7 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
   };
   const node = (
     <>
-      <ShapeStrip levels={levels} bpm={bpm} playhead={playhead} onLevels={setLevels} voicesOf={(sec) => voicesAt(sec.level, seed.instruments)} presets={PRESETS} onPreset={(p) => startWith(p)} onLength={resize} onClear={() => setLevels(null)} />
+      <ShapeStrip levels={levels} bpm={bpm} playhead={playhead} onLevels={setLevels} voicesOf={(sec) => voicesAt(sec.level, seed.instruments)} presets={PRESETS} onPreset={(p) => void startWith(p)} onLength={resize} onClear={() => setLevels(null)} />
       <div className={s.row}>
         {hear(levels)}
         <Chip label="suno" value={`${sections.length} section ${sections.length === 1 ? "tag" : "tags"} · unverified`} casing="lower" tone="amber" />{" "}

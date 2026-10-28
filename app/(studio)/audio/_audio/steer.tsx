@@ -87,7 +87,7 @@ export type Steer = {
 };
 
 /** `onSaid` names where the seed came from when a sentence is composed into it. */
-export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, can: ReadonlySet<string>, onSaid: (sentence: string) => void, onHeard: (t: Translation) => void): Steer {
+export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, can: ReadonlySet<string>, onSaid: (sentence: string) => void, onHeard: (t: Translation) => readonly number[] | null): Steer {
   const [sentence, setSentence] = useState("");
   const heard = useMemo(() => translate(sentence), [sentence]);
   const [said, setSaid] = useState<Translation | null>(null);
@@ -107,14 +107,19 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
   // Provenance is drawn only while the sentence on screen is the one the seed was composed from.
   const live = said !== null && said.sentence === sentence ? said : null;
 
+  // A compose answers with its sound - what the screen's own play mark would play: the shape when
+  // the piece has one, else four bars of the instruments together (the press is the gesture a
+  // browser asks before it plays). Nothing playable, nothing plays.
   const composeFrom = (t: Translation): void => {
-    ear.stop();
     setOpen(null);
     setMove(null);
     setSaid(t);
     setSeed(t.seed);
-    onHeard(t);
+    const levels = onHeard(t);
     onSaid(t.sentence.trim());
+    const ids = playableIds(t.seed.instruments, can);
+    if (ids.length > 0) ear.play(sketchHref(ids, levels ?? [3], t.seed.bpm, t.seed.key));
+    else ear.stop();
   };
   const compose = (): void => composeFrom(heard);
 

@@ -35,8 +35,10 @@ const SIZE = 2;
 const KEEP_STDERR = 4096;
 /** Workers that die before answering once, in a row, before the warm path is given up for this process. */
 const START_FAILURES = 2;
-const g = globalThis as typeof globalThis & { __gtAuditionPool?: Pool };
-const pool = (): Pool => (g.__gtAuditionPool ??= { workers: [], queue: [], seq: 0, broken: null, failedStarts: 0 });
+// Versioned: a dev reload keeps globalThis, and a pool left by an older shape of this module (one
+// without a queue, say) would otherwise be taken up by the new code and fail every render.
+const g = globalThis as typeof globalThis & { __gtAuditionPoolV2?: Pool };
+const pool = (): Pool => (g.__gtAuditionPoolV2 ??= { workers: [], queue: [], seq: 0, broken: null, failedStarts: 0 });
 const python = (): string => process.env["PYTHON"] ?? (process.platform === "win32" ? "python" : "python3");
 
 const answerSchema = z.object({ id: z.string().nullable(), ok: z.boolean(), error: z.string().optional(), kind: z.string().optional(), durationS: z.number().optional() });

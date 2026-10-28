@@ -28,6 +28,8 @@ export type Ear = {
   readonly clock: number;
   /** Play `href`, or stop it if it is the one sounding. */
   readonly toggle: (href: string) => void;
+  /** Play `href` from the start, whatever is sounding (a compose answers with its sound). */
+  readonly play: (href: string) => void;
   readonly stop: () => void;
 };
 
@@ -89,12 +91,8 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
     };
   }, []);
 
-  const toggle = useCallback(
+  const play = useCallback(
     (href: string): void => {
-      if (at === href && state !== "idle") {
-        stop();
-        return;
-      }
       calm();
       const mine = ++press.current;
       let a = el.current;
@@ -148,9 +146,17 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
         setState("idle");
       });
     },
-    [at, state, stop, explain],
+    [explain],
+  );
+
+  const toggle = useCallback(
+    (href: string): void => {
+      if (at === href && state !== "idle") stop();
+      else play(href);
+    },
+    [at, state, stop, play],
   );
 
   const stateOf = useCallback((href: string): EarState => (href === at ? state : "idle"), [at, state]);
-  return { at, state, failed, stateOf, clock, toggle, stop };
+  return { at, state, failed, stateOf, clock, toggle, play, stop };
 }
