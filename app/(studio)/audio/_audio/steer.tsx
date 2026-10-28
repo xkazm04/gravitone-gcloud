@@ -7,8 +7,10 @@
 //            seed's tempo and key (/audio/audition), through ONE ear - a second press stops the
 //            first, so a comparison is always two sounds in turn;
 //   swap it  a chip's candidates heard in a strip (same register first, then the neighbours a
-//            person confuses it with), the pick rewriting the seed's word and leaving its move
-//            (`-rhodes +grand piano`) on the strip.
+//            person confuses it with), alone or in the mix, the pick rewriting the seed's word and
+//            leaving its move (`-rhodes +grand piano`) on the strip; a word with no samples here
+//            is offered the playable sounds near it instead;
+//   learn it every pick by ear joins a "learned" row under the sentence, a press saying it.
 // The seed itself stays the lane's (./AudioLane.tsx): this hook only ever writes it through the
 // setter it is handed, so the composer, the variations and the receipt all read one seed.
 import { useEffect, useMemo, useState, type ReactNode } from "react";
