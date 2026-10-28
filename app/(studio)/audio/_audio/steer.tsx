@@ -29,7 +29,7 @@ type Move = { readonly minus: string; readonly plus: string };
 const NONE: ReadonlySet<number> = new Set();
 
 /** Sentences offered on an empty field: one each of a scene, a use with a length, a story, a feeling. */
-const EXAMPLES: readonly string[] = ["like a rainy café at night", "a 60 second trailer, epic but hopeful", "a sneaky cat stealing food", "lofi beats to study to"];
+const EXAMPLES: readonly string[] = ["like a rainy café at night", "a 60 second trailer, epic but hopeful", "a sneaky cat stealing food", "lofi beats to study to", "a lullaby for a rave"];
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
