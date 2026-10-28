@@ -10,7 +10,7 @@ import { ROWS } from "../../src/components/audio/lexicon.rows.ts";
 type Want = { readonly g?: readonly string[]; readonly m?: readonly string[]; readonly i?: readonly string[]; readonly avoid?: readonly string[]; readonly bpm?: readonly [number, number]; readonly unheard?: readonly string[] };
 
 const CASES: readonly (readonly [string, Want])[] = [
-  ["something like a heist movie but chill", { g: ["jazz funk"], m: ["cool", "suspenseful"], i: ["upright bass", "brushed drums"], bpm: [85, 95], unheard: [] }],
+  ["something like a heist movie but chill", { g: ["jazz funk"], m: ["cool", "suspenseful"], i: ["upright bass", "jazz drums"], bpm: [85, 95], unheard: [] }],
   ["like a rainy café at night", { g: ["lo-fi jazz"], m: ["cozy", "melancholic"], i: ["rhodes"], bpm: [70, 85], unheard: [] }],
   ["upbeat product demo, no vocals", { g: ["corporate pop"], m: ["upbeat"], avoid: ["vocals"], bpm: [105, 120] }],
   ["dreamy 80s synth for coding", { g: ["dream pop", "synth-pop"], i: ["synth pad"], unheard: [] }],

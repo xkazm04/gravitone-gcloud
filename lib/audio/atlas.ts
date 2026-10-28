@@ -25,7 +25,7 @@ import { renderAudition, renderSketch, type AuditionFacts } from "./sidecar.ts";
 const AUDIO_EXT = new Set([".wav", ".aif", ".aiff", ".flac", ".ogg"]);
 const MAX_DEPTH = 9;
 /** Bumped when the renderer changes what a file sounds like, so a cached render of the old one is never served. */
-const RENDER = "r2";
+const RENDER = "r3";
 /** The phrase's loudness: every audition sits here, so a choice is about timbre, not level. */
 export const AUDITION_LUFS = -20;
 

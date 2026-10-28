@@ -237,15 +237,23 @@ def finish(mix, target):
 
     tail = min(len(mix), int(0.6 * SR))
     mix[len(mix) - tail:] *= np.linspace(1.0, 0.0, tail)
-    mix *= 10 ** ((target - _loudness(mix)) / 20.0)
     ceiling = 0.89
-    if np.max(np.abs(mix)) > ceiling:
-        mix = ceiling * np.tanh(mix / ceiling)
+    # Twice: a soft limit on a transient-heavy render (a kit) takes loudness back off it, and the
+    # promise is that every audition sits at `target` so a choice is about timbre, not level.
+    for _ in range(2):
+        mix *= 10 ** ((target - _loudness(mix)) / 20.0)
+        if np.max(np.abs(mix)) > ceiling:
+            mix = ceiling * np.tanh(mix / ceiling)
     return mix.astype("float32")
 
 
 def render(spec):
-    mix, facts = voice(spec["files"], spec["bpm"], spec["tonic"], spec["minor"], spec.get("role", "keys"), spec.get("cacheDir"))
+    if spec.get("role") == "drums":  # a kit plays the groove, not the phrase (./drums.py)
+        from drums import beat
+
+        mix, facts = beat(spec["files"], spec["bpm"])
+    else:
+        mix, facts = voice(spec["files"], spec["bpm"], spec["tonic"], spec["minor"], spec.get("role", "keys"), spec.get("cacheDir"))
     y = finish(mix, float(spec.get("lufs", -20.0)))
     return y, {"durationS": round(len(y) / SR, 3), "lufs": round(_loudness(y.astype("float64")), 2), **facts}
 

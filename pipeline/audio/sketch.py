@@ -17,6 +17,7 @@ Spec: {"voices": [{"files": [...], "role": "keys"}], "levels": [0..3, ...], "bpm
 import math
 
 from audition import SR, AuditionError, _loudness, finish, voice
+from drums import beat as groove_at
 
 GAIN = [0.45, 0.62, 0.82, 1.0]
 MAX_VOICES = 5
@@ -59,21 +60,32 @@ def render_sketch(spec):
         raise AuditionError("the shape has no columns")
     bpm = float(spec["bpm"])
     beat = 60.0 / bpm
+    def even(x):
+        return x * (0.1 / max(float(np.sqrt(np.mean(x * x))), 1e-9))
+
+    # A melodic voice is one phrase; a kit is its groove at each level (./drums.py), so a quiet
+    # column has the hats and a full one the crash.
     parts = []
     for v in voices:
-        x, _ = voice(v["files"], bpm, spec["tonic"], spec["minor"], v.get("role", "keys"), spec.get("cacheDir"))
-        parts.append(x * (0.1 / max(float(np.sqrt(np.mean(x * x))), 1e-9)))
+        if v.get("role") == "drums":
+            parts.append({lv: even(groove_at(v["files"], bpm, lv)[0]) for lv in sorted(set(levels))})
+        else:
+            x, _ = voice(v["files"], bpm, spec["tonic"], spec["minor"], v.get("role", "keys"), spec.get("cacheDir"))
+            parts.append(even(x))
+    has_kit = any(isinstance(x, dict) for x in parts)
     group = int(16 * beat * SR)
-    total = group * len(levels) + max(0, len(parts[0]) - group)
+    first = parts[0] if not isinstance(parts[0], dict) else next(iter(parts[0].values()))
+    total = group * len(levels) + max(0, len(first) - group)
     mix = np.zeros(total, dtype="float64")
     for i, lv in enumerate(levels):
         at = i * group
         k = max(1, min(len(parts), math.ceil((lv + 1) / 4 * len(parts))))
-        for x in parts[:k]:
+        for part in parts[:k]:
+            x = part[lv] if isinstance(part, dict) else part
             end = min(total, at + len(x))
             mix[at:end] += GAIN[lv] * x[: end - at]
-        p = _pulse(beat, lv)
-        if np.any(p):
+        p = _pulse(beat, lv) if not has_kit else None  # a real kit keeps time; the click stands down
+        if p is not None and np.any(p):
             p *= 0.05 / max(float(np.sqrt(np.mean(p * p))), 1e-9)
             end = min(total, at + len(p))
             mix[at:end] += GAIN[lv] * p[: end - at]

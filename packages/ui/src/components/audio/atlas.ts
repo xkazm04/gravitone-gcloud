@@ -13,7 +13,7 @@
 // long before they can name it (the vocabulary problem is recognition, not recall), so the swap
 // offers same-role instruments first, then the neighbours a non-musician confuses them with.
 
-export type Role = "keys" | "bass" | "guitar" | "strings" | "voices" | "brass" | "winds" | "synth" | "mallets";
+export type Role = "keys" | "bass" | "guitar" | "strings" | "voices" | "brass" | "winds" | "synth" | "mallets" | "drums";
 
 export type AtlasEntry = {
   readonly id: string;
@@ -49,6 +49,11 @@ export const ATLAS: readonly AtlasEntry[] = [
   { id: "synth-pad", term: "synth pad", role: "synth", plain: ["hazy", "wide"], aka: ["pad", "pads", "ambient pad", "warm pads"], folders: ["synths/ambient encounters", "synths/smooth synth"] },
   { id: "analog-synth", term: "analog synth", role: "synth", plain: ["buzzy", "retro"], aka: ["synth", "synthesizer", "vintage synth", "saw synth"], folders: ["synths/ob saw", "synths/saw sh"] },
   { id: "synth-lead", term: "synth lead", role: "synth", plain: ["cutting", "bright"], aka: ["lead synth", "arp synth", "synth arp", "arpeggiator"], folders: ["synths/arp poly lead"] },
+  // A kit plays one groove instead of the phrase (pipeline/audio/drums.py); the same groove on every kit.
+  { id: "live-drums", term: "live drums", role: "drums", plain: ["punchy", "live"], aka: ["drums", "drum kit", "acoustic drums", "funk drums", "real drums"], folders: ["kits/hq funk kit"] },
+  { id: "jazz-drums", term: "jazz drums", role: "drums", plain: ["airy", "loose"], aka: ["jazz kit", "swing drums"], folders: ["kits/hq jazz kit"] },
+  { id: "rock-drums", term: "rock drums", role: "drums", plain: ["big", "hard-hitting"], aka: ["rock kit", "heavy drums"], folders: ["kits/hq rock kit"] },
+  { id: "drum-machine", term: "drum machine", role: "drums", plain: ["boomy", "electronic"], aka: ["808", "808s", "808 drums", "beat machine", "electronic drums"], folders: ["drum machines/808"] },
   { id: "kalimba", term: "kalimba", role: "mallets", plain: ["plinky", "wooden"], aka: ["thumb piano", "mbira", "likembe"], folders: ["multisamples/ikembe"] },
 ];
 
@@ -63,6 +68,7 @@ export const NEIGHBOURS: Readonly<Record<Role, readonly Role[]>> = {
   winds: ["strings", "brass", "voices"],
   synth: ["keys", "strings", "voices"],
   mallets: ["keys", "guitar", "synth"],
+  drums: [],
 };
 
 const norm = (w: string): string => w.trim().toLowerCase().replace(/\s+/g, " ");
