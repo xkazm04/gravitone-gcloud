@@ -1,0 +1,6 @@
+/* The studio's transport row: play mark, words, time, seek, stop; an error drops below. Tokens only. */
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3) var(--sp-4);min-width:0}
+.name{min-width:0;max-width:var(--w-detail);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 var(--fs-ui)/1.2 var(--sans);color:var(--ink-bright)}
+.row[data-state="idle"] .name{color:var(--muted)}
+.time{flex:none;font:500 var(--fs-micro)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.err{flex-basis:100%;min-width:0}

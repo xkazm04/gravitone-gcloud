@@ -1,0 +1,8 @@
+/* The fader: a meter rail with a round knob, the whole row the pointer target. Tokens only. */
+.fader{position:relative;flex:1;min-width:var(--w-thumb);height:var(--h-chip);display:flex;align-items:center;cursor:pointer;touch-action:none;border-radius:var(--r-control)}
+.fader:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge)}
+.off{cursor:not-allowed;opacity:.5}
+.rail{position:relative;flex:1;height:var(--h-meter);border-radius:var(--r-meter);background:var(--hair-2);overflow:hidden}
+.fill{position:absolute;top:0;bottom:0;background:var(--cyan)}
+.knob{position:absolute;top:50%;width:var(--size-pip);height:var(--size-pip);border-radius:50%;background:var(--ink-bright);border:1px solid var(--hair-3);transform:translate(-50%,-50%);pointer-events:none;transition:left var(--dur-fast) var(--ease)}
+@media (prefers-reduced-motion: reduce){.knob{transition:none}}

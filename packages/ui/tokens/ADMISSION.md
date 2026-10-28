@@ -280,3 +280,9 @@ Not admitted, mixed or composed from tokens instead: the scrim at `--ink` 58% (t
 `rgba(5,7,12,.58)`), the tile's kind badge ground `--ink` 78%, the ref mark's `--ink` 80%, the
 selected row's cyan at 9%, the summary's kind-bar columns as multiples of `--sp-7`. Moved a pixel,
 recorded in INVENTORY.md "Library parts".
+
+## Admitted at the audio studio (spark audio-agent-studio, WP1)
+
+| Role | Value | Uses | Definition |
+| --- | --- | --- | --- |
+| h-dock | `156px` | 2 | Most height a page's bottom dock takes from the viewport; the toast rises above it (Dock and Toast read it, so the receipt never covers the chat). |

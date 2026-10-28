@@ -24,6 +24,7 @@ export const SECTIONS = [
   { id: "part", group: "Composition", title: "Part workspace", sub: "workspace · rail · verdict · part tabs" },
   { id: "audio", group: "Composition", title: "Audio", sub: "preview · prompt · measured · terms · composer · variations · drafts · references" },
   { id: "ear", group: "Composition", title: "Steer by ear", sub: "say it · ear button · ear strip · shape strip · duel · track drop" },
+  { id: "studio", group: "Composition", title: "Audio studio", sub: "dock · transport row · fader" },
   { id: "graph", group: "Composition", title: "Scout graph", sub: "stage graph · column head · node · share meter" },
   { id: "library", group: "Composition", title: "Library", sub: "rail · tile · row · detail · lineage · summary" },
   { id: "style", group: "Composition", title: "Style atelier", sub: "proof sheet · trial matrix · ratchet · slots · palette · evidence · plates" },

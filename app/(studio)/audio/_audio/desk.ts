@@ -16,6 +16,8 @@ export const SECTIONS = [
   { id: "strengths", label: "strengths" },
   { id: "rubric", label: "rubric" },
   { id: "batch", label: "batch" },
+  // spark audio-agent-studio: an outside agent drives a studio for non-musicians (../studio/).
+  { id: "studio", label: "studio" },
 ] as const;
 export type Section = (typeof SECTIONS)[number]["id"];
 

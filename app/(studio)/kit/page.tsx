@@ -31,6 +31,7 @@ import { LibrarySection } from "./LibraryKit.tsx";
 import { SignalSections } from "./Signal.tsx";
 import { StatusSection } from "./Status.tsx";
 import { StyleSection } from "./StyleKit.tsx";
+import { StudioSection } from "./StudioKit.tsx";
 import { StructureSection } from "./Structure.tsx";
 import { PartSection } from "./PartKit.tsx";
 import { ProduceSection } from "./ProduceKit.tsx";
@@ -76,6 +77,7 @@ export default function KitPage() {
         <PartSection />
         <AudioSection />
         <EarSection />
+        <StudioSection />
         <GraphSection />
         <LibrarySection />
         <StyleSection />

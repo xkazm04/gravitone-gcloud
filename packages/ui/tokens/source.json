@@ -75,6 +75,7 @@
       {"name": "cols", "tier": "primitive", "value": "52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr)"},
       {"name": "w-rail", "tier": "role", "value": "228px", "note": "Width of a route's left rail: the Ledger's facets and the time strip's readout above them."},
       {"name": "w-detail", "tier": "role", "value": "344px", "note": "Width of a route's docked detail panel."},
+      {"name": "h-dock", "tier": "role", "value": "156px", "note": "Most height a page's bottom dock takes from the viewport; the toast rises above it."},
       {"name": "w-search", "tier": "role", "value": "clamp(220px,21vw,400px)", "note": "Width of the search field in a route's toolbar."},
       {"name": "ledger-cols", "tier": "role", "value": "54px 96px 128px 128px minmax(0,1fr) 70px 90px", "note": "Columns of an event row and its head: # · time · actor · type · subject · cost · src."},
       {"name": "h-event", "tier": "role", "value": "34px", "note": "Height of an event row in a ledger list."},

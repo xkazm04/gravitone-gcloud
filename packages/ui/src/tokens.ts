@@ -66,6 +66,7 @@ export const tokens = {
   "cal-w": "clamp(260px,19vw,340px)",
   "cols": "52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr)",
   "h-axis": "20px",
+  "h-dock": "156px",
   "h-event": "34px",
   "h-hours": "34px",
   "h-lane-folded": "48px",

@@ -1,0 +1,14 @@
+/* The studio's bottom dock: a top rule, the reply over the line in, never taller than --h-dock (the
+   toast rises above that height). Tokens only. */
+.dock{flex:none;display:grid;gap:var(--sp-3);max-height:var(--h-dock);overflow:auto;padding:var(--sp-4) var(--sp-loose);border-top:1px solid var(--hair-2);background:var(--ink-1)}
+.said{display:flex;gap:var(--sp-4);align-items:flex-start;min-width:0}
+.reply{margin:0;min-width:0;flex:1;font:400 var(--fs-ui)/1.45 var(--sans);color:var(--ink-bright);overflow-wrap:anywhere}
+.dock[data-dock="offline"] .reply{color:var(--muted)}
+.notice{margin:0;font:400 var(--fs-meta)/1.4 var(--sans);color:var(--amber)}
+.dropped{font:400 var(--fs-meta)/1.4 var(--sans);color:var(--muted)}
+.dropped summary{cursor:pointer;color:var(--illustrative-text)}
+.dropped summary:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge);border-radius:var(--r-xs)}
+.dropped ul{margin:var(--sp-1) 0 0;padding-left:var(--sp-6);display:grid;gap:var(--sp-1);overflow-wrap:anywhere}
+.send{display:flex;gap:var(--sp-3);align-items:center}
+.field{flex:1;min-width:0;display:grid}
+.field input{width:100%}
