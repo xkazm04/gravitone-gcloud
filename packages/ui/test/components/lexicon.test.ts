@@ -178,8 +178,8 @@ describe("translate: a sentence compiled into a seed", () => {
       for (const side of [p.a, p.b]) {
         const settled = translate(`${t.sentence}, ${side.settle}`);
         expect(settled.pulls.map((q) => q.kind)).not.toContain(p.kind);
-        if (p.kind === "tempo") expect(String(settled.seed.bpm)).toBe(side.settle.replace(" bpm", ""));
-        else expect(settled.seed.key).toBe(side.says);
+        if (p.kind === "tempo") expect(settled.seed.bpm).toBe(side.bpm);
+        else expect(settled.seed.key).toBe(side.key);
       }
     expect(translate("heist movie but chill").pulls).toEqual([]);
     expect(translate("sad piano for a breakup").pulls).toEqual([]);

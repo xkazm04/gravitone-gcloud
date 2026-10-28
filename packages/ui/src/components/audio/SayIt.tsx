@@ -8,12 +8,15 @@
 // chip to add. Where two of the words pull the tempo or the mode apart, both sides stand as chips
 // with what each alone would make; a press settles it by saying so ("62 bpm", "in minor") in the
 // sentence itself, so the words that would have avoided the compromise are learned by using them.
+// With an ear (`hearPull`) each side plays first: the same bars at that side's tempo or key.
 import type { ReactNode } from "react";
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
+import { EarButton } from "./EarButton.tsx";
 import { Field } from "../field/Field.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import type { Produced, PullSide, Translation } from "./lexicon.ts";
+import type { EarState } from "./useEar.ts";
 import s from "./Ear.module.css";
 
 export type SayItProps = {
@@ -32,9 +35,11 @@ export type SayItProps = {
   /** Sentences offered while the field is empty: a press fills it and composes. */
   readonly examples?: readonly string[];
   readonly onExample?: (sentence: string) => void;
+  /** A pull's side heard before it is chosen; `stateOf` null where nothing here can play it. */
+  readonly hearPull?: { readonly stateOf: (side: PullSide) => EarState | null; readonly onPlay: (side: PullSide) => void };
 };
 
-export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare, examples = [], onExample, learned = [], onLearned }: SayItProps) {
+export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare, examples = [], onExample, learned = [], onLearned, hearPull }: SayItProps) {
   const groupOf = (i: number): number[] => [...new Set(heard.terms.filter((p) => p.from.includes(i)).flatMap((p) => p.from))];
   const used = heard.terms.length;
   // Tempo, key and length come from words too: pointing at one lights the words it was read from.
@@ -45,8 +50,16 @@ export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare
   );
   const wordsOf = (from: readonly number[]): string => from.map((i) => heard.tokens[i]?.text ?? "").join(" ");
   const say = (more: string): string => (value.trim() === "" ? more : `${value.trim().replace(/[,.]$/, "")}, ${more}`);
-  const side = (x: PullSide): ReactNode =>
-    traced(x.from, <Chip label={wordsOf(x.from)} value={x.says} tone="amber" casing="lower" ghost name={`settle on ${x.settle}`} onPress={() => onChange(say(x.settle))} />);
+  const side = (x: PullSide): ReactNode => {
+    const state = hearPull?.stateOf(x) ?? null;
+    return traced(
+      x.from,
+      <span className={s.pull}>
+        {state !== null && hearPull !== undefined && <EarButton state={state} name={`${wordsOf(x.from)} ${x.says}`} onPress={() => hearPull.onPlay(x)} />}
+        <Chip label={wordsOf(x.from)} value={x.says} tone="amber" casing="lower" ghost name={`settle on ${x.settle}`} onPress={() => onChange(say(x.settle))} />
+      </span>,
+    );
+  };
   return (
     <section className={s.say} aria-label="say it">
       <form

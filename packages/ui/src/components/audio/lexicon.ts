@@ -35,8 +35,9 @@ export type Produced = {
   readonly from: readonly number[];
 };
 
-/** One side of a pull: the words behind it, what they alone would make, and the words that settle it their way. */
-export type PullSide = { readonly from: readonly number[]; readonly says: string; readonly settle: string };
+/** One side of a pull: the words behind it, what they alone would make (and the tempo or key that
+ *  is, to hear it), and the words that settle it their way. */
+export type PullSide = { readonly from: readonly number[]; readonly says: string; readonly settle: string; readonly bpm: number | null; readonly key: string | null };
 export type Pull = { readonly kind: "tempo" | "mode"; readonly a: PullSide; readonly b: PullSide };
 
 export type Translation = {
@@ -345,7 +346,10 @@ function tempoPull(ranges: readonly { lo: number; hi: number; from: number[] }[]
   const slow = ranges.reduce((a, r) => (r.hi < a.hi ? r : a));
   const fast = ranges.reduce((a, r) => (r.lo > a.lo ? r : a));
   if (fast.lo - slow.hi < PULL_BPM) return [];
-  const side = (r: { lo: number; hi: number; from: number[] }): PullSide => ({ from: r.from, says: `${r.lo}–${r.hi} bpm`, settle: `${Math.round((r.lo + r.hi) / 2)} bpm` });
+  const side = (r: { lo: number; hi: number; from: number[] }): PullSide => {
+    const bpm = Math.round((r.lo + r.hi) / 2);
+    return { from: r.from, says: `${r.lo}–${r.hi} bpm`, settle: `${bpm} bpm`, bpm, key: null };
+  };
   return [{ kind: "tempo", a: side(slow), b: side(fast) }];
 }
 function modePull(terms: readonly Produced[]): Pull[] {
@@ -353,7 +357,7 @@ function modePull(terms: readonly Produced[]): Pull[] {
   const minor = moods.filter((p) => MINOR.has(p.term));
   const major = moods.filter((p) => MAJOR.has(p.term));
   if (minor.length === 0 || major.length === 0) return [];
-  const side = (ps: readonly Produced[], says: string, settle: string): PullSide => ({ from: [...new Set(ps.flatMap((p) => p.from))], says, settle });
+  const side = (ps: readonly Produced[], says: string, settle: string): PullSide => ({ from: [...new Set(ps.flatMap((p) => p.from))], says, settle, bpm: null, key: says });
   return [{ kind: "mode", a: side(minor, MINOR_KEY, "in minor"), b: side(major, MAJOR_KEY, "in major") }];
 }
 

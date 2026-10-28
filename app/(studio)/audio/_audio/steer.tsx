@@ -17,7 +17,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ATLAS, atlasFor, AUDITION_KEY, auditionHref, nearFor, playableBpm, playableIds, sketchHref, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
 import { EarStrip } from "@gt/ui/components/audio/EarStrip.tsx";
-import { provenanceOf, translate, type Produced, type TermList, type Translation } from "@gt/ui/components/audio/lexicon.ts";
+import { provenanceOf, translate, type Produced, type PullSide, type TermList, type Translation } from "@gt/ui/components/audio/lexicon.ts";
 import { addTo, type Seed } from "@gt/ui/components/audio/recipe.ts";
 import type { SayItProps } from "@gt/ui/components/audio/SayIt.tsx";
 import type { SeedEar } from "@gt/ui/components/audio/SeedComposer.tsx";
@@ -129,6 +129,10 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
     else ear.stop();
   };
   const compose = (): void => composeFrom(heard);
+  // A pull's side as sound: the sentence's own instruments, four bars together, at that side's
+  // tempo or key - the two readings heard against each other before one is said.
+  const pullIds = playableIds(heard.seed.instruments, can);
+  const pullHref = (x: PullSide): string | null => (pullIds.length === 0 ? null : sketchHref(pullIds, [3], x.bpm ?? heard.seed.bpm, x.key ?? heard.seed.key));
 
   const say: SayItProps = {
     value: sentence,
@@ -145,6 +149,16 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
     onExample: (x: string) => {
       setSentence(x);
       composeFrom(translate(x));
+    },
+    hearPull: {
+      stateOf: (x) => {
+        const h = pullHref(x);
+        return h === null ? null : ear.stateOf(h);
+      },
+      onPlay: (x) => {
+        const h = pullHref(x);
+        if (h !== null) ear.toggle(h);
+      },
     },
   };
 
@@ -189,7 +203,8 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
     const rest = swapping !== undefined ? seed.instruments.filter((t) => atlasFor(t)?.id !== swapping.id) : seed.instruments.filter((t) => t !== nearing);
     return sketchHref(playableIds(rest, can, e.id), [3], seed.bpm, seed.key);
   };
-  const toWarm = [...playable.map(href), ...stripFor.map(rowHref)].join(" ");
+  const pulled = heard.pulls.flatMap((p) => [pullHref(p.a), pullHref(p.b)]).filter((h): h is string => h !== null);
+  const toWarm = [...playable.map(href), ...stripFor.map(rowHref), ...pulled].join(" ");
   useEffect(() => {
     if (toWarm === "") return;
     const t = setTimeout(() => warm(toWarm.split(" ")), 700);
