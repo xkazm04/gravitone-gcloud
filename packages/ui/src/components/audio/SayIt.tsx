@@ -86,6 +86,11 @@ export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare
           {heard.key !== null && traced(heard.key.from, <Chip label="key" value={heard.key.value} casing="lower" />)}
           {heard.lengthS !== null && traced(heard.lengthS.from, <Chip label="length" value={`${heard.lengthS.value} s`} casing="lower" />)}
           {heard.unheard.length > 0 && <Chip label="unheard" value={heard.unheard.join(" · ")} tone="amber" casing="lower" />}
+          {heard.near.map((n) => {
+            const t = heard.tokens[n.token];
+            if (t === undefined) return null;
+            return <Chip key={`${n.token}:${n.to}`} label={`${t.text} → ${n.to}`} tone="amber" casing="lower" ghost name={`read ${t.text} as ${n.to}`} onPress={() => onChange(`${value.slice(0, t.start)}${n.to}${value.slice(t.end)}`)} />;
+          })}
           {heard.spare.map((p) => (
             <Chip key={`${p.list}:${p.term}`} label={`+ ${p.term}`} casing="lower" ghost name={`add ${p.term}`} onPress={() => onSpare(p)} />
           ))}

@@ -227,6 +227,7 @@ export const ROWS: readonly LexRow[] = [
   { cue: ["loud", "noisy", "blasting"], m: ["intense"], i: ["distorted guitar", "rock drums"], bpm: [130, 150] },
   { cue: ["protest", "riot", "revolution", "uprising"], g: ["punk rock"], m: ["defiant", "rebellious"], i: ["distorted guitar", "rock drums"], bpm: [160, 175] },
   { cue: ["cheesy", "corny", "campy", "kitschy"], m: ["campy"] },
+  { cue: ["indie", "indie game"], g: ["indie pop"], m: ["warm", "earnest"], i: ["clean electric guitar", "live drums"], bpm: [100, 120] },
   { cue: ["funeral", "mourning", "grief", "farewell", "goodbye"], g: ["requiem"], m: ["somber", "mournful"], i: ["string section", "grand piano"], bpm: [55, 70] },
   { cue: ["exciting", "excited", "thrilling", "hype", "hyped"], m: ["energetic", "urgent"], bpm: [120, 135] },
   { cue: ["water", "river", "stream", "fountain", "waterfall"], g: ["ambient"], m: ["flowing", "calm"], i: ["kalimba", "synth pad"], bpm: [65, 80] },

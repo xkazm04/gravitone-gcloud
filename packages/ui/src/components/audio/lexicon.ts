@@ -48,6 +48,8 @@ export type Translation = {
   /** The mode the seed's moods lean to ("sad" -> A minor), with the words behind those moods; null when they do not lean. */
   readonly key: { readonly value: string; readonly from: readonly number[] } | null;
   readonly unheard: readonly string[];
+  /** Unheard words one slip from a word the lexicon hears ("melancolic" -> melancholic): offered, never applied. */
+  readonly near: readonly { readonly token: number; readonly to: string }[];
   readonly seed: Seed;
 };
 
@@ -212,10 +214,54 @@ export function translate(sentence: string): Translation {
   const bpm = explicit ?? tempoOf(ranges);
   const tokens: Token[] = raw.map((t, k) => ({ text: sentence.slice(t.start, t.end), start: t.start, end: t.end, kind: kinds[k] === "negator" ? "filler" : (kinds[k] ?? "unheard") }));
   const unheard = tokens.filter((t) => t.kind === "unheard").map((t) => t.text);
+  const near = tokens.flatMap((t, k) => {
+    const to = t.kind === "unheard" ? spelledAs(fold(t.text)) : null;
+    return to === null ? [] : [{ token: k, to }];
+  });
   const pick = (list: TermList): string[] => terms.filter((p) => p.list === list).map((p) => p.term);
   const key = keyOf(terms);
   const seed: Seed = { ...BLANK_SEED, genres: pick("genres"), moods: pick("moods"), instruments: pick("instruments"), avoid: pick("avoid"), bpm: bpm?.value ?? null, key: key?.value ?? null };
-  return { sentence, tokens, terms, spare, bpm, lengthS, key, unheard, seed };
+  return { sentence, tokens, terms, spare, bpm, lengthS, key, unheard, near, seed };
+}
+
+// A slip of the keyboard is not a word nobody taught the lexicon. One edit away (two for long
+// words) from a single-word cue is offered as that cue; short words are left alone, because
+// "five" is one letter from "fire" and a real word wrongly corrected teaches the wrong spelling.
+const WORDS: readonly string[] = [...new Set(CUES.filter((c) => c.words.length === 1).map((c) => c.words[0] ?? ""))].filter((w) => w.length >= 4);
+
+function spelledAs(w: string): string | null {
+  if (w.length < 5 || /\d/.test(w)) return null;
+  const most = w.length >= 8 ? 2 : 1;
+  let best: string | null = null;
+  let bestD = most + 1;
+  for (const c of WORDS) {
+    if (Math.abs(c.length - w.length) > most) continue;
+    const d = slips(w, c, most);
+    if (d < bestD) {
+      best = c;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+/** Edits between two words (insert, delete, swap a letter, swap two neighbours), stopping past `most`. */
+function slips(a: string, b: string, most: number): number {
+  let prev2: number[] = [];
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let v = Math.min((prev[j] ?? 0) + 1, (row[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, (prev2[j - 2] ?? 0) + 1);
+      row.push(v);
+    }
+    if (Math.min(...row) > most) return most + 1;
+    prev2 = prev;
+    prev = row;
+  }
+  return prev[b.length] ?? most + 1;
 }
 
 // Which way a mood leans. A person who says "sad" means minor without knowing the word, and an

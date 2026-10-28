@@ -111,6 +111,18 @@ describe("translate: a sentence compiled into a seed", () => {
     for (const g of genres) expect(translate(g).unheard, g).toEqual([]);
   });
 
+  test("a slip of the keyboard is offered its word, never applied; a short real word is left alone", () => {
+    const t = translate("melancolic jaz with a saxaphone");
+    expect(t.near.map((n) => [t.tokens[n.token]?.text, n.to])).toEqual([
+      ["melancolic", "melancholic"],
+      ["saxaphone", "saxophone"],
+    ]);
+    expect(t.unheard).toContain("melancolic");
+    expect(t.seed.moods).toEqual([]);
+    expect(translate("a five year old by the lake").near).toEqual([]);
+    expect(translate("an exciting trailer for my indie game").near).toEqual([]);
+  });
+
   test("a possessive is the word it belongs to, straight or curly", () => {
     expect(translate("my startup's launch").unheard).toEqual([]);
     expect(translate("my startup’s launch").unheard).toEqual([]);
