@@ -5,6 +5,7 @@ import { JOB_OPS } from "./tools/job.ts";
 import { LAUNCH_OPS } from "./tools/launch.ts";
 import { READ_OPS } from "./tools/read.ts";
 import { SPEND_OPS } from "./tools/spend.ts";
+import { STEER_OPS } from "./tools/steer.ts";
 
 // THE ONE TOOL REGISTRY of the agent door (spark athena-control-mcp; registry mcp-tools:
 // catalog-projection-modes). Every op is one McpToolSpec row in ./tools/*.ts; this module gathers
@@ -15,7 +16,7 @@ import { SPEND_OPS } from "./tools/spend.ts";
 export type { McpToolSpec } from "./op.ts";
 
 /** Every op, in family order. */
-export const REGISTRY: readonly McpToolSpec[] = [...READ_OPS, ...LAUNCH_OPS, ...JOB_OPS, ...SPEND_OPS];
+export const REGISTRY: readonly McpToolSpec[] = [...READ_OPS, ...STEER_OPS, ...LAUNCH_OPS, ...JOB_OPS, ...SPEND_OPS];
 
 /** A description is a tool's whole introduction to a model; past this it is a paragraph. */
 export const DESCRIPTION_MAX = 240;
