@@ -14,6 +14,7 @@ import { translate } from "@gt/ui/components/audio/lexicon.ts";
 import { SayIt } from "@gt/ui/components/audio/SayIt.tsx";
 import { PRESETS, voicesAt, type Level } from "@gt/ui/components/audio/shape.ts";
 import { ShapeStrip } from "@gt/ui/components/audio/ShapeStrip.tsx";
+import { TrackDrop } from "@gt/ui/components/audio/TrackDrop.tsx";
 import type { EarState } from "@gt/ui/components/audio/useEar.ts";
 
 import { inert } from "./ContractHooks.tsx";
@@ -105,6 +106,14 @@ export function EarSection() {
       <StripSpecimen />
       <ShapeSpecimen />
       <DuelSpecimen />
+      <Spec names={["TrackDrop"]} source="audio/TrackDrop.tsx · lib/audio/reference.ts" wide>
+        <Row label="read">
+          <TrackDrop busy={false} read={{ name: "night-drive.mp3", durationS: 214, bpm: 104, key: "F minor", levels: [0, 1, 1, 2, 3, 3, 1, 3, 3, 0] }} error={null} onFile={inert} onUse={inert} />
+        </Row>
+        <Row label="refused">
+          <TrackDrop busy={false} read={null} error="ffmpeg decode: Invalid data found when processing input" onFile={inert} onUse={inert} />
+        </Row>
+      </Spec>
     </Section>
   );
 }

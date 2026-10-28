@@ -3,7 +3,7 @@
 import { describe, expect, test } from "vitest";
 
 import { BLANK_SEED } from "../../src/components/audio/recipe.ts";
-import { clock, columnsFor, groupSeconds, planSeconds, presetForWords, PRESETS, sectionsOf, sectionsToPlan, sunoLyricsOf, voicesAt, type Level } from "../../src/components/audio/shape.ts";
+import { clock, columnsFor, groupSeconds, levelsOfContour, planSeconds, presetForWords, PRESETS, sectionsOf, sectionsToPlan, sunoLyricsOf, voicesAt, type Level } from "../../src/components/audio/shape.ts";
 
 describe("columns: whole four-bar groups at the seed's tempo", () => {
   test("a four-bar group at 120 bpm is eight seconds", () => {
@@ -89,5 +89,17 @@ describe("presets and words", () => {
   test("clock", () => {
     expect(clock(0)).toBe("0:00");
     expect(clock(75)).toBe("1:15");
+  });
+});
+
+describe("a reference's contour as levels", () => {
+  test("relative to the track's own loudest group, so the master's level does not matter", () => {
+    const quiet = [0.01, 0.04, 0.06, 0.1, 0.1, 0.03]; // 20, 8, 4.4, 0, 0, 10.5 dB under the loudest
+    const loud = quiet.map((x) => x * 8);
+    expect(levelsOfContour(quiet)).toEqual(levelsOfContour(loud));
+    expect(levelsOfContour(quiet)).toEqual([0, 1, 2, 3, 3, 0]);
+  });
+  test("silence is quiet, not an error", () => {
+    expect(levelsOfContour([0, 0.1])).toEqual([0, 3]);
   });
 });

@@ -45,6 +45,7 @@ import type { AudioView, SeedTake } from "./read.ts";
 import type { setHand, sunoConfirm, sunoReceipt } from "./actions.ts";
 import { useDuel } from "./duelState.tsx";
 import { useShape } from "./shapeState.tsx";
+import { useTrack } from "./trackState.tsx";
 import { explainAudition, useSteer } from "./steer.tsx";
 import s from "./audio.module.css";
 
@@ -55,6 +56,7 @@ export type AudioActs = { readonly setHand: typeof setHand; readonly sunoReceipt
 const DOORS = [
   { value: "words", label: "say it" },
   { value: "ear", label: "by ear" },
+  { value: "track", label: "from a track" },
 ] as const;
 const LIST_OF: Readonly<Record<string, SeedList>> = { genre: "genres", mood: "moods", instrument: "instruments" };
 const BLANK = "__blank";
@@ -102,13 +104,19 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
     shape.adopt,
   );
   // Two doors into the one seed: a sentence, or pairs heard by ear.
-  const [door, setDoor] = useState<"words" | "ear">("words");
+  const [door, setDoor] = useState<"words" | "ear" | "track">("words");
   // The ear door opens only where this machine can play both sides of at least one pair.
   const canDuel = playableAxes(can).length > 0;
   const duel = useDuel(ear, can, door === "ear", (next) => {
     setSeed(next);
     setFrom(BLANK);
     setLoaded("by ear");
+  });
+  // A track keeps the seed's words and gives it the track's tempo, key and shape.
+  const track = useTrack((read) => {
+    setSeed((cur) => ({ ...cur, bpm: read.bpm ?? cur.bpm, key: read.key ?? cur.key }));
+    shape.adoptLevels(read.levels);
+    setLoaded(`track · ${read.name}`);
   });
 
   const send = (s0: Seed, label: string): void => {
@@ -178,7 +186,7 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
       <main className={s.main}>
         {/* The ways into one seed, side by side: a sentence, pairs by ear, or a kept take. */}
         <div className={s.from}>
-          {canDuel && <Seg label="start from" options={DOORS} value={door} onChange={setDoor} />}
+          <Seg label="start from" options={canDuel ? DOORS : DOORS.filter((d) => d.value !== "ear")} value={door} onChange={setDoor} />
           <span className={s.grow} />
           <Select
             label="seed from"
@@ -188,7 +196,7 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
           />
           {!view.takes.ok && <ErrorLine message={`takes: ${view.takes.error}`} />}
         </div>
-        {door === "words" || duel === null ? <SayIt {...steer.say} /> : duel}
+        {door === "track" ? track : door === "ear" && duel !== null ? duel : <SayIt {...steer.say} />}
         <SeedComposer
           seed={seed}
           ear={steer.ear}

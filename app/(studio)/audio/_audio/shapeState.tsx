@@ -33,6 +33,8 @@ export type ShapeState = {
   readonly plan: string | undefined;
   /** A composed sentence that says a length or a use reshapes the piece. */
   readonly adopt: (t: Translation) => void;
+  /** A reference track's contour becomes the painted levels. */
+  readonly adoptLevels: (levels: readonly Level[]) => void;
 };
 
 export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeState {
@@ -62,6 +64,8 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
     if (p !== undefined) startWith(p, columnsFor(t.lengthS?.value ?? DEFAULT_LENGTH_S, t.seed.bpm ?? bpm));
   };
 
+  const adoptLevels = (next: readonly Level[]): void => setLevels(next.length === 0 ? null : next.slice(0, 32));
+
   if (levels === null) {
     const node = (
       <div className={s.row}>
@@ -71,7 +75,7 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
         ))}
       </div>
     );
-    return { node, lyrics: undefined, plan: undefined, adopt };
+    return { node, lyrics: undefined, plan: undefined, adopt, adoptLevels };
   }
 
   const sections = sectionsOf(levels, bpm);
@@ -94,5 +98,5 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
     </>
   );
   const planText = plan.sections.map((p) => `[${p.name} · ${Math.round(p.durationMs / 1000)} s] ${p.positiveStyles.join(", ")}`).join("\n");
-  return { node, lyrics: sunoLyricsOf(sections), plan: planText, adopt };
+  return { node, lyrics: sunoLyricsOf(sections), plan: planText, adopt, adoptLevels };
 }

@@ -138,3 +138,20 @@ export function presetForWords(words: readonly string[]): Preset | undefined {
   const id = has("trailer", "rise", "rising", "build", "building", "crescendo") ? "rise" : has("loop", "loopable", "background", "bed", "ambient", "study") ? "bed" : has("sting", "jingle", "intro") ? "sting" : null;
   return PRESETS.find((p) => p.id === id);
 }
+
+/**
+ * A reference track's energy contour as painted levels: one RMS per four-bar group, read in dB
+ * against the track's own loudest group - within 1.5 dB is full, 1.5-4.5 lifting, 4.5-9 steady,
+ * past 9 quiet. Relative, so a quiet master and a loud one paint the same shape. The thresholds
+ * are set so the composer's own sketch round-trips (painted 0123330 at 89 bpm, rendered, read
+ * back: 0123330 - its quiet column sits 11 dB under its full one); on other music they are a
+ * guess, kept here as the one place to change them.
+ */
+export function levelsOfContour(rms: readonly number[]): Level[] {
+  const db = rms.map((r) => 20 * Math.log10(Math.max(r, 1e-9)));
+  const top = Math.max(...db);
+  return db.map((d) => {
+    const below = top - d;
+    return below <= 1.5 ? 3 : below <= 4.5 ? 2 : below <= 9 ? 1 : 0;
+  });
+}

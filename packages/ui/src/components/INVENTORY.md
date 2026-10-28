@@ -311,6 +311,7 @@ Audio desk, the Recipe Book half (`/audio`, the Library's audio detail).
 | `EarStrip` | new | /audio | instruments heard in turn on one fixed phrase: swap (the instrument on top as `now`, same register first, then neighbours) or add by ear; plain words first, the term second; blind hides terms until a pick; Use |
 | `ShapeStrip` | new (B4, 2026-10-28) | /audio | energy painted over four-bar columns (drag, or arrows on a focused column); runs of one level drawn above as named sections with time, bars, level in words and the instruments the arrangement gives them; presets; four bars more or fewer; clear |
 | `DuelCard` | new (B3, 2026-10-28) | /audio | one pair at a time, differing on one axis: A and B each with a play mark and Pick, No difference; a pip per axis; done: each seed word with the pair that decided it, Again, Use |
+| `TrackDrop` | new (D4, 2026-10-28) | /audio | a track dropped or chosen; reading; its length, tempo and key as chips (unheard when not measured) and its energy every four bars as a row of level bars; the measure's own error; Use |
 
 Style atelier (`/library/style/[id]`).
 

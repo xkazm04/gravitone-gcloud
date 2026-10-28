@@ -46,3 +46,12 @@
 .padName{flex:1;font:700 var(--fs-h3)/1 var(--mono);color:var(--ink-bright)}
 .reason{display:flex;align-items:baseline;gap:var(--sp-3);padding:var(--sp-1) var(--sp-2)}
 .door{display:flex;align-items:center;gap:var(--sp-3)}
+.drop{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4);border-radius:var(--r-sm);border:1px dashed var(--hair-3)}
+.drop[data-over="true"]{border-color:var(--cyan);background:color-mix(in srgb,var(--cyan) 10%,transparent)}
+.fileInput{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.trackRead{display:grid;gap:var(--sp-2)}
+.contour{display:flex;align-items:flex-end;gap:var(--sp-hair);height:var(--h-field)}
+.bar{flex:1;border-radius:var(--r-xs);background:color-mix(in srgb,var(--cyan) 30%,transparent);height:25%}
+.bar[data-level="1"]{height:50%;background:color-mix(in srgb,var(--cyan) 45%,transparent)}
+.bar[data-level="2"]{height:75%;background:color-mix(in srgb,var(--cyan) 65%,transparent)}
+.bar[data-level="3"]{height:100%;background:var(--cyan)}
