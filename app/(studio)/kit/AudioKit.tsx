@@ -25,9 +25,7 @@ import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
 import { TermRail } from "@gt/ui/components/audio/TermRail.tsx";
 import { VariationList } from "@gt/ui/components/audio/VariationList.tsx";
 import { variationsOfSeed } from "@gt/ui/components/audio/variations.ts";
-import { batchProblem, blankBatch, TECHNIQUES, type BatchForm as BatchFormState } from "@gt/ui/components/audio/batch.ts";
-import { BatchForm } from "@gt/ui/components/audio/BatchForm.tsx";
-import { briefCheck } from "@gt/ui/components/audio/brief.ts";
+import { TECHNIQUES } from "@gt/ui/components/audio/batch.ts";
 import { BriefDelta } from "@gt/ui/components/audio/BriefDelta.tsx";
 import { buildTree, clickSelect, countsOf, EMPTY_SELECTION, renderPlan, toggleGroup, type AuditionTake, type HuntCardView, type HuntLeafView, type Reach, type Selection } from "@gt/ui/components/audio/hunt.ts";
 import { HuntAudition } from "@gt/ui/components/audio/HuntAudition.tsx";
@@ -37,13 +35,9 @@ import { HuntIdea, HuntShelf } from "@gt/ui/components/audio/HuntShelf.tsx";
 import { evidenceOf, handLesson } from "@gt/ui/components/audio/lesson.ts";
 import { LessonForm } from "@gt/ui/components/audio/LessonForm.tsx";
 import { LessonList, type LessonRow } from "@gt/ui/components/audio/LessonList.tsx";
-import { readRubric, type Ratings } from "@gt/ui/components/audio/rubric.ts";
-import { RubricCard } from "@gt/ui/components/audio/Rubric.tsx";
-import { cellKey, type Facet, type Sort, type StrengthCell } from "@gt/ui/components/audio/strengths.ts";
-import { StrengthHead, StrengthTable } from "@gt/ui/components/audio/Strengths.tsx";
 
 import { inert } from "./ContractHooks.tsx";
-import { LocalBandSpecimen } from "./LocalBandSpecimen.tsx";
+import { BatchSpecimen, BRIEF_MISSED, BRIEF_MUSIC, BRIEF_SFX, LocalBandSpecimen, RubricSpecimen, StrengthSpecimen } from "./LocalBandSpecimen.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
 
 /** A quarter second of silence as a WAV data URL: a source the browser can open, so the play control is real. */
@@ -349,106 +343,6 @@ function LessonSpecimen() {
   );
 }
 
-const BRIEF_MUSIC = briefCheck("music", { tempoBpm: 108, key: "G major", durationS: 45 }, { tempoBpm: 54.2, key: "E minor", durationS: 44.6 });
-const BRIEF_MISSED = briefCheck("music", { tempoBpm: 120, key: "D minor", durationS: 60 }, { tempoBpm: 96, key: "D minor", durationS: 74 });
-const BRIEF_SFX = briefCheck("sfx", { tempoBpm: null, key: null, durationS: 2.5 }, null);
-const SFX_RUBRIC = readRubric({ kind: "sfx", loop: true, verdict: "rejected", ratings: { event_match: 4 } });
-const NO_DIMS: readonly string[] = [];
-const BUSY_DIMS: readonly string[] = ["event_match"];
-
-function RubricSpecimen() {
-  const [ratings, setRatings] = useState<Ratings>({ melody: 8, instrument_choice: 7, instrument_quality: null });
-  const [focused, setFocused] = useState(false);
-  const rubric = readRubric({ kind: "music", loop: null, verdict: "kept", ratings });
-  return (
-    <Spec names={["RubricCard"]} source="audio/Rubric.tsx · rubric.ts · v1 app/playground/shared/Rubric.tsx" wide>
-      <RubricCard
-        take={{ id: "rt-1", title: "Whisper network", provider: "elevenlabs", verdict: "kept", src: SILENCE, rubric, brief: BRIEF_MUSIC }}
-        focused={focused}
-        dim={2}
-        playing={false}
-        busy={NO_DIMS}
-        onFocus={() => setFocused(true)}
-        onPlay={inert}
-        onScore={(d, v) => setRatings((r) => ({ ...r, [d]: v }))}
-      />
-      <RubricCard
-        take={{ id: "rt-2", title: "Door slam loop", provider: "elevenlabs", verdict: "rejected", src: null, rubric: SFX_RUBRIC, brief: BRIEF_SFX }}
-        focused={false}
-        dim={0}
-        playing={false}
-        busy={BUSY_DIMS}
-        onFocus={inert}
-        onPlay={inert}
-        onScore={inert}
-      />
-    </Spec>
-  );
-}
-
-const cell = (provider: StrengthCell["provider"], facet: Facet, value: string, n: number, kept: number, meanScore: number | null, topDefect: string | null = null): StrengthCell => ({
-  kind: "music",
-  provider,
-  facet,
-  value,
-  n,
-  kept,
-  rejected: n - kept,
-  meanScore,
-  topDefect,
-});
-
-const LOFI_SUNO = cell("suno", "genre", "lo-fi", 9, 7, 7.4, "tempo-instability");
-const CHAMBER_SUNO = cell("suno", "genre", "chamber", 2, 1, null);
-const CELLS: readonly StrengthCell[] = [
-  cell("elevenlabs", "genre", "chamber", 6, 5, 7.6),
-  CHAMBER_SUNO,
-  cell("elevenlabs", "genre", "lo-fi", 4, 1, 4.2, "broken-ending"),
-  LOFI_SUNO,
-  cell("elevenlabs", "genre", "ambient", 1, 1, null),
-  cell("elevenlabs", "mood", "tense", 3, 2, 6.8),
-  cell("suno", "instrument", "pizzicato", 5, 2, 5.1, "thin-mix"),
-  cell("elevenlabs", "technique", "tag-list", 7, 3, 5.9, "ignored-exclude"),
-];
-
-function StrengthSpecimen() {
-  const [facet, setFacet] = useState<Facet>("genre");
-  const [sort, setSort] = useState<Sort>({ key: "value", provider: null, dir: "asc" });
-  const [picked, setPicked] = useState<StrengthCell>(LOFI_SUNO);
-  return (
-    <Spec names={["StrengthTable", "StrengthHead"]} source="audio/Strengths.tsx · strengths.ts · v1 app/playground/triage/Strengths.tsx" wide>
-      <StrengthTable kind="music" cells={CELLS} facet={facet} sort={sort} picked={cellKey(picked)} onFacet={setFacet} onSort={setSort} onPick={setPicked} />
-      <Row label="measured">
-        <StrengthHead cell={picked} />
-      </Row>
-      <Row label="waiting">
-        <StrengthHead cell={CHAMBER_SUNO} />
-      </Row>
-    </Spec>
-  );
-}
-
-function BatchSpecimen() {
-  const [music, setMusic] = useState<BatchFormState>(() => ({
-    ...blankBatch("music"),
-    prompt: "Playful conspiratorial pizzicato, a caper in miniature.",
-    genre: "chamber",
-    mood: "tense",
-    instrument: "pizzicato",
-    negative: "vocals",
-    tempoBpm: 108,
-    key: "G major",
-    technique: ["duration-and-tempo-locking"],
-  }));
-  const [sfx, setSfx] = useState<BatchFormState>(() => blankBatch("sfx"));
-  return (
-    <Spec names={["BatchForm"]} source="audio/BatchForm.tsx · batch.ts · v1 shared/price.tsx" wide>
-      <BatchForm kind="music" form={music} onForm={setMusic} problem={batchProblem("music", music)} engine="elevenlabs" busy={false} onPrice={inert} />
-      <BatchForm kind="sfx" form={sfx} onForm={setSfx} problem={batchProblem("sfx", sfx)} engine="elevenlabs" busy={false} onPrice={inert} />
-    </Spec>
-  );
-}
-
 export function AudioSection() {
   return (
     <Section id="audio">
@@ -485,7 +379,7 @@ export function AudioSection() {
           <BriefDelta check={BRIEF_SFX} label="Door slam brief" />
         </Row>
       </Spec>
-      <RubricSpecimen />
+      <RubricSpecimen silence={SILENCE} />
       <StrengthSpecimen />
       <HuntSpecimen />
       <LessonSpecimen />

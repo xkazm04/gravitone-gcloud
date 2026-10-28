@@ -14,27 +14,10 @@ import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { Toggle } from "../toggle/Toggle.tsx";
 import { AudioPreview } from "./AudioPreview.tsx";
 import {
-  LOCAL_FX_PRESETS,
-  LOCAL_KEYS,
-  LOCAL_ROLES,
-  LOCAL_TASTE_STEERS,
-  applySeedToDraft,
-  applyTasteSteer,
-  describeStemChoice,
-  explainScoreChoices,
-  fxChainForPreset,
-  fxPresetOf,
-  sketchDraftFromBrief,
-  type LocalAuditionState,
-  type LocalControls,
-  type LocalFxChain,
-  type LocalFxPresetId,
-  type LocalInstrumentView,
-  type LocalRole,
-  type LocalScoreDraft,
-  type LocalTakeView,
-  type LocalTasteSteerId,
-  type LocalTemplateView,
+  LOCAL_FX_PRESETS, LOCAL_KEYS, LOCAL_ROLES, LOCAL_TASTE_STEERS, applySeedToDraft, applyTasteSteer,
+  describeStemChoice, explainScoreChoices, fxChainForPreset, fxPresetOf, sketchDraftFromBrief,
+  type LocalAuditionState, type LocalControls, type LocalFxChain, type LocalFxPresetId, type LocalInstrumentView,
+  type LocalRole, type LocalScoreDraft, type LocalTakeView, type LocalTasteSteerId, type LocalTemplateView,
 } from "./localBand.ts";
 import s from "./LocalBand.module.css";
 import type { Seed } from "./recipe.ts";
@@ -49,44 +32,26 @@ export type LocalBandStudioProps = {
   readonly audition?: LocalAuditionState | null;
   readonly onRender: (spec: LocalScoreDraft) => void;
   readonly onReceipt?: (spec: LocalScoreDraft) => void;
-  readonly onSwapStem: (
-    takeId: string,
-    role: LocalRole,
-    instrumentId: string,
-    opts?: { readonly muted?: boolean; readonly solo?: boolean; readonly fx?: LocalFxChain },
-  ) => void;
+  readonly onSwapStem: (takeId: string, role: LocalRole, instrumentId: string, opts?: { readonly muted?: boolean; readonly solo?: boolean; readonly fx?: LocalFxChain }) => void;
   readonly onAudition: (instrumentId: string) => void;
   readonly onPromote: (takeId: string) => void;
 };
 
 const SLIDERS: readonly { readonly key: keyof LocalControls; readonly label: string; readonly max: number }[] = [
-  { key: "density", label: "density", max: 1 },
-  { key: "brightness", label: "brightness", max: 1 },
-  { key: "lift", label: "middle lift", max: 1 },
-  { key: "swing", label: "swing", max: 0.5 },
-  { key: "humanise", label: "humanise", max: 1 },
+  { key: "density", label: "density", max: 1 }, { key: "brightness", label: "brightness", max: 1 },
+  { key: "lift", label: "middle lift", max: 1 }, { key: "swing", label: "swing", max: 0.5 }, { key: "humanise", label: "humanise", max: 1 },
 ];
 
 const KEY_OPTIONS = LOCAL_KEYS.map((k) => ({ value: k, label: k }));
 const FX_OPTIONS = LOCAL_FX_PRESETS.map((p) => ({ value: p.id, label: p.label }));
 
 export function LocalBandStudio({
-  templates,
-  catalog,
-  takes,
-  seed,
-  busy = false,
-  error = null,
-  audition = null,
-  onRender,
-  onReceipt,
-  onSwapStem,
-  onAudition,
-  onPromote,
+  templates, catalog, takes, seed, busy = false, error = null, audition = null,
+  onRender, onReceipt, onSwapStem, onAudition, onPromote,
 }: LocalBandStudioProps) {
   const defaultSpec = takes[0]?.spec ?? templates[0]?.spec;
   const [draft, setDraft] = useState<LocalScoreDraft>(() => defaultSpec!);
-  const [selectedTakeId, setSelectedTakeId] = useState<string>(() => takes[0]?.id ?? "");
+  const [pinnedTakeId, setPinnedTakeId] = useState<string | null>(null);
   const [briefText, setBriefText] = useState<string>("chill hip-hop, 84 bpm, A minor, warm keys");
   const [steerNote, setSteerNote] = useState<string | null>(null);
   const [swapChoice, setSwapChoice] = useState<Readonly<Record<LocalRole, string>>>(() => ({
@@ -96,7 +61,18 @@ export function LocalBandStudio({
     lead: defaultSpec?.tracks.find((t) => t.role === "lead")?.instrument ?? "sample-ikembe-bell",
   }));
 
-  const activeTake = takes.find((t) => t.id === selectedTakeId) ?? takes[0] ?? null;
+  const activeTake = (pinnedTakeId !== null ? takes.find((t) => t.id === pinnedTakeId) : undefined) ?? takes[0] ?? null;
+
+  const selectTake = (id: string): void => {
+    setPinnedTakeId(id);
+    const hit = takes.find((t) => t.id === id);
+    if (hit !== undefined) {
+      setDraft(hit.spec);
+      const nextSwap: Record<LocalRole, string> = { ...swapChoice };
+      for (const tr of hit.spec.tracks) nextSwap[tr.role] = tr.instrument;
+      setSwapChoice(nextSwap);
+    }
+  };
 
   const pickTemplate = (tpl: LocalTemplateView): void => {
     setDraft(tpl.spec);
@@ -154,7 +130,7 @@ export function LocalBandStudio({
           <Button label="Load from seed" size="sm" disabled={busy} onPress={() => setDraft((cur) => applySeedToDraft(seed, templates, catalog, cur))} />
         )}
         {onReceipt !== undefined && <Button label="Receipt ($0)" size="sm" disabled={busy} onPress={() => onReceipt(draft)} />}
-        <Button label={busy ? "Rendering…" : "Render 4-stem take ($0)"} tone="cyan" disabled={busy} onPress={() => onRender(draft)} />
+        <Button label={busy ? "Rendering…" : "Render 4-stem take ($0)"} tone="cyan" disabled={busy} onPress={() => { setPinnedTakeId(null); onRender(draft); }} />
       </div>
 
       {error !== null && error !== "" && <ErrorLine message={error} />}
@@ -239,9 +215,10 @@ export function LocalBandStudio({
           <div className={s.head}>
             <CapsHeading text={`mastered mix · ${activeTake.title}`} variant="section" level={4} />
             {takes.length > 1 && (
-              <Select label="rendered local takes" options={takes.map((t) => ({ value: t.id, label: `${t.title} (${t.id})` }))} value={activeTake.id} onChange={setSelectedTakeId} />
+              <Select label="rendered local takes" options={takes.map((t) => ({ value: t.id, label: `${t.title} (${t.id})` }))} value={activeTake.id} onChange={selectTake} />
             )}
             <span className={s.grow} />
+            <a className={s.linkBtn} href="/board/pkt%3Aaudio%3Aaudio%2Ftriage">Board triage</a>
             <a className={s.linkBtn} href={activeTake.rppUrl} download={`${activeTake.id}.rpp`}>REAPER .rpp</a>
             <Button label={activeTake.stage === "finalized" ? "In Arrange (finalized)" : "Send to Arrange"} size="sm" tone="emerald" disabled={busy || activeTake.stage === "finalized"} onPress={() => onPromote(activeTake.id)} />
           </div>
@@ -306,7 +283,7 @@ export function LocalBandStudio({
                   on={isMuted}
                   onToggle={(muted) => {
                     patchDraftTrack(role, { muted });
-                    if (activeTake !== null) onSwapStem(activeTake.id, role, currentInstId, { muted, solo: isSolo, ...(draftTrack?.fx === undefined ? {} : { fx: draftTrack.fx }) });
+                    if (activeTake !== null) { setPinnedTakeId(null); onSwapStem(activeTake.id, role, currentInstId, { muted, solo: isSolo, ...(draftTrack?.fx === undefined ? {} : { fx: draftTrack.fx }) }); }
                   }}
                 />
                 <Toggle
@@ -315,7 +292,7 @@ export function LocalBandStudio({
                   on={isSolo}
                   onToggle={(solo) => {
                     patchDraftTrack(role, { solo });
-                    if (activeTake !== null) onSwapStem(activeTake.id, role, currentInstId, { muted: isMuted, solo, ...(draftTrack?.fx === undefined ? {} : { fx: draftTrack.fx }) });
+                    if (activeTake !== null) { setPinnedTakeId(null); onSwapStem(activeTake.id, role, currentInstId, { muted: isMuted, solo, ...(draftTrack?.fx === undefined ? {} : { fx: draftTrack.fx }) }); }
                   }}
                 />
                 {stem !== null && (
@@ -354,7 +331,7 @@ export function LocalBandStudio({
                     size="sm"
                     tone="cyan"
                     disabled={busy || !stemDirty}
-                    onPress={() => onSwapStem(activeTake.id, role, currentInstId, { muted: isMuted, solo: isSolo, ...(draftTrack?.fx === undefined ? {} : { fx: draftTrack.fx }) })}
+                    onPress={() => { setPinnedTakeId(null); onSwapStem(activeTake.id, role, currentInstId, { muted: isMuted, solo: isSolo, ...(draftTrack?.fx === undefined ? {} : { fx: draftTrack.fx }) }); }}
                   />
                 )}
                 {stem !== null && <a className={s.linkBtn} href={stem.midiUrl} download={`${activeTake?.id ?? "stem"}-${role}.mid`}>.mid</a>}
