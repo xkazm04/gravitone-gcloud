@@ -176,7 +176,10 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
         <TermRail terms={terms} onPick={onPick} onHand={onHand} />
       </aside>
       <main className={s.main}>
+        {/* The ways into one seed, side by side: a sentence, pairs by ear, or a kept take. */}
         <div className={s.from}>
+          {canDuel && <Seg label="start from" options={DOORS} value={door} onChange={setDoor} />}
+          <span className={s.grow} />
           <Select
             label="seed from"
             value={from}
@@ -185,11 +188,6 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
           />
           {!view.takes.ok && <ErrorLine message={`takes: ${view.takes.error}`} />}
         </div>
-        {canDuel && (
-          <div className={s.from}>
-            <Seg label="start from" options={DOORS} value={door} onChange={setDoor} />
-          </div>
-        )}
         {door === "words" || duel === null ? <SayIt {...steer.say} /> : duel}
         <SeedComposer
           seed={seed}

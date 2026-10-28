@@ -29,3 +29,4 @@
 .row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2)}
 .hear{display:inline-flex;align-items:center;gap:var(--sp-2);margin-right:var(--sp-3)}
 .hearWord{font:600 var(--fs-micro)/1 var(--mono);color:var(--ink-bright)}
+.grow{flex:1}
