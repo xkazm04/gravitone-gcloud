@@ -102,6 +102,29 @@ describe("translate: a sentence compiled into a seed", () => {
     expect(translate("rock drums").seed.genres).toContain("rock");
   });
 
+  test("every genre and mood the lexicon can emit, typed, is heard as itself", () => {
+    const t = translate("a bossa nova cafe in rio");
+    expect(t.unheard).toEqual([]);
+    expect(t.seed.genres[0]).toBe("bossa nova");
+    expect(provenanceOf(t, "genres", "bossa nova")).toEqual([1, 2, 5]);
+    const genres = new Set(ROWS.flatMap((r) => r.g ?? []));
+    for (const g of genres) expect(translate(g).unheard, g).toEqual([]);
+  });
+
+  test("a possessive is the word it belongs to, straight or curly", () => {
+    expect(translate("my startup's launch").unheard).toEqual([]);
+    expect(translate("my startup’s launch").unheard).toEqual([]);
+  });
+
+  test("the key follows the way the seed's moods lean, with the words behind them", () => {
+    const sad = translate("sad piano for a breakup");
+    expect(sad.seed.key).toBe("A minor");
+    expect(sad.key?.from).toEqual(provenanceOf(sad, "moods", "sad"));
+    expect(translate("a happy ukulele tune").seed.key).toBe("C major");
+    expect(translate("chill vibes for a sunday afternoon").seed.key).toBeNull();
+    expect(translate("piano").key).toBeNull();
+  });
+
   test("an empty sentence is a blank seed", () => {
     const t = translate("   ");
     expect(t.tokens).toEqual([]);

@@ -6,6 +6,7 @@
 // was used. Hovering a heard word lights the seed terms it produced (`onTrace`); a term's own
 // hover lights its words back (`lit`). What a cue produced past a list's cap waits as a ghost
 // chip to add.
+import type { ReactNode } from "react";
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { Field } from "../field/Field.tsx";
@@ -34,6 +35,12 @@ export type SayItProps = {
 export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare, examples = [], onExample, learned = [], onLearned }: SayItProps) {
   const groupOf = (i: number): number[] => [...new Set(heard.terms.filter((p) => p.from.includes(i)).flatMap((p) => p.from))];
   const used = heard.terms.length;
+  // Tempo, key and length come from words too: pointing at one lights the words it was read from.
+  const traced = (from: readonly number[], chip: ReactNode): ReactNode => (
+    <span className={s.traced} onMouseEnter={() => onTrace(from)} onMouseLeave={() => onTrace(null)}>
+      {chip}
+    </span>
+  );
   return (
     <section className={s.say} aria-label="say it">
       <form
@@ -75,8 +82,9 @@ export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare
       {heard.tokens.length > 0 && (
         <div className={s.meta}>
           <Tally value={used} label="terms" />
-          {heard.bpm !== null && <Chip label="tempo" value={`${heard.bpm.value} bpm`} casing="lower" />}
-          {heard.lengthS !== null && <Chip label="length" value={`${heard.lengthS.value} s`} casing="lower" />}
+          {heard.bpm !== null && traced(heard.bpm.from, <Chip label="tempo" value={`${heard.bpm.value} bpm`} casing="lower" />)}
+          {heard.key !== null && traced(heard.key.from, <Chip label="key" value={heard.key.value} casing="lower" />)}
+          {heard.lengthS !== null && traced(heard.lengthS.from, <Chip label="length" value={`${heard.lengthS.value} s`} casing="lower" />)}
           {heard.unheard.length > 0 && <Chip label="unheard" value={heard.unheard.join(" · ")} tone="amber" casing="lower" />}
           {heard.spare.map((p) => (
             <Chip key={`${p.list}:${p.term}`} label={`+ ${p.term}`} casing="lower" ghost name={`add ${p.term}`} onPress={() => onSpare(p)} />

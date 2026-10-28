@@ -45,6 +45,8 @@ export type Translation = {
   readonly bpm: { readonly value: number; readonly from: readonly number[] } | null;
   /** A length the sentence said ("90 seconds", "a 2-minute"), in seconds. */
   readonly lengthS: { readonly value: number; readonly from: readonly number[] } | null;
+  /** The mode the seed's moods lean to ("sad" -> A minor), with the words behind those moods; null when they do not lean. */
+  readonly key: { readonly value: string; readonly from: readonly number[] } | null;
   readonly unheard: readonly string[];
   readonly seed: Seed;
 };
@@ -52,7 +54,7 @@ export type Translation = {
 /** How many words of each list a sentence may put in the seed; the rest are `spare`. */
 export const CAPS: Readonly<Record<TermList, number>> = { genres: 2, moods: 3, instruments: 4, avoid: 6 };
 
-const fold = (s: string): string => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const fold = (s: string): string => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[‘’]/g, "'").toLowerCase();
 
 type Cue = { readonly words: readonly string[]; readonly row: LexRow; readonly atlas?: true };
 
@@ -63,9 +65,17 @@ type Cue = { readonly words: readonly string[]; readonly row: LexRow; readonly a
 // instrument's name holds a word with a reading of its own ("JAZZ guitar", "ROCK drums"), that
 // word's genre, mood and tempo are kept beside the instrument.
 const ATLAS_ROWS: readonly LexRow[] = ATLAS.map((e) => ({ cue: [e.term, ...e.aka].map((c) => c.toLowerCase()), i: [e.term] }));
+// The same holds for every genre and mood a row can emit: "bossa nova" typed is bossa nova, not
+// two unheard words. Written rows still read first where a word has a reading of its own.
+const SAID = new Set(ROWS.flatMap((r) => r.cue));
+const OWN_ROWS: readonly LexRow[] = [
+  ...[...new Set(ROWS.flatMap((r) => r.g ?? []))].filter((t) => !SAID.has(t)).map((t): LexRow => ({ cue: [t], g: [t] })),
+  ...[...new Set(ROWS.flatMap((r) => r.m ?? []))].filter((t) => !SAID.has(t)).map((t): LexRow => ({ cue: [t], m: [t] })),
+];
 const CUES: readonly Cue[] = [
   ...ROWS.flatMap((row) => row.cue.map((c): Cue => ({ words: c.split(" "), row }))),
   ...ATLAS_ROWS.flatMap((row) => row.cue.map((c): Cue => ({ words: c.split(" "), row, atlas: true }))),
+  ...OWN_ROWS.flatMap((row) => row.cue.map((c): Cue => ({ words: c.split(" "), row }))),
 ].sort((a, b) => b.words.length - a.words.length);
 /** A single word's own written row ("jazz" -> the jazz row), for the words inside an instrument's name. */
 const WORD_ROW = new Map<string, LexRow>();
@@ -88,6 +98,7 @@ export function tokenize(sentence: string): { readonly text: string; readonly st
 
 /** The word as typed first, then plain suffixes off: rainy nights -> night, remembering -> remember, sneaked -> sneak. */
 function variants(w: string): string[] {
+  if (w.endsWith("'s")) return [w, ...variants(w.slice(0, -2))];
   const v = [w];
   if (w.length > 3 && w.endsWith("s")) v.push(w.slice(0, -1));
   if (w.length > 5 && w.endsWith("ing")) v.push(w.slice(0, -3), `${w.slice(0, -3)}e`);
@@ -202,8 +213,27 @@ export function translate(sentence: string): Translation {
   const tokens: Token[] = raw.map((t, k) => ({ text: sentence.slice(t.start, t.end), start: t.start, end: t.end, kind: kinds[k] === "negator" ? "filler" : (kinds[k] ?? "unheard") }));
   const unheard = tokens.filter((t) => t.kind === "unheard").map((t) => t.text);
   const pick = (list: TermList): string[] => terms.filter((p) => p.list === list).map((p) => p.term);
-  const seed: Seed = { ...BLANK_SEED, genres: pick("genres"), moods: pick("moods"), instruments: pick("instruments"), avoid: pick("avoid"), bpm: bpm?.value ?? null };
-  return { sentence, tokens, terms, spare, bpm, lengthS, unheard, seed };
+  const key = keyOf(terms);
+  const seed: Seed = { ...BLANK_SEED, genres: pick("genres"), moods: pick("moods"), instruments: pick("instruments"), avoid: pick("avoid"), bpm: bpm?.value ?? null, key: key?.value ?? null };
+  return { sentence, tokens, terms, spare, bpm, lengthS, key, unheard, seed };
+}
+
+// Which way a mood leans. A person who says "sad" means minor without knowing the word, and an
+// audition of a sad seed played in C major would answer a question nobody asked. The two keys
+// share their notes (A minor is C major's relative), so the phrase changes mode, not register.
+const MINOR = new Set(["sad", "melancholic", "dark", "eerie", "ominous", "tense", "suspenseful", "brooding", "lonely", "mysterious", "heartbroken", "moody", "cold", "haunting", "menacing", "somber", "sombre", "grim", "anxious", "nocturnal", "wistful", "mournful", "sinister", "uneasy", "smoky", "noir"]);
+const MAJOR = new Set(["happy", "bright", "hopeful", "uplifting", "triumphant", "playful", "cheerful", "optimistic", "bouncy", "heroic", "friendly", "positive", "joyful", "sunny", "carefree", "festive", "victorious", "celebratory", "proud", "whimsical", "silly", "jubilant", "light"]);
+export const MINOR_KEY = "A minor";
+export const MAJOR_KEY = "C major";
+
+/** The seed's moods counted by lean; a tie or no lean names no key. */
+function keyOf(terms: readonly Produced[]): { value: string; from: number[] } | null {
+  const moods = terms.filter((p) => p.list === "moods");
+  const minor = moods.filter((p) => MINOR.has(p.term));
+  const major = moods.filter((p) => MAJOR.has(p.term));
+  if (minor.length === major.length) return null;
+  const won = minor.length > major.length ? minor : major;
+  return { value: won === minor ? MINOR_KEY : MAJOR_KEY, from: [...new Set(won.flatMap((p) => p.from))] };
 }
 
 /** The tempo the matched rows agree on: the mean of their ranges' middles, rounded. */
