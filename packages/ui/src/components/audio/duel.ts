@@ -5,7 +5,7 @@
 // hold that - so every pair here is rendered by the composer's own local engine (the audition
 // phrase and the sketch, /audio/audition and /audio/sketch): the same notes, the same length, the
 // same loudness, and one thing changed - the tempo, the mode, the instrument family, the
-// material, the warmth, the density. The axis names are the vocabulary the person sees at the
+// material, the warmth, the beat, the density. The axis names are the vocabulary the person sees at the
 // end ("slow over quick"), after they have already chosen by ear.
 
 import { BLANK_SEED, type Seed } from "./recipe.ts";
@@ -36,6 +36,7 @@ export const AXES: readonly DuelAxis[] = [
   { id: "touch", name: "touch", a: { plain: "plucked", sound: with_({ ids: ["nylon-guitar"] }), instruments: ["nylon guitar"] }, b: { plain: "bowed", sound: with_({ ids: ["string-section"] }), instruments: ["string section"] } },
   { id: "material", name: "material", a: { plain: "acoustic", sound: with_({ ids: ["upright-piano"] }), genres: ["acoustic"], instruments: ["upright piano"] }, b: { plain: "electronic", sound: with_({ ids: ["analog-synth"] }), genres: ["electronic"], instruments: ["analog synth"] } },
   { id: "warmth", name: "warmth", a: { plain: "warm", sound: with_({ ids: ["rhodes"] }), moods: ["warm"], instruments: ["rhodes"] }, b: { plain: "glassy", sound: with_({ ids: ["electric-piano"] }), moods: ["crisp"], instruments: ["electric piano"] } },
+  { id: "beat", name: "beat", a: { plain: "played", sound: with_({ ids: ["live-drums"] }), instruments: ["live drums"] }, b: { plain: "programmed", sound: with_({ ids: ["drum-machine"] }), genres: ["electronic"], instruments: ["drum machine"] } },
   {
     id: "density",
     name: "density",
