@@ -87,12 +87,46 @@ export function atlasFor(word: string): AtlasEntry | undefined {
  * never one already in the seed (`have`, any spelling). At most `max`.
  */
 export function swapsFor(entry: AtlasEntry, audible: ReadonlySet<string>, have: readonly string[] = [], max = 5): AtlasEntry[] {
+  return ringOf(entry.role, entry.id, audible, have, max);
+}
+
+function ringOf(role: Role, not: string | null, audible: ReadonlySet<string>, have: readonly string[], max: number): AtlasEntry[] {
   const held = new Set(have.map((h) => atlasFor(h)?.id ?? norm(h)));
-  const rings: readonly Role[] = [entry.role, ...NEIGHBOURS[entry.role]];
+  const rings: readonly Role[] = [role, ...NEIGHBOURS[role]];
   const out: AtlasEntry[] = [];
-  for (const role of rings)
-    for (const e of ATLAS) if (e.role === role && e.id !== entry.id && audible.has(e.id) && !held.has(e.id) && !out.includes(e)) out.push(e);
+  for (const r of rings)
+    for (const e of ATLAS) if (e.role === r && e.id !== not && audible.has(e.id) && !held.has(e.id) && !out.includes(e)) out.push(e);
   return out.slice(0, max);
+}
+
+/**
+ * The register of an instrument word this machine has no samples for - the words the lexicon and
+ * people use that the atlas cannot play - so its chip can still offer the nearest sounds that CAN
+ * play. Named words first, then the word's last noun ("brushed drums" -> drums, "felt piano" ->
+ * keys). Unknown: no offer, rather than a guess.
+ */
+const NEAR: Readonly<Record<string, Role>> = {
+  saxophone: "winds", sax: "winds", harmonica: "winds", whistle: "winds", "tin whistle": "winds", flute: "winds",
+  "muted trumpet": "brass", trumpet: "brass", trombone: "brass", tuba: "brass",
+  harp: "strings", pizzicato: "strings", "pizzicato strings": "strings", cello: "strings",
+  sitar: "guitar", ukulele: "guitar", banjo: "guitar", lute: "guitar", oud: "guitar", "distorted guitar": "guitar", mandolin: "guitar",
+  organ: "keys", accordion: "keys", harpsichord: "keys", "felt piano": "keys",
+  marimba: "mallets", xylophone: "mallets", vibraphone: "mallets", celesta: "mallets", glockenspiel: "mallets", "steel drums": "mallets", "sleigh bells": "mallets", "singing bowls": "mallets", bell: "mallets", bells: "mallets",
+  "taiko drums": "drums", tabla: "drums", congas: "drums", "hand percussion": "drums", claps: "drums", shaker: "drums", timpani: "drums",
+  "square lead": "synth", drones: "synth", arpeggio: "synth",
+  vocals: "voices", "vocal chops": "voices",
+};
+const LAST_NOUN: Readonly<Record<string, Role>> = { drums: "drums", drum: "drums", guitar: "guitar", piano: "keys", keys: "keys", bass: "bass", synth: "synth", pad: "synth", pads: "synth", lead: "synth", strings: "strings", violin: "strings", choir: "voices", horns: "brass", brass: "brass" };
+
+export function roleOfWord(word: string): Role | undefined {
+  const w = norm(word);
+  return atlasFor(w)?.role ?? NEAR[w] ?? LAST_NOUN[w.split(" ").at(-1) ?? ""];
+}
+
+/** The playable sounds nearest a word this machine cannot play: its register first, then neighbours. */
+export function nearFor(word: string, audible: ReadonlySet<string>, have: readonly string[] = [], max = 5): AtlasEntry[] {
+  const role = roleOfWord(word);
+  return role === undefined ? [] : ringOf(role, null, audible, have, max);
 }
 
 /** The most instruments a sketch carries (lib/audio/atlas.ts refuses more). */

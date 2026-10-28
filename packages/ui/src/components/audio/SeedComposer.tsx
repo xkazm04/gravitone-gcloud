@@ -70,6 +70,8 @@ export type SeedComposerProps = {
 
 export type SeedEar = {
   readonly playable: (term: string) => boolean;
+  /** A word with no samples here that still has playable sounds near it: a swap, no play. */
+  readonly near: (term: string) => boolean;
   readonly stateOf: (term: string) => EarState;
   readonly onPlay: (term: string) => void;
   readonly onSwap: (term: string) => void;
@@ -109,8 +111,8 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
             <span key={t} className={s.seedChip} data-lit={isLit?.(list, t) ?? false} data-stance={terms.find((x) => x.facet === FACET_OF[list] && x.term === t)?.stance ?? "none"} {...trace(list, t)}>
               {audible && <EarButton state={ear.stateOf(t)} name={t} onPress={() => ear.onPlay(t)} />}
               {t}
-              {audible && (
-                <button type="button" className={s.x} aria-label={`swap ${t}`} onClick={() => ear.onSwap(t)}>
+              {(audible || (list === "instruments" && ear !== undefined && ear.near(t))) && (
+                <button type="button" className={s.x} aria-label={`swap ${t}`} onClick={() => ear?.onSwap(t)}>
                   ⇄
                 </button>
               )}

@@ -13,7 +13,7 @@
 // setter it is handed, so the composer, the variations and the receipt all read one seed.
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { ATLAS, atlasFor, AUDITION_KEY, auditionHref, playableBpm, playableIds, sketchHref, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
+import { ATLAS, atlasFor, AUDITION_KEY, auditionHref, nearFor, playableBpm, playableIds, sketchHref, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
 import { EarStrip } from "@gt/ui/components/audio/EarStrip.tsx";
 import { provenanceOf, translate, type Produced, type TermList, type Translation } from "@gt/ui/components/audio/lexicon.ts";
 import { addTo, type Seed } from "@gt/ui/components/audio/recipe.ts";
@@ -141,6 +141,7 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
 
   const seedEar: SeedEar = {
     playable: (t) => entryOf(t) !== undefined,
+    near: (t) => entryOf(t) === undefined && nearFor(t, can, seed.instruments).length > 0,
     stateOf: (t) => {
       const e = entryOf(t);
       return e === undefined ? "idle" : ear.stateOf(href(e));
@@ -162,12 +163,14 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
   const swapping = open?.kind === "swap" ? entryOf(open.term) : undefined;
   const holding = new Set(seed.instruments.map((t) => atlasFor(t)?.id));
   // Exactly what the open strip shows: its swaps, or what the seed does not hold yet.
-  const stripFor: readonly AtlasEntry[] = swapping !== undefined ? swapsFor(swapping, can, seed.instruments) : open?.kind === "add" ? ATLAS.filter((e) => can.has(e.id) && !holding.has(e.id)) : [];
+  const nearing = open?.kind === "swap" && swapping === undefined ? open.term : null;
+  const stripFor: readonly AtlasEntry[] =
+    swapping !== undefined ? swapsFor(swapping, can, seed.instruments) : nearing !== null ? nearFor(nearing, can, seed.instruments) : open?.kind === "add" ? ATLAS.filter((e) => can.has(e.id) && !holding.has(e.id)) : [];
   // A strip row's sound: alone, or in the mix - the seed's playable instruments with this one in
   // the swapped one's place (or added), all voices at the fullest level.
   const rowHref = (e: AtlasEntry): string => {
     if (!inMix) return href(e);
-    const rest = swapping !== undefined ? seed.instruments.filter((t) => atlasFor(t)?.id !== swapping.id) : seed.instruments;
+    const rest = swapping !== undefined ? seed.instruments.filter((t) => atlasFor(t)?.id !== swapping.id) : seed.instruments.filter((t) => t !== nearing);
     return sketchHref(playableIds(rest, can, e.id), [3], seed.bpm, seed.key);
   };
   const toWarm = [...playable.map(href), ...stripFor.map(rowHref)].join(" ");
@@ -185,6 +188,9 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
     if (now !== undefined) {
       const title = move === null ? `swap ${now.term}` : `-${move.minus} +${move.plus}`;
       strip = <EarStrip title={title} now={now} candidates={swapsFor(now, can, seed.instruments)} onPick={(e) => swapTo(open.term, e)} {...common} />;
+    } else if (stripFor.length > 0) {
+      // A word with no samples here: the nearest sounds that can play, the word itself not drawn as if it could.
+      strip = <EarStrip title={`near ${open.term}`} candidates={stripFor} onPick={(e) => swapTo(open.term, e)} {...common} />;
     }
   } else if (open?.kind === "add") {
     strip = (

@@ -3,7 +3,7 @@
 // or title names in what a row EMITS (a cue may name a film; that is how people talk).
 import { describe, expect, test } from "vitest";
 
-import { ATLAS, atlasFor, auditionHref, sketchHref, swapsFor } from "../../src/components/audio/atlas.ts";
+import { ATLAS, atlasFor, auditionHref, nearFor, roleOfWord, sketchHref, swapsFor } from "../../src/components/audio/atlas.ts";
 import { provenanceOf, translate } from "../../src/components/audio/lexicon.ts";
 import { ROWS } from "../../src/components/audio/lexicon.rows.ts";
 
@@ -163,6 +163,18 @@ describe("the atlas", () => {
     expect(auditionHref("rhodes", 91.6, "A minor")).toBe("/audio/audition?id=rhodes&bpm=92&key=A+minor");
     expect(auditionHref("rhodes", null, null)).toBe("/audio/audition?id=rhodes&bpm=90");
     expect(auditionHref("rhodes", 300, null)).toBe("/audio/audition?id=rhodes&bpm=90");
+  });
+
+  test("a word with no samples here is offered the nearest sounds that can play, never a guess", () => {
+    const all = new Set(ATLAS.map((e) => e.id));
+    expect(roleOfWord("saxophone")).toBe("winds");
+    expect(roleOfWord("brushed drums")).toBe("drums");
+    expect(roleOfWord("felt piano")).toBe("keys");
+    expect(roleOfWord("vinyl crackle")).toBeUndefined();
+    expect(nearFor("brushed drums", all).every((e) => e.role === "drums")).toBe(true);
+    expect(nearFor("saxophone", all)[0]?.role).toBe("winds");
+    expect(nearFor("vinyl crackle", all)).toEqual([]);
+    expect(nearFor("brushed drums", all, ["jazz drums"]).map((e) => e.id)).not.toContain("jazz-drums");
   });
 
   test("a sketch names each instrument once", () => {
