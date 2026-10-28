@@ -35,6 +35,8 @@ export type ShapeState = {
   readonly adopt: (t: Translation) => void;
   /** A reference track's contour becomes the painted levels. */
   readonly adoptLevels: (levels: readonly Level[]) => void;
+  /** The sketch of any seed over this shape (one full four bars while there is none); null when it has nothing this machine plays. */
+  readonly sketchOf: (s: Seed) => string | null;
 };
 
 export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeState {
@@ -65,6 +67,10 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
   };
 
   const adoptLevels = (next: readonly Level[]): void => setLevels(next.length === 0 ? null : next.slice(0, 32));
+  const sketchOf = (s0: Seed): string | null => {
+    const v = [...new Set(s0.instruments.map((t) => atlasFor(t)?.id).filter((id): id is string => id !== undefined && can.has(id)))].slice(0, 5);
+    return v.length === 0 ? null : sketchHref(v, levels ?? [3], playableBpm(s0.bpm), s0.key);
+  };
 
   if (levels === null) {
     const node = (
@@ -75,7 +81,7 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
         ))}
       </div>
     );
-    return { node, lyrics: undefined, plan: undefined, adopt, adoptLevels };
+    return { node, lyrics: undefined, plan: undefined, adopt, adoptLevels, sketchOf };
   }
 
   const sections = sectionsOf(levels, bpm);
@@ -101,5 +107,5 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
     </>
   );
   const planText = plan.sections.map((p) => `[${p.name} · ${Math.round(p.durationMs / 1000)} s] ${p.positiveStyles.join(", ")}`).join("\n");
-  return { node, lyrics: sunoLyricsOf(sections), plan: planText, adopt, adoptLevels };
+  return { node, lyrics: sunoLyricsOf(sections), plan: planText, adopt, adoptLevels, sketchOf };
 }
