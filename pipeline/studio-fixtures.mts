@@ -13,10 +13,13 @@ import path from "node:path";
 import { swapRoleInstrument, type ScoreRole, type ScoreSpec } from "@gt/domain/audio.score";
 import { templateById } from "@gt/domain/audio.score.templates";
 
-import { renderLocalScore } from "../lib/sound/localScore";
+import { auditionLocalInstrument, renderLocalScore } from "../lib/sound/localScore";
 import { storeRoot } from "../lib/sound/store";
 
 export const STUDIO_FIXTURE_INDEX = "studio-fixtures.json";
+
+/** Every instrument a scripted session offers as a candidate (its "on its own" preview). */
+const AUDITIONS = ["sample-mamas-bass", "vital-sub-bass", "sample-felt-piano", "sample-grand-piano", "sample-lofi-keys"] as const;
 
 const swapped = (spec: ScoreSpec, role: ScoreRole, instrument: string, title: string): ScoreSpec => {
   const r = swapRoleInstrument(spec, role, instrument);
@@ -62,7 +65,17 @@ async function main(argv: readonly string[]): Promise<number> {
     takes[key] = r.value.take.id;
     if (!argv.includes("--json")) console.log(`${key.padEnd(18)} ${r.value.take.id}  ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   }
-  const index = { v: 1, renderedAt: new Date().toISOString(), takes };
+  // The candidates' "on its own" audio is the file route's audition branch, which serves only what
+  // auditionLocalInstrument rendered before (/api/sound/takes/audition/file?instrument=<id>).
+  for (const id of AUDITIONS) {
+    const r = await auditionLocalInstrument(id);
+    if (!r.ok || r.value.source.startsWith("scipy")) {
+      console.error(`studio-fixtures: audition ${id}: ${r.ok ? `fell back to ${r.value.source}` : r.error.message}`);
+      return 1;
+    }
+    if (!argv.includes("--json")) console.log(`audition ${id.padEnd(20)} ${r.value.source}`);
+  }
+  const index = { v: 1, renderedAt: new Date().toISOString(), takes, auditions: AUDITIONS };
   const file = path.join(storeRoot(), STUDIO_FIXTURE_INDEX);
   fs.writeFileSync(file, `${JSON.stringify(index, null, 2)}\n`, "utf8");
   console.log(argv.includes("--json") ? JSON.stringify({ ok: true, file, ...index }) : `index: ${file}`);
