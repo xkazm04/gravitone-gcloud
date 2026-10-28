@@ -12,10 +12,14 @@ spends. Built 2026-10-28 (hackathon pack "Steer by ear", fusing B5, A1, B2, B4, 
 | By ear | Seven pairs, each differing in one dimension of the sound; answers compile to a seed with reasons | `duel.ts`, `DuelCard.tsx`; keys in `keymap/bindings.ts` (`audio.duel`) | `/audio/sketch` |
 | From a track | A track's tempo, key and energy every four bars become the seed's tempo, key and shape | `shape.ts` `levelsOfContour`, `TrackDrop.tsx` | `POST /audio/reference`, `lib/audio/reference.ts` |
 | Hear it | Every instrument the libraries file plays one fixed four-bar phrase at the seed's tempo and key, -20 LUFS | `atlas.ts` (25 instruments), `EarButton.tsx`, `useEar.ts` | `/audio/audition`, `lib/audio/atlas.ts`, `pipeline/audio/audition.py`, `drums.py` |
-| Swap it | Same-register candidates first, then neighbours, plain words first, blind on request | `atlas.ts` `swapsFor`, `EarStrip.tsx` | `/audio/audition` |
+| Swap it | Same-register candidates first, then neighbours, plain words first; blind, or in the mix with the rest of the seed; a word with no samples here is offered the sounds near it | `atlas.ts` `swapsFor`, `nearFor`, `EarStrip.tsx` | `/audio/audition`, `/audio/sketch` |
+| Learn it | Every pick by ear joins a "learned" row with its plain words; a press adds the word to the sentence (the lexicon hears every atlas term) | `SayIt.tsx`, `lexicon.ts` | - |
 | Shape it | Painted four-bar columns become named sections; Suno section tags (unverified) and an ElevenLabs plan (quoted, dry) | `shape.ts`, `ShapeStrip.tsx` | `lib/music/pricing.ts` `priceCall` |
-| Hear the shape | The seed's instruments together across the shape, voices thickening with the level; a playhead | `atlas.ts` `sketchHref` | `/audio/sketch`, `pipeline/audio/sketch.py` |
+| Hear the shape | The seed's instruments together across the shape, voices thickening with the level; a playhead; every door (Compose, the duel's Use, a track's Use) answers with this sound; each variation plays its own | `atlas.ts` `sketchHref`, `playableIds` | `/audio/sketch`, `pipeline/audio/sketch.py` |
 | Send | The existing Suno receipt, DRY by default; section tags ride in the lyrics field | `recipe.ts` `sunoFieldsOf` | `app/(studio)/audio/_audio/actions.ts` |
+
+Renders go through two warm `sidecar.py serve` workers (`lib/audio/renderWorker.ts`, about 0.6 s
+for an uncached audition or sketch; one process per render when no worker can start).
 
 The lane's shared state is in `app/(studio)/audio/_audio/`: `steer.tsx` (sentence, provenance,
 strips, warming), `shapeState.tsx`, `duelState.tsx`, `trackState.tsx`; `AudioLane.tsx` owns the
