@@ -50,4 +50,22 @@ describe("gt_read steer", () => {
     expect(v.suno.lyrics).toBe("[Instrumental]");
     expect(v.elevenlabs).toBeNull();
   });
+
+  test("words that pull two ways are named with what settles each side, as the screen does", async () => {
+    const r = await op?.run({ sentence: "chill drum and bass" }, ctx);
+    if (r === undefined || !r.ok) throw new Error("no answer");
+    const v = r.value as { pulls: { kind: string; sides: { words: string[]; says: string; settle: string }[] }[]; key: unknown; near: unknown[]; stand_ins: unknown[] };
+    expect(v.key).toBeNull();
+    expect(v.near).toEqual([]);
+    expect(v.stand_ins).toEqual([]);
+    expect(v.pulls).toEqual([
+      {
+        kind: "tempo",
+        sides: [
+          { words: ["chill"], says: "75–90 bpm", settle: "83 bpm" },
+          { words: ["drum", "and", "bass"], says: "165–174 bpm", settle: "170 bpm" },
+        ],
+      },
+    ]);
+  });
 });
