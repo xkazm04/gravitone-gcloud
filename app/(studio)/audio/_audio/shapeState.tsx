@@ -29,6 +29,8 @@ export type ShapeState = {
   readonly node: ReactNode;
   /** Suno's lyrics field for the shape; undefined while Suno decides the form. */
   readonly lyrics: string | undefined;
+  /** The ElevenLabs plan's sections as lines (name, seconds, styles); undefined with no shape. */
+  readonly plan: string | undefined;
   /** A composed sentence that says a length or a use reshapes the piece. */
   readonly adopt: (t: Translation) => void;
 };
@@ -69,7 +71,7 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
         ))}
       </div>
     );
-    return { node, lyrics: undefined, adopt };
+    return { node, lyrics: undefined, plan: undefined, adopt };
   }
 
   const sections = sectionsOf(levels, bpm);
@@ -86,10 +88,11 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
       <ShapeStrip levels={levels} bpm={bpm} onLevels={setLevels} voicesOf={(sec) => voicesAt(sec.level, seed.instruments)} presets={PRESETS} onPreset={(p) => startWith(p)} onLength={resize} onClear={() => setLevels(null)} />
       <div className={s.row}>
         {hear(levels)}
-        <Chip label="suno" value={`${sections.length} section tags · unverified`} casing="lower" tone="amber" />{" "}
-        <Chip label="elevenlabs plan" value={`${plan.sections.length} sections · ${Math.round(seconds)} s · ${quote.credits === undefined ? "unpriced" : `${count(Math.round(quote.credits))} credits`} · dry`} casing="lower" />
+        <Chip label="suno" value={`${sections.length} section ${sections.length === 1 ? "tag" : "tags"} · unverified`} casing="lower" tone="amber" />{" "}
+        <Chip label="elevenlabs plan" value={`${plan.sections.length} ${plan.sections.length === 1 ? "section" : "sections"} · ${Math.round(seconds)} s · ${quote.credits === undefined ? "unpriced" : `${count(Math.round(quote.credits))} credits`} · dry`} casing="lower" />
       </div>
     </>
   );
-  return { node, lyrics: sunoLyricsOf(sections), adopt };
+  const planText = plan.sections.map((p) => `[${p.name} · ${Math.round(p.durationMs / 1000)} s] ${p.positiveStyles.join(", ")}`).join("\n");
+  return { node, lyrics: sunoLyricsOf(sections), plan: planText, adopt };
 }

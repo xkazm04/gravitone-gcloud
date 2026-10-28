@@ -199,6 +199,7 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
           strip={steer.strip}
           shape={shape.node}
           {...(shape.lyrics === undefined ? {} : { lyrics: shape.lyrics })}
+          {...(shape.plan === undefined ? {} : { plan: shape.plan })}
           terms={terms}
           hands={hands}
           from={fromLabel}

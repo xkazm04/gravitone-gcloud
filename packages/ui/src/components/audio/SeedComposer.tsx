@@ -64,6 +64,8 @@ export type SeedComposerProps = {
   readonly shape?: ReactNode;
   /** Suno's lyrics field when a shape gives the piece sections; absent, "[Instrumental]". */
   readonly lyrics?: string;
+  /** The ElevenLabs plan, as lines, when a shape gives the piece sections: drawn under its dialect. */
+  readonly plan?: string;
 };
 
 export type SeedEar = {
@@ -79,11 +81,18 @@ const TARGETS = [
   { value: "elevenlabs", label: "elevenlabs" },
 ] as const satisfies readonly { readonly value: Target; readonly label: string }[];
 
-export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, onCopy, keys, ear, isLit, onTrace, strip, shape, lyrics }: SeedComposerProps) {
+export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, onCopy, keys, ear, isLit, onTrace, strip, shape, lyrics, plan }: SeedComposerProps) {
   const [target, setTarget] = useState<Target>("suno");
   const dl = (f: string): string => `audio-composer-${f}`;
   const drawn = compose(seed, target, hands);
-  const text = target === "suno" && lyrics !== undefined && drawn.endsWith(INSTRUMENTAL) ? `${drawn.slice(0, -INSTRUMENTAL.length)}${lyrics}` : drawn;
+  // What each vendor would be sent, drawn whole: Suno's tags in place of the bare "[Instrumental]",
+  // the ElevenLabs plan's sections under its sentence.
+  const text =
+    target === "suno" && lyrics !== undefined && drawn.endsWith(INSTRUMENTAL)
+      ? `${drawn.slice(0, -INSTRUMENTAL.length)}${lyrics}`
+      : target === "elevenlabs" && plan !== undefined
+        ? `${drawn}\n\n${plan}`
+        : drawn;
   const fields = sunoFieldsOf(seed, hands);
   const cut = target === "suno" ? sunoCut(seed, hands) : 0;
   const tempoRefused = tempoProblem(seed.bpm === null ? null : Math.round(seed.bpm));

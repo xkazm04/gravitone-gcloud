@@ -63,6 +63,7 @@ export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare
         <div className={s.meta}>
           <Tally value={used} label="terms" />
           {heard.bpm !== null && <Chip label="tempo" value={`${heard.bpm.value} bpm`} casing="lower" />}
+          {heard.lengthS !== null && <Chip label="length" value={`${heard.lengthS.value} s`} casing="lower" />}
           {heard.unheard.length > 0 && <Chip label="unheard" value={heard.unheard.join(" · ")} tone="amber" casing="lower" />}
           {heard.spare.map((p) => (
             <Chip key={`${p.list}:${p.term}`} label={`+ ${p.term}`} casing="lower" ghost name={`add ${p.term}`} onPress={() => onSpare(p)} />

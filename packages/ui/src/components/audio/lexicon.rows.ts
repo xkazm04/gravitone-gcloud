@@ -141,9 +141,9 @@ export const ROWS: readonly LexRow[] = [
   { cue: ["building", "build up", "rising", "crescendo"], g: ["cinematic"], m: ["rising"], i: ["string section"], bpm: [90, 110] },
   { cue: ["cinematic", "film", "movie", "score", "soundtrack"], g: ["cinematic"], m: ["emotional"], i: ["string section", "grand piano"], bpm: [70, 95] },
   // genres people say
-  { cue: ["lo-fi", "lofi", "lo fi"], g: ["lo-fi hip hop"], m: ["mellow"], i: ["rhodes", "vinyl crackle", "dusty drums"], bpm: [70, 85] },
+  { cue: ["lofi beats", "lo-fi beats", "lo fi beats", "chill beats", "lo-fi", "lofi", "lo fi"], g: ["lo-fi hip hop"], m: ["mellow"], i: ["rhodes", "vinyl crackle", "dusty drums"], bpm: [70, 85] },
   { cue: ["jazz", "jazzy"], g: ["jazz"], m: ["smooth"], i: ["upright bass", "brushed drums", "grand piano"], bpm: [90, 130] },
-  { cue: ["hip hop", "hip-hop", "rap", "beats"], g: ["hip hop"], m: ["confident"], i: ["drum machine", "synth bass"], bpm: [85, 95] },
+  { cue: ["hip hop", "hip-hop", "rap", "boom bap"], g: ["hip hop"], m: ["confident"], i: ["drum machine", "synth bass"], bpm: [85, 95] },
   { cue: ["rock", "rocky"], g: ["rock"], m: ["energetic"], i: ["distorted guitar", "electric bass", "live drums"], bpm: [115, 135] },
   { cue: ["classical", "orchestra", "orchestral", "symphonic"], g: ["orchestral"], m: ["elegant"], i: ["string section", "woodwinds", "brass section"], bpm: [70, 110] },
   { cue: ["electronic", "edm", "techno"], g: ["techno"], m: ["driving"], i: ["synth bass", "drum machine", "analog synth"], bpm: [122, 132] },
