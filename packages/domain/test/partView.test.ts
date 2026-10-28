@@ -213,7 +213,7 @@ describe("op labels of the later kinds", () => {
       { op: "voice-mark", lineId: "l1", takeId: "tk1", mark: null },
     ],
     "voice-line": [{ op: "voice-line", lineId: "l1", text: "x" }],
-    "voice-fx-ask": [{ op: "voice-fx-ask", lineId: "l1", takeId: "tk1", describe: "a ghost" }],
+    "voice-fx-ask": [{ op: "voice-fx-ask", lineId: "l1", takeId: "tk1", describe: "x" }],
   };
 
   test.each([
