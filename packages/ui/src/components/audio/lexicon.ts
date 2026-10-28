@@ -15,6 +15,7 @@
 import { ATLAS } from "./atlas.ts";
 import { BLANK_SEED, type Seed } from "./recipe.ts";
 import { FILLER, NEGATORS, ROWS, type LexRow } from "./lexicon.rows.ts";
+import { presetForWords } from "./shape.ts";
 
 export type TokenKind = "cue" | "filler" | "unheard" | "negator";
 
@@ -253,6 +254,10 @@ export function translate(sentence: string): Translation {
     } else spare.push(p);
   }
   const bpm = explicit ?? tempoOf(ranges);
+  // A word that names a shape ("build", "loop", "sting") is heard by the shape, not by a row.
+  words.forEach((w, k) => {
+    if (kinds[k] === "unheard" && presetForWords([w]) !== undefined) kinds[k] = "cue";
+  });
   const tokens: Token[] = raw.map((t, k) => ({ text: sentence.slice(t.start, t.end), start: t.start, end: t.end, kind: kinds[k] === "negator" ? "filler" : (kinds[k] ?? "unheard") }));
   const unheard = tokens.filter((t) => t.kind === "unheard").map((t) => t.text);
   const near = tokens.flatMap((t, k) => {
