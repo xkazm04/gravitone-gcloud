@@ -83,3 +83,4 @@ span.termName{cursor:default}
 .seedChip[data-lit="true"]{background:color-mix(in srgb,var(--cyan) 22%,transparent);border-color:color-mix(in srgb,var(--cyan) 55%,transparent)}
 .seedChip:has(button[data-state]){padding-left:var(--sp-tight)}
 .stripSlot{grid-column:1 / -1}
+.shapeSlot{min-width:0;display:grid;gap:var(--sp-2)}

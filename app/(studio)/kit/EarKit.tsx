@@ -10,6 +10,8 @@ import { EarButton } from "@gt/ui/components/audio/EarButton.tsx";
 import { EarStrip } from "@gt/ui/components/audio/EarStrip.tsx";
 import { translate } from "@gt/ui/components/audio/lexicon.ts";
 import { SayIt } from "@gt/ui/components/audio/SayIt.tsx";
+import { PRESETS, voicesAt, type Level } from "@gt/ui/components/audio/shape.ts";
+import { ShapeStrip } from "@gt/ui/components/audio/ShapeStrip.tsx";
 import type { EarState } from "@gt/ui/components/audio/useEar.ts";
 
 import { inert } from "./ContractHooks.tsx";
@@ -47,6 +49,26 @@ function StripSpecimen() {
   );
 }
 
+const VOICES = ["rhodes", "upright bass", "brushed drums"];
+
+function ShapeSpecimen() {
+  const [levels, setLevels] = useState<Level[]>([0, 0, 2, 3, 3, 1, 3, 0]);
+  return (
+    <Spec names={["ShapeStrip"]} source="audio/ShapeStrip.tsx · shape.ts" wide>
+      <ShapeStrip
+        levels={levels}
+        bpm={92}
+        onLevels={setLevels}
+        voicesOf={(sec) => voicesAt(sec.level, VOICES)}
+        presets={PRESETS}
+        onPreset={(p) => setLevels(p.levels(levels.length))}
+        onLength={(n) => setLevels((l) => (n < l.length ? l.slice(0, n) : [...l, l[l.length - 1] ?? 1]))}
+        onClear={inert}
+      />
+    </Spec>
+  );
+}
+
 export function EarSection() {
   return (
     <Section id="ear">
@@ -63,6 +85,7 @@ export function EarSection() {
         </Row>
       </Spec>
       <StripSpecimen />
+      <ShapeSpecimen />
     </Section>
   );
 }

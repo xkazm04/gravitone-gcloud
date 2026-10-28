@@ -42,6 +42,8 @@ export type Translation = {
   /** What a cue produced past a list's cap: offered, not sent. */
   readonly spare: readonly Produced[];
   readonly bpm: { readonly value: number; readonly from: readonly number[] } | null;
+  /** A length the sentence said ("90 seconds", "a 2-minute"), in seconds. */
+  readonly lengthS: { readonly value: number; readonly from: readonly number[] } | null;
   readonly unheard: readonly string[];
   readonly seed: Seed;
 };
@@ -92,11 +94,27 @@ export function translate(sentence: string): Translation {
   const produced: Produced[] = [];
   const ranges: { lo: number; hi: number; from: number[] }[] = [];
   let explicit: { value: number; from: number[] } | null = null;
+  let lengthS: { value: number; from: number[] } | null = null;
   let negate = -1;
   for (let i = 0; i < words.length; ) {
     const w = words[i] ?? "";
     if (/^\d{2,3}$/.test(w) && (words[i + 1] === "bpm" || words[i + 1] === "beats")) {
       explicit = { value: Number(w), from: [i, i + 1] };
+      kinds[i] = "cue";
+      kinds[i + 1] = "cue";
+      i += 2;
+      continue;
+    }
+    const unit = (u: string | undefined): number => (u === undefined ? 0 : /^(seconds?|secs?|s)$/.test(u) ? 1 : /^(minutes?|mins?)$/.test(u) ? 60 : 0);
+    const joined = /^(\d{1,3})-(seconds?|secs?|minutes?|mins?)$/.exec(w);
+    if (joined !== null && unit(joined[2]) > 0) {
+      lengthS = { value: Number(joined[1]) * unit(joined[2]), from: [i] };
+      kinds[i] = "cue";
+      i++;
+      continue;
+    }
+    if (/^\d{1,3}$/.test(w) && unit(words[i + 1]) > 0) {
+      lengthS = { value: Number(w) * unit(words[i + 1]), from: [i, i + 1] };
       kinds[i] = "cue";
       kinds[i + 1] = "cue";
       i += 2;
@@ -156,7 +174,7 @@ export function translate(sentence: string): Translation {
   const unheard = tokens.filter((t) => t.kind === "unheard").map((t) => t.text);
   const pick = (list: TermList): string[] => terms.filter((p) => p.list === list).map((p) => p.term);
   const seed: Seed = { ...BLANK_SEED, genres: pick("genres"), moods: pick("moods"), instruments: pick("instruments"), avoid: pick("avoid"), bpm: bpm?.value ?? null };
-  return { sentence, tokens, terms, spare, bpm, unheard, seed };
+  return { sentence, tokens, terms, spare, bpm, lengthS, unheard, seed };
 }
 
 /** The tempo the matched rows agree on: the mean of their ranges' middles, rounded. */

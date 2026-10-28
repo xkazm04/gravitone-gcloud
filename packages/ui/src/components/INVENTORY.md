@@ -309,6 +309,7 @@ Audio desk, the Recipe Book half (`/audio`, the Library's audio detail).
 | `SayIt` | new (steer by ear, 2026-10-28) - replaces the Floor's invisible sentence paste (lib/sound/suno/draft.ts `sentenceStand`) | /audio | a sentence and its echo as the lexicon heard it: heard words underlined, filler faint, unheard struck through in amber; a heard word lights the seed terms it produced; tempo and unheard as chips; overflow terms as ghost chips to add |
 | `EarButton` | new; AudioPreview's play control, chip-sized | /audio | idle (triangle), loading (dashed, pulsing - a first render is seconds), playing (filled, bars); named by instrument and verb |
 | `EarStrip` | new | /audio | instruments heard in turn on one fixed phrase: swap (the instrument on top as `now`, same register first, then neighbours) or add by ear; plain words first, the term second; blind hides terms until a pick; Use |
+| `ShapeStrip` | new (B4, 2026-10-28) | /audio | energy painted over four-bar columns (drag, or arrows on a focused column); runs of one level drawn above as named sections with time, bars, level in words and the instruments the arrangement gives them; presets; four bars more or fewer; clear |
 
 Style atelier (`/library/style/[id]`).
 

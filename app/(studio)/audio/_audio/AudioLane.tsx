@@ -40,6 +40,7 @@ import { useShell } from "../../_shell/Providers.tsx";
 import { copyText } from "../../_shell/clipboard.ts";
 import type { AudioView, SeedTake } from "./read.ts";
 import type { setHand, sunoConfirm, sunoReceipt } from "./actions.ts";
+import { useShape } from "./shapeState.tsx";
 import { useSteer } from "./steer.tsx";
 import s from "./audio.module.css";
 
@@ -77,14 +78,23 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
   // What the seed was last loaded from: a take's title, a variation's axis, a reference.
   const [loaded, setLoaded] = useState<string | null>(null);
   const fromLabel = loaded ?? take?.title ?? "blank";
-  const steer = useSteer(seed, setSeed, audible, (said) => {
-    setFrom(BLANK);
-    setLoaded(said === "" ? "blank" : `“${said}”`);
-  });
+  const shape = useShape(seed);
+  const steer = useSteer(
+    seed,
+    setSeed,
+    audible,
+    (said) => {
+      setFrom(BLANK);
+      setLoaded(said === "" ? "blank" : `“${said}”`);
+    },
+    shape.adopt,
+  );
 
   const send = (s0: Seed, label: string): void => {
-    const fields = sunoFieldsOf(s0, hands, label === "blank" ? undefined : label);
-    if (fields === null || flow.reading) return;
+    const base = sunoFieldsOf(s0, hands, label === "blank" ? undefined : label);
+    if (base === null || flow.reading) return;
+    // The shape's section tags ride in Suno's lyrics field; with no shape it stays "[Instrumental]".
+    const fields = shape.lyrics === undefined ? base : { ...base, lyrics: shape.lyrics };
     void flow.open({
       trail: [{ label: "Audio", href: "/audio" }],
       here: "send to suno",
@@ -161,6 +171,8 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
           isLit={steer.isLit}
           onTrace={steer.onTrace}
           strip={steer.strip}
+          shape={shape.node}
+          {...(shape.lyrics === undefined ? {} : { lyrics: shape.lyrics })}
           terms={terms}
           hands={hands}
           from={fromLabel}

@@ -73,6 +73,13 @@ describe("translate: a sentence compiled into a seed", () => {
     expect(t.spare.length).toBeGreaterThan(0);
   });
 
+  test("a length said in words is heard as seconds", () => {
+    expect(translate("90 seconds for a product demo").lengthS?.value).toBe(90);
+    expect(translate("a 2-minute trailer").lengthS?.value).toBe(120);
+    expect(translate("90 seconds for a product demo").unheard).toEqual([]);
+    expect(translate("sad piano").lengthS).toBeNull();
+  });
+
   test("an empty sentence is a blank seed", () => {
     const t = translate("   ");
     expect(t.tokens).toEqual([]);

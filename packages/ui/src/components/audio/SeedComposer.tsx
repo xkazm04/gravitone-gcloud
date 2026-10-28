@@ -21,7 +21,7 @@ import { Seg } from "../seg/Seg.tsx";
 import { TEMPO, tempoProblem } from "./batch.ts";
 import { EarButton } from "./EarButton.tsx";
 import type { EarState } from "./useEar.ts";
-import { addTo, avoidFloats, BLANK_SEED, compose, FACET_OF, preferredFloats, removeFrom, SEED_LISTS, sunoCut, sunoFieldsOf, type Hand, type Seed, type SeedList, type Target, type Term } from "./recipe.ts";
+import { addTo, avoidFloats, BLANK_SEED, compose, FACET_OF, INSTRUMENTAL, preferredFloats, removeFrom, SEED_LISTS, sunoCut, sunoFieldsOf, type Hand, type Seed, type SeedList, type Target, type Term } from "./recipe.ts";
 import s from "./Composer.module.css";
 
 function AddWord({ label, list, onAdd }: { readonly label: string; readonly list: string; readonly onAdd: (w: string) => void }) {
@@ -60,6 +60,10 @@ export type SeedComposerProps = {
   readonly onTrace?: (list: SeedList | "avoid", term: string | null) => void;
   /** Drawn under the instrument row: the strip a swap or an add by ear opens. */
   readonly strip?: ReactNode;
+  /** Drawn as the composer's last row: the piece's shape over time. */
+  readonly shape?: ReactNode;
+  /** Suno's lyrics field when a shape gives the piece sections; absent, "[Instrumental]". */
+  readonly lyrics?: string;
 };
 
 export type SeedEar = {
@@ -75,10 +79,11 @@ const TARGETS = [
   { value: "elevenlabs", label: "elevenlabs" },
 ] as const satisfies readonly { readonly value: Target; readonly label: string }[];
 
-export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, onCopy, keys, ear, isLit, onTrace, strip }: SeedComposerProps) {
+export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, onCopy, keys, ear, isLit, onTrace, strip, shape, lyrics }: SeedComposerProps) {
   const [target, setTarget] = useState<Target>("suno");
   const dl = (f: string): string => `audio-composer-${f}`;
-  const text = compose(seed, target, hands);
+  const drawn = compose(seed, target, hands);
+  const text = target === "suno" && lyrics !== undefined && drawn.endsWith(INSTRUMENTAL) ? `${drawn.slice(0, -INSTRUMENTAL.length)}${lyrics}` : drawn;
   const fields = sunoFieldsOf(seed, hands);
   const cut = target === "suno" ? sunoCut(seed, hands) : 0;
   const tempoRefused = tempoProblem(seed.bpm === null ? null : Math.round(seed.bpm));
@@ -162,6 +167,12 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
           <Seg label="prompt dialect" options={TARGETS} value={target} onChange={setTarget} />
         </div>
       </div>
+      {shape !== undefined && shape !== null && (
+        <div className={s.facet}>
+          <span className={s.facetLabel}>shape</span>
+          <div className={s.shapeSlot}>{shape}</div>
+        </div>
+      )}
       </div>
       <pre className={s.promptText} aria-label="prompt text" data-testid="audio-prompt">
         {text}

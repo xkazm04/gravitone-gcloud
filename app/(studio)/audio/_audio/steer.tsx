@@ -69,7 +69,7 @@ export type Steer = {
 };
 
 /** `onSaid` names where the seed came from when a sentence is composed into it. */
-export function useSteer(seed: Seed, setSeed: (next: Seed) => void, audible: readonly string[], onSaid: (sentence: string) => void): Steer {
+export function useSteer(seed: Seed, setSeed: (next: Seed) => void, audible: readonly string[], onSaid: (sentence: string) => void, onHeard: (t: Translation) => void): Steer {
   const ear = useEar();
   const can = useMemo(() => new Set(audible), [audible]);
   const [sentence, setSentence] = useState("");
@@ -94,6 +94,7 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, audible: rea
     setMove(null);
     setSaid(heard);
     setSeed(heard.seed);
+    onHeard(heard);
     onSaid(sentence.trim());
   };
 
