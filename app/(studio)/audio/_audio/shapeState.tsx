@@ -9,7 +9,7 @@
 // measured) - quoted only: the desk has no ElevenLabs producer (lib/sound/engines.ts), and DRY.
 import { useState, type ReactNode } from "react";
 
-import { playableBpm, playableIds, sketchHref } from "@gt/ui/components/audio/atlas.ts";
+import { playableBpm, playableIds, sketchHref, standInsOf } from "@gt/ui/components/audio/atlas.ts";
 import { EarButton } from "@gt/ui/components/audio/EarButton.tsx";
 import type { Translation } from "@gt/ui/components/audio/lexicon.ts";
 import type { Seed } from "@gt/ui/components/audio/recipe.ts";
@@ -54,6 +54,10 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
       <span className={s.hear}>
         <EarButton state={st} name={cols.length === 1 ? "the instruments together" : "the shape"} onPress={() => ear.toggle(href)} big />
         <span className={s.hearWord}>{cols.length === 1 ? `together · ${clock(groupSeconds(bpm))}` : `the shape · ${clock(groupSeconds(bpm) * cols.length)}`}</span>
+        {/* A word with no samples here sounds through its register's nearest: said, not hidden. */}
+        {standInsOf(seed.instruments, can).map((x) => (
+          <Chip key={x.word} label={x.word} value={`≈ ${x.as.term}`} casing="lower" ghost />
+        ))}
       </span>
     );
   };

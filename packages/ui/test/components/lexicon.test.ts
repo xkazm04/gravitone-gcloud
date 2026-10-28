@@ -3,7 +3,7 @@
 // or title names in what a row EMITS (a cue may name a film; that is how people talk).
 import { describe, expect, test } from "vitest";
 
-import { ATLAS, atlasFor, auditionHref, nearFor, roleOfWord, sketchHref, swapsFor } from "../../src/components/audio/atlas.ts";
+import { ATLAS, atlasFor, auditionHref, nearFor, playableIds, roleOfWord, sketchHref, soundFor, standInsOf, swapsFor } from "../../src/components/audio/atlas.ts";
 import { provenanceOf, translate } from "../../src/components/audio/lexicon.ts";
 import { ROWS } from "../../src/components/audio/lexicon.rows.ts";
 
@@ -226,6 +226,16 @@ describe("the atlas", () => {
     expect(nearFor("saxophone", all)[0]?.role).toBe("winds");
     expect(nearFor("vinyl crackle", all)).toEqual([]);
     expect(nearFor("brushed drums", all, ["jazz drums"]).map((e) => e.id)).not.toContain("jazz-drums");
+  });
+
+  test("a sketch hears a word with no samples through its register's nearest, and says so", () => {
+    const all = new Set(ATLAS.map((e) => e.id));
+    expect(playableIds(["muted trumpet", "upright bass"], all)).toEqual(["brass-section", "upright-bass"]);
+    expect(standInsOf(["muted trumpet", "upright bass"], all).map((x) => [x.word, x.as.term])).toEqual([["muted trumpet", "brass section"]]);
+    expect(soundFor("brushed drums", all)?.term).toBe("jazz drums");
+    expect(soundFor("vinyl crackle", all)).toBeUndefined();
+    expect(soundFor("rhodes", new Set(["grand-piano"]))?.term).toBe("grand piano");
+    expect(soundFor("rhodes", new Set(["live-drums"]))).toBeUndefined();
   });
 
   test("a sketch names each instrument once", () => {

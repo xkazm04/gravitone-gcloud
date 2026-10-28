@@ -132,13 +132,40 @@ export function nearFor(word: string, audible: ReadonlySet<string>, have: readon
 /** The most instruments a sketch carries (lib/audio/atlas.ts refuses more). */
 export const SKETCH_VOICES = 5;
 
+/** Where the register's first sound is not the nearest: brushes are a jazz kit's, claps a machine's. */
+const STAND_IN: Readonly<Record<string, string>> = { "brushed drums": "jazz-drums", brushes: "jazz-drums", claps: "drum-machine", "dusty drums": "jazz-drums" };
+
 /**
- * The atlas ids a seed's instruments name that this machine can play, once each, in seed order,
- * at most SKETCH_VOICES - the ONE spelling of "the seed's playable instruments" the shape's sketch,
- * a variation's sketch, a swap heard in the mix and the agent door all use. `must` is kept in.
+ * The sound a seed word is heard as in a sketch: its own where this machine has it; else the first
+ * playable sound of the SAME register ("muted trumpet" -> brass section), a stand-in the screen
+ * names (`standInsOf`); else none - a word with no register ("vinyl crackle") is never guessed.
+ */
+export function soundFor(word: string, audible: ReadonlySet<string>): AtlasEntry | undefined {
+  const own = atlasFor(word);
+  if (own !== undefined && audible.has(own.id)) return own;
+  const closer = STAND_IN[norm(word)];
+  if (closer !== undefined && audible.has(closer)) return atlasById(closer);
+  const role = roleOfWord(word);
+  return role === undefined ? undefined : ringOf(role, null, audible, [], ATLAS.length).find((e) => e.role === role);
+}
+
+/** The seed's words a sketch plays through another sound, with that sound: said beside the play mark. */
+export function standInsOf(instruments: readonly string[], audible: ReadonlySet<string>): { readonly word: string; readonly as: AtlasEntry }[] {
+  const ids = playableIds(instruments, audible);
+  return instruments.flatMap((word) => {
+    const as = soundFor(word, audible);
+    return as === undefined || as.id === atlasFor(word)?.id || !ids.includes(as.id) ? [] : [{ word, as }];
+  });
+}
+
+/**
+ * The atlas ids a seed's instruments are heard as on this machine (`soundFor`: their own, or a
+ * same-register stand-in), once each, in seed order, at most SKETCH_VOICES - the ONE spelling of
+ * "the seed's playable instruments" the shape's sketch, a variation's sketch, a swap heard in the
+ * mix and the agent door all use. `must` is kept in.
  */
 export function playableIds(instruments: readonly string[], audible: ReadonlySet<string>, must?: string): string[] {
-  const ids = [...new Set(instruments.map((t) => atlasFor(t)?.id).filter((id): id is string => id !== undefined && audible.has(id)))];
+  const ids = [...new Set(instruments.map((t) => soundFor(t, audible)?.id).filter((id): id is string => id !== undefined))];
   if (must === undefined) return ids.slice(0, SKETCH_VOICES);
   return [must, ...ids.filter((id) => id !== must)].slice(0, SKETCH_VOICES);
 }
