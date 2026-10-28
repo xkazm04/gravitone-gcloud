@@ -10,7 +10,7 @@ import { DuelCard } from "@gt/ui/components/audio/DuelCard.tsx";
 import { AXES, type Answer } from "@gt/ui/components/audio/duel.ts";
 import { EarButton } from "@gt/ui/components/audio/EarButton.tsx";
 import { EarStrip } from "@gt/ui/components/audio/EarStrip.tsx";
-import { translate } from "@gt/ui/components/audio/lexicon.ts";
+import { translate, type PullSide } from "@gt/ui/components/audio/lexicon.ts";
 import { SayIt } from "@gt/ui/components/audio/SayIt.tsx";
 import { PRESETS, voicesAt, type Level } from "@gt/ui/components/audio/shape.ts";
 import { ShapeStrip } from "@gt/ui/components/audio/ShapeStrip.tsx";
@@ -33,9 +33,12 @@ function SaySpecimen() {
   const [v, setV] = useState("sad but hopeful lullaby for a rave, no drums");
   const heard = useMemo(() => translate(v), [v]);
   const [lit, setLit] = useState<ReadonlySet<number>>(NONE);
+  // A pull's sides as the compose screen draws them: a play mark each, one of them sounding.
+  const [sounding, setSounding] = useState<string | null>("55–70 bpm");
+  const hearPull = { stateOf: (x: PullSide): EarState => (x.says === sounding ? "playing" : "idle"), onPlay: (x: PullSide) => setSounding(x.says === sounding ? null : x.says) };
   return (
     <Spec names={["SayIt"]} source="audio/SayIt.tsx · lexicon.ts" wide>
-      <SayIt value={v} onChange={setV} heard={heard} lit={lit} onTrace={(t) => setLit(t === null ? NONE : new Set(t))} onCompose={inert} onSpare={inert} learned={LEARNED} onLearned={(t) => setV((cur) => `${cur}, ${t}`)} />
+      <SayIt value={v} onChange={setV} heard={heard} lit={lit} onTrace={(t) => setLit(t === null ? NONE : new Set(t))} onCompose={inert} onSpare={inert} learned={LEARNED} onLearned={(t) => setV((cur) => `${cur}, ${t}`)} hearPull={hearPull} />
     </Spec>
   );
 }
