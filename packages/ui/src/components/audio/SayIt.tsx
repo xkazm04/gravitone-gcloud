@@ -12,9 +12,9 @@
 import type { ReactNode } from "react";
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
-import { EarButton } from "./EarButton.tsx";
 import { Field } from "../field/Field.tsx";
 import { Tally } from "../tally/Tally.tsx";
+import { EarButton } from "./EarButton.tsx";
 import type { Produced, PullSide, Translation } from "./lexicon.ts";
 import type { EarState } from "./useEar.ts";
 import s from "./Ear.module.css";

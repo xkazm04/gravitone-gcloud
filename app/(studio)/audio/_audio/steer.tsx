@@ -136,9 +136,14 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
 
   const say: SayItProps = {
     value: sentence,
-    onChange: setSentence,
+    // The sentence's own traces (its words, tempo, key, pulls) read the sentence on screen, so they
+    // light before a compose; a term chip's trace reads the composed one (isLit below).
+    onChange: (v: string) => {
+      setSentence(v);
+      setLit(NONE);
+    },
     heard,
-    lit: live === null ? NONE : lit,
+    lit,
     onTrace: (t) => setLit(t === null ? NONE : new Set(t)),
     onCompose: compose,
     onSpare: (p: Produced) => setSeed(addTo(seed, p.list, p.term)),
