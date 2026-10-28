@@ -11,7 +11,7 @@
 // measures the instrument's samples, then plays the phrase), seconds before the first byte.
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { mediaErrorWords } from "./AudioPreview.tsx";
+import { mediaErrorWords, srcWords } from "./AudioPreview.tsx";
 
 /** A first render measures a sample family and plays sixteen notes: well inside this. */
 export const EAR_WATCHDOG_MS = 30_000;
@@ -132,7 +132,7 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
       setFailed(null);
       setClock(0);
       dog.current = setTimeout(() => {
-        setFailed(`no answer from the player after ${EAR_WATCHDOG_MS / 1000} s · ${href.split("?")[0] ?? href}`);
+        setFailed(`no answer from the player after ${EAR_WATCHDOG_MS / 1000} s · ${srcWords(href)}`);
         me.pause();
         setAt(null);
         setState("idle");

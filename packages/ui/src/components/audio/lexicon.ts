@@ -58,7 +58,7 @@ export const CAPS: Readonly<Record<TermList, number>> = { genres: 2, moods: 3, i
 
 const fold = (s: string): string => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[‘’]/g, "'").toLowerCase();
 
-type Cue = { readonly words: readonly string[]; readonly row: LexRow; readonly atlas?: true };
+type Cue = { readonly words: readonly string[]; readonly row: LexRow; readonly atlas?: true; readonly own?: true };
 
 /** Every cue as its token list, longest first: "rainy cafe" is tried before "rain". */
 // Every instrument the atlas can play is a word the lexicon hears as itself ("slap bass" -> slap
@@ -68,33 +68,42 @@ type Cue = { readonly words: readonly string[]; readonly row: LexRow; readonly a
 // word's genre, mood and tempo are kept beside the instrument.
 const ATLAS_ROWS: readonly LexRow[] = ATLAS.map((e) => ({ cue: [e.term, ...e.aka].map((c) => c.toLowerCase()), i: [e.term] }));
 // The same holds for every genre and mood a row can emit: "bossa nova" typed is bossa nova, not
-// two unheard words. Written rows still read first where a word has a reading of its own.
+// two unheard words. These are tried only where no written or atlas cue matches, and only as typed
+// (no suffixes off: "lights" is not the mood light): a written row's reading always stands. The
+// words inside such a name keep their own rows' readings ("solo PIANO" still plays a piano).
 const SAID = new Set(ROWS.flatMap((r) => r.cue));
+const SKIP = new Set([...FILLER, ...NEGATORS]);
+const ownable = (t: string): boolean => !SAID.has(t) && !SKIP.has(t);
 const OWN_ROWS: readonly LexRow[] = [
-  ...[...new Set(ROWS.flatMap((r) => r.g ?? []))].filter((t) => !SAID.has(t)).map((t): LexRow => ({ cue: [t], g: [t] })),
-  ...[...new Set(ROWS.flatMap((r) => r.m ?? []))].filter((t) => !SAID.has(t)).map((t): LexRow => ({ cue: [t], m: [t] })),
+  ...[...new Set(ROWS.flatMap((r) => r.g ?? []))].filter(ownable).map((t): LexRow => ({ cue: [t], g: [t] })),
+  ...[...new Set(ROWS.flatMap((r) => r.m ?? []))].filter(ownable).map((t): LexRow => ({ cue: [t], m: [t] })),
 ];
+const byLength = (a: Cue, b: Cue): number => b.words.length - a.words.length;
 const CUES: readonly Cue[] = [
   ...ROWS.flatMap((row) => row.cue.map((c): Cue => ({ words: c.split(" "), row }))),
   ...ATLAS_ROWS.flatMap((row) => row.cue.map((c): Cue => ({ words: c.split(" "), row, atlas: true }))),
-  ...OWN_ROWS.flatMap((row) => row.cue.map((c): Cue => ({ words: c.split(" "), row }))),
-].sort((a, b) => b.words.length - a.words.length);
+].sort(byLength);
+const OWN_CUES: readonly Cue[] = OWN_ROWS.flatMap((row) => row.cue.map((c): Cue => ({ words: c.split(" "), row, own: true }))).sort(byLength);
 /** A single word's own written row ("jazz" -> the jazz row), for the words inside an instrument's name. */
 const WORD_ROW = new Map<string, LexRow>();
 for (const r of ROWS) for (const c of r.cue) if (!c.includes(" ") && !WORD_ROW.has(c)) WORD_ROW.set(c, r);
-const MAX_CUE = CUES[0]?.words.length ?? 1;
-const BY_HEAD = new Map<string, Cue[]>();
-for (const c of CUES) {
-  const head = c.words[0] ?? "";
-  BY_HEAD.set(head, [...(BY_HEAD.get(head) ?? []), c]);
-}
+const MAX_CUE = Math.max(CUES[0]?.words.length ?? 1, OWN_CUES[0]?.words.length ?? 1);
+const headed = (cues: readonly Cue[]): Map<string, Cue[]> => {
+  const m = new Map<string, Cue[]>();
+  for (const c of cues) m.set(c.words[0] ?? "", [...(m.get(c.words[0] ?? "") ?? []), c]);
+  return m;
+};
+const BY_HEAD = headed(CUES);
+const OWN_BY_HEAD = headed(OWN_CUES);
 const FILL = new Set(FILLER);
 const NEG = new Set(NEGATORS);
 
-/** The sentence's words with their offsets: letters, digits, hyphens and apostrophes. */
+/** The sentence's words, folded, with their offsets INTO THE SENTENCE AS TYPED: letters (any script,
+ *  with their marks), digits, hyphens and apostrophes. Folding happens per word, after the offsets
+ *  are taken, because folding can change a string's length (NFD Hangul, a decomposed accent). */
 export function tokenize(sentence: string): { readonly text: string; readonly start: number; readonly end: number }[] {
   const out: { text: string; start: number; end: number }[] = [];
-  for (const m of fold(sentence).matchAll(/[a-z0-9&]+(?:['-][a-z0-9]+)*/g)) out.push({ text: m[0], start: m.index, end: m.index + m[0].length });
+  for (const m of sentence.matchAll(/[\p{L}\p{M}\p{N}&]+(?:['’‘-][\p{L}\p{M}\p{N}]+)*/gu)) out.push({ text: fold(m[0]), start: m.index, end: m.index + m[0].length });
   return out;
 }
 
@@ -109,15 +118,17 @@ function variants(w: string): string[] {
   return v;
 }
 
+/** The longest cue starting at word i; a written or atlas cue wins a tie with a derived one. */
 function cueAt(words: readonly string[], i: number): Cue | null {
+  const own = (OWN_BY_HEAD.get(words[i] ?? "") ?? []).find((c) => c.words.every((w, k) => words[i + k] === w)) ?? null;
   for (const head of variants(words[i] ?? "")) {
     for (const c of BY_HEAD.get(head) ?? []) {
       if (c.words.length > MAX_CUE) continue;
       const ok = c.words.every((w, k) => k === 0 || variants(words[i + k] ?? "").includes(w));
-      if (ok) return c;
+      if (ok) return own !== null && own.words.length > c.words.length ? own : c;
     }
   }
-  return null;
+  return own;
 }
 
 /** The sentence, compiled: tokens with their kind, the seed's words with their provenance, the unheard. */
@@ -129,6 +140,7 @@ export function translate(sentence: string): Translation {
   const ranges: { lo: number; hi: number; from: number[] }[] = [];
   let explicit: { value: number; from: number[] } | null = null;
   let lengthS: { value: number; from: number[] } | null = null;
+  let explicitKey: { value: string; from: number[] } | null = null;
   let negate = -1;
   for (let i = 0; i < words.length; ) {
     const w = words[i] ?? "";
@@ -154,6 +166,13 @@ export function translate(sentence: string): Translation {
       i += 2;
       continue;
     }
+    const said = keySaid(words, i);
+    if (said !== null) {
+      explicitKey = { value: said.value, from: Array.from({ length: said.n }, (_, k) => i + k) };
+      for (const k of explicitKey.from) kinds[k] = "cue";
+      i += said.n;
+      continue;
+    }
     if (kinds[i] === "negator") {
       negate = i;
       i++;
@@ -177,12 +196,13 @@ export function translate(sentence: string): Translation {
       for (const t of c.row.m ?? []) produced.push({ list: "moods", term: t, from });
       for (const t of c.row.i ?? []) produced.push({ list: "instruments", term: t, from });
       if (c.row.bpm !== undefined) ranges.push({ lo: c.row.bpm[0], hi: c.row.bpm[1], from });
-      if (c.atlas === true)
-        for (const k of from.slice(0, -1)) {
+      if (c.atlas === true || c.own === true)
+        for (const k of c.atlas === true ? from.slice(0, -1) : from.length > 1 ? from : []) {
           const own = WORD_ROW.get(words[k] ?? "");
-          if (own === undefined || (own.g === undefined && own.m === undefined)) continue;
+          if (own === undefined || (own.g === undefined && own.m === undefined && (c.atlas === true || own.i === undefined))) continue;
           for (const t of own.g ?? []) produced.push({ list: "genres", term: t, from: [k] });
           for (const t of own.m ?? []) produced.push({ list: "moods", term: t, from: [k] });
+          if (c.own === true) for (const t of own.i ?? []) produced.push({ list: "instruments", term: t, from: [k] });
           if (own.bpm !== undefined) ranges.push({ lo: own.bpm[0], hi: own.bpm[1], from: [k] });
         }
     }
@@ -219,7 +239,7 @@ export function translate(sentence: string): Translation {
     return to === null ? [] : [{ token: k, to }];
   });
   const pick = (list: TermList): string[] => terms.filter((p) => p.list === list).map((p) => p.term);
-  const key = keyOf(terms);
+  const key = explicitKey ?? keyOf(terms);
   const seed: Seed = { ...BLANK_SEED, genres: pick("genres"), moods: pick("moods"), instruments: pick("instruments"), avoid: pick("avoid"), bpm: bpm?.value ?? null, key: key?.value ?? null };
   return { sentence, tokens, terms, spare, bpm, lengthS, key, unheard, near, seed };
 }
@@ -231,12 +251,15 @@ const WORDS: readonly string[] = [...new Set(CUES.filter((c) => c.words.length =
 
 function spelledAs(w: string): string | null {
   if (w.length < 5 || /\d/.test(w)) return null;
+  // Under eight letters only a letter dropped, doubled or swapped counts: a letter CHANGED in a
+  // short word is as often another real word (short / shore, story / storm, noise / noisy).
   const most = w.length >= 8 ? 2 : 1;
+  const sub = w.length >= 8 ? 1 : 2;
   let best: string | null = null;
   let bestD = most + 1;
   for (const c of WORDS) {
     if (Math.abs(c.length - w.length) > most) continue;
-    const d = slips(w, c, most);
+    const d = slips(w, c, most, sub);
     if (d < bestD) {
       best = c;
       bestD = d;
@@ -246,13 +269,13 @@ function spelledAs(w: string): string | null {
 }
 
 /** Edits between two words (insert, delete, swap a letter, swap two neighbours), stopping past `most`. */
-function slips(a: string, b: string, most: number): number {
+function slips(a: string, b: string, most: number, sub = 1): number {
   let prev2: number[] = [];
   let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
     const row = [i];
     for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const cost = a[i - 1] === b[j - 1] ? 0 : sub;
       let v = Math.min((prev[j] ?? 0) + 1, (row[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + cost);
       if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, (prev2[j - 2] ?? 0) + 1);
       row.push(v);
@@ -271,6 +294,22 @@ const MINOR = new Set(["sad", "melancholic", "dark", "eerie", "ominous", "tense"
 const MAJOR = new Set(["happy", "bright", "hopeful", "uplifting", "triumphant", "playful", "cheerful", "optimistic", "bouncy", "heroic", "friendly", "positive", "joyful", "sunny", "carefree", "festive", "victorious", "celebratory", "proud", "whimsical", "silly", "jubilant", "light"]);
 export const MINOR_KEY = "A minor";
 export const MAJOR_KEY = "C major";
+
+/** A key the sentence says - "E major", "b flat minor", "Eb major", "in minor", "a minor key" -
+ *  which the moods' lean never overrides; null when the words at i do not name one. */
+function keySaid(words: readonly string[], i: number): { value: string; n: number } | null {
+  const w = words[i] ?? "";
+  const letter = /^([a-g])(b)?$/.exec(w);
+  if (letter !== null) {
+    let j = i + 1;
+    let acc = letter[2] ?? "";
+    if (acc === "" && (words[j] === "flat" || words[j] === "sharp")) acc = words[j++] === "flat" ? "b" : "#";
+    const mode = words[j];
+    if (mode === "major" || mode === "minor") return { value: `${(letter[1] ?? "c").toUpperCase()}${acc} ${mode}`, n: j - i + 1 + (words[j + 1] === "key" ? 1 : 0) };
+  }
+  if ((w === "minor" || w === "major") && (words[i + 1] === "key" || words[i - 1] === "in")) return { value: w === "minor" ? MINOR_KEY : MAJOR_KEY, n: words[i + 1] === "key" ? 2 : 1 };
+  return null;
+}
 
 /** The seed's moods counted by lean; a tie or no lean names no key. */
 function keyOf(terms: readonly Produced[]): { value: string; from: number[] } | null {

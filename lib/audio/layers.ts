@@ -19,7 +19,7 @@ function bandPcm(bin: string, file: string, startS: number, b: LayerBand): Promi
   const args = ["-v", "error", "-ss", startS.toFixed(2), "-t", String(WINDOW_S), "-i", file, "-af", bandChain(b), "-ac", "1", "-ar", String(RATE), "-f", "f32le", "pipe:1"];
   return new Promise((resolve) => {
     execFile(bin, args, { encoding: "buffer", timeout: TIMEOUT_MS, maxBuffer: RATE * WINDOW_S * 4 + 65_536, windowsHide: true }, (e, stdout, stderr) => {
-      if (e !== null) return resolve(err("unavailable", `ffmpeg ${b.id} layer: ${stderr.toString("utf8").trim().split("\n").pop() ?? e.message}`));
+      if (e !== null) return resolve(err("unavailable", `ffmpeg ${b.id} layer: ${stderr.toString("utf8").trim().split("\n").pop() || e.message}`));
       const n = Math.floor(stdout.byteLength / 4);
       const view = new DataView(stdout.buffer, stdout.byteOffset, n * 4);
       const x = new Float32Array(n);

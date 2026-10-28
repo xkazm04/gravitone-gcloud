@@ -399,7 +399,7 @@ def cmd_audition(a, emit, failure, render_fn=None):
     except AuditionError as e:
         raise failure(str(e), "refused") from None
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
-    tmp = a.out + ".part.wav"
+    tmp = f"{a.out}.{os.getpid()}.part.wav"
     sf.write(tmp, y, SR, subtype="PCM_16")
-    os.replace(tmp, a.out)
+    swap_in(tmp, a.out)
     emit({"ok": True, **facts})

@@ -242,7 +242,7 @@ export const ROWS: readonly LexRow[] = [
   { cue: ["electric guitar", "clean guitar"], i: ["clean electric guitar"] },
   { cue: ["bass", "bass guitar", "bassline"], i: ["electric bass"] },
   { cue: ["upright bass", "double bass", "contrabass"], i: ["upright bass"] },
-  { cue: ["strings", "violins", "string section"], i: ["string section"] },
+  { cue: ["strings", "string", "violins", "string section"], i: ["string section"] },
   { cue: ["violin", "fiddle", "cello"], i: ["solo violin"] },
   { cue: ["choir", "choirs", "voices", "chant", "chanting", "angelic"], i: ["choir"] },
   { cue: ["brass", "horns", "trumpet", "trumpets", "trombone"], i: ["brass section"] },

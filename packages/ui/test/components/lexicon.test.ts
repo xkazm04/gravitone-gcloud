@@ -123,6 +123,36 @@ describe("translate: a sentence compiled into a seed", () => {
     expect(translate("an exciting trailer for my indie game").near).toEqual([]);
   });
 
+  test("a derived name never takes a written reading away: the words inside it keep theirs", () => {
+    expect(translate("solo piano").seed.instruments).toContain("grand piano");
+    expect(translate("dark ambient").seed.moods).toContain("dark");
+    expect(translate("focused").seed.genres).toContain("lo-fi hip hop");
+    expect(translate("still raining, sad piano").seed.moods).not.toContain("still");
+    expect(translate("city lights").seed.moods).not.toContain("light");
+  });
+
+  test("a word's offsets are the sentence as typed, whatever the script: a slip's chip rewrites the right letters", () => {
+    for (const lead of ["雨が好き", "café", "한국"]) {
+      const s = `${lead} melancolic`;
+      const t = translate(s);
+      const n = t.near[0];
+      const tok = n === undefined ? undefined : t.tokens[n.token];
+      expect(tok === undefined ? null : s.slice(tok.start, tok.end)).toBe("melancolic");
+    }
+  });
+
+  test("a key the sentence says beats the moods' lean", () => {
+    expect(translate("sad piano in E major").seed.key).toBe("E major");
+    expect(translate("happy tune in b flat minor").seed.key).toBe("Bb minor");
+    expect(translate("something happy in minor").seed.key).toBe("A minor");
+    expect(translate("sad piano in E major").unheard).toEqual([]);
+  });
+
+  test("a short real word is not offered a word one letter CHANGED from it", () => {
+    expect(translate("a short noise in eight bars").near).toEqual([]);
+    expect(translate("nigth chilll").near.map((n) => n.to)).toEqual(["night", "chill"]);
+  });
+
   test("a possessive is the word it belongs to, straight or curly", () => {
     expect(translate("my startup's launch").unheard).toEqual([]);
     expect(translate("my startup’s launch").unheard).toEqual([]);

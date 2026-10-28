@@ -44,7 +44,8 @@ export function percents(shares: readonly number[]): number[] {
   const raw = shares.map((v) => (100 * v) / total);
   const out = raw.map(Math.floor);
   const order = raw.map((v, i) => [v - Math.floor(v), i] as const).sort((a, b) => b[0] - a[0]);
-  for (let k = 0; k < 100 - out.reduce((a, b) => a + b, 0); k++) {
+  const gap = 100 - out.reduce((a, b) => a + b, 0);
+  for (let k = 0; k < gap; k++) {
     const i = order[k % order.length]?.[1];
     if (i !== undefined) out[i] = (out[i] ?? 0) + 1;
   }

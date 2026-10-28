@@ -48,8 +48,11 @@ const MEDIA_ERR: Readonly<Record<number, string>> = { 1: "MEDIA_ERR_ABORTED", 2:
 
 /** The element's failure in its own words: the code, never "could not play". */
 export function mediaErrorWords(code: number | undefined, src: string): string {
-  return `${code === undefined ? "MEDIA_ERR" : (MEDIA_ERR[code] ?? `MEDIA_ERR ${code}`)} · ${src.split("?")[0] ?? src}`;
+  return `${code === undefined ? "MEDIA_ERR" : (MEDIA_ERR[code] ?? `MEDIA_ERR ${code}`)} · ${srcWords(src)}`;
 }
+
+/** A source as an error line names it: its path, never its query - nor an inline data: body (a layer's is ~700 kB). */
+export const srcWords = (src: string): string => (src.startsWith("data:") ? (src.split(/[;,]/)[0] ?? "data:") : (src.split("?")[0] ?? src));
 
 /** What one press of the play control touches: the element, its watchdog, its failure line. */
 export type PressPort = {

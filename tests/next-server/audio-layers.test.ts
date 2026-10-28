@@ -21,6 +21,7 @@ describe("the layers' arithmetic", () => {
     expect(percents([0.7, 0.26, 0.03, 0.01])).toEqual([70, 26, 3, 1]);
     expect(percents([1, 1, 1]).reduce((a, b) => a + b, 0)).toBe(100);
     expect(percents([0, 0])).toEqual([0, 0]);
+    expect(percents([0.125, 0.125, 0.125, 0.625]).reduce((a, b) => a + b, 0)).toBe(100);
   });
 
   test("a band's chain is 24 dB/oct at each closed edge", () => {
@@ -50,5 +51,10 @@ describe.skipIf(!ready)("a two-tone track, split", () => {
     writeFileSync(bad, "not audio");
     const r = await layersOf(bad, 20, FF);
     expect(r.ok).toBe(false);
+  });
+
+  test("a binary that cannot start still says why", async () => {
+    const r = await layersOf(path.join(TMP, "two-tone.wav"), 20, "no-such-ffmpeg-binary");
+    expect(r.ok ? "" : r.error.message).toMatch(/low layer: \S/);
   });
 });
