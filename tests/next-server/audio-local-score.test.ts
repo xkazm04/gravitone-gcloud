@@ -2,7 +2,7 @@
 // $0 local receipt door, deterministic VST3/multisample rendering, -14 LUFS mastering,
 // 10-detector triage, solo/mute 4-stem cache reuse, and 1-second bit-identical stem swaps.
 
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -27,20 +27,12 @@ import { parseScoreSpec, type ScoreSpec } from "@gt/domain/audio.score";
 import { WORKED_SCORE_TEMPLATES, compileSeedToScore, templateById } from "@gt/domain/audio.score.templates";
 import { LocalBandStudio } from "@gt/ui/components/audio/LocalBandStudio.tsx";
 import { applyTasteSteer, describeStemChoice, explainScoreChoices, fxChainForPreset, fxPresetOf, sketchDraftFromBrief } from "@gt/ui/components/audio/localBand.ts";
+import { readArrange } from "../../app/(studio)/audio/_audio/arrangeRead.ts";
 import { readLocalBand } from "../../app/(studio)/audio/_audio/localRead.ts";
 import { renderMidi } from "../../lib/audio/sidecar.ts";
 import { closeKernel } from "../../lib/kernelStore.ts";
 import { engineRegistry, engineState } from "../../lib/sound/engines.ts";
-import {
-  auditionLocalInstrument,
-  buildLocalScoreReceipt,
-  buildScorePrompt,
-  draftScoreFromBrief,
-  promoteLocalTakeToArrange,
-  proposeScoreSpec,
-  renderLocalScore,
-  swapLocalTakeStem,
-} from "../../lib/sound/localScore.ts";
+import { auditionLocalInstrument, buildLocalScoreReceipt, buildScorePrompt, draftScoreFromBrief, promoteLocalTakeToArrange, proposeScoreSpec, renderLocalScore, swapLocalTakeStem } from "../../lib/sound/localScore.ts";
 import { filePathAbs } from "../../lib/sound/store.ts";
 import { getTake } from "../../lib/sound/takes.ts";
 import { triageContextOf } from "../../lib/sound/triageContext.ts";
@@ -236,6 +228,10 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
         expect(existsSync(filePathAbs(st.midiRel))).toBe(true);
       }
       expect(existsSync(filePathAbs(plan.rppRel))).toBe(true);
+      const rppText = readFileSync(filePathAbs(plan.rppRel), "utf8");
+      expect(rppText).toContain("RENDER_FILE");
+      expect(rppText).toContain("<RENDER_CFG");
+      expect(rppText).toContain(filePathAbs(plan.stems[0]!.fileRel));
 
       // Swap ONLY the lead stem to sample-mallet-guitar; drums, bass, and chords must be reused bit-for-bit
       const swapped = await swapLocalTakeStem({
@@ -288,6 +284,12 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
         expect(promoted.value.stage).toBe("finalized");
         const parentAfter = await getTake(take.id);
         expect(parentAfter.verdict).toBe("kept");
+        const arr = await readArrange("music");
+        expect(arr.takes.ok).toBe(true);
+        if (arr.takes.ok) {
+          const card = arr.takes.value.find((c) => c.id === promoted.value.id);
+          expect(card?.stems?.length).toBe(4);
+        }
       }
     },
     120_000,

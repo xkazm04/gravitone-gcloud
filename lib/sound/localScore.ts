@@ -7,16 +7,7 @@ import os from "node:os";
 import path from "node:path";
 
 import type { FxChain } from "@gt/domain/audio.fx";
-import {
-  INSTRUMENT_CATALOG,
-  SCORE_ROLES,
-  instrumentById,
-  parseScoreSpec,
-  swapRoleInstrument,
-  type InstrumentCatalogEntry,
-  type ScoreRole,
-  type ScoreSpec,
-} from "@gt/domain/audio.score";
+import { INSTRUMENT_CATALOG, SCORE_ROLES, instrumentById, parseScoreSpec, swapRoleInstrument, type InstrumentCatalogEntry, type ScoreRole, type ScoreSpec } from "@gt/domain/audio.score";
 import { scoreSectionsMs, scoreTotalBars } from "@gt/domain/audio.score.templates";
 import type { Triage } from "@gt/domain/audio.triage";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
@@ -27,7 +18,7 @@ import { putTriage, triageDigest } from "@gt/kernel/library/triage";
 import { auditionInstrument, renderScore, type AuditionResult, type DeterminismReport, type RenderedStem } from "../audio/sidecar";
 import { measureSignal } from "./measure";
 import { buildScorePrompt, draftScoreFromBrief, proposeScoreSpec } from "./scorePropose";
-import { mintId, safeId, soundFailure, storeRoot, writeBytesAtomic } from "./store";
+import { filePathAbs, mintId, safeId, soundFailure, storeRoot, writeBytesAtomic } from "./store";
 import { createTake, getTake, listTakes, patchTake } from "./takes";
 import { triageContextOf } from "./triageContext";
 import type { SoundTake, Stage, Verdict } from "./types";
@@ -190,7 +181,9 @@ export async function renderLocalScore(
       });
     }
 
-    const rppRel = await writeBytesAtomic(path.join("files", `${safeId(id)}.rpp`), new Uint8Array(await readFile(res.reaperProjectPath)));
+    let rppText = await readFile(res.reaperProjectPath, "utf8");
+    for (const st of stemMetas) rppText = rppText.replaceAll(st.wavPath, filePathAbs(st.fileRel));
+    const rppRel = await writeBytesAtomic(path.join("files", `${safeId(id)}.rpp`), new TextEncoder().encode(rppText));
     const { samples, sampleRate } = wavToMonoFloat32(mixBytes);
     const sig = measureSignal(samples, sampleRate, true);
     const sectionsMs = scoreSectionsMs(spec);
@@ -360,8 +353,10 @@ export async function promoteLocalTakeToArrange(input: {
 }): Promise<Result<SoundTake>> {
   try {
     const current = await getTake(input.takeId);
+    const plan = readLocalScorePlan(current);
+    const styleGroup = plan?.spec.style === "chill-hiphop" ? "hip hop" : plan?.spec.style === "calm-bed" ? "ambient" : plan?.spec.style === "warm-acoustic" ? "cinematic" : "electronic";
     const label = (input.label ?? current.label ?? current.title).trim() || "local-band-cue";
-    const group = (input.group ?? current.group ?? "electronic").trim() || "electronic";
+    const group = (input.group ?? current.group ?? styleGroup).trim() || styleGroup;
     let parentId = current.parentId;
     const seen = new Set<string>([current.id]);
     while (parentId && !seen.has(parentId)) {

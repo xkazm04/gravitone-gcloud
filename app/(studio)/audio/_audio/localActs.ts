@@ -112,7 +112,6 @@ const promoteLocalTakeAction = action(
   async (i): Promise<Result<{ readonly takeId: string; readonly stage: string | null }>> => {
     const r = await promoteLocalTakeToArrange({
       takeId: i.takeId,
-      group: "electronic",
       finalize: true,
     });
     if (!r.ok) return r;

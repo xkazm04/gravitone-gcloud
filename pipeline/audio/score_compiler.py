@@ -325,7 +325,24 @@ def apply_section_envelope(stem, role, spec, body_frames):
 
 
 def write_reaper_rpp(spec, stems_info, out_path):
-    lines = ['<REAPER_PROJECT 0.1 "7.0" 1730000000', f"  TEMPO {spec['tempoBpm']} 4 4", f"  SAMPLERATE {inst_lib.RATE} 0 0"]
+    render_wav = os.path.join(os.path.dirname(os.path.abspath(out_path)), "reaper-render.wav")
+    lines = [
+        '<REAPER_PROJECT 0.1 "7.82/win64" 1730000000',
+        f"  TEMPO {spec['tempoBpm']} 4 4",
+        f"  SAMPLERATE {inst_lib.RATE} 1 0",
+        f'  RENDER_FILE "{render_wav}"',
+        '  RENDER_PATTERN ""',
+        f"  RENDER_FMT 0 2 {inst_lib.RATE}",
+        "  RENDER_1X 0",
+        "  RENDER_RANGE 1 0 0 0 1000",
+        "  RENDER_RESAMPLE 3 0 1",
+        "  RENDER_ADDTOPROJ 0",
+        "  RENDER_STEMS 0",
+        "  RENDER_DITHER 0",
+        "  <RENDER_CFG",
+        "    ZXZhdxgAAQ==",
+        "  >",
+    ]
     for st in stems_info:
         vol = 10.0 ** (float(st.get("gainDb", 0.0)) / 20.0)
         lines += [
@@ -333,7 +350,7 @@ def write_reaper_rpp(spec, stems_info, out_path):
             f"    VOLPAN {vol:.4f} {float(st.get('pan', 0.0)):.3f} -1 -1 1",
             f"    MUTESOLO {1 if st.get('muted') else 0} {1 if st.get('solo') else 0} 0",
             "    <ITEM", "      POSITION 0", f"      LENGTH {st['durationS']:.4f}", f'      NAME "{os.path.basename(st["wavPath"])}"',
-            "      <SOURCE WAVE", f'        FILE "{st["wavPath"]}"', "      >", "    >", "  >",
+            "      <SOURCE WAVE", f'        FILE "{os.path.abspath(st["wavPath"])}"', "      >", "    >", "  >",
         ]
     lines.append(">")
     with open(out_path, "w", encoding="utf-8", newline="\n") as f:
