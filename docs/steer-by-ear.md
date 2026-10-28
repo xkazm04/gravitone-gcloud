@@ -8,7 +8,7 @@ spends. Built 2026-10-28 (hackathon pack "Steer by ear", fusing B5, A1, B2, B4, 
 
 | Step | What happens | Pure (`packages/ui/src/components/audio/`) | Server / engine |
 | --- | --- | --- | --- |
-| Say it | A sentence compiles to a seed; each term keeps the words that produced it; words nothing matched are shown struck through | `lexicon.ts`, `lexicon.rows.ts` (175 rows), `SayIt.tsx` | - |
+| Say it | A sentence compiles to a seed; each term keeps the words that produced it; words nothing matched are shown struck through | `lexicon.ts`, `lexicon.rows.ts` (176 written rows, plus one per atlas instrument), `SayIt.tsx` | - |
 | By ear | Seven pairs, each differing in one dimension of the sound; answers compile to a seed with reasons | `duel.ts`, `DuelCard.tsx`; keys in `keymap/bindings.ts` (`audio.duel`) | `/audio/sketch` |
 | From a track | A track's tempo, key and energy every four bars become the seed's tempo, key and shape | `shape.ts` `levelsOfContour`, `TrackDrop.tsx` | `POST /audio/reference`, `lib/audio/reference.ts` |
 | Hear it | Every instrument the libraries file plays one fixed four-bar phrase at the seed's tempo and key, -20 LUFS | `atlas.ts` (25 instruments), `EarButton.tsx`, `useEar.ts` | `/audio/audition`, `lib/audio/atlas.ts`, `pipeline/audio/audition.py`, `drums.py` |
