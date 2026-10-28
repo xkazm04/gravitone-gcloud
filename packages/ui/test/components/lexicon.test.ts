@@ -301,3 +301,11 @@ describe("the atlas", () => {
     expect(sketchHref(["grand-piano", "grand-piano", "rhodes"], [0, 3], 90, null)).toBe("/audio/sketch?ids=grand-piano%2Crhodes&levels=03&bpm=90");
   });
 });
+
+describe("a word that names a shape is heard", () => {
+  test("'a slow build' keeps 'build' as a cue, so the shape reads it", () => {
+    const t = translate("a slow build with piano");
+    expect(t.unheard).not.toContain("build");
+    expect(t.tokens.find((x) => x.text === "build")?.kind).toBe("cue");
+  });
+});
