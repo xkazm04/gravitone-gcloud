@@ -101,6 +101,8 @@ export const albumOpSchema = z.discriminatedUnion("op", [
   o({ op: z.literal("voice-use"), lineId: id, takeId: id }),
   o({ op: z.literal("voice-mark"), lineId: id, takeId: id, mark }),
   o({ op: z.literal("voice-line"), lineId: id, text: text(1000) }),
+  // The words a take is re-voiced as (VOICE `fxAsk`, the `fx-line` act's input): trimmed, 1..400.
+  o({ op: z.literal("voice-fx-ask"), lineId: id, takeId: id, describe: z.string().trim().min(1).max(400) }),
 ]);
 
 export const partOpSchema = z.union([researchOpSchema, scriptOpSchema, /* L39 */ framesOpSchema, motionOpSchema, /* L40 */ scoreOpSchema, cutOpSchema, albumOpSchema]);

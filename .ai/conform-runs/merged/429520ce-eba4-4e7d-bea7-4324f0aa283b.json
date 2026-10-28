@@ -1,0 +1,203 @@
+{
+ "schema": "conform-run/1",
+ "worker": "429520ce-eba4-4e7d-bea7-4324f0aa283b",
+ "subject": "production-pipeline-phasing",
+ "evaluatedAt": "2026-10-24T22:47:13.711465+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:98 The cut draws every clip on the score's one clock with ok, drift or missing as a first-class state, so a hole or drift has a timeline address instead of being papered over.",
+   "techniques": [
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:98 Clips carry startS/durS on one axis (CutClock.tsx:3 'THE ONE CLOCK the score and the cut draw'); ok/missing/drift are per-clip states, and drift is kept as a measured offsetMs."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:98 A failing blocking check gates the expensive aspect render. The bed check is unmeasured without a take, never a fail. Frames refuses to work with no adopted script (Frames.tsx:214) and offers rederive when the cut moved (Frames.tsx:200)."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:179 The finish line's headline is the count of failing checks; one fail turns it rose. Rows carry pass/fail/unmeasured with the deny sentence verbatim."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx:65 Takes cross into kept, rejected or in-use only by an operator decision. A take whose bytes are gone says 'gone' (ScoreTakes.tsx:53) instead of resolving to something plausible."
+    }
+   ]
+  },
+  {
+   "context": "runs-console",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/runs/_runs/Acts.tsx:51 Runs reads kernel job records that outlive any screen and treats interrupted as its own honest state with its own act, so a reload or crash is never blurred into done or gone.",
+   "techniques": [
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/runs/_runs/Acts.tsx:51 Interrupted is a first-class state; a lane HOLD on an interrupted paid job needs acknowledging (Acts.tsx:10). No ETA is invented (model.ts:20), and a fraction is drawn only for running jobs with a recorded unit total (view.ts:74)."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/runs/_runs/Inspector.tsx:195 The 'every resource' view leads with holds and failed, then the weir, then running. Stuck upstreams propagate 'blocked' to dependents (view.ts:52)."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/model.ts:38 The day-line is wall-clock job scheduling, which the technique explicitly keeps off the product's runtime clock."
+    },
+    {
+     "technique": "approval-reads-forward",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/Inspector.tsx:150 Approvals are handed off to the Weir/Board; no shared asset is signed off here."
+    }
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/_port/fixtureRead.ts:115 A project's status word is the worst of its parts' states (failed/blocked outranks the weir, which outranks running), so one stuck part makes a blocked project.",
+   "techniques": [
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/fixtureRead.ts:115 projectStateOf (domain plan.ts) checks failed/blocked first. The list groups by state (groupOf) and counts failed parts separately."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/real.ts:44 The port only enqueues kernel jobs; the worker runs them. A kind no producer binds waits queued and is reported as unknown, never failed."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/schedule.ts:85 Parts are placed after what they wait for, and gates wait on the operator. A failed or paused upstream draws its dependents as blocked (schedule.ts:106) instead of scheduling them."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/_port/schedule.ts:6 This scheduler is wall-clock lane placement, which the technique keeps separate from the product's runtime clock."
+    }
+   ]
+  },
+  {
+   "context": "research-producers",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "packages/producers/src/research/partJob.ts:75 Every research act is a persisted kernel job, single-flighted per act and unit at claim time inside the confirm's transaction, so a double click is one purchase and a reload loses nothing.",
+   "techniques": [
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/partJob.ts:75 The job row is the record. A crash during a unit is reported as the kernel's interruption, and a paid lane holds until the operator looks (partAct.ts:31). See notes for the cross-act serialization question."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/define.ts:49 Acts refuse before any spend when upstream is not settled: no brief, no notebook for a follow-up, no topic."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/followUp.ts:22 A follow-up answers the notebook (an asset) with allowlisted edits to named facts, never a regeneration, and is refused whole rather than applied in part."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/research/define.ts:21 Research comes before a runtime target exists; the view carries topic, notebook and queue, no seconds. The technique excludes this phase."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "production-pipeline-phasing",
+   "context": "plan-and-import",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T22:47:13.711465+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T22:47:13.711465+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "approval-reads-forward",
+    "long-run-as-background-job",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "runs-console",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T22:47:13.711465+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T22:47:13.711465+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases"
+   ],
+   "deviations": 0,
+   "context": "research-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

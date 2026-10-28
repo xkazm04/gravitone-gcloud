@@ -337,6 +337,8 @@ export async function createTakeTx(
     stage: stageOf(meta.stage),
     group: str(meta.group, 80),
     label: str(meta.label, 120),
+    use: str(meta.use, 200),
+    aim: str(meta.aim, 600),
     parentId: typeof meta.parentId === "string" && ID_RE.test(meta.parentId) ? meta.parentId : null,
     huntId: str(meta.huntId, 80),
     nodeId: str(meta.nodeId, 80),

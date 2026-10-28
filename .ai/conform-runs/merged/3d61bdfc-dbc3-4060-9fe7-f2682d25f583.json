@@ -1,0 +1,123 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3d61bdfc-dbc3-4060-9fe7-f2682d25f583",
+ "subject": "audit-logging",
+ "evaluatedAt": "2026-10-25T00:10:18.805989+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:122 The /ledger read model filters on indexed actor/type/subject/time columns, pages by keyset, and labels a partial text scan as partial, so a capped or filtered result never reads as the whole population.",
+   "techniques": [
+    {
+     "technique": "audit-querying",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:122 A capped scan says so on the surface. Facets are kernel counts that leave out their own filter, a lone id is answered by indexed subject and run lookups, and the empty state tells 'nothing recorded yet' (List.tsx:117) apart from '0 events' under a filter."
+    },
+    {
+     "technique": "two-clock-records",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:103 The detail labels whether the effective time was recorded or derived, and fieldsOf shows the ledger's own `recorded` instant beside it. The from/to window runs on coalesce(occurredAt, at), and the UI does not name that clock. That is a weak spot, but it is not judged a deviation here."
+    },
+    {
+     "technique": "append-only-design",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/actions.ts:28 The screen's only server actions are two reads (olderEvents, relatedEvents), so it exposes no way to change a record."
+    },
+    {
+     "technique": "best-effort-with-accounting",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:127 When the projection sync that feeds the ledger fails, the failure shows on the query surface itself, so an empty or thin result is not passed off as complete."
+    },
+    {
+     "technique": "record-axis-predicate",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:55 Events are never invalidated (append-only with seq), so there is no record-axis interval to rewind. The technique's own exemption covers this."
+    }
+   ]
+  },
+  {
+   "context": "run-records-and-slots",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/slots/schema.ts:78 The publications and metric_snapshots ledgers are append-only with no stated horizon or reaper anywhere (the search over the kernel's slots and records modules, lib/publish and workers found none), so metric readings written on a timer grow without bound, against retention-and-partitioning.",
+   "techniques": [
+    {
+     "technique": "retention-and-partitioning",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/slots/schema.ts:78 An append-only ledger with no age or count horizon at its insert door and no named reaper."
+    },
+    {
+     "technique": "append-only-design",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/schema.ts:67 Publications and readings refuse UPDATE and DELETE at the schema, and slots refuse DELETE (cancel is soft). State rows that do mutate (runs, projects) record the change as a new event with from/to, for example launch.ts:277 run.relaunched."
+    },
+    {
+     "technique": "write-chokepoint",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/write.ts:38 Every slot INSERT and UPDATE goes through one door that appends its event in the same transaction. A grep shows the record and slot tables are written only from schema.ts, write.ts, outcome.ts and import.ts, so the writers can be listed."
+    },
+    {
+     "technique": "write-path-sanitization",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/write.ts:61 The event carries references (ids, state, channel, rev), not the slot's free-form title, description or tags."
+    },
+    {
+     "technique": "best-effort-with-accounting",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/outcome.ts:50 The publication row doubles as the duplicate guard, so it fails the action (claim exception), and the claim is fenced by a lease (assertFence)."
+    },
+    {
+     "technique": "two-clock-records",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/outcome.ts:118 The reading's own time (snap.at, stored in metric_snapshots.at) is kept apart from the ledger's recorded `at`."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T00:10:18.805989+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "append-only-design",
+    "audit-querying",
+    "best-effort-with-accounting",
+    "record-axis-predicate",
+    "two-clock-records"
+   ],
+   "deviations": 0,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T00:10:18.805989+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "append-only-design",
+    "best-effort-with-accounting",
+    "retention-and-partitioning",
+    "two-clock-records",
+    "write-chokepoint",
+    "write-path-sanitization"
+   ],
+   "deviations": 1,
+   "context": "run-records-and-slots",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

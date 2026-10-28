@@ -108,6 +108,7 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "ad-ideas": ["claude-cli", "google"],
     "ad-scenarios": ["claude-cli", "google"],
     repair: ["claude-cli", "google"],
+    "voice-fx": ["claude-cli", "google"],
     // The one turn the local daemon leads (spark scout-vision S6): free, so worth
     // writing at all; the seat behind it, never the metered key.
     draft: ["ollama", "claude-cli"],
@@ -128,6 +129,7 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "ad-ideas": ["google"],
     "ad-scenarios": ["google"],
     repair: ["google"],
+    "voice-fx": ["google"],
     // A hosted box has no seat, and a draft is not worth a metered call: the
     // daemon where OLLAMA_HOST names one, an honest no-key refusal where not.
     draft: ["ollama"],
@@ -230,6 +232,9 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // writes), so it gets the long ceiling even though it is flash-class: the
   // output is as long as the research turn's, the thinking is not.
   repair: 600_000,
+  // One sentence in, one chain of at most eight stages out: the smallest
+  // answer any turn writes, so the sound turns' ceiling is generous.
+  "voice-fx": 300_000,
   // A draft is one short piece of markdown, but the daemon may have to load a
   // 17 GB model off disk before its first token - minutes on a cold card.
   draft: 300_000,

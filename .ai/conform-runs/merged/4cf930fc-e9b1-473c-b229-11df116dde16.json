@@ -1,0 +1,125 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4cf930fc-e9b1-473c-b229-11df116dde16",
+ "subject": "music-video-production",
+ "evaluatedAt": "2026-10-25T01:21:43.119181+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "music-video-pipeline",
+   "subject": "music-video-production",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/sound/mv/types.ts:12 The pipeline deliberately produces rung 1 of the form ladder (one still, particles and low-band light rendered per frame from the audio envelope), so it makes no sync claim it cannot back; the map it needs is the energy layer, which it has, and segment, coverage and cut-rate rules collapse except for the beat-pulse flash cap, which it implements.",
+   "techniques": [
+    {
+     "technique": "form-follows-what-the-track-gives",
+     "verdict": "conformant",
+     "evidence": "lib/sound/mv/types.ts:12 Lowest rung chosen on purpose, with no performance claim. The visualizer's motion depends only on frame index (compositor.ts:6), as the rung-one clause requires."
+    },
+    {
+     "technique": "track-map-before-treatment",
+     "verdict": "conformant",
+     "evidence": "lib/sound/mv/render.ts:149 The analysis runs before the treatment (MV_PHASES analysing->treating). It keeps tempo candidates with their octave siblings, an energy shape, and section boundaries found by Foote novelty rather than energy, flagged as unconfirmed (sections.ts:23). No bar grid or voice map, which the 'when not to use' clause calls ceremony for a visualizer that reacts frame by frame."
+    },
+    {
+     "technique": "cut-rate-follows-the-section",
+     "verdict": "conformant",
+     "evidence": "lib/sound/mv/compositor.ts:155 There are no cuts (one still). The beat-driven brightness pulse is capped at 3 flashes per second (WCAG 2.3.1) in one pass over the whole track before rendering, as the flash decision rule asks. It counts crossings of the drive band, not rendered luminance."
+    },
+    {
+     "technique": "segment-on-the-master-clock",
+     "verdict": "not-applicable",
+     "evidence": "lib/sound/mv/compositor.ts:6 A visualizer rendered per frame from the audio has no generated segments; its timing is exact by construction ('when not to use')."
+    },
+    {
+     "technique": "coverage-across-the-phrase",
+     "verdict": "not-applicable",
+     "evidence": "lib/sound/mv/metadata.ts:37 One still, no setups or angles. The technique states that a visualizer has no setups."
+    }
+   ],
+   "registryProposal": "cut-rate-follows-the-section and form-follows-what-the-track-gives say to count a beat-pulsed brightness effect's flashes against the 3/s ceiling, but they do not say where to count. This tree counts threshold crossings on the drive signal, before a gain (bloomIntensity, applied as several additive passes above 1) is applied downstream. The standard could require the count on rendered frame luminance, or on the drive only when no gain follows it."
+  },
+  {
+   "context": "imaging-vendor-providers-and-video",
+   "subject": "music-video-production",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/imaging/video/leonardo.ts:203 These are generic still and image-to-video vendor adapters (5/10 s silent clips from a key image, plus a still provider the MV engine calls). Nothing here plans against a locked song, and a search of lib/imaging/{providers,studio,video} for phrase, segment, tempo, downbeat and lip sync found no hits, so the subject's precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "segment-on-the-master-clock",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/video/types.ts:32 Clip lengths are a vendor duration list. No master in-point, offset or handle exists because no song clock reaches this hop."
+    },
+    {
+     "technique": "coverage-across-the-phrase",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/video/types.ts:44 Each request is one camera move from one image. Phrase coverage would be a caller's job, and no caller here passes a conditioning slice."
+    },
+    {
+     "technique": "form-follows-what-the-track-gives",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/video/leonardo.ts:205 No audio goes in or comes out, so no form decision is made here."
+    },
+    {
+     "technique": "track-map-before-treatment",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/providers/leonardoStudio.ts:5 The studio provider only serves the still. The track map lives in lib/sound/mv, not here."
+    },
+    {
+     "technique": "cut-rate-follows-the-section",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/video/leonardo.ts:203 No edit or cut placement happens in this context."
+    }
+   ],
+   "absenceTerms": [
+    "phrase",
+    "segment",
+    "tempo",
+    "downbeat",
+    "lip sync"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:21:43.119181+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "music-video-production"
+   ],
+   "techniques": [
+    "coverage-across-the-phrase",
+    "cut-rate-follows-the-section",
+    "form-follows-what-the-track-gives",
+    "segment-on-the-master-clock",
+    "track-map-before-treatment"
+   ],
+   "deviations": 0,
+   "context": "music-video-pipeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T01:21:43.119181+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "music-video-production"
+   ],
+   "techniques": [
+    "coverage-across-the-phrase",
+    "cut-rate-follows-the-section",
+    "form-follows-what-the-track-gives",
+    "segment-on-the-master-clock",
+    "track-map-before-treatment"
+   ],
+   "deviations": 0,
+   "context": "imaging-vendor-providers-and-video",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

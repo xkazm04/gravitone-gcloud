@@ -1,0 +1,155 @@
+{
+  "schema": "conform-run/1",
+  "worker": "e8ab1a70-284b-4ea1-96a2-edcf352aa562",
+  "subject": "media-playback",
+  "evaluatedAt": "2026-10-25T01:15:38.728327+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "part-editor-media-cut-score",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:246 The cut/score transport writes the playhead into React state on every animation frame, so the whole Cut and Score editors (Monitor, every CutClock lane and block, the timecode) re-render at frame rate for the length of playback. This is the ancestral defect playback-clock exists to prevent, even though the hook's own comment says it is 'outside React's render'.",
+      "techniques": [
+        {
+          "technique": "playback-clock",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:246 The playhead lives in useState and is set every rAF tick. The mutable ref `at` exists, but the needle and readout are not fed by a narrow frame-loop consumer or a throttled subscription. The wall-clock-delta advance on line 243 is correct."
+        },
+        {
+          "technique": "timeline-scheduling",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:63 The Monitor finds the piece on screen from the clock and each scene's interval, with no chaining, so seek is a pure function of the derived timeline. The scan is linear rather than sorted, which is fine at about 30 scenes."
+        },
+        {
+          "technique": "media-resource-lifecycle",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:250 The frame loop names its reaper on pause, on rate change and on unmount. The Render preview loop also cancels (Render.tsx:61)."
+        },
+        {
+          "technique": "transport-contract",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:119 The cut clock drives still plates with no engine to await. The only audible engines are stock <audio controls> elements, which the platform's own controls cover."
+        },
+        {
+          "technique": "engine-adapters",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Takes.tsx:238 Takes play only through platform media elements with stock behaviour. No second engine shares one contract."
+        },
+        {
+          "technique": "generated-supply-margin",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:71 Content is made ahead of time by kernel jobs and read from the blob store. Nothing is produced just ahead of the playhead."
+        }
+      ]
+    },
+    {
+      "context": "audio-arrange-desk",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/audio/_audio/useTransport.ts:89 A card's play control flips to 'playing' the moment it is pressed, before the element answers, and nothing listens for 'waiting' or 'stalled'. A slow or buffering take is drawn as playing until the 'playing' event, an error, or the watchdog arrives, and the user cannot tell buffering from playing.",
+      "techniques": [
+        {
+          "technique": "transport-contract",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:89 Button state comes from the request, not the machine, and there is no buffering or stalled state. Partly realized: a play watchdog is armed at line 91, superseded rejections are filtered by `gen`, and refusals are reported in words."
+        },
+        {
+          "technique": "playback-clock",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:107 Engine-driven position is read on demand from the element. No playhead is held in reactive state, and only the human-speed `playing` id is."
+        },
+        {
+          "technique": "media-resource-lifecycle",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:66 One element is shared by the whole board. On unmount it clears the watchdog, removes its listeners, pauses, and strips and reloads the source, so no audio outlives the surface."
+        },
+        {
+          "technique": "engine-adapters",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:39 There is one playback engine, the HTMLAudioElement. The engine registry in arrangeRead is vendor makers, not playback engines."
+        },
+        {
+          "technique": "source-resilience",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:53 Auditions are one take per press with no continuous run to keep alive. A failure is surfaced verbatim to the operator rather than recovered through a fallback."
+        },
+        {
+          "technique": "timeline-scheduling",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/Arrange.tsx:4 'Arrange' lays out workflow stages and groups, not a time-composed sequence."
+        },
+        {
+          "technique": "generated-supply-margin",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/AudioLane.tsx:168 Takes are finished files played from a stored src, not produced ahead of the playhead."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "media-playback",
+      "context": "bound-producers",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor lib/producers/registry.ts:6 is an import line (`import type { Job }`), so it does not show that playback is absent; the verdict also rests on an rg that came back empty, and the lib/producers/cut.ts anchor shows only that the cut is exported offline, not that nothing in the directory play"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-25T01:15:38.728327+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "media-playback"
+      ],
+      "techniques": [
+        "engine-adapters",
+        "generated-supply-margin",
+        "media-resource-lifecycle",
+        "playback-clock",
+        "timeline-scheduling",
+        "transport-contract"
+      ],
+      "deviations": 1,
+      "context": "part-editor-media-cut-score",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T01:15:38.728327+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "media-playback"
+      ],
+      "techniques": [
+        "engine-adapters",
+        "generated-supply-margin",
+        "media-resource-lifecycle",
+        "playback-clock",
+        "source-resilience",
+        "timeline-scheduling",
+        "transport-contract"
+      ],
+      "deviations": 1,
+      "context": "audio-arrange-desk",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T01:15:38.728327+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "media-playback"
+      ],
+      "techniques": [
+        "timeline-scheduling"
+      ],
+      "deviations": 0,
+      "context": "bound-producers",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

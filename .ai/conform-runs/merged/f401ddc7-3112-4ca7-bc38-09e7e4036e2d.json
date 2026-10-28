@@ -1,0 +1,173 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+ "subject": "sound-effect-generation",
+ "evaluatedAt": "2026-10-24T23:06:30.274752+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "sound-generation-engine",
+   "subject": "sound-effect-generation",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/sound/sfxJob.ts:127 Every effect the engine makes is a one-call composite, and the only way to get another is to reroll the same whole brief N times; no step generates layer elements, stacks them or keeps an assembly note, so a take that fails on one quality axis cannot keep the axes that worked.",
+   "techniques": [
+    {
+     "technique": "envelope-first-briefing",
+     "verdict": "conformant",
+     "evidence": "lib/sound/generate.ts:153 Duration must be stated and is checked against the 0.5-30 s effect window before anything is sent. The adherence dial (promptInfluence, generate.ts:166-175) is exposed and refused on music. The envelope fields themselves (event/material/space) are composed in @gt/ui batch.ts, outside this context."
+    },
+    {
+     "technique": "loop-seam-acceptance",
+     "verdict": "conformant",
+     "evidence": "lib/sound/generate.ts:315 Loop intent is sent to the vendor's loop flag at generation. Acceptance has a loop_seam rubric dimension (types.ts:42) and a loop-seam defect code (types.ts:54). No code enforces the listen-twice-through check; it is a score a person gives."
+    },
+    {
+     "technique": "layered-element-assembly",
+     "verdict": "deviation",
+     "evidence": "lib/sound/sfxJob.ts:127 The technique exists only as a tag slug (types.ts:84). No element role, stack, attack-aligned trim or assembly exists anywhere in lib/sound."
+    }
+   ]
+  },
+  {
+   "context": "sound-hunt-and-measure",
+   "subject": "sound-effect-generation",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/sound/huntEngine.ts:43 The canned hunt map tags a single composite prompt ('with a soft low thump') as layered-element-assembly, and no part of the hunt or measure flow assembles separately rendered element leaves into a stack. Lessons learned along the technique axis therefore credit the composite form with the technique's name.",
+   "techniques": [
+    {
+     "technique": "envelope-first-briefing",
+     "verdict": "conformant",
+     "evidence": "lib/sound/hunt.ts:122 The sfx section of pipeline/SOUND-HUNT-PROMPT.md is appended to the drafting prompt. That section requires labelled event/attack/body/tail/space/duration/loop fields. askOf (hunt.ts:212-217) drops any tempo or key on an effect. Hunt renders leave promptInfluence null (vendor default), which suits exploration."
+    },
+    {
+     "technique": "loop-seam-acceptance",
+     "verdict": "conformant",
+     "evidence": "lib/sound/huntRender.ts:102 The leaf's drafted loop flag is carried into the generate request, so loop intent is declared at generation. No seam measurement exists in measure.ts or measureRun.ts."
+    },
+    {
+     "technique": "layered-element-assembly",
+     "verdict": "deviation",
+     "evidence": "lib/sound/huntEngine.ts:43 This line is the stub engine (SOUND_HUNT_ENGINE=stub). The real drafting prompt does ask for separate low/transient/air leaves, but nothing assembles them."
+    }
+   ]
+  },
+  {
+   "context": "suno-driver-queue",
+   "subject": "sound-effect-generation",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/sound/suno/queue.ts:124 An sfx hunt leaf sent to Suno always has at least two tags (its category plus 'sound effect', line 120), so the envelope-first prompt is thrown away and replaced by a music-style comma tag line like 'ui, sound effect'. Duration is not carried either, so the effect is briefed like music, the failure the golden path opens with.",
+   "techniques": [
+    {
+     "technique": "envelope-first-briefing",
+     "verdict": "deviation",
+     "evidence": "lib/sound/suno/queue.ts:124 Tags replace the labelled attack/body/tail/space prompt. fieldsOfLeaf (lines 133-137) carries no duration."
+    }
+   ]
+  },
+  {
+   "context": "music-video-pipeline",
+   "subject": "sound-effect-generation",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/sound/mv/types.ts:3 The pipeline takes finished tracks and makes visuals and metadata from them; a search of lib/sound/mv/ for sfx, 'sound effect', riser, whoosh and generateSfx found no hit, so it never generates or briefs a sound effect.",
+   "techniques": [],
+   "absenceTerms": [
+    "sfx",
+    "riser",
+    "whoosh",
+    "generateSfx"
+   ]
+  },
+  {
+   "context": "trailer-structure-engine",
+   "subject": "sound-effect-generation",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/script/trailer/types.ts:369 The trailer model's only audio is the music cue (a TrailerCut is cue + movements + beats); a search of lib/script/trailer/ for sfx, 'sound effect', riser, whoosh and generateSfx found no hit, so this context neither generates effects nor plans an effects pass.",
+   "techniques": [],
+   "absenceTerms": [
+    "sfx",
+    "riser",
+    "whoosh",
+    "generateSfx"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T23:06:30.274752+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "sound-effect-generation"
+   ],
+   "techniques": [
+    "envelope-first-briefing",
+    "layered-element-assembly",
+    "loop-seam-acceptance"
+   ],
+   "deviations": 1,
+   "context": "sound-generation-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:06:30.274752+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "sound-effect-generation"
+   ],
+   "techniques": [
+    "envelope-first-briefing",
+    "layered-element-assembly",
+    "loop-seam-acceptance"
+   ],
+   "deviations": 1,
+   "context": "sound-hunt-and-measure",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:06:30.274752+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "sound-effect-generation"
+   ],
+   "techniques": [
+    "envelope-first-briefing"
+   ],
+   "deviations": 1,
+   "context": "suno-driver-queue",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:06:30.274752+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "sound-effect-generation"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "music-video-pipeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:06:30.274752+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "sound-effect-generation"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "trailer-structure-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

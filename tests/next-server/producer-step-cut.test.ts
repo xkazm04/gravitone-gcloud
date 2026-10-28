@@ -113,7 +113,7 @@ describe("cut acts are jobs with receipts", () => {
     let sent: CutDocument | undefined;
     const exportCut = async (doc: CutDocument): Promise<{ result: CutExportResult; bytes: Uint8Array }> => {
       sent = doc;
-      return { result: { id: "11111111-2222-3333-4444-555555555555", encoder: "libx264", width: 1920, height: 1080, fps: 25, durationS: doc.totalS, drawn: "plates", unreachable: [], sidecar: { projectId: "c3", kind: "cut-animatic", document: "x", totalS: doc.totalS, finish: [], gaps: { picture: 0, audio: 0 } }, wallMs: 1, sizeBytes: 3 }, bytes: new Uint8Array([0, 0, 1]) };
+      return { result: { id: "11111111-2222-3333-4444-555555555555", encoder: "libx264", width: 1920, height: 1080, fps: 25, durationS: doc.totalS, drawn: "plates", unreachable: [], narration: { lines: 0, ducked: false }, loudness: null, sidecar: { projectId: "c3", kind: "cut-animatic", document: "x", totalS: doc.totalS, finish: [], gaps: { picture: 0, audio: 0 } }, wallMs: 1, sizeBytes: 3 }, bytes: new Uint8Array([0, 0, 1]) };
     };
     const { jobId, report } = await run("c3", "export-animatic", { live: true, engines: { exportCut } });
     expect(report.outcome).toBe("done");
@@ -160,7 +160,7 @@ describe("a part job reads the blobs of the store it runs on", () => {
       let sent: CutDocument | undefined;
       const exportCut = async (doc: CutDocument): Promise<{ result: CutExportResult; bytes: Uint8Array }> => {
         sent = doc;
-        return { result: { id: "11111111-2222-3333-4444-555555555556", encoder: "libx264", width: 1920, height: 1080, fps: 25, durationS: doc.totalS, drawn: "plates", unreachable: [], sidecar: { projectId: "j1", kind: "cut-animatic", document: "x", totalS: doc.totalS, finish: [], gaps: { picture: 0, audio: 0 } }, wallMs: 1, sizeBytes: 3 }, bytes: new Uint8Array([0, 0, 1]) };
+        return { result: { id: "11111111-2222-3333-4444-555555555556", encoder: "libx264", width: 1920, height: 1080, fps: 25, durationS: doc.totalS, drawn: "plates", unreachable: [], narration: { lines: 0, ducked: false }, loudness: null, sidecar: { projectId: "j1", kind: "cut-animatic", document: "x", totalS: doc.totalS, finish: [], gaps: { picture: 0, audio: 0 } }, wallMs: 1, sizeBytes: 3 }, bytes: new Uint8Array([0, 0, 1]) };
       };
       const r = must(partActReceipt(b, ref("j1", "export-animatic"), cutUnits, { mode: "live", now: NOW }));
       const l = must(launchPartAct(b, ref("j1", "export-animatic"), cutUnits, { mode: "live", now: NOW, token: r.token, actor: OP, dryOnly: false }));

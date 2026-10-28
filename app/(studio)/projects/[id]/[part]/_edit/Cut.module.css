@@ -111,6 +111,8 @@ a.checkLabel:hover{color:var(--ink-bright)}
 .card{display:flex;flex-direction:column;gap:var(--sp-2);padding:var(--sp-3);border:1px solid var(--hair-2);border-radius:var(--r-tile);background:var(--ink-1);text-align:left;color:var(--text);font:inherit;cursor:pointer}
 .card[data-on]{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-hair)}
 .cardArt{aspect-ratio:4 / 3;width:100%;border-radius:var(--r-xs);background:var(--ink-2);object-fit:cover}
+/* a voice fx ask: which take, the words (the widest), the act */
+.fxAsk{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;align-items:center;gap:var(--sp-2)}
 
 @media (max-width:900px){
   .pair{grid-template-columns:minmax(0,1fr)}

@@ -14,9 +14,12 @@ import { framesProducer, framesUnits } from "@/lib/producers/frames";
 import { motionProducer, motionUnits } from "@/lib/producers/motion";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
+import { dryOnlyFrom } from "@gt/kernel/dryrun";
+import { isMusicConfigured } from "@/lib/music/elevenlabs";
 import type { EditorKind, PartActKind, PartOp, PartReceipt, PartView } from "@gt/domain/partView";
 
 import type { ServerPart } from "./port.ts";
+import { actModeOf } from "./actMode.ts";
 import { isLaterKind, later } from "./kinds.ts";
 import { actorOfWho, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type Scene } from "./realScene.ts";
 
@@ -38,6 +41,9 @@ export type RealDeps = {
   /** How long a confirm waits for its job to end before answering with it running (default ACT_WAIT_MS). */
   readonly actWaitMs?: number;
 };
+
+/** The mode an act is priced and launched in: `live` for the voice act alone (./actMode.ts). */
+const modeOf = (kind: EditorKind, act: PartActKind): "dry" | "live" => actModeOf(kind, act, { dryOnly: dryOnlyFrom(process.env), keyed: isMusicConfigured() });
 
 /** A dry act lands in milliseconds; a live turn takes minutes and is answered as running. */
 const ACT_WAIT_MS = 2500;
@@ -154,8 +160,7 @@ export function makeRealPart(deps: RealDeps): ServerPart {
  * transaction reads, a stale token answers the fresh receipt and writes nothing, and only then is
  * the act's job enqueued (L37 `enqueueActIn`: the same act on the same unit while its job is live
  * is that job - a double click is one purchase). The job runs under the part kind's producer on
- * the chosen option's lane, and always DRY: the editor cannot arm live yet (receiptFor's
- * decision 4), so no confirm here can spend.
+ * the chosen option's lane, DRY but for the voice act, which the receipt arms live (modeOf above).
  */
 function launchAct(deps: RealDeps, store: Store, projectId: string, key: string, act: PartActKind, token: string, actor: Actor, target?: string): Result<{ kind: "stale"; fresh: PartReceipt } | { kind: "go"; jobId: string; kind_: EditorKind }> {
   const now = deps.now();
@@ -167,7 +172,7 @@ function launchAct(deps: RealDeps, store: Store, projectId: string, key: string,
   const needs = moduleNeeds(scene.value, act, target);
   if (!needs.ok) return needs;
   const ref = { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) };
-  const l = launchPartAct(store, ref, bound.value.units, { mode: "dry", now, token, actor });
+  const l = launchPartAct(store, ref, bound.value.units, { mode: modeOf(kind, act), now, token, actor });
   if (!l.ok) return l;
   return l.value.kind === "stale" ? ok({ kind: "stale", fresh: partReceiptOf(l.value.fresh, act) }) : ok({ kind: "go", jobId: l.value.jobId, kind_: kind });
 }
@@ -190,7 +195,8 @@ function partReceiptOf(r: StepReceipt, act: PartActKind): PartReceipt {
  * same function its job's plan step books - placed among the live queue (lib/producers
  * `partActReceipt`). A kind whose producer is not bound yet is refused here as its confirm refuses
  * it: the editor side's static receipt was a price for a purchase the confirm could never launch.
- * Every receipt reads `dry` until the editor can arm live (decision 4: a confirm of a live receipt).
+ * Every receipt reads `dry` but the voice act's, which reads `live` where this process may spend
+ * (./actMode.ts): its confirm is the arm (decision 4: a confirm of a live receipt).
  */
 function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartActKind, target?: string): Result<PartReceipt> {
   const k = deps.store();
@@ -202,7 +208,7 @@ function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartAct
   if (!bound.ok) return bound;
   const needs = moduleNeeds(scene.value, act, target);
   if (!needs.ok) return needs;
-  const r = partActReceipt(k.value, { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) }, bound.value.units, { mode: "dry", now });
+  const r = partActReceipt(k.value, { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) }, bound.value.units, { mode: modeOf(scene.value.kind, act), now });
   return r.ok ? ok(partReceiptOf(r.value, act)) : r;
 }
 

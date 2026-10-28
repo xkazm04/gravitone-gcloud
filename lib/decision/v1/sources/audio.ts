@@ -2,11 +2,14 @@ import "server-only";
 
 import path from "node:path";
 
+import { EXPERIMENTAL_CHECKS, type Triage } from "@gt/domain/audio.triage";
+import { triageWords } from "@gt/domain/audio.triage.words";
 import type { BlobRef } from "@gt/domain/blob";
 import type { Decision } from "@gt/domain/decision";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { ApplyClaim } from "@gt/kernel/decision/apply";
 import { readMeasure } from "@gt/kernel/library/measures";
+import { readTriage, triageDigest } from "@gt/kernel/library/triage";
 import { briefCheck, briefWords, type BriefMeasured } from "@gt/ui/components/audio/brief.ts";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
@@ -15,6 +18,7 @@ import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { verdictRow } from "../../../sound/ledger.ts";
 import { filePathAbs, ledgerPath, readTakes, SoundError, withStore } from "../../../sound/store.ts";
 import { patchTakeTx } from "../../../sound/takes.ts";
+import { triageContextOf } from "../../../sound/triageContext.ts";
 import { takeFileHref } from "../../../sound/takeHref.ts";
 import { judgingOrder } from "../../../sound/triageOrder.ts";
 import { DEFECTS, type DefectCode, type SoundTake, type TakePatch } from "../../../sound/types.ts";
@@ -70,6 +74,13 @@ import {
 // about taste. A measure store that will not open is a disclosed loss, never a
 // packet that will not open.
 //
+// TRIAGE BESIDE IT (spark audio-triage WP3). After the brief check, the tile names
+// what the audio sidecar's detectors flagged in the same bytes (kernel audio_triage,
+// @gt/domain/audio.triage.words), looked up by the digest of the take's CURRENT
+// brief (lib/sound/triageContext.ts): a triage against a brief the take no longer
+// carries is not shown. Nothing flagged, or not triaged yet, leaves the line as it
+// was. The pile's order is untouched - triage names evidence, the human decides.
+//
 // THE PILE IS AN AGGREGATE, so its id carries a generation. v1 has no run here:
 // the Floor's pile is `audio/triage`, and a packet id that never changes cannot
 // be opened again once committed (the kernel refuses other content under a
@@ -116,6 +127,8 @@ export type AudioV1 = {
   readonly measures: ReadonlyMap<string, BriefMeasured>;
   /** Why the ingest measures could not be read, when they could not. */
   readonly measureError?: string;
+  /** The sidecar's triage of each pile take's bytes against its current brief, by take id; absent = not triaged. */
+  readonly triage?: ReadonlyMap<string, Triage>;
 };
 
 const createdMs = (t: Pick<SoundTake, "createdAt">): number => Date.parse(t.createdAt);
@@ -153,13 +166,16 @@ async function read(ref: AdapterRef): Promise<Result<AudioV1>> {
   return ok({ runId: pileRunId(AUDIO_PILE, cutoff), cutoff, takes, media: media.value, ledger: ledgerName(ledgerPath()), ...measured });
 }
 
-/** The pile's measures: the kernel's row for the bytes, else the take's own `measured`. */
-function measuresOf(pile: readonly SoundTake[], media: ReadonlyMap<string, BlobRef>): Pick<AudioV1, "measures" | "measureError"> {
+/** The pile's measures: the kernel's row for the bytes, else the take's own `measured`; and the bytes' triage. */
+function measuresOf(pile: readonly SoundTake[], media: ReadonlyMap<string, BlobRef>): Pick<AudioV1, "measures" | "measureError" | "triage"> {
   const own = (t: SoundTake): BriefMeasured | null => (t.measured === null ? null : { tempoBpm: t.measured.tempoBpm, key: t.measured.key, durationS: t.measured.durationS });
   const k = kernel();
+  const triage = new Map<string, Triage>();
   const rows = k.ok
     ? k.value.store.read((r) => new Map(pile.flatMap((t) => {
         const sha = media.get(t.id)?.sha256;
+        const found = sha === undefined ? null : readTriage(r, sha, triageDigest(triageContextOf(t)));
+        if (found !== null) triage.set(t.id, found);
         const m = sha === undefined ? null : readMeasure(r, sha);
         return m === null || m.error !== null ? [] : [[t.id, m] as const];
       })))
@@ -171,22 +187,68 @@ function measuresOf(pile: readonly SoundTake[], media: ReadonlyMap<string, BlobR
     const v = m === undefined ? base : { tempoBpm: m.tempoBpm ?? base?.tempoBpm ?? null, key: m.key ?? base?.key ?? null, durationS: m.durationS ?? base?.durationS ?? null };
     if (v !== null) out.set(t.id, v);
   }
-  return rows.ok ? { measures: out } : { measures: out, measureError: rows.error.message };
+  return rows.ok ? { measures: out, triage } : { measures: out, measureError: rows.error.message };
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
 
 const seconds = (s: number | null): string => (s === null ? "" : ` · ${Math.round(s)} s`);
 
-function words(t: SoundTake, measured: BriefMeasured | undefined): ItemWords {
+function words(t: SoundTake, measured: BriefMeasured | undefined, triage: Triage | undefined): ItemWords {
   const missed = briefWords(briefCheck(t.kind, { tempoBpm: t.tempoBpm, key: t.key, durationS: t.durationS }, measured ?? null));
+  const flagged = triage === undefined ? null : triageWords(triage);
   return {
     label: t.title,
-    meta: `${t.provider} · ${t.op}${seconds(measured?.durationS ?? t.durationS)}${missed === null ? "" : ` · ${missed}`}`,
+    meta: `${t.provider} · ${t.op}${seconds(measured?.durationS ?? t.durationS)}${missed === null ? "" : ` · ${missed}`}${flagged === null ? "" : ` · ${flagged}`}`,
     ...(t.prompt === "" ? {} : { prompt: t.prompt }),
     ...(t.peaks === null ? {} : { peaks: t.peaks }),
     music: t.kind === "music",
   };
+}
+
+/* ── runs: a kind, or a kind's takes that share a use and an aim ───────────── */
+//
+// A run is what the cull's zoom opens and what its header names (RunModal: use, aim, checks). A
+// take that states where it would ship and what it was briefed to achieve (SoundTake.use / .aim,
+// 2026-10-24) files into a run with every take of its kind that states the same two - so the
+// listener reads the goal before judging the take against it. A take that states neither files
+// under its kind, exactly as before; the header then honestly reads "use: not stated".
+
+const purposeKey = (t: SoundTake): string => (t.use || t.aim ? `${t.kind}\u0000${t.use ?? ""}\u0000${t.aim ?? ""}` : t.kind);
+
+/** Row ids in first-seen order: the bare kind for an unstated take, `<kind>-<n>` for each purpose. */
+function rowIdsOf(takes: readonly SoundTake[]): ReadonlyMap<string, string> {
+  const ids = new Map<string, string>();
+  const n = { music: 0, sfx: 0 };
+  for (const t of takes) {
+    const k = purposeKey(t);
+    if (ids.has(k)) continue;
+    ids.set(k, k === t.kind ? t.kind : `${t.kind}-${++n[t.kind]}`);
+  }
+  return ids;
+}
+
+const rowOf = (t: SoundTake, ids: ReadonlyMap<string, string>): string => ids.get(purposeKey(t)) ?? t.kind;
+
+/** The runs, with what their takes were for and briefed to do, and the triage checks that judged them. */
+function rowsOf(takes: readonly SoundTake[], ids: ReadonlyMap<string, string>, triage: ReadonlyMap<string, Triage> | undefined): RowWords[] {
+  const out: RowWords[] = [];
+  const seen = new Set<string>();
+  for (const t of takes) {
+    const id = rowOf(t, ids);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const mates = takes.filter((x) => rowOf(x, ids) === id);
+    const checks = [...new Set(mates.flatMap((x) => (triage?.get(x.id)?.findings ?? []).filter((f) => f.verdict !== "skip" && !EXPERIMENTAL_CHECKS.has(f.check)).map((f) => f.check)))];
+    out.push({
+      id,
+      label: id === t.kind ? t.kind : `${t.kind} · ${t.use ?? "use not stated"}`,
+      ...(t.use ? { use: t.use } : {}),
+      ...(t.aim ? { aim: t.aim } : {}),
+      ...(checks.length > 0 ? { checks } : {}),
+    });
+  }
+  return out;
 }
 
 function packet(v1: AudioV1): Result<OpenPlan> {
@@ -197,6 +259,7 @@ function packet(v1: AudioV1): Result<OpenPlan> {
     else losses.push({ candidate: t.id, grade: "dropped", reason: t.file === null ? "the take has no file to listen to; it stays unjudged in the Sound lab" : `${t.file.path} is not on disk; the take stays unjudged in the Sound lab` });
   }
   if (judgeable.length === 0) return err("not-found", `no unjudged take with a file is waiting at or before ${new Date(v1.cutoff).toISOString()}`);
+  const rowIds = rowIdsOf(judgeable);
   if (v1.measureError !== undefined) losses.push({ grade: "approximate", reason: `brief vs measured reads the takes' own measures only: ${v1.measureError}` });
   const minted = mintPacket({
     id: packetIdOf("audio", v1.runId),
@@ -207,16 +270,15 @@ function packet(v1: AudioV1): Result<OpenPlan> {
     runId: v1.runId,
     title: `${judgeable.length} take${judgeable.length === 1 ? "" : "s"} to judge`,
     // A lab take is its own job record in v1 (no queue job behind an ElevenLabs render).
-    items: judgeable.map((t) => ({ id: t.id, jobId: t.huntId ?? t.id, media: v1.media.get(t.id), row: t.kind, grades: [] })),
+    items: judgeable.map((t) => ({ id: t.id, jobId: t.huntId ?? t.id, media: v1.media.get(t.id), row: rowOf(t, rowIds), grades: [] })),
   });
   if (!minted.ok) return minted;
-  const kinds = (["music", "sfx"] as const).filter((k) => judgeable.some((t) => t.kind === k));
-  const rows: RowWords[] = kinds.map((k) => ({ id: k, label: k }));
+  const rows = rowsOf(judgeable, rowIds, v1.triage);
   return ok({
     packet: minted.value,
     // The pile is the UNJUDGED takes: v1 holds no verdict on any of them to import.
     initial: [],
-    present: { items: Object.fromEntries(judgeable.map((t) => [t.id, words(t, v1.measures.get(t.id))])), rows, meta: "Sound lab triage" },
+    present: { items: Object.fromEntries(judgeable.map((t) => [t.id, words(t, v1.measures.get(t.id), v1.triage?.get(t.id))])), rows, meta: "Sound lab triage" },
     urls: Object.fromEntries(judgeable.map((t) => [t.id, takeFileHref(t.id)])),
     losses,
   });

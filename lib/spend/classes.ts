@@ -31,6 +31,13 @@
 // var and no ceiling, the meter reads its absence as count-only, and a
 // `reserve()` against it throws a programming error rather than admitting.
 //
+// `tts-chars` (spark audio-postproduction-research WP2, 2026-10-24) is the fifth,
+// and the operator chose its unit: CHARACTERS OF TEXT SENT TO SPEECH, because
+// that is what ElevenLabs bills text-to-speech by (lib/music/elevenlabs.ts
+// `speak`; the rate is in packages/kernel/src/pricing/table.ts). Its own class,
+// not music's seconds: a line's spoken length is only known after the call, and
+// a ceiling metered in an estimate of it would refuse on a guess.
+//
 // ENV IS READ PER CALL, never cached at import: a probe or an operator changes a
 // ceiling after the module loaded and the next call must see it.
 //
@@ -38,10 +45,10 @@
 // default, never an open tab ("budget-defaults-unlimited"). `0` is a valid
 // ceiling meaning "spend nothing", not "disabled".
 
-export type SpendClass = "imaging-usd" | "video-usd" | "music-audio-s" | "text-usd";
+export type SpendClass = "imaging-usd" | "video-usd" | "music-audio-s" | "tts-chars" | "text-usd";
 
-/** `audio-s`: seconds of audio requested from a music vendor. */
-export type SpendUnit = "usd" | "audio-s";
+/** `audio-s`: seconds of audio requested from a music vendor. `chars`: characters of text sent to speech. */
+export type SpendUnit = "usd" | "audio-s" | "chars";
 
 interface ClassCommon {
   readonly unit: SpendUnit;
@@ -128,6 +135,21 @@ export const SPEND_CLASSES: Readonly<{ [K in SpendClass]: K extends "text-usd" ?
     defaultFloor: 0, // reporting only, as for imaging and video
     // The axes lib/music/log.ts prints: what was asked for, and which model.
     axes: ["op", "model"],
+    attributionAxis: "op",
+  },
+  "tts-chars": {
+    id: "tts-chars",
+    unit: "chars",
+    ceilingVar: "TTS_BUDGET_CHARS_PER_WINDOW",
+    windowVar: "TTS_BUDGET_WINDOW_MS",
+    floorVar: "TTS_BUDGET_FLOOR_CHARS",
+    // 50,000 characters an hour: a POLICY CHOICE, not a measurement - about $4 at
+    // the v2 Multilingual rate, or some forty re-voicings of a six-card explainer.
+    defaultCeiling: 50_000,
+    defaultWindowMs: 3_600_000, // one hour, as the others
+    defaultFloor: 0, // reporting only
+    // What was spoken by which model, in which voice.
+    axes: ["op", "model", "voice"],
     attributionAxis: "op",
   },
   "text-usd": {

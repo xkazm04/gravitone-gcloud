@@ -105,6 +105,16 @@
       "owner": "gravity"
     },
     {
+      "key": "text.voice-fx",
+      "name": "Write a voice-fx chain from a description",
+      "description": "Turns the operator's words for a character voice (an echo, a ghost, a broken radio) into ONE effect chain of at most eight stages (pipeline/VOICE-FX-PROMPT.md), held to @gt/domain/audio.fx's stage kinds and bounds at the door - an out-of-bounds answer is refused with its path, never clamped - and rendered by the audio sidecar as a new take on the same line.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/sound/voiceFx/propose.ts::proposeChain -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.draft",
       "name": "Draft a night's markdown on the local model",
       "description": "A night-fill draft item's prompt in, one markdown draft out (foundry-out/scout/<night>/drafts/), never a candidate and never on the Board; served by the local Ollama model first (qwen3.8:27b, $0) and the claude CLI behind it, never a metered key.",

@@ -1,0 +1,105 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e0544948-7826-4b95-890e-5e8f869b277a",
+ "subject": "evidence-bound-visuals",
+ "evaluatedAt": "2026-10-25T01:00:23.758974+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "frames-picture-composition",
+   "subject": "evidence-bound-visuals",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/frames/frames.ts:494 The scene validator holds figures to a citation that resolves in the notebook and keeps text out of plates, but arrows and loops are seeded and accepted without a fact that grades the relation as causal, plates are asked to draw arrows, and only a low-confidence grade caps a figure (medium passes as an exact value).",
+   "techniques": [
+    {
+     "technique": "figure-must-cite-a-fact",
+     "verdict": "conformant",
+     "evidence": "lib/frames/sceneSpec.ts:179 Throwing validator: a figure with no factId is refused, a factId that is not in the notebook is refused (line 181), and rejection is per beat (reviewSceneSpecs collects SpecRejection). Seeded figures from framesFromRender (frames.ts:491) carry no factId; they are counted off-context in lib/parts/verdict.ts:100, which holds the step at working."
+    },
+    {
+     "technique": "precision-limit-propagation",
+     "verdict": "deviation",
+     "evidence": "lib/frames/sceneSpec.ts:194 The grade travels (direction.ts:60 passes confidence), but only a figure at low is capped. A medium fact may be drawn as an exact value, elements are never capped, the Fact record has no free-text precision limit, and the contests field is never read here, so nothing stops two contested facts sharing an axis."
+    },
+    {
+     "technique": "causal-arrow-discipline",
+     "verdict": "deviation",
+     "evidence": "lib/frames/frames.ts:494 Arrows are seeded by beat kind with no fact. In sceneSpec.ts:158 an element's factId is optional for every kind, so an arrow or loop with no sourced causation passes the validator."
+    },
+    {
+     "technique": "epistemic-draw-routing",
+     "verdict": "deviation",
+     "evidence": "lib/frames/frames.ts:530 The text half holds: ASKS_FOR_TEXT rejects plate subjects that ask for glyphs (sceneSpec.ts:136), and the layer split is stated in frames.ts:9. But the plate subject recipes ask the model to draw arrows (also mechanism, line 529) that assert a relation, even though the vector kit has arrow and loop kinds. This is a routing exception the standard forbids."
+    }
+   ]
+  },
+  {
+   "context": "domain-parts-projects-slots",
+   "subject": "evidence-bound-visuals",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/domain/src/partView.frames.ts:212 The frames part view counts figures that cite no fact for the human author, which is the count the technique asks for. But the bind edit only reaches texts, so an arrow or loop a person keeps can never be bound to a sourced relation, and nothing in the view flags a figure bound to a fact graded too weak to draw.",
+   "techniques": [
+    {
+     "technique": "figure-must-cite-a-fact",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/partView.frames.ts:104 There is a standing count of unsourced figures per unit (pips, line 96), per layer (line 44) and per step. Binding is by fact id (line 212), which matches the gate-is-a-count rule for a person typing."
+    },
+    {
+     "technique": "causal-arrow-discipline",
+     "verdict": "deviation",
+     "evidence": "packages/domain/src/partView.frames.ts:212 Only a text can be bound. LayerView.factId exists for elements, but there is no edit that binds an arrow or loop to a fact, and the unsourced flag covers figures only."
+    },
+    {
+     "technique": "precision-limit-propagation",
+     "verdict": "deviation",
+     "evidence": "packages/domain/src/partView.frames.ts:44 The only per-layer evidence flag is a missing citation. FactOption carries confidence (line 102), but no layer or tally field marks a figure bound to a low or medium fact. The off-context binder (app/(studio)/projects/[id]/_part/fixtureFrames.ts:160) checks only that the id exists, not its grade."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "evidence-bound-visuals",
+   "context": "landing-cosmos-scenes",
+   "reason": "pair anchor refused: app/_landing/cosmos/engine/scenePaint.ts:4 does not contain the quoted text"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:00:23.758974+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "evidence-bound-visuals"
+   ],
+   "techniques": [
+    "causal-arrow-discipline",
+    "epistemic-draw-routing",
+    "figure-must-cite-a-fact",
+    "precision-limit-propagation"
+   ],
+   "deviations": 1,
+   "context": "frames-picture-composition",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T01:00:23.758974+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "evidence-bound-visuals"
+   ],
+   "techniques": [
+    "causal-arrow-discipline",
+    "figure-must-cite-a-fact",
+    "precision-limit-propagation"
+   ],
+   "deviations": 1,
+   "context": "domain-parts-projects-slots",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

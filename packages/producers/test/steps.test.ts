@@ -8,7 +8,7 @@ import type { Output } from "@gt/kernel/job-core";
 import { researchPlan, type ResearchView } from "../src/research/define.ts";
 import { actSteps, askOf, bookedPlan, FREE, partJobId, unitOf, type UnitPrice } from "../src/research/partAct.ts";
 import { scriptPlan, type ScriptView } from "../src/script/define.ts";
-import { NO_VOICE_ENGINE, voicePlan } from "../src/voice/define.ts";
+import { fxPlan, NO_LINES, NO_VOICE_ENGINE, voicePlan, type FxSource } from "../src/voice/define.ts";
 import { wordsPlan } from "../src/words/define.ts";
 
 // The studio step producers' pure halves on literal inputs (L37): the part job's id grammar, the
@@ -130,6 +130,21 @@ describe("script acts", () => {
 });
 
 describe("album words and explainer voice", () => {
+  it("fx-line is one free unit for the line's pending ask, refused before the plan when the line lacks one", () => {
+    const lines = [{ id: "line-c1", text: "Bitcoin is scarce." }, { id: "line-c2", text: "Scarcity is not price." }];
+    const blob = { sha256: "a".repeat(64), bytes: 10, mime: "audio/wav" };
+    const takes: Record<string, FxSource> = { t1: { id: "t1", lineId: "line-c1", blob, engine: { mode: "live" } }, t2: { id: "t2", lineId: "line-c2" }, t3: { id: "t3", lineId: "line-c2", blob } };
+    const view = (asks: Record<string, { from: string; describe: string }>) => ({ lines, asks, take: (id: string) => takes[id] });
+    const why = (r: ReturnType<typeof fxPlan>): string => (r.ok ? "" : r.error.message);
+    const p = fxPlan(view({ "line-c1": { from: "t1", describe: "a ghost" } }), "line-c1");
+    expect(p).toMatchObject({ ok: true, value: { act: "fx-line", units: [{ name: "fx:line-c1:t1", estimate: { usd: 0 }, input: { id: "line-c1", from: "t1", describe: "a ghost", text: "Bitcoin is scarce.", blob, engine: { mode: "live" } } }] } });
+    expect(why(fxPlan(view({}), undefined))).toBe("voice fx names a line");
+    expect(why(fxPlan(view({}), "line-c9"))).toBe("no line line-c9");
+    expect(why(fxPlan(view({}), "line-c1"))).toBe("no voice fx is asked for line-c1");
+    expect(why(fxPlan(view({ "line-c1": { from: "t3", describe: "a ghost" } }), "line-c1"))).toBe("take t3 is not a take of line-c1");
+    expect(why(fxPlan(view({ "line-c2": { from: "t2", describe: "a ghost" } }), "line-c2"))).toBe("take t2 holds no audio to put through a chain");
+  });
+
   it("words are one turn, whatever the recipe's units; live needs an analysed track, dry stands in", () => {
     expect(wordsPlan({ title: "08 Stay", analysed: true, dry: false }, null, SEAT)).toMatchObject({ ok: true, value: { units: [{ name: "metadata" }] } });
     const live = wordsPlan({ title: "08 Stay", analysed: false, dry: false }, null, SEAT);
@@ -137,11 +152,26 @@ describe("album words and explainer voice", () => {
     expect(wordsPlan({ title: "08 Stay", analysed: false, dry: true }, null, SEAT).ok).toBe(true);
   });
 
-  it("a take per line, or the one line a target names; a live voice job is refused - no engine exists", () => {
-    const lines = [{ id: "r:1", text: "Bitcoin is scarce." }, { id: "r:2", text: "Scarcity is not price." }];
-    expect(voicePlan({ lines, engine: null, dry: true }, null, FREE)).toMatchObject({ ok: true, value: { units: [{ name: "line:r:1" }, { name: "line:r:2" }] } });
-    expect(voicePlan({ lines, engine: null, dry: true }, "record-line", FREE, "r:2")).toMatchObject({ ok: true, value: { units: [{ name: "line:r:2" }] } });
-    const live = voicePlan({ lines, engine: null, dry: false }, null, FREE);
+  it("a take per line, or the one line a target names; a live job on an option with no engine is refused", () => {
+    const lines = [{ id: "line-c1", text: "Bitcoin is scarce." }, { id: "line-c2", text: "Scarcity is not price." }];
+    const free = (): UnitPrice => FREE;
+    expect(voicePlan({ lines, engine: null, dry: true }, null, free)).toMatchObject({ ok: true, value: { units: [{ name: "line:line-c1" }, { name: "line:line-c2" }] } });
+    expect(voicePlan({ lines, engine: null, dry: true }, "record-line", free, "line-c2")).toMatchObject({ ok: true, value: { units: [{ name: "line:line-c2" }] } });
+    const live = voicePlan({ lines, engine: null, dry: false }, null, free);
     expect(live.ok ? "" : live.error.message).toBe(NO_VOICE_ENGINE);
+    const none = voicePlan({ lines: [], engine: "eleven_multilingual_v2", dry: false }, null, free);
+    expect(none.ok ? "" : none.error.message).toBe(NO_LINES);
+  });
+
+  it("an engine speaks live, and every line carries ITS OWN price - the characters it bills", () => {
+    const lines = [{ id: "line-c1", text: "Bitcoin is scarce." }, { id: "line-c2", text: "Scarcity is not the same thing as price." }];
+    const perChar = (l: { readonly text: string }): UnitPrice => ({ seconds: 120, usd: l.text.length * 0.00008 });
+    const p = voicePlan({ lines, engine: "eleven_multilingual_v2", dry: false }, "record-line", perChar, undefined, (l) => ({ chars: l.text.length }));
+    if (!p.ok) throw p.error;
+    expect(p.value.units.map((u) => u.estimate.usd)).toEqual([18 * 0.00008, 40 * 0.00008]);
+    expect(p.value.units.map((u) => u.input)).toEqual([
+      { id: "line-c1", text: "Bitcoin is scarce.", chars: 18 },
+      { id: "line-c2", text: "Scarcity is not the same thing as price.", chars: 40 },
+    ]);
   });
 });

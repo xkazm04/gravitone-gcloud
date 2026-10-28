@@ -17,7 +17,7 @@ describe("packet sources", () => {
     expect(SOURCES.strips.reasons).toEqual(["concept", "legibility", "motion", "craft", "identity", "too-busy", "generic", "broken"]);
     expect(SOURCES.strips.maxReasons).toBe(3);
     expect(SOURCES.article.reasons).toEqual(["structure", "storytelling", "depth", "figures", "voice", "medium-fidelity", "truth"]);
-    expect(SOURCES.audio.reasons).toHaveLength(11);
+    expect(SOURCES.audio.reasons).toHaveLength(15);
     expect(SOURCES.dojo.reasons).toEqual(["technique", "execution"]);
     expect(SOURCES.forge.reasons).toEqual(["style", "subject", "text", "craft"]);
   });

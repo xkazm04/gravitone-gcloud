@@ -29,10 +29,13 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { TRIAGE_VERSION, type Triage } from "@gt/domain/audio.triage";
 import { putAudioMeasures } from "@gt/kernel/library/measures";
+import { putTriage, triageDigest } from "@gt/kernel/library/triage";
 
 import { audioAdapter, parsePile, type AudioV1 } from "../../lib/decision/v1/sources/audio.ts";
 import { closeKernel, kernel } from "../../lib/kernelStore.ts";
+import { triageContextOf } from "../../lib/sound/triageContext.ts";
 import type { SoundTake } from "../../lib/sound/types.ts";
 import { must, openFlow } from "./decision-v1-harness.ts";
 
@@ -192,6 +195,61 @@ describe("brief vs measured on the tile", () => {
     must(putAudioMeasures(k.value.store, [{ sha, peaks: [0.1], energy: 0.1, durationS: 31, tempoBpm: 90, key: null, measuredAt: T0, error: null }]));
     const plan = must(audioAdapter.packet(must(await audioAdapter.read({ runId: RUN }))));
     expect(plan.present.items["st-a"]?.meta).toBe("elevenlabs · compose · 31 s · tempo 120 bpm → 90 bpm −30 bpm");
+  });
+
+  // The sidecar's triage of the same bytes (spark audio-triage WP3), keyed by the take's current brief.
+  const flagged: Triage = {
+    version: TRIAGE_VERSION,
+    findings: [
+      { check: "clipping", verdict: "flag", value: 12, threshold: 3, unit: "samples" },
+      { check: "true-peak-over", verdict: "flag", value: 0.8, threshold: 0, unit: "dBTP" },
+      { check: "dead-air", verdict: "pass", value: 0.4, threshold: 2, unit: "s" },
+      { check: "loop-seam", defect: "loop-seam", verdict: "skip", value: null, threshold: null, unit: "dB" },
+    ],
+    flagged: 2,
+  };
+  const clean: Triage = { version: TRIAGE_VERSION, findings: [{ check: "clipping", verdict: "pass", value: 0, threshold: 3, unit: "samples" }], flagged: 0 };
+  function triaged(t: SoundTake, triage: Triage): void {
+    const k = kernel();
+    if (!k.ok) throw k.error;
+    const sha = createHash("sha256").update(`RIFF${t.id}`).digest("hex");
+    must(putTriage(k.value.store, [{ sha, contextDigest: triageDigest(triageContextOf(t)), triage, at: T0 }]));
+  }
+
+  it("names what the triage flagged after the brief line; a take with nothing flagged reads as it did", async () => {
+    const off = take("st-tri", { tempoBpm: 120, measured: { ...measured, tempoBpm: 96 } });
+    const held = take("st-clean", { createdAt: "2026-10-15T09:01:00.000Z" });
+    seed([off, held]);
+    triaged(off, flagged);
+    triaged(held, clean);
+    const plan = must(audioAdapter.packet(must(await audioAdapter.read({ runId: RUN }))));
+    expect(plan.present.items["st-tri"]?.meta).toBe("elevenlabs · compose · 30 s · tempo 120 bpm → 96 bpm −24 bpm · clipped run 12 · true peak +0.8 dBTP");
+    expect(plan.present.items["st-clean"]?.meta).toBe("elevenlabs · compose · 30 s");
+    // The pile's order is the judging queue's, triage or not.
+    expect(plan.packet.items.map((c) => c.id)).toEqual(["st-tri", "st-clean"]);
+  });
+
+  it("files takes that state a use and an aim into one run per purpose, with both on its header; an unstated take files under its kind", async () => {
+    const bed = { use: "ambience bed looped under narration", aim: "a seamless wrap at a steady level - loop-seam, loudness" };
+    const a = take("st-loop-a", { kind: "sfx", op: "sfx", ...bed });
+    const b = take("st-loop-b", { kind: "sfx", op: "sfx", ...bed, createdAt: "2026-10-15T09:01:00.000Z" });
+    const plain = take("st-plain", { createdAt: "2026-10-15T09:02:00.000Z" });
+    seed([a, b, plain]);
+    triaged(a, flagged);
+    const plan = must(audioAdapter.packet(must(await audioAdapter.read({ runId: RUN }))));
+    expect(plan.packet.items.map((c) => [c.id, c.row])).toEqual([["st-loop-a", "sfx-1"], ["st-loop-b", "sfx-1"], ["st-plain", "music"]]);
+    expect(plan.present.rows).toEqual([
+      { id: "sfx-1", label: "sfx · ambience bed looped under narration", use: bed.use, aim: bed.aim, checks: ["clipping", "true-peak-over", "dead-air"] },
+      { id: "music", label: "music" },
+    ]);
+  });
+
+  it("a triage against a brief the take no longer carries is not shown", async () => {
+    const before = take("st-rebrief", { durationS: 30 });
+    triaged(before, flagged);
+    seed([take("st-rebrief", { durationS: 45 })]);
+    const plan = must(audioAdapter.packet(must(await audioAdapter.read({ runId: RUN }))));
+    expect(plan.present.items["st-rebrief"]?.meta).toBe("elevenlabs · compose · 45 s");
   });
 
   it("a measure store that will not open is a disclosed loss, never a packet that will not open", async () => {

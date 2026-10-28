@@ -1,0 +1,101 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5c30671c-f7cf-4a4b-8f99-28f1af44621d",
+ "subject": "cinematic-language",
+ "evaluatedAt": "2026-10-25T00:24:39.031150+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "frames-picture-composition",
+   "subject": "cinematic-language",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/frames/shotPrompt.ts:154 The shot\u2192prompt compiler phrases camera stance as attitude and composes shot size, placement, screen direction and lit-dark subject recipes from typed shot fields, and the shot derivation enforces size jumps and one axis, so the prompts a trailer shot list proposes are directed rather than the eye-level training mean.",
+   "techniques": [
+    {
+     "technique": "camera-position-semantics",
+     "verdict": "conformant",
+     "evidence": "lib/frames/shotPrompt.ts:154 ANGLE_PHRASE states angle as meaning plus headroom consequence (dojo camera-attitude cycle); SIZE_PHRASE and PLACEMENT_PHRASE (crosshair/thirds/diagonal) cover size and framing. Caveat: shots.ts:332 never seeds angle, so derived shots get size and recipe stance only."
+    },
+    {
+     "technique": "lighting-as-dramatic-instrument",
+     "verdict": "conformant",
+     "evidence": "lib/frames/shotPrompt.ts:111 Recipes name one in-world source and what stays dark, written as described effects with no equipment terms (comment at 106-109 cites the what-stays-dark dojo); peak:ECU and reset:EWS do the same."
+    },
+    {
+     "technique": "scene-grammar-progression",
+     "verdict": "conformant",
+     "evidence": "lib/frames/shots.ts:251 Size picks require at least 2 steps between consecutive shots (avoids the stutter cut), setup ladders open on EWS (establishing), SEQUENCE_DIRECTION at shots.ts:242 fixes the axis with neutral shots at reset/tail, and shotReview checks size-jump and unmediated flips."
+    },
+    {
+     "technique": "movement-motivation",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/shotPrompt.ts:204 This context writes text-to-image prompts for plates; a move is passed through only when a person writes one, and the clip itself is directed in the motion step, outside this context."
+    }
+   ],
+   "registryProposal": "lens-effect-language lists 'sharp-everywhere default (no depth-of-field clause)' as a failure, but the golden path says to leave dials that do not matter for the beat at neutral. The standard should say whether an unstated depth of field counts as neutral or as the failure."
+  },
+  {
+   "context": "landing-cosmos-scenes",
+   "subject": "cinematic-language",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/camera.ts:1 The landing cosmos is a code-painted paper diorama whose 'camera' is pointer- and wheel-driven CSS parallax over canvas planes, with no generation model, prompt or shot brief anywhere. I searched the engine directory for prompt, generat, genre, lens and close-up and found zero hits, so the subject's precondition (directing generated shots) does not hold.",
+   "techniques": [
+    {
+     "technique": "movement-motivation",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/camera.ts:1 Camera motion is interactive parallax from user input, not a briefed move for a generator."
+    }
+   ],
+   "absenceTerms": [
+    "prompt",
+    "generat",
+    "genre",
+    "lens",
+    "close-up"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "cinematic-language",
+   "context": "visual-producers",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-25T00:24:39.031150+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "cinematic-language"
+   ],
+   "techniques": [
+    "camera-position-semantics",
+    "lighting-as-dramatic-instrument",
+    "movement-motivation",
+    "scene-grammar-progression"
+   ],
+   "deviations": 0,
+   "context": "frames-picture-composition",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T00:24:39.031150+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "cinematic-language"
+   ],
+   "techniques": [
+    "movement-motivation"
+   ],
+   "deviations": 0,
+   "context": "landing-cosmos-scenes",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

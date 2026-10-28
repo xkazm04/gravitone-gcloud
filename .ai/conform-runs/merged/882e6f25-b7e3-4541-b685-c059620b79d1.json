@@ -1,0 +1,102 @@
+{
+ "schema": "conform-run/1",
+ "worker": "882e6f25-b7e3-4541-b685-c059620b79d1",
+ "subject": "client-fetch-cache",
+ "evaluatedAt": "2026-10-25T01:59:25.691315+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "client-fetch-cache",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:112 The detail paints from the list row the user clicked, but the subject-history count is one the row never carried, and until the related read settles it shows a confident 1 (no other acts) instead of unknown. This is the 'borrowed list row renders zero for a count it never carried' failure named by sibling-entry-warmth.",
+   "techniques": [
+    {
+     "technique": "sibling-entry-warmth",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:112 The borrow itself is done right: Ledger.tsx:97 finds the row by seq, and read.ts:253 is the cold twin for a deep link. But bySubject is not on the row, so it renders as the value 1 while the read is in flight, and again on every reselect."
+    },
+    {
+     "technique": "swr-design",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:132 Stream arrivals are coalesced into one event-driven refresh, and the transition keeps the current render painted while the new one renders. Events win over any timer."
+    },
+    {
+     "technique": "cache-key-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/filter.ts:103 One builder derives the identity from the canonical, fixed-order toSearch, leaving out the windowing-only axes. page.tsx:36 keys the mount with it, so older pages of another filter cannot collide."
+    },
+    {
+     "technique": "portable-read-definitions",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:12 The server render, the JSONL route and both Server Actions call one set of plain read functions. actions.ts re-parses the page's own search with the same parser."
+    },
+    {
+     "technique": "parse-and-derive-caches",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:96 The seq index is a pure derivation keyed by the rows' reference identity, holds one entry, and can always be recomputed."
+    },
+    {
+     "technique": "prefetch-and-defer",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/feed.ts:34 The live stream's first connect is held back by a fixed 1.5 s timer (feed.ts:145) rather than an idle callback with a timeout fallback. Scheduled work is cancelled on unmount, which is correct, and there is no intent prefetch of related reads."
+    },
+    {
+     "technique": "warm-remount-caches",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/page.tsx:31 Each mount's rows, counts and strip arrive as server-rendered props, so no client-fetched primary data dies with the view. Older pages are dropped on purpose when the filter identity changes."
+    },
+    {
+     "technique": "in-flight-dedup",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:77 Each after-render read has a single call site. Older pages use a refuse guard; related reads use debounce plus latest-wins (async-race-guards). No two callers share a key."
+    },
+    {
+     "technique": "similarity-keyed-admission",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:85 The only held answer is matched by exact seq identity. Nothing is keyed on resemblance."
+    },
+    {
+     "technique": "plural-policy-claims",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:53 The related answer is held in component state owned by one reader. No entry has several claimants with different policies."
+    }
+   ],
+   "registryProposal": "prefetch-and-defer's 'defer to idle, not to a timer' does not cover a long-lived stream whose delay exists to get past a test harness's network-idle window. An idle callback would not guarantee clearing that window, so the technique could name this case: either the readiness signal moves (this repo already uses data-ready), or the timer is argued as a test contract."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "client-fetch-cache",
+   "context": "domain-parts-projects-slots",
+   "reason": "absence contradicted: packages/domain/src/errors.ts:40 contains 'cache' (2 hit(s) in the context's directories)"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:59:25.691315+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "client-fetch-cache"
+   ],
+   "techniques": [
+    "cache-key-discipline",
+    "in-flight-dedup",
+    "parse-and-derive-caches",
+    "plural-policy-claims",
+    "portable-read-definitions",
+    "prefetch-and-defer",
+    "sibling-entry-warmth",
+    "similarity-keyed-admission",
+    "swr-design",
+    "warm-remount-caches"
+   ],
+   "deviations": 1,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

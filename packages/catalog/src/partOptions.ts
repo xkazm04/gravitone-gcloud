@@ -40,6 +40,8 @@ export type OptionDecl =
       readonly usage?: { readonly unit: string; readonly perUnit: number; readonly size?: string };
       /** Used when the quote is unpriced: a band the pipeline observed, or the honest reason. */
       readonly fallback?: UsdDecl;
+      /** A speech option's one voice (operator decision 2026-10-24: no picker). */
+      readonly voice?: VoiceDecl;
     }
   | {
       readonly via: "local";
@@ -51,6 +53,29 @@ export type OptionDecl =
       readonly pace: PaceDecl;
       readonly usd: UsdDecl;
     };
+
+/** A vendor voice by id, with where the id was confirmed: a voice id typed from memory is a 404. */
+export type VoiceDecl = { readonly voiceId: string; readonly name: string; readonly source: string; readonly checked: string };
+
+/**
+ * THE NARRATION VOICE: ElevenLabs' premade "George". Confirmed in the vendor's own default-voices
+ * table (elevenlabs.io/docs/help-center/product/voices/my-voices/what-are-default-voices, read
+ * 2026-10-24) and used as the example voice of the TTS convert reference. That same page says the
+ * default voices EXPIRE on 2026-12-31 and are offered only to accounts created before March 2026,
+ * and names "Eldrin" (6WwXjDDEMyNmFG95zycZ) as George's replacement - so this row has a date on it.
+ */
+export const DEFAULT_VOICE: VoiceDecl = {
+  voiceId: "JBFqnCBsd6RMkjVDRZzb",
+  name: "George",
+  source: "ElevenLabs default-voices table and TTS convert reference; default voices expire 2026-12-31 (replacement named: Eldrin, 6WwXjDDEMyNmFG95zycZ)",
+  checked: "2026-10-24",
+};
+
+/** The voice a speech option speaks with, or undefined for an option that names none. */
+export function voiceOf(kind: WorkKind, provider: string): VoiceDecl | undefined {
+  const d = PART_OPTIONS[kind].options.find((o) => o.provider === provider);
+  return d?.via === "router" ? d.voice : undefined;
+}
 
 export type KindOptions = {
   readonly unitNoun: string;
@@ -182,16 +207,19 @@ export const PART_OPTIONS: Readonly<Record<WorkKind, KindOptions>> = {
   },
   voice: {
     unitNoun: "take",
+    route: { medium: "audio", capability: "speech" },
     producer: "voice",
     options: [
       {
-        via: "local",
+        via: "router",
         provider: "elevenlabs-voice",
-        model: "elevenlabs-voice",
-        lane: "cloud.elevenlabs",
         label: "ElevenLabs · voice",
         pace: proto(2, "voice on ElevenLabs"),
-        usd: { unpriced: "no voice model or price is declared in v1; the router lists ElevenLabs voice with no capability" },
+        // A take is one strip card's line. The PLAN prices it at an assumed 200 characters (a
+        // caption of ~35 words); the act's RECEIPT replaces that with each line's exact count
+        // (lib/producers/voice.ts), because characters are what the vendor bills.
+        usage: { unit: "character", perUnit: 200 },
+        voice: DEFAULT_VOICE,
       },
       {
         via: "local",

@@ -1,0 +1,93 @@
+{
+ "schema": "conform-run/1",
+ "worker": "15828de5-56c3-4800-90a2-e9aa6423ea5c",
+ "subject": "native-shell-integration",
+ "evaluatedAt": "2026-10-25T03:05:32.197919+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "studio-shell",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/liveFeed.ts:51 The shell's one long-lived stream is a browser EventSource opened by the page itself, and the shell's files contain no native host (a search for electron, tauri, ipcRenderer and webview found 0 hits in app/(studio)/_shell), so the subject's precondition does not hold here: there is no native process holding capabilities the page cannot reach.",
+   "techniques": [
+    {
+     "technique": "native-owned-stream",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/liveFeed.ts:51 The stream belongs to the view because there is no native side to move it to. When the tab is hidden the poll backstop pauses and catches up on wake (header comment, lines 15-17), which is a choice made inside the browser."
+    },
+    {
+     "technique": "permission-gate-vector",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/keys.ts:40 The only host-side state the shell touches is localStorage keys. It asks for no OS permissions."
+    }
+   ],
+   "absenceTerms": [
+    "electron",
+    "tauri",
+    "ipcRenderer",
+    "webview"
+   ]
+  },
+  {
+   "context": "landing-cosmos-shell",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/keyboard.ts:15 The landing gets its keys straight from the browser window's keydown event, with no wrapper or embedded web view forwarding them, and a search for electron, tauri, ipcRenderer and webview found 0 hits in app/_landing, so there is no native shell for any technique to govern.",
+   "techniques": [
+    {
+     "technique": "host-forwarded-key-contract",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/keyboard.ts:15 Keys reach the page directly from a desktop browser. No host keeps keys for itself and no native wrapper forwards them."
+    },
+    {
+     "technique": "native-owned-stream",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/perf.ts:137 When the tab is hidden the perf throttle stops on purpose. There is no background stream and no native owner."
+    }
+   ],
+   "absenceTerms": [
+    "electron",
+    "tauri",
+    "ipcRenderer",
+    "webview"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T03:05:32.197919+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "native-owned-stream",
+    "permission-gate-vector"
+   ],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T03:05:32.197919+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "host-forwarded-key-contract",
+    "native-owned-stream"
+   ],
+   "deviations": 0,
+   "context": "landing-cosmos-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -67,8 +67,8 @@ test("keys: 1 keeps, 5 rejects, U undecides on the Board's cull, and 2-4 name th
   expect(cull("reject").flatMap((r) => r.caps)).toEqual(["5"]);
   expect(cull("undecide").flatMap((r) => r.caps)).toEqual(["U"]);
   expect(cull("reason").flatMap((r) => r.caps)).toEqual(["2", "3", "4"]);
-  // Eleven defects in v1's order: the first three on keys, every one on a chip.
-  expect(SOURCES.audio.reasons).toHaveLength(11);
+  // Fifteen defects in v1's order: the first three on keys, every one on a chip.
+  expect(SOURCES.audio.reasons).toHaveLength(15);
   expect(keyedReason(reasonVocabulary("audio"), undefined, "2")).toBe("smeared-transients");
   expect(keyedReason(reasonVocabulary("audio"), undefined, "4")).toBe("section-bleed");
   expect(keyedReason(reasonVocabulary("audio"), undefined, "-")).toBeUndefined();

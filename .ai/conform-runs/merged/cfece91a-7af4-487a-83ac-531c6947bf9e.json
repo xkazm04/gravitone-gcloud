@@ -1,0 +1,129 @@
+{
+ "schema": "conform-run/1",
+ "worker": "cfece91a-7af4-487a-83ac-531c6947bf9e",
+ "subject": "job-coordination",
+ "evaluatedAt": "2026-10-25T01:08:46.669102+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "domain-run-job-steps",
+   "subject": "job-coordination",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "packages/domain/src/job.machine.ts:31 The job lifecycle is one closed table: live states (queued, running), held states (paused, failed, interrupted) and terminal states (done, cancelled). The record's superRefine ties each state to its payload (lease while running, error while failed, interruption while interrupted), so recovery and views read one vocabulary instead of scattered flags.",
+   "techniques": [
+    {
+     "technique": "job-state-machines",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/job.machine.ts:31 Closed vocabulary as data with one authority. jobStateSchema is z.enum(jobMachine.states) and transitions.ts assert() refuses undeclared edges."
+    },
+    {
+     "technique": "terminal-state-recovery",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/job.machine.ts:37 Terminal set is closed (done, cancelled, both []). A crashed job gets its own parked state whose only exits are back through the queue or cancel, and the record requires a typed error or an interruption payload. The domain declares no age policy for paused/failed/interrupted."
+    },
+    {
+     "technique": "in-flight-is-a-position",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/job.machine.ts:13 At job grain, running means dispatched. An orphaned running job becomes 'interrupted' (unknown outcome, with holder and stage recorded) rather than being re-run, so recovery reads a recorded fact. The disposition is the same for every step: park for the operator."
+    },
+    {
+     "technique": "lease-renewal",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/job.ts:63 The lease record carries a fencing token, heartbeatAt and ttlS, and the schema requires a lease exactly while running. The renewal loop and expiry-is-loss live in kernel lease-core.ts, outside this context."
+    },
+    {
+     "technique": "liveness-proof-reclaim",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/job.ts:48 Holder identity is bootId+pid+host, a start token that survives pid reuse. The comment at job.ts:46 says a different host 'is treated as gone', but kernel gone() returns false for a foreign host and leaves it to TTL (see notes)."
+    },
+    {
+     "technique": "terms-travel-permission-does-not",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/job.ts:115 The ceiling, mode (dry/live with its arm) and steer are written into the record at submission. The comment on mode says a retry must not silently change it."
+    }
+   ]
+  },
+  {
+   "context": "board-decision-desk",
+   "subject": "job-coordination",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "app/(studio)/board/_port/real.ts:200 The commit's terminal verdict and its pending apply-outbox row land in one kernel transaction. The fire-and-forget kick, the bounded sweep on every render and the operator's redrive are the movers for the side effects that come after the terminal write. The decided desk shows the apply's state and v1's error verbatim, read from the store.",
+   "techniques": [
+    {
+     "technique": "no-unrestorable-state-at-a-suspension-point",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/real.ts:200 Dying between the commit tx (real.ts:196) and this kick loses nothing: kernel commit.ts:65 inserts the pending packet_applies row inside the same tx, so the state at that point is durable."
+    },
+    {
+     "technique": "no-wall-clock-in-the-advance-contract",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/real.ts:53 The request (and the keepalive route's maxDuration) bounds only the decision write. Delivering the durable apply is not awaited and is not cut short by the request's clock."
+    },
+    {
+     "technique": "terminal-state-recovery",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/actions.ts:90 After the terminal commit, the fan-out has named movers: a pending apply is swept on render (load.ts:33 reconcileApplies) and a stuck one is moved back to pending by the operator's redrive, with a fresh attempt budget and an Event."
+    },
+    {
+     "technique": "job-observability",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_board/DecidedDesk.tsx:43 The apply's state, read from the store, and its lastError verbatim (line 46) are shown per packet. The fleet-wide stuck view is on the Floor (LaneCells), outside this context. The rail's ordering does not bring stuck applies to the top."
+    },
+    {
+     "technique": "terms-travel-permission-does-not",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/real.ts:194 The digest of the v1 state the preview was planned from travels in the token. The commit recomputes it from a fresh read, and the kernel refuses 'stale-preview' instead of committing under different terms."
+    },
+    {
+     "technique": "step-position-and-resumability",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/real.ts:221 The return act's dedup identity is derived deterministically from its content, not minted per attempt, so a re-run gets the first result (the keyed re-run disposition). Commit likewise takes a ticket (real.ts:187)."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:08:46.669102+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "job-coordination"
+   ],
+   "techniques": [
+    "in-flight-is-a-position",
+    "job-state-machines",
+    "lease-renewal",
+    "liveness-proof-reclaim",
+    "terminal-state-recovery",
+    "terms-travel-permission-does-not"
+   ],
+   "deviations": 0,
+   "context": "domain-run-job-steps",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T01:08:46.669102+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "job-coordination"
+   ],
+   "techniques": [
+    "job-observability",
+    "no-unrestorable-state-at-a-suspension-point",
+    "no-wall-clock-in-the-advance-contract",
+    "step-position-and-resumability",
+    "terminal-state-recovery",
+    "terms-travel-permission-does-not"
+   ],
+   "deviations": 0,
+   "context": "board-decision-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

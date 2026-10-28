@@ -1,0 +1,106 @@
+{
+ "schema": "conform-run/1",
+ "worker": "42ba43c0-be26-49f7-8db0-082adc73e62d",
+ "subject": "demo-data-plane",
+ "evaluatedAt": "2026-10-25T02:29:50.445887+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "library-port",
+   "subject": "demo-data-plane",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/library/_port/fixtureData.ts:97 The Library's fixture declares its own project roster (prj-glass-harbor, style glass-harbor), which disagrees with the Projects fixture's roster (glass-harbor-trailer, style glass-harbor-noir), even though the port's header says one switch moves the whole studio into one fixture universe; so 'Use in project' on the fixture side names a project that /projects in the same lane does not have.",
+   "techniques": [
+    {
+     "technique": "one-interface-many-planes",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/port.ts:44 Both planes are typed against ServerLibrary, so dropping a fixture method fails at compile time. The one weakness: ServerLibrary is declared inside real.ts:46, not in a module of its own."
+    },
+    {
+     "technique": "runtime-dispatch-not-build-flag",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/port.ts:30 The env var is read once per process, so this is a deployment-gated plane for dev, /kit and the fixture lane. Viewers have no demo entry. That is the internal gated-deployment case the technique itself allows. If a visitor-facing demo is ever added, this exact line becomes the failure the technique names."
+    },
+    {
+     "technique": "fixture-self-consistency",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/fixtureData.ts:97 Inside the route the world is coherent: a 5,000-item corpus projected from one data module with minted ids. But it re-declares projects and styles that the Projects fixture also declares, with different ids."
+    },
+    {
+     "technique": "seeded-determinism",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/fixtureData.ts:111 An explicit, checked-in seeded generator with fixed T0/T1 instants in fixtureCorpus.ts, so every boot builds the same corpus. A grep of the context found no Math.random."
+    }
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "demo-data-plane",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/_port/fixtureData.ts:155 The Projects fixture seeds its own project and style ids (glass-harbor-trailer / glass-harbor-noir) separately from the Library fixture's roster (prj-glass-harbor / glass-harbor), so the two screens of one fixture universe disagree about the same entities.",
+   "techniques": [
+    {
+     "technique": "one-interface-many-planes",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/port.ts:57 ServerProduce is mapped from ProducePort (contract.ts) and both planes implement it. makeRealProduce returns ServerProduce, so parity is checked at compile time."
+    },
+    {
+     "technique": "runtime-dispatch-not-build-flag",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/_port/port.ts:46 A process-level switch for the dev/fixture lane, with no visitor-facing demo entry. This is the internal gated-deployment case the technique allows."
+    },
+    {
+     "technique": "fixture-self-consistency",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/_port/fixtureData.ts:155 Plan, list and jobs are derived from SEED_PROJECTS inside the route. But its styles and projects are a second roster with no shared root with the Library fixture."
+    },
+    {
+     "technique": "seeded-determinism",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/fixture.ts:198 The world is born once from a single reference instant, and its seeds are offsets from it. Only the schedule's NOW moves after that, which counts as 'deterministic, not static'."
+    }
+   ],
+   "registryProposal": "The subject assumes a customer-reachable demo. A common shape it doesn't name: a developer/prototyping fixture plane that humans read (kit, screenshot capture, design review) and that is switched per process by an env var. Adding a 'dev fixture plane' clause to runtime-dispatch's 'When not to use it' would stop seats from splitting between deviation and not-applicable on that line."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T02:29:50.445887+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "demo-data-plane"
+   ],
+   "techniques": [
+    "fixture-self-consistency",
+    "one-interface-many-planes",
+    "runtime-dispatch-not-build-flag",
+    "seeded-determinism"
+   ],
+   "deviations": 1,
+   "context": "library-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T02:29:50.445887+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "demo-data-plane"
+   ],
+   "techniques": [
+    "fixture-self-consistency",
+    "one-interface-many-planes",
+    "runtime-dispatch-not-build-flag",
+    "seeded-determinism"
+   ],
+   "deviations": 1,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

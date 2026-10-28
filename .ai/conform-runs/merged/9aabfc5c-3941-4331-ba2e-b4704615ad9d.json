@@ -1,0 +1,61 @@
+{
+  "schema": "conform-run/1",
+  "worker": "9aabfc5c-3941-4331-ba2e-b4704615ad9d",
+  "subject": "concurrent-vcs",
+  "evaluatedAt": "2026-10-25T02:08:01.557860+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "studio-shell",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/_shell/session.ts:29 The shell's only 'session' is a Firebase auth-cookie bridge posted to /api/session; a recursive search of app/(studio)/_shell for worktree, stash, rev-parse, pre-commit and GIT_INDEX_FILE found nothing, so this context does no VCS work and no shared-checkout concern reaches it.",
+      "techniques": [],
+      "absenceTerms": [
+        "worktree",
+        "stash",
+        "rev-parse",
+        "pre-commit",
+        "GIT_INDEX_FILE"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "concurrent-vcs",
+      "context": "foundry-forge-store-and-verdicts",
+      "reason": "withdrawn after review: reviewer (sonnet): The verdict contradicts itself: the technique anchor at catalogue.ts:252 says the precondition (a singular resource shared across processes) holds, while the verdict says not-applicable. The fsPort.ts:12 comment also describes shared, git-tracked indices that overlapping commits and acquire.py write"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-25T02:08:01.557860+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "concurrent-vcs"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "studio-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-25T02:08:01.557860+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "concurrent-vcs"
+      ],
+      "techniques": [
+        "physical-isolation",
+        "shared-resource-arbitration"
+      ],
+      "deviations": 0,
+      "context": "foundry-forge-store-and-verdicts",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

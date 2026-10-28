@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "89af9ab9-0873-4a74-afe1-e419448fa5dc",
+ "subject": "bounded-enumeration",
+ "evaluatedAt": "2026-10-25T22:31:33.714437+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "runs-console",
+   "subject": "bounded-enumeration",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/runs/_runs/load.ts:99 Every Runs render reads the whole kernel jobs table through a list verb that takes no position and no limit (packages/kernel/src/job.ts:265 runs `SELECT record FROM jobs ... ORDER BY ord, n` with no LIMIT), then cuts it to the last KERNEL_CAP in memory. Server memory per render therefore grows with every job ever enqueued, which is the unbounded list this subject exists to prevent.",
+   "techniques": [
+    {
+     "technique": "after-plus-limit-not-cursor",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/runs/_runs/load.ts:99 The kernel job read has no `after` or `limit`, so the page is not a seek. The ledger read beside it (line 85) passes a window and a limit to queryEvents, whose cursor is the (t, seq) tuple of the last delivered row, so only the jobs half falls short."
+    },
+    {
+     "technique": "page-size-from-memory-budget",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/runs/_runs/load.ts:37 LEDGER_CAP = 1000 and KERNEL_CAP = 500 have no stated inputs. There is no key or record ceiling, no memory target, and no statement that they are screen-sized interactive caps, which the technique says must be named. Line 24 does say that the cap does not bound list() itself, so that part is honest."
+    },
+    {
+     "technique": "required-limit-breaks-unaware-clients",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/runs/_runs/load.ts:101 The jobs list is clamped silently. Jobs past 500 are dropped, and nothing reaches the model or the problems list to say more existed. The ledger half is the loud form: line 90 turns `page.value.capped` into a visible ErrorLine."
+    },
+    {
+     "technique": "declare-the-inconsistency",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/load.ts:85 Runs reads one page per source and never follows a continuation, so there is no walk across pages whose consistency contract it would need to declare."
+    },
+    {
+     "technique": "deny-absorbs-and-lowest-limit-wins",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/readKeys.ts:1 The 'read keys' are keyboard bindings, not access policies. The 'ceiling' terms in this context (Acts.tsx, dojo.ts) are spend ceilings in USD. No page ceilings are stated, and no policies are merged."
+    },
+    {
+     "technique": "filter-after-return-under-limit",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/page.tsx:33 No caller identity reaches the read, and no page is filtered per key to what a caller may see. There is nothing to hide, so the precondition does not hold."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T22:31:33.714437+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "bounded-enumeration"
+   ],
+   "techniques": [
+    "after-plus-limit-not-cursor",
+    "declare-the-inconsistency",
+    "deny-absorbs-and-lowest-limit-wins",
+    "filter-after-return-under-limit",
+    "page-size-from-memory-budget",
+    "required-limit-breaks-unaware-clients"
+   ],
+   "deviations": 1,
+   "context": "runs-console",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

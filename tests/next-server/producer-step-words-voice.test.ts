@@ -1,7 +1,8 @@
 // THE ALBUM WORDS AND EXPLAINER VOICE ACTS (Phase 4 wave C, L37), through their receipts and
 // jobs: words is one `mv-metadata` turn whose answer passes v1's fitter and is booked on the job
-// (the words part holds no step record yet); voice has no engine in this studio, so a live job is
-// refused at its plan step with that sentence, and a dry one needs lines to speak.
+// (the words part holds no step record yet); voice needs lines to speak - strip cards with
+// captions - and a live job on an option with no engine is refused at its plan step. Voice that
+// speaks is tests/next-server/producer-step-voice.test.ts.
 
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -26,11 +27,8 @@ import { compose } from "@gt/kernel/records/write";
 import type { Store } from "@gt/kernel/store";
 
 import { driveStep, launchPartAct, partActReceipt, type UnitsFn } from "../../lib/producers/research.ts";
-import { encodeRecord } from "../../packages/domain/src/steps/registry.ts";
-import type { PartSnapshot } from "../../packages/kernel/src/parts/driver.ts";
-import { FREE } from "../../packages/producers/src/research/partAct.ts";
-import { NO_VOICE_ENGINE, voicePlan } from "../../packages/producers/src/voice/define.ts";
-import { landVoice, standInSeconds, voiceUnits } from "../../lib/producers/voice.ts";
+import { NO_LINES, NO_VOICE_ENGINE } from "../../packages/producers/src/voice/define.ts";
+import { voiceUnits } from "../../lib/producers/voice.ts";
 import { wordsProducer, wordsUnits } from "../../lib/producers/words.ts";
 
 const dirs: string[] = [SOUND];
@@ -92,38 +90,8 @@ describe("explainer voice", () => {
     const s = store("explainer", "ex");
     const ref = { projectId: "ex", partId: "ex/voice", act: "record-line" };
     const dry = partActReceipt(s, ref, voiceUnits, { mode: "dry", now: NOW });
-    expect(dry.ok ? "" : dry.error.message).toBe("record lines needs an adopted script with spoken beats");
-    // The live refusal (no engine) is held on literal inputs in packages/producers/test/steps.test.ts.
+    expect(dry.ok ? "" : dry.error.message).toBe(NO_LINES);
+    // The live refusal (an option with no engine) is held on literal inputs in packages/producers/test/steps.test.ts.
     expect(NO_VOICE_ENGINE).toContain("no speech engine");
-  });
-
-  // The explainer recipe has no script part to adopt lines from, so no driven record-line job can
-  // be composed; the stand-in's length is held on the function perform calls.
-  it("sizes a stand-in take by the words on the line, not the whitespace around them", () => {
-    expect(standInSeconds("  two words  ")).toBe(1);
-    expect(standInSeconds("\tone two three four five six\n")).toBeCloseTo(2.4);
-  });
-
-  // No recipe composes a driven record-line job (see above), so the landing is held on the plan
-  // and booked outputs a job would hand it, through the record's own door.
-  it("lands a take per line on the voice record: the first is active, a rerun adds beside it", () => {
-    const lines = [{ id: "r:1", text: "Bitcoin is scarce." }, { id: "r:2", text: "Scarcity is not price." }];
-    const planned = voicePlan({ lines, engine: null, dry: true }, null, FREE);
-    if (!planned.ok) throw planned.error;
-    const blob = (n: number) => ({ sha256: String(n).repeat(64).slice(0, 64), mime: "audio/wav", bytes: 44 });
-    const book = (n: number) => new Map(planned.value.units.map((u, i) => [u.name, { id: u.input["id"], blob: blob(n + i), seconds: 1, standIn: true }] as const));
-    const none = { records: new Map() } as unknown as PartSnapshot;
-    const first = landVoice("job1", planned.value, book(1), none, 10);
-    if (!first.ok) throw first.error;
-    const enc = encodeRecord("voice", first.value["voice"]);
-    expect(enc.ok).toBe(true);
-    const rec = first.value["voice"] as { takes: Record<string, unknown>; byLine: Record<string, { takeIds: string[]; active: string | null }> };
-    expect(Object.keys(rec.takes)).toEqual(["job1:line:r:1", "job1:line:r:2"]);
-    expect(rec.byLine["r:1"]).toEqual({ takeIds: ["job1:line:r:1"], active: "job1:line:r:1" });
-    const again = landVoice("job2", planned.value, book(5), { records: new Map([["voice", rec]]) } as unknown as PartSnapshot, 20);
-    if (!again.ok) throw again.error;
-    const rec2 = again.value["voice"] as typeof rec;
-    expect(rec2.byLine["r:1"]).toEqual({ takeIds: ["job1:line:r:1", "job2:line:r:1"], active: "job1:line:r:1" });
-    expect(encodeRecord("voice", rec2).ok).toBe(true);
   });
 });

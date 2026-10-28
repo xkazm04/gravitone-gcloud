@@ -54,6 +54,13 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
   (measured on v1's `api/foundry/extract` and `api/frames`, both deleted in Phase 6 wave C). Build with Turbopack after a TEMPORARY, never-committed line
   in next.config.ts: `nextConfig.turbopack = { ...nextConfig.turbopack, root: "<main checkout>" }`,
   then `npm run check:bundle`, then restore the file (copy it aside first). Measured 2026-10-05.
+  **When the worktree is NOT under the main checkout** (the fleet guard now forces short paths, `git worktree add
+  C:/t/<id>`), `root: "<main checkout>"` fails "distDirRoot should not navigate out of the projectPath": set `root` to
+  the common ancestor (`"C:/"`), and before `check:bundle` strip the `[project]/t/<id>/` prefix that root puts on every
+  key of `.next/server/**/*client-reference-manifest*` (sizes and env-name scans read the chunks, not the keys).
+  The build also leaves symlinks in `.next/node_modules/` pointing INTO the main checkout's node_modules: rmdir every
+  reparse point in the worktree (`Get-ChildItem -Recurse -Attributes ReparsePoint`) before `git worktree remove --force`.
+  Measured 2026-10-24 (audio-postproduction-research).
   2026-10-23: that build now SUCCEEDS but `check:bundle` cannot read the worktree's manifest ("COULD NOT RUN: ... names no
   (studio) layout entry"). Measure on main right after the ff with `NEXT_DIST_DIR=.next-landing npm run build && NEXT_DIST_DIR=.next-landing npm run check:bundle`
   - the operator's dev server keeps `.next` - and land the budget raise as the next commit.
@@ -86,6 +93,11 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
 ## Repo law
 
 See `.claude/perfect/config.md` `## Repo law` verbatim, plus:
+- **A vendor-billing batch is rendered from an explicit id list, spawned WITHOUT a shell, after one
+  dry call proves the arguments arrive whole** (measured 2026-10-24: `spawnSync(..., { shell: true })` split every
+  prompt at its first space and ~7,650 ElevenLabs credits bought one-word takes; a title-matching rerun then
+  re-rendered kept items). Say "live" in a commit or a report only for a path that made a real vendor call; a
+  fake-fetch test is a stand-in and is called one.
 - A step surface MUST be scouted against `knowledge/templates/<template>/steps/<step>/PATTERNS.md`
   and `params.json` before it is designed. "Commission the craft research" is a valid answer.
 - `WORK_KINDS` and `RECIPES` in `packages/catalog/src/recipes.ts` are append-only registries
@@ -141,6 +153,11 @@ One AskUserQuestion call of up to 4 questions per wave.
 - 2026-08-30 (card-decision-engine): on visual/motion ambition the operator picks the BOLDER option — framer-motion physics over the CSS-only recommendation, and “prototype all three art variants behind a switcher, we pick or fuse” over choosing one. Offer the ambitious option as a first-class choice, not a warning-wrapped afterthought; a real dependency cost stated in the option text is an acceptable price, not a veto.
 - 2026-08-30 (card-decision-engine, round 2): showcase card art is for CURATED choices (few, fixed, art-worthy); GENERATED content gets the dense reading face — scannable title in the body font, icon watermark instead of an art zone, metadata behind an expand, front limited to the decision state + the honest downside. “The title carries the idea; the user expands if not certain.” Long generated titles are a data-contract defect to fix at the prompt (claim = headline ≤ 90 chars), with a UI splitter only as the reader for old data.
 
+- 2026-10-24 (audio-postproduction-research): operator keeps ONE spark over a recommended 4-way split when the parts
+  share a seam (6 WPs shipped fine); picks the LLM-driven creative path (chain written from a description) over a preset
+  library; picks the smaller infra option (catalog default voice) when the creative part is elsewhere; keeps risky options
+  (static analysis of trial binaries) as a named contingency rather than dropping them. Mid-build scope additions that
+  close a dead end ("add WP5") are welcome as one targeted question.
 - 2026-10-23 (scout-decision-graph): the operator stages generated media as a LADDER judged per rung (track -> visualizer -> full video -> Short; a Short never from the cheap rung) - offer the staged option first. Reasons are mandatory even on cheap words, with an optional note; offer `required + note` rather than `optional`.
 - 2026-10-23 (scout-muse): on a new generative lane the operator defers what research can decide ("decide based on the research" for reject reasons), stops at concept until the end goal is known (3D = Leonardo concept stills, no mesh), and prefers a cheap direction check over quality (50 stills at studio quality Low). Offer `research first, then decide` and `concept only` as options, and size a first batch as a direction check.
 
@@ -159,6 +176,26 @@ One AskUserQuestion call of up to 4 questions per wave.
 - 2026-10-06 (ads-project-type, 4 builders, base moved 21 commits mid-spark) · Re-run the FULL suite after every rebase onto a moving base: each rebase surfaced a tree-wide probe no package could have seen (bell-doors hand-lists JobKinds; a new step-verdicts probe pinned "cut has no reporter"; gate-registry wants every regression as an npm script), and one parallel merge added a SIXTH studio step with no discipline routing — a mid-build design fork the operator had to answer. A builder's "I looked at the extracted frame" missed a 43px off-centre CTA the Director saw at a glance: a visual acceptance criterion must name the MEASUREMENT (content bbox centre within N px), not the act of looking. The operator-approved live smoke earned its cost on its first call: one of three vendor model ids copied from a reference script was invalid at the vendor, invisible to every fake-backed probe.
 - 2026-10-14 (watershed-code-quality, 3 builders in the main checkout) · A design brief's own rules can contradict each other: "@gt/ui sees @gt/domain type-only" plus "JSON.parse only in the domain door" left the token pipeline no legal door - the new structure gate caught it on its first real-tree run. Check a brief's invariants against each other before dispatch. Also: a one-line `cmd /c a & echo %ERRORLEVEL%` chain prints 0 after a failure (expansion happens at parse time) - read the runner's summary line, never a chained exit code. The overlay's `vault:` still names the other machine; this run used the repo's `.vault/Spark`.
 - 2026-10-22 (game-3d-assets WP1, worktree) · A node_modules JUNCTION to the main checkout makes @gt/* resolve to MAIN's packages/, so tsc/vitest in a worktree never see the worktree's package edits (typecheck:next failed on a lane the worktree added). The builder rebuilt node_modules as per-entry junctions with @gt/{catalog,domain,kernel,producers,ui} pointing at the worktree's packages. Do that at worktree creation. Also: when the main checkout is on another session's branch, land a fast-forward with `git fetch . <branch>:main` - no checkout touched.
+- 2026-10-24 (audio-postproduction-research, 5 builders in one short-path worktree) · Scout traced the CONSUMERS of a
+  new record but not the DELIVERABLE's entry: the explainer export died at `cutView` counting frames ("no picture to
+  cut"), found by a builder, added as WP5 mid-build - apply liveness rule 1 to the output path (user action -> artefact),
+  not only to surfaces. A Director WP0 contract shipped a ledger key the event door refuses (`audio.accept:`); a WP0 that
+  names a key/id format needs one test through the door it will pass. A "live arming" wave must list every act whose
+  purpose needs a live call (fx-line shipped dry until review). Mutant entries returned as scratch `mutants.ts` and merged
+  by the Director: zero registry collisions across 5 builders. Resuming a finished builder with SendMessage for a test
+  rework cost a fraction of a new brief.
+- 2026-10-24 (explainer-real-article-strips) · A gate shipped green in the previous spark was red on main: its builder
+  wrote the prompt LF in the worktree, a checkout gives CRLF, the parser matched only 
+. **After every ff-merge, re-run
+  the spark's new check:* gates in the MAIN checkout** (fresh files from git), and prove any text-parsing gate on a CRLF
+  copy. Also: a fan-out of a priced act must state in the brief how the confirmed ceiling divides (a builder copied it
+  to every job); one real unit at the go-gate ($2.67) surfaced a gate near-miss no fake could (rounds 1 -> 2); inline
+  nested quoting mangled paths three times in one session - write scripts to files.
+- 2026-10-24 (audio session, end) · The repo-specific lesson seen twice - nested shell quoting corrupting a path or an argument
+  (junction targets, a .cmd, a Python regex, then a spawn that split prompts) - is promoted to Repo law above. A plan
+  document is worth a verified / not-verified ledger: this session's "live" TTS, LLM chains and voice FX were all
+  exercised only by fakes or fixtures, which commit messages alone did not show. When the operator redirects the whole
+  session's scope, stop building, write the plan, and end - do not widen the next spark.
 - 2026-10-23 (registry-feedback-loop, 3 builders, one in a sibling repo) · The brief hung an event on a function that does not exist (`planExtractCommit().promotions`); the builder stubbed it as a hook rather than invent it - liveness rule 6 should name the function for every EVENT, not just every field. Two builders hand-rolled a second reader of the sibling repo's location; name the existing reader (`lib/articles/registryRead` `manifestRegistryLocal`) in the brief. An agent shell's `npm run verify` lacks the winget ffmpeg: put the `.env.local` FFMPEG folder on PATH first (3 false reds otherwise).
 - 2026-10-23 (stats-reels, 2 builders in a worktree) · Before removing a worktree, count junctions whose target lies outside it in a SEPARATE step and read the count first; build the root with `Resolve-Path` (backslashes) - a `pwd -W` root (forward slashes) never prefixes a junction's target, so every junction reads as outward and the check is noise. Also: an active-runs `BUILDING` entry went stale within the hour (its spark had landed) - check `git log main` for a sibling's WP commits before designing beside it.
 - 2026-10-23 (scout-idea-artboards WP-I4) · Read a gate run's FULL failure list - a head -20 of the log hid access-only-401 behind deployment-cells and I reported the rest green. The operator's purpose doctrine (YouTube video only; notes as direction confirmations) arrived after a triage: for a generative loop, wave 1 should ask what the output is FOR.

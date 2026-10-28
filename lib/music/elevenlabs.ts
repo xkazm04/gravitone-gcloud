@@ -18,6 +18,7 @@ import { releaseMusic, reserveMusic, settleMusic } from "./budget";
 import { MusicError } from "./errors";
 import { logCall } from "./log";
 import { priceCall, type MusicOp } from "./pricing";
+import { releaseTts, reserveTts, settleTts } from "./ttsBudget";
 import type {
   DetailedMusicResult,
   MusicPlan,
@@ -539,4 +540,79 @@ async function generateSfxCall(req: {
     audio: { b64: bytes.toString("base64"), mime: "audio/mpeg" },
     requestedSeconds: req.durationSeconds ?? null,
   };
+}
+
+/* ── Text-to-speech: the explainer's narration ────────────────────────────────
+ *
+ * Wire facts (elevenlabs.io/docs/api-reference/text-to-speech/convert, read 2026-10-24):
+ *   POST https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=<fmt>
+ *   auth: `xi-api-key` header; body: { text, model_id } (model default eleven_multilingual_v2)
+ *   response: the encoded audio itself; output_format default mp3_44100_128
+ * mp3_44100_128 is asked for by name: it is the documented default, and community reports say
+ * 44.1 kHz PCM is refused below the Pro tier - a format some plans refuse is a take that fails on
+ * the operator's plan and not on ours.
+ *
+ * BILLING (elevenlabs.io/pricing/api, read 2026-10-24): "Text to Speech is billed per character",
+ * in US dollars, $0.08 per 1K characters for v2 Multilingual. So the metered quantity is the
+ * text's characters - exact before the call - held on its own ceiling (./ttsBudget.ts, class
+ * `tts-chars`) through the same three steps as `metered` above: refuse or hold, settle or
+ * release, one log line. The dollars are the price row's arithmetic (./pricing.ts op `tts`): the
+ * response reports no cost.
+ */
+
+const TTS_ENDPOINT = "https://api.elevenlabs.io/v1/text-to-speech";
+const TTS_OUTPUT_FORMAT = "mp3_44100_128";
+/** A voice id is a path segment: anything but its alphabet is refused rather than sent. */
+const VOICE_ID_RE = /^[A-Za-z0-9]{8,64}$/;
+
+/** Characters as the vendor counts them: the text's code points (an emoji is one, not two). */
+export const ttsCharacters = (text: string): number => [...text].length;
+
+export type SpokenLine = {
+  readonly bytes: Uint8Array;
+  readonly mime: "audio/mpeg";
+  readonly characters: number;
+  /** The price row's estimate; absent when the row reached no money (`unpriced` says why). */
+  readonly usd?: number;
+  readonly unpriced?: string;
+  /** How long the vendor took, which is what the take waited. */
+  readonly ms: number;
+};
+
+async function meteredTts<T>(characters: number, model: string, voice: string, run: () => Promise<T>): Promise<T> {
+  // Outside the try, as in `metered`: a refusal is not a call and is never booked or logged as one.
+  const hold = await reserveTts(characters);
+  const started = Date.now();
+  try {
+    const out = await run();
+    const quote = priceCall({ op: "tts", model, seconds: 0, characters });
+    await settleTts(hold, { characters, model, voice, outcome: "served", basis: quote.basis });
+    logCall({ op: "tts", ms: Date.now() - started, seconds: 0, chars: characters, model, basis: quote.basis, usd: quote.usd });
+    return out;
+  } catch (e) {
+    const err = e instanceof MusicError ? e : new MusicError("failed", "The tts call failed unexpectedly.");
+    if (BILLED_ON_FAILURE.has(err.kind)) await settleTts(hold, { characters, model, voice, outcome: "failed", basis: "estimated" });
+    logCall({ op: "tts", ms: Date.now() - started, seconds: 0, chars: characters, kind: err.kind, message: err.message });
+    throw err;
+  } finally {
+    await releaseTts(hold);
+  }
+}
+
+/** One line of narration, spoken in `voiceId` by `modelId`: MP3 bytes, its characters and their price. */
+export async function speak(text: string, opts: { readonly voiceId: string; readonly modelId: string }): Promise<SpokenLine> {
+  if (text.trim() === "") throw new MusicError("bad-request", "A line to speak needs words.");
+  if (!VOICE_ID_RE.test(opts.voiceId)) throw new MusicError("bad-request", `"${opts.voiceId.slice(0, 80)}" is not an ElevenLabs voice id.`);
+  if (opts.modelId.trim() === "") throw new MusicError("bad-request", "A line to speak needs a model id.");
+  const characters = ttsCharacters(text);
+  const started = Date.now();
+  const bytes = await meteredTts(characters, opts.modelId, opts.voiceId, () =>
+    vendorFetch(`${TTS_ENDPOINT}/${opts.voiceId}?output_format=${TTS_OUTPUT_FORMAT}`, { text, model_id: opts.modelId }, async (res) => {
+      const b = new Uint8Array(await res.arrayBuffer());
+      if (b.byteLength < 500) throw new MusicError("bad-response", `The vendor returned ${b.byteLength} bytes — not speech.`);
+      return b;
+    }),
+  );
+  const quote = priceCall({ op: "tts", model: opts.modelId, seconds: 0, characters });
+  return { bytes, mime: "audio/mpeg", characters, ...(quote.usd === undefined ? { unpriced: quote.note } : { usd: quote.usd }), ms: Date.now() - started };
 }

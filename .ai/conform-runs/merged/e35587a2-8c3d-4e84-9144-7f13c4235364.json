@@ -1,0 +1,172 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e35587a2-8c3d-4e84-9144-7f13c4235364",
+ "subject": "invariant-placement",
+ "evaluatedAt": "2026-10-25T02:41:44.492542+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "invariant-placement",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/_part/researchView.ts:28 A research card whose kind is outside the known set is quietly turned into a 'fact' in the emitted view, so the invalid kind becomes a valid one and no observable records that the coercion happened.",
+   "techniques": [
+    {
+     "technique": "repairing-check-erases-its-evidence",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/researchView.ts:28 Repairs instead of refusing: an unknown card kind is coerced to 'fact' with no count, log or flag, so every downstream assertion over legal kinds passes."
+    },
+    {
+     "technique": "completeness-at-emission",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/realScene.ts:58 A missing job.enqueued time is emitted as the epoch (1970-01-01), a made-up value in the PartView sent to the editor. The same line omits an absent `stage`, which is the posture the technique asks for."
+    },
+    {
+     "technique": "paired-sites-localize-the-fault",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/realRecs.ts:14 The record shape is checked only at the kernel's write door. The read side is a bare cast, and its comment depends on the writers, so a corrupted record cannot be traced to either side."
+    },
+    {
+     "technique": "placement-precedes-gate",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/schema.ts:16 Every op enters through one strict zod door: an extra field is refused, not silently dropped (door altitude, chosen explicitly)."
+    },
+    {
+     "technique": "constraint-deletion-is-silent",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/parts-real.test.ts:113 A negative test checks that the op-kind door refuses an op meant for another editor kind. The voice-fx-ask door (schema.ts:105) has its own refusal sweep in producer-step-voice-fx.test.ts:161."
+    },
+    {
+     "technique": "build-time-evaluation-of-cross-value-invariants",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/kinds.ts:41 A cross-table invariant (every editor kind has a working-record line) is checked by the type checker in every configuration, not by a selected branch."
+    },
+    {
+     "technique": "derived-properties-cannot-be-forged",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/kinds.ts:167 The receipt's binding to its target is a digest of the parts, recomputed on each confirm, never declared, so a receipt for plate A cannot confirm a render of B."
+    },
+    {
+     "technique": "shape-with-a-not-applicable-member",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/real.ts:123 An unbound kind is a Partial lookup returning undefined plus an explicit refusal, not a 'none' member added to EditorKind. Non-editor tabs carry verdict null, not a fake state."
+    },
+    {
+     "technique": "initialization-proof-tokens",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/real.ts:56 Store operations need a Store value that only the Result-returning opener yields, so a failed open is a value the caller has to branch on, not a null check someone must remember."
+    },
+    {
+     "technique": "indistinguishable-members-do-not-rise",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/contract.ts:20 The two same-typed ids cross the port as named fields, which TypeScript checks structurally. port.ts:36 flattens them into positional (projectId, key) arguments, but there a swap fails loudly as not-found, not as empty success."
+    },
+    {
+     "technique": "consumption-bounds-at-most-once",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/real.ts:141 The one-shot act token crosses a server-action (network) boundary and is held to one purchase by a store-side dedupe. That is delivery-guarantee territory, which this technique excludes."
+    }
+   ]
+  },
+  {
+   "context": "library-port",
+   "subject": "invariant-placement",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/library/_port/present.ts:52 A cover with an unknown mime is emitted as ?type=image/jpeg even though blobRoute (lib/library/media.ts:9) accepts mime null and serves an untyped URL. The presenter invents a value the store left unknown, and every tile consumer trusts it.",
+   "techniques": [
+    {
+     "technique": "completeness-at-emission",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/present.ts:52 An optional part (cover.mime: string | null) is given a default at the emission mapping instead of being left out, which the technique names as the failure."
+    },
+    {
+     "technique": "repairing-check-erases-its-evidence",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/real.ts:178 The kernel's silent 'nothing changed' is turned into a refusal instead of being absorbed. A stale toggle is reported, not quietly agreed with."
+    },
+    {
+     "technique": "constraint-deletion-is-silent",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/library-real.test.ts:105 A negative test checks that the second pin is refused, so removing the refusal would turn the suite red."
+    },
+    {
+     "technique": "placement-precedes-gate",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/actions.ts:31 Acts enter through one zod discriminated-union door in the action core. Unlike the part schema these objects are not .strict(), so extra fields are dropped, not refused."
+    },
+    {
+     "technique": "derived-properties-cannot-be-forged",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/present.ts:128 The detail's pinned state is derived from the acts the index offers, not stored as a separate flag that could drift."
+    },
+    {
+     "technique": "shape-with-a-not-applicable-member",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/present.ts:80 The resolver returns an optional kind; it filters out the 'all' key and does not add a placeholder member to LibraryKindName."
+    },
+    {
+     "technique": "initialization-proof-tokens",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/real.ts:122 Each verb must first get a Store from a Result and returns the open failure unchanged, so it cannot touch the store unopened."
+    },
+    {
+     "technique": "indistinguishable-members-do-not-rise",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/real.ts:49 The side's verbs take one string id plus parameters of distinct types. No pair of same-typed members can be swapped."
+    }
+   ],
+   "registryProposal": "completeness-at-emission could name the presentation mapper (domain row -> screen card) as an emission boundary. That is where defaults like a mime fallback or an epoch timestamp tend to show up, because the presenter's goal is to never draw an empty tile."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T02:41:44.492542+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "invariant-placement"
+   ],
+   "techniques": [
+    "build-time-evaluation-of-cross-value-invariants",
+    "completeness-at-emission",
+    "constraint-deletion-is-silent",
+    "consumption-bounds-at-most-once",
+    "derived-properties-cannot-be-forged",
+    "indistinguishable-members-do-not-rise",
+    "initialization-proof-tokens",
+    "paired-sites-localize-the-fault",
+    "placement-precedes-gate",
+    "repairing-check-erases-its-evidence",
+    "shape-with-a-not-applicable-member"
+   ],
+   "deviations": 1,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T02:41:44.492542+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "invariant-placement"
+   ],
+   "techniques": [
+    "completeness-at-emission",
+    "constraint-deletion-is-silent",
+    "derived-properties-cannot-be-forged",
+    "indistinguishable-members-do-not-rise",
+    "initialization-proof-tokens",
+    "placement-precedes-gate",
+    "repairing-check-erases-its-evidence",
+    "shape-with-a-not-applicable-member"
+   ],
+   "deviations": 1,
+   "context": "library-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

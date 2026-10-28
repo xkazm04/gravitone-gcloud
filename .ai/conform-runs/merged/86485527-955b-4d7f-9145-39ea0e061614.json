@@ -1,0 +1,99 @@
+{
+ "schema": "conform-run/1",
+ "worker": "86485527-955b-4d7f-9145-39ea0e061614",
+ "subject": "agent-browser-control",
+ "evaluatedAt": "2026-10-25T01:51:08.440496+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "imaging-vendor-providers-and-video",
+   "subject": "agent-browser-control",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/imaging/studio/selectors.ts:4 The Leonardo Studio code is a hand-scripted Playwright/CDP automation: a human keeps a fixed selector table (selectors.ts), and studioGenerate/studioRecon (driver.ts) call it from code. No agent or LLM gets this browser as a command tool, so the subject's precondition (a coding/QA agent driving a browser through a command surface) does not hold. I searched lib/imaging/{providers,studio,video} for ariaSnapshot, mcp, tunnel, allowlist and getByRole and got no hits. Generic words like 'snapshot', 'daemon' and 'agent' do appear, but only as budget snapshots, the Ollama daemon and the agy vendor CLI.",
+   "techniques": [
+    {
+     "technique": "references-over-selectors",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/studio/selectors.ts:81 Selectors are written by a human after a dated recon, not by an agent reading a text dump, so the agent-naming problem never comes up."
+    },
+    {
+     "technique": "persistent-browser-daemon",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/studio/browser.ts:80 It attaches to the operator's own Chrome profile over CDP. The process does not own or serve a browser daemon, and no agent command loop calls it."
+    },
+    {
+     "technique": "agent-actionable-errors",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/studio/driver.ts:30 Errors go to the imaging router and the operator, not to an agent choosing its next browser command."
+    },
+    {
+     "technique": "effect-classed-commands",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/studio/driver.ts:174 There is no agent command registry to classify. The nearest thing is a wire guard on the vendor's GraphQL mutations, which is spend safety, not command classes."
+    },
+    {
+     "technique": "socket-scoped-surface",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/studio/browser.ts:47 Nothing exposes a listener to remote agents, and there is no tunnel."
+    }
+   ],
+   "absenceTerms": [
+    "ariaSnapshot",
+    "mcp",
+    "tunnel",
+    "allowlist",
+    "getByRole"
+   ]
+  },
+  {
+   "context": "library-browser-screen",
+   "subject": "agent-browser-control",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/library/page.tsx:7 'Browser' here means a person browsing an asset library in a Next.js route. Nothing gives an agent a browser, so the subject does not govern this context. A search of app/(studio)/library for playwright, chromium, connectOverCDP, ariaSnapshot, mcp and tunnel found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "playwright",
+    "chromium",
+    "connectOverCDP",
+    "ariaSnapshot",
+    "tunnel"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:51:08.440496+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-browser-control"
+   ],
+   "techniques": [
+    "agent-actionable-errors",
+    "effect-classed-commands",
+    "persistent-browser-daemon",
+    "references-over-selectors",
+    "socket-scoped-surface"
+   ],
+   "deviations": 0,
+   "context": "imaging-vendor-providers-and-video",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T01:51:08.440496+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-browser-control"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "library-browser-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

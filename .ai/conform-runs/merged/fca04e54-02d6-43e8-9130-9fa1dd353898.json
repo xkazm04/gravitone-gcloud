@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fca04e54-02d6-43e8-9130-9fa1dd353898",
+ "subject": "model-routing",
+ "evaluatedAt": "2026-10-26T00:14:46.949196+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "model-routing",
+   "context": "vendor-routing-and-calibration",
+   "reason": "evidence leans on calibration/core.ts, which is not a tracked file"
+  }
+ ],
+ "consults": []
+}

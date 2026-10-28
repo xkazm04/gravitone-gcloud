@@ -81,12 +81,12 @@ export const SOURCES = {
   // lib/articles/types.ts:337 CHECK_DIMENSIONS, the Board's reject axes for
   // articles (lib/board/sources/articles.ts:569). A reject may name all seven.
   article: { modes: ["packet-review"], reasons: ["structure", "storytelling", "depth", "figures", "voice", "medium-fidelity", "truth"], maxReasons: 7, noteMax: NOTE_LONG },
-  // lib/sound/types.ts:48 DEFECTS - eleven codes; keys 2-4 name the first three, the chips all eleven.
-  // takes.ts reasonsOf de-duplicated and capped nothing, so all eleven may stand.
+  // lib/sound/types.ts:48 DEFECTS - fifteen codes; keys 2-4 name the first three, the chips all fifteen (the last four are the technical ones the triage detectors evidence).
+  // takes.ts reasonsOf de-duplicated and capped nothing, so all fifteen may stand.
   audio: {
     modes: ["matrix-cull"],
-    reasons: ["smeared-transients", "vocal-garble", "section-bleed", "tempo-instability", "broken-ending", "loop-seam", "spectral-imbalance", "phase-width", "confident-hallucination", "off-brief", "wrong-event"],
-    maxReasons: 11,
+    reasons: ["smeared-transients", "vocal-garble", "section-bleed", "tempo-instability", "broken-ending", "loop-seam", "spectral-imbalance", "phase-width", "confident-hallucination", "off-brief", "wrong-event", "clipping", "level", "dead-air", "wrong-length"],
+    maxReasons: 15,
     noteMax: NOTE_LONG,
   },
   // lib/suno/types.ts:88 and lib/sound/mv/types.ts:46: keep | drop, nothing more.
@@ -204,6 +204,10 @@ export const REASON_MEANING: { readonly [S in PacketSource]: { readonly [R in Re
     "confident-hallucination": "An instrument or voice nobody briefed, mixed as if intended.",
     "off-brief": "Pleasant, but the wrong piece for the brief.",
     "wrong-event": "The sound reads as a different event than the one briefed.",
+    clipping: "Peaks clip or the true peak goes over.",
+    level: "Loudness sits outside the usable range.",
+    "dead-air": "Silence inside the take where sound was briefed.",
+    "wrong-length": "The length is off the brief.",
   },
   suno: {},
   mv: {},

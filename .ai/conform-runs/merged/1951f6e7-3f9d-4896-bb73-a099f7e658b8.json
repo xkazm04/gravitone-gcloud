@@ -1,0 +1,121 @@
+{
+ "schema": "conform-run/1",
+ "worker": "1951f6e7-3f9d-4896-bb73-a099f7e658b8",
+ "subject": "frame-direction",
+ "evaluatedAt": "2026-10-24T22:19:22.265048+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "frames-picture-composition",
+   "subject": "frame-direction",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/frames/frames.ts:438 The frame model keys its picture by rhetorical beat kind (hook/turn/movement\u2026) through a lookup table instead of a closed visual-function vocabulary, and it has no motif threads and no boundary declarations, so the arc-level obligations exist only as prompt prose that the validator cannot check.",
+   "techniques": [
+    {
+     "technique": "per-beat-rejection",
+     "verdict": "conformant",
+     "evidence": "lib/frames/sceneSpec.ts:271 reviewSceneSpecs collects refusals per beat, keeps applied, rejected and missing disjoint, fails the whole pass only on unusable JSON, and rethrows non-gate exceptions. Not realized: no single finding when most beats fail for the same reason, and the duplicate guard (line 264) fixes the unit at one scene per beat."
+    },
+    {
+     "technique": "plate-elements-text-split",
+     "verdict": "conformant",
+     "evidence": "lib/frames/sceneSpec.ts:179 Plate, elements and texts are separate layers (frames.ts:3-11). ASKS_FOR_TEXT rejects glyph requests in the subject. A figure must cite a notebook fact, and a low-grade fact may not carry an exact figure."
+    },
+    {
+     "technique": "motion-intent-authoring",
+     "verdict": "conformant",
+     "evidence": "lib/frames/sceneSpec.ts:148 Motion is required (12+ chars), may not move text, and is rejected when it restates the subject. FrameClip has no duration field by design (frames.ts:124), and no verb or easing whitelist is enforced (sceneSpec.ts:139-143)."
+    },
+    {
+     "technique": "one-function-per-visual",
+     "verdict": "conformant",
+     "evidence": "lib/frames/shots.ts:204 The shot lane gives a reset beat exactly one shot. Weak evidence: the explainer gate allows one scene per beat and cannot count functions, because no function field exists."
+    },
+    {
+     "technique": "visual-function-vocabulary",
+     "verdict": "deviation",
+     "evidence": "lib/frames/frames.ts:438 There is no closed function vocabulary (evidence, comparison, mechanism, metaphor, reveal, state-change, texture with sub-roles). The seed subject (subjectFor, lines 525-538) is a template per rhetorical role, which is the slide-deck failure the standard names. A metaphor budget or image-led mode cannot be computed."
+    },
+    {
+     "technique": "motif-establish-vary-payoff",
+     "verdict": "deviation",
+     "evidence": "lib/frames/sceneSpec.ts:26 The SceneSpec has no named thread and no lifecycle op (establish, carry, change, reprise, retire). Motifs live only in the free-text rationale the prompt asks for, so the rule that change and reprise need an earlier establish is not machine-checked."
+    },
+    {
+     "technique": "boundary-transition-class",
+     "verdict": "deviation",
+     "evidence": "lib/frames/frames.ts:154 Frame carries plate, clip, elements, texts and rationale, but no carry/agent/refresh declaration for its join. Hold beats cannot say whether they keep the last picture or clear the screen."
+    }
+   ],
+   "registryProposal": "per-beat-rejection says a rejected beat 'keeps the template output the pass exists to replace', and visual-function-vocabulary names a template keyed by rhetorical category as the slide-deck failure. Here the fallback seed is exactly that template (PROBLEM_OF by BeatKind). The standard could say whether the honest-fallback seed must itself be keyed by visual function, or whether a category-keyed seed is acceptable as long as it is marked unauthored, as this repo does by leaving `rationale` empty."
+  },
+  {
+   "context": "landing-cosmos-scenes",
+   "subject": "frame-direction",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/sceneSpec.ts:2 The landing cosmos is a procedural paper-collage parallax (sky, ridges, disc sheets, medallions) with no narration beats, no spoken lines and no cited figures. A case-insensitive search of app/_landing for beat, narration, factId, voiceover and visualFunction returned no hits, so the subject's precondition (deciding what is on screen while a beat is spoken) does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "beat",
+    "narration",
+    "factId",
+    "voiceover",
+    "visualFunction"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "frame-direction",
+   "context": "part-editor-media-cut-score",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "frame-direction",
+   "context": "visual-producers",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "frame-direction",
+   "context": "part-workspace-desk",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T22:19:22.265048+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "frame-direction"
+   ],
+   "techniques": [
+    "boundary-transition-class",
+    "motif-establish-vary-payoff",
+    "motion-intent-authoring",
+    "one-function-per-visual",
+    "per-beat-rejection",
+    "plate-elements-text-split",
+    "visual-function-vocabulary"
+   ],
+   "deviations": 1,
+   "context": "frames-picture-composition",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T22:19:22.265048+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "frame-direction"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "landing-cosmos-scenes",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -1,0 +1,66 @@
+{
+ "schema": "conform-run/1",
+ "worker": "97e8fc81-700b-4cbc-b8f8-0c3dd8d14d9f",
+ "subject": "import-normalization",
+ "evaluatedAt": "2026-10-26T00:07:07.653965+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "plan-and-import",
+   "subject": "import-normalization",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/import/ImportView.tsx:235 The review gate only lets the user commit every importable project and shelf item from every source at once. There is no per-entity opt-in and no collision choice (an existing project is silently set to 'skip'), and confirm commits source by source, so a failure partway through can leave an import half-applied.",
+   "techniques": [
+    {
+     "technique": "review-before-commit",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:161 confirm() commits each source in its own request inside a loop. If a later source fails, the earlier sources have already landed, but the screen shows only an error and throws away their outcomes, which is the 'user unsure which half' partial commit. The preview also has no per-entity selection and no skip/rename/replace choice for collisions."
+    },
+    {
+     "technique": "lossy-conversion-disclosure",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:320 Each loss is listed per entity with its grade (approximate/data-only/dropped) and its reason, and it is shown in the preview before the confirm button."
+    },
+    {
+     "technique": "format-detection",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:93 There is only one format (.gravitone). An archive that fails inspection is refused with a named code before upload, and that is shown differently from the empty result 'no v1 projects in this browser' (line 209). No permissive fallback parser."
+    },
+    {
+     "technique": "overlay-merge-absence-semantics",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/project.ts:187 Re-importing never merges an overlay into existing data: a project that already exists is skipped. With no merge, the absence semantics never come up."
+    },
+    {
+     "technique": "durable-intermediate-representation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:155 The commit sends the same archive bytes again and the server re-parses them, bound to the preview's token. Parsing is cheap and deterministic, so the transient IR is the right choice."
+    }
+   ],
+   "registryProposal": "The subject's 'when you control both ends' exclusion does not clearly cover a migration from the same product's previous major version (v1 IndexedDB rows into the v2 kernel). This repo treats that migration as a foreign import with a loss ledger. The golden path could say whether a cross-generation migration of your own data is in scope."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-26T00:07:07.653965+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "import-normalization"
+   ],
+   "techniques": [
+    "durable-intermediate-representation",
+    "format-detection",
+    "lossy-conversion-disclosure",
+    "overlay-merge-absence-semantics",
+    "review-before-commit"
+   ],
+   "deviations": 1,
+   "context": "plan-and-import",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -20,9 +20,13 @@
 //   its dialled offset, or a gap. A take that is playing from a file dropped
 //   into THIS browser session is a gap here, not a take: its `blob:` URL is
 //   dead to every process but the tab that minted it, and a document that
-//   carried it would compile to a render that silently loses the music. Every
-//   spoken line is a gap on the voice lane ("written, not recorded") for the
-//   same reason the Cut draws it missing — nothing records a voice yet.
+//   carried it would compile to a render that silently loses the music. A
+//   spoken line is a VOICE segment when its take's bytes are a kernel blob
+//   (the explainer's vo clip carries `sha256:<digest>`, lib/cut/explainer.ts),
+//   named by that digest - content-addressed, so the render reads exactly the
+//   bytes the Voice part landed. Any other spoken line is a gap: a film's
+//   lines are "written, not recorded" (deriveTimeline), and a take held
+//   without bytes (a dry stand-in with no blob) has nothing to play.
 //
 //   THE GATE RECORD TRAVELS WITH IT. `finish` is `finishLine(cut, offsets)` at
 //   compile time, so an animatic exported with holes says which holes, after
@@ -50,7 +54,8 @@ export const CUT_DOCUMENT_VERSION = 1;
 
 /** What a still composites, in FrameCanvas's order: plate, marks, words. */
 export interface LayerSnapshot {
-  /** The plate's `src` as the frame holds it: a data: URL or a public path. */
+  /** The plate's `src` as the frame holds it: a data: URL or a public path - or,
+   *  for an explainer's strip card, its image's kernel blob as `sha256:<digest>`. */
   plate: string;
   elements: FrameElement[];
   texts: FrameText[];
@@ -82,7 +87,10 @@ interface AudioBase {
 }
 
 export type AudioSegment =
+  /** Music: a sound-store take, by id. */
   | (AudioBase & { kind: "take"; takeId: string })
+  /** Voice: a narration take's bytes in the kernel blob store, by digest. */
+  | (AudioBase & { kind: "voice"; sha256: string })
   | (AudioBase & { kind: "gap"; why: string });
 
 export interface CutDocument {
@@ -102,6 +110,9 @@ const ms = (s: number) => Math.round(s * 1000) / 1000;
  *  stored take, because it is what is playing now. */
 const browserOnly = (src: string) => /^(blob|data):/i.test(src);
 
+/** A kernel blob's content address as a clip spells it (explainer.ts `src`). */
+const BLOB_SRC = /^sha256:([0-9a-f]{64})$/;
+
 function picture(cut: DerivedCut): PictureSegment[] {
   const byRef = new Map(cut.clips.filter((c) => c.track === "video").map((c) => [c.ref, c]));
   return cut.scenes.map((sc) => {
@@ -119,9 +130,20 @@ function picture(cut: DerivedCut): PictureSegment[] {
         },
       };
     }
+    // An explainer's strip card (lib/cut/explainer.ts) has no frame: its
+    // rendered image IS the whole picture, held as a kernel blob, so it is a
+    // still with no marks or words over it. Only a content address qualifies -
+    // a frameless clip with any other src is the fixture's, and stays a gap.
+    if (clip && clip.status !== "missing" && clip.src && !frame && BLOB_SRC.test(clip.src)) {
+      return { ...base, kind: "still", layers: { plate: clip.src, elements: [], texts: [] } };
+    }
     // The fixture's scenes have a gradient and no frame; a project's scene
-    // without a held plate has the clip's reason. Either way, no picture.
-    return { ...base, kind: "gap", why: clip?.why ?? (frame ? "no plate" : "no frame behind this scene") };
+    // without a held plate has the clip's reason. Either way, no picture. A
+    // project scene with no frame is a strip card drawn with no image in hand
+    // (a film's every scene has its frame: deriveTimeline builds both from one
+    // unit list), and says so in the card's terms.
+    const frameless = cut.origin === "fixture" ? "no frame behind this scene" : "card has no rendered image";
+    return { ...base, kind: "gap", why: clip?.why ?? (frame ? "no plate" : frameless) };
   });
 }
 
@@ -137,6 +159,8 @@ function audioOf(c: CutClip, offsets: Offsets, takes: Readonly<Record<string, st
     offsetMs,
   };
   if (c.status === "missing" || !c.src) return { ...base, kind: "gap", why: c.why ?? "no take in hand" };
+  const blob = c.track === "vo" ? BLOB_SRC.exec(c.src) : null;
+  if (blob) return { ...base, kind: "voice", sha256: blob[1] };
   const takeId = c.track === "music" ? takes[c.ref] : undefined;
   if (takeId && !browserOnly(c.src)) return { ...base, kind: "take", takeId };
   return { ...base, kind: "gap", why: "session file, not in the sound store" };

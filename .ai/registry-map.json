@@ -1048,7 +1048,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/checks.ts:1 The checks and critique measure an original English draft from the article pipeline, not a machine-translated store; a case-insensitive search of lib/articles for translat, i18n, termbase, glossary and targetLang found nothing, so there is no source/target pair, translation engine or derived store for this subject to govern.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a50db88f6aef4acb",
+          "evaluatedRevision": 8
         },
         {
           "subject": "eval-harness",
@@ -1136,7 +1140,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "docs/articles.md:366 Refactor 1f6e3e5d (2026-10-11) moved critiqueStep into lib/articles/critiqueStep.ts:57 and did not touch docs/articles.md. engine.ts does not re-export it (only drive.ts imports it), so the coupled guide names a location that has been false since that change, and nothing in the change boundary caught it.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         },
         {
           "subject": "video-assembly",
@@ -1342,7 +1350,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/mediumPackage.ts:257 The landing package is hard-coded to one language (lang=\"en\") and no translated locale is ever built; a search of lib/articles for translat, i18n, termbase, glossary and targetLang found nothing, so the human gate reviews original English prose, never machine pretranslations.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a50db88f6aef4acb",
+          "evaluatedRevision": 8
         },
         {
           "subject": "supply-chain",
@@ -1480,7 +1492,11 @@
           "revision": 9,
           "changedAt": "2026-10-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/articles/agentSteps.ts:36 Every writer step runs a fresh headless turn in an isolated temp workspace holding only inputs/ and out/. A non-completed outcome or a missing or empty out/ file fails the step by name, and dry runs are answered by a labeled stand-in rather than the seat. The context consumes the transport correctly; the spawn door itself lives in lib/agent and lib/claudeCli.ts.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
+          "evaluatedRevision": 9
         },
         {
           "subject": "agent-instruction-files",
@@ -2174,7 +2190,11 @@
           "revision": 3,
           "changedAt": "2026-08-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/ReferenceList.tsx:1 The only \"reference\" here is an audio track scored on tempo and key, not a character image. A search of packages/ui/src/components/audio for camera, portrait, embedding, likeness, focal and image found nothing. The words that did hit (\"characters\" as a string length in lesson.ts, \"one-shot\" sfx, \"facet\") have nothing to do with visual identity, so this context never conditions a recurring character across shots.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:1b3e132bebd8dcc9",
+          "evaluatedRevision": 3
         },
         {
           "subject": "music-prompt-composition",
@@ -2190,7 +2210,11 @@
           "revision": 1,
           "changedAt": "2026-08-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/batch.ts:87 A music batch brief (10 to 300 s, so full pieces) is one free-text prompt, and the composer's Seed has no section unit either. There is no ordered list of sections, each with its own duration, style and lyric or instrumental marking, so a take can only be accepted or regenerated whole, never edited by section.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2d8975c2a51e5157",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"
@@ -2342,7 +2366,11 @@
           "revision": 4,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/HuntAudition.tsx:3 These components audition and arrange generated music takes through one audio transport; there is no speaking presence, face, rig or speech-timing consumer, and grep for avatar|viseme|lipsync|talking|mouth over packages/ui/src found nothing, so the talking-avatar subject does not govern this context.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:72517c45ca8e4198",
+          "evaluatedRevision": 4
         },
         {
           "subject": "generated-speech-acceptance",
@@ -2379,7 +2407,11 @@
           "revision": 2,
           "changedAt": "2026-09-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:1 These are pure models and boards for auditioning and arranging generated music takes. Nothing here captures or narrates a software demo, and a search of packages/ui/src/components/audio for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "structured-output",
@@ -2638,7 +2670,11 @@
           "revision": 2,
           "changedAt": "2026-09-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:1 This context scores generated audio takes and records lessons from them; no demo film is produced. A search of packages/ui/src/components/audio for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "scoring-rubrics",
@@ -2816,7 +2852,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/voice/define.ts:10 Every voice part speaks through one fixed catalog voice (packages/catalog/src/partOptions.ts DEFAULT_VOICE 'George'), so the narrator is a default rather than cast per creator × format after an audition, and each VoiceLine is only {id, text}, so it carries no pause or emphasis direction.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:750a2ae7e033a1e6",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"
@@ -2890,7 +2930,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/decision/v1/registry.ts:60 Each packet source is pinned to exactly one adapter over its own v1 store, and a source with no adapter is refused, so there is no set of interchangeable upstreams, no candidate selection and no fallback. A grep of lib/decision/v1 found no failover/reroute/gateway; `fallback` appears only as a timestamp default (types.ts:135 instantOr).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "module-design",
@@ -2986,8 +3030,12 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "lib/decision/v1/sources/audio.ts:221 The audio adapter groups takes by two kinds only, music and sfx. A case-insensitive substring search of lib/decision/v1 for tts, speech, transcript, speaker and intelligibility found no hits, so no adapter turns a speech clip into a packet that would need speech-acceptance scoring.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:944f40c9b53212c0",
+          "evaluatedRevision": 2
         },
         {
           "subject": "fleet-orchestration",
@@ -3665,7 +3713,11 @@
           "revision": 17,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/door.ts:52 The schema door keeps only the first zod issue and writes its field path into the message string. `detail` holds the door name, not the field. The forms that errors.ts says 'show field-level detail' can only get the failing field by parsing prose, and all other issues are lost.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:d811928687fd4faf",
+          "evaluatedRevision": 17
         },
         {
           "subject": "eval-harness",
@@ -3697,8 +3749,8 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "priorNotApplicable": 3,
+          "state": "unknown"
         },
         {
           "subject": "fleet-orchestration",
@@ -3784,7 +3836,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/project.ts:8 The domain defines a project as a production composition whose state is derived from its parts, not as a managed software project in a portfolio; packages/domain/src has no portfolio, unwatched, watcher or 'working set' term, so the subject's portfolio-management techniques do not apply, although the record does rhyme with them.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "video-assembly",
@@ -3832,7 +3888,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/partView.frames.ts:212 The frames part view counts figures that cite no fact for the human author, which is the count the technique asks for. But the bind edit only reaches texts, so an arrow or loop a person keeps can never be bound to a sourced relation, and nothing in the view flags a figure bound to a fact graded too weak to draw.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a3b657bb0d44f7d8",
+          "evaluatedRevision": 9
         },
         {
           "subject": "agent-instruction-files",
@@ -4019,7 +4079,11 @@
           "revision": 17,
           "changedAt": "2026-10-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/domain/src/job.machine.ts:31 The job lifecycle is one closed table: live states (queued, running), held states (paused, failed, interrupted) and terminal states (done, cancelled). The record's superRefine ties each state to its payload (lease while running, error while failed, interruption while interrupted), so recovery and views read one vocabulary instead of scattered flags.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:68f09609d1498e88",
+          "evaluatedRevision": 17
         },
         {
           "subject": "module-design",
@@ -4087,7 +4151,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/registry.ts:23 The step registry lists every production step (still, research, script, frames, parts, finish), and none of them is a translation or localization step; a case-insensitive search of packages/domain/src for translat, i18n, termbase, glossary and targetLang found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a50db88f6aef4acb",
+          "evaluatedRevision": 8
         }
       ],
       "governance": "governed"
@@ -4121,7 +4189,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/domain/src/style.ratchet.ts:128 The style's status comes from its evidence and its lock event through one pure ratchet that the door, the kernel writes and the view all share, and that same module holds the lock gate, the one-way ratchet, the approvals-only window and the send count.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "retrieval",
@@ -4991,7 +5063,11 @@
           "revision": 3,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 The 'engine' is the host's own resumable step machine. Each unit is a vendor call (readback, synthesis, generation), not guest code on an embedded interpreter, so nothing here can be counted or terminated in this subject's sense; a search of lib/foundry/extract for interpreter, node:vm, quickjs, isolated-vm, worker_threads, sandbox and recursion found 0 hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a59e479b7cea486b",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"
@@ -5409,7 +5485,11 @@
           "revision": 2,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/frames/frames.ts:438 The frame model keys its picture by rhetorical beat kind (hook/turn/movement…) through a lookup table instead of a closed visual-function vocabulary, and it has no motif threads and no boundary declarations, so the arc-level obligations exist only as prompt prose that the validator cannot check.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:b936a9a456cd5767",
+          "evaluatedRevision": 2
         },
         {
           "subject": "image-prompt-composition",
@@ -5461,7 +5541,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:154 The shot→prompt compiler phrases camera stance as attitude and composes shot size, placement, screen direction and lit-dark subject recipes from typed shot fields, and the shot derivation enforces size jumps and one axis, so the prompts a trailer shot list proposes are directed rather than the eye-level training mean.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "evidence-bound-visuals",
@@ -5477,7 +5561,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/frames/frames.ts:494 The scene validator holds figures to a citation that resolves in the notebook and keeps text out of plates, but arrows and loops are seeded and accepted without a fact that grades the relation as causal, plates are asked to draw arrows, and only a low-confidence grade caps a figure (medium passes as an exact value).",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a3b657bb0d44f7d8",
+          "evaluatedRevision": 9
         },
         {
           "subject": "agent-memory",
@@ -5545,7 +5633,11 @@
           "revision": 1,
           "changedAt": "2026-08-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/frames/frames.ts:1 The context models composed pictures (plate, vector elements, texts) and briefs image plates only; a case-insensitive search of lib/frames/ (including picture/) for music, suno, bpm, lyric, tempo, instrumental and melody found zero hits, so no music brief is written here and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2d8975c2a51e5157",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"
@@ -5623,7 +5715,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/router.ts:433 Any non-ImagingError raised inside the candidate call, including a bug in the plane's own adapter or response translation, is turned into a `failed` error stamped with the candidate's provider id and logged in `trail`/logCall against that vendor; errors.ts:91-92 admits `failed` mixes vendor 4xx/5xx, unreachable hosts and 'a bug in our own adapter', so the plane's own failures are blamed on a provider, and no router-versus-candidate axis exists.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "cost-metering",
@@ -5845,7 +5941,11 @@
           "revision": 3,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/imaging/studio/selectors.ts:4 The Leonardo Studio code is a hand-scripted Playwright/CDP automation: a human keeps a fixed selector table (selectors.ts), and studioGenerate/studioRecon (driver.ts) call it from code. No agent or LLM gets this browser as a command tool, so the subject's precondition (a coding/QA agent driving a browser through a command surface) does not hold. I searched lib/imaging/{providers,studio,video} for ariaSnapshot, mcp, tunnel, allowlist and getByRole and got no hits. Generic words like 'snapshot', 'daemon' and 'agent' do appear, but only as budget snapshots, the Ollama daemon and the agy vendor CLI.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a5e059a866a49108",
+          "evaluatedRevision": 5
         },
         {
           "subject": "platform-format-adaptation",
@@ -5861,7 +5961,11 @@
           "revision": 3,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:54 The vendor clip canvas table grades each size by provenance: 856×480 is measured, 9:16 is marked assumed, and square and 4:5 are refused at the route instead of guessed. That is the measured-template refusal rule applied to container physics, and the 9:16 request is generated natively tall, not cropped from wide. Only two of the six techniques apply to these vendor adapters.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:14fcb9b8c64f1b8b",
+          "evaluatedRevision": 3
         },
         {
           "subject": "image-prompt-composition",
@@ -5909,7 +6013,11 @@
           "revision": 2,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/imaging/video/leonardo.ts:203 These are generic still and image-to-video vendor adapters (5/10 s silent clips from a key image, plus a still provider the MV engine calls). Nothing here plans against a locked song, and a search of lib/imaging/{providers,studio,video} for phrase, segment, tempo, downbeat and lip sync found no hits, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2d32bc9195341316",
+          "evaluatedRevision": 2
         },
         {
           "subject": "model-call-outcome-integrity",
@@ -6103,7 +6211,11 @@
           "revision": 4,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/job-core.ts:21 The unit here is a vendor job whose durable state is a status column plus a step cursor (the next step is the first missing output, and `progress.stage` marks a step as in flight). The golden path's own scoping section ('The generic durable work record is not this subject') gives that shape to the job discipline in another bundle. A case-insensitive search of packages/kernel/src for transcript, compaction, tool_call, toolCall and placement found no hits: there is no provider stream, no parallel tool batch and no ordered transcript for this subject to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2939cd03f8f3a4d1",
+          "evaluatedRevision": 6
         },
         {
           "subject": "test-harness",
@@ -6989,7 +7101,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/paper.ts:2 Canvas paint, RNG and worker raster code produce pixels for the app's landing page and hold no repository front-page prose, badges or host metadata; a search of app/_landing for README, shields, README.md and markdown found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
+          "evaluatedRevision": 4
         },
         {
           "subject": "canvas-graph",
@@ -7005,7 +7121,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/paper.ts:2 This context is a pure paint and rasterisation pipeline (paper grain, inks, palette, seeded RNG, a worker job queue). It has no node/edge model, no pan/zoom camera and no pointer manipulation: a search of app/_landing/cosmos for toWorld, setPointerCapture, zoom and onWheel found nothing, and the only 'edges' hits are paper sheet edges (paper.ts, banner.ts), not graph edges.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "engine-host-contract",
@@ -7042,7 +7162,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:1 This context paints paper textures off the main thread and contains no text-translation code; searches for i18n, termbase, glossary, targetLang and 'machine translation' found nothing (the only 'translate' hits are canvas and CSS transforms, so that term was left out of absence_terms).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a50db88f6aef4acb",
+          "evaluatedRevision": 8
         },
         {
           "subject": "test-harness",
@@ -7074,7 +7198,11 @@
           "revision": 10,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_landing/cosmos/engine/reams.ts:48 This mostly paint-side context still renders copy: the reams' accessible names and their label text (reams.ts:67). Those strings fall outside the copy contract's `app/_landing/*.tsx` sources, so the UK spelling 'stylised' ships unchecked against the declared US variant.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:f00a2dbd4e8fdce1",
+          "evaluatedRevision": 10
         },
         {
           "subject": "engine-binding-surface",
@@ -7147,7 +7275,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:1 The landing cosmos is a code-painted paper diorama whose 'camera' is pointer- and wheel-driven CSS parallax over canvas planes, with no generation model, prompt or shot brief anywhere. I searched the engine directory for prompt, generat, genre, lens and close-up and found zero hits, so the subject's precondition (directing generated shots) does not hold.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "repository-landing-document",
@@ -7163,7 +7295,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/scene.ts:1 Scene composition and camera code for the app's own animated landing page has no repository front-page document in it; a search of app/_landing for README, shields, README.md and markdown found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
+          "evaluatedRevision": 4
         },
         {
           "subject": "voice-io",
@@ -7195,7 +7331,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_landing/cosmos/engine/sceneSpec.ts:59 The overview declares seven infinite sway sheets, a drifting cloud bank, a pulsing lamp and a bob on every medallion. The surface has no visible stop control, the ambient travel is far past the budget, and the reduced-motion flag the scripted loops read is a snapshot taken at boot.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "video-assembly",
@@ -7263,7 +7403,11 @@
           "revision": 2,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/sceneSpec.ts:2 The landing cosmos is a procedural paper-collage parallax (sky, ridges, disc sheets, medallions) with no narration beats, no spoken lines and no cited figures. A case-insensitive search of app/_landing for beat, narration, factId, voiceover and visualFunction returned no hits, so the subject's precondition (deciding what is on screen while a beat is spoken) does not hold.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:b936a9a456cd5767",
+          "evaluatedRevision": 2
         },
         {
           "subject": "evidence-bound-visuals",
@@ -7317,7 +7461,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/Cosmos.tsx:3 This context is a page the app renders itself (a React and canvas client component), not the repository's front-page document, and the golden path leaves claims an application renders out of scope; a search of app/_landing for README, shields, README.md and markdown found nothing, and the only 'badge' hit is the app's StaleBadge UI component.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
+          "evaluatedRevision": 4
         },
         {
           "subject": "table",
@@ -7438,7 +7586,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/keyboard.ts:15 The landing gets its keys straight from the browser window's keydown event, with no wrapper or embedded web view forwarding them, and a search for electron, tauri, ipcRenderer and webview found 0 hits in app/_landing, so there is no native shell for any technique to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:9034ad02704d9c88",
+          "evaluatedRevision": 5
         },
         {
           "subject": "translation-pipeline-topology",
@@ -7755,7 +7907,11 @@
           "revision": 10,
           "changedAt": "2026-10-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:31 The v1→ledger projection runs only when an operator runs it or when the Floor, Ledger or Runs pages call freshLedger(). There is no periodic tick, and the agents' door (app/api/ledger/route.ts reads the ledger and never calls freshLedger) can serve a ledger that has been stale for as long as nobody opened a page, so how stale it can get has no limit.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:2d5b609198b79d34",
+          "evaluatedRevision": 10
         },
         {
           "subject": "supply-chain",
@@ -8608,7 +8764,11 @@
           "revision": 2,
           "changedAt": "2026-10-07",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/sound/mv/types.ts:12 The pipeline deliberately produces rung 1 of the form ladder (one still, particles and low-band light rendered per frame from the audio envelope), so it makes no sync claim it cannot back; the map it needs is the energy layer, which it has, and segment, coverage and cut-rate rules collapse except for the beat-pulse flash cap, which it implements.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:2d32bc9195341316",
+          "evaluatedRevision": 2
         },
         {
           "subject": "video-assembly",
@@ -8644,7 +8804,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/sound/mv/types.ts:3 The pipeline takes finished tracks and makes visuals and metadata from them; a search of lib/sound/mv/ for sfx, 'sound effect', riser, whoosh and generateSfx found no hit, so it never generates or briefs a sound effect.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4138f0757b58efac",
+          "evaluatedRevision": 5
         },
         {
           "subject": "voice-io",
@@ -8742,7 +8906,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/notebook/notebook.ts:46 The shipped notebook's mechanism chains still hold bare AND links in their prose `chain[]`, with no typed `steps[]` and no per-link evidence. So the causal spine the board and script read is a sequence with an unconnected joint, which is the exact defect pre-linked mechanisms exist to prevent.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:094f1b2708130460",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-instruction-files",
@@ -8860,7 +9028,11 @@
           "revision": 15,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/notebook/shape.ts:60 The notebook door checks only that `confidence` (and likewise `tension.strength` and `sources[].evidenceClass`) is a non-empty string, while NOTEBOOK_SCHEMA declares closed enums for them, so on the prompted rung (the local CLI, where nothing constrains decoding) a value like \"very high\" passes the door that should hold domain checks with total strictness.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:d51aec71411ccb2b",
+          "evaluatedRevision": 15
         },
         {
           "subject": "self-describing-model-packages",
@@ -8913,7 +9085,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/notebook/graph.ts:78 Here the 'graph half' is a reference graph of research-notebook cards (facts, mechanisms, conclusions), checked for duplicate ids, dangling refs and unlinked conversions. Nothing in it is a topology of long-lived processes joined by named channels. A search of lib/notebook found zero hits for spawn, topology, subscribe and composite, so none of the subject's preconditions hold.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:8bc79a0c5315d2ac",
+          "evaluatedRevision": 1
         },
         {
           "subject": "eval-harness",
@@ -8961,7 +9137,11 @@
           "revision": 17,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/notebook/corpus.ts:102 The corpus gate groups and snapshots refusals by rule keys it builds from message text with regexes (`ruleOf`), even though graph findings had a typed `GraphIssueKind` when they were created. Rewording any rule therefore changes approved verdicts, and one cause can split across several wordings.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:d811928687fd4faf",
+          "evaluatedRevision": 17
         },
         {
           "subject": "agent-runtime-assembly",
@@ -9758,7 +9938,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:126 FrameCanvas ends a drag only on pointerup and has no onPointerCancel or lostpointercapture handler. After a cancelled gesture the `drag` state stays set, so later pointermove events over that layer keep moving it until some pointerup arrives: the 'drag sticks to the cursor' failure that direct-manipulation names.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "frame-direction",
@@ -9790,7 +9974,11 @@
           "revision": 2,
           "changedAt": "2026-09-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/part/part.ts:1 These are workspace and Board-desk UI rules (verdicts, tabs, clocks, keyboard walk) for a film part. Nothing here drives or records the system as a demo, and a search of packages/ui/src/components/part and packages/ui/src/components/desk for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "data-access",
@@ -10129,7 +10317,11 @@
           "revision": 7,
           "changedAt": "2026-09-18",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/Unpriced.tsx:15 The only plan vocabulary in this context is a vendor's credit or subscription plan that the operator pays for, shown as an unpriced figure. The product sells no tier to anyone. Searching produce/ for entitlement, tier, paywall, billing and stripe found nothing, so the receipt and composer price vendor jobs under cost-metering, not plan entitlements.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:58f21c0561a86e45",
+          "evaluatedRevision": 7
         },
         {
           "subject": "agent-runtime-assembly",
@@ -10612,7 +10804,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/producers/src/publish/timers.ts:20 The publish context's two loops are named once from a closed set, and each TimerSpec registers its cadence, deadline and staggered first firing. The tick body reports when the next slot is due, sweeps orphans and downtime misses through the steady-state code path, and stops at safe points between claims. A store-read status surface also exposes staleness, standing failure and quarantine, so this context supplies what the background-jobs envelope needs.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:22ed2a99172ae050",
+          "evaluatedRevision": 5
         },
         {
           "subject": "fleet-orchestration",
@@ -10681,7 +10877,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/publish/adapter.ts:65 A slot names its destination channel and adapterFor selects exactly that channel's adapter or refuses; channels are destinations, not interchangeable upstreams, so there is no candidate tree or fallback. A grep of the publish directory for failover/fallback/reroute/gateway found no hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "measurement-honesty",
@@ -10697,7 +10897,11 @@
           "revision": 11,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/publish/standing.ts:30 The channel standing is folded over at most WINDOW=200 ledger rows. When no success falls inside that window, failuresSinceSuccess is a floor and lastSuccessAt=null cannot tell \"never succeeded\" from \"succeeded before the window\". Standing has no field marking the truncation, so consumers print the floor as a total (e.g. pipeline/publish.mts:167 prints \"N failure(s) since\").",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:b702c58e785c6c51",
+          "evaluatedRevision": 11
         },
         {
           "subject": "quality-gates",
@@ -10763,7 +10967,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/research/followUp.ts:23 A fact that a follow-up turn adds to the notebook goes through a door that accepts one free-text `source` string. It carries no evidence class, locator, plural sources, loadBearing flag, kind, or as-of/event/period dates, so a newly added claim enters the research asset ungraded. That is the comma-joined, ungradeable source the ladder names as its first failure.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:094f1b2708130460",
+          "evaluatedRevision": 5
         },
         {
           "subject": "review-iteration-loops",
@@ -10815,7 +11023,11 @@
           "revision": 2,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/research/define.ts:17 This context is kernel-job plumbing for research acts (notebook turn, follow-up allowlist door, ads ideas, metered spend) and ffprobe media facts. It produces no beat list, connector, hook, reversal or close. A case-insensitive search of packages/producers/src/research and packages/producers/src/media-facts for therefore, and then, reframe, reversal and scqa found no hits, and define.ts:9 notes that no engine writes the beat board yet.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:dd5bc32ae4e71fbb",
+          "evaluatedRevision": 2
         },
         {
           "subject": "production-pipeline-phasing",
@@ -10831,7 +11043,11 @@
           "revision": 4,
           "changedAt": "2026-09-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/producers/src/research/partJob.ts:75 Every research act is a persisted kernel job, single-flighted per act and unit at claim time inside the confirm's transaction, so a double click is one purchase and a reload loses nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
+          "evaluatedRevision": 5
         },
         {
           "subject": "fleet-orchestration",
@@ -10969,7 +11185,11 @@
           "revision": 9,
           "changedAt": "2026-10-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/runs/lanes.ts:16 A case-insensitive search of packages/ui/src/components/review and runs for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. These are client UI components and pure models over @gt/domain types, with no process or agent transport.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
+          "evaluatedRevision": 9
         },
         {
           "subject": "eval-harness",
@@ -11212,7 +11432,11 @@
           "revision": 10,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/slots/schema.ts:78 The publications and metric_snapshots ledgers are append-only with no stated horizon or reaper anywhere (the search over the kernel's slots and records modules, lib/publish and workers found none), so metric readings written on a timer grow without bound, against retention-and-partitioning.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
+          "evaluatedRevision": 10
         },
         {
           "subject": "subprocess-lifecycle",
@@ -11228,7 +11452,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/records/schedule.ts:4 The context's 'slots' are pure lane-schedule computations and calendar publishing records over the kernel store, and a case-insensitive grep of packages/kernel/src/records and packages/kernel/src/slots for child_process, spawn, execFile, SIGTERM and SIGKILL found nothing, so no child process is spawned, supervised or reaped here and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:bad19520d32fbc43",
+          "evaluatedRevision": 15
         },
         {
           "subject": "agent-runtime-assembly",
@@ -11568,7 +11796,11 @@
           "revision": 2,
           "changedAt": "2026-09-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/types.ts:1 lib/script writes the narration for generated factual films from notebook cards. It never drives or records the software as a demo, and a search of lib/script for recorder, screencast, playwright, recordVideo and 'demo film' found nothing, so the subject's precondition (a demo film of a working software system) does not hold here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "review-iteration-loops",
@@ -11674,7 +11906,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/sfxJob.ts:127 Every effect the engine makes is a one-call composite, and the only way to get another is to reroll the same whole brief N times; no step generates layer elements, stacks them or keeps an assembly note, so a take that fails on one quality axis cannot keep the axes that worked.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4138f0757b58efac",
+          "evaluatedRevision": 5
         },
         {
           "subject": "video-assembly",
@@ -11877,7 +12113,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/huntEngine.ts:43 The canned hunt map tags a single composite prompt ('with a soft low thump') as layered-element-assembly, and no part of the hunt or measure flow assembles separately rendered element leaves into a stack. Lessons learned along the technique axis therefore credit the composite form with the technique's name.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4138f0757b58efac",
+          "evaluatedRevision": 5
         },
         {
           "subject": "eval-harness",
@@ -12370,7 +12610,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/src/styles/schema.ts:57 Every style write goes through the door and ratchetBlocker in one transaction, and a SQL trigger refuses a demotion even from a writer that skips both, so a locked style cannot be unlocked or changed underneath frames built on it.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "image-prompt-composition",
@@ -12536,7 +12780,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:22 These are @gt/ui React components for culling and locking styles inside the studio, not a repository front page; a search of the style, cull, cut and pair component directories for README, shields, README.md and markdown found nothing (the 'badge' hits are CSS class names, and the figcaption hits are app UI, not a landing document).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"
@@ -12586,7 +12834,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/suno/queue.ts:124 An sfx hunt leaf sent to Suno always has at least two tags (its category plus 'sound effect', line 120), so the envelope-first prompt is thrown away and replaced by a music-style comma tag line like 'ui, sound effect'. Duration is not carried either, so the effect is briefed like music, the failure the golden path opens with.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4138f0757b58efac",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-memory",
@@ -12650,7 +12902,11 @@
           "revision": 9,
           "changedAt": "2026-10-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/sound/suno/propose.ts:18 A case-insensitive search of lib/sound/suno for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. Proposals reach a model only through the text router's contract, and generation goes through a browser driver, so this context spawns no agent CLI.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
+          "evaluatedRevision": 9
         },
         {
           "subject": "generative-provider-routing",
@@ -12900,7 +13156,11 @@
           "revision": 9,
           "changedAt": "2026-10-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:181 Both Claude CLI rungs collapse unparseable or result-less output into an opaque 'failed' with no bounded prefix of the raw stdout, accumulate stdout without a byte cap, and accept an empty `result` as a successful answer, so a login prompt, rate-limit notice or empty envelope all reach the router as the same undiagnosable failure or as success.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
+          "evaluatedRevision": 9
         }
       ],
       "governance": "governed"
@@ -12936,7 +13196,11 @@
           "revision": 3,
           "changedAt": "2026-09-01",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/trailer/report.ts:62 The engine models six of the seven techniques as typed data and checks, but concealment-and-its-tells has only a standing unmeasured row: no TrailerCut carries a signal for the honesty limit (does the cut still convey how the work feels to use), so a cut that hides its experiential product completely gets no finding beyond that row.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:6a687c5a8080a492",
+          "evaluatedRevision": 3
         },
         {
           "subject": "quality-gates",
@@ -13000,7 +13264,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/trailer/types.ts:30 The trailer engine only models and checks declared trailer structure (no durations, no prose, no narrator). A recursive search of lib/script/trailer, rules/ included, for voice, tone, wpm, bookend, narrator and profile found nothing, so there is no tone layer, voice profile or rate dial for this subject to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:750a2ae7e033a1e6",
+          "evaluatedRevision": 5
         },
         {
           "subject": "test-harness",
@@ -13032,7 +13300,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/trailer/types.ts:369 The trailer model's only audio is the music cue (a TrailerCut is cue + movements + beats); a search of lib/script/trailer/ for sfx, 'sound effect', riser, whoosh and generateSfx found no hit, so this context neither generates effects nor plans an effects pass.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4138f0757b58efac",
+          "evaluatedRevision": 5
         },
         {
           "subject": "voice-io",
@@ -13064,7 +13336,11 @@
           "revision": 15,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 I read the context's ten files and searched lib/script/ recursively for sqlite, pragma, better-sqlite3, journal_mode, VACUUM, wal_checkpoint, openStore and GRAVITONE_STORE_PATH, with no hits: the engine is pure TypeScript over in-memory TrailerCut values, its only outside input is this static JSON params import, and it never opens an embedded database, so none of the subject's operator duties apply.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:0722fec97cff5b66",
+          "evaluatedRevision": 15
         }
       ],
       "governance": "governed"
@@ -13251,7 +13527,11 @@
           "revision": 7,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 The region is always mounted, but its text is written straight into it with no node keyed to each announcement, so the same receipt shown twice in a row (e.g. a retried act that fails the same way) makes no DOM change and is not spoken the second time; a correct shell scheduler still could not force a remount through this primitive.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:5e30485ee0c7c123",
+          "evaluatedRevision": 7
         },
         {
           "subject": "settings",
@@ -13378,7 +13658,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/jsonl/Json.tsx:1 These are ledger and time shapes: breadcrumbs, header chips, event rows, JSON line/block views, a day-count time strip and a waveform. None of them renders a long document with headings, a contents panel, anchors, a scroll spy or pinned offsets. Searching packages/ui/src/components for IntersectionObserver, scroll-margin, rootMargin and slugify found nothing, and the context's own directories contain no sticky, scrollIntoView, heading or anchor at all.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:ee082e781491937e",
+          "evaluatedRevision": 3
         },
         {
           "subject": "video-assembly",
@@ -13410,7 +13694,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:15 These are display components over domain event types; they make no network calls and front no upstreams. A grep of these directories for failover/reroute/gateway/candidate found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "self-describing-model-packages",
@@ -13447,7 +13735,11 @@
           "revision": 6,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:1 This context draws ledger acts, crumbs, cost chips, JSON, a time strip and a waveform: records of things the system did, which the golden path puts on the transcript side of the border. A case-insensitive search of its seven component directories and INVENTORY.md for companion, avatar, transcript, quickReply/quick repl, chat, recall and walkthrough found zero hits, so no model-composed conversation exists here to orchestrate.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:f3ecee1630629b34",
+          "evaluatedRevision": 6
         },
         {
           "subject": "time-travel-replay",
@@ -13462,7 +13754,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:3 This context's only time-based shapes are TimeStrip, a settled per-day histogram whose drag sets a {from,to} filter range (the 'settled-record view' the golden path puts outside replay), and Wave, an audio take's peak strip (media-playback). A search of the seven component dirs for the subject's terms found no hit for scrub/seek/rewind. 'replay' appears only in a comment saying the prototype's replayed session segment was dropped, and 'playhead' only as the audio playhead, so no completed run is re-presented under a viewer-owned clock.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:798a88c318279127",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"
@@ -13564,7 +13860,11 @@
           "revision": 6,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/hint/words.ts:2 This context is a static mark vocabulary (chip, ghost, glyph, hint, heading, empty, errorline, keycaps, stalebadge, sr-only), and its only 'narration' is the app describing itself, which it caps; a case-insensitive search of all ten component directories for companion, avatar, transcript, quickReply/quick repl, chat, recall and walkthrough found zero hits, so there's no resident companion, model turn or chat surface for the subject to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:f3ecee1630629b34",
+          "evaluatedRevision": 6
         },
         {
           "subject": "document-text-extraction",
@@ -13691,7 +13991,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/provenance/Provenance.tsx:13 These are presentational components that render fields they are handed; they front no upstreams. A grep of these directories for failover/reroute/gateway found nothing. `candidate` and `upstream` do appear, but as UI vocabulary (status tones, the UpstreamBreak shape), and no file calls fetch.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "quality-gates",
@@ -14200,7 +14504,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/motion.ts:43 The motion producer's clip call (bound at lib/producers/motion.ts:183 and sent as `prompt: rec.motion` in lib/imaging/video/clips.ts) carries the plate and the motion sentence but no compiled style block, so the still-to-motion hop drops the text half of the style lock, which the standard says lets the look drift mid-clip.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "frame-direction",

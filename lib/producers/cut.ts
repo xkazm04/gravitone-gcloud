@@ -6,6 +6,8 @@ import type { BlobRef } from "@gt/domain/blob";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 import type { ResourceLane } from "@gt/domain/lane";
+import { STRIPS, VOICE } from "@gt/domain/steps/parts";
+import { decodeStep } from "@gt/domain/steps/record";
 import { blobStore } from "@gt/kernel/blob";
 import type { Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
 import type { PartSnapshot } from "@gt/kernel/parts/driver";
@@ -18,7 +20,8 @@ import { adRenderRequest, seedFinish, shotRows } from "@/lib/cut/ads/finish";
 import { adExportFilePath, AdRenderError, REAL_AD_RENDER_DEPS, startAdRender, type AdRenderDeps, type AdRenderReceipt } from "@/lib/adRender";
 import type { AdBrief, AdsFinishData, AdsShotsData } from "@/lib/ads/types";
 import { compileCut, cutDocumentHash, takePointers, type CutDocument } from "@/lib/cut/cutDocument";
-import { deriveTimeline } from "@/lib/cut/deriveTimeline";
+import { deriveTimeline, type DerivedCut } from "@/lib/cut/deriveTimeline";
+import { EXPLAINER_SKIPS, explainerCut } from "@/lib/cut/explainer";
 import { ExportError, runCutExport, type CutExportResult } from "@/lib/cutExport";
 import type { PictureUnit } from "@/lib/frames/picture/unit";
 import type { Aspect } from "@/lib/imaging/types";
@@ -40,6 +43,12 @@ import { pickedScenario } from "./frames.ts";
 //                    store and handed to the call as a data: URL IN MEMORY, for the call only;
 //                    nothing with base64 is ever stored (STEPS-DESIGN §0.4). lib/cutExport.ts is
 //                    not edited.
+//                    AN EXPLAINER has no frames: its picture is the strip cards and its narration
+//                    the VOICE record's active takes, so its cut is `explainerCut` over those two
+//                    records - the call lib/parts/verdict.ts makes, so the export and the gate read
+//                    one clock. A card's image and a take's audio are kernel blobs, named in the
+//                    document by digest (`sha256:`) and read by runCutExport itself; the finish
+//                    line drops the music rows an explainer never plans (EXPLAINER_SKIPS).
 //   render-aspect    `adRenderRequest` (refused while a blocking finish check fails) ->
 //                    `startAdRender` (ffmpeg + headless Chromium overlays) -> the mp4 as a blob
 //                    on `ads-finish.exports`. DROPPED, said: the end card's logo lives in the
@@ -95,15 +104,39 @@ function adsFinish(s: PartSnapshot, f: PartFacts): { finish: AdsFinishData; why?
   return { finish, rows };
 }
 
-export function cutView(s: PartSnapshot, f: PartFacts): CutView {
-  if (f.discipline === "ads") {
-    const a = adsFinish(s, f);
-    return { face: "ads", scenes: a.rows.length, ...(a.why === undefined ? {} : { adsBlocked: a.why }), aspects: a.finish.aspects };
-  }
-  return { face: "standard", scenes: pictureFromUnits(unitsOf(s), f.targetS ?? 0).scenes.length, aspects: [] };
+/** The project's picture is strip cards when its plan HAS a strips part (the explainer recipe,
+ *  `article · strips · voice · cut`): what the project is made of, not what its recipe is called. */
+export const picturesStrips = (f: PartFacts): boolean => f.plan.parts.some((p) => p.kind === "strips");
+
+/** The explainer's cut over its strips and VOICE records, decoded at the step door. An absent
+ *  record is the empty one its part starts from; an unreadable one is the door's sentence. */
+export function stripsCut(s: PartSnapshot, f: PartFacts): Result<DerivedCut> {
+  const st = s.records.get("strips");
+  const strips = st === undefined ? undefined : decodeStep(STRIPS, st);
+  if (strips?.ok === false) return strips;
+  const vo = s.records.get("voice");
+  const voice = vo === undefined ? undefined : decodeStep(VOICE, vo);
+  if (voice?.ok === false) return voice;
+  return ok(explainerCut({ cards: strips?.value.cards ?? [], voice: voice?.value ?? { text: {}, takes: {}, byLine: {} }, targetS: f.targetS }));
 }
 
-export const cutUnits: UnitsFn = withRecords((s: PartSnapshot, f: PartFacts, ask: Pick<ActAsk, "act" | "target">): Result<ActPlan> => cutPlan(cutView(s, f), ask.act, ask.target, priceOf(f.option)));
+export function cutView(s: PartSnapshot, f: PartFacts): Result<CutView> {
+  if (f.discipline === "ads") {
+    const a = adsFinish(s, f);
+    return ok({ face: "ads", scenes: a.rows.length, ...(a.why === undefined ? {} : { adsBlocked: a.why }), aspects: a.finish.aspects });
+  }
+  if (picturesStrips(f)) {
+    // Scene count = card count: explainerCut places one scene per card, drawn or not.
+    const cut = stripsCut(s, f);
+    return cut.ok ? ok({ face: "standard", scenes: cut.value.scenes.length, aspects: [] }) : cut;
+  }
+  return ok({ face: "standard", scenes: pictureFromUnits(unitsOf(s), f.targetS ?? 0).scenes.length, aspects: [] });
+}
+
+export const cutUnits: UnitsFn = withRecords((s: PartSnapshot, f: PartFacts, ask: Pick<ActAsk, "act" | "target">): Result<ActPlan> => {
+  const v = cutView(s, f);
+  return v.ok ? cutPlan(v.value, ask.act, ask.target, priceOf(f.option)) : v;
+});
 
 /** A local render's failure: a posture refusal or a bad document is the job's sentence; an
  *  ffmpeg that failed may succeed on a retry (the breaker counts it). */
@@ -142,13 +175,27 @@ async function storeHeld(spots: readonly ScoreSpot[] | null): Promise<Set<string
 
 const standBytes = (what: string): Uint8Array => new TextEncoder().encode(`dry stand-in: ${what}`);
 
-async function animaticUnit(ctx: StepContext, unit: ActUnit, s: PartSnapshot, f: PartFacts, eng: CutEngines): Promise<StepOutcome> {
-  const projectId = projectOf(ctx.job);
+/** A film's (or trailer's) document: its frames on the one clock Score shares, its cues' takes. */
+async function framesDocument(s: PartSnapshot, f: PartFacts, projectId: string, root: string): Promise<CutDocument> {
   const spots = spotsOf(s);
-  const units = await withPlates(unitsOf(s), jobBlobRoot(ctx));
+  const units = await withPlates(unitsOf(s), root);
   const cut = deriveTimeline({ projectId, project: f.targetS === null ? null : { title: f.plan.project.title, logline: "", targetS: f.targetS }, units, spots, storeTakeIds: await storeHeld(spots) });
   const offsets = field(recOf(s, "cut")["offsets"]) ?? {};
-  const doc = compileCut(cut, written<Record<string, number>>(offsets), takePointers(spots));
+  return compileCut(cut, written<Record<string, number>>(offsets), takePointers(spots));
+}
+
+/** An explainer's document: cards as stills by blob digest, active takes as voice segments, no
+ *  cues (it plans no score), and the finish line the explainer's gate reads. */
+export function stripsDocument(s: PartSnapshot, f: PartFacts): Result<CutDocument> {
+  const cut = stripsCut(s, f);
+  if (!cut.ok) return cut;
+  const doc = compileCut(cut.value, written<Record<string, number>>(field(recOf(s, "cut")["offsets"]) ?? {}), {});
+  return ok({ ...doc, finish: doc.finish.filter((x) => !EXPLAINER_SKIPS.has(x.id)) });
+}
+
+async function animaticUnit(ctx: StepContext, unit: ActUnit, s: PartSnapshot, f: PartFacts, eng: CutEngines): Promise<StepOutcome> {
+  const projectId = projectOf(ctx.job);
+  const doc = picturesStrips(f) ? must(stripsDocument(s, f)) : await framesDocument(s, f, projectId, jobBlobRoot(ctx));
   const hash = cutDocumentHash(doc);
   const out = await meteredCall<{ result: CutExportResult; bytes: Uint8Array } | null>(ctx, {
     provider: "ffmpeg",

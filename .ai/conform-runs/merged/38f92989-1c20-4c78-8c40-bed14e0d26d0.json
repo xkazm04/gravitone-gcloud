@@ -1,0 +1,72 @@
+{
+ "schema": "conform-run/1",
+ "worker": "38f92989-1c20-4c78-8c40-bed14e0d26d0",
+ "subject": "native-document-format",
+ "evaluatedAt": "2026-10-26T00:24:15.856674+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-writing-research",
+   "subject": "native-document-format",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:91 Every edit leaves these editors as a typed op sent at a rev through the part port to the server-side store, and the page reads its view back through loadPart. No file in this context writes, versions, exports or re-opens a saved document that could leave the application. A recursive grep of app/(studio)/projects/[id]/[part] found 0 hits each for writeFile, serialize, formatVersion, saveAs, download, schemaVersion and relink, so the subject's precondition (an application's own saved document read by unknown later readers) does not hold here.",
+   "techniques": [
+    {
+     "technique": "format-is-the-engines-input",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/page.tsx:33 The editor reads a server-built view object from the port. It does not save a file that a downstream consumer reads."
+    },
+    {
+     "technique": "one-writer-per-fact",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:4 Writes go through one op door to a store, not to a document with two projections. Projection drift is a store question, not a file question."
+    },
+    {
+     "technique": "serialization-is-locale-free",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:52 The only number-to-text conversions here (toFixed in Article, AdsBrief, Scenarios and Words) are for display. Nothing in the context serializes to a machine-facing file."
+    },
+    {
+     "technique": "format-generations-are-declared",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:161 'versions' here is the candidate's version history (versioning-snapshots, which the golden path excludes), not format generations. There is no document stamp to declare."
+    },
+    {
+     "technique": "ignorable-extensions-must-be-declared",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/editors.tsx:27 This file only dispatches editors by kind. The context writes no third-party document format that carries an extension region."
+    }
+   ],
+   "absenceTerms": [
+    "writeFile",
+    "serialize",
+    "formatVersion",
+    "saveAs",
+    "schemaVersion"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-26T00:24:15.856674+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-document-format"
+   ],
+   "techniques": [
+    "format-generations-are-declared",
+    "format-is-the-engines-input",
+    "ignorable-extensions-must-be-declared",
+    "one-writer-per-fact",
+    "serialization-is-locale-free"
+   ],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

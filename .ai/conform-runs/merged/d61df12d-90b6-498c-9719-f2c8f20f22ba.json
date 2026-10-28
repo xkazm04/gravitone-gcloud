@@ -1,0 +1,197 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+ "subject": "multi-provider-gateway-plane",
+ "evaluatedAt": "2026-10-24T21:25:50.452686+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "imaging-gateway-and-spend",
+   "subject": "multi-provider-gateway-plane",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/imaging/router.ts:433 Any non-ImagingError raised inside the candidate call, including a bug in the plane's own adapter or response translation, is turned into a `failed` error stamped with the candidate's provider id and logged in `trail`/logCall against that vendor; errors.ts:91-92 admits `failed` mixes vendor 4xx/5xx, unreachable hosts and 'a bug in our own adapter', so the plane's own failures are blamed on a provider, and no router-versus-candidate axis exists.",
+   "techniques": [
+    {
+     "technique": "router-versus-candidate-failure",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/router.ts:433 No sweep happens because `failed` is not reroutable, but there is no attribution marker: a plane-side exception is filed as the candidate's failure (provider=id, trail why=failed), which is the misfiling the technique names. The `unsupported`-at-position-0 throw and the `no-alternative` type do give partial router-side arms."
+    },
+    {
+     "technique": "exclusive-authorship-of-a-measured-decision",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/router.ts:400 The served provider and the eliminated (decided-first) candidates sit on the same provenance record, so a fallback is visible in the output. unreachedPlanTops (router.ts:177) checks at window level whether the measured plan top is ever served."
+    },
+    {
+     "technique": "policy-verdict-in-the-status-space",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/errors.ts:112 The fallback loop branches on a typed kind, not on an operator list of status integers, and the budget refusal is raised before any candidate and is not reroutable. The callers (probes, kernel jobs) read the body `code`. No consumer has to match on integers, so the technique's precondition does not hold; 402 for over-budget is mapped at errors.ts:236."
+    },
+    {
+     "technique": "strategy-tree-with-inherited-policy",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/router.ts:90 The plan is a flat ordered list per capability and environment, with one policy scope (one budget hold per request). The technique's 'one candidate set and one policy' exclusion applies."
+    },
+    {
+     "technique": "named-members-over-a-uniform-collection",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/router.ts:112 Providers are used only on the request path, where the technique says a uniform collection is right. There is no inventory aggregate built from the providers."
+    },
+    {
+     "technique": "upstream-identity-before-inventory",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/env.ts:29 Each upstream speaks its own dialect and is configured by id, so the dialect is the identity. No shared wire protocol and no discovered endpoints."
+    },
+    {
+     "technique": "join-breadth-follows-the-wrong-match-cost",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/pricing.ts:221 The only catalog join is exact equality on provider and model strings the adapters themselves supply. There is no fuzzy join against an upstream's naming scheme, and a miss surfaces as `unpriced` rather than being deleted silently."
+    },
+    {
+     "technique": "caller-scoped-normalization-strictness",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:1 The published contract is the repo's own and serves first-party callers. The technique's 'contract is your own / one consumer population' exclusion applies."
+    },
+    {
+     "technique": "per-provider-stream-framing",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/handlers.ts:89 Every capability returns a settled answer. A grep of lib/imaging for stream/getReader/text/event-stream found no streaming path."
+    },
+    {
+     "technique": "one-typed-carrier-for-echoed-state",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:166 The plane keeps vendor-side state on its own provenance record. Nothing is round-tripped through a client's next request."
+    }
+   ]
+  },
+  {
+   "context": "ui-status-provenance",
+   "subject": "multi-provider-gateway-plane",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/provenance/Provenance.tsx:13 These are presentational components that render fields they are handed; they front no upstreams. A grep of these directories for failover/reroute/gateway found nothing. `candidate` and `upstream` do appear, but as UI vocabulary (status tones, the UpstreamBreak shape), and no file calls fetch.",
+   "techniques": [],
+   "absenceTerms": [
+    "failover",
+    "reroute",
+    "gateway"
+   ]
+  },
+  {
+   "context": "board-decision-adapters",
+   "subject": "multi-provider-gateway-plane",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/decision/v1/registry.ts:60 Each packet source is pinned to exactly one adapter over its own v1 store, and a source with no adapter is refused, so there is no set of interchangeable upstreams, no candidate selection and no fallback. A grep of lib/decision/v1 found no failover/reroute/gateway; `fallback` appears only as a timestamp default (types.ts:135 instantOr).",
+   "techniques": [],
+   "absenceTerms": [
+    "failover",
+    "reroute",
+    "gateway"
+   ]
+  },
+  {
+   "context": "publish-producers",
+   "subject": "multi-provider-gateway-plane",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/producers/src/publish/adapter.ts:65 A slot names its destination channel and adapterFor selects exactly that channel's adapter or refuses; channels are destinations, not interchangeable upstreams, so there is no candidate tree or fallback. A grep of the publish directory for failover/fallback/reroute/gateway found no hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "failover",
+    "fallback",
+    "reroute",
+    "gateway"
+   ]
+  },
+  {
+   "context": "ui-ledger-timeline",
+   "subject": "multi-provider-gateway-plane",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:15 These are display components over domain event types; they make no network calls and front no upstreams. A grep of these directories for failover/reroute/gateway/candidate found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "failover",
+    "reroute",
+    "gateway",
+    "candidate"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T21:25:50.452686+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-provider-gateway-plane"
+   ],
+   "techniques": [
+    "caller-scoped-normalization-strictness",
+    "exclusive-authorship-of-a-measured-decision",
+    "join-breadth-follows-the-wrong-match-cost",
+    "named-members-over-a-uniform-collection",
+    "one-typed-carrier-for-echoed-state",
+    "per-provider-stream-framing",
+    "policy-verdict-in-the-status-space",
+    "router-versus-candidate-failure",
+    "strategy-tree-with-inherited-policy",
+    "upstream-identity-before-inventory"
+   ],
+   "deviations": 1,
+   "context": "imaging-gateway-and-spend",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T21:25:50.452686+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-provider-gateway-plane"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ui-status-provenance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T21:25:50.452686+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-provider-gateway-plane"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "board-decision-adapters",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T21:25:50.452686+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-provider-gateway-plane"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "publish-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T21:25:50.452686+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-provider-gateway-plane"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ui-ledger-timeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

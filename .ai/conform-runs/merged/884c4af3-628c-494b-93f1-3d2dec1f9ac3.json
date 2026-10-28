@@ -1,0 +1,113 @@
+{
+ "schema": "conform-run/1",
+ "worker": "884c4af3-628c-494b-93f1-3d2dec1f9ac3",
+ "subject": "narrative-scroll-surface",
+ "evaluatedAt": "2026-10-25T03:01:56.826419+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-port-fixtures",
+   "subject": "narrative-scroll-surface",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/fixture.ts:29 The context is server-only, in-memory part records and their op logs, with no rendered page, scroll binding or reveal anywhere in it. A grep of app/(studio)/projects/[id]/_part for useScroll, scrollY, onScroll, animation-timeline and IntersectionObserver found nothing, so no technique of a narrative scroll surface has anything to govern here.",
+   "techniques": [
+    {
+     "technique": "sequence-as-spine",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureExplainer.ts:55 These are stand-in article section headings stored as data for a video explainer's article part. They are not stations of a scrolling page."
+    },
+    {
+     "technique": "illustration-carries-the-claim",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureExplainer.ts:16 'Explainer' here is a produced video made of article, strips and voice. The strip cards are product output records, not art on an explanatory web page."
+    },
+    {
+     "technique": "motion-carries-the-mechanism",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureMotion.ts:14 'Motion' is a production part: per-unit clip direction and rendered clips. It is not UI animation explaining a mechanism."
+    }
+   ],
+   "absenceTerms": [
+    "useScroll",
+    "scrollY",
+    "onScroll",
+    "animation-timeline",
+    "IntersectionObserver"
+   ]
+  },
+  {
+   "context": "kit-design-system-specimens",
+   "subject": "narrative-scroll-surface",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/kit/KitNav.tsx:3 /kit is a reference catalogue of design-system specimens with a scroll-spy contents panel. It is read by a developer who already wants a specific part, which is the 'Documents' and 'reader with a task' case every technique excludes. A grep of app/(studio)/kit found no scroll-driven progression (useScroll, scrollY, onScroll, animation-timeline and data-station all returned nothing).",
+   "techniques": [
+    {
+     "technique": "sequence-as-spine",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/sections.ts:6 The sections are a set of specimen groups (tokens, signal, controls, compositions). Reordering them changes emphasis, not meaning."
+    },
+    {
+     "technique": "no-orientation-tax",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/KitNav.tsx:36 This is a genuine document navigation of legible titled destinations, which the technique hands to long-form-reading-surface."
+    },
+    {
+     "technique": "motion-carries-the-mechanism",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/Motion.tsx:4 These are press-triggered specimens of feedback gestures that belong to the motion vocabulary. They do not explain a mechanism."
+    },
+    {
+     "technique": "reveal-without-loss",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/page.tsx:54 Every section is mounted unconditionally in the server-rendered page. Nothing is revealed on scroll."
+    }
+   ],
+   "absenceTerms": [
+    "useScroll",
+    "scrollY",
+    "onScroll",
+    "animation-timeline",
+    "data-station"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T03:01:56.826419+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "narrative-scroll-surface"
+   ],
+   "techniques": [
+    "illustration-carries-the-claim",
+    "motion-carries-the-mechanism",
+    "sequence-as-spine"
+   ],
+   "deviations": 0,
+   "context": "part-port-fixtures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T03:01:56.826419+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "narrative-scroll-surface"
+   ],
+   "techniques": [
+    "motion-carries-the-mechanism",
+    "no-orientation-tax",
+    "reveal-without-loss",
+    "sequence-as-spine"
+   ],
+   "deviations": 0,
+   "context": "kit-design-system-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

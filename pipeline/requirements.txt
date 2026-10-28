@@ -13,9 +13,16 @@
 #   huggingface-hub   fetch_ref2va.py only
 #   transformers      identity.py only (inside the model loader)
 #   facenet-pytorch   identity.py only (inside the model loader)
-#   sentence-transformers, soundfile, torchaudio   embeddings/spike.py only
+#   sentence-transformers, torchaudio   embeddings/spike.py only
+#   soundfile         embeddings/spike.py, and the audio sidecar (below)
 # torch is imported at module top by identity.py and embeddings/spike.py.
+#
+# The audio sidecar (pipeline/audio/, docs/audio-sidecar.md) imports numpy,
+# scipy, soundfile, pyloudnorm and pedalboard inside its verbs, so `doctor` and
+# a missing-module failure still answer in JSON without them. pedalboard is
+# GPL-3; it runs as this separate CLI and nothing that links it is distributed.
 numpy
+scipy
 Pillow
 huggingface-hub
 torch
@@ -24,3 +31,5 @@ facenet-pytorch
 sentence-transformers
 soundfile
 torchaudio
+pyloudnorm
+pedalboard

@@ -20,7 +20,8 @@ export const AD_ASPECT_TARGETS = ["9:16", "1:1", "4:5", "16:9"] as const;
 
 export type CutView = {
   readonly face: "standard" | "ads";
-  /** Scenes on the clock (picture units placed): nothing to export without them. */
+  /** Scenes on the clock (a film's picture units placed, an explainer's strip cards): nothing to
+   *  export without them. */
   readonly scenes: number;
   /** The ads finish's blocking check sentence, when one fails (clips, end card). */
   readonly adsBlocked?: string;

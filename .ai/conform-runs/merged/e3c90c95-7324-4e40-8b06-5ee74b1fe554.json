@@ -1,0 +1,105 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e3c90c95-7324-4e40-8b06-5ee74b1fe554",
+ "subject": "content-research-grounding",
+ "evaluatedAt": "2026-10-25T02:18:25.583737+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "research-producers",
+   "subject": "content-research-grounding",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/producers/src/research/followUp.ts:23 A fact that a follow-up turn adds to the notebook goes through a door that accepts one free-text `source` string. It carries no evidence class, locator, plural sources, loadBearing flag, kind, or as-of/event/period dates, so a newly added claim enters the research asset ungraded. That is the comma-joined, ungradeable source the ladder names as its first failure.",
+   "techniques": [
+    {
+     "technique": "evidence-grading-ladder",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/research/followUp.ts:23 adds-fact has a singular source string and confidence with no reason. It has no evidenceClass, locator, loadBearing flag, kind, or three dates, even though lib/notebook/types.ts Fact supports all of them."
+    },
+    {
+     "technique": "unknowns-as-constraints",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/followUp.ts:57 resolves-unknown names its unknown by stable id and is checked against the notebook's ids, never by position. A stray id refuses the whole answer, so nothing is dropped or partly applied."
+    }
+   ]
+  },
+  {
+   "context": "notebook-content-and-board",
+   "subject": "content-research-grounding",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/notebook/notebook.ts:46 The shipped notebook's mechanism chains still hold bare AND links in their prose `chain[]`, with no typed `steps[]` and no per-link evidence. So the causal spine the board and script read is a sequence with an unconnected joint, which is the exact defect pre-linked mechanisms exist to prevent.",
+   "techniques": [
+    {
+     "technique": "pre-linked-causal-mechanisms",
+     "verdict": "deviation",
+     "evidence": "lib/notebook/notebook.ts:46 Bare AND links appear in m-etf-plumbing and m-treasury-flywheel (line 61 too). None of the three mechanisms has typed steps[] or per-step evidence ids. m-institutionalisation, the thesis, cites no facts."
+    },
+    {
+     "technique": "evidence-grading-ladder",
+     "verdict": "deviation",
+     "evidence": "lib/notebook/facts.ts:19 A load-bearing fact has three publications comma-joined into one source string, with no evidenceClass, locator, eventDate or period. Only f-midtier-distribute (facts.ts:37) carries sources[], kind, unit and period. counts.ts:325 does count loadBearing && low."
+    },
+    {
+     "technique": "prior-declaration-and-steel-man",
+     "verdict": "deviation",
+     "evidence": "lib/notebook/notebook.ts:170 The unsearched counter-case is filed under researchGaps, the named failure. The steelMan block (line 90) has no provenance mark, and the Notebook carries no declared-prior field. The board's counter-case column and required steel-man card (dimensions.ts:98, cards.ts:150) are conformant structure over non-conformant content."
+    },
+    {
+     "technique": "tension-finding-taxonomy",
+     "verdict": "deviation",
+     "evidence": "lib/notebook/notebook.ts:32 The expectation/reality/why/strength triple is present. But strength stays high while the four-year-cycle counter-position (line 130) stands. No baseline distribution sizes the drawdown, so a surviving counter-case leaves the score untouched."
+    },
+    {
+     "technique": "scale-conversion-of-numbers",
+     "verdict": "deviation",
+     "evidence": "lib/notebook/notebook.ts:111 Every conversion is linked to its fact id with `for` (line 107 on), which is conformant. But this felt form drops the fact's 'in risk-on conditions' qualifier and widens it to 'on most days'. Most quantities also lack unit, period and denominator."
+    },
+    {
+     "technique": "unknowns-as-constraints",
+     "verdict": "conformant",
+     "evidence": "lib/notebook/unknowns.ts:61 Each unknown has a stable id and an impact phrased as what the render may not say. Resolved unknowns are kept with resolvedBy (lines 40, 54), and UNKNOWN_BY_ID keys the script ledger by id (notebook.ts:188)."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T02:18:25.583737+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "content-research-grounding"
+   ],
+   "techniques": [
+    "evidence-grading-ladder",
+    "unknowns-as-constraints"
+   ],
+   "deviations": 1,
+   "context": "research-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T02:18:25.583737+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "content-research-grounding"
+   ],
+   "techniques": [
+    "evidence-grading-ladder",
+    "pre-linked-causal-mechanisms",
+    "prior-declaration-and-steel-man",
+    "scale-conversion-of-numbers",
+    "tension-finding-taxonomy",
+    "unknowns-as-constraints"
+   ],
+   "deviations": 1,
+   "context": "notebook-content-and-board",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

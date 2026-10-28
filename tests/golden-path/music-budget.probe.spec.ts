@@ -310,9 +310,10 @@ test("the ledger answers by axis, in the same vocabulary the log line uses", asy
   expect(a.byOp.generate).toBe(18);
   expect(a.byOp.sfx).toBe(8);
   expect(a.byOutcome.failed).toBe(5);
-  // Every row is unpriced today, and the ledger says so rather than letting a
-  // duration be read as a bill.
-  expect(a.unpricedSeconds).toBe(26);
+  // No row carries dollars, and the ledger says so rather than letting a duration be read as a
+  // bill. The sfx seconds are measured in credits (pricing.ts, 2026-10-24), so only the generate
+  // seconds (13 served + 5 failed) are unpriced.
+  expect(a.unpricedSeconds).toBe(18);
   expect(await musicSpendRows(now)).toHaveLength(3);
   expect((await musicSpendRows(now)).every((r) => r.usd === undefined)).toBe(true);
 });

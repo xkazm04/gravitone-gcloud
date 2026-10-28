@@ -1,0 +1,65 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9331df4e-473e-407c-a98a-1481f4086931",
+ "subject": "app-shell",
+ "evaluatedAt": "2026-10-24T23:56:02.393062+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "kit-design-system-specimens",
+   "subject": "app-shell",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "app/(studio)/kit/Spec.tsx:14 The kit's in-page index and its section headings both derive from the one SECTIONS list, and the index marks position with aria-current=\"location\". This is page-owned depth below the shell, which is what app-shell asks of anything beyond the shell's level; the shell-only techniques do not apply to a single route page.",
+   "techniques": [
+    {
+     "technique": "navigation-model",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/kit/Spec.tsx:14 Section headings read the same registry the nav iterates. Section ids are typed SectionId, and all 22 SECTIONS ids have a matching <Section id=...> in the body, so nav and body cannot drift."
+    },
+    {
+     "technique": "nav-hierarchy",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/kit/KitNav.tsx:35 Group headings are plain labels, not destinations. The index is page structure, an in-page anchor list marked aria-current=\"location\" (line 36), and not a third shell level."
+    },
+    {
+     "technique": "lazy-section-loading",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/page.tsx:3 The kit's 'sections' are anchors inside one route page, not shell sections loaded separately. Shell-level code splitting is judged on studio-shell."
+    },
+    {
+     "technique": "badge-and-attention",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/Controls.tsx:75 The only badges here are specimens on a button. The kit index carries no attention badges."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "app-shell",
+   "context": "studio-shell",
+   "reason": "evidence leans on loading.tsx/error.tsx, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T23:56:02.393062+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "app-shell"
+   ],
+   "techniques": [
+    "badge-and-attention",
+    "lazy-section-loading",
+    "nav-hierarchy",
+    "navigation-model"
+   ],
+   "deviations": 0,
+   "context": "kit-design-system-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

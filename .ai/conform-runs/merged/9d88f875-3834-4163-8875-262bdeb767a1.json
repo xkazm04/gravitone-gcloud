@@ -1,0 +1,59 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9d88f875-3834-4163-8875-262bdeb767a1",
+ "subject": "declared-process-graph",
+ "evaluatedAt": "2026-10-25T23:18:40.130448+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "notebook-contract-validation",
+   "subject": "declared-process-graph",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/notebook/graph.ts:78 Here the 'graph half' is a reference graph of research-notebook cards (facts, mechanisms, conclusions), checked for duplicate ids, dangling refs and unlinked conversions. Nothing in it is a topology of long-lived processes joined by named channels. A search of lib/notebook found zero hits for spawn, topology, subscribe and composite, so none of the subject's preconditions hold.",
+   "techniques": [
+    {
+     "technique": "per-kind-field-whitelist",
+     "verdict": "not-applicable",
+     "evidence": "lib/notebook/graph.ts:32 The graph checks are about card-reference integrity. There are no node kinds that launch processes, so no per-kind field legality applies."
+    },
+    {
+     "technique": "composite-expansion-contract",
+     "verdict": "not-applicable",
+     "evidence": "lib/notebook/graph.ts:67 The notebook is checked as-is. There are no composite nodes and no expansion stage (zero hits for 'composite')."
+    },
+    {
+     "technique": "bounded-expansion",
+     "verdict": "not-applicable",
+     "evidence": "lib/notebook/validate.ts:18 The validator reads one parsed model answer and never loads author-chosen sub-documents, so there is no recursion to bound."
+    }
+   ],
+   "absenceTerms": [
+    "spawn",
+    "topology",
+    "subscribe",
+    "composite"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T23:18:40.130448+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "declared-process-graph"
+   ],
+   "techniques": [
+    "bounded-expansion",
+    "composite-expansion-contract",
+    "per-kind-field-whitelist"
+   ],
+   "deviations": 0,
+   "context": "notebook-contract-validation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -1,0 +1,88 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4eb90336-6af0-4a3a-84c6-40e70bc9e64a",
+ "subject": "canvas-graph",
+ "evaluatedAt": "2026-10-25T01:55:16.965784+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "landing-cosmos-paper-raster",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/paper.ts:2 This context is a pure paint and rasterisation pipeline (paper grain, inks, palette, seeded RNG, a worker job queue). It has no node/edge model, no pan/zoom camera and no pointer manipulation: a search of app/_landing/cosmos for toWorld, setPointerCapture, zoom and onWheel found nothing, and the only 'edges' hits are paper sheet edges (paper.ts, banner.ts), not graph edges.",
+   "techniques": [
+    {
+     "technique": "viewport-transform",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/layout.ts:3 layout.ts derives fixed screen geometry from W/H and counts. Nothing converts between screen and world space and nothing reads a pointer, so there is no conversion authority to judge."
+    }
+   ],
+   "absenceTerms": [
+    "toWorld",
+    "setPointerCapture",
+    "zoom",
+    "onWheel"
+   ]
+  },
+  {
+   "context": "part-workspace-desk",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:126 FrameCanvas ends a drag only on pointerup and has no onPointerCancel or lostpointercapture handler. After a cancelled gesture the `drag` state stays set, so later pointermove events over that layer keep moving it until some pointerup arrives: the 'drag sticks to the cursor' failure that direct-manipulation names.",
+   "techniques": [
+    {
+     "technique": "direct-manipulation",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:78 Capturing at press on the layer itself (line 72) is correct. But any movement becomes a live move with no screen-space threshold: a 1px jitter on a ~800px frame rounds to 0.1% and up() then emits an onMove edit for what was meant as a click. Cancel and capture-lost exit paths are also missing (pair anchor)."
+    },
+    {
+     "technique": "viewport-transform",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:64 No camera, but there is still a mapping. The one inverse (screen px to frame percent) is a single function next to the forward percent styling, reads the live container rect, and guards against zero size."
+    },
+    {
+     "technique": "edge-management",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:42 The surface's only collection is positioned layers. There is no edge or connection type, so no anchor geometry, routing or edge economy to judge."
+    }
+   ],
+   "registryProposal": "canvas-graph scopes itself to relationship/topology surfaces, yet its direct-manipulation and 'no camera is not no authority' rules bind just as well to edge-less layer-composition canvases (a percent-positioned frame editor). Saying explicitly whether such surfaces fall under this subject or under drag-drop would stop seats disagreeing on applicability."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T01:55:16.965784+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "viewport-transform"
+   ],
+   "deviations": 0,
+   "context": "landing-cosmos-paper-raster",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T01:55:16.965784+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "direct-manipulation",
+    "edge-management",
+    "viewport-transform"
+   ],
+   "deviations": 1,
+   "context": "part-workspace-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

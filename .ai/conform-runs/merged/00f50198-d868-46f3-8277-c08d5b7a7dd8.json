@@ -1,0 +1,67 @@
+{
+ "schema": "conform-run/1",
+ "worker": "00f50198-d868-46f3-8277-c08d5b7a7dd8",
+ "subject": "plan-entitlements",
+ "evaluatedAt": "2026-10-25T03:13:03.270895+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "plan-and-import",
+   "subject": "plan-entitlements",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/_plan/Plan.tsx:8 Here 'plan' is a project's production plan: the parts, models, units and estimated cost of a launch, versioned by revision. It is not a tenant's paid tier. Searching _plan/ and import/ for entitlement, tier, paywall, billing and stripe found nothing, so there is no tier model, capability gate or lifecycle event to judge.",
+   "techniques": [],
+   "absenceTerms": [
+    "entitlement",
+    "tier",
+    "paywall",
+    "billing",
+    "stripe"
+   ]
+  },
+  {
+   "context": "produce-compose-receipt",
+   "subject": "plan-entitlements",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/produce/Unpriced.tsx:15 The only plan vocabulary in this context is a vendor's credit or subscription plan that the operator pays for, shown as an unpriced figure. The product sells no tier to anyone. Searching produce/ for entitlement, tier, paywall, billing and stripe found nothing, so the receipt and composer price vendor jobs under cost-metering, not plan entitlements.",
+   "techniques": [],
+   "absenceTerms": [
+    "entitlement",
+    "tier",
+    "paywall",
+    "billing",
+    "stripe"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T03:13:03.270895+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "plan-entitlements"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "plan-and-import",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-25T03:13:03.270895+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "plan-entitlements"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "produce-compose-receipt",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

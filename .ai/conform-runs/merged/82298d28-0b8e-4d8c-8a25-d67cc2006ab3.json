@@ -1,0 +1,35 @@
+{
+  "schema": "conform-run/1",
+  "worker": "82298d28-0b8e-4d8c-8a25-d67cc2006ab3",
+  "subject": "generated-output-grading",
+  "evaluatedAt": "2026-10-25T23:59:17.554191+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "generated-output-grading",
+      "context": "style-trials-cull",
+      "reason": "withdrawn after review: reviewer (sonnet): The conformant verdict leans on pair/BlindPair.tsx (blind judging, 'differs' outcome, agreement Tally), which is not one of this context's files, and I could not confirm in the context that the server withholds the machine's pick; the same technique's flip-analysis anchor (TrialMatrix.tsx:1) is a no"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-25T23:59:17.554191+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "generated-output-grading"
+      ],
+      "techniques": [
+        "cross-provider-flip-analysis",
+        "trial-matrix-design",
+        "two-grader-disagreement-rule",
+        "vision-model-grading-schema"
+      ],
+      "deviations": 0,
+      "context": "style-trials-cull",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

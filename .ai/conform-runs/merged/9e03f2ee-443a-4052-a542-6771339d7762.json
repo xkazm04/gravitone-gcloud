@@ -1,0 +1,80 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9e03f2ee-443a-4052-a542-6771339d7762",
+ "subject": "structured-output",
+ "evaluatedAt": "2026-10-24T21:40:04.273210+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "notebook-contract-validation",
+   "subject": "structured-output",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/notebook/shape.ts:60 The notebook door checks only that `confidence` (and likewise `tension.strength` and `sources[].evidenceClass`) is a non-empty string, while NOTEBOOK_SCHEMA declares closed enums for them, so on the prompted rung (the local CLI, where nothing constrains decoding) a value like \"very high\" passes the door that should hold domain checks with total strictness.",
+   "techniques": [
+    {
+     "technique": "schema-validation-and-repair",
+     "verdict": "deviation",
+     "evidence": "lib/notebook/shape.ts:60 Findings are path-addressed and repair is bounded (lib/text/repair.ts MAX_REPAIR_ATTEMPTS = 2), but the domain layer is missing: the schema enum ['high','medium','low'] (schema-facts.ts:21) is never re-checked by the validator. Where enums are checked (leap/useFor), the vocabulary is a hand-typed second copy (shape-helpers.ts:19 LEAPS), not derived from the schema."
+    },
+    {
+     "technique": "display-vs-machine-channels",
+     "verdict": "deviation",
+     "evidence": "lib/notebook/retrieval.ts:95 Whether the notebook admits that no search ran is recovered by running a regex over the human-prose `researchGaps[0]`, not carried as a typed field. That is the scraper-of-prose shape the technique bans. A rephrased confession refuses a valid notebook, and a confession that happens to match wins acceptance."
+    },
+    {
+     "technique": "graded-span-grounding",
+     "verdict": "conformant",
+     "evidence": "lib/notebook/retrieval.ts:106 The system, not the model, decides whether a cited URL was grounded: it aligns against this run's own fetch receipts with transport-only normalization (scheme, www, trailing slash, fragment). The result is graded, downgrading high to medium with a recorded finding rather than trusting the model's word."
+    },
+    {
+     "technique": "enumerable-domain-decoding",
+     "verdict": "conformant",
+     "evidence": "lib/notebook/schema-facts.ts:21 The closed value domains are carried in the request schema, so Gemini's constrained decoding enforces them on the native rung. The validator's failure to re-check them is recorded under schema-validation-and-repair."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "structured-output",
+   "context": "domain-run-job-steps",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "structured-output",
+   "context": "domain-decision-board-core",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "structured-output",
+   "context": "audio-hunt-arrange",
+   "reason": "These are UI boards and pure view models for auditioning and arranging takes. `prompt` here is a vendor input string (for example the sfxAnatomy/loopOf parsing in hunt.ts), not model output being extracted. The subject's precondition does not visibly hold, but \"prompt\" and \"llm\" (DraftList.tsx) hit in the directory, so a not-applicable verdict could not be proved by absence."
+  },
+  {
+   "subject": "structured-output",
+   "context": "domain-parts-projects-slots",
+   "reason": "These are domain state machines and part-view projections. No model-output extraction was found, but \"prompt\" occurs in partView.data.ts and partView.ts, so absence cannot be proved. The files were not read deeply enough for any other verdict."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T21:40:04.273210+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "structured-output"
+   ],
+   "techniques": [
+    "display-vs-machine-channels",
+    "enumerable-domain-decoding",
+    "graded-span-grounding",
+    "schema-validation-and-repair"
+   ],
+   "deviations": 1,
+   "context": "notebook-contract-validation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

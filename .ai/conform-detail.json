@@ -6646,42 +6646,54 @@
       "context": "run-records-and-slots",
       "subject": "audit-logging",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-18",
-      "evaluatedTs": "2026-10-18T21:47:20.645Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:10:18.805Z",
+      "worker": "3d61bdfc-dbc3-4060-9fe7-f2682d25f583",
       "techniques": [
         {
-          "technique": "append-only-design",
+          "technique": "retention-and-partitioning",
           "verdict": "deviation",
-          "evidence": "packages/kernel/src/records/schema.ts:93 Project, part, and run entities expose in-place UPDATE mutations rather than maintaining immutable history via append-only revisions."
+          "evidence": "packages/kernel/src/slots/schema.ts:78 An append-only ledger with no age or count horizon at its insert door and no named reaper."
         },
         {
-          "technique": "best-effort-with-accounting",
+          "technique": "append-only-design",
           "verdict": "conformant",
-          "evidence": "packages/kernel/src/slots/outcome.ts:57 Publication records act as fail-closed control records participating directly in the publishing transaction."
+          "evidence": "packages/kernel/src/slots/schema.ts:67 Publications and readings refuse UPDATE and DELETE at the schema, and slots refuse DELETE (cancel is soft). State rows that do mutate (runs, projects) record the change as a new event with from/to, for example launch.ts:277 run.relaunched."
         },
         {
           "technique": "write-chokepoint",
           "verdict": "conformant",
-          "evidence": "packages/kernel/src/records/write.ts:47 All plan mutation actions route ledger event writes through the single projectEvent helper within the mutation transaction."
+          "evidence": "packages/kernel/src/slots/write.ts:38 Every slot INSERT and UPDATE goes through one door that appends its event in the same transaction. A grep shows the record and slot tables are written only from schema.ts, write.ts, outcome.ts and import.ts, so the writers can be listed."
+        },
+        {
+          "technique": "write-path-sanitization",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/write.ts:61 The event carries references (ids, state, channel, rev), not the slot's free-form title, description or tags."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/outcome.ts:50 The publication row doubles as the duplicate guard, so it fails the action (claim exception), and the claim is fenced by a lease (assertFence)."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/outcome.ts:118 The reading's own time (snap.at, stored in metric_snapshots.at) is kept apart from the ledger's recorded `at`."
         },
         {
           "technique": "record-axis-predicate",
           "verdict": "deviation",
-          "evidence": "packages/kernel/src/slots/read.ts:43 Slot reads query current mutable rows without implementing a held_at(T) record-axis predicate to rewind to historical state."
+          "evidence": "packages/kernel/src/slots/read.ts:43 Slot reads query current mutable rows without implementing a held_at(T) record-axis predicate to rewind to historical state.",
+          "carriedFrom": "2026-10-18"
         },
         {
           "technique": "tamper-evidence",
           "verdict": "conformant",
-          "evidence": "packages/kernel/src/records/receipt.ts:112 Static launch receipts generate canonical SHA-256 tokens binding input lines and queue state to prove integrity at confirmation."
+          "evidence": "packages/kernel/src/records/receipt.ts:112 Static launch receipts generate canonical SHA-256 tokens binding input lines and queue state to prove integrity at confirmation.",
+          "carriedFrom": "2026-10-18"
         }
-      ],
-      "withdrawn": {
-        "worker": "c8fd5e99-17a1-4fcd-b394-ad0723cd1421",
-        "state": "deviation",
-        "at": "2026-10-18T21:48:30.149534+00:00",
-        "reason": "reviewer (sonnet): schema.ts:93 is a compare-and-set UPDATE on the mutable projects table, which is operational state and not the audit log. write.ts shows each mutation appending a ledger event in the same transaction, so 'destroys prior state with no append-only record' is not supported. I also could not confirm the"
-      }
+      ]
     },
     "2e702395-189e-4eb9-910c-dc4b76ff6e9a/audit-logging": {
       "context": "ui-ledger-timeline",
@@ -7112,47 +7124,48 @@
       "context": "domain-run-job-steps",
       "subject": "job-coordination",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-18",
-      "evaluatedTs": "2026-10-18T23:04:37.188Z",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:08:46.669Z",
+      "worker": "cfece91a-7af4-487a-83ac-531c6947bf9e",
       "techniques": [
         {
           "technique": "job-state-machines",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/transitions.ts:26 Enforces that state machine transitions are declared and validates transitions through an assert method."
-        },
-        {
-          "technique": "in-flight-is-a-position",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/job.ts:157 Enforces that an interrupted job record must name the running stage and holder so recovery knows what effect was in flight."
-        },
-        {
-          "technique": "lease-renewal",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/job.ts:152 Guarantees that a job holds a lease with monotonic fence and heartbeat TTL timestamps if and only if it is in running state."
-        },
-        {
-          "technique": "step-position-and-resumability",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/steps/record.ts:30 Step outputs are defined with versioned schemas, migration functions, and stable keys to allow explicit step-by-step resumption and migration."
-        },
-        {
-          "technique": "terms-travel-permission-does-not",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/job.ts:116 The job's USD ceiling is explicitly modeled on the job record as frozen terms that travel with the job rather than being looked up live."
+          "evidence": "packages/domain/src/job.machine.ts:31 Closed vocabulary as data with one authority. jobStateSchema is z.enum(jobMachine.states) and transitions.ts assert() refuses undeclared edges."
         },
         {
           "technique": "terminal-state-recovery",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/job.machine.ts:38 Terminal states have an empty transition set so no subsequent transition or retry sweep can rewrite a final verdict."
+          "evidence": "packages/domain/src/job.machine.ts:37 Terminal set is closed (done, cancelled, both []). A crashed job gets its own parked state whose only exits are back through the queue or cancel, and the record requires a typed error or an interruption payload. The domain declares no age policy for paused/failed/interrupted."
+        },
+        {
+          "technique": "in-flight-is-a-position",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.machine.ts:13 At job grain, running means dispatched. An orphaned running job becomes 'interrupted' (unknown outcome, with holder and stage recorded) rather than being re-run, so recovery reads a recorded fact. The disposition is the same for every step: park for the operator."
+        },
+        {
+          "technique": "lease-renewal",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:63 The lease record carries a fencing token, heartbeatAt and ttlS, and the schema requires a lease exactly while running. The renewal loop and expiry-is-loss live in kernel lease-core.ts, outside this context."
+        },
+        {
+          "technique": "liveness-proof-reclaim",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:48 Holder identity is bootId+pid+host, a start token that survives pid reuse. The comment at job.ts:46 says a different host 'is treated as gone', but kernel gone() returns false for a foreign host and leaves it to TTL (see notes)."
+        },
+        {
+          "technique": "terms-travel-permission-does-not",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:115 The ceiling, mode (dry/live with its arm) and steer are written into the record at submission. The comment on mode says a retry must not silently change it."
+        },
+        {
+          "technique": "step-position-and-resumability",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/steps/record.ts:30 Step outputs are defined with versioned schemas, migration functions, and stable keys to allow explicit step-by-step resumption and migration.",
+          "carriedFrom": "2026-10-18"
         }
-      ],
-      "withdrawn": {
-        "worker": "99e8ef43-be2f-440f-a820-ae80ff481c55",
-        "state": "conformant",
-        "at": "2026-10-18T23:06:10.368361+00:00",
-        "reason": "reviewer (sonnet): The technique at packages/domain/src/job.ts:157 only requires an `interruption` record (holder and time) while the job is interrupted, and `interruption.stage` is optional. `interrupted()` in job-core.ts:237 builds the record without a stage when none was in flight. So the claim that the record must"
-      }
+      ]
     },
     "3eb496e8-52aa-446d-bf75-07dc7c891b16/job-coordination": {
       "context": "kernel-python-protocol",
@@ -7445,38 +7458,37 @@
       "context": "notebook-contract-validation",
       "subject": "error-handling",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T00:35:35.055Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:47:25.569Z",
+      "worker": "a640b5be-1d38-4e10-b821-4edd0369e9f5",
       "techniques": [
-        {
-          "technique": "consumer-decides-error-shape",
-          "verdict": "deviation",
-          "evidence": "lib/notebook/corpus.ts:54 Corpus evaluation must parse message text with regexes because findings lack a closed enumeration for consumers to branch on."
-        },
         {
           "technique": "structured-propagation",
           "verdict": "deviation",
-          "evidence": "lib/notebook/failure.ts:19 NotebookFinding represents rules as unconstrained string prose rather than typed error categories."
+          "evidence": "lib/notebook/graph.ts:72 The typed `GraphIssue.kind` from cards.ts is written into the prose `rule` and never kept as a field. This is the 'failures the system mints itself' loss the technique names."
+        },
+        {
+          "technique": "consumer-decides-error-shape",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/corpus.ts:55 `NotebookFinding` carries `path`/`rule`/`observed` but no rule id. Its one branching consumer (the corpus probe and gate) has to recover the kind, and shape-rule identity, by matching prose."
         },
         {
           "technique": "parse-failure-keeps-identity",
           "verdict": "conformant",
-          "evidence": "lib/notebook/corpus.ts:110 measureCorpus isolates decode failures to individual corpus items identified by path while continuing to read remaining files."
+          "evidence": "lib/notebook/failure.ts:18 A model answer is one document, so it is refused whole and every finding names its position as a JSON path. The draft is kept for repair."
         },
         {
           "technique": "swallowed-error-prevention",
           "verdict": "conformant",
-          "evidence": "lib/notebook/dialect.ts:288 Unrecognized dialect keys are counted and reported in unmapped rather than silently swallowed during translation."
+          "evidence": "lib/notebook/corpus.ts:100 The catch is narrow: only the expected refusal becomes a verdict, and anything else is rethrown. Minor: `sameAddress` in retrieval.ts:150 uses a bare `catch {}` for URL normalisation without saying it drops the error on purpose."
+        },
+        {
+          "technique": "error-doors",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/shape.ts:162 A caught compile failure becomes a path-addressed finding that reaches the refusal, not a silent skip."
         }
-      ],
-      "registryProposal": "When validation frameworks express constraints as path-addressed rules, omitting machine-readable error codes forces downstream consumers into regex prose matching to classify failures.",
-      "withdrawn": {
-        "worker": "d6f6baed-f800-461c-aba4-54e6cb0d5b27",
-        "state": "deviation",
-        "at": "2026-10-19T00:37:36.273263+00:00",
-        "reason": "reviewer (sonnet): The deviation is anchored on lib/notebook/corpus.ts (ruleOf, measureCorpus), which is not among the context's files. validate.ts imports failure.ts but nothing in the context calls corpus.ts, so the verdict describes a consumer outside the context. The cited lines are accurate: ruleOf does regex-nor"
-      }
+      ]
     },
     "b412ea73-0dc3-4362-93c4-2a9b913f9a61/import-normalization": {
       "context": "v1-import-and-archive",
@@ -7661,67 +7673,72 @@
       "context": "produce-compose-receipt",
       "subject": "plan-entitlements",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T00:56:15.434Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:13:03.270Z",
+      "worker": "00f50198-d868-46f3-8277-c08d5b7a7dd8",
       "techniques": [
         {
           "technique": "capability-gate-predicates",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/Receipt.tsx:96 Confirmation is blocked by invalid ceiling input; no paid-plan capability predicate was found."
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:96 Confirmation is blocked by invalid ceiling input; no paid-plan capability predicate was found.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "deployment-mode-short-circuit",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/Receipt.tsx:105 Mode denotes dry or live job execution, not whether a deployment sells capabilities."
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:105 Mode denotes dry or live job execution, not whether a deployment sells capabilities.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "entitlement-lifecycle-revocation",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/LaneHold.tsx:45 Acknowledgement addresses an interrupted paid vendor job; no subscription cancellation or recovery lifecycle was found."
+          "evidence": "packages/ui/src/components/produce/LaneHold.tsx:45 Acknowledgement addresses an interrupted paid vendor job; no subscription cancellation or recovery lifecycle was found.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "id-vs-label-split",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/PlanTable.tsx:44 The selected identity belongs to a vendor-model option, not a tenant tier."
+          "evidence": "packages/ui/src/components/produce/PlanTable.tsx:44 The selected identity belongs to a vendor-model option, not a tenant tier.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "inherited-tier-not-cloned-tier",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:51 A choice selects a production route; no customer-specific commercial agreement or inherited tier was found."
+          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:51 A choice selects a production route; no customer-specific commercial agreement or inherited tier was found.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "live-catalog-edit-is-a-lifecycle-event",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/produce.ts:125 Change detection compares individual launch receipts, not catalog edits affecting subscribed tenants."
+          "evidence": "packages/ui/src/components/produce/produce.ts:125 Change detection compares individual launch receipts, not catalog edits affecting subscribed tenants.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "price-book-authority",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/Receipt.tsx:78 Receipt lines display dependency usage costs, which this technique explicitly excludes."
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:78 Receipt lines display dependency usage costs, which this technique explicitly excludes.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "provider-publishes-state-not-decision",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:8 The consumed server preview describes production-route deltas, not operator-defined entitlements served to another product."
+          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:8 The consumed server preview describes production-route deltas, not operator-defined entitlements served to another product.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "subtractive-entitlement",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/produce.ts:132 Removed entries are receipt-line differences; they are not exceptions to inherited tier capabilities."
+          "evidence": "packages/ui/src/components/produce/produce.ts:132 Removed entries are receipt-line differences; they are not exceptions to inherited tier capabilities.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "tier-model-single-source",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/ComposeDialog.tsx:88 The rendered catalog contains composition recipes; no commercial tier catalog was found."
+          "evidence": "packages/ui/src/components/produce/ComposeDialog.tsx:88 The rendered catalog contains composition recipes; no commercial tier catalog was found.",
+          "carriedFrom": "2026-10-19"
         }
-      ],
-      "withdrawn": {
-        "worker": "a87fba3d-c5f1-435b-9093-b39bdf1c12fe",
-        "state": "not-applicable",
-        "at": "2026-10-19T00:56:39.749705+00:00",
-        "reason": "reviewer (sonnet): The anchor produce.ts:51 is optionCost, a per-unit USD calculation, which doesn't show that a plan or tier precondition is absent. Unpriced.tsx:15 even checks for 'subscription' in a reason string, and the seat's evidence never mentions it. The technique anchors (Receipt mode chip, ModelPicker, Lane"
-      }
+      ]
     },
     "e2f6231a-d39f-4d39-9465-0a48436cae92/migrations": {
       "context": "project-step-store",
@@ -7860,52 +7877,48 @@
       "context": "ui-controls-shell",
       "subject": "accessibility",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T01:24:56.300Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:32:39.639Z",
+      "worker": "609656eb-2b77-4fb9-aeda-4ae17cdd4c5f",
       "techniques": [
         {
-          "technique": "a11y-verification",
+          "technique": "live-region-architecture",
           "verdict": "deviation",
-          "evidence": "packages/ui/test/components/controls.test.ts:130 This Toast check asserts static live-region markup, leaving announcement timing, bursts and repeated-message delivery unobserved."
-        },
-        {
-          "technique": "hidden-but-mounted-inertness",
-          "verdict": "deviation",
-          "evidence": "packages/ui/src/components/sheet/LevelSheet.tsx:58 The ordinary sheet initially mounts translated offscreen until requestAnimationFrame sets risen, with no inert boundary; its focus effect already targets the mounted section."
+          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 The region is mounted before any news (role=status at :21), which is good. But there is no keyed remount or clear-then-set, so a repeat is a no-op. The shell's scheduler (app/(studio)/_shell/toast.ts showToast) also replaces the open receipt rather than queueing it, so in a burst only the last write is heard."
         },
         {
           "technique": "keyboard-navigation-models",
           "verdict": "deviation",
-          "evidence": "packages/ui/src/components/field/Field.module.css:5 The field removes the focus outline and substitutes a border tint; this selector also outranks the shared :focus-visible outline."
-        },
-        {
-          "technique": "live-region-architecture",
-          "verdict": "deviation",
-          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 Toast owns a separate live region and renders the message directly; the shell receipt store replaces the current message without a drain queue or repeat mutation."
+          "evidence": "packages/ui/src/components/field/Field.module.css:5 Field, Select and Search remove the app-wide 2px focus outline (this unlayered module beats @layer base) and replace it with a 1px border at .55 alpha, a weaker indicator than the one removed. app/globals.css says to tint the border as well as the outline, not instead of it. The focus-ring probe only walks app/ and components/, so it never checks packages/ui."
         },
         {
           "technique": "name-and-description-wiring",
           "verdict": "deviation",
-          "evidence": "packages/ui/src/components/toggle/Toggle.tsx:34 The override replaces the visible label without preserving it: the ledger Toolbar passes visible '{ } jsonl' with accessible name 'agent view, JSON Lines'."
+          "evidence": "packages/ui/src/components/toggle/Toggle.tsx:34 The free-form `name` replaces the visible label instead of starting with it. Call sites set label \"live\" with name \"arm live, now dry\", and label X with name \"mechanism X\", so the spoken name differs from the drawn word (label-in-name) and the live one also writes state into the name next to aria-pressed. Field.tsx:26 (required aria-label) and Button's required `label` are conformant."
+        },
+        {
+          "technique": "hidden-but-mounted-inertness",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/fold/Fold.tsx:56 Fold renders its body only after the first open, then hides it with the `hidden` attribute, which closes the visual and accessibility channels together from one condition. When closed, the Toast holds no text and does not mount its ledger link."
+        },
+        {
+          "technique": "primitive-level-a11y",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/button/Button.tsx:63 Native button, a/select/input everywhere; label required; aria-pressed on Toggle and Seg; disabled is honest (it stays in the tab order). Caveat: a disabled `submit` Button still submits its form when activated, because aria-disabled does not block native submission, so every form's onSubmit has to re-check busy itself (HuntShelf.tsx:38, ScheduleForm.tsx:103)."
+        },
+        {
+          "technique": "a11y-verification",
+          "verdict": "deviation",
+          "evidence": "packages/ui/test/components/controls.test.ts:130 The primitive tests regex-match SSR markup for attributes (role, aria-pressed, aria-live) instead of querying computed names by role or the sequence of announcements. Nothing announces the same text twice, so the repeat-silence defect passes. This is the attribute-as-proxy trap the gate-sees-target law names."
         },
         {
           "technique": "preference-respect",
           "verdict": "deviation",
-          "evidence": "packages/ui/src/components/button/Button.module.css:3 The button combines a fixed pixel-token height with nonwrapping text, preventing its container from growing and reflowing with enlarged text."
-        },
-        {
-          "technique": "primitive-level-a11y",
-          "verdict": "deviation",
-          "evidence": "packages/ui/src/components/button/Button.tsx:64 Disabled removes only the click callback; with submit=true the native button still submits its form because aria-disabled does not cancel default activation."
+          "evidence": "packages/ui/src/components/button/Button.module.css:3 The button combines a fixed pixel-token height with nonwrapping text, preventing its container from growing and reflowing with enlarged text.",
+          "carriedFrom": "2026-10-19"
         }
-      ],
-      "withdrawn": {
-        "worker": "dc8dbf29-2572-4da5-94dd-b0a6451fd770",
-        "state": "deviation",
-        "at": "2026-10-19T01:25:24.174250+00:00",
-        "reason": "reviewer (sonnet): The deviation anchors on Toast.tsx:22, and Toast.tsx and LevelSheet.tsx are not among this context's files. The claim that the shell receipt store replaces the message with no drain queue or repeat mutation could not be confirmed: Toast.tsx is the only non-test file that mentions Toast, and I found "
-      }
+      ]
     },
     "5414e8ac-5105-43f0-a153-088e12501c9d/accessibility": {
       "context": "ui-marks-and-text",
@@ -8079,42 +8092,37 @@
       "context": "imaging-vendor-providers-and-video",
       "subject": "agent-browser-control",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T01:39:42.293Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:51:08.440Z",
+      "worker": "86485527-955b-4d7f-9145-39ea0e061614",
       "techniques": [
         {
           "technique": "references-over-selectors",
-          "verdict": "deviation",
-          "evidence": "lib/imaging/studio/selectors.ts:81 Maintains hardcoded DOM selectors in a static lookup table instead of generating runtime accessibility references with external locators."
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/selectors.ts:81 Selectors are written by a human after a dated recon, not by an agent reading a text dump, so the agent-naming problem never comes up."
         },
         {
           "technique": "persistent-browser-daemon",
-          "verdict": "deviation",
-          "evidence": "lib/imaging/studio/browser.ts:28 Connects to a hardcoded CDP port instead of discovering a managed workspace daemon via an atomic owner-only state file."
-        },
-        {
-          "technique": "effect-classed-commands",
-          "verdict": "deviation",
-          "evidence": "lib/imaging/providers/leonardoStudio.ts:45 Exposes ad-hoc driver methods without declaring an effect-classed command registry distinguishing reads, writes, and meta operations."
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/browser.ts:80 It attaches to the operator's own Chrome profile over CDP. The process does not own or serve a browser daemon, and no agent command loop calls it."
         },
         {
           "technique": "agent-actionable-errors",
-          "verdict": "deviation",
-          "evidence": "lib/imaging/studio/driver.ts:261 Throws descriptive failure strings without providing the literal next command or action class required for autonomous recovery."
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/driver.ts:30 Errors go to the imaging router and the operator, not to an agent choosing its next browser command."
+        },
+        {
+          "technique": "effect-classed-commands",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/driver.ts:174 There is no agent command registry to classify. The nearest thing is a wire guard on the vendor's GraphQL mutations, which is spend safety, not command classes."
         },
         {
           "technique": "socket-scoped-surface",
           "verdict": "not-applicable",
-          "evidence": "lib/imaging/studio/browser.ts:43 The browser automation is strictly loopback-bound with no remote forwarding tunnel or remote agent surface."
+          "evidence": "lib/imaging/studio/browser.ts:47 Nothing exposes a listener to remote agents, and there is no tunnel."
         }
-      ],
-      "withdrawn": {
-        "worker": "e3a297a2-615c-47d1-8e70-2ce7cdfa4aa7",
-        "state": "deviation",
-        "at": "2026-10-19T01:40:02.387531+00:00",
-        "reason": "reviewer (sonnet): The hardcoded-selector table at selectors.ts:81 is real, but the other technique claims don't hold. browser.ts uses a default CDP endpoint that LEONARDO_STUDIO_CDP overrides, so the port isn't hardcoded. driver.ts:261 throws StudioError with a typed class ('failed' or 'signed-out'), which contradict"
-      }
+      ]
     },
     "d6ef2aee-128a-4430-80a9-de42991c6316/browser-credential-boundary": {
       "context": "ui-status-provenance",
@@ -8171,47 +8179,42 @@
       "context": "trailer-structure-engine",
       "subject": "creator-voice-and-tone",
       "bundle": "media-generation",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T02:11:43.195Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:32:28.794Z",
+      "worker": "a10915a7-5b73-4849-a4b8-91ed4884bd2a",
       "techniques": [
         {
           "technique": "delivery-rate-budgeting",
           "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/types.ts:30 The structural model does not set a narration rate or duration budget."
-        },
-        {
-          "technique": "dial-vs-subject-property",
-          "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/plan.ts:33 These are explicit structural-edit fields; the searched context exposes no creator-tone dials."
+          "evidence": "lib/script/trailer/types.ts:30 The cut has no duration or word budget; timing belongs to the separate shot layer."
         },
         {
           "technique": "engine-tone-separation",
           "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/cut.ts:3 This module composes structural data rather than rendering prose against a tone profile."
-        },
-        {
-          "technique": "reference-world-and-bookends",
-          "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/plan.ts:134 Plan application patches existing beats; searches found no reference-world or signature-bookend machinery."
+          "evidence": "lib/script/trailer/structure.ts:40 Structure is kept as data, but nothing here takes a tone input, so there is no separation to enforce."
         },
         {
           "technique": "spoken-delivery-direction",
           "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/types.ts:402 The downstream seam described here concerns shots, with no synthetic-narrator casting or speech-direction path found."
+          "evidence": "lib/script/trailer/types.ts:51 This is a form vocabulary only. No narrator casting or speech render happens in this context."
+        },
+        {
+          "technique": "dial-vs-subject-property",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/types.ts:30 No creator-facing dials exist here."
+        },
+        {
+          "technique": "reference-world-and-bookends",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/structure.ts:40 No bookend slots and no analogy-domain lists in this context."
         },
         {
           "technique": "voice-profile-from-accepted-work",
           "verdict": "not-applicable",
-          "evidence": "lib/script/trailer/ops.ts:269 Rebasing retains structural edits and the campaign budget; no learned voice-profile update path was found."
+          "evidence": "lib/script/trailer/types.ts:51 No learned profile in this context."
         }
-      ],
-      "withdrawn": {
-        "worker": "c7a94e8e-ad80-40f1-87cf-463119460401",
-        "state": "not-applicable",
-        "at": "2026-10-19T02:12:00.284165+00:00",
-        "reason": "reviewer (sonnet): The anchor (structure.ts:40) is a comment saying the checker has no access to duration, shot count, loudness or image. That says nothing about creator voice or tone. The absence search is the only support for the claim. The context's plan.ts also lets a model rewrite beat `text` and `label` (PATCHAB"
-      }
+      ]
     },
     "e5b296e2-cccf-47a5-b8bd-ce730d40ace8/embedded-db": {
       "context": "kernel-store-and-events",
@@ -8325,42 +8328,39 @@
       "context": "ui-ledger-timeline",
       "subject": "long-form-reading-surface",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T09:39:20.152Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:44:12.584Z",
+      "worker": "2556fdd7-1fce-4891-93e8-dd261d9fae51",
       "techniques": [
         {
-          "technique": "anchor-id-single-assigner",
+          "technique": "scroll-spy-reading-band",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/ledgerlink/LedgerLink.tsx:9 The link consumes a caller-supplied ledger destination and does not derive heading addresses."
+          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:3 The only position UI is a pointer-dragged day range on a bar chart. Nothing tracks which section the reader has scrolled to."
         },
         {
           "technique": "fixed-chrome-offset-budget",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/timestrip/TimeStrip.module.css:2 The strip uses local relative positioning; the context contains no pinned reading panel or anchored-heading clearance."
+          "evidence": "packages/ui/src/components/crumbs/Crumbs.tsx:10 The breadcrumb is an inline nav landmark. None of these components pins itself against a header or reads a header height."
+        },
+        {
+          "technique": "anchor-id-single-assigner",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/jsonl/Json.tsx:3 The JSON views address records by line number in a windowed list. They have no headings and mint no anchor ids."
         },
         {
           "technique": "focus-transfer-on-in-place-navigation",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/crumbs/Crumbs.tsx:18 Breadcrumb actions delegate to callers; these components own no article-content replacement or destination heading."
-        },
-        {
-          "technique": "scroll-spy-reading-band",
-          "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:104 The tracked domain is event dates and selected ranges, not reading position within prose."
+          "evidence": "packages/ui/src/components/crumbs/Crumbs.tsx:18 Breadcrumb actions delegate to callers; these components own no article-content replacement or destination heading.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "server-parsed-once-reused",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/jsonl/Json.tsx:17 This scanner produces JSON syntax-coloring runs, not a document outline, heading addresses or reading metrics."
+          "evidence": "packages/ui/src/components/jsonl/Json.tsx:17 This scanner produces JSON syntax-coloring runs, not a document outline, heading addresses or reading metrics.",
+          "carriedFrom": "2026-10-19"
         }
-      ],
-      "withdrawn": {
-        "worker": "fc8110cb-0e57-4fee-9b83-1e74b6b72741",
-        "state": "not-applicable",
-        "at": "2026-10-19T09:39:58.393689+00:00",
-        "reason": "reviewer (sonnet): The not-applicable's anchor, INVENTORY.md:93, is the JsonLine/JsonBlock table row. It sits outside the context's component files and does not show that a navigable prose document is absent; the technique anchors I opened (LedgerLink.tsx:9, Crumbs.tsx:18, TimeStrip.tsx:104) only show those components"
-      }
+      ]
     },
     "3f11be96-c51f-4098-8472-341c42362e6d/measurement-honesty": {
       "context": "sound-hunt-and-measure",
@@ -8891,52 +8891,47 @@
       "context": "publish-producers",
       "subject": "background-jobs",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T22:37:07.444Z",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T22:16:40.602Z",
+      "worker": "a7bb55b2-ffca-4a6e-8732-c8e64597b987",
       "techniques": [
-        {
-          "technique": "adaptive-cadence",
-          "verdict": "conformant",
-          "evidence": "packages/producers/src/publish/tick.ts:89 publishTick inspects upcoming scheduled slots and returns next to wake earlier when a slot is due before the idle cadence interval."
-        },
-        {
-          "technique": "job-progress-and-cancellation",
-          "verdict": "not-applicable",
-          "evidence": "packages/producers/src/publish/publish.ts:53 Publishing operates under recurring timer ticks above the kernel job model rather than as watched jobs with progress streams or snapshot re-attachment."
-        },
-        {
-          "technique": "loop-health-telemetry",
-          "verdict": "conformant",
-          "evidence": "packages/producers/src/publish/timers.ts:75 timerStatusIn provides a queryable current-state surface for registered timers, detecting silence via stale lease heartbeats and surfacing standing failures."
-        },
         {
           "technique": "loop-supervision",
           "verdict": "conformant",
-          "evidence": "packages/producers/src/publish/timers.ts:20 Names come from a closed set with explicit TimerSpec registration parameters and lease TTL slack for singleton loops."
-        },
-        {
-          "technique": "startup-sweeps",
-          "verdict": "conformant",
-          "evidence": "packages/producers/src/publish/tick.ts:55 downtimeOf attributes slots missed during worker downtime directly to the detected gap window, recording provenance on the missed event."
+          "evidence": "packages/producers/src/publish/timers.ts:20 Closed name roster. TimerSpec carries name, everyMs, deadlineMs and firstDelayMs, so cadence and first-tick delay sit in the registration, not the body. Each timer is a kernel lease on timer:<name> with a TTL of three missed beats (timerTtlS, line 44): a heartbeat claim with slack."
         },
         {
           "technique": "tick-isolation",
           "verdict": "conformant",
-          "evidence": "packages/producers/src/publish/publish.ts:118 publishClaimed catches throws from adapter sends, converting crashes to recorded failures on the slot so an upload error never kills the tick loop."
+          "evidence": "packages/producers/src/publish/timers.ts:27 Each loop declares a per-tick deadline in its spec (30 min for publish-tick). Abandoned work is fenced, so it cannot corrupt shared state. Inside the body, publishClaimed catches adapter throws per slot (publish.ts:117) and records them as slot failures, so one bad slot costs one outcome, not the tick. Crash capture, the re-entrancy skip and quarantine run in the worker envelope (workers/timers.ts), which is outside this context."
+        },
+        {
+          "technique": "adaptive-cadence",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:51 The tick returns the earliest still-scheduled slot (computed at tick.ts:89), so the loop can wake at that slot's time. The 30 s idle cadence stays as the safety net, and timers.ts:33 states the worst-case latency next to the constant. firstDelayMs staggers boot (0 vs 60 s), a deliberate stagger rather than random jitter. The metrics cadence is justified next to its constant by quota."
+        },
+        {
+          "technique": "loop-health-telemetry",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/timers.ts:75 A read-only current-state surface: one row per roster entry with lastRunAt, nextDueAt, stale (silence via lease heartbeat lapse or a dead process), the standing failure verbatim, and quarantined. Transitions only (timer.fail/recover/quarantine/gap), not one event per tick. Two partial gaps: there is no explicit consecutive-failure count (failing.since stands in) and no last-success time separate from the heartbeat."
+        },
+        {
+          "technique": "startup-sweeps",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:74 The startup catch-up is the steady-state sweep itself, the publish-tick's first firing at firstDelayMs 0. It reports missed, interrupted (claims held by dead holders), drifted and cleared slots. A miss inside the downtime gap is attributed with downtime {from, to} in the same commit as the miss."
+        },
+        {
+          "technique": "job-progress-and-cancellation",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:82 Cooperative stop at safe points between claimed uploads. Unstarted claims fail with a stated cause (STOPPED_TEXT, publish.ts:53), never left phantom-running. Uploads heartbeat the claim per chunk (the keeper in publish.ts), which serves as the is-it-moving signal. A lost fence stops the sender. Outcomes are a closed published/failed/lost set keyed by slot id. An upload already in flight is an uncancellable span; there is no done/total progress, only liveness."
         },
         {
           "technique": "timeout-is-a-status-not-a-consumption",
           "verdict": "not-applicable",
-          "evidence": "packages/producers/src/publish/timers.ts:28 Publishing ticks use deadlines that abandon and fence timed-out runs rather than bounded waits on tracked operations that return a non-consuming give-up status."
+          "evidence": "packages/producers/src/publish/tick.ts:106 Nothing here is a budgeted wait on a tracked operation that can give up and wait again. publish-now runs the tick inline and awaits its result. The only deadline (deadlineMs) abandons and fences the work, which is the cancellation contract this technique excludes."
         }
-      ],
-      "withdrawn": {
-        "worker": "f9ebe6cd-2da8-41bc-ba6f-cb25a251525b",
-        "state": "conformant",
-        "at": "2026-10-19T22:37:30.959317+00:00",
-        "reason": "reviewer (sonnet): The anchors back only part of the claim: timers.ts shows the closed TIMER_NAMES set, TimerSpec and timerStatusIn, and tick.ts:89 shows the `next` wakeup. Three other claims are unsupported. publish.ts:53 is just the STOPPED_TEXT constant, so it does not show publishing runs as timer ticks rather tha"
-      }
+      ]
     },
     "0c02b354-237b-44cb-9283-518ed620e846/cross-instance-cache-lease": {
       "context": "job-queue-and-leases",
@@ -9700,155 +9695,145 @@
       "context": "run-records-and-slots",
       "subject": "subprocess-lifecycle",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-22",
-      "evaluatedTs": "2026-10-22T21:37:52.959Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:36:20.677Z",
+      "worker": "93fc62f4-d6f4-47b9-af27-3fe76daf9c43",
       "techniques": [
-        {
-          "technique": "cancellation-needs-a-terminable-unit",
-          "verdict": "not-applicable",
-          "evidence": "packages/kernel/src/slots/core.ts:114 Calendar cancellation computes a record transition; it does not cancel executable guest work or own a terminable child."
-        },
         {
           "technique": "concurrency-and-slots",
           "verdict": "not-applicable",
-          "evidence": "packages/kernel/src/slots/schema.ts:107 Publishing slots enforce item/channel exclusivity, rather than admission capacity for operating-system children."
-        },
-        {
-          "technique": "decode-child-output-per-line",
-          "verdict": "not-applicable",
-          "evidence": "packages/kernel/src/slots/schema.ts:153 This reads stored JSON text; the context captures no child-output bytes requiring decoding."
-        },
-        {
-          "technique": "host-resource-protection",
-          "verdict": "not-applicable",
-          "evidence": "packages/kernel/src/records/receipt.ts:158 The receipt ceiling measures monetary exposure, rather than a subprocess execution ceiling or machine-resource budget."
+          "evidence": "packages/kernel/src/records/schedule.ts:4 Lane 'slots' are a deterministic schedule drawing, not admission before a process spawn."
         },
         {
           "technique": "liveness-and-heartbeats",
           "verdict": "not-applicable",
-          "evidence": "packages/kernel/src/slots/outcome.ts:84 The heartbeat renews a fenced publishing claim; it does not supervise progress on a spawned child's output channels."
-        },
-        {
-          "technique": "session-reuse",
-          "verdict": "not-applicable",
-          "evidence": "packages/kernel/src/records/receipt.ts:112 This fingerprint confirms receipt inputs and queue state; it does not identify or pool CLI sessions."
-        },
-        {
-          "technique": "spawn-contract",
-          "verdict": "not-applicable",
-          "evidence": "packages/kernel/src/records/launch.ts:24 Launch persists records and enqueues jobs; inspection of enqueueIn confirmed a database insert rather than process creation."
+          "evidence": "packages/kernel/src/slots/sweep.ts:34 The heartbeat renews a store lease that the publishing process holds on a slot. It is not liveness of a child the host spawned (delivery-guarantees/concurrency-guards territory)."
         },
         {
           "technique": "termination-and-reaping",
           "verdict": "not-applicable",
-          "evidence": "packages/kernel/src/slots/sweep.ts:120 The sweep fences stale claimants and records interrupted publishing; it owns no child handle to terminate or reap."
+          "evidence": "packages/kernel/src/slots/sweep-core.ts:11 'interrupt' fails a calendar record whose claimant lapsed. Nothing is killed or reaped, because no process tree belongs to this code."
+        },
+        {
+          "technique": "spawn-contract",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/records/launch.ts:13 Launch only enqueues a kernel Job row in the store transaction. No spawn door, argv or env is built here."
+        },
+        {
+          "technique": "cancellation-needs-a-terminable-unit",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/core.ts:114 Calendar cancellation computes a record transition; it does not cancel executable guest work or own a terminable child.",
+          "carriedFrom": "2026-10-22"
+        },
+        {
+          "technique": "decode-child-output-per-line",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/schema.ts:153 This reads stored JSON text; the context captures no child-output bytes requiring decoding.",
+          "carriedFrom": "2026-10-22"
+        },
+        {
+          "technique": "host-resource-protection",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/records/receipt.ts:158 The receipt ceiling measures monetary exposure, rather than a subprocess execution ceiling or machine-resource budget.",
+          "carriedFrom": "2026-10-22"
+        },
+        {
+          "technique": "session-reuse",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/records/receipt.ts:112 This fingerprint confirms receipt inputs and queue state; it does not identify or pool CLI sessions.",
+          "carriedFrom": "2026-10-22"
         }
-      ],
-      "withdrawn": {
-        "worker": "be5f76c2-85cc-46c6-82e5-a03f11ed1f51",
-        "state": "not-applicable",
-        "at": "2026-10-22T21:38:24.687681+00:00",
-        "reason": "reviewer (sonnet): The main anchor, records/schema.ts:110, is `insertRun`, which only inserts a row. It does not show that child processes are absent. The context's own records/launch.ts, read.ts and schedule.ts import LANE_CAPACITY and ResourceLane and compute lane admission capacity and ETA for jobs that occupy a GP"
-      }
+      ]
     },
     "bd05d347-c5c6-4eb4-8de2-b68a6102ac01/sync-replication": {
       "context": "ledger-v1-projection-core",
       "subject": "sync-replication",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-22",
-      "evaluatedTs": "2026-10-22T21:48:52.286Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:40:03.673Z",
+      "worker": "ce08eadc-47f3-4ae9-9c05-b3a88d7e3db1",
       "techniques": [
+        {
+          "technique": "topology-declaration",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/types.ts:12 One-way mirror from v1 stores into the append-only kernel ledger, with the direction stated. The engine is generic over the V1_SOURCES list (lib/ledger/v1/sources.ts), and local drift is reported, not overwritten."
+        },
         {
           "technique": "change-tracking-and-cursors",
           "verdict": "deviation",
-          "evidence": "lib/ledger/v1/sync.ts:152 The sync loop reads and projects entire source snapshots on every pass instead of maintaining durable per-stream cursors that advance after settlement."
+          "evidence": "lib/ledger/v1/sync.ts:31 No cursor: each pass re-reads the full snapshot and appends idempotently by key, in bounded 200-event transactions, and keeps read failures separate from empty passes, which is sound. But the periodic tick that should set the floor was rejected on purpose, so liveness depends on page renders acting as the wake signal."
         },
         {
           "technique": "conflict-detection-and-policy",
-          "verdict": "deviation",
-          "evidence": "lib/ledger/v1/sync.ts:138 When existing keys return with altered content, the sync only counts them as drifted and discards the new payload without parking or preserving the conflict."
-        },
-        {
-          "technique": "in-flight-is-per-connection",
-          "verdict": "not-applicable",
-          "evidence": "lib/ledger/v1/types.ts:156 Sources are read directly in-process and written to local SQLite rather than pushed across remote socket connections with retransmission queues."
-        },
-        {
-          "technique": "projection-security",
           "verdict": "conformant",
-          "evidence": "lib/ledger/v1/facts.ts:65 Outbound events are projected through a single factory that allowlists fields and tags each event with the data universe boundary."
+          "evidence": "lib/ledger/v1/sync.ts:138 A held key that comes back with different content is compared by content identity (kernel appendOnce `same`). The held fact stands, which is the append-only policy, and the drift is counted in the report as its own outcome instead of being overwritten or dropped."
         },
         {
           "technique": "sync-observability",
           "verdict": "conformant",
-          "evidence": "lib/ledger/v1/sync.ts:167 Per-stream failures are isolated and tracked in health records with failure streaks and verbatim error messages without aborting sibling streams."
+          "evidence": "lib/ledger/v1/sync.ts:167 Each source gets its own outcome with the error class and verbatim text, a consecutive-failure streak, and last_ok_at kept separate from last_error_at in ingest_sources. A failing source does not stop the others (readOne never throws)."
         },
         {
           "technique": "tombstone-propagation",
-          "verdict": "deviation",
-          "evidence": "lib/ledger/v1/sync.ts:231 The projection sync only appends events and omits tombstone propagation, causing the replica to retain deleted source history indefinitely."
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sync.ts:206 The receiving side is an append-only event history, so keeping facts whose v1 record is gone is the purpose. Live work is read at render time and never stored, so a deleted v1 record cannot come back as a stored ghost."
         },
         {
-          "technique": "topology-declaration",
+          "technique": "in-flight-is-per-connection",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sync.ts:133 Delivery is an in-process SQLite transaction. There is no socket outbox or connection-level retransmit queue."
+        },
+        {
+          "technique": "projection-security",
           "verdict": "conformant",
-          "evidence": "lib/ledger/v1/sources.ts:23 Mirrored streams are declared in an enumerable registry of read-only projection sources that lack write methods back to the source stores."
+          "evidence": "lib/ledger/v1/facts.ts:65 Outbound events are projected through a single factory that allowlists fields and tags each event with the data universe boundary.",
+          "carriedFrom": "2026-10-22"
         }
       ],
-      "withdrawn": {
-        "worker": "97fa5cb7-e4ae-4d06-8e3a-1f5bc52fed98",
-        "state": "deviation",
-        "at": "2026-10-22T21:49:26.928740+00:00",
-        "reason": "reviewer (sonnet): The facts.ts:65 anchor does not allowlist fields (make() spreads f.data and extra and only adds src), and the 'omits tombstone propagation' claim has no anchor (grep finds no tombstone, delete or cursor code). The context is also a one-way idempotent append-only ingest, not replication, so the 'no d"
-      }
+      "registryProposal": "change-tracking-and-cursors treats the periodic tick as mandatory. It does not cover demand-driven freshness, where every reader triggers the sync under a single-flight claim. That design is only safe when every reader goes through the trigger, and the technique could say so: list the readers and require that each one triggers the sync or carries a staleness bound. Without that rule, a design that skips the tick looks deliberate and still leaves a door (here an agents' API route) with no freshness limit."
     },
     "2e702395-189e-4eb9-910c-dc4b76ff6e9a/time-travel-replay": {
       "context": "ui-ledger-timeline",
       "subject": "time-travel-replay",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-23",
-      "evaluatedTs": "2026-10-23T21:12:02.093Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:45:00.789Z",
+      "worker": "02ed6000-8256-4627-b768-042e82d278d4",
       "techniques": [
         {
           "technique": "timeline-derivation",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/timestrip/strip.ts:14 The only replay wording drops the locally replayed session segment; bars are day counts, not a playable ordering of raw records."
+          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:3 The day buckets are a static map of the whole record, not a playable timeline with a moving now."
         },
         {
           "technique": "transport-and-time-mapping",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/wave/Wave.tsx:13 The only playhead is a unitless audio-peak fraction that dims bars; there is no record-time map, speed, or dead-air marker."
-        },
-        {
-          "technique": "accrual-overlays",
-          "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/header/header.ts:8 Header spend is a settled window sum with no playhead, so there is no clocked accrual to fold or reconcile."
-        },
-        {
-          "technique": "estimate-labeling",
-          "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:27 Inferred time is a static row flag (drawn as ≈, with est/ill on cost); nothing plays the row, so labels have no playback to survive."
+          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:11 The drag is a range brush for filtering. There is no play/pause/seek/speed transport and no replay clock."
         },
         {
           "technique": "renderer-reuse",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/jsonl/Json.tsx:4 JSON is a fixed-height windowed list of settled records; these files have no replay feed and no second renderer."
+          "evidence": "packages/ui/src/components/timestrip/strip.ts:14 The one replayed feed the prototype had was removed, so there is no replay feed to share or fork a renderer for."
         },
         {
           "technique": "scrub-performance",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:11 A drag commits a date-range filter, not a fold-at-t seek, so keyframes and prefix sums have no scrub to accelerate."
+          "evidence": "packages/ui/src/components/wave/Wave.tsx:13 This playhead is an audio take's position (media-playback), not a fold over run records, so keyframes and prefix sums do not come into it."
+        },
+        {
+          "technique": "accrual-overlays",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/header/header.ts:8 Spend is a settled sum over a time window that is never re-accrued against a replay position."
+        },
+        {
+          "technique": "estimate-labeling",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:68 Derived times are marked on each datum in a static list, which is sound on its own terms, but nothing is played back, so the rule for keeping the label visible during playback has nothing to govern."
         }
-      ],
-      "registryProposal": "The golden path already excludes a settled spatial map and points transport grammar at media-playback, but the six use_when lines never say the precondition is an agent-run replay clock, so a day-histogram brush and an audio peak playhead look like a broken replay.",
-      "withdrawn": {
-        "worker": "e981cf5b-a2d5-402c-b254-e0a848a73a1e",
-        "state": "not-applicable",
-        "at": "2026-10-23T21:12:30.838444+00:00",
-        "reason": "reviewer (sonnet): The anchor (timestrip/TimeStrip.tsx) and the techniques at timestrip/strip.ts and wave/Wave.tsx are not among the context's listed files (crumbs, header, eventrow, ledgerlink, jsonl), and Wave is an audio component. I confirmed the comments as written, but I could not confirm that the timestrip and "
-      }
+      ]
     },
     "d067e4e3-6739-4666-9103-06dac7f825ac/agent-memory": {
       "context": "library-projection-feeds",
@@ -11758,6 +11743,1825 @@
       "evaluatedTs": "2026-10-24T06:38:35.278Z",
       "worker": "7ea0c467-6d22-44ef-bd88-385bc2d3c793",
       "techniques": []
+    },
+    "da2b8086-0019-48a6-91bf-5c3f95187072/visual-style-locking": {
+      "context": "domain-style-library-assets",
+      "subject": "visual-style-locking",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:12:29.637Z",
+      "worker": "d0838674-8922-4f45-8042-7c817769c5eb",
+      "techniques": [
+        {
+          "technique": "draft-proofing-locked-ratchet",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/style.ratchet.ts:217 ratchetBlocker refuses unlocking, a changed locked block and a demotion. lockBlocker requires zero pending proofs and at least one approval. Status is also stored on the record, but the door (style.ts superRefine) refuses any status that differs from statusOf, so the stored copy cannot drift."
+        },
+        {
+          "technique": "approved-reference-sheet",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/style.ratchet.ts:56 The send count is a named constant, separate from PROOF_CAP (the window, counted over approved proofs). styleRefs sends only approved proofs under the current block. Each proof records model, provider and costUsd. Selection is founding approvals plus newest, not closest element vocabulary, so that soft preference rule is not realized."
+        },
+        {
+          "technique": "rejections-as-negative-evidence",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/styleView.ts:292 Rejections take no window capacity. The proof schema keeps a rejected proof with an optional note, and rejections are never in styleRefs."
+        },
+        {
+          "technique": "style-onboarding-from-sample",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/style.ts:106 The origin is recorded on the artifact. A readback carries a signature and an edited flag, so the vision readback stays a hypothesis until a human edits it."
+        },
+        {
+          "technique": "style-block-restated-every-call",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/style.ratchet.ts:95 The style is a four-slot structured record with role-assigned palette, compiled by one function. Whether every call path uses it is judged on visual-producers."
+        }
+      ]
+    },
+    "543cb8a9-abee-46e1-a06e-f5dfc6ed4fb2/visual-style-locking": {
+      "context": "style-store",
+      "subject": "visual-style-locking",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:12:29.637Z",
+      "worker": "d0838674-8922-4f45-8042-7c817769c5eb",
+      "techniques": [
+        {
+          "technique": "draft-proofing-locked-ratchet",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/core.ts:123 A duplicate keeps the block, empties the sheet and restarts as a candidate. The lock op refuses through lockBlocker (core.ts:115), and the status is re-derived on every plan."
+        },
+        {
+          "technique": "rejections-as-negative-evidence",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/core.ts:100 remove-proof refuses a rejected proof. Caveat: judge-proof can move a rejected proof back to pending, which remove-proof then accepts. The reject evidence row and the append-only style_ops log (which holds the note) survive, but the plate and its on-sheet note do not."
+        },
+        {
+          "technique": "approved-reference-sheet",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/writers.ts:117 Proofs land only under the current block digest, so each sheet image carries its lineage. The v1 import keeps model, provider and cost, and reports missing lineage as unknown."
+        },
+        {
+          "technique": "style-onboarding-from-sample",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/writers.ts:79 A readback or extract lands as a candidate with its origin recorded in the event. A style that already has evidence is never overwritten."
+        }
+      ]
+    },
+    "038cd727-793d-43fe-b86b-a39ef50c7334/visual-style-locking": {
+      "context": "visual-producers",
+      "subject": "visual-style-locking",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:12:29.637Z",
+      "worker": "d0838674-8922-4f45-8042-7c817769c5eb",
+      "techniques": [
+        {
+          "technique": "style-block-restated-every-call",
+          "verdict": "deviation",
+          "evidence": "lib/producers/motion.ts:43 Frames and proofs restate the block through compilePrompt (lib/producers/frames.ts:230, style.ts:137), and the Google provider labels references as STYLE REFERENCES. The motion hop has no slot for the block at all."
+        },
+        {
+          "technique": "draft-proofing-locked-ratchet",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/frames/look.ts:95 One resolution point with named misses (unset, missing, no-block; look.ts:71) is conformant. But production draws in an unlocked style and only marks it 'not locked' on the receipt; the standard allows only locked styles to anchor production. Project choices also offer proven styles (app/(studio)/projects/_port/realChoices.ts:60)."
+        },
+        {
+          "technique": "approved-reference-sheet",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/frames/look.ts:78 Frames send the ratchet's approved-only selection, capped at SEND_REFS. A fallback look sends no refs."
+        },
+        {
+          "technique": "style-onboarding-from-sample",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/style/define.ts:77 Adopt reads the look back into the grammar slots (technique, subject, finish, a three-colour role palette). Seeded plates land as PENDING proofs for the operator to judge. Extract reads, groups, replicates and transfers onto other scenes."
+        },
+        {
+          "technique": "motion-sampled-under-a-frame-budget",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/motion/define.ts:7 Motion is proposed from a single still plate. No reference footage is sampled for a motion signature."
+        }
+      ]
+    },
+    "8c6c65cc-6679-4c2c-8951-670d77b8ad7c/multi-provider-gateway-plane": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:25:50.452Z",
+      "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+      "techniques": [
+        {
+          "technique": "router-versus-candidate-failure",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/router.ts:433 No sweep happens because `failed` is not reroutable, but there is no attribution marker: a plane-side exception is filed as the candidate's failure (provider=id, trail why=failed), which is the misfiling the technique names. The `unsupported`-at-position-0 throw and the `no-alternative` type do give partial router-side arms."
+        },
+        {
+          "technique": "exclusive-authorship-of-a-measured-decision",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:400 The served provider and the eliminated (decided-first) candidates sit on the same provenance record, so a fallback is visible in the output. unreachedPlanTops (router.ts:177) checks at window level whether the measured plan top is ever served."
+        },
+        {
+          "technique": "policy-verdict-in-the-status-space",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/errors.ts:112 The fallback loop branches on a typed kind, not on an operator list of status integers, and the budget refusal is raised before any candidate and is not reroutable. The callers (probes, kernel jobs) read the body `code`. No consumer has to match on integers, so the technique's precondition does not hold; 402 for over-budget is mapped at errors.ts:236."
+        },
+        {
+          "technique": "strategy-tree-with-inherited-policy",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:90 The plan is a flat ordered list per capability and environment, with one policy scope (one budget hold per request). The technique's 'one candidate set and one policy' exclusion applies."
+        },
+        {
+          "technique": "named-members-over-a-uniform-collection",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:112 Providers are used only on the request path, where the technique says a uniform collection is right. There is no inventory aggregate built from the providers."
+        },
+        {
+          "technique": "upstream-identity-before-inventory",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/env.ts:29 Each upstream speaks its own dialect and is configured by id, so the dialect is the identity. No shared wire protocol and no discovered endpoints."
+        },
+        {
+          "technique": "join-breadth-follows-the-wrong-match-cost",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/pricing.ts:221 The only catalog join is exact equality on provider and model strings the adapters themselves supply. There is no fuzzy join against an upstream's naming scheme, and a miss surfaces as `unpriced` rather than being deleted silently."
+        },
+        {
+          "technique": "caller-scoped-normalization-strictness",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:1 The published contract is the repo's own and serves first-party callers. The technique's 'contract is your own / one consumer population' exclusion applies."
+        },
+        {
+          "technique": "per-provider-stream-framing",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/handlers.ts:89 Every capability returns a settled answer. A grep of lib/imaging for stream/getReader/text/event-stream found no streaming path."
+        },
+        {
+          "technique": "one-typed-carrier-for-echoed-state",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:166 The plane keeps vendor-side state on its own provenance record. Nothing is round-tripped through a client's next request."
+        }
+      ]
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/multi-provider-gateway-plane": {
+      "context": "ui-status-provenance",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:25:50.452Z",
+      "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+      "techniques": []
+    },
+    "8c854c7a-5467-4ddc-80ed-76f19b1f5094/multi-provider-gateway-plane": {
+      "context": "board-decision-adapters",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:25:50.452Z",
+      "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+      "techniques": []
+    },
+    "7226db68-4ca8-41ee-a2f8-3012d05e4acd/multi-provider-gateway-plane": {
+      "context": "publish-producers",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:25:50.452Z",
+      "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+      "techniques": []
+    },
+    "2e702395-189e-4eb9-910c-dc4b76ff6e9a/multi-provider-gateway-plane": {
+      "context": "ui-ledger-timeline",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:25:50.452Z",
+      "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+      "techniques": []
+    },
+    "c425f431-c0d1-4f34-b736-1a5d70683ef4/structured-output": {
+      "context": "notebook-contract-validation",
+      "subject": "structured-output",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:40:04.273Z",
+      "worker": "9e03f2ee-443a-4052-a542-6771339d7762",
+      "techniques": [
+        {
+          "technique": "schema-validation-and-repair",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/shape.ts:60 Findings are path-addressed and repair is bounded (lib/text/repair.ts MAX_REPAIR_ATTEMPTS = 2), but the domain layer is missing: the schema enum ['high','medium','low'] (schema-facts.ts:21) is never re-checked by the validator. Where enums are checked (leap/useFor), the vocabulary is a hand-typed second copy (shape-helpers.ts:19 LEAPS), not derived from the schema."
+        },
+        {
+          "technique": "display-vs-machine-channels",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/retrieval.ts:95 Whether the notebook admits that no search ran is recovered by running a regex over the human-prose `researchGaps[0]`, not carried as a typed field. That is the scraper-of-prose shape the technique bans. A rephrased confession refuses a valid notebook, and a confession that happens to match wins acceptance."
+        },
+        {
+          "technique": "graded-span-grounding",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/retrieval.ts:106 The system, not the model, decides whether a cited URL was grounded: it aligns against this run's own fetch receipts with transport-only normalization (scheme, www, trailing slash, fragment). The result is graded, downgrading high to medium with a recorded finding rather than trusting the model's word."
+        },
+        {
+          "technique": "enumerable-domain-decoding",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/schema-facts.ts:21 The closed value domains are carried in the request schema, so Gemini's constrained decoding enforces them on the native rung. The validator's failure to re-check them is recorded under schema-validation-and-repair."
+        }
+      ]
+    },
+    "0572228c-bd2e-42a3-a146-6a91d10fa08f/docs-sync": {
+      "context": "article-check-and-critique",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:08:50.214Z",
+      "worker": "2939ff64-fef5-4b19-9294-bd3b3d20d218",
+      "techniques": [
+        {
+          "technique": "same-change-enforcement",
+          "verdict": "deviation",
+          "evidence": "docs/articles.md:366 The split commit 1f6e3e5d changed lib/articles/critiqueStep.ts and engine.ts, and its stat shows no docs/ file. The doc has been edited since (7dad8b6e) and still names engine.ts."
+        },
+        {
+          "technique": "named-duplication-points",
+          "verdict": "deviation",
+          "evidence": "docs/articles.md:434 The prompt is derived from THRESHOLDS (checks.ts:29), which is right. The guide still hand-copies literal values (7,000; 450; 300; 45; 15 percent; 8/3/1 at lines 424-434) that a machine could compare, and no checker reads docs/articles.md."
+        },
+        {
+          "technique": "doc-rot-detection",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:7 A post dimension the check cannot measure is not counted as clean."
+        },
+        {
+          "technique": "checked-vs-skipped-denominators",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checksReport.ts:25 The report carries notMeasured separately from pass/fail, and a browser that cannot launch yields not-measured items with the reason."
+        },
+        {
+          "technique": "rendered-surface-coupling",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checksRendered.ts:99 The check opens the rendered post at two widths and reads the text inside the figure SVGs (checksStatic.ts:91), so it does not judge pictures it never opened."
+        },
+        {
+          "technique": "dated-corrections",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:47 Thresholds carry their date, measurement and n (e.g. maxWords set 2026-10-06 from 6,942 and 6,497)."
+        }
+      ]
+    },
+    "158d061e-feaa-4660-a1d3-6e8774b1f152/frame-direction": {
+      "context": "frames-picture-composition",
+      "subject": "frame-direction",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:19:22.265Z",
+      "worker": "1951f6e7-3f9d-4896-bb73-a099f7e658b8",
+      "techniques": [
+        {
+          "technique": "per-beat-rejection",
+          "verdict": "conformant",
+          "evidence": "lib/frames/sceneSpec.ts:271 reviewSceneSpecs collects refusals per beat, keeps applied, rejected and missing disjoint, fails the whole pass only on unusable JSON, and rethrows non-gate exceptions. Not realized: no single finding when most beats fail for the same reason, and the duplicate guard (line 264) fixes the unit at one scene per beat."
+        },
+        {
+          "technique": "plate-elements-text-split",
+          "verdict": "conformant",
+          "evidence": "lib/frames/sceneSpec.ts:179 Plate, elements and texts are separate layers (frames.ts:3-11). ASKS_FOR_TEXT rejects glyph requests in the subject. A figure must cite a notebook fact, and a low-grade fact may not carry an exact figure."
+        },
+        {
+          "technique": "motion-intent-authoring",
+          "verdict": "conformant",
+          "evidence": "lib/frames/sceneSpec.ts:148 Motion is required (12+ chars), may not move text, and is rejected when it restates the subject. FrameClip has no duration field by design (frames.ts:124), and no verb or easing whitelist is enforced (sceneSpec.ts:139-143)."
+        },
+        {
+          "technique": "one-function-per-visual",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shots.ts:204 The shot lane gives a reset beat exactly one shot. Weak evidence: the explainer gate allows one scene per beat and cannot count functions, because no function field exists."
+        },
+        {
+          "technique": "visual-function-vocabulary",
+          "verdict": "deviation",
+          "evidence": "lib/frames/frames.ts:438 There is no closed function vocabulary (evidence, comparison, mechanism, metaphor, reveal, state-change, texture with sub-roles). The seed subject (subjectFor, lines 525-538) is a template per rhetorical role, which is the slide-deck failure the standard names. A metaphor budget or image-led mode cannot be computed."
+        },
+        {
+          "technique": "motif-establish-vary-payoff",
+          "verdict": "deviation",
+          "evidence": "lib/frames/sceneSpec.ts:26 The SceneSpec has no named thread and no lifecycle op (establish, carry, change, reprise, retire). Motifs live only in the free-text rationale the prompt asks for, so the rule that change and reprise need an earlier establish is not machine-checked."
+        },
+        {
+          "technique": "boundary-transition-class",
+          "verdict": "deviation",
+          "evidence": "lib/frames/frames.ts:154 Frame carries plate, clip, elements, texts and rationale, but no carry/agent/refresh declaration for its join. Hold beats cannot say whether they keep the last picture or clear the screen."
+        }
+      ],
+      "registryProposal": "per-beat-rejection says a rejected beat 'keeps the template output the pass exists to replace', and visual-function-vocabulary names a template keyed by rhetorical category as the slide-deck failure. Here the fallback seed is exactly that template (PROBLEM_OF by BeatKind). The standard could say whether the honest-fallback seed must itself be keyed by visual function, or whether a category-keyed seed is acceptable as long as it is marked unauthored, as this repo does by leaving `rationale` empty."
+    },
+    "076622f1-4906-4cdc-9a76-307df47fdd14/frame-direction": {
+      "context": "landing-cosmos-scenes",
+      "subject": "frame-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:19:22.265Z",
+      "worker": "1951f6e7-3f9d-4896-bb73-a099f7e658b8",
+      "techniques": []
+    },
+    "f8036604-75f5-4f7d-898c-734511ac5e86/live-system-demo-film": {
+      "context": "script-composition-and-validation",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:31:10.573Z",
+      "worker": "cd721550-d90c-43ce-8484-fc0bf3d478cd",
+      "techniques": [],
+      "registryProposal": "This context has beats, narration word budgets (renders.ts:154 '150 wpm') and staleness/impact tracking, so the ranker's token score pairs it with this subject. The golden path could say outright that a narrated generated film about a topic is not a live-system demo, which would stop audio-first pacing and script-as-single-source being applied here by token overlap."
+    },
+    "c909310e-6f47-45b3-b06e-b18cfb3ab27c/live-system-demo-film": {
+      "context": "audio-hunt-arrange",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:31:10.573Z",
+      "worker": "cd721550-d90c-43ce-8484-fc0bf3d478cd",
+      "techniques": []
+    },
+    "f54f23e7-c790-44ff-beaf-a5cb83c8d5c4/live-system-demo-film": {
+      "context": "audio-lessons-measures",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:31:10.573Z",
+      "worker": "cd721550-d90c-43ce-8484-fc0bf3d478cd",
+      "techniques": []
+    },
+    "430ace14-ef3a-4ef0-acd0-71c989368950/live-system-demo-film": {
+      "context": "part-workspace-desk",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:31:10.573Z",
+      "worker": "cd721550-d90c-43ce-8484-fc0bf3d478cd",
+      "techniques": []
+    },
+    "5195e631-ab0c-4f12-930b-8c0da09fcd3d/production-pipeline-phasing": {
+      "context": "research-producers",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:47:13.711Z",
+      "worker": "429520ce-eba4-4e7d-bea7-4324f0aa283b",
+      "techniques": [
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/partJob.ts:75 The job row is the record. A crash during a unit is reported as the kernel's interruption, and a paid lane holds until the operator looks (partAct.ts:31). See notes for the cross-act serialization question."
+        },
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/define.ts:49 Acts refuse before any spend when upstream is not settled: no brief, no notebook for a follow-up, no topic."
+        },
+        {
+          "technique": "asset-vs-disposable-render",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/followUp.ts:22 A follow-up answers the notebook (an asset) with allowlisted edits to named facts, never a regeneration, and is refused whole rather than applied in part."
+        },
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/research/define.ts:21 Research comes before a runtime target exists; the view carries topic, notebook and queue, no seconds. The technique excludes this phase."
+        }
+      ]
+    },
+    "e5f8b2b5-3ac7-422b-9950-c7431117591a/repository-landing-document": {
+      "context": "landing-cosmos-shell",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:54:15.633Z",
+      "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
+      "techniques": []
+    },
+    "076622f1-4906-4cdc-9a76-307df47fdd14/repository-landing-document": {
+      "context": "landing-cosmos-scenes",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:54:15.633Z",
+      "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
+      "techniques": []
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/repository-landing-document": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:54:15.633Z",
+      "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
+      "techniques": []
+    },
+    "cc39e764-df6c-4508-a8a9-e13944674461/repository-landing-document": {
+      "context": "style-trials-cull",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:54:15.633Z",
+      "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
+      "techniques": []
+    },
+    "f6a26c60-230a-4e2d-811f-4ecef7a2cad1/sound-effect-generation": {
+      "context": "sound-generation-engine",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:06:30.274Z",
+      "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+      "techniques": [
+        {
+          "technique": "envelope-first-briefing",
+          "verdict": "conformant",
+          "evidence": "lib/sound/generate.ts:153 Duration must be stated and is checked against the 0.5-30 s effect window before anything is sent. The adherence dial (promptInfluence, generate.ts:166-175) is exposed and refused on music. The envelope fields themselves (event/material/space) are composed in @gt/ui batch.ts, outside this context."
+        },
+        {
+          "technique": "loop-seam-acceptance",
+          "verdict": "conformant",
+          "evidence": "lib/sound/generate.ts:315 Loop intent is sent to the vendor's loop flag at generation. Acceptance has a loop_seam rubric dimension (types.ts:42) and a loop-seam defect code (types.ts:54). No code enforces the listen-twice-through check; it is a score a person gives."
+        },
+        {
+          "technique": "layered-element-assembly",
+          "verdict": "deviation",
+          "evidence": "lib/sound/sfxJob.ts:127 The technique exists only as a tag slug (types.ts:84). No element role, stack, attack-aligned trim or assembly exists anywhere in lib/sound."
+        }
+      ]
+    },
+    "3f11be96-c51f-4098-8472-341c42362e6d/sound-effect-generation": {
+      "context": "sound-hunt-and-measure",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:06:30.274Z",
+      "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+      "techniques": [
+        {
+          "technique": "envelope-first-briefing",
+          "verdict": "conformant",
+          "evidence": "lib/sound/hunt.ts:122 The sfx section of pipeline/SOUND-HUNT-PROMPT.md is appended to the drafting prompt. That section requires labelled event/attack/body/tail/space/duration/loop fields. askOf (hunt.ts:212-217) drops any tempo or key on an effect. Hunt renders leave promptInfluence null (vendor default), which suits exploration."
+        },
+        {
+          "technique": "loop-seam-acceptance",
+          "verdict": "conformant",
+          "evidence": "lib/sound/huntRender.ts:102 The leaf's drafted loop flag is carried into the generate request, so loop intent is declared at generation. No seam measurement exists in measure.ts or measureRun.ts."
+        },
+        {
+          "technique": "layered-element-assembly",
+          "verdict": "deviation",
+          "evidence": "lib/sound/huntEngine.ts:43 This line is the stub engine (SOUND_HUNT_ENGINE=stub). The real drafting prompt does ask for separate low/transient/air leaves, but nothing assembles them."
+        }
+      ]
+    },
+    "ab872012-f902-4f43-b9c7-f13137e36f24/sound-effect-generation": {
+      "context": "suno-driver-queue",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:06:30.274Z",
+      "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+      "techniques": [
+        {
+          "technique": "envelope-first-briefing",
+          "verdict": "deviation",
+          "evidence": "lib/sound/suno/queue.ts:124 Tags replace the labelled attack/body/tail/space prompt. fieldsOfLeaf (lines 133-137) carries no duration."
+        }
+      ]
+    },
+    "30a879d3-b06e-4530-a9fa-051ee66769dd/sound-effect-generation": {
+      "context": "music-video-pipeline",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:06:30.274Z",
+      "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+      "techniques": []
+    },
+    "d12a6aa7-39d7-464c-b47d-c4a1670d3bbd/sound-effect-generation": {
+      "context": "trailer-structure-engine",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:06:30.274Z",
+      "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+      "techniques": []
+    },
+    "94e6b933-0f6a-4631-b2f0-4c98b0799c28/agent-cli-transport": {
+      "context": "text-reasoning-engine",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:20:28.938Z",
+      "worker": "950657ee-324f-44b9-8484-6ad829af7ce1",
+      "techniques": [
+        {
+          "technique": "output-normalization",
+          "verdict": "deviation",
+          "evidence": "lib/claudeCli.ts:323 No raw-text prefix is kept on a parse failure. `out += c` (line 405) has no cap. Line 328 `String(j.result ?? \"\")` lets an empty answer through, and the router does not re-check it. The envelope subtype only reaches the caller inside the message text, never as a value it can branch on. Stream hygiene is good: separate stderr and a guarded stdin write."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "deviation",
+          "evidence": "lib/claudeCli.ts:146 The strip is at the single door (spawnTurn and the probe both use seatOnlyEnv), which is good. But the list holds only the four ANTHROPIC_* vars. It leaves out the provider-routing switches (CLAUDE_CODE_USE_BEDROCK/VERTEX) and the vendor's session markers (CLAUDECODE, CLAUDE_CODE_ENTRYPOINT); grep finds no hit for any of them anywhere in the repo, although the technique requires stripping them."
+        },
+        {
+          "technique": "availability-probe",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCli.ts:84 Policy and platform posture are checked before any spawn (line 69). The probe uses the same shell predicate and seatOnlyEnv as the run, records the version, and its detail says it cannot prove login. Caveat: the version is not compared against the dated capability row."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCli.ts:60 The capability carries its version, date and method, and the router reads it to decide whether to append a schema instruction. Partial: the cells are inline comments, not a matrix keyed to the probed version."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:441 Preferred, then alternate, then honest refusal. The router records each descent reason, and the rung travels in provenance. No deterministic floor, by a stated decision (header lines 40-54)."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:85 The retrieve rung has three layers: tool existence, the allow list with dontAsk, and safe-mode/strict-mcp, plus a stream fence. The reasoning door relies on `--allowed-tools \"\"` and `--max-turns 1`, and spawnTurn sets no neutral cwd, so ambient project instructions can load in generate mode."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "deviation",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:213 The tool stance is taken from the child's init event (line 215 breach), and an argv probe spec exists. But billing direction is never observed from the child: the init handler reads only `tools`, and the probe is `--version`, which reports no auth method. So the seat promise is the host's intent only."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:88 Unattended batch turns with a pre-set stance; no person is reachable inside the child's turn."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/claudeCli.ts:120 The session id is recorded as provenance only. It is never passed back (no --resume anywhere in lib/text)."
+        }
+      ]
+    },
+    "14632859-df56-4340-9e16-c420ff681ee3/agent-cli-transport": {
+      "context": "article-run-engine",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:20:28.938Z",
+      "worker": "950657ee-324f-44b9-8484-6ad829af7ce1",
+      "techniques": [
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/articles/agentSteps.ts:36 Edit stance is contained: an isolated temp worktree, per-step tool lists (STEP_PLAN, line 28), and dontAsk rather than bypass in the seam's argv. The registry is staged as read-only copies."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "conformant",
+          "evidence": "lib/articles/ingestSources.ts:18 Answer-file dialect: a missing file, invalid JSON or an empty array each fail the step by name. A non-completed outcome throws with the tool's errors (agentSteps.ts:93)."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/articles/turns.ts:26 A writer turn has no heuristic substitute, so a refused turn is an honest refusal that carries its reason. Dry mode is a labeled stand-in (standInTurn, line 24) that is a property of the job and never enters the seat."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/engine.ts:13 Resume is host-side state (resume.ts resumePoint over step status); no child thread id is stored or passed back."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:82 Unattended turns; the human gate is a post-hoc Board approval, not a mid-turn answer channel."
+        }
+      ]
+    },
+    "ab872012-f902-4f43-b9c7-f13137e36f24/agent-cli-transport": {
+      "context": "suno-driver-queue",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:20:28.938Z",
+      "worker": "950657ee-324f-44b9-8484-6ad829af7ce1",
+      "techniques": []
+    },
+    "571eae96-e297-40c6-a556-3a3bf8f48e3f/agent-cli-transport": {
+      "context": "review-and-runs-history",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:20:28.938Z",
+      "worker": "950657ee-324f-44b9-8484-6ad829af7ce1",
+      "techniques": []
+    },
+    "298a4b92-0268-4d06-99a5-7ad103981170/multi-project": {
+      "context": "domain-parts-projects-slots",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:29:07.819Z",
+      "worker": "4354fe8b-d8ad-41dd-a7cb-a1aa6675148a",
+      "techniques": [
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/project.ts:35 An opaque id separate from the title does rhyme with minted identity. But there is no admission door, path, remote or cross-tool join for the technique to judge."
+        },
+        {
+          "technique": "project-onboarding-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/project.machine.ts:13 A production lifecycle (draft to ratified) derived from part state. It is not a candidate/onboarding/active/paused/archived management lifecycle."
+        },
+        {
+          "technique": "per-project-tabs-and-state",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/project.ts:48 A discarded draft keeps its row (archival as a state), but domain types hold no tab set or per-project view state."
+        }
+      ]
+    },
+    "0572228c-bd2e-42a3-a146-6a91d10fa08f/translation-quality-measurement": {
+      "context": "article-check-and-critique",
+      "subject": "translation-quality-measurement",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:40:40.621Z",
+      "worker": "98a1fd3a-150a-42ee-956b-1419b36bc263",
+      "techniques": []
+    },
+    "e660bf0f-199c-4cd9-91e1-1a13e318e55f/translation-quality-measurement": {
+      "context": "article-human-gate-and-landing",
+      "subject": "translation-quality-measurement",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:40:40.621Z",
+      "worker": "98a1fd3a-150a-42ee-956b-1419b36bc263",
+      "techniques": []
+    },
+    "f770abb6-6609-4c9f-959f-a31407dc501f/translation-quality-measurement": {
+      "context": "domain-run-job-steps",
+      "subject": "translation-quality-measurement",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:40:40.621Z",
+      "worker": "98a1fd3a-150a-42ee-956b-1419b36bc263",
+      "techniques": []
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/translation-quality-measurement": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "translation-quality-measurement",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:40:40.621Z",
+      "worker": "98a1fd3a-150a-42ee-956b-1419b36bc263",
+      "techniques": []
+    },
+    "158d061e-feaa-4660-a1d3-6e8774b1f152/cinematic-language": {
+      "context": "frames-picture-composition",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:24:39.031Z",
+      "worker": "5c30671c-f7cf-4a4b-8f99-28f1af44621d",
+      "techniques": [
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:154 ANGLE_PHRASE states angle as meaning plus headroom consequence (dojo camera-attitude cycle); SIZE_PHRASE and PLACEMENT_PHRASE (crosshair/thirds/diagonal) cover size and framing. Caveat: shots.ts:332 never seeds angle, so derived shots get size and recipe stance only."
+        },
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:111 Recipes name one in-world source and what stays dark, written as described effects with no equipment terms (comment at 106-109 cites the what-stays-dark dojo); peak:ECU and reset:EWS do the same."
+        },
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shots.ts:251 Size picks require at least 2 steps between consecutive shots (avoids the stutter cut), setup ladders open on EWS (establishing), SEQUENCE_DIRECTION at shots.ts:242 fixes the axis with neutral shots at reset/tail, and shotReview checks size-jump and unmediated flips."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/shotPrompt.ts:204 This context writes text-to-image prompts for plates; a move is passed through only when a person writes one, and the clip itself is directed in the motion step, outside this context."
+        }
+      ],
+      "registryProposal": "lens-effect-language lists 'sharp-everywhere default (no depth-of-field clause)' as a failure, but the golden path says to leave dials that do not matter for the beat at neutral. The standard should say whether an unstated depth of field counts as neutral or as the failure."
+    },
+    "076622f1-4906-4cdc-9a76-307df47fdd14/cinematic-language": {
+      "context": "landing-cosmos-scenes",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:24:39.031Z",
+      "worker": "5c30671c-f7cf-4a4b-8f99-28f1af44621d",
+      "techniques": [
+        {
+          "technique": "movement-motivation",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:1 Camera motion is interactive parallax from user input, not a briefed move for a generator."
+        }
+      ]
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/copy-quality-gates": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "copy-quality-gates",
+      "bundle": "localization",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:37:07.140Z",
+      "worker": "330e510a-4fa6-4b7d-b65f-a87a3ca970d5",
+      "techniques": [
+        {
+          "technique": "rendered-string-extraction",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/reams.ts:48 A code-literal accessible name, assembled from fragments, is not extracted by the gate or declared out of scope."
+        }
+      ]
+    },
+    "3610b8be-4772-464f-b2f8-dd3a38fef27f/error-handling": {
+      "context": "domain-decision-board-core",
+      "subject": "error-handling",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:47:25.569Z",
+      "worker": "a640b5be-1d38-4e10-b821-4edd0369e9f5",
+      "techniques": [
+        {
+          "technique": "structured-propagation",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/door.ts:68 The validation failure's category-specific data (the field and the other issues) is stringified at the boundary. Only issues[0] survives, as prose."
+        },
+        {
+          "technique": "reclassification-is-not-repair",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/errors.ts:20 `internal` is both the impossible class and the catch-all. That gives up the zero-rate detector the technique relies on: any unrecognised foreign failure lands in `internal` too."
+        },
+        {
+          "technique": "taxonomy-design",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/errors.ts:2 Closed union of 8 codes, each justified by the consumer that branches on it. Transience is stated only in comments, not as data, and there is no retry-interval field."
+        },
+        {
+          "technique": "exit-contract-is-a-taxonomy-projection",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/errors.ts:85 The external HTTP code is an exhaustive Record keyed by the taxonomy, beside its declaration. A new code without a status does not compile."
+        },
+        {
+          "technique": "consumer-decides-error-shape",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/errors.ts:63 The published package hands out a closed, branchable code (with an `isAppError` brand that works across module copies), not an opaque aggregate."
+        },
+        {
+          "technique": "swallowed-error-prevention",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/door.ts:82 The only JSON.parse catch turns into a classified Result and keeps `cause`."
+        }
+      ]
+    },
+    "158d061e-feaa-4660-a1d3-6e8774b1f152/evidence-bound-visuals": {
+      "context": "frames-picture-composition",
+      "subject": "evidence-bound-visuals",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:00:23.758Z",
+      "worker": "e0544948-7826-4b95-890e-5e8f869b277a",
+      "techniques": [
+        {
+          "technique": "figure-must-cite-a-fact",
+          "verdict": "conformant",
+          "evidence": "lib/frames/sceneSpec.ts:179 Throwing validator: a figure with no factId is refused, a factId that is not in the notebook is refused (line 181), and rejection is per beat (reviewSceneSpecs collects SpecRejection). Seeded figures from framesFromRender (frames.ts:491) carry no factId; they are counted off-context in lib/parts/verdict.ts:100, which holds the step at working."
+        },
+        {
+          "technique": "precision-limit-propagation",
+          "verdict": "deviation",
+          "evidence": "lib/frames/sceneSpec.ts:194 The grade travels (direction.ts:60 passes confidence), but only a figure at low is capped. A medium fact may be drawn as an exact value, elements are never capped, the Fact record has no free-text precision limit, and the contests field is never read here, so nothing stops two contested facts sharing an axis."
+        },
+        {
+          "technique": "causal-arrow-discipline",
+          "verdict": "deviation",
+          "evidence": "lib/frames/frames.ts:494 Arrows are seeded by beat kind with no fact. In sceneSpec.ts:158 an element's factId is optional for every kind, so an arrow or loop with no sourced causation passes the validator."
+        },
+        {
+          "technique": "epistemic-draw-routing",
+          "verdict": "deviation",
+          "evidence": "lib/frames/frames.ts:530 The text half holds: ASKS_FOR_TEXT rejects plate subjects that ask for glyphs (sceneSpec.ts:136), and the layer split is stated in frames.ts:9. But the plate subject recipes ask the model to draw arrows (also mechanism, line 529) that assert a relation, even though the vector kit has arrow and loop kinds. This is a routing exception the standard forbids."
+        }
+      ]
+    },
+    "298a4b92-0268-4d06-99a5-7ad103981170/evidence-bound-visuals": {
+      "context": "domain-parts-projects-slots",
+      "subject": "evidence-bound-visuals",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:00:23.758Z",
+      "worker": "e0544948-7826-4b95-890e-5e8f869b277a",
+      "techniques": [
+        {
+          "technique": "figure-must-cite-a-fact",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/partView.frames.ts:104 There is a standing count of unsourced figures per unit (pips, line 96), per layer (line 44) and per step. Binding is by fact id (line 212), which matches the gate-is-a-count rule for a person typing."
+        },
+        {
+          "technique": "causal-arrow-discipline",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/partView.frames.ts:212 Only a text can be bound. LayerView.factId exists for elements, but there is no edit that binds an arrow or loop to a fact, and the unsourced flag covers figures only."
+        },
+        {
+          "technique": "precision-limit-propagation",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/partView.frames.ts:44 The only per-layer evidence flag is a missing citation. FactOption carries confidence (line 102), but no layer or tally field marks a figure bound to a low or medium fact. The off-context binder (app/(studio)/projects/[id]/_part/fixtureFrames.ts:160) checks only that the id exists, not its grade."
+        }
+      ]
+    },
+    "13ee868d-574a-4147-b72e-11339db0250d/media-playback": {
+      "context": "bound-producers",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:15:38.728Z",
+      "techniques": [
+        {
+          "technique": "timeline-scheduling",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/cut.ts:26 The cut is compiled and exported offline as a file job, not scheduled against a live playback clock. video-assembly is the governing subject here, not media-playback."
+        }
+      ],
+      "withdrawn": {
+        "worker": "e8ab1a70-284b-4ea1-96a2-edcf352aa562",
+        "state": "not-applicable",
+        "at": "2026-10-25T01:16:04.171981+00:00",
+        "reason": "reviewer (sonnet): The anchor lib/producers/registry.ts:6 is an import line (`import type { Job }`), so it does not show that playback is absent; the verdict also rests on an rg that came back empty, and the lib/producers/cut.ts anchor shows only that the cut is exported offline, not that nothing in the directory play"
+      }
+    },
+    "30a879d3-b06e-4530-a9fa-051ee66769dd/music-video-production": {
+      "context": "music-video-pipeline",
+      "subject": "music-video-production",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:21:43.119Z",
+      "worker": "4cf930fc-e9b1-473c-b229-11df116dde16",
+      "techniques": [
+        {
+          "technique": "form-follows-what-the-track-gives",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/types.ts:12 Lowest rung chosen on purpose, with no performance claim. The visualizer's motion depends only on frame index (compositor.ts:6), as the rung-one clause requires."
+        },
+        {
+          "technique": "track-map-before-treatment",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/render.ts:149 The analysis runs before the treatment (MV_PHASES analysing->treating). It keeps tempo candidates with their octave siblings, an energy shape, and section boundaries found by Foote novelty rather than energy, flagged as unconfirmed (sections.ts:23). No bar grid or voice map, which the 'when not to use' clause calls ceremony for a visualizer that reacts frame by frame."
+        },
+        {
+          "technique": "cut-rate-follows-the-section",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/compositor.ts:155 There are no cuts (one still). The beat-driven brightness pulse is capped at 3 flashes per second (WCAG 2.3.1) in one pass over the whole track before rendering, as the flash decision rule asks. It counts crossings of the drive band, not rendered luminance."
+        },
+        {
+          "technique": "segment-on-the-master-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/mv/compositor.ts:6 A visualizer rendered per frame from the audio has no generated segments; its timing is exact by construction ('when not to use')."
+        },
+        {
+          "technique": "coverage-across-the-phrase",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/mv/metadata.ts:37 One still, no setups or angles. The technique states that a visualizer has no setups."
+        }
+      ],
+      "registryProposal": "cut-rate-follows-the-section and form-follows-what-the-track-gives say to count a beat-pulsed brightness effect's flashes against the 3/s ceiling, but they do not say where to count. This tree counts threshold crossings on the drive signal, before a gain (bloomIntensity, applied as several additive passes above 1) is applied downstream. The standard could require the count on rendered frame luminance, or on the drive only when no gain follows it."
+    },
+    "60361278-9fbe-43c5-add7-454ed78ef0f5/music-video-production": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "music-video-production",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:21:43.119Z",
+      "worker": "4cf930fc-e9b1-473c-b229-11df116dde16",
+      "techniques": [
+        {
+          "technique": "segment-on-the-master-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/types.ts:32 Clip lengths are a vendor duration list. No master in-point, offset or handle exists because no song clock reaches this hop."
+        },
+        {
+          "technique": "coverage-across-the-phrase",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/types.ts:44 Each request is one camera move from one image. Phrase coverage would be a caller's job, and no caller here passes a conditioning slice."
+        },
+        {
+          "technique": "form-follows-what-the-track-gives",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/leonardo.ts:205 No audio goes in or comes out, so no form decision is made here."
+        },
+        {
+          "technique": "track-map-before-treatment",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/providers/leonardoStudio.ts:5 The studio provider only serves the still. The track map lives in lib/sound/mv, not here."
+        },
+        {
+          "technique": "cut-rate-follows-the-section",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/leonardo.ts:203 No edit or cut placement happens in this context."
+        }
+      ]
+    },
+    "5195e631-ab0c-4f12-930b-8c0da09fcd3d/short-form-narrative-structure": {
+      "context": "research-producers",
+      "subject": "short-form-narrative-structure",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:28:58.748Z",
+      "worker": "4ae89907-f122-4906-a517-8d71161ad9f5",
+      "techniques": [
+        {
+          "technique": "but-therefore-beat-linking",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/research/define.ts:9 The beats face is dealt free, with no engine and no connector data in this context."
+        },
+        {
+          "technique": "question-stack-architecture",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/research/followUp.ts:33 Follow-up questions here are research queries that revise facts, not act-level viewer questions."
+        }
+      ]
+    },
+    "c909310e-6f47-45b3-b06e-b18cfb3ab27c/talking-avatar": {
+      "context": "audio-hunt-arrange",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:32:19.342Z",
+      "worker": "fb2d2e7b-3df7-4745-a1b0-48fedba0fe24",
+      "techniques": []
+    },
+    "d12a6aa7-39d7-464c-b47d-c4a1670d3bbd/trailer-structure": {
+      "context": "trailer-structure-engine",
+      "subject": "trailer-structure",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:36:18.021Z",
+      "worker": "249ebdf7-c969-4ac3-9bab-27845d18bc5d",
+      "techniques": [
+        {
+          "technique": "concealment-and-its-tells",
+          "verdict": "deviation",
+          "evidence": "lib/script/trailer/report.ts:62 The code states the gap itself. Mislead is routed to the promise ledger (PromiseSource 'assembly'), but the honesty limit and per-shot subtraction are not realized; the report emits one unmeasured row instead."
+        },
+        {
+          "technique": "cue-first-assembly",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/types.ts:373 The cue is a field of the cut, and movements and beats point into it through cueSection and cueMark. composeCut requires a cue (cut.ts:47). Caveat: beats still carry an authored `at` timecode that does not depend on the cue."
+        },
+        {
+          "technique": "withholding-budget",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/types.ts:245 The budget is keyed to the campaign, not the cut. It holds the five named asset kinds, the spend/imply/hold allowances and a trade field for each spend. The model's patch fields (plan.ts:33) cannot touch allowances, so whoever is measured on the cut cannot set the budget."
+        },
+        {
+          "technique": "promise-ledger",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/types.ts:270 Payer is an explicit field and source can be claim, register or assembly. Spend-vs-debt is recorded as spentByTheCut. The ledger is advisory and never a gate, through ADVISORY_RULES read from params (thresholds.ts:105)."
+        },
+        {
+          "technique": "escalation-without-mechanism",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/types.ts:331 The raised variable is an explicit field, as the 'in a tool' rule asks. It is an array so that a rung raising several variables can be expressed and then detected."
+        },
+        {
+          "technique": "dynamic-reset",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/thresholds.ts:94 One structural reset, the too-many threshold and holds-per-reset are read from params. resetHolds is an array (types.ts:345) so that a reset holding two ideas can be detected."
+        },
+        {
+          "technique": "length-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/types.ts:291 The drop order is stored as data in the doctrine's order. Runtimes and per-rung part counts are deliberately not encoded."
+        }
+      ]
+    },
+    "f2d24a0a-da51-4b5b-a694-198122624880/trailer-structure": {
+      "context": "trailer-structure-rules",
+      "subject": "trailer-structure",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:36:18.021Z",
+      "techniques": [
+        {
+          "technique": "escalation-without-mechanism",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/escalation.ts:64 Flags a consecutive repeat of a raised variable (merge rule), and a rung raising more than one variable at line 49. Possible gap: a rung-less spot or platform cut is still a violation at line 29, while the technique exempts the shortest cuts."
+        },
+        {
+          "technique": "dynamic-reset",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/reset.ts:41 Three or more resets is a violation and exactly two is reported unmeasured. The reset's position must be immediately before the peak (line 59). It must land on a cue boundary. Mood-led cuts and cuts that drop the reset are not-engaged."
+        },
+        {
+          "technique": "cue-first-assembly",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/cue.ts:61 A cue with no breath before its peak is rejected. A movement with no cue section is unmeasured, never a pass."
+        },
+        {
+          "technique": "length-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/ladder.ts:64 Drops must form a prefix of the drop order. A short rung with no declared drops is unmeasured, because it may have been trimmed rather than derived."
+        },
+        {
+          "technique": "promise-ledger",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/promises.ts:21 A missing payer is surfaced as incomplete, and the rule stays advisory. Extraction from ignorance and register-level promises are reported unmeasured."
+        },
+        {
+          "technique": "withholding-budget",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/withholding.ts:38 Showing a held or implied asset is a violation, and so is a spend with no recorded trade (line 50). With no budget the verdict is undecided. Campaign drift is reported as outside a single-cut check."
+        }
+      ],
+      "withdrawn": {
+        "worker": "249ebdf7-c969-4ac3-9bab-27845d18bc5d",
+        "state": "conformant",
+        "at": "2026-10-25T01:49:10.777994+00:00",
+        "reason": "reviewer (sonnet): escalation.ts:29 flags any non-moodLed cut with no rung beats as a violation, whatever its rung or droppedParts. The ladder's DROP_ORDER includes 'middle-rungs', so a legitimately derived spot or platform cut would be flagged. The seat's own evidence names this gap, so 'conformant' is contradicted o"
+      }
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/canvas-graph": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:55:16.965Z",
+      "worker": "4eb90336-6af0-4a3a-84c6-40e70bc9e64a",
+      "techniques": [
+        {
+          "technique": "viewport-transform",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/layout.ts:3 layout.ts derives fixed screen geometry from W/H and counts. Nothing converts between screen and world space and nothing reads a pointer, so there is no conversion authority to judge."
+        }
+      ]
+    },
+    "430ace14-ef3a-4ef0-acd0-71c989368950/canvas-graph": {
+      "context": "part-workspace-desk",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:55:16.965Z",
+      "worker": "4eb90336-6af0-4a3a-84c6-40e70bc9e64a",
+      "techniques": [
+        {
+          "technique": "direct-manipulation",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:78 Capturing at press on the layer itself (line 72) is correct. But any movement becomes a live move with no screen-space threshold: a 1px jitter on a ~800px frame rounds to 0.1% and up() then emits an onMove edit for what was meant as a click. Cancel and capture-lost exit paths are also missing (pair anchor)."
+        },
+        {
+          "technique": "viewport-transform",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:64 No camera, but there is still a mapping. The one inverse (screen px to frame percent) is a single function next to the forward percent styling, reads the live container rect, and guards against zero size."
+        },
+        {
+          "technique": "edge-management",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/part/FrameCanvas.tsx:42 The surface's only collection is positioned layers. There is no edge or connection type, so no anchor geometry, routing or edge economy to judge."
+        }
+      ],
+      "registryProposal": "canvas-graph scopes itself to relationship/topology surfaces, yet its direct-manipulation and 'no camera is not no authority' rules bind just as well to edge-less layer-composition canvases (a percent-positioned frame editor). Saying explicitly whether such surfaces fall under this subject or under drag-drop would stop seats disagreeing on applicability."
+    },
+    "e481098a-3532-46d9-bdc9-de84fbc2ce01/concurrent-vcs": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:08:01.557Z",
+      "techniques": [
+        {
+          "technique": "shared-resource-arbitration",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/catalogue.ts:252 This is the one technique whose precondition holds: a singular resource shared across processes. The hand lock names its owner (by: \"app\" here, and {pid, at, by} in lib/diskTx.ts), breaks the lock once it passes staleMs, and after a bounded wait reports a stall to the operator as a 503 instead of polling forever."
+        },
+        {
+          "technique": "physical-isolation",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/fsPort.ts:12 This context only writes files and creates no worktree or checkout."
+        }
+      ],
+      "withdrawn": {
+        "worker": "9aabfc5c-3941-4331-ba2e-b4704615ad9d",
+        "state": "not-applicable",
+        "at": "2026-10-25T02:08:26.292272+00:00",
+        "reason": "reviewer (sonnet): The verdict contradicts itself: the technique anchor at catalogue.ts:252 says the precondition (a singular resource shared across processes) holds, while the verdict says not-applicable. The fsPort.ts:12 comment also describes shared, git-tracked indices that overlapping commits and acquire.py write"
+      }
+    },
+    "5195e631-ab0c-4f12-930b-8c0da09fcd3d/content-research-grounding": {
+      "context": "research-producers",
+      "subject": "content-research-grounding",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:18:25.583Z",
+      "worker": "e3c90c95-7324-4e40-8b06-5ee74b1fe554",
+      "techniques": [
+        {
+          "technique": "evidence-grading-ladder",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/research/followUp.ts:23 adds-fact has a singular source string and confidence with no reason. It has no evidenceClass, locator, loadBearing flag, kind, or three dates, even though lib/notebook/types.ts Fact supports all of them."
+        },
+        {
+          "technique": "unknowns-as-constraints",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/followUp.ts:57 resolves-unknown names its unknown by stable id and is checked against the notebook's ids, never by position. A stray id refuses the whole answer, so nothing is dropped or partly applied."
+        }
+      ]
+    },
+    "52a8fa01-9fd2-44a0-88ee-30ff178edd5c/content-research-grounding": {
+      "context": "notebook-content-and-board",
+      "subject": "content-research-grounding",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:18:25.583Z",
+      "worker": "e3c90c95-7324-4e40-8b06-5ee74b1fe554",
+      "techniques": [
+        {
+          "technique": "pre-linked-causal-mechanisms",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/notebook.ts:46 Bare AND links appear in m-etf-plumbing and m-treasury-flywheel (line 61 too). None of the three mechanisms has typed steps[] or per-step evidence ids. m-institutionalisation, the thesis, cites no facts."
+        },
+        {
+          "technique": "evidence-grading-ladder",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/facts.ts:19 A load-bearing fact has three publications comma-joined into one source string, with no evidenceClass, locator, eventDate or period. Only f-midtier-distribute (facts.ts:37) carries sources[], kind, unit and period. counts.ts:325 does count loadBearing && low."
+        },
+        {
+          "technique": "prior-declaration-and-steel-man",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/notebook.ts:170 The unsearched counter-case is filed under researchGaps, the named failure. The steelMan block (line 90) has no provenance mark, and the Notebook carries no declared-prior field. The board's counter-case column and required steel-man card (dimensions.ts:98, cards.ts:150) are conformant structure over non-conformant content."
+        },
+        {
+          "technique": "tension-finding-taxonomy",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/notebook.ts:32 The expectation/reality/why/strength triple is present. But strength stays high while the four-year-cycle counter-position (line 130) stands. No baseline distribution sizes the drawdown, so a surviving counter-case leaves the score untouched."
+        },
+        {
+          "technique": "scale-conversion-of-numbers",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/notebook.ts:111 Every conversion is linked to its fact id with `for` (line 107 on), which is conformant. But this felt form drops the fact's 'in risk-on conditions' qualifier and widens it to 'on most days'. Most quantities also lack unit, period and denominator."
+        },
+        {
+          "technique": "unknowns-as-constraints",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/unknowns.ts:61 Each unknown has a stable id and an impact phrased as what the render may not say. Resolved unknowns are kept with resolvedBy (lines 40, 54), and UNKNOWN_BY_ID keys the script ledger by id (notebook.ts:188)."
+        }
+      ]
+    },
+    "5414e8ac-5105-43f0-a153-088e12501c9d/conversation-orchestration": {
+      "context": "ui-marks-and-text",
+      "subject": "conversation-orchestration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:23:09.353Z",
+      "worker": "2cd2242e-38ca-461a-9e1a-9b92de83a35e",
+      "techniques": [
+        {
+          "technique": "model-proposed-quick-replies",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/chip/Chip.tsx:2 Chip is a label/filter door the screens author. It is never a model-proposed next message, and no quick-reply grammar exists here."
+        },
+        {
+          "technique": "progress-beat-grammar",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/hint/words.ts:2 In this context 'narration' means app self-description that a gate holds down. No model writes progress lines and nothing lifts them out of a token stream."
+        }
+      ]
+    },
+    "2e702395-189e-4eb9-910c-dc4b76ff6e9a/conversation-orchestration": {
+      "context": "ui-ledger-timeline",
+      "subject": "conversation-orchestration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:23:09.353Z",
+      "worker": "2cd2242e-38ca-461a-9e1a-9b92de83a35e",
+      "techniques": [
+        {
+          "technique": "structured-visual-replies",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:3 The rows are runtime records rendered at a fixed height. They are not tables or charts a model composed as its answer."
+        },
+        {
+          "technique": "recall-transparency",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:9 The provenance marks here describe where a cost or time came from, not the memory a companion turn spends. No recall strip exists."
+        }
+      ]
+    },
+    "970bf5b7-6aa6-407d-97c3-cbe87f301ec5/creator-voice-and-tone": {
+      "context": "audio-text-producers",
+      "subject": "creator-voice-and-tone",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:32:28.794Z",
+      "worker": "a10915a7-5b73-4849-a4b8-91ed4884bd2a",
+      "techniques": [
+        {
+          "technique": "spoken-delivery-direction",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/voice/define.ts:10 Casting is a default: one voice for every creator and format, with no audition. The VoiceLine type (line 28) has no slot for delivery markup. Partly realized: re-recording one line by target (line 42) is the smallest-patch form the technique asks for, and the binding measures rendered seconds."
+        },
+        {
+          "technique": "engine-tone-separation",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/script/define.ts:20 ScriptView carries face, scope, spine, notes and staged state but no tone or profile input, so the script producer has no tone control to separate."
+        },
+        {
+          "technique": "dial-vs-subject-property",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/words/define.ts:19 No producer view exposes a tone dial."
+        }
+      ],
+      "registryProposal": "spoken-delivery-direction does not say what a single-operator studio should do when the vendor offers only a dated default voice (this repo's George expires 2026-12-31). It could add a rule for when re-casting is forced by the vendor rather than chosen."
+    },
+    "8c6c65cc-6679-4c2c-8951-670d77b8ad7c/guest-execution-bounding": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "guest-execution-bounding",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:35:12.248Z",
+      "techniques": [
+        {
+          "technique": "terminate-from-outside-when-you-cannot-count",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/http.ts:58 This timeout aborts a fetch to a remote vendor. It does not bound an embedded third-party engine in the host process, so the technique's precondition does not hold."
+        }
+      ],
+      "registryProposal": "terminate-from-outside mentions 'a connection the host handed off', where a timeout drops the await while the remote work goes on. The same thing happens when a billed remote vendor job is aborted client-side: the vendor may still finish and bill it (http.ts treats an in-flight timeout as 'presumed billed'). The subject should say whether remote vendor jobs are in scope or belong to a neighbour subject such as retry-backoff or cost-metering.",
+      "withdrawn": {
+        "worker": "0a0ebcc3-2f71-4672-995b-62ab844838a5",
+        "state": "not-applicable",
+        "at": "2026-10-25T02:35:41.052415+00:00",
+        "reason": "reviewer (sonnet): The claim that a search of lib/imaging for sandbox and similar terms found 0 hits is false: providers/agy.ts spawns an agentic CLI with --sandbox via child_process, and studio/browser.ts and driver.ts drive Playwright. The anchor http.ts:1 is only a header comment about HTTP retry, so it does not sh"
+      }
+    },
+    "0335f0dc-2987-4b19-96e1-58941a70c9d5/guest-execution-bounding": {
+      "context": "foundry-extract-engine",
+      "subject": "guest-execution-bounding",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:35:12.248Z",
+      "worker": "0a0ebcc3-2f71-4672-995b-62ab844838a5",
+      "techniques": [
+        {
+          "technique": "nested-liveness-ceilings",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:7 The unit and request ceilings here bound the host's own step machine on Cloud Run, not foreign guest work, so the technique's guest-work precondition does not hold."
+        }
+      ]
+    },
+    "158d061e-feaa-4660-a1d3-6e8774b1f152/music-prompt-composition": {
+      "context": "frames-picture-composition",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:58:05.560Z",
+      "worker": "1e4223a0-1a21-48b4-8be9-85d01283ab67",
+      "techniques": [
+        {
+          "technique": "section-plan-as-the-brief",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:5 the only generated artifact here is an image plate; there is no music brief"
+        },
+        {
+          "technique": "sonic-style-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:5 no music style directives; searching lib/frames for music, suno, bpm and tempo found nothing"
+        },
+        {
+          "technique": "lyrics-for-singability",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:7 the texts here are drawn captions and labels, not sung lyrics"
+        },
+        {
+          "technique": "duration-and-tempo-locking",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:5 no cue brief and no tempo; searching for bpm and tempo found nothing"
+        },
+        {
+          "technique": "reference-track-anchoring",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:5 no reference track; searching for music, suno and melody found nothing"
+        }
+      ]
+    },
+    "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867/music-prompt-composition": {
+      "context": "audio-composer-briefs",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:58:05.560Z",
+      "worker": "1e4223a0-1a21-48b4-8be9-85d01283ab67",
+      "techniques": [
+        {
+          "technique": "section-plan-as-the-brief",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/batch.ts:87 The music brief is a single prose string. batch.ts:41 also offers \"section-plan-as-the-brief\" as a technique tag the operator can claim, but the form has no structure that could realise it. The Seed type in recipe.ts has no sections or durations."
+        },
+        {
+          "technique": "duration-and-tempo-locking",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/brief.ts:80 Length and tempo are checked against the delivered take as a measured gate. `unmeasured` is kept apart from `held`. There is no picture-cue bar math, and none is needed because nothing here is briefed against picture."
+        }
+      ],
+      "registryProposal": "section-plan-as-the-brief lets a short prose prompt stand when the purpose is exploring identity. This context's batch lane runs N identical briefs to measure provider variance and keep-rates per term, which is a learning lab, not a production piece. The technique should say whether a variance or vocabulary measurement lane counts as exploration, and whether such a lane may claim the technique as a tag (batch.ts:41) when it cannot express a plan."
+    },
+    "e5f8b2b5-3ac7-422b-9950-c7431117591a/native-shell-integration": {
+      "context": "landing-cosmos-shell",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:05:32.197Z",
+      "worker": "15828de5-56c3-4800-90a2-e9aa6423ea5c",
+      "techniques": [
+        {
+          "technique": "host-forwarded-key-contract",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/keyboard.ts:15 Keys reach the page directly from a desktop browser. No host keeps keys for itself and no native wrapper forwards them."
+        },
+        {
+          "technique": "native-owned-stream",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/perf.ts:137 When the tab is hidden the perf throttle stops on purpose. There is no background stream and no native owner."
+        }
+      ]
+    },
+    "17769afc-f302-4371-8956-63b8f52ada32/optional-dependency-degradation": {
+      "context": "asset-library-store",
+      "subject": "optional-dependency-degradation",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:10:58.391Z",
+      "techniques": [
+        {
+          "technique": "guarded-singleton-accessor",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/detail.ts:122 No client is built; the store comes in as a parameter, and the accessor that opens it lives elsewhere (kernel-store-and-events / lib/kernelProcess)."
+        },
+        {
+          "technique": "capability-honest-refusal",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/detail.ts:125 A missing row is a real not-found inside a configured store. That is error handling, not a refusal for a missing capability."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c1da637f-0196-44cf-9af8-a70254ddd30a",
+        "state": "not-applicable",
+        "at": "2026-10-25T03:11:28.718944+00:00",
+        "reason": "reviewer (sonnet): The claim that this context has no optional dependency to degrade is contradicted by the code: measures.ts:37-39,145-147, triage.ts:24-25 and schema.ts:58 model an optional Python audio sidecar (NULL columns, 'sidecar unavailable', a missing sidecar writes no row), and the seat's search terms never "
+      }
+    },
+    "60361278-9fbe-43c5-add7-454ed78ef0f5/platform-format-adaptation": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "platform-format-adaptation",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:17:16.586Z",
+      "worker": "5eced268-ffcd-49a4-82d1-306bc9e70649",
+      "techniques": [
+        {
+          "technique": "format-as-measured-template",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:54 Canvas sizes carry a measured/assumed grade, and sizes with no evidence are refused (lines 55-56), not filled with a guess."
+        },
+        {
+          "technique": "sound-off-first-design",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/providers/google.ts:64 Captions and numbers are vector-drawn and composited over the generated plate, never rendered by the model, as the 'captions are checkable text, so they are drawn' rule requires. selectors.ts:50 also turns off prompt enhancement because it could add lettering."
+        },
+        {
+          "technique": "derived-short-contract",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/types.ts:1 The video hop animates one still into a 5 or 10 s clip. No parent video is scoped or cut here."
+        },
+        {
+          "technique": "image-led-vs-narration-led",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/clips.ts:83 A clip request carries only a motion prompt: no script, narration or word budget passes through this context."
+        }
+      ]
+    },
+    "8c854c7a-5467-4ddc-80ed-76f19b1f5094/generated-speech-acceptance": {
+      "context": "board-decision-adapters",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:28:25.231Z",
+      "worker": "185c908d-a2ca-40f3-b673-d61c985fb0a8",
+      "techniques": []
+    },
+    "3610b8be-4772-464f-b2f8-dd3a38fef27f/generated-speech-acceptance": {
+      "context": "domain-decision-board-core",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:28:25.231Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "185c908d-a2ca-40f3-b673-d61c985fb0a8",
+        "state": "not-applicable",
+        "at": "2026-10-25T03:29:10.946453+00:00",
+        "reason": "reviewer (sonnet): packages/domain/src already holds speech acceptance (audio.accept.ts has a \"voice-take\" profile and a spoken-line length check, audio.triage.ts has a \"voice\" kind and thresholds), and source.ts's audio reasons include \"vocal-garble\", so the claim of no speech coverage in that directory is contradict"
+      }
+    },
+    "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867/character-identity-continuity": {
+      "context": "audio-composer-briefs",
+      "subject": "character-identity-continuity",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T22:53:28.843Z",
+      "worker": "d033a700-9b74-4c58-b4b8-f20a77a47261",
+      "techniques": [
+        {
+          "technique": "reference-shows-only-invariants",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/ReferenceList.tsx:21 A reference's content is a tempo/key truth for a music track, not a character image whose pose or expression could leak."
+        },
+        {
+          "technique": "reference-admitted-late",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/ReferenceList.tsx:15 No image conditioning channel or denoising entry point exists; methods are tempo/key analysers."
+        },
+        {
+          "technique": "camera-position-not-focal-length",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/recipe.ts:24 Brief facets are musical; no shot list, camera setup or focal length exists to test."
+        },
+        {
+          "technique": "identity-ruler-calibration",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:12 The scoring here is an audio take rubric, not a face-identity instrument."
+        }
+      ]
+    },
+    "c425f431-c0d1-4f34-b736-1a5d70683ef4/declared-process-graph": {
+      "context": "notebook-contract-validation",
+      "subject": "declared-process-graph",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:18:40.130Z",
+      "worker": "9d88f875-3834-4163-8875-262bdeb767a1",
+      "techniques": [
+        {
+          "technique": "per-kind-field-whitelist",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/graph.ts:32 The graph checks are about card-reference integrity. There are no node kinds that launch processes, so no per-kind field legality applies."
+        },
+        {
+          "technique": "composite-expansion-contract",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/graph.ts:67 The notebook is checked as-is. There are no composite nodes and no expansion stage (zero hits for 'composite')."
+        },
+        {
+          "technique": "bounded-expansion",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:18 The validator reads one parsed model answer and never loads author-chosen sub-documents, so there is no recursion to bound."
+        }
+      ]
+    },
+    "0c02b354-237b-44cb-9283-518ed620e846/durable-agent-operations": {
+      "context": "job-queue-and-leases",
+      "subject": "durable-agent-operations",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:48:20.641Z",
+      "worker": "f964446e-24b4-4e47-a315-6108b9007aa5",
+      "techniques": [
+        {
+          "technique": "total-restart-point-by-reference",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-core.ts:29 This is the job discipline's in-flight-is-a-position design: a status plus a stage marker on a job row. It is not a total agent-operation state that names its next procedure, and the golden path explicitly sends this shape to the job subject."
+        },
+        {
+          "technique": "intent-mints-the-identity",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-run.ts:270 The step is marked in flight in the transaction before the call and booked in the next one. That is the intent-like commit pair of a step cursor. Outputs are keyed by step name, not by transcript identities that other records reference, which is the technique's own carve-out ('a linear pipeline of keyed effects... the cursor is the simpler design')."
+        },
+        {
+          "technique": "settlement-order-is-not-placement-order",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-core.ts:191 A job performs one step at a time, the first missing one. No parallel batch settles out of order into an ordered record."
+        },
+        {
+          "technique": "close-is-a-controlled-crash",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-worker.ts:27 On worker stop, each drive finishes its current step and then writes `job.yielded` (running->paused->queued, job-run.ts:248-250). That is a write made only on graceful exit. The comment cites admission-queue as its rule, so it is judged by that subject, not this one."
+        }
+      ],
+      "registryProposal": "The golden path defers the generic job record to 'a different bundle' but names neither the bundle nor a subject. Repos like this one cite the governing subjects by name in their comments (job-coordination: in-flight-is-a-position, background-jobs: startup-sweeps, admission-queue: drain-and-shutdown). Naming them in the scoping paragraph would let a judge route a job-queue context without reasoning from the discriminator alone."
+    },
+    "d12a6aa7-39d7-464c-b47d-c4a1670d3bbd/embedded-db": {
+      "context": "trailer-structure-engine",
+      "subject": "embedded-db",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:51:35.768Z",
+      "worker": "482986df-c0aa-4131-83e9-cf524a552444",
+      "techniques": [
+        {
+          "technique": "analytical-reads-off-the-serving-store",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 No serving store to read from; its data comes from a static JSON import."
+        },
+        {
+          "technique": "connection-pooling",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/readers.ts:6 Its imports are types and pure helpers only (readers.ts:6-14); it opens no connection."
+        },
+        {
+          "technique": "corruption-class-response",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 No writes to a store, so it has no corruption class to respond to."
+        },
+        {
+          "technique": "db-self-instrumentation",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 No database operations to instrument."
+        },
+        {
+          "technique": "derived-capacity-limits",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 Its thresholds are trailer-craft rule numbers, not entry or transaction limits of a storage engine."
+        },
+        {
+          "technique": "extension-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 No engine, so no extensions to load."
+        },
+        {
+          "technique": "journal-and-durability-modes",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 Nothing is persisted here; the search found no journal or pragma."
+        },
+        {
+          "technique": "quiet-window-maintenance",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 No maintenance passes."
+        },
+        {
+          "technique": "single-writer-holder-discipline",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 Holds no store file."
+        },
+        {
+          "technique": "storage-accounting-and-pruning",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/thresholds.ts:7 Stores no rows, so nothing to prune."
+        }
+      ]
+    },
+    "cc39e764-df6c-4508-a8a9-e13944674461/generated-output-grading": {
+      "context": "style-trials-cull",
+      "subject": "generated-output-grading",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:59:17.554Z",
+      "techniques": [
+        {
+          "technique": "trial-matrix-design",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/TrialMatrix.tsx:9 Five distinct trial problems per style. Each column counts the spread of verdicts (approved/rejected/undecided/earlier), stale plates are counted apart and never shown as the face, and unrendered cells show 'not rendered under this block' (line 66). LockGate also requires lockProblems covered before a lock."
+        },
+        {
+          "technique": "two-grader-disagreement-rule",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/pair/BlindPair.tsx:163 The human judges blind (the machine's pick is withheld by the server until the human has judged), then machine-vs-human disagreement is shown per pair as its own 'differs' outcome instead of being averaged. The agreement Tally (line 170) counts only comparable pairs (agree of compared), and 'machine not comparable' is a separate state. This is the human-calibration layer the technique and the golden path describe."
+        },
+        {
+          "technique": "vision-model-grading-schema",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/cull/MatrixCull.tsx:83 Only the provenance clause is visible in this context. The cull desk shows which grader series (model@digest) made the packet's grades whenever it differs from the series the calibration was measured on. StyleFacts.tsx:72 also marks an agent's verdict as 'shown, not counted'. The schema's field design lives server-side and was not judged here."
+        },
+        {
+          "technique": "cross-provider-flip-analysis",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/style/TrialMatrix.tsx:1 The matrix shows one style against its trial problems. No surface in this context runs the same grid on two generators and diffs it, so there is nothing for a flip analysis to read. Each proof does record provider · model (ProofSheet.tsx:113)."
+        }
+      ],
+      "withdrawn": {
+        "worker": "82298d28-0b8e-4d8c-8a25-d67cc2006ab3",
+        "state": "conformant",
+        "at": "2026-10-26T00:00:20.253942+00:00",
+        "reason": "reviewer (sonnet): The conformant verdict leans on pair/BlindPair.tsx (blind judging, 'differs' outcome, agreement Tally), which is not one of this context's files, and I could not confirm in the context that the server withholds the machine's pick; the same technique's flip-analysis anchor (TrialMatrix.tsx:1) is a no"
+      }
+    },
+    "7226db68-4ca8-41ee-a2f8-3012d05e4acd/measurement-honesty": {
+      "context": "publish-producers",
+      "subject": "measurement-honesty",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:10:19.589Z",
+      "worker": "3fb6af6d-6c62-4e6b-9a6f-44688d34955e",
+      "techniques": [
+        {
+          "technique": "lower-bound-disclosure",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/publish/standing.ts:30 The bound is stated only in the doc comment on line 29 (\"or since the window began\"). The value that travels carries no truncated or at-least marker, so the floor reaches readers looking like a census."
+        },
+        {
+          "technique": "unmeasurable-vs-zero",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/metrics.ts:31 Fields the platform cannot report are null, never 0, and the mechanism is named on lines 28-29. Dry publications get no snapshot instead of a row of zeros (lines 14-15). lib/publish/youtube.ts fetchStats also returns null for withheld ids."
+        },
+        {
+          "technique": "renormalize-over-present",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/adapter.ts:36 Absence survives the adapter seam as null and is persisted unchanged through recordMetric (step 1: preserve absence at every hop). Totals are computed outside this context."
+        },
+        {
+          "technique": "incomplete-not-verdict",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/metrics.ts:63 A failed platform read returns the error rather than a refreshed count. Dry mode and no-live cases return refreshed:0 with the reason in words (lines 40-46), not a measured zero."
+        },
+        {
+          "technique": "co-published-numbers-must-reconcile",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/metrics.ts:68 The withheld count is incremented in the same loop iteration as refreshed, so the note's \"N returned no statistics\" can never be larger than the refreshed figure printed beside it."
+        },
+        {
+          "technique": "speed-figure-names-its-endpoints",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/timers.ts:38 The downtime gap is named for the events the instrument can actually see (last heartbeat to the noticing tick) and carries both endpoints as from/to. It makes no claim about when the outage really began."
+        },
+        {
+          "technique": "minimum-sample-floors",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/publish/standing.ts:43 Standing produces counts, not rates. The technique explicitly exempts counts, so no floor is owed."
+        },
+        {
+          "technique": "noise-band-and-hysteresis",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/publish/metrics.ts:19 This context only appends lifetime snapshots. Deltas, and any decision to announce a change, live in @gt/domain/publication, which is outside this context."
+        }
+      ]
+    },
+    "076622f1-4906-4cdc-9a76-307df47fdd14/motion": {
+      "context": "landing-cosmos-scenes",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:21:25.143Z",
+      "worker": "a4455aff-70b2-4aba-aa34-609242138654",
+      "techniques": [
+        {
+          "technique": "unprompted-motion-lifecycle",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/sceneSpec.ts:59 The sway loops (46-124 s periods, infinite alternate per cosmos.css:78) start on their own and run indefinitely. A search of app/_landing for pause/stop/aria-pressed found no visible, operable stop; only the OS preference and machine pauses (hidden tab, off-screen) suspend them. The pointer parallax is value-driven with clamped travel, so it is exempt."
+        },
+        {
+          "technique": "taste-budgets",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/sceneSpec.ts:28 The ambient drift travels ±4% of viewport width (about ±77 px at 1920), and the sway rotates large discs by up to about 4.9 deg, against a bound of a few pixels. About 9 ambient instances plus one bob per medallion run at once (more than fit on one hand). The medal bob (±3-4 px) and the 900 ms stagger cap are within budget."
+        },
+        {
+          "technique": "reduced-motion-mechanics",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:32 cx.RM comes from perf.ts:99 matchMedia(...).matches, read once in index.ts:104, and no change listener exists. A preference turned on mid-session stops the CSS loops through the live media query, but the scripted parallax and carousel glide keep their boot-time copy. The fallbacks themselves are well designed: loops go still, transitions collapse to .15s rather than to zero, and the carousel snaps."
+        },
+        {
+          "technique": "loop-pause-governance",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:53 wirePause merges hidden-tab and off-screen into one root .paused class, but only CSS reads it. The scripted camera loop re-derives visibility from document.hidden itself and ignores the off-screen decider. setLook/frameReq also restart frames while paused, which contradicts the header's claim that the frame loop stops. There is no user-stop decider."
+        },
+        {
+          "technique": "performance-discipline",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:20 Frame values are written straight to element style (transform/opacity) outside React, on one shared rAF loop (life.ts Life.want/tick) that idles when no step wants a frame. The timestep is clamped per step (camera.ts:29, carousel.ts:41)."
+        },
+        {
+          "technique": "engine-selection",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/life.ts:14 Ambient and fire-and-forget motion runs on platform keyframes and transitions. The one owned scripted loop carries the retargetable, input-steered gestures (parallax, drag, carousel glide). No third-party animation library with a global switch is involved."
+        },
+        {
+          "technique": "gesture-decomposition",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/camera.ts:41 The camera is split into independent tracks: pointer look (approach k=.085), drag offset (decay .9, held while dragging) and wheel dolly (decays only after 800 ms idle). Each has its own curve and its own input axis."
+        },
+        {
+          "technique": "one-shot-guarding",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/scene.ts:133 A rebuild (resize or tier change) marks the planes and medallions .in before the new stack is connected (scene.ts:136), so the entrance does not replay. The boot mount is the only cause of the entrance, which works as a structural reset; the header states it (scene.ts:20-23)."
+        },
+        {
+          "technique": "content-bearing-degradation",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/scene.ts:98 A raster job that fails or is dropped resolves null (raster.ts run/drainMain catch), so Promise.all still settles and the plane is revealed rather than left armed. The hidden start state applies only to JS-built nodes, and the reduced-motion boot path calls showAll."
+        },
+        {
+          "technique": "continuity-across-change",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/carousel.ts:323 Opening a template passes the card face's rect so the stage art FLIPs out of the card (one identity). Carousel cards stay mounted and only their transform changes. Caveat: the reduced form in stage.ts:109 keeps the match with a .01s tween rather than withdrawing the identity, which is outside this context."
+        },
+        {
+          "technique": "preset-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/cosmos.css:4 The landing's motion is declared bespoke private choreography (taken from the contest design, not the kit), which the technique allows outside the shared vocabulary. Its taste numbers (e.g. medalLayer.ts:19 stagger 55/900) are inline rather than named constants."
+        }
+      ],
+      "registryProposal": "reduced-motion-mechanics could name the split-liveness case directly: a CSS media query that stays live alongside a scripted flag sampled once yields a half-reduced surface after a mid-session toggle, and each half looks correct on its own."
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/vendored-patch-stack": {
+      "context": "ui-status-provenance",
+      "subject": "vendored-patch-stack",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:56:21.174Z",
+      "techniques": [
+        {
+          "technique": "one-reset-authority",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:6 The code is first-party, carried over from the project's own v1. No vendored checkout exists, so nothing needs a reset."
+        },
+        {
+          "technique": "patch-set-authority",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:8 Divergence from v1 is recorded as plain source edits with the reason in a comment. There is no patch set and no patched tree, so neither can be the authority."
+        }
+      ],
+      "withdrawn": {
+        "worker": "cbf0ba28-14dc-4d86-b6dc-c7bd82834767",
+        "state": "not-applicable",
+        "at": "2026-10-26T01:00:34.523751+00:00",
+        "reason": "reviewer (sonnet): The anchors in UpstreamBreak.tsx (lines 1, 6, 8) are header comments about a failed pipeline step and what was kept from v1, so they do not show that no vendored tree or patch set exists. That file is also not among the context's listed files (status, tally, piprow, stackbar, facts, facet). I did no"
+      }
     }
   }
 }

@@ -116,7 +116,7 @@ export type LiveHold = {
   readonly id: string;
   readonly spendClass: string;
   readonly amount: number;
-  readonly unit: "usd" | "audio-s";
+  readonly unit: "usd" | "audio-s" | "chars";
   /** When it was reserved; absent when v1's stamp does not read as an instant. */
   readonly since?: string;
   /** The reserving process: `gone` is a hold v1's next transaction reclaims once its TTL has run. */

@@ -35,7 +35,9 @@ import { LaterEditor } from "./editors.tsx";
 
 /** The frame every editor hands to PartWorkspace; the editor adds its rail, primary, inspector. */
 export type Frame = Omit<PartWorkspaceProps, "rail" | "primary" | "inspector" | "mode" | "facts">;
-export type Send = (op: PartOp) => void;
+/** Send an op at the view's rev; `then` runs once it APPLIED (not on a refusal or a conflict) -
+ *  the voice editor's ask-then-act (an op that must land before the act that reads it). */
+export type Send = (op: PartOp, then?: () => void) => void;
 /** Launch an act through the receipt flow; `target` names one unit for a per-unit act. */
 export type Launch = (act: PartActKind, label: string, target?: string) => void;
 export type EditorProps<V> = { readonly view: V; readonly frame: Frame; readonly send: Send; readonly busy: boolean; readonly error: string | null; readonly act: Launch };
@@ -62,8 +64,8 @@ export function PartEditor({ first, port, nowMs }: { readonly first: PartView; r
   const flow = useReceipt(nowMs);
   const at = { projectId: view.projectId, key: view.key };
 
-  const write = async (run: () => ReturnType<PartPort["opPart"]>): Promise<void> => {
-    if (inflight.current) return;
+  const write = async (run: () => ReturnType<PartPort["opPart"]>): Promise<boolean> => {
+    if (inflight.current) return false;
     inflight.current = true;
     setBusy(true);
     try {
@@ -71,22 +73,26 @@ export function PartEditor({ first, port, nowMs }: { readonly first: PartView; r
       const r = await settled(run());
       if (!r.ok) {
         setError(r.error.error);
-        return;
+        return false;
       }
       if (r.value.kind === "conflict") {
         setView(r.value.current);
         setError("changed elsewhere — redrawn as it is now");
-        return;
+        return false;
       }
       setView(r.value.view);
       setError(null);
+      return true;
     } finally {
       inflight.current = false;
       setBusy(false);
     }
   };
 
-  const send: Send = (op) => void write(() => port.opPart({ ...at, baseRev: view.rev, op }));
+  const send: Send = (op, then) =>
+    void write(() => port.opPart({ ...at, baseRev: view.rev, op })).then((applied) => {
+      if (applied) then?.();
+    });
   const undo = (): void | false => {
     if (view.ops.length === 0 || inflight.current) return false;
     void write(() => port.undoPart({ ...at, baseRev: view.rev }));

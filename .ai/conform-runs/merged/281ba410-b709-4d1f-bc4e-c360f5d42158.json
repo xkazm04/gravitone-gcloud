@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "281ba410-b709-4d1f-bc4e-c360f5d42158",
+ "subject": "drag-drop",
+ "evaluatedAt": "2026-10-25T23:44:18.783088+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-arrange-desk",
+   "subject": "drag-drop",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:73 The card drag's only cancel paths are pointercancel and a release outside any cell: no Escape listener, no blur or visibility handling, and no unmount reaper exist. A mis-grabbed card cannot be put back with Escape (the keymap's Esc binds only 'leave-field' in fields), and a drag that is live when the board unmounts leaves its listeners and state behind.",
+   "techniques": [
+    {
+     "technique": "drag-lifecycle",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:73 Good: SLOP_PX threshold (line 53), pointercancel goes to cancel and never to commit, and a drop on nothing cancels; end() is a single reaper. Missing: the Escape cancel the technique calls non-negotiable, focus/blur loss, an unmount teardown, and a singleton guard (a second start() overwrites live.current while the first element's listeners stay attached)."
+    },
+    {
+     "technique": "drop-affordances",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:58 Only the cell under the pointer lights, and it is never run through checkMove. Valid targets are not announced at drag start, refusing cells look the same as accepting ones, and there is no edge auto-scroll. Present: grab cursor and user-select:none on .card, the .over highlight, and the dashed provisional rim (packages/ui Arrange.module.css)."
+    },
+    {
+     "technique": "payload-and-identity",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:125 A drop is a statement of identity plus cell ({id, from, to, opId}), never an index. The id is re-resolved at drop time (Arrange.tsx:226 stackOf), and only one write per card can be in flight (line 109)."
+    },
+    {
+     "technique": "ownership-boundaries",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:133 Request posture: the card is drawn provisional until the store answers. A refusal returns the card and gives the store's reason, and ANSWER_MS turns a missing answer into an explained refusal. lib/sound/arrange.ts moveTake re-runs admitMove against current takes inside the store transaction, which is the authority's door."
+    },
+    {
+     "technique": "keyboard-alternatives",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:195 \u21e7arrow moves the focused card through the same move() path, focus rides with the card (lines 94-97), and the outcome is announced by toast or by a live ErrorLine. But no single-pointer, no-drag control moves a card between stages or groups. moveTake is called only from arrangeActs, and no other writer sets stage/group, so the click path the technique requires (WCAG 2.5.7) is missing."
+    },
+    {
+     "technique": "cross-surface-handoff",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:5 The card drag never leaves the one ArrangeBoard surface. The only drop that crosses a boundary is the OS file drop into RoundTrip, which lives in @gt/ui (it checks dataTransfer types for 'Files' before accepting) and is outside this context's files."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-25T23:44:18.783088+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "drag-drop"
+   ],
+   "techniques": [
+    "cross-surface-handoff",
+    "drag-lifecycle",
+    "drop-affordances",
+    "keyboard-alternatives",
+    "ownership-boundaries",
+    "payload-and-identity"
+   ],
+   "deviations": 1,
+   "context": "audio-arrange-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

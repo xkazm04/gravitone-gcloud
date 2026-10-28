@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { AUDIO_PROFILE_IDS } from "../audio.accept.ts";
+import { fxChainSchema } from "../audio.fx.ts";
 import { blobRefSchema } from "../blob.ts";
 import { RENDER_RES } from "../partView.album.ts";
 import { RECEIPT_MODES } from "../produce.ts";
@@ -96,6 +98,20 @@ const takeSchema = z.looseObject({
   sections: z.array(z.looseObject({ name: z.string(), startMs: z.number(), endMs: z.number() })).default([]),
 });
 
+/** A narration take. Every addition is OPTIONAL and absent on a take that never had it (a v1
+ *  record, a dry stand-in): the absent-value convention is "omit the key", never null. */
+const voiceTakeSchema = takeSchema.extend({
+  /** Who spoke it: provider, model, the voice, and whether a vendor was billed. */
+  engine: z.looseObject({ provider: z.string().min(1), model: z.string().min(1), voiceId: z.string().min(1).optional(), mode: z.enum(["dry", "live"]) }).optional(),
+  /** An FX version: the take it was rendered from (a take on the same line), the words it was
+   *  asked for, and the chain that rendered it. */
+  fxOf: z.string().min(1).optional(),
+  describe: z.string().min(1).max(400).optional(),
+  chain: fxChainSchema.optional(),
+  /** The advisory acceptance verdict (audio.accept.ts), mirrored from its ledger event. */
+  accept: z.looseObject({ profile: z.enum(AUDIO_PROFILE_IDS), verdict: z.enum(["pass", "fail"]), reasons: z.array(z.string()) }).optional(),
+});
+
 export const VOICE = defineStepRecord({
   key: "voice",
   owner: "voice",
@@ -104,8 +120,12 @@ export const VOICE = defineStepRecord({
     .looseObject({
       ...versionField,
       text: z.record(z.string(), z.string()).default({}),
-      takes: z.record(z.string(), takeSchema).default({}),
+      takes: z.record(z.string(), voiceTakeSchema).default({}),
       byLine: z.record(z.string(), z.looseObject({ takeIds: z.array(z.string()), active: textOrNull })).default({}),
+      /** A voice fx asked for and not yet rendered, per line (op `voice-fx-ask`; the `fx-line`
+       *  act renders it as a new take and clears it). OPTIONAL, not defaulted: a writer that
+       *  never asks keeps compiling, and an absent key is "no ask". */
+      fxAsk: z.record(z.string(), z.looseObject({ from: z.string().min(1), describe: z.string().trim().min(1).max(400) })).optional(),
     })
     // A line's take list names takes this record holds, and its active one is among them: a
     // dangling id would draw a take the cut cannot find (v1's score held the same rule per spot).
