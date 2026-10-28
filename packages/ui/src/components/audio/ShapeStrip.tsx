@@ -22,11 +22,13 @@ export type ShapeStripProps = {
   /** Four bars more or fewer. */
   readonly onLength: (columns: number) => void;
   readonly onClear: () => void;
+  /** The column the sketch is sounding, while it plays; the strip lights it. */
+  readonly playhead?: number | null;
 };
 
 const clampLevel = (n: number): Level => (Math.max(0, Math.min(3, n)) as Level);
 
-export function ShapeStrip({ levels, bpm, onLevels, voicesOf, presets, onPreset, onLength, onClear }: ShapeStripProps) {
+export function ShapeStrip({ levels, bpm, onLevels, voicesOf, presets, onPreset, onLength, onClear, playhead = null }: ShapeStripProps) {
   const painting = useRef(false);
   const sections = sectionsOf(levels, bpm);
   const total = sections.at(-1)?.endS ?? 0;
@@ -47,7 +49,7 @@ export function ShapeStrip({ levels, bpm, onLevels, voicesOf, presets, onPreset,
     <section className={s.shape} aria-label="shape">
       <div className={s.secs} style={cols}>
         {sections.map((sec) => (
-          <div key={sec.from} className={s.sec} data-level={sec.level} style={{ gridColumn: `${sec.from + 1} / ${sec.to + 1}` }}>
+          <div key={sec.from} className={s.sec} data-level={sec.level} data-now={playhead !== null && playhead >= sec.from && playhead < sec.to} style={{ gridColumn: `${sec.from + 1} / ${sec.to + 1}` }}>
             <b className={s.secName}>{sec.label}</b>
             <span className={s.secMeta}>{`${clock(sec.startS)}–${clock(sec.endS)} · ${sec.bars} bars`}</span>
             <span className={s.secMeta}>{[LEVEL_WORDS[sec.level], ...voicesOf(sec)].join(" · ")}</span>
@@ -77,6 +79,7 @@ export function ShapeStrip({ levels, bpm, onLevels, voicesOf, presets, onPreset,
             key={i}
             className={s.col}
             data-level={l}
+            data-now={playhead === i}
             role="slider"
             tabIndex={0}
             aria-label={`bars ${i * 4 + 1} to ${i * 4 + 4}`}

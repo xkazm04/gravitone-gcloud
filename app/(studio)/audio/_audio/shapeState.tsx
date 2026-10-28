@@ -79,6 +79,9 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
   }
 
   const sections = sectionsOf(levels, bpm);
+  // While the shape's sketch sounds, the column under the clock is lit.
+  const sounding = ids.length > 0 && ear.at === sketchHref(ids, levels, bpm, seed.key) && ear.state === "playing";
+  const playhead = sounding ? Math.min(levels.length - 1, Math.floor(ear.clock / groupSeconds(bpm))) : null;
   const plan = sectionsToPlan(seed, sections);
   const seconds = planSeconds(plan);
   const quote = priceCall({ op: "compose", seconds });
@@ -89,7 +92,7 @@ export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeS
   };
   const node = (
     <>
-      <ShapeStrip levels={levels} bpm={bpm} onLevels={setLevels} voicesOf={(sec) => voicesAt(sec.level, seed.instruments)} presets={PRESETS} onPreset={(p) => startWith(p)} onLength={resize} onClear={() => setLevels(null)} />
+      <ShapeStrip levels={levels} bpm={bpm} playhead={playhead} onLevels={setLevels} voicesOf={(sec) => voicesAt(sec.level, seed.instruments)} presets={PRESETS} onPreset={(p) => startWith(p)} onLength={resize} onClear={() => setLevels(null)} />
       <div className={s.row}>
         {hear(levels)}
         <Chip label="suno" value={`${sections.length} section ${sections.length === 1 ? "tag" : "tags"} · unverified`} casing="lower" tone="amber" />{" "}

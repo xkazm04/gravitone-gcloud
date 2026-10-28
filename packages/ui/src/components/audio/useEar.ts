@@ -24,18 +24,21 @@ export type Ear = {
   readonly state: EarState;
   readonly failed: string | null;
   readonly stateOf: (href: string) => EarState;
+  /** Seconds into `at`, sampled at the element's `timeupdate` (a few times a second); 0 when silent. */
+  readonly clock: number;
   /** Play `href`, or stop it if it is the one sounding. */
   readonly toggle: (href: string) => void;
   readonly stop: () => void;
 };
 
-type Handlers = { readonly playing: () => void; readonly ended: () => void; readonly error: (code: number | undefined) => void };
+type Handlers = { readonly playing: () => void; readonly ended: () => void; readonly error: (code: number | undefined) => void; readonly time: (s: number) => void };
 
 /** Point the one element at a new source, its events at this press. Outside the hook: the element is
  *  an external system the hook drives, not a value React renders from. */
 function load(a: HTMLAudioElement, href: string, on: Handlers): void {
   a.onplaying = on.playing;
   a.onended = on.ended;
+  a.ontimeupdate = () => on.time(a.currentTime);
   a.onerror = () => on.error(a.error?.code);
   a.pause();
   a.src = href;
@@ -55,6 +58,9 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
   const [at, setAt] = useState<string | null>(null);
   const [state, setState] = useState<EarState>("idle");
   const [failed, setFailed] = useState<string | null>(null);
+  // The clock is not render state at audio rate: one cell, written at timeupdate (~4 Hz), which the
+  // playhead samples (AudioPreview's playback-clock rule).
+  const [clock, setClock] = useState(0);
 
   const calm = (): void => {
     if (dog.current !== null) clearTimeout(dog.current);
@@ -105,6 +111,10 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
         ended: () => {
           setAt(null);
           setState("idle");
+          setClock(0);
+        },
+        time: (t) => {
+          if (press.current === mine) setClock(t);
         },
         error: (code) => {
           calm();
@@ -119,6 +129,7 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
       setAt(href);
       setState("loading");
       setFailed(null);
+      setClock(0);
       dog.current = setTimeout(() => {
         setFailed(`no answer from the player after ${EAR_WATCHDOG_MS / 1000} s · ${href.split("?")[0] ?? href}`);
         me.pause();
@@ -138,5 +149,5 @@ export function useEar(explain?: (href: string) => Promise<string | null>): Ear 
   );
 
   const stateOf = useCallback((href: string): EarState => (href === at ? state : "idle"), [at, state]);
-  return { at, state, failed, stateOf, toggle, stop };
+  return { at, state, failed, stateOf, clock, toggle, stop };
 }

@@ -16,3 +16,5 @@
 .foot{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}
 .grow{flex:1}
 .len{font:600 var(--fs-micro)/1 var(--mono);color:var(--ink-bright)}
+.col[data-now="true"]{border-color:var(--ink-bright);box-shadow:0 0 0 1px var(--ink-bright)}
+.sec[data-now="true"]{background:color-mix(in srgb,var(--cyan) 16%,transparent);border-left-color:var(--cyan)}
