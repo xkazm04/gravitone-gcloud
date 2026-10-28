@@ -61,9 +61,7 @@
     ".next-l53/types/**/*.ts",
     ".next-l53/dev/types/**/*.ts",
     ".next-l56/types/**/*.ts",
-    ".next-l56/dev/types/**/*.ts",
-    ".next-hk/types/**/*.ts",
-    ".next-hk/dev/types/**/*.ts"
+    ".next-l56/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
