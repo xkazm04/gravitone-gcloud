@@ -8,8 +8,8 @@
 // (`from`, token indices), and every word that produced nothing is returned as `unheard` - a
 // translation that hid what it ignored would teach the wrong lesson about what was asked.
 //
-// Matching is greedy, longest cue first, over accent-stripped lower-case tokens; a trailing "s"
-// is tried off ("rainy nights" -> night). A negator before a cue ("no drums", "without vocals")
+// Matching is greedy, longest cue first, over accent-stripped lower-case tokens; plain suffixes
+// are tried off when the word as typed matches nothing ("rainy nights" -> night, "stealing" -> steal). A negator before a cue ("no drums", "without vocals")
 // fences the cue's own words and drops every instrument that carries them ("brushed drums"). Tempo is the mean of
 // the matched rows' ranges, unless the sentence says a number with "bpm".
 import { BLANK_SEED, type Seed } from "./recipe.ts";
@@ -73,7 +73,15 @@ export function tokenize(sentence: string): { readonly text: string; readonly st
   return out;
 }
 
-const variants = (w: string): string[] => (w.length > 3 && w.endsWith("s") ? [w, w.slice(0, -1)] : [w]);
+/** The word as typed first, then plain suffixes off: rainy nights -> night, remembering -> remember, sneaked -> sneak. */
+function variants(w: string): string[] {
+  const v = [w];
+  if (w.length > 3 && w.endsWith("s")) v.push(w.slice(0, -1));
+  if (w.length > 5 && w.endsWith("ing")) v.push(w.slice(0, -3), `${w.slice(0, -3)}e`);
+  if (w.length > 4 && w.endsWith("ed")) v.push(w.slice(0, -2), w.slice(0, -1));
+  if (w.length > 4 && w.endsWith("ly")) v.push(w.slice(0, -2));
+  return v;
+}
 
 function cueAt(words: readonly string[], i: number): Cue | null {
   for (const head of variants(words[i] ?? "")) {

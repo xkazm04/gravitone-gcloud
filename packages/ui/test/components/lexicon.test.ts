@@ -17,19 +17,19 @@ const CASES: readonly (readonly [string, Want])[] = [
   ["sad piano", { m: ["melancholic", "sad"], i: ["grand piano"], bpm: [60, 80] }],
   ["epic fantasy trailer with choir", { g: ["epic orchestral"], i: ["choir"] }],
   ["lofi beats to study to", { g: ["lo-fi hip hop"], i: ["rhodes"], bpm: [70, 90] }],
-  ["a cozy cabin in winter by the fireplace", { m: ["cozy"], unheard: ["cabin"] }],
+  ["a cozy igloo in winter by the fireplace", { m: ["cozy"], unheard: ["igloo"] }],
   ["tokyo city pop at sunset", { g: ["city pop"], i: ["electric piano"] }],
   ["spooky halloween party", { m: ["eerie"], i: ["choir"] }],
   ["calm meditation without drums", { m: ["calm"], avoid: ["drums"], bpm: [55, 75] }],
   ["energetic workout music at 128 bpm", { m: ["energetic"], bpm: [128, 128] }],
-  ["western showdown at high noon", { g: ["western"], i: ["nylon guitar"], unheard: ["showdown", "high", "noon"] }],
+  ["western showdown at high noon", { g: ["western"], i: ["nylon guitar"], unheard: [] }],
   ["romantic paris cafe", { m: ["romantic"], i: ["accordion"] }],
   ["groovy 70s funk with slap bass", { g: ["funk"], i: ["slap bass"], bpm: [100, 115] }],
-  ["video game boss fight", { g: ["chiptune"], unheard: ["boss", "fight"] }],
+  ["video game boss fight in a volcano", { g: ["chiptune", "epic orchestral"], i: ["taiko drums"], unheard: ["volcano"] }],
   ["peaceful forest morning", { g: ["folk"], m: ["calm"], i: ["nylon guitar"] }],
   ["mysterious space ambient", { g: ["space ambient"], m: ["mysterious"], i: ["synth pad"] }],
   ["wedding first dance with strings and piano", { g: ["romantic ballad"], i: ["grand piano", "string section"] }],
-  ["zelda dungeon flute vibes", { i: ["woodwinds"], unheard: ["zelda", "dungeon"] }],
+  ["zelda dungeon flute vibes", { g: ["dark ambient"], i: ["woodwinds"], unheard: ["zelda"] }],
 ];
 
 describe("translate: a sentence compiled into a seed", () => {

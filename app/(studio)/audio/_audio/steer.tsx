@@ -12,9 +12,6 @@
 // The seed itself stays the lane's (./AudioLane.tsx): this hook only ever writes it through the
 // setter it is handed, so the composer, the variations and the receipt all read one seed.
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { z } from "zod";
-
-import { parseJsonAt } from "@gt/domain/door";
 
 import { ATLAS, atlasFor, AUDITION_BPM, AUDITION_KEY, auditionHref, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
 import { EarStrip } from "@gt/ui/components/audio/EarStrip.tsx";
@@ -29,15 +26,16 @@ type Move = { readonly minus: string; readonly plus: string };
 
 const NONE: ReadonlySet<number> = new Set();
 
-const envelope = z.object({ error: z.string() });
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
-/** A failed audition's own sentence, read off the route's error envelope (useEar's `explain`). */
+/** A failed audition's own sentence, read off the route's error envelope through a narrow check
+ *  (./returnClient.ts's way: a client module never loads zod) - useEar's `explain`. */
 export async function explainAudition(href: string): Promise<string | null> {
   try {
     const r = await fetch(href);
     if (r.ok) return null;
-    const doc = parseJsonAt("audition", envelope, await r.text());
-    return doc.ok ? doc.value.error : null;
+    const body: unknown = await r.json();
+    return isObject(body) && typeof body["error"] === "string" ? body["error"] : null;
   } catch {
     return null; // the element's own code is already on screen; nothing better was said
   }
