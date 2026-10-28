@@ -16,7 +16,7 @@ Spec: {"voices": [{"files": [...], "role": "keys"}], "levels": [0..3, ...], "bpm
 
 import math
 
-from audition import SR, AuditionError, _loudness, finish, voice
+from audition import SR, AuditionError, finish, voice
 from drums import beat as groove_at
 
 GAIN = [0.45, 0.62, 0.82, 1.0]
@@ -90,5 +90,5 @@ def render_sketch(spec):
             p *= 0.05 / max(float(np.sqrt(np.mean(p * p))), 1e-9)
             end = min(total, at + len(p))
             mix[at:end] += GAIN[lv] * p[: end - at]
-    y = finish(mix, float(spec.get("lufs", -20.0)))
-    return y, {"durationS": round(len(y) / SR, 3), "lufs": round(_loudness(y.astype("float64")), 2), "voices": len(parts), "columns": len(levels)}
+    y, lufs = finish(mix, float(spec.get("lufs", -20.0)))
+    return y, {"durationS": round(len(y) / SR, 3), "lufs": round(lufs, 2), "voices": len(parts), "columns": len(levels)}

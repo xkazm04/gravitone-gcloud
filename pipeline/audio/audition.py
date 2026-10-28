@@ -239,19 +239,25 @@ def voice(files, bpm, tonic, minor, role, cache_dir):
 
 
 def finish(mix, target):
-    """Fade the tail, set the integrated loudness to `target`, hold the peak under -1 dBFS softly."""
+    """Fade the tail, set the integrated loudness to `target`, hold the peak under -1 dBFS softly;
+    answer (samples, the loudness they measure).
+
+    A gain lands exactly on `target`, so a render the limiter leaves alone is measured once. One the
+    limiter touches (a kit's transients) loses some loudness to it and is measured and set again -
+    the promise is that every audition sits at `target`, so a choice is about timbre, not level.
+    Each measure is an FFT the length of the render: three of them were most of a three-minute
+    sketch's four seconds."""
     import numpy as np
 
     tail = min(len(mix), int(0.6 * SR))
     mix[len(mix) - tail:] *= np.linspace(1.0, 0.0, tail)
     ceiling = 0.89
-    # Twice: a soft limit on a transient-heavy render (a kit) takes loudness back off it, and the
-    # promise is that every audition sits at `target` so a choice is about timbre, not level.
     for _ in range(2):
         mix *= 10 ** ((target - _loudness(mix)) / 20.0)
-        if np.max(np.abs(mix)) > ceiling:
-            mix = ceiling * np.tanh(mix / ceiling)
-    return mix.astype("float32")
+        if np.max(np.abs(mix)) <= ceiling:
+            return mix.astype("float32"), target
+        mix = ceiling * np.tanh(mix / ceiling)
+    return mix.astype("float32"), _loudness(mix)
 
 
 def render(spec):
@@ -261,8 +267,8 @@ def render(spec):
         mix, facts = beat(spec["files"], spec["bpm"])
     else:
         mix, facts = voice(spec["files"], spec["bpm"], spec["tonic"], spec["minor"], spec.get("role", "keys"), spec.get("cacheDir"))
-    y = finish(mix, float(spec.get("lufs", -20.0)))
-    return y, {"durationS": round(len(y) / SR, 3), "lufs": round(_loudness(y.astype("float64")), 2), **facts}
+    y, lufs = finish(mix, float(spec.get("lufs", -20.0)))
+    return y, {"durationS": round(len(y) / SR, 3), "lufs": round(lufs, 2), **facts}
 
 
 def _biquad_gain2(kind, gain_db, q, fc, w):
