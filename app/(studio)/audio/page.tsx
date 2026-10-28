@@ -23,6 +23,7 @@ import { EngineList } from "@gt/ui/components/audio/EngineList.tsx";
 import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
 
 import { audibleIds } from "../../../lib/audio/atlas.ts";
+import { warmWorkers } from "../../../lib/audio/renderWorker.ts";
 import { makersOf } from "../../../lib/sound/engines.ts";
 import { setHand, sunoConfirm, sunoReceipt } from "./_audio/actions.ts";
 import { Arrange } from "./_audio/Arrange.tsx";
@@ -69,7 +70,11 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   else if (url.section === "strengths") body = <StrengthsDesk key={url.kind} view={await readStrengths(url.kind)} lessonDoor={confirmLessonAct} />;
   else if (url.section === "rubric") body = <RubricDesk key={url.kind} view={await readRubricPile(url.kind)} acts={{ scoreTake }} />;
   else if (url.section === "batch") body = <BatchDesk key={url.kind} view={readBatch(url.kind, registry)} nowMs={audioNow()} acts={{ batchReceipt, batchConfirm }} />;
-  else if (url.kind === "music") body = <AudioLane view={await readAudio()} nowMs={audioNow()} acts={{ setHand, sunoReceipt, sunoConfirm }} engines={engineRows(registry)} canSend={makersOf(registry, "music").some((e) => e.id === "suno")} audible={await audibleIds()} />;
+  else if (url.kind === "music") {
+    const audible = await audibleIds();
+    if (audible.length > 0) warmWorkers(); // the first play mark pressed answers like the tenth
+    body = <AudioLane view={await readAudio()} nowMs={audioNow()} acts={{ setHand, sunoReceipt, sunoConfirm }} engines={engineRows(registry)} canSend={makersOf(registry, "music").some((e) => e.id === "suno")} audible={audible} />;
+  }
   else
     body = (
       <section className={s.makers} aria-label="effects">

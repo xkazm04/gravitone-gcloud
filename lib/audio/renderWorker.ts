@@ -147,6 +147,17 @@ export async function renderSketchWarm(spec: SketchSpec, out: string, timeoutMs:
   return r === "fallback" ? renderSketch(spec, out, { timeoutMs }) : r;
 }
 
+/**
+ * Start the workers before anyone presses play: the first press after a server starts otherwise
+ * pays the imports (three seconds) while the person waits on a pulsing mark. Idempotent; a box
+ * that cannot spawn, or whose workers already failed to start, is left to the per-call path.
+ */
+export function warmWorkers(): void {
+  const p = pool();
+  if (!canSpawnLocalBinaries() || p.broken !== null || p.failedStarts > 0) return;
+  while (p.workers.filter((w) => !w.dead).length < SIZE && start() !== null);
+}
+
 /** Stop every warm worker (a test's afterAll; a server never needs to). */
 export function stopWorkers(): void {
   const p = pool();

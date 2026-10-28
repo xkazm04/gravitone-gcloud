@@ -167,8 +167,29 @@ def _pitch_map(files, cache_dir):
         tmp = f"{cached}.{os.getpid()}.part"
         with open(tmp, "w", encoding="utf8") as f:
             json.dump(pairs, f)
-        os.replace(tmp, cached)
+        swap_in(tmp, cached)
     return pairs
+
+
+def swap_in(tmp, target):
+    """os.replace, for a file two workers may write at once. On Windows the replace is refused
+    (WinError 5) while the other process holds the target; what it wrote is the same bytes - a
+    measure and a render are deterministic - so a target that is there is taken as written."""
+    import time
+
+    for attempt in range(5):
+        try:
+            os.replace(tmp, target)
+            return
+        except PermissionError:
+            if os.path.isfile(target):
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+                return
+            time.sleep(0.05 * (attempt + 1))
+    os.replace(tmp, target)
 
 
 def phrase(tonic, minor, role):
@@ -332,7 +353,7 @@ def render_to(spec, out, render_fn=None):
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     tmp = f"{out}.{os.getpid()}.part.wav"
     sf.write(tmp, y, SR, subtype="PCM_16")
-    os.replace(tmp, out)
+    swap_in(tmp, out)
     return facts
 
 
@@ -341,6 +362,10 @@ def serve(stdin, stdout):
     {id, ok, ...facts} or {id, ok: false, error, kind}. A render costs about a second; starting
     Python and importing NumPy costs three more on a loaded box, so the Node side keeps this
     running (lib/audio/renderWorker.ts) instead of spawning one per audition."""
+    # The imports are paid here, before the first request, so a worker the server starts ahead of
+    # time (renderWorker.ts warmWorkers) answers its first press at render speed.
+    import numpy  # noqa: F401
+    import soundfile  # noqa: F401
     from sketch import render_sketch
 
     fns = {"audition": None, "sketch": render_sketch}
