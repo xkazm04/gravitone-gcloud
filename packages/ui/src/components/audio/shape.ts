@@ -49,6 +49,9 @@ export function columnsFor(lengthS: number, bpm: number): number {
   return Math.min(MAX_COLUMNS, Math.max(MIN_COLUMNS, Math.round(lengthS / groupSeconds(bpm))));
 }
 
+/** The seconds a length becomes once fitted to whole groups: "10 seconds" at 90 bpm is two groups, 21 s. */
+export const fittedSeconds = (lengthS: number, bpm: number): number => columnsFor(lengthS, bpm) * groupSeconds(bpm);
+
 const SUNO_TAG: Readonly<Record<SectionName, string>> = { Intro: "Intro", Build: "Build-Up", Peak: "Chorus", Break: "Break", Theme: "Verse", Outro: "Outro" };
 
 /** Runs of one level, named by where they sit: first and quieter is an intro, the loudest a peak. */

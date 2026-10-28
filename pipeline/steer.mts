@@ -86,7 +86,7 @@ if (flag("--json")) {
   if (b.sections.length > 0) {
     console.log("");
     for (const s of b.sections) console.log(`${pad(s.label)} ${clock(s.startS)}-${clock(s.endS)}  ${String(s.bars).padStart(2)} bars  ${LEVEL_WORDS[s.level]}`);
-    console.log(`elevenlabs plan  ${b.plan?.sections.length ?? 0} sections, ${Math.round(b.planSeconds)} s, ${quote?.credits === undefined ? "unpriced" : `${Math.round(quote.credits)} credits`} - quoted, dry`);
+    console.log(`elevenlabs plan  ${b.plan?.sections.length ?? 0} section${b.plan?.sections.length === 1 ? "" : "s"}, ${Math.round(b.planSeconds)} s, ${quote?.credits === undefined ? "unpriced" : `${Math.round(quote.credits)} credits`} - quoted, dry`);
   }
   if (flag("--hear")) {
     console.log("");

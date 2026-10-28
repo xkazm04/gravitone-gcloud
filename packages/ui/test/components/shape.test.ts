@@ -3,7 +3,7 @@
 import { describe, expect, test } from "vitest";
 
 import { BLANK_SEED } from "../../src/components/audio/recipe.ts";
-import { clock, columnsFor, groupSeconds, levelsOfContour, planSeconds, presetForWords, PRESETS, sectionsOf, sectionsToPlan, sunoLyricsOf, voicesAt, type Level } from "../../src/components/audio/shape.ts";
+import { clock, columnsFor, fittedSeconds, groupSeconds, levelsOfContour, planSeconds, presetForWords, PRESETS, sectionsOf, sectionsToPlan, sunoLyricsOf, voicesAt, type Level } from "../../src/components/audio/shape.ts";
 
 describe("columns: whole four-bar groups at the seed's tempo", () => {
   test("a four-bar group at 120 bpm is eight seconds", () => {
@@ -13,6 +13,10 @@ describe("columns: whole four-bar groups at the seed's tempo", () => {
     expect(columnsFor(90, 120)).toBe(11);
     expect(columnsFor(5, 120)).toBe(2);
     expect(columnsFor(10_000, 120)).toBe(32);
+  });
+  test("a length is met on whole groups: 10 s at 90 bpm becomes two groups, 21 s", () => {
+    expect(Math.round(fittedSeconds(10, 90))).toBe(21);
+    expect(fittedSeconds(88, 120)).toBe(88);
   });
 });
 

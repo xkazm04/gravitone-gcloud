@@ -15,7 +15,9 @@ import { Chip } from "../chip/Chip.tsx";
 import { Field } from "../field/Field.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import { EarButton } from "./EarButton.tsx";
+import { playableBpm } from "./atlas.ts";
 import type { Produced, PullSide, Translation } from "./lexicon.ts";
+import { fittedSeconds } from "./shape.ts";
 import type { EarState } from "./useEar.ts";
 import s from "./Ear.module.css";
 
@@ -38,6 +40,13 @@ export type SayItProps = {
   /** A pull's side heard before it is chosen; `stateOf` null where nothing here can play it. */
   readonly hearPull?: { readonly stateOf: (side: PullSide) => EarState | null; readonly onPlay: (side: PullSide) => void };
 };
+
+// A length is met on whole four-bar groups at the seed's tempo, so the chip says both when they
+// differ: what was asked and what the shape will be ("10 s → 21 s" - two groups is the shortest).
+function lengthOf(asked: number, bpm: number | null): string {
+  const fit = Math.round(fittedSeconds(asked, playableBpm(bpm)));
+  return fit === asked ? `${asked} s` : `${asked} s → ${fit} s`;
+}
 
 export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare, examples = [], onExample, learned = [], onLearned, hearPull }: SayItProps) {
   const groupOf = (i: number): number[] => [...new Set(heard.terms.filter((p) => p.from.includes(i)).flatMap((p) => p.from))];
@@ -103,7 +112,7 @@ export function SayIt({ value, onChange, heard, lit, onTrace, onCompose, onSpare
           <Tally value={used} label="terms" />
           {heard.bpm !== null && traced(heard.bpm.from, <Chip label="tempo" value={`${heard.bpm.value} bpm`} casing="lower" />)}
           {heard.key !== null && traced(heard.key.from, <Chip label="key" value={heard.key.value} casing="lower" />)}
-          {heard.lengthS !== null && traced(heard.lengthS.from, <Chip label="length" value={`${heard.lengthS.value} s`} casing="lower" />)}
+          {heard.lengthS !== null && traced(heard.lengthS.from, <Chip label="length" value={lengthOf(heard.lengthS.value, heard.seed.bpm)} casing="lower" />)}
           {heard.pulls.map((p) => (
             <span key={p.kind} className={s.pull} role="group" aria-label={`${p.kind}, two ways`}>
               {side(p.a)}
