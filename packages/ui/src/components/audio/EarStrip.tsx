@@ -45,7 +45,7 @@ export function EarStrip({ title, now, candidates, stateOf, onPlay, onPick, onCl
             <span className={s.termWord}>{e.term}</span>
           </span>
         )}
-        <span className={s.termWord}>{blind && !isNow ? "" : e.role}</span>
+        <span className={s.role}>{blind && !isNow ? "" : e.role}</span>
         {isNow ? <span className={s.termWord}>now</span> : <Button label="Use" size="sm" onPress={() => onPick(e)} />}
       </li>
     );
@@ -58,7 +58,7 @@ export function EarStrip({ title, now, candidates, stateOf, onPlay, onPick, onCl
         <Toggle label="blind" on={blind} onToggle={onBlind} />
         <Button label="Close" size="sm" onPress={onClose} />
       </div>
-      <ul className={s.rows}>
+      <ul className={`${s.rows} ${s.cards}`}>
         {now !== undefined && row(now, -1, true)}
         {candidates.map((e, i) => row(e, i, false))}
       </ul>

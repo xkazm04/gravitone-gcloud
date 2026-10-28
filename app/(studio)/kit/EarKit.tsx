@@ -6,6 +6,8 @@
 import { useMemo, useState } from "react";
 
 import { ATLAS, atlasById, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
+import { DuelCard } from "@gt/ui/components/audio/DuelCard.tsx";
+import { AXES, type Answer } from "@gt/ui/components/audio/duel.ts";
 import { EarButton } from "@gt/ui/components/audio/EarButton.tsx";
 import { EarStrip } from "@gt/ui/components/audio/EarStrip.tsx";
 import { translate } from "@gt/ui/components/audio/lexicon.ts";
@@ -51,6 +53,22 @@ function StripSpecimen() {
 
 const VOICES = ["rhodes", "upright bass", "brushed drums"];
 
+function DuelSpecimen() {
+  const [answers, setAnswers] = useState<Readonly<Record<string, Answer>>>({ pace: "a", colour: "skip" });
+  const done: Readonly<Record<string, Answer>> = { pace: "a", colour: "b", touch: "a", material: "a", warmth: "a", density: "skip" };
+  const href = (x: { readonly ids: readonly string[] }): string => x.ids.join("+");
+  return (
+    <Spec names={["DuelCard"]} source="audio/DuelCard.tsx · duel.ts" wide>
+      <Row label="a pair">
+        <DuelCard axes={AXES} answers={answers} hrefOf={href} stateOf={() => "idle"} onPlay={inert} onAnswer={(axis, a) => setAnswers((m) => ({ ...m, [axis]: a }))} onUse={inert} onAgain={() => setAnswers({})} />
+      </Row>
+      <Row label="decided">
+        <DuelCard axes={AXES} answers={done} hrefOf={href} stateOf={() => "idle"} onPlay={inert} onAnswer={inert} onUse={inert} onAgain={inert} />
+      </Row>
+    </Spec>
+  );
+}
+
 function ShapeSpecimen() {
   const [levels, setLevels] = useState<Level[]>([0, 0, 2, 3, 3, 1, 3, 0]);
   return (
@@ -86,6 +104,7 @@ export function EarSection() {
       </Spec>
       <StripSpecimen />
       <ShapeSpecimen />
+      <DuelSpecimen />
     </Section>
   );
 }
