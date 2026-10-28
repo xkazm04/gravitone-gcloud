@@ -1,4 +1,4 @@
-"""The audio sidecar: measure a file, or render a voice-fx chain over it.
+"""The audio sidecar: measure a file, render a voice-fx chain, triage a take, or render a ScoreSpec.
 
     python pipeline/audio/sidecar.py measure --in <wav|mp3|m4a|...> --json
       -> {"ok":true,"measure":{integratedLufs,truePeakDb,lra,clippedSamples,leadSilenceS,tailSilenceS,durationS}}
@@ -6,32 +6,14 @@
       -> {"ok":true,"durationS":n,"gainDb":g,"truePeakDb":tp,"rate":r,"channels":c,"notes":[...]}
     python pipeline/audio/sidecar.py triage --in <file> --context <context.json> --json
       -> {"ok":true,"triage":{"version":1,"findings":[{check,defect?,verdict,value,threshold,unit,atS?,note?}],"flagged":n}}
+    python pipeline/audio/sidecar.py render-score --spec <spec.json> --out-dir <dir> [--cache-dir <dir>] [--verify-determinism] --json
+      -> {"ok":true,"title":...,"mixPath":...,"mixSha256":...,"measure":{...},"triage":{...},"stems":[...],"determinism":...}
+    python pipeline/audio/sidecar.py audition --instrument <id> [--out <wav>] --json
+      -> {"ok":true,"id":...,"audition":{...}}
     python pipeline/audio/sidecar.py doctor --json
       -> {"ok":true,"python":"<sys.version>","modules":[...],"missing":[...],"errors":{...},"versions":{...},"ffmpeg":path|null}
 
 The one consumer is lib/audio/sidecar.ts; docs/audio-sidecar.md is the operator's page.
-
-CONTRACT: stdout's LAST line is one JSON object, whatever happened. A failure is
-{"ok":false,"error":"<the underlying tool's own sentence>","kind":...} and exit code 1, where
-kind is "missing-module" (an import failed: the error IS Python's ImportError sentence),
-"refused" (the chain, the triage context, or the arguments), or "failed" (decode, render,
-write). Nothing is paraphrased: an operator reading the Node error reads what soundfile, ffmpeg
-or pedalboard said.
-
-Only the standard library is imported at module top, so `doctor` and a missing-module failure
-still answer in JSON on a Python with none of the requirements installed.
-
-DECODE: soundfile first (wav, flac, ogg, and mp3 on libsndfile >= 1.1); anything it refuses
-goes through ffmpeg (`FFMPEG` or ffmpeg on PATH) to a temp float wav at the file's own rate
-and channel count, then soundfile. Blob files carry no extension, so the format is never
-guessed from the name.
-
-OUTPUT of `fx`: 16-bit PCM WAV at the input's sample rate and channel count - what every
-browser plays and every ffmpeg reads. PEAK PROTECTION: when the rendered true peak is above
--1 dBTP (the voice-take ceiling, packages/domain/src/audio.accept.ts) a final gain sets it to
--1.1 dBTP before quantisation (the 0.1 dB is the margin a 16-bit write may move it by);
-`gainDb` is that gain, 0 when none was needed, and `truePeakDb` is measured on the file as
-written.
 """
 
 import argparse
@@ -182,6 +164,40 @@ def cmd_triage(a):
     emit({"ok": True, "triage": triage.run(data, rate, ctx)})
 
 
+def cmd_render_score(a):
+    import render_score
+
+    try:
+        with open(a.spec, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as e:
+        raise Failure(f"spec file: {e}", "refused") from None
+    try:
+        spec_doc = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise Failure(f"spec is not JSON: {e}", "refused") from None
+    try:
+        res = render_score.render_score(
+            spec_doc,
+            a.out_dir,
+            cache_dir=a.cache_dir,
+            verify_determinism=bool(a.verify_determinism),
+        )
+    except render_score.ScoreRefused as e:
+        raise Failure(f"score spec: {e}", "refused") from None
+    emit(res)
+
+
+def cmd_audition(a):
+    import score_instruments
+
+    try:
+        res = score_instruments.audition_instrument(a.instrument, out_path=a.out)
+    except ValueError as e:
+        raise Failure(str(e), "refused") from None
+    emit(res)
+
+
 def _dist_version(name):
     from importlib import metadata
 
@@ -221,10 +237,27 @@ def main(argv):
     t.add_argument("--in", dest="input", required=True)
     t.add_argument("--context", required=True)
     t.add_argument("--json", action="store_true")
+    rs = sub.add_parser("render-score")
+    rs.add_argument("--spec", required=True)
+    rs.add_argument("--out-dir", dest="out_dir", required=True)
+    rs.add_argument("--cache-dir", dest="cache_dir", default=None)
+    rs.add_argument("--verify-determinism", dest="verify_determinism", action="store_true")
+    rs.add_argument("--json", action="store_true")
+    au = sub.add_parser("audition")
+    au.add_argument("--instrument", required=True)
+    au.add_argument("--out", default=None)
+    au.add_argument("--json", action="store_true")
     d = sub.add_parser("doctor")
     d.add_argument("--json", action="store_true")
     a = p.parse_args(argv)
-    run = {"measure": cmd_measure, "fx": cmd_fx, "triage": cmd_triage, "doctor": cmd_doctor}[a.verb]
+    run = {
+        "measure": cmd_measure,
+        "fx": cmd_fx,
+        "triage": cmd_triage,
+        "render-score": cmd_render_score,
+        "audition": cmd_audition,
+        "doctor": cmd_doctor,
+    }[a.verb]
     try:
         run(a)
     except Failure as e:

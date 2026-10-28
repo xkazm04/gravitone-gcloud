@@ -1,25 +1,7 @@
 // THE AUDIO DESK'S ENGINE REGISTRY - which engines this studio can reach from /audio, by what
 // transport, with which operations, and why the rest are withheld. Pure: no React, no fetch, no
 // environment except the capability flags a caller passes in.
-//
-// Moved from v1 app/playground/engines.ts (which dies with the playground in wave C). Its seam is
-// the reason it exists and is kept whole: a view never asks "is this Suno?", it asks
-// `can(engine, op)`, so an engine gaining an operation flips a row instead of adding an `if`
-// to every view - and a declared engine with nothing installed never renders a fake take.
-//
-// UPGRADED - the rows say what is true on the desk now, not in the v1 lab:
-//   suno        v1 "manual" (paste a prompt, drop the file back). Suno automation landed: a seed
-//               is SENT as Suno's form through a receipt and runs as a box.chrome job
-//               (lib/producers/suno.ts), so the row flipped to transport "browser" and gained
-//               `compose` - exactly the flip v1's header predicted. The round trip stays: a
-//               remaster or edit is still done by hand in Suno's studio and its file returned.
-//   elevenlabs  v1 "api" with live compose/plan/section-edit/sfx through /api/music/*. Those
-//               routes are the v1 lab's and nothing on the desk launches them: a free ElevenLabs
-//               seed has no producer, and a press that bills with no receipt is the defect the
-//               receipt removed (SeedComposer's header). So every render op is WITHHELD with
-//               that reason - or with the deployment's own reason when the capability is off -
-//               and the dialect stays copyable.
-//   local       unchanged: declared, not installed, with what it would take.
+
 import { ABSENCE_REASON, absenceReason, type Capabilities, type DeploymentFacts } from "../capabilities.ts";
 
 export type EngineId = "elevenlabs" | "suno" | "local";
@@ -61,32 +43,43 @@ export type EngineDef = {
 /** Why the desk launches no ElevenLabs render while the capability is on. */
 export const NO_DESK_PRODUCER = "no desk producer: renders run as Score cues or sound.mts generate";
 
-export function engineRegistry(caps: Pick<Capabilities, "musicSectionEdit" | "musicSfx">, facts?: DeploymentFacts): readonly EngineDef[] {
+export function engineRegistry(
+  caps: Pick<Capabilities, "musicSectionEdit" | "musicSfx"> & { readonly localRender?: boolean },
+  facts?: DeploymentFacts,
+): readonly EngineDef[] {
   const why = (cap: "musicSectionEdit" | "musicSfx"): string => (facts === undefined ? ABSENCE_REASON[cap] : absenceReason(cap, facts));
-  // compose / plan / section-edit share /api/music/compose and its stored-song posture, which the
-  // musicSectionEdit flag governs (lib/capabilities.ts); sfx has its own flag.
   const el = (op: Op): { op: Op; reason: string } => {
     const cap = op === "sfx" ? "musicSfx" : "musicSectionEdit";
     return { op, reason: caps[cap] ? NO_DESK_PRODUCER : why(cap) };
   };
+  const localActive = caps.localRender === true || facts?.localBinaries === true;
   return [
     { id: "suno", name: "Suno", transport: "browser", ops: ["compose", "prompt-copy", "file-return"], withheld: [] },
-    // Effects run on the desk as the `sfx` producer's batch (L66) whenever the capability is on.
     { id: "elevenlabs", name: "ElevenLabs", transport: "api", ops: caps.musicSfx ? ["prompt-copy", "sfx"] : ["prompt-copy"], withheld: RENDER_OPS.filter((op) => !(op === "sfx" && caps.musicSfx)).map(el) },
-    {
-      id: "local",
-      name: "Local",
-      transport: "none",
-      ops: [],
-      withheld: [],
-      // In the order it would be built; each is work this repo does not have yet.
-      needs: ["a GPU runner on this machine", "a music adapter and its producer", "a licence decision per model"],
-      candidates: [
-        { name: "MusicGen", licence: "weights CC-BY-NC 4.0", note: "non-commercial only" },
-        { name: "Stable Audio Open", licence: "Stability community licence", note: "short clips, effects" },
-        { name: "ACE-Step", licence: "Apache-2.0", note: "full songs, lyrics" },
-      ],
-    },
+    localActive
+      ? {
+          id: "local",
+          name: "Local",
+          transport: "api",
+          ops: ["compose", "section-edit"],
+          withheld: [],
+          candidates: [
+            { name: "Vital VST3 + Local Sample Kits", licence: "Vital Audio EULA + Local DAW packs", note: "deterministic 4-stem score engine ($0)" },
+          ],
+        }
+      : {
+          id: "local",
+          name: "Local",
+          transport: "none",
+          ops: [],
+          withheld: [],
+          needs: ["a GPU runner on this machine", "a music adapter and its producer", "a sidecar binary posture"],
+          candidates: [
+            { name: "MusicGen", licence: "weights CC-BY-NC 4.0", note: "non-commercial only" },
+            { name: "Stable Audio Open", licence: "Stability community licence", note: "short clips, effects" },
+            { name: "ACE-Step", licence: "Apache-2.0", note: "full songs, lyrics" },
+          ],
+        },
   ];
 }
 

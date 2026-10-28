@@ -9,7 +9,8 @@ import type { AudioMeasureFull } from "@gt/domain/audio.accept";
 import { parseJsonAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { FxChain } from "@gt/domain/audio.fx";
-import { triageAnswerSchema, type Triage, type TriageContext } from "@gt/domain/audio.triage";
+import { SCORE_ROLES, parseScoreSpec, type ScoreRole, type ScoreSpec } from "@gt/domain/audio.score";
+import { triageAnswerSchema, triageSchema, type Triage, type TriageContext } from "@gt/domain/audio.triage";
 
 import { canSpawnLocalBinaries, describePosture } from "../deployment.ts";
 
@@ -17,26 +18,11 @@ import { canSpawnLocalBinaries, describePosture } from "../deployment.ts";
 // pyloudnorm on this box). Server-only by construction: it spawns a local binary, so it is
 // reached only from producers and server code, never from a client module. docs/audio-sidecar.md
 // is the operator's page (install, the stage map, what doctor reports).
-//
-// CONTRACT (the sidecar's stdout, LAST line, JSON):
-//   python pipeline/audio/sidecar.py measure --in <wav> --json
-//     -> {"ok":true,"measure":{integratedLufs,truePeakDb,lra,clippedSamples,leadSilenceS,tailSilenceS,durationS}}
-//   python pipeline/audio/sidecar.py fx --in <wav> --chain <chain.json> --out <wav> --json
-//     -> {"ok":true,"durationS":n,"gainDb":g,...}
-//   any failure -> {"ok":false,"error":"<the tool's own sentence>","kind":...} and exit code 1.
-// The interpreter is `PYTHON` or the platform default (lib/producers/forge.ts:76).
-//
-// Every call is BOUNDED - a timeout (60 s by default) and a cap on what is kept of stdout and
-// stderr - and refuses before spawning when this deployment may not spawn a local binary
-// (lib/deployment.ts), with that posture's own sentence. The sidecar's error is carried
-// VERBATIM; a run that answered no JSON at all is reported with its exit and the last three
-// lines of its stderr, which is where Python's traceback ends. The sidecar's `kind` picks the
-// code: a chain or an argument it refused is `invalid`, everything else (a missing module, a
-// decoder that said no, a timeout) is `unavailable` - the dependency, not the caller.
 
 export type SidecarOptions = { readonly timeoutMs?: number };
 
 const TIMEOUT_MS = 60_000;
+const RENDER_SCORE_TIMEOUT_MS = 90_000;
 const DOCTOR_TIMEOUT_MS = 30_000;
 /** What is kept of each stream: the answer is one line at the end, the reason the last lines of stderr. */
 const KEEP_BYTES = 64 * 1024;
@@ -99,17 +85,19 @@ async function call<S extends z.ZodType>(verb: string, args: readonly string[], 
   return err("unavailable", `audio sidecar ${verb} exited ${String(r.code)}${said === "" ? (doc.ok ? "" : `: ${doc.error.message}`) : `: ${said}`}`);
 }
 
+const measureObjSchema = z.object({
+  integratedLufs: z.number().nullable(),
+  truePeakDb: z.number().nullable(),
+  lra: z.number().nonnegative().nullable(),
+  clippedSamples: z.number().int().nonnegative(),
+  leadSilenceS: z.number().nonnegative(),
+  tailSilenceS: z.number().nonnegative(),
+  durationS: z.number().nonnegative(),
+});
+
 const measureSchema = z.object({
   ok: z.literal(true),
-  measure: z.object({
-    integratedLufs: z.number().nullable(),
-    truePeakDb: z.number().nullable(),
-    lra: z.number().nonnegative().nullable(),
-    clippedSamples: z.number().int().nonnegative(),
-    leadSilenceS: z.number().nonnegative(),
-    tailSilenceS: z.number().nonnegative(),
-    durationS: z.number().nonnegative(),
-  }),
+  measure: measureObjSchema,
 });
 
 const fxSchema = z.object({ ok: z.literal(true), durationS: z.number().nonnegative(), gainDb: z.number().optional() });
@@ -122,6 +110,80 @@ const doctorSchema = z.object({
   errors: z.record(z.string(), z.string()).optional(),
 });
 
+const stemResultSchema = z.object({
+  role: z.enum(SCORE_ROLES),
+  instrument: z.string(),
+  instrumentName: z.string(),
+  source: z.string(),
+  wavPath: z.string(),
+  midiPath: z.string(),
+  sha256: z.string(),
+  trackHash: z.string(),
+  reused: z.boolean(),
+  muted: z.boolean(),
+  solo: z.boolean(),
+  gainDb: z.number(),
+  pan: z.number(),
+  noteCount: z.number().int().nonnegative(),
+  renderMs: z.number().int().nonnegative(),
+  durationS: z.number().nonnegative(),
+  integratedLufs: z.number().nullable(),
+  truePeakDb: z.number().nullable(),
+});
+
+const determinismResultSchema = z.object({
+  bitIdentical: z.boolean(),
+  maxAbsDiff: z.number().nonnegative(),
+  rmsDiff: z.number().nonnegative(),
+  firstSha256: z.string(),
+  secondSha256: z.string(),
+});
+
+const renderScoreAnswerSchema = z.object({
+  ok: z.literal(true),
+  title: z.string(),
+  tempoBpm: z.number().positive(),
+  key: z.string(),
+  loop: z.boolean(),
+  totalBars: z.number().int().positive(),
+  durationS: z.number().nonnegative(),
+  mixPath: z.string(),
+  mixSha256: z.string(),
+  reaperProjectPath: z.string(),
+  measure: measureObjSchema,
+  triage: triageSchema,
+  stems: z.array(stemResultSchema),
+  reusedRoles: z.array(z.enum(SCORE_ROLES)),
+  renderedRoles: z.array(z.enum(SCORE_ROLES)),
+  totalRenderMs: z.number().int().nonnegative(),
+  determinism: determinismResultSchema.nullable(),
+});
+
+export type RenderedStem = z.output<typeof stemResultSchema>;
+export type DeterminismReport = z.output<typeof determinismResultSchema>;
+export type RenderScoreResult = z.output<typeof renderScoreAnswerSchema>;
+
+const auditionAnswerSchema = z.object({
+  ok: z.literal(true),
+  id: z.string(),
+  name: z.string(),
+  role: z.enum(SCORE_ROLES),
+  source: z.string(),
+  outPath: z.string().nullable(),
+  audition: z.object({
+    status: z.enum(["ready", "refused"]),
+    noteOnWorks: z.boolean(),
+    lufsAtVel100: z.number().nullable(),
+    truePeakDb: z.number().nullable(),
+    tailS: z.number().nonnegative(),
+    renderMs: z.number().int().nonnegative(),
+    deterministic: z.boolean(),
+    maxDiff: z.number().nonnegative(),
+    refusalReason: z.string().nullable(),
+  }),
+});
+export type AuditionResult = z.output<typeof auditionAnswerSchema>;
+
 /** Loudness, true peak, range, clipping, edge silence and length of one audio file. */
 export async function measureFile(path: string, opts: SidecarOptions = {}): Promise<Result<AudioMeasureFull>> {
   const r = await call("measure", ["--in", path], measureSchema, opts.timeoutMs ?? TIMEOUT_MS);
@@ -130,9 +192,7 @@ export async function measureFile(path: string, opts: SidecarOptions = {}): Prom
 
 /**
  * Render `chain` over `inPath` into `outPath` (16-bit WAV, the input's rate and channels, true
- * peak held at or under -1 dBTP). The chain goes to the sidecar as a temp file, never argv:
- * a Windows command line is 32 K and a quoted JSON on it is one escaping bug from a different
- * chain.
+ * peak held at or under -1 dBTP).
  */
 export async function applyChain(inPath: string, chain: FxChain, outPath: string, opts: SidecarOptions = {}): Promise<Result<{ readonly durationS: number }>> {
   if (!canSpawnLocalBinaries()) return err("unavailable", `audio sidecar fx: ${describePosture()}`);
@@ -148,10 +208,7 @@ export async function applyChain(inPath: string, chain: FxChain, outPath: string
 }
 
 /**
- * The triage findings for one file, judged against the brief it was made from (spark
- * audio-triage; @gt/domain/audio.triage holds the checks, units and thresholds). The context goes
- * to the sidecar as a temp file, never argv, for applyChain's reason. A check whose context was
- * not committed comes back `skip`, never guessed.
+ * The triage findings for one file, judged against the brief it was made from.
  */
 export async function triageFile(file: string, context: TriageContext, opts: SidecarOptions = {}): Promise<Result<Triage>> {
   if (!canSpawnLocalBinaries()) return err("unavailable", `audio sidecar triage: ${describePosture()}`);
@@ -167,9 +224,44 @@ export async function triageFile(file: string, context: TriageContext, opts: Sid
 }
 
 /**
- * Is the sidecar runnable here: which interpreter, and which of its modules import. A module
- * that does not import is a refusal naming it with Python's own sentence, so a caller that asks
- * first (the media-facts job's loudness port) knows why without spawning a measure per file.
+ * Compile and render a closed ScoreSpec into per-role stems and a mastered -14 LUFS mix.
+ * When `cacheDir` is passed, unchanged stems are reused bit-for-bit so swapping one role's
+ * instrument re-renders only that role.
+ */
+export async function renderScore(
+  specInput: ScoreSpec,
+  outDir: string,
+  opts: SidecarOptions & { readonly cacheDir?: string; readonly verifyDeterminism?: boolean } = {},
+): Promise<Result<RenderScoreResult>> {
+  const checked = parseScoreSpec(specInput);
+  if (!checked.ok) return checked;
+  if (!canSpawnLocalBinaries()) return err("unavailable", `audio sidecar render-score: ${describePosture()}`);
+  const dir = await mkdtemp(path.join(os.tmpdir(), "gt-scorespec-"));
+  try {
+    const specFile = path.join(dir, "spec.json");
+    await writeFile(specFile, JSON.stringify(checked.value), "utf8");
+    const args = ["--spec", specFile, "--out-dir", outDir];
+    if (opts.cacheDir !== undefined) args.push("--cache-dir", opts.cacheDir);
+    if (opts.verifyDeterminism === true) args.push("--verify-determinism");
+    const r = await call("render-score", args, renderScoreAnswerSchema, opts.timeoutMs ?? RENDER_SCORE_TIMEOUT_MS);
+    return r.ok ? ok(r.value as RenderScoreResult) : r;
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Render a 2.4 s audition preview of one catalog instrument and measure its audition card.
+ */
+export async function auditionInstrument(instrumentId: string, outPath?: string, opts: SidecarOptions = {}): Promise<Result<AuditionResult>> {
+  const args = ["--instrument", instrumentId];
+  if (outPath !== undefined) args.push("--out", outPath);
+  const r = await call("audition", args, auditionAnswerSchema, opts.timeoutMs ?? TIMEOUT_MS);
+  return r.ok ? ok(r.value as AuditionResult) : r;
+}
+
+/**
+ * Is the sidecar runnable here: which interpreter, and which of its modules import.
  */
 export async function sidecarDoctor(): Promise<Result<{ readonly python: string; readonly modules: readonly string[] }>> {
   const r = await call("doctor", [], doctorSchema, DOCTOR_TIMEOUT_MS);
@@ -181,3 +273,5 @@ export async function sidecarDoctor(): Promise<Result<{ readonly python: string;
   }
   return ok({ python: version, modules });
 }
+
+export type { ScoreRole, ScoreSpec };
