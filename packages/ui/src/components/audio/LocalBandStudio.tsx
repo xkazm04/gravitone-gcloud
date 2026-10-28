@@ -127,7 +127,19 @@ export function LocalBandStudio({
         <Chip label="cost" value="$0 local" tone="cyan" casing="lower" />
         <span className={s.grow} />
         {seed !== undefined && (
-          <Button label="Load from seed" size="sm" disabled={busy} onPress={() => setDraft((cur) => applySeedToDraft(seed, templates, catalog, cur))} />
+          <Button
+            label="Load from seed"
+            size="sm"
+            disabled={busy}
+            onPress={() => {
+              const next = applySeedToDraft(seed, templates, catalog, draft);
+              setDraft(next);
+              const nextSwap: Record<LocalRole, string> = { ...swapChoice };
+              for (const tr of next.tracks) nextSwap[tr.role] = tr.instrument;
+              setSwapChoice(nextSwap);
+              setSteerNote(`loaded from seed · ${next.style ?? "chill-hiphop"} · ${next.tempoBpm} bpm · ${next.key}`);
+            }}
+          />
         )}
         {onReceipt !== undefined && <Button label="Receipt ($0)" size="sm" disabled={busy} onPress={() => onReceipt(draft)} />}
         <Button label={busy ? "Rendering…" : "Render 4-stem take ($0)"} tone="cyan" disabled={busy} onPress={() => { setPinnedTakeId(null); onRender(draft); }} />

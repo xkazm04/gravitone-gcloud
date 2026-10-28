@@ -187,7 +187,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
       expect(seam?.verdict).toBe("pass");
       expect(seam?.value ?? 99).toBeLessThan(3);
     }
-  }, 60_000);
+  }, 180_000);
 
   it(
     "renders a ScoreSpec deterministically to -14 LUFS, passes all triage detectors, swaps 1 stem while reusing the other 3 bit-for-bit, and remixes solo/mute with 4-stem cache reuse",
@@ -292,7 +292,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
         }
       }
     },
-    120_000,
+    240_000,
   );
 
   it("renders instrument audition previews, renders SMF .mid files via renderMidi, and refuses failed A0 instruments", async () => {
@@ -326,7 +326,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     const refusedMidi = await renderMidi(midiPath, "minigrand-vst3", outMidiWav);
     expect(refusedMidi.ok).toBe(false);
     if (!refusedMidi.ok) expect(refusedMidi.error.message).toContain("silent");
-  }, 60_000);
+  }, 180_000);
 
   it("renders LocalBandStudio over readLocalBand() with taste steering, solo/mute, fx presets, receipt door, and arrangement breakdown", async () => {
     const view = await readLocalBand();

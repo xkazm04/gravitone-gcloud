@@ -9,7 +9,7 @@ import type { AudioMeasureFull } from "@gt/domain/audio.accept";
 import { parseJsonAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { FxChain } from "@gt/domain/audio.fx";
-import { SCORE_ROLES, parseScoreSpec, type ScoreRole, type ScoreSpec } from "@gt/domain/audio.score";
+import { SCORE_ROLES, instrumentById, parseScoreSpec, type ScoreRole, type ScoreSpec } from "@gt/domain/audio.score";
 import { triageAnswerSchema, triageSchema, type Triage, type TriageContext } from "@gt/domain/audio.triage";
 
 import { canSpawnLocalBinaries, describePosture } from "../deployment.ts";
@@ -21,8 +21,8 @@ import { canSpawnLocalBinaries, describePosture } from "../deployment.ts";
 
 export type SidecarOptions = { readonly timeoutMs?: number };
 
-const TIMEOUT_MS = 60_000;
-const RENDER_SCORE_TIMEOUT_MS = 90_000;
+const TIMEOUT_MS = 120_000;
+const RENDER_SCORE_TIMEOUT_MS = 180_000;
 const DOCTOR_TIMEOUT_MS = 30_000;
 /** What is kept of each stream: the answer is one line at the end, the reason the last lines of stderr. */
 const KEEP_BYTES = 64 * 1024;
@@ -283,7 +283,7 @@ export async function renderScore(
  * Render a 2.4 s audition preview of one catalog instrument and measure its audition card.
  */
 export async function auditionInstrument(instrumentId: string, outPath?: string, opts: SidecarOptions = {}): Promise<Result<AuditionResult>> {
-  const args = ["--instrument", instrumentId];
+  const cat = instrumentById(instrumentId); if (!cat || cat.audition.status !== "ready" || !cat.licence.trim()) return err("invalid", `audio sidecar audition: instrument ${instrumentId} refused: ${cat?.audition.refusalReason ?? "not ready"}`); const args = ["--instrument", instrumentId];
   if (outPath !== undefined) args.push("--out", outPath);
   const r = await call("audition", args, auditionAnswerSchema, opts.timeoutMs ?? TIMEOUT_MS);
   return r.ok ? ok(r.value as AuditionResult) : r;
@@ -314,7 +314,7 @@ export async function renderMidi(
   outPath: string,
   opts: SidecarOptions & { readonly brightness?: number } = {},
 ): Promise<Result<RenderMidiResult>> {
-  const args = ["--midi", midiPath, "--instrument", instrumentId, "--out", outPath];
+  const cat = instrumentById(instrumentId); if (!cat || cat.audition.status !== "ready" || !cat.licence.trim()) return err("invalid", `audio sidecar render: instrument ${instrumentId} refused: ${cat?.audition.refusalReason ?? "not ready"}`); const args = ["--midi", midiPath, "--instrument", instrumentId, "--out", outPath];
   if (opts.brightness !== undefined) args.push("--brightness", String(opts.brightness));
   const r = await call("render", args, renderMidiAnswerSchema, opts.timeoutMs ?? TIMEOUT_MS);
   return r.ok ? ok(r.value as RenderMidiResult) : r;
