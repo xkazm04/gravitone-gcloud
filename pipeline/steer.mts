@@ -8,7 +8,7 @@
 // --hear renders, locally and free, one audition per playable instrument and the sketch of them
 // together over the shape (pipeline/audio/audition.py, sketch.py) from the sample libraries named
 // by GRAVITONE_SAMPLE_ROOTS, and prints the WAV paths. No store is opened.
-import { playableBpm, playableIds } from "@gt/ui/components/audio/atlas.ts";
+import { playableBpm, playableIds, standInsOf } from "@gt/ui/components/audio/atlas.ts";
 import { clock, LEVEL_WORDS, PRESETS } from "@gt/ui/components/audio/shape.ts";
 import { steerBrief } from "@gt/ui/components/audio/steer.ts";
 
@@ -41,7 +41,7 @@ if (lengthS !== undefined && (!Number.isFinite(lengthS) || lengthS < 10 || lengt
 const b = steerBrief({ sentence, ...(shape === undefined ? {} : { shape }), ...(lengthS === undefined ? {} : { lengthS }) });
 const quote = b.plan === null ? null : priceCall({ op: "compose", seconds: b.planSeconds });
 
-const heard: { auditions: { term: string; file: string | null; why?: string }[]; sketch: string | null } = { auditions: [], sketch: null };
+const heard: { auditions: { term: string; file: string | null; why?: string }[]; sketch: string | null; standIns: { word: string; as: string }[] } = { auditions: [], sketch: null, standIns: [] };
 if (flag("--hear")) {
   if (sampleRoots().length === 0) {
     console.error(`--hear: no sample library is configured (${SAMPLE_ROOTS_ENV})`);
@@ -58,6 +58,7 @@ if (flag("--hear")) {
     heard.auditions.push(r.ok ? { term: i.term, file: r.value } : { term: i.term, file: null, why: r.error.message });
   }
   const ids = playableIds(b.seed.instruments, can);
+  heard.standIns = standInsOf(b.seed.instruments, can).map((x) => ({ word: x.word, as: x.as.term }));
   if (ids.length > 0) {
     const r = await sketchFile({ ids, levels: b.levels ?? [3], bpm, key: b.seed.key });
     if (r.ok) heard.sketch = r.value;
@@ -71,7 +72,9 @@ if (flag("--json")) {
   const pad = (s: string): string => s.padEnd(12);
   for (const h of b.heard) console.log(`${pad(h.list)} ${h.term.padEnd(24)} <- ${h.from.join(" ")}`);
   console.log(`${pad("unheard")} ${b.unheard.length === 0 ? "-" : b.unheard.join(", ")}`);
+  for (const n of b.near) console.log(`${pad("did you mean")} ${n.word} -> ${n.to}`);
   if (b.seed.bpm !== null) console.log(`${pad("tempo")} ${b.seed.bpm} bpm`);
+  if (b.key !== null) console.log(`${pad("key")} ${b.key.value.padEnd(24)} <- ${b.key.from.join(" ")}`);
   console.log("");
   if (b.suno === null) console.log("suno       (no style words: nothing to send)");
   else {
@@ -87,6 +90,6 @@ if (flag("--json")) {
   if (flag("--hear")) {
     console.log("");
     for (const a of heard.auditions) console.log(`hear ${a.term.padEnd(22)} ${a.file ?? `- (${a.why ?? ""})`}`);
-    console.log(`hear ${"(together)".padEnd(22)} ${heard.sketch ?? "-"}`);
+    console.log(`hear ${"(together)".padEnd(22)} ${heard.sketch ?? "-"}${heard.standIns.length === 0 ? "" : `  (${heard.standIns.map((x) => `${x.word} ≈ ${x.as}`).join(", ")})`}`);
   }
 }

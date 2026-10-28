@@ -19,6 +19,10 @@ export type SteerAsk = {
 export type SteerBrief = {
   readonly heard: readonly { readonly list: string; readonly term: string; readonly from: readonly string[] }[];
   readonly unheard: readonly string[];
+  /** Unheard words one slip from a word the lexicon hears: offered, not applied. */
+  readonly near: readonly { readonly word: string; readonly to: string }[];
+  /** The key the moods lean to, with the sentence words behind it; null when they do not lean. */
+  readonly key: { readonly value: string; readonly from: readonly string[] } | null;
   readonly seed: Seed;
   /** null when the sentence produced no style word: a seed with no words is not a prompt. */
   readonly suno: SunoFieldsDraft | null;
@@ -48,6 +52,8 @@ export function steerBrief(ask: SteerAsk): SteerBrief {
   return {
     heard: t.terms.map((p) => ({ list: p.list, term: p.term, from: p.from.map((i) => t.tokens[i]?.text ?? "") })),
     unheard: t.unheard,
+    near: t.near.map((n) => ({ word: t.tokens[n.token]?.text ?? "", to: n.to })),
+    key: t.key === null ? null : { value: t.key.value, from: t.key.from.map((i) => t.tokens[i]?.text ?? "") },
     seed: t.seed,
     suno,
     levels,
