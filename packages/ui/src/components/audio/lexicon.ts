@@ -82,8 +82,20 @@ const ATLAS_ROWS: readonly LexRow[] = ATLAS.map((e) => ({ cue: [e.term, ...e.aka
 const SAID = new Set(ROWS.flatMap((r) => r.cue));
 const SKIP = new Set([...FILLER, ...NEGATORS]);
 const ownable = (t: string): boolean => !SAID.has(t) && !SKIP.has(t);
+// A genre typed as itself keeps the tempo the rows emitting it agree on (one span of 25 bpm or
+// less): "chill drum and bass" read 83 bpm, the genre's own 165-174 lost; now the two pull, said.
+const GENRE_BPM = new Map<string, [number, number]>();
+for (const r of ROWS)
+  for (const g of r.bpm === undefined ? [] : (r.g ?? [])) {
+    const was = GENRE_BPM.get(g);
+    GENRE_BPM.set(g, was === undefined ? [r.bpm?.[0] ?? 0, r.bpm?.[1] ?? 0] : [Math.min(was[0], r.bpm?.[0] ?? 0), Math.max(was[1], r.bpm?.[1] ?? 0)]);
+  }
+const genreBpm = (g: string): { bpm?: [number, number] } => {
+  const b = GENRE_BPM.get(g);
+  return b === undefined || b[1] - b[0] > 25 ? {} : { bpm: b };
+};
 const OWN_ROWS: readonly LexRow[] = [
-  ...[...new Set(ROWS.flatMap((r) => r.g ?? []))].filter(ownable).map((t): LexRow => ({ cue: [t], g: [t] })),
+  ...[...new Set(ROWS.flatMap((r) => r.g ?? []))].filter(ownable).map((t): LexRow => ({ cue: [t], g: [t], ...genreBpm(t) })),
   ...[...new Set(ROWS.flatMap((r) => r.m ?? []))].filter(ownable).map((t): LexRow => ({ cue: [t], m: [t] })),
 ];
 const byLength = (a: Cue, b: Cue): number => b.words.length - a.words.length;

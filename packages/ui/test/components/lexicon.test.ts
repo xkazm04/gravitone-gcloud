@@ -181,6 +181,9 @@ describe("translate: a sentence compiled into a seed", () => {
         if (p.kind === "tempo") expect(settled.seed.bpm).toBe(side.bpm);
         else expect(settled.seed.key).toBe(side.key);
       }
+    const dnb = translate("chill drum and bass");
+    expect(translate("drum and bass").seed.bpm).toBe(170);
+    expect(dnb.pulls.map((p) => [p.a.says, p.b.says])).toEqual([["75–90 bpm", "165–174 bpm"]]);
     expect(translate("heist movie but chill").pulls).toEqual([]);
     expect(translate("sad piano for a breakup").pulls).toEqual([]);
     expect(translate("a lullaby for a rave, 63 bpm").pulls).toEqual([]);
