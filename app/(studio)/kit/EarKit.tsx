@@ -20,6 +20,8 @@ import type { EarState } from "@gt/ui/components/audio/useEar.ts";
 import { inert } from "./ContractHooks.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
 
+// Silent sources: a specimen shows the row, not a track.
+const KIT_LAYERS = ([["low", 0.52], ["body", 0.33], ["bite", 0.11], ["air", 0.04]] as const).map(([id, share]) => ({ id, share, href: `data:audio/wav;base64,${id}` }));
 const NONE: ReadonlySet<number> = new Set();
 const LEARNED = [
   { term: "slap bass", plain: "snappy · funky" },
@@ -112,7 +114,7 @@ export function EarSection() {
       <DuelSpecimen />
       <Spec names={["TrackDrop"]} source="audio/TrackDrop.tsx · lib/audio/reference.ts" wide>
         <Row label="read">
-          <TrackDrop busy={false} read={{ name: "night-drive.mp3", durationS: 214, bpm: 104, key: "F minor", levels: [0, 1, 1, 2, 3, 3, 1, 3, 3, 0] }} error={null} onFile={inert} onUse={inert} />
+          <TrackDrop busy={false} read={{ name: "night-drive.mp3", durationS: 214, bpm: 104, key: "F minor", levels: [0, 1, 1, 2, 3, 3, 1, 3, 3, 0], layers: KIT_LAYERS, layersError: null }} error={null} onFile={inert} onUse={inert} stateOf={() => "idle"} onPlay={inert} />
         </Row>
         <Row label="refused">
           <TrackDrop busy={false} read={null} error="ffmpeg decode: Invalid data found when processing input" onFile={inert} onUse={inert} />

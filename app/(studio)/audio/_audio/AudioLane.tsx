@@ -122,7 +122,7 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
     if (href !== null) ear.play(href);
   });
   // A track keeps the seed's words and gives it the track's tempo, key and shape.
-  const track = useTrack((read) => {
+  const track = useTrack(ear, (read) => {
     const next = { ...seed, bpm: read.bpm ?? seed.bpm, key: read.key ?? seed.key };
     setSeed(next);
     shape.adoptLevels(read.levels);

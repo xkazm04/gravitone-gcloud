@@ -6,22 +6,29 @@
 import { useState, type ReactNode } from "react";
 
 import { errorMessage } from "@gt/domain/errors";
+import type { Layer, LayerId } from "@gt/ui/components/audio/layers.ts";
 import type { Level } from "@gt/ui/components/audio/shape.ts";
 import { TrackDrop, type TrackRead } from "@gt/ui/components/audio/TrackDrop.tsx";
+import type { Ear } from "@gt/ui/components/audio/useEar.ts";
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 const isLevel = (v: unknown): v is Level => v === 0 || v === 1 || v === 2 || v === 3;
+const LAYER_IDS: readonly unknown[] = ["low", "body", "bite", "air"] satisfies LayerId[];
+const isLayer = (v: unknown): v is Layer => isObject(v) && LAYER_IDS.includes(v["id"]) && typeof v["share"] === "number" && typeof v["href"] === "string" && v["href"].startsWith("data:audio/wav;base64,");
 
 function readOf(body: unknown): TrackRead | null {
   if (!isObject(body) || typeof body["name"] !== "string" || typeof body["durationS"] !== "number") return null;
   const bpm = body["bpm"];
   const key = body["key"];
   const levels = body["levels"];
+  const layers = body["layers"];
+  const layersError = body["layersError"];
   if (!(bpm === null || typeof bpm === "number") || !(key === null || typeof key === "string") || !Array.isArray(levels) || !levels.every(isLevel)) return null;
-  return { name: body["name"], durationS: body["durationS"], bpm, key, levels };
+  if (!Array.isArray(layers) || !layers.every(isLayer) || !(layersError === null || typeof layersError === "string")) return null;
+  return { name: body["name"], durationS: body["durationS"], bpm, key, levels, layers, layersError };
 }
 
-export function useTrack(onUse: (read: TrackRead) => void): ReactNode {
+export function useTrack(ear: Ear, onUse: (read: TrackRead) => void): ReactNode {
   const [busy, setBusy] = useState(false);
   const [read, setRead] = useState<TrackRead | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,5 +47,5 @@ export function useTrack(onUse: (read: TrackRead) => void): ReactNode {
       .catch((e: unknown) => setError(`the track did not reach the studio: ${errorMessage(e)}`))
       .finally(() => setBusy(false));
   };
-  return <TrackDrop busy={busy} read={read} error={error} onFile={onFile} onUse={() => read !== null && onUse(read)} />;
+  return <TrackDrop busy={busy} read={read} error={error} onFile={onFile} onUse={() => read !== null && onUse(read)} stateOf={ear.stateOf} onPlay={ear.toggle} />;
 }

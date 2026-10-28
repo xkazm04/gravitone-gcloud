@@ -3,10 +3,12 @@ import os from "node:os";
 import path from "node:path";
 
 import { err, ok, type Result } from "@gt/domain/errors";
+import type { Layer } from "@gt/ui/components/audio/layers.ts";
 import { groupSeconds, levelsOfContour, MAX_COLUMNS, MIN_COLUMNS, type Level } from "@gt/ui/components/audio/shape.ts";
 
 import { keyOf, MEASURE_RATE, samplesOf, tempoOf, windowOf } from "../sound/measure.ts";
 import { ffmpegDecode, type Decode } from "../sound/measureRun.ts";
+import { layersOf } from "./layers.ts";
 
 // A REFERENCE TRACK AS A SEED'S STRUCTURE (D4, as far as the core flow allows): a track a person
 // likes, measured for what the composer can steer - its tempo, its key, and its energy over time
@@ -22,6 +24,10 @@ export type ReferenceRead = {
   readonly key: string | null;
   /** Painted levels, one per four-bar group; empty when no tempo could be heard. */
   readonly levels: readonly Level[];
+  /** The track's four bands, playable (./layers.ts); empty when ffmpeg could not cut them. */
+  readonly layers: readonly Layer[];
+  /** Why there are no layers, in ffmpeg's words; null when there are. */
+  readonly layersError: string | null;
 };
 
 /** RMS of each four-bar group of `x` at `bpm`, at most MAX_COLUMNS groups (a longer track is read whole, grouped wider). */
@@ -39,7 +45,7 @@ export function contourOf(x: Float32Array, rate: number, bpm: number): number[] 
   return out;
 }
 
-export async function readReference(name: string, bytes: Uint8Array, decode: Decode = ffmpegDecode()): Promise<Result<ReferenceRead>> {
+export async function readReference(name: string, bytes: Uint8Array, decode: Decode = ffmpegDecode(), cut: typeof layersOf = layersOf): Promise<Result<ReferenceRead>> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "gt-reference-"));
   try {
     const file = path.join(dir, `ref${path.extname(name).replace(/[^.a-z0-9]/gi, "").slice(0, 8)}`);
@@ -53,7 +59,9 @@ export async function readReference(name: string, bytes: Uint8Array, decode: Dec
     const key = keyOf(w, MEASURE_RATE);
     const contour = bpm === null ? [] : contourOf(x, MEASURE_RATE, bpm);
     const levels = contour.length === 0 ? [] : levelsOfContour(contour);
-    return ok({ name, durationS: Math.round((x.length / MEASURE_RATE) * 10) / 10, bpm: bpm === null ? null : Math.round(bpm), key, levels });
+    const durationS = Math.round((x.length / MEASURE_RATE) * 10) / 10;
+    const layers = await cut(file, durationS);
+    return ok({ name, durationS, bpm: bpm === null ? null : Math.round(bpm), key, levels, layers: layers.ok ? layers.value : [], layersError: layers.ok ? null : layers.error.message });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

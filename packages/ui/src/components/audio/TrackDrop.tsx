@@ -10,10 +10,21 @@ import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
+import { EarButton } from "./EarButton.tsx";
+import { LAYER_BANDS, percents, type Layer } from "./layers.ts";
 import { clock, LEVEL_WORDS, type Level } from "./shape.ts";
+import type { EarState } from "./useEar.ts";
 import s from "./Ear.module.css";
 
-export type TrackRead = { readonly name: string; readonly durationS: number; readonly bpm: number | null; readonly key: string | null; readonly levels: readonly Level[] };
+export type TrackRead = {
+  readonly name: string;
+  readonly durationS: number;
+  readonly bpm: number | null;
+  readonly key: string | null;
+  readonly levels: readonly Level[];
+  readonly layers: readonly Layer[];
+  readonly layersError: string | null;
+};
 
 export type TrackDropProps = {
   readonly busy: boolean;
@@ -21,9 +32,12 @@ export type TrackDropProps = {
   readonly error: string | null;
   readonly onFile: (file: File) => void;
   readonly onUse: () => void;
+  /** The lane's one ear: a layer sounds through it like any audition. */
+  readonly stateOf?: (href: string) => EarState;
+  readonly onPlay?: (href: string) => void;
 };
 
-export function TrackDrop({ busy, read, error, onFile, onUse }: TrackDropProps) {
+export function TrackDrop({ busy, read, error, onFile, onUse, stateOf, onPlay }: TrackDropProps) {
   const pick = useRef<HTMLInputElement | null>(null);
   const [over, setOver] = useState(false);
   return (
@@ -76,8 +90,38 @@ export function TrackDrop({ busy, read, error, onFile, onUse }: TrackDropProps) 
               ))}
             </div>
           )}
+          {read.layers.length > 0 && stateOf !== undefined && onPlay !== undefined && <Layers layers={read.layers} stateOf={stateOf} onPlay={onPlay} />}
+          {read.layersError !== null && <ErrorLine message={read.layersError} />}
         </div>
       )}
     </section>
+  );
+}
+
+const AUDIBLE_SHARE = 0.01;
+
+/** The track's four bands, each playable alone, each with its part of the track's energy. */
+function Layers({ layers, stateOf, onPlay }: { readonly layers: readonly Layer[]; readonly stateOf: (href: string) => EarState; readonly onPlay: (href: string) => void }) {
+  const pct = percents(layers.map((l) => l.share));
+  return (
+    <div className={s.layers} aria-label="layers">
+      {layers.map((l, i) => {
+        const words = LAYER_BANDS.find((b) => b.id === l.id)?.words ?? "";
+        return (
+          <div key={l.id} className={s.layer}>
+            {/* Under a percent there is nothing to hear but the floor, levelled up into hiss. */}
+            {l.share >= AUDIBLE_SHARE ? <EarButton state={stateOf(l.href)} name={`the ${l.id} layer`} onPress={() => onPlay(l.href)} /> : <span className={s.earGap} />}
+            <span className={s.words}>
+              <span className={s.plain}>{l.id}</span>
+              <span className={s.termWord}>{words}</span>
+            </span>
+            <span className={s.termWord}>{pct[i] ?? 0}%</span>
+            <span className={s.share} role="img" aria-label={`${l.id}: ${pct[i] ?? 0}% of the energy`}>
+              <span className={s.shareFill} style={{ inlineSize: `${pct[i] ?? 0}%` }} />
+            </span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
