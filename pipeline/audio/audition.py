@@ -265,18 +265,55 @@ def render(spec):
     return y, {"durationS": round(len(y) / SR, 3), "lufs": round(_loudness(y.astype("float64")), 2), **facts}
 
 
-def _loudness(x):
-    try:
-        import pyloudnorm as pyln
-
-        v = float(pyln.Meter(SR).integrated_loudness(x))
-        if math.isfinite(v):
-            return v
-    except ImportError:
-        pass
+def _biquad_gain2(kind, gain_db, q, fc, w):
+    """|H(e^jw)|^2 of one RBJ biquad (pyloudnorm's IIRfilter coefficients, the BS.1770 K-weighting pair)."""
     import numpy as np
 
-    return 20.0 * math.log10(max(float(np.sqrt(np.mean(x * x))), 1e-9))
+    a_ = 10 ** (gain_db / 40.0)
+    w0 = 2 * math.pi * fc / SR
+    alpha = math.sin(w0) / (2 * q)
+    c = math.cos(w0)
+    if kind == "high_shelf":
+        b = [a_ * ((a_ + 1) + (a_ - 1) * c + 2 * math.sqrt(a_) * alpha), -2 * a_ * ((a_ - 1) + (a_ + 1) * c), a_ * ((a_ + 1) + (a_ - 1) * c - 2 * math.sqrt(a_) * alpha)]
+        a = [(a_ + 1) - (a_ - 1) * c + 2 * math.sqrt(a_) * alpha, 2 * ((a_ - 1) - (a_ + 1) * c), (a_ + 1) - (a_ - 1) * c - 2 * math.sqrt(a_) * alpha]
+    else:  # high_pass
+        b = [(1 + c) / 2, -(1 + c), (1 + c) / 2]
+        a = [1 + alpha, -2 * c, 1 - alpha]
+    z = np.exp(-1j * w)
+    h = (b[0] + b[1] * z + b[2] * z * z) / (a[0] + a[1] * z + a[2] * z * z)
+    return np.abs(h) ** 2
+
+
+def _loudness(x):
+    """Integrated loudness, LUFS (ITU-R BS.1770-4: K-weighting, 400 ms blocks at 75% overlap, the
+    -70 LUFS absolute and -10 LU relative gates) in NumPy alone. pyloudnorm gives the same figure
+    (within 0.1 LU on the renders here) but imports SciPy - ~650 module files, measured at 16 s of a
+    21 s render on this box while other jobs held the disk. The K-weighting is applied as its
+    magnitude in the frequency domain: block power does not depend on phase.
+    """
+    import numpy as np
+
+    x = np.asarray(x, dtype="float64")
+    n = len(x)
+    if n < int(0.4 * SR):
+        return 20.0 * math.log10(max(float(np.sqrt(np.mean(x * x))) if n else 0.0, 1e-9))
+    nfft = 1 << (n - 1).bit_length()  # a power of two: a ragged length made the FFT 10x slower
+    spec = np.fft.rfft(x, nfft)
+    w = 2 * math.pi * np.fft.rfftfreq(nfft, 1.0 / SR) / SR
+    g2 = _biquad_gain2("high_shelf", 4.0, 1 / math.sqrt(2), 1500.0, w) * _biquad_gain2("high_pass", 0.0, 0.5, 38.0, w)
+    y = np.fft.irfft(spec * np.sqrt(g2), nfft)[:n]
+    block, step = int(0.4 * SR), int(0.1 * SR)
+    sq = np.concatenate([[0.0], np.cumsum(y * y)])
+    starts = np.arange(0, n - block + 1, step)
+    z = (sq[starts + block] - sq[starts]) / block
+    with np.errstate(divide="ignore"):
+        lk = -0.691 + 10 * np.log10(z)
+    above = z[lk > -70.0]
+    if len(above) == 0:
+        return -70.0
+    rel = -0.691 + 10 * math.log10(float(np.mean(above))) - 10.0
+    kept = z[(lk > -70.0) & (lk > rel)]
+    return -0.691 + 10 * math.log10(float(np.mean(kept if len(kept) else above)))
 
 
 def cmd_audition(a, emit, failure, render_fn=None):

@@ -13,7 +13,7 @@
 // setter it is handed, so the composer, the variations and the receipt all read one seed.
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { ATLAS, atlasFor, AUDITION_KEY, auditionHref, playableBpm, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
+import { ATLAS, atlasFor, AUDITION_KEY, auditionHref, playableBpm, sketchHref, swapsFor, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
 import { EarStrip } from "@gt/ui/components/audio/EarStrip.tsx";
 import { provenanceOf, translate, type Produced, type TermList, type Translation } from "@gt/ui/components/audio/lexicon.ts";
 import { addTo, type Seed } from "@gt/ui/components/audio/recipe.ts";
@@ -94,6 +94,9 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
   const [lit, setLit] = useState<ReadonlySet<number>>(NONE);
   const [open, setOpen] = useState<Open>(null);
   const [blind, setBlind] = useState(false);
+  // In the mix: a candidate plays with the rest of the seed (one full four bars of the sketch)
+  // instead of alone - the swap heard where it will live.
+  const [inMix, setInMix] = useState(false);
   const [move, setMove] = useState<Move | null>(null);
 
   const href = (e: AtlasEntry): string => auditionHref(e.id, seed.bpm, seed.key);
@@ -158,7 +161,15 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
   const playable = seed.instruments.map(entryOf).filter((e): e is AtlasEntry => e !== undefined);
   const swapping = open?.kind === "swap" ? entryOf(open.term) : undefined;
   const stripFor: readonly AtlasEntry[] = swapping !== undefined ? swapsFor(swapping, can, seed.instruments) : open?.kind === "add" ? ATLAS.filter((e) => can.has(e.id)) : [];
-  const toWarm = [...playable, ...stripFor].map(href).join(" ");
+  // A strip row's sound: alone, or in the mix - the seed's playable instruments with this one in
+  // the swapped one's place (or added), all voices at the fullest level.
+  const ids = playable.map((e) => e.id);
+  const rowHref = (e: AtlasEntry): string => {
+    if (!inMix) return href(e);
+    const mix = swapping !== undefined ? ids.map((id) => (id === swapping.id ? e.id : id)) : [...ids, e.id];
+    return sketchHref(mix.includes(e.id) ? mix : [...mix, e.id], [3], seed.bpm, seed.key);
+  };
+  const toWarm = [...playable.map(href), ...stripFor.map(rowHref)].join(" ");
   useEffect(() => {
     if (toWarm === "") return;
     const t = setTimeout(() => warm(toWarm.split(" ")), 700);
@@ -167,7 +178,7 @@ export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, ca
 
   let strip: ReactNode = null;
   const held = ["4 bars", seed.key ?? AUDITION_KEY, `${playableBpm(seed.bpm)} bpm`, "−20 LUFS"];
-  const common = { stateOf: (e: AtlasEntry) => ear.stateOf(href(e)), onPlay: (e: AtlasEntry) => ear.toggle(href(e)), onClose: () => setOpen(null), blind, onBlind: setBlind, held };
+  const common = { stateOf: (e: AtlasEntry) => ear.stateOf(rowHref(e)), onPlay: (e: AtlasEntry) => ear.toggle(rowHref(e)), onClose: () => setOpen(null), blind, onBlind: setBlind, held, inMix, onInMix: setInMix };
   if (open?.kind === "swap") {
     const now = entryOf(open.term);
     if (now !== undefined) {

@@ -29,9 +29,12 @@ export type EarStripProps = {
   readonly onBlind: (b: boolean) => void;
   /** What every row holds still - bars, key, tempo, loudness - so only the instrument differs. */
   readonly held?: readonly string[];
+  /** Each row heard with the rest of the seed rather than alone; absent, no such choice. */
+  readonly inMix?: boolean;
+  readonly onInMix?: (b: boolean) => void;
 };
 
-export function EarStrip({ title, now, candidates, stateOf, onPlay, onPick, onClose, blind, onBlind, held = [] }: EarStripProps) {
+export function EarStrip({ title, now, candidates, stateOf, onPlay, onPick, onClose, blind, onBlind, held = [], inMix, onInMix }: EarStripProps) {
   const row = (e: AtlasEntry, i: number, isNow: boolean) => {
     const st = stateOf(e);
     return (
@@ -61,6 +64,7 @@ export function EarStrip({ title, now, candidates, stateOf, onPlay, onPick, onCl
           <Chip key={h} label={h} casing="lower" />
         ))}
         <span className={s.grow} />
+        {inMix !== undefined && onInMix !== undefined && <Toggle label="in the mix" on={inMix} onToggle={onInMix} />}
         <Toggle label="blind" on={blind} onToggle={onBlind} />
         <Button label="Close" size="sm" onPress={onClose} />
       </div>
