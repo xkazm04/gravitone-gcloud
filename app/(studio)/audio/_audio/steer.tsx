@@ -19,7 +19,7 @@ import { provenanceOf, translate, type Produced, type TermList, type Translation
 import { addTo, type Seed } from "@gt/ui/components/audio/recipe.ts";
 import type { SayItProps } from "@gt/ui/components/audio/SayIt.tsx";
 import type { SeedEar } from "@gt/ui/components/audio/SeedComposer.tsx";
-import { useEar } from "@gt/ui/components/audio/useEar.ts";
+import type { Ear } from "@gt/ui/components/audio/useEar.ts";
 
 type Open = { readonly kind: "swap"; readonly term: string } | { readonly kind: "add" } | null;
 type Move = { readonly minus: string; readonly plus: string };
@@ -69,9 +69,7 @@ export type Steer = {
 };
 
 /** `onSaid` names where the seed came from when a sentence is composed into it. */
-export function useSteer(seed: Seed, setSeed: (next: Seed) => void, audible: readonly string[], onSaid: (sentence: string) => void, onHeard: (t: Translation) => void): Steer {
-  const ear = useEar();
-  const can = useMemo(() => new Set(audible), [audible]);
+export function useSteer(seed: Seed, setSeed: (next: Seed) => void, ear: Ear, can: ReadonlySet<string>, onSaid: (sentence: string) => void, onHeard: (t: Translation) => void): Steer {
   const [sentence, setSentence] = useState("");
   const heard = useMemo(() => translate(sentence), [sentence]);
   const [said, setSaid] = useState<Translation | null>(null);

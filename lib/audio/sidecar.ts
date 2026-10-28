@@ -225,3 +225,30 @@ export async function renderAudition(spec: AuditionSpec, outPath: string, opts: 
     await rm(dir, { recursive: true, force: true });
   }
 }
+
+const sketchSchema = z.object({ ok: z.literal(true), durationS: z.number().nonnegative(), lufs: z.number(), voices: z.number().int().nonnegative(), columns: z.number().int().nonnegative() });
+
+/** The sketch the sidecar renders (pipeline/audio/sketch.py): voices over the painted levels. */
+export type SketchSpec = {
+  readonly voices: readonly { readonly files: readonly string[]; readonly role: string }[];
+  readonly levels: readonly number[];
+  readonly bpm: number;
+  readonly tonic: number;
+  readonly minor: boolean;
+  readonly lufs: number;
+  readonly cacheDir: string;
+};
+
+/** The seed's instruments together across the shape's columns into `outPath`; the spec as a temp file (applyChain's reason). */
+export async function renderSketch(spec: SketchSpec, outPath: string, opts: SidecarOptions = {}): Promise<Result<{ readonly durationS: number }>> {
+  if (!canSpawnLocalBinaries()) return err("unavailable", `audio sidecar sketch: ${describePosture()}`);
+  const dir = await mkdtemp(path.join(os.tmpdir(), "gt-sketch-"));
+  try {
+    const file = path.join(dir, "spec.json");
+    await writeFile(file, JSON.stringify(spec), "utf8");
+    const r = await call("sketch", ["--spec", file, "--out", outPath], sketchSchema, opts.timeoutMs ?? TIMEOUT_MS);
+    return r.ok ? ok({ durationS: r.value.durationS }) : r;
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}

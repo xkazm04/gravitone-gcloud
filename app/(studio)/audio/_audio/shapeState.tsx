@@ -9,15 +9,18 @@
 // measured) - quoted only: the desk has no ElevenLabs producer (lib/sound/engines.ts), and DRY.
 import { useState, type ReactNode } from "react";
 
-import { AUDITION_BPM } from "@gt/ui/components/audio/atlas.ts";
+import { atlasFor, AUDITION_BPM, sketchHref } from "@gt/ui/components/audio/atlas.ts";
+import { EarButton } from "@gt/ui/components/audio/EarButton.tsx";
 import type { Translation } from "@gt/ui/components/audio/lexicon.ts";
 import type { Seed } from "@gt/ui/components/audio/recipe.ts";
-import { columnsFor, planSeconds, presetForWords, PRESETS, sectionsOf, sectionsToPlan, sunoLyricsOf, voicesAt, type Level, type Preset } from "@gt/ui/components/audio/shape.ts";
+import type { Ear } from "@gt/ui/components/audio/useEar.ts";
+import { clock, columnsFor, groupSeconds, planSeconds, presetForWords, PRESETS, sectionsOf, sectionsToPlan, sunoLyricsOf, voicesAt, type Level, type Preset } from "@gt/ui/components/audio/shape.ts";
 import { ShapeStrip } from "@gt/ui/components/audio/ShapeStrip.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { count } from "@gt/ui/components/tally/count.ts";
 
 import { priceCall } from "../../../../lib/music/pricing.ts";
+import s from "./audio.module.css";
 
 /** What a piece is when nothing says otherwise: a minute and a half. */
 const DEFAULT_LENGTH_S = 90;
@@ -30,9 +33,23 @@ export type ShapeState = {
   readonly adopt: (t: Translation) => void;
 };
 
-export function useShape(seed: Seed): ShapeState {
+export function useShape(seed: Seed, ear: Ear, can: ReadonlySet<string>): ShapeState {
   const [levels, setLevels] = useState<Level[] | null>(null);
   const bpm = seed.bpm !== null && seed.bpm >= 40 ? seed.bpm : AUDITION_BPM;
+  // The sketch: the seed's playable instruments together, over the shape, or one full four bars
+  // while Suno still decides the form. Free and local; the same ear as every audition.
+  const ids = [...new Set(seed.instruments.map((t) => atlasFor(t)?.id).filter((id): id is string => id !== undefined && can.has(id)))].slice(0, 5);
+  const hear = (cols: readonly Level[]): ReactNode => {
+    if (ids.length === 0) return null;
+    const href = sketchHref(ids, cols, bpm, seed.key);
+    const st = ear.stateOf(href);
+    return (
+      <span className={s.hear}>
+        <EarButton state={st} name={cols.length === 1 ? "the instruments together" : "the shape"} onPress={() => ear.toggle(href)} big />
+        <span className={s.hearWord}>{cols.length === 1 ? `together · ${clock(groupSeconds(bpm))}` : `the shape · ${clock(groupSeconds(bpm) * cols.length)}`}</span>
+      </span>
+    );
+  };
   const startWith = (p: Preset, columns?: number): void => setLevels(p.levels(columns ?? levels?.length ?? columnsFor(DEFAULT_LENGTH_S, bpm)));
 
   const adopt = (t: Translation): void => {
@@ -45,7 +62,8 @@ export function useShape(seed: Seed): ShapeState {
 
   if (levels === null) {
     const node = (
-      <div>
+      <div className={s.row}>
+        {hear([3])}
         {PRESETS.map((p) => (
           <Chip key={p.id} label={p.label} casing="lower" ghost name={`shape: ${p.label}`} onPress={() => startWith(p)} />
         ))}
@@ -66,7 +84,8 @@ export function useShape(seed: Seed): ShapeState {
   const node = (
     <>
       <ShapeStrip levels={levels} bpm={bpm} onLevels={setLevels} voicesOf={(sec) => voicesAt(sec.level, seed.instruments)} presets={PRESETS} onPreset={(p) => startWith(p)} onLength={resize} onClear={() => setLevels(null)} />
-      <div>
+      <div className={s.row}>
+        {hear(levels)}
         <Chip label="suno" value={`${sections.length} section tags · unverified`} casing="lower" tone="amber" />{" "}
         <Chip label="elevenlabs plan" value={`${plan.sections.length} sections · ${Math.round(seconds)} s · ${quote.credits === undefined ? "unpriced" : `${count(Math.round(quote.credits))} credits`} · dry`} casing="lower" />
       </div>

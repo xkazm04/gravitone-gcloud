@@ -189,19 +189,19 @@ def _fit_register(notes, lo, hi):
     return [(b, ln, m + 12 * best) for b, ln, m in notes]
 
 
-def render(spec):
+def voice(files, bpm, tonic, minor, role, cache_dir):
+    """One instrument playing the phrase: 16 beats and one more of ring, unnormalised, mono."""
     import numpy as np
 
-    files = [f for f in spec["files"] if os.path.isfile(f)]
+    files = [f for f in files if os.path.isfile(f)]
     if not files:
         raise AuditionError("none of the instrument's sample files exist on this machine")
-    pairs = _pitch_map(files, spec.get("cacheDir"))
+    pairs = _pitch_map(files, cache_dir)
     if not pairs:
         raise AuditionError("no sample of the instrument has a pitch that could be measured")
-    bpm = float(spec["bpm"])
-    beat = 60.0 / bpm
+    beat = 60.0 / float(bpm)
     lo, hi = min(m for _, m in pairs), max(m for _, m in pairs)
-    notes = _fit_register(phrase(int(spec["tonic"]) % 12, bool(spec["minor"]), spec.get("role", "keys")), lo, hi)
+    notes = _fit_register(phrase(int(tonic) % 12, bool(minor), role), lo, hi)
     total = int(SR * (17 * beat + 0.6))
     mix = np.zeros(total, dtype="float64")
     loaded = {}
@@ -224,17 +224,28 @@ def render(spec):
         at = int(start_b * beat * SR)
         end = min(total, at + n)
         mix[at:end] += 0.5 * y[: end - at]
-    tail = int(0.6 * SR)
-    mix[-tail:] *= np.linspace(1.0, 0.0, tail)
     if float(np.sqrt(np.mean(mix * mix))) < 1e-5:
         raise AuditionError("the instrument renders silent")
-    target = float(spec.get("lufs", -20.0))
-    lufs = _loudness(mix)
-    mix *= 10 ** ((target - lufs) / 20.0)
+    return mix, {"notes": len(notes), "range": [lo, hi], "measured": len(pairs)}
+
+
+def finish(mix, target):
+    """Fade the tail, set the integrated loudness to `target`, hold the peak under -1 dBFS softly."""
+    import numpy as np
+
+    tail = min(len(mix), int(0.6 * SR))
+    mix[len(mix) - tail:] *= np.linspace(1.0, 0.0, tail)
+    mix *= 10 ** ((target - _loudness(mix)) / 20.0)
     ceiling = 0.89
     if np.max(np.abs(mix)) > ceiling:
         mix = ceiling * np.tanh(mix / ceiling)
-    return mix.astype("float32"), {"durationS": round(total / SR, 3), "lufs": round(_loudness(mix), 2), "notes": len(notes), "range": [lo, hi], "measured": len(pairs)}
+    return mix.astype("float32")
+
+
+def render(spec):
+    mix, facts = voice(spec["files"], spec["bpm"], spec["tonic"], spec["minor"], spec.get("role", "keys"), spec.get("cacheDir"))
+    y = finish(mix, float(spec.get("lufs", -20.0)))
+    return y, {"durationS": round(len(y) / SR, 3), "lufs": round(_loudness(y.astype("float64")), 2), **facts}
 
 
 def _loudness(x):
@@ -251,13 +262,13 @@ def _loudness(x):
     return 20.0 * math.log10(max(float(np.sqrt(np.mean(x * x))), 1e-9))
 
 
-def cmd_audition(a, emit, failure):
+def cmd_audition(a, emit, failure, render_fn=None):
     import soundfile as sf
 
     with open(a.spec, "r", encoding="utf8") as f:
         spec = json.load(f)
     try:
-        y, facts = render(spec)
+        y, facts = (render_fn or render)(spec)
     except AuditionError as e:
         raise failure(str(e), "refused") from None
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)

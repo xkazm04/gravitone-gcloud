@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, readdir, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -6,7 +7,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { keyPitch } from "@gt/ui/components/audio/brief.ts";
 import { ATLAS, AUDITION_KEY, atlasById, type AtlasEntry } from "@gt/ui/components/audio/atlas.ts";
 
-import { renderAudition, type AuditionFacts } from "./sidecar.ts";
+import { renderAudition, renderSketch, type AuditionFacts } from "./sidecar.ts";
 
 // THE ATLAS ON THIS MACHINE - which of @gt/ui's atlas instruments the local sample libraries can
 // play, and the audition phrase each one renders.
@@ -99,6 +100,53 @@ export type AuditionAsk = { readonly id: string; readonly bpm: number; readonly 
 
 const inflight = new Map<string, Promise<Result<string>>>();
 
+/** A cached file, or the one render of it already running, or a new render (deduped by path). */
+async function cachedOr(out: string, render: () => Promise<Result<unknown>>): Promise<Result<string>> {
+  const have = await stat(out).then(
+    (s) => s.size > 0,
+    () => false,
+  );
+  if (have) return ok(out);
+  const running = inflight.get(out);
+  if (running !== undefined) return running;
+  const job = (async (): Promise<Result<string>> => {
+    await mkdir(path.dirname(out), { recursive: true });
+    const r = await render();
+    return r.ok ? ok(out) : r;
+  })();
+  inflight.set(out, job);
+  try {
+    return await job;
+  } finally {
+    inflight.delete(out);
+  }
+}
+
+export type SketchAsk = { readonly ids: readonly string[]; readonly levels: readonly number[]; readonly bpm: number; readonly key: string | null };
+
+/** The seed's playable instruments together across the shape (pipeline/audio/sketch.py), cached by everything that shapes it. */
+export async function sketchFile(ask: SketchAsk, env: NodeJS.ProcessEnv = process.env): Promise<Result<string>> {
+  const entries = ask.ids.map((id) => atlasById(id));
+  const unknown = ask.ids.filter((_, i) => entries[i] === undefined);
+  if (unknown.length > 0) return err("invalid", `no instrument ${unknown.map((u) => `"${u}"`).join(", ")} in the atlas`);
+  if (ask.ids.length === 0 || ask.ids.length > 5) return err("invalid", "a sketch carries one to five instruments");
+  if (ask.levels.length < 1 || ask.levels.length > 32 || ask.levels.some((l) => !Number.isInteger(l) || l < 0 || l > 3)) return err("invalid", "a shape is 1-32 columns of levels 0-3");
+  if (!Number.isInteger(ask.bpm) || ask.bpm < 40 || ask.bpm > 220) return err("invalid", `a sketch's tempo is a whole 40-220 bpm, not ${ask.bpm}`);
+  const k = keyPitch(ask.key ?? AUDITION_KEY);
+  if (k === null) return err("invalid", `"${ask.key ?? ""}" is not a key (C major, A minor, F#m)`);
+  if (sampleRoots(env).length === 0) return err("unavailable", `no sample library is configured: ${SAMPLE_ROOTS_ENV} names none`);
+  const fams = await machineAtlas(env);
+  const voices: { files: readonly string[]; role: string }[] = [];
+  for (const e of entries) {
+    const files = e === undefined ? undefined : fams.get(e.id);
+    if (e === undefined || files === undefined) return err("unavailable", `${e?.term ?? "?"}: no library under ${SAMPLE_ROOTS_ENV} files it`);
+    voices.push({ files, role: e.role });
+  }
+  const dir = auditionDir(env);
+  const tag = createHash("sha1").update(JSON.stringify([ask.ids, ask.levels, ask.bpm, k.pc, k.minor])).digest("hex").slice(0, 16);
+  return cachedOr(path.join(dir, `sketch-${tag}.wav`), () => renderSketch({ voices, levels: ask.levels, bpm: ask.bpm, tonic: k.pc, minor: k.minor, lufs: AUDITION_LUFS, cacheDir: dir }, path.join(dir, `sketch-${tag}.wav`)));
+}
+
 /** The audition file for one instrument at one tempo and key: from the cache, or rendered once. */
 export async function auditionFile(ask: AuditionAsk, env: NodeJS.ProcessEnv = process.env): Promise<Result<string>> {
   const entry: AtlasEntry | undefined = atlasById(ask.id);
@@ -111,22 +159,5 @@ export async function auditionFile(ask: AuditionAsk, env: NodeJS.ProcessEnv = pr
   if (files === undefined) return err("unavailable", `${entry.term}: no library under ${SAMPLE_ROOTS_ENV} files it`);
   const dir = auditionDir(env);
   const out = path.join(dir, `${entry.id}-${ask.bpm}-${k.pc}${k.minor ? "m" : ""}.wav`);
-  const have = await stat(out).then(
-    (s) => s.size > 0,
-    () => false,
-  );
-  if (have) return ok(out);
-  const running = inflight.get(out);
-  if (running !== undefined) return running;
-  const job = (async (): Promise<Result<string>> => {
-    await mkdir(dir, { recursive: true });
-    const r: Result<AuditionFacts> = await renderAudition({ files, bpm: ask.bpm, tonic: k.pc, minor: k.minor, role: entry.role, lufs: AUDITION_LUFS, cacheDir: dir }, out);
-    return r.ok ? ok(out) : r;
-  })();
-  inflight.set(out, job);
-  try {
-    return await job;
-  } finally {
-    inflight.delete(out);
-  }
+  return cachedOr(out, (): Promise<Result<AuditionFacts>> => renderAudition({ files, bpm: ask.bpm, tonic: k.pc, minor: k.minor, role: entry.role, lufs: AUDITION_LUFS, cacheDir: dir }, out));
 }

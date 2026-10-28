@@ -25,3 +25,7 @@
   .rail,.main,.side{overflow:visible;flex:none}
   .rail{border-right:0;border-bottom:1px solid var(--hair)}
 }
+/* the shape row's line: the sketch's play mark, then the presets or the two briefs' chips */
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2)}
+.hear{display:inline-flex;align-items:center;gap:var(--sp-2);margin-right:var(--sp-3)}
+.hearWord{font:600 var(--fs-micro)/1 var(--mono);color:var(--ink-bright)}

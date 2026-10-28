@@ -99,3 +99,10 @@ export function auditionHref(id: string, bpm: number | null, key: string | null)
 /** The phrase's tempo when the seed names none, and its key. */
 export const AUDITION_BPM = 90;
 export const AUDITION_KEY = "C major";
+
+/** The sketch's address: the instruments together over the shape's levels (one digit per four bars). */
+export function sketchHref(ids: readonly string[], levels: readonly number[], bpm: number | null, key: string | null): string {
+  const q = new URLSearchParams({ ids: ids.join(","), levels: levels.join(""), bpm: String(Math.round(bpm ?? AUDITION_BPM)) });
+  if (key !== null && key.trim() !== "") q.set("key", key.trim());
+  return `/audio/sketch?${q.toString()}`;
+}

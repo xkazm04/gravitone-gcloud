@@ -27,6 +27,7 @@ import { EngineList, type EngineRow } from "@gt/ui/components/audio/EngineList.t
 import { ReferenceList } from "@gt/ui/components/audio/ReferenceList.tsx";
 import { BLANK_SEED, FACET_OF, addTo, handsOf, sunoFieldsOf, type Hand, type Seed, type SeedList, type Term } from "@gt/ui/components/audio/recipe.ts";
 import { SayIt } from "@gt/ui/components/audio/SayIt.tsx";
+import { useEar } from "@gt/ui/components/audio/useEar.ts";
 import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
 import { TermRail } from "@gt/ui/components/audio/TermRail.tsx";
 import { VariationList } from "@gt/ui/components/audio/VariationList.tsx";
@@ -78,11 +79,15 @@ export function AudioLane({ view, nowMs, acts, engines, canSend, audible }: { re
   // What the seed was last loaded from: a take's title, a variation's axis, a reference.
   const [loaded, setLoaded] = useState<string | null>(null);
   const fromLabel = loaded ?? take?.title ?? "blank";
-  const shape = useShape(seed);
+  // One ear for the whole composer: a chip, a strip row and the sketch never sound at once.
+  const ear = useEar();
+  const can = useMemo(() => new Set(audible), [audible]);
+  const shape = useShape(seed, ear, can);
   const steer = useSteer(
     seed,
     setSeed,
-    audible,
+    ear,
+    can,
     (said) => {
       setFrom(BLANK);
       setLoaded(said === "" ? "blank" : `“${said}”`);
