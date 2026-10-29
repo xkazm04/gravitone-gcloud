@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { fxChainSchema, type FxChain } from "./audio.fx.ts";
+import { STUDIO_ROLES, type StudioRole } from "./audio.studio.kinds.ts";
 import { parseAt, parseJsonAt } from "./door.ts";
 import { err, ok, type Result } from "./errors.ts";
 
@@ -8,10 +9,44 @@ import { err, ok, type Result } from "./errors.ts";
 // (pipeline/audio/render_score.py). Every object is strict, every numeric parameter is bounded,
 // and an out-of-range value, silent/refused plugin, or out-of-key note is refused at the door
 // with its exact path - never silently clamped.
+//
+// STAGE S2 (spark audio-agent-studio) grew it ADDITIVELY, still `v: 1`: up to 8 tracks over the 7
+// studio roles; a track's optional `id` (absent = its role) is what is unique, so a role may repeat
+// only when every track of it carries an id; `enters` (one flag per section, absent = everywhere)
+// rests a track in some sections. gainDb / pan are mix-time (the renderer keeps them out of the stem
+// hash and the bake). A v1 document validates, hashes and renders as it did.
 
 export const SCORE_SPEC_VERSION = 1;
-export const SCORE_ROLES = ["drums", "bass", "chords", "lead"] as const;
-export type ScoreRole = (typeof SCORE_ROLES)[number];
+/** The track roles: the studio's (./audio.studio.kinds.ts), one list. */
+export const SCORE_ROLES = STUDIO_ROLES;
+export type ScoreRole = StudioRole;
+/** The roles an instrument in the catalog is measured for; a studio role plays them through SCORE_ROLE_COMPAT. */
+export const INSTRUMENT_ROLES = ["drums", "bass", "chords", "lead"] as const;
+export type InstrumentRole = (typeof INSTRUMENT_ROLES)[number];
+export const SCORE_MAX_TRACKS = 8;
+/** A track id: lower-case letters, digits and dashes, 1..24 characters. */
+export const TRACK_ID_RE = /^[a-z0-9-]{1,24}$/;
+
+/**
+ * Which catalog roles may play each studio role. MIRRORS packages/domain/src/audio.roles.json `compat`
+ * (the file the Python renderer reads); packages/domain/test/audio.score.tracks.test.ts fails when the
+ * two drift. Kept as a constant so the door stays a pure module (no JSON import, no fs).
+ */
+export const SCORE_ROLE_COMPAT: Readonly<Record<ScoreRole, readonly InstrumentRole[]>> = {
+  drums: ["drums"],
+  percussion: ["drums"],
+  bass: ["bass"],
+  chords: ["chords"],
+  pad: ["chords"],
+  lead: ["lead"],
+  texture: ["lead", "chords"],
+};
+
+/** Can an instrument measured for `instrumentRole` play a `role` track. */
+export const instrumentFitsRole = (instrumentRole: InstrumentRole, role: ScoreRole): boolean => SCORE_ROLE_COMPAT[role].includes(instrumentRole);
+
+/** A track's address: its id, or its role when it has none (one per role then). */
+export const trackIdOf = (t: { readonly id?: string | undefined; readonly role: ScoreRole }): string => t.id ?? t.role;
 
 export const SCORE_KEYS = [
   "C major", "G major", "D major", "F major", "Bb major", "Eb major",
@@ -55,7 +90,7 @@ export type AuditionCard = {
 export type InstrumentCatalogEntry = {
   readonly id: string;
   readonly name: string;
-  readonly role: ScoreRole;
+  readonly role: InstrumentRole;
   readonly engine: "vital-vst3" | "sample-pack" | "synth";
   /** Plain non-musician description (<= 12 words). */
   readonly plainLabel: string;
@@ -106,8 +141,9 @@ export const INSTRUMENT_CATALOG: readonly InstrumentCatalogEntry[] = [
 ] as const;
 
 export const instrumentById = (id: string): InstrumentCatalogEntry | undefined => INSTRUMENT_CATALOG.find((x) => x.id === id);
+/** The ready, licensed instruments that may play a `role` track (through SCORE_ROLE_COMPAT). */
 export const readyInstrumentsForRole = (role: ScoreRole): readonly InstrumentCatalogEntry[] =>
-  INSTRUMENT_CATALOG.filter((x) => x.role === role && x.audition.status === "ready" && x.licence.trim() !== "");
+  INSTRUMENT_CATALOG.filter((x) => instrumentFitsRole(x.role, role) && x.audition.status === "ready" && x.licence.trim() !== "");
 
 const num = (min: number, max: number) => z.number().min(min).max(max);
 
@@ -139,7 +175,11 @@ export type ScoreSection = z.output<typeof scoreSectionSchema>;
 
 export const scoreTrackSchema = z.strictObject({
   role: z.enum(SCORE_ROLES),
+  /** Unique across the tracks; absent = the role (then the role appears once). */
+  id: z.string().regex(TRACK_ID_RE, "a track id is 1..24 lower-case letters, digits or dashes").optional(),
   instrument: z.string().trim().min(1).max(80),
+  /** One flag per section: does this track play there. Absent = everywhere (never written all-true). */
+  enters: z.array(z.boolean()).min(1).max(8).optional(),
   muted: z.boolean().optional(),
   solo: z.boolean().optional(),
   gainDb: num(-24, 12).optional(),
@@ -160,27 +200,62 @@ export const scoreSpecSchema = z.strictObject({
   loop: z.boolean().optional(),
   controls: scoreControlsSchema,
   sections: z.array(scoreSectionSchema).min(1).max(8),
-  tracks: z.array(scoreTrackSchema).min(1).max(4),
+  tracks: z.array(scoreTrackSchema).min(1).max(SCORE_MAX_TRACKS),
 });
 export type ScoreSpec = z.output<typeof scoreSpecSchema>;
 
-/** Validate catalog eligibility, role matching, bar bounds, and scale membership. */
-export function validateScoreSemantics(spec: ScoreSpec): Result<ScoreSpec> {
-  const totalBars = spec.sections.reduce((acc, s) => acc + s.bars, 0);
-  if (totalBars < 2 || totalBars > 64) return err("invalid", `score spec: sections: total bars ${totalBars} is outside 2..64`);
-  const allowedPc = scalePitchClasses(spec.key);
-  const seenRoles = new Set<ScoreRole>();
+/** The track-address rules: ids unique, a repeated role only with an id on every track of it, `enters` one flag per section. */
+function validateTrackAddresses(spec: ScoreSpec): Result<ScoreSpec> {
+  const seen = new Map<string, number>();
   for (let i = 0; i < spec.tracks.length; i++) {
     const tr = spec.tracks[i]!;
-    if (seenRoles.has(tr.role)) return err("invalid", `score spec: tracks.${i}.role: duplicate role ${tr.role}`);
-    seenRoles.add(tr.role);
+    const before = spec.tracks.findIndex((o, j) => j < i && o.role === tr.role && (o.id === undefined || tr.id === undefined));
+    if (before >= 0) {
+      return err("invalid", `score spec: tracks.${i}.role: duplicate role ${tr.role} (tracks.${before} too) - give every ${tr.role} track an id`);
+    }
+    const key = trackIdOf(tr);
+    const at = seen.get(key);
+    if (at !== undefined) return err("invalid", `score spec: tracks.${i}.${tr.id === undefined ? "role" : "id"}: track id ${key} is already tracks.${at}'s`);
+    seen.set(key, i);
+    if (tr.enters !== undefined) {
+      if (tr.enters.length !== spec.sections.length) {
+        return err("invalid", `score spec: tracks.${i}.enters: ${tr.enters.length} flags for ${spec.sections.length} sections (one per section)`);
+      }
+      if (!tr.enters.includes(true)) return err("invalid", `score spec: tracks.${i}.enters: the track plays in no section - remove it or mute it`);
+    }
+  }
+  return ok(spec);
+}
+
+/** `enters` all-true says "everywhere", which is written as no `enters` at all: one spelling, one stem hash. */
+const canonicalTracks = (spec: ScoreSpec): ScoreSpec =>
+  spec.tracks.some((t) => t.enters !== undefined && t.enters.every(Boolean))
+    ? { ...spec, tracks: spec.tracks.map((t) => (t.enters !== undefined && t.enters.every(Boolean) ? withoutEnters(t) : t)) }
+    : spec;
+const withoutEnters = (t: ScoreTrack): ScoreTrack => {
+  const { enters: _drop, ...rest } = t;
+  return rest;
+};
+
+/** Validate catalog eligibility, role matching, track ids, bar bounds, and scale membership. */
+export function validateScoreSemantics(specIn: ScoreSpec): Result<ScoreSpec> {
+  const totalBars = specIn.sections.reduce((acc, s) => acc + s.bars, 0);
+  if (totalBars < 2 || totalBars > 64) return err("invalid", `score spec: sections: total bars ${totalBars} is outside 2..64`);
+  const addressed = validateTrackAddresses(specIn);
+  if (!addressed.ok) return addressed;
+  const spec = canonicalTracks(specIn);
+  const allowedPc = scalePitchClasses(spec.key);
+  for (let i = 0; i < spec.tracks.length; i++) {
+    const tr = spec.tracks[i]!;
     const inst = instrumentById(tr.instrument);
     if (inst === undefined) return err("invalid", `score spec: tracks.${i}.instrument: unknown instrument ${tr.instrument}`);
     if (inst.licence.trim() === "") return err("invalid", `score spec: tracks.${i}.instrument: ${tr.instrument} has an empty licence note`);
     if (inst.audition.status !== "ready" || !inst.audition.noteOnWorks) {
       return err("invalid", `score spec: tracks.${i}.instrument: ${tr.instrument} refused (${inst.audition.refusalReason ?? "audition failed"})`);
     }
-    if (inst.role !== tr.role) return err("invalid", `score spec: tracks.${i}.instrument: ${tr.instrument} is for ${inst.role}, not ${tr.role}`);
+    if (!instrumentFitsRole(inst.role, tr.role)) {
+      return err("invalid", `score spec: tracks.${i}.instrument: ${tr.instrument} is for ${inst.role}, not ${tr.role} (a ${tr.role} track takes ${SCORE_ROLE_COMPAT[tr.role].join(" or ")} instruments)`);
+    }
     if (tr.notes !== undefined) {
       for (let j = 0; j < tr.notes.length; j++) {
         const n = tr.notes[j]!;
@@ -188,7 +263,7 @@ export function validateScoreSemantics(spec: ScoreSpec): Result<ScoreSpec> {
         if (n.midi < inst.pitchRange[0] || n.midi > inst.pitchRange[1]) {
           return err("invalid", `score spec: tracks.${i}.notes.${j}.midi: ${n.midi} is outside ${tr.instrument} range ${inst.pitchRange[0]}..${inst.pitchRange[1]}`);
         }
-        if (tr.role !== "drums" && !allowedPc.has(((n.midi % 12) + 12) % 12)) {
+        if (inst.role !== "drums" && !allowedPc.has(((n.midi % 12) + 12) % 12)) {
           return err("invalid", `score spec: tracks.${i}.notes.${j}.midi: ${n.midi} (${midiNoteName(n.midi)}) leaves declared key ${spec.key} in bar ${n.bar}`);
         }
       }
@@ -207,11 +282,41 @@ export function parseScoreSpecJson(text: string): Result<ScoreSpec> {
   return parsed.ok ? validateScoreSemantics(parsed.value as ScoreSpec) : parsed;
 }
 
-/** Swap a single role's instrument while keeping the rest of the ScoreSpec untouched. */
+/** Swap one track's instrument (by its id; absent in the spec = its role), keeping the rest of the ScoreSpec untouched. */
+export function swapTrackInstrument(spec: ScoreSpec, trackId: string, instrumentId: string, fx?: FxChain): Result<ScoreSpec> {
+  if (!spec.tracks.some((t) => trackIdOf(t) === trackId)) return err("invalid", `score spec: no track ${trackId} (tracks: ${spec.tracks.map(trackIdOf).join(", ")})`);
+  const next: ScoreSpec = {
+    ...spec,
+    tracks: spec.tracks.map((t) => (trackIdOf(t) === trackId ? { ...t, instrument: instrumentId, ...(fx === undefined ? {} : { fx }) } : t)),
+  };
+  return validateScoreSemantics(next);
+}
+
+/** Swap a single role's instrument (v1 callers: one track per role). A role that repeats is addressed by track id instead. */
 export function swapRoleInstrument(spec: ScoreSpec, role: ScoreRole, instrumentId: string, fx?: FxChain): Result<ScoreSpec> {
+  const of = spec.tracks.filter((t) => t.role === role);
+  if (of.length > 1) return err("invalid", `score spec: role ${role} has ${of.length} tracks (${of.map(trackIdOf).join(", ")}) - swap one by its track id`);
   const next: ScoreSpec = {
     ...spec,
     tracks: spec.tracks.map((t) => (t.role === role ? { ...t, instrument: instrumentId, ...(fx === undefined ? {} : { fx }) } : t)),
   };
   return validateScoreSemantics(next);
+}
+
+/**
+ * Give an id to every track of a role that repeats and has none (`<role>-<n>`, the first free n from 1),
+ * so a spec assembled from parts passes the id rule. Tracks of a role that appears once are untouched
+ * (a v1 spec comes back as it went in).
+ */
+export function withTrackIds<T extends { readonly role: ScoreRole; readonly id?: string | undefined }>(tracks: readonly T[]): T[] {
+  const repeats = (role: ScoreRole): boolean => tracks.filter((o) => o.role === role).length > 1;
+  const taken = new Set(tracks.filter((t) => t.id !== undefined || !repeats(t.role)).map(trackIdOf));
+  return tracks.map((t) => {
+    if (t.id !== undefined || !repeats(t.role)) return t;
+    let n = 1;
+    while (taken.has(`${t.role}-${n}`)) n++;
+    const id = `${t.role}-${n}`;
+    taken.add(id);
+    return { ...t, id };
+  });
 }

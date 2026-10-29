@@ -11,7 +11,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { swapRoleInstrument, type ScoreRole, type ScoreSpec } from "@gt/domain/audio.score";
-import { templateById } from "@gt/domain/audio.score.templates";
+import { FULL_BAND_SPEC, templateById } from "@gt/domain/audio.score.templates";
 
 import { auditionLocalInstrument, renderLocalScore } from "../lib/sound/localScore";
 import { storeRoot } from "../lib/sound/store";
@@ -37,6 +37,8 @@ function fixtureSpecs(): Readonly<Record<string, ScoreSpec>> {
     hiphop,
     "hiphop-felt-piano": swapped(hiphop, "chords", "sample-felt-piano", "Midnight Study Loop (felt piano)"),
     synth: templateById("synthwave-pulse").spec,
+    // Stage S2: eight tracks - two leads by id, pad, percussion, texture, parts resting per section.
+    "full-band": FULL_BAND_SPEC,
   };
 }
 
@@ -54,10 +56,10 @@ async function main(argv: readonly string[]): Promise<number> {
       console.error(`studio-fixtures: ${key}: ${r.error.message}`);
       return 1;
     }
-    // The engine falls back to a scipy stand-in when a sample path is missing and says so only in
-    // `source`; a fixture labelled "felt piano" must not play a synth (.hackathon/instruments.local.json
-    // or GRAVITONE_INSTRUMENTS_CONFIG names the sample folders).
-    const standIns = r.value.plan.stems.filter((s) => s.source.startsWith("scipy")).map((s) => `${s.role} (${s.source})`);
+    // The engine refuses a stand-in synth for a missing sample path unless asked (allowFallback is not
+    // asked here); this holds the line again: a fixture labelled "felt piano" must not play a synth
+    // (.hackathon/instruments.local.json or GRAVITONE_INSTRUMENTS_CONFIG names the sample folders).
+    const standIns = r.value.plan.stems.filter((s) => s.fallback || s.source.startsWith("scipy")).map((s) => `${s.id} (${s.source})`);
     if (standIns.length > 0) {
       console.error(`studio-fixtures: ${key}: ${standIns.join(", ")} fell back to a synth stand-in - point GRAVITONE_INSTRUMENTS_CONFIG at the sample folders`);
       return 1;
@@ -69,7 +71,7 @@ async function main(argv: readonly string[]): Promise<number> {
   // auditionLocalInstrument rendered before (/api/sound/takes/audition/file?instrument=<id>).
   for (const id of AUDITIONS) {
     const r = await auditionLocalInstrument(id);
-    if (!r.ok || r.value.source.startsWith("scipy")) {
+    if (!r.ok || r.value.fallback) {
       console.error(`studio-fixtures: audition ${id}: ${r.ok ? `fell back to ${r.value.source}` : r.error.message}`);
       return 1;
     }

@@ -4,9 +4,11 @@ import path from "node:path";
 import {
   INSTRUMENT_CATALOG,
   SCORE_KEYS,
+  SCORE_MAX_TRACKS,
   SCORE_ROLES,
   SCORE_SPEC_VERSION,
   STYLE_TEMPLATES,
+  TRACK_ID_RE,
   parseScoreSpec,
   type ScoreKey,
   type ScoreRole,
@@ -74,13 +76,17 @@ export const SCORE_SCHEMA: Record<string, unknown> = {
     tracks: {
       type: "array",
       minItems: 1,
-      maxItems: 4,
+      maxItems: SCORE_MAX_TRACKS,
       items: {
         type: "object",
         required: ["role", "instrument"],
         properties: {
           role: { type: "string", enum: [...SCORE_ROLES] },
+          // Required on every track of a role that repeats (two leads); unique across the tracks.
+          id: { type: "string", pattern: TRACK_ID_RE.source },
           instrument: { type: "string", enum: [...READY_INSTRUMENT_IDS] },
+          // One flag per section; omit to play everywhere.
+          enters: { type: "array", items: { type: "boolean" } },
           gainDb: { type: "number" },
           pan: { type: "number" },
           pattern: { type: "string" },

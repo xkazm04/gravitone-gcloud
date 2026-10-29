@@ -2,8 +2,11 @@
 //
 //   npx tsx pipeline/local-score.mts templates [--json]
 //   npx tsx pipeline/local-score.mts receipt [--template chill-hiphop|calm-bed|synthwave-pulse|warm-acoustic] [--spec <file.json>]
-//   npx tsx pipeline/local-score.mts render [--template chill-hiphop|calm-bed|synthwave-pulse|warm-acoustic] [--spec <file.json>] [--verify-determinism] [--json]
-//   npx tsx pipeline/local-score.mts swap --take <id> --role drums|bass|chords|lead --instrument <id> [--muted] [--solo] [--json]
+//   npx tsx pipeline/local-score.mts render [--template chill-hiphop|calm-bed|synthwave-pulse|warm-acoustic] [--spec <file.json>] [--verify-determinism] [--allow-fallback] [--json]
+//   npx tsx pipeline/local-score.mts swap --take <id> (--track <trackId> | --role <role>) --instrument <id> [--muted] [--solo] [--json]
+//
+// A stem is addressed by its track id (the spec's `id`, or the role when it gave none); `--allow-fallback`
+// lets a stand-in synth play a track whose samples or plugin are missing (refused otherwise).
 //   npx tsx pipeline/local-score.mts audition --instrument <id> [--json]
 //
 // Zero vendor spend ($0). Files takes into SOUND_STORE_DIR under provider "local".
@@ -89,7 +92,7 @@ async function main(argv: readonly string[]): Promise<number> {
     const rawSpec = specFile
       ? (JSON.parse(fs.readFileSync(path.resolve(specFile), "utf8")) as unknown)
       : templateById(templateId).spec;
-    const res = await renderLocalScore(rawSpec, { verifyDeterminism });
+    const res = await renderLocalScore(rawSpec, { verifyDeterminism, ...(argv.includes("--allow-fallback") ? { allowFallback: true } : {}) });
     if (!res.ok) {
       console.error(JSON.stringify({ ok: false, error: res.error }, null, 2));
       return 1;
@@ -104,11 +107,12 @@ async function main(argv: readonly string[]): Promise<number> {
           provider: take.provider,
           durationS: take.durationS,
           measured: take.measured,
-          reusedRoles: plan.reusedRoles,
-          renderedRoles: plan.renderedRoles,
+          reusedIds: plan.reusedIds,
+          renderedIds: plan.renderedIds,
           determinism: plan.determinism,
           triageFlagged: plan.triage.flagged,
           stems: plan.stems.map((s) => ({
+            id: s.id,
             role: s.role,
             instrument: s.instrument,
             source: s.source,
@@ -128,17 +132,19 @@ async function main(argv: readonly string[]): Promise<number> {
 
   if (cmd === "swap") {
     const takeId = flagOf(argv, "--take");
+    const track = flagOf(argv, "--track");
     const role = flagOf(argv, "--role") as ScoreRole | null;
     const instrumentId = flagOf(argv, "--instrument");
     const muted = argv.includes("--muted") ? true : undefined;
     const solo = argv.includes("--solo") ? true : undefined;
-    if (!takeId || !role || !instrumentId) {
-      console.error(JSON.stringify({ ok: false, error: "swap requires --take <id> --role <role> --instrument <id>" }));
+    if (!takeId || (!track && !role) || !instrumentId) {
+      console.error(JSON.stringify({ ok: false, error: "swap requires --take <id> --track <trackId> (or --role <role>) --instrument <id>" }));
       return 2;
     }
     const res = await swapLocalTakeStem({
       takeId,
-      role,
+      ...(track ? { track } : {}),
+      ...(role ? { role } : {}),
       instrumentId,
       ...(muted === undefined ? {} : { muted }),
       ...(solo === undefined ? {} : { solo }),
@@ -155,12 +161,13 @@ async function main(argv: readonly string[]): Promise<number> {
           takeId: take.id,
           parentId: take.parentId,
           variation: take.variation,
-          reusedRoles: plan.reusedRoles,
-          renderedRoles: plan.renderedRoles,
+          reusedIds: plan.reusedIds,
+          renderedIds: plan.renderedIds,
           totalRenderMs: plan.totalRenderMs,
           measured: take.measured,
           triageFlagged: plan.triage.flagged,
           stems: plan.stems.map((s) => ({
+            id: s.id,
             role: s.role,
             instrument: s.instrument,
             sha256: s.sha256,
@@ -218,6 +225,7 @@ async function main(argv: readonly string[]): Promise<number> {
           triageFlagged: plan.triage.flagged,
           mixSha256: plan.mixSha256,
           stems: plan.stems.map((s) => ({
+            id: s.id,
             role: s.role,
             instrument: s.instrument,
             source: s.source,

@@ -1,6 +1,8 @@
 import {
   INSTRUMENT_CATALOG,
   SCORE_KEYS,
+  instrumentFitsRole,
+  withTrackIds,
   SCORE_SPEC_VERSION,
   type ScoreControls,
   type ScoreKey,
@@ -212,6 +214,27 @@ export const WORKED_SCORE_TEMPLATES: readonly StyleTemplateMeta[] = [
 
 export const WORKED_SCORE_SPECS: readonly ScoreSpec[] = WORKED_SCORE_TEMPLATES.map((t) => t.spec);
 
+/**
+ * THE FULL BAND (stage S2): the chill hip-hop groove arranged for eight tracks - two leads told apart by
+ * id, a pad and a percussion part on the new roles, a texture, and parts that rest in some sections
+ * (`enters`, one flag per section: intro, lift, outro). Not a style template; the worked example of what
+ * the grown engine takes (the studio's `full-band` fixture, the S2 tests, SCORE-PROMPT.md's example).
+ */
+export const FULL_BAND_SPEC: ScoreSpec = {
+  ...templateById("chill-hiphop").spec,
+  title: "Midnight Study Loop (full band)",
+  tracks: [
+    { role: "drums", instrument: "kit-808-warm", pattern: "boom-bap", enters: [false, true, true] },
+    { role: "percussion", instrument: "kit-909-pulse", pan: 0.2, enters: [false, true, false] },
+    { role: "bass", instrument: "vital-sub-bass", pattern: "root-fifth" },
+    { role: "chords", instrument: "sample-lofi-keys", gainDb: -3, pan: -0.1, pattern: "warm-voicing" },
+    { role: "pad", instrument: "vital-warm-pad", gainDb: -6, enters: [true, true, false] },
+    { role: "lead", id: "lead-bell", instrument: "sample-ikembe-bell", gainDb: -3.5, pan: 0.15, pattern: "call-response" },
+    { role: "lead", id: "lead-guitar", instrument: "sample-mallet-guitar", gainDb: -4, pan: -0.2, enters: [false, true, true] },
+    { role: "texture", instrument: "vital-glass-lead", gainDb: -9, enters: [true, false, true] },
+  ],
+};
+
 export function templateById(id: StyleTemplateId): StyleTemplateMeta {
   return WORKED_SCORE_TEMPLATES.find((t) => t.id === id) ?? WORKED_SCORE_TEMPLATES[0]!;
 }
@@ -263,13 +286,13 @@ export function compileSeedToScore(
   const pickForRole = (role: ScoreRole, defaultId: string): string => {
     const explicit = opts.roleInstruments?.[role];
     if (explicit) {
-      const hit = INSTRUMENT_CATALOG.find((c) => c.id === explicit && c.role === role && c.audition.status === "ready");
+      const hit = INSTRUMENT_CATALOG.find((c) => c.id === explicit && instrumentFitsRole(c.role, role) && c.audition.status === "ready");
       if (hit) return hit.id;
     }
     for (const w of seedIn.instruments ?? []) {
       const wl = w.trim().toLowerCase();
       const hit = INSTRUMENT_CATALOG.find(
-        (c) => c.role === role && c.audition.status === "ready" && (c.name.toLowerCase().includes(wl) || c.plainLabel.toLowerCase().includes(wl)),
+        (c) => instrumentFitsRole(c.role, role) && c.audition.status === "ready" && (c.name.toLowerCase().includes(wl) || c.plainLabel.toLowerCase().includes(wl)),
       );
       if (hit) return hit.id;
     }
@@ -284,9 +307,12 @@ export function compileSeedToScore(
     key,
     loop: opts.loop ?? base.loop ?? false,
     controls,
-    tracks: base.tracks.map((tr) => ({
-      ...tr,
-      instrument: pickForRole(tr.role, tr.instrument),
-    })),
+    // A role that repeats is addressed by track id (no change for the one-per-role templates).
+    tracks: withTrackIds(
+      base.tracks.map((tr) => ({
+        ...tr,
+        instrument: pickForRole(tr.role, tr.instrument),
+      })),
+    ),
   };
 }

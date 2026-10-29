@@ -1,4 +1,4 @@
-"""Compile a ScoreSpec into MIDI and per-role WAV stems, mix with FxChain + sidechain ducking,
+"""Compile a ScoreSpec into MIDI and per-track WAV stems (FxChain baked in, pre-fader, keyed by track id), mix with level/pan + ducking,
 master to -14 LUFS, verify determinism, and export a REAPER .rpp project (D6 + A2 + C6).
 """
 
@@ -17,6 +17,8 @@ import fxchain
 import loudness
 import score_compiler as sc
 import score_instruments as inst_lib
+import score_patterns
+import score_sources
 import triage
 
 ScoreRefused = sc.ScoreRefused
@@ -30,13 +32,48 @@ TARGET_LUFS = -14.0
 CEILING_DBTP = -1.1
 
 
+MIX_TIME = ("muted", "solo", "gainDb", "pan")  # applied at mix time: never in the stem hash or the bake
+
+
 def _track_hash(spec, track):
+    bake = {k: v for k, v in track.items() if k not in MIX_TIME}
+    if "enters" in bake and all(bake["enters"]):
+        del bake["enters"]  # all-true is the same stem as absent
     payload = {
         "v": spec["v"], "seed": spec["seed"], "tempoBpm": spec["tempoBpm"], "key": spec["key"],
         "loop": bool(spec.get("loop", False)), "controls": spec["controls"], "sections": spec["sections"],
-        "track": {k: v for k, v in track.items() if k not in ("muted", "solo")},
+        "track": bake,
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+
+
+def _cached_source(cache_wav, live_missing, allow_fallback):
+    """The true source of a cached stem (from the json beside it), or None when the cache must not
+    be used: no sidecar json (a pre-S2 cache), or a stand-in the request refuses or the real source
+    could now replace."""
+    if not cache_wav or not os.path.isfile(cache_wav):
+        return None
+    try:
+        with open(cache_wav[:-4] + ".json", encoding="utf-8") as f:
+            meta = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if score_sources.is_fallback(meta.get("source")) and (not allow_fallback or live_missing is None):
+        return None
+    return meta.get("source")
+
+
+def _pan_gain(buf, gain_db, pan):
+    """Mix-time level and pan on a pre-fader stem (the v1 bake law, now applied at the mix)."""
+    g_lin = 10.0 ** (float(gain_db) / 20.0)
+    buf[:, 0] *= g_lin * (1.0 - max(0.0, float(pan)))
+    buf[:, 1] *= g_lin * (1.0 + min(0.0, float(pan)))
+    return buf
+
+
+def _roles(spec, ids):
+    """The v1 `*Roles` lists (kept one release): the role of each listed track id."""
+    return [t["role"] for t in spec["tracks"] if sc.track_id(t) in ids]
 
 
 def _sha256_file(path):
@@ -47,8 +84,9 @@ def _sha256_file(path):
     return h.hexdigest()
 
 
-def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False, _skip_triage=False):
-    """Compile and render ScoreSpec -> stems, mix.wav, triage, and optional determinism report."""
+def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False, allow_fallback=False, _skip_triage=False):
+    """Compile and render ScoreSpec -> pre-fader stems by track id, mix.wav, triage, and optional determinism report.
+    A stand-in source is refused (naming what is missing) unless allow_fallback."""
     t_start = time.time()
     spec = sc.validate_spec(spec_doc)
     stems_dir = os.path.join(out_dir, "stems")
@@ -63,33 +101,41 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False, _s
     body_frames, total_frames = int(round(body_s * inst_lib.RATE)), int(round(total_s * inst_lib.RATE))
 
     any_solo = any(bool(tr.get("solo")) for tr in spec["tracks"])
-    stems_info, reused_roles, rendered_roles, stem_buffers = [], [], [], {}
+    stems_info, reused_ids, rendered_ids, stem_buffers = [], [], [], {}
+    probes = {}
+    for i, tr in enumerate(spec["tracks"]):
+        if tr["instrument"] not in probes:
+            probes[tr["instrument"]] = score_sources.probe(tr["instrument"])
+        stand_in, missing = probes[tr["instrument"]]
+        if missing and not allow_fallback:
+            raise ScoreRefused(f"tracks.{i}.instrument: {tr['instrument']} would play a stand-in ({stand_in}): missing {missing}; pass allowFallback to accept it")
 
-    for tr in spec["tracks"]:
-        role, inst_id = tr["role"], tr["instrument"]
+    for i, tr in enumerate(spec["tracks"]):
+        tid, role, inst_id = sc.track_id(tr), tr["role"], tr["instrument"]
         thash = _track_hash(spec, tr)
-        wav_path, mid_path = os.path.join(stems_dir, f"{role}.wav"), os.path.join(stems_dir, f"{role}.mid")
-        cache_wav = os.path.join(cache_dir, f"{role}-{thash}.wav") if cache_dir else None
+        wav_path, mid_path = os.path.join(stems_dir, f"{tid}.wav"), os.path.join(stems_dir, f"{tid}.mid")
+        cache_wav = os.path.join(cache_dir, f"{tid}-{thash}.wav") if cache_dir else None
         events = sc.compile_track_events(spec, tr)
         inst_lib.write_smf_midi(events, bpm, mid_path)
 
         t0 = time.time()
-        if cache_wav and os.path.isfile(cache_wav):
+        source_used = _cached_source(cache_wav, probes[inst_id][1], allow_fallback)
+        if source_used is not None:
             buf, _ = sf.read(cache_wav, dtype="float32", always_2d=True)
             if os.path.abspath(cache_wav) != os.path.abspath(wav_path):
                 with open(cache_wav, "rb") as sf_in, open(wav_path, "wb") as sf_out:
                     sf_out.write(sf_in.read())
-            source_used = "cached-bit-exact"
-            reused_roles.append(role)
+            reused_ids.append(tid)
         else:
             raw_body, source_used = inst_lib.render_instrument_events(inst_id, events, body_s, brightness=spec["controls"]["brightness"])
+            if score_sources.is_fallback(source_used) and not allow_fallback:
+                raise ScoreRefused(f"tracks.{i}.instrument: {inst_id} rendered silence on its real source and would play a stand-in ({source_used}); pass allowFallback to accept it")
             shaped = sc.apply_section_envelope(raw_body[:body_frames], role, spec, body_frames)
             if "fx" in tr and tr["fx"]:
                 shaped, _notes = fxchain.render(shaped, inst_lib.RATE, fxchain.validate(tr["fx"]))
-            gain_db, pan = float(tr.get("gainDb", 0.0)), float(tr.get("pan", 0.0))
-            g_lin = 10.0 ** (gain_db / 20.0)
-            shaped[:, 0] *= g_lin * (1.0 - max(0.0, pan))
-            shaped[:, 1] *= g_lin * (1.0 + min(0.0, pan))
+            gate = score_patterns.rest_gate(spec, tr, len(shaped), inst_lib.RATE)
+            if gate is not None:
+                shaped = (shaped * gate[:, None]).astype(np.float32)
             if not is_loop:
                 fade_n = min(len(shaped), int(round(FADE_OUT_S * inst_lib.RATE)))
                 if fade_n > 0:
@@ -106,17 +152,20 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False, _s
                 os.makedirs(cache_dir, exist_ok=True)
                 with open(wav_path, "rb") as sf_in, open(cache_wav, "wb") as sf_out:
                     sf_out.write(sf_in.read())
+                with open(cache_wav[:-4] + ".json", "w", encoding="utf-8") as f:
+                    json.dump({"source": source_used, "fallback": score_sources.is_fallback(source_used)}, f)
             buf, _ = sf.read(wav_path, dtype="float32", always_2d=True)
-            rendered_roles.append(role)
+            rendered_ids.append(tid)
 
         render_ms = int(round((time.time() - t0) * 1000))
-        stem_buffers[role] = buf
+        stem_buffers[tid] = buf
         st_peak_lin = float(np.max(np.abs(buf))) if buf.size > 0 else 0.0
         st_lufs = loudness.integrated_lufs(buf, inst_lib.RATE) if not _skip_triage else None
         stems_info.append({
-            "role": role, "instrument": inst_id, "instrumentName": inst_lib.CATALOG[inst_id]["name"], "source": source_used,
+            "id": tid, "role": role, "instrument": inst_id, "instrumentName": inst_lib.CATALOG[inst_id]["name"],
+            "source": source_used, "fallback": score_sources.is_fallback(source_used),
             "wavPath": os.path.abspath(wav_path), "midiPath": os.path.abspath(mid_path), "sha256": _sha256_file(wav_path),
-            "trackHash": thash, "reused": role in reused_roles, "muted": bool(tr.get("muted", False)), "solo": bool(tr.get("solo", False)),
+            "trackHash": thash, "reused": tid in reused_ids, "muted": bool(tr.get("muted", False)), "solo": bool(tr.get("solo", False)),
             "gainDb": float(tr.get("gainDb", 0.0)), "pan": float(tr.get("pan", 0.0)), "noteCount": len(events),
             "renderMs": render_ms, "durationS": round(len(buf) / float(inst_lib.RATE), 4),
             "integratedLufs": st_lufs, "truePeakDb": round(20.0 * math.log10(st_peak_lin), 2) if st_peak_lin > 0 else None,
@@ -124,8 +173,9 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False, _s
 
     mix = np.zeros((total_frames, 2), dtype=np.float32)
     drum_env = None
-    if "drums" in stem_buffers:
-        d_abs = np.max(np.abs(stem_buffers["drums"]), axis=1)
+    keys = [_pan_gain(stem_buffers[sc.track_id(t)].copy(), t.get("gainDb", 0.0), t.get("pan", 0.0)) for t in spec["tracks"] if t["role"] == "drums"]
+    if keys:  # the duck key is the drums as heard (post-fader), muted or not, as in v1
+        d_abs = np.max(np.abs(keys[0] if len(keys) == 1 else np.sum(keys, axis=0)), axis=1)
         win = max(1, int(0.025 * inst_lib.RATE))
         drum_env = signal.fftconvolve(d_abs, np.ones(win, dtype=np.float32) / win, mode="same")
 
@@ -134,10 +184,10 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False, _s
         active = bool(tr.get("solo", False)) if any_solo else not bool(tr.get("muted", False))
         if not active:
             continue
-        s_buf = stem_buffers[role][:total_frames].copy()
-        if role == "chords" and drum_env is not None:
+        s_buf = stem_buffers[sc.track_id(tr)][:total_frames].copy()
+        if role in ("chords", "pad") and drum_env is not None:
             s_buf *= np.clip(1.0 - 0.25 * drum_env[:len(s_buf)], 0.72, 1.0)[:, None]
-        mix += s_buf
+        mix += _pan_gain(s_buf, tr.get("gainDb", 0.0), tr.get("pan", 0.0))
 
     raw_lufs = loudness.integrated_lufs(mix, inst_lib.RATE)
     if raw_lufs is not None and math.isfinite(raw_lufs):
@@ -186,7 +236,7 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False, _s
     if verify_determinism:
         import tempfile
         with tempfile.TemporaryDirectory(prefix="gt-score-det-") as tmp2:
-            second = render_score(spec_doc, tmp2, cache_dir=None, verify_determinism=False, _skip_triage=True)
+            second = render_score(spec_doc, tmp2, cache_dir=None, verify_determinism=False, allow_fallback=allow_fallback, _skip_triage=True)
             mix2, _ = sf.read(second["mixPath"], dtype="float32", always_2d=True)
             max_diff = float(np.max(np.abs(written_mix - mix2)))
             rms_diff = float(np.sqrt(np.mean(np.square(written_mix - mix2))))
@@ -200,7 +250,8 @@ def render_score(spec_doc, out_dir, cache_dir=None, verify_determinism=False, _s
         "ok": True, "title": spec["title"], "tempoBpm": bpm, "key": spec["key"], "loop": is_loop,
         "totalBars": total_bars, "durationS": mix_measure["durationS"], "mixPath": os.path.abspath(mix_path),
         "mixSha256": mix_sha, "reaperProjectPath": os.path.abspath(rpp_path), "measure": mix_measure,
-        "triage": triage_res, "stems": stems_info, "reusedRoles": reused_roles, "renderedRoles": rendered_roles,
+        "triage": triage_res, "stems": stems_info, "reusedIds": reused_ids, "renderedIds": rendered_ids,
+        "reusedRoles": _roles(spec, reused_ids), "renderedRoles": _roles(spec, rendered_ids),
         "totalRenderMs": int(round((time.time() - t_start) * 1000)), "determinism": determinism,
     }
 
@@ -311,7 +362,7 @@ def render_midi_file(mid_path, inst_id, out_path, brightness=0.5):
     if meas["integratedLufs"] is None:
         raise ScoreRefused(f"instrument {inst_id} render is silent")
     return {
-        "ok": True, "id": inst_id, "name": entry["name"], "role": entry["role"], "source": source_used,
+        "ok": True, "id": inst_id, "name": entry["name"], "role": entry["role"], "source": source_used, "fallback": score_sources.is_fallback(source_used),
         "outPath": os.path.abspath(out_path), "sha256": _sha256_file(out_path), "noteCount": len(events),
         "tempoBpm": round(bpm, 2), "renderMs": render_ms, "durationS": meas["durationS"], "measure": meas,
     }
@@ -325,7 +376,7 @@ SKETCH_TEMPLATES = {
 }
 
 
-def sketch_score(style="chill-hiphop", out_dir=".", seed=None, tempo_bpm=None, key=None, verify_determinism=False):
+def sketch_score(style="chill-hiphop", out_dir=".", seed=None, tempo_bpm=None, key=None, verify_determinism=False, allow_fallback=False):
     """Build and render a 4-stem sketch from a style template + optional seed/tempo/key overrides (C6)."""
     if style not in SKETCH_TEMPLATES:
         raise ScoreRefused(f"unknown style {style!r}; expected one of {sorted(SKETCH_TEMPLATES)}")
@@ -345,4 +396,4 @@ def sketch_score(style="chill-hiphop", out_dir=".", seed=None, tempo_bpm=None, k
             {"role": "lead", "instrument": l_tr[0], "gainDb": -3.2, "pan": 0.12, "pattern": l_tr[1]},
         ],
     }
-    return render_score(spec, out_dir, verify_determinism=verify_determinism)
+    return render_score(spec, out_dir, verify_determinism=verify_determinism, allow_fallback=allow_fallback)

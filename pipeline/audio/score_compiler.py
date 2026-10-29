@@ -2,6 +2,7 @@
 
 import math
 import os
+import re
 import zlib
 
 import numpy as np
@@ -9,9 +10,12 @@ from scipy import signal
 
 import fxchain
 import score_instruments as inst_lib
+import score_patterns
 
 SCORE_SPEC_VERSION = 1
-ROLES = ("drums", "bass", "chords", "lead")
+ROLES = tuple(inst_lib.role_compat())  # the studio roles, in audio.roles.json order
+MAX_TRACKS = 8
+TRACK_ID = re.compile(r"^[a-z0-9-]{1,24}$")
 KEYS = {
     "C major": (0, (0, 2, 4, 5, 7, 9, 11)), "G major": (7, (0, 2, 4, 5, 7, 9, 11)),
     "D major": (2, (0, 2, 4, 5, 7, 9, 11)), "F major": (5, (0, 2, 4, 5, 7, 9, 11)),
@@ -40,6 +44,11 @@ def _int(v):
 
 def _note_name(midi):
     return f"{NOTE_NAMES[midi % 12]}{(midi // 12) - 1}"
+
+
+def track_id(track):
+    """A track's id: its own `id`, else its role (a v1 track)."""
+    return track.get("id") or track["role"]
 
 
 def validate_spec(doc):
@@ -102,23 +111,38 @@ def validate_spec(doc):
     if not (2 <= total_bars <= 64):
         raise ScoreRefused(f"sections: total bars {total_bars} is outside 2..64")
     tracks = doc.get("tracks")
-    if not isinstance(tracks, list) or not (1 <= len(tracks) <= 4):
-        raise ScoreRefused("tracks: expected 1..4 tracks")
+    if not isinstance(tracks, list) or not (1 <= len(tracks) <= MAX_TRACKS):
+        raise ScoreRefused(f"tracks: expected 1..{MAX_TRACKS} tracks")
     root_pc, steps = KEYS[key]
     allowed_pc = {(root_pc + st) % 12 for st in steps}
-    seen_roles = set()
+    role_count = {}
+    for tr in tracks:
+        if isinstance(tr, dict):
+            role_count[tr.get("role")] = role_count.get(tr.get("role"), 0) + 1
+    seen_ids = set()
     for i, tr in enumerate(tracks):
         if not isinstance(tr, dict):
             raise ScoreRefused(f"tracks.{i}: expected an object")
-        extra_t = sorted(set(tr) - {"role", "instrument", "muted", "solo", "gainDb", "pan", "pattern", "fx", "notes"})
+        extra_t = sorted(set(tr) - {"id", "role", "instrument", "muted", "solo", "gainDb", "pan", "pattern", "fx", "notes", "enters"})
         if extra_t:
             raise ScoreRefused(f"tracks.{i}: unrecognized key {extra_t[0]!r}")
         role = tr.get("role")
         if role not in ROLES:
             raise ScoreRefused(f"tracks.{i}.role: unknown role {role!r}")
-        if role in seen_roles:
-            raise ScoreRefused(f"tracks.{i}.role: duplicate role {role}")
-        seen_roles.add(role)
+        if "id" in tr:
+            if not isinstance(tr["id"], str) or not TRACK_ID.fullmatch(tr["id"]):
+                raise ScoreRefused(f"tracks.{i}.id: {tr['id']!r} is not 1..24 of a-z, 0-9, -")
+        elif role_count[role] > 1:
+            raise ScoreRefused(f"tracks.{i}.role: duplicate role {role} (a repeated role needs an id on every one of its tracks)")
+        if track_id(tr) in seen_ids:
+            raise ScoreRefused(f"tracks.{i}.id: duplicate track id {track_id(tr)}")
+        seen_ids.add(track_id(tr))
+        if "enters" in tr:
+            ent = tr["enters"]
+            if not isinstance(ent, list) or len(ent) != len(secs) or not all(isinstance(x, bool) for x in ent):
+                raise ScoreRefused(f"tracks.{i}.enters: expected {len(secs)} booleans, one per section")
+            if not any(ent):
+                raise ScoreRefused(f"tracks.{i}.enters: the track plays in no section - remove it or mute it")
         inst_id = tr.get("instrument")
         if inst_id not in inst_lib.CATALOG:
             raise ScoreRefused(f"tracks.{i}.instrument: unknown instrument {inst_id!r}")
@@ -127,7 +151,7 @@ def validate_spec(doc):
             raise ScoreRefused(f"tracks.{i}.instrument: {inst_id} has an empty licence note")
         if cat["status"] != "ready":
             raise ScoreRefused(f"tracks.{i}.instrument: {inst_id} refused ({cat['refusalReason']})")
-        if cat["role"] != role:
+        if cat["role"] not in inst_lib.role_compat()[role]:
             raise ScoreRefused(f"tracks.{i}.instrument: {inst_id} is for {cat['role']}, not {role}")
         if "gainDb" in tr and (not _num(tr["gainDb"]) or not (-24 <= tr["gainDb"] <= 12)):
             raise ScoreRefused(f"tracks.{i}.gainDb: {tr['gainDb']!r} is outside -24..12")
@@ -157,7 +181,7 @@ def validate_spec(doc):
                     raise ScoreRefused(f"tracks.{i}.notes.{j}.midi: {midi_n!r} is outside {inst_id} range {lo_p}..{hi_p}")
                 if not _int(vel_n) or not (1 <= vel_n <= 127):
                     raise ScoreRefused(f"tracks.{i}.notes.{j}.velocity: {vel_n!r} is outside 1..127")
-                if role != "drums" and (midi_n % 12) not in allowed_pc:
+                if cat["role"] != "drums" and (midi_n % 12) not in allowed_pc:
                     raise ScoreRefused(f"tracks.{i}.notes.{j}.midi: {midi_n} ({_note_name(midi_n)}) leaves declared key {key} in bar {bar_n}")
     return doc
 
@@ -179,13 +203,18 @@ def _scale_midi(key, base_octave, degree, lo_p, hi_p):
 
 
 def compile_track_events(spec, track):
-    """Compile one role track into [(start_s, end_s, midi, vel)] with pattern-specific musicality."""
+    """Compile one track into [(start_s, end_s, midi, vel)]; `enters` drops events after generation."""
+    return score_patterns.apply_enters(spec, track, _generate_events(spec, track))
+
+
+def _generate_events(spec, track):
+    """Pattern-specific musicality, seeded by (seed, id ?? role, pattern, key): a v1 track's seed is unchanged."""
     bpm = float(spec["tempoBpm"])
     beat_s, bar_s = 60.0 / bpm, 240.0 / bpm
     ctrls = spec["controls"]
     swing, density, lift, humanise = float(ctrls["swing"]), float(ctrls["density"]), float(ctrls["lift"]), float(ctrls["humanise"])
-    role, pat = track["role"], track.get("pattern") or "default"
-    r = _seeded_rng(spec["seed"], role, pat, spec["key"])
+    role, pat, tag = track["role"], track.get("pattern") or "default", track_id(track)
+    r = _seeded_rng(spec["seed"], tag, pat, spec["key"])
 
     if track.get("notes"):
         return [
@@ -210,7 +239,7 @@ def compile_track_events(spec, track):
         for k in range(bars):
             bar_idx = at_bar + k
             if is_loop:
-                r = _seeded_rng(spec["seed"], role, pat, spec["key"], bar_idx % 2)
+                r = _seeded_rng(spec["seed"], tag, pat, spec["key"], bar_idx % 2)
             bar_start_s = bar_idx * bar_s
             deg = prog[(bar_idx if is_loop else k) % len(prog)]
             vel_base = int(round(68 + 42 * eff_energy))
@@ -297,6 +326,12 @@ def compile_track_events(spec, track):
                     midi_n = _scale_midi(spec["key"], oct_l, deg + motif_steps[m_idx % len(motif_steps)], lo_p, hi_p)
                     v = max(38, min(120, int(vel_base * (0.95 if is_lift else 0.55)) + int(r.integers(-6, 6) * humanise)))
                     events.append((bar_start_s + bt * beat_s + sw, bar_start_s + (bt + 0.6) * beat_s + sw, midi_n, v))
+            else:  # pad, percussion, texture
+                events.extend(score_patterns.bar_events(role, pat, r, {
+                    "bar_start_s": bar_start_s, "beat_s": beat_s, "deg": deg, "k": k, "bars": bars, "is_lift": is_lift,
+                    "density": density, "swing": swing, "humanise": humanise, "vel_base": vel_base,
+                    "midi": lambda o, d: _scale_midi(spec["key"], o, d, lo_p, hi_p),
+                }))
         at_bar += bars
     return events
 
@@ -305,7 +340,7 @@ def apply_section_envelope(stem, role, spec, body_frames):
     bpm, lift_ctrl = float(spec["tempoBpm"]), float(spec["controls"]["lift"])
     bar_s = 240.0 / bpm
     out = stem.copy()
-    if bool(spec.get("loop", False)) or len(spec["sections"]) < 2 or role == "drums":
+    if bool(spec.get("loop", False)) or len(spec["sections"]) < 2 or role in ("drums", "percussion"):
         return out
     at_bar = 0
     for idx, sec in enumerate(spec["sections"]):
@@ -346,7 +381,7 @@ def write_reaper_rpp(spec, stems_info, out_path):
     for st in stems_info:
         vol = 10.0 ** (float(st.get("gainDb", 0.0)) / 20.0)
         lines += [
-            "  <TRACK", f'    NAME "{st["role"]} - {st["instrument"]}"',
+            "  <TRACK", f'    NAME "{st.get("id") or st["role"]} - {st["instrument"]}"',
             f"    VOLPAN {vol:.4f} {float(st.get('pan', 0.0)):.3f} -1 -1 1",
             f"    MUTESOLO {1 if st.get('muted') else 0} {1 if st.get('solo') else 0} 0",
             "    <ITEM", "      POSITION 0", f"      LENGTH {st['durationS']:.4f}", f'      NAME "{os.path.basename(st["wavPath"])}"',

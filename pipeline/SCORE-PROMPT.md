@@ -10,7 +10,7 @@
 -->
 
 <!-- section: shared -->
-You design a deterministic 4-stem local music score (`ScoreSpec`) for the Local Band engine (`box.render`, `$0` local VST3 + sample pack renderer).
+You design a deterministic local music score (`ScoreSpec`, one stem per track, up to 8 tracks) for the Local Band engine (`box.render`, `$0` local VST3 + sample pack renderer).
 
 Answer with ONE JSON object and nothing else - no prose, no code fence, no comment.
 
@@ -25,10 +25,15 @@ The object has `v` (`v` is always 1) and the exact keys below - no other keys, e
 - `loop` - boolean (`true` for bar-aligned loop seam, `false` for multi-section cue with tail fade)
 - `controls` - closed object with `density` 0..1, `brightness` 0..1, `lift` 0..1, `swing` 0..0.5, `humanise` 0..1
 - `sections` - `sections` holds 1..8 sections, each with `name` 1..40 chars, `bars` 1..32, `energy` 0..1, optional `progression` of 1..8 scale degrees in 0..6, and total bars in 2..64
-- `tracks` - `tracks` holds 1..4 tracks with distinct `role` from `drums`, `bass`, `chords`, `lead`, `instrument` from the ready catalog for that role, optional `gainDb` -24..12, optional `pan` -1..1, optional `pattern` 1..40 chars, optional `fx`, and optional `notes` (0..512 items, each with `bar` 1..64, `beat` 0..3.99, `durationBeats` 0.1..16, `midi` 12..108, `velocity` 1..127)
+- `tracks` - `tracks` holds 1..8 tracks, each with `role` from `drums`, `percussion`, `bass`, `chords`, `pad`, `lead`, `texture`, `instrument` from the ready catalog for that role, optional `id`, optional `enters`, optional `gainDb` -24..12, optional `pan` -1..1, optional `pattern` 1..40 chars, optional `fx`, and optional `notes` (0..512 items, each with `bar` 1..64, `beat` 0..3.99, `durationBeats` 0.1..16, `midi` 12..108, `velocity` 1..127)
+
+Tracks:
+- A track's `id` is 1..24 lower-case letters, digits or dashes, unique across the tracks; without one, the track is known by its role. A role may appear twice (two leads) only when EVERY track of that role has an `id`.
+- `enters` holds one boolean per section (the same count as `sections`): `true` where the track plays, `false` where it rests. Leave it out for a track that plays everywhere (never write it all `true`); a track must play somewhere.
+- Which catalog roles each track role plays: `drums` <- `drums`; `percussion` <- `drums`; `bass` <- `bass`; `chords` <- `chords`; `pad` <- `chords`; `lead` <- `lead`; `texture` <- `lead` or `chords`.
 
 <!-- section: music -->
-A0 measured instrument catalog (pick only `ready` instruments matching the track's `role`; `refused` entries are rejected at the door):
+A0 measured instrument catalog (pick only `ready` instruments whose catalog role the track's `role` plays; `refused` entries are rejected at the door):
 
 - `kit-808-warm` - role `drums`, engine `sample-pack`, pitchRange 35..81 (Deep sub kick, crisp snare, warm vinyl hats)
 - `kit-909-pulse` - role `drums`, engine `sample-pack`, pitchRange 35..81 (Punchy electronic kick, snappy clap, bright hats)
@@ -48,8 +53,8 @@ A0 measured instrument catalog (pick only `ready` instruments matching the track
 - `hybrid-vst3` - role `lead`, refused (`cold load 77.6 s exceeds 5.0 s ceiling and licence note is empty`)
 
 Harmony and mix rules:
-- Every explicit note on a non-drum track (`bass`, `chords`, `lead`) MUST belong to the declared `key` scale and stay inside the instrument's `pitchRange`. The door refuses any out-of-key note with the bar and track path.
-- Keep `drums` and `bass` centred (`pan: 0`). When a piece has 2 or more sections (`intro` -> `lift` -> `outro`) and `loop: false`, give `lift` at least `+0.40` higher `energy` than `intro` so the arrangement clears `section-boundary` triage.
+- Every explicit note on a pitched track (any track not played by a `drums` kit) MUST belong to the declared `key` scale and stay inside the instrument's `pitchRange`. The door refuses any out-of-key note with the bar and track path.
+- Keep `drums` and `bass` centred (`pan: 0`); spread two tracks of one role apart with `pan`. When a piece has 2 or more sections (`intro` -> `lift` -> `outro`) and `loop: false`, give `lift` at least `+0.40` higher `energy` than `intro` so the arrangement clears `section-boundary` triage.
 
 Worked examples - a brief, then the answer for it:
 
@@ -75,6 +80,12 @@ Warm acoustic sketch at 104 bpm in G major with grand piano and mallet guitar:
 
 ```json
 {"v":1,"title":"Morning Workshop","style":"warm-acoustic","seed":204,"tempoBpm":104,"key":"G major","loop":false,"controls":{"density":0.5,"brightness":0.55,"lift":0.65,"swing":0.08,"humanise":0.45},"sections":[{"name":"opening","bars":2,"energy":0.35,"progression":[0,3,4,0]},{"name":"chorus-lift","bars":4,"energy":0.82,"progression":[4,5,3,0]},{"name":"outro","bars":2,"energy":0.34,"progression":[3,4,0,0]}],"tracks":[{"role":"drums","instrument":"kit-acoustic-brush","gainDb":-2,"pan":0,"pattern":"studio-groove"},{"role":"bass","instrument":"sample-mamas-bass","gainDb":-2.2,"pan":0,"pattern":"walking-root"},{"role":"chords","instrument":"sample-grand-piano","gainDb":-2.4,"pan":-0.1,"pattern":"open-chords"},{"role":"lead","instrument":"sample-mallet-guitar","gainDb":-2.6,"pan":0.14,"pattern":"plucked-hook","notes":[{"bar":1,"beat":1,"durationBeats":1,"midi":67,"velocity":84},{"bar":3,"beat":0,"durationBeats":1,"midi":71,"velocity":92},{"bar":5,"beat":2,"durationBeats":1,"midi":74,"velocity":94},{"bar":7,"beat":0,"durationBeats":1.5,"midi":67,"velocity":82}]}]}
+```
+
+The full band: the same groove for eight tracks, two leads told apart by id, a pad, percussion and a texture, parts resting in some sections:
+
+```json
+{"v":1,"title":"Midnight Study, Full Band","style":"chill-hiphop","seed":108,"tempoBpm":84,"key":"A minor","loop":false,"controls":{"density":0.55,"brightness":0.45,"lift":0.7,"swing":0.18,"humanise":0.35},"sections":[{"name":"intro","bars":2,"energy":0.35,"progression":[0,5,3,4]},{"name":"lift","bars":4,"energy":0.85,"progression":[0,5,2,6]},{"name":"outro","bars":2,"energy":0.4,"progression":[0,3,4,0]}],"tracks":[{"role":"drums","instrument":"kit-808-warm","pattern":"boom-bap","enters":[false,true,true]},{"role":"percussion","instrument":"kit-909-pulse","pan":0.2,"enters":[false,true,false]},{"role":"bass","instrument":"vital-sub-bass","pattern":"root-fifth"},{"role":"chords","instrument":"sample-lofi-keys","gainDb":-3,"pan":-0.1,"pattern":"warm-voicing"},{"role":"pad","instrument":"vital-warm-pad","gainDb":-6,"enters":[true,true,false]},{"role":"lead","id":"lead-bell","instrument":"sample-ikembe-bell","gainDb":-3.5,"pan":0.15,"pattern":"call-response"},{"role":"lead","id":"lead-guitar","instrument":"sample-mallet-guitar","gainDb":-4,"pan":-0.2,"enters":[false,true,true]},{"role":"texture","instrument":"vital-glass-lead","gainDb":-9,"enters":[true,false,true]}]}
 ```
 
 The score brief to design:

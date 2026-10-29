@@ -14,7 +14,9 @@
 //      declared tempo and bar duration to the sample.
 //   3. CASES. `proposeScoreSpec` driven by a STUB agent with recorded answers so the door's
 //      refusals are pinned: out-of-key note with exact bar & track path, silent MiniGrand VST3,
-//      slow/unlicensed Hybrid VST3, out-of-range tempo, duplicate role, stray key, wrong version.
+//      slow/unlicensed Hybrid VST3, out-of-range tempo, stray key, wrong version - and the stage S2
+//      track rules: a repeated role passes only with an id on every track of it, ids are unique,
+//      at most 8 tracks, `enters` has one flag per section, a pad takes a chords instrument.
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -25,7 +27,9 @@ import { fileURLToPath } from "node:url";
 import {
   INSTRUMENT_CATALOG,
   SCORE_KEYS,
+  SCORE_MAX_TRACKS,
   SCORE_ROLES,
+  SCORE_ROLE_COMPAT,
   SCORE_SPEC_VERSION,
   STYLE_TEMPLATES,
 } from "../packages/domain/src/audio.score.ts";
@@ -86,7 +90,13 @@ rule("the tempo bound", /`tempoBpm` - `40\.\.220`/);
 rule("the seed bound", /`seed` - integer `0\.\.2147483647`/);
 rule("the controls bounds", /`density` 0\.\.1, `brightness` 0\.\.1, `lift` 0\.\.1, `swing` 0\.\.0\.5, `humanise` 0\.\.1/);
 rule("the sections count", /`sections` holds 1\.\.8 sections/);
-rule("the tracks count", /`tracks` holds 1\.\.4 tracks/);
+rule("the tracks count", new RegExp(`\`tracks\` holds 1\\.\\.${SCORE_MAX_TRACKS} tracks`));
+rule("the track id rule", /A role may appear twice \(two leads\) only when EVERY track of that role has an `id`/);
+rule("the enters rule", /`enters` holds one boolean per section/);
+for (const r of SCORE_ROLES) {
+  const said = `\`${r}\` <- ${SCORE_ROLE_COMPAT[r].map((c) => `\`${c}\``).join(" or ")}`;
+  if (!flat.includes(said)) failures.push(`${P}: the role map must say ${said}`);
+}
 rule("the brief slot", /\{\{IDEA\}\}/);
 for (const st of STYLE_TEMPLATES) if (!flat.includes(`\`${st}\``)) failures.push(`${P}: missing style \`${st}\``);
 for (const k of SCORE_KEYS) if (!flat.includes(`\`${k}\``)) failures.push(`${P}: missing key \`${k}\``);
@@ -98,7 +108,9 @@ const blocks = [...sent.matchAll(/([^\n]*)\n+```json\n([\s\S]*?)\n```/g)].map((m
   said: (m[1] ?? "").toLowerCase(),
   body: m[2] ?? "",
 }));
-if (blocks.length !== 4) failures.push(`${P}: ${blocks.length} worked examples; expected 4 (one per style template)`);
+/** One worked example per style template, then the full band (stage S2: 8 tracks, ids, enters). */
+const EXAMPLES = STYLE_TEMPLATES.length + 1;
+if (blocks.length !== EXAMPLES) failures.push(`${P}: ${blocks.length} worked examples; expected ${EXAMPLES} (one per style template + the full band)`);
 
 const parsedExamples: unknown[] = [];
 for (const [i, b] of blocks.entries()) {
@@ -123,7 +135,20 @@ for (const st of STYLE_TEMPLATES) {
   }
 }
 
-if (parsedExamples.length === 4) {
+const FULL = parsedExamples.at(-1) as { tracks?: { role: string; id?: string; enters?: boolean[] }[] } | undefined;
+const fullTracks = FULL?.tracks ?? [];
+const fullRoles = new Set(fullTracks.map((t) => t.role));
+if (
+  parsedExamples.length !== EXAMPLES ||
+  fullTracks.length !== SCORE_MAX_TRACKS ||
+  !["pad", "percussion", "texture"].every((r) => fullRoles.has(r)) ||
+  !fullTracks.some((t) => t.id !== undefined && fullTracks.some((o) => o !== t && o.role === t.role)) ||
+  !fullTracks.some((t) => t.enters !== undefined)
+) {
+  failures.push(`${P}: the last worked example must be the full band - ${SCORE_MAX_TRACKS} tracks with pad, percussion and texture, a repeated role told apart by id, and a part that rests (enters)`);
+}
+
+if (parsedExamples.length === EXAMPLES) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gt-score-reg-"));
   try {
     const specsFile = path.join(tmpDir, "examples.json");
@@ -144,9 +169,10 @@ for idx, spec in enumerate(specs):
     expected_body_s = total_bars * (240.0 / bpm)
     expected_samples = int(round(expected_body_s * rate))
     for tr in v["tracks"]:
+        tid = tr.get("id") or tr["role"]
         events = score_compiler.compile_track_events(v, tr)
-        assert len(events) > 0, f"example {idx} role {tr['role']} compiled 0 events"
-        mid_path = os.path.join(${JSON.stringify(tmpDir)}, f"ex-{idx}-{tr['role']}.mid")
+        assert len(events) > 0, f"example {idx} track {tid} compiled 0 events"
+        mid_path = os.path.join(${JSON.stringify(tmpDir)}, f"ex-{idx}-{tid}.mid")
         score_instruments.write_smf_midi(events, bpm, mid_path)
         parsed_events, parsed_bpm, parsed_dur = render_score.read_smf_midi(mid_path)
         assert abs(parsed_bpm - bpm) < 0.05, f"example {idx} MIDI bpm {parsed_bpm} != {bpm}"
@@ -189,6 +215,7 @@ const stub =
   };
 
 const GOOD = parsedExamples[0] as Record<string, unknown>;
+const GOOD_TRACKS = GOOD["tracks"] as Record<string, unknown>[];
 type Verdict = "ok" | "refused";
 const CASES: readonly (readonly [string, unknown, Verdict, string?])[] = [
   ["good: chill-hiphop worked example", GOOD, "ok"],
@@ -229,7 +256,7 @@ const CASES: readonly (readonly [string, unknown, Verdict, string?])[] = [
     "controls.swing",
   ],
   [
-    "duplicate role track",
+    "duplicate role track without ids",
     {
       ...GOOD,
       tracks: [
@@ -239,6 +266,41 @@ const CASES: readonly (readonly [string, unknown, Verdict, string?])[] = [
     },
     "refused",
     "tracks.1.role",
+  ],
+  [
+    "repeated role told apart by ids",
+    { ...GOOD, tracks: [...GOOD_TRACKS, { role: "lead", id: "lead-2", instrument: "sample-mallet-guitar", pan: -0.2 }].map((t) => (t["role"] === "lead" && t["id"] === undefined ? { ...t, id: "lead-1" } : t)) },
+    "ok",
+  ],
+  [
+    "repeated role with one id missing",
+    { ...GOOD, tracks: [...GOOD_TRACKS, { role: "lead", id: "lead-2", instrument: "sample-mallet-guitar" }] },
+    "refused",
+    "tracks.4.role",
+  ],
+  [
+    "duplicate track id",
+    { ...GOOD, tracks: [{ role: "lead", id: "hook", instrument: "sample-ikembe-bell" }, { role: "lead", id: "hook", instrument: "sample-mallet-guitar" }] },
+    "refused",
+    "tracks.1.id",
+  ],
+  [
+    `${SCORE_MAX_TRACKS + 1} tracks`,
+    { ...GOOD, tracks: Array.from({ length: SCORE_MAX_TRACKS + 1 }, (_, i) => ({ role: "lead", id: `lead-${i + 1}`, instrument: "sample-ikembe-bell" })) },
+    "refused",
+    "tracks",
+  ],
+  [
+    "enters with the wrong count",
+    { ...GOOD, tracks: GOOD_TRACKS.map((t) => (t["role"] === "bass" ? { ...t, enters: [true, false] } : t)) },
+    "refused",
+    "tracks.1.enters",
+  ],
+  [
+    "a pad on a lead instrument",
+    { ...GOOD, tracks: [...GOOD_TRACKS, { role: "pad", instrument: "vital-pluck-lead" }] },
+    "refused",
+    "tracks.4.instrument",
   ],
   ["stray key on root", { ...GOOD, extraField: true }, "refused", "(root)"],
   ["wrong version", { ...GOOD, v: 2 }, "refused", "v"],

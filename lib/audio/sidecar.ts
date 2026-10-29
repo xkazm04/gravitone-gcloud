@@ -9,7 +9,7 @@ import type { AudioMeasureFull } from "@gt/domain/audio.accept";
 import { parseJsonAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { FxChain } from "@gt/domain/audio.fx";
-import { SCORE_ROLES, instrumentById, parseScoreSpec, type ScoreRole, type ScoreSpec } from "@gt/domain/audio.score";
+import { SCORE_ROLES, TRACK_ID_RE, instrumentById, parseScoreSpec, type ScoreRole, type ScoreSpec } from "@gt/domain/audio.score";
 import { triageAnswerSchema, triageSchema, type Triage, type TriageContext } from "@gt/domain/audio.triage";
 
 import { canSpawnLocalBinaries, describePosture } from "../deployment.ts";
@@ -23,7 +23,8 @@ import { canSpawnLocalBinaries, describePosture } from "../deployment.ts";
 //   measure --in <wav>                         -> {"ok":true,"measure":{integratedLufs,truePeakDb,lra,...}}
 //   fx --in <wav> --chain <chain.json> --out   -> {"ok":true,"durationS":n,"gainDb":g,...}
 //   triage --in <file> --context <ctx.json>    -> {"ok":true,"triage":{...}}
-//   render-score --spec <spec.json> --out-dir  -> {"ok":true,"mixPath":...,"stems":[...],...}
+//   render-score --spec <spec.json> --out-dir [--cache-dir d] [--verify-determinism] [--allow-fallback]
+//                                              -> {"ok":true,"mixPath":...,"stems":[{id,source,fallback,...}],"reusedIds":[...],...}
 //   audition-instrument --instrument <id>      -> {"ok":true,"id":...,"audition":{...}}   (local-band catalog)
 //   render --midi <mid> --instrument <id>      -> {"ok":true,...}
 //   audition / sketch --spec <json> --out <wav> -> phrase renders, ./sidecarPhrase.ts (atlas families)
@@ -159,10 +160,15 @@ const doctorSchema = z.object({
 });
 
 const stemResultSchema = z.object({
+  /** The track's id (its role when the spec gave none): unique per take, the stem's file name. */
+  id: z.string().regex(TRACK_ID_RE),
   role: z.enum(SCORE_ROLES),
   instrument: z.string(),
   instrumentName: z.string(),
+  /** What really made the sound, a cache hit included (the renderer keeps it beside the cached stem). */
   source: z.string(),
+  /** A stand-in played this track (a missing sample folder or plugin); only when the request allowed it. */
+  fallback: z.boolean(),
   wavPath: z.string(),
   midiPath: z.string(),
   sha256: z.string(),
@@ -201,6 +207,9 @@ const renderScoreAnswerSchema = z.object({
   measure: measureObjSchema,
   triage: triageSchema,
   stems: z.array(stemResultSchema),
+  reusedIds: z.array(z.string()),
+  renderedIds: z.array(z.string()),
+  /** Kept one release beside the ids (stage S2); a role that repeats appears once per track. */
   reusedRoles: z.array(z.enum(SCORE_ROLES)),
   renderedRoles: z.array(z.enum(SCORE_ROLES)),
   totalRenderMs: z.number().int().nonnegative(),
@@ -210,6 +219,15 @@ const renderScoreAnswerSchema = z.object({
 export type RenderedStem = z.output<typeof stemResultSchema>;
 export type DeterminismReport = z.output<typeof determinismResultSchema>;
 export type RenderScoreResult = z.output<typeof renderScoreAnswerSchema>;
+/** The render-score answer's shape, for the warm worker (./renderWorker.ts) to read its answers through. */
+export { renderScoreAnswerSchema };
+
+export type RenderScoreOptions = SidecarOptions & {
+  readonly cacheDir?: string;
+  readonly verifyDeterminism?: boolean;
+  /** Absent = false: a track whose sample folder or plugin is missing is refused, naming the path, never played by a stand-in. */
+  readonly allowFallback?: boolean;
+};
 
 const auditionAnswerSchema = z.object({
   ok: z.literal(true),
@@ -218,6 +236,8 @@ const auditionAnswerSchema = z.object({
   role: z.enum(SCORE_ROLES),
   source: z.string(),
   outPath: z.string().nullable(),
+  /** A stand-in synth played the preview (stage S2: the renderer says so instead of substituting silently). */
+  fallback: z.boolean().optional(),
   audition: z.object({
     status: z.enum(["ready", "refused"]),
     noteOnWorks: z.boolean(),
@@ -271,16 +291,22 @@ export async function triageFile(file: string, context: TriageContext, opts: Sid
   }
 }
 
+/** The cold `render-score` argument list for a spec file (the warm worker sends the same facts as JSON). */
+export function renderScoreArgs(specFile: string, outDir: string, opts: RenderScoreOptions): string[] {
+  const args = ["--spec", specFile, "--out-dir", outDir];
+  if (opts.cacheDir !== undefined) args.push("--cache-dir", opts.cacheDir);
+  if (opts.verifyDeterminism === true) args.push("--verify-determinism");
+  if (opts.allowFallback === true) args.push("--allow-fallback");
+  return args;
+}
+
 /**
- * Compile and render a closed ScoreSpec into per-role stems and a mastered -14 LUFS mix.
- * When `cacheDir` is passed, unchanged stems are reused bit-for-bit so swapping one role's
- * instrument re-renders only that role.
+ * Compile and render a closed ScoreSpec into per-track stems and a mastered -14 LUFS mix in a fresh
+ * process. When `cacheDir` is passed, unchanged stems are reused bit-for-bit so changing one track
+ * re-renders only that track (gain / pan / mute / solo re-render nothing: they are mix-time).
+ * ./renderWorker.ts `renderScoreWarm` is the warm path; this is its fallback.
  */
-export async function renderScore(
-  specInput: ScoreSpec,
-  outDir: string,
-  opts: SidecarOptions & { readonly cacheDir?: string; readonly verifyDeterminism?: boolean } = {},
-): Promise<Result<RenderScoreResult>> {
+export async function renderScore(specInput: ScoreSpec, outDir: string, opts: RenderScoreOptions = {}): Promise<Result<RenderScoreResult>> {
   const checked = parseScoreSpec(specInput);
   if (!checked.ok) return checked;
   if (!canSpawnLocalBinaries()) return err("unavailable", `audio sidecar render-score: ${describePosture()}`);
@@ -288,10 +314,7 @@ export async function renderScore(
   try {
     const specFile = path.join(dir, "spec.json");
     await writeFile(specFile, JSON.stringify(checked.value), "utf8");
-    const args = ["--spec", specFile, "--out-dir", outDir];
-    if (opts.cacheDir !== undefined) args.push("--cache-dir", opts.cacheDir);
-    if (opts.verifyDeterminism === true) args.push("--verify-determinism");
-    const r = await call("render-score", args, renderScoreAnswerSchema, opts.timeoutMs ?? RENDER_SCORE_TIMEOUT_MS);
+    const r = await call("render-score", renderScoreArgs(specFile, outDir, opts), renderScoreAnswerSchema, opts.timeoutMs ?? RENDER_SCORE_TIMEOUT_MS);
     return r.ok ? ok(r.value as RenderScoreResult) : r;
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -315,6 +338,7 @@ const renderMidiAnswerSchema = z.object({
   role: z.enum(SCORE_ROLES),
   source: z.string(),
   outPath: z.string(),
+  fallback: z.boolean().optional(),
   sha256: z.string(),
   noteCount: z.number().int().nonnegative(),
   tempoBpm: z.number().positive(),

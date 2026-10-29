@@ -50,6 +50,17 @@ CATALOG = {
 _VITAL_CACHE = None
 _VITAL_PARAMS = None
 _SAMPLE_CACHE = {}
+_COMPAT = None
+ROLES_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "packages", "domain", "src", "audio.roles.json")
+
+
+def role_compat():
+    """Studio role -> the catalog roles that may play it, read from the one file TypeScript reads too."""
+    global _COMPAT
+    if _COMPAT is None:
+        with open(ROLES_JSON, encoding="utf-8") as f:
+            _COMPAT = {k: tuple(v) for k, v in json.load(f)["compat"].items()}
+    return _COMPAT
 
 
 def runtime_paths():
@@ -127,20 +138,28 @@ def _load_sample(path):
     return data
 
 
+MULTISAMPLES = {
+    "sample-felt-piano": ("Multisamples/Upright Home Piano", [("Upright Home Piano C2.aif", 36), ("Upright Home Piano C3.aif", 48), ("Upright Home Piano C4.aif", 60), ("Upright Home Piano C5.aif", 72)]),
+    "sample-grand-piano": ("Multisamples/Grand Piano", [("GrandPiano C2 mf.aif", 36), ("GrandPiano C3 mf.aif", 48), ("GrandPiano C4 mf.aif", 60), ("GrandPiano C5 mf.aif", 72)]),
+    "sample-lofi-keys": ("Multisamples/Synths/Lo Fi Voodoo", [("Lo Fi Voodoo - C1 - 1.aif", 36), ("Lo Fi Voodoo - C2 - 1.aif", 48), ("Lo Fi Voodoo - C3 - 1.aif", 60), ("Lo Fi Voodoo - C4 - 1.aif", 72)]),
+    "sample-mamas-bass": ("Multisamples/Synths/Mamas Bass", [("Mamas Bass - C1.aif", 36), ("Mamas Bass - F#1.aif", 42), ("Mamas Bass - C2.aif", 48), ("Mamas Bass - F#2.aif", 54)]),
+    "sample-ikembe-bell": ("Multisamples/Ikembe", [("Ikembe C2.aif", 60), ("Ikembe E2.aif", 64), ("Ikembe A2.aif", 69), ("Ikembe C3.aif", 72)]),
+    "sample-mallet-guitar": ("Multisamples/Mallet Guitar", [("Mallet Guitar C1.wav", 48), ("Mallet Guitar C2.wav", 60), ("Mallet Guitar C3.wav", 72), ("Mallet Guitar C4.wav", 84)]),
+}
+DRUM_PICKS = {
+    "kit-808-warm": {"kick": "One Shots/Drums/Kick/Kick 007.aif", "snare": "One Shots/Drums/Snare/Snare 505.aif", "hat": "One Shots/Drums/Hihat/Hihat Closed 45 Vinyl.wav", "clap": "One Shots/Drums/Clap/Clap 808.aif"},
+    "kit-909-pulse": {"kick": "Multisamples/Drum Machines/909/Kick 909 Tune1.wav", "snare": "One Shots/Drums/Snare/Snare 707.wav", "hat": "One Shots/Drums/Hihat/Hihat Closed 606.aif", "clap": "One Shots/Drums/Clap/Clap 909.aif"},
+    "kit-acoustic-brush": {"kick": "One Shots/Drums/Kick/Kick 606.wav", "snare": "One Shots/Drums/Snare/Snare 3k Hiss.wav", "hat": "One Shots/Drums/Hihat/Hihat Closed 2B.aif", "clap": "One Shots/Drums/Clap/Clap 808 Light Quick.aif"},
+}
+FL_DRUM_PICKS = {"kick": "Drums (ModeAudio)/Kicks/Attack Kick 01.wv", "snare": "Drums (ModeAudio)/Snares/Attack Snare 01.wv", "hat": "Drums (ModeAudio)/Hi Hats/Attack Hat 01.wv", "clap": "Drums (ModeAudio)/Claps/Attack Clap 01.wv"}
+
+
 def _find_multisample(inst_id):
     ab = runtime_paths()["abletonSamplesDir"]
     mapping = {}
     if ab and os.path.isdir(ab):
-        candidates = {
-            "sample-felt-piano": ("Multisamples/Upright Home Piano", [("Upright Home Piano C2.aif", 36), ("Upright Home Piano C3.aif", 48), ("Upright Home Piano C4.aif", 60), ("Upright Home Piano C5.aif", 72)]),
-            "sample-grand-piano": ("Multisamples/Grand Piano", [("GrandPiano C2 mf.aif", 36), ("GrandPiano C3 mf.aif", 48), ("GrandPiano C4 mf.aif", 60), ("GrandPiano C5 mf.aif", 72)]),
-            "sample-lofi-keys": ("Multisamples/Synths/Lo Fi Voodoo", [("Lo Fi Voodoo - C1 - 1.aif", 36), ("Lo Fi Voodoo - C2 - 1.aif", 48), ("Lo Fi Voodoo - C3 - 1.aif", 60), ("Lo Fi Voodoo - C4 - 1.aif", 72)]),
-            "sample-mamas-bass": ("Multisamples/Synths/Mamas Bass", [("Mamas Bass - C1.aif", 36), ("Mamas Bass - F#1.aif", 42), ("Mamas Bass - C2.aif", 48), ("Mamas Bass - F#2.aif", 54)]),
-            "sample-ikembe-bell": ("Multisamples/Ikembe", [("Ikembe C2.aif", 60), ("Ikembe E2.aif", 64), ("Ikembe A2.aif", 69), ("Ikembe C3.aif", 72)]),
-            "sample-mallet-guitar": ("Multisamples/Mallet Guitar", [("Mallet Guitar C1.wav", 48), ("Mallet Guitar C2.wav", 60), ("Mallet Guitar C3.wav", 72), ("Mallet Guitar C4.wav", 84)]),
-        }
-        if inst_id in candidates:
-            sub, files = candidates[inst_id]
+        if inst_id in MULTISAMPLES:
+            sub, files = MULTISAMPLES[inst_id]
             folder = os.path.join(ab, *sub.split("/"))
             for fname, root_midi in files:
                 fp = os.path.join(folder, fname)
@@ -154,18 +173,12 @@ def _find_drum_samples(kit_id):
     ab, fl = paths["abletonSamplesDir"], paths["flPacksDir"]
     found = {}
     if ab and os.path.isdir(ab):
-        picks = {
-            "kit-808-warm": {"kick": "One Shots/Drums/Kick/Kick 007.aif", "snare": "One Shots/Drums/Snare/Snare 505.aif", "hat": "One Shots/Drums/Hihat/Hihat Closed 45 Vinyl.wav", "clap": "One Shots/Drums/Clap/Clap 808.aif"},
-            "kit-909-pulse": {"kick": "Multisamples/Drum Machines/909/Kick 909 Tune1.wav", "snare": "One Shots/Drums/Snare/Snare 707.wav", "hat": "One Shots/Drums/Hihat/Hihat Closed 606.aif", "clap": "One Shots/Drums/Clap/Clap 909.aif"},
-            "kit-acoustic-brush": {"kick": "One Shots/Drums/Kick/Kick 606.wav", "snare": "One Shots/Drums/Snare/Snare 3k Hiss.wav", "hat": "One Shots/Drums/Hihat/Hihat Closed 2B.aif", "clap": "One Shots/Drums/Clap/Clap 808 Light Quick.aif"},
-        }.get(kit_id, {})
-        for part, rel in picks.items():
+        for part, rel in DRUM_PICKS.get(kit_id, {}).items():
             fp = os.path.join(ab, *rel.split("/"))
             if os.path.isfile(fp):
                 found[part] = fp
     if len(found) < 3 and fl and os.path.isdir(fl):
-        wv_picks = {"kick": "Drums (ModeAudio)/Kicks/Attack Kick 01.wv", "snare": "Drums (ModeAudio)/Snares/Attack Snare 01.wv", "hat": "Drums (ModeAudio)/Hi Hats/Attack Hat 01.wv", "clap": "Drums (ModeAudio)/Claps/Attack Clap 01.wv"}
-        for part, rel in wv_picks.items():
+        for part, rel in FL_DRUM_PICKS.items():
             fp = os.path.join(fl, *rel.split("/"))
             if part not in found and os.path.isfile(fp):
                 found[part] = fp
@@ -334,8 +347,8 @@ def render_instrument_events(inst_id, events, duration_s, brightness=0.5):
     return _synth_voice(events, duration_s, inst_id, brightness=brightness)
 
 
-def audition_instrument(inst_id, out_path=None):
-    """Render a 2.4s musical audition phrase for a catalog instrument, verify determinism, and measure."""
+def audition_instrument(inst_id, out_path=None, role=None):
+    """Render a 2.4s musical audition phrase for a catalog instrument (as `role`, a studio role, when given), verify determinism, and measure."""
     import loudness
     import soundfile as sf
 
@@ -347,8 +360,13 @@ def audition_instrument(inst_id, out_path=None):
     if entry["status"] != "ready":
         raise ValueError(f"instrument {inst_id} refused: {entry['refusalReason'] or 'audition failed'}")
 
-    role = entry["role"]
+    if role is not None and entry["role"] not in role_compat().get(role, ()):
+        raise ValueError(f"instrument {inst_id} is for {entry['role']}, not {role}")
+    role = role or entry["role"]
     phrases = {
+        "percussion": [(t * 0.25, t * 0.25 + 0.08, 39 if t in (2, 6) else 42, 96 if t in (2, 6) else (70 if t % 2 == 0 else 54)) for t in range(8)],
+        "pad": [(0.0, 2.0, 60, 84), (0.0, 2.0, 64, 80), (0.0, 2.0, 67, 82)],
+        "texture": [(0.0, 1.1, 76, 78), (1.2, 2.0, 79, 72)],
         "drums": [(0.0, 0.25, 36, 110), (0.25, 0.35, 42, 85), (0.5, 0.75, 38, 105), (0.75, 0.85, 42, 80), (1.0, 1.25, 36, 112), (1.25, 1.45, 36, 98), (1.5, 1.75, 39, 108), (1.75, 1.85, 42, 88)],
         "bass": [(0.0, 0.45, 36, 108), (0.5, 0.95, 43, 102), (1.0, 1.45, 41, 105), (1.5, 2.0, 36, 110)],
         "chords": [(0.0, 0.95, 60, 96), (0.0, 0.95, 64, 92), (0.0, 0.95, 67, 94), (0.0, 0.95, 71, 88), (1.0, 2.0, 57, 96), (1.0, 2.0, 60, 92), (1.0, 2.0, 64, 94), (1.0, 2.0, 69, 90)],
@@ -371,7 +389,7 @@ def audition_instrument(inst_id, out_path=None):
         sf.write(out_path, a1, RATE, subtype="PCM_16", format="WAV")
     return {
         "ok": True, "id": inst_id, "name": entry["name"], "role": role, "source": source_used,
-        "outPath": os.path.abspath(out_path) if out_path else None,
+        "fallback": source_used.startswith("scipy-"), "outPath": os.path.abspath(out_path) if out_path else None,
         "audition": {
             "status": "ready", "noteOnWorks": True, "lufsAtVel100": meas["integratedLufs"],
             "truePeakDb": meas["truePeakDb"], "tailS": meas["tailSilenceS"],

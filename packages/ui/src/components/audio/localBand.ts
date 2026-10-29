@@ -2,10 +2,18 @@
 // Keeps the browser bundle at zero Zod bytes while sharing exact structural shapes with
 // @gt/domain/audio.score and lib/sound/localScore.ts.
 
+import type { StudioRole } from "@gt/domain/audio.studio.kinds";
+
 import type { Seed } from "./recipe.ts";
 
-export type LocalRole = "drums" | "bass" | "chords" | "lead";
-export const LOCAL_ROLES: readonly LocalRole[] = ["drums", "bass", "chords", "lead"];
+/** A track's role: the studio's seven (stage S2). A role may repeat; a stem's `id` is what is unique. */
+export type LocalRole = StudioRole;
+/** The roles a catalog instrument is measured for (a pad plays a chords instrument, @gt/domain/audio.score SCORE_ROLE_COMPAT). */
+export type LocalInstrumentRole = "drums" | "bass" | "chords" | "lead";
+/** The four rows of the retired local-band form (one per catalog role). */
+export const LOCAL_ROLES: readonly LocalInstrumentRole[] = ["drums", "bass", "chords", "lead"];
+/** A role -> instrument choice; partial, since a track list need not hold every role. */
+export type LocalSwapChoice = Readonly<Partial<Record<LocalRole, string>>>;
 
 export const LOCAL_KEYS: readonly string[] = [
   "C major", "G major", "D major", "F major", "Bb major", "Eb major",
@@ -62,8 +70,10 @@ export function fxPresetOf(fx: LocalFxChain | undefined): LocalFxPresetId {
 export type LocalControls = { readonly density: number; readonly brightness: number; readonly lift: number; readonly swing: number; readonly humanise: number };
 export type LocalSection = { readonly name: string; readonly bars: number; readonly energy: number; readonly progression?: readonly number[] };
 export type LocalTrackDraft = {
-  readonly role: LocalRole; readonly instrument: string; readonly gainDb?: number; readonly pan?: number;
+  readonly role: LocalRole; readonly id?: string; readonly instrument: string; readonly gainDb?: number; readonly pan?: number;
   readonly muted?: boolean; readonly solo?: boolean; readonly pattern?: string; readonly fx?: LocalFxChain;
+  readonly enters?: readonly boolean[];
+  readonly notes?: readonly { readonly bar: number; readonly beat: number; readonly durationBeats: number; readonly midi: number; readonly velocity: number }[];
 };
 export type LocalScoreDraft = {
   readonly v: 1; readonly title: string; readonly style?: "chill-hiphop" | "calm-bed" | "synthwave-pulse" | "warm-acoustic";
@@ -75,12 +85,15 @@ export type LocalTemplateView = {
   readonly label: string; readonly plainIntent: string; readonly spec: LocalScoreDraft;
 };
 export type LocalInstrumentView = {
-  readonly id: string; readonly name: string; readonly role: LocalRole; readonly engine: "vital-vst3" | "sample-pack" | "synth";
+  readonly id: string; readonly name: string; readonly role: LocalInstrumentRole; readonly engine: "vital-vst3" | "sample-pack" | "synth";
   readonly plainLabel: string; readonly character: string; readonly licence: string; readonly status: "ready" | "refused";
   readonly lufsAtVel100: number | null; readonly loadMs: number; readonly renderMs: number; readonly deterministic: boolean; readonly refusalReason: string | null;
 };
 export type LocalStemView = {
-  readonly role: LocalRole; readonly instrument: string; readonly instrumentName: string; readonly source: string;
+  /** The track id (its role when the spec gave none): the stem's address in `?stem=`. */
+  readonly id: string; readonly role: LocalRole; readonly instrument: string; readonly instrumentName: string;
+  /** What really played it; `fallback` = a stand-in played because the request allowed one. */
+  readonly source: string; readonly fallback: boolean;
   readonly sha256: string; readonly reused: boolean; readonly noteCount: number; readonly renderMs: number;
   readonly integratedLufs: number | null; readonly truePeakDb: number | null; readonly gainDb: number;
   readonly pan: number; readonly muted: boolean; readonly solo: boolean; readonly audioUrl: string; readonly midiUrl: string;
@@ -89,7 +102,8 @@ export type LocalTriageFindingView = { readonly check: string; readonly verdict:
 export type LocalTakeView = {
   readonly id: string; readonly title: string; readonly tempoBpm: number; readonly key: string; readonly durationS: number;
   readonly loop: boolean; readonly lufs: number | null; readonly truePeakDb: number | null; readonly mixUrl: string; readonly rppUrl: string;
-  readonly peaks: readonly number[]; readonly reusedRoles: readonly LocalRole[]; readonly renderedRoles: readonly LocalRole[];
+  readonly peaks: readonly number[]; readonly reusedIds: readonly string[]; readonly renderedIds: readonly string[];
+  readonly reusedRoles: readonly LocalRole[]; readonly renderedRoles: readonly LocalRole[];
   readonly totalRenderMs: number; readonly bitIdentical: boolean | null; readonly maxAbsDiff: number | null; readonly mixSha256: string;
   readonly triageFlagged: number; readonly triageFindings: readonly LocalTriageFindingView[]; readonly stems: readonly LocalStemView[];
   readonly spec: LocalScoreDraft; readonly stage: string | null; readonly verdict: string;
@@ -177,7 +191,7 @@ export type LocalTasteSteer = {
   readonly id: LocalTasteSteerId;
   readonly label: string;
   readonly summary: string;
-  readonly roles: Partial<Readonly<Record<LocalRole, string>>>;
+  readonly roles: LocalSwapChoice;
   readonly controls: Partial<LocalControls>;
 };
 
@@ -214,11 +228,11 @@ export const LOCAL_TASTE_STEERS: readonly LocalTasteSteer[] = [
 
 export function applyTasteSteer(
   draft: LocalScoreDraft,
-  currentSwap: Readonly<Record<LocalRole, string>>,
+  currentSwap: LocalSwapChoice,
   steerId: LocalTasteSteerId,
-): { readonly draft: LocalScoreDraft; readonly swapChoice: Readonly<Record<LocalRole, string>>; readonly summary: string } {
+): { readonly draft: LocalScoreDraft; readonly swapChoice: LocalSwapChoice; readonly summary: string } {
   const steer = LOCAL_TASTE_STEERS.find((x) => x.id === steerId) ?? LOCAL_TASTE_STEERS[0]!;
-  const nextSwap: Record<LocalRole, string> = { ...currentSwap };
+  const nextSwap: Partial<Record<LocalRole, string>> = { ...currentSwap };
   const nextTracks = draft.tracks.map((tr) => {
     const picked = steer.roles[tr.role];
     if (picked !== undefined) {
@@ -273,9 +287,9 @@ const BRIEF_ROLES: readonly (readonly [RegExp, LocalRole, string])[] = [
 export function sketchDraftFromBrief(
   brief: string,
   templates: readonly LocalTemplateView[],
-  currentSwap: Readonly<Record<LocalRole, string>>,
+  currentSwap: LocalSwapChoice,
   current: LocalScoreDraft,
-): { readonly draft: LocalScoreDraft; readonly swapChoice: Readonly<Record<LocalRole, string>>; readonly summary: string } {
+): { readonly draft: LocalScoreDraft; readonly swapChoice: LocalSwapChoice; readonly summary: string } {
   const words = brief.trim();
   if (words === "") return { draft: current, swapChoice: currentSwap, summary: "brief unchanged" };
   const lower = words.toLowerCase();
@@ -304,7 +318,7 @@ export function sketchDraftFromBrief(
           { name: "outro", bars: Math.max(1, Math.floor(totalBars * 0.25)), energy: 0.35, progression: [0, 3, 0, 0] },
         ]
       : base.sections;
-  const nextSwap: Record<LocalRole, string> = { ...currentSwap };
+  const nextSwap: Partial<Record<LocalRole, string>> = { ...currentSwap };
   for (const tr of base.tracks) nextSwap[tr.role] = tr.instrument;
   for (const [re, role, instId] of BRIEF_ROLES) if (re.test(words)) nextSwap[role] = instId;
   const tracks = base.tracks.map((tr) => ({ ...tr, instrument: nextSwap[tr.role] ?? tr.instrument }));

@@ -7,15 +7,16 @@ import os from "node:os";
 import path from "node:path";
 
 import type { FxChain } from "@gt/domain/audio.fx";
-import { INSTRUMENT_CATALOG, SCORE_ROLES, instrumentById, parseScoreSpec, swapRoleInstrument, type InstrumentCatalogEntry, type ScoreRole, type ScoreSpec } from "@gt/domain/audio.score";
+import { INSTRUMENT_CATALOG, SCORE_ROLES, instrumentById, parseScoreSpec, swapRoleInstrument, swapTrackInstrument, trackIdOf, type InstrumentCatalogEntry, type InstrumentRole, type ScoreRole, type ScoreSpec } from "@gt/domain/audio.score";
 import { scoreSectionsMs, scoreTotalBars } from "@gt/domain/audio.score.templates";
-import type { Triage } from "@gt/domain/audio.triage";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Receipt, ReceiptLine, ReceiptMode } from "@gt/domain/produce";
 import { putAudioMeasures } from "@gt/kernel/library/measures";
 import { putTriage, triageDigest } from "@gt/kernel/library/triage";
 
-import { auditionInstrument, renderScore, type AuditionResult, type DeterminismReport, type RenderedStem } from "../audio/sidecar";
+import { auditionInstrument, type AuditionResult, type DeterminismReport } from "../audio/sidecar";
+import { renderScoreWarm } from "../audio/renderWorker";
+import { isStandInSource, readLocalScorePlan, stemAudioUrl, stemFileName, stemMidiUrl, type LocalScorePlan, type LocalScoreStemMeta } from "./localScorePlan";
 import { measureSignal } from "./measure";
 import { buildScorePrompt, draftScoreFromBrief, proposeScoreSpec } from "./scorePropose";
 import { filePathAbs, mintId, safeId, soundFailure, storeRoot, writeBytesAtomic } from "./store";
@@ -24,29 +25,7 @@ import { triageContextOf } from "./triageContext";
 import type { SoundTake, Stage, Verdict } from "./types";
 
 export { buildScorePrompt, draftScoreFromBrief, proposeScoreSpec };
-
-export type LocalScoreStemMeta = RenderedStem & {
-  readonly fileRel: string;
-  readonly midiRel: string;
-  readonly audioUrl: string;
-  readonly midiUrl: string;
-};
-
-export type LocalScorePlan = {
-  readonly kind: "local-score";
-  readonly chunks: readonly { readonly text: string; readonly duration_ms: number }[];
-  readonly spec: ScoreSpec;
-  readonly stems: readonly LocalScoreStemMeta[];
-  readonly triage: Triage;
-  readonly determinism: DeterminismReport | null;
-  readonly mixSha256: string;
-  readonly rppRel: string;
-  readonly rppUrl: string;
-  readonly reusedRoles: readonly ScoreRole[];
-  readonly renderedRoles: readonly ScoreRole[];
-  readonly totalRenderMs: number;
-  readonly costUsd: 0;
-};
+export { readLocalScorePlan, type LocalScorePlan, type LocalScoreStemMeta };
 
 /** Price a closed ScoreSpec as a $0 local Receipt on `box.render` before rendering. */
 export function buildLocalScoreReceipt(
@@ -65,8 +44,8 @@ export function buildLocalScoreReceipt(
     const start = new Date(cursorMs).toISOString();
     cursorMs += sec * 1000;
     return {
-      key: `stem:${tr.role}`,
-      label: `${tr.role} · ${inst.name}`,
+      key: `stem:${trackIdOf(tr)}`,
+      label: `${trackIdOf(tr)} · ${inst.name}`,
       lane: "box.render",
       provider: "local",
       model: inst.engine,
@@ -130,14 +109,10 @@ export function wavToMonoFloat32(wavBytes: Uint8Array): { readonly samples: Floa
   return { samples: new Float32Array(0), sampleRate };
 }
 
-export function readLocalScorePlan(take: Pick<SoundTake, "plan">): LocalScorePlan | null {
-  const p = take.plan as Partial<LocalScorePlan> | null;
-  if (!p || typeof p !== "object" || p.kind !== "local-score" || !p.spec || !Array.isArray(p.stems)) return null;
-  return p as LocalScorePlan;
-}
-
 export type RenderLocalScoreOpts = {
   readonly verifyDeterminism?: boolean;
+  /** Absent = false: a track whose samples or plugin are missing is refused, never played by a stand-in. */
+  readonly allowFallback?: boolean;
   readonly fallbackDeterminism?: DeterminismReport | null;
   readonly parentId?: string | null;
   readonly op?: "compose" | "section-edit";
@@ -159,9 +134,10 @@ export async function renderLocalScore(
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), "gt-local-score-"));
   try {
     const cacheDir = path.join(storeRoot(), "local-stem-cache");
-    const rendered = await renderScore(spec, tmpDir, {
+    const rendered = await renderScoreWarm(spec, tmpDir, {
       cacheDir,
       verifyDeterminism: opts.verifyDeterminism ?? (opts.op !== "section-edit"),
+      ...(opts.allowFallback === true ? { allowFallback: true } : {}),
     });
     if (!rendered.ok) return rendered;
     const res = rendered.value;
@@ -171,14 +147,9 @@ export async function renderLocalScore(
 
     const stemMetas: LocalScoreStemMeta[] = [];
     for (const st of res.stems) {
-      const role = st.role;
-      const stemRel = await writeBytesAtomic(path.join("files", `${safeId(id)}-${role}.wav`), new Uint8Array(await readFile(st.wavPath)));
-      const midiRel = await writeBytesAtomic(path.join("files", `${safeId(id)}-${role}.mid`), new Uint8Array(await readFile(st.midiPath)));
-      stemMetas.push({
-        ...st, fileRel: stemRel, midiRel,
-        audioUrl: `/api/sound/takes/${encodeURIComponent(id)}/file?stem=${encodeURIComponent(role)}`,
-        midiUrl: `/api/sound/takes/${encodeURIComponent(id)}/file?artifact=midi&stem=${encodeURIComponent(role)}`,
-      });
+      const stemRel = await writeBytesAtomic(path.join("files", stemFileName(safeId(id), st.id, "wav")), new Uint8Array(await readFile(st.wavPath)));
+      const midiRel = await writeBytesAtomic(path.join("files", stemFileName(safeId(id), st.id, "mid")), new Uint8Array(await readFile(st.midiPath)));
+      stemMetas.push({ ...st, fileRel: stemRel, midiRel, audioUrl: stemAudioUrl(id, st.id), midiUrl: stemMidiUrl(id, st.id) });
     }
 
     let rppText = await readFile(res.reaperProjectPath, "utf8");
@@ -200,12 +171,13 @@ export async function renderLocalScore(
       kind: "local-score", chunks, spec, stems: stemMetas, triage: res.triage,
       determinism: res.determinism ?? opts.fallbackDeterminism ?? null, mixSha256: res.mixSha256,
       rppRel, rppUrl: `/api/sound/takes/${encodeURIComponent(id)}/file?artifact=rpp`,
+      reusedIds: res.reusedIds, renderedIds: res.renderedIds,
       reusedRoles: res.reusedRoles, renderedRoles: res.renderedRoles, totalRenderMs: res.totalRenderMs, costUsd: 0,
     };
 
-    const instrumentsSummary = stemMetas.map((s) => `${s.role}: ${s.instrumentName}`).join(" · ");
+    const instrumentsSummary = stemMetas.map((s) => `${s.id}: ${s.instrumentName}`).join(" · ");
     const prompt = `${spec.title} — ${styleTag} in ${spec.key} at ${spec.tempoBpm} BPM (${instrumentsSummary})`;
-    const use = spec.loop === true ? `seamless loop bed (${styleTag})` : `local 4-stem score cue (${styleTag})`;
+    const use = spec.loop === true ? `seamless loop bed (${styleTag})` : `local ${stemMetas.length}-stem score cue (${styleTag})`;
     const aim = `${spec.tempoBpm} BPM in ${spec.key}; sections [${spec.sections.map((s) => `${s.name}:${s.bars}b`).join(", ")}]; mastered -14 LUFS, 0 triage flags`;
 
     const created = await createTake(
@@ -216,7 +188,7 @@ export async function renderLocalScore(
         provider: "local",
         op: opts.op ?? "compose",
         origin: "lab",
-        technique: ["local-score", styleTag, ...spec.tracks.map((t) => `${t.role}:${t.instrument}`)],
+        technique: ["local-score", styleTag, ...spec.tracks.map((t) => `${trackIdOf(t)}:${t.instrument}`)],
         prompt,
         terms: { genre: [styleTag], mood: ["deterministic", "local-band"], instrument: spec.tracks.map((t) => t.instrument), sfxCategory: null },
         tempoBpm: spec.tempoBpm,
@@ -269,9 +241,11 @@ export async function renderLocalScore(
   }
 }
 
+/** One track's instrument swap (and its mix fields). `track` is the track id; `role` is the v1 address (one track per role). */
 export type SwapLocalStemInput = {
   readonly takeId: string;
-  readonly role: ScoreRole;
+  readonly track?: string;
+  readonly role?: ScoreRole;
   readonly instrumentId: string;
   readonly gainDb?: number;
   readonly pan?: number;
@@ -280,9 +254,10 @@ export type SwapLocalStemInput = {
   readonly fx?: FxChain;
 };
 
-/** Swap one stem's instrument, FX chain, or mute/solo state on an existing local take, reusing unchanged stems bit-for-bit. */
+/** Swap one stem's instrument, FX chain, or mix state on an existing local take, reusing unchanged stems bit-for-bit. */
 export async function swapLocalTakeStem(input: SwapLocalStemInput): Promise<Result<{ readonly take: SoundTake; readonly plan: LocalScorePlan }>> {
-  if (!SCORE_ROLES.includes(input.role)) return err("invalid", `unknown stem role: ${String(input.role)}`);
+  if (input.track === undefined && input.role === undefined) return err("invalid", "a stem swap names its track (or, for a one-per-role take, its role)");
+  if (input.role !== undefined && !SCORE_ROLES.includes(input.role)) return err("invalid", `unknown stem role: ${String(input.role)}`);
   let parent: SoundTake;
   try {
     parent = await getTake(input.takeId);
@@ -291,13 +266,17 @@ export async function swapLocalTakeStem(input: SwapLocalStemInput): Promise<Resu
   }
   const prevPlan = readLocalScorePlan(parent);
   if (!prevPlan) return err("invalid", `take ${input.takeId} does not carry a local ScoreSpec`);
-  const prevTrack = prevPlan.spec.tracks.find((t) => t.role === input.role);
-  const swapped = swapRoleInstrument(prevPlan.spec, input.role, input.instrumentId, input.fx);
+  const swapped =
+    input.track !== undefined
+      ? swapTrackInstrument(prevPlan.spec, input.track, input.instrumentId, input.fx)
+      : swapRoleInstrument(prevPlan.spec, input.role!, input.instrumentId, input.fx);
   if (!swapped.ok) return swapped;
+  const trackId = input.track ?? input.role!;
+  const prevTrack = prevPlan.spec.tracks.find((t) => trackIdOf(t) === trackId);
   const nextSpec: ScoreSpec = {
     ...swapped.value,
     tracks: swapped.value.tracks.map((t) =>
-      t.role === input.role
+      trackIdOf(t) === trackId
         ? { ...t, ...(input.gainDb !== undefined ? { gainDb: input.gainDb } : {}), ...(input.pan !== undefined ? { pan: input.pan } : {}), ...(input.muted !== undefined ? { muted: input.muted } : {}), ...(input.solo !== undefined ? { solo: input.solo } : {}) }
         : t,
     ),
@@ -308,13 +287,13 @@ export async function swapLocalTakeStem(input: SwapLocalStemInput): Promise<Resu
     parentId: parent.id,
     op: "section-edit",
     group: parent.group,
-    variation: { axis: `stem:${input.role}`, diff: [`${prevTrack?.instrument ?? "previous"} -> ${input.instrumentId}`] },
+    variation: { axis: `stem:${trackId}`, diff: [`${prevTrack?.instrument ?? "previous"} -> ${input.instrumentId}`] },
   });
 }
 
 /** Render a short audition preview WAV for a ready catalog instrument, or refuse with its measured A0 gate reason. */
 export async function auditionLocalInstrument(instrumentId: string): Promise<
-  Result<{ readonly instrumentId: string; readonly name: string; readonly role: ScoreRole; readonly audioUrl: string; readonly audition: AuditionResult["audition"]; readonly source: string }>
+  Result<{ readonly instrumentId: string; readonly name: string; readonly role: InstrumentRole; readonly audioUrl: string; readonly audition: AuditionResult["audition"]; readonly source: string; readonly fallback: boolean }>
 > {
   const cat = instrumentById(instrumentId);
   if (!cat) return err("invalid", `unknown instrument: ${instrumentId}`);
@@ -337,6 +316,7 @@ export async function auditionLocalInstrument(instrumentId: string): Promise<
       audioUrl: `/api/sound/takes/audition/file?instrument=${encodeURIComponent(cat.id)}`,
       audition: res.value.audition,
       source: res.value.source,
+      fallback: res.value.fallback ?? isStandInSource(res.value.source),
     });
   } catch (e) {
     return err("internal", errorMessage(e));
