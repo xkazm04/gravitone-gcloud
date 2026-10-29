@@ -25,10 +25,9 @@ import { askOf, keptMix, mixChanges, mixText, newestStems, newTurnId, userTurn, 
 import type { StudioTakeFacts, StudioTasteLine, TasteLean } from "@gt/domain/audio.suno";
 import type { VerdictSend } from "@gt/ui/components/suno/VerdictBar.tsx";
 
-import type { StudioView } from "../url.ts";
 import type { Dispatch, ParsedTurn, RefusedTurn, StudioSource, SunoHost, VariantProps } from "./types.ts";
 import { uploadTake } from "./upload.ts";
-import { STUDIO_VIEWS_BY } from "./variants.ts";
+import { STUDIO_VIEW } from "./variants.ts";
 import s from "./studio.module.css";
 
 export type HostSessionData = {
@@ -68,10 +67,9 @@ type RoomProps = {
   readonly offline: boolean;
   readonly presence: "listening" | "nobody";
   readonly renders: "ready" | "missing";
-  /** Spark suno-advisor: the read's take facts and taste, and the S1 composition. */
+  /** Spark suno-advisor: the read's take facts and taste. */
   readonly takes: Readonly<Record<string, StudioTakeFacts>>;
   readonly taste: readonly StudioTasteLine[];
-  readonly view: StudioView;
 };
 
 const words = (r: { readonly ok: true } | { readonly ok: false; readonly error: { readonly error: string } }): string | null => (r.ok ? null : r.error.error);
@@ -198,7 +196,7 @@ function answersVerdict(turns: readonly ParsedTurn[], cursor: number, promptId: 
   return next !== undefined && next.from === "user" && next.verdict?.promptId === promptId;
 }
 
-function Stage({ session, offline, presence, renders, source, talk, suno, view }: RoomProps & { readonly source: StudioSource; readonly talk: Talk; readonly suno: SunoOps }) {
+function Stage({ session, offline, presence, renders, source, talk, suno }: RoomProps & { readonly source: StudioSource; readonly talk: Talk; readonly suno: SunoOps }) {
   const [draft, setDraft] = useState("");
   const transport = useMix();
   const { turns, send, setNotice } = talk;
@@ -256,7 +254,7 @@ function Stage({ session, offline, presence, renders, source, talk, suno, view }
   }, [suno, send, setNotice]);
   // The dock's verdict row is about the newest prompt version shown (./suno.ts, the one fold).
   const prompt = useMemo(() => newestVersion(sunoVersions(turns))?.promptId ?? null, [turns]);
-  const View = STUDIO_VIEWS_BY[view];
+  const View = STUDIO_VIEW;
   const props: VariantProps = {
     session: { id: session.id, title: session.title, turns, cursor: talk.cursor, visible, source, refused: session.refused ?? [] },
     dock: { state, reply: visible?.turn.text ?? null, notice, presence: source === "fixture" ? "listening" : presence },

@@ -90,9 +90,9 @@ export function StudioHost({ url, sessions, renders, note, head, presence, acts,
       {session === undefined ? (
         <p className={s.empty}>No scripted session to show.</p>
       ) : live ? (
-        <LiveRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence={presence} renders={renders} takes={takes} taste={taste} view={url.view ?? "thread"} acts={acts} onSession={(id) => go({ ...url, session: id })} />
+        <LiveRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence={presence} renders={renders} takes={takes} taste={taste} acts={acts} onSession={(id) => go({ ...url, session: id })} />
       ) : (
-        <FixtureRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence="listening" renders={renders} takes={takes} taste={taste} view={url.view ?? "thread"} />
+        <FixtureRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence="listening" renders={renders} takes={takes} taste={taste} />
       )}
     </div>
   );
