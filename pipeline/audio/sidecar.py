@@ -1,7 +1,10 @@
-"""The audio sidecar: measure a file, render a voice-fx chain, triage a take, render a ScoreSpec, or audition.
+"""The audio sidecar: measure or analyze a file, render a voice-fx chain, triage a take, render a ScoreSpec, or audition.
 
     python pipeline/audio/sidecar.py measure --in <wav|mp3|m4a|...> --json
       -> {"ok":true,"measure":{integratedLufs,truePeakDb,lra,clippedSamples,leadSilenceS,tailSilenceS,durationS}}
+    python pipeline/audio/sidecar.py analyze --in <wav|mp3|...> --json   (librosa; analyze.py says how)
+      -> {"ok":true,"analyze":{"durationS":n,"analysisRate":22050,"tempo":{bpm,trackerBpm,alt,beats,method}|null,
+          "key":{name,strength,correlation,runnerUp:{name,correlation},method}|null,"measure":{...measure's}}}
     python pipeline/audio/sidecar.py fx --in <wav> --chain <chain.json | inline JSON> --out <wav> --json
       -> {"ok":true,"durationS":n,"gainDb":g,"truePeakDb":tp,"rate":r,"channels":c,"notes":[...]}
     python pipeline/audio/sidecar.py triage --in <file> --context <context.json> --json
@@ -18,7 +21,10 @@
     python pipeline/audio/sidecar.py serve   (the warm worker: one JSON request per stdin line, lib/audio/renderWorker.ts;
       verbs audition, sketch, render-score - serve_score.py)
     python pipeline/audio/sidecar.py doctor --json
-      -> {"ok":true,"python":"<sys.version>","modules":[...],"missing":[...],"errors":{...},"versions":{...},"ffmpeg":path|null}
+      -> {"ok":true,"python":"<sys.version>","modules":[...],"missing":[...],"errors":{...},"versions":{...},"ffmpeg":path|null,
+          "verbs":{"analyze":{"modules":["librosa","numba"],"missing":[...]}}}
+      (`missing` is what EVERY verb needs; `verbs` names a module only one verb needs, so a box without
+      librosa still measures, renders and triages and only `analyze` refuses)
 
 The one consumer is lib/audio/sidecar.ts; docs/audio-sidecar.md is the operator's page.
 
@@ -59,6 +65,11 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
 REQUIRED = ("numpy", "scipy", "soundfile", "pyloudnorm", "pedalboard")
+# A module only one verb imports: doctor reports it under that verb, not in `missing`. numba is
+# named beside librosa because librosa imports lazily: `import librosa` answers on a box where its
+# first real call dies in numba ("Numba needs NumPy 2.2 or less. Got NumPy 2.4.", measured
+# 2026-10-29 with numba 0.61.2), so only importing numba itself says the verb will run.
+VERB_REQUIRED = {"analyze": ("librosa", "numba")}
 CEILING_DBTP = -1.0
 TARGET_DBTP = -1.1
 
@@ -128,6 +139,16 @@ def cmd_measure(a):
 
     data, rate = read_audio(a.input)
     emit({"ok": True, "measure": loudness.measure(data, rate)})
+
+
+def cmd_analyze(a):
+    import analyze
+    import loudness
+
+    data, rate = read_audio(a.input)
+    doc = analyze.analyze(data, rate)
+    doc["measure"] = loudness.measure(data, rate)
+    emit({"ok": True, "analyze": doc})
 
 
 def _load_chain(arg):
@@ -267,8 +288,19 @@ def cmd_doctor(_a):
             continue
         modules.append(name)
         versions[name] = str(getattr(m, "__version__", "") or _dist_version(name))
+    verbs = {}
+    for verb, names in VERB_REQUIRED.items():
+        lacking = []
+        for name in names:
+            try:
+                m = importlib.import_module(name)
+                versions[name] = str(getattr(m, "__version__", "") or _dist_version(name))
+            except Exception as e:  # the same two failures as above
+                lacking.append(name)
+                errors[name] = str(e) or type(e).__name__
+        verbs[verb] = {"modules": list(names), "missing": lacking}
     emit({"ok": True, "python": sys.version, "modules": modules, "missing": missing, "errors": errors,
-          "versions": versions, "ffmpeg": shutil.which(ffmpeg_bin())})
+          "versions": versions, "ffmpeg": shutil.which(ffmpeg_bin()), "verbs": verbs})
 
 
 def cmd_audition(a):
@@ -300,6 +332,9 @@ def main(argv):
     m = sub.add_parser("measure")
     m.add_argument("--in", dest="input", required=True)
     m.add_argument("--json", action="store_true")
+    an = sub.add_parser("analyze")
+    an.add_argument("--in", dest="input", required=True)
+    an.add_argument("--json", action="store_true")
     f = sub.add_parser("fx")
     f.add_argument("--in", dest="input", required=True)
     f.add_argument("--chain", required=True)
@@ -352,6 +387,7 @@ def main(argv):
     a = p.parse_args(argv)
     run = {
         "measure": cmd_measure,
+        "analyze": cmd_analyze,
         "fx": cmd_fx,
         "triage": cmd_triage,
         "render-score": cmd_render_score,

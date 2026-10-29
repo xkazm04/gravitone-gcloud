@@ -21,6 +21,7 @@ import { canSpawnLocalBinaries, describePosture } from "../deployment.ts";
 //
 // CONTRACT (the sidecar's stdout, LAST line, JSON; pipeline/audio/sidecar.py's docstring lists every verb):
 //   measure --in <wav>                         -> {"ok":true,"measure":{integratedLufs,truePeakDb,lra,...}}
+//   analyze --in <file>                        -> {"ok":true,"analyze":{durationS,tempo,key,measure}}   (librosa)
 //   fx --in <wav> --chain <chain.json> --out   -> {"ok":true,"durationS":n,"gainDb":g,...}
 //   triage --in <file> --context <ctx.json>    -> {"ok":true,"triage":{...}}
 //   render-score --spec <spec.json> --out-dir [--cache-dir d] [--verify-determinism] [--allow-fallback]
@@ -149,6 +150,21 @@ const measureSchema = z.object({
   measure: measureObjSchema,
 });
 
+/** A finished song's tempo and key (pipeline/audio/analyze.py says how each is found) with measure's loudness. */
+const analyzeObjSchema = z.object({
+  durationS: z.number().nonnegative(),
+  analysisRate: z.number().int().positive(),
+  /** null: no beat was found. `alt` are the octave neighbours (half / double) inside 60..200 bpm. */
+  tempo: z.object({ bpm: z.number().positive(), trackerBpm: z.number().positive(), alt: z.array(z.number().positive()), beats: z.number().int().nonnegative(), method: z.string() }).nullable(),
+  /** null: no pitch content. `strength` is (r1 - r2) / (1 - r2) over the Krumhansl-Kessler correlations, 0..1. */
+  key: z
+    .object({ name: z.string(), strength: z.number().min(0).max(1), correlation: z.number(), runnerUp: z.object({ name: z.string(), correlation: z.number() }), method: z.string() })
+    .nullable(),
+  measure: measureObjSchema,
+});
+const analyzeSchema = z.object({ ok: z.literal(true), analyze: analyzeObjSchema });
+export type AudioAnalysis = z.output<typeof analyzeObjSchema>;
+
 const fxSchema = z.object({ ok: z.literal(true), durationS: z.number().nonnegative(), gainDb: z.number().optional() });
 
 const doctorSchema = z.object({
@@ -256,6 +272,12 @@ export type AuditionResult = z.output<typeof auditionAnswerSchema>;
 export async function measureFile(path: string, opts: SidecarOptions = {}): Promise<Result<AudioMeasureFull>> {
   const r = await call("measure", ["--in", path], measureSchema, opts.timeoutMs ?? TIMEOUT_MS);
   return r.ok ? ok(r.value.measure) : r;
+}
+
+/** Tempo (with its octave neighbours), key and loudness of one finished song, librosa's (spark suno-advisor). */
+export async function analyzeFile(path: string, opts: SidecarOptions = {}): Promise<Result<AudioAnalysis>> {
+  const r = await call("analyze", ["--in", path], analyzeSchema, opts.timeoutMs ?? TIMEOUT_MS);
+  return r.ok ? ok(r.value.analyze) : r;
 }
 
 /**

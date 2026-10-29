@@ -10,6 +10,14 @@ import "server-only";
 // Absence is said, not hidden: an event the door refuses becomes a `refused` line in its
 // conversation (or, when even its session cannot be read, a line in the page's note), never a
 // silently skipped turn. A ledger with more studio events than the read bound says so too.
+//
+// SPARK SUNO-ADVISOR: the read also carries `taste` (the confirmed profile, folded from `audio.taste`
+// events) and `takes` (the facts of every take a user turn uploaded), both through the ONE reader the
+// agent's inbox uses too (lib/sound/suno/facts.ts). `readLedger` stays SYNC - the kernel store is
+// sync, so the conversations and the taste fold are read there and stay testable on a bare store;
+// the take facts live in the sound store's files (async), so `readLedgerFacts` is the async wrapper
+// that adds them, and it is what the port reads. A take a turn names that this server does not hold,
+// an unreadable taste event and a store that cannot be read are each said in the note.
 import { parseStudioEvent, STUDIO_EVENTS, type StudioEventType } from "@gt/domain/audio.studio.events";
 import type { ParsedTurn } from "@gt/domain/audio.studio.door";
 import { ok, type Result } from "@gt/domain/errors";
@@ -17,6 +25,7 @@ import { queryEvents } from "@gt/kernel/events-query";
 import type { Store } from "@gt/kernel/store";
 
 import { kernel } from "../../../../../lib/kernelStore.ts";
+import { readTakeFacts, readTaste, tasteNote } from "../../../../../lib/sound/suno/facts.ts";
 import type { RefusedTurn, StudioPort, StudioPortSession, StudioRead } from "./port.ts";
 
 /** What the fold needs of a ledger row. */
@@ -94,7 +103,7 @@ function readStudioEvents(store: Store): Result<{ events: StudioLedgerEvent[]; h
   }
 }
 
-/** The live read over one store: exported for the port's test. */
+/** The live read over one store, conversations and taste (sync): exported for the port's test. */
 export function readLedger(store: Store): StudioRead {
   const read = readStudioEvents(store);
   if (!read.ok) return { source: "live", renders: "ready", note: `The studio's conversations could not be read: ${read.error.message}`, sessions: [] };
@@ -102,13 +111,37 @@ export function readLedger(store: Store): StudioRead {
   const notes: string[] = [];
   if (read.value.capped) notes.push(`Only the newest ${STUDIO_READ_MAX} studio messages are shown; older ones are in the ledger.`);
   if (lost.length > 0) notes.push(`${lost.length === 1 ? "1 studio message names" : `${lost.length} studio messages name`} no readable conversation: ${lost.join("; ")}`);
-  return { source: "live", renders: "ready", sessions, head: read.value.head, ...(notes.length > 0 ? { note: notes.join(" ") } : {}) };
+  const taste = readTaste(store);
+  if (!taste.ok) notes.push(`The taste profile could not be read: ${taste.error.message}`);
+  const tasteSaid = taste.ok ? tasteNote(taste.value) : undefined;
+  if (tasteSaid !== undefined) notes.push(tasteSaid);
+  return { source: "live", renders: "ready", sessions, head: read.value.head, ...(taste.ok ? { taste: taste.value.lines } : {}), ...(notes.length > 0 ? { note: notes.join(" ") } : {}) };
+}
+
+/** Every take id a user turn of these conversations uploaded, first sent first. */
+export function uploadedTakeIds(sessions: readonly StudioPortSession[]): string[] {
+  const ids: string[] = [];
+  for (const s of sessions) for (const t of s.turns) if (t.turn.from === "user" && t.turn.takeId !== undefined && !ids.includes(t.turn.takeId)) ids.push(t.turn.takeId);
+  return ids;
+}
+
+/** readLedger plus the facts of every uploaded take its conversations name: what the port reads. */
+export async function readLedgerFacts(store: Store): Promise<StudioRead> {
+  const base = readLedger(store);
+  const ids = uploadedTakeIds(base.sessions);
+  if (ids.length === 0) return { ...base, takes: {} };
+  const facts = await readTakeFacts(ids);
+  const notes = base.note === undefined ? [] : [base.note];
+  if (!facts.ok) notes.push(`The uploaded takes could not be read: ${facts.error.message}`);
+  const gone = facts.ok ? ids.filter((id) => facts.value[id] === undefined) : [];
+  if (gone.length > 0) notes.push(`${gone.length === 1 ? "1 uploaded take is" : `${gone.length} uploaded takes are`} not on this server: ${gone.join(", ")}.`);
+  return { ...base, ...(facts.ok ? { takes: facts.value } : {}), ...(notes.length > 0 ? { note: notes.join(" ") } : {}) };
 }
 
 export const ledgerPort: StudioPort = {
   read: async () => {
     const k = kernel();
     if (!k.ok) return { source: "live", renders: "ready", note: `The studio's conversations could not be read: ${k.error.message}`, sessions: [] };
-    return readLedger(k.value.store);
+    return readLedgerFacts(k.value.store);
   },
 };

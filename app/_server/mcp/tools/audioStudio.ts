@@ -9,7 +9,9 @@ import { queryEvents } from "@gt/kernel/events-query";
 import { appendOnce } from "@gt/kernel/ingest";
 import type { Store } from "@gt/kernel/store";
 
-import { foldStudioEvents, type StudioLedgerEvent } from "../../../(studio)/audio/studio/_port/ledger.ts";
+import { readTakeFacts, readTaste, tasteNote } from "../../../../lib/sound/suno/facts.ts";
+import { foldStudioEvents, uploadedTakeIds, type StudioLedgerEvent } from "../../../(studio)/audio/studio/_port/ledger.ts";
+import type { StudioPortSession } from "../../../(studio)/audio/studio/_port/port.ts";
 import { STUDIO_LANE, STUDIO_SUBJECT_KIND } from "../../../(studio)/audio/studio/_live/say.ts";
 import { studioHref } from "../../../(studio)/audio/studio/url.ts";
 import { defineOp, READS, WRITES, type McpToolSpec, type Obj } from "../op.ts";
@@ -87,7 +89,26 @@ function takeOf(turns: readonly ParsedTurn[]): string | undefined {
   return undefined;
 }
 
-/** One conversation's state: the newest answer, the take it shows, that take's score and stems. */
+/** The suno advisor's half of a conversation's state (spark suno-advisor), through the page's reader
+ *  (lib/sound/suno/facts.ts): the facts of every take its user turns uploaded, and the taste profile.
+ *  What could not be read is said beside it (`takesNote`, `tasteNote`), never left as a silent gap. */
+async function sunoStateOf(store: Store, conv: StudioPortSession | undefined): Promise<Obj> {
+  const ids = conv === undefined ? [] : uploadedTakeIds([conv]);
+  const facts = await readTakeFacts(ids);
+  const gone = facts.ok ? ids.filter((id) => facts.value[id] === undefined) : [];
+  const taste = readTaste(store);
+  const tasteSaid = taste.ok ? tasteNote(taste.value) : `the taste profile could not be read: ${taste.error.message}`;
+  const takesSaid = !facts.ok ? `the uploaded takes could not be read: ${facts.error.message}` : gone.length > 0 ? `not on this server: ${gone.join(", ")}` : undefined;
+  return {
+    ...(facts.ok ? { takes: facts.value } : {}),
+    ...(takesSaid === undefined ? {} : { takesNote: takesSaid }),
+    ...(taste.ok ? { taste: taste.value.lines } : {}),
+    ...(tasteSaid === undefined ? {} : { tasteNote: tasteSaid }),
+  };
+}
+
+/** One conversation's state: the newest answer, the take it shows, that take's score and stems,
+ *  and the facts of the takes its person uploaded with the confirmed taste. */
 async function stateOf(store: Store, session: string): Promise<Result<Obj>> {
   const read = studioEvents(store, { types: BOTH, session, order: "desc", limit: SCAN });
   if (!read.ok) return read;
@@ -102,6 +123,7 @@ async function stateOf(store: Store, session: string): Promise<Result<Obj>> {
     ...(latest === undefined ? {} : { latestAgentTurn: latest.turn }),
     ...(conv?.refused === undefined ? {} : { refused: conv.refused }),
     view: studioHref({ session, offline: false, source: "live" }),
+    ...(await sunoStateOf(store, conv)),
   };
   if (takeId === undefined) return ok(base);
   const take = await readLocalTake(takeId);
@@ -227,7 +249,7 @@ export const AUDIO_STUDIO_READ_OPS: readonly McpToolSpec[] = [
     family: "read",
     op: "audio_inbox",
     title: "Studio inbox (long-poll)",
-    description: "Wait up to waitS (0..25) s for a studio message newer than after (none given: the unanswered ones), then answer messages, conversations and one conversation's state: newest answer, take, score, stems. Pass next back.",
+    description: "Wait up to waitS (0..25) s for a studio message newer than after (none given: the unanswered ones), then answer messages, conversations and one conversation's state: newest answer, take, score, stems, uploaded takes, taste. Pass next back.",
     input: z.object({ session: studioSessionSchema.optional(), after: z.number().int().min(0).optional(), waitS: z.number().int().min(0).max(INBOX_WAIT_MAX_S).optional() }).strict(),
     annotations: READS,
     writes: false,

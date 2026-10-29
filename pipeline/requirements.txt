@@ -21,6 +21,9 @@
 # scipy, soundfile, pyloudnorm and pedalboard inside its verbs, so `doctor` and
 # a missing-module failure still answer in JSON without them. pedalboard is
 # GPL-3; it runs as this separate CLI and nothing that links it is distributed.
+# Its `analyze` verb (pipeline/audio/analyze.py) imports librosa, which needs a
+# numba that accepts the installed numpy (numba 0.61.2 refuses numpy 2.4;
+# 0.68.1 runs it, measured 2026-10-29); `doctor` reports both under `verbs`.
 numpy
 scipy
 Pillow
@@ -33,3 +36,4 @@ soundfile
 torchaudio
 pyloudnorm
 pedalboard
+librosa
