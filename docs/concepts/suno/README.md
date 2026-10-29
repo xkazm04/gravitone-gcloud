@@ -1,6 +1,6 @@
 # Suno package: the advisor, and what it decided about hearing a take
 
-**Status: IN BUILD as spark `suno-advisor` (2026-10-29), stage S1.** The design, the decisions with their
+**Status: SHIPPED as spark `suno-advisor` (2026-10-29), the thread composition.** The design, the decisions with their
 rejected options, and the research below live in the vault note `.vault/Spark/ideas/suno-advisor.md`. This
 file is the repo-side record: what the studio does with Suno, what it refuses to do, and why. Each claim is
 marked VERIFIED (read in code, measured, or read on the vendor's own page, with the date) or NOT VERIFIED.
@@ -90,9 +90,7 @@ read and the measurement disagree on tempo or key, the measurement stands.
   take. The refusal names the field (`listen: instruments.0.prominence: ...`), and the claim is released
   with a note that the vendor may have billed it. Nothing retries: another try is the person's next
   press.
-- **Not yet measured live.** The 3.8 Flash live pass that `providers/google.ts` owes has not been run
-  with this repo's key. The first listen the owner presses at the gate is that pass for this turn:
-  about $0.04 for a 3-minute take at the allowance, and less at the real count.
+- **Measured live once (2026-10-29, owner-approved).** A 17.7 s local-band render with known contents (synthwave, D minor, 112 bpm; 909 kit, analog pulse bass, warm pad, pluck lead; no vocals) went through `analyze` and one live `gemini-3.8-flash` listen: 8.0 s, settled at **$0.0028** against a quote of $0.032 (the output allowance is a ceiling about 11x the real count). Measured: 112.0 bpm (right), G minor at strength 0.02 (wrong, and flagged as a coin toss). Heard: 110 bpm, F minor (wrong), no vocals (right), drum machine / synth bass / synth pads (right), "synth brass" for the pluck lead (wrong), genre "electro-funk / 80s boogie" (a neighbour of synthwave). One clip, n=1: it agrees with the research above - tempo is solid, roles are plausible, key is unreliable from both sides.
 
 ## Challenge 2 - the download limit (vendor pages, read 2026-10-29)
 
