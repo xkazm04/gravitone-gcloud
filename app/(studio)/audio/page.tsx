@@ -3,9 +3,11 @@
 // (./_audio/desk.ts) and its kind - music or sfx - in the URL beside the section; each section
 // reads on the server and hands one client island its data and its Server Actions.
 //
-//   compose   terms, the composer and its variations, drafts and references (L52), and the
-//             engines the desk can reach (lib/sound/engines.ts); effects have no composer here
-//             until an engine on the desk makes them, and the page says which engines and why;
+//   compose   the audio studio (spark audio-agent-studio, stage S2): a person says what they want
+//             in the dock, an outside agent answers with a track, its parts and its next steps
+//             (./studio/); `?s=studio` is an alias. It retired the seed composer, the say-it /
+//             by-ear / from-a-track doors and the local-band form: the engines and Server Actions
+//             they reached stay, because the agent's MCP ops call them;
 //   arrange   kept takes as version stacks, stages across and groups down: moves, finalize with
 //             a library label, the Suno round trip, the rows (./_audio/Arrange.tsx);
 //   hunt      an idea drafted into a map of axes and leaves, leaves priced in audio-seconds,
@@ -18,22 +20,15 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
-import { EngineList } from "@gt/ui/components/audio/EngineList.tsx";
 import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
 
 import { audibleIds } from "../../../lib/audio/atlas.ts";
 import { warmWorkers } from "../../../lib/audio/renderWorker.ts";
-import { makersOf } from "../../../lib/sound/engines.ts";
-import { setHand, sunoConfirm, sunoReceipt } from "./_audio/actions.ts";
 import { Arrange } from "./_audio/Arrange.tsx";
 import { editRows, moveCard } from "./_audio/arrangeActs.ts";
-import { deskEngines, engineRows, finalizedCount, readArrange } from "./_audio/arrangeRead.ts";
-import { AudioLane } from "./_audio/AudioLane.tsx";
+import { deskEngines, finalizedCount, readArrange } from "./_audio/arrangeRead.ts";
 import { deskHref, KINDS, parseDeskUrl, SECTIONS } from "./_audio/desk.ts";
-import { auditionLocalInstrumentAct, localScoreReceiptAct, promoteLocalTakeAct, renderLocalScoreAct, swapLocalStemAct } from "./_audio/localActs.ts";
-import { readLocalBand } from "./_audio/localRead.ts";
-import { audioNow, readAudio } from "./_audio/read.ts";
+import { audioNow } from "./_audio/read.ts";
 import { crownTake, draftHuntLesson, draftHuntMap, renderLeaves } from "./_hunt/acts.ts";
 import { Hunt } from "./_hunt/Hunt.tsx";
 import { readHunt } from "./_hunt/read.ts";
@@ -68,41 +63,23 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   }));
   const kinds = KINDS.map((k) => ({ id: k, label: k, href: deskHref({ ...url, kind: k }) }));
   let body: ReactNode;
-  if (url.section === "studio") body = <StudioSection url={parseStudioUrl(q)} />;
-  else if (url.section === "arrange") body = <Arrange view={await readArrange(url.kind)} acts={{ moveCard, editRows }} />;
+  if (url.section === "arrange") body = <Arrange view={await readArrange(url.kind)} acts={{ moveCard, editRows }} />;
   else if (url.section === "hunt") body = <Hunt view={await readHunt(url.kind, huntParam(q))} acts={{ draftHuntMap, renderLeaves, crownTake, draftHuntLesson, confirmLessonAct }} nowMs={audioNow()} />;
   else if (url.section === "lessons") body = <Lessons view={await readLessons(url.kind)} />;
   else if (url.section === "strengths") body = <StrengthsDesk key={url.kind} view={await readStrengths(url.kind)} lessonDoor={confirmLessonAct} />;
   else if (url.section === "rubric") body = <RubricDesk key={url.kind} view={await readRubricPile(url.kind)} acts={{ scoreTake }} />;
   else if (url.section === "batch") body = <BatchDesk key={url.kind} view={readBatch(url.kind, registry)} nowMs={audioNow()} acts={{ batchReceipt, batchConfirm }} />;
-  else if (url.kind === "music") {
-    const audible = await audibleIds();
-    if (audible.length > 0) warmWorkers(); // the first play mark pressed answers like the tenth
-    const [audioView, localBand] = await Promise.all([readAudio(), readLocalBand()]);
-    body = (
-      <AudioLane
-        view={audioView}
-        nowMs={audioNow()}
-        acts={{ setHand, sunoReceipt, sunoConfirm }}
-        engines={engineRows(registry)}
-        canSend={makersOf(registry, "music").some((e) => e.id === "suno")}
-        audible={audible}
-        localBand={localBand}
-        localActs={{ localScoreReceiptAct, renderLocalScoreAct, swapLocalStemAct, auditionLocalInstrumentAct, promoteLocalTakeAct }}
-      />
-    );
-  } else
-    body = (
-      <section className={s.makers} aria-label="effects">
-        <CapsHeading text="effects" tally={{ value: makersOf(registry, "sfx").length, label: "engines" }} level={2} />
-        <EngineList engines={engineRows(registry)} label="engines" />
-      </section>
-    );
+  else {
+    // The studio: one way in to composing. Its candidates are auditioned on this machine's samples,
+    // so the render workers warm up first (the first play mark pressed answers like the tenth).
+    if ((await audibleIds()).length > 0) warmWorkers();
+    body = <StudioSection url={parseStudioUrl(q)} />;
+  }
   return (
     <div className={s.desk}>
       <div className={s.bar}>
         <TabRail label="audio desk" mode="audio" tabs={tabs} current={url.section} />
-        {url.section !== "studio" && <TabRail label="kind" mode="audio" tabs={kinds} current={url.kind} />}
+        {url.section !== "compose" && <TabRail label="kind" mode="audio" tabs={kinds} current={url.kind} />}
       </div>
       {body}
     </div>

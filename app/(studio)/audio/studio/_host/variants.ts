@@ -1,9 +1,6 @@
-// The three competing layouts the studio switcher offers (spark audio-agent-studio, stage S1). Each
-// builder replaces only its own folder under ../_v/; this table is the host's one reference to them.
-import type { VariantId } from "../url.ts";
-import { Variant as Canvas } from "../_v/canvas/Variant.tsx";
-import { Variant as Desk } from "../_v/desk/Variant.tsx";
-import { Variant as Stage } from "../_v/stage/Variant.tsx";
+// The studio's one view (spark audio-agent-studio, stage S2: the owner picked canvas's layout drawn
+// with desk's components). This line is the host's one reference to it.
+import { View } from "../_view/View.tsx";
 import type { Variant } from "./types.ts";
 
-export const VARIANT_VIEWS: Readonly<Record<VariantId, Variant>> = { desk: Desk, canvas: Canvas, stage: Stage };
+export const STUDIO_VIEW: Variant = View;

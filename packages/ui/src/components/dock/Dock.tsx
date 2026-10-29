@@ -13,7 +13,7 @@ import type { StudioDropped } from "@gt/domain/audio.studio";
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { Field } from "../field/Field.tsx";
-import { droppedWords, type DockState } from "./dock.ts";
+import { canSendIn, droppedWords, type DockState } from "./dock.ts";
 import s from "./Dock.module.css";
 
 export type DockProps = {
@@ -31,19 +31,20 @@ export type DockProps = {
 
 const PILL = {
   listening: { label: "listening", tone: "emerald" },
+  waiting: { label: "nobody listening yet", tone: "neutral" },
   thinking: { label: "thinking", tone: "amber" },
   offline: { label: "offline", tone: "neutral" },
 } as const;
 
 export function Dock({ state, reply, notice = null, draft, onDraft, onSend, dropped }: DockProps) {
-  const canSend = state === "listening" && draft.trim() !== "";
+  const canSend = canSendIn(state) && draft.trim() !== "";
   const pill = PILL[state];
   const words = droppedWords(dropped);
   return (
     <section className={s.dock} data-dock={state} aria-label="talk to the studio">
       <div className={s.said} aria-live="polite">
-        <Chip label={pill.label} tone={pill.tone} dot={state !== "offline"} ghost={state === "offline"} casing="lower" />
-        <p className={s.reply}>{state === "offline" ? "No agent is listening right now, so sending is off." : (reply ?? "Say what you would like to hear.")}</p>
+        <Chip label={pill.label} tone={pill.tone} dot={state === "listening" || state === "thinking"} ghost={state === "offline" || state === "waiting"} casing="lower" />
+        <p className={s.reply}>{state === "offline" ? "No agent is listening right now, so sending is off." : (reply ?? (state === "waiting" ? "Nobody is listening yet. Your message will wait for the agent." : "Say what you would like to hear."))}</p>
       </div>
       {notice !== null && <p className={s.notice}>{notice}</p>}
       {words !== null && (
@@ -64,7 +65,7 @@ export function Dock({ state, reply, notice = null, draft, onDraft, onSend, drop
         }}
       >
         <div className={s.field}>
-          <Field label="your message to the studio" value={draft} onChange={onDraft} placeholder={state === "offline" ? "nobody is listening" : "make the bass softer"} maxLength={400} disabled={state !== "listening"} />
+          <Field label="your message to the studio" value={draft} onChange={onDraft} placeholder={state === "offline" ? "nobody is listening" : "make the bass softer"} maxLength={400} disabled={!canSendIn(state)} />
         </div>
         <Button label="Send" tone="cyan" submit disabled={!canSend} />
       </form>

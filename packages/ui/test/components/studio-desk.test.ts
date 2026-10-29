@@ -131,4 +131,19 @@ describe("LaneHead", () => {
     expect(html).toContain("planned, not yet audible");
     expect(html).toContain("illustrative");
   });
+  test("the take's own level and pan read as made; a change from them reads as the value", () => {
+    const made = { levelDb: -2, pan: 0.4 };
+    const at = renderToStaticMarkup(h(LaneHead, { ...base, state: "on", mix: made, made }));
+    expect(at).toMatch(/volume <b[^>]*>as made, 2 dB quieter<\/b>/);
+    expect(at).toMatch(/left or right <b[^>]*>as made, a little right<\/b>/);
+    const moved = renderToStaticMarkup(h(LaneHead, { ...base, state: "on", mix: { levelDb: 1, pan: 0.4 }, made }));
+    expect(moved).toMatch(/volume <b[^>]*>1 dB louder<\/b>/);
+    expect(renderToStaticMarkup(h(LaneHead, { ...base, state: "on", mix: {} }))).toMatch(/volume <b[^>]*>as made<\/b>/);
+  });
+  test("compact (six parts or more) keeps every control and the words, and draws differently", () => {
+    const roomy = renderToStaticMarkup(h(LaneHead, { ...base, state: "on", mix: { levelDb: -3 } }));
+    const tight = renderToStaticMarkup(h(LaneHead, { ...base, state: "on", mix: { levelDb: -3 }, compact: true }));
+    for (const want of ['aria-label="mute warm bass"', 'aria-label="play only warm bass"', "volume of warm bass", "left or right for warm bass", "3 dB quieter"]) expect(tight).toContain(want);
+    expect(tight).not.toBe(roomy);
+  });
 });

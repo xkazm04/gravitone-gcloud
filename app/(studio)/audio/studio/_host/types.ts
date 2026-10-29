@@ -1,18 +1,20 @@
-// THE STUDIO HOST'S CONTRACT WITH A VARIANT (spark audio-agent-studio, stage S1). A variant is
-// `(props: VariantProps) => JSX`: everything it draws and every press it can make arrives here,
-// and it imports NOTHING from app state (registry schema-driven-ui: a store-free renderer with an
-// injected capabilities object). The host (./StudioHost.tsx) owns the conversation, the dock, the
-// switcher and the one transport; a variant owns the main frame and the side panels.
+// THE STUDIO HOST'S CONTRACT WITH THE VIEW (spark audio-agent-studio; stage S1 named it a variant,
+// stage S2 keeps one view). The view is `(props: VariantProps) => JSX`: everything it draws and every
+// press it can make arrives here, and it imports NOTHING from app state (registry schema-driven-ui: a
+// store-free renderer with an injected capabilities object). The host (./StudioHost.tsx) owns the
+// conversation (live: the ledger relay; `&source=fixture`: the script), the dock and the one
+// transport; the view owns the main frame and the side panels.
 //
 // Types only: a client module reads the turn's TYPES from @gt/domain/audio.studio, never its zod.
 import type { ReactNode } from "react";
 
 import type { StudioAction, StudioDropped } from "@gt/domain/audio.studio";
 import type { ParsedTurn } from "@gt/domain/audio.studio.door";
+import type { RefusedTurn, StudioSource } from "../_port/port.ts";
 import type { DockState } from "@gt/ui/components/dock/dock.ts";
 import type { MixTransport } from "@gt/ui/components/audio/useMix.ts";
 
-export type { ParsedTurn };
+export type { ParsedTurn, RefusedTurn, StudioSource };
 
 /** The session as far as the conversation has got. */
 export type HostSession = {
@@ -24,6 +26,10 @@ export type HostSession = {
   readonly cursor: number;
   /** The turn the dock and the side panels speak for: the newest agent turn shown; null before one. */
   readonly visible: ParsedTurn | null;
+  /** S2: where the turns come from - the ledger (live) or the scripted sessions. */
+  readonly source: StudioSource;
+  /** S2, live: recorded events of this conversation the door refused (the host also lists them). */
+  readonly refused: readonly RefusedTurn[];
 };
 
 export type HostDock = {
@@ -32,6 +38,8 @@ export type HostDock = {
   readonly reply: string | null;
   /** The page's one plain line ("the scripted session has no answer to that"); null when none. */
   readonly notice: string | null;
+  /** S2: is the outside agent listening ("nobody": a message waits in the inbox for its next look). */
+  readonly presence: "listening" | "nobody";
 };
 
 /**
@@ -52,6 +60,15 @@ export type VariantProps = {
   readonly dropped: readonly StudioDropped[];
   /** "missing": the fixture renders are not in the store (the host shows the banner). */
   readonly renders: "ready" | "missing";
+  /**
+   * S2 "keep this mix": sends the agent a user turn whose `mix` is the transport's live mix of the
+   * newest stems piece (by stem id), for it to bake into the score and re-render. Live only; the
+   * scripted sessions answer with a notice.
+   */
+  readonly keepMix: () => void;
+  /** What `keepMix` would change, one plain line per stem ("warm finger bass muted, at -3 dB");
+   *  empty when the live mix is what was rendered (nothing to keep). */
+  readonly mixChanges: readonly string[];
 };
 
 export type Variant = (props: VariantProps) => ReactNode;

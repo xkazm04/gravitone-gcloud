@@ -231,14 +231,9 @@ test("a Suno return dropped on a remaster card becomes the stack's next version"
   await shot(page, "audio-arrange-returned");
 });
 
-test("the kind seam: effects have their own rows, and the effects composer names its engines", async ({ page }) => {
+test("the kind seam: effects have their own rows", async ({ page }) => {
   await page.goto("/audio?s=arrange&kind=sfx");
   await expect(page.getByRole("rowheader").filter({ hasText: "impacts" })).toBeVisible();
-  await page.goto("/audio?kind=sfx");
-  const list = page.getByRole("list", { name: "engines" });
-  await expect(list).toContainText("ElevenLabs");
-  await expect(list).toContainText("no desk producer");
-  await expect(list).toContainText("not installed");
   await shot(page, "audio-effects");
 });
 

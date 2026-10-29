@@ -1,8 +1,8 @@
 import "server-only";
 
 // THE STUDIO'S TURN PORT, FIXTURE SIDE (spark audio-agent-studio, stage S1). The page reads turns
-// through `StudioPort` only, so stage S2 swaps this for a ledger side (an agent's recorded turns)
-// without touching a variant. Here the turns are the scripted sessions (./fixtureSessions.ts):
+// through `StudioPort` (./port.ts) only; live, the ledger side (./ledger.ts) answers, and this side
+// serves `&source=fixture` and the tests. Here the turns are the scripted sessions (./fixtureSessions.ts):
 // their {{key}} audio tokens are resolved against the index pipeline/studio-fixtures.mts writes
 // (<storeRoot()>/studio-fixtures.json), THEN every turn passes the agent's own door
 // (@gt/domain/audio.studio.door), so a fixture is held to exactly what an agent's turn is.
@@ -21,11 +21,9 @@ import { z } from "zod";
 
 import { storeRoot } from "../../../../../lib/sound/store.ts";
 import { FIXTURE_SESSIONS, type FixtureSession } from "./fixtureSessions.ts";
+import type { StudioPort, StudioPortSession, StudioRead } from "./port.ts";
 
-export type StudioPortSession = { readonly id: string; readonly title: string; readonly turns: readonly ParsedTurn[] };
-export type StudioRead = { readonly renders: "ready" | "missing"; readonly note?: string; readonly sessions: readonly StudioPortSession[] };
-/** The seam: a fixture today, the ledger's recorded turns in stage S2. */
-export type StudioPort = { readonly read: () => Promise<StudioRead> };
+export type { StudioPort, StudioPortSession, StudioRead };
 
 /** Same name as pipeline/studio-fixtures.mts STUDIO_FIXTURE_INDEX (a pipeline module is not imported by a route). */
 const INDEX_FILE = "studio-fixtures.json";
@@ -96,7 +94,7 @@ export function readFixture(index: Index, sessions: readonly FixtureSession[] = 
   else if (unknown.size > 0) notes.push(`the fixture index has no render for ${[...unknown].sort().join(", ")}. Run ${MAKE} again.`);
   if (refused.length > 0) notes.push(`turns refused at the door: ${refused.join("; ")}`);
   const missing = "missing" in index || unknown.size > 0;
-  return { renders: missing ? "missing" : "ready", ...(notes.length > 0 ? { note: notes.join(" ") } : {}), sessions: read };
+  return { source: "fixture", renders: missing ? "missing" : "ready", ...(notes.length > 0 ? { note: notes.join(" ") } : {}), sessions: read };
 }
 
 export const fixturePort: StudioPort = { read: async () => readFixture(await readIndex()) };

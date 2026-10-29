@@ -16,8 +16,6 @@ export const SECTIONS = [
   { id: "strengths", label: "strengths" },
   { id: "rubric", label: "rubric" },
   { id: "batch", label: "batch" },
-  // spark audio-agent-studio: an outside agent drives a studio for non-musicians (../studio/).
-  { id: "studio", label: "studio" },
 ] as const;
 export type Section = (typeof SECTIONS)[number]["id"];
 
@@ -28,9 +26,13 @@ export type DeskUrl = { readonly section: Section; readonly kind: Kind };
 
 const one = (v: string | readonly string[] | undefined): string | undefined => (typeof v === "string" ? v : v?.[0]);
 
+/** `?s=studio` (spark audio-agent-studio) is the compose section's alias: the studio IS compose now. */
+const ALIASES: Readonly<Record<string, Section>> = { studio: "compose" };
+
 /** An unknown section or kind reads as the default, never a 404: an old link still lands. */
 export function parseDeskUrl(q: Readonly<Record<string, string | readonly string[] | undefined>>): DeskUrl {
-  const s = one(q["s"]);
+  const raw = one(q["s"]);
+  const s = raw === undefined ? undefined : (ALIASES[raw] ?? raw);
   const k = one(q["kind"]);
   return { section: SECTIONS.find((x) => x.id === s)?.id ?? "compose", kind: KINDS.find((x) => x === k) ?? "music" };
 }

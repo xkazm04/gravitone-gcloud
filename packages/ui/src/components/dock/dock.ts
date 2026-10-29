@@ -3,8 +3,12 @@
 // where it was, what it claimed to be and the door's reason.
 import type { StudioDropped } from "@gt/domain/audio.studio";
 
-export const DOCK_STATES = ["listening", "thinking", "offline"] as const;
+/** `waiting`: nobody is listening yet, but a message may still be sent - it waits for the agent. */
+export const DOCK_STATES = ["listening", "waiting", "thinking", "offline"] as const;
 export type DockState = (typeof DOCK_STATES)[number];
+
+/** Whether the dock takes a message in this state. */
+export const canSendIn = (state: DockState): boolean => state === "listening" || state === "waiting";
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
 

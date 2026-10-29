@@ -1,0 +1,17 @@
+/* A card's sentence strip (desk's style): what was heard (linked words underlined, what they became
+   written under them, unused words struck) and a pull as two playable sides. A heard sentence from
+   an earlier answer reads quieter. Tokens only. */
+.heard,.pull{display:grid;gap:var(--sp-3);align-content:start;min-width:0;justify-items:start}
+.heard[data-carried] .sentence{color:var(--muted)}
+.kicker{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.sentence{margin:0;font:500 var(--fs-read)/2.7 var(--sans);color:var(--text)}
+.link{ruby-position:under;ruby-align:center;color:var(--ink-bright);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--cyan) 70%,transparent);text-underline-offset:var(--sp-tight)}
+.became{font:600 var(--fs-micro)/1.2 var(--sans);color:var(--cyan);text-decoration:none}
+.unheard{color:var(--muted);text-decoration:line-through;text-decoration-thickness:var(--stroke-mark);text-decoration-color:color-mix(in srgb,var(--amber) 70%,transparent)}
+.extra{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}
+.meta{font:500 var(--fs-micro)/1.35 var(--sans);color:var(--muted)}
+.sides{display:grid;gap:var(--sp-2);justify-self:stretch}
+.side{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);border:1px solid var(--hair-2);border-radius:var(--r);background:var(--wash)}
+.sideWords{flex:1;display:grid;gap:var(--sp-nudge);min-width:0}
+.sideName{font:700 var(--fs-ui)/1.2 var(--sans);color:var(--ink-bright)}
+.noSound{flex:none;width:var(--size-play);height:var(--size-play);border-radius:50%;border:1px dashed var(--hair-3)}

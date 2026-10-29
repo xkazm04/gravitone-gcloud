@@ -104,9 +104,11 @@ describe("what a press plays", () => {
 });
 
 describe("the studio's address", () => {
-  it("defaults to desk and the first session; an unknown variant reads as desk", () => {
-    expect(parseStudioUrl({ s: "studio" })).toEqual({ variant: "desk", session: null, offline: false });
-    expect(parseStudioUrl({ v: "nope", session: "vlog-beat", agent: "offline" })).toEqual({ variant: "desk", session: "vlog-beat", offline: true });
-    expect(studioHref({ variant: "stage", session: "game-menu", offline: true })).toBe("/audio?s=studio&v=stage&session=game-menu&agent=offline");
+  it("defaults to the live ledger and the newest conversation; one view, so a stale v= is ignored", () => {
+    expect(parseStudioUrl({ s: "studio" })).toEqual({ session: null, offline: false, source: "live" });
+    expect(parseStudioUrl({ v: "stage", session: "vlog-beat", agent: "offline", source: "fixture" })).toEqual({ session: "vlog-beat", offline: true, source: "fixture" });
+    expect(parseStudioUrl({ source: "nope" }).source).toBe("live");
+    expect(studioHref({ session: "game-menu", offline: true, source: "fixture" })).toBe("/audio?s=studio&session=game-menu&agent=offline&source=fixture");
+    expect(studioHref({ session: null, offline: false, source: "live" })).toBe("/audio?s=studio");
   });
 });

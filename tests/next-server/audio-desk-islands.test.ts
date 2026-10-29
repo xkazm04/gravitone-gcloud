@@ -19,10 +19,8 @@
 // media element's promise rule: pause() while a play() is pending rejects that play with an
 // AbortError. A stop pressed while the take is still loading is the person's own stop, never a
 // failure line (media-playback transport-contract: a failure is a play that did not happen).
-//
-// THE COMPOSER'S HAND (./AudioLane.tsx), the island itself through the same dispatcher (its JSX is
-// only walked for the TermRail's props): a hand is drawn the moment it is set, and a hand the store
-// refuses - or whose request never comes back - is taken off again, never left drawn.
+// (The composer's hand on the term rail retired with /audio's compose UI, spark audio-agent-studio
+// stage S2; the store's hand write, ./actions.ts setHand, stays.)
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -31,12 +29,9 @@ const toasts = vi.hoisted((): string[] => []);
 vi.mock("../../app/(studio)/_shell/Providers.tsx", () => ({ useShell: () => ({ toast: (w: string) => toasts.push(w) }) }));
 vi.mock("@gt/ui/keymap/dispatch", async (orig) => ({ ...(await orig<object>()), useKeys: () => {} }));
 
-import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
-
-import type { Hand, Term } from "@gt/ui/components/audio/recipe.ts";
+import type { PointerEvent as ReactPointerEvent } from "react";
 
 import { answered, inFlight } from "../../app/(studio)/audio/_audio/Arrange.tsx";
-import { AudioLane, type AudioActs } from "../../app/(studio)/audio/_audio/AudioLane.tsx";
 import { useCardDrag } from "../../app/(studio)/audio/_audio/useCardDrag.ts";
 import { useTransport } from "../../app/(studio)/audio/_audio/useTransport.ts";
 import { harness } from "../golden-path/_studio/hooks.ts";
@@ -204,59 +199,5 @@ describe("useTransport - a stop is not a failure", () => {
     expect(fails).toEqual([]);
     expect([after.playing, FakeAudio.last?.src]).toEqual(["b", "/b.wav"]);
     h.unmount();
-  });
-});
-
-// ── the composer's hand ──
-
-type Rail = { readonly terms: readonly Term[]; readonly onHand: (id: string, h: Hand) => void };
-function railOf(node: ReactNode): Rail | null {
-  if (Array.isArray(node)) {
-    for (const n of node) {
-      const r = railOf(n as ReactNode);
-      if (r !== null) return r;
-    }
-    return null;
-  }
-  if (typeof node !== "object" || node === null || !("props" in node)) return null;
-  const p = node.props as Record<string, unknown>;
-  if (typeof p["onHand"] === "function" && Array.isArray(p["terms"])) return p as unknown as Rail;
-  return railOf(p["children"] as ReactNode);
-}
-
-const term: Term = { id: "genre:ambient", term: "ambient", facet: "genre", n: 4, kept: 3, rejected: 1, keepRate: 0.75, stance: null, phrase: "", topDefect: null };
-const view = { terms: { ok: true, value: [term] }, takes: { ok: true, value: [] }, concept: [], keys: [], drafts: { ok: true, value: [] }, references: [] } as const;
-
-async function lane(setHand: AudioActs["setHand"]) {
-  toasts.length = 0;
-  const acts = { setHand, sunoReceipt: vi.fn(), sunoConfirm: vi.fn() } as unknown as AudioActs;
-  const h = harness(() => AudioLane({ view, nowMs: 0, acts, engines: [], canSend: true, audible: [] }), { settleWhen: "stable" });
-  const rail = async (): Promise<Rail> => {
-    const r = railOf(await h.settleUp());
-    if (r === null) throw new Error("no TermRail in the lane");
-    return r;
-  };
-  return rail;
-}
-
-describe("AudioLane - the hand a person sets", () => {
-  it("a hand the store refuses is taken off the rail again, with the store's words", async () => {
-    const rail = await lane(async () => ({ ok: false, error: { error: "no term genre:ambient", code: "invalid" } }));
-    (await rail()).onHand("genre:ambient", { stance: "prefer" });
-    expect((await rail()).terms[0]?.stance).toBeNull();
-    expect(toasts).toEqual(["no term genre:ambient"]);
-  });
-
-  it("a hand whose request never came back is taken off too, and said", async () => {
-    const rail = await lane(() => Promise.reject(new Error("Failed to fetch")));
-    (await rail()).onHand("genre:ambient", { stance: "avoid" });
-    expect((await rail()).terms[0]?.stance).toBeNull();
-    expect(toasts).toEqual(["Failed to fetch"]);
-  });
-
-  it("a hand the store takes stays drawn", async () => {
-    const rail = await lane(async () => ({ ok: true, value: { id: "genre:ambient" } }));
-    (await rail()).onHand("genre:ambient", { stance: "prefer" });
-    expect((await rail()).terms[0]?.stance).toBe("prefer");
   });
 });

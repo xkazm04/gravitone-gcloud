@@ -20,9 +20,7 @@ import { RowFoot, RowHead } from "@gt/ui/components/audio/RowHead.tsx";
 import { TakeCard, type CardTake } from "@gt/ui/components/audio/TakeCard.tsx";
 import { DraftList, type DraftRow } from "@gt/ui/components/audio/DraftList.tsx";
 import { ReferenceList, type ReferenceRow } from "@gt/ui/components/audio/ReferenceList.tsx";
-import { handsOf, termId, type Hand, type Seed, type Term } from "@gt/ui/components/audio/recipe.ts";
-import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
-import { TermRail } from "@gt/ui/components/audio/TermRail.tsx";
+import { termId, type Seed, type Term } from "@gt/ui/components/audio/recipe.ts";
 import { VariationList } from "@gt/ui/components/audio/VariationList.tsx";
 import { variationsOfSeed } from "@gt/ui/components/audio/variations.ts";
 import { TECHNIQUES } from "@gt/ui/components/audio/batch.ts";
@@ -37,7 +35,7 @@ import { LessonForm } from "@gt/ui/components/audio/LessonForm.tsx";
 import { LessonList, type LessonRow } from "@gt/ui/components/audio/LessonList.tsx";
 
 import { inert } from "./ContractHooks.tsx";
-import { BatchSpecimen, BRIEF_MISSED, BRIEF_MUSIC, BRIEF_SFX, LocalBandSpecimen, RubricSpecimen, StrengthSpecimen } from "./LocalBandSpecimen.tsx";
+import { BatchSpecimen, BRIEF_MISSED, BRIEF_MUSIC, BRIEF_SFX, RubricSpecimen, StrengthSpecimen } from "./LocalBandSpecimen.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
 
 /** A quarter second of silence as a WAV data URL: a source the browser can open, so the play control is real. */
@@ -183,22 +181,14 @@ function ArrangeSpecimen() {
   );
 }
 
+// The seed composer and its term rail retired with /audio's compose UI (spark audio-agent-studio,
+// stage S2); the variations list stays a kit shape.
 function ComposerSpecimen() {
   const [seed, setSeed] = useState<Seed>(SEED);
-  const [hands, setHands] = useState<Readonly<Record<string, Hand>>>(() => handsOf(TERMS));
-  const terms = useMemo(() => TERMS.map((x) => ({ ...x, stance: hands[x.id]?.stance ?? null, phrase: hands[x.id]?.phrase ?? "" })), [hands]);
   return (
-    <>
-      <Spec names={["TermRail"]} source="audio/TermRail.tsx · v1 app/library/audio/Terms.tsx">
-        <TermRail terms={terms} onPick={inert} onHand={(id, h) => setHands((m) => ({ ...m, [id]: h }))} />
-      </Spec>
-      <Spec names={["SeedComposer"]} source="audio/SeedComposer.tsx · v1 InspectorComposer.tsx" wide>
-        <SeedComposer seed={seed} terms={terms} hands={hands} from="Whisper network" keys={["G major", "E minor"]} onSeed={setSeed} onSend={inert} busy={false} onCopy={inert} />
-      </Spec>
-      <Spec names={["VariationList"]} source="audio/VariationList.tsx · v1 InspectorVariations.tsx" wide>
-        <VariationList list={variationsOfSeed(seed, terms)} onLoad={(v) => setSeed(v.seed)} onSend={inert} busy={false} />
-      </Spec>
-    </>
+    <Spec names={["VariationList"]} source="audio/VariationList.tsx · v1 InspectorVariations.tsx" wide>
+      <VariationList list={variationsOfSeed(seed, TERMS)} onLoad={(v) => setSeed(v.seed)} onSend={inert} busy={false} />
+    </Spec>
   );
 }
 
@@ -383,7 +373,6 @@ export function AudioSection() {
       <StrengthSpecimen />
       <HuntSpecimen />
       <LessonSpecimen />
-      <LocalBandSpecimen />
     </Section>
   );
 }

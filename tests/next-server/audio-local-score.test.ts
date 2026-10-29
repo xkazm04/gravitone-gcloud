@@ -4,8 +4,6 @@
 
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
-import { createElement as h } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -25,7 +23,6 @@ const ROOT = vi.hoisted(() => {
 
 import { parseScoreSpec, type ScoreSpec } from "@gt/domain/audio.score";
 import { WORKED_SCORE_TEMPLATES, compileSeedToScore, templateById } from "@gt/domain/audio.score.templates";
-import { LocalBandStudio } from "@gt/ui/components/audio/LocalBandStudio.tsx";
 import { applyTasteSteer, describeStemChoice, explainScoreChoices, fxChainForPreset, fxPresetOf, sketchDraftFromBrief } from "@gt/ui/components/audio/localBand.ts";
 import { readArrange } from "../../app/(studio)/audio/_audio/arrangeRead.ts";
 import { readLocalBand } from "../../app/(studio)/audio/_audio/localRead.ts";
@@ -328,7 +325,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     if (!refusedMidi.ok) expect(refusedMidi.error.message).toContain("silent");
   }, 180_000);
 
-  it("renders LocalBandStudio over readLocalBand() with taste steering, solo/mute, fx presets, receipt door, and arrangement breakdown", async () => {
+  it("reads the local band (readLocalBand) and steers it: taste steering, fx presets, a sketched draft, stem choices in words", async () => {
     const view = await readLocalBand();
     expect(view.templates.length).toBe(4);
     expect(view.catalog.length).toBe(16);
@@ -365,29 +362,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     const refusedDesc = describeStemChoice("minigrand-vst3", null, view.catalog);
     expect(refusedDesc.tone).toBe("rose");
     expect(refusedDesc.text).toContain("silent");
-
-    const html = renderToStaticMarkup(
-      h(LocalBandStudio, {
-        templates: view.templates,
-        catalog: view.catalog,
-        takes: view.takes,
-        onRender: () => {},
-        onReceipt: () => {},
-        onSwapStem: () => {},
-        onAudition: () => {},
-        onPromote: () => {},
-      }),
-    );
-    expect(html).toContain("local band · 4-stem studio");
-    expect(html).toContain("Receipt ($0)");
-    expect(html).toContain("softer under voiceover");
-    expect(html).toContain("Chill Lo-Fi Groove");
-    expect(html).toContain("reused bit-exact");
-    expect(html).toContain("mute drums stem");
-    expect(html).toContain("solo drums stem");
-    expect(html).toContain("REAPER .rpp");
-    expect(html).toContain("AIR MiniGrand VST3");
-    expect(html).toContain("instrument render is silent");
-    expect(html).toContain("AIR Hybrid 3 VST3");
+    // (The LocalBandStudio form that drew these retired with /audio's compose UI, spark
+    // audio-agent-studio stage S2; the studio's agent drives the same engine through the MCP ops.)
   });
 });

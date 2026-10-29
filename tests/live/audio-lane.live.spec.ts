@@ -2,13 +2,10 @@
 //
 // Owner ruling 2026-10-17: v1's Library Audio tab (the Recipe Book) is rebuilt as the Audio lane's
 // composer surface, and the Floor's audio composer launches from a sentence. Driven here:
-//   · /audio draws the terms (the ledger's one vocabulary), the composer seeded from a kept take,
-//     its variations, the take's preview / prompt / measured block, the drafts and references;
-//   · a hand on a term is written to the sound store (hands.json) and floats into the composer;
-//   · Send to Suno opens the RECEIPT; ⏎ confirms it: a suno.json proposal + queued record and ONE
-//     dry box.chrome kernel job under the receipt's id, the draft drawn queued;
 //   · the Floor's audio composer, which until Phase 5 refused its confirm, launches a sentence:
-//     the dry stand-in (no text turn), the same kind of job;
+//     the dry stand-in (no text turn), a suno.json record and ONE dry box.chrome kernel job.
+// (/audio's own composer - terms, seed, variations, Send to Suno - retired with spark
+// audio-agent-studio stage S2: /audio's compose section is the agent studio now.)
 // /kit is not walked here: it reads tokens/source.json from the server's working directory, which
 // in this universe is the temp dir; tests/live/kit.live.spec.ts walks every @gt/ui export there.
 //
@@ -134,50 +131,6 @@ test.afterAll(() => {
     else server.kill("SIGTERM");
   }
   rmSync(U, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
-});
-
-test("the composer surface draws the ledger's terms, a seed from a kept take and what that take is", async ({ page }) => {
-  await page.goto("/audio");
-  await expect(page.getByRole("region", { name: "composer" })).toBeVisible();
-  // Terms come from the ledger, each with its keep rate; the seed is a kept take's words.
-  await expect(page.locator('[aria-label="genre terms"] li').first()).toBeVisible();
-  await expect(page.getByTestId("audio-prompt")).toContainText("[Instrumental]");
-  await expect(page.getByRole("region", { name: "variations" })).toBeVisible();
-  // The take the seed came from: preview with a play control, its prompt, the measured grid.
-  await expect(page.getByRole("button", { name: /^play / })).toBeVisible();
-  await expect(page.getByRole("region", { name: "seed take" }).locator("dt")).toHaveCount(6);
-  await expect(page.getByRole("region", { name: "references" })).toContainText("French 79");
-  await shot(page, "audio-1440");
-});
-
-test("a hand on a term is the store's, and a preferred term floats into the composer", async ({ page }) => {
-  await page.goto("/audio");
-  const first = page.locator('[aria-label="genre terms"] li').first();
-  const name = (await first.getByRole("button").first().innerText()).replace(/^[★⊘]\s*/, "").trim();
-  await page.getByRole("button", { name: `prefer ${name}`, exact: true }).click();
-  await expect.poll(() => (existsSync(path.join(SOUND(), "hands.json")) ? readFileSync(path.join(SOUND(), "hands.json"), "utf8") : "")).toContain(`"genre:${name.toLowerCase()}"`);
-  await page.getByRole("button", { name: "Blank" }).click();
-  await expect(page.getByRole("button", { name: `add preferred ${name}` })).toBeVisible();
-});
-
-test("Send to Suno is a receipt, then one dry box.chrome job under the receipt's id", async ({ page }) => {
-  await page.goto("/audio");
-  const before = existsSync(path.join(SOUND(), "suno.json")) ? sunoJobs().length : 0;
-  await page.getByRole("button", { name: "Send to Suno" }).click();
-  await expect(page.getByText("Render box · Chrome")).toBeVisible();
-  // The receipt wrote nothing.
-  expect(existsSync(path.join(SOUND(), "suno.json")) ? sunoJobs().length : 0).toBe(before);
-  await shot(page, "audio-receipt");
-  await page.keyboard.press("Enter");
-  await expect(page.getByText(/suno · launched · suno\.sj-lane-/)).toBeVisible();
-  const made = sunoJobs().slice(before);
-  expect(made).toHaveLength(1);
-  const j = made[0];
-  if (j === undefined) throw new Error("no record");
-  expect(j).toMatchObject({ state: "queued", job: `job:run:suno.${j.id}` });
-  expect(kernelJob(`job:run:suno.${j.id}`)).toEqual({ producer: "suno", lane: "box.chrome", mode: "dry" });
-  await expect(page.getByRole("region", { name: "drafts" }).locator("li").first()).toContainText("queued");
-  await shot(page, "audio-launched");
 });
 
 test("the Floor's audio composer launches a sentence as a Suno take (dry: no text turn)", async ({ page }) => {
