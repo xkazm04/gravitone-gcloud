@@ -3,6 +3,7 @@ import { z } from "zod";
 import { COST_SOURCES } from "./event.ts";
 import { audioIntentSchema } from "./audio.intent.schema.ts";
 import { STUDIO_MAX, STUDIO_ROLES, STUDIO_TURN_VERSION, type StudioActionKind, type StudioNodeKind } from "./audio.studio.kinds.ts";
+import { SUNO_FIELDS, SUNO_LIMITS, SUNO_MODELS, TASTE_LEANS, VERDICT_CLIPS, VERDICT_OFF } from "./audio.suno.ts";
 
 // THE AUDIO STUDIO'S TURN - the closed contract between the agent that drives the studio from outside
 // (Athena or Claude Code through the MCP door; spark audio-agent-studio) and the page that renders it.
@@ -69,10 +70,27 @@ export type StudioCandidate = z.output<typeof studioCandidateSchema>;
 
 const sideSchema = z.strictObject({ label, says: line, audio: studioAudioSchema.optional(), settle: line });
 
+/** A Suno slider, 0..100. */
+const slider = z.number().int().min(0).max(100);
+
+/** One field a prompt version changed against its parent, and why. */
+export const sunoChangeSchema = z.strictObject({
+  field: z.enum(SUNO_FIELDS),
+  was: z.string().trim().min(1).max(200).optional(),
+  now: z.string().trim().min(1).max(200),
+  why: line,
+});
+export type SunoChange = z.output<typeof sunoChangeSchema>;
+
+/** A taste line the agent proposes from the person's verdicts; only a confirmed one persists (`audio.taste`). */
+export const studioTasteRowSchema = z.strictObject({ id, line: z.string().trim().min(1).max(120), lean: z.enum(TASTE_LEANS) });
+
 export const STUDIO_NODE_SCHEMAS = {
   track: z.strictObject({
     ...nodeBase, kind: z.literal("track"), takeId: z.string().min(1).max(120).optional(), mix: studioAudioSchema,
     bpm: z.number().min(20).max(400).optional(), key: z.string().min(1).max(40).optional(), lengthS: z.number().positive().max(3600).optional(),
+    /** The Suno prompt this audio answers: a local `sketch` of it, or the person's uploaded `suno` take (clip a or b). */
+    answers: z.strictObject({ promptId: id, as: z.enum(["sketch", "suno"]), clip: z.enum(["a", "b"]).optional() }).optional(),
   }),
   stems: z.strictObject({ ...nodeBase, kind: z.literal("stems"), takeId: z.string().min(1).max(120).optional(), rows: z.array(studioStemSchema).min(1).max(STUDIO_MAX.stems) }),
   sections: z.strictObject({ ...nodeBase, kind: z.literal("sections"), rows: z.array(studioSectionSchema).min(1).max(STUDIO_MAX.sections) }),
@@ -98,6 +116,22 @@ export const STUDIO_NODE_SCHEMAS = {
     ...nodeBase, kind: z.literal("measures"), takeId: z.string().min(1).max(120).optional(),
     rows: z.array(z.strictObject({ label: z.string().trim().min(1).max(40), value: z.string().trim().min(1).max(60), tone: z.enum(["ok", "warn", "bad"]).optional() })).min(1).max(STUDIO_MAX.measures),
   }),
+  /** A prompt for the person to paste into suno.com/create by hand (the studio never drives Suno).
+   *  `promptId` is the version's stable name; `parent` the version it revises, with `changes` and the
+   *  verdict it answers (`because`). Fields are refused past SUNO_LIMITS, never clipped. */
+  suno_prompt: z.strictObject({
+    ...nodeBase, kind: z.literal("suno_prompt"), promptId: id, parent: id.optional(),
+    name: z.string().trim().min(1).max(SUNO_LIMITS.title).optional(),
+    style: z.string().trim().min(1).max(SUNO_LIMITS.style),
+    lyrics: z.string().trim().min(1).max(SUNO_LIMITS.lyrics).optional(),
+    exclude: z.string().trim().min(1).max(SUNO_LIMITS.exclude).optional(),
+    instrumental: z.boolean(),
+    model: z.enum(SUNO_MODELS),
+    settings: z.strictObject({ weirdness: slider.optional(), styleInfluence: slider.optional(), variety: slider.optional() }),
+    changes: z.array(sunoChangeSchema).min(1).max(STUDIO_MAX.changes).optional(),
+    because: line.optional(),
+  }),
+  taste: z.strictObject({ ...nodeBase, kind: z.literal("taste"), rows: z.array(studioTasteRowSchema).min(1).max(STUDIO_MAX.taste) }),
 } as const satisfies Record<StudioNodeKind, z.ZodType>;
 
 export type StudioNodeOf<K extends StudioNodeKind> = z.output<(typeof STUDIO_NODE_SCHEMAS)[K]>;
@@ -141,6 +175,15 @@ export const studioTurnEnvelopeSchema = z.strictObject({
   /** A USER turn's "keep this mix": the mixer settings heard, by stem id, for the agent to bake into
    *  the score (stage S2). The door drops it from an agent turn. */
   mix: z.record(id, z.strictObject({ muted: z.boolean().optional(), solo: z.boolean().optional(), levelDb: z.number().min(-60).max(12).optional(), pan: z.number().min(-1).max(1).optional() })).optional(),
+  /** A USER turn's verdict on what a Suno prompt produced (spark suno-advisor). The door drops it from an agent turn. */
+  verdict: z.strictObject({
+    promptId: id,
+    clip: z.enum(VERDICT_CLIPS),
+    keep: z.boolean().optional(),
+    off: z.array(z.enum(VERDICT_OFF)).min(1).max(VERDICT_OFF.length).optional(),
+  }).optional(),
+  /** A USER turn's uploaded take (POST /audio/studio/take returned it). The door drops it from an agent turn. */
+  takeId: z.string().min(1).max(120).optional(),
   show: z.array(z.unknown()).max(STUDIO_MAX.nodes * 2).optional(),
   actions: z.array(z.unknown()).max(STUDIO_MAX.actions * 2).optional(),
 });

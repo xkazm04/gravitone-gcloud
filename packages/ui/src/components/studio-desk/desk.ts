@@ -18,9 +18,12 @@ export type DeskPieces = { readonly [K in StudioNodeKind]: readonly Placed<K>[] 
  */
 export const DESK_CARRY: Readonly<Record<StudioNodeKind, boolean>> = {
   track: true, sections: true, stems: true, heard: true, candidates: false, pull: false, duel: false, measures: false,
+  // The living Suno prompt stands until a newer version replaces it; proposed taste belongs to its turn.
+  suno_prompt: true, taste: false,
 };
 
-const KINDS: readonly StudioNodeKind[] = ["track", "stems", "sections", "candidates", "heard", "pull", "duel", "measures"];
+// Every kind, typed so a kind added to the vocabulary and missed here is a type error, not a silent absence.
+const KINDS = Object.keys(DESK_CARRY) as readonly StudioNodeKind[];
 
 function nodesOf<K extends StudioNodeKind>(t: ParsedTurn, kind: K): StudioNodeOf<K>[] {
   return t.turn.show.filter((n): n is StudioNodeOf<K> => n.kind === kind);

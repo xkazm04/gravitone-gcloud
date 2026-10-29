@@ -54,8 +54,8 @@ describe("cards", () => {
 });
 
 describe("carry-over (the host rule, per card)", () => {
-  it("track, sections, stems and heard carry; candidates, pull, duel and measures do not", () => {
-    expect(Object.entries(CARRY).filter(([, c]) => c).map(([k]) => k).sort()).toEqual(["heard", "sections", "stems", "track"]);
+  it("track, sections, stems, heard and the Suno prompt carry; candidates, pull, duel, measures and taste do not", () => {
+    expect(Object.entries(CARRY).filter(([, c]) => c).map(([k]) => k).sort()).toEqual(["heard", "sections", "stems", "suno_prompt", "track"]);
   });
 
   it("a choices-only answer keeps the arrangement and the sentence from the answer before, marked carried", () => {

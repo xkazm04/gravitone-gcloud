@@ -21,8 +21,12 @@ import { answers, NO_ANSWER, OFFLINE_LINE, openingCursor, replyCursor, THINK_MS,
 import { dockStateOf, NOBODY_LINE, WAITING_LINE } from "./live.ts";
 import { soundOf } from "./press.ts";
 import { askOf, keptMix, mixChanges, mixText, newestStems, newTurnId, userTurn, type UserAsk } from "./turns.ts";
-import type { Dispatch, ParsedTurn, RefusedTurn, StudioSource, VariantProps } from "./types.ts";
-import { STUDIO_VIEW } from "./variants.ts";
+import type { StudioTakeFacts, StudioTasteLine, TasteLean } from "@gt/domain/audio.suno";
+
+import type { StudioView } from "../url.ts";
+import type { Dispatch, ParsedTurn, RefusedTurn, StudioSource, SunoHost, VariantProps } from "./types.ts";
+import { uploadTake } from "./upload.ts";
+import { STUDIO_VIEWS_BY } from "./variants.ts";
 import s from "./studio.module.css";
 
 export type HostSessionData = {
@@ -34,11 +38,18 @@ export type HostSessionData = {
 };
 
 type Filed = { readonly ok: true; readonly value: { readonly session: string } } | { readonly ok: false; readonly error: { readonly error: string } };
-/** The two Server Actions the live room calls (../_live/acts.ts), injected so the room stays testable. */
+type Answered<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: { readonly error: string } };
+/** The Server Actions the live room calls (../_live/acts.ts, ../_live/sunoActs.ts), injected so the room stays testable. */
 export type StudioActs = {
   readonly say: (input: { readonly session: string; readonly turn: unknown }) => Promise<Filed>;
   readonly newSession: () => Promise<Filed>;
+  readonly listen: (input: { readonly takeId: string }) => Promise<Answered<StudioTakeFacts>>;
+  readonly keepTaste: (input: { readonly line: string; readonly lean: TasteLean; readonly session?: string; readonly turn?: string }) => Promise<Answered<readonly StudioTasteLine[]>>;
+  readonly dropTaste: (input: { readonly line: string }) => Promise<Answered<readonly StudioTasteLine[]>>;
 };
+
+/** What a room hands the stage for Suno: facts and taste from the read, and the presses that are not a message. */
+type SunoOps = Omit<SunoHost, "sendVerdict"> & { readonly upload: (file: File, promptId: string, clip?: "a" | "b") => Promise<{ readonly takeId: string } | string> };
 
 type Talk = {
   readonly turns: readonly ParsedTurn[];
@@ -50,7 +61,18 @@ type Talk = {
   readonly send: (ask: UserAsk) => Promise<boolean>;
 };
 
-type RoomProps = { readonly session: HostSessionData; readonly offline: boolean; readonly presence: "listening" | "nobody"; readonly renders: "ready" | "missing" };
+type RoomProps = {
+  readonly session: HostSessionData;
+  readonly offline: boolean;
+  readonly presence: "listening" | "nobody";
+  readonly renders: "ready" | "missing";
+  /** Spark suno-advisor: the read's take facts and taste, and the S1 composition. */
+  readonly takes: Readonly<Record<string, StudioTakeFacts>>;
+  readonly taste: readonly StudioTasteLine[];
+  readonly view: StudioView;
+};
+
+const words = (r: { readonly ok: true } | { readonly ok: false; readonly error: { readonly error: string } }): string | null => (r.ok ? null : r.error.error);
 
 export function LiveRoom({ acts, onSession, ...room }: RoomProps & { readonly acts: StudioActs; readonly onSession: (id: string) => void }) {
   const router = useRouter();
@@ -98,7 +120,30 @@ export function LiveRoom({ acts, onSession, ...room }: RoomProps & { readonly ac
     [acts, busy, offline, onSession, router, session.id, turns.length],
   );
   const talk: Talk = { turns, cursor: turns.length, thinking, notice, setNotice, send };
-  return <Stage {...room} source="live" talk={talk} />;
+  const suno: SunoOps = {
+    takes: room.takes,
+    taste: room.taste,
+    listen: async (takeId) => {
+      const r = await acts.listen({ takeId });
+      if (r.ok) router.refresh();
+      return words(r);
+    },
+    keepTaste: async (row, turnId) => {
+      const r = await acts.keepTaste({ ...row, session: session.id, ...(turnId !== undefined ? { turn: turnId } : {}) });
+      if (r.ok) router.refresh();
+      return words(r);
+    },
+    dropTaste: async (line) => {
+      const r = await acts.dropTaste({ line });
+      if (r.ok) router.refresh();
+      return words(r);
+    },
+    upload: async (file, promptId, clip) => {
+      const r = await uploadTake({ file, session: session.id, promptId, ...(clip !== undefined ? { clip } : {}) });
+      return r.ok ? { takeId: r.takeId } : r.error;
+    },
+  };
+  return <Stage {...room} source="live" talk={talk} suno={suno} />;
 }
 
 export function FixtureRoom(room: RoomProps) {
@@ -137,10 +182,13 @@ export function FixtureRoom(room: RoomProps) {
     [all, cursor, room.offline, thinking],
   );
   const turns = useMemo(() => all.slice(0, cursor), [all, cursor]);
-  return <Stage {...room} source="fixture" talk={{ turns, cursor, thinking, notice, setNotice, send }} />;
+  // The scripted sessions file nothing: a press that would write answers in words (WP3 may script more).
+  const scripted = async (): Promise<string | null> => "the scripted session keeps nothing";
+  const suno: SunoOps = { takes: room.takes, taste: room.taste, listen: scripted, keepTaste: scripted, dropTaste: scripted, upload: async () => "the scripted session takes no upload" };
+  return <Stage {...room} source="fixture" talk={{ turns, cursor, thinking, notice, setNotice, send }} suno={suno} />;
 }
 
-function Stage({ session, offline, presence, renders, source, talk }: RoomProps & { readonly source: StudioSource; readonly talk: Talk }) {
+function Stage({ session, offline, presence, renders, source, talk, suno, view }: RoomProps & { readonly source: StudioSource; readonly talk: Talk; readonly suno: SunoOps }) {
   const [draft, setDraft] = useState("");
   const transport = useMix();
   const { turns, send, setNotice } = talk;
@@ -177,7 +225,23 @@ function Stage({ session, offline, presence, renders, source, talk }: RoomProps 
   const state = dockStateOf(offline, talk.thinking, source === "fixture" ? "listening" : presence);
   const waiting = source === "live" && !offline && presence === "nobody";
   const notice = talk.notice ?? (waiting ? (talk.thinking ? WAITING_LINE : NOBODY_LINE) : null);
-  const View = STUDIO_VIEW;
+  const sunoHost = useMemo<SunoHost>(() => {
+    const { upload, ...rest } = suno;
+    return {
+      ...rest,
+      sendVerdict: async ({ verdict, text, file, clip }) => {
+        let takeId: string | undefined;
+        if (file !== undefined) {
+          const up = await upload(file, verdict.promptId, clip);
+          if (typeof up === "string") return up;
+          takeId = up.takeId;
+        }
+        const went = await send({ text, verdict, ...(takeId !== undefined ? { takeId } : {}) });
+        return went ? null : "the verdict was not sent";
+      },
+    };
+  }, [suno, send]);
+  const View = STUDIO_VIEWS_BY[view];
   const props: VariantProps = {
     session: { id: session.id, title: session.title, turns, cursor: talk.cursor, visible, source, refused: session.refused ?? [] },
     dock: { state, reply: visible?.turn.text ?? null, notice, presence: source === "fixture" ? "listening" : presence },
@@ -187,6 +251,7 @@ function Stage({ session, offline, presence, renders, source, talk }: RoomProps 
     renders,
     keepMix,
     mixChanges: changes,
+    suno: sunoHost,
   };
   return (
     <>

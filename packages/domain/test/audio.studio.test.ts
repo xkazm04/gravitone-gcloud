@@ -19,6 +19,13 @@ const full = () => ({
     { id: "mood", kind: "pull", question: "calm or hopeful?", sides: [{ label: "calm", says: "slower, darker", settle: "keep it calm" }, { label: "hopeful", says: "brighter lift", settle: "lean hopeful" }] },
     { id: "ab", kind: "duel", question: "which drums?", a: { label: "brushed", audio: mix }, b: { label: "tight", audio: mix } },
     { id: "m", kind: "measures", rows: [{ label: "loudness", value: "-14.0 LUFS", tone: "ok" }] },
+    {
+      id: "p2", kind: "suno_prompt", promptId: "p2", parent: "p1", name: "Night drive", style: "synthwave, warm analog bass, 96 bpm",
+      lyrics: "[Intro]\n[Verse]\nlights on the overpass", exclude: "trap hats", instrumental: false, model: "v6",
+      settings: { weirdness: 40, styleInfluence: 70, variety: 0 },
+      changes: [{ field: "style", was: "synthwave, 120 bpm", now: "synthwave, 96 bpm", why: "the verdict said too fast" }], because: "too fast, vocals buried",
+    },
+    { id: "taste", kind: "taste", rows: [{ id: "t1", line: "dry male vocals", lean: "like" }, { id: "t2", line: "trap hats", lean: "dislike" }] },
   ],
   actions: [
     { id: "a1", kind: "play", label: "play", node: "track" },
@@ -42,7 +49,7 @@ describe("parseStudioTurn", () => {
   it("passes a turn that uses every node kind, untouched", () => {
     const { turn, dropped } = parsed(full());
     expect(dropped).toEqual([]);
-    expect(turn.show.map((n) => n.kind)).toEqual(["track", "sections", "stems", "candidates", "heard", "pull", "duel", "measures"]);
+    expect(turn.show.map((n) => n.kind)).toEqual(["track", "sections", "stems", "candidates", "heard", "pull", "duel", "measures", "suno_prompt", "taste"]);
     expect(turn.actions).toHaveLength(8);
   });
 
@@ -56,7 +63,7 @@ describe("parseStudioTurn", () => {
     t.show.splice(1, 0, { id: "x", kind: "spectrogram" } as never);
     const { turn, dropped } = parsed(t);
     expect(dropped).toEqual([{ at: "show[1]", kind: "spectrogram", reason: 'unknown kind "spectrogram"' }]);
-    expect(turn.show).toHaveLength(8);
+    expect(turn.show).toHaveLength(10);
   });
 
   it("drops a node with a bad field, naming its path", () => {
@@ -116,7 +123,7 @@ describe("parseStudioTurn", () => {
 
   it("caps the pieces and the actions, dropping the overflow", () => {
     const t = full();
-    for (let i = 0; i < 6; i++) t.show.push({ id: `m${i}`, kind: "measures", rows: [{ label: "a", value: "b" }] } as never);
+    for (let i = 0; i < 4; i++) t.show.push({ id: `m${i}`, kind: "measures", rows: [{ label: "a", value: "b" }] } as never);
     const { turn, dropped } = parsed(t);
     expect(turn.show).toHaveLength(12);
     expect(dropped.filter((d) => d.reason === "past the 12-piece cap")).toHaveLength(2);
@@ -142,6 +149,33 @@ describe("parseStudioTurn", () => {
     expect(agentTurn.turn.mix).toBeUndefined();
     expect(agentTurn.dropped).toEqual([{ at: "mix", kind: "mix", reason: "an agent turn carries no mix" }]);
   });
+
+  it("keeps a user turn's Suno verdict and uploaded take, and drops both from an agent turn", () => {
+    const verdict = { promptId: "p2", clip: "a", keep: false, off: ["tempo", "vocals"] };
+    const user = parsed({ v: 1, id: "u3", seq: 4, at: "2026-10-29T10:00:00Z", from: "user", text: "too fast", verdict, takeId: "st_9" });
+    expect(user.turn.verdict).toEqual(verdict);
+    expect(user.turn.takeId).toBe("st_9");
+    const agentTurn = parsed({ ...full(), verdict, takeId: "st_9" });
+    expect(agentTurn.turn.verdict).toBeUndefined();
+    expect(agentTurn.turn.takeId).toBeUndefined();
+    expect(agentTurn.dropped.map((d) => d.at)).toEqual(["verdict", "takeId"]);
+  });
+
+  it("holds a Suno prompt to its lineage and its field limits, and taste lines to unique ids", () => {
+    const t = full();
+    const prompt = t.show[8] as Record<string, unknown>;
+    t.show.push({ ...prompt, id: "self", promptId: "p3", parent: "p3" } as never);
+    t.show.push({ ...prompt, id: "orphan", promptId: "p4", parent: undefined } as never);
+    t.show.push({ ...prompt, id: "long", promptId: "p5", style: "x".repeat(1001) } as never);
+    const { dropped } = parsed(t);
+    expect(dropped.map((d) => d.at)).toEqual(["show[10]", "show[11]", "show[12]"]);
+    expect(dropped[0]?.reason).toBe('prompt "p3" names itself as its parent');
+    expect(dropped[1]?.reason).toBe('prompt "p4" lists changes but no parent to change from');
+    expect(dropped[2]?.reason).toMatch(/style.*1000/);
+    const twice = full();
+    (twice.show[9] as { rows: { id: string }[] }).rows[1]!.id = "t1";
+    expect(parsed(twice).dropped).toEqual([{ at: "show[9]", kind: "taste", reason: 'taste line "t1" appears twice' }]);
+  });
 });
 
 describe("studio ledger events", () => {
@@ -151,7 +185,7 @@ describe("studio ledger events", () => {
     const s1 = parseStudioEvent(STUDIO_EVENTS.say, { session: "calm-bed", turn: say });
     expect(s1.ok && s1.value.parsed.turn.text).toBe("something calm");
     const t1 = parseStudioEvent(STUDIO_EVENTS.turn, { session: "calm-bed", turn: full() });
-    expect(t1.ok && t1.value.parsed.turn.show).toHaveLength(8);
+    expect(t1.ok && t1.value.parsed.turn.show).toHaveLength(10);
   });
 
   it("refuses a say that carries an agent turn, and a bad session id", () => {

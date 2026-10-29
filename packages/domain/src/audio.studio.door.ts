@@ -39,14 +39,22 @@ const STEM_ACTIONS: readonly StudioActionKind[] = ["swap_stem", "mute", "solo", 
 export function parseStudioTurn(input: unknown): Result<ParsedTurn> {
   const env = parseAt("studio turn", studioTurnEnvelopeSchema, input);
   if (!env.ok) return env;
-  const { show: rawShow = [], actions: rawActions = [], mix, ...rest } = env.value;
+  const { show: rawShow = [], actions: rawActions = [], mix, verdict, takeId, ...rest } = env.value;
   const dropped: StudioDropped[] = [];
   const drop = (at: string, item: unknown, reason: string): void => {
     dropped.push({ at, kind: kindOf(item), reason });
   };
   if (mix !== undefined && rest.from === "agent") dropped.push({ at: "mix", kind: "mix", reason: "an agent turn carries no mix" });
+  if (verdict !== undefined && rest.from === "agent") dropped.push({ at: "verdict", kind: "verdict", reason: "an agent turn carries no verdict" });
+  if (takeId !== undefined && rest.from === "agent") dropped.push({ at: "takeId", kind: "takeId", reason: "an agent turn carries no uploaded take" });
+  const user = rest.from === "user";
   // `Parsed` widens a record's values to optional; the schema already refused an absent value.
-  const head = mix !== undefined && rest.from === "user" ? { ...rest, mix: mix as NonNullable<StudioTurn["mix"]> } : rest;
+  const head = {
+    ...rest,
+    ...(mix !== undefined && user ? { mix: mix as NonNullable<StudioTurn["mix"]> } : {}),
+    ...(verdict !== undefined && user ? { verdict } : {}),
+    ...(takeId !== undefined && user ? { takeId } : {}),
+  };
   if (head.from === "user" && (rawShow.length > 0 || rawActions.length > 0)) {
     rawShow.forEach((n, i) => drop(`show[${i}]`, n, "a user turn shows nothing"));
     rawActions.forEach((a, i) => drop(`actions[${i}]`, a, "a user turn proposes nothing"));
@@ -101,6 +109,15 @@ function nodeFault(node: StudioNode, rawShow: readonly unknown[]): string | null
     const ids = node.rows.map((r) => r.id);
     const twice = ids.find((x, i) => ids.indexOf(x) !== i);
     if (twice !== undefined) return `candidate "${twice}" appears twice`;
+  }
+  if (node.kind === "suno_prompt") {
+    if (node.parent === node.promptId) return `prompt "${node.promptId}" names itself as its parent`;
+    if (node.changes !== undefined && node.parent === undefined) return `prompt "${node.promptId}" lists changes but no parent to change from`;
+  }
+  if (node.kind === "taste") {
+    const ids = node.rows.map((r) => r.id);
+    const twice = ids.find((x, i) => ids.indexOf(x) !== i);
+    if (twice !== undefined) return `taste line "${twice}" appears twice`;
   }
   return null;
 }

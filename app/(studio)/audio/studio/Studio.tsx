@@ -8,6 +8,7 @@ import { fixturePort } from "./_port/fixture.ts";
 import { ledgerPort } from "./_port/ledger.ts";
 import type { StudioPort } from "./_port/port.ts";
 import { newSessionAct, sayAct } from "./_live/acts.ts";
+import { dropTasteAct, keepTasteAct, listenAct } from "./_live/sunoActs.ts";
 import { readPresence } from "./_live/presence.ts";
 import { StudioHost } from "./_host/StudioHost.tsx";
 import type { StudioUrl } from "./url.ts";
@@ -23,7 +24,9 @@ export async function StudioSection({ url, port }: { readonly url: StudioUrl; re
       note={read.note ?? null}
       head={read.head ?? 0}
       presence={presence}
-      acts={{ say: sayAct, newSession: newSessionAct }}
+      acts={{ say: sayAct, newSession: newSessionAct, listen: listenAct, keepTaste: keepTasteAct, dropTaste: dropTasteAct }}
+      takes={read.takes ?? {}}
+      taste={read.taste ?? []}
     />
   );
 }

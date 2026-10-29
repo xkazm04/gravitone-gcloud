@@ -3,6 +3,7 @@
 // agent's `audio.turn` answers) and the fixture (./fixture.ts, scripted sessions for `&source=fixture`
 // and tests). Types only, so the host island can name them without loading a server module.
 import type { ParsedTurn } from "@gt/domain/audio.studio.door";
+import type { StudioTakeFacts, StudioTasteLine } from "@gt/domain/audio.suno";
 
 import type { StudioSource } from "../url.ts";
 
@@ -28,6 +29,10 @@ export type StudioRead = {
   readonly sessions: readonly StudioPortSession[];
   /** Live only: the ledger's newest seq, where the page's live feed continues from. */
   readonly head?: number;
+  /** Spark suno-advisor: what this server knows of every take a user turn uploaded, by takeId. */
+  readonly takes?: Readonly<Record<string, StudioTakeFacts>>;
+  /** Spark suno-advisor: the confirmed taste profile (folded `audio.taste` events), oldest first. */
+  readonly taste?: readonly StudioTasteLine[];
 };
 
 export type StudioPort = { readonly read: () => Promise<StudioRead> };

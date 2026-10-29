@@ -16,11 +16,12 @@ import type { CardCtx } from "./ctx.ts";
 import { LanesAbsent, RulerAbsent, SectionsRuler, StemLanes } from "./Lanes.tsx";
 import { HeardLine, PullSides } from "./Sentence.tsx";
 import { DuelSwitch, MasterAbsent, MeasureChips, TrackLane } from "./Track.tsx";
+import { SunoPromptStub, TasteStub } from "./Suno.tsx";
 import { TryInstead } from "./TryInstead.tsx";
 import s from "./view.module.css";
 
 /** Where in a card a kind stands. */
-export type CardPlace = "strip" | "ruler" | "master" | "lanes" | "drawer" | "transport" | "chips";
+export type CardPlace = "strip" | "ruler" | "master" | "lanes" | "drawer" | "transport" | "chips" | "prompt" | "taste";
 
 type Entry<K extends StudioNodeKind> = {
   readonly place: CardPlace;
@@ -40,11 +41,13 @@ export const VIEW_REGISTRY = {
   candidates: { place: "drawer", View: TryInstead, Absent: null, broken: "the instruments to try could not be drawn" },
   duel: { place: "transport", View: DuelSwitch, Absent: null, broken: "the comparison could not be drawn" },
   measures: { place: "chips", View: MeasureChips, Absent: null, broken: "the measures could not be drawn" },
+  suno_prompt: { place: "prompt", View: SunoPromptStub, Absent: null, broken: "the Suno prompt could not be drawn" },
+  taste: { place: "taste", View: TasteStub, Absent: null, broken: "the taste lines could not be drawn" },
 } as const satisfies { readonly [K in StudioNodeKind]: Entry<K> };
 
 const REG: { readonly [K in StudioNodeKind]: Entry<K> } = VIEW_REGISTRY;
 /** Kinds a card draws once (its place holds one); the rest are said in the card's notes. */
-export const SINGLE: ReadonlySet<StudioNodeKind> = new Set(["track", "sections", "stems", "heard", "pull", "duel"]);
+export const SINGLE: ReadonlySet<StudioNodeKind> = new Set(["track", "sections", "stems", "heard", "pull", "duel", "suno_prompt"]);
 
 /** One piece's containment: its failure stays in its slot. */
 class Contained extends Component<{ readonly broken: string; readonly children: ReactNode }, { readonly error: string | null }> {

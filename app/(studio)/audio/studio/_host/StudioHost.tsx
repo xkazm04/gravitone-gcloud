@@ -20,6 +20,8 @@ import { SourceTag } from "@gt/ui/components/source/SourceTag.tsx";
 import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 import { usePollBackstop } from "@gt/ui/freshness/useFreshness";
 
+import type { StudioTakeFacts, StudioTasteLine } from "@gt/domain/audio.suno";
+
 import { BACKSTOP_MS, COALESCE_MS, openFeed } from "../../../_shell/liveFeed.ts";
 import { studioHref, type StudioUrl } from "../url.ts";
 import { FixtureRoom, LiveRoom, type HostSessionData, type StudioActs } from "./rooms.tsx";
@@ -38,11 +40,14 @@ export type StudioHostProps = {
   /** Live: is the outside agent listening (read server-side from its token's last use). */
   readonly presence: "listening" | "nobody";
   readonly acts: StudioActs;
+  /** Spark suno-advisor: facts of every uploaded take, and the confirmed taste profile. */
+  readonly takes: Readonly<Record<string, StudioTakeFacts>>;
+  readonly taste: readonly StudioTasteLine[];
 };
 
 const NEW_TITLE = "A new song";
 
-export function StudioHost({ url, sessions, renders, note, head, presence, acts }: StudioHostProps) {
+export function StudioHost({ url, sessions, renders, note, head, presence, acts, takes, taste }: StudioHostProps) {
   const router = useRouter();
   const live = url.source === "live";
   const [made, setMade] = useState<string | null>(null);
@@ -85,9 +90,9 @@ export function StudioHost({ url, sessions, renders, note, head, presence, acts 
       {session === undefined ? (
         <p className={s.empty}>No scripted session to show.</p>
       ) : live ? (
-        <LiveRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence={presence} renders={renders} acts={acts} onSession={(id) => go({ ...url, session: id })} />
+        <LiveRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence={presence} renders={renders} takes={takes} taste={taste} view={url.view ?? "thread"} acts={acts} onSession={(id) => go({ ...url, session: id })} />
       ) : (
-        <FixtureRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence="listening" renders={renders} />
+        <FixtureRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence="listening" renders={renders} takes={takes} taste={taste} view={url.view ?? "thread"} />
       )}
     </div>
   );

@@ -9,7 +9,13 @@ import type { ParsedTurn } from "@gt/domain/audio.studio.door";
 import type { StemMix } from "@gt/ui/components/audio/mix.ts";
 
 /** What the person asks: words, or a pressed proposal (its id and words), or a mix to keep. */
-export type UserAsk = { readonly text: string; readonly action?: string; readonly mix?: NonNullable<StudioTurn["mix"]> };
+export type UserAsk = {
+  readonly text: string;
+  readonly action?: string;
+  readonly mix?: NonNullable<StudioTurn["mix"]>;
+  readonly verdict?: NonNullable<StudioTurn["verdict"]>;
+  readonly takeId?: string;
+};
 
 /** The ask a pressed agent-bound proposal makes: its id, and its words (`say` carries its own). */
 export const askOf = (a: StudioAction): UserAsk => ({ text: a.kind === "say" ? a.text : a.label, action: a.id });
@@ -25,7 +31,7 @@ export function newTurnId(nowMs: number, random: () => number = Math.random): st
 
 /** The raw user turn the `say` action receives; `seq` = how many turns the conversation holds. */
 export function userTurn(ask: UserAsk, id: string, seq: number, at: string): Record<string, unknown> {
-  return { v: 1, id, seq, at, from: "user", text: ask.text.trim(), ...(ask.action !== undefined ? { action: ask.action } : {}), ...(ask.mix !== undefined ? { mix: ask.mix } : {}) };
+  return { v: 1, id, seq, at, from: "user", text: ask.text.trim(), ...(ask.action !== undefined ? { action: ask.action } : {}), ...(ask.mix !== undefined ? { mix: ask.mix } : {}), ...(ask.verdict !== undefined ? { verdict: ask.verdict } : {}), ...(ask.takeId !== undefined ? { takeId: ask.takeId } : {}) };
 }
 
 /** The newest stems piece across the conversation shown (an older answer's, when the newest has none). */

@@ -8,7 +8,8 @@
 // Types only: a client module reads the turn's TYPES from @gt/domain/audio.studio, never its zod.
 import type { ReactNode } from "react";
 
-import type { StudioAction, StudioDropped } from "@gt/domain/audio.studio";
+import type { StudioAction, StudioDropped, StudioTurn } from "@gt/domain/audio.studio";
+import type { StudioTakeFacts, StudioTasteLine, TasteLean } from "@gt/domain/audio.suno";
 import type { ParsedTurn } from "@gt/domain/audio.studio.door";
 import type { RefusedTurn, StudioSource } from "../_port/port.ts";
 import type { DockState } from "@gt/ui/components/dock/dock.ts";
@@ -69,6 +70,27 @@ export type VariantProps = {
   /** What `keepMix` would change, one plain line per stem ("warm finger bass muted, at -3 dB");
    *  empty when the live mix is what was rendered (nothing to keep). */
   readonly mixChanges: readonly string[];
+  /** Spark suno-advisor: the Suno advisor's facts and presses. */
+  readonly suno: SunoHost;
+};
+
+/**
+ * Spark suno-advisor: what the view knows and can do about Suno. Every function resolves with the
+ * refusal in words, or null when it went; none of them reaches suno.com.
+ */
+export type SunoHost = {
+  /** Facts per uploaded take, by takeId (measured here; `listened` after a priced Listen). */
+  readonly takes: Readonly<Record<string, StudioTakeFacts>>;
+  /** The confirmed taste profile. */
+  readonly taste: readonly StudioTasteLine[];
+  /** Run the priced listener on one take (receipt first; DRY returns a stand-in). */
+  readonly listen: (takeId: string) => Promise<string | null>;
+  /** Confirm a proposed taste line (from the turn that proposed it). */
+  readonly keepTaste: (row: { readonly line: string; readonly lean: TasteLean }, turnId?: string) => Promise<string | null>;
+  /** Remove a line from the profile. */
+  readonly dropTaste: (line: string) => Promise<string | null>;
+  /** Send a verdict on a prompt as the person's next message, uploading a take first when a file is given. */
+  readonly sendVerdict: (v: { readonly verdict: NonNullable<StudioTurn["verdict"]>; readonly text: string; readonly file?: File; readonly clip?: "a" | "b" }) => Promise<string | null>;
 };
 
 export type Variant = (props: VariantProps) => ReactNode;
