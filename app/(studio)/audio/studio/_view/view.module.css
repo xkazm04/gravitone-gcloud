@@ -5,7 +5,7 @@
 .view{height:100%;display:grid;grid-template-columns:calc(var(--w-rail) * .9) minmax(0,1fr) var(--w-next);grid-template-rows:minmax(0,1fr);gap:var(--sp-6)}
 .view > *{min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain}
 .stack{display:flex;flex-direction:column;gap:var(--sp-5);padding-right:var(--sp-2)}
-.cardSlot{flex:none;scroll-margin-top:0;min-width:0}
+.cardSlot{flex:none;scroll-margin-top:0;min-width:0;container-type:inline-size}
 
 .card{display:grid;gap:var(--sp-5);padding:var(--sp-5) var(--sp-6);border-radius:var(--r-lg);border:1px solid var(--hair);background:var(--panel-ground)}
 .card[data-latest]{border-color:color-mix(in srgb,var(--cyan) 30%,transparent)}

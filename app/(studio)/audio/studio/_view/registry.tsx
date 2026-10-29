@@ -16,7 +16,7 @@ import type { CardCtx } from "./ctx.ts";
 import { LanesAbsent, RulerAbsent, SectionsRuler, StemLanes } from "./Lanes.tsx";
 import { HeardLine, PullSides } from "./Sentence.tsx";
 import { DuelSwitch, MasterAbsent, MeasureChips, TrackLane } from "./Track.tsx";
-import { SunoPromptStub, TasteStub } from "./Suno.tsx";
+import { SunoPrompt, Taste } from "./Suno.tsx";
 import { TryInstead } from "./TryInstead.tsx";
 import s from "./view.module.css";
 
@@ -41,8 +41,8 @@ export const VIEW_REGISTRY = {
   candidates: { place: "drawer", View: TryInstead, Absent: null, broken: "the instruments to try could not be drawn" },
   duel: { place: "transport", View: DuelSwitch, Absent: null, broken: "the comparison could not be drawn" },
   measures: { place: "chips", View: MeasureChips, Absent: null, broken: "the measures could not be drawn" },
-  suno_prompt: { place: "prompt", View: SunoPromptStub, Absent: null, broken: "the Suno prompt could not be drawn" },
-  taste: { place: "taste", View: TasteStub, Absent: null, broken: "the taste lines could not be drawn" },
+  suno_prompt: { place: "prompt", View: SunoPrompt, Absent: null, broken: "the Suno prompt could not be drawn" },
+  taste: { place: "taste", View: Taste, Absent: null, broken: "the taste lines could not be drawn" },
 } as const satisfies { readonly [K in StudioNodeKind]: Entry<K> };
 
 const REG: { readonly [K in StudioNodeKind]: Entry<K> } = VIEW_REGISTRY;

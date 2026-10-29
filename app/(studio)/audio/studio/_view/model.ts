@@ -10,6 +10,8 @@ import type { StudioAction, StudioNodeKind, StudioNodeOf, StudioTurn } from "@gt
 import type { ParsedTurn } from "@gt/domain/audio.studio.door";
 import { DESK_CARRY, deskPieces, levelWords, panWords, type DeskPieces } from "@gt/ui/components/studio-desk/desk.ts";
 
+import { versionName } from "./thread.ts";
+
 /** One card: the ask that opened it (null for an agent turn with no ask before it) and its answer
  *  (null while the agent is still working on the ask). */
 export type CardModel = {
@@ -49,13 +51,18 @@ export const hasTimeline = (p: DeskPieces): boolean => p.track.length + p.sectio
 export const nodeOf = <K extends StudioNodeKind>(turn: Pick<StudioTurn, "show">, kind: K): StudioNodeOf<K> | undefined =>
   turn.show.find((n) => n.kind === kind) as StudioNodeOf<K> | undefined;
 
-/** A card's name in a few words: its track's title, else what its first choice is about, else its first sentence. */
+/** A card's name in a few words: the Suno prompt version it shows, else its track's title, else what its
+ *  first choice is about, else its taste proposals, else its first sentence. */
 export function cardTitle(turn: StudioTurn): string {
+  const prompt = nodeOf(turn, "suno_prompt");
+  if (prompt !== undefined) return versionName(prompt);
   for (const n of turn.show) {
     if (n.kind === "track") return n.title ?? "the track";
     if (n.kind === "candidates") return n.title ?? `choices: ${n.prompt ?? "a new sound"}`;
     if (n.kind === "duel" || n.kind === "pull") return n.title ?? n.question;
   }
+  const taste = nodeOf(turn, "taste");
+  if (taste !== undefined) return `taste: ${taste.rows.length} line${taste.rows.length === 1 ? "" : "s"} to keep`;
   const first = turn.text.split(/(?<=[.!?:])\s/)[0] ?? turn.text;
   return first.length > 60 ? `${first.slice(0, 57)}...` : first;
 }

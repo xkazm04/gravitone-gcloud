@@ -13,6 +13,7 @@ import type { VariantProps } from "../_host/types.ts";
 import { Card } from "./Card.tsx";
 import { askBlockedWords, cardsOf } from "./model.ts";
 import { NextSteps, Rail } from "./Side.tsx";
+import { TasteProfile } from "./Suno.tsx";
 import s from "./view.module.css";
 
 const reducedMotion = (): boolean => typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -52,6 +53,8 @@ export function View(v: VariantProps) {
   };
 
   const blocked = askBlockedWords(dock.state, dock.presence);
+  // The taste profile stands beside a conversation that is about Suno prompts, not beside every one.
+  const sunoThread = useMemo(() => session.turns.some(({ turn }) => turn.show.some((n) => n.kind === "suno_prompt" || n.kind === "taste")), [session.turns]);
 
   if (cards.length === 0) return <p className={s.quiet}>The agent has not answered yet. Say what you would like to hear below.</p>;
   return (
@@ -71,7 +74,7 @@ export function View(v: VariantProps) {
           </div>
         ))}
       </div>
-      <NextSteps visible={session.visible} turns={session.turns} transport={transport} dispatch={dispatch} blocked={blocked} offline={dock.state === "offline" ? dock.presence : null} />
+      <NextSteps visible={session.visible} turns={session.turns} transport={transport} dispatch={dispatch} blocked={blocked} offline={dock.state === "offline" ? dock.presence : null} taste={sunoThread ? <TasteProfile suno={v.suno} /> : null} />
     </div>
   );
 }

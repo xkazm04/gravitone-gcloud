@@ -2,7 +2,8 @@
 // transport across the top (play every part / stop, where it is, seek), the duel as an A/B switch on
 // that transport (switching keeps the second you are at), and the track itself as the first lane:
 // its title, tempo, key and length in words, the finished mix's own play mark, the measures as
-// chips, the mix's waveform.
+// chips, the mix's waveform. A track answering a Suno prompt says so (a sketch of it, or its take a /
+// b); the person's uploaded take carries its measured and heard facts as a row under the lane.
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { EarButton } from "@gt/ui/components/audio/EarButton.tsx";
@@ -14,6 +15,7 @@ import { deskAct, proposal, type Placed } from "@gt/ui/components/studio-desk/de
 import { localPlay, nodeSound, soundKey } from "../_host/press.ts";
 import { cardSound, turnOf, type CardCtx } from "./ctx.ts";
 import { LaneBody, PEAKS } from "./Lanes.tsx";
+import { AnswersChip, TakeRow } from "./Suno.tsx";
 import lanes from "./lanes.module.css";
 import s from "./master.module.css";
 
@@ -49,21 +51,28 @@ export function TrackLane({ placed, ctx }: { readonly placed: Placed<"track">; r
   const length = node.lengthS ?? node.mix.durationS;
   const facts = [node.bpm === undefined ? null : `${node.bpm} beats a minute`, node.key === undefined ? null : keyWords(node.key), length === undefined ? null : `${clockOf(length)} long`].filter((x) => x !== null);
   return (
-    <div className={`${lanes.lane} ${s.master}`} data-row="master">
-      <div className={s.head}>
-        <div className={s.top}>
-          {snd !== null && <EarButton state={transport.stateOf(snd.key)} name={`${node.title ?? "the track"}, the finished mix`} onPress={() => ctx.press(localPlay(node.id), turnId)} big />}
-          <span className={s.words}>
-            <b className={s.title}>{node.title ?? "the track"}</b>
-            <span className={s.facts}>{facts.length === 0 ? "the finished mix" : `the finished mix · ${facts.join(" · ")}`}</span>
-          </span>
-          {node.source !== undefined && <SourceTag kind={node.source} />}
+    <>
+      <div className={`${lanes.lane} ${s.master}`} data-row="master">
+        <div className={s.head}>
+          <div className={s.top}>
+            {snd !== null && <EarButton state={transport.stateOf(snd.key)} name={`${node.title ?? "the track"}, the finished mix`} onPress={() => ctx.press(localPlay(node.id), turnId)} big />}
+            <span className={s.words}>
+              <b className={s.title}>{node.title ?? "the track"}</b>
+              <span className={s.facts}>{facts.length === 0 ? "the finished mix" : `the finished mix · ${facts.join(" · ")}`}</span>
+            </span>
+            {node.source !== undefined && <SourceTag kind={node.source} />}
+          </div>
+          <div className={s.chips}>
+            <AnswersChip node={node} />
+            {ctx.slot("measures")}
+          </div>
+          {placed.carried && <span className={s.hint}>from an earlier answer</span>}
         </div>
-        <div className={s.chips}>{ctx.slot("measures")}</div>
-        {placed.carried && <span className={s.hint}>from an earlier answer</span>}
+        <LaneBody ctx={ctx} peaks={transport.peaks(node.mix.href, PEAKS)} tone="cyan" note={ctx.v.renders === "missing" ? "the sound is not in the store" : "drawing the waveform"} markEnd />
       </div>
-      <LaneBody ctx={ctx} peaks={transport.peaks(node.mix.href, PEAKS)} tone="cyan" note={ctx.v.renders === "missing" ? "the sound is not in the store" : "drawing the waveform"} markEnd />
-    </div>
+      {/* The take's facts stand on the card that brought the take; a later card carrying the track only marks it. */}
+      {!placed.carried && <TakeRow node={node} ctx={ctx} />}
+    </>
   );
 }
 

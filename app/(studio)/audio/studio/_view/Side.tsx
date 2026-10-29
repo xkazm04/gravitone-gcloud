@@ -6,6 +6,8 @@
 // that DISPATCHES, with its `why`, whether it plays here or asks the agent, and, derived from the
 // resolved action, what pressing it does (registry action-consent-wiring) - and what works with no
 // agent at all: play or stop the newest take, every part with my changes, stop, put the mix back.
+import type { ReactNode } from "react";
+
 import { STUDIO_ACTION_GOES } from "@gt/domain/audio.studio.kinds";
 import type { StudioAction, StudioTurn } from "@gt/domain/audio.studio";
 import type { ParsedTurn } from "@gt/domain/audio.studio.door";
@@ -58,6 +60,8 @@ type NextProps = {
   readonly blocked: string | null;
   /** The dock reads offline: "listening" = the offline preview (asks refused), "nobody" = no agent has looked yet (asks wait). */
   readonly offline: "listening" | "nobody" | null;
+  /** Spark suno-advisor: the confirmed taste profile, between the next steps and what always works. */
+  readonly taste?: ReactNode;
 };
 
 /** Is a local proposal already in effect (its sound playing, its mix setting already set). */
@@ -84,7 +88,7 @@ function newestWith(turns: readonly ParsedTurn[], kind: "track" | "stems"): { re
   return null;
 }
 
-export function NextSteps({ visible, turns, transport, dispatch, blocked, offline }: NextProps) {
+export function NextSteps({ visible, turns, transport, dispatch, blocked, offline, taste }: NextProps) {
   const turn = visible?.turn ?? null;
   const take = newestWith(turns, "track");
   const parts = newestWith(turns, "stems");
@@ -129,6 +133,7 @@ export function NextSteps({ visible, turns, transport, dispatch, blocked, offlin
           </ul>
         )}
       </Panel>
+      {taste}
       <Panel title="always here">
         <ul className={s.list}>
           <li className={s.step}>
