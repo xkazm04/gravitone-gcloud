@@ -1,6 +1,6 @@
 # Suno package: the advisor, and what it decided about hearing a take
 
-**Status: SHIPPED as spark `suno-advisor` (2026-10-29), the thread composition.** The design, the decisions with their
+**Status: SHIPPED as spark `suno-advisor` (2026-10-29), the thread composition.** **The analysis is on hold for a rethink** (owner, 2026-10-29, after a real Suno take: "the results seem out of touch") - see "Owner verdict on the analysis" at the end. The design, the decisions with their
 rejected options, and the research below live in the vault note `.vault/Spark/ideas/suno-advisor.md`. This
 file is the repo-side record: what the studio does with Suno, what it refuses to do, and why. Each claim is
 marked VERIFIED (read in code, measured, or read on the vendor's own page, with the date) or NOT VERIFIED.
@@ -136,3 +136,16 @@ scout's track step and the music-video job still reach these paths until then.
 - Branch `hackathon/audio-steer-1028/e3`: the measured instrument atlas, swap with "what changes", the taste duel.
 - Branch `hackathon/audio-steer-1028/e1`: the section-tag lyrics writer. NOT VERIFIED: whether Suno follows
   section tags on an instrumental.
+
+## Owner verdict on the analysis (2026-10-29)
+
+Tested on a real Suno take of the owner's ("Wasted day", 215.7 s): measured 139.7 bpm (or 69.9), F minor at strength
+0.002 (a coin toss), -15.5 LUFS, -2.2 dBTP, LRA 6.5. Three live `gemini-3.8-flash` listens were all billed ($0.0116,
+$0.0136, $0.0122) and all refused by the read's door, because the model's section timeline ran 2-9% past the song;
+65b33a17 widened the window to 15% (trim / drop) but no read has landed yet. The owner's call: **do not run it further
+for now - the results seem out of touch, and the analysis needs a rethink later.** Open questions for that rethink:
+
+- What the advisor actually needs from a take to write the next prompt - the owner's verdict alone may be enough.
+- Whether a model listen is worth its cost and its errors (key wrong on both clips; timeline stretched on a full song).
+- Keeping the raw answer of every refused read, so a door problem is fixed without paying again.
+- Key detection: wrong from both the measurement and the listener on both clips tested.
