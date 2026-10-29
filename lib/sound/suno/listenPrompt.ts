@@ -114,22 +114,36 @@ export const LISTEN_SCHEMA: Record<string, unknown> = {
 /** Seconds a section may run past the measured length: decoders disagree on an mp3's length by a frame or two. */
 export const SECTION_SLACK_S = 2;
 
+/** Share of the take's length a listener's timeline may run past the take: its timestamps are estimates
+ *  that stretch on a full song (live 2026-10-29, three reads of one 215.7 s Suno take ran 2.4%, >2.2% and
+ *  8.6% long: a last section ending at 221 s, a seventh STARTING at 220.5 s, a last section ending at
+ *  234.3 s; a 2 s door threw all three paid reads away). Inside this window an end is trimmed to the
+ *  take and a section starting past the end is dropped; beyond it the read is refused as invented. */
+export const SECTION_TRIM_SHARE = 0.15;
+
+/** How far past the take a section may end and still be read (then trimmed to the take). */
+export const sectionSlackS = (durationS: number): number => Math.max(SECTION_SLACK_S, durationS * SECTION_TRIM_SHARE);
+
 /**
  * A model's answer into a StudioListen, or the refusal naming the first bad field. Code sets `model`
  * and `at`; an answer that tries to set them (or `standIn`) is refused, never overwritten - a real read
  * labelled a stand-in, or a stand-in labelled a model, is the one lie this read cannot tell. Beyond the
- * door: each section starts before it ends and inside the take. Nothing is repaired or clamped.
+ * door: each section starts before it ends. The one repair, inside `sectionSlackS` past the take (the
+ * read is shown unconfirmed anyway): an end past the take is trimmed to it, and a section starting past
+ * the end - the model's timeline drift - is dropped. Further out, the read is refused.
  */
 export function readOf(answer: unknown, ctx: { readonly model: string; readonly at: string; readonly durationS: number }): Result<StudioListen> {
   if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return err("invalid", `${LISTEN_DOOR}: (root): the answer is not an object`);
   for (const k of ["model", "at", "standIn"]) if (k in answer) return err("invalid", `${LISTEN_DOOR}: ${k}: the answer may not set ${k}; it is set by code`);
   const r = parseStudioListen({ ...answer, model: ctx.model, at: ctx.at });
   if (!r.ok) return r;
+  const slack = sectionSlackS(ctx.durationS);
   for (const [i, s] of r.value.sections.entries()) {
     if (s.startS >= s.endS) return err("invalid", `${LISTEN_DOOR}: sections.${i}.endS: ${s.endS} is not after its start ${s.startS}`);
-    if (s.endS > ctx.durationS + SECTION_SLACK_S) return err("invalid", `${LISTEN_DOOR}: sections.${i}.endS: ${s.endS} s is past the take's ${ctx.durationS} s`);
+    if (s.endS > ctx.durationS + slack) return err("invalid", `${LISTEN_DOOR}: sections.${i}.endS: ${s.endS} s is past the take's ${ctx.durationS} s`);
   }
-  return r;
+  const sections = r.value.sections.filter((s) => s.startS < ctx.durationS).map((s) => (s.endS > ctx.durationS ? { ...s, endS: ctx.durationS } : s));
+  return ok({ ...r.value, sections });
 }
 
 /** The DRY read: says what it is and claims nothing heard. */

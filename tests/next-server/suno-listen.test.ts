@@ -148,6 +148,14 @@ describe("listen", () => {
     expect(events(d.mem, "receipt.settled")).toEqual([]);
   });
 
+  it("inside the drift window trims an end past the take and drops a section starting past it (live 2026-10-29)", async () => {
+    const sections = [{ name: "outro", startS: 150, endS: 185, says: "fades" }, { name: "ghost", startS: 181, endS: 186, says: "nothing" }];
+    const near = await listenWith("st-take1", deps({ reason: async () => served({ ...READ, sections }) }));
+    expect(near.ok && near.value.listened?.sections).toEqual([{ name: "outro", startS: 150, endS: 180, says: "fades" }]);
+    const far = await listenWith("st-take1", deps({ reason: async () => served({ ...READ, sections: [{ name: "ghost", startS: 200, endS: 210, says: "nothing" }] }) }));
+    expect(far.ok ? "" : far.error.message).toMatch(/^listen: sections\.0\.endS: /);
+  });
+
   it("refuses an answer that sets what code sets, and a section past the take", async () => {
     const stand = await listenWith("st-take1", deps({ reason: async () => served({ ...READ, standIn: true }) }));
     expect(stand.ok ? "" : stand.error.message).toMatch(/^listen: standIn: /);

@@ -6749,7 +6749,7 @@ export const MUTANTS: UnitMutant[] = [
     id: "listen-section-past-the-take",
     test: "tests/next-server/suno-listen.test.ts",
     file: "lib/sound/suno/listenPrompt.ts",
-    find: "if (s.endS > ctx.durationS + SECTION_SLACK_S) return err(",
+    find: "if (s.endS > ctx.durationS + slack) return err(",
     replace: "if (s.endS > ctx.durationS * 10) return err(",
     why: "Invented section timestamps past the take's end pass as heard.",
   },
