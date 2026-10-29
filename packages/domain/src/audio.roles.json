@@ -1,0 +1,12 @@
+{
+  "_": "Which catalog instrument roles may play each studio role (spark audio-agent-studio S2). ONE file read by both engines: @gt/domain/audio.score (TypeScript, the door) and pipeline/audio/score_instruments.py (Python, the renderer). Edit it here only.",
+  "compat": {
+    "drums": ["drums"],
+    "percussion": ["drums"],
+    "bass": ["bass"],
+    "chords": ["chords"],
+    "pad": ["chords"],
+    "lead": ["lead"],
+    "texture": ["lead", "chords"]
+  }
+}

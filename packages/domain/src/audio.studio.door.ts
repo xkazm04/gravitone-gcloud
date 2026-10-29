@@ -39,11 +39,14 @@ const STEM_ACTIONS: readonly StudioActionKind[] = ["swap_stem", "mute", "solo", 
 export function parseStudioTurn(input: unknown): Result<ParsedTurn> {
   const env = parseAt("studio turn", studioTurnEnvelopeSchema, input);
   if (!env.ok) return env;
-  const { show: rawShow = [], actions: rawActions = [], ...head } = env.value;
+  const { show: rawShow = [], actions: rawActions = [], mix, ...rest } = env.value;
   const dropped: StudioDropped[] = [];
   const drop = (at: string, item: unknown, reason: string): void => {
     dropped.push({ at, kind: kindOf(item), reason });
   };
+  if (mix !== undefined && rest.from === "agent") dropped.push({ at: "mix", kind: "mix", reason: "an agent turn carries no mix" });
+  // `Parsed` widens a record's values to optional; the schema already refused an absent value.
+  const head = mix !== undefined && rest.from === "user" ? { ...rest, mix: mix as NonNullable<StudioTurn["mix"]> } : rest;
   if (head.from === "user" && (rawShow.length > 0 || rawActions.length > 0)) {
     rawShow.forEach((n, i) => drop(`show[${i}]`, n, "a user turn shows nothing"));
     rawActions.forEach((a, i) => drop(`actions[${i}]`, a, "a user turn proposes nothing"));

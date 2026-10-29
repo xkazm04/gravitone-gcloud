@@ -138,6 +138,9 @@ export const studioTurnEnvelopeSchema = z.strictObject({
   action: id.optional(),
   /** The track document's vague layer (e4's intent), when this turn changed it. */
   intent: audioIntentSchema.optional(),
+  /** A USER turn's "keep this mix": the mixer settings heard, by stem id, for the agent to bake into
+   *  the score (stage S2). The door drops it from an agent turn. */
+  mix: z.record(id, z.strictObject({ muted: z.boolean().optional(), solo: z.boolean().optional(), levelDb: z.number().min(-60).max(12).optional(), pan: z.number().min(-1).max(1).optional() })).optional(),
   show: z.array(z.unknown()).max(STUDIO_MAX.nodes * 2).optional(),
   actions: z.array(z.unknown()).max(STUDIO_MAX.actions * 2).optional(),
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { STUDIO_ACTION_GOES, STUDIO_ACTION_KINDS, STUDIO_NODE_KINDS } from "../src/audio.studio.kinds.ts";
 import { parseStudioTurn } from "../src/audio.studio.door.ts";
+import { STUDIO_EVENTS, parseStudioEvent, studioEventKey } from "../src/audio.studio.events.ts";
 
 const mix = { href: "/api/sound/takes/st_1/file" };
 const stem = (id: string, role: string, extra: Record<string, unknown> = {}) => ({ id, role, label: `${id} words`, ...extra });
@@ -131,5 +132,36 @@ describe("parseStudioTurn", () => {
     const r = parseStudioTurn({ ...full(), v: 2 });
     expect(r.ok).toBe(false);
     expect(parseStudioTurn({ ...full(), text: "" }).ok).toBe(false);
+  });
+
+  it("keeps a user turn's mix and drops one an agent sends", () => {
+    const mixed = { muted: true, levelDb: -3 };
+    const user = parsed({ v: 1, id: "u2", seq: 3, at: "2026-10-29T10:00:00Z", from: "user", text: "keep this mix", mix: { bass: mixed } });
+    expect(user.turn.mix).toEqual({ bass: mixed });
+    const agentTurn = parsed({ ...full(), mix: { bass: mixed } });
+    expect(agentTurn.turn.mix).toBeUndefined();
+    expect(agentTurn.dropped).toEqual([{ at: "mix", kind: "mix", reason: "an agent turn carries no mix" }]);
+  });
+});
+
+describe("studio ledger events", () => {
+  const say = { v: 1, id: "u1", seq: 1, at: "2026-10-29T10:00:00Z", from: "user", text: "something calm" };
+
+  it("reads a say and a turn through the turn door", () => {
+    const s1 = parseStudioEvent(STUDIO_EVENTS.say, { session: "calm-bed", turn: say });
+    expect(s1.ok && s1.value.parsed.turn.text).toBe("something calm");
+    const t1 = parseStudioEvent(STUDIO_EVENTS.turn, { session: "calm-bed", turn: full() });
+    expect(t1.ok && t1.value.parsed.turn.show).toHaveLength(8);
+  });
+
+  it("refuses a say that carries an agent turn, and a bad session id", () => {
+    const r = parseStudioEvent(STUDIO_EVENTS.say, { session: "calm-bed", turn: full() });
+    expect(r.ok ? "" : r.error.message).toBe("audio.say: carries a turn from the agent, expected one from the user");
+    expect(parseStudioEvent(STUDIO_EVENTS.say, { session: "Calm Bed!", turn: say }).ok).toBe(false);
+  });
+
+  it("keys events by a dot-free kind", () => {
+    expect(studioEventKey(STUDIO_EVENTS.say, "u1")).toBe("audio-say:u1");
+    expect(studioEventKey(STUDIO_EVENTS.turn, "t2")).toBe("audio-turn:t2");
   });
 });
