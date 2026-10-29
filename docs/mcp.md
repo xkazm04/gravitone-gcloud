@@ -177,8 +177,8 @@ id: <session>}` on lane `audio`, and both are read through the one studio event 
   500 ms until a message newer than `after` exists. With no `after`, it answers the messages no agent turn has
   followed yet. Its answer holds `messages` (`{session, seq, at, turn, pressed?}`, where `pressed` is the agent
   action the person pressed), `sessions` (`{id, title, lastSeq, waiting}`), one conversation's `state`
-  (`latestAgentTurn`, `takeId`, `score`, `stems`, `nextSeq`) and `next`, the `after` for the next call. It writes
-  nothing.
+  (`latestAgentTurn`, `takeId`, `score`, `stems`, `nextSeq`, and the Suno advisor's `takes` and `taste`, below)
+  and `next`, the `after` for the next call. It writes nothing.
 - Presence is the token's `lastUsedAt`, which every call stamps (at most once a minute). The dock says
   "listening" while the act token named `studio-agent` (`GRAVITONE_STUDIO_AGENT_TOKEN_NAME`) was used within 90 s.
 - `audio_guide` is the vocabulary a turn may use. It is derived from the registry that the turn door and the
@@ -208,12 +208,45 @@ id: <session>}` on lane `audio`, and both are read through the one studio event 
 A presented CLI token is judged before the dev fixture (`lib/apiAuth.ts` `resolvePrincipal`), so an agent can
 drive the studio on a `NEXT_PUBLIC_DEV_AUTH=1` dev server too: the browser is the dev owner, the agent is its token.
 
+### The Suno advisor (spark suno-advisor)
+
+The agent can also write prompts the person generates on suno.com by hand. The studio never drives
+suno.com and never fetches audio from Suno: the person pastes the prompt and, when they choose, uploads the
+mp3 they downloaded. The skill's "Suno advisor mode" is the agent's side.
+
+- Two piece kinds (schemas in `audio_guide`, `@gt/domain/audio.studio`). `suno_prompt` is a prompt card:
+  `promptId`, `parent?`, `name?`, `style` (1..1000), `lyrics?` (..5000, line breaks kept), `exclude?` (..1000),
+  `instrumental`, `model` (`v6`, `v6-wild` or `v6-mini`), `settings` (`weirdness`, `styleInfluence`, `variety`,
+  integers 0..100), `changes?` (`{field, was?, now, why}`, at most 8) and `because?`. A field past its cap is
+  refused, not cut. The door refuses a card whose `parent` is its own `promptId` and a card with `changes`
+  but no `parent`. `taste` proposes 1..8 rows `{id, line (..120), lean: "like" | "dislike"}` with unique lines.
+  A `track` may carry `answers: {promptId, as: "sketch" | "suno", clip?: "a" | "b"}`.
+- Two user-turn fields, dropped (and named in `dropped`) from an agent turn. `verdict` is
+  `{promptId, clip: "a" | "b" | "both", keep?, off?}`, where `off` lists any of `tempo`, `energy`, `vocals`,
+  `instruments`, `structure`, `mix`, `mood` or `lyrics`. `takeId` is a take the person uploaded through
+  `POST /audio/studio/take`.
+- `audio_inbox` `state.takes` maps each `takeId` the conversation's user turns name to its facts:
+  `{takeId, name, durationS, href, promptId?, clip?, measured: {bpm?, bpmAlt?, key?, keyStrength?, lufs?,
+  truePeakDb?, lra?}, listened?, listenUsd?}`. `measured` comes from this server, for $0. `listened` is a
+  Gemini audio model's read (`{model, at, standIn?, genre, mood, bpm?, key?, vocals, instruments, sections}`).
+  It exists only when the person pressed Listen, and the page marks it unconfirmed. `standIn: true` marks a
+  dry run that heard nothing. `listenUsd` is the quoted price of a listen; with no price row it is omitted and
+  Listen refuses. `state.taste` holds the confirmed taste lines `{line, lean, since}`, folded from
+  `audio.taste` events (subject `{kind: "studio-taste", id: "owner"}`, lane `audio`; the last keep or drop
+  of a line wins). `takesNote` and `tasteNote` say what could not be read.
+- The agent writes no taste and runs no listen. Keep, drop and Listen are the person's Server Actions
+  (`app/(studio)/audio/studio/_live/sunoActs.ts`). A listen is a priced `suno-listen` text turn
+  (`lib/sound/suno/listen.ts`) with a kernel receipt, and `GRAVITONE_DRY_ONLY=1` makes it a stand-in.
+
 ## Tests
 
 - `tests/next-server/mcp-audio.test.ts`: every audio op through the JSON-RPC layer over an in-memory kernel, with
   the engine faked at its module seam. It covers the long-poll (a message filed during the wait, `waitS: 0` at
   once), `audio_turn` (a user turn refused, dropped pieces reported, a retry appended once) and a guide that
   lists every kind in the registry. `tests/next-server/audio-preview.test.ts` covers the palette's previews.
+  `tests/next-server/suno-listen.test.ts` covers the listener (quote, unpriced refusal, dry stand-in, a valid and
+  an invalid read from a fake provider, the receipt, the inline audio part, the CRLF prompt), and
+  `tests/next-server/studio-taste.test.ts` covers the taste writes.
 - `tests/next-server/mcp-registry.test.ts`: the registry's rules and both projections.
 - `tests/next-server/mcp-door.test.ts`: the envelope, who may call, scope, the live rule (with seeded
   receipts at the handler seam), the job refusals, cancel's ledger actor, and byte-identical results

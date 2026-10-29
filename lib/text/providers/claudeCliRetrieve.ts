@@ -53,7 +53,7 @@ import { StringDecoder } from "node:string_decoder";
 
 import { CliError, spawnTurn, USES_SHELL, type RunOptions } from "../../claudeCli";
 import { MODEL } from "../../model";
-import { unsupported } from "../errors";
+import { invalidRequest, unsupported } from "../errors";
 import type { ProbeResult, SourceReceipt, TextProvider, TextRequest, TextResult } from "../types";
 import { claudeCliProvider, cliTextError } from "./claudeCli";
 
@@ -318,6 +318,9 @@ export function claudeCliRetrieveProvider(): TextProvider {
     },
 
     async retrieve(req: TextRequest, timeoutMs: number): Promise<TextResult> {
+      // The retrieval CLI reads the web, not audio: refused before a spawn.
+      if (req.audio !== undefined)
+        throw invalidRequest("claude-cli-retrieve", `The claude CLI cannot hear audio; the ${req.turn} turn needs an engine that can. Nothing was dispatched.`);
       const started = Date.now();
       try {
         const run = await runClaudeRetrieve(req.prompt, { timeoutMs, signal: req.signal });

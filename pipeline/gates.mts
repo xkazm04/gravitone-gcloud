@@ -147,6 +147,13 @@ export const GATES: readonly Gate[] = [
     rationale: "pipeline/VOICE-FX-PROMPT.md against the stage kinds and bounds read off @gt/domain/audio.fx, its worked examples through the chain door, and proposeChain's refusals on a stub agent's recorded answers. Filesystem only, no model.",
   },
   {
+    id: "suno-listen",
+    npmScript: "check:suno-listen",
+    class: "blocking",
+    outcomes: "01",
+    rationale: "pipeline/SUNO-LISTEN-PROMPT.md's 8 sections and rules on LF and CRLF copies, the router's LISTEN_SCHEMA against @gt/domain/audio.suno.schema studioListenSchema at every depth, its worked example through readOf and back, and recorded refusals naming their paths. Filesystem only, no model.",
+  },
+  {
     id: "score",
     npmScript: "check:score",
     class: "blocking",

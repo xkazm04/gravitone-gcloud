@@ -58,6 +58,15 @@ const TURN_RULES = [
   "Every audio href is a path on this server, starting with one / - copy them from the verbs' answers, never build one.",
   "Stems are pre-fader: give each stems row the levelDb and pan the verb answered for that stem, so the page plays what the mix holds.",
   "Actions whose goes is local change only what the page plays; goes agent sends the press back to you as the person's next message (its action field is the action id).",
+  // The Suno advisor's rules (spark suno-advisor): what the person pastes into suno.com by hand, how a
+  // revision names its lineage, and what may and may not be said about a take.
+  "Show a suno_prompt when the person wants something to generate on suno.com, or a revision of one; they paste it by hand, and the studio never drives Suno.",
+  "Every revision of a prompt names its parent promptId, lists its changes (field, was, now, why), and says because: the verdict it answers.",
+  "Keep settings.variety at 0 unless the person asks for variety: above 0 lets Suno rewrite the style you wrote.",
+  'To let the person hear a new direction before they spend Suno credits, sketch it with audio_render and show that track with answers {promptId, as: "sketch"}.',
+  "Propose a taste row only from a preference the person's verdicts repeated; a line persists only when the person keeps it.",
+  "A take's listened read is unconfirmed: never state it as fact, and where it disagrees with the measured tempo or key, the measured value stands.",
+  "Never say you heard a take: speak about a take only from its facts in state.takes, and with no facts, ask how it sounded.",
 ];
 
 const SCORE_RULES = [
