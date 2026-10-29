@@ -20,7 +20,9 @@ import { parseJsonAt } from "@gt/domain/door";
 import { z } from "zod";
 
 import { storeRoot } from "../../../../../lib/sound/store.ts";
-import { FIXTURE_SESSIONS, type FixtureSession } from "./fixtureSessions.ts";
+import type { StudioTakeFacts } from "@gt/domain/audio.suno";
+
+import { FIXTURE_SESSIONS, FIXTURE_TAKES, FIXTURE_TASTE, type FixtureSession } from "./fixtureSessions.ts";
 import type { StudioPort, StudioPortSession, StudioRead } from "./port.ts";
 
 export type { StudioPort, StudioPortSession, StudioRead };
@@ -84,17 +86,30 @@ export function readSession(s: FixtureSession, takes: Takes, unknown: Set<string
   return { id: s.id, title: s.title, turns };
 }
 
-export function readFixture(index: Index, sessions: readonly FixtureSession[] = FIXTURE_SESSIONS): StudioRead {
+/** Spark suno-advisor: the scripted takes' facts with their audio resolved like a turn's. A take whose
+ *  audio is not rendered is left out (its href would name a path that cannot exist), and the note says
+ *  which render is missing, as for any turn. */
+export function readTakes(facts: Readonly<Record<string, StudioTakeFacts>>, takes: Takes, unknown: Set<string>): Readonly<Record<string, StudioTakeFacts>> {
+  const out: Record<string, StudioTakeFacts> = {};
+  for (const [id, f] of Object.entries(facts)) {
+    const href = resolve(f.href, takes, unknown);
+    if (typeof href === "string" && !href.includes("{{")) out[id] = { ...f, href };
+  }
+  return out;
+}
+
+export function readFixture(index: Index, sessions: readonly FixtureSession[] = FIXTURE_SESSIONS, facts: Readonly<Record<string, StudioTakeFacts>> = FIXTURE_TAKES): StudioRead {
   const takes = "takes" in index ? index.takes : {};
   const unknown = new Set<string>();
   const refused: string[] = [];
   const read = sessions.map((s) => readSession(s, takes, unknown, refused));
+  const takeFacts = readTakes(facts, takes, unknown);
   const notes: string[] = [];
   if ("missing" in index) notes.push(`${index.missing}. Run ${MAKE} to render them; until then the pieces that need audio are dropped and say so.`);
   else if (unknown.size > 0) notes.push(`the fixture index has no render for ${[...unknown].sort().join(", ")}. Run ${MAKE} again.`);
   if (refused.length > 0) notes.push(`turns refused at the door: ${refused.join("; ")}`);
   const missing = "missing" in index || unknown.size > 0;
-  return { source: "fixture", renders: missing ? "missing" : "ready", ...(notes.length > 0 ? { note: notes.join(" ") } : {}), sessions: read };
+  return { source: "fixture", renders: missing ? "missing" : "ready", ...(notes.length > 0 ? { note: notes.join(" ") } : {}), sessions: read, takes: takeFacts, taste: FIXTURE_TASTE };
 }
 
 export const fixturePort: StudioPort = { read: async () => readFixture(await readIndex()) };

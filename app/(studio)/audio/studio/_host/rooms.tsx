@@ -20,8 +20,10 @@ import { useMix } from "@gt/ui/components/audio/useMix.ts";
 import { answers, NO_ANSWER, OFFLINE_LINE, openingCursor, replyCursor, THINK_MS, visibleTurn } from "./conversation.ts";
 import { dockStateOf, NOBODY_LINE, WAITING_LINE } from "./live.ts";
 import { soundOf } from "./press.ts";
+import { newestVersion, sunoVersions } from "./suno.ts";
 import { askOf, keptMix, mixChanges, mixText, newestStems, newTurnId, userTurn, type UserAsk } from "./turns.ts";
 import type { StudioTakeFacts, StudioTasteLine, TasteLean } from "@gt/domain/audio.suno";
+import type { VerdictSend } from "@gt/ui/components/suno/VerdictBar.tsx";
 
 import type { StudioView } from "../url.ts";
 import type { Dispatch, ParsedTurn, RefusedTurn, StudioSource, SunoHost, VariantProps } from "./types.ts";
@@ -165,7 +167,8 @@ export function FixtureRoom(room: RoomProps) {
         return false;
       }
       if (thinking) return false;
-      if (ask.mix !== undefined || !answers(all, cursor, ask.action !== undefined ? { action: ask.action } : { text: ask.text })) {
+      const heard = ask.verdict !== undefined ? answersVerdict(all, cursor, ask.verdict.promptId) : answers(all, cursor, ask.action !== undefined ? { action: ask.action } : { text: ask.text });
+      if (ask.mix !== undefined || !heard) {
         setNotice(NO_ANSWER);
         return false;
       }
@@ -186,6 +189,13 @@ export function FixtureRoom(room: RoomProps) {
   const scripted = async (): Promise<string | null> => "the scripted session keeps nothing";
   const suno: SunoOps = { takes: room.takes, taste: room.taste, listen: scripted, keepTaste: scripted, dropTaste: scripted, upload: async () => "the scripted session takes no upload" };
   return <Stage {...room} source="fixture" talk={{ turns, cursor, thinking, notice, setNotice, send }} suno={suno} />;
+}
+
+/** A scripted verdict is answered when the script's next turn is the person's verdict on the same
+ *  prompt - whatever its words, chips or file (the script already holds what it says). */
+function answersVerdict(turns: readonly ParsedTurn[], cursor: number, promptId: string): boolean {
+  const next = turns[cursor]?.turn;
+  return next !== undefined && next.from === "user" && next.verdict?.promptId === promptId;
 }
 
 function Stage({ session, offline, presence, renders, source, talk, suno, view }: RoomProps & { readonly source: StudioSource; readonly talk: Talk; readonly suno: SunoOps }) {
@@ -233,14 +243,19 @@ function Stage({ session, offline, presence, renders, source, talk, suno, view }
         let takeId: string | undefined;
         if (file !== undefined) {
           const up = await upload(file, verdict.promptId, clip);
-          if (typeof up === "string") return up;
+          if (typeof up === "string") {
+            setNotice(up);
+            return up;
+          }
           takeId = up.takeId;
         }
         const went = await send({ text, verdict, ...(takeId !== undefined ? { takeId } : {}) });
         return went ? null : "the verdict was not sent";
       },
     };
-  }, [suno, send]);
+  }, [suno, send, setNotice]);
+  // The dock's verdict row is about the newest prompt version shown (./suno.ts, the one fold).
+  const prompt = useMemo(() => newestVersion(sunoVersions(turns))?.promptId ?? null, [turns]);
   const View = STUDIO_VIEWS_BY[view];
   const props: VariantProps = {
     session: { id: session.id, title: session.title, turns, cursor: talk.cursor, visible, source, refused: session.refused ?? [] },
@@ -270,6 +285,19 @@ function Stage({ session, offline, presence, renders, source, talk, suno, view }
           });
         }}
         dropped={props.dropped}
+        {...(prompt !== null
+          ? {
+              verdict: {
+                promptId: prompt,
+                // Every refusal is already the dock's notice: the upload's (above) and the room's send's own.
+                onSend: async (v: VerdictSend) => {
+                  const refused = await sunoHost.sendVerdict(v);
+                  if (refused === null) setDraft("");
+                  return refused;
+                },
+              },
+            }
+          : {})}
       />
     </>
   );

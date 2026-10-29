@@ -12,11 +12,13 @@ import { Fader } from "@gt/ui/components/fader/Fader.tsx";
 
 import { inert } from "./ContractHooks.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
+import k from "./kit.module.css";
 
 const DROPPED: readonly StudioDropped[] = [
   { at: "show[4]", kind: "waterfall3d", reason: 'unknown kind "waterfall3d"' },
   { at: "actions[4]", kind: "pick", reason: 'names piece "no-such-duel", which is not on screen' },
 ];
+const SUNO_REPLY = "Here is a Suno prompt for a late-night drive, and a free local sketch of the same idea. Paste it into Suno and tell me which take works.";
 const REPLY = "Here is a head-nod beat at 84 bpm in A minor with lo-fi keys. You asked for piano, so I can swap the keys for a felt piano. Have a listen.";
 
 function DockSpecimen() {
@@ -24,13 +26,24 @@ function DockSpecimen() {
   return (
     <Spec names={["Dock"]} source="dock/Dock.tsx · dock.ts" wide>
       <Row label="listening">
-        <Dock state="listening" reply={REPLY} draft={draft} onDraft={setDraft} onSend={inert} dropped={DROPPED} />
+        <div className={k.grow}>
+          <Dock state="listening" reply={REPLY} draft={draft} onDraft={setDraft} onSend={inert} dropped={DROPPED} />
+        </div>
       </Row>
       <Row label="thinking">
-        <Dock state="thinking" reply={REPLY} notice="This scripted session has no answer to that yet (stage S1)." draft="" onDraft={inert} onSend={inert} dropped={[]} />
+        <div className={k.grow}>
+          <Dock state="thinking" reply={REPLY} notice="This scripted session has no answer to that yet (stage S1)." draft="" onDraft={inert} onSend={inert} dropped={[]} />
+        </div>
       </Row>
       <Row label="offline">
-        <Dock state="offline" reply={null} draft="" onDraft={inert} onSend={inert} dropped={[]} />
+        <div className={k.grow}>
+          <Dock state="offline" reply={null} draft="" onDraft={inert} onSend={inert} dropped={[]} />
+        </div>
+      </Row>
+      <Row label="verdict row">
+        <div className={k.grow}>
+          <Dock state="listening" reply={SUNO_REPLY} draft="" onDraft={inert} onSend={inert} dropped={[]} verdict={{ promptId: "p1", onSend: async () => null }} />
+        </div>
       </Row>
     </Spec>
   );

@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { readFixture, stripUnresolved } from "../../app/(studio)/audio/studio/_port/fixture.ts";
+import { NIGHT_DRIVE_TAKE } from "../../app/(studio)/audio/studio/_port/fixtureSessions.ts";
 import { answers, openingCursor, replyCursor, visibleTurn } from "../../app/(studio)/audio/studio/_host/conversation.ts";
 import { localMix, localPlay, nodeSound, soundKey, soundOf, spansOf } from "../../app/(studio)/audio/studio/_host/press.ts";
 import { parseStudioUrl, studioHref } from "../../app/(studio)/audio/studio/url.ts";
@@ -18,10 +19,18 @@ describe("the fixture port", () => {
     const r = readFixture({ takes: TAKES });
     expect(r.renders).toBe("ready");
     expect(r.note).toBeUndefined();
-    expect(r.sessions.map((s) => s.id)).toEqual(["study-bed", "vlog-beat", "game-menu"]);
+    expect(r.sessions.map((s) => s.id)).toEqual(["study-bed", "vlog-beat", "game-menu", "night-drive"]);
     expect(JSON.stringify(r.sessions)).not.toContain("{{");
     expect(JSON.stringify(r.sessions)).toContain("/api/sound/takes/st-calm/file?stem=bass");
     expect(r.sessions.flatMap((s) => s.turns.flatMap((t) => t.dropped.map((d) => `${s.id} ${d.at}`)))).toEqual(["vlog-beat show[4]", "vlog-beat actions[4]"]);
+  });
+
+  it("serves the scripted take's facts with its audio resolved, and the two-line taste profile", () => {
+    const r = readFixture({ takes: TAKES });
+    expect(Object.keys(r.takes ?? {})).toEqual([NIGHT_DRIVE_TAKE]);
+    expect(r.takes?.[NIGHT_DRIVE_TAKE]?.href).toBe("/api/sound/takes/st-syn/file");
+    expect(r.taste?.map((t) => t.lean)).toEqual(["dislike", "like"]);
+    expect(readFixture({ missing: "no fixture renders yet" }).takes).toEqual({});
   });
 
   it("with no index: missing, a note naming the command, and the pieces that need audio dropped and said", () => {

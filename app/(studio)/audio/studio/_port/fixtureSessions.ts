@@ -4,7 +4,11 @@
 // by the fixture port from pipeline/studio-fixtures.mts's index. Session "game-menu" scripts the v2
 // arrangement (8 stems, per-section entry) the engine cannot make yet: those pieces say "illustrative".
 // Session "vlog-beat" carries one broken piece and one broken action ON PURPOSE, so every variant has
-// to show its dropped-piece disclosure.
+// to show its dropped-piece disclosure. Session "night-drive" (spark suno-advisor) is the Suno advisor:
+// a prompt card with a local sketch, a verdict with an uploaded take, a revised prompt with its lineage,
+// and taste proposals; its take's facts and a two-line taste profile are FIXTURE_TAKES / FIXTURE_TASTE.
+
+import type { StudioTakeFacts, StudioTasteLine } from "@gt/domain/audio.suno";
 
 export type FixtureSession = { readonly id: string; readonly title: string; readonly turns: readonly unknown[] };
 
@@ -136,4 +140,86 @@ const gameMenu: FixtureSession = {
   ],
 };
 
-export const FIXTURE_SESSIONS: readonly FixtureSession[] = [studyBed, vlogBeat, gameMenu];
+/** The uploaded take of night-drive's first prompt (FIXTURE_TAKES holds what was measured and heard). */
+export const NIGHT_DRIVE_TAKE = "suno-nd-p1-a";
+
+const ndLyrics = (chorus: string): string =>
+  ["[Intro]", "", "[Verse]", "Streetlights count the miles for me", "Windows down, the city breathes", "Radio hums a borrowed tune", "Chasing down the highway moon", "", "[Pre-Chorus]", "Hold the wheel, hold the line", "", "[Chorus]", chorus, "Neon in the rain", "Nowhere we are going", "Feels the same", "", "[Outro]"].join("\n");
+const ndBecause = "A is close, but it rushes and the voice is too breathy and buried.";
+const verdictUser = (id: string, seq: number, text: string, verdict: unknown, takeId?: string) => ({ ...user(id, seq, text), verdict, ...(takeId ? { takeId } : {}) });
+
+const nightDrive: FixtureSession = {
+  id: "night-drive",
+  title: "A synthwave song for a night drive",
+  turns: [
+    user("nd-u1", 1, "a song for driving at night, 80s synths, a woman singing, a bit wistful"),
+    agent("nd-a1", 2, "Here is a Suno prompt for a late-night drive, and a free local sketch of the same idea so you can hear the direction first. Paste it into Suno, generate, and tell me which take works and what is off.", [
+      { id: "p1", kind: "suno_prompt", promptId: "p1", name: "Neon Overpass", instrumental: false, model: "v6",
+        style: "synthwave, 1980s retro, nocturnal and wistful, steady driving pulse, analog bass arpeggio, gated reverb drums, shimmering poly pads, airy female vocal, tape-saturated mix, 112 bpm, D minor",
+        lyrics: ndLyrics("Overpass, we're glowing"), exclude: "trap hi-hats, EDM drop",
+        settings: { weirdness: 35, styleInfluence: 70, variety: 0 } },
+      { id: "sketch", kind: "track", title: "Neon Overpass (local sketch)", takeId: "{{synth}}", mix: take("synth"), answers: { promptId: "p1", as: "sketch" } },
+      { id: "taste", kind: "taste", rows: [{ id: "t1", line: "night-drive synthwave", lean: "like" }, { id: "t2", line: "big festival drops", lean: "dislike" }] },
+    ], [
+      { id: "nd-p1", kind: "play", label: "play the sketch", node: "sketch" },
+    ]),
+    verdictUser("nd-u2", 3, ndBecause, { promptId: "p1", clip: "a", keep: false, off: ["tempo", "vocals"] }, NIGHT_DRIVE_TAKE),
+    agent("nd-a2", 4, "Take a came out faster than the prompt asked, and the voice sat back behind the pads. This version pins the tempo and brings the voice forward; same model and sliders.", [
+      { id: "take-a", kind: "track", title: "Neon Overpass, take a", takeId: NIGHT_DRIVE_TAKE, mix: take("synth"), source: "illustrative", answers: { promptId: "p1", as: "suno", clip: "a" } },
+      { id: "measures", kind: "measures", takeId: NIGHT_DRIVE_TAKE, rows: [{ label: "tempo", value: "faster than asked", tone: "warn" }, { label: "key", value: "as asked", tone: "ok" }, { label: "loudness", value: "streaming-loud", tone: "ok" }] },
+      { id: "p2", kind: "suno_prompt", promptId: "p2", parent: "p1", name: "Neon Overpass", instrumental: false, model: "v6",
+        style: "synthwave, 1980s retro, nocturnal and wistful, 112 bpm steady half-time feel, analog bass arpeggio, gated reverb drums, shimmering poly pads, clear upfront female vocal, close-mic, tape-saturated mix, D minor",
+        lyrics: ndLyrics("Overpass, we're glowing (glowing)"), exclude: "trap hi-hats, EDM drop, breathy whisper vocal",
+        settings: { weirdness: 35, styleInfluence: 70, variety: 0 },
+        changes: [
+          { field: "style", was: "steady driving pulse", now: "112 bpm steady half-time feel", why: "take a rushed past the tempo asked" },
+          { field: "style", was: "airy female vocal", now: "clear upfront female vocal, close-mic", why: "the voice was breathy and buried" },
+          { field: "exclude", now: "breathy whisper vocal", why: "fence the breathy read out" },
+        ],
+        because: ndBecause },
+    ], [
+      { id: "nd-p2", kind: "play", label: "play take a", node: "take-a" },
+    ]),
+    verdictUser("nd-u3", 5, "Both takes of this one work. Keeping it.", { promptId: "p2", clip: "both", keep: true }),
+    agent("nd-a3", 6, "Kept. Three things you seem to like and dislike; keep the ones that should carry into the next song.", [
+      { id: "taste", kind: "taste", rows: [{ id: "t3", line: "clear upfront female vocal", lean: "like" }, { id: "t4", line: "half-time synthwave drums", lean: "like" }, { id: "t5", line: "breathy whisper vocals", lean: "dislike" }] },
+    ], []),
+  ],
+};
+
+export const FIXTURE_SESSIONS: readonly FixtureSession[] = [studyBed, vlogBeat, gameMenu, nightDrive];
+
+/** What this server would know of night-drive's uploaded take: measured, and one listen (a plausible
+ *  read, written to disagree with the measurement on tempo and key, as listeners do). The href is a
+ *  {{key}} token the fixture port resolves like any turn's. */
+export const FIXTURE_TAKES: Readonly<Record<string, StudioTakeFacts>> = {
+  [NIGHT_DRIVE_TAKE]: {
+    takeId: NIGHT_DRIVE_TAKE, name: "Neon Overpass (a).mp3", durationS: 167.4, href: "/api/sound/takes/{{synth}}/file", promptId: "p1", clip: "a",
+    measured: { bpm: 124, bpmAlt: [62, 248], key: "D minor", keyStrength: 0.71, lufs: -9.6, truePeakDb: -0.8, lra: 5.4 },
+    listened: {
+      model: "gemini-3.8-flash", at: "2026-10-28T18:03:40Z", genre: ["synthwave", "retro pop"], mood: ["nocturnal", "wistful", "driving"], bpm: 62, key: "F major",
+      vocals: { heard: true, character: "breathy female lead, set back behind the pads" },
+      instruments: [
+        { name: "analog bass arpeggio", role: "bass", prominence: "lead" },
+        { name: "gated reverb drums", role: "drums", prominence: "supporting" },
+        { name: "poly synth pads", role: "chords", prominence: "supporting" },
+        { name: "tape hiss", role: "texture", prominence: "background" },
+      ],
+      sections: [
+        { name: "intro", startS: 0, endS: 14, says: "pads and arpeggio alone" },
+        { name: "verse", startS: 14, endS: 52, says: "the vocal enters low in the mix" },
+        { name: "chorus", startS: 52, endS: 84, says: "drums open up, the vocal stays back" },
+        { name: "verse", startS: 84, endS: 118, says: "thinner, arpeggio forward" },
+        { name: "chorus", startS: 118, endS: 152, says: "a lead synth doubles the tune" },
+        { name: "outro", startS: 152, endS: 167, says: "pads fade on a held chord" },
+      ],
+    },
+    listenUsd: 0.0062,
+  },
+};
+
+/** A confirmed profile of two lines: one dislike, so the prompt card's exclude-from-taste has a chip. */
+export const FIXTURE_TASTE: readonly StudioTasteLine[] = [
+  { line: "heavy autotune", lean: "dislike", since: "2026-10-21T20:14:00Z" },
+  { line: "analog synth bass", lean: "like", since: "2026-10-22T19:02:00Z" },
+];

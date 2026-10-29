@@ -8,11 +8,16 @@
 //
 // It marks itself `data-dock`, and the shell's toast rises above `--h-dock` on any page that holds
 // one (toast/Toast.module.css), so a receipt never covers the conversation.
+//
+// Spark suno-advisor: while a Suno prompt is on screen the dock carries a VerdictBar row (`verdict`)
+// over the line in. The slot takes the bar's props, not a node, so it can hold nothing but the bar;
+// the bar's words are this dock's draft, and it is off whenever sending is.
 import type { StudioDropped } from "@gt/domain/audio.studio";
 
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { Field } from "../field/Field.tsx";
+import { VerdictBar, type VerdictBarProps } from "../suno/VerdictBar.tsx";
 import { canSendIn, droppedWords, type DockState } from "./dock.ts";
 import s from "./Dock.module.css";
 
@@ -27,6 +32,8 @@ export type DockProps = {
   readonly onSend: () => void;
   /** What the door dropped from the visible turn. */
   readonly dropped: readonly StudioDropped[];
+  /** A verdict row on the Suno prompt on screen; its words are `draft`. */
+  readonly verdict?: Omit<VerdictBarProps, "text" | "disabled">;
 };
 
 const PILL = {
@@ -36,7 +43,7 @@ const PILL = {
   offline: { label: "offline", tone: "neutral" },
 } as const;
 
-export function Dock({ state, reply, notice = null, draft, onDraft, onSend, dropped }: DockProps) {
+export function Dock({ state, reply, notice = null, draft, onDraft, onSend, dropped, verdict }: DockProps) {
   const canSend = canSendIn(state) && draft.trim() !== "";
   const pill = PILL[state];
   const words = droppedWords(dropped);
@@ -57,6 +64,7 @@ export function Dock({ state, reply, notice = null, draft, onDraft, onSend, drop
           </ul>
         </details>
       )}
+      {verdict !== undefined && <VerdictBar key={verdict.promptId} {...verdict} text={draft} disabled={!canSendIn(state)} />}
       <form
         className={s.send}
         onSubmit={(e) => {

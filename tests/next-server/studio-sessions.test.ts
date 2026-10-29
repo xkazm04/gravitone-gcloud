@@ -38,7 +38,7 @@ describe("studio fixture sessions", () => {
 
   it("covers every node kind across the sessions, and marks the v2 arrangement illustrative", () => {
     const kinds = new Set(all.flatMap((x) => (x.r.ok ? x.r.value.turn.show.map((n) => n.kind) : [])));
-    expect([...kinds].sort()).toEqual(["candidates", "duel", "heard", "measures", "pull", "sections", "stems", "track"]);
+    expect([...kinds].sort()).toEqual(["candidates", "duel", "heard", "measures", "pull", "sections", "stems", "suno_prompt", "taste", "track"]);
     const eight = all.flatMap((x) => (x.r.ok ? x.r.value.turn.show : [])).find((n) => n.kind === "stems" && n.rows.length === 8);
     expect(eight?.source).toBe("illustrative");
   });
