@@ -233,3 +233,7 @@ One AskUserQuestion call of up to 4 questions per wave.
   refusals, ledger turns MEDIA, .ai/use-cases.json) and a new regression gate three (gates.mts, verify:serial,
   gates.yml) - name them in the brief. Junction-safe worktree removal: unlink every link first (509 here), count main's
   node_modules before and after.
+- 2026-10-29 (suno-advisor follow-up, owner test on a real take) · A door on a VENDOR ANSWER was written from the schema
+  and never met a real answer before ship: the first full-length Suno take showed the listener's timeline 2-9% long and a
+  2 s door refused three BILLED reads. Tune such a door on recorded real answers, keep the raw answer of every refusal, and
+  make the live smoke use a full-length real input, not a 17 s clip. Owner verdict: analysis parked for a rethink.
