@@ -1,6 +1,8 @@
 import { MCP_FAMILIES, type McpAnnotations, type McpFamily } from "@gt/domain/mcp";
 
 import type { McpToolSpec } from "./op.ts";
+import { AUDIO_LAUNCH_OPS, AUDIO_READ_OPS } from "./tools/audio.ts";
+import { AUDIO_STUDIO_LAUNCH_OPS, AUDIO_STUDIO_READ_OPS } from "./tools/audioStudio.ts";
 import { JOB_OPS } from "./tools/job.ts";
 import { LAUNCH_OPS } from "./tools/launch.ts";
 import { READ_OPS } from "./tools/read.ts";
@@ -16,7 +18,17 @@ import { STEER_OPS } from "./tools/steer.ts";
 export type { McpToolSpec } from "./op.ts";
 
 /** Every op, in family order. */
-export const REGISTRY: readonly McpToolSpec[] = [...READ_OPS, ...STEER_OPS, ...LAUNCH_OPS, ...JOB_OPS, ...SPEND_OPS];
+export const REGISTRY: readonly McpToolSpec[] = [
+  ...READ_OPS,
+  ...STEER_OPS,
+  ...AUDIO_STUDIO_READ_OPS,
+  ...AUDIO_READ_OPS,
+  ...LAUNCH_OPS,
+  ...AUDIO_STUDIO_LAUNCH_OPS,
+  ...AUDIO_LAUNCH_OPS,
+  ...JOB_OPS,
+  ...SPEND_OPS,
+];
 
 /** A description is a tool's whole introduction to a model; past this it is a paragraph. */
 export const DESCRIPTION_MAX = 240;

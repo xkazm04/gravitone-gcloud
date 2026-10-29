@@ -147,6 +147,13 @@ export const GATES: readonly Gate[] = [
     rationale: "pipeline/VOICE-FX-PROMPT.md against the stage kinds and bounds read off @gt/domain/audio.fx, its worked examples through the chain door, and proposeChain's refusals on a stub agent's recorded answers. Filesystem only, no model.",
   },
   {
+    id: "score",
+    npmScript: "check:score",
+    class: "blocking",
+    outcomes: "01",
+    rationale: "The local band's ScoreSpec door (@gt/domain/audio.score: 8 tracks, repeatable roles with ids, per-section enters, the role map) against SCORE-PROMPT.md's rules and worked examples, refusal cases, and the Python compiler's MIDI for every worked example (pipeline/audio/score_compiler.py). Offline, no model; needs the repo's Python.",
+  },
+  {
     id: "audio-triage",
     npmScript: "check:audio-triage",
     class: "advisory",

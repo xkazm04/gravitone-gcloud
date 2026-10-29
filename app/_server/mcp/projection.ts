@@ -43,8 +43,9 @@ export type PublishedTool = {
 };
 
 const FAMILY_WORDS: { readonly [F in McpFamily]: { readonly title: string; readonly lead: string } } = {
-  read: { title: "Read the studio", lead: "Projects, plans, jobs, held lanes, Board packets, the Library and the Ledger." },
-  launch: { title: "Compose and launch", lead: "Compose, change, price and launch projects and Floor runs; a live launch that is not free becomes a spend request." },
+  // Trimmed for the audio studio's ops (spark audio-agent-studio S2): lead + op names fit DESCRIPTION_MAX.
+  read: { title: "Read the studio", lead: "Studio, Ledger and audio reads." },
+  launch: { title: "Compose and launch", lead: "Compose, launch, render; paid live asks to spend." },
   job: { title: "Act on jobs", lead: "Pause, resume, retry, reorder, re-route or cancel a job; acknowledge a held lane." },
   spend: { title: "Spend requests", lead: "Spend requests this token filed, and the operator's verdicts." },
 };
