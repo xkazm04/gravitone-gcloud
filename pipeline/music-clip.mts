@@ -60,7 +60,7 @@ function usage(msg: string): never {
   if (JSON_OUT) emit({ ok: false, error: msg, usage: true });
   else {
     console.error(`music-clip: ${msg}`);
-    console.error("usage: npx tsx pipeline/music-clip.mts <analyze|status|board a|board t|board b|pick|pack|compare> <dir> [--json]");
+    console.error("usage: npx tsx pipeline/music-clip.mts <analyze|status|board a|board t|board b|pick|pack|compare|shots> <dir> [--json]");
   }
   process.exit(2);
 }
@@ -202,6 +202,22 @@ async function main(): Promise<void> {
     const r = runCompare(dir, title);
     if (JSON_OUT) emit({ ok: true, verb: "compare", ...r });
     else say(`${r.html}\n${r.stacks.map((s) => `${s.stack} ${s.present ? (s.error ? `invalid: ${s.error}` : "result") : "no result"}`).join("  ")}`);
+    return;
+  }
+
+  if (cmd === "shots") {
+    // The edit: film/shotplan.json -> film/shotlist.json, refused when any shot breaks the ceiling.
+    const dir = dirArg(1);
+    const { expandPlan, listStats } = await import("../lib/music-clip/shotlist.ts");
+    const film = path.join(dir, "music-clip", "film");
+    const planPath = path.join(film, "shotplan.json");
+    if (!fs.existsSync(planPath)) throw new Error(`no ${planPath}`);
+    const { list, errors } = expandPlan(JSON.parse(fs.readFileSync(planPath, "utf8")), readTimeline(dir));
+    if (errors.length) throw new Error(`the shot plan breaks the edit:\n  ${errors.join("\n  ")}`);
+    fs.writeFileSync(path.join(film, "shotlist.json"), `${JSON.stringify(list, null, 2)}\n`);
+    const st = listStats(list);
+    if (JSON_OUT) emit({ ok: true, verb: "shots", ...st });
+    else say(`${path.join(film, "shotlist.json")}\n${st.shots} shots  longest ${st.maxS} s  mean ${st.meanS} s (ceiling ${list.maxShotS} s)\n${Object.entries(st.sets).map(([k, v]) => `${k} ${v}`).join("  ")}`);
     return;
   }
 
