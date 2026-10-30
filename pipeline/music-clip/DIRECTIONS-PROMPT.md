@@ -70,11 +70,14 @@ A self-contained card that renders at **480x270**:
 
 - HTML + CSS + inline SVG only. No network (no `src`/`href` to anything outside
   the file), no web fonts (system stacks only), no script needed to render.
-- Must show: palette swatches (every palette entry, with its hex); a type specimen
-  of the track title and ONE lyric line from timeline.json, set in the direction's
-  type; the story line; the transition vocabulary by name; the risk.
-- Work text only: names, hexes, lyric words, the story, the risk. No sentence
-  about the card, the board, or how to choose.
+- Must show: the direction's ART filling the whole card (the look, not a
+  description of it); a type specimen of the track title (>= 28 px, one line,
+  never clipped) and ONE lyric line from timeline.json, set in the direction's
+  type on a solid band of the ground colour so the art never runs through
+  the letters; small palette chips. The board itself prints name, animation,
+  type, story, transitions and risk under each card from directions.json:
+  do NOT repeat them in the fragment (measured on the first run: repeated
+  fields clipped at 480x270 and doubled the reading).
 - Root element sized `width:480px;height:270px;overflow:hidden`. Body margin 0.
 - Text at least 12 px; the title specimen at least 28 px.
 
