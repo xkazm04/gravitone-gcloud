@@ -141,3 +141,79 @@ export async function shootKeyframes(opts: {
   }
   return { files, renderer, ms, errors };
 }
+
+/**
+ * A span of the scene as a video with the track under it: one page, frames
+ * at start + i/fps in order (the scene is pure, so order only saves page
+ * loads), PNGs piped to ffmpeg, the mp3 slice muxed in. NVENC first, libx264
+ * when this ffmpeg or GPU refuses it - the encoder that ran is returned.
+ * The audio is the track itself, cut at the same start: never re-timed.
+ */
+export async function renderSpan(opts: {
+  pageFile: string;
+  rootDir: string;
+  timeline: TimelineV1;
+  audioPath: string;
+  startS: number;
+  endS: number;
+  outFile: string;
+  fps?: number;
+  width?: number;
+  height?: number;
+}): Promise<{ frames: number; renderer: string; encoder: string; ms: number }> {
+  const { spawn } = await import("node:child_process");
+  const fps = opts.fps ?? 30;
+  const width = opts.width ?? 1920;
+  const height = opts.height ?? 1080;
+  const n = Math.round((opts.endS - opts.startS) * fps);
+  const t0 = Date.now();
+  const site = await serveDir(opts.rootDir);
+  const url = `${site.origin}/${path.relative(path.resolve(opts.rootDir), path.resolve(opts.pageFile)).split(path.sep).join("/")}`;
+  const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
+  const encodeWith = async (encoder: string): Promise<void> => {
+    const vArgs = encoder === "h264_nvenc" ? ["-c:v", "h264_nvenc", "-preset", "p5", "-cq", "19"] : ["-c:v", "libx264", "-preset", "medium", "-crf", "18"];
+    const ff = spawn("ffmpeg", ["-y", "-v", "error", "-f", "image2pipe", "-framerate", String(fps), "-i", "-", "-ss", String(opts.startS), "-t", String(n / fps), "-i", opts.audioPath, "-map", "0:v", "-map", "1:a", ...vArgs, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "256k", "-shortest", opts.outFile], { stdio: ["pipe", "ignore", "pipe"] });
+    let err = "";
+    ff.stderr.on("data", (d) => (err += String(d)));
+    const done = new Promise<void>((ok, bad) => ff.on("close", (code) => (code === 0 ? ok() : bad(new Error(`ffmpeg ${encoder}: ${err.trim()}`)))));
+    const page = await browser.newPage({ viewport: { width, height } });
+    try {
+      await page.route((u) => !u.href.startsWith(site.origin), (r) => r.abort());
+      await page.addInitScript((tl) => {
+        (window as unknown as { __TIMELINE__: unknown }).__TIMELINE__ = tl;
+      }, opts.timeline);
+      await page.goto(url);
+      await page.waitForFunction(() => (window as unknown as { __READY__?: boolean }).__READY__ === true, null, { timeout: READY_TIMEOUT_MS });
+      for (let i = 0; i < n; i++) {
+        await page.evaluate((tt) => (window as unknown as { render: (x: number) => void }).render(tt), opts.startS + i / fps);
+        const png = await page.screenshot({ type: "png" });
+        if (!ff.stdin.write(png)) await new Promise((r) => ff.stdin.once("drain", r));
+      }
+    } finally {
+      ff.stdin.end();
+      await page.close();
+    }
+    await done;
+  };
+  let encoder = "h264_nvenc";
+  let renderer = "unknown";
+  try {
+    const probe = await browser.newPage();
+    renderer = await probe.evaluate(() => {
+      const g = document.createElement("canvas").getContext("webgl2");
+      const d = g?.getExtension("WEBGL_debug_renderer_info");
+      return g && d ? String(g.getParameter(d.UNMASKED_RENDERER_WEBGL)) : "no webgl2";
+    });
+    await probe.close();
+    try {
+      await encodeWith(encoder);
+    } catch {
+      encoder = "libx264";
+      await encodeWith(encoder);
+    }
+  } finally {
+    await browser.close();
+    await site.close();
+  }
+  return { frames: n, renderer, encoder, ms: Date.now() - t0 };
+}
