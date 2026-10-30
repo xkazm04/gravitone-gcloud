@@ -1,6 +1,6 @@
 ---
 name: music-clip
-version: 2.0.0
+version: 2.1.0
 memory: none
 category: Content
 description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then a three-stack render bake-off (kernel, HyperFrames, Remotion) scored on quality, editability, throughput and stability. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / pack / compare). Invoke with /music-clip <folder> [verb].
@@ -151,39 +151,32 @@ Board A chose the look; Board T chooses the film before any hero is built.
    that the answer is `pick b:<id>`, where the id is `story.json`'s `direction`
    (an unknown id makes `pick` list the valid ones) or free text, which means revise and stop again.
 
-## Stage 3 - the bake-off (after `pick b:<id>`)
+## Stage 3 - the film (after `pick t:<id>`)
 
-1. Run `pack`. Say the `packSha1`.
-2. Spawn THREE builder subagents in parallel, in ONE message (Agent tool,
-   `model: opus`), one per stack, each in its own worktree or directory:
-   - **kernel**: its own `render(t)` page on `lib/export/headless.ts` +
-     `lib/musicVideoExport.ts` capture;
-   - **hyperframes**;
-   - **remotion** (or Revideo; the builder says which in `notes`).
+The stack is decided: our own engine - a `film/index.html` whose frame is a pure function of t,
+three.js on the box's GPU (`lib/music-clip/gpuShot.ts`), captured and muxed by `cut.mts`. The
+operator settled it on 2026-10-30 after every approved frame of Break the Sequence came from it:
+"render speed will not be factor if we can achieve the quality ... stick to this proven variant and
+perfect with each scene and clip". The three-stack bake-off (`pack`, `compare`, `pick stack:`)
+stays in the CLI, unused by default.
 
-   Each prompt: "Read `pipeline/music-clip/BAKEOFF-BRIEF.md`. Your stack:
-   <stack>. The sealed pack: <folder>/music-clip/bakeoff/pack (packSha1
-   <sha>). Your directory: <folder>/music-clip/bakeoff/<stack>/." Each builds
-   the ~25 s proof (a chorus with a section transition and lyric lines), then
-   the full clip, and writes `bakeoff/<stack>/result.json`.
-3. When all three report: check each pack file's sha1 against `pack.json`
-   `files` (a changed file voids the runs that read it; `pack` seals, it does not
-   verify). Then run the edit round from `pipeline/music-clip/SCORING.md`:
-   a FRESH Opus agent per stack applies R1, R2, R3 and records `editRound` into
-   that stack's `result.json`. Fill sections 2-6 of the scoring sheet; leave
-   section 1 (the operator's eyes) empty.
-4. Run `compare`. Check every clip `compare.html` points at exists and plays
-   (`ffprobe`); a "no result" cell names a stack that did not finish.
-5. **STOP.** Tell the operator the path of `compare.html`, the filled sheet,
-   the proposed weighting (marked as a proposal), and that the answer is
-   `pick stack:<name>`.
-
-## Stage 4 - the final
-
-`pick stack:<name>` sets the stage to `final` and copies the winner's
-`fullMp4` to `music-clip/final.mp4` (it refuses when the stack has none). Say its path, duration and the ffprobe line. Forging
-the winning stack into the codebase is a separate follow-up; say so and do not
-start it.
+1. **The edit as data.** Write `film/shotplan.json` (per section: the grid unit and a cycle of
+   shots, each a set + cam + note) and run `shots`: it expands on the beat grid into
+   `film/shotlist.json` and refuses any shot over `maxShotS`. Break the Sequence's rule, from the
+   operator: no shot over 3 s, something always happens. Intimate sets build between refrains;
+   the army only in refrains and the intense second half.
+2. **Core first, then sets in parallel.** One builder owns `film/core/` (renderer, post chain,
+   material library, the robot factory with the approved beat-locked motion, timeline helpers) and
+   the shot router, and leaves a stub for every set so the film plays end to end. Then one Opus
+   builder per set group, in parallel, each touching only its `film/sets/<set>.js`, each shooting
+   every one of its shots (start, middle, end) and 4K crops, iterating against CRAFT.md.
+3. **Proof cuts with sound** (`cut.mts`) on the refrains and on every new set before the full
+   render; the operator judges motion and sync by ear and eye, not by stills.
+4. **The full render:** `cut.mts <folder> film/index.html 0 <duration> music-clip/final.mp4`
+   (1080p ~1 h on the RTX Spark; `--size 3840x2160` ~4 h). Check frames from the encoded file on
+   downbeats.
+5. **STOP.** The final's path, duration, the ffprobe line. Notes from the operator go back into a
+   set or the plan, never into a one-off patch of the render.
 
 ## Rules
 
