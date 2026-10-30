@@ -2,8 +2,8 @@
 name: music-clip
 memory: none
 category: Content
-description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board B (story per section plus a seek-stable hero loop), then a three-stack render bake-off (kernel, HyperFrames, Remotion) scored on quality, editability, throughput and stability. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / pack / compare). Invoke with /music-clip <folder> [verb].
-argument-hint: "<folder> [analyze|status|board a|board b|pick a:<id>|pick b:<id>|pick stack:<name>|pack|compare]"
+description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then a three-stack render bake-off (kernel, HyperFrames, Remotion) scored on quality, editability, throughput and stability. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / pack / compare). Invoke with /music-clip <folder> [verb].
+argument-hint: "<folder> [analyze|status|board a|board t|board b|pick a:<id>|pick t:<id>|pick b:<id>|pick stack:<name>|pack|compare]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, Agent
 ---
 
@@ -12,7 +12,9 @@ allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, Agent
 One session walks one track as far as the next stop, then stops. The CLI
 (`pipeline/music-clip.mts`) analyses, validates, assembles boards, seals the
 bake-off pack and builds the comparison; this skill writes what only a reader can
-(directions, a story, a hero loop) and looks at every sheet before it stops.
+(directions, treatments and their scenes, a story, a hero loop) and looks at every sheet before it
+stops. Every scene and hero author reads `pipeline/music-clip/CRAFT.md` first - it is the bar a
+film is held to, the one Board B missed when it came out "a PowerPoint presentation".
 Operator doc: `docs/music-clip.md`. Output: `<folder>/music-clip/`.
 
 ## Commands
@@ -21,8 +23,9 @@ Operator doc: `docs/music-clip.md`. Output: `<folder>/music-clip/`.
 npx tsx pipeline/music-clip.mts analyze "<folder>" [--audio "<file>"] --dry|--yes   # --dry: no vendor call; --yes: ONE live Gemini call
 npx tsx pipeline/music-clip.mts status "<folder>" --json
 npx tsx pipeline/music-clip.mts board a "<folder>"
+npx tsx pipeline/music-clip.mts board t "<folder>" [--only <treatment-id>]          # shoots scene keyframes on the GPU
 npx tsx pipeline/music-clip.mts board b "<folder>"
-npx tsx pipeline/music-clip.mts pick "<folder>" <a:<id> | b:<id> | stack:<kernel|hyperframes|remotion>>
+npx tsx pipeline/music-clip.mts pick "<folder>" <a:<id> | t:<id> | b:<id> | stack:<kernel|hyperframes|remotion>>
 npx tsx pipeline/music-clip.mts pack "<folder>"
 npx tsx pipeline/music-clip.mts compare "<folder>"
 ```
@@ -41,7 +44,9 @@ state says is done unless the operator asks.
 | (none) | Stage 0 |
 | `analyzed` | Stage 1 |
 | `board-a` | STOP: waiting for `pick a:<id>` |
-| `picked-a` | Stage 2 |
+| `picked-a` | Stage 1b |
+| `board-t` | STOP: waiting for `pick t:<id>` |
+| `picked-t` | Stage 2 |
 | `board-b` | STOP: waiting for `pick b:<id>` |
 | `picked-b` | Stage 3 |
 | `bakeoff` | Stage 3 (resume the stacks without a result.json), or STOP for `pick stack:<name>` |
@@ -77,10 +82,34 @@ Everything else is local DSP and costs nothing.
    that the answer is `pick a:<id>` or free text. Free text ("the third one but
    colder") means: revise directions.json, re-run `board a`, stop again.
 
-## Stage 2 - Board B (after `pick a:<id>`)
+## Stage 1b - Board T (after `pick a:<id>`)
+
+Board A chose the look; Board T chooses the film before any hero is built.
+
+1. Read `pipeline/music-clip/CRAFT.md`, then write `music-clip/treatments.json` following
+   `pipeline/music-clip/TREATMENTS-PROMPT.md`: 3-4 treatments that keep the picked palette and
+   type and vary characters, plot and signature device; one plot beat per section in (section,
+   bar, beat); keyframes at the same 4 track times in every treatment.
+2. Run `board t` once with no scenes: it validates (every violation listed - fix them all) and
+   draws each treatment text-only.
+3. Spawn one Opus builder per treatment, in parallel, in ONE message, each building
+   `board-t/<id>/scene.html` on the gpuShot contract and iterating with `board t --only <id>`
+   (the prompt is in TREATMENTS-PROMPT.md).
+4. Run `board t`. A `warnings` entry naming a console error, a frame that did not load, or a
+   `SwiftShader` renderer is a defect, not a note.
+5. OPEN `music-clip/board-t-sheet.png` and every keyframe PNG; rebuild a blank, black or
+   slideshow-still treatment with `--only <id>`.
+6. **STOP.** Tell the operator the path of `board-t.html` and of the sheet, and that the answer is
+   `pick t:<id>` or free text (revise treatments.json / a scene, re-run `board t`, stop again).
+
+## Stage 2 - Board B (after `pick t:<id>`)
 
 1. Write `music-clip/story.json` and `music-clip/board-b/hero.html` following
-   `pipeline/music-clip/STORY-PROMPT.md`.
+   `pipeline/music-clip/STORY-PROMPT.md` and CRAFT.md. The story carries the picked treatment's
+   plot into its sections and may name it (`"treatment": "<picks.t>"`; `board b` refuses any other
+   id). The hero starts FROM the picked treatment's `board-t/<id>/scene.html` - its world,
+   characters, camera device and post chain - not from a blank page. `board b` refuses before a
+   treatment is picked.
 2. Run `board b`. It refuses a bad story and lints the hero for frame purity.
    The lint only warns; treat every finding as must-fix and re-run. A `warnings` entry saying the three frames are
    identical is a defect, not a note.

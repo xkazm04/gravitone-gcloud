@@ -9,19 +9,25 @@ session stops at each one and the next session resumes from `status`. Skill:
 ## The pipeline
 
 ```
-analyze ──> timeline.json ──> Board A ──(pick a:<id>)──> Board B ──(pick b:<id>)──> pack ──> bake-off x3 ──> compare ──(pick stack:<name>)──> final.mp4
- one Gemini     the map         directions.json        story.json + hero.html     sealed     kernel           compare.html
- call (--yes)                   + a card each          a seek-stable hero loop    input      hyperframes
-                                                                                             remotion
+analyze ──> timeline.json ──> Board A ──(pick a:<id>)──> Board T ──(pick t:<id>)──> Board B ──(pick b:<id>)──> pack ──> bake-off x3 ──> compare ──(pick stack:<name>)──> final.mp4
+ one Gemini     the map         directions.json        treatments.json          story.json + hero.html     sealed     kernel           compare.html
+ call (--yes)                   + a card each          + a GPU-shot scene each  grown from the picked      input      hyperframes
+                                                                                scene                                 remotion
 ```
+
+Stages: `analyzed -> board-a -> picked-a -> board-t -> picked-t -> board-b -> picked-b -> bakeoff -> final`.
+Board T was added 2026-10-30, after a Board B built straight on a direction came out "a PowerPoint
+presentation": the look (A) and the film (T) are now decided before a hero is built.
+`pipeline/music-clip/CRAFT.md` is required reading for every scene and hero author.
 
 | verb | does | stage after |
 |---|---|---|
 | `analyze <dir> [--yes\|--dry] [--audio f]` | decode, DSP, beats, sections; one Gemini call for line times with `--yes`, none with `--dry`; refuses with neither | `analyzed` |
 | `status <dir> [--json]` | stage, picks, artifacts present, next verb; reads only | - |
 | `board a <dir>` | validates `directions.json` (<= 10, kebab ids, `#rrggbb` palettes, no empty field), assembles `board-a.html`, shoots `board-a-sheet.png` | `board-a` |
-| `board b <dir>` | validates `story.json`, frame-purity lint on `hero.html`, assembles `board-b.html`, shoots `board-b-sheet.png` at three times, cold and out of order | `board-b` |
-| `pick <dir> a:<id>\|b:<id>\|stack:<name>` | records the operator's pick; idempotent; an unknown id lists the valid ones | `picked-a` / `picked-b` / unchanged |
+| `board t <dir> [--only <id>]` | validates `treatments.json` (1-4, kebab ids, one plot beat per section in order, 1-6 keyframes each inside the track and in their section, grids in the union), shoots each `board-t/<id>/scene.html` at its keyframes on the GPU, assembles `board-t.html`, shoots `board-t-sheet.png`; `--only` re-shoots one scene and reuses the others' frames | `board-t` |
+| `board b <dir>` | needs `pick t:`; validates `story.json` (its optional `treatment` must be the picked one), frame-purity lint on `hero.html`, assembles `board-b.html`, shoots `board-b-sheet.png` at three times, cold and out of order | `board-b` |
+| `pick <dir> a:<id>\|t:<id>\|b:<id>\|stack:<name>` | records the operator's pick; idempotent; an unknown id lists the valid ones; a changed pick drops every pick after it | `picked-a` / `picked-t` / `picked-b` / unchanged |
 | `pack <dir>` | seals the bake-off input with per-file sha1 and a `packSha1` | `bakeoff` |
 | `compare <dir>` | `compare.html`: each stack's clips and numbers side by side | - |
 
@@ -38,6 +44,9 @@ In: `<dir>/` holds exactly one `*.mp3` (or `--audio <file>`), `lyrics.txt|lyrics
 | `timeline.json`, `state.json` | `analyze` |
 | `directions.json`, `board-a/<id>.html` | the session (`DIRECTIONS-PROMPT.md`) |
 | `board-a.html`, `board-a-sheet.png` | `board a` |
+| `treatments.json`, `board-t/<id>/scene.html` | the session and one builder per treatment (`TREATMENTS-PROMPT.md`) |
+| `vendor/three/`, `board-t/<id>/frames/` (+ `shot.json`: renderer, ms, console errors) | `board t` |
+| `board-t.html`, `board-t-sheet.png` | `board t` |
 | `story.json`, `board-b/hero.html` | the session (`STORY-PROMPT.md`) |
 | `board-b.html`, `board-b-sheet.png` | `board b` |
 | `bakeoff/pack/` (+ `pack.json`) | `pack` |
@@ -88,10 +97,26 @@ never `0` for unknown.
 
 1. After `analyze`: the spend is said before the live call; `--yes` only with the operator's word.
 2. After `board a`: the operator answers `pick a:<id>` or free text (a revision).
-3. After `board b`: `pick b:<id>` (the id is `story.json`'s `direction`) or free text.
-4. After `compare`: `pick stack:<name>`.
+3. After `board t`: `pick t:<id>` or free text.
+4. After `board b`: `pick b:<id>` (the id is `story.json`'s `direction`) or free text.
+5. After `compare`: `pick stack:<name>`.
 
 The session looks at every sheet PNG before it stops; a blank or near-copy card is fixed first.
+
+## The treatments (Board T)
+
+A treatment is a film on the picked look: characters that read with no face and no lip sync, how
+they are built, ONE signature camera device, a motif that changes, one plot beat per section in
+(section, bar, beat), transitions by grid level, shot lengths per section kind, one post chain and
+its risk (`TreatmentsV1`). 3-4 per board, each with 1-6 keyframes at the same track times across
+treatments so the frames compare like with like.
+
+Each treatment's scene is a lit WebGL page shot on the GPU (`lib/music-clip/gpuShot.ts`): the clip
+folder is served on 127.0.0.1 (Chromium refuses module scripts from file://), every other origin is
+aborted, three.js comes from `music-clip/vendor/three/`, and each keyframe is drawn by
+`window.render(t)` on a fresh page. The renderer string is printed under each treatment; on this box
+it is ANGLE/D3D11 on the NVIDIA GPU, and a `SwiftShader` renderer is flagged as the CPU fallback.
+Board B's hero starts from the picked treatment's scene.
 
 ## The form, the story, the hero
 

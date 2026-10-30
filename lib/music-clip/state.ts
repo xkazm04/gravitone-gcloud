@@ -14,6 +14,13 @@
 // The stack pick ends the machine: it moves the stage to `final` (the CLI copies
 // that stack's full render to final.mp4 before writing the pick). A `b` pick
 // names the story's direction - StoryV1 carries no other id to approve.
+//
+// Board T sits between the look and the hero (2026-10-30: the operator found a
+// Board B built straight on a direction "a PowerPoint presentation"). A `t`
+// pick chooses the treatment - characters, plot, the one camera device - so a
+// hero is never built before someone decided what the film is about. It needs
+// the direction picked and Board T rendered; changing it drops the story and
+// the stack, like any changed pick upstream.
 
 import type { ClipStack, ClipStage, StateV1 } from "./types";
 
@@ -27,7 +34,7 @@ export class ClipError extends Error {
   }
 }
 
-export const STAGES: readonly ClipStage[] = ["analyzed", "board-a", "picked-a", "board-b", "picked-b", "proof", "bakeoff", "final"];
+export const STAGES: readonly ClipStage[] = ["analyzed", "board-a", "picked-a", "board-t", "picked-t", "board-b", "picked-b", "proof", "bakeoff", "final"];
 export const STACKS: readonly ClipStack[] = ["kernel", "hyperframes", "remotion"];
 
 export const stageIndex = (s: ClipStage) => STAGES.indexOf(s);
@@ -44,7 +51,7 @@ export function parseState(raw: unknown): StateV1 | string {
   const p = o["picks"];
   if (!p || typeof p !== "object") return "picks is not an object";
   const picks = p as Record<string, unknown>;
-  for (const k of ["a", "b"]) if (picks[k] !== undefined && typeof picks[k] !== "string") return `picks.${k} is not a string`;
+  for (const k of ["a", "t", "b"]) if (picks[k] !== undefined && typeof picks[k] !== "string") return `picks.${k} is not a string`;
   if (picks["stack"] !== undefined && !STACKS.includes(picks["stack"] as ClipStack)) return `picks.stack must be one of ${STACKS.join(", ")}`;
   return raw as StateV1;
 }
@@ -69,20 +76,21 @@ export function resetTo(state: StateV1, stage: ClipStage, now: string): StateV1 
   const keep = (pickStage: ClipStage) => stageIndex(pickStage) < stageIndex(stage);
   const picks: StateV1["picks"] = {};
   if (state.picks.a !== undefined && keep("picked-a")) picks.a = state.picks.a;
+  if (state.picks.t !== undefined && keep("picked-t")) picks.t = state.picks.t;
   if (state.picks.b !== undefined && keep("picked-b")) picks.b = state.picks.b;
   if (state.picks.stack !== undefined && keep("final")) picks.stack = state.picks.stack;
   return { ...state, stage, picks, updatedAt: now };
 }
 
-export type PickKind = "a" | "b" | "stack";
+export type PickKind = "a" | "t" | "b" | "stack";
 export interface Pick {
   kind: PickKind;
   id: string;
 }
 
 export function parsePick(arg: string | undefined): Pick {
-  const m = /^(a|b|stack):(.+)$/.exec(arg ?? "");
-  if (!m) throw new ClipError(`pick needs a:<direction-id>, b:<direction-id> or stack:<${STACKS.join("|")}>, got ${arg ?? "nothing"}`, "usage");
+  const m = /^(a|t|b|stack):(.+)$/.exec(arg ?? "");
+  if (!m) throw new ClipError(`pick needs a:<direction-id>, t:<treatment-id>, b:<direction-id> or stack:<${STACKS.join("|")}>, got ${arg ?? "nothing"}`, "usage");
   return { kind: m[1] as PickKind, id: m[2] as string };
 }
 
@@ -99,10 +107,15 @@ export function applyPick(state: StateV1, pick: Pick, valid: readonly string[], 
     if (state.picks.a === pick.id) return same(state);
     return { state: { ...state, stage: "picked-a", picks: { a: pick.id }, updatedAt: now }, changed: true };
   }
+  if (pick.kind === "t") {
+    if (state.picks.a === undefined || !atLeast(state, "board-t")) throw new ClipError(`pick t: needs board t first (stage ${state.stage})`, "stage");
+    if (state.picks.t === pick.id) return same(state);
+    return { state: { ...state, stage: "picked-t", picks: { a: state.picks.a, t: pick.id }, updatedAt: now }, changed: true };
+  }
   if (pick.kind === "b") {
-    if (state.picks.a === undefined || !atLeast(state, "board-b")) throw new ClipError(`pick b: needs board b first (stage ${state.stage})`, "stage");
+    if (state.picks.a === undefined || state.picks.t === undefined || !atLeast(state, "board-b")) throw new ClipError(`pick b: needs board b first (stage ${state.stage})`, "stage");
     if (state.picks.b === pick.id) return same(state);
-    return { state: { ...state, stage: "picked-b", picks: { a: state.picks.a, b: pick.id }, updatedAt: now }, changed: true };
+    return { state: { ...state, stage: "picked-b", picks: { a: state.picks.a, t: state.picks.t, b: pick.id }, updatedAt: now }, changed: true };
   }
   if (!atLeast(state, "bakeoff")) throw new ClipError(`pick stack: needs the bake-off first (stage ${state.stage}); run pack`, "stage");
   if (state.picks.stack === pick.id) return same(state);
@@ -110,7 +123,7 @@ export function applyPick(state: StateV1, pick: Pick, valid: readonly string[], 
 }
 
 /** The verb that moves the folder on, given its stage and what is on disk. */
-export function nextVerb(state: StateV1 | undefined, has: { directions: boolean; story: boolean; results: number }): string {
+export function nextVerb(state: StateV1 | undefined, has: { directions: boolean; treatments: boolean; story: boolean; results: number }): string {
   if (!state) return "analyze <dir> --dry | --yes";
   switch (state.stage) {
     case "analyzed":
@@ -118,9 +131,13 @@ export function nextVerb(state: StateV1 | undefined, has: { directions: boolean;
       if (!has.directions) return "author music-clip/directions.json, then board a <dir>";
       return state.stage === "analyzed" ? "board a <dir>" : "pick <dir> a:<direction-id>";
     case "picked-a":
+    case "board-t":
+      if (!has.treatments) return "author music-clip/treatments.json + board-t/<id>/scene.html, then board t <dir>";
+      return state.stage === "picked-a" ? "board t <dir>" : "pick <dir> t:<treatment-id>";
+    case "picked-t":
     case "board-b":
-      if (!has.story) return "author music-clip/story.json + board-b/hero.html, then board b <dir>";
-      return state.stage === "picked-a" ? "board b <dir>" : `pick <dir> b:${state.picks.a ?? "<direction-id>"}`;
+      if (!has.story) return "author music-clip/story.json + board-b/hero.html (from the picked treatment's scene.html), then board b <dir>";
+      return state.stage === "picked-t" ? "board b <dir>" : `pick <dir> b:${state.picks.a ?? "<direction-id>"}`;
     case "picked-b":
     case "proof":
       return "pack <dir>";

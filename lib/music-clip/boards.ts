@@ -9,7 +9,12 @@
 // EVERY violation listed, because a session fixing them one round-trip at a
 // time is the slow way to learn there were six.
 //
-// Board B reads `story.json` (StoryV1, below) and `board-b/hero.html`.
+// Board T (treatments) lives in treatments.ts and reuses this file's browser.
+//
+// Board B reads `story.json` (StoryV1, below) and `board-b/hero.html`. It needs
+// a treatment picked first; the story may name it (`treatment`), and when it
+// does it must be the picked one - a hero built from the treatment the
+// operator passed over is the slideshow this stage was added to prevent.
 //
 // THE HERO CONTRACT (hero.html, authored by the model session):
 //   - It defines `window.render(t)`, t in SECONDS RELATIVE TO THE TRACK (not
@@ -41,7 +46,7 @@ import { chromium, type Browser, type Page } from "playwright";
 import { lintStrip } from "../foundry/strips/lint";
 import { boardAPage, boardBPage, injectTimeline, sheetBPage, type StoryCell } from "./boardShell";
 import { clipPath, readJsonFile, readTimeline, requireState, writeState } from "./folder";
-import { advanceTo, ClipError, resetTo } from "./state";
+import { advanceTo, atLeast, ClipError, resetTo } from "./state";
 import { MAX_DIRECTIONS, type DirectionsV1, type StateV1, type TimelineV1 } from "./types";
 
 export interface StorySection {
@@ -56,6 +61,8 @@ export interface StoryV1 {
   v: 1;
   /** The picked direction's id; `pick b:<id>` approves this story by it. */
   direction: string;
+  /** The picked treatment's id (state picks.t), when the story names it. */
+  treatment?: string;
   sections: StorySection[];
   hero: { sectionId: string; startS: number; endS: number };
 }
@@ -98,12 +105,17 @@ export function validateDirections(raw: unknown): Checked<DirectionsV1> {
   return v.length ? { ok: false, violations: v } : { ok: true, value: raw as unknown as DirectionsV1 };
 }
 
-export function validateStory(raw: unknown, t: TimelineV1, pickA: string | undefined): Checked<StoryV1> {
+export function validateStory(raw: unknown, t: TimelineV1, pickA: string | undefined, pickT?: string): Checked<StoryV1> {
   const v: string[] = [];
   if (!isObj(raw)) return { ok: false, violations: ["story.json is not an object"] };
   if (raw["v"] !== 1) v.push("v must be 1");
   if (!filled(raw["direction"])) v.push("direction is empty");
   else if (pickA !== undefined && raw["direction"] !== pickA) v.push(`direction "${String(raw["direction"])}" is not the picked direction "${pickA}"`);
+  const tr = raw["treatment"];
+  if (tr !== undefined) {
+    if (!filled(tr)) v.push("treatment is empty");
+    else if (pickT !== undefined && tr !== pickT) v.push(`treatment "${String(tr)}" is not the picked treatment "${pickT}"`);
+  }
   const ids = new Set(t.sections.map((s) => s.id));
   const secs = raw["sections"];
   if (!Array.isArray(secs) || secs.length === 0) v.push("sections must be a non-empty array");
@@ -168,7 +180,7 @@ export function lintHero(html: string): string[] {
 
 // ---- the browser
 
-async function launch(): Promise<Browser> {
+export async function launch(): Promise<Browser> {
   try {
     // The strip renderer's flags (pipeline/strips/render.mts): no GPU raster, so a sheet is the same pixels twice.
     return await chromium.launch({ headless: true, args: ["--disable-partial-raster", "--disable-gpu", "--disable-lcd-text"] });
@@ -178,7 +190,7 @@ async function launch(): Promise<Browser> {
 }
 
 /** A page that can reach only file:, data:, blob: and about: - the board's own promise, enforced. */
-async function offlinePage(browser: Browser, width: number, height: number, blocked: string[]): Promise<Page> {
+export async function offlinePage(browser: Browser, width: number, height: number, blocked: string[]): Promise<Page> {
   const p = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   await p.route("**/*", (route) => {
     const u = route.request().url();
@@ -189,7 +201,7 @@ async function offlinePage(browser: Browser, width: number, height: number, bloc
   return p;
 }
 
-const settle = (p: Page, ms: number) => p.evaluate((n) => new Promise<void>((r) => setTimeout(r, n)), ms);
+export const settle = (p: Page, ms: number) => p.evaluate((n) => new Promise<void>((r) => setTimeout(r, n)), ms);
 
 export interface BoardResult {
   html: string;
@@ -208,8 +220,8 @@ export function readDirections(dir: string): DirectionsV1 {
   return checked.value;
 }
 
-export function readStory(dir: string, t: TimelineV1, pickA: string | undefined): StoryV1 {
-  const checked = validateStory(readJsonFile(clipPath(dir, "story.json"), "story.json"), t, pickA);
+export function readStory(dir: string, t: TimelineV1, pickA: string | undefined, pickT?: string): StoryV1 {
+  const checked = validateStory(readJsonFile(clipPath(dir, "story.json"), "story.json"), t, pickA, pickT);
   if (!checked.ok) throw new ClipError(`story.json refused: ${checked.violations.join("; ")}`, "invalid");
   return checked.value;
 }
@@ -248,10 +260,11 @@ export async function renderBoardA(dir: string): Promise<BoardResult> {
 export async function renderBoardB(dir: string): Promise<BoardResult> {
   const state = requireState(dir);
   if (state.picks.a === undefined) throw new ClipError(`board b needs a direction: pick <dir> a:<id> (stage ${state.stage})`, "stage");
+  if (state.picks.t === undefined || !atLeast(state, "picked-t")) throw new ClipError(`board b needs a treatment: board t <dir>, then pick <dir> t:<id> (stage ${state.stage})`, "stage");
   const t = readTimeline(dir);
   const direction = readDirections(dir).directions.find((d) => d.id === state.picks.a);
   if (!direction) throw new ClipError(`picked direction "${state.picks.a}" is no longer in directions.json; render board a and pick again`, "stage");
-  const story = readStory(dir, t, state.picks.a);
+  const story = readStory(dir, t, state.picks.a, state.picks.t);
   const heroPath = clipPath(dir, "board-b", "hero.html");
   if (!fs.existsSync(heroPath)) throw new ClipError(`hero page is missing: ${heroPath}`, "missing");
   const heroHtml = fs.readFileSync(heroPath, "utf8");

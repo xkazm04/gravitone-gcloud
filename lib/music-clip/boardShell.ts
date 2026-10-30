@@ -13,7 +13,7 @@
 // the data already has (animation, type, risk) - a board that explains itself
 // is the defect the repo's narration law was written against.
 
-import type { Direction, LyricConfidence, TimelineSection, TimelineV1 } from "./types";
+import type { Direction, LyricConfidence, TimelineSection, TimelineV1, Treatment } from "./types";
 
 export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
@@ -52,10 +52,10 @@ svg.curve{width:100%;height:90px;background:#16181d;border-radius:6px;display:bl
 .tally span{border:1px solid #33363d;border-radius:999px;padding:2px 10px;font-size:13px}
 `;
 
-export function page(title: string, css: string, body: string): string {
+export function page(title: string, css: string, body: string, csp = CSP): string {
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="${CSP}">
+<meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 <style>${BASE_CSS}${css}</style></head>
@@ -233,4 +233,96 @@ export function sheetBPage(title: string, frames: readonly { t: number; png: str
   const css = `.row{display:grid;grid-template-columns:repeat(${frames.length},1fr);gap:12px;margin-bottom:20px}.row figure img{width:100%;display:block;border-radius:4px}.row figcaption{font:13px ui-monospace,monospace;color:#9a978f;padding-top:4px}.board{width:100%;display:block;border-top:1px solid #262930;padding-top:20px}.flag{font:600 14px ui-monospace,monospace;margin-bottom:10px;color:${differ ? "#7fd18b" : "#f06b6b"}}`;
   const figs = frames.map((f) => `<figure><img src="data:image/png;base64,${f.png}" alt="t ${f.t.toFixed(2)} s"><figcaption>t ${f.t.toFixed(2)} s</figcaption></figure>`).join("");
   return page(title, css, `<div class="flag">${differ ? "frames differ" : "frames identical"}</div><div class="row">${figs}</div><img class="board" src="data:image/png;base64,${boardPng}" alt="board">`);
+}
+
+// ---- Board T: the treatments, each a wide band of keyframes over its text.
+//
+// The frames are the one thing on a board that is not inline: a treatment's
+// keyframes are 1920x1080 PNGs shot on the GPU, and base64-ing four of them per
+// treatment into the page would make a 30 MB board. So the page names them by
+// RELATIVE path (`board-t/<id>/frames/...`) and its CSP widens img-src to
+// 'self' and nothing else - still no byte from off the machine.
+
+export const CSP_T = "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; font-src data:";
+
+export interface TreatmentShot {
+  /** One relative src per keyframe; undefined where no frame exists. */
+  frames: (string | undefined)[];
+  scene: boolean;
+  renderer?: string;
+  msPerFrame?: number;
+  errors: number;
+}
+
+const T_CSS = `
+.dir{display:flex;gap:14px;align-items:center;margin:-12px 0 24px}.dir .pal{display:flex;gap:3px}.dir .pal span{width:28px;height:14px;border-radius:2px}
+section.tr{background:#16181d;border:1px solid #262930;border-radius:10px;padding:20px 22px;margin-bottom:28px;display:grid;gap:16px}
+section.tr h2{font-size:26px;font-weight:650;display:flex;gap:16px;align-items:baseline}
+section.tr h2 .mono{font-size:16px;color:#e8735f;font-weight:500}
+.logline{font-size:18px;max-width:1400px}
+.frames{display:grid;gap:10px}
+.frames figure{display:grid;gap:4px}
+.frames img,.frames .none{width:100%;aspect-ratio:16/9;display:block;border-radius:4px;background:#000;object-fit:cover}
+.frames .none{border:1px dashed #3a3d45;display:flex;align-items:center;justify-content:center;color:#9a978f;font:13px ui-monospace,monospace}
+.frames figcaption{font-size:13px;display:flex;gap:8px;align-items:baseline}
+.sec{border-radius:3px;padding:0 6px;color:#fff;font-size:12px;white-space:nowrap}
+.cols{display:grid;grid-template-columns:minmax(380px,1fr) 2fr;gap:22px;align-items:start}
+dl{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:14px}
+dt{color:#9a978f;font-size:12px;padding-top:2px}
+dd.risk{color:#f0b37e}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chips span{border:1px solid #33363d;border-radius:4px;padding:0 6px;font-size:12px}
+table.plot{width:100%;border-collapse:separate;border-spacing:0 3px;font-size:13px}
+table.plot td{padding:5px 8px;vertical-align:top;background:#1b1d23}
+table.plot td:first-child{border-left:4px solid var(--c);white-space:nowrap;width:150px}
+.gpu{font-size:13px}.gpu.bad{color:#f06b6b;font-weight:600}
+`;
+
+export interface TreatmentCell {
+  treatment: Treatment;
+  shot: TreatmentShot;
+}
+
+function treatmentBand(t: TimelineV1, c: TreatmentCell): string {
+  const tr = c.treatment;
+  const sec = (id: string) => t.sections.find((s) => s.id === id);
+  const secChip = (id: string) => {
+    const s = sec(id);
+    return s ? `<span class="sec" style="background:${LABEL_COLOUR[s.label]}">${esc(s.lyricTag ?? s.label)}</span>` : `<span class="sec">${esc(id)}</span>`;
+  };
+  const figs = tr.keyframes
+    .map((k, i) => {
+      const src = c.shot.frames[i];
+      const img = src ? `<img src="${esc(src)}" alt="${esc(tr.name)} ${k.t.toFixed(2)} s">` : `<div class="none">${c.shot.scene ? "not shot" : "no scene.html"}</div>`;
+      return `<figure>${img}<figcaption>${secChip(k.sectionId)}<span class="mono">${mmss(k.t)} · ${k.t.toFixed(2)} s</span><span>${esc(k.caption)}</span></figcaption></figure>`;
+    })
+    .join("");
+  const rows = tr.plot
+    .map((b) => {
+      const s = sec(b.sectionId);
+      const col = s ? LABEL_COLOUR[s.label] : "#3a3d45";
+      return `<tr style="--c:${col}"><td>${secChip(b.sectionId)} <span class="mono dim">${esc(b.sectionId)}${s ? ` ${mmss(s.startS)}` : ""}</span></td><td>${esc(b.beat)}</td><td>${esc(b.shot)}</td></tr>`;
+    })
+    .join("");
+  const sl = tr.shotLengthS;
+  const gpu = c.shot.renderer === undefined ? "" : `<div class="gpu mono${/swiftshader/i.test(c.shot.renderer) ? " bad" : ""}">${esc(c.shot.renderer)}${c.shot.msPerFrame === undefined ? "" : ` · ${Math.round(c.shot.msPerFrame)} ms/frame`} · ${c.shot.errors} console error${c.shot.errors === 1 ? "" : "s"}${/swiftshader/i.test(c.shot.renderer) ? " · SwiftShader: CPU raster, not the GPU" : ""}</div>`;
+  return `<section class="tr" data-treatment="${esc(tr.id)}" aria-label="${esc(tr.name)}">
+<h2><span>${esc(tr.name)}</span><span class="mono">${esc(tr.id)}</span></h2>
+<div class="logline">${esc(tr.logline)}</div>
+<div class="frames" style="grid-template-columns:repeat(${Math.min(4, Math.max(1, tr.keyframes.length))},1fr)">${figs}</div>
+<div class="cols"><dl>
+<dt>characters</dt><dd>${esc(tr.characters)}</dd><dt>built as</dt><dd>${esc(tr.characterTech)}</dd>
+<dt>signature device</dt><dd>${esc(tr.signatureDevice)}</dd><dt>motif</dt><dd>${esc(tr.motif)}</dd>
+<dt>transitions</dt><dd class="chips">${tr.transitions.map((x) => `<span><b>${esc(x.grid)}</b> ${esc(x.move)}</span>`).join("")}</dd>
+<dt>shot length</dt><dd class="mono">verse ${sl.verse} s · chorus ${sl.chorus} s · bridge ${sl.bridge} s</dd>
+<dt>post</dt><dd class="chips">${tr.post.map((x) => `<span>${esc(x)}</span>`).join("")}</dd>
+<dt>risk</dt><dd class="risk">${esc(tr.risk)}</dd>
+</dl>
+<table class="plot">${rows}</table></div>
+${gpu}
+</section>`;
+}
+
+export function boardTPage(t: TimelineV1, direction: Direction | undefined, cells: readonly TreatmentCell[]): string {
+  const dir = direction ? `<div class="dir"><span class="mono dim">${esc(direction.id)}</span><span>${esc(direction.name)}</span><div class="pal">${direction.palette.map((c) => `<span style="background:${c}"></span>`).join("")}</div><span class="dim">${esc(direction.type)}</span></div>` : "";
+  return page(`${trackTitle(t)} - T`, T_CSS, `${trackHeader(t)}\n${dir}\n<main>\n${cells.map((c) => treatmentBand(t, c)).join("\n")}\n</main>`, CSP_T);
 }

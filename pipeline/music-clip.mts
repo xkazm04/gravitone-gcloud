@@ -5,15 +5,18 @@
 //
 //   npx tsx pipeline/music-clip.mts analyze <dir> (--yes | --dry) [--audio <file>]
 //   npx tsx pipeline/music-clip.mts status <dir>
-//   npx tsx pipeline/music-clip.mts board a|b <dir>
-//   npx tsx pipeline/music-clip.mts pick <dir> a:<id> | b:<id> | stack:<kernel|hyperframes|remotion>
+//   npx tsx pipeline/music-clip.mts board a|t|b <dir> [--only <treatment-id>]
+//   npx tsx pipeline/music-clip.mts pick <dir> a:<id> | t:<id> | b:<id> | stack:<kernel|hyperframes|remotion>
 //   npx tsx pipeline/music-clip.mts pack <dir> [--audio <file>]
 //   npx tsx pipeline/music-clip.mts compare <dir>
 //
 //   analyze  beats, tempo, bands, sections and lyric times -> music-clip/timeline.json
 //   status   the stage, the picks, which artifacts exist, the next verb
-//   board    validate the authored files, assemble board-a.html / board-b.html,
-//            and photograph them to board-a-sheet.png / board-b-sheet.png
+//   board    validate the authored files, assemble board-a.html / board-t.html /
+//            board-b.html, and photograph them to board-<a|t|b>-sheet.png.
+//            board t first shoots each treatment's scene.html keyframes on the
+//            GPU (lib/music-clip/gpuShot.ts); --only <id> re-shoots one and
+//            reuses the others' frames
 //   pick     record a choice; picking the same thing twice changes nothing.
 //            stack:<name> copies that stack's full render to final.mp4
 //   pack     seal the bake-off input into music-clip/bakeoff/pack/ with its sha1
@@ -41,9 +44,13 @@ const YES = argv.includes("--yes");
 const DRY = argv.includes("--dry");
 const BOOL = ["--json", "--yes", "--dry"];
 const rest = argv.filter((a) => !BOOL.includes(a));
-const audioAt = rest.indexOf("--audio");
-const AUDIO = audioAt >= 0 ? rest[audioAt + 1] : undefined;
-const args = audioAt >= 0 ? rest.filter((_, i) => i !== audioAt && i !== audioAt + 1) : rest;
+/** A `--name <value>` pair, taken out of the list it was found in. */
+function valueFlag(list: string[], name: string): [string | undefined, string[]] {
+  const at = list.indexOf(name);
+  return at >= 0 ? [list[at + 1], list.filter((_, i) => i !== at && i !== at + 1)] : [undefined, list];
+}
+const [AUDIO, rest2] = valueFlag(rest, "--audio");
+const [ONLY, args] = valueFlag(rest2, "--only");
 const cmd = args[0];
 
 const emit = (v: unknown) => process.stdout.write(`${JSON.stringify(v)}\n`);
@@ -53,7 +60,7 @@ function usage(msg: string): never {
   if (JSON_OUT) emit({ ok: false, error: msg, usage: true });
   else {
     console.error(`music-clip: ${msg}`);
-    console.error("usage: npx tsx pipeline/music-clip.mts <analyze|status|board a|board b|pick|pack|compare> <dir> [--json]");
+    console.error("usage: npx tsx pipeline/music-clip.mts <analyze|status|board a|board t|board b|pick|pack|compare> <dir> [--json]");
   }
   process.exit(2);
 }
@@ -80,7 +87,8 @@ function dirArg(i: number): string {
 }
 
 const ARTIFACTS = [
-  "state.json", "timeline.json", "directions.json", "board-a.html", "board-a-sheet.png", "story.json",
+  "state.json", "timeline.json", "directions.json", "board-a.html", "board-a-sheet.png",
+  "treatments.json", "board-t.html", "board-t-sheet.png", "story.json",
   "board-b/hero.html", "board-b.html", "board-b-sheet.png", "bakeoff/pack/pack.json",
   ...STACKS.map((s) => `bakeoff/${s}/result.json`), "compare.html", "final.mp4",
 ];
@@ -112,7 +120,7 @@ async function main(): Promise<void> {
     const state = readState(dir);
     const exists = Object.fromEntries(ARTIFACTS.map((a) => [a, fs.existsSync(clipPath(dir, a))]));
     const results = STACKS.filter((s) => exists[`bakeoff/${s}/result.json`]).length;
-    const next = nextVerb(state, { directions: !!exists["directions.json"], story: !!exists["story.json"] && !!exists["board-b/hero.html"], results });
+    const next = nextVerb(state, { directions: !!exists["directions.json"], treatments: !!exists["treatments.json"], story: !!exists["story.json"] && !!exists["board-b/hero.html"], results });
     if (JSON_OUT) emit({ ok: true, verb: "status", dir: clipRoot(dir), stage: state?.stage ?? null, picks: state?.picks ?? {}, artifacts: exists, next });
     else {
       say(`${clipRoot(dir)}`);
@@ -125,13 +133,17 @@ async function main(): Promise<void> {
 
   if (cmd === "board") {
     const which = args[1];
-    if (which !== "a" && which !== "b") usage("board a <dir> | board b <dir>");
+    if (which !== "a" && which !== "t" && which !== "b") usage("board a <dir> | board t <dir> [--only <id>] | board b <dir>");
     const dir = dirArg(2);
+    if (ONLY !== undefined && which !== "t") usage("--only belongs to board t");
     const { renderBoardA, renderBoardB } = await import("../lib/music-clip/boards.ts");
-    const r = which === "a" ? await renderBoardA(dir) : await renderBoardB(dir);
+    const { renderBoardT } = await import("../lib/music-clip/treatments.ts");
+    const bt = which === "t" ? await renderBoardT(dir, ONLY !== undefined ? { only: ONLY } : {}) : undefined;
+    const r = bt ?? (which === "a" ? await renderBoardA(dir) : await renderBoardB(dir));
     if (JSON_OUT) emit({ ok: true, verb: `board ${which}`, ...r });
     else {
       say(`${r.html}\n${r.sheet}\nstage ${r.stage}${r.framesDiffer === undefined ? "" : `  hero frames ${r.framesDiffer ? "differ" : "IDENTICAL"}`}`);
+      for (const x of bt?.treatments ?? []) say(`  ${x.id}  ${x.shot}  ${x.frames.length} frame(s)${x.renderer ? `  ${x.renderer}  ${Math.round(x.msPerFrame ?? 0)} ms/frame` : ""}`);
       for (const w of r.warnings) say(`warning: ${w}`);
     }
     return;
@@ -146,9 +158,12 @@ async function main(): Promise<void> {
     if (pick.kind === "a") {
       const { readDirections } = await import("../lib/music-clip/boards.ts");
       valid = readDirections(dir).directions.map((d) => d.id);
+    } else if (pick.kind === "t") {
+      const { readTreatments } = await import("../lib/music-clip/treatments.ts");
+      valid = readTreatments(dir, readTimeline(dir), state.picks.a).treatments.map((x) => x.id);
     } else if (pick.kind === "b") {
       const { readStory } = await import("../lib/music-clip/boards.ts");
-      valid = [readStory(dir, readTimeline(dir), state.picks.a).direction];
+      valid = [readStory(dir, readTimeline(dir), state.picks.a, state.picks.t).direction];
     } else valid = STACKS;
     const { state: next, changed } = applyPick(state, pick, valid, new Date().toISOString());
     let final: string | undefined;

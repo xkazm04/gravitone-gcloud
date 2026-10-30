@@ -2,9 +2,10 @@
 // spawned without a shell), in a temp folder: a 30 s tone as the track, the
 // fixture timeline as the analysis (WP1's analyser is not called - the analyze
 // verb itself is exercised only for its no-spend refusal), then board a, the
-// pick, board b with a canvas hero, the pack, a one-stack comparison and the
-// stack pick that lands final.mp4. Chromium photographs both boards; the test
-// checks the PNGs exist and are not trivially small. Set MUSIC_CLIP_KEEP=<dir>
+// pick, board t with one three.js scene shot on the GPU (and one treatment
+// with none), the t pick, board b with a canvas hero, the pack, a one-stack
+// comparison and the stack pick that lands final.mp4. Chromium photographs
+// every board; the test checks the PNGs exist and are not trivially small. Set MUSIC_CLIP_KEEP=<dir>
 // to keep the folder for looking at the sheets.
 
 import { execFile, execFileSync } from "node:child_process";
@@ -47,6 +48,48 @@ window.render = function (t) {
   g.font = "600 44px sans-serif"; g.fillText(t.toFixed(2) + " s", 40, 80);
 };
 </script></body></html>`;
+
+// A tiny lit three.js world on the gpuShot contract: import map into the clip
+// folder's vendor/three, __TIMELINE__ read, render(t) pure in t, __READY__ last.
+const SCENE = `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000;overflow:hidden}</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three/build/three.module.js","three/addons/":"../../vendor/three/examples/jsm/"}}</script></head>
+<body><script type="module">
+import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+const T = window.__TIMELINE__;
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+const s = new THREE.Scene(); s.fog = new THREE.FogExp2(0x1b1b1e, 0.06); s.background = new THREE.Color(0x1b1b1e);
+const cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
+const units = [];
+for (let i = 0; i < 9; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2, 0.6), new THREE.MeshStandardMaterial({ color: 0x8a2c1c, metalness: 0.7, roughness: 0.35 })); m.position.set((i - 4) * 1.4, 0, -i * 0.3); s.add(m); units.push(m); }
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x222226 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -1; s.add(floor);
+const key = new THREE.PointLight(0xe86a33, 80); key.position.set(-3, 4, 4); s.add(key); s.add(new THREE.AmbientLight(0x404050, 0.6));
+const c = new EffectComposer(r); c.addPass(new RenderPass(s, cam)); c.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.9, 0.4, 0.2));
+window.render = (t) => {
+  const k = T.intensity[Math.min(T.intensity.length - 1, Math.round(t * T.fps))] || 0;
+  cam.position.set(Math.sin(t * 0.2) * 3, 1.2, 9 - t * 0.15); cam.lookAt(0, 0, -2);
+  units.forEach((u, i) => { u.rotation.y = t * 0.3 + i * 0.4; u.scale.y = 0.6 + k; });
+  key.intensity = 40 + 120 * k; c.render();
+};
+window.__READY__ = true;
+</script></body></html>`;
+
+const treatment = (id: string, name: string) => ({
+  id, name, logline: "unit 7 stops and the line follows", characters: "nine visored units, numbered chests", characterTech: "three.js boxes, instanced",
+  signatureDevice: "one endless push down the line", motif: "the visor light: white, red, green",
+  plot: [
+    { sectionId: "s1", beat: "bar 1 beat 1: the line is dark", shot: "slow push" },
+    { sectionId: "s2", beat: "bar 5 beat 1: unit 7 stops", shot: "push, key from the left" },
+    { sectionId: "s3", beat: "bar 9 beat 1: the row turns", shot: "orbit, cut on downbeats" },
+    { sectionId: "s4", beat: "bar 13 beat 1: green", shot: "rise and hold" },
+  ],
+  transitions: [{ grid: "section", move: "fly through the shutter" }, { grid: "downbeat", move: "hard cut" }],
+  shotLengthS: { verse: 3, chorus: 1, bridge: 6 }, post: ["bloom", "grain", "vignette"], risk: "the row reads as a screensaver",
+  keyframes: [{ t: 4, sectionId: "s1", caption: "the dark line" }, { t: 12, sectionId: "s2", caption: "unit 7 stops" }, { t: 20, sectionId: "s3", caption: "the row turns" }, { t: 27, sectionId: "s4", caption: "green" }],
+});
 
 const direction = (id: string, name: string, palette: string[]) => ({ id, name, animation: "beat-locked push-ins", palette, type: "condensed grotesk, all caps", story: "a factory floor wakes on the downbeat", transitions: ["hard cut on bar", "white flash 2f"], risk: "flash rate in the chorus" });
 
@@ -109,9 +152,39 @@ describe("music-clip CLI end to end", () => {
     expect([p1.json["changed"], p2.json["changed"]]).toEqual([true, false]);
     expect(fs.readFileSync(path.join(d, "music-clip", "state.json"), "utf8")).toBe(state1);
 
+    // Board T: board b refuses before a treatment is picked.
+    expect(String((await cli("board", "b", d)).json["error"])).toMatch(/board b needs a treatment/);
+    writeClipJson(d, "treatments.json", { v: 1, direction: "rust-choir", treatments: [{ ...treatment("x", "X"), keyframes: [{ t: 31, sectionId: "s4", caption: "late" }] }] });
+    expect(String((await cli("board", "t", d)).json["error"])).toMatch(/keyframes\[0\]\.t 31 is outside the track/);
+    writeClipJson(d, "treatments.json", { v: 1, direction: "rust-choir", treatments: [treatment("one-who-stops", "The One Who Stops"), treatment("assembly-birth", "Assembly Birth")] });
+    fs.mkdirSync(path.join(d, "music-clip", "board-t", "one-who-stops"), { recursive: true });
+    fs.writeFileSync(path.join(d, "music-clip", "board-t", "one-who-stops", "scene.html"), SCENE);
+    const bt = await cli("board", "t", d);
+    expect(bt.code).toBe(0);
+    expect(bt.json["stage"]).toBe("board-t");
+    expect(bt.json["warnings"]).toEqual(["assembly-birth: no board-t/assembly-birth/scene.html, text only"]);
+    const shots = bt.json["treatments"] as { id: string; shot: string; frames: string[]; renderer?: string; msPerFrame?: number; errors: string[] }[];
+    expect(shots.map((x) => [x.id, x.shot, x.frames.length])).toEqual([["one-who-stops", "now", 4], ["assembly-birth", "none", 0]]);
+    expect(shots[0]?.errors).toEqual([]);
+    console.log(`board t renderer: ${shots[0]?.renderer}  ${shots[0]?.msPerFrame} ms/frame`);
+    expect(shots[0]?.renderer).not.toMatch(/SwiftShader|unknown|no webgl2/);
+    for (const f of shots[0]?.frames ?? []) expect(fs.statSync(path.join(d, "music-clip", f)).size).toBeGreaterThan(20_000);
+    expect(fs.statSync(path.join(d, "music-clip", "board-t-sheet.png")).size).toBeGreaterThan(50_000);
+    const boardT = fs.readFileSync(path.join(d, "music-clip", "board-t.html"), "utf8");
+    expect(boardT).toContain('data-treatment="assembly-birth"');
+    expect(boardT).toContain('src="board-t/one-who-stops/frames/k-4.00.png"');
+    expect(boardT).not.toMatch(/(src|href)="https?:/);
+    // --only re-shoots nothing but the one named; the other's frames are reused.
+    expect((await cli("board", "t", d, "--only", "nope")).json["error"]).toMatch(/valid: one-who-stops, assembly-birth/);
+    const only = await cli("board", "t", d, "--only", "assembly-birth");
+    expect((only.json["treatments"] as { shot: string }[]).map((x) => x.shot)).toEqual(["reused", "none"]);
+    expect((await cli("pick", d, "t:nope")).json["error"]).toMatch(/valid: one-who-stops, assembly-birth/);
+    expect((await cli("pick", d, "t:one-who-stops")).json["stage"]).toBe("picked-t");
+
     writeClipJson(d, "story.json", {
       v: 1,
       direction: "rust-choir",
+      treatment: "one-who-stops",
       sections: [
         { id: "s1", title: "Cold pulse", beat: "the floor is dark", visual: "one lamp", cutsPerBar: 0.5 },
         { id: "s2", title: "Chug", beat: "machines start", visual: "pistons", cutsPerBar: 1 },

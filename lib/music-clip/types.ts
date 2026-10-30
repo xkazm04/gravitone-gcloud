@@ -94,14 +94,14 @@ export interface TimelineV1 {
   warnings: string[];
 }
 
-export type ClipStage = "analyzed" | "board-a" | "picked-a" | "board-b" | "picked-b" | "proof" | "bakeoff" | "final";
+export type ClipStage = "analyzed" | "board-a" | "picked-a" | "board-t" | "picked-t" | "board-b" | "picked-b" | "proof" | "bakeoff" | "final";
 export type ClipStack = "kernel" | "hyperframes" | "remotion";
 
 export interface StateV1 {
   v: 1;
   stage: ClipStage;
   trackSha1: string;
-  picks: { a?: string; b?: string; stack?: ClipStack };
+  picks: { a?: string; t?: string; b?: string; stack?: ClipStack };
   updatedAt: string;
 }
 

@@ -124,8 +124,8 @@ describe("state machine", () => {
     expect(stageAfterAnalyze(s, "def", T).reset).toBe(true);
   });
   it("names the next verb", () => {
-    expect(nextVerb(undefined, { directions: false, story: false, results: 0 })).toMatch(/^analyze/);
-    expect(nextVerb({ ...base, stage: "board-b", picks: { a: "x" } }, { directions: true, story: true, results: 0 })).toBe("pick <dir> b:x");
+    expect(nextVerb(undefined, { directions: false, treatments: false, story: false, results: 0 })).toMatch(/^analyze/);
+    expect(nextVerb({ ...base, stage: "board-b", picks: { a: "x", t: "y" } }, { directions: true, treatments: true, story: true, results: 0 })).toBe("pick <dir> b:x");
   });
 });
 
