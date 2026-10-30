@@ -11,6 +11,7 @@
 // module never prompts. A Gemini failure is a warning and the section-only
 // floor, never a failed analysis.
 
+import { reanchorSections } from "./anchor";
 import { crossCheckBoundaries, deriveVoice, lineSections, sectionOnly, snapLyrics } from "./align";
 import { assignBars, bpmFromBeats, refineBeatTimes, trackBeatFrames } from "./beats";
 import { ANALYSIS_RATE, decodeMono, readTrack } from "./decode";
@@ -70,7 +71,7 @@ export async function analyzeTrack(input: AnalyzeInput, seams: AnalyzeSeams = {}
     tags: parsed.tags,
   });
   warnings.push(...pass.warnings);
-  const sections = pass.sections;
+  let sections = pass.sections;
   if (sections.length < 5) warnings.push(`sections: only ${sections.length} heard; fewer than the five a clip's structure is planned on`);
 
   const homes = lineSections(parsed, pass.tagSections);
@@ -94,6 +95,22 @@ export async function analyzeTrack(input: AnalyzeInput, seams: AnalyzeSeams = {}
       if (!answer.ok) warnings.push(`lyrics: the Gemini call failed, every line is section-only - ${answer.error}`);
       else {
         const v = validateLineTimes(answer.value, parsed.lines.map((l) => l.id), track.durationS);
+        // The sung lines get a say in where the parts begin (anchor.ts), then
+        // every line is judged against the parts as re-anchored.
+        const re = reanchorSections({
+          pass,
+          tags: parsed.tags,
+          firstLineS: parsed.tags.map((t) => (t.lineIds[0] !== undefined ? v.times.get(t.lineIds[0])?.startS : undefined)),
+          downbeats: beats.filter((b) => b.downbeat).map((b) => b.t),
+          intensity,
+          durationS: track.durationS,
+        });
+        if (re) {
+          sections = re.result.sections;
+          for (let i = warnings.length - 1; i >= 0; i--) if (warnings[i].includes("heard no section of its own")) warnings.splice(i, 1);
+          warnings.push(...re.notes, ...re.result.warnings);
+          lyrics = sectionOnly(parsed, sections, lineSections(parsed, re.result.tagSections));
+        }
         lyrics = snapLyrics(lyrics, v.times, onsets, sections);
         if (v.dropped.length) warnings.push(`lyrics: ${v.dropped.length} line(s) fell back to section-only: ${v.dropped.map((d) => `${d.id} ${d.why}`).join("; ")}`);
         warnings.push(...crossCheckBoundaries(v.sections, sections));
