@@ -28,7 +28,7 @@
 // Each keyframe gets a FRESH page, so a scene that only looks right after the
 // frames before it is caught here, cold, as it would be in a chunked render.
 
-import { cp, mkdir, readFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -56,6 +56,14 @@ export async function vendorThree(clipDir: string): Promise<string> {
   const threeMain = req.resolve("three");
   const root = path.resolve(path.dirname(threeMain), "..");
   const dest = path.join(clipDir, "vendor", "three");
+  // Already vendored: copying again while a parallel shoot reads the tree crashed both (four set
+  // builders on one film, 2026-10-30). A stale copy is refreshed by deleting vendor/three by hand.
+  try {
+    await access(path.join(dest, "build", "three.module.js"));
+    return dest;
+  } catch {
+    // not vendored yet
+  }
   await mkdir(dest, { recursive: true });
   await cp(path.join(root, "build"), path.join(dest, "build"), { recursive: true });
   await cp(path.join(root, "examples", "jsm"), path.join(dest, "examples", "jsm"), { recursive: true });
