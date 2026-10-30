@@ -27,6 +27,18 @@ describe("shot plan -> shot list", () => {
     expect(errors.some((e) => /over the 3 s ceiling/.test(e))).toBe(true);
   });
 
+  it("a one-take section is a single shot over the ceiling, and only that section is exempt", () => {
+    const p = plan("bar");
+    p.sections[0] = { ...p.sections[0], oneTake: true };
+    const { list, errors } = expandPlan(p, tl);
+    expect(errors).toEqual([]);
+    const first = list.shots.filter((s) => s.sectionId === tl.sections[0].id);
+    expect(first).toHaveLength(1);
+    expect(first[0].oneTake).toBe(true);
+    expect(first[0].endS).toBeCloseTo(tl.sections[0].endS, 3);
+    expect(list.shots.filter((s) => s.oneTake)).toHaveLength(1);
+  });
+
   it("refuses an unknown cam and an unplanned section", () => {
     const p = plan("bar");
     (p.sections[0].shots[0] as { cam: string }).cam = "dolly-zoom";

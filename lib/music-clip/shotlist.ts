@@ -31,6 +31,10 @@ export interface PlannedShot {
 export interface SectionPlan {
   sectionId: string;
   unit: GridUnit;
+  /** The whole section is ONE shot (its first planned shot), exempt from the ceiling. An operator's
+   *  call, never a default: on Break the Sequence the intro does not build, and cutting it did not
+   *  work (2026-10-30), so it is one 15 s take. */
+  oneTake?: boolean;
   /** Cycled in order until the section is filled. */
   shots: PlannedShot[];
 }
@@ -53,6 +57,8 @@ export interface Shot {
   note: string;
   /** Index of this (set, cam) pair's occurrence in the film: a set varies its angle by it. */
   variant: number;
+  /** Set when the section is planned as one take: the ceiling does not apply to this shot. */
+  oneTake?: true;
 }
 
 export interface ShotListV1 {
@@ -94,7 +100,7 @@ export function expandPlan(plan: ShotPlanV1, timeline: TimelineV1): { list: Shot
       continue;
     }
     for (const p of sp.shots) if (!(CAMS as readonly string[]).includes(p.cam)) errors.push(`${sp.sectionId}: cam "${p.cam}" is not one of ${CAMS.join(", ")}`);
-    const grid = gridOf(timeline, sec.startS, sec.endS, sp.unit);
+    const grid = sp.oneTake ? [sec.startS, sec.endS] : gridOf(timeline, sec.startS, sec.endS, sp.unit);
     let g = 0;
     let k = 0;
     while (g < grid.length - 1) {
@@ -104,7 +110,7 @@ export function expandPlan(plan: ShotPlanV1, timeline: TimelineV1): { list: Shot
       const key = `${p.set}/${p.cam}`;
       const variant = seen.get(key) ?? 0;
       seen.set(key, variant + 1);
-      shots.push({ id: `${sp.sectionId}-${String(k + 1).padStart(2, "0")}`, sectionId: sp.sectionId, startS: r3(grid[g]), endS: r3(grid[end]), set: p.set, cam: p.cam, note: p.note, variant });
+      shots.push({ id: `${sp.sectionId}-${String(k + 1).padStart(2, "0")}`, sectionId: sp.sectionId, startS: r3(grid[g]), endS: r3(grid[end]), set: p.set, cam: p.cam, note: p.note, variant, ...(sp.oneTake ? { oneTake: true as const } : {}) });
       g = end;
       k++;
     }
@@ -123,7 +129,7 @@ export function checkList(list: ShotListV1, timeline: TimelineV1): string[] {
   if (Math.abs(list.shots[list.shots.length - 1].endS - dur) > 0.05) errors.push(`last shot ends at ${list.shots[list.shots.length - 1].endS}, not ${dur}`);
   list.shots.forEach((s, i) => {
     const len = s.endS - s.startS;
-    if (len > list.maxShotS + 1e-6) errors.push(`${s.id} (${s.set}/${s.cam}) is ${len.toFixed(2)} s, over the ${list.maxShotS} s ceiling`);
+    if (len > list.maxShotS + 1e-6 && !s.oneTake) errors.push(`${s.id} (${s.set}/${s.cam}) is ${len.toFixed(2)} s, over the ${list.maxShotS} s ceiling`);
     if (len < MIN_SHOT_S) errors.push(`${s.id} is ${len.toFixed(2)} s, under ${MIN_SHOT_S} s`);
     const prev = list.shots[i - 1];
     if (prev && Math.abs(prev.endS - s.startS) > 0.001) errors.push(`${prev.id} -> ${s.id}: ${prev.endS} != ${s.startS} (gap or overlap)`);

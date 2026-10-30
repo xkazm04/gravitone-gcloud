@@ -13,3 +13,8 @@
 ## 2.1.0 - 2026-10-30 - gravitone-gcloud
 - The bake-off was never run: the treatment stage needed a renderer at once, ours reached the GPU, and every approved frame came from it. The operator retired the bake-off: quality, not render speed, decides; perfect the proven stack scene by scene.
 - The operator's edit rule for this track: no shot over 3 s, something always happens; army only in refrains and the intense second half. Made enforceable as data (shotplan -> shotlist, `shots` refuses >3 s): 139 shots, longest 2.0 s.
+
+## 2.2.0 - 2026-10-30 - gravitone-gcloud
+- Film v1 (139 shots, 4:10, 48 min on NVENC) came back "almost oneshotted"; the operator's notes were all set-level: a pile-up where a line stopped (1:12, 1:30), a hand clipping through a lever grip (2:10), white-slab inserts, an unreadable outro, and an intro that cut where the music does not build.
+- Every note went into a set or the plan, never the render: the line flows round 0451 nodding; the fingers close on a wrap circle (chords of radius 52 mm round the grip); the visor-bench strip became glass with an LED line under the bloom threshold; the outro silhouettes the dark army against an emergency-red shutter glow; s01 became one 15 s take (`oneTake` in the plan).
+- A contact sheet of shot midpoints did not show the pile-up or the clipping hand: both read only in motion or at full size. Shoot the start, middle and end of every shot that has contact (hands on props, crowds that stop) at 1080p and open them.

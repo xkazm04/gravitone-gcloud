@@ -1,6 +1,6 @@
 ---
 name: music-clip
-version: 2.1.0
+version: 2.2.0
 memory: none
 category: Content
 description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then a three-stack render bake-off (kernel, HyperFrames, Remotion) scored on quality, editability, throughput and stability. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / pack / compare). Invoke with /music-clip <folder> [verb].
@@ -164,7 +164,14 @@ stays in the CLI, unused by default.
    shots, each a set + cam + note) and run `shots`: it expands on the beat grid into
    `film/shotlist.json` and refuses any shot over `maxShotS`. Break the Sequence's rule, from the
    operator: no shot over 3 s, something always happens. Intimate sets build between refrains;
-   the army only in refrains and the intense second half.
+   the army only in refrains and the intense second half. The one exception is the operator's to
+   make: a section marked `"oneTake": true` is a single shot exempt from the ceiling (Break the
+   Sequence's intro, 15 s, "the music in this phase does not build up and switching scenes in
+   intro does not work well there"). A one-take is a camera path over timed keys, monotone cubic
+   (a Catmull-Rom tangent overshoots and swings the look target off the subject), with an event
+   on every onset or beat along the way.
+   Crowds keep moving: a unit that stops in a marching line is walked into by the next one. Route
+   the line round the stopped unit and let the walkers nod as they walk (operator, film v1 at 1:12).
 2. **Core first, then sets in parallel.** One builder owns `film/core/` (renderer, post chain,
    material library, the robot factory with the approved beat-locked motion, timeline helpers) and
    the shot router, and leaves a stub for every set so the film plays end to end. Then one Opus
