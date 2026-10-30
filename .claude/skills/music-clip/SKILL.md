@@ -1,5 +1,6 @@
 ---
 name: music-clip
+version: 2.0.0
 memory: none
 category: Content
 description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then a three-stack render bake-off (kernel, HyperFrames, Remotion) scored on quality, editability, throughput and stability. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / pack / compare). Invoke with /music-clip <folder> [verb].
@@ -17,7 +18,39 @@ stops. Every scene and hero author reads `pipeline/music-clip/CRAFT.md` first - 
 film is held to, the one Board B missed when it came out "a PowerPoint presentation".
 Operator doc: `docs/music-clip.md`. Output: `<folder>/music-clip/`.
 
+## The method (2.0.0) - why the boards are in this order
+
+Version 1.0.0 went look -> hero and came out "a PowerPoint presentation": a status panel and type
+on black, one rotating cone. Every one of four treatments rose to film stills once five things
+changed, and they are the method now:
+
+1. **Research the bar before the first board, not after the first miss.** The quality of current
+   clips is a measured thing (CRAFT.md: one lit world and a moving camera, one post chain over
+   every frame, transitions as events on the grid, faceless characters, a motif that changes, an
+   arc across the choruses). A session that has not read CRAFT.md designs slides.
+2. **Separate the look from the film.** Board A fixes palette and type only. Board T then decides
+   what the look is FOR: characters, plot per section, ONE signature camera device, the motif and
+   how it changes. A hero is never built before a treatment is picked.
+3. **Every treatment is judged on rendered frames, not prose.** Keyframes at the SAME track times
+   across treatments (like with like), each a real render of the scene page at t.
+4. **A world on the GPU, not a page on the CPU.** Headless Chromium reaches the box's GPU through
+   ANGLE/D3D11 (`lib/music-clip/gpuShot.ts`); three.js with fog, depth of field, bloom, grade and
+   grain at ~0.3-0.6 s per 1080p frame. The CPU (SwiftShader) path is what made v1 flat.
+5. **One Opus builder per treatment, in parallel, each self-critiquing.** Each builder opens its
+   own PNGs, iterates at least three times against CRAFT.md's checklist, checks motion (t vs
+   t+0.5 s) and purity (same t twice), and scores its frames honestly - those scores name the next
+   upgrade (on Break the Sequence all four named primitive bodies as the ceiling).
+6. **Music is felt in the bodies, not only the lights.** A beat-locked motion of the characters
+   (heads nodding on the beat in the refrains, down-stroke landing on the beat, downbeats harder,
+   amplitude from the low band) is a closed-form function of `beats` and t - the operator's
+   "we would ultimately win" on Unit 0451. Prove it with `cut.mts` (a span as mp4 with the
+   track's own audio) before the bake-off, never by stills alone.
+
 ## Commands
+
+Proof cut of any scene span with the track under it (GPU, NVENC):
+`npx tsx pipeline/music-clip/cut.mts <folder> <scene.html> <startS> <endS> <out.mp4>`; keyframes alone:
+`npx tsx pipeline/music-clip/shoot.mts <scene.html> <timeline.json> <outDir> <t...>`.
 
 ```bash
 npx tsx pipeline/music-clip.mts analyze "<folder>" [--audio "<file>"] --dry|--yes   # --dry: no vendor call; --yes: ONE live Gemini call
