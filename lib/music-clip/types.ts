@@ -131,3 +131,56 @@ export interface AnalyzeInput {
   /** Dry: no vendor call; lyric times fall back to section-only. */
   dry: boolean;
 }
+
+// ---- Board T (treatments): added 2026-10-30 after the operator found Board B
+// "a PowerPoint presentation" - the stage between the look (Board A) and the
+// hero (Board B) where characters, plot and the animation language are chosen.
+
+export interface TreatmentBeat {
+  /** TimelineSection.id */
+  sectionId: string;
+  /** What happens, addressed in (section, bar, beat); never raw seconds. */
+  beat: string;
+  /** The shot: camera move, framing, light. */
+  shot: string;
+}
+
+export interface TreatmentKeyframe {
+  /** Seconds on the track clock; the scene page renders render(t) here. */
+  t: number;
+  sectionId: string;
+  caption: string;
+}
+
+export interface Treatment {
+  id: string;
+  name: string;
+  logline: string;
+  /** The character(s), how they read without a face or lip sync. */
+  characters: string;
+  /** How they are built: three.js low-poly, silhouettes, SDF, 2.5D plates, AI video inserts. */
+  characterTech: string;
+  /** The ONE camera device carried through the whole film. */
+  signatureDevice: string;
+  /** The recurring object and how it changes across sections. */
+  motif: string;
+  /** One beat per timeline section, in track order. */
+  plot: TreatmentBeat[];
+  /** Grid level -> transition, e.g. { grid: "section", move: "fly-through the shutter" }. */
+  transitions: { grid: "section" | "phrase" | "bar" | "downbeat" | "drop"; move: string }[];
+  /** Average shot length in seconds per section kind. */
+  shotLengthS: { verse: number; chorus: number; bridge: number };
+  /** The post chain every frame goes through, in order. */
+  post: string[];
+  risk: string;
+  keyframes: TreatmentKeyframe[];
+}
+
+export interface TreatmentsV1 {
+  v: 1;
+  /** Board A's picked direction this builds on (palette and type stay). */
+  direction: string;
+  treatments: Treatment[];
+}
+
+export const MAX_TREATMENTS = 4;
