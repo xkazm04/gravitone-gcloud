@@ -46,7 +46,8 @@ describe("findPython under CI", () => {
   const lookup = (ci: string | undefined) =>
     spawnSync(process.execPath, ["-e", `import(${JSON.stringify(pathToFileURL(path.join(here, "helpers.ts")).href)}).then((m) => console.log(String(m.findPython())))`], {
       encoding: "utf8",
-      env: { PATH: path.dirname(process.execPath), SystemRoot: process.env.SystemRoot, ...(ci === undefined ? {} : { CI: ci }) },
+      // NODE_NO_WARNINGS: node 24 prints an ExperimentalWarning for node:sqlite on stderr.
+      env: { NODE_NO_WARNINGS: "1", PATH: path.dirname(process.execPath), SystemRoot: process.env.SystemRoot, ...(ci === undefined ? {} : { CI: ci }) },
     });
 
   it("throws when CI is set and no Python 3 answers", () => {

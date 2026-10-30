@@ -33,6 +33,7 @@ import { auditionLocalInstrument, buildLocalScoreReceipt, buildScorePrompt, draf
 import { filePathAbs } from "../../lib/sound/store.ts";
 import { getTake } from "../../lib/sound/takes.ts";
 import { triageContextOf } from "../../lib/sound/triageContext.ts";
+import { SAMPLES } from "./local-band-samples.ts";
 
 afterAll(() => {
   closeKernel();
@@ -132,7 +133,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     expect(localActive.ops).toEqual(["compose", "section-edit"]);
   });
 
-  it("builds the A2 text-to-score prompt from pipeline/SCORE-PROMPT.md, drafts briefs via proposeScoreSpec/draftScoreFromBrief, and renders a seamless loop passing loop-seam", async () => {
+  it.skipIf(!SAMPLES)("builds the A2 text-to-score prompt from pipeline/SCORE-PROMPT.md, drafts briefs via proposeScoreSpec/draftScoreFromBrief, and renders a seamless loop passing loop-seam", async () => {
     const prompt = await buildScorePrompt("Warm lo-fi loop for late night reading");
     expect(prompt).toContain("Warm lo-fi loop for late night reading");
     expect(prompt).toContain("vital-sub-bass");
@@ -186,7 +187,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     }
   }, 180_000);
 
-  it(
+  it.skipIf(!SAMPLES)(
     "renders a ScoreSpec deterministically to -14 LUFS, passes all triage detectors, swaps 1 stem while reusing the other 3 bit-for-bit, and remixes solo/mute with 4-stem cache reuse",
     async () => {
       const spec = templateById("chill-hiphop").spec;
@@ -292,7 +293,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     240_000,
   );
 
-  it("renders instrument audition previews, renders SMF .mid files via renderMidi, and refuses failed A0 instruments", async () => {
+  it.skipIf(!SAMPLES)("renders instrument audition previews, renders SMF .mid files via renderMidi, and refuses failed A0 instruments", async () => {
     const refused = await auditionLocalInstrument("minigrand-vst3");
     expect(refused.ok).toBe(false);
 
@@ -325,7 +326,7 @@ describe("Local Band ScoreSpec, $0 Receipt, & A0 Gate", () => {
     if (!refusedMidi.ok) expect(refusedMidi.error.message).toContain("silent");
   }, 180_000);
 
-  it("reads the local band (readLocalBand) and steers it: taste steering, fx presets, a sketched draft, stem choices in words", async () => {
+  it.skipIf(!SAMPLES)("reads the local band (readLocalBand) and steers it: taste steering, fx presets, a sketched draft, stem choices in words", async () => {
     const view = await readLocalBand();
     expect(view.templates.length).toBe(4);
     expect(view.catalog.length).toBe(16);

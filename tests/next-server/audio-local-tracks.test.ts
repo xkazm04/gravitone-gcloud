@@ -40,6 +40,7 @@ import { closeKernel } from "../../lib/kernelStore.ts";
 import { renderLocalScore } from "../../lib/sound/localScore.ts";
 import { mixLocalTake, rewriteLocalStem } from "../../lib/sound/localScoreVerbs.ts";
 import { filePathAbs } from "../../lib/sound/store.ts";
+import { SAMPLES } from "./local-band-samples.ts";
 
 /** sha256 of mix.wav for the gain-free chill-hiphop template, rendered at 84826f76 (deterministic: verified twice). */
 const V1_NOGAIN_MIX_SHA = "63acaeb118e2e408b98a4c85bbb9c0da536ea10c555b53d73650cd4148265e89";
@@ -74,7 +75,7 @@ const noGain = (): ScoreSpec => {
 const ids = (xs: readonly { readonly id: string }[]): string[] => xs.map((x) => x.id);
 
 describe("local band tracks, rendered", () => {
-  it("renders a v1 spec bit-identically to before stage S2, warm and cold alike", async () => {
+  it.skipIf(!SAMPLES)("renders a v1 spec bit-identically to before stage S2, warm and cold alike", async () => {
     const warm = await renderLocalScore(noGain(), { verifyDeterminism: false });
     if (!warm.ok) throw new Error(warm.error.message);
     expect(warm.value.plan.mixSha256).toBe(V1_NOGAIN_MIX_SHA);
@@ -95,7 +96,7 @@ describe("local band tracks, rendered", () => {
     }
   }, 300_000);
 
-  it("renders the full band: a repeated role is two distinct stems, files and URLs by track id", async () => {
+  it.skipIf(!SAMPLES)("renders the full band: a repeated role is two distinct stems, files and URLs by track id", async () => {
     const r = await renderLocalScore(FULL_BAND_SPEC, { verifyDeterminism: false });
     if (!r.ok) throw new Error(r.error.message);
     const { take, plan } = r.value;
