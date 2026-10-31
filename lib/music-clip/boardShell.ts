@@ -122,9 +122,9 @@ export function defaultSwatch(d: Direction): string {
 }
 
 const CARD_CSS = `
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(482px,1fr));gap:20px}
 article{background:#16181d;border:1px solid #262930;border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
-article iframe{width:100%;aspect-ratio:16/9;border:0;display:block;background:#000}
+article iframe{width:480px;height:270px;border:0;display:block;margin:0 auto;background:#000}
 article .body{padding:14px 16px;display:grid;gap:8px}
 article h2{font-size:19px;font-weight:650;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 article h2 .mono{font-size:12px;color:#9a978f;font-weight:400}
