@@ -1,9 +1,9 @@
 ---
 name: music-clip
-version: 2.3.0
+version: 2.4.0
 memory: none
 category: Content
-description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then a three-stack render bake-off (kernel, HyperFrames, Remotion) scored on quality, editability, throughput and stability. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / pack / compare). Invoke with /music-clip <folder> [verb].
+description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then the film - our own three.js engine on the GPU (start from pipeline/music-clip/film-starter/), the edit as a beat-grid shot plan, one set module per location, proof cuts with sound, a full render muxed with the lossless master, and note rounds that go back into sets and the plan. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / shots) and pipeline/music-clip/{shoot,cut}.mts. Invoke with /music-clip <folder> [verb].
 argument-hint: "<folder> [analyze|status|board a|board t|board b|pick a:<id>|pick t:<id>|pick b:<id>|pick stack:<name>|pack|compare]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, Agent
 ---
@@ -64,7 +64,8 @@ npx tsx pipeline/music-clip.mts compare "<folder>"
 ```
 
 The folder holds exactly one `*.mp3` (or name it with `--audio`), `lyrics.txt|lyrics.md`
-and `style.txt|style.md|prompt.md|prompt.txt`. A missing file is named by the CLI.
+and `style.txt|style.md|prompt.md|prompt.txt`. A missing file is named by the CLI. Ask for the
+track's lossless master too (Suno exports a wav): put it beside the mp3 and every render muxes it.
 
 ## Resume first, always
 
@@ -177,22 +178,54 @@ stays in the CLI, unused by default.
    stays on the mp3 (check they line up: cross-correlate, expect 0 ms).
    Crowds keep moving: a unit that stops in a marching line is walked into by the next one. Route
    the line round the stopped unit and let the walkers nod as they walk (operator, film v1 at 1:12).
-2. **Core first, then sets in parallel.** One builder owns `film/core/` (renderer, post chain,
-   material library, the robot factory with the approved beat-locked motion, timeline helpers) and
-   the shot router, and leaves a stub for every set so the film plays end to end. Then one Opus
-   builder per set group, in parallel, each touching only its `film/sets/<set>.js`, each shooting
-   every one of its shots (start, middle, end) and 4K crops, iterating against CRAFT.md.
-3. **Proof cuts with sound** (`cut.mts`) on the refrains and on every new set before the full
-   render; the operator judges motion and sync by ear and eye, not by stills.
-4. **The full render:** `cut.mts <folder> film/index.html 0 <duration> music-clip/final.mp4`
-   (1080p ~1 h on the RTX Spark; `--size 3840x2160` ~4 h). Check frames from the encoded file on
-   downbeats.
-5. **STOP.** The final's path, duration, the ffprobe line. Notes from the operator go back into a
-   set or the plan, never into a one-off patch of the render.
+2. **Core first, then sets in parallel.** Start from `pipeline/music-clip/film-starter/` (Break the
+   Sequence's proven core: post chain, material library, the robot factory with the approved nod,
+   kit, env with the monotone `hermite` camera path, the router, and the one-take exemplar
+   `sets/cable-room/onetake.js`; its README says what to keep and what is per-track). Copy it to
+   `<folder>/music-clip/film/`, keep what serves this track, rewrite the sets. One builder owns
+   `film/core/` and the router and leaves a stub per set so the film plays end to end; then one
+   Opus builder per set group, in parallel, each touching only its `film/sets/<set>.js`, each
+   shooting every one of its shots (start, middle, end) and 4K crops, iterating against CRAFT.md.
+3. **Proof cuts with sound** (`cut.mts`) on the refrains, on every new set and on every one-take
+   before the full render; the operator judges motion and sync by ear and eye, not by stills.
+4. **The full render:** `cut.mts <folder> film/index.html 0 <duration> music-clip/film-vN-1080p.mp4`
+   (1080p 47-53 min on the RTX Spark; `--size 3840x2160` ~4 h). Version every render (v1, v2, ...)
+   and keep the previous one for comparison. Never run the test suite during a render: the box is
+   saturated and timed tests fail. Check frames pulled FROM THE ENCODED FILE.
+5. **STOP.** The final's path, duration, the ffprobe line, a contact sheet. Notes from the operator
+   go back into a set or the plan, never into a one-off patch of the render.
+
+### Note rounds - how the operator's notes become fixes
+
+Break the Sequence took three rounds (v1 -> v3); every note was a timestamp and a symptom.
+
+- **Timestamp -> shot -> set.** Map each time to its shot in `film/shotlist.json`, pull frames at
+  the time from the encoded file (full size, not a contact-sheet thumbnail), find the cause in the
+  set, fix the set or the plan, shoot the fix at the note's time AND at every other shot of that
+  set/cam (a fix in a set fixes all its repeats).
+- **What thumbnails hide:** contact (a hand through a grip, units walking into each other) and
+  motion only show at full size or in motion. Shoot start/middle/end of every contact shot at 1080p.
+- **Exposure traps, all seen:** an HDR emissive prop near the lens is a white slab (keep close props
+  under the bloom threshold; a thin LED line may bloom, a face may not); a dark set whose light
+  source dies (visors off) goes black - give the silhouettes a backdrop light; a light hitting a
+  glossy lid at grazing angle is a hot white patch.
+- **A camera path through keys** overshoots with Catmull-Rom tangents (the look target swung off
+  the gauge and the frame went black): use `hermite` from core/env.js (monotone, never overshoots).
+- **Openings and endings:** cutting every bar where the music does not build reads as random.
+  Look at the low band of the intro and the outro before writing the plan; where it is flat,
+  propose a one-take (`oneTake` / `tailTake`) to the operator. A shot cycle repeated through a long
+  section repeats its story notes - check every note's time against its lyric time.
+
+### Delivery
+
+The upload file is the last render remuxed if only the sound changed (`-c:v copy`):
+1080p30 H.264 ~16 Mb/s + AAC 384 kb/s 48 kHz from the master, `+faststart` - about 0.5 GB for
+4 minutes. YouTube takes up to 256 GB or 12 hours, whichever is less, and recommends 8 Mb/s for
+1080p30 and 384 kb/s stereo AAC, so the file needs no compression for upload.
 
 ## Rules
 
-- Never push, never commit the operator's folder, never delete the operator's
+- Never push unless the operator asks; never commit the operator's folder, never delete the operator's
   files (the mp3, lyrics, style, anything outside `music-clip/`).
 - The live analysis is the only spend; no other vendor, no generated stills or
   video in this pipeline.

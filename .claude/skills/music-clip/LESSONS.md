@@ -21,4 +21,9 @@
 
 ## 2.3.0 - 2026-10-31 - gravitone-gcloud
 - Film v2 approved except the outro: the s13 cycle ran twice, so "visors going off" and "Signal lost" played again 13 s after they happened, and the last 0.69 s was a hard-cut fragment. The fix was the opening's fix: the ending is one take (`tailTake`), the bars before it each carry one story beat.
-- The Suno wav and the mp3 lined up to the sample (lag 0 ms, r 0.999); the master goes under the picture as one AAC generation (320 kb/s) instead of mp3 -> AAC.
+- The Suno wav and the mp3 lined up to the sample (lag 0 ms, r 0.999); the master goes under the picture as one AAC generation (320 kb/s; 384 kb/s from 2.4.0) instead of mp3 -> AAC.
+
+## 2.4.0 - 2026-10-31 - gravitone-gcloud
+- Break the Sequence shipped after three note rounds (v1 "almost oneshotted", v2 outro only, v3 "very well done"). Every note was a timestamp plus a symptom and every fix landed in a set or the plan; the skill now carries the round as a procedure (Stage 3, Note rounds).
+- The proven engine lived only in the operator's Downloads folder, out of reach of the next track. It is now `pipeline/music-clip/film-starter/` (core + router + the one-take exemplar).
+- The upload: 513 MB for 4:10 (H.264 16 Mb/s, AAC 384 kb/s); YouTube's cap is 256 GB / 12 h.

@@ -156,7 +156,7 @@ export async function shootKeyframes(opts: {
  * loads), PNGs piped to ffmpeg, the mp3 slice muxed in. NVENC first, libx264
  * when this ffmpeg or GPU refuses it - the encoder that ran is returned.
  * The audio is the track itself, cut at the same start: never re-timed. A lossless source (wav/flac) is
- * encoded once to AAC 320 kb/s at its own rate; an mp3 source stays at 256 kb/s (more bits cannot buy back what
+ * encoded once to AAC 384 kb/s at its own rate (YouTube's recommended stereo upload bitrate); an mp3 source stays at 256 kb/s (more bits cannot buy back what
  * the mp3 already threw away).
  */
 export async function renderSpan(opts: {
@@ -182,7 +182,7 @@ export async function renderSpan(opts: {
   const browser = await chromium.launch({ headless: true, args: GPU_ARGS });
   const encodeWith = async (encoder: string): Promise<void> => {
     const vArgs = encoder === "h264_nvenc" ? ["-c:v", "h264_nvenc", "-preset", "p5", "-cq", "19"] : ["-c:v", "libx264", "-preset", "medium", "-crf", "18"];
-    const ff = spawn("ffmpeg", ["-y", "-v", "error", "-f", "image2pipe", "-framerate", String(fps), "-i", "-", "-ss", String(opts.startS), "-t", String(n / fps), "-i", opts.audioPath, "-map", "0:v", "-map", "1:a", ...vArgs, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", /\.(wav|flac)$/i.test(opts.audioPath) ? "320k" : "256k", "-shortest", opts.outFile], { stdio: ["pipe", "ignore", "pipe"] });
+    const ff = spawn("ffmpeg", ["-y", "-v", "error", "-f", "image2pipe", "-framerate", String(fps), "-i", "-", "-ss", String(opts.startS), "-t", String(n / fps), "-i", opts.audioPath, "-map", "0:v", "-map", "1:a", ...vArgs, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", /\.(wav|flac)$/i.test(opts.audioPath) ? "384k" : "256k", "-movflags", "+faststart", "-shortest", opts.outFile], { stdio: ["pipe", "ignore", "pipe"] });
     let err = "";
     ff.stderr.on("data", (d) => (err += String(d)));
     const done = new Promise<void>((ok, bad) => ff.on("close", (code) => (code === 0 ? ok() : bad(new Error(`ffmpeg ${encoder}: ${err.trim()}`)))));
