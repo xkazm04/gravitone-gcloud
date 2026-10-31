@@ -9840,35 +9840,67 @@
       "subject": "agent-memory",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T00:00:33.219Z",
-      "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
-      "techniques": []
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-1",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "lib/library/project.ts:14 the projection's consumer is the Library index for screens, not an agent context."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/library/project.ts:14 The context is a deterministic projection of studio feeds into the kernel's Library index for the screens, not a store an agent carries forward between sessions; searching lib/library (feeds included) found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hits are the SQLite ':memory:' path and an ingest memo (rememberIngest), which is a content-hash cache.",
+          "evaluatedAt": "2026-10-24T00:00:33.219Z",
+          "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
+          "reason": "replaced by cloud-20261031-gravitone-1"
+        }
+      ]
     },
     "e2f6231a-d39f-4d39-9465-0a48436cae92/agent-memory": {
       "context": "project-step-store",
       "subject": "agent-memory",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T00:00:33.219Z",
-      "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
-      "techniques": []
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-1",
+      "techniques": [
+        {
+          "technique": "durable-store-failure-posture",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/index.ts:9 the store is browser step content, not an agent memory store, though it does separate never-written from failed reads on its own terms."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:2 This is an IndexedDB store for UI step content keyed `${projectId}:${phase}`, with no agent reading it as recalled memory; searching lib/steps found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hit is a comment about an in-memory mirror in saveWatchers.ts. Its honest never-written vs failed read path is the same idea as durable-store-failure-posture, but it is not an agent memory store.",
+          "evaluatedAt": "2026-10-24T00:00:33.219Z",
+          "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
+          "reason": "replaced by cloud-20261031-gravitone-1"
+        }
+      ]
     },
     "e481098a-3532-46d9-bdc9-de84fbc2ce01/agent-memory": {
       "context": "foundry-forge-store-and-verdicts",
       "subject": "agent-memory",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T00:00:33.219Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
-        "state": "not-applicable",
-        "at": "2026-10-24T00:00:56.990991+00:00",
-        "reason": "reviewer (sonnet): The claim that no agent recalls this context's verdicts is contradicted. verdictLog.ts is the shared verdict writer that lib/foundry/scout/store.ts and lib/foundry/training/store.ts use. scout/taste.ts reads the operator's last verdicts back into each new night as taste.md for the skill (\"rejections"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-1",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/store.ts:4 readers are the app and the cull, not an agent's context assembly."
+        }
+      ],
+      "registryProposal": "The forge's style lifecycle (hypothesis in styles.json, 'proven' only when a human kept it on more than one scene, lib/foundry/store.ts:11-12) has the shape of cross-context-promotion's second-sighting bar applied to generation recipes rather than agent memory; if the registry wants that bar reusable outside agent memory, it may belong in a shared technique."
     },
     "b412ea73-0dc3-4362-93c4-2a9b913f9a61/agent-memory": {
       "context": "v1-import-and-archive",
@@ -13562,6 +13594,80 @@
         "at": "2026-10-26T01:00:34.523751+00:00",
         "reason": "reviewer (sonnet): The anchors in UpstreamBreak.tsx (lines 1, 6, 8) are header comments about a failed pipeline step and what was kept from v1, so they do not show that no vendored tree or patch set exists. That file is also not among the context's listed files (status, tally, piprow, stackbar, facts, facet). I did no"
       }
+    },
+    "14632859-df56-4340-9e16-c420ff681ee3/agent-memory": {
+      "context": "article-run-engine",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-1",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:3 one agent turn per step over staged inputs; no recall tier is assembled into the prompt."
+        },
+        {
+          "technique": "episodic-capture",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:3 run outputs are ingested as the run's own artifacts (draft, sources), not captured as episodes for later distillation."
+        }
+      ]
+    },
+    "fb6d9704-d95c-46bc-b440-c6599e487cff/agent-memory": {
+      "context": "foundry-strips-and-training",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-1",
+      "techniques": [
+        {
+          "technique": "procedure-promotion",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/training/store.ts:14 a ledger row is the remote loop's work queue for reflecting an improvement into a prompt surface; the promotion itself happens outside this context and outside this repo's code."
+        },
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/strips/author.ts:1 one isolated turn; no recalled material is assembled into its prompt."
+        }
+      ]
+    },
+    "c425f431-c0d1-4f34-b736-1a5d70683ef4/agent-memory": {
+      "context": "notebook-contract-validation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-1",
+      "techniques": [
+        {
+          "technique": "consolidation",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:1 validates a single run's output shape; no distillation into durable beliefs."
+        }
+      ]
+    },
+    "f8036604-75f5-4f7d-898c-734511ac5e86/agent-memory": {
+      "context": "script-composition-and-validation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-1",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/compose.ts:2 the prompt is assembled from the current notebook, with no recalled-memory tier."
+        }
+      ]
     }
   }
 }

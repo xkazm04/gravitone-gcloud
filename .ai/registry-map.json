@@ -1408,7 +1408,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:3 Each writer step stages inputs, runs one agent turn in a fresh workspace (makeWorkspace) and ingests out/, so state crosses steps only as staged files of this run and nothing is carried across runs into an agent's context; grep over the context's 18 files for memory|recall|lesson|remember|episod|history|session|--resume finds no store read back as recalled memory (loop.ts only reads which topics are covered, for claiming).",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "agent-runtime-assembly",
@@ -5103,7 +5107,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/store.ts:4 The forge disk layer is the app's read path and the human cull's write path over generated image runs; its style store and ledger.json are a recipe catalogue and verdict record for image generation (forge.py reads styles.json as recipes), not a belief store an agent recalls into context; grep over its 10 files for memory|recall|lesson|episod|remember|inject finds none in that sense (calibration.ts calibrates a grader against human verdicts).",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "mcp-tools",
@@ -5333,7 +5341,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/strips/author.ts:1 Strip authoring is one agent turn in an isolated workspace whose only carried input is the in-run fix feedback; strips-ledger.json is written at commit but read only by lib/foundry/strips/triage.ts, lib/foundry/catalogue.ts and the Board source (grep 'strips-ledger' across the repo), never by the author turn, and the Dojo ledger is a work queue for a loop on another machine (lib/foundry/training/store.ts:14), so no agent here recalls a carried-forward store; grep terms memory|recall|lesson|episod|remember|learn.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "agent-runtime-assembly",
@@ -8607,10 +8619,10 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/library/project.ts:14 The context is a deterministic projection of studio feeds into the kernel's Library index for the screens, not a store an agent carries forward between sessions; searching lib/library (feeds included) found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hits are the SQLite ':memory:' path and an ingest memo (rememberIngest), which is a content-hash cache.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
-          "evaluatedRevision": 51
+          "evidence": "lib/library/project.ts:14 The Library projection reads each feed, ingests its media into blobs and upserts items into the kernel's Library index for the screens; re-judged against revision 52, no agent reads that index as recalled memory (rememberIngest is an ingest memo, not agent memory); grep over its 12 files for memory|recall|lesson|episod|remember finds only rememberIngest and the Dojo 'lesson' vocabulary facet.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "prompt-assembly",
@@ -9012,7 +9024,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:1 The context is a runtime validation door deciding whether one model answer is a notebook; it holds no store an agent carries forward or recalls; grep over its 15 files for memory|recall|lesson|episod|remember finds only retrieval.ts's rule that a remembered (unfetched) URL is not a citation.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "structured-output",
@@ -10408,10 +10424,10 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/steps/index.ts:2 This is an IndexedDB store for UI step content keyed `${projectId}:${phase}`, with no agent reading it as recalled memory; searching lib/steps found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hit is a comment about an in-memory mirror in saveWatchers.ts. Its honest never-written vs failed read path is the same idea as durable-store-failure-posture, but it is not an agent memory store.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
-          "evaluatedRevision": 51
+          "evidence": "lib/steps/index.ts:9 An IndexedDB object store of per-project UI step content keyed `${projectId}:${phase}`; re-judged against revision 52, no agent reads it as recalled memory; grep over its 16 files for memory|recall|lesson|episod|remember|inject finds none.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "settings",
@@ -11708,7 +11724,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/compose.ts:2 The script producer runs one compose turn with one prompt assembly from notebook cards and one door over the answer; versions.ts keeps the script's own version history and human notes, not memory an agent recalls across sessions; grep over its 14 files for memory|recall|lesson|episod|remember finds only gate.ts's 'a question with no memory' about RegExp state.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "prompt-assembly",
