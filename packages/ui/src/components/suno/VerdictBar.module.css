@@ -1,0 +1,17 @@
+/* The dock's verdict row: one wrapping line of controls - which take, keep/drop, the off-axes chips,
+   the attached take, send - with a picked file's fault on its own line. The file input is the
+   browser's picker only; the visible control is the attach button. Tokens only. */
+.bar{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);align-items:center;min-width:0}
+.pick{display:inline-flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);align-items:center;min-width:0}
+.keep,.off,.file{display:inline-flex;flex-wrap:wrap;gap:var(--sp-1);align-items:center;min-width:0}
+/* A phone: the dock is short (--h-dock), so the row is two lines - which take and keep/drop, then the
+   off-axes chips scrolling sideways beside attach and send. */
+@media (max-width:700px){
+  .pick{flex:1 1 100%}
+  .off{flex:1 1 0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+}
+.picker{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.remove{display:inline-grid;place-items:center;width:var(--h-chip);height:var(--h-chip);border:1px solid var(--hair-2);border-radius:var(--r-chip);color:var(--muted);font:600 var(--fs-ui)/1 var(--mono);cursor:pointer}
+.remove:hover{color:var(--ink-bright);border-color:var(--hair-3)}
+.remove:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge)}
+.fault{flex-basis:100%}

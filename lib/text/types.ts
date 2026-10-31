@@ -222,6 +222,18 @@ export interface SourceReceipt {
  *                        candidate and never on the Board. The one turn the
  *                        local Ollama model answers first (spark scout-vision
  *                        S6): a draft is worth writing only because it is free.
+ *   · `suno-listen`      lib/sound/suno/listen.ts — ONE uploaded Suno take
+ *                        (the mp3 the person downloaded) in as an inline audio
+ *                        part (TextRequest.audio), one StudioListen read out:
+ *                        genre, mood, tempo and key estimated independently,
+ *                        instruments with role and prominence, timestamped
+ *                        sections. Prompt: pipeline/SUNO-LISTEN-PROMPT.md;
+ *                        held to @gt/domain/audio.suno.schema at the door. The
+ *                        ONLY turn that carries audio, so the only one planned
+ *                        to google alone in both postures: the local CLI and
+ *                        the daemon cannot hear and refuse it before dispatch.
+ *                        Priced per audio second before it runs (a receipt),
+ *                        pressed by the person, never by an agent.
  */
 export type TurnClass =
   | "edit-plan"
@@ -240,7 +252,22 @@ export type TurnClass =
   | "repair"
   | "voice-fx"
   | "draft"
+  | "suno-listen"
   | "probe";
+
+/**
+ * AUDIO THE MODEL MUST HEAR, sent inline beside the prompt (the `suno-listen`
+ * turn). An adapter that cannot hear REFUSES a request carrying it before
+ * dispatch (`invalid-request`): a text-only engine answering an audio question
+ * from the prompt alone would describe a song it never heard. The bytes ride
+ * whole; the adapter that sends them checks its vendor's inline request ceiling
+ * (providers/google.ts GOOGLE_INLINE_REQUEST_MAX_BYTES) and refuses past it.
+ */
+export interface TextAudio {
+  /** The file's media type as the vendor wants it named (audio/mp3, audio/wav, ...). */
+  mimeType: string;
+  bytes: Uint8Array;
+}
 
 /**
  * HOW THE ANSWER WAS REACHED. Not cosmetic — see the header, point 1.
@@ -349,6 +376,9 @@ export interface TextRequest extends TextSteer {
    * receives an unvalidated body it has to hand-parse.
    */
   schema?: Record<string, unknown>;
+  /** Audio the model must hear with the prompt (see `TextAudio`). Only an
+   *  adapter that can hear accepts it; every other one refuses before dispatch. */
+  audio?: TextAudio;
   /**
    * The application's ceiling, in milliseconds.
    *

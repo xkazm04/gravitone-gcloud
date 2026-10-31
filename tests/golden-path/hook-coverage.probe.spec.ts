@@ -31,6 +31,9 @@ export const EXEMPT: Record<string, string> = {
   "app/(studio)/library/_library/useNarrow.ts": NEEDS_DOM,
   "app/(studio)/audio/_audio/useCardDrag.ts": NEEDS_DOM,
   "app/(studio)/audio/_audio/useTransport.ts": NEEDS_DOM,
+  // spark audio-agent-studio: writes the playhead onto a ref'd timeline every animation frame; its
+  // arithmetic (fracAt) is unit-tested in packages/ui/test/components/studio-desk.test.ts.
+  "app/(studio)/audio/studio/_view/usePlayhead.ts": NEEDS_DOM,
 };
 
 /* ───────────────────────────── derivation (pure) ──────────────────────────── */

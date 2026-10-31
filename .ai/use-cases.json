@@ -115,6 +115,16 @@
       "owner": "gravity"
     },
     {
+      "key": "text.suno-listen",
+      "name": "Listen to an uploaded Suno take",
+      "description": "Turns ONE Suno take the person downloaded and uploaded (inline audio, 32 tokens per second) into a read of genre, mood, tempo and key estimated independently, instruments with role and prominence, timestamped sections and whether vocals are heard (pipeline/SUNO-LISTEN-PROMPT.md), held to @gt/domain/audio.suno.schema studioListenSchema and shown unconfirmed; quoted and receipted before it runs, a stand-in under GRAVITONE_DRY_ONLY.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/sound/suno/listen.ts::listenTake -> lib/text/router.ts::reason()",
+      "expected_models": ["gemini-3.8-flash"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.draft",
       "name": "Draft a night's markdown on the local model",
       "description": "A night-fill draft item's prompt in, one markdown draft out (foundry-out/scout/<night>/drafts/), never a candidate and never on the Board; served by the local Ollama model first (qwen3.8:27b, $0) and the claude CLI behind it, never a metered key.",

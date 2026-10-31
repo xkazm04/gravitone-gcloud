@@ -30,6 +30,15 @@ describe("the registry", () => {
     for (const op of ["composer_run", "compose", "set_part", "rename", "plan_launch", "discard", "part_act"]) expect(opsOf("launch").find((s) => s.op === op)?.writes, op).toBe(true);
     for (const op of ["pause", "resume", "retry", "move", "reroute", "cancel", "ack_lane"]) expect(opsOf("job").find((s) => s.op === op)?.writes, op).toBe(true);
   });
+
+  it("carries the audio studio's ops (spark audio-agent-studio S2): reads in read, the local band's writes in launch", () => {
+    const read = ["audio_inbox", "audio_guide", "audio_palette", "audio_compile", "intent_steer"];
+    const launch = ["audio_turn", "audio_render", "audio_mix", "audio_rewrite", "audio_audition"];
+    for (const op of read) expect(opsOf("read").find((s) => s.op === op), op).toMatchObject({ writes: false, annotations: { readOnlyHint: true } });
+    for (const op of launch) expect(opsOf("launch").find((s) => s.op === op), op).toMatchObject({ writes: true, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } });
+    // `read.steer` is the composer's sentence compile; e4's intent steer is its own op beside it.
+    expect(opsOf("read").map((s) => s.op)).toEqual(expect.arrayContaining(["steer", "intent_steer"]));
+  });
 });
 
 describe("the family projection", () => {

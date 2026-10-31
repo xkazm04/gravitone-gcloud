@@ -50,6 +50,33 @@ const pro = (): string => process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-
 const flash = (): string => process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash";
 
 /**
+ * THE LISTENER'S MODEL (`suno-listen`, spark suno-advisor), pinned and not
+ * env-steerable: lib/sound/suno/listen.ts quotes a listen BEFORE it runs from
+ * this id's kernel price rows, and a model the quote did not price is a bill
+ * nobody saw. 3.8 flash because it is the one priced google model
+ * (packages/kernel/src/pricing/table.ts: its input rate carries no modality
+ * split on ai.google.dev/gemini-api/docs/pricing, read 2026-10-29, so audio
+ * input bills at the input rate), and ai.google.dev/gemini-api/docs/audio's own
+ * examples name it. The live pass the note on MODEL_FOR_TURN owes 3.8 is still
+ * owed: the first listen the owner presses at the S1 gate is that pass for this turn.
+ */
+export const SUNO_LISTEN_MODEL = "gemini-3.8-flash";
+
+/**
+ * The vendor's inline request ceiling: "Maximum request size is 20 MB total
+ * (including prompts and all files)" (ai.google.dev/gemini-api/docs/audio,
+ * page dated 2026-09-23, read 2026-10-29). Held in decimal megabytes, the
+ * smaller reading, so a body this adapter sends is under the limit under
+ * either. Audio rides base64 (4/3 of its bytes), so a ~14 MB mp3 is the most
+ * one request can carry; past it the Files API would be needed, and this
+ * adapter does not upload.
+ */
+export const GOOGLE_INLINE_REQUEST_MAX_BYTES = 20_000_000;
+
+/** The bytes a request body spends on audio of this many bytes, inline (base64). */
+export const inlineAudioBytes = (bytes: number): number => 4 * Math.ceil(bytes / 3);
+
+/**
  * Which model answers which turn.
  *
  * Per the registry's model-routing/turn-classification technique: the turn class
@@ -156,6 +183,8 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], () => string> = {
   // No plan row sends a draft here (router.ts PLAN); the entry keeps this table
   // total, and a `prefer: "google"` is dropped because google is not planned.
   draft: flash,
+  // Pinned, never env-steered: see SUNO_LISTEN_MODEL.
+  "suno-listen": () => SUNO_LISTEN_MODEL,
   probe: flash,
 };
 
@@ -299,8 +328,27 @@ export function googleProvider(): TextProvider {
             `will send inline. Nothing was dispatched and nothing was billed.`,
         );
 
+      // AUDIO, INLINE (TextRequest.audio): the vendor's request ceiling is the
+      // WHOLE body, so the base64 audio and the prompt are counted together and
+      // refused past it here - before dispatch and before any bill - rather than
+      // being sent to fail as a vendor 400.
+      const audio = req.audio;
+      if (audio !== undefined) {
+        const total = inlineAudioBytes(audio.bytes.byteLength) + Buffer.byteLength(prompt, "utf8");
+        if (total > GOOGLE_INLINE_REQUEST_MAX_BYTES)
+          throw invalidRequest(
+            "google",
+            `This request would carry ${(total / 1e6).toFixed(1)} MB inline (the audio base64-encoded, ` +
+              `with the prompt); Google takes at most ${GOOGLE_INLINE_REQUEST_MAX_BYTES / 1e6} MB in one ` +
+              `request. Nothing was dispatched and nothing was billed.`,
+          );
+      }
+      const parts: Record<string, unknown>[] = [{ text: prompt }];
+      if (audio !== undefined)
+        parts.push({ inlineData: { mimeType: audio.mimeType, data: Buffer.from(audio.bytes).toString("base64") } });
+
       const body: Record<string, unknown> = {
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts }],
         generationConfig: {
           ...(native ? { responseMimeType: "application/json", responseSchema: native } : {}),
         },

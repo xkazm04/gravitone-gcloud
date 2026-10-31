@@ -496,9 +496,9 @@ const LEGACY_DETAIL: Record<Exclude<AccessVerdict, "ok">, string> = {
 /**
  * WHO IS CALLING — one principal per request, or a typed refusal.
  *
- *   · the dev fixture first, in either mode (`devOpen`, non-production only);
- *   · a token-shaped Bearer, in either mode: lib/principal.ts resolveCliToken,
- *     judged alone (a bad token never falls through to the secret);
+ *   · a token-shaped Bearer first, in either mode: lib/principal.ts resolveCliToken,
+ *     judged alone (a bad token never falls through to the secret or the dev fixture);
+ *   · then the dev fixture, in either mode (`devOpen`, non-production only);
  *   · legacy: the shared-secret verdict, unchanged. Admitted callers are the
  *     local owner under NEXT_PUBLIC_LOCAL_MODE, else the shared secret - except
  *     that under SHARED_SECRET_CALLERS=browser a money route admits the secret
@@ -513,9 +513,12 @@ export async function resolvePrincipal(
   req: Request,
   opts: { use?: KeyUse; now?: number } = {},
 ): Promise<Resolution> {
-  if (devOpen()) return DEV_FIXTURE;
+  // A presented CLI token is judged first, even under the dev fixture: an agent that brings its own
+  // credential (the studio agent on /api/mcp, spark audio-agent-studio) is that agent, never the dev
+  // owner, and a bad token is refused rather than waved through as the fixture.
   const token = presentedToken(req);
   if (token !== undefined) return resolveCliToken(req, token, opts.use ?? "money", opts.now);
+  if (devOpen()) return DEV_FIXTURE;
   if (principalMode() === "legacy") {
     const verdict = checkAccess(req);
     if (verdict === "ok" && (opts.use ?? "money") === "money" && sharedSecretCallers() === "browser" && !browserMarked(req)) {

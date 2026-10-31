@@ -11,8 +11,6 @@ import { AudioMeasures } from "../../src/components/audio/AudioMeasures.tsx";
 import { AudioPreview, mediaErrorWords, pressPlay } from "../../src/components/audio/AudioPreview.tsx";
 import { AudioPrompt } from "../../src/components/audio/AudioPrompt.tsx";
 import { DraftList } from "../../src/components/audio/DraftList.tsx";
-import { SeedComposer } from "../../src/components/audio/SeedComposer.tsx";
-import { TermRail } from "../../src/components/audio/TermRail.tsx";
 import { VariationList } from "../../src/components/audio/VariationList.tsx";
 import { ReferenceList } from "../../src/components/audio/ReferenceList.tsx";
 import { BLANK_SEED, addTo, avoidFloats, compose, fitTo, handsOf, preferredFloats, removeFrom, sortTerms, sunoCut, sunoFieldsOf, termId, type Seed, type Term } from "../../src/components/audio/recipe.ts";
@@ -285,36 +283,22 @@ describe("the detail components' markup", () => {
   });
 });
 
-describe("the composer's markup", () => {
-  const props = { terms: [], hands: {}, from: "blank", onSeed: () => {}, onSend: () => {}, busy: false, onCopy: () => {}, keys: [] };
-  test("a seed past Suno's limits says how many of its words the form drops", () => {
+// The seed composer and the term rail retired with /audio's compose UI (spark audio-agent-studio,
+// stage S2); the recipe's limits they drew stay pure and are held here.
+describe("the seed's limits", () => {
+  test("a seed past Suno's limits drops a counted number of its words from the form", () => {
     const long = { ...SEED, instruments: Array.from({ length: 40 }, (_, i) => `instrument-${i}`) };
     const n = sunoCut(long, {});
     // 40 instruments of ~13 chars against 200: most of them, plus the tempo and key after them.
     expect(n).toBeGreaterThan(20);
     expect(sunoFieldsOf(long, {})?.style.split(", ").length).toBe(long.genres.length + long.moods.length + long.instruments.length + 2 - n);
-    expect(/>cut<b[^>]*>(\d+)<\/b>/.exec(renderToStaticMarkup(h(SeedComposer, { ...props, seed: long })))?.[1]).toBe(String(n));
     expect(sunoCut(SEED, {})).toBe(0);
-    expect(renderToStaticMarkup(h(SeedComposer, { ...props, seed: SEED }))).not.toContain(">cut<");
   });
 
-  test("a tempo the batch would refuse is refused here too: Send waits and says why, and no variation steps past it", () => {
-    const send = (seed: Seed): string => /<button[^>]*>Send to Suno[\s\S]*?<\/button>/.exec(renderToStaticMarkup(h(SeedComposer, { ...props, seed })))?.[0] ?? "";
-    expect(send({ ...SEED, bpm: 999 })).toContain('aria-disabled="true"');
-    expect(send({ ...SEED, bpm: 999 })).toContain("tempo 40–220");
-    expect(send({ ...SEED, bpm: 120 })).not.toContain('aria-disabled="true"');
+  test("no tempo variation steps past the batch's 40-220", () => {
     const bpms = [218, 42, 220, 40].flatMap((bpm) => variationsOfSeed({ ...SEED, bpm }, []).filter((v) => v.axis === "tempo").map((v) => v.seed.bpm ?? 0));
     expect(bpms.filter((b) => b < 40 || b > 220)).toEqual([]);
     expect(variationsOfSeed({ ...SEED, bpm: 218 }, []).filter((v) => v.axis === "tempo").map((v) => v.diff[0])).toEqual(["-6 BPM"]);
-  });
-});
-
-describe("the term rail's markup", () => {
-  test("a word the seed can carry is a press that adds it; an effect category is no press at all", () => {
-    const html = renderToStaticMarkup(h(TermRail, { terms: [term("instrument", "cello", 4, 3), term("sfxCategory", "impact", 3, 2)], onPick: () => {}, onHand: () => {} }));
-    expect(html).toContain('aria-label="add cello to the seed"');
-    expect(html).not.toContain('aria-label="add impact to the seed"');
-    expect(html).toContain("impact");
   });
 });
 

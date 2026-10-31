@@ -1,0 +1,26 @@
+/* A card's master lane and transport bar (desk's style): the transport row with the duel's A/B
+   switch beside it, then the track as the first lane (head: title, facts, measures; body: the mix's
+   waveform). Tokens only. */
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-4) var(--sp-6);padding:var(--sp-4) var(--sp-5);background:var(--ink-3);border-bottom:1px solid var(--hair-2)}
+.bar > :first-child{flex:1 1 calc(var(--w-detail) * 1.2);min-width:0}
+.master{background:color-mix(in srgb,var(--cyan) 4%,transparent)}
+.head{display:grid;gap:var(--sp-3);align-content:start;padding:var(--sp-4);border-right:1px solid var(--hair);min-width:0}
+.top{display:flex;align-items:center;gap:var(--sp-3);min-width:0}
+.words{flex:1;min-width:0;display:grid;gap:var(--sp-nudge)}
+.title{font:700 var(--fs-h3)/1.25 var(--sans);color:var(--ink-bright);overflow-wrap:anywhere}
+.facts{font:500 var(--fs-micro)/1.35 var(--sans);color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:var(--sp-1) var(--sp-2)}
+.chips:empty{display:none}
+.hint{font:500 var(--fs-micro)/1.3 var(--sans);color:var(--faint)}
+.absent{margin:0;padding:var(--sp-5);border-top:1px solid var(--hair);color:var(--muted);font:500 var(--fs-ui)/1.4 var(--sans)}
+.duel{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-4)}
+.question{font:600 var(--fs-ui)/1.2 var(--sans);color:var(--ink-bright)}
+.ab{display:inline-flex;border:1px solid var(--hair-2);border-radius:var(--r-control);overflow:hidden}
+.side{display:inline-flex;align-items:center;gap:var(--sp-2);height:var(--h-control);padding:0 var(--sp-5);border:0;border-left:1px solid var(--hair-2);background:var(--wash);color:var(--text);font:600 var(--fs-ui)/1 var(--sans);cursor:pointer;transition:background var(--dur-fast) var(--ease)}
+.side:first-child{border-left:0}
+.side:hover{background:var(--wash-hi)}
+.side:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:calc(-1 * var(--stroke-mark))}
+.side[aria-pressed="true"]{background:var(--cyan);color:var(--ink)}
+.letter{font:700 var(--fs-ui)/1 var(--mono)}
+.picks{display:inline-flex;gap:var(--sp-2)}
+@media (prefers-reduced-motion: reduce){.side{transition:none}}

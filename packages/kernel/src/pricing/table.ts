@@ -32,7 +32,11 @@ import { z } from "zod";
 // ENV-FREE AND IMPORT-FREE apart from the schema, as every v1 copy was: the
 // table can be handed to a browser without saying which keys this box holds.
 
-export const PRICE_UNITS = ["image", "input-token", "output-token", "audio-second", "character", "clip-5s", "clip-10s"] as const;
+// `audio-input-token` is its own unit, not `input-token`: a vendor that tokenises audio prices it
+// apart from text on most of its models (ai.google.dev/gemini-api/docs/pricing lists "(audio)" input
+// rows beside "(text / image / video)" ones), so a listen quoted at the text rate is an invented price
+// wherever the two differ. A model whose page states one rate for every modality gets both rows.
+export const PRICE_UNITS = ["image", "input-token", "output-token", "audio-input-token", "audio-second", "character", "clip-5s", "clip-10s"] as const;
 export const priceUnitSchema = z.enum(PRICE_UNITS);
 export type PriceUnit = z.output<typeof priceUnitSchema>;
 
@@ -206,6 +210,19 @@ export const PRICE_TABLE: readonly PriceRow[] = [
     source:
       "The vendor's own published rate (2026-09-02). INTRODUCTORY: it doubles to 7.50 on 2027-01-01. Re-measure the thoughts multiplier before promoting: at a fixed rate that ratio is the whole cost story.",
     checked: "2026-09-02",
+  },
+  {
+    // The listener's audio (lib/sound/suno/listen.ts, turn `suno-listen`): 32 tokens per second of
+    // audio (ai.google.dev/gemini-api/docs/audio, "Technical details about audio", read 2026-10-29).
+    provider: "google",
+    model: "gemini-3.8-flash",
+    unit: "audio-input-token",
+    usd: 0.75,
+    per: M,
+    validUntil: "2026-12-31",
+    source:
+      "ai.google.dev/gemini-api/docs/pricing, read 2026-10-29 (page 'Last updated 2026-10-28 UTC'): Gemini 3.8 Flash, Standard, Paid Tier, 'Input price' '$0.75 through December 31, 2026. $1.50 starting January 1, 2027.' with NO modality qualifier, where the same page splits audio out for the models that bill it apart (3.1 Flash-Lite '$0.25 (text / image / video)' and '$0.50 (audio)'). So audio input bills at the input rate on this model. INTRODUCTORY: 1.50 from 2027-01-01.",
+    checked: "2026-10-29",
   },
 
   /* ── audio (lib/music/pricing.ts): seconds exact, money not ──────────── */

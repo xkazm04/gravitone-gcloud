@@ -151,8 +151,11 @@ describe("the envelope", () => {
   });
 
   it("lists exactly the four family tools", async () => {
-    const r = (await (await door()(post({ jsonrpc: "2.0", id: 1, method: "tools/list" }))).json()) as { result: { tools: { name: string }[] } };
+    const r = (await (await door()(post({ jsonrpc: "2.0", id: 1, method: "tools/list" }))).json()) as { result: { tools: { name: string; description: string }[] } };
     expect(r.result.tools.map((t) => t.name)).toEqual(["gt_read", "gt_launch", "gt_job", "gt_spend"]);
+    // The audio studio's ops (S2) join two families; they add no tool.
+    expect(r.result.tools.find((t) => t.name === "gt_read")?.description).toContain("audio_inbox");
+    expect(r.result.tools.find((t) => t.name === "gt_launch")?.description).toContain("audio_turn");
   });
 
   it("answers args its op's door refuses in-band, as the work's error", async () => {

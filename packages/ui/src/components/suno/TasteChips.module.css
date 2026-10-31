@@ -1,0 +1,14 @@
+/* Taste rows: a lean chip, the line in the reading face, the row's presses at the end; a refusal on
+   its own line under the row. A pending row dims. Tokens only. */
+.taste{display:grid;gap:var(--sp-4);min-width:0}
+.group{display:grid;gap:var(--sp-2);min-width:0}
+.rows{margin:0;padding:0;list-style:none;display:grid;gap:var(--sp-2)}
+.row{display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;gap:var(--sp-2) var(--sp-3);align-items:center;min-width:0}
+.row[data-pending]{opacity:.7}
+.line{font:400 var(--fs-ui)/1.4 var(--sans);color:var(--ink-bright);overflow-wrap:anywhere;min-width:0}
+.acts{display:inline-flex;gap:var(--sp-2)}
+.refused{grid-column:1/-1}
+@media (max-width:520px){
+  .row{grid-template-columns:max-content minmax(0,1fr)}
+  .acts{grid-column:1/-1}
+}

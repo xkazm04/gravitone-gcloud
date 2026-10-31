@@ -9,6 +9,7 @@ import { FIXTURE_MODE } from "../../../../lib/fixtures/mode.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { deploymentFacts, serverCapabilities } from "../../../../lib/serverCapabilities.ts";
 import { engineRegistry, engineState, type EngineDef } from "../../../../lib/sound/engines.ts";
+import { readLocalScorePlan } from "../../../../lib/sound/localScore.ts";
 import { readGroups } from "../../../../lib/sound/store.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
 import { takeFileHref } from "../../../../lib/sound/takeHref.ts";
@@ -51,6 +52,7 @@ export function deskEngines(): readonly EngineDef[] {
 
 function cardOf(t: SoundTake, m: AudioMeasureRow | undefined): CardTake {
   const ok = m !== undefined && m.error === null;
+  const localPlan = readLocalScorePlan(t);
   return {
     id: t.id,
     title: t.title,
@@ -69,6 +71,16 @@ function cardOf(t: SoundTake, m: AudioMeasureRow | undefined): CardTake {
     prompt: t.prompt,
     origin: t.origin,
     fileName: t.fileName,
+    ...(localPlan === null
+      ? {}
+      : {
+          stems: localPlan.stems.map((st) => ({
+            role: st.role,
+            instrumentName: st.instrumentName,
+            src: st.audioUrl,
+            reused: st.reused,
+          })),
+        }),
   };
 }
 

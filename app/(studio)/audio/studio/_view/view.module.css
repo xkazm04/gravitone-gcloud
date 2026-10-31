@@ -1,0 +1,52 @@
+/* The audio studio's one view (spark audio-agent-studio, stage S2): canvas's frame - versions rail |
+   card stack | next steps, each column its own scroll inside the host's frame, so the newest card and
+   the panel that speaks for it are on screen together - holding desk-styled cards: the reply, the
+   sentence strip, the timeline, the notes. Tokens only; motion is dropped under reduced motion. */
+.view{height:100%;display:grid;grid-template-columns:calc(var(--w-rail) * .9) minmax(0,1fr) var(--w-next);grid-template-rows:minmax(0,1fr);gap:var(--sp-6)}
+.view > *{min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain}
+.stack{display:flex;flex-direction:column;gap:var(--sp-5);padding-right:var(--sp-2)}
+.cardSlot{flex:none;scroll-margin-top:0;min-width:0;container-type:inline-size}
+
+.card{display:grid;gap:var(--sp-5);padding:var(--sp-5) var(--sp-6);border-radius:var(--r-lg);border:1px solid var(--hair);background:var(--panel-ground)}
+.card[data-latest]{border-color:color-mix(in srgb,var(--cyan) 30%,transparent)}
+.card[data-pending]{border-style:dashed;background:var(--ink-1)}
+.cardHead{display:flex;align-items:flex-start;gap:var(--sp-4)}
+.headBody{flex:1;min-width:0;display:grid;gap:var(--sp-2)}
+.ask{margin:0;font:500 var(--fs-read)/1.5 var(--sans);color:var(--ink-bright)}
+.youSaid{display:block;font:700 var(--fs-micro)/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.reply{margin:0;font:400 var(--fs-ui)/1.5 var(--sans);color:var(--text)}
+.num{flex:none;display:inline-grid;place-items:center;min-width:var(--h-chip);height:var(--h-chip);padding:0 var(--sp-1);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:700 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.noEar{flex:none;width:var(--size-glyph-btn);height:var(--size-glyph-btn)}
+
+.sentence{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:var(--sp-4) var(--sp-7);padding:var(--sp-4) var(--sp-5);border:1px solid var(--hair);border-radius:var(--r-lg);background:var(--ink-1)}
+.sentence > :only-child{grid-column:1 / -1}
+.timeline{display:grid;border:1px solid var(--hair-2);border-radius:var(--r-lg);background:var(--ink-1);overflow:hidden}
+.chips{display:flex;flex-wrap:wrap;gap:var(--sp-1) var(--sp-2)}
+.notes{display:grid;gap:var(--sp-2);padding:var(--sp-4) var(--sp-5);border:1px dashed color-mix(in srgb,var(--amber) 45%,transparent);border-radius:var(--r);background:var(--amber-a);font:500 var(--fs-meta)/1.4 var(--sans);color:var(--text)}
+.noteHead{color:var(--ink-bright)}
+.noteList{margin:0;padding-left:var(--sp-6);display:grid;gap:var(--sp-1)}
+.broken{margin:0;padding:var(--sp-3) var(--sp-4);font:500 var(--fs-meta)/1.4 var(--sans);color:var(--error-text);background:var(--rose-a);border-radius:var(--r-sm)}
+.working{margin:0;font:500 var(--fs-ui)/1.4 var(--sans);color:var(--muted)}
+.quiet{margin:0;font:400 var(--fs-meta)/1.4 var(--sans);color:var(--muted)}
+.skeleton{display:grid;gap:var(--sp-3)}
+.skeleton span{display:block;height:var(--h-row);border-radius:var(--r-sm);background:var(--wash-hi);animation:breathe 1.2s ease-in-out infinite}
+.skeleton span:first-child{height:var(--h-strip)}
+.skeleton span:last-child{width:60%}
+
+.strip{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) var(--sp-5);border-radius:var(--r);border:1px solid var(--hair);background:var(--ink-1)}
+.stripTitle{flex:none;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 var(--fs-ui)/1.2 var(--sans);color:var(--text)}
+.stripAsk{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 var(--fs-meta)/1.2 var(--sans);color:var(--faint)}
+.stripNote{flex:none;font:500 var(--fs-micro)/1 var(--mono);color:var(--amber)}
+
+@keyframes breathe{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.skeleton span{animation:none}}
+@media (max-width:1600px){
+  .view{grid-template-columns:minmax(0,1fr) var(--w-next);grid-template-rows:auto minmax(0,1fr)}
+  .view > nav{grid-column:1 / -1;overflow:visible}
+  .view > nav ol{display:flex;flex-wrap:wrap}
+}
+@media (max-width:1180px){
+  .view{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+  .view > *{overflow:visible}
+  .sentence{grid-template-columns:minmax(0,1fr)}
+}

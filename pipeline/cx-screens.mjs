@@ -129,4 +129,7 @@ export const SCREENS = {
   "audio-rubric": { url: "/audio?s=rubric" },
   "audio-batch": { url: "/audio?s=batch" },
   "audio-batch-sfx": { url: "/audio?s=batch&kind=sfx" },
+  // Spark suno-advisor: the scripted Suno conversation, and its kit pieces.
+  "audio-suno": { url: "/audio?s=studio&source=fixture&session=night-drive" },
+  "kit-suno": { url: "/kit#suno" },
 };

@@ -27,7 +27,7 @@
 import { CliError, probeClaude, runClaude } from "../../claudeCli";
 import { MODEL } from "../../model";
 import { localPosture, describePosture } from "../../deployment";
-import { TextError, type TextErrorKind } from "../errors";
+import { invalidRequest, TextError, type TextErrorKind } from "../errors";
 import type { ProbeResult, TextProvider, TextRequest, TextResult } from "../types";
 
 /** CliError's kinds into the shared taxonomy. A total mapping — the record is
@@ -98,6 +98,11 @@ export function claudeCliProvider(): TextProvider {
     },
 
     async reason(req: TextRequest, timeoutMs: number): Promise<TextResult> {
+      // The CLI takes a prompt on stdin and nothing else: it cannot hear. An
+      // audio turn answered from the words alone would describe a song nobody
+      // played it, so it is refused before a process is spawned.
+      if (req.audio !== undefined)
+        throw invalidRequest("claude-cli", `The claude CLI cannot hear audio; the ${req.turn} turn needs an engine that can. Nothing was dispatched.`);
       const started = Date.now();
       try {
         // The caller's signal goes to the door, which ends the whole process

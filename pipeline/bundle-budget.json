@@ -9,7 +9,7 @@
     "/(.)board/[packet]": 249986,
     "/projects/runs": 241256,
     "/ledger": 231472,
-    "/kit": 348349,
+    "/kit": 363665,
     "/projects": 228875,
     "/projects/[id]": 228362,
     "/projects/[id]/[part]": 258746,
@@ -17,7 +17,7 @@
     "/articles": 212493,
     "/articles/[runId]": 212493,
     "/articles/new": 212493,
-    "/audio": 255629,
+    "/audio": 279023,
     "/board": 212493,
     "/calendar": 212493,
     "/foundry": 212493,
@@ -35,5 +35,6 @@
   "phase6": "2026-10-18: rebaselined against a real Turbopack build of 2aded3f7. Every entry set to its measurement; the (studio) routes new since phase4 seeded at measurement (/articles, /articles/[runId], /articles/new, /audio, /board, /calendar, /foundry, /library, /library/style/[id], /playground, /projects/new, /studio/[projectId]). The build retired none of the routes in the file. Raised: /floor +4.5 KB (the Calendar slot and schedule levels, SlotLevel, ScheduleLevel and the Composers: Phase 4 wave A, Phase 6 waves A-B); /kit +50.6 KB (specimens of the components added to @gt/ui since 47b8095: style, audio, arrange, hunt, insight, lesson, library, part, floor-slot, floor-schedule). Lowered to measurement, 1.3-6.2 KB under: /(.)board/[packet], /board/[packet], /ledger, /projects, /projects/[id], /projects/[id]/[part], /projects/import, /projects/runs.",
   "scout-route": "2026-10-23: /scout seeded at its measured first load (207813 B: only the root layout's shared chunks - the page is a server redirect to the newest night's packet). The ~+358 B every route grew is the landing's Enter locally (lib/useAuth.tsx enterLocally) inside the root layout's AuthProvider, within the 2% slack.",
   "scout-decision-graph": "2026-10-23: measured on a real Turbopack build of 68c67db5 (spark scout-decision-graph landed on a2b3ebfa local-draws). Raised for earned weight - /scout +9.9 KB (the page is now the decision graph: the _scout island, StageGraph, ShareMeter, the split editor and node panel, where it was a server redirect); /board/[packet] and /(.)board/[packet] +5.6 KB (the seeds desk: NoteField and the E note, the reason gate and its words, the seeds category); /kit +8.7 KB (the StageGraph and ShareMeter specimens). /local-draws seeded at its measurement (only the root layout's shared chunks: a server page).",
-  "scout-desk": "2026-10-22: measured on a real Turbopack build of the merge 2173e35a (scout/live-engines into main). Raised for earned weight - /board/[packet] and /(.)board/[packet] +7.5 KB (the one-desk cull: RunMosaic, RunModal, VariantCard, VerdictPick, VideoBar, IdeaList, content tabs; MatrixCullSheet, Band and Mosaic deleted; +6.6 KB measured at e471df80 before the merge, +0.9 KB the 3D tile from spark game-3d-assets), /kit +7.9 KB (their specimens plus the model viewer specimen)."
+  "scout-desk": "2026-10-22: measured on a real Turbopack build of the merge 2173e35a (scout/live-engines into main). Raised for earned weight - /board/[packet] and /(.)board/[packet] +7.5 KB (the one-desk cull: RunMosaic, RunModal, VariantCard, VerdictPick, VideoBar, IdeaList, content tabs; MatrixCullSheet, Band and Mosaic deleted; +6.6 KB measured at e471df80 before the merge, +0.9 KB the 3D tile from spark game-3d-assets), /kit +7.9 KB (their specimens plus the model viewer specimen).",
+  "suno-advisor": "2026-10-29: measured on a real Turbopack build of 338c8fe6 (spark suno-advisor S1+S2 on main; NEXT_DIST_DIR=.next-landing). Raised for earned weight - /audio +23.4 KB: the thread card's Suno pieces (SunoPromptCard, Lineage, TakeFacts, TasteChips, VerdictBar in the dock, _view/Suno.tsx + thread.ts) AND the audio-agent-studio studio itself (439cc60b landed the canvas, desk lanes and dock without a bundle measurement, so its share is inside this number and was not separated); client imports from @gt/domain are the zod-free audio.suno constants only. /kit +15.3 KB: the five Suno specimens (SunoKit) and the dock verdict-row specimen. Every other (studio) route moved about +1 KB, inside the 2% slack."
 }

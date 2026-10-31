@@ -1,0 +1,185 @@
+{
+  "compiler": "audio-intent-v1",
+  "hash": "ai-v1-8865ba8069b7cd7e",
+  "canonicalIntent": {
+    "use": "puzzle game menu",
+    "mood": [
+      "calm",
+      "curious"
+    ],
+    "lengthS": 60,
+    "loop": true
+  },
+  "seed": {
+    "genres": [
+      "ambient",
+      "indie electronic"
+    ],
+    "moods": [
+      "calm",
+      "curious"
+    ],
+    "instruments": [
+      "marimba",
+      "electric piano",
+      "warm bass guitar",
+      "hand percussion"
+    ],
+    "bpm": 72,
+    "key": null,
+    "avoid": [
+      "vocals",
+      "singing",
+      "fade-out ending"
+    ]
+  },
+  "paletteId": "palette-marimba",
+  "suno": {
+    "style": "ambient, indie electronic, calm, curious, marimba, electric piano, warm bass guitar, hand percussion, 72 bpm",
+    "lyrics": "[Instrumental]",
+    "exclude": "vocals, singing, fade-out ending"
+  },
+  "elevenlabsSentence": "Calm, curious ambient / indie electronic instrumental, 72 BPM. Built on marimba, electric piano, warm bass guitar and hand percussion. No vocals, no singing, no fade-out ending.",
+  "sections": [
+    {
+      "name": "loop a",
+      "durationS": 30,
+      "durationMs": 30000,
+      "positiveStyles": [
+        "ambient",
+        "indie electronic",
+        "calm",
+        "curious",
+        "marimba",
+        "electric piano",
+        "warm bass guitar",
+        "hand percussion",
+        "72 bpm",
+        "instrumental",
+        "loop body, no ending"
+      ],
+      "negativeStyles": [
+        "vocals",
+        "singing",
+        "fade-out ending",
+        "fade-out ending",
+        "ending sting"
+      ],
+      "directions": [
+        "loops back to the first bar without a gap"
+      ]
+    },
+    {
+      "name": "loop b",
+      "durationS": 30,
+      "durationMs": 30000,
+      "positiveStyles": [
+        "ambient",
+        "indie electronic",
+        "calm",
+        "curious",
+        "marimba",
+        "electric piano",
+        "warm bass guitar",
+        "hand percussion",
+        "72 bpm",
+        "instrumental",
+        "loop body, variation, no ending"
+      ],
+      "negativeStyles": [
+        "vocals",
+        "singing",
+        "fade-out ending",
+        "fade-out ending",
+        "ending sting"
+      ],
+      "directions": [
+        "loops back to the first bar without a gap"
+      ]
+    }
+  ],
+  "plan": {
+    "positiveGlobalStyles": [
+      "ambient",
+      "indie electronic",
+      "calm",
+      "curious",
+      "marimba",
+      "electric piano",
+      "warm bass guitar",
+      "hand percussion",
+      "72 bpm",
+      "instrumental"
+    ],
+    "negativeGlobalStyles": [
+      "vocals",
+      "singing",
+      "fade-out ending"
+    ],
+    "sections": [
+      {
+        "name": "loop a",
+        "durationS": 30,
+        "durationMs": 30000,
+        "positiveStyles": [
+          "ambient",
+          "indie electronic",
+          "calm",
+          "curious",
+          "marimba",
+          "electric piano",
+          "warm bass guitar",
+          "hand percussion",
+          "72 bpm",
+          "instrumental",
+          "loop body, no ending"
+        ],
+        "negativeStyles": [
+          "vocals",
+          "singing",
+          "fade-out ending",
+          "fade-out ending",
+          "ending sting"
+        ],
+        "directions": [
+          "loops back to the first bar without a gap"
+        ]
+      },
+      {
+        "name": "loop b",
+        "durationS": 30,
+        "durationMs": 30000,
+        "positiveStyles": [
+          "ambient",
+          "indie electronic",
+          "calm",
+          "curious",
+          "marimba",
+          "electric piano",
+          "warm bass guitar",
+          "hand percussion",
+          "72 bpm",
+          "instrumental",
+          "loop body, variation, no ending"
+        ],
+        "negativeStyles": [
+          "vocals",
+          "singing",
+          "fade-out ending",
+          "fade-out ending",
+          "ending sting"
+        ],
+        "directions": [
+          "loops back to the first bar without a gap"
+        ]
+      }
+    ]
+  },
+  "lint": [
+    {
+      "code": "palette-applied",
+      "level": "note",
+      "message": "no instruments were named, so palette-marimba was applied (Marimba, Electric piano, Warm bass, Hand percussion); hear them with audio_palette before sending"
+    }
+  ]
+}

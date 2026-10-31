@@ -100,8 +100,12 @@ export function ollamaProvider(): TextProvider {
 
     async reason(req: TextRequest, timeoutMs: number): Promise<TextResult> {
       const started = Date.now();
-      const host = keyFor("ollama").replace(/\/$/, "");
       const model = ollamaTextModel();
+      // The local text model reads words only: an audio turn is refused, never
+      // answered from the prompt as though the audio had been heard.
+      if (req.audio !== undefined)
+        throw invalidRequest("ollama", `${model} on Ollama cannot hear audio; the ${req.turn} turn needs an engine that can. Nothing was dispatched.`);
+      const host = keyFor("ollama").replace(/\/$/, "");
       if (req.prompt.length > MAX_PROMPT_CHARS)
         throw invalidRequest(
           "ollama",

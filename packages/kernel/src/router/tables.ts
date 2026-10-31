@@ -149,6 +149,7 @@ export const TURN_CLASSES = [
   "repair",
   "voice-fx",
   "draft",
+  "suno-listen",
   "probe",
 ] as const;
 export type TurnClass = (typeof TURN_CLASSES)[number];
@@ -178,7 +179,8 @@ export const TEXT_TABLE: MediumTable = {
       lane: "cloud.google",
       transport: "cloud",
       honours: [],
-      models: Object.fromEntries(TURN_CLASSES.map((turn) => [`reason/${turn}`, PLAN_CLASS.has(turn) ? "gemini-3.1-pro-preview" : "gemini-3.6-flash"])),
+      // `suno-listen` is pinned to the one priced model that hears (providers/google.ts SUNO_LISTEN_MODEL).
+      models: Object.fromEntries(TURN_CLASSES.map((turn) => [`reason/${turn}`, turn === "suno-listen" ? "gemini-3.8-flash" : PLAN_CLASS.has(turn) ? "gemini-3.1-pro-preview" : "gemini-3.6-flash"])),
       credential: "GOOGLE_AI_API_KEY",
     },
     {
@@ -204,7 +206,8 @@ export const TEXT_TABLE: MediumTable = {
   ],
   plans: {
     local: {
-      ...perTurn((turn) => (turn === "probe" ? ["claude-cli"] : turn === "draft" ? ["ollama", "claude-cli"] : ["claude-cli", "google"])),
+      // `suno-listen` carries audio, which only google hears (lib/text/router.ts PLAN).
+      ...perTurn((turn) => (turn === "probe" ? ["claude-cli"] : turn === "draft" ? ["ollama", "claude-cli"] : turn === "suno-listen" ? ["google"] : ["claude-cli", "google"])),
       "retrieve/research": ["claude-cli-retrieve"],
     },
     cloud: perTurn((turn) => (turn === "draft" ? ["ollama"] : ["google"])),

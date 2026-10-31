@@ -72,6 +72,7 @@
   --cal-w: clamp(260px,19vw,340px);
   --cols: 52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr);
   --h-axis: 20px; /* Height of a time axis under a strip. */
+  --h-dock: 156px; /* Most height a page's bottom dock takes from the viewport; the toast rises above it. */
   --h-event: 34px; /* Height of an event row in a ledger list. */
   --h-hours: 34px; /* Height of the hour axis over the Runs day-line. */
   --h-lane-folded: 48px; /* Height of a Floor lane folded to its summary while another lane is focused. */

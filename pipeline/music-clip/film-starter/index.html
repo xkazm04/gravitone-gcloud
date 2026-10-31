@@ -1,0 +1,59 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Break the Sequence - film</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js","three/addons/":"../vendor/three/examples/jsm/"}}</script>
+</head><body><script type="module">
+// film/index.html - the whole clip as one gpuShot scene page.
+//   window.__TIMELINE__ (injected) -> core; ./shotlist.json -> the edit (never hand-edit it: it is generated from
+//   shotplan.json by `npx tsx pipeline/music-clip.mts shots <dir>`); every set in ./sets/ built once before READY.
+//   window.render(t): shot = the shotlist entry containing t (binary search) -> set.render(t, shot, core, state)
+//   -> its post values over the defaults -> the shared composer. Pure: same t, same pixels.
+import * as THREE from "three";
+import { createEnv, mulberry, hash1, clamp } from "./core/env.js";
+import { createPost } from "./core/post.js";
+import { createTextures } from "./core/textures.js";
+import { createRobots } from "./core/robots.js";
+import { createKit } from "./core/kit.js";
+import { validateSet, nearestCam } from "./core/set-api.js";
+
+const SETS = ["cable-room", "assembly", "corridor", "overseer-screen", "vents", "scanner-gate", "visor-macro", "lever-console", "factory-floor", "rain-window", "sirens", "stairs-grid", "hud-pov", "outside"];
+const TL = window.__TIMELINE__;
+const W = innerWidth || 1920, H = innerHeight || 1080;
+const post = createPost(THREE, W, H);
+const X = createTextures(THREE, post.renderer);
+const robots = createRobots(THREE, X);
+const kit = createKit(THREE, X);
+const env = createEnv(TL);
+const core = { THREE, W, H, env, X, robots, kit, post: { focusOn: post.focusOn }, rng: { mulberry, hash1 } };
+
+const shotlist = await (await fetch("./shotlist.json")).json();
+const SHOTS = shotlist.shots;
+const mods = {}, states = {};
+for (const name of SETS) {
+  const file = `./sets/${name}.js`;
+  const mod = (await import(file)).default;
+  const errs = validateSet(mod, file); if (errs.length) throw new Error(errs.join("; "));
+  mods[name] = mod;
+}
+// build every set once; the wall time of each build is logged so a slow set is visible (core diagnostics)
+window.__buildMs = {};
+for (const name of SETS) { const t0 = performance.now(); console.log(`[film] build ${name} ...`); states[name] = await mods[name].build(core); window.__buildMs[name] = Math.round(performance.now() - t0); console.log(`[film] build ${name} ${window.__buildMs[name]} ms`); }
+for (const s of SHOTS) if (!mods[s.set]) throw new Error(`shot ${s.id}: unknown set ${s.set}`);
+
+function shotAt(t) { let lo = 0, hi = SHOTS.length - 1, r = 0; while (lo <= hi) { const m = (lo + hi) >> 1; if (SHOTS[m].startS <= t) { r = m; lo = m + 1; } else hi = m - 1; } return SHOTS[r]; }
+function render(t) {
+  const s = shotAt(t), mod = mods[s.set];
+  const shot = { ...s, t, local: t - s.startS, p: clamp((t - s.startS) / (s.endS - s.startS), 0, 1), sec: env.sectionAt(t), cam: nearestCam(mod, s.cam), plannedCam: s.cam };
+  const out = mod.render(t, shot, core, states[s.set]);
+  post.frame(out.scene, out.camera, out.post, t);
+  return s.id;
+}
+window.render = render;
+window.__film = { SHOTS, shotAt, env, core, frame: post.frame, version: 1 };
+
+await document.fonts.ready;
+await post.ready();
+// warm every set once (compiles its shaders) at its first shot's midpoint
+for (const name of SETS) { const s = SHOTS.find(x => x.set === name); if (!s) continue; const t0 = performance.now(); console.log(`[film] warm ${name} ...`); render((s.startS + s.endS) / 2); console.log(`[film] warm ${name} ${Math.round(performance.now() - t0)} ms`); }
+window.__READY__ = true;
+</script></body></html>

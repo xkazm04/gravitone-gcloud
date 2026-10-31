@@ -18,11 +18,15 @@
 // its header. A stale URL that still carries `k` is read as carrying nothing, so it is
 // judged by its cookie, never by the secret in its query. Access-checked, not
 // rate-bucketed: a Triage queue of thirty takes is thirty of these at once.
+//
+// A LOCAL-BAND STEM is `?stem=<trackId>` (its `.mid` adds `artifact=midi`): the track's id, which is its
+// role when the spec gave none - so a take filed before ids existed still resolves by role.
 
+import { TRACK_ID_RE } from "@gt/domain/audio.score";
 import { err } from "@gt/domain/errors";
 
 import { toErrorResponse } from "../../../../../../lib/sound/http.ts";
-import { filePathAbs } from "../../../../../../lib/sound/store.ts";
+import { filePathAbs, safeId } from "../../../../../../lib/sound/store.ts";
 import { getTake } from "../../../../../../lib/sound/takes.ts";
 import { route } from "../../../../../_server/route.ts";
 import { serveFile } from "../../../../../_server/serveFile.ts";
@@ -33,6 +37,29 @@ export const GET = route({ guard: "access", bodyCap: 0 }, async ({ req, params }
   const id = (await params)["id"];
   if (typeof id !== "string" || id === "") return err("invalid", "a take is addressed by its id");
   try {
+    const url = new URL(req.url);
+    if (id === "audition") {
+      const inst = url.searchParams.get("instrument") ?? "";
+      if (!inst) return err("invalid", "audition preview requires ?instrument=<id>");
+      const rel = `files/audition-${safeId(inst)}.wav`;
+      const res = await serveFile(req, filePathAbs(rel), { mime: "audio/wav" });
+      return res.status === 404 ? err("not-found", `audition preview for ${inst} is not rendered yet`) : res;
+    }
+    const artifact = url.searchParams.get("artifact");
+    const stem = url.searchParams.get("stem");
+    if (stem !== null && stem !== "" && !TRACK_ID_RE.test(stem)) return err("invalid", `a stem is addressed by its track id (1..24 lower-case letters, digits or dashes), not ${JSON.stringify(stem.slice(0, 40))}`);
+    if (artifact === "midi" || artifact === "rpp") {
+      const track = stem !== null && stem !== "" ? stem : "chords";
+      const rel = artifact === "midi" ? `files/${safeId(id)}-${track}.mid` : `files/${safeId(id)}.rpp`;
+      const mime = artifact === "midi" ? "audio/midi" : "text/plain; charset=utf-8";
+      const res = await serveFile(req, filePathAbs(rel), { mime });
+      return res.status === 404 ? err("not-found", `take ${id}'s ${artifact} artifact is missing from the store`) : res;
+    }
+    if (stem !== null && stem !== "") {
+      const rel = `files/${safeId(id)}-${stem}.wav`;
+      const res = await serveFile(req, filePathAbs(rel), { mime: "audio/wav" });
+      return res.status === 404 ? err("not-found", `take ${id}'s ${stem} stem is missing from the store`) : res;
+    }
     const take = await getTake(id);
     if (!take.file) return err("not-found", `take ${id} has no audio — it is an example row with no bytes`);
     const res = await serveFile(req, filePathAbs(take.file.path), { mime: take.file.mime });

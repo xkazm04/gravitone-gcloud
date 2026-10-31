@@ -80,3 +80,7 @@ span.termName{cursor:default}
 .method{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
 .methodName{width:var(--w-timecode);font:600 var(--fs-micro)/1 var(--mono);color:var(--faint);text-transform:uppercase}
 .methodVal{font:600 var(--fs-meta)/1 var(--mono);color:var(--ink-bright)}
+.seedChip[data-lit="true"]{background:color-mix(in srgb,var(--cyan) 22%,transparent);border-color:color-mix(in srgb,var(--cyan) 55%,transparent)}
+.seedChip:has(button[data-state]){padding-left:var(--sp-tight)}
+.stripSlot{grid-column:1 / -1}
+.shapeSlot{min-width:0;display:grid;gap:var(--sp-2)}

@@ -112,6 +112,10 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     // The one turn the local daemon leads (spark scout-vision S6): free, so worth
     // writing at all; the seat behind it, never the metered key.
     draft: ["ollama", "claude-cli"],
+    // The one turn that carries audio (TextRequest.audio): only google can hear
+    // it, so it is google alone in both postures. Listing the CLI would put a
+    // guaranteed `invalid-request` at the head of every trail.
+    "suno-listen": ["google"],
     probe: ["claude-cli"],
   },
   cloud: {
@@ -133,6 +137,7 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     // A hosted box has no seat, and a draft is not worth a metered call: the
     // daemon where OLLAMA_HOST names one, an honest no-key refusal where not.
     draft: ["ollama"],
+    "suno-listen": ["google"],
     probe: ["google"],
   },
 };
@@ -238,6 +243,9 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // A draft is one short piece of markdown, but the daemon may have to load a
   // 17 GB model off disk before its first token - minutes on a cold card.
   draft: 300_000,
+  // One take of a few minutes in, one small read out; the few MB sent inline
+  // are the slow half. The sound turns' ceiling.
+  "suno-listen": 300_000,
   probe: 30_000,
 };
 

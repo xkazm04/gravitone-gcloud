@@ -147,6 +147,20 @@ export const GATES: readonly Gate[] = [
     rationale: "pipeline/VOICE-FX-PROMPT.md against the stage kinds and bounds read off @gt/domain/audio.fx, its worked examples through the chain door, and proposeChain's refusals on a stub agent's recorded answers. Filesystem only, no model.",
   },
   {
+    id: "suno-listen",
+    npmScript: "check:suno-listen",
+    class: "blocking",
+    outcomes: "01",
+    rationale: "pipeline/SUNO-LISTEN-PROMPT.md's 8 sections and rules on LF and CRLF copies, the router's LISTEN_SCHEMA against @gt/domain/audio.suno.schema studioListenSchema at every depth, its worked example through readOf and back, and recorded refusals naming their paths. Filesystem only, no model.",
+  },
+  {
+    id: "score",
+    npmScript: "check:score",
+    class: "advisory",
+    outcomes: "01",
+    rationale: "ADVISORY on input determinism (spark suno-advisor, 2026-10-29: registered blocking at 439cc60b but run by neither the CI gates job nor verify:serial, which verify-ci-parity caught): it needs numpy and scipy from an unpinned pip install that the gates job does not run, so its verdict is not a function of this tree alone (quality-gates/blocking-by-input-determinism). Promote when its Python inputs are pinned by hash. The local band's ScoreSpec door (@gt/domain/audio.score: 8 tracks, repeatable roles with ids, per-section enters, the role map) against SCORE-PROMPT.md's rules and worked examples, refusal cases, and the Python compiler's MIDI for every worked example (pipeline/audio/score_compiler.py). Offline, no model; needs the repo's Python.",
+  },
+  {
     id: "audio-triage",
     npmScript: "check:audio-triage",
     class: "advisory",

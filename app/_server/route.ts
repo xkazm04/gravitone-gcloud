@@ -141,7 +141,10 @@ function cappedRequest(req: Request, cap: number, where: string): Request {
       },
     }),
   );
-  return new Request(req, { body: counted, duplex: "half" } as RequestInit);
+  // Built from the request's parts, not `new Request(req, ...)`: under Node 24 the copy reads the
+  // source's private #state, and Next hands a request whose class did not declare it, so every
+  // body-carrying route (the MCP door, /audio/return) threw "Cannot read private member #state".
+  return new Request(req.url, { method: req.method, headers: req.headers, body: counted, signal: req.signal, duplex: "half" } as RequestInit);
 }
 
 function deadline(req: Request, maxDuration: number | undefined): AbortSignal {

@@ -43,6 +43,14 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
   "recovered cleanly" is not evidence the rule is optional). State it as an absolute in every builder
   brief's Rules section, not just the overlay: "never git stash, for any reason, even to diff against
   a clean baseline - a parallel package may be writing files in this same worktree right now."
+  **`tsconfig.json` belongs to the Director during a fan-out (promoted 2026-10-29, the third bite):** builders
+  do NOT revert it - with five builders' `next dev` processes and their revert scripts on one worktree it was found
+  at 0 bytes twice (suno-advisor). The Director runs `git checkout -- tsconfig.json` before each commit and never
+  stages it.
+- `on arrival (promoted 2026-10-29, suno-advisor):` typecheck alone does not say the base is green. Also LOAD the
+  golden-path suite (`npx playwright test --list` - a missing declared dependency kept the whole suite from loading on
+  main and hid an inherited parity failure) and CALL, not import, any Python dependency the design leans on (librosa
+  imported fine and died on its first call: numba vs numpy - the vault's October report had said so).
   **Any `next dev`/`next build` run auto-appends `.next-<name>/types/**` entries to `tsconfig.json`
   as a side effect** - a builder claiming it reverted this needs it verified by the Director reading
   the actual committed diff, not trusted from the report (seen twice: 2026-09-05 as a bare lesson,
@@ -147,6 +155,11 @@ One AskUserQuestion call of up to 4 questions per wave.
 
 ## Question taste
 
+- 2026-10-29 (suno-advisor): for a NEW surface the operator adds "prototype 3 variants of composition" even when the
+  pieces are settled - offer a staged S1 (contract + variants on scripted data, backend in parallel) as a first option.
+  A conditional risk written INTO the option text ("if CI lacks numpy it goes red and you decide then") turned a later
+  reversal into one evidence-backed question; keep doing it. Facts only the owner knows (their vendor plan) are worth a
+  question; they changed the model list.
 - 2026-08-27: operator picks the fuller surface over the minimal seam when the types already exist (overrode "persist + minimal read" → full trailer Script; "no cue" → fixture cue). Offer the full option first when the vocabulary is already in the repo.
 - Decide by convention, do not ask: untagged records = visible everywhere (honest-absence law); verdict panels follow GatePanel.
 - 2026-08-30 (dojo): operator prefers keeping cross-machine workflows INSIDE the product (a second gravitone checkout on the GPU box) over external glue (file sync, upload routes), and prefers the measured option over the pre-decided one (ship both judges, let cycle data pick). Offer "the app travels to the data" and "measure it in v1" options explicitly.
@@ -166,6 +179,8 @@ One AskUserQuestion call of up to 4 questions per wave.
 - 2026-10-24 (scout-storyboards): every pick Recommended except the header, where the operator kept spend GLOBAL while moving NEXT into the Scout header - a
   number the operator watches everywhere stays everywhere; offer "move X, keep Y global" when a spark relocates shell chrome.
 - 2026-10-30: for creative pipelines the operator judges at the frame, and wants options shown as rendered artefacts (boards), not described; ask 'which of these' over 'which approach'.
+
+- 2026-10-29 (audio-agent-studio, from hackathon audio-steer-1028): on an agent-driven product the operator keeps the BRAIN OUTSIDE the app (an MCP-driven Claude Code skill over an in-app LLM turn), trusts the LLM over hardcoded libraries and configuration forms ("composable UI"), fuses variants by axis (one variant's LAYOUT with another's COMPONENT STYLE), and chose one build over the recommended staged split once the design was clear. Offer "outside agent via MCP" and "fuse layout x style" as first-class options; recommend staging, but expect "all at once".
 
 ## Skill improvement log
 
@@ -208,5 +223,20 @@ One AskUserQuestion call of up to 4 questions per wave.
 - 2026-10-25 (scout-vision S1, 2 builders, worktree) · This repo mixes CRLF and LF: a Director's scripted replace that did not ASSERT its match count silently missed on CRLF (types.ts) and a field shipped under the old name; every scripted edit asserts count==1 and normalizes line endings. Git Bash heredocs failed twice on prose with quotes - write edit scripts with the Write tool and run them. A compound spark (operator picked every scope item) staged as gated stages in one spark kept wave 3 focused on S1 only; asking at each stage's gate defers questions until the earlier stage has taught something.
 - 2026-10-25 (scout-vision S2, 4 builders + Director packages, worktree) · `node pipeline/unit-mutants.mts` run from INSIDE a spark worktree creates a nested `.claude/worktrees/mutants-unit` worktree there; after removing the spark worktree, `git worktree prune --dry-run -v` then `prune` (it only drops entries whose directory is gone). WP0 stubs that export no ModuleMigrations kept kernel.test green while the kernel builder ran in parallel (a stub migration would have failed the DECLARED-set check). Holding a UI package's commit until the lib package whose stub it calls has landed avoided a committed state where the real Library feed throws.
 - 2026-10-25 (scout-vision S3, 3 parallel builders) · Worktree hygiene, both traps hit in one cut: `git worktree remove --force` LEFT the directory behind (the nested `.claude/worktrees/mutants-unit` that unit-mutants creates inside a spark worktree survived), and a failed `git worktree add -b` still CREATED the branch; the junction script then wrote 416 junctions into a plain directory. Fix used and to repeat: guard the junction script on `<wt>/.git` being a file; before `remove`, unlink EVERY reparse point under the worktree (deepest first), then remove, then `test -e` the path; re-add on an existing branch without `-b`. Three packages that import each other (doors <-> cast door <-> readers) landed as ONE commit naming them, rather than a split whose middle states do not build.
+- 2026-10-29 (audio-agent-studio, S1 + S2, 9 builders in one reused worktree) · A spark composed from a hackathon fusion must scout the MECHANISM behind each fused claim first: "e1's LLM takes vague directions" was a 150-row keyword table, and saying so in wave 1 changed the architecture. A new outside CALLER is a liveness item: trace route guard -> principal resolution under every posture the operator runs (DEV_AUTH resolved the dev fixture before any bearer, so /api/mcp refused the studio agent's token; fixed bd04de78). Run the full `npm test` probes at the FIRST package commit, not only test:unit: gate liveness (check:score orphaned since a merge) and hook-coverage (a new hook) surfaced only at the end. Never `source` a hackathon seat's `.hackathon/env.sh` for gates: it built foundry store paths from an unexpanded `$(...)` and failed 16 probes; use the overlay env. A local-band render with `.hackathon/instruments.local.json` missing used to fall back to scipy synths silently (refused by default since 5ecd39b4) - copy that file into any worktree that renders.
+- 2026-10-29 (suno-advisor, 6 builders + Director packages, worktree; research spark that became a build) · A research
+  question ("can we hear a Suno track?") answered by one web agent + one code scout in parallel BEFORE wave 1 shaped
+  the whole design; the vault's own prior experiment (20 Gemini reads) was the strongest evidence and was found by
+  reading the vault, not the web. A WP0 that pre-wired every shared seam (host capability type, stub server actions,
+  stub lib modules with final signatures, the variants table, the one derivation fold) let 3 backend + 3 variant
+  builders run with zero file collisions. Promoted to Gates this run: tsconfig ownership; the arrival check (load the
+  suite, call the dependency). A new text turn class has six homes (types, router PLAN, kernel router table, provider
+  refusals, ledger turns MEDIA, .ai/use-cases.json) and a new regression gate three (gates.mts, verify:serial,
+  gates.yml) - name them in the brief. Junction-safe worktree removal: unlink every link first (509 here), count main's
+  node_modules before and after.
+- 2026-10-29 (suno-advisor follow-up, owner test on a real take) · A door on a VENDOR ANSWER was written from the schema
+  and never met a real answer before ship: the first full-length Suno take showed the listener's timeline 2-9% long and a
+  2 s door refused three BILLED reads. Tune such a door on recorded real answers, keep the raw answer of every refusal, and
+  make the live smoke use a full-length real input, not a 17 s clip. Owner verdict: analysis parked for a rethink.
 - 2026-10-30 music-clip: landing overlap must include the BASE's lag - local main 100 behind origin with operator WIP in files that gap touches blocked the ff although every brief file was new; check `git diff --name-only main origin/main` against `git status --short` at the go-gate. Also: a docs builder briefed to report contract inconsistencies caught 3 wire gaps while the code builders were still running.
 - 2026-10-30 music-clip (2): a creative-output spark must research the QUALITY BAR before wave 1, not only feasibility - the dialog accepted 'pure web tech' with no reference for what good looks like and Board B shipped a slideshow; after three research passes + rendered treatments the operator picked within one board. Also: check the render HARDWARE path at scout time (headless Chromium could reach the GPU all along; the reused strips flags turned it off).

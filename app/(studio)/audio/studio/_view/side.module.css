@@ -1,0 +1,22 @@
+/* The studio view's side panels (desk's style in canvas's places): the versions rail on the left,
+   next steps and what always works on the right. Tokens only. */
+.rail{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0}
+.railList{list-style:none;margin:0;padding:0;display:grid;gap:var(--sp-1)}
+.railItem{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-sm);border:1px solid transparent}
+.railItem[aria-current]{border-color:color-mix(in srgb,var(--cyan) 30%,transparent);background:var(--wash)}
+.railJump{flex:1;min-width:0;display:flex;align-items:center;gap:var(--sp-3);padding:0;border:0;background:none;color:var(--muted);font:500 var(--fs-ui)/1.3 var(--sans);text-align:left;cursor:pointer}
+.railJump:hover,.railItem[aria-current] .railJump{color:var(--ink-bright)}
+.railJump:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge);border-radius:var(--r-xs)}
+.railTitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.num{flex:none;display:inline-grid;place-items:center;min-width:var(--h-chip);height:var(--h-chip);padding:0 var(--sp-1);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:700 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.noEar{flex:none;width:var(--size-glyph-btn);height:var(--size-glyph-btn)}
+.side{display:grid;gap:var(--sp-5);align-content:start;min-width:0}
+.side > section{border:1px solid var(--hair);border-radius:var(--r-lg);overflow:hidden}
+.list{list-style:none;margin:0;padding:var(--sp-4) var(--sp-5);display:grid;gap:var(--sp-4)}
+.step{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);padding-bottom:var(--sp-4);border-bottom:1px solid var(--hair)}
+.step:last-child{padding-bottom:0;border-bottom:0}
+.why{flex-basis:100%;display:grid;gap:var(--sp-nudge);min-width:0;font:500 var(--fs-meta)/1.35 var(--sans);color:var(--text)}
+.goes{font:500 var(--fs-micro)/1.3 var(--sans);color:var(--faint)}
+.step[data-goes="agent"] .goes{color:var(--cyan)}
+.empty{margin:0;padding:var(--sp-4) var(--sp-5);color:var(--muted);font:500 var(--fs-ui)/1.4 var(--sans)}
+.offline{margin:var(--sp-4) var(--sp-5) 0;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-sm);border:1px dashed var(--hair-3);font:500 var(--fs-meta)/1.4 var(--sans);color:var(--text)}

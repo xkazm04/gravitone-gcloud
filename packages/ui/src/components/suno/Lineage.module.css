@@ -1,0 +1,12 @@
+/* A prompt version's lineage: the verdict it answers as a quote with a violet rule, then one row per
+   changed field - mono field name, was struck through, now bright, the reason muted. Tokens only. */
+.lineage{display:grid;gap:var(--sp-2);min-width:0}
+.because{margin:0;padding:var(--sp-1) 0 var(--sp-1) var(--sp-3);border-left:var(--stroke-mark) solid var(--violet);font:400 var(--fs-ui)/1.45 var(--sans);color:var(--text);overflow-wrap:anywhere}
+.changes{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:var(--sp-1) var(--sp-3);align-items:baseline}
+.change{display:contents}
+.field{font:600 var(--fs-micro)/1.4 var(--mono);color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+.delta{font:500 var(--fs-meta)/1.45 var(--mono);overflow-wrap:anywhere;min-width:0}
+.was{color:var(--muted);text-decoration:line-through}
+.arrow{color:var(--faint)}
+.now{color:var(--ink-bright)}
+.why{grid-column:2;font:400 var(--fs-meta)/1.4 var(--sans);color:var(--muted);overflow-wrap:anywhere}
