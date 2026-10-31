@@ -1,9 +1,9 @@
 ---
 name: music-clip
-version: 2.5.0
+version: 2.6.0
 memory: none
 category: Content
-description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then the film - our own three.js engine on the GPU (start from pipeline/music-clip/film-starter/), the edit as a beat-grid shot plan, one set module per location, proof cuts with sound, a full render muxed with the lossless master, and note rounds that go back into sets and the plan. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / shots) and pipeline/music-clip/{shoot,cut}.mts. Invoke with /music-clip <folder> [verb].
+description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then the film - our own three.js engine on the GPU (start from pipeline/music-clip/film-starter/), the edit as a beat-grid shot plan, one set module per location, proof cuts with sound, a full render muxed with the lossless master, and note rounds that go back into sets and the plan. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / shots) and pipeline/music-clip/{shoot,cut,deliver,keyframes}.mts; every film ships as a 10-bit HEVC upload copy (deliver.mts, ~0.1 GB for 4-5 min). Invoke with /music-clip <folder> [verb].
 argument-hint: "<folder> [analyze|status|board a|board t|board b|pick a:<id>|pick t:<id>|pick b:<id>|pick stack:<name>|pack|compare]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, Agent
 ---
@@ -216,21 +216,47 @@ Break the Sequence took three rounds (v1 -> v3); every note was a timestamp and 
   propose a one-take (`oneTake` / `tailTake`) to the operator. A shot cycle repeated through a long
   section repeats its story notes - check every note's time against its lyric time.
 
-### Delivery
+### The generated path - keyframes for image-to-video (after a baseline film)
 
-The render (`cut.mts`, NVENC H.264 ~16 Mb/s + AAC 384 kb/s from the master) is the archive, about 0.5 GB for
-4-5 minutes - too big to ship, and YouTube gains nothing from it (it recommends 8 Mb/s for 1080p30 and
-re-encodes every upload). Ship a 10-bit HEVC copy:
+The three.js film is the baseline: it fixes story, edit and timing cheaply. The next version can be shot as
+generated stills animated by an image-to-video model (Stay Here, 2026-10-31: "we can prompt the keyframes and
+afford to enhance the story or detail of scenes"). Its plan is `music-clip/storyboard-vN.md` (one keyframe per
+4-6 s clip, cut on bar downbeats) and `music-clip/keyframes.json`:
 
 ```bash
-ffmpeg -i film-vN-1080p.mp4 -c:v libx265 -preset slow -crf 22 -pix_fmt yuv420p10le -tag:v hvc1   -c:a aac -b:a 256k -ar 48000 -movflags +faststart film-vN-upload.mp4
+npx tsx pipeline/music-clip/keyframes.mts <folder> --dry            # the plan, nothing sent
+npx tsx pipeline/music-clip/keyframes.mts <folder> --only K05 --yes # one frame first: read its credits line
+npx tsx pipeline/music-clip/keyframes.mts <folder> --yes            # the rest (skips frames already on disk)
 ```
 
-Measured on Stay Here v2 (284 s, grain over smooth backlit gradients), VMAF mean / worst frame vs the render:
-x265 10-bit CRF 22 **106 MB, 97.0 / 81.4**; x264 CRF 18 <=10 Mb/s 363 MB, 96.4 / 85.4; x264 CRF 23 <=8 Mb/s
-162 MB, 94.7 / 79.0. 10-bit also keeps the gradients from banding. Grain is what costs the bits. Verify
-every copy: `ffmpeg -i up.mp4 -i render.mp4 -lavfi "[0:v]format=yuv420p[a];[1:v]format=yuv420p[b];[a][b]libvmaf" -f null -`
-(mean >= 95). YouTube takes up to 256 GB or 12 h, so size is our choice, not its limit.
+- The operator's setup (2026-10-31): Leonardo v2, `openai/gpt-image-2.5-sunburst`, `quality: LOW`,
+  2048x1136, one `style_ids` entry, `prompt_enhance: OFF` - in `keyframes.json` `request`. Every frame is
+  deleted from the Leonardo library after download; `keyframes/ledger.jsonl` keeps generation id and credits.
+- It draws on the API key's own pool (`apiSubscriptionTokens` / `apiPaidTokens` in `/v1/me`), NOT the web
+  studio's subscription tokens. On 2026-10-31 that pool was 0 and v2 answered 402 "Insufficient tokens" with
+  6,844 studio tokens unused: check the pool before promising a batch; the studio pool is reached only through
+  the browser studio driver (`lib/imaging/studio/`).
+- Prompts: ONE style sentence and ONE fixed phrase per character, repeated verbatim in every frame (the model
+  keeps what it is told the same way); the act's gel named in each; type in the world named in capitals
+  (SEIZED, BANK, OPEN); hands "at natural scale". Rules the baseline's notes taught: no push-in from wide to
+  close inside a clip (frame the keyframe at the distance the shot holds); every cut carries something across
+  it (an object, a screen direction, a gel).
+
+### Delivery - always the same encode
+
+The render (`cut.mts`, NVENC H.264 ~16 Mb/s + AAC 384 kb/s from the master) is the ARCHIVE, about 0.5 GB for
+4-5 minutes. It is never the upload. Every film ships through one command:
+
+```bash
+npx tsx pipeline/music-clip/deliver.mts <folder>/music-clip/film-vN-1080p.mp4   # -> film-vN-upload.mp4
+```
+
+It encodes x265 10-bit CRF 22 (AAC 256 kb/s 48 kHz, `+faststart`) and measures VMAF against the render; it
+exits 1 under a mean of 95 (lower `--crf` and re-run). Measured on Stay Here v2 (284 s, grain over smooth
+backlit gradients), VMAF mean / worst frame: x265 10-bit CRF 22 **106 MB, 97.0 / 81.4**; x264 CRF 18 363 MB,
+96.4 / 85.4; x264 CRF 23 162 MB, 94.7 / 79.0. YouTube re-encodes every upload and recommends 8 Mb/s for
+1080p30, so the render's extra bits buy nothing; 10-bit keeps the gradients from banding; grain is what
+costs the bits. Say the size and the VMAF line when you hand a film over.
 
 ## Rules
 
