@@ -1,0 +1,133 @@
+{
+  "worker": "cloud-20261031-gravitone-2",
+  "evaluatedAt": "2026-10-31",
+  "pairs": [
+    {
+      "context": "e660bf0f-199c-4cd9-91e1-1a13e318e55f",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/articles/landing.ts:35 figures that failed to render to PNG reach only console.error, landing proceeds and the run record carries nothing, so the Medium package ships with missing figures and no surface ever shows it (the 'check that prints findings to a log nobody's exit code depends on' case). Context is article-human-gate-and-landing; the current context-map.json lists it as id 6a878b5f-8652-4265-839a-dce38680a9c7.",
+      "techniques": [
+        {"technique": "severity-by-construction", "verdict": "deviation", "evidence": "lib/articles/landing.ts:35 a detected defect (failedFigures) whose only sink is console.error; no exit path, no field on the run, no operator view - by construction it cannot refuse or even be seen."},
+        {"technique": "refusal-names-a-reachable-remedy", "verdict": "realized", "evidence": "lib/articles/humanActs.ts:35 the refusal names the run's actual status and the one status the act requires - an in-tree, actionable remedy, not a bare 'forbidden'."},
+        {"technique": "waiver-names-its-finding", "verdict": "realized", "evidence": "lib/articles/humanActs.ts:30 approval names patches by identity and a patch id that matches nothing is refused with a 400, not silently ignored."},
+        {"technique": "self-reported-gate-inputs", "verdict": "realized", "evidence": "lib/articles/landing.ts:29 landing refuses without the approval record written by the human act; the landing step cannot author its own permission."}
+      ]
+    },
+    {
+      "context": "3fa7a830-b03c-4d82-87ef-fba8e753d390",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evidence": "app/(studio)/board/_board/commitFlow.tsx:4 the desk's gate-like behaviour is the stale-preview re-show on a 409 (the commit bound to the consequence the operator saw); the refusal logic itself lives in the kernel (decision-and-gates), so this UI context realizes few quality-gates techniques directly and fewer than half were anchorable. Current map id c1a2a2a3-7561-4522-816b-c2418500374c.",
+      "techniques": [
+        {"technique": "self-reported-gate-inputs", "verdict": "realized", "evidence": "app/(studio)/board/_board/commitFlow.tsx:3 commit carries the preview's token, so the kernel - not the client - decides whether what was shown is still what commits."}
+      ]
+    },
+    {
+      "context": "431b1607-266c-4fcb-93e8-b7f91e5a0ebc",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evidence": "packages/kernel/src/decision/core.ts:211 commit refuses while any candidate is undecided and carries the undecided ids in detail; three domain-gate techniques are realized, no deviation found, but 3 of 27 is below the evidence floor for conformant. Current map id 92742f06-a6dc-418e-8c50-42c050345bc7.",
+      "techniques": [
+        {"technique": "advancement-evidence-fields", "verdict": "realized", "evidence": "packages/kernel/src/decision/core.ts:211 undecided is an explicit state that blocks the commit and is enumerated in the refusal, not a blank merged into reject (v1's default sweep removed)."},
+        {"technique": "self-reported-gate-inputs", "verdict": "realized", "evidence": "packages/kernel/src/parts/gates.ts:19 a gate part is ratified only by a committed Board packet, replacing v1's signedOff timestamp any surface could write."},
+        {"technique": "unmeasurable-criteria", "verdict": "realized", "evidence": "packages/kernel/src/parts/gates.ts:55 a missing or failed committed result reads as not ratified, and gates.ts:63 requires rows.size > 0, so a cull with nothing measured never certifies."}
+      ]
+    },
+    {
+      "context": "fb6d9704-d95c-46bc-b440-c6599e487cff",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/foundry/training/blind.ts:165 the 'unmeasurable' verdict is guarded by pairs_n > 0, so an improvement with zero pairs (claimAllowed via blindComplete, blind.ts:154: 0 === 0) is written to the ledger as better/not-better from nothing measured - the measured-nothing state certifies instead of being refused. Current map id 946b3fa8-75ef-47c1-94b1-40703a9401b1.",
+      "techniques": [
+        {"technique": "unmeasurable-criteria", "verdict": "deviation", "evidence": "lib/foundry/training/blind.ts:165 1-3 pairs read 'unmeasurable' but 0 pairs falls through to a verdict; the floor that exists for thin evidence is skipped exactly when there is no evidence."},
+        {"technique": "oracle-frozen-during-repair", "verdict": "realized", "evidence": "lib/foundry/strips/author.ts:4 the authoring agent cannot render or grade its own strip; lint and render run in the orchestrator, outside what the fix turn can write."},
+        {"technique": "refusal-names-a-reachable-remedy", "verdict": "realized", "evidence": "lib/foundry/strips/lint.ts:35 each lint rule's name carries its remedy ('use a seeded PRNG'), and lint.ts:9 states every error names its rule."}
+      ]
+    },
+    {
+      "context": "a91965bd-84cb-42b6-978f-29ca7258f718",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:198 one 'accept over the gate' click waives every violation on every blocking render of the staged version, and the staged row shows only render ids (Document.tsx:196), never which findings are being waived - a blanket waiver. Current map id 93249c73-ef93-4c55-909a-6f3a67262366.",
+      "techniques": [
+        {"technique": "waiver-names-its-finding", "verdict": "deviation", "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:198 the escape hatch takes no finding identity; two findings on one render are both downgraded by one act."},
+        {"technique": "unmeasurable-criteria", "verdict": "realized", "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:190 the gate's enforced share is shown on the surface, so unmeasured constraints are visible and counted rather than read as passes."}
+      ]
+    },
+    {
+      "context": "f8036604-75f5-4f7d-898c-734511ac5e86",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/script/versions.ts:136 GateOverride records only a violation count, the blocking render ids and enforced%, while its doc (versions.ts:131) promises 'which one' - the accept-over-gate receipt cannot name the findings it waived, so a later reader cannot tell what was overridden. Current map id 1c2ac174-ba41-4264-b184-6b7aa04507d4.",
+      "techniques": [
+        {"technique": "waiver-names-its-finding", "verdict": "deviation", "evidence": "lib/script/versions.ts:147 overrideFrom copies counts and render ids, not finding identities (rule+subject); the override is a blanket over every finding in the staged version."},
+        {"technique": "unmeasurable-criteria", "verdict": "realized", "evidence": "lib/script/gate.ts:194 a constraint with no probe gets verdict 'unmeasured', counted separately and kept in the enforced denominator, never a pass."},
+        {"technique": "severity-by-construction", "verdict": "realized", "evidence": "lib/script/gate.ts:578 blocked = violations > 0, and app/(studio)/projects/[id]/_part/fixtureScript.ts:181 refuses a plain accept while blocked - the verdict is wired to the act."},
+        {"technique": "prose-rule-drift", "verdict": "realized", "evidence": "lib/script/gate.ts:23 the hand-typed constraint ledger is replaced by a function that reads the render, after a violation slipped past twelve prose self-checks."},
+        {"technique": "unparseable-form-is-a-finding", "verdict": "realized", "evidence": "lib/script/gate.ts:445 spelled-out figures, a form the numeral matcher cannot read, are reported 'unmeasured' instead of silently passing traceability."},
+        {"technique": "gate-liveness", "verdict": "realized", "evidence": "lib/script/gate.ts:647 u-yield-causality is kept as a known-red control the probe table must catch, and gate.ts:103 a probe that cannot compile throws instead of reading as clean."},
+        {"technique": "self-reported-gate-inputs", "verdict": "realized", "evidence": "lib/script/gate.ts:27 the gate may not report pass for anything it did not itself check, replacing a ledger whose human-typed state the render's author supplied."}
+      ]
+    },
+    {
+      "context": "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evidence": "packages/ui/src/components/audio/recipe.ts:104 the Suno dialect is drawn from the one form sunoFieldsOf sends rather than written twice; these are vendor generation prompts with no context window, history or layered system prompt, so most of the 32 techniques have no purchase and fewer than half could be anchored. Current map id 03bbdce3-27bb-4361-947c-ba8f0d70fa2c.",
+      "techniques": [
+        {"technique": "layered-composition", "verdict": "realized", "evidence": "packages/ui/src/components/audio/recipe.ts:104 one assembler per vendor family: the displayed line is derived from the sent fields, after drift where the preview showed words Suno never received."},
+        {"technique": "context-budgeting", "verdict": "realized", "evidence": "packages/ui/src/components/audio/recipe.ts:149 sunoCut counts the style words and fences STYLE_MAX/EXCLUDE_MAX drop, so truncation names what it dropped."}
+      ]
+    },
+    {
+      "context": "f770abb6-6609-4c9f-959f-a31407dc501f",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "packages/domain/src/steps/still.ts:22 the only 'prompt' in this context is a stored string field on a still take's record; the context is run/job state machines, lane capacity, estimates and zod step-record schemas with no prompt assembler. Grepped packages/domain/src (context files) for prompt, assembl, messages, systemPrompt, claude, llm, model: hits are record fields and model-option keys only. Current map id 1155c1ec-f832-471a-929c-2a16f06cfbb7.",
+      "techniques": []
+    },
+    {
+      "context": "a91965bd-84cb-42b6-978f-29ca7258f718",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/projects/[id]/[part]/page.tsx:38 the context is the part editors, reading and writing through PART_PORT; no editor assembles or sends a model prompt. Grepped page.tsx and _edit/*.tsx for prompt, claude, llm, assembl: no prompt construction found. Current map id 93249c73-ef93-4c55-909a-6f3a67262366.",
+      "techniques": []
+    },
+    {
+      "context": "7226db68-4ca8-41ee-a2f8-3012d05e4acd",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "packages/producers/src/publish/publish.ts:21 the context publishes claimed slots to channels through an adapter and collects stats; it makes no model call. Grepped packages/producers/src/publish/*.ts for prompt, claude, llm, model, turn, assembl: the only 'model' hit is metrics.ts:62's vendor stats quote key. Current map id d8928803-1de2-497f-882c-809d029b705b.",
+      "techniques": []
+    },
+    {
+      "context": "f8036604-75f5-4f7d-898c-734511ac5e86",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/script/compose.ts:186 engineSections returns an empty string when no ENGINES.md heading matches a qualifying engine's label, so the capability text for the engines the model may use can silently render as nothing - the empty-string render variable-interpolation names as the dishonest outcome, indistinguishable from an unwired input. Current map id 1c2ac174-ba41-4264-b184-6b7aa04507d4.",
+      "techniques": [
+        {"technique": "variable-interpolation", "verdict": "deviation", "evidence": "lib/script/compose.ts:186 an unmatched engine section renders as '' rather than failing, defaulting or omitting with notice; contrast compose.ts:181, where absent params get a declared default."},
+        {"technique": "layered-composition", "verdict": "realized", "evidence": "lib/script/compose.ts:169 one assembler (composePrompt) for the compose family, the stable SCRIPT-PROMPT.md doctrine first and the per-run material after it."},
+        {"technique": "capability-documentation", "verdict": "realized", "evidence": "lib/script/compose.ts:189 the engines the model may not use are derived from the notebook's engineFit against the qualifying set, not hand-written."},
+        {"technique": "context-budgeting", "verdict": "realized", "evidence": "lib/script/compose.ts:124 material past MAX_COMPOSE_CHARS is refused before any spend, naming the size and largest field, rather than left to silent provider truncation (a total ceiling, not per-layer floors)."}
+      ]
+    }
+  ],
+  "declined": [],
+  "consults": [
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["quality-gates"], "techniques": ["severity-by-construction", "refusal-names-a-reachable-remedy", "waiver-names-its-finding", "self-reported-gate-inputs", "advancement-evidence-fields", "unmeasurable-criteria", "oracle-frozen-during-repair", "prose-rule-drift", "unparseable-form-is-a-finding", "gate-liveness"], "deviations": 4},
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["prompt-assembly"], "techniques": ["variable-interpolation", "layered-composition", "capability-documentation", "context-budgeting"], "deviations": 1}
+  ]
+}

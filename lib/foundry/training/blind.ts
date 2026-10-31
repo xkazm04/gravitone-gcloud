@@ -110,7 +110,10 @@ export function pickToArm(pick: BlindPick, slotA: Arm): Arm | "tie" {
 }
 
 export interface BlindMeasure {
+  /** Pairs the human picked blind. */
   pairs_n: number;
+  /** Pairs the improvement has at all, picked or not. Zero means nothing was compared. */
+  pairs_total: number;
   /** Fraction of picked pairs where the human chose the challenger. */
   human_pick_rate: number;
   chokepoint_vs_human: number;
@@ -139,6 +142,7 @@ export function measureBlind(imp: Improvement, entry: ImprovementBlind | undefin
   }
   return {
     pairs_n: n,
+    pairs_total: (imp.pairs ?? []).length,
     human_pick_rate: n ? challenger / n : 0,
     chokepoint_vs_human: n ? chokeAgree / n : 0,
     ...(gemJudged ? { gemini_vs_human: gemAgree / gemJudged } : {}),
@@ -159,10 +163,18 @@ export function claimAllowed(imp: Improvement, entry: ImprovementBlind | undefin
   return Boolean(entry?.anchored) || blindComplete(imp, entry);
 }
 
-/** The ledger row's verdict. A blind row with too few pairs measures nothing
- *  about the judges and says so; an anchored row keeps the human's word. */
+/** The ledger row's verdict. A comparison over zero pairs measured nothing, so
+ *  it is `unmeasurable` whatever the human said: an improvement with no pairs
+ *  (anchored or not), and a blind row with no picks, which no floor override
+ *  lifts - the override permits a SMALL sample, never an empty one. A blind row
+ *  under the floor is `unmeasurable` unless overridden; an anchored row with
+ *  pairs keeps the human's word. */
 export function ledgerVerdict(human: TrainingVerdict, measure: BlindMeasure, entry: ImprovementBlind | undefined, floor = BLIND_FLOOR): "better" | "not-better" | "unmeasurable" {
-  if (!entry?.anchored && measure.pairs_n < floor && !entry?.floorOverride && measure.pairs_n > 0) return "unmeasurable";
+  if (measure.pairs_total === 0) return "unmeasurable";
+  if (!entry?.anchored) {
+    if (measure.pairs_n === 0) return "unmeasurable";
+    if (measure.pairs_n < floor && !entry?.floorOverride) return "unmeasurable";
+  }
   return human === "approve" ? "better" : "not-better";
 }
 

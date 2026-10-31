@@ -1,0 +1,99 @@
+{
+  "worker": "cloud-20261031-gravitone-1",
+  "evaluatedAt": "2026-10-31",
+  "pairs": [
+    {
+      "context": "14632859-df56-4340-9e16-c420ff681ee3",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/articles/agentSteps.ts:3 Each writer step stages inputs, runs one agent turn in a fresh workspace (makeWorkspace) and ingests out/, so state crosses steps only as staged files of this run and nothing is carried across runs into an agent's context; grep over the context's 18 files for memory|recall|lesson|remember|episod|history|session|--resume finds no store read back as recalled memory (loop.ts only reads which topics are covered, for claiming).",
+      "techniques": [
+        { "technique": "recall-injection", "verdict": "not-applicable", "evidence": "lib/articles/agentSteps.ts:3 one agent turn per step over staged inputs; no recall tier is assembled into the prompt." },
+        { "technique": "episodic-capture", "verdict": "not-applicable", "evidence": "lib/articles/agentSteps.ts:3 run outputs are ingested as the run's own artifacts (draft, sources), not captured as episodes for later distillation." }
+      ]
+    },
+    {
+      "context": "3fa7a830-b03c-4d82-87ef-fba8e753d390",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/board/_board/Board.tsx:8 The Board is a human decision desk whose every verdict, pick, undo and commit goes through BoardPort Server Actions over artifact packets; no agent reads its decisions back as memory, so the subject's precondition (a long-lived agent carrying a store forward) is absent; grep over its 17 files for memory|recall|lesson|episod|remember finds only 'in-memory BoardPort' fixture and a VRAM 'memory' wait field.",
+      "techniques": [
+        { "technique": "memory-governance", "verdict": "not-applicable", "evidence": "app/(studio)/board/_board/Board.tsx:8 the gate rules on produced packets (verdicts/picks/commits), not on beliefs proposed for an agent's consolidated store." }
+      ]
+    },
+    {
+      "context": "e481098a-3532-46d9-bdc9-de84fbc2ce01",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/foundry/store.ts:4 The forge disk layer is the app's read path and the human cull's write path over generated image runs; its style store and ledger.json are a recipe catalogue and verdict record for image generation (forge.py reads styles.json as recipes), not a belief store an agent recalls into context; grep over its 10 files for memory|recall|lesson|episod|remember|inject finds none in that sense (calibration.ts calibrates a grader against human verdicts).",
+      "techniques": [
+        { "technique": "recall-injection", "verdict": "not-applicable", "evidence": "lib/foundry/store.ts:4 readers are the app and the cull, not an agent's context assembly." }
+      ],
+      "registryProposal": "The forge's style lifecycle (hypothesis in styles.json, 'proven' only when a human kept it on more than one scene, lib/foundry/store.ts:11-12) has the shape of cross-context-promotion's second-sighting bar applied to generation recipes rather than agent memory; if the registry wants that bar reusable outside agent memory, it may belong in a shared technique."
+    },
+    {
+      "context": "fb6d9704-d95c-46bc-b440-c6599e487cff",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/foundry/strips/author.ts:1 Strip authoring is one agent turn in an isolated workspace whose only carried input is the in-run fix feedback; strips-ledger.json is written at commit but read only by lib/foundry/strips/triage.ts, lib/foundry/catalogue.ts and the Board source (grep 'strips-ledger' across the repo), never by the author turn, and the Dojo ledger is a work queue for a loop on another machine (lib/foundry/training/store.ts:14), so no agent here recalls a carried-forward store; grep terms memory|recall|lesson|episod|remember|learn.",
+      "techniques": [
+        { "technique": "procedure-promotion", "verdict": "not-applicable", "evidence": "lib/foundry/training/store.ts:14 a ledger row is the remote loop's work queue for reflecting an improvement into a prompt surface; the promotion itself happens outside this context and outside this repo's code." },
+        { "technique": "recall-injection", "verdict": "not-applicable", "evidence": "lib/foundry/strips/author.ts:1 one isolated turn; no recalled material is assembled into its prompt." }
+      ]
+    },
+    {
+      "context": "d067e4e3-6739-4666-9103-06dac7f825ac",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/library/project.ts:14 The Library projection reads each feed, ingests its media into blobs and upserts items into the kernel's Library index for the screens; re-judged against revision 52, no agent reads that index as recalled memory (rememberIngest is an ingest memo, not agent memory); grep over its 12 files for memory|recall|lesson|episod|remember finds only rememberIngest and the Dojo 'lesson' vocabulary facet.",
+      "techniques": [
+        { "technique": "recall-injection", "verdict": "not-applicable", "evidence": "lib/library/project.ts:14 the projection's consumer is the Library index for screens, not an agent context." }
+      ]
+    },
+    {
+      "context": "c425f431-c0d1-4f34-b736-1a5d70683ef4",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/notebook/validate.ts:1 The context is a runtime validation door deciding whether one model answer is a notebook; it holds no store an agent carries forward or recalls; grep over its 15 files for memory|recall|lesson|episod|remember finds only retrieval.ts's rule that a remembered (unfetched) URL is not a citation.",
+      "techniques": [
+        { "technique": "consolidation", "verdict": "not-applicable", "evidence": "lib/notebook/validate.ts:1 validates a single run's output shape; no distillation into durable beliefs." }
+      ]
+    },
+    {
+      "context": "e2f6231a-d39f-4d39-9465-0a48436cae92",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/steps/index.ts:9 An IndexedDB object store of per-project UI step content keyed `${projectId}:${phase}`; re-judged against revision 52, no agent reads it as recalled memory; grep over its 16 files for memory|recall|lesson|episod|remember|inject finds none.",
+      "techniques": [
+        { "technique": "durable-store-failure-posture", "verdict": "not-applicable", "evidence": "lib/steps/index.ts:9 the store is browser step content, not an agent memory store, though it does separate never-written from failed reads on its own terms." }
+      ]
+    },
+    {
+      "context": "f8036604-75f5-4f7d-898c-734511ac5e86",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/script/compose.ts:2 The script producer runs one compose turn with one prompt assembly from notebook cards and one door over the answer; versions.ts keeps the script's own version history and human notes, not memory an agent recalls across sessions; grep over its 14 files for memory|recall|lesson|episod|remember finds only gate.ts's 'a question with no memory' about RegExp state.",
+      "techniques": [
+        { "technique": "recall-injection", "verdict": "not-applicable", "evidence": "lib/script/compose.ts:2 the prompt is assembled from the current notebook, with no recalled-memory tier." }
+      ]
+    }
+  ],
+  "declined": [],
+  "consults": [
+    {
+      "ts": "2026-10-31T00:00:00Z",
+      "bundle": "software-engineering",
+      "subjects": ["agent-memory"],
+      "techniques": ["recall-injection", "episodic-capture", "memory-governance", "procedure-promotion", "consolidation", "durable-store-failure-posture", "cross-context-promotion"],
+      "deviations": 0
+    }
+  ]
+}

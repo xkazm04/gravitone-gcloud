@@ -18,7 +18,7 @@
 // server-side by construction — @google/genai has no browser guard at all,
 // only a README warning.
 
-import { ImagingError } from "../errors";
+import { classifyStop, ImagingError, stopError } from "../errors";
 import { keyFor } from "../env";
 import { requestJson } from "../http";
 import { parseAgainstSchema } from "../json";
@@ -119,9 +119,14 @@ function textFrom(res: Interaction): string {
  * a silently empty result. An empty result is therefore treated as a refusal
  * rather than a success, which is the safe direction: a refusal re-routes to
  * another vendor, where a false success would hand the caller nothing.
+ *
+ * A NAMED reason outranks both the sniff and the empty default (errors.ts
+ * classifyStop): a recitation block or a suspended account must not hop.
  */
 function assertUsable(res: Interaction, what: string): void {
   const blocked = /safety|blocked|prohibited|policy|violat/i;
+  const named = res.status === "failed" ? classifyStop(res.error?.reason, res.error?.message) : undefined;
+  if (named) throw stopError(named, "google", what, res.error);
   if (res.status === "failed") {
     const msg = res.error?.message || res.error?.reason || "";
     throw new ImagingError(
@@ -141,6 +146,17 @@ function assertUsable(res: Interaction, what: string): void {
       res.status,
     );
 }
+
+/** A completed call that produced nothing: its named reason when it carries one,
+ *  else undefined and the caller's "empty is a refusal" default applies. */
+function emptyStop(res: Interaction, what: string): ImagingError | undefined {
+  const named = classifyStop(res.error?.reason, res.error?.message);
+  return named ? stopError(named, "google", what, res.error) : undefined;
+}
+
+/** A stop the chain must end on, which outranks a refusal in the same batch. */
+const terminalStop = (e: unknown): boolean =>
+  e instanceof ImagingError && (e.kind === "protected-material" || e.kind === "account-blocked");
 
 /* ── The provider ─────────────────────────────────────────────────────────── */
 
@@ -252,7 +268,7 @@ export function googleProvider(): ImagingProvider {
       assertUsable(res, "recognition");
       const text = textFrom(res);
       if (!text)
-        throw new ImagingError("Google returned an empty recognition.", "refused", "google", res.status);
+        throw emptyStop(res, "recognition") ?? new ImagingError("Google returned an empty recognition.", "refused", "google", res.status);
 
       const vision = priceCall({ provider: "google", model: VISION_MODEL });
       return {
@@ -330,10 +346,15 @@ async function runImage(
       const got = imagesFrom(r.value);
       for (const img of got)
         images.push({ base64: img.data, mime: (img.mime as ImageRef["mime"]) ?? "image/png" });
-      // A completed call with no image is how a safety block usually presents.
-      if (!got.length) refused++;
+      // A completed call with no image is how a safety block usually presents,
+      // unless it names its reason.
+      if (!got.length) {
+        const named = emptyStop(r.value, what);
+        if (named) throw named;
+        refused++;
+      }
     } catch (e) {
-      firstError ??= e;
+      if (firstError === undefined || (terminalStop(e) && !terminalStop(firstError))) firstError = e;
       if (e instanceof ImagingError && e.kind === "refused") refused++;
       else failed++;
     }

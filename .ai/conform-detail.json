@@ -9378,52 +9378,50 @@
       "context": "ui-status-provenance",
       "subject": "public-claim-provenance",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-22",
-      "evaluatedTs": "2026-10-22T02:54:54.165Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:29:48.972Z",
+      "worker": "727bac66-4fc5-453e-b8b4-977bf1e22668",
       "techniques": [
-        {
-          "technique": "build-time-derivation-off-the-client-bundle",
-          "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/tally/Tally.tsx:28 Renders supplied operational values; this context does not reduce a heavy catalog for a public claim."
-        },
-        {
-          "technique": "degraded-never-claims-live",
-          "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/status/status.ts:164 Handles unknown workflow-state tokens, not fetch outcomes or currency badges on public counters."
-        },
         {
           "technique": "derived-numerator-authored-denominator",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/stackbar/StackBar.tsx:25 Reports operational decision counts rather than shipped capabilities against an authored public goal."
-        },
-        {
-          "technique": "no-data-source-labelled-inline",
-          "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/source/SourceTag.tsx:19 Displays caller-supplied operational source classifications; no hand-authored public measurement is declared here."
+          "evidence": "packages/ui/src/components/tally/Tally.tsx:15 Tally draws a ratio but authors neither half; both come from the caller, on operator screens, not a public progress fraction."
         },
         {
           "technique": "presentation-invariants-on-derived-values",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/facet/FacetRow.tsx:59 Clamps a studio filter's supplied share; no public derived count and authored target pair was found."
+          "evidence": "packages/ui/src/components/stackbar/StackBar.tsx:20 Empty pile is guarded at its one computation and spoken/drawn values read the same props, but there is no hand-authored target against a live count. Tally has no value<=of check, which would matter only on a public surface."
+        },
+        {
+          "technique": "degraded-never-claims-live",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/status/status.ts:151 Closed status vocabulary, defined once, degrading toward attention. This is operator job/run state, not a public request-time counter with a liveness badge."
+        },
+        {
+          "technique": "no-data-source-labelled-inline",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/source/SourceTag.tsx:14 SourceTag is an inline provenance label the reader can see (real/model/illustrative/fixture/derived), but it qualifies operator-facing figures, not hand-typed public claims."
         },
         {
           "technique": "promise-only-what-ships",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:87 Presents an operator's supplied action preview rather than a public success panel promising follow-up."
+          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:87 The confirm panel renders the adapter's own sentences about what the commit will do, word for word. It is an operator HITL dialog, not a public success panel promising a follow-up."
+        },
+        {
+          "technique": "build-time-derivation-off-the-client-bundle",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/tally/Tally.tsx:28 Renders supplied operational values; this context does not reduce a heavy catalog for a public claim.",
+          "carriedFrom": "2026-10-22"
         },
         {
           "technique": "provenance-as-a-build-gate",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/provenance/Provenance.tsx:32 These chips identify production metadata within the studio; the standard explicitly excludes internal consoles from this public-claim gate."
+          "evidence": "packages/ui/src/components/provenance/Provenance.tsx:32 These chips identify production metadata within the studio; the standard explicitly excludes internal consoles from this public-claim gate.",
+          "carriedFrom": "2026-10-22"
         }
       ],
-      "withdrawn": {
-        "worker": "43567bc3-02a5-4b97-8f60-4908d01f02f7",
-        "state": "not-applicable",
-        "at": "2026-10-22T02:55:35.023814+00:00",
-        "reason": "reviewer (sonnet): The not-applicable anchor (ConsequencePanel.tsx:69) is an incidental line that renders commit-packet chips and does not show that public claims are absent; ConsequencePanel is also not among the listed context files. The 'illustrative' vs 'real' distinction in SourceTag.tsx suggests data-provenance "
-      }
+      "registryProposal": "Scope note: the subject restricts itself to public surfaces, yet operator tools with a fixture/real produce-side switch show the same seeded-vs-derived problem (fixture values in the same typography as real ones). A pointer stating whether that case belongs to measurement-honesty or to this subject's degraded-never-claims-live would help seats sort internal SourceTag-style provenance chips."
     },
     "e5b296e2-cccf-47a5-b8bd-ce730d40ace8/realtime-events": {
       "context": "kernel-store-and-events",
@@ -9840,35 +9838,92 @@
       "subject": "agent-memory",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T00:00:33.219Z",
-      "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
-      "techniques": []
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "lib/library/project.ts:14 the projection's consumer is the Library index for screens, not an agent context.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/library/project.ts:14 The context is a deterministic projection of studio feeds into the kernel's Library index for the screens, not a store an agent carries forward between sessions; searching lib/library (feeds included) found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hits are the SQLite ':memory:' path and an ingest memo (rememberIngest), which is a content-hash cache.",
+          "evaluatedAt": "2026-10-24T00:00:33.219Z",
+          "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
+          "reason": "replaced by cloud-20261031-gravitone-1"
+        },
+        {
+          "state": "not-applicable",
+          "evidence": "lib/library/project.ts:14 The Library projection reads each feed, ingests its media into blobs and upserts items into the kernel's Library index for the screens; re-judged against revision 52, no agent reads that index as recalled memory (rememberIngest is an ingest memo, not agent memory); grep over its 12 files for memory|recall|lesson|episod|remember finds only rememberIngest and the Dojo 'lesson' vocabulary facet.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
     },
     "e2f6231a-d39f-4d39-9465-0a48436cae92/agent-memory": {
       "context": "project-step-store",
       "subject": "agent-memory",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T00:00:33.219Z",
-      "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
-      "techniques": []
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [
+        {
+          "technique": "durable-store-failure-posture",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/index.ts:9 the store is browser step content, not an agent memory store, though it does separate never-written from failed reads on its own terms.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:2 This is an IndexedDB store for UI step content keyed `${projectId}:${phase}`, with no agent reading it as recalled memory; searching lib/steps found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hit is a comment about an in-memory mirror in saveWatchers.ts. Its honest never-written vs failed read path is the same idea as durable-store-failure-posture, but it is not an agent memory store.",
+          "evaluatedAt": "2026-10-24T00:00:33.219Z",
+          "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
+          "reason": "replaced by cloud-20261031-gravitone-1"
+        },
+        {
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:9 An IndexedDB object store of per-project UI step content keyed `${projectId}:${phase}`; re-judged against revision 52, no agent reads it as recalled memory; grep over its 16 files for memory|recall|lesson|episod|remember|inject finds none.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
     },
     "e481098a-3532-46d9-bdc9-de84fbc2ce01/agent-memory": {
       "context": "foundry-forge-store-and-verdicts",
       "subject": "agent-memory",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T00:00:33.219Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
-        "state": "not-applicable",
-        "at": "2026-10-24T00:00:56.990991+00:00",
-        "reason": "reviewer (sonnet): The claim that no agent recalls this context's verdicts is contradicted. verdictLog.ts is the shared verdict writer that lib/foundry/scout/store.ts and lib/foundry/training/store.ts use. scout/taste.ts reads the operator's last verdicts back into each new night as taste.md for the skill (\"rejections"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/store.ts:4 readers are the app and the cull, not an agent's context assembly.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/foundry/store.ts:4 The forge disk layer is the app's read path and the human cull's write path over generated image runs; its style store and ledger.json are a recipe catalogue and verdict record for image generation (forge.py reads styles.json as recipes), not a belief store an agent recalls into context; grep over its 10 files for memory|recall|lesson|episod|remember|inject finds none in that sense (calibration.ts calibrates a grader against human verdicts).",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
     },
     "b412ea73-0dc3-4362-93c4-2a9b913f9a61/agent-memory": {
       "context": "v1-import-and-archive",
@@ -10034,44 +10089,58 @@
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T01:07:42.727Z",
-      "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
       "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "realized",
+          "evidence": "lib/foundry/extract/prompts.ts:1 every instruction the Extract module sends lives in one file, so a prompt change is a diff there rather than a hunt through call sites"
+        },
         {
           "technique": "fingerprinting-and-cache-keys",
           "verdict": "deviation",
-          "evidence": "lib/foundry/extract/performGroup.ts:52 Synthesis, readback and critique prompts are not recorded by digest or version. Only the replica prompt is kept (performReplica.ts:37), and readbacks carry VOCAB_VERSION, not a prompt version."
-        },
-        {
-          "technique": "layered-composition",
-          "verdict": "conformant",
-          "evidence": "lib/foundry/extract/prompts.ts:1 One assembler module. Callers pass typed inputs (sources, partition), and synthesisPrompt puts RULES first and SOURCES last. Minor: the critique prompt repeats its naming policy after the volatile recipe."
+          "evidence": "lib/foundry/extract/performGroup.ts:64 send site books cost only; the payloadDigest at packages/kernel/src/dryrun.ts:181 is written on the dry path alone, never for a live send"
         },
         {
           "technique": "house-vocabulary-layer",
           "verdict": "conformant",
-          "evidence": "lib/foundry/extract/performCommon.ts:25 A closed observable vocabulary from one authority (ENUMS), defined in the prompt, and adoption is checked: off-vocabulary words are logged by field."
+          "evidence": "lib/foundry/extract/performCommon.ts:25 A closed observable vocabulary from one authority (ENUMS), defined in the prompt, and adoption is checked: off-vocabulary words are logged by field.",
+          "carriedFrom": "2026-10-24"
         },
         {
           "technique": "variable-interpolation",
           "verdict": "deviation",
-          "evidence": "lib/foundry/extract/prompts.ts:89 Vision-model prose (prior model output, untrusted class) is interpolated with no declared trust class. The list itself is capped (MAX_SOURCES=60 at store.ts:82, colours sliced to 5 in performRead.ts:25)."
+          "evidence": "lib/foundry/extract/prompts.ts:89 Vision-model prose (prior model output, untrusted class) is interpolated with no declared trust class. The list itself is capped (MAX_SOURCES=60 at store.ts:82, colours sliced to 5 in performRead.ts:25).",
+          "carriedFrom": "2026-10-24"
         },
         {
           "technique": "task-envelope",
           "verdict": "deviation",
-          "evidence": "lib/foundry/extract/prompts.ts:92 Opens with a role sentence. The done criteria are explicit, but there is no self-check before answering: coverage is only validated after the paid turn."
+          "evidence": "lib/foundry/extract/prompts.ts:92 Opens with a role sentence. The done criteria are explicit, but there is no self-check before answering: coverage is only validated after the paid turn.",
+          "carriedFrom": "2026-10-24"
         },
         {
           "technique": "capability-documentation",
           "verdict": "not-applicable",
-          "evidence": "lib/foundry/extract/store.ts:284 No tools are offered. The schema constrains the answer, but no operation roster exists."
+          "evidence": "lib/foundry/extract/store.ts:284 No tools are offered. The schema constrains the answer, but no operation roster exists.",
+          "carriedFrom": "2026-10-24"
         },
         {
           "technique": "history-compaction",
           "verdict": "not-applicable",
-          "evidence": "lib/foundry/extract/engine.ts:11 Every unit is a fresh single call and state lives in the manifest, so there is no transcript to compact."
+          "evidence": "lib/foundry/extract/engine.ts:11 Every unit is a fresh single call and state lives in the manifest, so there is no transcript to compact.",
+          "carriedFrom": "2026-10-24"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/performGroup.ts:52 The synthesis prompt is built and sent with only cost and model booked to the manifest, so the run records no digest or version of the instruction that grouped its styles. The replica image prompts, by contrast, are persisted in full.",
+          "evaluatedAt": "2026-10-24T01:07:42.727Z",
+          "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+          "reason": "replaced by cloud-20261031-gravitone-5"
         }
       ]
     },
@@ -10080,10 +10149,19 @@
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T01:07:42.727Z",
-      "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
-      "techniques": []
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/library/feeds/types.ts:9 Feeds read v1 stores and map them into library items. 'prompt' appears only as stored generation metadata (extras.prompt) and a fixture string. A search found no lib/text import, reason(), schemaInstruction, generateContent or claude/gemini call, so nothing here assembles or sends a model prompt.",
+          "evaluatedAt": "2026-10-24T01:07:42.727Z",
+          "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
     },
     "158d061e-feaa-4660-a1d3-6e8774b1f152/video-assembly": {
       "context": "frames-picture-composition",
@@ -11125,44 +11203,59 @@
       "subject": "generative-provider-routing",
       "bundle": "media-generation",
       "state": "deviation",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T05:10:57.531Z",
-      "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-3",
       "techniques": [
         {
           "technique": "capability-to-vendor-plan",
           "verdict": "deviation",
-          "evidence": "lib/imaging/router.ts:90 The chokepoint and the prefer/avoid asymmetry (orderFor, noAlternative) conform, but a new vendor entered AHEAD of the incumbent with no usable-output comparison, which breaks the 'enters behind the incumbent' rule."
+          "evidence": "lib/imaging/router.ts:93 agy sits at the head of dev generate without a usable-output comparison, against the rule that a new vendor enters behind the incumbent. The chokepoint and the steer rules themselves are realized (orderFor: avoid removes, and an emptied chain throws no-alternative)."
         },
         {
           "technique": "cost-per-usable-economics",
           "verdict": "deviation",
-          "evidence": "lib/imaging/router.ts:84 The Google-vs-Leonardo grid (7/30 vs 26/30, $0.110 vs $0.052 per usable) is recorded above the plan row, but the row's top entry is justified by a live check rather than cost per usable; the pricing table leaves agy unpriced, so it has no figure at all. The pre-call gate (reserve before walk) does conform."
-        },
-        {
-          "technique": "refusal-reroute-hop",
-          "verdict": "conformant",
-          "evidence": "lib/imaging/errors.ts:112 Refusal is its own kind and reroutable; failed/bad-response/over-budget/invalid-request throw. The comment explains why each was left out."
+          "evidence": "lib/imaging/router.ts:87 agy took the plan's top position on 'verified live', not on cost per usable output. The google/leonardo order is measured (router.ts:81 '$0.052 per usable'), and the pre-call gate is realized (router.ts:312 reserve before any vendor)."
         },
         {
           "technique": "non-silent-elimination",
-          "verdict": "conformant",
-          "evidence": "lib/imaging/router.ts:400 Four elimination kinds pushed to the trail as each decision is made. The trail lands on provenance, in the thrown error (the constraint outranks the vendor error at lines 476-488) and in logCall."
+          "verdict": "realized",
+          "evidence": "lib/imaging/router.ts:405 The trail of eliminations is attached to the served result as provenance.reroutedFrom. Each skip kind is pushed at the moment of decision (e.g. router.ts:370 no-key)."
+        },
+        {
+          "technique": "refusal-reroute-hop",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/errors.ts:112 Only refused, rate-limited and no-key re-route, so a vendor timeout or failure throws instead of hopping, which the standard lists as reroutable. There is also no kind for a protected-material block or an account-level stop, so those named reasons cannot throw separately. The core refusal hop is realized."
         },
         {
           "technique": "vendor-fact-ledger",
-          "verdict": "conformant",
-          "evidence": "lib/imaging/pricing.ts:10 Every row has a source and a checked date. Rates are bound to atSize. The vendor-reported/estimated/unpriced basis travels on Provenance, and the pre-call estimate takes the dearest rate."
-        },
-        {
-          "technique": "unspent-budget-is-a-defect",
-          "verdict": "conformant",
-          "evidence": "lib/imaging/router.ts:177 Plan-top reachability is reported per window, and budget.ts declares a floor band with an underFloor report that is never enforced."
+          "verdict": "realized",
+          "evidence": "lib/imaging/pricing.ts:83 Every price row requires a checked date next to its source. Unpriced rows stay undefined with a reason instead of an invented figure."
         },
         {
           "technique": "resolution-as-stage-property",
           "verdict": "deviation",
-          "evidence": "lib/imaging/types.ts:33 GenerateRequest pins the aspect but carries no size or stage field. Pixel size is one table per aspect, and Google's image_size is one env knob, so filmstrip drafts (count>1) and winners render at the same size."
+          "evidence": "lib/imaging/types.ts:75 GenerateRequest (lines 75-88) carries aspect, count, references, seed and quality but no size or stage. The gateway therefore cannot ask for a draft rung versus a final rung, and resolution stays a per-vendor env setting."
+        },
+        {
+          "technique": "unspent-budget-is-a-defect",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/handlers.ts:120 GET /api/imaging/budget returns the ceiling, spent and remaining amounts but drops floorUsd and underFloor, although budgetStats computes both. unreachedPlanTops (router.ts:181) has no production caller, only a probe spec. The floor and the uncalled plan top are computed and never reported to a human."
+        },
+        {
+          "technique": "extraction-model-bake-off",
+          "verdict": "unread",
+          "evidence": "lib/imaging/router.ts:106 recognize leads with the local ollama eye. I did not judge whether that order rests on a bake-off."
+        }
+      ],
+      "registryProposal": "refusal-reroute-hop lists vendor-side failure and timeout as reroutable. errors.ts:85-110 gives a weighed counter-argument: a 5xx or timeout on a billable work request is presumed billed, so a hop bills twice for a request nobody declined. The technique should say when presumed-billed failures should stay unrouted.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/imaging/router.ts:90 The dev generate plan puts agy, which is unpriced and was only checked to work live, ahead of Google, the measured cost-per-usable winner, so for unreferenced requests the plan order is a belief and not a measurement, even though the router mechanics (steer, trail, refusal walk, pre-call gate, plan-top reachability) all follow the standard.",
+          "evaluatedAt": "2026-10-24T05:10:57.531Z",
+          "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+          "reason": "replaced by cloud-20261031-gravitone-3"
         }
       ]
     },
@@ -11171,29 +11264,39 @@
       "subject": "generative-provider-routing",
       "bundle": "media-generation",
       "state": "deviation",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T05:10:57.531Z",
-      "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-3",
       "techniques": [
         {
           "technique": "capability-to-vendor-plan",
           "verdict": "deviation",
-          "evidence": "packages/kernel/src/router/tables.ts:126 Per-environment plans live side by side, and tableProblems catches table bugs. But the plan's first entry is a vendor that never went through a usable-output comparison."
+          "evidence": "packages/kernel/src/router/tables.ts:128 agy leads dev generate without a usable-output comparison. Steering is realized: an exclusion that empties the chain is refused no-alternative (route.ts:143)."
+        },
+        {
+          "technique": "non-silent-elimination",
+          "verdict": "realized",
+          "evidence": "packages/kernel/src/router/route.ts:39 Every elimination lands in trail with a sentence. route.ts:40 has the request-level constraint outrank a vendor error."
+        },
+        {
+          "technique": "refusal-reroute-hop",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/router/route.ts:58 Only refused and rate-limited walk the chain. Timeout and vendor failure throw, which differs from the standard's reroutable list (see the registry proposal on the gateway pair)."
         },
         {
           "technique": "cost-per-usable-economics",
           "verdict": "deviation",
-          "evidence": "packages/kernel/src/router/tables.ts:10 The cited grid compares only Google and Leonardo, so it cannot justify agy's lead. The gate side does conform: reserve.ts routes, then reserves at the dearest rate before any call."
-        },
+          "evidence": "packages/kernel/src/router/tables.ts:10 The cited grid compares only Google and Leonardo, so it cannot justify agy's lead. The gate side does conform: reserve.ts routes, then reserves at the dearest rate before any call.",
+          "carriedFrom": "2026-10-24"
+        }
+      ],
+      "superseded": [
         {
-          "technique": "non-silent-elimination",
-          "verdict": "conformant",
-          "evidence": "packages/kernel/src/router/route.ts:140 Every elimination, now including steered-out and steerDropped, carries a closed-vocabulary kind plus a sentence. A request-level constraint outranks other causes in the exhausted message."
-        },
-        {
-          "technique": "refusal-reroute-hop",
-          "verdict": "conformant",
-          "evidence": "packages/kernel/src/router/route.ts:58 Only refusal and rate-limit walk. Other failures are refused as 'stopped'. Each provider is tried at most once, via facts.attempts."
+          "state": "deviation",
+          "evidence": "packages/kernel/src/router/tables.ts:126 The kernel table copied v1's plan faithfully, including agy at the top of dev generate with no usable-output measurement, while its comment cites the Google/Leonardo grid as the reason for the order; meanwhile route.ts realizes the steer, constraint and refusal-walk rules as a pure function.",
+          "evaluatedAt": "2026-10-24T05:10:57.531Z",
+          "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+          "reason": "replaced by cloud-20261031-gravitone-3"
         }
       ]
     },
@@ -11202,71 +11305,90 @@
       "subject": "generative-provider-routing",
       "bundle": "media-generation",
       "state": "deviation",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T05:10:57.531Z",
-      "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-3",
       "techniques": [
-        {
-          "technique": "capability-to-vendor-plan",
-          "verdict": "conformant",
-          "evidence": "lib/text/router.ts:93 One table per posture (local and cloud), with turn classes as the capability vocabulary. reason() is the only entry point, and the cloud row is deliberately short, with a reason given."
-        },
-        {
-          "technique": "non-silent-elimination",
-          "verdict": "conformant",
-          "evidence": "lib/text/router.ts:426 The descent trail is kept on provenance, in the final error and in logTurn. Rung and transport travel with every answer."
-        },
-        {
-          "technique": "refusal-reroute-hop",
-          "verdict": "conformant",
-          "evidence": "lib/text/providers/google.ts:325 A 200 that carries a safety block is raised as reroutable 'refused'. An empty answer becomes bad-response, which is a failure but does not re-route, so it is not a false success (see notes)."
-        },
-        {
-          "technique": "vendor-fact-ledger",
-          "verdict": "conformant",
-          "evidence": "lib/text/pricing.ts:3 Cloud rows are unpriced on purpose, with reasons and checked dates. The CLI's own total_cost_usd is booked as vendor-reported."
-        },
         {
           "technique": "cost-per-usable-economics",
           "verdict": "deviation",
-          "evidence": "lib/text/spend.ts:5 'Gate before, not after' is not realized. This was the operator's ruling of 2026-10-07 ('count only, refuse nothing'), but the standard does not bend to it."
+          "evidence": "lib/text/spend.ts:5 The text-usd class has no ceiling, so no turn is gated before the call. Google turns are also unpriced, so they book nothing."
+        },
+        {
+          "technique": "capability-to-vendor-plan",
+          "verdict": "realized",
+          "evidence": "lib/text/router.ts:97 Turn classes route through one PLAN table per environment (claude-cli, then google)."
+        },
+        {
+          "technique": "non-silent-elimination",
+          "verdict": "realized",
+          "evidence": "lib/text/router.ts:8 The trail reaches the caller as the thrown error and as provenance.reroutedFrom when a later engine served."
+        },
+        {
+          "technique": "refusal-reroute-hop",
+          "verdict": "realized",
+          "evidence": "lib/text/errors.ts:113 'refused' is a reroutable kind beside the availability kinds."
+        },
+        {
+          "technique": "vendor-fact-ledger",
+          "verdict": "realized",
+          "evidence": "lib/text/pricing.ts:54 Every text price row carries a checked date. In-service cloud rows are deliberately unpriced, not guessed."
         },
         {
           "technique": "resolution-as-stage-property",
           "verdict": "not-applicable",
-          "evidence": "lib/text/router.ts:1 Text turns have no output-resolution dimension."
+          "evidence": "lib/text/router.ts:1 Text turns have no output-resolution dimension.",
+          "carriedFrom": "2026-10-24"
         }
       ],
-      "registryProposal": "The subject's scope is image and video generation, yet its techniques (plan, trail, refusal hop) bind just as cleanly to an LLM reasoning chain. Either state that the subject covers any generative chain, or point text routing at model-routing explicitly."
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/text/spend.ts:5 Text spend is count-only with no pre-call ceiling, so the metered Google fallback can spend without any gate, which the standard calls a report, not a control; the routing, trail, refusal and pricing rules otherwise conform.",
+          "evaluatedAt": "2026-10-24T05:10:57.531Z",
+          "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+          "reason": "replaced by cloud-20261031-gravitone-3"
+        }
+      ]
     },
     "5e00d05c-885e-4eac-ad26-f937df9d612f/generative-provider-routing": {
       "context": "spend-and-pricing",
       "subject": "generative-provider-routing",
       "bundle": "media-generation",
       "state": "deviation",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T05:10:57.531Z",
-      "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-3",
       "techniques": [
         {
           "technique": "unspent-budget-is-a-defect",
           "verdict": "deviation",
-          "evidence": "packages/kernel/src/spend/core.ts:44 A grep for floor/band/underFloor across packages/kernel/src/spend finds nothing. SpendStats (ledger.ts:341-351) exposes ceiling and remaining only."
+          "evidence": "packages/kernel/src/spend/core.ts:44 A class declares a ceiling only, with no floor and no under-floor report."
         },
         {
           "technique": "cost-per-usable-economics",
-          "verdict": "conformant",
-          "evidence": "packages/kernel/src/spend/core.ts:8 Calls are reserved before the vendor and refused before dispatch. Unpriced is never booked as zero."
+          "verdict": "realized",
+          "evidence": "packages/kernel/src/spend/core.ts:96 admits() checks spent + held + lapsed + amount against the ceiling before any vendor call, so the pre-call gate half of the technique is in place."
         },
         {
           "technique": "vendor-fact-ledger",
-          "verdict": "conformant",
-          "evidence": "packages/kernel/src/pricing/table.ts:11 The zod schema requires a source and a checked date. A validUntil date retires a rate. A vendor figure wins over the table, and a zero vendor figure counts as missing."
+          "verdict": "realized",
+          "evidence": "packages/kernel/src/pricing/table.ts:60 The schema requires an ISO checked date on every price row, beside a source of at least 20 characters (table.ts:59). A figure is bound to the size it was measured at (table.ts:55 atSize)."
         },
         {
           "technique": "resolution-as-stage-property",
           "verdict": "conformant",
-          "evidence": "packages/kernel/src/pricing/quote.ts:14 Only the pricing interaction was judged here: a size with no row quotes as unpriced. The stage ladder itself lives outside this context."
+          "evidence": "packages/kernel/src/pricing/quote.ts:14 Only the pricing interaction was judged here: a size with no row quotes as unpriced. The stage ladder itself lives outside this context.",
+          "carriedFrom": "2026-10-24"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "packages/kernel/src/spend/core.ts:44 The kernel's SpendClass and SpendStats carry only a ceiling and the remaining amount, with no floor or band, so the rebuilt spend authority looks only upward; v1's floorOf/underFloor (lib/spend, outside this context) was not carried into it.",
+          "evaluatedAt": "2026-10-24T05:10:57.531Z",
+          "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+          "reason": "replaced by cloud-20261031-gravitone-3"
         }
       ]
     },
@@ -11275,34 +11397,44 @@
       "subject": "generative-provider-routing",
       "bundle": "media-generation",
       "state": "deviation",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T05:10:57.531Z",
-      "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-3",
       "techniques": [
         {
           "technique": "resolution-as-stage-property",
           "verdict": "deviation",
-          "evidence": "lib/imaging/providers/google.ts:53 One global size, with no draft/proof/final rung per request and no promotion step."
+          "evidence": "lib/imaging/providers/google.ts:53 One env-wide IMAGE_SIZE is sent on every generate (google.ts:179), with no per-stage rung and no promotion step."
         },
         {
           "technique": "refusal-reroute-hop",
-          "verdict": "conformant",
-          "evidence": "lib/imaging/providers/google.ts:327 An empty Google result is treated as refused. Leonardo's NSFW status maps to refused. Note: Leonardo's 'COMPLETE but no images' (leonardo.ts:244) maps to bad-response, not refused."
-        },
-        {
-          "technique": "non-silent-elimination",
-          "verdict": "conformant",
-          "evidence": "lib/imaging/providers/leonardo.ts:117 Each adapter declares whether it reads references and which negative-prompt channel it uses, so the router enforces the constraint and no adapter silently drops a field."
+          "verdict": "realized",
+          "evidence": "lib/imaging/providers/google.ts:348 A completed call that returns no image is raised as kind 'refused', following the empty-result-is-refusal rule. The policy-vocabulary sniff at google.ts:124 is the legitimate fallback for the undocumented Interactions block shape. It does not split out protected-material or account stops; that gap is recorded on the gateway pair."
         },
         {
           "technique": "vendor-fact-ledger",
-          "verdict": "deviation",
-          "evidence": "lib/imaging/video/pricing.ts:78 The credit-to-USD rate is declared twice (here and leonardo.ts:44), against the ledger's one-copy rule. Otherwise strong: the video table is unpriced with dated reasons, and costFromVendor treats an unknown unit or a zero as unpriced."
+          "verdict": "realized",
+          "evidence": "lib/imaging/providers/google.ts:188 The size actually requested is passed to the price table instead of assumed, and a figure at another size goes unpriced. Wire facts are dated at the source (google.ts:58 'measured, 2026-08-13')."
+        },
+        {
+          "technique": "non-silent-elimination",
+          "verdict": "realized",
+          "evidence": "lib/imaging/providers/google.ts:353 A partial batch records how many images were asked for, returned, refused and failed (shortBatch) instead of hiding the loss."
         },
         {
           "technique": "cost-per-usable-economics",
           "verdict": "conformant",
-          "evidence": "lib/imaging/video/budget.ts:8 The video gate reserves before the adapter is touched and holds a high figure (UNPRICED_HOLD_USD_PER_S) for unpriced clips."
+          "evidence": "lib/imaging/video/budget.ts:8 The video gate reserves before the adapter is touched and holds a high figure (UNPRICED_HOLD_USD_PER_S) for unpriced clips.",
+          "carriedFrom": "2026-10-24"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/imaging/providers/google.ts:53 Output size is one process-wide env knob for every Google generate, so drafts and promoted winners bill at the same rung, which is the flat-rate resolution failure; refusal reading, adapter constraint declarations and unpriced video rows otherwise conform.",
+          "evaluatedAt": "2026-10-24T05:10:57.531Z",
+          "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+          "reason": "replaced by cloud-20261031-gravitone-3"
         }
       ]
     },
@@ -13562,6 +13694,2785 @@
         "at": "2026-10-26T01:00:34.523751+00:00",
         "reason": "reviewer (sonnet): The anchors in UpstreamBreak.tsx (lines 1, 6, 8) are header comments about a failed pipeline step and what was kept from v1, so they do not show that no vendored tree or patch set exists. That file is also not among the context's listed files (status, tally, piprow, stackbar, facts, facet). I did no"
       }
+    },
+    "14632859-df56-4340-9e16-c420ff681ee3/agent-memory": {
+      "context": "article-run-engine",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:3 each step is stage inputs, one agent turn, ingest out/: per-step state is files on disk, not session working memory carried by a long-lived agent"
+        },
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:36 the workspace is created empty per step under os.tmpdir(); nothing is recalled from a durable store into it"
+        },
+        {
+          "technique": "episodic-capture",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:3 run outputs are ingested as the run's own artifacts (draft, sources), not captured as episodes for later distillation.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:3 Each writer step stages inputs, runs one agent turn in a fresh workspace (makeWorkspace) and ingests out/, so state crosses steps only as staged files of this run and nothing is carried across runs into an agent's context; grep over the context's 18 files for memory|recall|lesson|remember|episod|history|session|--resume finds no store read back as recalled memory (loop.ts only reads which topics are covered, for claiming).",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
+    },
+    "fb6d9704-d95c-46bc-b440-c6599e487cff/agent-memory": {
+      "context": "foundry-strips-and-training",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-1",
+      "techniques": [
+        {
+          "technique": "procedure-promotion",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/training/store.ts:14 a ledger row is the remote loop's work queue for reflecting an improvement into a prompt surface; the promotion itself happens outside this context and outside this repo's code."
+        },
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/strips/author.ts:1 one isolated turn; no recalled material is assembled into its prompt."
+        }
+      ]
+    },
+    "c425f431-c0d1-4f34-b736-1a5d70683ef4/agent-memory": {
+      "context": "notebook-contract-validation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [
+        {
+          "technique": "consolidation",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:1 validates a single run's output shape; no distillation into durable beliefs.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:1 The context is a runtime validation door deciding whether one model answer is a notebook; it holds no store an agent carries forward or recalls; grep over its 15 files for memory|recall|lesson|episod|remember finds only retrieval.ts's rule that a remembered (unfetched) URL is not a citation.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
+    },
+    "f8036604-75f5-4f7d-898c-734511ac5e86/agent-memory": {
+      "context": "script-composition-and-validation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/compose.ts:2 the prompt is assembled from the current notebook, with no recalled-memory tier.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/script/compose.ts:2 The script producer runs one compose turn with one prompt assembly from notebook cards and one door over the answer; versions.ts keeps the script's own version history and human notes, not memory an agent recalls across sessions; grep over its 14 files for memory|recall|lesson|episod|remember finds only gate.ts's 'a question with no memory' about RegExp state.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
+    },
+    "19e8292e-3706-401a-8259-d1dd22ab89b1/audit-logging": {
+      "context": "ledger-screen",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:10:18.805Z",
+      "worker": "3d61bdfc-dbc3-4060-9fe7-f2682d25f583",
+      "techniques": [
+        {
+          "technique": "audit-querying",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:122 A capped scan says so on the surface. Facets are kernel counts that leave out their own filter, a lone id is answered by indexed subject and run lookups, and the empty state tells 'nothing recorded yet' (List.tsx:117) apart from '0 events' under a filter."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:103 The detail labels whether the effective time was recorded or derived, and fieldsOf shows the ledger's own `recorded` instant beside it. The from/to window runs on coalesce(occurredAt, at), and the UI does not name that clock. That is a weak spot, but it is not judged a deviation here."
+        },
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/actions.ts:28 The screen's only server actions are two reads (olderEvents, relatedEvents), so it exposes no way to change a record."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:127 When the projection sync that feeds the ledger fails, the failure shows on the query surface itself, so an empty or thin result is not passed off as complete."
+        },
+        {
+          "technique": "record-axis-predicate",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:55 Events are never invalidated (append-only with seq), so there is no record-axis interval to rewind. The technique's own exemption covers this."
+        },
+        {
+          "technique": "tamper-evidence",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:87 Reads do not verify row hash chains on read or compute an integrity verdict for rendered records.",
+          "carriedFrom": "2026-10-18"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/vocab.ts:39 Conflating effective and recorded time by defaulting null occurredAt to recorded time prevents queries and the studio UI from distinguishing when an event occurred from when it was ingested.",
+          "evaluatedAt": "2026-10-18T21:47:20.645Z",
+          "worker": "c8fd5e99-17a1-4fcd-b394-ad0723cd1421",
+          "reason": "replaced by 3d61bdfc-dbc3-4060-9fe7-f2682d25f583"
+        }
+      ]
+    },
+    "f2b24d86-7201-4945-837d-0c6343e1273b/app-shell": {
+      "context": "studio-shell",
+      "subject": "app-shell",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:12:37.924Z",
+      "worker": "c2516f48-321d-4399-8801-6afb814ec32e",
+      "techniques": [
+        {
+          "technique": "navigation-model",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/_shell/HeaderBar.tsx:37 Active section is derived directly from the URL pathname using sectionOf, guaranteeing a single owned location value without duplicated active state."
+        },
+        {
+          "technique": "badge-and-attention",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/_shell/HeaderBar.tsx:107 The ledger delta badge derives its count from head facts and persistent seen state, clearing on genuine exposure when on the ledger route."
+        },
+        {
+          "technique": "shell-hosted-services",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/_shell/Providers.tsx:60 Providers establishes the shell's single host region above content, mounting session-lifetime singletons (toasts, keymap, storage eviction, session renewal) with explicit reapers."
+        },
+        {
+          "technique": "nav-hierarchy",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/_shell/HeaderBar.tsx:80 The shell header navigation maintains a flat list of sections using non-interactive visual separators between groups rather than multi-level menus."
+        }
+      ]
+    },
+    "f2b24d86-7201-4945-837d-0c6343e1273b/concurrent-vcs": {
+      "context": "studio-shell",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:08:01.557Z",
+      "worker": "9aabfc5c-3941-4331-ba2e-b4704615ad9d",
+      "techniques": [
+        {
+          "technique": "commit-time-claim-guard",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/session.ts:31 The session bridge posts authentication state, without guarding Git commits.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "commit-verification",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/HeaderBar.tsx:64 The stored head is an application-event exposure marker, without Git commit readback.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "integration-door",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/liveFeed.ts:5 Refresh integrates server-rendered page data, without merging repository branches.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "intent-ledgers",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/keys.ts:28 The ledger tracks application acts seen by an operator, rather than editing intentions.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "isolated-index-commits",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/Providers.tsx:39 Shell storage uses browser localStorage, without manipulating a staging index.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "never-lose-work-rules",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/Providers.tsx:102 Sign-out evicts identity-scoped browser state; no repository stash, reset or staging operation occurs.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "physical-isolation",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/Handoff.tsx:9 The handoff concerns a browser principal, without allocating an editing workspace.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "shared-resource-arbitration",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/live.ts:23 Caching shares an application read within a request, without arbitrating developer-session machine resources.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "sub-file-claim-scope",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/nav.ts:42 Path matching identifies navigation sections, without granting source-code claims.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/(studio)/_shell/session.ts:4 The shell coordinates authenticated browser state and application events; searches found no worktree, GIT_INDEX_FILE, pre-commit or intent-ledger references in its directory, with repository matches confined to other contexts.",
+          "evaluatedAt": "2026-10-19T00:29:03.243Z",
+          "worker": "7dbee07c-bb02-40d1-8ece-fe959b9880a8",
+          "reason": "replaced by 9aabfc5c-3941-4331-ba2e-b4704615ad9d"
+        }
+      ]
+    },
+    "65532049-3be0-4143-a9c8-0c6919a26841/error-handling": {
+      "context": "library-port",
+      "subject": "error-handling",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T00:47:25.569Z",
+      "worker": "a640b5be-1d38-4e10-b821-4edd0369e9f5",
+      "techniques": [
+        {
+          "technique": "error-doors",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_port/handoff.ts:16 A fallback with no telemetry or log is 'an outage with good manners'."
+        },
+        {
+          "technique": "swallowed-error-prevention",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_port/handoff.ts:17 Every `readStyle` failure code (unavailable or internal, not only not-found) is collapsed to 'try the next candidate' and dropped without being declared."
+        },
+        {
+          "technique": "structured-propagation",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_port/real.ts:196 Re-wrapped without `{ cause: e }`, so the original FoundryError and its status are lost. Unmapped statuses (e.g. 500/502) fall into `internal`."
+        },
+        {
+          "technique": "taxonomy-design",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/real.ts:129 A foreign failure is classified on its structured status in one table, not on its message."
+        },
+        {
+          "technique": "consumer-decides-error-shape",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/real.ts:47 Each side answers the domain's closed `Result`, which actions.ts turns into the wire envelope for the client island."
+        },
+        {
+          "technique": "user-facing-mapping",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/real.ts:178 The kernel's 'nothing changed' becomes a conflict worded the same way as fixture.ts:198/204, so the failure reads the same on both sides. There is no shared registry or suggested-action field."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/library/_port/handoff.ts:16 When opening the kernel store fails, styleHandoff silently returns the raw identifier fallback without routing the error to a log or telemetry door, violating error-doors and swallowed-error-prevention.",
+          "evaluatedAt": "2026-10-19T00:35:35.055Z",
+          "worker": "d6f6baed-f800-461c-aba4-54e6cb0d5b27",
+          "reason": "replaced by a640b5be-1d38-4e10-b821-4edd0369e9f5"
+        }
+      ]
+    },
+    "9c525f5b-e99e-405e-a21d-ba19247ed5a7/import-normalization": {
+      "context": "plan-and-import",
+      "subject": "import-normalization",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:07:07.653Z",
+      "worker": "97e8fc81-700b-4cbc-b8f8-0c3dd8d14d9f",
+      "techniques": [
+        {
+          "technique": "review-before-commit",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:161 confirm() commits each source in its own request inside a loop. If a later source fails, the earlier sources have already landed, but the screen shows only an error and throws away their outcomes, which is the 'user unsure which half' partial commit. The preview also has no per-entity selection and no skip/rename/replace choice for collisions."
+        },
+        {
+          "technique": "lossy-conversion-disclosure",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:320 Each loss is listed per entity with its grade (approximate/data-only/dropped) and its reason, and it is shown in the preview before the confirm button."
+        },
+        {
+          "technique": "format-detection",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:93 There is only one format (.gravitone). An archive that fails inspection is refused with a named code before upload, and that is shown differently from the empty result 'no v1 projects in this browser' (line 209). No permissive fallback parser."
+        },
+        {
+          "technique": "overlay-merge-absence-semantics",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/project.ts:187 Re-importing never merges an overlay into existing data: a project that already exists is skipped. With no merge, the absence semantics never come up."
+        },
+        {
+          "technique": "durable-intermediate-representation",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:155 The commit sends the same archive bytes again and the server re-parses them, bound to the preview's token. Parsing is cheap and deterministic, so the transient IR is the right choice."
+        },
+        {
+          "technique": "adapter-capability-tables",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:30 Precondition does not hold in presentation components as mapping tables belong to parser and transform layers.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "import-validation",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:92 In-browser validation verifies archive integrity and structural validity before any bytes are transmitted to the server door.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "intermediate-representation",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:97 The client view stages and renders normalized intermediate entities received from the server door without touching raw foreign rows.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "registryProposal": "The subject's 'when you control both ends' exclusion does not clearly cover a migration from the same product's previous major version (v1 IndexedDB rows into the v2 kernel). This repo treats that migration as a foreign import with a loss ledger. The golden path could say whether a cross-generation migration of your own data is in scope.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:236 The review screen lacks per-entity selection checkboxes and collision policy controls, forcing an all-or-nothing commit of all candidates.",
+          "evaluatedAt": "2026-10-19T00:42:18.900Z",
+          "worker": "351ef0f9-f810-406c-ac6e-d28d4e95f861",
+          "reason": "replaced by 97e8fc81-700b-4cbc-b8f8-0c3dd8d14d9f"
+        }
+      ]
+    },
+    "24d70cb5-a388-4b29-ac00-026e932d947e/invariant-placement": {
+      "context": "part-port-real-and-contract",
+      "subject": "invariant-placement",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:41:44.492Z",
+      "worker": "e35587a2-8c3d-4e84-9144-7f13c4235364",
+      "techniques": [
+        {
+          "technique": "repairing-check-erases-its-evidence",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/researchView.ts:28 Repairs instead of refusing: an unknown card kind is coerced to 'fact' with no count, log or flag, so every downstream assertion over legal kinds passes."
+        },
+        {
+          "technique": "completeness-at-emission",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/realScene.ts:58 A missing job.enqueued time is emitted as the epoch (1970-01-01), a made-up value in the PartView sent to the editor. The same line omits an absent `stage`, which is the posture the technique asks for."
+        },
+        {
+          "technique": "paired-sites-localize-the-fault",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/realRecs.ts:14 The record shape is checked only at the kernel's write door. The read side is a bare cast, and its comment depends on the writers, so a corrupted record cannot be traced to either side."
+        },
+        {
+          "technique": "placement-precedes-gate",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/schema.ts:16 Every op enters through one strict zod door: an extra field is refused, not silently dropped (door altitude, chosen explicitly)."
+        },
+        {
+          "technique": "constraint-deletion-is-silent",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/parts-real.test.ts:113 A negative test checks that the op-kind door refuses an op meant for another editor kind. The voice-fx-ask door (schema.ts:105) has its own refusal sweep in producer-step-voice-fx.test.ts:161."
+        },
+        {
+          "technique": "build-time-evaluation-of-cross-value-invariants",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/kinds.ts:41 A cross-table invariant (every editor kind has a working-record line) is checked by the type checker in every configuration, not by a selected branch."
+        },
+        {
+          "technique": "derived-properties-cannot-be-forged",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/kinds.ts:167 The receipt's binding to its target is a digest of the parts, recomputed on each confirm, never declared, so a receipt for plate A cannot confirm a render of B."
+        },
+        {
+          "technique": "shape-with-a-not-applicable-member",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/real.ts:123 An unbound kind is a Partial lookup returning undefined plus an explicit refusal, not a 'none' member added to EditorKind. Non-editor tabs carry verdict null, not a fake state."
+        },
+        {
+          "technique": "initialization-proof-tokens",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/real.ts:56 Store operations need a Store value that only the Result-returning opener yields, so a failed open is a value the caller has to branch on, not a null check someone must remember."
+        },
+        {
+          "technique": "indistinguishable-members-do-not-rise",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/contract.ts:20 The two same-typed ids cross the port as named fields, which TypeScript checks structurally. port.ts:36 flattens them into positional (projectId, key) arguments, but there a swap fails loudly as not-found, not as empty success."
+        },
+        {
+          "technique": "consumption-bounds-at-most-once",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/real.ts:141 The one-shot act token crosses a server-action (network) boundary and is held to one purchase by a store-side dedupe. That is delivery-guarantee territory, which this technique excludes."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/researchView.ts:28 When an unrecognized card kind arrives, cardView coerces it to 'fact' rather than refusing it, destroying the evidence that an invalid kind was received.",
+          "evaluatedAt": "2026-10-19T00:49:56.479Z",
+          "worker": "47dad576-301b-4250-9b17-69f62b19b54e",
+          "reason": "replaced by e35587a2-8c3d-4e84-9144-7f13c4235364"
+        }
+      ]
+    },
+    "65532049-3be0-4143-a9c8-0c6919a26841/invariant-placement": {
+      "context": "library-port",
+      "subject": "invariant-placement",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:41:44.492Z",
+      "worker": "e35587a2-8c3d-4e84-9144-7f13c4235364",
+      "techniques": [
+        {
+          "technique": "completeness-at-emission",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_port/present.ts:52 An optional part (cover.mime: string | null) is given a default at the emission mapping instead of being left out, which the technique names as the failure."
+        },
+        {
+          "technique": "repairing-check-erases-its-evidence",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/real.ts:178 The kernel's silent 'nothing changed' is turned into a refusal instead of being absorbed. A stale toggle is reported, not quietly agreed with."
+        },
+        {
+          "technique": "constraint-deletion-is-silent",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/library-real.test.ts:105 A negative test checks that the second pin is refused, so removing the refusal would turn the suite red."
+        },
+        {
+          "technique": "placement-precedes-gate",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/actions.ts:31 Acts enter through one zod discriminated-union door in the action core. Unlike the part schema these objects are not .strict(), so extra fields are dropped, not refused."
+        },
+        {
+          "technique": "derived-properties-cannot-be-forged",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/present.ts:128 The detail's pinned state is derived from the acts the index offers, not stored as a separate flag that could drift."
+        },
+        {
+          "technique": "shape-with-a-not-applicable-member",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/present.ts:80 The resolver returns an optional kind; it filters out the 'all' key and does not add a placeholder member to LibraryKindName."
+        },
+        {
+          "technique": "initialization-proof-tokens",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/real.ts:122 Each verb must first get a Store from a Result and returns the open failure unchanged, so it cannot touch the store unopened."
+        },
+        {
+          "technique": "indistinguishable-members-do-not-rise",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_port/real.ts:49 The side's verbs take one string id plus parameters of distinct types. No pair of same-typed members can be swapped."
+        },
+        {
+          "technique": "build-time-evaluation-of-cross-value-invariants",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_port/contract.ts:20 No compile-time cross-value invariant evaluations exist in this port.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "registryProposal": "completeness-at-emission could name the presentation mapper (domain row -> screen card) as an emission boundary. That is where defaults like a mime fallback or an epoch timestamp tend to show up, because the presenter's goal is to never draw an empty tile.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/library/_port/actions.ts:34 Library item and project identifiers are typed as unbranded strings at the action boundary, failing to use domain-branded types to prevent transposition.",
+          "evaluatedAt": "2026-10-19T00:49:56.479Z",
+          "worker": "47dad576-301b-4250-9b17-69f62b19b54e",
+          "reason": "replaced by e35587a2-8c3d-4e84-9144-7f13c4235364"
+        }
+      ]
+    },
+    "9c525f5b-e99e-405e-a21d-ba19247ed5a7/plan-entitlements": {
+      "context": "plan-and-import",
+      "subject": "plan-entitlements",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:13:03.270Z",
+      "worker": "00f50198-d868-46f3-8277-c08d5b7a7dd8",
+      "techniques": [
+        {
+          "technique": "capability-gate-predicates",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:123 Launch availability checks project draft and request state; no paid-feature gate was found.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "deployment-mode-short-circuit",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/receipt.tsx:155 The exposed mode selects dry or live execution, not commercial deployment entitlements.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "entitlement-lifecycle-revocation",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/receipt.tsx:124 The handled transition refreshes a stale launch receipt; no subscription grant or revocation handler was found.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "id-vs-label-split",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:213 The displayed label identifies a production recipe, not a commercial tier.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "inherited-tier-not-cloned-tier",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:94 Customization edits a project part; no negotiated customer price or derived tier agreement was found.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "live-catalog-edit-is-a-lifecycle-event",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:114 Renaming changes one project's title, not a subscribed commercial catalog.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "price-book-authority",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:244 The displayed amount is an estimated production cost, not a price charged for a subscription tier.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "provider-publishes-state-not-decision",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/receipt.tsx:119 The contract confirms this product's execution receipt; it does not publish another product's entitlement state.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "subtractive-entitlement",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:107 The override-like merge coalesces project-part edits; no subscription capability removal layer was found.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "tier-model-single-source",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/compose.tsx:38 Composition selects a recipe and source material; these plans are production configurations rather than paid tiers.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:127 Context searches found no entitlement, tierId, or subscriptionId references, and the inspected plan and import flows concern project execution receipts and archive migration rather than subscription plans.",
+          "evaluatedAt": "2026-10-19T00:56:15.434Z",
+          "worker": "a87fba3d-c5f1-435b-9093-b39bdf1c12fe",
+          "reason": "replaced by 00f50198-d868-46f3-8277-c08d5b7a7dd8"
+        }
+      ]
+    },
+    "a91965bd-84cb-42b6-978f-29ca7258f718/platform-format-adaptation": {
+      "context": "part-editor-writing-research",
+      "subject": "platform-format-adaptation",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:11:30.986Z",
+      "worker": "77777452-7788-4491-986e-4ff5f7f4738d",
+      "techniques": [
+        {
+          "technique": "derived-short-contract",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:260 The candidate checks panel omits the source render's four explicit derived-short review items."
+        },
+        {
+          "technique": "one-anchor-per-clip",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:97 The short-script tool has no named anchor field or second-anchor refusal; adoption submits only the candidate ID."
+        }
+      ]
+    },
+    "19e8292e-3706-401a-8259-d1dd22ab89b1/client-fetch-cache": {
+      "context": "ledger-screen",
+      "subject": "client-fetch-cache",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:59:25.691Z",
+      "worker": "882e6f25-b7e3-4541-b685-c059620b79d1",
+      "techniques": [
+        {
+          "technique": "sibling-entry-warmth",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:112 The borrow itself is done right: Ledger.tsx:97 finds the row by seq, and read.ts:253 is the cold twin for a deep link. But bySubject is not on the row, so it renders as the value 1 while the read is in flight, and again on every reselect."
+        },
+        {
+          "technique": "swr-design",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:132 Stream arrivals are coalesced into one event-driven refresh, and the transition keeps the current render painted while the new one renders. Events win over any timer."
+        },
+        {
+          "technique": "cache-key-discipline",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/filter.ts:103 One builder derives the identity from the canonical, fixed-order toSearch, leaving out the windowing-only axes. page.tsx:36 keys the mount with it, so older pages of another filter cannot collide."
+        },
+        {
+          "technique": "portable-read-definitions",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:12 The server render, the JSONL route and both Server Actions call one set of plain read functions. actions.ts re-parses the page's own search with the same parser."
+        },
+        {
+          "technique": "parse-and-derive-caches",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:96 The seq index is a pure derivation keyed by the rows' reference identity, holds one entry, and can always be recomputed."
+        },
+        {
+          "technique": "prefetch-and-defer",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/feed.ts:34 The live stream's first connect is held back by a fixed 1.5 s timer (feed.ts:145) rather than an idle callback with a timeout fallback. Scheduled work is cancelled on unmount, which is correct, and there is no intent prefetch of related reads."
+        },
+        {
+          "technique": "warm-remount-caches",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/page.tsx:31 Each mount's rows, counts and strip arrive as server-rendered props, so no client-fetched primary data dies with the view. Older pages are dropped on purpose when the filter identity changes."
+        },
+        {
+          "technique": "in-flight-dedup",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:77 Each after-render read has a single call site. Older pages use a refuse guard; related reads use debounce plus latest-wins (async-race-guards). No two callers share a key."
+        },
+        {
+          "technique": "similarity-keyed-admission",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:85 The only held answer is matched by exact seq identity. Nothing is keyed on resemblance."
+        },
+        {
+          "technique": "plural-policy-claims",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:53 The related answer is held in component state owned by one reader. No entry has several claimants with different policies."
+        },
+        {
+          "technique": "admission-hypothesis",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/feed.ts:6 Live stream events trigger whole-page router refresh rather than entering a client-side cache governed by a stated admission hypothesis.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "registryProposal": "prefetch-and-defer's 'defer to idle, not to a timer' does not cover a long-lived stream whose delay exists to get past a test harness's network-idle window. An idle callback would not guarantee clearing that window, so the technique could name this case: either the readiness signal moves (this repo already uses data-ready), or the timer is argued as a test contract.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:67 Post-render reads for older ledger pages accumulate strictly in component-scoped React state and are discarded on filter remounts rather than managed by a client fetch cache with SWR, warm remount retention, and in-flight deduplication.",
+          "evaluatedAt": "2026-10-19T01:50:47.976Z",
+          "worker": "f4c9964c-e939-44a3-80c4-3276dd9e9a60",
+          "reason": "replaced by 882e6f25-b7e3-4541-b685-c059620b79d1"
+        }
+      ]
+    },
+    "f6554c57-29ce-484d-90c3-ae89e2f466c0/conformance-checking": {
+      "context": "part-port-fixtures",
+      "subject": "conformance-checking",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:56:32.313Z",
+      "worker": "7223b7a8-dd56-4956-bdbb-434b4dc8182f",
+      "techniques": [
+        {
+          "technique": "checker-false-positive-discipline",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureAds.ts:71 The detector validates advertising ideas, not repository-standard findings."
+        },
+        {
+          "technique": "claim-write-back",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixture.ts:390 This records a research job's output, not proof from executing a declared repository command."
+        },
+        {
+          "technique": "declared-deviation-register",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScript.ts:183 The override accepts script content over its editorial gate; it is not an implementation's exception to a claimed specification."
+        },
+        {
+          "technique": "declared-then-proven",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureActs.ts:78 Confirmation lands an editor action's stand-in output rather than proving repository declarations."
+        },
+        {
+          "technique": "derived-expectation-needs-an-evidence-floor",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureFrames.ts:89 The derived values are picture units for an editor, not expectations compared against a published repository manifest."
+        },
+        {
+          "technique": "edition-stratified-conformance",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureFramesView.ts:67 These versions identify stored step schemas; there is no upstream conformance suite stratified by specification edition."
+        },
+        {
+          "technique": "finding-severity-ladder",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureResearch.ts:137 Blocked describes research readiness, not a severity assigned to a repository assessment finding."
+        },
+        {
+          "technique": "fixture-repo-testing",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureResearch.ts:53 The fixtures replay notebook content; they are not project trees supplied to a repository checker."
+        },
+        {
+          "technique": "inline-predicate-rung-inference",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureActs.ts:40 The receipt identifies a project-part action, not a specification claim carrying a verification command."
+        },
+        {
+          "technique": "pass-ratio-comparability",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureFramesView.ts:167 This summarizes shot-review outcomes rather than publishing a repository conformance percentage."
+        },
+        {
+          "technique": "rule-registry-enumerated-fixtures",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixture.ts:173 The enumeration collects editor records from project parts, not independent repository-checking rules."
+        }
+      ]
+    },
+    "94b106ab-d9bd-4bd6-b7e2-83ad6b1c5077/conformance-checking": {
+      "context": "floor-calendar-port",
+      "subject": "conformance-checking",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:11:23.146Z",
+      "worker": "f85b6ed0-f459-420b-a342-df7860a9dcad",
+      "techniques": [
+        {
+          "technique": "checker-false-positive-discipline",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/real.ts:205 This checks whether a schedulable Library item exists, not whether a repository satisfies a standard.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "claim-write-back",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/fixture.ts:223 The write creates a scheduled publication, not a verification stamp for an executed declared command.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "declared-deviation-register",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/fixture.ts:69 Transitions are checked against the domain machine; no deliberate departure from a claimed external specification was identified.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "declared-then-proven",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/readiness.ts:87 The row reports channel readiness and a diagnostic command, not proof of a repository-standard clause.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "derived-expectation-needs-an-evidence-floor",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/real.ts:266 The query supplies schedulable videos; it does not derive an expected declaration for a drift assertion.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "edition-stratified-conformance",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/readiness.ts:90 Applicability concerns available publishing adapters, not editions of an upstream conformance suite.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "finding-severity-ladder",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/real.ts:98 Problems describe unavailable calendar data, not graded findings from a repository assessment.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "fixture-repo-testing",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/fixture.ts:122 The fixture materializes publication-slot rows, not repositories exercised through a checker's entry point.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "inline-predicate-rung-inference",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/fixture.ts:247 These are channel diagnostic commands, not inline verification predicates attached to specification claims.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "pass-ratio-comparability",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/real.ts:112 Published numbers measure audience activity, not conformance passes over applicable checks.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "rule-registry-enumerated-fixtures",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/fixture.ts:236 The registry enumerates publishing channels, not independent checker rules requiring pass/fail fixture pairs.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/real.ts:258 Context searches found no conformance, proofStamp or ruleRegistry matches, while repository searches located checking elsewhere; this port manages publication slots and deployment readiness rather than repository conformance assessments.",
+          "evaluatedAt": "2026-10-19T01:56:32.313Z",
+          "worker": "7223b7a8-dd56-4956-bdbb-434b4dc8182f",
+          "reason": "replaced by f85b6ed0-f459-420b-a342-df7860a9dcad"
+        }
+      ]
+    },
+    "65532049-3be0-4143-a9c8-0c6919a26841/demo-data-plane": {
+      "context": "library-port",
+      "subject": "demo-data-plane",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:29:50.445Z",
+      "worker": "42ba43c0-be26-49f7-8db0-082adc73e62d",
+      "techniques": [
+        {
+          "technique": "one-interface-many-planes",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/port.ts:44 Both planes are typed against ServerLibrary, so dropping a fixture method fails at compile time. The one weakness: ServerLibrary is declared inside real.ts:46, not in a module of its own."
+        },
+        {
+          "technique": "runtime-dispatch-not-build-flag",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_port/port.ts:30 The env var is read once per process, so this is a deployment-gated plane for dev, /kit and the fixture lane. Viewers have no demo entry. That is the internal gated-deployment case the technique itself allows. If a visitor-facing demo is ever added, this exact line becomes the failure the technique names."
+        },
+        {
+          "technique": "fixture-self-consistency",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_port/fixtureData.ts:97 Inside the route the world is coherent: a 5,000-item corpus projected from one data module with minted ids. But it re-declares projects and styles that the Projects fixture also declares, with different ids."
+        },
+        {
+          "technique": "seeded-determinism",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/fixtureData.ts:111 An explicit, checked-in seeded generator with fixed T0/T1 instants in fixtureCorpus.ts, so every boot builds the same corpus. A grep of the context found no Math.random."
+        },
+        {
+          "technique": "network-faithful-mocks",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_port/fixture.ts:198 Fixture mutation writes directly into in-memory global state rather than using per-session copy isolation or shared validation.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "fake-surface-honesty-contract",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/page.tsx:51 The page renders fixture data without presenting any persistent visible marker in the chrome or validating the honesty contract.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/library/_port/port.ts:27 The library data plane is selected from an environment variable at module load time rather than dynamically per call from live session state.",
+          "evaluatedAt": "2026-10-19T07:18:49.800Z",
+          "worker": "ffde029c-8d17-45c1-8fb8-0387bf55ca3b",
+          "reason": "replaced by 42ba43c0-be26-49f7-8db0-082adc73e62d"
+        }
+      ]
+    },
+    "a3e9906f-52ed-4440-ad2d-1ae25b225045/demo-data-plane": {
+      "context": "projects-index-port",
+      "subject": "demo-data-plane",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:29:50.445Z",
+      "worker": "42ba43c0-be26-49f7-8db0-082adc73e62d",
+      "techniques": [
+        {
+          "technique": "one-interface-many-planes",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/_port/port.ts:57 ServerProduce is mapped from ProducePort (contract.ts) and both planes implement it. makeRealProduce returns ServerProduce, so parity is checked at compile time."
+        },
+        {
+          "technique": "runtime-dispatch-not-build-flag",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_port/port.ts:46 A process-level switch for the dev/fixture lane, with no visitor-facing demo entry. This is the internal gated-deployment case the technique allows."
+        },
+        {
+          "technique": "fixture-self-consistency",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/_port/fixtureData.ts:155 Plan, list and jobs are derived from SEED_PROJECTS inside the route. But its styles and projects are a second roster with no shared root with the Library fixture."
+        },
+        {
+          "technique": "seeded-determinism",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/_port/fixture.ts:198 The world is born once from a single reference instant, and its seeds are offsets from it. Only the schedule's NOW moves after that, which counts as 'deterministic, not static'."
+        },
+        {
+          "technique": "network-faithful-mocks",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/_port/fixtureActs.ts:135 Write operations directly mutate shared in-memory fixture objects without per-session copy isolation.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "fake-surface-honesty-contract",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/page.tsx:37 The projects page renders without any persistent visual marker or disclosure that fixture data is being displayed.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "registryProposal": "The subject assumes a customer-reachable demo. A common shape it doesn't name: a developer/prototyping fixture plane that humans read (kit, screenshot capture, design review) and that is switched per process by an env var. Adding a 'dev fixture plane' clause to runtime-dispatch's 'When not to use it' would stop seats from splitting between deviation and not-applicable on that line.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/_port/port.ts:46 The projects data plane is bound to an environment variable at module load time rather than dynamically resolved per call from live session state.",
+          "evaluatedAt": "2026-10-19T07:18:49.800Z",
+          "worker": "ffde029c-8d17-45c1-8fb8-0387bf55ca3b",
+          "reason": "replaced by 42ba43c0-be26-49f7-8db0-082adc73e62d"
+        }
+      ]
+    },
+    "a91965bd-84cb-42b6-978f-29ca7258f718/long-form-reading-surface": {
+      "context": "part-editor-writing-research",
+      "subject": "long-form-reading-surface",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:44:12.584Z",
+      "worker": "2556fdd7-1fce-4891-93e8-dd261d9fae51",
+      "techniques": [
+        {
+          "technique": "anchor-id-single-assigner",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:76 Sections carry an opaque data-section key from the view model. No heading text becomes an id and nothing links to it, so there is no address space for two parts of the code to disagree on."
+        },
+        {
+          "technique": "focus-transfer-on-in-place-navigation",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:30 Keys move a selection inside one document that stays mounted. No panel swaps the article content in place, so focus never needs to be handed to a new heading."
+        },
+        {
+          "technique": "server-parsed-once-reused",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:75 The section list arrives already built in ArticleData, and the client never parses article prose. But that list is the content shown, not a contents panel derived from a body, so there is no second derivation that could go stale."
+        },
+        {
+          "technique": "fixed-chrome-offset-budget",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/part/Part.module.css:5 The imported workspace allocates header, body and footer separate grid rows, with the primary scrolling internally; these reading views have no overlapping pinned elements requiring a shared offset.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "scroll-spy-reading-band",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:30 This is explicit keyboard selection and scrolling through section excerpts, rather than a contents panel claiming the reader's current section or reading progress.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:78 For multi-sentence sections, the article displays only the first sentence while presenting word counts computed from the complete bodies, contrary to the technique's visible-body predicate.",
+          "evaluatedAt": "2026-10-19T09:39:20.152Z",
+          "worker": "fc8110cb-0e57-4fee-9b83-1e74b6b72741",
+          "reason": "replaced by 2556fdd7-1fce-4891-93e8-dd261d9fae51"
+        }
+      ]
+    },
+    "5f587245-f343-4253-b6d1-a84fec6327a6/bounded-enumeration": {
+      "context": "runs-console",
+      "subject": "bounded-enumeration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T22:31:33.714Z",
+      "worker": "89af9ab9-0873-4a74-afe1-e419448fa5dc",
+      "techniques": [
+        {
+          "technique": "after-plus-limit-not-cursor",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/runs/_runs/load.ts:99 The kernel job read has no `after` or `limit`, so the page is not a seek. The ledger read beside it (line 85) passes a window and a limit to queryEvents, whose cursor is the (t, seq) tuple of the last delivered row, so only the jobs half falls short."
+        },
+        {
+          "technique": "page-size-from-memory-budget",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/runs/_runs/load.ts:37 LEDGER_CAP = 1000 and KERNEL_CAP = 500 have no stated inputs. There is no key or record ceiling, no memory target, and no statement that they are screen-sized interactive caps, which the technique says must be named. Line 24 does say that the cap does not bound list() itself, so that part is honest."
+        },
+        {
+          "technique": "required-limit-breaks-unaware-clients",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/runs/_runs/load.ts:101 The jobs list is clamped silently. Jobs past 500 are dropped, and nothing reaches the model or the problems list to say more existed. The ledger half is the loud form: line 90 turns `page.value.capped` into a visible ErrorLine."
+        },
+        {
+          "technique": "declare-the-inconsistency",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/load.ts:85 Runs reads one page per source and never follows a continuation, so there is no walk across pages whose consistency contract it would need to declare."
+        },
+        {
+          "technique": "deny-absorbs-and-lowest-limit-wins",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/readKeys.ts:1 The 'read keys' are keyboard bindings, not access policies. The 'ceiling' terms in this context (Acts.tsx, dojo.ts) are spend ceilings in USD. No page ceilings are stated, and no policies are merged."
+        },
+        {
+          "technique": "filter-after-return-under-limit",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/page.tsx:33 No caller identity reaches the read, and no page is filtered per key to what a caller may see. There is nothing to hide, so the precondition does not hold."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/runs/_runs/load.ts:101 Runs materializes the entire kernel job collection before slicing it to 500 rows, so the display cap does not bound server memory as job history grows.",
+          "evaluatedAt": "2026-10-20T21:16:12.086Z",
+          "worker": "58987d77-dc23-46e7-9132-67bd61bcb9da",
+          "reason": "replaced by 89af9ab9-0873-4a74-afe1-e419448fa5dc"
+        }
+      ]
+    },
+    "5f587245-f343-4253-b6d1-a84fec6327a6/feed": {
+      "context": "runs-console",
+      "subject": "feed",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:55:25.649Z",
+      "worker": "6ecae4f8-af9f-4864-ae21-46ec1364da6f",
+      "techniques": [
+        {
+          "technique": "reverse-chronology-semantics",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/view.ts:124 The only ordering is the J/K walk, ascending by start with a key tiebreak, so it is total and three-way. Placement is otherwise by x-position on a time axis; there is no newest-first sequence."
+        },
+        {
+          "technique": "live-prepend",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:101 The 'live feed' is SSE advice that triggers a coalesced router.refresh() of the whole model. No rows grow at a top edge, so there is no viewport to hold and no held-arrivals buffer."
+        },
+        {
+          "technique": "event-clustering",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/view.ts:32 Rows are fixed resource lanes, not occurrence rows. A busy producer fills its own lane and cannot drown others."
+        },
+        {
+          "technique": "read-position-and-unseen",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:51 The only reader state is selection and zoom in the URL. There is no 'since you last looked' promise and no badge."
+        },
+        {
+          "technique": "feed-retention",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/model.ts:38 The window is a fixed span around NOW, read from the ledger, which this context does not own or reap. A hit on the LEDGER_CAP cap is stated as truncation (load.ts:487), not drawn as empty."
+        }
+      ],
+      "registryProposal": "The feed golden path draws boundaries against table, triage queue, transcript and audit record, but not against a time-axis/Gantt surface (bars placed on resource rows by start and end). A day-line that follows live work through a module named 'liveFeed' scores high lexically against 'feed' but has none of its contract. Naming the timeline as a neighbour would spare judges this false match.",
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:293 Runs presents a resource scheduling canvas rather than an occurrence feed; searches found feed references for refresh and freshness plumbing, with no readPosition or unseenCount matches in the context or repository.",
+          "evaluatedAt": "2026-10-22T01:12:14.280Z",
+          "worker": "02d26396-9201-4034-b53f-e75e6ad1d14d",
+          "reason": "replaced by 6ecae4f8-af9f-4864-ae21-46ec1364da6f"
+        }
+      ]
+    },
+    "a91965bd-84cb-42b6-978f-29ca7258f718/native-document-format": {
+      "context": "part-editor-writing-research",
+      "subject": "native-document-format",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T01:57:08.497Z",
+      "worker": "068fe99a-2775-4e57-8d3d-de510290ae06",
+      "techniques": [
+        {
+          "technique": "format-generations-are-declared",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:161 These versions restore script state through an operation; they are history snapshots, which the standard explicitly distinguishes from document format generations."
+        },
+        {
+          "technique": "format-is-the-engines-input",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:87 The editor submits operations to its server port; this save path does not produce a document artifact for an external engine."
+        },
+        {
+          "technique": "ignorable-extensions-must-be-declared",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/realResearch.ts:68 Source metadata belongs to the application's database record, rather than an extension vocabulary embedded in somebody else's document format."
+        },
+        {
+          "technique": "one-writer-per-fact",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Words.tsx:83 Current text is changed through a part operation; this context does not serialize parallel editor and consumer regions into a native document."
+        },
+        {
+          "technique": "reference-or-embed",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/realResearch.ts:64 Notebook content is stored in a managed step record; no portable document's asset embedding or filesystem reference contract is involved."
+        },
+        {
+          "technique": "serialization-is-locale-free",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/parts/driver.ts:109 The traced persistence destination is a database row, outside this subject's native document file scope."
+        }
+      ]
+    },
+    "24d70cb5-a388-4b29-ac00-026e932d947e/release-pipeline": {
+      "context": "part-port-real-and-contract",
+      "subject": "release-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:34:26.337Z",
+      "worker": "c08d116e-6fcc-4bed-b214-49ce03d6a8ed",
+      "techniques": [
+        {
+          "technique": "version-single-truth",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/realScript.ts:31 The only 'Version' here is an accepted script draft, a domain record. No release version is recorded in this context."
+        },
+        {
+          "technique": "pipeline-staging",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/wire.ts:3 Server Actions are handed to the client in the same build. Nothing here gets tagged, built or published."
+        },
+        {
+          "technique": "release-level-by-reader-reach",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/schema.ts:8 The op union is a strict door whose readers all live inside the monorepo. No reader population outside it needs a release level."
+        },
+        {
+          "technique": "announcing-versus-silent-breakage",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/realScript.ts:30 This is backward compatibility with v1 store records, not a breaking release sent to outside consumers."
+        },
+        {
+          "technique": "deprecation-by-version-arithmetic",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/port.ts:27 The public surface is an env switch and in-repo types. No public symbol carries a deprecation clock."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/scriptView.ts:191 The dispatch sends every remaining face to documentData, so extending ScriptFace can silently produce a document view instead of forcing this reader to handle the added member.",
+          "evaluatedAt": "2026-10-22T03:39:03.567Z",
+          "worker": "fb9cfbfa-6020-42ec-b164-018ccd674497",
+          "reason": "replaced by c08d116e-6fcc-4bed-b214-49ce03d6a8ed"
+        }
+      ]
+    },
+    "2836155f-e2b2-4d2f-b13a-d98a29291078/voice-io": {
+      "context": "audio-arrange-desk",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:23:15.564Z",
+      "worker": "f33be498-c49d-4fa5-aa98-decaf03f1d07",
+      "techniques": []
+    },
+    "f2b24d86-7201-4945-837d-0c6343e1273b/voice-io": {
+      "context": "studio-shell",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:23:15.564Z",
+      "worker": "f33be498-c49d-4fa5-aa98-decaf03f1d07",
+      "techniques": []
+    },
+    "f2b24d86-7201-4945-837d-0c6343e1273b/mcp-tools": {
+      "context": "studio-shell",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:41:42.048Z",
+      "worker": "b1e51a97-1bb9-40ec-818c-e1b7f2455e43",
+      "techniques": []
+    },
+    "19e8292e-3706-401a-8259-d1dd22ab89b1/mcp-tools": {
+      "context": "ledger-screen",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:41:42.048Z",
+      "worker": "b1e51a97-1bb9-40ec-818c-e1b7f2455e43",
+      "techniques": []
+    },
+    "f2b24d86-7201-4945-837d-0c6343e1273b/prompt-assembly": {
+      "context": "studio-shell",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/(studio)/_shell/facts.ts:1 The shell renders header facts, toasts, a bell and a live feed from kernel events. A search of app/(studio)/_shell for prompt, lib/text, reason(, schemaInstruction, generateContent and claude/gemini found nothing, so no model prompt is assembled here.",
+          "evaluatedAt": "2026-10-24T01:07:42.727Z",
+          "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
+    },
+    "bf8089f7-ccb4-458c-9a60-2ad34bd0ebbb/video-assembly": {
+      "context": "part-editor-media-cut-score",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:31:44.072Z",
+      "worker": "819cc5a8-4033-4b20-a243-2ab1f092d935",
+      "techniques": [
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:52 'A cheap rung is only representative of what it can reproduce': the preview's inputs differ from the export's, and the preview is silent while rung 5 calls for sound."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:110 The only nudge step is ±50 ms, more than one frame at 24/25/30 fps, where the standard asks for sub-frame steps well under a frame. The signed offset readout and snap-to-mark (line 114) do conform."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:198 Blocks are drawn at their true start and length on one shared ruler, in fixed lanes: picture, voice, music (Cut.tsx LANES)."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:85 A missing plate is drawn as a hole and kept apart from a dry stand-in; unplaced items are listed with their reason."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:38 A cue's span is bound to its first and last scene, so a retime re-derives its in and out. Each cue carries a purpose, a tempo and a takes state."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:255 The turn mark is read from the view's derived turn and drawn on the shared clock, never typed. Its derivation lives in the port, outside this context."
+        }
+      ],
+      "registryProposal": "drift-correction says 'increments of a few tens of milliseconds' while the golden path says 'well under the frame'. A 50 ms step satisfies the first wording and breaches the second at every common frame rate. The technique should state one bound, e.g. at most half a frame at the cut's rate."
+    },
+    "a91965bd-84cb-42b6-978f-29ca7258f718/agent-instruction-files": {
+      "context": "part-editor-writing-research",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:37:17.740Z",
+      "worker": "f98b025d-2a46-4121-94c3-420353024a33",
+      "techniques": []
+    },
+    "bf8089f7-ccb4-458c-9a60-2ad34bd0ebbb/agent-instruction-files": {
+      "context": "part-editor-media-cut-score",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:37:17.740Z",
+      "worker": "f98b025d-2a46-4121-94c3-420353024a33",
+      "techniques": []
+    },
+    "f2b24d86-7201-4945-837d-0c6343e1273b/fleet-orchestration": {
+      "context": "studio-shell",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:13:49.144Z",
+      "worker": "d6bca970-2131-404f-b98e-516d2fbe882b",
+      "techniques": [
+        {
+          "technique": "session-registry",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/_shell/bell.ts:13 A parallel vocabulary plus a Partial mapping: the place new states get silently dropped. Leaving out queued, paused and cancelled today is documented, but it is not enforced to be exhaustive."
+        },
+        {
+          "technique": "absent-status-passthrough",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/_shell/headerFacts.ts:55 An unreadable ledger yields null spend with the store's words, never a substituted $0."
+        }
+      ]
+    },
+    "b1bb3381-a002-4ed7-b36e-ab8844eec683/supply-chain": {
+      "context": "floor-hub-screen",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:27:27.054Z",
+      "worker": "4a516d29-3448-4079-bbe3-e012183e5dfb",
+      "techniques": []
+    },
+    "f2b24d86-7201-4945-837d-0c6343e1273b/agent-runtime-assembly": {
+      "context": "studio-shell",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:05:46.301Z",
+      "worker": "3965b210-8a9d-4794-82ff-800b10703618",
+      "techniques": []
+    },
+    "bf8089f7-ccb4-458c-9a60-2ad34bd0ebbb/data-video-art-direction": {
+      "context": "part-editor-media-cut-score",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:37:10.922Z",
+      "worker": "c73cdd3e-e560-464f-ba22-270f1eb93982",
+      "techniques": []
+    },
+    "19e8292e-3706-401a-8259-d1dd22ab89b1/data-video-art-direction": {
+      "context": "ledger-screen",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:37:10.922Z",
+      "worker": "c73cdd3e-e560-464f-ba22-270f1eb93982",
+      "techniques": []
+    },
+    "5b1d1ebe-d7e3-4173-8204-ed5349e29010/data-video-art-direction": {
+      "context": "kit-screen-specimens",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:37:10.922Z",
+      "worker": "c73cdd3e-e560-464f-ba22-270f1eb93982",
+      "techniques": []
+    },
+    "19e8292e-3706-401a-8259-d1dd22ab89b1/data-access": {
+      "context": "ledger-screen",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:57:15.207Z",
+      "worker": "fe7817ef-7901-4c5b-ac9e-96014860f6cf",
+      "techniques": [
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:182 A loop of per-item reads (for each day at read.ts:175). It computes all seven facets when only actorKind is used, and no test sets a query-count ceiling."
+        },
+        {
+          "technique": "layering-rules",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:6 The screen issues no SQL: every read goes through the kernel's named query and count operations."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:232 Display reads return a consumer-shaped, read-only projection (page, facets, strip) that is never written back."
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/filter.ts:74 URL tokens are mapped onto closed vocabularies and passed to the kernel as a structured query. No query text is assembled here."
+        },
+        {
+          "technique": "repo-testing",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/ledger-read.test.ts:24 Each test gets a fresh real kernel store, and fixtures are written through append (the front door)."
+        }
+      ]
+    },
+    "19e8292e-3706-401a-8259-d1dd22ab89b1/table": {
+      "context": "ledger-screen",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:45:33.728Z",
+      "worker": "4dd4e440-425c-42be-bdc6-9bb02d7c7c94",
+      "techniques": [
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:106 Grid role with one tab stop (tabIndex 0 on the scroller), but arrows only change aria-selected on rows. There is no cell focus, no activedescendant, no left/right traversal, and the column headers sit outside the grid element. This is the 'cells cannot take focus' anti-pattern."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:91 Keyset on the (t, seq) cursor with PAGE=500. Older pages are appended through a Server Action with the page's own cursor, never an offset."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:89 The order itself is total: the kernel sorts `t, seq` (events-query.ts:158) and the merge uses the same comparator. The gap is accessibility: the order is exposed only in the button's label, with no aria-sort on a columnheader. Toggling remounts the Ledger (key includes the order), so no status message speaks the change."
+        },
+        {
+          "technique": "filtering",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:57 Entered text (draft) and the applied filter (the URL) are separate. Free text commits on submit, facets on change. page.tsx keys the client by filter identity, so rows and selection from an old filter do not survive."
+        },
+        {
+          "technique": "client-server-split",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:16 Filter, sort and window all run on the server. The unindexed text part is scanned server-side and labelled ('searched N', 'N+'). Client-side cost over loaded rows is marked '+'."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:58 Bounded pages, fixed row height read from the tokens, windowed rendering, rows keyed by seq."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/page.tsx:32 Empty states are typed by cause (List.tsx:116-121: nothing recorded yet vs 0 events + clear filters). But a failed read replaces the whole surface, chrome included, with an ErrorLine that offers no retry."
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:34 Rows reach the client 500 at a time on an explicit 'older' press, so the browser's scroll-size ceiling is not in reach."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/page.tsx:1 Read-only, append-only list. No cell editing, paste or fill."
+        },
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:85 The only copy is whole rows as JSON Lines. No cell-range copy and no paste back."
+        },
+        {
+          "technique": "export-escapes-for-its-consumer",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:81 The export is JSONL for agents, not CSV for spreadsheets."
+        }
+      ]
+    },
+    "8ee4e416-6184-4f45-b91d-43a7e9ad5380/generated-music-acceptance": {
+      "context": "audio-insight-lessons",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:55:20.362Z",
+      "worker": "89811f2a-232b-4f37-9393-1f74f7526544",
+      "techniques": [
+        {
+          "technique": "brief-conformance-listen",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/_insight/Rubric.tsx:4 Scores fixed rubric dimensions 1-10 instead of a checklist derived from the brief (sections, exclusions item by item, vocal/instrumental, ending shape). An absent score is never zero, which is good, but the checklist itself is missing."
+        },
+        {
+          "technique": "structure-verification-against-plan",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/_insight/read.ts:113 Only total tempo, key and length are checked. The section durations in the take's stored provider plan are never verified, and the check sits beside the score instead of gating the listen."
+        },
+        {
+          "technique": "loudness-and-peak-acceptance",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/_insight/read.ts:112 The take's own lufs and truePeakDb are dropped here, so the rubric pile judges takes without any loudness or peak measurement in view and with no destination target."
+        }
+      ]
+    },
+    "2836155f-e2b2-4d2f-b13a-d98a29291078/generated-music-acceptance": {
+      "context": "audio-arrange-desk",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:55:20.362Z",
+      "worker": "89811f2a-232b-4f37-9393-1f74f7526544",
+      "techniques": [
+        {
+          "technique": "loudness-and-peak-acceptance",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/return/route.ts:55 A file can be finalized without being measured, which the technique's unmeasured-is-not-pass rule forbids."
+        },
+        {
+          "technique": "rights-and-provenance-record",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/return/route.ts:47 A library label is the only finalize-time fact this door collects. It records no account, plan tier, terms date or cleared destination for the returned Suno audio."
+        }
+      ]
+    },
+    "bf8089f7-ccb4-458c-9a60-2ad34bd0ebbb/review-iteration-loops": {
+      "context": "part-editor-media-cut-score",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:08:48.356Z",
+      "worker": "858359f8-f3d6-4496-9a0e-843793fca516",
+      "techniques": [
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx:75 Other sections are kept by reference downstream, but adherence is a fixed default rather than a property of the note, and nothing checks the anchor region."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Frames.tsx:206 The direction proposal shows the rows it refused, its conflicts with human layers and the units it left unmentioned, so 'untouched' stays distinct from 'forgotten'."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Frames.tsx:208 A direction pass is a staged proposal. Accepting it by default leaves human-edited layers untouched, and overwriting them is a separate, deliberate act."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/FramesInspector.tsx:125 Each frame text declares the notebook fact it rests on, and an unmapped text shows as 'unsourced' rather than silently resting on nothing. Only declaration applies here; shares do not."
+        }
+      ]
+    },
+    "19e8292e-3706-401a-8259-d1dd22ab89b1/settings": {
+      "context": "ledger-screen",
+      "subject": "settings",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:27:37.352Z",
+      "worker": "0807eb84-ba07-435c-beb3-6622bd3af9a2",
+      "techniques": []
+    },
+    "24d70cb5-a388-4b29-ac00-026e932d947e/translation-pipeline-topology": {
+      "context": "part-port-real-and-contract",
+      "subject": "translation-pipeline-topology",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:38:35.278Z",
+      "worker": "7ea0c467-6d22-44ef-bd88-385bc2d3c793",
+      "techniques": []
+    },
+    "a3e9906f-52ed-4440-ad2d-1ae25b225045/translation-pipeline-topology": {
+      "context": "projects-index-port",
+      "subject": "translation-pipeline-topology",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:38:35.278Z",
+      "worker": "7ea0c467-6d22-44ef-bd88-385bc2d3c793",
+      "techniques": []
+    },
+    "d71ab371-c2c2-4e30-a32f-ecc38451e694/visual-style-locking": {
+      "context": "style-atelier",
+      "subject": "visual-style-locking",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:12:29.637Z",
+      "worker": "d0838674-8922-4f45-8042-7c817769c5eb",
+      "techniques": [
+        {
+          "technique": "draft-proofing-locked-ratchet",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/style/[id]/_atelier/Atelier.tsx:203 Otherwise it shows a 'lock held' chip naming the blocker. A locked style gets no judge controls. Duplicate is always offered once a block exists."
+        },
+        {
+          "technique": "rejections-as-negative-evidence",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/style/[id]/_atelier/Atelier.tsx:120 A rejection is only sent with a non-empty reason."
+        },
+        {
+          "technique": "approved-reference-sheet",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/style/[id]/_atelier/Dossier.tsx:103 The send count is drawn separately from the window. When full, the fixture act answers 'reject an approval to make room' (fixtureActs.ts:69). That uses a literal 14 and counts stale approvals, unlike the view; the surface also simply hides the render controls when full."
+        },
+        {
+          "technique": "style-onboarding-from-sample",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/style/[id]/_atelier/Dossier.tsx:46 The origin (readback, extracted, preset, and so on) and its source are shown on the style document."
+        }
+      ]
+    },
+    "e9de0daf-ffe2-4687-be68-b0c9a8d8583d/docs-sync": {
+      "context": "kit-design-system-specimens",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:08:50.214Z",
+      "worker": "2939ff64-fef5-4b19-9294-bd3b3d20d218",
+      "techniques": [
+        {
+          "technique": "source-doc-mapping",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/kit/page.tsx:52 Coverage of the coupling is gated, not just membership: a token group with no section is reported."
+        },
+        {
+          "technique": "source-as-data-without-the-app",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/kit/page.tsx:43 The authority is read as data through a parser, and a failed parse is surfaced (page.tsx:51) rather than drawing an empty sheet."
+        },
+        {
+          "technique": "same-change-enforcement",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/kit/Status.tsx:5 The status sheet is generated from the module itself, so no separate prose copy owes a same-change update."
+        },
+        {
+          "technique": "named-duplication-points",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/kit/Tokens.tsx:6 Tokens are drawn from the one authority instead of a hand-typed list (which the prototype kit had)."
+        },
+        {
+          "technique": "rendered-surface-coupling",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/kit/Tokens.tsx:9 The specimen shows the resolved value, not a picture or a copied string, so it cannot fall behind the stylesheet."
+        },
+        {
+          "technique": "doc-rot-detection",
+          "verdict": "conformant",
+          "evidence": "tests/live/kit.live.spec.ts:12 The live lane walks every exported component and every source token, so a missing specimen is detected rather than assumed absent."
+        },
+        {
+          "technique": "checked-vs-skipped-denominators",
+          "verdict": "conformant",
+          "evidence": "tests/live/kit.live.spec.ts:14 There are floors (>25 components, >50 tokens, >200 text nodes), so an empty walk cannot report green."
+        },
+        {
+          "technique": "negative-claims-are-pinned",
+          "verdict": "conformant",
+          "evidence": "tests/live/kit.live.spec.ts:69 The sheet's stated 'floor 12px' (sections.ts:8) is a negative claim, and it is pinned by a computed-size test."
+        }
+      ]
+    },
+    "5b1d1ebe-d7e3-4173-8204-ed5349e29010/live-system-demo-film": {
+      "context": "kit-screen-specimens",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:31:10.573Z",
+      "worker": "cd721550-d90c-43ce-8484-fc0bf3d478cd",
+      "techniques": []
+    },
+    "bf8089f7-ccb4-458c-9a60-2ad34bd0ebbb/production-pipeline-phasing": {
+      "context": "part-editor-media-cut-score",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:47:13.711Z",
+      "worker": "429520ce-eba4-4e7d-bea7-4324f0aa283b",
+      "techniques": [
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:98 Clips carry startS/durS on one axis (CutClock.tsx:3 'THE ONE CLOCK the score and the cut draw'); ok/missing/drift are per-clip states, and drift is kept as a measured offsetMs."
+        },
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:98 A failing blocking check gates the expensive aspect render. The bed check is unmeasured without a take, never a fail. Frames refuses to work with no adopted script (Frames.tsx:214) and offers rederive when the cut moved (Frames.tsx:200)."
+        },
+        {
+          "technique": "worst-news-first-progress",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:179 The finish line's headline is the count of failing checks; one fail turns it rose. Rows carry pass/fail/unmeasured with the deny sentence verbatim."
+        },
+        {
+          "technique": "asset-vs-disposable-render",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx:65 Takes cross into kept, rejected or in-use only by an operator decision. A take whose bytes are gone says 'gone' (ScoreTakes.tsx:53) instead of resolving to something plausible."
+        }
+      ]
+    },
+    "5f587245-f343-4253-b6d1-a84fec6327a6/production-pipeline-phasing": {
+      "context": "runs-console",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:47:13.711Z",
+      "worker": "429520ce-eba4-4e7d-bea7-4324f0aa283b",
+      "techniques": [
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/runs/_runs/Acts.tsx:51 Interrupted is a first-class state; a lane HOLD on an interrupted paid job needs acknowledging (Acts.tsx:10). No ETA is invented (model.ts:20), and a fraction is drawn only for running jobs with a recorded unit total (view.ts:74)."
+        },
+        {
+          "technique": "worst-news-first-progress",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/runs/_runs/Inspector.tsx:195 The 'every resource' view leads with holds and failed, then the weir, then running. Stuck upstreams propagate 'blocked' to dependents (view.ts:52)."
+        },
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/model.ts:38 The day-line is wall-clock job scheduling, which the technique explicitly keeps off the product's runtime clock."
+        },
+        {
+          "technique": "approval-reads-forward",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/Inspector.tsx:150 Approvals are handed off to the Weir/Board; no shared asset is signed off here."
+        }
+      ]
+    },
+    "a3e9906f-52ed-4440-ad2d-1ae25b225045/production-pipeline-phasing": {
+      "context": "projects-index-port",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:47:13.711Z",
+      "worker": "429520ce-eba4-4e7d-bea7-4324f0aa283b",
+      "techniques": [
+        {
+          "technique": "worst-news-first-progress",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/_port/fixtureRead.ts:115 projectStateOf (domain plan.ts) checks failed/blocked first. The list groups by state (groupOf) and counts failed parts separately."
+        },
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/_port/real.ts:44 The port only enqueues kernel jobs; the worker runs them. A kind no producer binds waits queued and is reported as unknown, never failed."
+        },
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/_port/schedule.ts:85 Parts are placed after what they wait for, and gates wait on the operator. A failed or paused upstream draws its dependents as blocked (schedule.ts:106) instead of scheduling them."
+        },
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_port/schedule.ts:6 This scheduler is wall-clock lane placement, which the technique keeps separate from the product's runtime clock."
+        }
+      ]
+    },
+    "d71ab371-c2c2-4e30-a32f-ecc38451e694/repository-landing-document": {
+      "context": "style-atelier",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:54:15.633Z",
+      "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
+      "techniques": []
+    },
+    "24d70cb5-a388-4b29-ac00-026e932d947e/multi-project": {
+      "context": "part-port-real-and-contract",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:29:07.819Z",
+      "worker": "4354fe8b-d8ad-41dd-a7cb-a1aa6675148a",
+      "techniques": [
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/page.tsx:32 The id identifies one production plan read through the produce port. Nothing here is a portfolio registry entry with a path or remote that could be re-bound."
+        },
+        {
+          "technique": "passive-signal-ingestion",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/real.ts:25 Reads one composition's part records from the kernel. Nothing watches a project's VCS or ledger exhaust."
+        }
+      ]
+    },
+    "a3e9906f-52ed-4440-ad2d-1ae25b225045/multi-project": {
+      "context": "projects-index-port",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:29:07.819Z",
+      "worker": "4354fe8b-d8ad-41dd-a7cb-a1aa6675148a",
+      "techniques": [
+        {
+          "technique": "portfolio-drill-hierarchy",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/page.tsx:25 A list of compositions that opens on the first one's plan. It is not a triage wall over managed projects."
+        },
+        {
+          "technique": "passive-signal-ingestion",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_port/realRead.ts:22 Figures come from kernel job and part records of the studio's own work, not from watchers over a project's exhaust."
+        }
+      ]
+    },
+    "9c525f5b-e99e-405e-a21d-ba19247ed5a7/multi-project": {
+      "context": "plan-and-import",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:29:07.819Z",
+      "worker": "4354fe8b-d8ad-41dd-a7cb-a1aa6675148a",
+      "techniques": [
+        {
+          "technique": "project-onboarding-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/page.tsx:7 A data-migration door for compositions with preview and confirm. It is not an admission door that equips a metadata contract."
+        },
+        {
+          "technique": "portfolio-drill-hierarchy",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:3 Shows one composition's plan beside its list. It is not a wall, matrix or detail drill over a portfolio's dimensions."
+        }
+      ]
+    },
+    "e9de0daf-ffe2-4687-be68-b0c9a8d8583d/app-shell": {
+      "context": "kit-design-system-specimens",
+      "subject": "app-shell",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:56:02.393Z",
+      "worker": "9331df4e-473e-407c-a98a-1481f4086931",
+      "techniques": [
+        {
+          "technique": "navigation-model",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/kit/Spec.tsx:14 Section headings read the same registry the nav iterates. Section ids are typed SectionId, and all 22 SECTIONS ids have a matching <Section id=...> in the body, so nav and body cannot drift."
+        },
+        {
+          "technique": "nav-hierarchy",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/kit/KitNav.tsx:35 Group headings are plain labels, not destinations. The index is page structure, an in-page anchor list marked aria-current=\"location\" (line 36), and not a third shell level."
+        },
+        {
+          "technique": "lazy-section-loading",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/kit/page.tsx:3 The kit's 'sections' are anchors inside one route page, not shell sections loaded separately. Shell-level code splitting is judged on studio-shell."
+        },
+        {
+          "technique": "badge-and-attention",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/kit/Controls.tsx:75 The only badges here are specimens on a button. The kit index carries no attention badges."
+        }
+      ]
+    },
+    "3fa7a830-b03c-4d82-87ef-fba8e753d390/job-coordination": {
+      "context": "board-decision-desk",
+      "subject": "job-coordination",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:08:46.669Z",
+      "worker": "cfece91a-7af4-487a-83ac-531c6947bf9e",
+      "techniques": [
+        {
+          "technique": "no-unrestorable-state-at-a-suspension-point",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/board/_port/real.ts:200 Dying between the commit tx (real.ts:196) and this kick loses nothing: kernel commit.ts:65 inserts the pending packet_applies row inside the same tx, so the state at that point is durable."
+        },
+        {
+          "technique": "no-wall-clock-in-the-advance-contract",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/board/_port/real.ts:53 The request (and the keepalive route's maxDuration) bounds only the decision write. Delivering the durable apply is not awaited and is not cut short by the request's clock."
+        },
+        {
+          "technique": "terminal-state-recovery",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/board/_port/actions.ts:90 After the terminal commit, the fan-out has named movers: a pending apply is swept on render (load.ts:33 reconcileApplies) and a stuck one is moved back to pending by the operator's redrive, with a fresh attempt budget and an Event."
+        },
+        {
+          "technique": "job-observability",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/board/_board/DecidedDesk.tsx:43 The apply's state, read from the store, and its lastError verbatim (line 46) are shown per packet. The fleet-wide stuck view is on the Floor (LaneCells), outside this context. The rail's ordering does not bring stuck applies to the top."
+        },
+        {
+          "technique": "terms-travel-permission-does-not",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/board/_port/real.ts:194 The digest of the v1 state the preview was planned from travels in the token. The commit recomputes it from a fresh read, and the kernel refuses 'stale-preview' instead of committing under different terms."
+        },
+        {
+          "technique": "step-position-and-resumability",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/board/_port/real.ts:221 The return act's dedup identity is derived deterministically from its content, not minted per attempt, so a re-run gets the first result (the keyed re-run disposition). Commit likewise takes a ticket (real.ts:187)."
+        }
+      ]
+    },
+    "bf8089f7-ccb4-458c-9a60-2ad34bd0ebbb/media-playback": {
+      "context": "part-editor-media-cut-score",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:15:38.728Z",
+      "worker": "e8ab1a70-284b-4ea1-96a2-edcf352aa562",
+      "techniques": [
+        {
+          "technique": "playback-clock",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:246 The playhead lives in useState and is set every rAF tick. The mutable ref `at` exists, but the needle and readout are not fed by a narrow frame-loop consumer or a throttled subscription. The wall-clock-delta advance on line 243 is correct."
+        },
+        {
+          "technique": "timeline-scheduling",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:63 The Monitor finds the piece on screen from the clock and each scene's interval, with no chaining, so seek is a pure function of the derived timeline. The scan is linear rather than sorted, which is fine at about 30 scenes."
+        },
+        {
+          "technique": "media-resource-lifecycle",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:250 The frame loop names its reaper on pause, on rate change and on unmount. The Render preview loop also cancels (Render.tsx:61)."
+        },
+        {
+          "technique": "transport-contract",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:119 The cut clock drives still plates with no engine to await. The only audible engines are stock <audio controls> elements, which the platform's own controls cover."
+        },
+        {
+          "technique": "engine-adapters",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Takes.tsx:238 Takes play only through platform media elements with stock behaviour. No second engine shares one contract."
+        },
+        {
+          "technique": "generated-supply-margin",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:71 Content is made ahead of time by kernel jobs and read from the blob store. Nothing is produced just ahead of the playhead."
+        }
+      ]
+    },
+    "2836155f-e2b2-4d2f-b13a-d98a29291078/media-playback": {
+      "context": "audio-arrange-desk",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:15:38.728Z",
+      "worker": "e8ab1a70-284b-4ea1-96a2-edcf352aa562",
+      "techniques": [
+        {
+          "technique": "transport-contract",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:89 Button state comes from the request, not the machine, and there is no buffering or stalled state. Partly realized: a play watchdog is armed at line 91, superseded rejections are filtered by `gen`, and refusals are reported in words."
+        },
+        {
+          "technique": "playback-clock",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:107 Engine-driven position is read on demand from the element. No playhead is held in reactive state, and only the human-speed `playing` id is."
+        },
+        {
+          "technique": "media-resource-lifecycle",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:66 One element is shared by the whole board. On unmount it clears the watchdog, removes its listeners, pauses, and strips and reloads the source, so no audio outlives the surface."
+        },
+        {
+          "technique": "engine-adapters",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:39 There is one playback engine, the HTMLAudioElement. The engine registry in arrangeRead is vendor makers, not playback engines."
+        },
+        {
+          "technique": "source-resilience",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:53 Auditions are one take per press with no continuous run to keep alive. A failure is surfaced verbatim to the operator rather than recovered through a fallback."
+        },
+        {
+          "technique": "timeline-scheduling",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/Arrange.tsx:4 'Arrange' lays out workflow stages and groups, not a time-composed sequence."
+        },
+        {
+          "technique": "generated-supply-margin",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/AudioLane.tsx:168 Takes are finished files played from a stored src, not produced ahead of the playhead."
+        }
+      ]
+    },
+    "e9de0daf-ffe2-4687-be68-b0c9a8d8583d/talking-avatar": {
+      "context": "kit-design-system-specimens",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:32:19.342Z",
+      "worker": "fb2d2e7b-3df7-4745-a1b0-48fedba0fe24",
+      "techniques": [
+        {
+          "technique": "motion-route-selection",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/kit/Motion.tsx:3 Motion here is UI micro-animation specimens (lockIn/fadeUp/moved/shake), not avatar animation routes."
+        }
+      ]
+    },
+    "2836155f-e2b2-4d2f-b13a-d98a29291078/talking-avatar": {
+      "context": "audio-arrange-desk",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:32:19.342Z",
+      "worker": "fb2d2e7b-3df7-4745-a1b0-48fedba0fe24",
+      "techniques": []
+    },
+    "4ce0de70-b998-4d9c-bb23-665d20624b7c/agent-browser-control": {
+      "context": "library-browser-screen",
+      "subject": "agent-browser-control",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T01:51:08.440Z",
+      "worker": "86485527-955b-4d7f-9145-39ea0e061614",
+      "techniques": []
+    },
+    "e9de0daf-ffe2-4687-be68-b0c9a8d8583d/concurrency-guards": {
+      "context": "kit-design-system-specimens",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T02:04:55.109Z",
+      "worker": "45961488-54e7-49e2-a5e9-98bf8204a49b",
+      "techniques": []
+    },
+    "e9de0daf-ffe2-4687-be68-b0c9a8d8583d/narrative-scroll-surface": {
+      "context": "kit-design-system-specimens",
+      "subject": "narrative-scroll-surface",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:01:56.826Z",
+      "worker": "884c4af3-628c-494b-93f1-3d2dec1f9ac3",
+      "techniques": [
+        {
+          "technique": "sequence-as-spine",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/kit/sections.ts:6 The sections are a set of specimen groups (tokens, signal, controls, compositions). Reordering them changes emphasis, not meaning."
+        },
+        {
+          "technique": "no-orientation-tax",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/kit/KitNav.tsx:36 This is a genuine document navigation of legible titled destinations, which the technique hands to long-form-reading-surface."
+        },
+        {
+          "technique": "motion-carries-the-mechanism",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/kit/Motion.tsx:4 These are press-triggered specimens of feedback gestures that belong to the motion vocabulary. They do not explain a mechanism."
+        },
+        {
+          "technique": "reveal-without-loss",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/kit/page.tsx:54 Every section is mounted unconditionally in the server-rendered page. Nothing is revealed on scroll."
+        }
+      ]
+    },
+    "f2b24d86-7201-4945-837d-0c6343e1273b/native-shell-integration": {
+      "context": "studio-shell",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:05:32.197Z",
+      "worker": "15828de5-56c3-4800-90a2-e9aa6423ea5c",
+      "techniques": [
+        {
+          "technique": "native-owned-stream",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/liveFeed.ts:51 The stream belongs to the view because there is no native side to move it to. When the tab is hidden the poll backstop pauses and catches up on wake (header comment, lines 15-17), which is a choice made inside the browser."
+        },
+        {
+          "technique": "permission-gate-vector",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/keys.ts:40 The only host-side state the shell touches is localStorage keys. It asks for no OS permissions."
+        }
+      ]
+    },
+    "3fa7a830-b03c-4d82-87ef-fba8e753d390/generated-speech-acceptance": {
+      "context": "board-decision-desk",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:28:25.231Z",
+      "worker": "185c908d-a2ca-40f3-b673-d61c985fb0a8",
+      "techniques": []
+    },
+    "5b1d1ebe-d7e3-4173-8204-ed5349e29010/generated-speech-acceptance": {
+      "context": "kit-screen-specimens",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T03:28:25.231Z",
+      "worker": "185c908d-a2ca-40f3-b673-d61c985fb0a8",
+      "techniques": []
+    },
+    "4ce0de70-b998-4d9c-bb23-665d20624b7c/browser-credential-boundary": {
+      "context": "library-browser-screen",
+      "subject": "browser-credential-boundary",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T22:45:06.628Z",
+      "worker": "99221ceb-288c-4b48-8722-42544bec97a1",
+      "techniques": [
+        {
+          "technique": "public-vs-server-env-split",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/page.tsx:41 The only env-derived value (SIDE, from unprefixed GRAVITONE_PRODUCE_SIDE in the server-only _port) is used in the Server Component. No browser-read config value exists in this context."
+        },
+        {
+          "technique": "broker-proxy-attaches-secret",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_library/Library.tsx:86 The client calls a same-origin Server Action for the app's own index. No privileged upstream or vendor secret is reached from this screen, so nothing needs brokering."
+        },
+        {
+          "technique": "outbound-fetch-destination-validation",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/fixture-tone/route.ts:24 The context's one route builds a WAV in memory and makes no outbound fetch, so no destination arrives as data."
+        },
+        {
+          "technique": "opaque-upstream-errors",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/page.tsx:44 The error message shown comes from the app's own local index, not from an upstream behind a broker, and the project deliberately renders real store errors verbatim. That exposes no third-party topology."
+        },
+        {
+          "technique": "aggregate-view-not-base-table",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/page.tsx:43 Kind and facet counts are computed server-side by the port. No browser role queries a hosted store's tables or views directly."
+        },
+        {
+          "technique": "omit-the-column-not-the-value",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_library/DetailView.tsx:143 The client renders a shaped ShownDetail projection the server built. There is no schema a public role can read, so there is no regime-one column grant to judge."
+        },
+        {
+          "technique": "default-deny-plus-defaulted-owner",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_library/Library.tsx:143 Writes go through a Server Action, so the server is the only client of the store. This matches the technique's 'your code is the only client' exclusion; there are no row policies to write."
+        },
+        {
+          "technique": "allowlisted-operator-stream",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_library/Library.tsx:89 The only outcome surface is a toast of an action's error code. No debug or log stream renders requests that carried credentials."
+        }
+      ]
+    },
+    "e9de0daf-ffe2-4687-be68-b0c9a8d8583d/design-tokens": {
+      "context": "kit-design-system-specimens",
+      "subject": "design-tokens",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:36:06.031Z",
+      "worker": "e6ddc843-b4cd-4e2c-a125-0092269943fc",
+      "techniques": [
+        {
+          "technique": "motion-tokens",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/kit/kit.module.css:58 .35s sits between the dur (.3s) and dur-slow (.6s) steps, the in-between value the technique names as a vocabulary violation. Lines 57/59/60 inline .9s/.9s/.4s the same way. On top of that, Motion.tsx:29 clears its state on onAnimationEnd, while the blanket reduced-motion rule (world.css, animation:none) collapses motion to exactly zero, which is the completion-event breakage the technique warns about."
+        },
+        {
+          "technique": "token-enforcement",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/kit/kit.module.css:57 check-tokens walks app/(studio) and lints this file, but tokenLint.ts only polices colour literals, px literals and unknown var() names. A raw duration (and the em PAGE MEASUREs at lines 17/22) passes green even though a duration ladder exists. Primitive-tier references are not policed either."
+        },
+        {
+          "technique": "token-taxonomy",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/kit/kit.module.css:12 source.json tags --cyan, --ink-bright, --hair, --faint, --sp-*, --r-sm and --fs-* as tier 'primitive'. The kit's layout CSS consumes them directly throughout, the skipped-layer anti-pattern, and --cyan is also a hue-named token."
+        },
+        {
+          "technique": "cross-language-token-parity",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/kit/page.tsx:46 The page reads the authority (packages/ui/tokens/source.json, line 43) rather than a hand-listed copy, and surfaces any group it does not draw as an ErrorLine (set membership). Specimens paint through var(--name) (Tokens.tsx:41), so what is shown is the generated stylesheet's resolved value. Motion.tsx uses a completion event rather than a timed wait."
+        },
+        {
+          "technique": "theme-architecture",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/kit/Tokens.tsx:41 There is one binding set (each source.json token has a single value; prefers-color-scheme/data-theme have no hits in app/(studio) or packages/ui). The kit paints roles through var() without asking which theme it is in."
+        }
+      ]
+    },
+    "2836155f-e2b2-4d2f-b13a-d98a29291078/drag-drop": {
+      "context": "audio-arrange-desk",
+      "subject": "drag-drop",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-25",
+      "evaluatedTs": "2026-10-25T23:44:18.783Z",
+      "worker": "281ba410-b709-4d1f-bc4e-c360f5d42158",
+      "techniques": [
+        {
+          "technique": "drag-lifecycle",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:73 Good: SLOP_PX threshold (line 53), pointercancel goes to cancel and never to commit, and a drop on nothing cancels; end() is a single reaper. Missing: the Escape cancel the technique calls non-negotiable, focus/blur loss, an unmount teardown, and a singleton guard (a second start() overwrites live.current while the first element's listeners stay attached)."
+        },
+        {
+          "technique": "drop-affordances",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:58 Only the cell under the pointer lights, and it is never run through checkMove. Valid targets are not announced at drag start, refusing cells look the same as accepting ones, and there is no edge auto-scroll. Present: grab cursor and user-select:none on .card, the .over highlight, and the dashed provisional rim (packages/ui Arrange.module.css)."
+        },
+        {
+          "technique": "payload-and-identity",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/audio/_audio/Arrange.tsx:125 A drop is a statement of identity plus cell ({id, from, to, opId}), never an index. The id is re-resolved at drop time (Arrange.tsx:226 stackOf), and only one write per card can be in flight (line 109)."
+        },
+        {
+          "technique": "ownership-boundaries",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/audio/_audio/Arrange.tsx:133 Request posture: the card is drawn provisional until the store answers. A refusal returns the card and gives the store's reason, and ANSWER_MS turns a missing answer into an explained refusal. lib/sound/arrange.ts moveTake re-runs admitMove against current takes inside the store transaction, which is the authority's door."
+        },
+        {
+          "technique": "keyboard-alternatives",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/_audio/Arrange.tsx:195 ⇧arrow moves the focused card through the same move() path, focus rides with the card (lines 94-97), and the outcome is announced by toast or by a live ErrorLine. But no single-pointer, no-drag control moves a card between stages or groups. moveTake is called only from arrangeActs, and no other writer sets stage/group, so the click path the technique requires (WCAG 2.5.7) is missing."
+        },
+        {
+          "technique": "cross-surface-handoff",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:5 The card drag never leaves the one ArrangeBoard surface. The only drop that crosses a boundary is the OS file drop into RoundTrip, which lives in @gt/ui (it checks dataTransfer types for 'Files' before accepting) and is outside this context's files."
+        }
+      ]
+    },
+    "65532049-3be0-4143-a9c8-0c6919a26841/trust-base": {
+      "context": "library-port",
+      "subject": "trust-base",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-26",
+      "evaluatedTs": "2026-10-26T00:48:25.554Z",
+      "worker": "f1b47c65-64da-4d5a-b564-623dcd4c6811",
+      "techniques": [
+        {
+          "technique": "soundness-argument-names-its-dependencies",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_port/fixtureCorpus.ts:97 Three `as` assertions in this file (lines 66, 76 and 97) override what the checker infers. Each depends on a fact stated somewhere else: a non-empty array at lines 66 and 76, and writes that use only ATTENTION literals at line 97. No site names its dependency, and the depended-on sites (lines 179 and 248) have no note saying the cast relies on them."
+        },
+        {
+          "technique": "leaf-spec-states-what-callers-read",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_port/port.ts:44 No body is exempted from checking. Both sides implement the ServerLibrary contract and the TS checker checks them against it in full, so there is no trusted leaf whose spec could be weaker or stronger than its body."
+        },
+        {
+          "technique": "assumptions-are-build-errors",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_port/port.ts:30 The only environmental fact read here is a runtime side switch with a safe default. No proof or type-level argument depends on a platform fact such as word size or endianness."
+        }
+      ],
+      "registryProposal": "In TypeScript the members this subject would count are mostly `as` assertions, non-null `!` and `any` flow. The golden path names `any` through census-counts-unmarked-members, but no technique states the rule for `as` assertions directly. A short note in soundness-argument-names-its-dependencies saying that a TS `as` narrowing of a wider type is a member, and that a type guard is the removal, would make the subject usable on TS trees."
+    },
+    "3fa7a830-b03c-4d82-87ef-fba8e753d390/agent-memory": {
+      "context": "board-decision-desk",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [
+        {
+          "technique": "memory-governance",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/board/_board/Board.tsx:8 the gate rules on produced packets (verdicts/picks/commits), not on beliefs proposed for an agent's consolidated store.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/(studio)/board/_board/Board.tsx:8 The Board is a human decision desk whose every verdict, pick, undo and commit goes through BoardPort Server Actions over artifact packets; no agent reads its decisions back as memory, so the subject's precondition (a long-lived agent carrying a store forward) is absent; grep over its 17 files for memory|recall|lesson|episod|remember finds only 'in-memory BoardPort' fixture and a VRAM 'memory' wait field.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
+    },
+    "e660bf0f-199c-4cd9-91e1-1a13e318e55f/quality-gates": {
+      "context": "article-human-gate-and-landing",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-2",
+      "techniques": [
+        {
+          "technique": "severity-by-construction",
+          "verdict": "deviation",
+          "evidence": "lib/articles/landing.ts:35 a detected defect (failedFigures) whose only sink is console.error; no exit path, no field on the run, no operator view - by construction it cannot refuse or even be seen."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "realized",
+          "evidence": "lib/articles/humanActs.ts:35 the refusal names the run's actual status and the one status the act requires - an in-tree, actionable remedy, not a bare 'forbidden'."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "realized",
+          "evidence": "lib/articles/humanActs.ts:30 approval names patches by identity and a patch id that matches nothing is refused with a 400, not silently ignored."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "realized",
+          "evidence": "lib/articles/landing.ts:29 landing refuses without the approval record written by the human act; the landing step cannot author its own permission."
+        }
+      ]
+    },
+    "fb6d9704-d95c-46bc-b440-c6599e487cff/quality-gates": {
+      "context": "foundry-strips-and-training",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-2",
+      "techniques": [
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/training/blind.ts:165 1-3 pairs read 'unmeasurable' but 0 pairs falls through to a verdict; the floor that exists for thin evidence is skipped exactly when there is no evidence."
+        },
+        {
+          "technique": "oracle-frozen-during-repair",
+          "verdict": "realized",
+          "evidence": "lib/foundry/strips/author.ts:4 the authoring agent cannot render or grade its own strip; lint and render run in the orchestrator, outside what the fix turn can write."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "realized",
+          "evidence": "lib/foundry/strips/lint.ts:35 each lint rule's name carries its remedy ('use a seeded PRNG'), and lint.ts:9 states every error names its rule."
+        }
+      ]
+    },
+    "a91965bd-84cb-42b6-978f-29ca7258f718/quality-gates": {
+      "context": "part-editor-writing-research",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-2",
+      "techniques": [
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:198 the escape hatch takes no finding identity; two findings on one render are both downgraded by one act."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:190 the gate's enforced share is shown on the surface, so unmeasured constraints are visible and counted rather than read as passes."
+        }
+      ]
+    },
+    "f8036604-75f5-4f7d-898c-734511ac5e86/quality-gates": {
+      "context": "script-composition-and-validation",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-2",
+      "techniques": [
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "deviation",
+          "evidence": "lib/script/versions.ts:147 overrideFrom copies counts and render ids, not finding identities (rule+subject); the override is a blanket over every finding in the staged version."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "realized",
+          "evidence": "lib/script/gate.ts:194 a constraint with no probe gets verdict 'unmeasured', counted separately and kept in the enforced denominator, never a pass."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "realized",
+          "evidence": "lib/script/gate.ts:578 blocked = violations > 0, and app/(studio)/projects/[id]/_part/fixtureScript.ts:181 refuses a plain accept while blocked - the verdict is wired to the act."
+        },
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "realized",
+          "evidence": "lib/script/gate.ts:23 the hand-typed constraint ledger is replaced by a function that reads the render, after a violation slipped past twelve prose self-checks."
+        },
+        {
+          "technique": "unparseable-form-is-a-finding",
+          "verdict": "realized",
+          "evidence": "lib/script/gate.ts:445 spelled-out figures, a form the numeral matcher cannot read, are reported 'unmeasured' instead of silently passing traceability."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "realized",
+          "evidence": "lib/script/gate.ts:647 u-yield-causality is kept as a known-red control the probe table must catch, and gate.ts:103 a probe that cannot compile throws instead of reading as clean."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "realized",
+          "evidence": "lib/script/gate.ts:27 the gate may not report pass for anything it did not itself check, replacing a ledger whose human-typed state the render's author supplied."
+        }
+      ]
+    },
+    "f770abb6-6609-4c9f-959f-a31407dc501f/prompt-assembly": {
+      "context": "domain-run-job-steps",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/still.ts:22 the only 'prompt' in this context is a stored string field on a still take's record; the context is run/job state machines, lane capacity, estimates and zod step-record schemas with no prompt assembler. Grepped packages/domain/src (context files) for prompt, assembl, messages, systemPrompt, claude, llm, model: hits are record fields and model-option keys only. Current map id 1155c1ec-f832-471a-929c-2a16f06cfbb7.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-2",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
+    },
+    "a91965bd-84cb-42b6-978f-29ca7258f718/prompt-assembly": {
+      "context": "part-editor-writing-research",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/page.tsx:38 the context is the part editors, reading and writing through PART_PORT; no editor assembles or sends a model prompt. Grepped page.tsx and _edit/*.tsx for prompt, claude, llm, assembl: no prompt construction found. Current map id 93249c73-ef93-4c55-909a-6f3a67262366.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-2",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
+    },
+    "7226db68-4ca8-41ee-a2f8-3012d05e4acd/prompt-assembly": {
+      "context": "publish-producers",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/publish/publish.ts:21 the context publishes claimed slots to channels through an adapter and collects stats; it makes no model call. Grepped packages/producers/src/publish/*.ts for prompt, claude, llm, model, turn, assembl: the only 'model' hit is metrics.ts:62's vendor stats quote key. Current map id d8928803-1de2-497f-882c-809d029b705b.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-2",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
+    },
+    "f8036604-75f5-4f7d-898c-734511ac5e86/prompt-assembly": {
+      "context": "script-composition-and-validation",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "realized",
+          "evidence": "lib/script/compose.ts:162 composePrompt is the one assembler for the compose family, stacking the standing prompt doc, format, engines, notebook, scope and cards in a fixed order"
+        },
+        {
+          "technique": "context-budgeting",
+          "verdict": "realized",
+          "evidence": "lib/script/compose.ts:102 MAX_COMPOSE_CHARS is a hard ceiling enforced before pricing, and composeTooLarge refuses with the size and the largest field named rather than letting the provider truncate"
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "deviation",
+          "evidence": "lib/script/compose.ts:57 engineSections filters by free-text label inclusion and returns whatever matched, including nothing, with no check that every allowed engine got its section"
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "lib/producers/research.ts:121 the compose turn's send passes the prompt as payload to the meter, whose digest is minted only on the dry path (packages/kernel/src/dryrun.ts:181); a live send records no prompt digest or size"
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "lib/script/compose.ts:186 an unmatched engine section renders as '' rather than failing, defaulting or omitting with notice; contrast compose.ts:181, where absent params get a declared default.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/script/compose.ts:186 engineSections returns an empty string when no ENGINES.md heading matches a qualifying engine's label, so the capability text for the engines the model may use can silently render as nothing - the empty-string render variable-interpolation names as the dishonest outcome, indistinguishable from an unwired input. Current map id 1c2ac174-ba41-4264-b184-6b7aa04507d4.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-2",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
+    },
+    "e660bf0f-199c-4cd9-91e1-1a13e318e55f/hitl-approval": {
+      "context": "article-human-gate-and-landing",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-3",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "realized",
+          "evidence": "lib/articles/humanActs.ts:35 Approve is a guarded transition allowed only from awaiting-approval (reject likewise at humanActs.ts:47). landing.ts:30 refuses to land a run with no recorded approval."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "deviation",
+          "evidence": "lib/articles/types.ts:535 There is no timeout edge out of the gate, so expiry never resolves to deny-or-hold as a recorded outcome."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "unread",
+          "evidence": "lib/articles/humanActs.ts:36 The run-side approval holds only {at, patches}. The actor and revision live in the Board decision log (packages/kernel/src/decision), outside this context, and I did not judge them."
+        }
+      ]
+    },
+    "f770abb6-6609-4c9f-959f-a31407dc501f/hitl-approval": {
+      "context": "domain-run-job-steps",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-3",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "realized",
+          "evidence": "packages/domain/src/run.machine.ts:29 The gate is an enumerated, durable state on the run, left only by ratify, block or send-back."
+        },
+        {
+          "technique": "fail-closed-profile-for-headless",
+          "verdict": "realized",
+          "evidence": "packages/domain/src/job.machine.ts:28 Nothing resumes a crashed job automatically. lane.ts:56 holds a paid lane until an operator has looked, so an unknown outcome defaults to stop rather than proceed."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/run.machine.ts:29 There is no timeout transition out of awaiting_gate."
+        }
+      ]
+    },
+    "fb6d9704-d95c-46bc-b440-c6599e487cff/hitl-approval": {
+      "context": "foundry-strips-and-training",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-3",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "realized",
+          "evidence": "lib/foundry/strips/triage.ts:101 Only an awaiting-triage run is committable."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "realized",
+          "evidence": "lib/foundry/strips/triage.ts:35 A token binds the commit to the preview the operator saw. A verdict or card that moved in between is a 409, so an approval binds to what was approved."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/types.ts:119 There is no expiry status for an unanswered triage. The reject-to-cleanup half is realized: store.ts:18 deletes a rejected card's media on commit."
+        }
+      ]
+    },
+    "a91965bd-84cb-42b6-978f-29ca7258f718/video-assembly": {
+      "context": "part-editor-writing-research",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/editors.tsx:33 `cut: CutEditor` only dispatches to the timeline editor, which lives outside this context; no lane is drawn here"
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Beats.tsx:113 the beat board shows a cue label beside a beat slot, with no clock position, so no marker is placed on a timeline here"
+        }
+      ]
+    },
+    "f6554c57-29ce-484d-90c3-ae89e2f466c0/video-assembly": {
+      "context": "part-port-fixtures",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 `pic?.clock.find((c) => /turn/i.test(c.scene.mood))`: a second copy of the turn rule (fixtureCut.ts:143 uses turnOf, lib/cut/deriveTimeline.ts:314). Both take the first match without surfacing a second candidate, which breaks 'one derivation, all consumers' and the two-match rule."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:62 every lane's clips, scenes, gaps and edits are drawn from one deriveTimeline result over the project's records, so a typed duration has no second writer"
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:207 snap returns the offset to exactly 0 and refuses a clip already on its mark. :123 re-derives status from the current offset (shownStatus), and :199 caps a nudge at 5 s as 're-edit, not sync'."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:142 music gaps are computed (musicGaps) and :145 unplaced material carries its reason. :36 drops v1's hand-typed fallback cut, so a project with no frames is an empty cut, not a borrowed one."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:61 cue in/out times are re-derived by cuesFrom from cue spans stored as scene ids (:183), so a retimed picture moves every cue. Coverage is computed (:89 coveredS) and silent runs are computed (:88 gapRuns)."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:100 the cut is compiled into a deterministic EDL (compileCut and cutDocumentHash), and :259 stamps each animatic export with that document hash"
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "unread",
+          "evidence": "the voice/explainer fixtures (fixtureExplainer.ts) were not read for alignment handling"
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "unread",
+          "evidence": "fixtureMotion.ts was skimmed only to its header"
+        }
+      ]
+    },
+    "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867/voice-io": {
+      "context": "audio-composer-briefs",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "stt-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/batch.ts:165 the only audio meter here is the seconds of music a provider bills; nothing captures or transcribes speech"
+        }
+      ],
+      "registryProposal": "Coverage question: the matcher pairs voice-io to music/SFX generation contexts on vendor vocabulary (ElevenLabs, audio). The subject's own boundary (plumbing, not producing) excludes them, so route by that precondition."
+    },
+    "0335f0dc-2987-4b19-96e1-58941a70c9d5/voice-io": {
+      "context": "foundry-extract-engine",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "tts-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 'synthesis turn' is a style-reasoning call over images; no text is spoken and no audio is produced or captured"
+        }
+      ]
+    },
+    "3f11be96-c51f-4098-8472-341c42362e6d/voice-io": {
+      "context": "sound-hunt-and-measure",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "tts-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/huntRender.ts:81 ElevenLabs is used here as a music meter (seconds of music audio), not as speech synthesis"
+        }
+      ]
+    },
+    "431b1607-266c-4fcb-93e8-b7f91e5a0ebc/test-harness": {
+      "context": "decision-and-gates",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "suite-partitioning",
+          "verdict": "not-applicable",
+          "evidence": "vitest.config.mts:12 the suites that test this module (packages/kernel/test/decision.*.test.ts) live outside the context"
+        }
+      ]
+    },
+    "f770abb6-6609-4c9f-959f-a31407dc501f/test-harness": {
+      "context": "domain-run-job-steps",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "suite-partitioning",
+          "verdict": "not-applicable",
+          "evidence": "vitest.config.mts:12 membership by location; nothing in packages/domain/src declares or runs a suite"
+        }
+      ],
+      "registryProposal": "Coverage question: the matcher pairs test-harness to production modules on shared tokens (gate, step, decision, run). The subject's precondition is harness machinery, so these pairs are lexical resonance, not governance."
+    },
+    "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867/prompt-assembly": {
+      "context": "audio-composer-briefs",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/recipe.ts:1 one pure model shared by composer, kit and server door (the one-assembler habit holds), but there are no prompt layers to own"
+        }
+      ],
+      "registryProposal": "prompt-assembly scopes itself to 'a call to a language model' but gives no ruling on text prompts to non-LLM generative vendors (text-to-music style lines, text-to-image recipes). Here two of its rules carry over cleanly (one assembler per family: recipe.ts:1; truncation counted and surfaced: sunoCut) while the layer/budget/transcript machinery does not. A one-line scope note would stop each judge deciding this differently."
     }
   }
 }
