@@ -1499,8 +1499,8 @@
           "state": "conformant",
           "evidence": "lib/articles/agentSteps.ts:36 Every writer step runs a fresh headless turn in an isolated temp workspace holding only inputs/ and out/. A non-completed outcome or a missing or empty out/ file fails the step by name, and dry runs are answered by a labeled stand-in rather than the seat. The context consumes the transport correctly; the spawn door itself lives in lib/agent and lib/claudeCli.ts.",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "agent-instruction-files",
@@ -1924,7 +1924,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:3 The desk auditions and arranges music takes through one <audio> element. Nothing here captures speech or synthesizes it; this is media playback and music arrangement, not a voice channel. A search of app/(studio)/audio found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone, transcri, utterance or dictat.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "generated-music-acceptance",
@@ -1940,7 +1944,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/audio/return/route.ts:55 A returned Suno file is filed as a kept version, finalized too if a label is given, with no loudness or peak measurement and no rights record. lib/sound/arrange.ts fileReturn, which this calls, checks only the head, the stage and the label.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "media-playback",
@@ -1956,7 +1964,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:89 A card's play control flips to 'playing' the moment it is pressed, before the element answers, and nothing listens for 'waiting' or 'stalled'. A slow or buffering take is drawn as playing until the 'playing' event, an error, or the watchdog arrives, and the user cannot tell buffering from playing.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:122990080db4f70e",
+          "evaluatedRevision": 6
         },
         {
           "subject": "mcp-tools",
@@ -1988,7 +2000,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:73 The card drag's only cancel paths are pointercancel and a release outside any cell: no Escape listener, no blur or visibility handling, and no unmount reaper exist. A mis-grabbed card cannot be put back with Escape (the keymap's Esc binds only 'leave-field' in fields), and a drag that is live when the board unmounts leaves its listeners and state behind.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:31c96c1f832f7148",
+          "evaluatedRevision": 5
         },
         {
           "subject": "talking-avatar",
@@ -2004,7 +2020,11 @@
           "revision": 4,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/audio/page.tsx:1 The /audio route is a music/sfx composing and arranging desk with a single <audio> transport (useTransport.ts) and no face synchronised to a voice; grep for avatar|viseme|lipsync|talking|mouth over app/(studio) returned no hits, so none of the nine techniques has its precondition here.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:72517c45ca8e4198",
+          "evaluatedRevision": 4
         },
         {
           "subject": "video-assembly",
@@ -2414,8 +2434,8 @@
           "state": "not-applicable",
           "evidence": "packages/ui/src/components/audio/hunt.ts:1 These are pure models and boards for auditioning and arranging generated music takes. Nothing here captures or narrates a software demo, and a search of packages/ui/src/components/audio for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
-          "evaluatedRevision": 2
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "structured-output",
@@ -2531,7 +2551,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/audio/_insight/Rubric.tsx:4 The judging surface scores every take 1-10 on fixed per-kind dimensions. It never derives a pass/fail/unmeasured sheet from the take's own brief, so acceptance can drift into taste, which is exactly what the technique guards against.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
@@ -2677,8 +2701,8 @@
           "state": "not-applicable",
           "evidence": "packages/ui/src/components/audio/rubric.ts:1 This context scores generated audio takes and records lessons from them; no demo film is produced. A search of packages/ui/src/components/audio for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
-          "evaluatedRevision": 2
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "scoring-rubrics",
@@ -3125,7 +3149,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/board/_board/Board.tsx:8 The Board is a human decision desk whose every verdict, pick, undo and commit goes through BoardPort Server Actions over artifact packets; no agent reads its decisions back as memory, so the subject's precondition (a long-lived agent carrying a store forward) is absent; grep over its 17 files for memory|recall|lesson|episod|remember finds only 'in-memory BoardPort' fixture and a VRAM 'memory' wait field.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "mcp-tools",
@@ -3189,8 +3217,12 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "app/(studio)/board/_port/fixtureData.ts:200 The Board desk only renders music and sound-effect takes. A case-insensitive substring search of app/(studio)/board for tts, speech, transcript, speaker and intelligibility found no hits, so no synthesized speech reaches this surface to be accepted, scored or listened to.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:944f40c9b53212c0",
+          "evaluatedRevision": 2
         },
         {
           "subject": "module-design",
@@ -3238,7 +3270,11 @@
           "revision": 17,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/(studio)/board/_port/real.ts:200 The commit's terminal verdict and its pending apply-outbox row land in one kernel transaction. The fire-and-forget kick, the bounded sweep on every render and the operator's redrive are the movers for the side effects that come after the terminal write. The decided desk shows the apply's state and v1's error verbatim, read from the store.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:68f09609d1498e88",
+          "evaluatedRevision": 17
         }
       ],
       "governance": "governed"
@@ -4343,7 +4379,11 @@
           "revision": 10,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/floor/_calendar/port.ts:3 The context is the Floor Calendar's fixture/real data seam plus its slot verbs. Its readiness.ts reports which publish channels are ready from env presence and store standing; it is not a conformance verdict about a repository. Searching _calendar/ for conformance, checker, conformant and write-back found nothing.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:58a3b7c0b9efb42c",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",
@@ -4586,7 +4626,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/floor/page.tsx:5 This screen reads the studio's own stores through ports and renders them. Its imports are next, react, @gt/* and repo modules. Searching app/(studio)/floor for gunzip, unzip, pickle, child_process, lockfile, tarfile and advisory found nothing, so no supply-chain crossing is owned here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "agent-memory",
@@ -5218,8 +5262,8 @@
           "state": "not-applicable",
           "evidence": "lib/foundry/verdictLog.ts:163 Context and repository searches found local file logging and SQLite transactions but no consensus write path for Foundry, so the replicated-log precondition does not hold.",
           "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:230a37319e1dd059",
-          "evaluatedRevision": 2,
+          "evaluatedAgainst": "sha256-b2:10473b2ddfd2ef20",
+          "evaluatedRevision": 3,
           "revisionsBehind": 0
         },
         {
@@ -6148,8 +6192,8 @@
           "state": "not-applicable",
           "evidence": "packages/kernel/src/job.ts:194 Context searches found none of the listed engine-contract identifiers, and these persisted vendor jobs belong to the standard's explicitly excluded durable-job coordination scope.",
           "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "revisionsBehind": 0
         },
         {
@@ -6353,8 +6397,8 @@
           "state": "not-applicable",
           "evidence": "packages/kernel/py/job.py:7 These modules are the Python side of the SQLite kernel protocols (job queue, lease, ledger, meter, styles). Here 'languages' means Python and Node, not human locales. A grep of packages/kernel/py for translation, i18n, hreflang and pseudo-loc found nothing, so this context has no translated content, catalog or pipeline for the subject to govern.",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
-          "evaluatedRevision": 12
+          "evaluatedAgainst": "sha256-b2:7a5b5afa04e7f7ad",
+          "evaluatedRevision": 13
         },
         {
           "subject": "supply-chain",
@@ -6409,8 +6453,8 @@
           "state": "not-applicable",
           "evidence": "packages/kernel/py/job.py:85 Context searches found none of the listed engine-contract identifiers, and the queue contains durable SQLite records, which the standard explicitly excludes.",
           "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "revisionsBehind": 0
         },
         {
@@ -6675,8 +6719,8 @@
           "state": "not-applicable",
           "evidence": "packages/kernel/src/store.ts:234 Context and repository searches found direct SQLite transactions and an audit event table but no implemented consensus adapter, so replicated-log transaction rules are not applicable.",
           "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:230a37319e1dd059",
-          "evaluatedRevision": 2,
+          "evaluatedAgainst": "sha256-b2:10473b2ddfd2ef20",
+          "evaluatedRevision": 3,
           "revisionsBehind": 0
         }
       ],
@@ -6715,7 +6759,11 @@
           "revision": 6,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/(studio)/kit/Spec.tsx:14 The kit's in-page index and its section headings both derive from the one SECTIONS list, and the index marks position with aria-current=\"location\". This is page-owned depth below the shell, which is what app-shell asks of anything beyond the shell's level; the shell-only techniques do not apply to a single route page.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:b55c5172e3d9fac0",
+          "evaluatedRevision": 8
         },
         {
           "subject": "design-tokens",
@@ -6731,7 +6779,11 @@
           "revision": 7,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/kit/kit.module.css:58 The kit's motion specimens hard-code .9s, .35s and .4s, none of which is on the ladder (dur-fast .15s, dur .3s, dur-slow .6s), and the file that presents the design system as shipped also styles its own layout from primitive-tier tokens, so the specimen page itself drifts from the vocabulary it displays.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:165125b7a54d0de3",
+          "evaluatedRevision": 7
         },
         {
           "subject": "eval-harness",
@@ -6763,7 +6815,11 @@
           "revision": 4,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/kit/sections.ts:1 The /kit page is a design-system specimen index (tokens, signal, controls, structure, composition, contract) with no face, rig, viseme or companion presence; grep of app/(studio) and packages/ui/src for avatar|viseme|lipsync|talking|mouth returned no hits, so the subject's precondition (a face that moves with a voice) does not hold.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:72517c45ca8e4198",
+          "evaluatedRevision": 4
         },
         {
           "subject": "docs-sync",
@@ -6779,7 +6835,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/(studio)/kit/page.tsx:52 /kit is the design system's documentation surface, and it is derived from its authorities (source.json, the STATUS table, the component tree) rather than hand-listed. Uncovered token groups show on the page as an error, and a live probe walks both populations with floors.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         },
         {
           "subject": "mcp-tools",
@@ -6811,7 +6871,11 @@
           "revision": 16,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/kit/page.tsx:4 The /kit route renders static specimens and token read-backs from source.json. A grep of app/(studio)/kit for mutex, inflight/in-flight, idempot, singleflight and semaphore found nothing. Every busy/pending prop it passes is a literal false/null or inert, and the only 'lock' hits are a CSS animation name and a glyph name, so the route has no operation that can be invoked twice and nothing to guard.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
+          "evaluatedRevision": 16
         },
         {
           "subject": "agent-runtime-assembly",
@@ -6859,7 +6923,11 @@
           "revision": 3,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/kit/KitNav.tsx:3 /kit is a reference catalogue of design-system specimens with a scroll-spy contents panel. It is read by a developer who already wants a specific part, which is the 'Documents' and 'reader with a task' case every technique excludes. A grep of app/(studio)/kit found no scroll-driven progression (useScroll, scrollY, onScroll, animation-timeline and data-station all returned nothing).",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:e93abcf9f70a6c36",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"
@@ -6913,7 +6981,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/kit/ProduceKit.tsx:3 The kit renders @gt/ui specimens of studio screens from fixed fixture data, and its palettes and 'photo' strings describe still styles, not a data-video frame; a search of app/(studio)/kit for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "docs-sync",
@@ -6993,7 +7065,11 @@
           "revision": 2,
           "changedAt": "2026-09-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/kit/AudioKit.tsx:3 The /kit cards render @gt/ui components over literal fixture data as design-system specimens and produce no film. A search of app/(studio)/kit for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "generated-speech-acceptance",
@@ -7009,8 +7085,12 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "app/(studio)/kit/AudioKit.tsx:156 The kit specimens show music and sfx engine operations and takes, with no speech operation. A case-insensitive substring search of app/(studio)/kit for tts, speech, transcript, speaker and intelligibility found no hits, so the screen has no speech to accept.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:944f40c9b53212c0",
+          "evaluatedRevision": 2
         },
         {
           "subject": "module-design",
@@ -7096,8 +7176,8 @@
           "state": "not-applicable",
           "evidence": "app/_landing/cosmos/engine/layout.ts:353 The cosmos engine paints paper and raster layers. Its one locale touch hard-pins number formatting to en-US. It holds no translated strings, catalog or serving path. A grep for translation, i18n, hreflang and pseudo-loc found nothing; the 'translate' hits are CSS/canvas transforms.",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
-          "evaluatedRevision": 12
+          "evaluatedAgainst": "sha256-b2:7a5b5afa04e7f7ad",
+          "evaluatedRevision": 13
         },
         {
           "subject": "repository-landing-document",
@@ -7156,8 +7236,8 @@
           "state": "not-applicable",
           "evidence": "app/_landing/cosmos/engine/raster.ts:89 Context searches found none of the listed engine-contract identifiers, and raster execution uses a browser Worker without implementing a language-engine host contract.",
           "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "revisionsBehind": 0
         },
         {
@@ -7233,8 +7313,8 @@
           "state": "not-applicable",
           "evidence": "app/_landing/cosmos/engine/raster.ts:89 The raster service runs repository-owned TypeScript through browser APIs, and context and repository searches found no WebAssembly, PhantomData, or thread_local constructs indicating the foreign binding obligations covered by this subject.",
           "evaluatedAt": "2026-10-22",
-          "evaluatedAgainst": "sha256-b2:823cd55ac89d000b",
-          "evaluatedRevision": 2
+          "evaluatedAgainst": "sha256-b2:cf656e76f4ec68fa",
+          "evaluatedRevision": 3
         },
         {
           "subject": "data-video-art-direction",
@@ -7516,8 +7596,8 @@
           "state": "deviation",
           "evidence": "app/_landing/cosmos/engine/nav.ts:196 Cosmos implements an internal multi-level navigation and back stack within a browser tab without integrating into the browser's history or address, causing the browser Back gesture to leave the application rather than traverse sections.",
           "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:62a9a7fc993ea8b5",
-          "evaluatedRevision": 6,
+          "evaluatedAgainst": "sha256-b2:b55c5172e3d9fac0",
+          "evaluatedRevision": 8,
           "revisionsBehind": 0
         },
         {
@@ -7676,7 +7756,11 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:12 Agents get the ledger through a plain HTTP JSONL route (app/api/ledger, outside this context) that shares the read module, not through an MCP server, and a grep of app/(studio)/ledger for mcp, modelcontextprotocol, tools/call, inputSchema and jsonrpc found nothing, so no tool-protocol surface exists here to judge.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34
         },
         {
           "subject": "audit-logging",
@@ -7692,7 +7776,11 @@
           "revision": 10,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:122 The /ledger read model filters on indexed actor/type/subject/time columns, pages by keyset, and labels a partial text scan as partial, so a capped or filtered result never reads as the whole population.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11
         },
         {
           "subject": "table",
@@ -7708,7 +7796,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:106 The event list has role=grid, but focus stays on the scroll container: there is no aria-activedescendant and no cell ever takes focus, so a screen-reader user in application mode does not hear the selected row that J/K or ↑/↓ moves to.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "data-access",
@@ -7724,7 +7816,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:182 readStrip calls countEvents once per day over 84 days. Each call runs a total, a head and two statements for each of seven facets (16 statements in its own read transaction), so one render issues about 1,344 count statements to draw one per-day actor-kind bar series that a single grouped read could answer.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "voice-io",
@@ -7772,7 +7868,11 @@
           "revision": 15,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:112 The detail paints from the list row the user clicked, but the subject-history count is one the row never carried, and until the related read settles it shows a confident 1 (no other acts) instead of unknown. This is the 'borrowed list row renders zero for a count it never carried' failure named by sibling-entry-warmth.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:20824426732ffb6a",
+          "evaluatedRevision": 15
         },
         {
           "subject": "agent-memory",
@@ -7804,7 +7904,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/ledger/page.tsx:1 The ledger is an append-only event list with facets and a per-day strip, so it draws no data-video frame; a search of app/(studio)/ledger for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing (its one 'race' hit is an async-race-guard comment).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "settings",
@@ -7820,7 +7924,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/filter.ts:9 The Ledger screen keeps its only user-chosen state (facets, query, order, view) in URL search params as transient view filters and reads the kernel event store, so there is no settings store here; a grep of app/(studio)/ledger for setting, preference, localStorage and getSetting found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         }
       ],
       "governance": "governed"
@@ -8081,8 +8189,8 @@
           "state": "deviation",
           "evidence": "lib/ledger/v1/sources/sound.ts:68 Passing nullable effective timestamps into f.recorded causes missing times to default to the sync clock, misattributing historical decisions to the time of projection.",
           "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
-          "evaluatedRevision": 10,
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11,
           "revisionsBehind": 0
         },
         {
@@ -8273,7 +8381,11 @@
           "revision": 3,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/library/page.tsx:42 The Library reads its index only on the server, through the server-only port, and the client island gets Server Action references and same-origin media URLs, so the browser holds no credential for any dependency. A case-insensitive search of app/(studio)/library for NEXT_PUBLIC, apiKey/api_key, authorization, createClient, supabase, anon_key, signedUrl and x-api-key found no hits.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:8c4e4cc37445b46c",
+          "evaluatedRevision": 4
         },
         {
           "subject": "mcp-tools",
@@ -8353,7 +8465,11 @@
           "revision": 3,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/library/page.tsx:7 'Browser' here means a person browsing an asset library in a Next.js route. Nothing gives an agent a browser, so the subject does not govern this context. A search of app/(studio)/library for playwright, chromium, connectOverCDP, ariaSnapshot, mcp and tunnel found nothing.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:a5e059a866a49108",
+          "evaluatedRevision": 5
         },
         {
           "subject": "optional-dependency-degradation",
@@ -8469,7 +8585,11 @@
           "revision": 4,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/library/_port/fixtureData.ts:97 The Library's fixture declares its own project roster (prj-glass-harbor, style glass-harbor), which disagrees with the Projects fixture's roster (glass-harbor-trailer, style glass-harbor-noir), even though the port's header says one switch moves the whole studio into one fixture universe; so 'Use in project' on the fixture side names a project that /projects in the same lane does not have.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:8b6581bd5537bf1b",
+          "evaluatedRevision": 5
         },
         {
           "subject": "mcp-tools",
@@ -8517,7 +8637,11 @@
           "revision": 9,
           "changedAt": "2026-09-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/library/_port/present.ts:52 A cover with an unknown mime is emitted as ?type=image/jpeg even though blobRoute (lib/library/media.ts:9) accepts mime null and serves an untyped URL. The presenter invents a value the store left unknown, and every tile consumer trusts it.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:c6563834f502429c",
+          "evaluatedRevision": 9
         },
         {
           "subject": "supply-chain",
@@ -8549,7 +8673,11 @@
           "revision": 17,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/library/_port/handoff.ts:16 When the kernel store cannot be opened, the style handoff passes the id through and reaches no door. A store outage then shows up downstream as the atelier's 404, and nobody is told the store was down.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:d811928687fd4faf",
+          "evaluatedRevision": 17
         },
         {
           "subject": "trust-base",
@@ -8565,7 +8693,11 @@
           "revision": 5,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/library/_port/fixtureCorpus.ts:97 This hand-written type assertion narrows a plain string facet to the Attention union. It is sound only because lines 179 and 248 of the same file write the literals \"missing\" and \"unreadable\", which match ATTENTION in packages/domain/src/library.ts:38, and neither the cast nor those writes say so, so an edit that adds a third attention value would keep compiling while the row carries a value the type rules out.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:0fd52192b37a88e4",
+          "evaluatedRevision": 6
         },
         {
           "subject": "data-video-art-direction",
@@ -9211,7 +9343,11 @@
           "revision": 19,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:52 The poster preview is documented as 'the poster as the export will draw it', but it renders with a fixed seed of 7, the default effect params, the low band as its high band and no look. The export (lib/sound/mv/render.ts:223-227) uses seedFor(motion), the motion-scaled bloom, the look's hue and its scene, so the cheap rung isn't a stand-in for the render it gates.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f548f222df2e692",
+          "evaluatedRevision": 20
         },
         {
           "subject": "prompt-assembly",
@@ -9275,7 +9411,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:3 These are media editor screens (cut, frames, score, voice) with no instruction file, skill or agent spawn; searching the same app/(studio)/projects/[id]/[part]/ tree for CLAUDE.md, AGENTS.md, SKILL.md and 'instruction' found 0 hits, so the subject's precondition does not hold here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "production-pipeline-phasing",
@@ -9291,7 +9431,11 @@
           "revision": 4,
           "changedAt": "2026-09-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:98 The cut draws every clip on the score's one clock with ok, drift or missing as a first-class state, so a hole or drift has a timeline address instead of being papered over.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
+          "evaluatedRevision": 5
         },
         {
           "subject": "media-playback",
@@ -9307,7 +9451,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:246 The cut/score transport writes the playhead into React state on every animation frame, so the whole Cut and Score editors (Monitor, every CutClock lane and block, the timecode) re-render at frame rate for the length of playback. This is the ancestral defect playback-clock exists to prevent, even though the hook's own comment says it is 'outside React's render'.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:122990080db4f70e",
+          "evaluatedRevision": 6
         },
         {
           "subject": "data-video-art-direction",
@@ -9323,7 +9471,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Strips.tsx:3 The only chart-like surface in these editors is the narrated explainer's strips grid, where voice lines play under each card and the screen only reviews cards already drawn; a search of the _edit directory for 'bar race', 'statreel', 'champion', 'leaderboard', 'data-video' and 'data video' found nothing, so these review screens never design a narration-free data-video frame.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "frame-direction",
@@ -9355,7 +9507,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx:75 A section revision of a music take is sent with only a section index and free text. The surface declares no adherence or seam design per note and does not flag the anchor (opening) section, so a lyric fix and a 'make it darker' departure reach the engine with the same continuity setting.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         }
       ],
       "governance": "governed"
@@ -9441,7 +9597,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:3 These files are a React editor island and its sub-editors with no agent-instruction asset, harness file or agent launch; searching app/(studio)/projects/[id]/[part]/ for CLAUDE.md, AGENTS.md, SKILL.md and 'instruction' found 0 hits, so the subject's precondition does not hold here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "voice-io",
@@ -9505,7 +9665,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:77 The nearest thing to an article here is ArticleEditor, and it shows each section as a digest (heading, word count, one lead paragraph) inside a PartWorkspace whose rail holds the run's steps, not a contents panel. No heading gets an id attribute, nothing links to an anchor, and nothing tracks scroll or pins against fixed chrome. Searching app/(studio)/projects for IntersectionObserver, scroll-margin, rootMargin and slugify found nothing. The only scroll calls are scrollIntoView({block:\"nearest\"}) on a selected item when the keyboard walks to it (Article.tsx:30, Trailer.tsx:110, CutClock.tsx:126). That is list selection, not jumping to an anchor.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:ee082e781491937e",
+          "evaluatedRevision": 3
         },
         {
           "subject": "native-document-format",
@@ -9521,7 +9685,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/real.ts:72 Searches for nativeDocument and relink found no matches in the context or repository, and tracing the editors' writes established transactional database records rather than a published native document file contract.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:1104f28404244275",
+          "evaluatedRevision": 3
         },
         {
           "subject": "platform-format-adaptation",
@@ -9537,7 +9705,11 @@
           "revision": 3,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:260 The script review surface displays generic gate findings and permits candidate adoption without exposing the four derived-short checks or a named single-anchor contract.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:14fcb9b8c64f1b8b",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"
@@ -9623,7 +9795,11 @@
           "revision": 10,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureFramesView.ts:164 Context searches found no conformance, proofStamp or ruleRegistry matches, while repository searches located checking elsewhere; these modules validate media content rather than assess repositories against a declared standard.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:58a3b7c0b9efb42c",
+          "evaluatedRevision": 10
         },
         {
           "subject": "data-video-art-direction",
@@ -9789,7 +9965,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/contract.ts:20 Here a projectId addresses the parts of one media composition for the part editors, not a managed codebase in a portfolio; searching app/(studio)/projects and packages/domain/src for portfolio, unwatched, watcher and 'working set' found nothing, so the subject's precondition (a manager holding N software projects) does not hold.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "translation-pipeline-topology",
@@ -9805,7 +9985,11 @@
           "revision": 12,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/contract.ts:1 The part port is an internal operator studio surface (load/op/undo/act over kernel records). It has no locale catalog or translation pipeline. A grep of app/(studio)/projects for translation, i18n, hreflang and pseudo-loc found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7a5b5afa04e7f7ad",
+          "evaluatedRevision": 13
         },
         {
           "subject": "release-pipeline",
@@ -9821,7 +10005,11 @@
           "revision": 11,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/_part/wire.ts:3 This context is an in-app server seam whose only readers are the client islands built and deployed alongside it as Server Actions, so it ships no versioned, distributable artifact to machines it cannot reach; searching its files for changelog, @deprecated, semver and updater found nothing, and every 'version' hit is the script editor's draft Version (lib/script/versions), not a release version.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:faf052699c35ced4",
+          "evaluatedRevision": 11
         },
         {
           "subject": "voice-io",
@@ -9885,7 +10073,11 @@
           "revision": 9,
           "changedAt": "2026-09-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/researchView.ts:28 A research card whose kind is outside the known set is quietly turned into a 'fact' in the emitted view, so the invalid kind becomes a valid one and no observable records that the coercion happened.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:c6563834f502429c",
+          "evaluatedRevision": 9
         }
       ],
       "governance": "governed"
@@ -9993,8 +10185,8 @@
           "state": "not-applicable",
           "evidence": "packages/ui/src/components/part/part.ts:1 These are workspace and Board-desk UI rules (verdicts, tabs, clocks, keyboard walk) for a film part. Nothing here drives or records the system as a demo, and a search of packages/ui/src/components/part and packages/ui/src/components/desk for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
-          "evaluatedRevision": 2
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "data-access",
@@ -10094,7 +10286,11 @@
           "revision": 7,
           "changedAt": "2026-09-18",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:8 Here 'plan' is a project's production plan: the parts, models, units and estimated cost of a launch, versioned by revision. It is not a tenant's paid tier. Searching _plan/ and import/ for entitlement, tier, paywall, billing and stripe found nothing, so there is no tier model, capability gate or lifecycle event to judge.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:66961f93b3ce02ba",
+          "evaluatedRevision": 8
         },
         {
           "subject": "mcp-tools",
@@ -10142,7 +10338,11 @@
           "revision": 1,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:235 The review gate only lets the user commit every importable project and shelf item from every source at once. There is no per-entity opt-in and no collision choice (an existing project is silently set to 'skip'), and confirm commits source by source, so a failure partway through can leave an import half-applied.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:4981ff0ea8a59c1b",
+          "evaluatedRevision": 1
         },
         {
           "subject": "multi-project",
@@ -10158,7 +10358,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/import/page.tsx:2 Import moves v1 browser compositions into kernel Projects, and the plan view prices one composition before launch; neither admits or manages a codebase in a portfolio, and searching these directories for portfolio, unwatched, watcher and 'working set' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "module-design",
@@ -10336,8 +10540,8 @@
           "state": "not-applicable",
           "evidence": "packages/ui/src/components/produce/Unpriced.tsx:15 The only plan vocabulary in this context is a vendor's credit or subscription plan that the operator pays for, shown as an unpriced figure. The product sells no tier to anyone. Searching produce/ for entitlement, tier, paywall, billing and stripe found nothing, so the receipt and composer price vendor jobs under cost-metering, not plan entitlements.",
           "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:58f21c0561a86e45",
-          "evaluatedRevision": 7
+          "evaluatedAgainst": "sha256-b2:66961f93b3ce02ba",
+          "evaluatedRevision": 8
         },
         {
           "subject": "agent-runtime-assembly",
@@ -10658,7 +10862,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/page.tsx:1 The Projects index lists media compositions (recipe plans launched as producer jobs), not a portfolio of managed repositories; a search of the context's directories for portfolio, unwatched, watcher and 'working set' returned no hits, so walls, watchers, tabs-as-working-set and admission doors have nothing to govern here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "mcp-tools",
@@ -10706,7 +10914,11 @@
           "revision": 4,
           "changedAt": "2026-09-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/(studio)/projects/_port/fixtureRead.ts:115 A project's status word is the worst of its parts' states (failed/blocked outranks the weir, which outranks running), so one stuck part makes a blocked project.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
+          "evaluatedRevision": 5
         },
         {
           "subject": "translation-pipeline-topology",
@@ -10722,7 +10934,11 @@
           "revision": 12,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/_port/contract.ts:1 The projects port serves single-language studio screens: fixture or real reads, launches and reroutes. A grep of app/(studio)/projects for translation, i18n, hreflang and pseudo-loc found nothing, so there is no translation topology to judge.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7a5b5afa04e7f7ad",
+          "evaluatedRevision": 13
         },
         {
           "subject": "image-prompt-composition",
@@ -10754,7 +10970,11 @@
           "revision": 4,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/_port/fixtureData.ts:155 The Projects fixture seeds its own project and style ids (glass-harbor-trailer / glass-harbor-noir) separately from the Library fixture's roster (prj-glass-harbor / glass-harbor), so the two screens of one fixture universe disagree about the same entities.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:8b6581bd5537bf1b",
+          "evaluatedRevision": 5
         },
         {
           "subject": "docs-sync",
@@ -11204,8 +11424,8 @@
           "state": "not-applicable",
           "evidence": "packages/ui/src/components/runs/lanes.ts:16 A case-insensitive search of packages/ui/src/components/review and runs for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. These are client UI components and pure models over @gt/domain types, with no process or agent transport.",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "eval-harness",
@@ -11451,8 +11671,8 @@
           "state": "deviation",
           "evidence": "packages/kernel/src/slots/schema.ts:78 The publications and metric_snapshots ledgers are append-only with no stated horizon or reaper anywhere (the search over the kernel's slots and records modules, lib/publish and workers found none), so metric readings written on a timer grow without bound, against retention-and-partitioning.",
           "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
-          "evaluatedRevision": 10
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11
         },
         {
           "subject": "subprocess-lifecycle",
@@ -11471,8 +11691,8 @@
           "state": "not-applicable",
           "evidence": "packages/kernel/src/records/schedule.ts:4 The context's 'slots' are pure lane-schedule computations and calendar publishing records over the kernel store, and a case-insensitive grep of packages/kernel/src/records and packages/kernel/src/slots for child_process, spawn, execFile, SIGTERM and SIGKILL found nothing, so no child process is spawned, supervised or reaped here and the subject's precondition does not hold.",
           "evaluatedAt": "2026-10-26",
-          "evaluatedAgainst": "sha256-b2:bad19520d32fbc43",
-          "evaluatedRevision": 15
+          "evaluatedAgainst": "sha256-b2:204503a49b5c115b",
+          "evaluatedRevision": 16
         },
         {
           "subject": "agent-runtime-assembly",
@@ -11590,7 +11810,11 @@
           "revision": 4,
           "changedAt": "2026-09-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/(studio)/projects/runs/_runs/Acts.tsx:51 Runs reads kernel job records that outlive any screen and treats interrupted as its own honest state with its own act, so a reload or crash is never blurred into done or gone.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
+          "evaluatedRevision": 5
         },
         {
           "subject": "hitl-approval",
@@ -11622,7 +11846,11 @@
           "revision": 3,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/runs/_runs/load.ts:99 Every Runs render reads the whole kernel jobs table through a list verb that takes no position and no limit (packages/kernel/src/job.ts:265 runs `SELECT record FROM jobs ... ORDER BY ord, n` with no LIMIT), then cuts it to the last KERNEL_CAP in memory. Server memory per render therefore grows with every job ever enqueued, which is the unbounded list this subject exists to prevent.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:4ec15f52e99e1903",
+          "evaluatedRevision": 3
         },
         {
           "subject": "feed",
@@ -11638,7 +11866,11 @@
           "revision": 4,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:3 Runs is a horizontal day-line: jobs are bars placed by start and end on resource-lane rows, with zoom and a centred NOW, not a newest-first list of occurrences read top-down. A case-insensitive grep of app/(studio)/projects/runs for unseen, lastSeen, markRead, prepend, readPosition, 'new since', 'newest first' and cluster found nothing, so the feed contract (catch-up order, prepend, read anchor, clustering, retention) has no surface here to govern.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:fdaa24ca3f5177d9",
+          "evaluatedRevision": 4
         },
         {
           "subject": "agent-instruction-files",
@@ -11819,8 +12051,8 @@
           "state": "not-applicable",
           "evidence": "lib/script/types.ts:1 lib/script writes the narration for generated factual films from notebook cards. It never drives or records the software as a demo, and a search of lib/script for recorder, screencast, playwright, recordVideo and 'demo film' found nothing, so the subject's precondition (a demo film of a working software system) does not hold here.",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
-          "evaluatedRevision": 2
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "review-iteration-loops",
@@ -12279,8 +12511,8 @@
           "state": "not-applicable",
           "evidence": "packages/kernel/src/spend/core.ts:96 Context searches found no entitlement, tierId, or subscriptionId references, and the inspected code enforces vendor-spend ceilings, which the standard explicitly excludes from entitlement gating.",
           "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:58f21c0561a86e45",
-          "evaluatedRevision": 7,
+          "evaluatedAgainst": "sha256-b2:66961f93b3ce02ba",
+          "evaluatedRevision": 8,
           "revisionsBehind": 0
         },
         {
@@ -12351,7 +12583,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/_shell/facts.ts:1 The shell renders header facts, toasts, a bell and a live feed from kernel events. A search of app/(studio)/_shell for prompt, lib/text, reason(, schemaInstruction, generateContent and claude/gemini found nothing, so no model prompt is assembled here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "mcp-tools",
@@ -12367,7 +12603,11 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/_shell/nav.ts:1 The shell is React chrome (nav registry, header facts, toasts, bell, live re-read) with no tool server, client, catalog or tool-result handling; a case-insensitive grep of app/(studio)/_shell for mcp, modelcontextprotocol, tools/call, inputSchema, jsonrpc and tool_use returned no hits, so the MCP tool-protocol precondition does not hold.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34
         },
         {
           "subject": "app-shell",
@@ -12383,7 +12623,11 @@
           "revision": 6,
           "changedAt": "2026-09-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/(studio)/_shell/HeaderBar.tsx:37 The studio shell derives its active navigation state, attention badges, and session-hosted services from owned state and URL routing across a persistent frame.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:b55c5172e3d9fac0",
+          "evaluatedRevision": 8
         },
         {
           "subject": "fleet-orchestration",
@@ -12399,7 +12643,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/_shell/bell.ts:13 The bell keeps its own status enum (JobStatus, four hand-written literals in lib/jobs.tsx) and maps into it with a Partial record. That is the monitoring-layer parallel enum plus mapping function the technique names, and a state the job machine gains later is silently left out of the bell's \"what ended\" instead of failing to compile.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "voice-io",
@@ -12415,7 +12663,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/_shell/toast.ts:1 The shell (header, nav, toasts, job bell, live re-read feed) has no audio capture or speech output. A search of app/(studio)/_shell found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone, transcri, utterance or dictat, so no voice-io technique has a construct to govern.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "native-shell-integration",
@@ -12431,7 +12683,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/_shell/liveFeed.ts:51 The shell's one long-lived stream is a browser EventSource opened by the page itself, and the shell's files contain no native host (a search for electron, tauri, ipcRenderer and webview found 0 hits in app/(studio)/_shell), so the subject's precondition does not hold here: there is no native process holding capabilities the page cannot reach.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:9034ad02704d9c88",
+          "evaluatedRevision": 5
         },
         {
           "subject": "test-harness",
@@ -12479,7 +12735,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/_shell/live.ts:23 The shell is page chrome: it reads kernel events and v1 live work once per request, runs a toast queue and makes a Firebase cookie handoff. A search of app/(studio)/_shell for runAgent, cliSeam, plugin, mcp and registerHook (and for spawn, child_process and prompt) found nothing, so no model or tool call is assembled here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "concurrent-vcs",
@@ -12495,7 +12755,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/_shell/session.ts:29 The shell's only 'session' is a Firebase auth-cookie bridge posted to /api/session; a recursive search of app/(studio)/_shell for worktree, stash, rev-parse, pre-commit and GIT_INDEX_FILE found nothing, so this context does no VCS work and no shared-checkout concern reaches it.",
+          "evaluatedAt": "2026-10-25",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         }
       ],
       "governance": "governed"
@@ -12533,7 +12797,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/(studio)/library/style/[id]/_atelier/Atelier.tsx:203 The atelier offers lock only when the server-side gate admits it, offers duplicate as the way to change a look, refuses to send a rejection without a reason, and shows the send count apart from the window.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "image-prompt-composition",
@@ -12581,7 +12849,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/library/style/[id]/page.tsx:8 A studio detail route built on a data port is an application screen, not a repository landing document; a search of app/(studio)/library/style for README, shields, badge, README.md and markdown found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
+          "evaluatedRevision": 4
         },
         {
           "subject": "mcp-tools",
@@ -12925,8 +13197,8 @@
           "state": "not-applicable",
           "evidence": "lib/sound/suno/propose.ts:18 A case-insensitive search of lib/sound/suno for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. Proposals reach a model only through the text router's contract, and generation goes through a browser driver, so this context spawns no agent CLI.",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "generative-provider-routing",
@@ -13179,8 +13451,8 @@
           "state": "deviation",
           "evidence": "lib/text/providers/claudeCliRetrieve.ts:181 Both Claude CLI rungs collapse unparseable or result-less output into an opaque 'failed' with no bounded prefix of the raw stdout, accumulate stdout without a byte cap, and accept an empty `result` as a successful answer, so a login prompt, rate-limit notice or empty envelope all reach the router as the same undiagnosable failure or as success.",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         }
       ],
       "governance": "governed"
@@ -13550,8 +13822,8 @@
           "state": "deviation",
           "evidence": "packages/ui/src/components/toast/Toast.tsx:22 The region is always mounted, but its text is written straight into it with no node keyed to each announcement, so the same receipt shown twice in a row (e.g. a retried act that fails the same way) makes no DOM change and is not spoken the second time; a correct shell scheduler still could not force a remount through this primitive.",
           "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:5e30485ee0c7c123",
-          "evaluatedRevision": 7
+          "evaluatedAgainst": "sha256-b2:d839f62eac6007da",
+          "evaluatedRevision": 8
         },
         {
           "subject": "settings",
@@ -13660,8 +13932,8 @@
           "state": "deviation",
           "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:26 Providing only a single formatted time string property prevents UI consumers from inspecting and contrasting effective time against recorded time.",
           "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
-          "evaluatedRevision": 10,
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11,
           "revisionsBehind": 0
         },
         {
@@ -13939,8 +14211,8 @@
           "state": "deviation",
           "evidence": "packages/ui/src/components/hint/Hint.module.css:6 A closed Hint hides its mounted tooltip through opacity and pointer events while leaving the tooltip exposed to accessibility-tree navigation.",
           "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:5e30485ee0c7c123",
-          "evaluatedRevision": 7,
+          "evaluatedAgainst": "sha256-b2:d839f62eac6007da",
+          "evaluatedRevision": 8,
           "revisionsBehind": 0
         },
         {
@@ -14050,8 +14322,8 @@
           "state": "deviation",
           "evidence": "packages/ui/src/components/tally/Tally.tsx:28 Tally renders numbers directly or interpolates them into ratios, bypassing the required numeric primitive and its locale policy.",
           "evaluatedAt": "2026-10-22",
-          "evaluatedAgainst": "sha256-b2:bea7b30fd48d528d",
-          "evaluatedRevision": 5
+          "evaluatedAgainst": "sha256-b2:6a9ab99285e2cac0",
+          "evaluatedRevision": 6
         },
         {
           "subject": "public-claim-provenance",
@@ -14067,7 +14339,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/layout.tsx:1 These @gt/ui state/origin primitives render only inside the authenticated (studio) operator shell. The public landing (app/page.tsx renders only Cosmos; app/_landing imports none of Tally/SourceTag/StackBar/PipRow/StatusPill/Provenance/ChannelBadge), and a case-insensitive grep of the context's eleven component directories for roadmap|marketing|landing|public|seed found zero hits, so no outward claim surface with an unverifying reader exists here.",
+          "evaluatedAt": "2026-10-26",
+          "evaluatedAgainst": "sha256-b2:60eb54ef03f44a69",
+          "evaluatedRevision": 3
         },
         {
           "subject": "fleet-orchestration",
@@ -14154,8 +14430,8 @@
           "state": "not-applicable",
           "evidence": "packages/ui/src/components/provenance/Provenance.tsx:32 Searches found none of the listed credential terms in the eleven component directories, whose implementations render supplied values and callbacks without owning a credential, database grant, or upstream request.",
           "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:d3eef10e9ed8459f",
-          "evaluatedRevision": 3,
+          "evaluatedAgainst": "sha256-b2:8c4e4cc37445b46c",
+          "evaluatedRevision": 4,
           "revisionsBehind": 0
         },
         {
@@ -14232,8 +14508,8 @@
           "state": "not-applicable",
           "evidence": "lib/import/archive.ts:9 This context converts v1 data to and from the NDJSON archive and the kernel store, with no agent and no carried-forward memory; searching lib/import found no hit for recall, consolidat, belief, distill or memories (the one 'memory' hit is an out-of-memory comment in archive.ts).",
           "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
-          "evaluatedRevision": 51
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "supply-chain",
@@ -14325,8 +14601,8 @@
           "state": "not-applicable",
           "evidence": "lib/import/serve.ts:17 This context implements application data migration through HTTP and CLI entry points, and searches of its files and the repository found no embeddable, registrar, or WinterCG constructs requiring standards-layered guest-runtime design.",
           "evaluatedAt": "2026-10-22",
-          "evaluatedAgainst": "sha256-b2:9cfe5aba03ea1a19",
-          "evaluatedRevision": 1
+          "evaluatedAgainst": "sha256-b2:3cf694924d502131",
+          "evaluatedRevision": 2
         },
         {
           "subject": "signed-artifacts",
@@ -14365,8 +14641,8 @@
           "state": "not-applicable",
           "evidence": "lib/import/archive.ts:163 Context searches found none of the listed engine-contract identifiers, and the importer parses application archive data without exposing an embedded language engine.",
           "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "revisionsBehind": 0
         },
         {
