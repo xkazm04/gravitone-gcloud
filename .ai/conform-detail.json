@@ -16158,6 +16158,160 @@
           "evidence": "lib/foundry/strips/types.ts:119 There is no expiry status for an unanswered triage. The reject-to-cleanup half is realized: store.ts:18 deletes a rejected card's media on commit."
         }
       ]
+    },
+    "a91965bd-84cb-42b6-978f-29ca7258f718/video-assembly": {
+      "context": "part-editor-writing-research",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/editors.tsx:33 `cut: CutEditor` only dispatches to the timeline editor, which lives outside this context; no lane is drawn here"
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Beats.tsx:113 the beat board shows a cue label beside a beat slot, with no clock position, so no marker is placed on a timeline here"
+        }
+      ]
+    },
+    "f6554c57-29ce-484d-90c3-ae89e2f466c0/video-assembly": {
+      "context": "part-port-fixtures",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 `pic?.clock.find((c) => /turn/i.test(c.scene.mood))`: a second copy of the turn rule (fixtureCut.ts:143 uses turnOf, lib/cut/deriveTimeline.ts:314). Both take the first match without surfacing a second candidate, which breaks 'one derivation, all consumers' and the two-match rule."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:62 every lane's clips, scenes, gaps and edits are drawn from one deriveTimeline result over the project's records, so a typed duration has no second writer"
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:207 snap returns the offset to exactly 0 and refuses a clip already on its mark. :123 re-derives status from the current offset (shownStatus), and :199 caps a nudge at 5 s as 're-edit, not sync'."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:142 music gaps are computed (musicGaps) and :145 unplaced material carries its reason. :36 drops v1's hand-typed fallback cut, so a project with no frames is an empty cut, not a borrowed one."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:61 cue in/out times are re-derived by cuesFrom from cue spans stored as scene ids (:183), so a retimed picture moves every cue. Coverage is computed (:89 coveredS) and silent runs are computed (:88 gapRuns)."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:100 the cut is compiled into a deterministic EDL (compileCut and cutDocumentHash), and :259 stamps each animatic export with that document hash"
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "unread",
+          "evidence": "the voice/explainer fixtures (fixtureExplainer.ts) were not read for alignment handling"
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "unread",
+          "evidence": "fixtureMotion.ts was skimmed only to its header"
+        }
+      ]
+    },
+    "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867/voice-io": {
+      "context": "audio-composer-briefs",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "stt-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/batch.ts:165 the only audio meter here is the seconds of music a provider bills; nothing captures or transcribes speech"
+        }
+      ],
+      "registryProposal": "Coverage question: the matcher pairs voice-io to music/SFX generation contexts on vendor vocabulary (ElevenLabs, audio). The subject's own boundary (plumbing, not producing) excludes them, so route by that precondition."
+    },
+    "0335f0dc-2987-4b19-96e1-58941a70c9d5/voice-io": {
+      "context": "foundry-extract-engine",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "tts-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 'synthesis turn' is a style-reasoning call over images; no text is spoken and no audio is produced or captured"
+        }
+      ]
+    },
+    "3f11be96-c51f-4098-8472-341c42362e6d/voice-io": {
+      "context": "sound-hunt-and-measure",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "tts-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/huntRender.ts:81 ElevenLabs is used here as a music meter (seconds of music audio), not as speech synthesis"
+        }
+      ]
+    },
+    "431b1607-266c-4fcb-93e8-b7f91e5a0ebc/test-harness": {
+      "context": "decision-and-gates",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "suite-partitioning",
+          "verdict": "not-applicable",
+          "evidence": "vitest.config.mts:12 the suites that test this module (packages/kernel/test/decision.*.test.ts) live outside the context"
+        }
+      ]
+    },
+    "f770abb6-6609-4c9f-959f-a31407dc501f/test-harness": {
+      "context": "domain-run-job-steps",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-4",
+      "techniques": [
+        {
+          "technique": "suite-partitioning",
+          "verdict": "not-applicable",
+          "evidence": "vitest.config.mts:12 membership by location; nothing in packages/domain/src declares or runs a suite"
+        }
+      ],
+      "registryProposal": "Coverage question: the matcher pairs test-harness to production modules on shared tokens (gate, step, decision, run). The subject's precondition is harness machinery, so these pairs are lexical resonance, not governance."
     }
   }
 }

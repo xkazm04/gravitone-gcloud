@@ -2086,7 +2086,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/batch.ts:41 the briefs are music-generation techniques (tag-list, tempo locking, lyrics-for-singability) for Suno/ElevenLabs music (recipe.ts:22). That is producing sound to a creative brief, which voice-io's golden path excludes; it owns only plumbing speech (capture, STT, TTS, playback). Terms grepped: tts|stt|speech|transcri|microphone|getUserMedia|voice|whisper|elevenlabs|synthes|narrat|vocal|lyric. The only hits were music vendor and lyrics fields.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "prompt-assembly",
@@ -3550,7 +3554,11 @@
           "revision": 26,
           "changedAt": "2026-10-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "vitest.config.mts:12 suite membership is by location under packages/*/test and tests/next-*; this context is production kernel code (decision apply, commit, gates) with no harness machinery. Terms grepped over its 13 files: vitest|expect(|playwright|harness|reset*(|test-only|data-testid|.live, with zero hits. Its pure core/persistence split serves testability but is not a harness.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:c96e1ee699a88119",
+          "evaluatedRevision": 27
         },
         {
           "subject": "module-design",
@@ -4047,7 +4055,11 @@
           "revision": 26,
           "changedAt": "2026-10-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "vitest.config.mts:12 tests are collected from packages/*/test (packages/domain/test/{transitions,plan,lane,estimate}.test.ts); this context is the domain model (machines, lanes, steps) with no harness machinery. Terms grepped over its 19 files: vitest|expect(|playwright|harness|reset*(|test-only|data-testid|.live, with zero hits.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:c96e1ee699a88119",
+          "evaluatedRevision": 27
         },
         {
           "subject": "structured-output",
@@ -5006,7 +5018,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:66 the engine's only media input is readImage: it derives art styles from an image gallery. Its 'synthesis' (engine.ts:11) is a text reasoning turn, not speech synthesis. Terms grepped: tts|stt|speech|transcri|microphone|getUserMedia|voice|whisper|elevenlabs|synthes|narrat|vocal|lyric. The only hits were the style-synthesis prompt and schema.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "image-prompt-composition",
@@ -9573,7 +9589,11 @@
           "revision": 19,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/editors.tsx:16 the cut surface is imported from Cut.tsx, which is not one of this context's 14 files; the context holds only text-side editors (script, article, beats, research, words), so no timeline, clip, cue lane or clock is assembled here. Terms grepped over the context's files: timeline|startS|durS|drift|clip|music|cue|alignment|loudness|render|lane. The only hits were a beat-slot cue label (Beats.tsx:113), a scenario's musicMood string and editor-registry plumbing.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:5f548f222df2e692",
+          "evaluatedRevision": 20
         },
         {
           "subject": "quality-gates",
@@ -9795,7 +9815,11 @@
           "revision": 19,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 the score's turn mark is a second derivation (first scene whose mood matches /turn/i, labelled by slug at :90), separate from the cut's turnOf at fixtureCut.ts:143. It also silently takes the first match, so two turns or a mislabelled scene become one plausible mark, and the score and cut marks can age apart.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:5f548f222df2e692",
+          "evaluatedRevision": 20
         },
         {
           "subject": "agent-memory",
@@ -12356,7 +12380,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/sound/hunt.ts:128 the hunt briefs music or sound effects (renderable on elevenlabs and suno, :193) and measures takes against a music rubric. That is producing and judging sound to a creative brief, outside voice-io's plumbing scope. Terms grepped: tts|stt|speech|transcri|microphone|getUserMedia|voice|whisper|elevenlabs|synthes|narrat|vocal|lyric. The only hits were the ElevenLabs music/SFX provider.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "agent-memory",
