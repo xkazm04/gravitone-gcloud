@@ -30,6 +30,17 @@ export type ImagingErrorKind =
   | "invalid-request"
   /** The vendor's safety layer declined. Re-route, never retry. */
   | "refused"
+  /** The vendor blocked the output for reproducing protected material (Gemini's
+   *  `RECITATION` / `IMAGE_RECITATION`). Same verdict at every vendor, so it is
+   *  NOT re-routed: walking it down the chain would launder exactly what the
+   *  block exists to stop. Terminal, and billed like a refusal (inference ran). */
+  | "protected-material"
+  /** The vendor stopped the ACCOUNT, not the request (Google's
+   *  `CONSUMER_SUSPENDED` / `BILLING_DISABLED`, Leonardo studio out of credits).
+   *  Terminal and operator-actionable: refusals accrue against the account that
+   *  sent them, so this ends the chain and is surfaced as a 503 for a human to
+   *  fix, never walked past like a missing key. */
+  | "account-blocked"
   /** The caller ruled out the only vendor that could have served this. Not a
    *  refusal and not a missing key — the request and the config are both fine,
    *  they just cannot be satisfied together. Nowhere to route. */
@@ -76,6 +87,11 @@ export class ImagingError extends Error {
    */
   dispatched = false;
 
+  /** Which stage the vendor said blocked, when it said: `output` for Gemini's
+   *  `IMAGE_*` stop reasons. Kept on the router's trail — an input-stage block
+   *  re-refuses deterministically, an output-stage block was one sample's verdict. */
+  stage: StopStage | undefined = undefined;
+
   /** Is a plain retry against the SAME vendor worth attempting? A refusal is
    *  deterministic — the same prompt refuses again — so it is not. */
   get retryable(): boolean {
@@ -107,6 +123,10 @@ export class ImagingError extends Error {
    *
    * `bad-response` is the same argument with the adapter-bug case louder: the
    * vendor answered, and we could not read it. That is ours to fix.
+   *
+   * `protected-material` and `account-blocked` are out for a different reason:
+   * the next vendor would give the same verdict (protected material), or the
+   * stop is about who is asking rather than what (the account) - see the kinds.
    */
   get reroutable(): boolean {
     return this.kind === "refused" || this.kind === "rate-limited" || this.kind === "no-key";
@@ -138,6 +158,7 @@ export class ImagingError extends Error {
  *   refused        BILLED. A safety block is a decision the model makes AFTER
  *                  reading the prompt, and the adapters raise it from a 200 body
  *                  (see http.ts's header) - inference happened.
+ *   protected-material  BILLED. Same argument: the block is on what was generated.
  *   failed         BILLED ONLY IF DISPATCHED. This kind covers both a 4xx/5xx the
  *                  vendor answered and a host that could not be reached at all.
  *                  Only http.ts knows which, and it says so on the error.
@@ -146,6 +167,7 @@ export class ImagingError extends Error {
  *   invalid-request NOT billed. An adapter checked one of the vendor's own
  *                   limits and refused to dispatch. Nothing left the process.
  *   no-key         NOT billed. Rejected at authentication, or never attempted.
+ *   account-blocked NOT billed. The account was stopped at the door; no work ran for it.
  *   unsupported    NOT billed. A routing-table fact; no call is made.
  *   no-alternative NOT billed. The chain emptied before a vendor was chosen.
  *   over-budget    NOT billed. Refused by our own ceiling, before any vendor.
@@ -159,9 +181,11 @@ export function presumedBilled(err: ImagingError): boolean {
     case "timeout":
     case "bad-response":
     case "refused":
+    case "protected-material":
       return true;
     case "failed":
       return err.dispatched;
+    case "account-blocked":
     case "rate-limited":
     case "invalid-request":
     case "no-key":
@@ -234,7 +258,10 @@ export function statusFor(kind: ImagingErrorKind): number {
     case "invalid-request":
       return 400; // the caller's input exceeds a limit this adapter enforces
     case "refused":
+    case "protected-material":
       return 422; // understood, and declined — not a client format error
+    case "account-blocked":
+      return 503; // the vendor account needs an operator; the request was fine
     case "no-alternative":
       return 409; // the request is well-formed; it conflicts with the roster
     case "over-budget":
@@ -247,4 +274,65 @@ export function statusFor(kind: ImagingErrorKind): number {
     case "failed":
       return 502;
   }
+}
+
+/* ── Named stop reasons ───────────────────────────────────────────────────── */
+
+export type StopStage = "input" | "output";
+
+/**
+ * A vendor's NAMED stop reason, read into a kind. Pure.
+ *
+ * An empty result with no reason is a refusal (the adapters' default); a named
+ * reason decides, and not every named stop is a refusal to walk past. Only
+ * vocabularies the adapters already receive, each checked against the vendor's
+ * published enum:
+ *   Gemini FinishReason / BlockReason (ai.google.dev/api/generate-content)
+ *   google.api.ErrorReason (googleapis google/api/error_reason.proto)
+ * Matched as whole tokens in the reason field first, then the message. Returns
+ * undefined when nothing named is there - the caller's own default applies.
+ * Precedence is severity: account > protected material > policy > no image.
+ */
+const NAMED: readonly { kind: ImagingErrorKind; tokens: readonly string[] }[] = [
+  { kind: "account-blocked", tokens: ["CONSUMER_SUSPENDED", "BILLING_DISABLED"] },
+  { kind: "protected-material", tokens: ["IMAGE_RECITATION", "RECITATION"] },
+  {
+    kind: "refused",
+    tokens: ["IMAGE_PROHIBITED_CONTENT", "IMAGE_SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "SAFETY"],
+  },
+  // No image and no policy reason: a failure, not a refusal - it does not hop.
+  { kind: "failed", tokens: ["NO_IMAGE", "IMAGE_OTHER"] },
+];
+
+export interface NamedStop {
+  readonly kind: ImagingErrorKind;
+  readonly token: string;
+  readonly stage?: StopStage;
+}
+
+export function classifyStop(...texts: (string | undefined)[]): NamedStop | undefined {
+  for (const text of texts) {
+    if (!text) continue;
+    for (const { kind, tokens } of NAMED) {
+      const token = tokens.find((t) => new RegExp(`(^|[^A-Z_])${t}([^A-Z_]|$)`).test(text));
+      if (token) return { kind, token, ...(token.startsWith("IMAGE_") ? { stage: "output" as const } : {}) };
+    }
+  }
+  return undefined;
+}
+
+/** The ImagingError for a named stop, with the stage kept for the trail. */
+export function stopError(stop: NamedStop, provider: ProviderId, what: string, detail?: unknown): ImagingError {
+  const said = `(${stop.token})`;
+  const message =
+    stop.kind === "account-blocked"
+      ? `${provider} stopped this ${what} at the account level ${said}. The account needs an operator before any further call.`
+      : stop.kind === "protected-material"
+        ? `${provider} blocked this ${what} for reproducing protected material ${said}. Not re-routed: every vendor owes the same verdict.`
+        : stop.kind === "refused"
+          ? `${provider} declined this ${what} on policy grounds ${said}.`
+          : `${provider} produced no image for this ${what} and named no policy reason ${said}.`;
+  const err = new ImagingError(message, stop.kind, provider, detail);
+  err.stage = stop.stage;
+  return err;
 }
