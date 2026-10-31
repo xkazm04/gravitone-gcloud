@@ -1210,7 +1210,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/landing.ts:35 figures that failed to render to PNG reach only console.error, landing proceeds and the run record carries nothing, so the Medium package ships with missing figures and no surface ever shows it (the 'check that prints findings to a log nobody's exit code depends on' case). Context is article-human-gate-and-landing; the current context-map.json lists it as id 6a878b5f-8652-4265-839a-dce38680a9c7.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "hitl-approval",
@@ -4071,7 +4075,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/still.ts:22 the only 'prompt' in this context is a stored string field on a still take's record; the context is run/job state machines, lane capacity, estimates and zod step-record schemas with no prompt assembler. Grepped packages/domain/src (context files) for prompt, assembl, messages, systemPrompt, claude, llm, model: hits are record fields and model-option keys only. Current map id 1155c1ec-f832-471a-929c-2a16f06cfbb7.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "hitl-approval",
@@ -5353,7 +5361,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/training/blind.ts:165 the 'unmeasurable' verdict is guarded by pairs_n > 0, so an improvement with zero pairs (claimAllowed via blindComplete, blind.ts:154: 0 === 0) is written to the ledger as better/not-better from nothing measured - the measured-nothing state certifies instead of being refused. Current map id 946b3fa8-75ef-47c1-94b1-40703a9401b1.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "hitl-approval",
@@ -9565,7 +9577,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:198 one 'accept over the gate' click waives every violation on every blocking render of the staged version, and the staged row shows only render ids (Document.tsx:196), never which findings are being waived - a blanket waiver. Current map id 93249c73-ef93-4c55-909a-6f3a67262366.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "prompt-assembly",
@@ -9581,7 +9597,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/page.tsx:38 the context is the part editors, reading and writing through PART_PORT; no editor assembles or sends a model prompt. Grepped page.tsx and _edit/*.tsx for prompt, claude, llm, assembl: no prompt construction found. Current map id 93249c73-ef93-4c55-909a-6f3a67262366.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "agent-instruction-files",
@@ -11024,7 +11044,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/publish/publish.ts:21 the context publishes claimed slots to channels through an adapter and collects stats; it makes no model call. Grepped packages/producers/src/publish/*.ts for prompt, claude, llm, model, turn, assembl: the only 'model' hit is metrics.ts:62's vendor stats quote key. Current map id d8928803-1de2-497f-882c-809d029b705b.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "background-jobs",
@@ -11940,7 +11964,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/versions.ts:136 GateOverride records only a violation count, the blocking render ids and enforced%, while its doc (versions.ts:131) promises 'which one' - the accept-over-gate receipt cannot name the findings it waived, so a later reader cannot tell what was overridden. Current map id 1c2ac174-ba41-4264-b184-6b7aa04507d4.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "agent-memory",
@@ -11976,7 +12004,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/compose.ts:186 engineSections returns an empty string when no ENGINES.md heading matches a qualifying engine's label, so the capability text for the engines the model may use can silently render as nothing - the empty-string render variable-interpolation names as the dishonest outcome, indistinguishable from an unwired input. Current map id 1c2ac174-ba41-4264-b184-6b7aa04507d4.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "supply-chain",
