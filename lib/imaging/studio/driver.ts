@@ -275,6 +275,14 @@ export async function studioGenerate(prompt: string, aspect: Aspect, quality?: "
 
     if (balance !== undefined && balance <= 0) throw new StudioError("leonardo studio is out of credits", "no-credits");
 
+    // A reference left on the form. The URL sets model, size and quality, not the prompt box's attachments,
+    // and a reference a hand attached STICKS to the session: on 2026-10-31 a "WE DECIDE" robot poster and a
+    // start frame from another session rode along on 46 music-clip keyframes (robots and the slogan leaked
+    // into the night frames, +3 credits each) - "Reset to Defaults" did not clear them. Refused before the
+    // click, unspent; the remedy is the chip's hover-x in the studio.
+    const attached = STUDIO.form.attachedRef.exec(await page.evaluate(() => document.body.innerText));
+    if (attached) throw new StudioError(`leonardo studio prompt carries an attachment ("${attached[0]}") left from another session; remove it in the studio and retry`, "refused");
+
     // The price before the click: the button carries it. Unreadable is not a
     // refusal (the label may change), but a price above the ceiling is.
     const button = page.locator(STUDIO.form.generate).filter({ visible: true }).first();

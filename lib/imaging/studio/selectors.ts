@@ -98,6 +98,9 @@ export const STUDIO = {
     /** 2026-10-12 recon — the spend button; its label carries the price ("Generate
 8"). */
     generate: "button:has-text('Generate')",
+    /** 2026-10-31 — the prompt box's attachments read "Image Reference 1" / "Start Frame 1" in the page text
+     *  (absent when the box is clean, verified both ways); any of them on the form refuses the generate. */
+    attachedRef: /\b(?:Image|Style|Content|Character) Reference \d+|\b(?:Start|End) Frame \d+/,
   },
   auth: {
     /** 2026-10-12 recon — the session is better-auth's (`__Secure-better-auth.session_token`);
