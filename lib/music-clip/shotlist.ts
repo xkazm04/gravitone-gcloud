@@ -35,6 +35,10 @@ export interface SectionPlan {
    *  call, never a default: on Break the Sequence the intro does not build, and cutting it did not
    *  work (2026-10-30), so it is one 15 s take. */
   oneTake?: boolean;
+  /** The section's last `units` grid units are ONE shot, exempt from the ceiling; the cycle fills the rest.
+   *  Same operator's call as oneTake, for an ending: Break the Sequence's last 14 s (2026-10-31: "last 15s may
+   *  need unique sequence to end the clip, similarly to the opening"). */
+  tailTake?: PlannedShot & { units: number };
   /** Cycled in order until the section is filled. */
   shots: PlannedShot[];
 }
@@ -103,16 +107,25 @@ export function expandPlan(plan: ShotPlanV1, timeline: TimelineV1): { list: Shot
     const grid = sp.oneTake ? [sec.startS, sec.endS] : gridOf(timeline, sec.startS, sec.endS, sp.unit);
     let g = 0;
     let k = 0;
-    while (g < grid.length - 1) {
+    const tail = sp.tailTake && !sp.oneTake ? sp.tailTake : undefined;
+    if (tail && !(CAMS as readonly string[]).includes(tail.cam)) errors.push(`${sp.sectionId}: cam "${tail.cam}" is not one of ${CAMS.join(", ")}`);
+    const fillEnd = tail ? Math.max(0, grid.length - 1 - Math.max(1, Math.round(tail.units))) : grid.length - 1;
+    while (g < fillEnd) {
       const p = sp.shots[k % sp.shots.length];
       const n = Math.max(1, Math.round(p.units ?? 1));
-      const end = Math.min(grid.length - 1, g + n);
+      const end = Math.min(fillEnd, g + n);
       const key = `${p.set}/${p.cam}`;
       const variant = seen.get(key) ?? 0;
       seen.set(key, variant + 1);
       shots.push({ id: `${sp.sectionId}-${String(k + 1).padStart(2, "0")}`, sectionId: sp.sectionId, startS: r3(grid[g]), endS: r3(grid[end]), set: p.set, cam: p.cam, note: p.note, variant, ...(sp.oneTake ? { oneTake: true as const } : {}) });
       g = end;
       k++;
+    }
+    if (tail) {
+      const key = `${tail.set}/${tail.cam}`;
+      const variant = seen.get(key) ?? 0;
+      seen.set(key, variant + 1);
+      shots.push({ id: `${sp.sectionId}-${String(k + 1).padStart(2, "0")}`, sectionId: sp.sectionId, startS: r3(grid[fillEnd]), endS: r3(grid[grid.length - 1]), set: tail.set, cam: tail.cam, note: tail.note, variant, oneTake: true });
     }
   }
   shots.sort((a, b) => a.startS - b.startS);

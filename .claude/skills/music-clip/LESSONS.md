@@ -18,3 +18,7 @@
 - Film v1 (139 shots, 4:10, 48 min on NVENC) came back "almost oneshotted"; the operator's notes were all set-level: a pile-up where a line stopped (1:12, 1:30), a hand clipping through a lever grip (2:10), white-slab inserts, an unreadable outro, and an intro that cut where the music does not build.
 - Every note went into a set or the plan, never the render: the line flows round 0451 nodding; the fingers close on a wrap circle (chords of radius 52 mm round the grip); the visor-bench strip became glass with an LED line under the bloom threshold; the outro silhouettes the dark army against an emergency-red shutter glow; s01 became one 15 s take (`oneTake` in the plan).
 - A contact sheet of shot midpoints did not show the pile-up or the clipping hand: both read only in motion or at full size. Shoot the start, middle and end of every shot that has contact (hands on props, crowds that stop) at 1080p and open them.
+
+## 2.3.0 - 2026-10-31 - gravitone-gcloud
+- Film v2 approved except the outro: the s13 cycle ran twice, so "visors going off" and "Signal lost" played again 13 s after they happened, and the last 0.69 s was a hard-cut fragment. The fix was the opening's fix: the ending is one take (`tailTake`), the bars before it each carry one story beat.
+- The Suno wav and the mp3 lined up to the sample (lag 0 ms, r 0.999); the master goes under the picture as one AAC generation (320 kb/s) instead of mp3 -> AAC.

@@ -39,6 +39,21 @@ describe("shot plan -> shot list", () => {
     expect(list.shots.filter((s) => s.oneTake)).toHaveLength(1);
   });
 
+  it("a tail take is the section's last units as one shot; the cycle fills before it", () => {
+    const p = plan("bar");
+    const last = tl.sections.length - 1;
+    p.sections[last] = { ...p.sections[last], tailTake: { set: "end", cam: "crane", note: "the ending", units: 2 } };
+    const { list, errors } = expandPlan(p, tl);
+    expect(errors).toEqual([]);
+    const sec = list.shots.filter((s) => s.sectionId === tl.sections[last].id);
+    const tail = sec.at(-1)!;
+    expect(tail.set).toBe("end");
+    expect(tail.oneTake).toBe(true);
+    expect(tail.endS).toBeCloseTo(tl.sections[last].endS, 3);
+    expect(sec.slice(0, -1).every((s) => !s.oneTake && s.set !== "end")).toBe(true);
+    expect(sec.at(-2)!.endS).toBe(tail.startS);
+  });
+
   it("refuses an unknown cam and an unplanned section", () => {
     const p = plan("bar");
     (p.sections[0].shots[0] as { cam: string }).cam = "dolly-zoom";

@@ -37,7 +37,9 @@ outside `<dir>/music-clip/` and never opens the studio store.
 ## Folder contract
 
 In: `<dir>/` holds exactly one `*.mp3` (or `--audio <file>`), `lyrics.txt|lyrics.md`,
-`style.txt|style.md|prompt.md|prompt.txt`. Out, all under `<dir>/music-clip/`:
+`style.txt|style.md|prompt.md|prompt.txt`, and optionally the same track's lossless master (one
+`*.wav` or `*.flac`): the analysis reads the mp3, renders (`cut.mts`) mux the master as AAC 320 kb/s.
+Out, all under `<dir>/music-clip/`:
 
 | file | written by |
 |---|---|
