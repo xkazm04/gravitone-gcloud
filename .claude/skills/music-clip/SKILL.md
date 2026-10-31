@@ -1,6 +1,6 @@
 ---
 name: music-clip
-version: 2.4.0
+version: 2.5.0
 memory: none
 category: Content
 description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then the film - our own three.js engine on the GPU (start from pipeline/music-clip/film-starter/), the edit as a beat-grid shot plan, one set module per location, proof cuts with sound, a full render muxed with the lossless master, and note rounds that go back into sets and the plan. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / shots) and pipeline/music-clip/{shoot,cut}.mts. Invoke with /music-clip <folder> [verb].
@@ -218,10 +218,19 @@ Break the Sequence took three rounds (v1 -> v3); every note was a timestamp and 
 
 ### Delivery
 
-The upload file is the last render remuxed if only the sound changed (`-c:v copy`):
-1080p30 H.264 ~16 Mb/s + AAC 384 kb/s 48 kHz from the master, `+faststart` - about 0.5 GB for
-4 minutes. YouTube takes up to 256 GB or 12 hours, whichever is less, and recommends 8 Mb/s for
-1080p30 and 384 kb/s stereo AAC, so the file needs no compression for upload.
+The render (`cut.mts`, NVENC H.264 ~16 Mb/s + AAC 384 kb/s from the master) is the archive, about 0.5 GB for
+4-5 minutes - too big to ship, and YouTube gains nothing from it (it recommends 8 Mb/s for 1080p30 and
+re-encodes every upload). Ship a 10-bit HEVC copy:
+
+```bash
+ffmpeg -i film-vN-1080p.mp4 -c:v libx265 -preset slow -crf 22 -pix_fmt yuv420p10le -tag:v hvc1   -c:a aac -b:a 256k -ar 48000 -movflags +faststart film-vN-upload.mp4
+```
+
+Measured on Stay Here v2 (284 s, grain over smooth backlit gradients), VMAF mean / worst frame vs the render:
+x265 10-bit CRF 22 **106 MB, 97.0 / 81.4**; x264 CRF 18 <=10 Mb/s 363 MB, 96.4 / 85.4; x264 CRF 23 <=8 Mb/s
+162 MB, 94.7 / 79.0. 10-bit also keeps the gradients from banding. Grain is what costs the bits. Verify
+every copy: `ffmpeg -i up.mp4 -i render.mp4 -lavfi "[0:v]format=yuv420p[a];[1:v]format=yuv420p[b];[a][b]libvmaf" -f null -`
+(mean >= 95). YouTube takes up to 256 GB or 12 h, so size is our choice, not its limit.
 
 ## Rules
 
