@@ -1417,10 +1417,10 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/articles/agentSteps.ts:3 Each writer step stages inputs, runs one agent turn in a fresh workspace (makeWorkspace) and ingests out/, so state crosses steps only as staged files of this run and nothing is carried across runs into an agent's context; grep over the context's 18 files for memory|recall|lesson|remember|episod|history|session|--resume finds no store read back as recalled memory (loop.ts only reads which topics are covered, for claiming).",
+          "evidence": "lib/articles/agentSteps.ts:36 every writer step gets a fresh uniquely-named tmp workspace and receives only staged run files (topic, sources.json, claims.json, outline, and for a rework the previous post plus one operator note), so no store of beliefs or episodes is carried across runs or recalled into a later agent turn; the standard's precondition (a long-lived agent whose history outgrows its budget) is absent. Grepped lib/articles for memory|recall|remember|episod|lesson|learn|history|carry and for listRuns/readdir of other runs: no cross-run read into a prompt.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
-          "evaluatedRevision": 52
+          "evaluatedAgainst": "sha256-b2:3969141e7ec94b83",
+          "evaluatedRevision": 53
         },
         {
           "subject": "agent-runtime-assembly",
@@ -2106,7 +2106,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/recipe.ts:91 the only 'prompt' built here is a music-vendor input (a Suno style/exclude form held to 200 characters, or an ElevenLabs one-sentence sfx line), not a language-model context with identity/policy/capability/context/task layers, a transcript or a token budget. Grepped the context's files for llm|claude|gemini|token|system prompt|messages|context window|anthropic|openai: one hit, a DraftList.tsx:36 comment naming drafts produced elsewhere. Note: context-map lists SeedComposer.tsx and TermRail.tsx, which do not exist.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:e72fd75e79e6a4a2",
+          "evaluatedRevision": 45
         },
         {
           "subject": "video-assembly",
@@ -3162,10 +3166,10 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "app/(studio)/board/_board/Board.tsx:8 The Board is a human decision desk whose every verdict, pick, undo and commit goes through BoardPort Server Actions over artifact packets; no agent reads its decisions back as memory, so the subject's precondition (a long-lived agent carrying a store forward) is absent; grep over its 17 files for memory|recall|lesson|episod|remember finds only 'in-memory BoardPort' fixture and a VRAM 'memory' wait field.",
+          "evidence": "app/(studio)/board/_board/Board.tsx:8 the Board is a human decision desk whose verdicts, picks, undos and commits all go through BoardPort Server Actions; no agent reads or writes a memory here. Grepped app/(studio)/board for memory|recall|llm|prompt|model|agent|claude: hits are only fixture display strings (fixtureData.ts) and an in-memory fixture port.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
-          "evaluatedRevision": 52
+          "evaluatedAgainst": "sha256-b2:3969141e7ec94b83",
+          "evaluatedRevision": 53
         },
         {
           "subject": "mcp-tools",
@@ -4092,10 +4096,10 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "packages/domain/src/steps/still.ts:22 the only 'prompt' in this context is a stored string field on a still take's record; the context is run/job state machines, lane capacity, estimates and zod step-record schemas with no prompt assembler. Grepped packages/domain/src (context files) for prompt, assembl, messages, systemPrompt, claude, llm, model: hits are record fields and model-option keys only. Current map id 1155c1ec-f832-471a-929c-2a16f06cfbb7.",
+          "evidence": "packages/domain/src/steps/still.ts:22 the only 'prompt' in the context is a stored string field on a still take's record; the context is run/job state machines, lanes, plans and estimates. Grepped the 19 files for prompt|llm|claude|token|system|messages: hits are this field, a fencing token, and unit-name comments.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
-          "evaluatedRevision": 44
+          "evaluatedAgainst": "sha256-b2:e72fd75e79e6a4a2",
+          "evaluatedRevision": 45
         },
         {
           "subject": "hitl-approval",
@@ -4979,10 +4983,10 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "lib/foundry/extract/performGroup.ts:52 The synthesis prompt is built and sent with only cost and model booked to the manifest, so the run records no digest or version of the instruction that grouped its styles. The replica image prompts, by contrast, are persisted in full.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
-          "evaluatedRevision": 44
+          "evidence": "lib/foundry/extract/performGroup.ts:64 after the synthesis prompt is sent (line 63), only its cost is booked and the reasoner's model name stored, so a live extract run records no digest or size of any prompt it sent; the kernel mints a payload digest only for dry runs (packages/kernel/src/dryrun.ts:181), so 'did that run see the new instruction?' is unanswerable for every paid run.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:e72fd75e79e6a4a2",
+          "evaluatedRevision": 45
         },
         {
           "subject": "mcp-tools",
@@ -5184,10 +5188,10 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/foundry/store.ts:4 The forge disk layer is the app's read path and the human cull's write path over generated image runs; its style store and ledger.json are a recipe catalogue and verdict record for image generation (forge.py reads styles.json as recipes), not a belief store an agent recalls into context; grep over its 10 files for memory|recall|lesson|episod|remember|inject finds none in that sense (calibration.ts calibrates a grader against human verdicts).",
+          "evidence": "lib/foundry/store.ts:4 the forge disk layer is the app's read path and the human cull's only write path over generated image runs; the style catalogue it fronts feeds image-generation recipes, not a long-lived agent's recalled beliefs. Grepped the 10 files for memory|recall|lesson|prompt|llm|agent|claude|feedback: hits are grader-digest stamps (calibration.ts, types.ts) and a style `prompt` field.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
-          "evaluatedRevision": 52
+          "evaluatedAgainst": "sha256-b2:3969141e7ec94b83",
+          "evaluatedRevision": 53
         },
         {
           "subject": "mcp-tools",
@@ -8791,10 +8795,10 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/library/project.ts:14 The Library projection reads each feed, ingests its media into blobs and upserts items into the kernel's Library index for the screens; re-judged against revision 52, no agent reads that index as recalled memory (rememberIngest is an ingest memo, not agent memory); grep over its 12 files for memory|recall|lesson|episod|remember finds only rememberIngest and the Dojo 'lesson' vocabulary facet.",
+          "evidence": "lib/library/project.ts:14 the Library projection reads each feed, ingests media into blobs and upserts items into the kernel's Library index: a catalogue of produced artefacts, not an agent's episodic or consolidated memory (agents may query it on demand through the MCP `library` read op, app/_server/mcp/tools/read.ts, which is tool access to data, not carried belief). Grepped lib/library for memory|recall|llm|agent|claude|model|prompt|embedding|retriev: only stored generation prompts and a `model` (glTF) kind.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
-          "evaluatedRevision": 52
+          "evaluatedAgainst": "sha256-b2:3969141e7ec94b83",
+          "evaluatedRevision": 53
         },
         {
           "subject": "prompt-assembly",
@@ -8811,10 +8815,10 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/library/feeds/types.ts:9 Feeds read v1 stores and map them into library items. 'prompt' appears only as stored generation metadata (extras.prompt) and a fixture string. A search found no lib/text import, reason(), schemaInstruction, generateContent or claude/gemini call, so nothing here assembles or sends a model prompt.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
-          "evaluatedRevision": 44
+          "evidence": "lib/library/feeds/types.ts:9 a feed is a reader and a pure mapping over v1 stores into library items; no model call is assembled or sent. Grepped lib/library for llm|claude|reason(|prompt|messages: 'prompt' appears only as stored generation metadata copied into extras and as a fixture trial subject.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:e72fd75e79e6a4a2",
+          "evaluatedRevision": 45
         },
         {
           "subject": "retrieval",
@@ -9197,10 +9201,10 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/notebook/validate.ts:1 The context is a runtime validation door deciding whether one model answer is a notebook; it holds no store an agent carries forward or recalls; grep over its 15 files for memory|recall|lesson|episod|remember finds only retrieval.ts's rule that a remembered (unfetched) URL is not a citation.",
+          "evidence": "lib/notebook/validate.ts:1 the context is a runtime door deciding whether one research run's answer counts as a notebook; it holds no store an agent carries forward. Grepped lib/notebook for memory|recall|remember|episod|history|persist|store: hits are notebook content and the retrieval cross-check of fetched vs recalled citations (retrieval.ts), which is output provenance, not agent memory.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
-          "evaluatedRevision": 52
+          "evaluatedAgainst": "sha256-b2:3969141e7ec94b83",
+          "evaluatedRevision": 53
         },
         {
           "subject": "structured-output",
@@ -9630,10 +9634,10 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "app/(studio)/projects/[id]/[part]/page.tsx:38 the context is the part editors, reading and writing through PART_PORT; no editor assembles or sends a model prompt. Grepped page.tsx and _edit/*.tsx for prompt, claude, llm, assembl: no prompt construction found. Current map id 93249c73-ef93-4c55-909a-6f3a67262366.",
+          "evidence": "app/(studio)/projects/[id]/[part]/page.tsx:38 the context is the part editors reading and writing through PART_PORT; no editor assembles or sends a model prompt. Grepped the editors for llm|claude|reason(|messages|prompt: the only hits are Notebook.tsx queuing a follow-up as a typed op {op, prompt, cardId} to the port, which hands raw input to an assembler elsewhere, the shape the standard asks of a call site.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
-          "evaluatedRevision": 44
+          "evaluatedAgainst": "sha256-b2:e72fd75e79e6a4a2",
+          "evaluatedRevision": 45
         },
         {
           "subject": "agent-instruction-files",
@@ -10684,10 +10688,10 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/steps/index.ts:9 An IndexedDB object store of per-project UI step content keyed `${projectId}:${phase}`; re-judged against revision 52, no agent reads it as recalled memory; grep over its 16 files for memory|recall|lesson|episod|remember|inject finds none.",
+          "evidence": "lib/steps/index.ts:8 an IndexedDB object store of per-project UI step content keyed by project and phase; no agent reads it as memory. Grepped lib/steps for llm|prompt|agent|model|claude|recall|memory: no hits.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
-          "evaluatedRevision": 52
+          "evaluatedAgainst": "sha256-b2:3969141e7ec94b83",
+          "evaluatedRevision": 53
         },
         {
           "subject": "settings",
@@ -11081,10 +11085,10 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "packages/producers/src/publish/publish.ts:21 the context publishes claimed slots to channels through an adapter and collects stats; it makes no model call. Grepped packages/producers/src/publish/*.ts for prompt, claude, llm, model, turn, assembl: the only 'model' hit is metrics.ts:62's vendor stats quote key. Current map id d8928803-1de2-497f-882c-809d029b705b.",
+          "evidence": "packages/producers/src/publish/publish.ts:21 the context publishes claimed slots to channels through an adapter and collects stats; it makes no model call. Grepped packages/producers/src/publish for llm|claude|prompt|messages|reason(: no hits.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
-          "evaluatedRevision": 44
+          "evaluatedAgainst": "sha256-b2:e72fd75e79e6a4a2",
+          "evaluatedRevision": 45
         },
         {
           "subject": "background-jobs",
@@ -12021,10 +12025,10 @@
           "changedAt": "2026-10-15",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/script/compose.ts:2 The script producer runs one compose turn with one prompt assembly from notebook cards and one door over the answer; versions.ts keeps the script's own version history and human notes, not memory an agent recalls across sessions; grep over its 14 files for memory|recall|lesson|episod|remember finds only gate.ts's 'a question with no memory' about RegExp state.",
+          "evidence": "lib/script/compose.ts:2 the script producer runs one compose turn with one prompt assembly from the current notebook; history.ts/versions.ts keep user-facing script versions (restore mints a new version), never recalled into a later model turn. Grepped lib/script for memory|recall|lesson|episod: no agent memory store.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
-          "evaluatedRevision": 52
+          "evaluatedAgainst": "sha256-b2:3969141e7ec94b83",
+          "evaluatedRevision": 53
         },
         {
           "subject": "prompt-assembly",
@@ -12041,10 +12045,10 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "lib/script/compose.ts:186 engineSections returns an empty string when no ENGINES.md heading matches a qualifying engine's label, so the capability text for the engines the model may use can silently render as nothing - the empty-string render variable-interpolation names as the dishonest outcome, indistinguishable from an unwired input. Current map id 1c2ac174-ba41-4264-b184-6b7aa04507d4.",
+          "evidence": "lib/script/compose.ts:186 the capability section for the qualifying engines is cut out of ENGINES.md by matching each engine's model-written notebook label against '## ' headings (engineSections, line 57), and a label that matches no heading leaves that engine's capability text silently absent with no notice in the prompt, so the model is told it may use an engine whose contract it is never shown.",
           "evaluatedAt": "2026-10-31",
-          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
-          "evaluatedRevision": 44
+          "evaluatedAgainst": "sha256-b2:e72fd75e79e6a4a2",
+          "evaluatedRevision": 45
         },
         {
           "subject": "supply-chain",
@@ -12656,10 +12660,10 @@
           "changedAt": "2026-10-14",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "app/(studio)/_shell/facts.ts:1 The shell renders header facts, toasts, a bell and a live feed from kernel events. A search of app/(studio)/_shell for prompt, lib/text, reason(, schemaInstruction, generateContent and claude/gemini found nothing, so no model prompt is assembled here.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
-          "evaluatedRevision": 44
+          "evidence": "app/(studio)/_shell/facts.ts:1 the shell computes header numbers, toasts, a bell and a live feed from kernel events; it sends no model prompt. Grepped app/(studio)/_shell for prompt|llm|claude|reason(|messages: no hits.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:e72fd75e79e6a4a2",
+          "evaluatedRevision": 45
         },
         {
           "subject": "mcp-tools",

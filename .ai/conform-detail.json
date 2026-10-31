@@ -9840,12 +9840,13 @@
       "state": "not-applicable",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-1",
+      "worker": "cloud-20261031-gravitone-5",
       "techniques": [
         {
           "technique": "recall-injection",
           "verdict": "not-applicable",
-          "evidence": "lib/library/project.ts:14 the projection's consumer is the Library index for screens, not an agent context."
+          "evidence": "lib/library/project.ts:14 the projection's consumer is the Library index for screens, not an agent context.",
+          "carriedFrom": "2026-10-31"
         }
       ],
       "superseded": [
@@ -9855,6 +9856,13 @@
           "evaluatedAt": "2026-10-24T00:00:33.219Z",
           "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
           "reason": "replaced by cloud-20261031-gravitone-1"
+        },
+        {
+          "state": "not-applicable",
+          "evidence": "lib/library/project.ts:14 The Library projection reads each feed, ingests its media into blobs and upserts items into the kernel's Library index for the screens; re-judged against revision 52, no agent reads that index as recalled memory (rememberIngest is an ingest memo, not agent memory); grep over its 12 files for memory|recall|lesson|episod|remember finds only rememberIngest and the Dojo 'lesson' vocabulary facet.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
         }
       ]
     },
@@ -9865,12 +9873,13 @@
       "state": "not-applicable",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-1",
+      "worker": "cloud-20261031-gravitone-5",
       "techniques": [
         {
           "technique": "durable-store-failure-posture",
           "verdict": "not-applicable",
-          "evidence": "lib/steps/index.ts:9 the store is browser step content, not an agent memory store, though it does separate never-written from failed reads on its own terms."
+          "evidence": "lib/steps/index.ts:9 the store is browser step content, not an agent memory store, though it does separate never-written from failed reads on its own terms.",
+          "carriedFrom": "2026-10-31"
         }
       ],
       "superseded": [
@@ -9880,6 +9889,13 @@
           "evaluatedAt": "2026-10-24T00:00:33.219Z",
           "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
           "reason": "replaced by cloud-20261031-gravitone-1"
+        },
+        {
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:9 An IndexedDB object store of per-project UI step content keyed `${projectId}:${phase}`; re-judged against revision 52, no agent reads it as recalled memory; grep over its 16 files for memory|recall|lesson|episod|remember|inject finds none.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
         }
       ]
     },
@@ -9890,15 +9906,24 @@
       "state": "not-applicable",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-1",
+      "worker": "cloud-20261031-gravitone-5",
       "techniques": [
         {
           "technique": "recall-injection",
           "verdict": "not-applicable",
-          "evidence": "lib/foundry/store.ts:4 readers are the app and the cull, not an agent's context assembly."
+          "evidence": "lib/foundry/store.ts:4 readers are the app and the cull, not an agent's context assembly.",
+          "carriedFrom": "2026-10-31"
         }
       ],
-      "registryProposal": "The forge's style lifecycle (hypothesis in styles.json, 'proven' only when a human kept it on more than one scene, lib/foundry/store.ts:11-12) has the shape of cross-context-promotion's second-sighting bar applied to generation recipes rather than agent memory; if the registry wants that bar reusable outside agent memory, it may belong in a shared technique."
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/foundry/store.ts:4 The forge disk layer is the app's read path and the human cull's write path over generated image runs; its style store and ledger.json are a recipe catalogue and verdict record for image generation (forge.py reads styles.json as recipes), not a belief store an agent recalls into context; grep over its 10 files for memory|recall|lesson|episod|remember|inject finds none in that sense (calibration.ts calibrates a grader against human verdicts).",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
     },
     "b412ea73-0dc3-4362-93c4-2a9b913f9a61/agent-memory": {
       "context": "v1-import-and-archive",
@@ -10064,44 +10089,58 @@
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T01:07:42.727Z",
-      "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
       "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "realized",
+          "evidence": "lib/foundry/extract/prompts.ts:1 every instruction the Extract module sends lives in one file, so a prompt change is a diff there rather than a hunt through call sites"
+        },
         {
           "technique": "fingerprinting-and-cache-keys",
           "verdict": "deviation",
-          "evidence": "lib/foundry/extract/performGroup.ts:52 Synthesis, readback and critique prompts are not recorded by digest or version. Only the replica prompt is kept (performReplica.ts:37), and readbacks carry VOCAB_VERSION, not a prompt version."
-        },
-        {
-          "technique": "layered-composition",
-          "verdict": "conformant",
-          "evidence": "lib/foundry/extract/prompts.ts:1 One assembler module. Callers pass typed inputs (sources, partition), and synthesisPrompt puts RULES first and SOURCES last. Minor: the critique prompt repeats its naming policy after the volatile recipe."
+          "evidence": "lib/foundry/extract/performGroup.ts:64 send site books cost only; the payloadDigest at packages/kernel/src/dryrun.ts:181 is written on the dry path alone, never for a live send"
         },
         {
           "technique": "house-vocabulary-layer",
           "verdict": "conformant",
-          "evidence": "lib/foundry/extract/performCommon.ts:25 A closed observable vocabulary from one authority (ENUMS), defined in the prompt, and adoption is checked: off-vocabulary words are logged by field."
+          "evidence": "lib/foundry/extract/performCommon.ts:25 A closed observable vocabulary from one authority (ENUMS), defined in the prompt, and adoption is checked: off-vocabulary words are logged by field.",
+          "carriedFrom": "2026-10-24"
         },
         {
           "technique": "variable-interpolation",
           "verdict": "deviation",
-          "evidence": "lib/foundry/extract/prompts.ts:89 Vision-model prose (prior model output, untrusted class) is interpolated with no declared trust class. The list itself is capped (MAX_SOURCES=60 at store.ts:82, colours sliced to 5 in performRead.ts:25)."
+          "evidence": "lib/foundry/extract/prompts.ts:89 Vision-model prose (prior model output, untrusted class) is interpolated with no declared trust class. The list itself is capped (MAX_SOURCES=60 at store.ts:82, colours sliced to 5 in performRead.ts:25).",
+          "carriedFrom": "2026-10-24"
         },
         {
           "technique": "task-envelope",
           "verdict": "deviation",
-          "evidence": "lib/foundry/extract/prompts.ts:92 Opens with a role sentence. The done criteria are explicit, but there is no self-check before answering: coverage is only validated after the paid turn."
+          "evidence": "lib/foundry/extract/prompts.ts:92 Opens with a role sentence. The done criteria are explicit, but there is no self-check before answering: coverage is only validated after the paid turn.",
+          "carriedFrom": "2026-10-24"
         },
         {
           "technique": "capability-documentation",
           "verdict": "not-applicable",
-          "evidence": "lib/foundry/extract/store.ts:284 No tools are offered. The schema constrains the answer, but no operation roster exists."
+          "evidence": "lib/foundry/extract/store.ts:284 No tools are offered. The schema constrains the answer, but no operation roster exists.",
+          "carriedFrom": "2026-10-24"
         },
         {
           "technique": "history-compaction",
           "verdict": "not-applicable",
-          "evidence": "lib/foundry/extract/engine.ts:11 Every unit is a fresh single call and state lives in the manifest, so there is no transcript to compact."
+          "evidence": "lib/foundry/extract/engine.ts:11 Every unit is a fresh single call and state lives in the manifest, so there is no transcript to compact.",
+          "carriedFrom": "2026-10-24"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/performGroup.ts:52 The synthesis prompt is built and sent with only cost and model booked to the manifest, so the run records no digest or version of the instruction that grouped its styles. The replica image prompts, by contrast, are persisted in full.",
+          "evaluatedAt": "2026-10-24T01:07:42.727Z",
+          "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+          "reason": "replaced by cloud-20261031-gravitone-5"
         }
       ]
     },
@@ -10110,10 +10149,19 @@
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T01:07:42.727Z",
-      "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
-      "techniques": []
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/library/feeds/types.ts:9 Feeds read v1 stores and map them into library items. 'prompt' appears only as stored generation metadata (extras.prompt) and a fixture string. A search found no lib/text import, reason(), schemaInstruction, generateContent or claude/gemini call, so nothing here assembles or sends a model prompt.",
+          "evaluatedAt": "2026-10-24T01:07:42.727Z",
+          "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
     },
     "158d061e-feaa-4660-a1d3-6e8774b1f152/video-assembly": {
       "context": "frames-picture-composition",
@@ -13654,17 +13702,32 @@
       "state": "not-applicable",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-1",
+      "worker": "cloud-20261031-gravitone-5",
       "techniques": [
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:3 each step is stage inputs, one agent turn, ingest out/: per-step state is files on disk, not session working memory carried by a long-lived agent"
+        },
         {
           "technique": "recall-injection",
           "verdict": "not-applicable",
-          "evidence": "lib/articles/agentSteps.ts:3 one agent turn per step over staged inputs; no recall tier is assembled into the prompt."
+          "evidence": "lib/articles/agentSteps.ts:36 the workspace is created empty per step under os.tmpdir(); nothing is recalled from a durable store into it"
         },
         {
           "technique": "episodic-capture",
           "verdict": "not-applicable",
-          "evidence": "lib/articles/agentSteps.ts:3 run outputs are ingested as the run's own artifacts (draft, sources), not captured as episodes for later distillation."
+          "evidence": "lib/articles/agentSteps.ts:3 run outputs are ingested as the run's own artifacts (draft, sources), not captured as episodes for later distillation.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:3 Each writer step stages inputs, runs one agent turn in a fresh workspace (makeWorkspace) and ingests out/, so state crosses steps only as staged files of this run and nothing is carried across runs into an agent's context; grep over the context's 18 files for memory|recall|lesson|remember|episod|history|session|--resume finds no store read back as recalled memory (loop.ts only reads which topics are covered, for claiming).",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
         }
       ]
     },
@@ -13696,12 +13759,22 @@
       "state": "not-applicable",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-1",
+      "worker": "cloud-20261031-gravitone-5",
       "techniques": [
         {
           "technique": "consolidation",
           "verdict": "not-applicable",
-          "evidence": "lib/notebook/validate.ts:1 validates a single run's output shape; no distillation into durable beliefs."
+          "evidence": "lib/notebook/validate.ts:1 validates a single run's output shape; no distillation into durable beliefs.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:1 The context is a runtime validation door deciding whether one model answer is a notebook; it holds no store an agent carries forward or recalls; grep over its 15 files for memory|recall|lesson|episod|remember finds only retrieval.ts's rule that a remembered (unfetched) URL is not a citation.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
         }
       ]
     },
@@ -13712,12 +13785,22 @@
       "state": "not-applicable",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-1",
+      "worker": "cloud-20261031-gravitone-5",
       "techniques": [
         {
           "technique": "recall-injection",
           "verdict": "not-applicable",
-          "evidence": "lib/script/compose.ts:2 the prompt is assembled from the current notebook, with no recalled-memory tier."
+          "evidence": "lib/script/compose.ts:2 the prompt is assembled from the current notebook, with no recalled-memory tier.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/script/compose.ts:2 The script producer runs one compose turn with one prompt assembly from notebook cards and one door over the answer; versions.ts keeps the script's own version history and human notes, not memory an agent recalls across sessions; grep over its 14 files for memory|recall|lesson|episod|remember finds only gate.ts's 'a question with no memory' about RegExp state.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
         }
       ]
     },
@@ -14842,10 +14925,19 @@
       "subject": "prompt-assembly",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T01:07:42.727Z",
-      "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
-      "techniques": []
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/(studio)/_shell/facts.ts:1 The shell renders header facts, toasts, a bell and a live feed from kernel events. A search of app/(studio)/_shell for prompt, lib/text, reason(, schemaInstruction, generateContent and claude/gemini found nothing, so no model prompt is assembled here.",
+          "evaluatedAt": "2026-10-24T01:07:42.727Z",
+          "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
     },
     "bf8089f7-ccb4-458c-9a60-2ad34bd0ebbb/video-assembly": {
       "context": "part-editor-media-cut-score",
@@ -15887,12 +15979,22 @@
       "state": "not-applicable",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-1",
+      "worker": "cloud-20261031-gravitone-5",
       "techniques": [
         {
           "technique": "memory-governance",
           "verdict": "not-applicable",
-          "evidence": "app/(studio)/board/_board/Board.tsx:8 the gate rules on produced packets (verdicts/picks/commits), not on beliefs proposed for an agent's consolidated store."
+          "evidence": "app/(studio)/board/_board/Board.tsx:8 the gate rules on produced packets (verdicts/picks/commits), not on beliefs proposed for an agent's consolidated store.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/(studio)/board/_board/Board.tsx:8 The Board is a human decision desk whose every verdict, pick, undo and commit goes through BoardPort Server Actions over artifact packets; no agent reads its decisions back as memory, so the subject's precondition (a long-lived agent carrying a store forward) is absent; grep over its 17 files for memory|recall|lesson|episod|remember finds only 'in-memory BoardPort' fixture and a VRAM 'memory' wait field.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-1",
+          "reason": "replaced by cloud-20261031-gravitone-5"
         }
       ]
     },
@@ -16027,8 +16129,17 @@
       "state": "not-applicable",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-2",
-      "techniques": []
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/still.ts:22 the only 'prompt' in this context is a stored string field on a still take's record; the context is run/job state machines, lane capacity, estimates and zod step-record schemas with no prompt assembler. Grepped packages/domain/src (context files) for prompt, assembl, messages, systemPrompt, claude, llm, model: hits are record fields and model-option keys only. Current map id 1155c1ec-f832-471a-929c-2a16f06cfbb7.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-2",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
     },
     "a91965bd-84cb-42b6-978f-29ca7258f718/prompt-assembly": {
       "context": "part-editor-writing-research",
@@ -16037,8 +16148,17 @@
       "state": "not-applicable",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-2",
-      "techniques": []
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/page.tsx:38 the context is the part editors, reading and writing through PART_PORT; no editor assembles or sends a model prompt. Grepped page.tsx and _edit/*.tsx for prompt, claude, llm, assembl: no prompt construction found. Current map id 93249c73-ef93-4c55-909a-6f3a67262366.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-2",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
     },
     "7226db68-4ca8-41ee-a2f8-3012d05e4acd/prompt-assembly": {
       "context": "publish-producers",
@@ -16047,8 +16167,17 @@
       "state": "not-applicable",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-2",
-      "techniques": []
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/publish/publish.ts:21 the context publishes claimed slots to channels through an adapter and collects stats; it makes no model call. Grepped packages/producers/src/publish/*.ts for prompt, claude, llm, model, turn, assembl: the only 'model' hit is metrics.ts:62's vendor stats quote key. Current map id d8928803-1de2-497f-882c-809d029b705b.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-2",
+          "reason": "replaced by cloud-20261031-gravitone-5"
+        }
+      ]
     },
     "f8036604-75f5-4f7d-898c-734511ac5e86/prompt-assembly": {
       "context": "script-composition-and-validation",
@@ -16057,27 +16186,42 @@
       "state": "deviation",
       "evaluatedAt": "2026-10-31",
       "evaluatedTs": "2026-10-31T00:00:00.000Z",
-      "worker": "cloud-20261031-gravitone-2",
+      "worker": "cloud-20261031-gravitone-5",
       "techniques": [
-        {
-          "technique": "variable-interpolation",
-          "verdict": "deviation",
-          "evidence": "lib/script/compose.ts:186 an unmatched engine section renders as '' rather than failing, defaulting or omitting with notice; contrast compose.ts:181, where absent params get a declared default."
-        },
         {
           "technique": "layered-composition",
           "verdict": "realized",
-          "evidence": "lib/script/compose.ts:169 one assembler (composePrompt) for the compose family, the stable SCRIPT-PROMPT.md doctrine first and the per-run material after it."
-        },
-        {
-          "technique": "capability-documentation",
-          "verdict": "realized",
-          "evidence": "lib/script/compose.ts:189 the engines the model may not use are derived from the notebook's engineFit against the qualifying set, not hand-written."
+          "evidence": "lib/script/compose.ts:162 composePrompt is the one assembler for the compose family, stacking the standing prompt doc, format, engines, notebook, scope and cards in a fixed order"
         },
         {
           "technique": "context-budgeting",
           "verdict": "realized",
-          "evidence": "lib/script/compose.ts:124 material past MAX_COMPOSE_CHARS is refused before any spend, naming the size and largest field, rather than left to silent provider truncation (a total ceiling, not per-layer floors)."
+          "evidence": "lib/script/compose.ts:102 MAX_COMPOSE_CHARS is a hard ceiling enforced before pricing, and composeTooLarge refuses with the size and the largest field named rather than letting the provider truncate"
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "deviation",
+          "evidence": "lib/script/compose.ts:57 engineSections filters by free-text label inclusion and returns whatever matched, including nothing, with no check that every allowed engine got its section"
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "lib/producers/research.ts:121 the compose turn's send passes the prompt as payload to the meter, whose digest is minted only on the dry path (packages/kernel/src/dryrun.ts:181); a live send records no prompt digest or size"
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "lib/script/compose.ts:186 an unmatched engine section renders as '' rather than failing, defaulting or omitting with notice; contrast compose.ts:181, where absent params get a declared default.",
+          "carriedFrom": "2026-10-31"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/script/compose.ts:186 engineSections returns an empty string when no ENGINES.md heading matches a qualifying engine's label, so the capability text for the engines the model may use can silently render as nothing - the empty-string render variable-interpolation names as the dishonest outcome, indistinguishable from an unwired input. Current map id 1c2ac174-ba41-4264-b184-6b7aa04507d4.",
+          "evaluatedAt": "2026-10-31T00:00:00.000Z",
+          "worker": "cloud-20261031-gravitone-2",
+          "reason": "replaced by cloud-20261031-gravitone-5"
         }
       ]
     },
@@ -16312,6 +16456,23 @@
         }
       ],
       "registryProposal": "Coverage question: the matcher pairs test-harness to production modules on shared tokens (gate, step, decision, run). The subject's precondition is harness machinery, so these pairs are lexical resonance, not governance."
+    },
+    "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867/prompt-assembly": {
+      "context": "audio-composer-briefs",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-31",
+      "evaluatedTs": "2026-10-31T00:00:00.000Z",
+      "worker": "cloud-20261031-gravitone-5",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/recipe.ts:1 one pure model shared by composer, kit and server door (the one-assembler habit holds), but there are no prompt layers to own"
+        }
+      ],
+      "registryProposal": "prompt-assembly scopes itself to 'a call to a language model' but gives no ruling on text prompts to non-LLM generative vendors (text-to-music style lines, text-to-image recipes). Here two of its rules carry over cleanly (one assembler per family: recipe.ts:1; truncation counted and surfaced: sunoCut) while the layer/budget/transcript machinery does not. A one-line scope note would stop each judge deciding this differently."
     }
   }
 }
