@@ -240,6 +240,12 @@ npx tsx pipeline/music-clip/keyframes.mts <folder> --via studio --yes   # the sa
   (`lib/imaging/studio/`, Chrome on CDP 9333, one tab at a time under the studio lock the scout shares),
   paid from the studio pool - measured 20 credits and ~30 s a frame; the script deletes each generation
   through the API afterwards. The studio's default style (Dynamic) is the operator's style id.
+- Clips: `npx tsx pipeline/music-clip/clips.mts <folder> --dry | --yes` - each keyframe plus its `motion` line
+  (keyframes.json) through the box's LTX-2.5 i2v (lib/imaging/video/comfyLtx.ts, ComfyUI, $0) into
+  `clips/<id>.mp4`, from its t to the next keyframe's in whole seconds (2-10), 1280x704, ~6-7 min per 5 s
+  alone on the card (Stay Here: 46 clips, 288 s, ~6 h - a night). It queues only on an EMPTY ComfyUI queue (it
+  waits out another session's run) and frees the models only when nothing else is waiting. Motion lines:
+  one gentle move per clip, "no zoom, no cuts", the puppets stiff on their rods.
 - Prompts: ONE style sentence and ONE fixed phrase per character, repeated verbatim in every frame (the model
   keeps what it is told the same way); the act's gel named in each; type in the world named in capitals
   (SEIZED, BANK, OPEN); hands "at natural scale". Rules the baseline's notes taught: no push-in from wide to
