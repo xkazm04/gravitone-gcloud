@@ -1230,7 +1230,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/types.ts:535 awaiting-approval can leave only by approved, rejected or drafting: there is no expiry edge. grep for expir/overdue/deadline in lib/articles and the decision kernel finds no reaper, so a run at the gate waits forever with no recorded 'expired unanswered' outcome and no overdue marker. The standard says a pending decision must not be immortal.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "agent-memory",
@@ -4095,7 +4099,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/run.machine.ts:29 awaiting_gate can go only to ratified, blocked or running: the domain machine has no expiry or overdue state, and no reaper exists in the decision kernel (grep expir/overdue/deadline). A gate packet the operator never answers stays pending forever, against the standard's 'timeout is deny or hold, never immortal'.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "fleet-orchestration",
@@ -5381,7 +5389,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/strips/types.ts:119 A strip run's status is running, awaiting-triage or committed, with no expired or overdue state and no reaper. A triage the operator never commits keeps its rendered media and its pending cards indefinitely, which the standard calls an immortal pending item.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "agent-memory",
@@ -5744,10 +5756,10 @@
           "changedAt": "2026-09-17",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "lib/imaging/router.ts:90 The dev generate plan puts agy, which is unpriced and was only checked to work live, ahead of Google, the measured cost-per-usable winner, so for unreferenced requests the plan order is a belief and not a measurement, even though the router mechanics (steer, trail, refusal walk, pre-call gate, plan-top reachability) all follow the standard.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11
+          "evidence": "lib/imaging/router.ts:93 The dev generate plan still puts agy first, ahead of Google, which won the measured cost-per-usable grid. agy has no price and no usable-output measurement (router.ts:87 says only 'verified live'), so every dev generate where agy is present routes to an unmeasured vendor. The standard says a new vendor goes in behind the incumbent until a comparison says otherwise.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:3035bdbc5262b8ba",
+          "evaluatedRevision": 12
         },
         {
           "subject": "module-design",
@@ -5974,10 +5986,10 @@
           "changedAt": "2026-09-17",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/imaging/providers/google.ts:53 Output size is one process-wide env knob for every Google generate, so drafts and promoted winners bill at the same rung, which is the flat-rate resolution failure; refusal reading, adapter constraint declarations and unpriced video rows otherwise conform.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11
+          "evidence": "lib/imaging/providers/google.ts:53 Google's output size is still one process-wide env setting (GOOGLE_IMAGE_SIZE, default 1K) for every generate. Drafts and promoted winners bill at the same rung, the flat-rate resolution failure the standard names.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:3035bdbc5262b8ba",
+          "evaluatedRevision": 12
         },
         {
           "subject": "video-assembly",
@@ -12505,10 +12517,10 @@
           "changedAt": "2026-09-17",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/kernel/src/spend/core.ts:44 The kernel's SpendClass and SpendStats carry only a ceiling and the remaining amount, with no floor or band, so the rebuilt spend authority looks only upward; v1's floorOf/underFloor (lib/spend, outside this context) was not carried into it.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11
+          "evidence": "packages/kernel/src/spend/core.ts:44 The kernel SpendClass still has only a ceiling (or null for count-only) and no floor or band. grep for floor/underFloor/unreached under packages/kernel/src finds no spend hit. The rebuilt spend kernel has dropped the floor that v1's lib/spend/meter.ts reports, so a thrifty window cannot be reported as one.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:3035bdbc5262b8ba",
+          "evaluatedRevision": 12
         },
         {
           "subject": "module-design",
@@ -13461,10 +13473,10 @@
           "changedAt": "2026-09-17",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/text/spend.ts:5 Text spend is count-only with no pre-call ceiling, so the metered Google fallback can spend without any gate, which the standard calls a report, not a control; the routing, trail, refusal and pricing rules otherwise conform.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11
+          "evidence": "lib/text/spend.ts:5 Text spend is still count-only, and nothing under lib/text calls reserve(). The metered Google fallback in every local plan row (lib/text/router.ts:97) can therefore spend with no pre-call ceiling. That is the operator's 2026-10-07 'count only, refuse nothing' ruling, and it is still a budget that only observes after the fact.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:3035bdbc5262b8ba",
+          "evaluatedRevision": 12
         },
         {
           "subject": "agent-cli-transport",
@@ -14745,10 +14757,10 @@
           "changedAt": "2026-09-17",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "packages/kernel/src/router/tables.ts:126 The kernel table copied v1's plan faithfully, including agy at the top of dev generate with no usable-output measurement, while its comment cites the Google/Leonardo grid as the reason for the order; meanwhile route.ts realizes the steer, constraint and refusal-walk rules as a pure function.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11
+          "evidence": "packages/kernel/src/router/tables.ts:128 The kernel image table still copies v1's dev generate order, with agy first, ahead of the measured cost-per-usable winner Google. The table's own header (tables.ts:10-12) cites only the google/leonardo grid as the reason, so agy's position has no measurement behind it.",
+          "evaluatedAt": "2026-10-31",
+          "evaluatedAgainst": "sha256-b2:3035bdbc5262b8ba",
+          "evaluatedRevision": 12
         },
         {
           "subject": "prompt-assembly",
