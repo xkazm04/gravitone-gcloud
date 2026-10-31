@@ -57,6 +57,10 @@ describe("the studio URL", () => {
     expect(low).toBe(MEDIUM_16_9.replace("16%3A9", "9%3A16").replace("quality=MEDIUM", "quality=LOW"));
     expect(STUDIO.limits.maxCreditsPerImage).toBe(25);
   });
+  it("names size MEDIUM only when asked (music-clip keyframes, 2048x1136); SMALL stays the default", () => {
+    expect(STUDIO.page.imageUrl("16:9", "medium", "SMALL")).toBe(MEDIUM_16_9);
+    expect(STUDIO.page.imageUrl("16:9", "low", "MEDIUM")).toBe(MEDIUM_16_9.replace("size=SMALL", "size=MEDIUM").replace("quality=MEDIUM", "quality=LOW"));
+  });
 });
 
 describe("the provider", () => {

@@ -227,6 +227,7 @@ afford to enhance the story or detail of scenes"). Its plan is `music-clip/story
 npx tsx pipeline/music-clip/keyframes.mts <folder> --dry            # the plan, nothing sent
 npx tsx pipeline/music-clip/keyframes.mts <folder> --only K05 --yes # one frame first: read its credits line
 npx tsx pipeline/music-clip/keyframes.mts <folder> --yes            # the rest (skips frames already on disk)
+npx tsx pipeline/music-clip/keyframes.mts <folder> --via studio --yes   # the same through the web studio's pool
 ```
 
 - The operator's setup (2026-10-31): Leonardo v2, `openai/gpt-image-2.5-sunburst`, `quality: LOW`,
@@ -234,8 +235,11 @@ npx tsx pipeline/music-clip/keyframes.mts <folder> --yes            # the rest (
   deleted from the Leonardo library after download; `keyframes/ledger.jsonl` keeps generation id and credits.
 - It draws on the API key's own pool (`apiSubscriptionTokens` / `apiPaidTokens` in `/v1/me`), NOT the web
   studio's subscription tokens. On 2026-10-31 that pool was 0 and v2 answered 402 "Insufficient tokens" with
-  6,844 studio tokens unused: check the pool before promising a batch; the studio pool is reached only through
-  the browser studio driver (`lib/imaging/studio/`).
+  6,844 studio tokens unused: check the pool before promising a batch. Then use `--via studio` (the operator's
+  pick that day): the same model, LOW and size MEDIUM 2048x1136 through the signed-in web studio
+  (`lib/imaging/studio/`, Chrome on CDP 9333, one tab at a time under the studio lock the scout shares),
+  paid from the studio pool - measured 20 credits and ~30 s a frame; the script deletes each generation
+  through the API afterwards. The studio's default style (Dynamic) is the operator's style id.
 - Prompts: ONE style sentence and ONE fixed phrase per character, repeated verbatim in every frame (the model
   keeps what it is told the same way); the act's gel named in each; type in the world named in capitals
   (SEIZED, BANK, OPEN); hands "at natural scale". Rules the baseline's notes taught: no push-in from wide to

@@ -1,6 +1,6 @@
 // Keyframe stills for a /music-clip film through Leonardo's v2 API (GPT Image 2.5 Sunburst by default).
 //
-//   npx tsx pipeline/music-clip/keyframes.mts <clip dir> [--only K01,K02] [--again] [--dry | --yes] [--jobs 3]
+//   npx tsx pipeline/music-clip/keyframes.mts <clip dir> [--via api|studio] [--only K01,K02] [--again] [--dry | --yes] [--jobs 3]
 //
 // Reads <clip>/music-clip/keyframes.json:
 //   { "v": 1,
@@ -12,6 +12,11 @@
 //
 // The setup is the operator's (2026-10-31, Stay Here v3): Sunburst, LOW quality, 2048x1136, one style id,
 // prompt_enhance OFF - "low quality, medium resolution" keyframes for image-to-video.
+// --via studio (operator, 2026-10-31, when the API pool was 0): the same model, quality and size through the
+// signed-in web studio (lib/imaging/studio/driver.ts, the STUDIO credit pool, one tab at a time under the
+// studio lock shared with the scout's jobs). The studio driver deletes nothing by design; this script then
+// deletes the generation through the API (a delete spends nothing). Its style is the studio default, Dynamic
+// (111dc692-...), which is the operator's style id; another style id cannot be set this way.
 // Spend: nothing runs without --yes (--dry prints the plan). Hygiene: every generation is deleted from the
 // operator's Leonardo library once its pixels are on disk (memory: leonardo-studio-hygiene). The key comes
 // from LEONARDO_API_KEY or the repo's .env.local and never reaches the console or a file.
@@ -24,7 +29,9 @@ const flag = (n: string) => { const i = argv.indexOf(n); if (i < 0) return false
 const opt = (n: string) => { const i = argv.indexOf(n); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const dry = flag("--dry"), yes = flag("--yes"), again = flag("--again");
 const only = opt("--only")?.split(",").map((s) => s.trim()).filter(Boolean);
-const jobs = Math.max(1, Number(opt("--jobs") ?? 3));
+const via = opt("--via") ?? "api";
+if (via !== "api" && via !== "studio") { console.error("--via api|studio"); process.exit(2); }
+const jobs = via === "studio" ? 1 : Math.max(1, Number(opt("--jobs") ?? 3));
 const [dir] = argv;
 if (!dir) { console.error("usage: keyframes.mts <clip dir> [--only K01,K02] [--again] [--dry | --yes] [--jobs 3]"); process.exit(2); }
 
@@ -40,7 +47,7 @@ const todo = spec.frames.filter((f) => (!only || only.includes(f.id)) && (again 
 const bad = spec.frames.filter((f) => f.prompt.length > 2000).map((f) => `${f.id} (${f.prompt.length} chars)`);
 if (bad.length) { console.error(`prompts over v2's 2000 chars: ${bad.join(", ")}`); process.exit(2); }
 
-console.log(`${todo.length} keyframe(s) to make with ${spec.request.model} ${spec.request.width}x${spec.request.height} ${spec.request.quality ?? ""}: ${todo.map((f) => f.id).join(" ")}`);
+console.log(`${todo.length} keyframe(s) to make via ${via} with ${spec.request.model} ${spec.request.width}x${spec.request.height} ${spec.request.quality ?? ""}: ${todo.map((f) => f.id).join(" ")}`);
 if (dry || !yes) { console.log(dry ? "dry: nothing sent" : "refusing to spend without --yes (or --dry for the plan)"); process.exit(dry ? 0 : 2); }
 
 function apiKey(): string {
@@ -84,6 +91,19 @@ async function one(f: { id: string; prompt: string }): Promise<{ credits?: numbe
   const body = { model, public: false, parameters: { ...params, quantity: 1, prompt: f.prompt } };
   let id: string | undefined, credits: number | undefined, cleanup = "none", file = "";
   try {
+    if (via === "studio") {
+      const { studioGenerate } = await import("../../lib/imaging/studio/driver");
+      const { withStudioLock } = await import("../../lib/imaging/studio/lock");
+      const quality = String(spec.request.quality ?? "LOW").toUpperCase() === "MEDIUM" ? "medium" : "low";
+      const size = spec.request.width >= 2000 ? "MEDIUM" : "SMALL";
+      const run = await withStudioLock(() => studioGenerate(f.prompt, "16:9", quality, size));
+      id = run.generationId; credits = run.credits;
+      const ext = run.image.mime.includes("jpeg") ? "jpg" : run.image.mime.includes("webp") ? "webp" : "png";
+      for (const old of fs.readdirSync(outDir).filter((x) => x.startsWith(f.id + "."))) fs.rmSync(path.join(outDir, old));
+      file = `${f.id}.${ext}`;
+      fs.writeFileSync(path.join(outDir, file), Buffer.from(run.image.base64, "base64"));
+      return { credits, ok: true };
+    }
     const start = await api(`${API}/v2/generations`, { method: "POST", body: JSON.stringify(body) });
     id = start.generate?.generationId ?? start.generationId ?? start.id;
     if (!id) throw new Error(`no generation id: ${hide(JSON.stringify(start))}`);

@@ -214,7 +214,7 @@ async function clickIfPresent(page: Page, selector: string): Promise<boolean> {
 
 /** One still. Resolves once the image bytes are held; the generation stays in the operator's studio
  *  (the provider deletes it), and a failure after `Generate` named it carries its id for that delete. */
-export async function studioGenerate(prompt: string, aspect: Aspect, quality?: "low" | "medium"): Promise<StudioRun> {
+export async function studioGenerate(prompt: string, aspect: Aspect, quality?: "low" | "medium", size: "SMALL" | "MEDIUM" = "SMALL"): Promise<StudioRun> {
   let browser;
   try {
     browser = await attach({ spawn: true });
@@ -254,7 +254,7 @@ export async function studioGenerate(prompt: string, aspect: Aspect, quality?: "
   page.on("response", onResponse);
 
   try {
-    await page.goto(STUDIO.page.imageUrl(aspect, quality), { waitUntil: "domcontentloaded", timeout: 45_000 });
+    await page.goto(STUDIO.page.imageUrl(aspect, quality, size), { waitUntil: "domcontentloaded", timeout: 45_000 });
     if (STUDIO.page.signedOutPath.test(new URL(page.url()).pathname)) throw new StudioError("not signed in to leonardo", "signed-out");
 
     const box = page.locator(STUDIO.form.prompt).filter({ visible: true }).first();
