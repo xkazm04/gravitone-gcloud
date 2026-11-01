@@ -27,3 +27,9 @@
 - Break the Sequence shipped after three note rounds (v1 "almost oneshotted", v2 outro only, v3 "very well done"). Every note was a timestamp plus a symptom and every fix landed in a set or the plan; the skill now carries the round as a procedure (Stage 3, Note rounds).
 - The proven engine lived only in the operator's Downloads folder, out of reach of the next track. It is now `pipeline/music-clip/film-starter/` (core + router + the one-take exemplar).
 - The upload: 513 MB for 4:10 (H.264 16 Mb/s, AAC 384 kb/s); YouTube's cap is 256 GB / 12 h.
+
+## 2.9.0 - 2026-11-01 - gravitone-gcloud
+- Count Us All went generated-first with no three.js baseline: 48 bar-grid scenes, Leonardo Studio keyframes (round 1 Small Low for approval, round 2 Medium Low with round 1 as Image Reference), local LTX at 3 seeds overnight, two note rounds, ending "the final output looks great".
+- An Image Reference locks composition and ignores prompt fixes; redesigns go without a reference, two variants each.
+- The note "closeups with slow or no movement" came from motion lines that said what stays still; the "lag" at cuts came from a 0.1-0.27 s held last frame (5.04 s clips in 5.2 s scenes). Fixes: continuous-action motion lines, a trim offset for short scenes, slow-to-fill instead of hold, freezedetect before handover.
+- Incident 2026-10-31: a studio dry run's cleanup deleted 50 of the operator's Leonardo uploads by deleting every id it saw in traffic. The rule is now in Rules: one id, the run's own, count-checked, never in a dry run.
