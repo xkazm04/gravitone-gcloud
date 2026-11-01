@@ -341,6 +341,9 @@ backlit gradients), VMAF mean / worst frame: x265 10-bit CRF 22 **106 MB, 97.0 /
 96.4 / 85.4; x264 CRF 23 162 MB, 94.7 / 79.0. YouTube re-encodes every upload and recommends 8 Mb/s for
 1080p30, so the render's extra bits buy nothing; 10-bit keeps the gradients from banding; grain is what
 costs the bits. Say the size and the VMAF line when you hand a film over.
+A textured look (paper tooth, halftone, ink grain) costs about twice that: on Count Us All (195 s
+screenprint) CRF 22 gave 193 MB at VMAF 97.5, so it shipped at `--crf 25`: **134 MB, 96.4**. When the
+mean clears 96 at CRF 22, try 25 before handing over.
 
 ## Rules
 
