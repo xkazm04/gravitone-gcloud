@@ -1,6 +1,6 @@
 ---
 name: music-clip
-version: 2.7.0
+version: 2.8.0
 memory: none
 category: Content
 description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then the film - our own three.js engine on the GPU (start from pipeline/music-clip/film-starter/), the edit as a beat-grid shot plan, one set module per location, proof cuts with sound, a full render muxed with the lossless master, and note rounds that go back into sets and the plan. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / shots) and pipeline/music-clip/{shoot,cut,deliver,keyframes}.mts; every film ships as a 10-bit HEVC upload copy (deliver.mts, ~0.1 GB for 4-5 min). Invoke with /music-clip <folder> [verb].
@@ -249,6 +249,14 @@ npx tsx pipeline/music-clip/keyframes.mts <folder> --via studio --yes   # the sa
   literally and melts the figures into floating black rectangles by the clip's end (Stay Here run 1: 12 of 46
   drifted, most broke at 20-50% of the clip). Say instead that every silhouette stays whole and keeps its
   outline from the first frame to the last and nothing new enters the frame.
+- Pace follows the section's intensity, not the keyframe count (Stay Here v3, operator: "the song is much
+  more fast paced, whereas the scene movement and closeups are almost static"). From intensity ~0.6 up, one
+  shot per bar (2.9 s at 83 BPM), each its own keyframe and its own action verb ("snaps", "hurls",
+  "sprints", "drops"), camera locked off; a story beat that held one 9-11 s clip becomes 3-4 bars of
+  action (the climb: hook, haul, slip, vault). A gentle LTX move over 6+ s reads as a slow zoom.
+- Never write rods or strings into the STYLE sentence ("thin wire rods holding the puppets"): the image
+  model draws them on some frames and not others, and the inconsistency shows (Stay Here v3 at 1:01,
+  1:20, 1:30). Write "the figures stand free with no rods, strings or wires anywhere above them".
 - Look before the edit: a contact sheet of frames at 0/20/40/60/80/100% of each clip. A clip whose clean
   part covers its span is trimmed (`assembly.json`); one that breaks earlier than that is re-rendered with
   `--only <ids> --again --seed 2000` (keep the first takes in `clips/v1/`). Slowing a clean 40% to fill a
