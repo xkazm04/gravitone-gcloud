@@ -33,3 +33,6 @@
 - An Image Reference locks composition and ignores prompt fixes; redesigns go without a reference, two variants each.
 - The note "closeups with slow or no movement" came from motion lines that said what stays still; the "lag" at cuts came from a 0.1-0.27 s held last frame (5.04 s clips in 5.2 s scenes). Fixes: continuous-action motion lines, a trim offset for short scenes, slow-to-fill instead of hold, freezedetect before handover.
 - Incident 2026-10-31: a studio dry run's cleanup deleted 50 of the operator's Leonardo uploads by deleting every id it saw in traffic. The rule is now in Rules: one id, the run's own, count-checked, never in a dry run.
+
+## 2.10.0 - 2026-11-01 - gravitone-gcloud
+- Break the Sequence graphic-novel validation (3 keyframes, 9 LTX clips): ink survives LTX when the motion line pins the palette; colour changes (visor to green, a green wave through a crowd) render as beams and fog unless the line forbids glow, and then a crowd-wide change does not happen at all - cut between two keyframes instead. A stencilled serial spreads to neighbours by 3-4 s.

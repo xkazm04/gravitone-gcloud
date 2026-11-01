@@ -1,6 +1,6 @@
 ---
 name: music-clip
-version: 2.9.0
+version: 2.10.0
 memory: none
 category: Content
 description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then the film - our own three.js engine on the GPU (start from pipeline/music-clip/film-starter/), the edit as a beat-grid shot plan, one set module per location, proof cuts with sound, a full render muxed with the lossless master, and note rounds that go back into sets and the plan. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / shots) and pipeline/music-clip/{shoot,cut,deliver,keyframes}.mts; every film ships as a 10-bit HEVC upload copy (deliver.mts, ~0.1 GB for 4-5 min). Invoke with /music-clip <folder> [verb].
@@ -325,6 +325,26 @@ in one session plus one night. What it taught:
 - **Share the GPU politely.** When another job holds ComfyUI, check every hour, and take the card only
   after two readings two minutes apart show it idle (under 15% utilization and 12 GB, queue empty). Use
   the running ComfyUI rather than starting a second one, and never stop a process you did not start.
+
+#### Inked looks on LTX (Break the Sequence, graphic novel, 2026-11-01)
+
+Three keyframes (studio Medium Low, 17 credits each) and 9 clips at 1280x704 validated an ink-and-spot-colour
+look before a full plan. Measured, 3 seeds per frame:
+
+- **The ink holds** when the motion line says it must: "keeps its ink outline and cross-hatching", "the colours
+  stay exactly as in the first frame: black ink on cream paper, red and green only in the small lamps and visor
+  strips, no glow, no fog, no beams". Without that sentence, seeds smooth the hatching toward CG shading by 4 s.
+- **Light changing colour is drawn as volumetric light.** "Green light spreads along the visor" became a laser
+  beam out of the visor; "a wave of green light races through the crowd" flooded the whole crowd with green fog
+  by 1.5 s on both seeds. With the colour sentence above, the visor turned green INSIDE the strip (a pass),
+  and the crowd wave did not happen at all. A colour change across a crowd is two keyframes (all red,
+  then the green wave) and a hard cut on the downbeat, not one clip.
+- **One stencilled serial gets copied** onto the neighbours ("0461", "045") by 3-4 s, even when the keyframe
+  shows one. Trim such shots to their first 2-3 s, or give every unit its own serial in the keyframe.
+- "Frozen in place and does not take a single step" holds a single figure still inside a moving crowd;
+  "stays still" alone did not (0451 walked off with the line).
+- A frame's own `seconds` in keyframes.json overrides the span for `clips.mts` (a validation set far apart on
+  the track).
 
 ### Delivery - always the same encode
 

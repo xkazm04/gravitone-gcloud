@@ -4,7 +4,8 @@
 //
 // Reads <clip>/music-clip/keyframes.json (frames: id, t, motion) and keyframes/<id>.<ext>; writes
 // clips/<id>.mp4 and one line per clip to clips/ledger.jsonl. A clip runs from its keyframe's t to the
-// next one's (the last to the track's end), in whole seconds, 2..10 (LTX's range is 1..10).
+// next one's (the last to the track's end), in whole seconds, 2..10 (LTX's range is 1..10). A frame's own
+// `seconds` overrides the span (a validation set of a few frames far apart on the track).
 //
 // The engine is lib/imaging/video/comfyLtx.ts renderLtxClip (LTX-2.5 i2v, two passes, ~6-7 min per 5 s at
 // 1280x704 alone on the card). THE QUEUE IS SHARED with other sessions: a clip is only queued when ComfyUI's
@@ -25,7 +26,7 @@ const [dir] = argv;
 if (!dir) { console.error("usage: clips.mts <clip dir> [--only K01] [--again] [--dry | --yes] [--size 1280x704]"); process.exit(2); }
 
 const clip = path.join(dir, "music-clip");
-const spec = JSON.parse(fs.readFileSync(path.join(clip, "keyframes.json"), "utf8")) as { frames: { id: string; t: number; motion?: string }[] };
+const spec = JSON.parse(fs.readFileSync(path.join(clip, "keyframes.json"), "utf8")) as { frames: { id: string; t: number; motion?: string; seconds?: number }[] };
 const duration = JSON.parse(fs.readFileSync(path.join(clip, "timeline.json"), "utf8")).track.durationS as number;
 const kfDir = path.join(clip, "keyframes"), outDir = path.join(clip, "clips");
 fs.mkdirSync(outDir, { recursive: true });
@@ -33,7 +34,7 @@ const frames = [...spec.frames].sort((a, b) => a.t - b.t);
 const plan = frames.map((f, i) => {
   const span = (frames[i + 1]?.t ?? duration) - f.t;
   const still = fs.readdirSync(kfDir).find((x) => x.startsWith(f.id + ".") && /\.(jpe?g|png|webp)$/i.test(x));
-  return { ...f, seconds: Math.min(10, Math.max(2, Math.ceil(span))), still };
+  return { ...f, seconds: Math.min(10, Math.max(2, Math.ceil(f.seconds ?? span))), still };
 }).filter((f) => (!only || only.includes(f.id)) && (again || !fs.existsSync(path.join(outDir, `${f.id}.mp4`))));
 const missing = plan.filter((f) => !f.still || !f.motion).map((f) => `${f.id}${!f.still ? " (no still)" : ""}${!f.motion ? " (no motion)" : ""}`);
 if (missing.length) { console.error(`cannot render: ${missing.join(", ")}`); process.exit(2); }
