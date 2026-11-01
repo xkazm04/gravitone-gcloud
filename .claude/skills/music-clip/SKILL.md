@@ -1,6 +1,6 @@
 ---
 name: music-clip
-version: 2.6.0
+version: 2.7.0
 memory: none
 category: Content
 description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then the film - our own three.js engine on the GPU (start from pipeline/music-clip/film-starter/), the edit as a beat-grid shot plan, one set module per location, proof cuts with sound, a full render muxed with the lossless master, and note rounds that go back into sets and the plan. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / shots) and pipeline/music-clip/{shoot,cut,deliver,keyframes}.mts; every film ships as a 10-bit HEVC upload copy (deliver.mts, ~0.1 GB for 4-5 min). Invoke with /music-clip <folder> [verb].
@@ -245,7 +245,19 @@ npx tsx pipeline/music-clip/keyframes.mts <folder> --via studio --yes   # the sa
   `clips/<id>.mp4`, from its t to the next keyframe's in whole seconds (2-10), 1280x704, ~6-7 min per 5 s
   alone on the card (Stay Here: 46 clips, 288 s, ~6 h - a night). It queues only on an EMPTY ComfyUI queue (it
   waits out another session's run) and frees the models only when nothing else is waiting. Motion lines:
-  one gentle move per clip, "no zoom, no cuts", the puppets stiff on their rods.
+  one gentle move per clip, "no zoom, no cuts". NOT "puppets of black card on wire rods": LTX draws it
+  literally and melts the figures into floating black rectangles by the clip's end (Stay Here run 1: 12 of 46
+  drifted, most broke at 20-50% of the clip). Say instead that every silhouette stays whole and keeps its
+  outline from the first frame to the last and nothing new enters the frame.
+- Look before the edit: a contact sheet of frames at 0/20/40/60/80/100% of each clip. A clip whose clean
+  part covers its span is trimmed (`assembly.json`); one that breaks earlier than that is re-rendered with
+  `--only <ids> --again --seed 2000` (keep the first takes in `clips/v1/`). Slowing a clean 40% to fill a
+  span reads as slow motion; the climb shots at x0.87 read fine.
+- Assembly: `npx tsx pipeline/music-clip/assemble.mts <folder> <folder>/music-clip/film-vN-1080p.mp4 [--dry]`
+  - each keyframe's t snapped to the nearest beat (within half a beat; past the beat grid the t stands),
+  clip i fills [cut i, cut i+1) frame-exact, a clip shorter than its span is slowed to fill it,
+  `music-clip/assembly.json` `{ "K25": { "in": 0, "out": 6.5 } }` picks a source window, 1920x1080 24 fps
+  NVENC + AAC 384k from the master. ~30 s for 4:44. Then deliver.mts as for any render.
 - Prompts: ONE style sentence and ONE fixed phrase per character, repeated verbatim in every frame (the model
   keeps what it is told the same way); the act's gel named in each; type in the world named in capitals
   (SEIZED, BANK, OPEN); hands "at natural scale". Rules the baseline's notes taught: no push-in from wide to

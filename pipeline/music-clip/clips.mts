@@ -1,6 +1,6 @@
 // Image-to-video clips for a /music-clip film from its keyframes, on the box's own LTX (ComfyUI) - $0.
 //
-//   npx tsx pipeline/music-clip/clips.mts <clip dir> [--only K01,K02] [--again] [--dry | --yes] [--size 1280x704]
+//   npx tsx pipeline/music-clip/clips.mts <clip dir> [--only K01,K02] [--again] [--seed 1000] [--dry | --yes] [--size 1280x704]
 //
 // Reads <clip>/music-clip/keyframes.json (frames: id, t, motion) and keyframes/<id>.<ext>; writes
 // clips/<id>.mp4 and one line per clip to clips/ledger.jsonl. A clip runs from its keyframe's t to the
@@ -20,6 +20,7 @@ const opt = (n: string) => { const i = argv.indexOf(n); if (i < 0) return undefi
 const dry = flag("--dry"), yes = flag("--yes"), again = flag("--again");
 const only = opt("--only")?.split(",").map((s) => s.trim()).filter(Boolean);
 const [W, H] = (opt("--size") ?? "1280x704").split("x").map(Number);
+const seedBase = Number(opt("--seed") ?? 1000); // a re-render of a drifted clip takes another seed (--again --seed 2000)
 const [dir] = argv;
 if (!dir) { console.error("usage: clips.mts <clip dir> [--only K01] [--again] [--dry | --yes] [--size 1280x704]"); process.exit(2); }
 
@@ -55,11 +56,11 @@ for (const f of plan) {
   const mime = /\.png$/i.test(f.still!) ? "image/png" : /\.webp$/i.test(f.still!) ? "image/webp" : "image/jpeg";
   const t0 = Date.now();
   try {
-    const r = await renderLtxClip({ image: { bytes, mime }, prompt: f.motion!, width: W, height: H, seconds: f.seconds, seed: 1000 + frames.findIndex((x) => x.id === f.id) },
+    const r = await renderLtxClip({ image: { bytes, mime }, prompt: f.motion!, width: W, height: H, seconds: f.seconds, seed: seedBase + frames.findIndex((x) => x.id === f.id) },
       { root: path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "../.."), release: (await queueSize()) <= 1 });
     fs.writeFileSync(path.join(outDir, `${f.id}.mp4`), r.bytes);
     made++;
-    const line = { id: f.id, seconds: f.seconds, frames: r.frames, size: `${r.width}x${r.height}`, wallS: Math.round(r.wallMs / 1000), promptId: r.promptId, at: new Date().toISOString() };
+    const line = { id: f.id, seed: seedBase + frames.findIndex((x) => x.id === f.id), seconds: f.seconds, frames: r.frames, size: `${r.width}x${r.height}`, wallS: Math.round(r.wallMs / 1000), promptId: r.promptId, at: new Date().toISOString() };
     fs.appendFileSync(path.join(outDir, "ledger.jsonl"), JSON.stringify(line) + "\n");
     console.log(`${f.id} ${f.seconds}s ${line.wallS}s wall`);
   } catch (e) {
