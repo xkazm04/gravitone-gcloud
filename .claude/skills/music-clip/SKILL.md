@@ -1,6 +1,6 @@
 ---
 name: music-clip
-version: 2.10.0
+version: 2.11.0
 memory: none
 category: Content
 description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then the film - our own three.js engine on the GPU (start from pipeline/music-clip/film-starter/), the edit as a beat-grid shot plan, one set module per location, proof cuts with sound, a full render muxed with the lossless master, and note rounds that go back into sets and the plan. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / shots) and pipeline/music-clip/{shoot,cut,deliver,keyframes}.mts; every film ships as a 10-bit HEVC upload copy (deliver.mts, ~0.1 GB for 4-5 min). Invoke with /music-clip <folder> [verb].
@@ -345,6 +345,48 @@ look before a full plan. Measured, 3 seeds per frame:
   "stays still" alone did not (0451 walked off with the line).
 - A frame's own `seconds` in keyframes.json overrides the span for `clips.mts` (a validation set far apart on
   the track).
+
+#### Fast sections: first-last-frame shots on MiniMax H3 (Stay Here v5, 2026-11-01)
+
+The v4 cut gave every bar its own LTX shot, drawn from a start frame only. The operator's verdict was that
+the pacing "is faster, but lost any logic". Each shot made up its own action, and nothing carried that action
+into the next shot. The fix is to make the next shot's keyframe the END frame of this one. The test ran on
+K25c (2:25), one shot drawn three ways:
+
+- **B, LTX with an end guide** (`LTXVAddGuide` frame_idx -1 in both passes, `LTXVCropGuides` before the
+  upsampler and the decode, start strength 1.0): 75 s to render.
+- **C, H3 at 3 s** (73 frames, below the trained range): 451 s.
+- **C5, H3 at 5.2 s** (124 frames): 1223 s. **The operator picked C5:** "C5 held the best".
+
+v5 used C5 on the 36 shots from 1:03 to 1:12 and 1:50 to 3:28. The operator's word on the result: "beautiful
+and was worth the time".
+
+- **Command:**
+  `python -I pipeline/music-clip/clips-h3.py <folder> --plan <plan.json> [--only ids] [--again] [--dry]`.
+  - The plan is a list of `{"id": "K24", "end": "K24b"}`.
+  - The prompt is the shot's `motion` line, followed by "The shot ends on: " and the end keyframe's scene.
+  - Each shot is 124 frames at 1280x704 and 24 fps, with the fl2v turbo LoRA (8 steps) and seed 5000 plus
+    the frame's index.
+  - It writes `assembly.json {in: 0, out: 5.167}`, so the whole render plays at about 1.8x inside its 2.9 s
+    bar. At that speed it reads as fast action, not as a sped-up clip.
+- **Use an end frame only where the action stays in one place:** the pact, the street run, the climb, the roof
+  and the hall. A location change gets no end frame (street to van cab, roof to hall, hall to vault). The
+  model always reaches the end frame, and when the place changes it cuts inside the clip to get there.
+- **A different framing for the end frame causes an inner cut,** even in the same place. On K25c, wide to
+  closer meant a cut inside the clip on every model. In v5:
+  - K23c (sprint, end frame K24) jumped to a dark close-up halfway.
+  - K29 (wall box, end frame K29b, the laptop close-up) dipped to black between the two.
+
+  Draw the end keyframe at the start frame's distance, or leave it out. The contact sheet (frames at 0.1,
+  2.6 and 5.0 s of every clip) catches both.
+- **H3 fills an empty set.** K29c's empty hall of red threads gained a woman in a lace dress and a dog. Say
+  "the hall stays empty; no figures appear" in the motion line of an empty-set shot.
+- **What it costs on the box:** 7-8.5 min a clip alone on the card (421-521 s), and 10-23 min while another
+  job shares the card. The 36 shots took about 6 h ($0), queued only on an empty ComfyUI queue. Plan one
+  night for a film's fast sections. Slow sections stay on LTX (`clips.mts`), which is about 3x faster and
+  holds a gentle move fine.
+- **The LTX negative prompt does nothing:** LTX-2.5 distilled samples at CFG 1. Write the prohibitions into
+  the positive motion line ("no extra figures appear; no cuts").
 
 ### Delivery - always the same encode
 
