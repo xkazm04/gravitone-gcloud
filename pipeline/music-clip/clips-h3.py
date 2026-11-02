@@ -1,6 +1,11 @@
 """Clips for a /music-clip film on the box's MiniMax H3 first-last-frame model (ComfyUI, $0).
 
     python -I pipeline/music-clip/clips-h3.py <clip dir> --plan <plan.json> [--only K21,K22] [--again] [--dry]
+        [--out <subdir>] [--seed N]
+
+A plan entry may carry its own "motion" (replaces the keyframe's, e.g. a fast-action line for H3 beside an LTX
+plan) and "out" (the source window's end in assembly.json, e.g. 3.4 for a one-bar shot). --out writes the clips
+and their assembly.json under clips/<subdir>/ so a second engine's takes sit beside the first's for comparison.
 
 The plan (JSON) is a list of shots: {"id": "K24", "end": "K24b"} - the start frame is keyframes/<id>.jpg, the
 end frame (optional) keyframes/<end>.jpg; the prompt is the shot's `motion` from keyframes.json, plus, when there
@@ -33,13 +38,16 @@ def flag(n):
     if n in args: args.remove(n); return True
     return False
 plan_path, only, again, dry = opt("--plan"), opt("--only"), flag("--again"), flag("--dry")
+sub, seed_opt = opt("--out"), opt("--seed")
+if seed_opt: SEED = int(seed_opt)
 if not args or not plan_path:
     sys.exit("usage: clips-h3.py <clip dir> --plan <plan.json> [--only K21] [--again] [--dry]")
 clip = os.path.join(args[0], "music-clip")
 kf = {f["id"]: f for f in json.load(open(os.path.join(clip, "keyframes.json"), encoding="utf8"))["frames"]}
 plan = json.load(open(plan_path, encoding="utf8"))
 only = set(only.split(",")) if only else None
-out_dir = os.path.join(clip, "clips")
+out_dir = os.path.join(clip, "clips", sub) if sub else os.path.join(clip, "clips")
+os.makedirs(out_dir, exist_ok=True)
 todo = [s for s in plan if (not only or s["id"] in only) and (again or not os.path.exists(os.path.join(out_dir, s["id"] + ".mp4")))]
 
 
@@ -51,7 +59,7 @@ def scene(prompt):
 
 
 def prompt_for(s):
-    p = kf[s["id"]]["motion"]
+    p = s.get("motion") or kf[s["id"]]["motion"]
     if s.get("end"):
         p += " The shot ends on: " + scene(kf[s["end"]]["prompt"])
     return p
@@ -125,7 +133,7 @@ def render(s):
         raise RuntimeError("finished with no mp4")
 
 
-ov_path = os.path.join(clip, "assembly.json")
+ov_path = os.path.join(out_dir if sub else clip, "assembly.json")
 made = failed = 0
 for s in todo:
     while (n := queue_size()) != 0:
@@ -136,7 +144,7 @@ for s in todo:
         data, pid = render(s)
         open(os.path.join(out_dir, s["id"] + ".mp4"), "wb").write(data)
         ov = json.load(open(ov_path, encoding="utf8")) if os.path.exists(ov_path) else {}
-        ov[s["id"]] = {"in": 0, "out": round(FRAMES / FPS, 3)}
+        ov[s["id"]] = {"in": 0, "out": s.get("out", round(FRAMES / FPS, 3))}
         json.dump(ov, open(ov_path, "w", encoding="utf8"), indent=2)
         line = {"id": s["id"], "engine": "minimax-h3-fl2v-turbo", "end": s.get("end"), "frames": FRAMES, "size": f"{W}x{H}",
                 "wallS": round(time.time() - t0), "promptId": pid, "at": time.strftime("%Y-%m-%dT%H:%M:%S")}
