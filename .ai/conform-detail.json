@@ -9860,14 +9860,14 @@
       "subject": "agent-memory",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T00:00:33.219Z",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T09:18:47.438Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
+        "worker": "e480e214-bcc1-415c-8648-74a28500e9e4",
         "state": "not-applicable",
-        "at": "2026-10-24T00:00:56.990991+00:00",
-        "reason": "reviewer (sonnet): The claim that no agent recalls this context's verdicts is contradicted. verdictLog.ts is the shared verdict writer that lib/foundry/scout/store.ts and lib/foundry/training/store.ts use. scout/taste.ts reads the operator's last verdicts back into each new night as taste.md for the skill (\"rejections"
+        "at": "2026-11-03T09:19:37.989999+00:00",
+        "reason": "reviewer (sonnet): The claim that no agent recalls its own experience is contradicted in the same lib/foundry tree: lib/foundry/scout/taste.ts writes the operator's last committed nights' verdicts, reasons and notes into each new night's taste.md for the skill to read before it searches. That is cross-run recall feedi"
       }
     },
     "b412ea73-0dc3-4362-93c4-2a9b913f9a61/agent-memory": {
@@ -13562,6 +13562,36 @@
         "at": "2026-10-26T01:00:34.523751+00:00",
         "reason": "reviewer (sonnet): The anchors in UpstreamBreak.tsx (lines 1, 6, 8) are header comments about a failed pipeline step and what was kept from v1, so they do not show that no vendored tree or patch set exists. That file is also not among the context's listed files (status, tally, piprow, stackbar, facts, facet). I did no"
       }
+    },
+    "14632859-df56-4340-9e16-c420ff681ee3/agent-memory": {
+      "context": "article-run-engine",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T09:18:47.438Z",
+      "worker": "e480e214-bcc1-415c-8648-74a28500e9e4",
+      "techniques": []
+    },
+    "c425f431-c0d1-4f34-b736-1a5d70683ef4/agent-memory": {
+      "context": "notebook-contract-validation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T09:18:47.438Z",
+      "worker": "e480e214-bcc1-415c-8648-74a28500e9e4",
+      "techniques": []
+    },
+    "f8036604-75f5-4f7d-898c-734511ac5e86/agent-memory": {
+      "context": "script-composition-and-validation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T09:18:47.438Z",
+      "worker": "e480e214-bcc1-415c-8648-74a28500e9e4",
+      "techniques": []
     }
   }
 }

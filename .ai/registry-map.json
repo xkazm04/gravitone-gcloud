@@ -1408,7 +1408,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/resume.ts:11 The only thing a run carries forward is its own step record, used to resume a failed job, and each run gets fresh inputs from the registry; a case-insensitive recursive grep of lib/articles for memory, recall, consolidat and episodic found 0 files, so no store of the agent's past experience is captured, consolidated or recalled here.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "agent-runtime-assembly",
@@ -9012,7 +9016,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/notebook/retrieval.ts:12 This context validates one run's notebook output (schema, shape, graph checks, fetched-receipt cross-check) as an object, and its 'provenance' field is about where a cited claim came from, not a memory store; a recursive grep of lib/notebook found 0 files for memory and consolidat.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "structured-output",
@@ -11708,7 +11716,11 @@
           "revision": 51,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/history.ts:9 What persists here is the version history of a script document, gated and restored forward, which is versioning rather than an agent's memory; a recursive grep of lib/script found 0 files for recall, consolidat, decay and episod.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "prompt-assembly",
