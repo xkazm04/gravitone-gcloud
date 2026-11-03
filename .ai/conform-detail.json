@@ -13847,6 +13847,72 @@
       "evaluatedTs": "2026-11-03T22:09:48.926Z",
       "worker": "35af6e0b-56ba-4cbc-b66d-cc4319e86ae2",
       "techniques": []
+    },
+    "79439a23-e379-41e6-92c6-ea1bbd2516d7/quality-gates": {
+      "context": "foundry-mesh-gates",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T22:33:45.341Z",
+      "worker": "8b4abd9a-e8dd-45c9-aa5d-44fd76071993",
+      "techniques": [
+        {
+          "technique": "gate-liveness",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/mesh/gates/rig-gate.ts:149 The population is cut to one primitive by structure and reported in the same words as a whole-asset verdict. Morph targets are read across every mesh (line 129), so the narrower weight read is known, and nothing asserts it."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/face-budget.ts:115 A missing request or measurement returns 'unmeasured' with a reason, never 'honored'. The rig gate also fails closed on unread joint names and morph counts."
+        },
+        {
+          "technique": "false-positive-economics",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/mesh-score.ts:163 A component-count rule that misfired on assembled characters was narrowed with a face-share histogram, not deleted. The blunt rule stays wherever the histogram is absent."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/mesh-score.ts:56 The thresholds are exported so the download door derives its ceiling from the number the grader uses, with no second hand-written copy."
+        },
+        {
+          "technique": "instrument-answers-only-its-own-question",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/mesh-score.ts:231 The three.js geometry scorer names the topology codes it cannot measure (GATE_ONLY_CODES) and does not let its green stand for them."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/version.ts:6 Each GateResult carries the exact ported rule version that judged it, so a satisfied verdict points at the version it was measured on."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/face-budget.ts:132 Budget findings name a remedy the reader can act on. The quad-trap branch points at providerFaceLimit, which ships in the same tree."
+        },
+        {
+          "technique": "unparseable-form-is-a-finding",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/rig-gate.ts:376 Bytes the parser cannot read get their own outcome, separate from both pass and fail, and are never read as a clean rig."
+        }
+      ]
+    },
+    "868afe8a-01af-428e-9f7c-d561ee033d4c/quality-gates": {
+      "context": "project-step-store",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T22:33:45.341Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "8b4abd9a-e8dd-45c9-aa5d-44fd76071993",
+        "state": "not-applicable",
+        "at": "2026-11-03T22:34:06.373385+00:00",
+        "reason": "reviewer (sonnet): lib/steps/recordRegistry.ts (lines 11-20, 154-181) refuses future-version and malformed records, and its header names this 'refuse, never downgrade' rule. So the claim that no check in this context refuses anything is contradicted, and the cited index.ts:8 anchor does not show that the precondition "
+      }
     }
   }
 }

@@ -6997,7 +6997,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/mesh/gates/rig-gate.ts:149 The rig gate reads skin weights, zero-weight vertices and the vertex count from the first primitive of the first mesh only. It still reports them as the whole asset ('N of M vertices carry no weight'), so a multi-primitive or multi-shell character passes with unweighted geometry the gate never saw, or fails as unrigged when its skin sits on a later mesh.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "talking-avatar",
