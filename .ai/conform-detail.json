@@ -14126,6 +14126,72 @@
         }
       ],
       "registryProposal": "gap-and-refusal-honesty could name a common failure mode: the refusal is classed correctly at the vendor and kept on the job record, but never written onto the cue the cut draws from, so the cut still shows 'missing'."
+    },
+    "1c2ac174-ba41-4264-b184-6b7aa04507d4/prompt-assembly": {
+      "context": "script-composition-and-validation",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:43:57.013Z",
+      "worker": "ee87a618-eabe-4f50-a3af-ccb2ad1a8d60",
+      "techniques": [
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "lib/script/compose.ts:102 The budget is counted in characters, and only for the total. Notebook, conclusions and engines have no line item each and no full-to-summarized-to-notice ladder. Oversize refuses the run instead of degrading."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "lib/script/compose.ts:196 List variables are rendered as raw JSON under a fixed heading even when empty ('## CONCLUSIONS IN SCOPE' over []), where the empty-list rule says to omit the section. No trust class is declared for the notebook, which is output of an earlier research model run."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "conformant",
+          "evidence": "lib/script/compose.ts:169 One assembler for the compose family. The authored standing doc leads, and template params, engines, notebook and cards trail in order of volatility. The caller (lib/producers/script.ts) sends the string unappended."
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "conformant",
+          "evidence": "lib/script/compose.ts:186 Only the ENGINES.md sections for engines that qualify are rendered. The answer schema's engine enum comes from the same fits (validate.ts composeSchema), so the documented abilities and the door agree."
+        },
+        {
+          "technique": "consumer-coupled-decoration",
+          "verdict": "conformant",
+          "evidence": "lib/script/compose.ts:191 Notebook fields with no reader in this turn (sources, and engineFit, which is duplicated above) are stripped before serialisation, and the consumer reasoning is written down."
+        },
+        {
+          "technique": "task-envelope",
+          "verdict": "conformant",
+          "evidence": "lib/script/compose.ts:175 The run section states the deliverable as an artifact. The authored layer opens with 'THE JOB', not a role claim, and the answer is checked by parseDraft."
+        },
+        {
+          "technique": "contributed-document-admission",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/compose.ts:38 The injected documents are the repo's own authored knowledge files. Nothing third-party is installed."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/compose.ts:207 This is one single-shot prompt string with no multi-turn transcript to compact, so the compaction and history family does not arise."
+        },
+        {
+          "technique": "pinned-prompt-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/compose.ts:162 Assembly reads only the run and files on disk. No date or time is rendered into the prompt."
+        }
+      ]
+    },
+    "03bbdce3-27bb-4361-947c-ba8f0d70fa2c/prompt-assembly": {
+      "context": "audio-composer-briefs",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:43:57.013Z",
+      "worker": "ee87a618-eabe-4f50-a3af-ccb2ad1a8d60",
+      "techniques": []
     }
   }
 }

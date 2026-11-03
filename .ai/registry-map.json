@@ -3068,7 +3068,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/batch.ts:7 The prompts assembled here (composeSfxPrompt, the Suno fields in recipe.ts) go to audio-generation vendors, not to a language model, and the file names sound-effect-generation as its governing technique. A search of packages/ui/src/components/audio for systemPrompt, max_tokens, anthropic, compaction and fingerprint returned no hits.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "video-assembly",
@@ -16302,7 +16306,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/compose.ts:102 The compose turn's only budget is a whole-material ceiling in serialised characters (the comment just above converts it to 'roughly a quarter of a million tokens'). Past it the run is refused outright. No per-section allocation, degradation ladder or token-unit counter exists, which falls short of context-budgeting.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "supply-chain",
