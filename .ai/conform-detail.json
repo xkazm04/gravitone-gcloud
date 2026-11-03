@@ -13903,16 +13903,52 @@
       "context": "project-step-store",
       "subject": "quality-gates",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "deviation",
       "evaluatedAt": "2026-11-03",
-      "evaluatedTs": "2026-11-03T22:33:45.341Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "8b4abd9a-e8dd-45c9-aa5d-44fd76071993",
-        "state": "not-applicable",
-        "at": "2026-11-03T22:34:06.373385+00:00",
-        "reason": "reviewer (sonnet): lib/steps/recordRegistry.ts (lines 11-20, 154-181) refuses future-version and malformed records, and its header names this 'refuse, never downgrade' rule. So the claim that no check in this context refuses anything is contradicted, and the cited index.ts:8 anchor does not show that the precondition "
-      }
+      "evaluatedTs": "2026-11-03T23:15:56.647Z",
+      "worker": "930e38bc-cd24-431b-8e42-e3d50f8207a1",
+      "techniques": [
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/step-record-literal-keys.probe.spec.ts:70 Two of the three remedies it names no longer exist: a repo-wide grep finds only unrelated private patchRecord helpers in lib/producers."
+        },
+        {
+          "technique": "unparseable-form-is-a-finding",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/step-record-literal-keys.probe.spec.ts:15 The check knows a key passed through a const escapes it. On owned code it accepts that blind spot and does not refuse the unrecognised form."
+        },
+        {
+          "technique": "renameable-detector-keys",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/shared-notebook-contracts.probe.spec.ts:140 The connection-close gate for withStore's rule matches the literal 'await openDb()'. An aliased import or openDb().then(...) drops a caller out of the population without any change to what the check is about."
+        },
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "conformant",
+          "evidence": "lib/steps/withStore.ts:38 The close-what-you-open rule was taken out of a stale prose count and mechanised in a probe."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/step-record-literal-keys.probe.spec.ts:55 The instrument is asserted before the result: a walk that found almost nothing fails instead of passing."
+        },
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/step-record-literal-keys.probe.spec.ts:17 The haystack is normalised to code, so a comment quoting the forbidden call neither counts nor hides."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/shared-notebook-contracts.probe.spec.ts:184 Exemptions are keyed by file, must carry a reason, and fail once the file stops leaking (lines 186-190)."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/steps/recordRegistry.ts:190 A future or malformed record gets a distinct 'refused' outcome, separate from both failed and never-written, and is never cast."
+        }
+      ]
     },
     "bba6c91f-7e8c-40e9-acee-8929eb245a8c/video-assembly": {
       "context": "cut-and-export",
@@ -13975,6 +14011,94 @@
         }
       ],
       "registryProposal": "drift-correction states a perceptual tolerance (~15 ms early / ~45 ms late) but the golden path also asks for a snap that returns the offset to exactly zero; a technique line saying whether a gate should pass an offset inside the tolerance (vs. requiring zero) would settle whether a zero-tolerance finish gate is a deviation."
+    },
+    "d74a16c1-aca7-4dee-9935-c890f5785336/quality-gates": {
+      "context": "resource-gates-and-gpu",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:15:56.647Z",
+      "worker": "930e38bc-cd24-431b-8e42-e3d50f8207a1",
+      "techniques": [
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/resource.ts:161 The admission gate sits in the work's path, so letting the actor through on a broken instrument is allowed, but only if it is loud to the operator on a code of its own. An unread cpuBusy is quietly treated as clean, and no waiting/unread event is written. An unread comfyQueue (line 164) gets the same silent pass, but profileReady refuses on it. The memory branch (line 152, refuse 'unread') does conform."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/resources/gate.ts:30 A probe that throws gives an empty MachineLoad, so memory-costly jobs wait as 'unread' and are never admitted on a reading of zero."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/resource.ts:16 Admission charges peaks that the kernel's profiler measured, not a cost the producer declares. A profile job is never profiled itself (PROFILER, line 98)."
+        }
+      ],
+      "registryProposal": "The in-path split in unmeasurable-criteria (open to the actor, loud to the operator) covers runtime admission gates as well as CI gates. use_when could name 'a resource admission gate whose probe can come back partly unread' so that seats judging runtime gates find it."
+    },
+    "67420468-b503-4a5c-bf04-0e24a9bbc225/quality-gates": {
+      "context": "scout-engine-core",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:15:56.647Z",
+      "worker": "930e38bc-cd24-431b-8e42-e3d50f8207a1",
+      "techniques": [
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/needs.ts:109 The remedy lives outside the tree and is given as a literal, not resolved from needsRoot(). By contrast, doctor.ts:143 resolves COMFY_START from the environment."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/doctor.ts:315 Which checks block is computed from the needed flag. Notes cannot fail the night."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/doctor.ts:319 The printed FAIL/note tag comes from the same Check fields as blocking(), so the surface cannot understate what blocks."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/doctor.ts:204 A condition that was not evaluated is shown as an explicit skip with its reason, not as ok. The judge also fails an unread age closed (muse.ts:81)."
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/planDoors.ts:32 The plan-time rung reuses the launch door's own parser, so one check runs at both rungs."
+        },
+        {
+          "technique": "blocking-by-input-determinism",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/planDoors.ts:37 Checks over the payload block at plan time. Checks that read the world (caps, money, seed state) are kept for launch, where their input is current."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/budget.ts:16 The budget gate reads the kernel's meter rows, not a figure the gated night keeps for itself."
+        },
+        {
+          "technique": "item-liveness",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/plan.ts:31 Queued plan items have an 'expired' terminal state when the night's until passes, so they cannot sit queued forever."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/plan.ts:52 Each non-satisfied terminal state carries a reason from a closed state vocabulary; none is blank."
+        },
+        {
+          "technique": "fabrication-economics",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/judge.ts:20 The eye has a separate 'will not say' token instead of being forced to invent an age, and that token fails closed in judgeFailure."
+        }
+      ]
     }
   }
 }

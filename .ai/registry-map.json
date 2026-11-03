@@ -13578,7 +13578,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/step-record-literal-keys.probe.spec.ts:70 The ratchet that guards this context's step-key rule tells the reader to use patchRecord and useRecord, but both retired with app/_phases (recordRegistry.ts:27, patchStep.ts:40-41) and neither exists in lib/steps. Only readRecord resolves, so most of the refusal's remedy is a dead end.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "migrations",
@@ -14257,7 +14261,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/resource.ts:161 When the probe cannot read CPU load, the admission gate admits the CPU-costly job and records nothing about the missing reading, so 'could not check' looks the same as 'checked and clean' to the operator, while an unread commit charge two conditions earlier (line 152) is refused out loud.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "mcp-tools",
@@ -15337,7 +15345,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/needs.ts:109 The stale-needs refusal tells the reader to run a command in a sibling checkout as the literal 'in pof', even though the module resolves that root itself (needsRoot: EXPORT_ROOT_POF or ../pof). The remedy is not printed where it would actually run.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "agent-memory",
