@@ -13827,6 +13827,26 @@
       "evaluatedTs": "2026-11-03T17:19:58.080Z",
       "worker": "13237af0-8881-4903-9070-0fe592168a0a",
       "techniques": []
+    },
+    "d8928803-1de2-497f-882c-809d029b705b/prompt-assembly": {
+      "context": "publish-producers",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T22:09:48.926Z",
+      "worker": "35af6e0b-56ba-4cbc-b66d-cc4319e86ae2",
+      "techniques": []
+    },
+    "1155c1ec-f832-471a-929c-2a16f06cfbb7/prompt-assembly": {
+      "context": "domain-run-job-steps",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T22:09:48.926Z",
+      "worker": "35af6e0b-56ba-4cbc-b66d-cc4319e86ae2",
+      "techniques": []
     }
   }
 }

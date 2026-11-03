@@ -5723,7 +5723,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/registry.ts:13 The context holds zod persistence schemas, state machines and estimates for runs, jobs and step records; 'prompt' shows up only as a stored field (for example still takes' prompt string), and a search of packages/domain/src for systemPrompt, anthropic, compaction, contextWindow and maxTokens found nothing, so nothing here assembles a model prompt.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "job-coordination",
@@ -13872,7 +13876,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/publish/adapter.ts:5 The publish producers are channel adapters, a claim/record tick and metrics refresh against platform APIs, with no model call; a search of packages/producers/src/publish for prompt, systemPrompt, anthropic, compaction and contextWindow found nothing (the 'token' hits are OAuth refresh tokens).",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "background-jobs",
