@@ -9,7 +9,7 @@
 
 import type { SceneFx } from "./compositor";
 
-export type MvLookId = "siren-rain" | "garage-red";
+export type MvLookId = "siren-rain" | "garage-red" | "arch-lyre" | "ring-lyre";
 
 /** Misu Vol 2 cover: a siren singing on rain-wet temple steps, two braziers
  *  beside her, ghostly kithara / aulos / frame drum over the sea, moon upper
@@ -118,7 +118,95 @@ const GARAGE_RED: SceneFx = {
   ],
 };
 
-export const MV_LOOKS: Record<MvLookId, SceneFx> = { "siren-rain": SIREN_RAIN, "garage-red": GARAGE_RED };
+/** Misu Vol 3 trial A: a woman with a lyre at the foot of a crimson hall,
+ *  robots with red eyes reclining at a long table, a glowing triangle in the
+ *  pointed arch at the far end. The picture already paints sparks leaving the
+ *  strings, fanning right and down; the stream carries them on. Measured off
+ *  the 2752x1536 picture on 2026-10-30. The operator asked for 50% more beat
+ *  swing than the plain triage render, and red edge light, not cyan-white. */
+const ARCH_LYRE: SceneFx = {
+  intensity: 1.5,
+  bloomRgb: [255, 60, 50],
+  particleHue: 0,
+  dust: 0.4,
+  crf: 25,
+  streams: [
+    { from: { x0: 0.255, y0: 0.62, x1: 0.285, y1: 0.8 }, to: { x0: 0.29, y0: 0.64, x1: 0.34, y1: 0.86 }, count: 60, hue: 4, hueTo: 356, l: 60, lifeS: [2.5, 5], sizePx: 2.2 },
+    { from: { x0: 0.26, y0: 0.7, x1: 0.29, y1: 0.8 }, to: { x0: 0.28, y0: 0.8, x1: 0.36, y1: 0.88 }, count: 28, hue: 0, l: 55, lifeS: [3.5, 6], sizePx: 1.6 },
+  ],
+  glows: [
+    { x: 0.511, y: 0.355, r: 0.14, hue: 0, lagFrames: 0, l: 52 },
+    { x: 0.513, y: 0.12, r: 0.08, hue: 355, lagFrames: 6, l: 50 },
+  ],
+  lamps: {
+    points: [
+      { x: 0.105, y: 0.43 }, { x: 0.2125, y: 0.463 }, { x: 0.3, y: 0.48 },
+      { x: 0.69, y: 0.487 }, { x: 0.79, y: 0.463 }, { x: 0.927, y: 0.448 },
+    ],
+    r: 0.018,
+    hue: 0,
+  },
+  reflect: {
+    hue: 358,
+    streaks: [
+      { x: 0.515, y: 0.6, w: 0.05, h: 0.12, band: "low" },
+      { x: 0.515, y: 0.8, w: 0.04, h: 0.15, band: "mid" },
+    ],
+  },
+  beacons: [
+    { x: 0.032, y: 0.27, r: 0.02, hue: 5, l: 60, a: 0.25, rate: 0.4 },
+    { x: 0.977, y: 0.255, r: 0.02, hue: 5, l: 60, a: 0.25, rate: 0.45 },
+  ],
+};
+
+/** Misu Vol 3 trial B: a woman with a lyre seen from behind in a dark round
+ *  hall, armoured figures reclining on couches, kneeling attendants with red
+ *  glasses, an obsidian ring hung overhead. The picture already paints one
+ *  column of sparks falling from above the ring through it onto the strings,
+ *  violet-white at the top and red below; the stream carries it down.
+ *  Measured off the 3584x2016 picture on 2026-10-30; 50% more beat swing and
+ *  red edge light, as for trial A. */
+const RING_LYRE: SceneFx = {
+  // The operator's pick for the album (2026-10-30, over arch-lyre). Its
+  // second pass: the picture a quarter darker at rest and 30% more swing on
+  // top of trial A/B's 1.5, so the red reads as the beat's light; the streams
+  // at half their trial speed (twice the life over the same path).
+  intensity: 1.95,
+  dim: 0.25,
+  bloomRgb: [255, 70, 80],
+  particleHue: 355,
+  dust: 0.4,
+  crf: 25,
+  streams: [
+    { from: { x0: 0.5, y0: 0.06, x1: 0.516, y1: 0.12 }, to: { x0: 0.488, y0: 0.64, x1: 0.552, y1: 0.76 }, count: 110, hue: 265, hueTo: 355, l: 66, lifeS: [6, 12], sizePx: 2, sway: 0.004 },
+    { from: { x0: 0.503, y0: 0.04, x1: 0.513, y1: 0.1 }, to: { x0: 0.495, y0: 0.32, x1: 0.525, y1: 0.4 }, count: 30, hue: 260, hueTo: 280, l: 75, lifeS: [4, 7], sizePx: 1.6, sway: 0.003 },
+  ],
+  glows: [
+    { x: 0.5, y: 0.29, r: 0.2, hue: 265, lagFrames: 0, l: 60 },
+    { x: 0.52, y: 0.7, r: 0.08, hue: 355, lagFrames: 4, l: 52 },
+  ],
+  lamps: {
+    points: [{ x: 0.0925, y: 0.684 }, { x: 0.245, y: 0.702 }, { x: 0.8825, y: 0.702 }],
+    r: 0.035,
+    hue: 355,
+  },
+  reflect: {
+    hue: 356,
+    streaks: [
+      { x: 0.0925, y: 0.75, w: 0.03, h: 0.15, band: "low" },
+      { x: 0.245, y: 0.76, w: 0.03, h: 0.15, band: "low" },
+      { x: 0.8825, y: 0.76, w: 0.03, h: 0.15, band: "mid" },
+    ],
+  },
+  beacons: [
+    { x: 0.145, y: 0.555, r: 0.015, hue: 0, l: 60, a: 0.3, rate: 0.3 },
+    { x: 0.288, y: 0.56, r: 0.015, hue: 0, l: 60, a: 0.3, rate: 0.35 },
+    { x: 0.673, y: 0.565, r: 0.015, hue: 0, l: 60, a: 0.3, rate: 0.32 },
+    { x: 0.84, y: 0.555, r: 0.015, hue: 0, l: 60, a: 0.3, rate: 0.38 },
+  ],
+};
+
+export const MV_LOOKS: Record<MvLookId, SceneFx> = { "siren-rain": SIREN_RAIN, "garage-red": GARAGE_RED, "arch-lyre": ARCH_LYRE, "ring-lyre": RING_LYRE };
 
 /** What a look draws, in one sentence for the YouTube text turn - the
  *  picture, never the music. Without it the turn describes the generic
@@ -129,6 +217,10 @@ export const MV_LOOK_NOTES: Record<MvLookId, string> = {
     "the album's own cover art: a siren singing on rain-wet marble temple steps beside a night sea, with falling rain, flickering braziers and pale blue light carried from her voice to ghostly ancient instruments; the light swells with the track",
   "garage-red":
     "the album's own cover art: a keyboardist in a dark Tokyo garage beside a black sports car, red taillight glow in the haze and on the wet floor, red light trails shaping ghostly guitar, bass and violin players; the light builds with the track",
+  "arch-lyre":
+    "the album's own cover art: a woman playing a lyre at the foot of a crimson hall where robots with red eyes recline at a long table under a glowing triangle in a pointed arch; red sparks drift off the strings and the light swells with the track",
+  "ring-lyre":
+    "the album's own cover art: a woman playing a lyre in a dark round hall of reclining armoured figures and kneeling attendants, a column of violet sparks falling from a hanging obsidian ring onto the strings and turning red; the light swells with the track",
 };
 export const MV_LOOK_IDS = Object.keys(MV_LOOKS) as MvLookId[];
 // Own keys only: `in` also answers for "toString", "constructor" and every other

@@ -50,7 +50,14 @@ try {
     posterDataUrl: `data:${mime};base64,${fs.readFileSync(still).toString("base64")}`,
     envelope,
     seed: 12345,
-    effectParams: { ...DEFAULT_EFFECT_PARAMS, bloomIntensity: 0.5 },
+    // The queue's numbers for a supplied still (motion defaults: pulse 0.5 is
+    // the default bloom, density 0.5 the default dust), then the look's gain
+    // and dust, as lib/sound/mv/render.ts applies them.
+    effectParams: {
+      ...DEFAULT_EFFECT_PARAMS,
+      bloomIntensity: DEFAULT_EFFECT_PARAMS.bloomIntensity * (MV_LOOKS[lookArg].intensity ?? 1),
+      particleCount: Math.round(DEFAULT_EFFECT_PARAMS.particleCount * (MV_LOOKS[lookArg].dust ?? 1)),
+    },
     fit: "cover",
     particleHue: MV_LOOKS[lookArg].particleHue ?? 200,
     scene: MV_LOOKS[lookArg],

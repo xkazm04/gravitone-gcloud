@@ -263,7 +263,7 @@ export function particleAt(
  *
  * Pure: same `edgeMask` + `params` in, same canvas pixels out.
  */
-export function buildBloomTexture(edgeMask: EdgeMask, params: EffectParams): HTMLCanvasElement {
+export function buildBloomTexture(edgeMask: EdgeMask, params: EffectParams, rgb: readonly [number, number, number] = [200, 230, 255]): HTMLCanvasElement {
   const blurred = boxBlur(edgeMask.data, edgeMask.width, edgeMask.height, params.bloomBlurPasses);
   const canvas = document.createElement("canvas");
   canvas.width = edgeMask.width;
@@ -273,11 +273,13 @@ export function buildBloomTexture(edgeMask: EdgeMask, params: EffectParams): HTM
   for (let i = 0; i < blurred.length; i++) {
     const v = blurred[i] > params.edgeThreshold ? blurred[i] : 0;
     const a = Math.min(255, Math.round(v * 255));
-    // A cool cyan-white tint — additive, so only the alpha channel matters for
+    // A cool cyan-white tint unless a look names its own (a red picture's
+    // edges lit cyan-white read as haze, not as its light - Misu Vol 3,
+    // 2026-10-30) — additive, so only the alpha channel matters for
     // intensity; colour is a fixed constant, not a reactive value.
-    imgData.data[i * 4 + 0] = 200;
-    imgData.data[i * 4 + 1] = 230;
-    imgData.data[i * 4 + 2] = 255;
+    imgData.data[i * 4 + 0] = rgb[0];
+    imgData.data[i * 4 + 1] = rgb[1];
+    imgData.data[i * 4 + 2] = rgb[2];
     imgData.data[i * 4 + 3] = a;
   }
   ctx.putImageData(imgData, 0, 0);
@@ -578,6 +580,11 @@ export function renderFrame(ctx: CanvasRenderingContext2D, input: RenderInput): 
     dx = (w - dw) / 2;
   }
   ctx.drawImage(input.poster, dx, dy, dw, dh);
+  const dim = Math.min(0.8, Math.max(0, input.scene?.dim ?? 0));
+  if (dim > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${dim})`;
+    ctx.fillRect(dx, dy, dw, dh);
+  }
 
   // EDGE-MASK BLOOM ON BEATS. Opacity/intensity driven by the FLASH-SAFE low
   // band (never the raw one) — reading `boundedLow` here, rather than
@@ -691,6 +698,24 @@ export interface SceneFx {
   smoke?: { y0: number; y1: number; count: number; hue: number };
   /** Faint steady lights with a slow twinkle (a skyline, a tube). */
   beacons?: { x: number; y: number; r: number; hue: number; l: number; a: number; rate: number }[];
+  /** The edge light's colour, 0..255 each (cyan-white when absent). Read by
+   *  the render page when it builds the bloom texture, not drawn here. */
+  bloomRgb?: [number, number, number];
+  /** How far the picture itself is darkened under every light, 0..0.8 (0 when
+   *  absent): a dimmer rest leaves the beat's light more room to lift it. */
+  dim?: number;
+  /** The drifting dust's count against the treatment's (1 when absent). Read
+   *  by the render, not drawn here. */
+  dust?: number;
+  /** Sparks carried one way along a stream the picture already paints: each
+   *  is born in `from`'s box and lands in `to`'s, its hue drifting from `hue`
+   *  to `hueTo`. The low band thickens a stream, the high band brightens it. */
+  streams?: {
+    from: { x0: number; y0: number; x1: number; y1: number };
+    to: { x0: number; y0: number; x1: number; y1: number };
+    count: number; hue: number; hueTo?: number; l?: number;
+    lifeS: [number, number]; sizePx: number; sway?: number;
+  }[];
 }
 
 interface SceneCtx {
@@ -916,6 +941,43 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
   for (const bc of fx.beacons ?? []) {
     const tw = 0.6 + 0.4 * Math.sin(t * bc.rate * Math.PI * 2 + bc.x * 17);
     radial(ctx, px(bc.x), py(bc.y), bc.r * dh, hsla(bc.hue, 100, bc.l, bc.a * tw * (0.8 + 0.2 * k)), hsla(bc.hue, 100, 50, 0));
+  }
+
+  // STREAMS: the picture's painted sparks, set moving the way they already
+  // point. A spark's lane and life come from (seed, stream, index) alone, and
+  // the low band only decides how many lanes show, so a lane never jumps.
+  const streams = fx.streams ?? [];
+  for (let si = 0; si < streams.length; si++) {
+    const s = streams[si];
+    const sl = s.l ?? 62;
+    const shown = Math.round(s.count * (0.5 + 0.5 * Math.min(1, k * low * 1.4)));
+    const bright = 0.3 + 0.7 * Math.min(1, k * high * 1.8);
+    for (let i = 0; i < shown; i++) {
+      const rng = mulberry32(hashSeed(seed ^ (0x57e0 + si * 131), i));
+      const x0 = s.from.x0 + rng() * (s.from.x1 - s.from.x0);
+      const y0 = s.from.y0 + rng() * (s.from.y1 - s.from.y0);
+      const x1 = s.to.x0 + rng() * (s.to.x1 - s.to.x0);
+      const y1 = s.to.y0 + rng() * (s.to.y1 - s.to.y0);
+      const life = s.lifeS[0] + rng() * (s.lifeS[1] - s.lifeS[0]);
+      const p = fract(rng() + t / life);
+      const sway = Math.sin(t * (0.9 + rng()) + rng() * 6.28) * (s.sway ?? 0.006);
+      const x = x0 + (x1 - x0) * p + sway * (dh / dw);
+      const y = y0 + (y1 - y0) * p;
+      const tw = 0.6 + 0.4 * Math.sin(t * (6 + rng() * 10) + rng() * 6.28);
+      const a = Math.sin(Math.PI * p) * tw * bright;
+      if (a < 0.02) continue;
+      // The short way round the wheel: 4 -> 356 is eight degrees through red,
+      // not 352 through green and blue.
+      const hue = s.hue + ((((s.hueTo ?? s.hue) - s.hue + 540) % 360) - 180) * p;
+      const size = s.sizePx * (0.5 + rng()) * u;
+      ctx.globalAlpha = Math.min(1, a);
+      radial(ctx, px(x), py(y), size * 3.5, hsla(hue, 100, sl, 0.45), hsla(hue, 100, sl - 10, 0));
+      ctx.fillStyle = hsla(hue, 80, Math.min(95, sl + 22), 1);
+      ctx.beginPath();
+      ctx.arc(px(x), py(y), size * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   ctx.restore();

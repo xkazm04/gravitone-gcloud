@@ -178,6 +178,7 @@ One AskUserQuestion call of up to 4 questions per wave.
 
 - 2026-10-24 (scout-storyboards): every pick Recommended except the header, where the operator kept spend GLOBAL while moving NEXT into the Scout header - a
   number the operator watches everywhere stays everywhere; offer "move X, keep Y global" when a spark relocates shell chrome.
+- 2026-10-30: for creative pipelines the operator judges at the frame, and wants options shown as rendered artefacts (boards), not described; ask 'which of these' over 'which approach'.
 
 - 2026-10-29 (audio-agent-studio, from hackathon audio-steer-1028): on an agent-driven product the operator keeps the BRAIN OUTSIDE the app (an MCP-driven Claude Code skill over an in-app LLM turn), trusts the LLM over hardcoded libraries and configuration forms ("composable UI"), fuses variants by axis (one variant's LAYOUT with another's COMPONENT STYLE), and chose one build over the recommended staged split once the design was clear. Offer "outside agent via MCP" and "fuse layout x style" as first-class options; recommend staging, but expect "all at once".
 
@@ -237,3 +238,5 @@ One AskUserQuestion call of up to 4 questions per wave.
   and never met a real answer before ship: the first full-length Suno take showed the listener's timeline 2-9% long and a
   2 s door refused three BILLED reads. Tune such a door on recorded real answers, keep the raw answer of every refusal, and
   make the live smoke use a full-length real input, not a 17 s clip. Owner verdict: analysis parked for a rethink.
+- 2026-10-30 music-clip: landing overlap must include the BASE's lag - local main 100 behind origin with operator WIP in files that gap touches blocked the ff although every brief file was new; check `git diff --name-only main origin/main` against `git status --short` at the go-gate. Also: a docs builder briefed to report contract inconsistencies caught 3 wire gaps while the code builders were still running.
+- 2026-10-30 music-clip (2): a creative-output spark must research the QUALITY BAR before wave 1, not only feasibility - the dialog accepted 'pure web tech' with no reference for what good looks like and Board B shipped a slideshow; after three research passes + rendered treatments the operator picked within one board. Also: check the render HARDWARE path at scout time (headless Chromium could reach the GPU all along; the reused strips flags turned it off).

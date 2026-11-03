@@ -147,6 +147,12 @@ export function bloomIntensityFor(pulseStrength: number): number {
   return Math.round(DEFAULT_EFFECT_PARAMS.bloomIntensity * (0.6 + 0.8 * pulseStrength) * 1000) / 1000;
 }
 
+/** A look's dust against the treatment's count (looks.ts `dust`). */
+function withDust(p: EffectParams, dust: number | undefined): EffectParams {
+  const d = clamp(dust, 0, 4, 1);
+  return d === 1 ? p : { ...p, particleCount: Math.round(p.particleCount * d) };
+}
+
 function withBloomGain(p: EffectParams, gain: number | undefined): EffectParams {
   const g = clamp(gain, 0, 5, 1);
   return g === 1 ? p : { ...p, bloomIntensity: Math.round(p.bloomIntensity * g * 1000) / 1000 };
@@ -235,7 +241,7 @@ export async function renderMusicVideo(args: RenderArgs): Promise<{ durationS: n
       posterDataUrl,
       envelope,
       seed: seedFor(motion),
-      effectParams: withBloomGain(effectParamsFor(motion), args.bloomGain ?? (args.look ? MV_LOOKS[args.look].intensity : undefined)),
+      effectParams: withDust(withBloomGain(effectParamsFor(motion), args.bloomGain ?? (args.look ? MV_LOOKS[args.look].intensity : undefined)), args.look ? MV_LOOKS[args.look].dust : undefined),
       fit: "cover",
       particleHue: (args.look ? MV_LOOKS[args.look].particleHue : undefined) ?? motion.particleHue,
       ...(args.look ? { scene: MV_LOOKS[args.look] } : {}),

@@ -283,14 +283,14 @@ export async function setUpRenderPage(page: Page, setup: RenderPageSetup): Promi
         const compositor = (window as unknown as {
           __Compositor: {
             computeEdgeMask: (d: ImageData) => unknown;
-            buildBloomTexture: (m: unknown, p: EffectParams) => CanvasImageSource;
+            buildBloomTexture: (m: unknown, p: EffectParams, rgb?: [number, number, number]) => CanvasImageSource;
             limitFlashRate: (low: number[], fps: number, t: number, m: number) => number[];
             focalPulseTrack: (low: number[], fps: number, t: number, m: number) => number[];
             renderFrame: (ctx: CanvasRenderingContext2D, input: Record<string, unknown>) => void;
           };
         }).__Compositor;
         const edgeMask = compositor.computeEdgeMask(actx.getImageData(0, 0, aw, ah));
-        const bloomTexture = compositor.buildBloomTexture(edgeMask, effectParams);
+        const bloomTexture = compositor.buildBloomTexture(edgeMask, effectParams, scene?.bloomRgb);
 
         // ONCE PER ENVELOPE — same single pass EffectsStudio.tsx takes.
         const boundedLow = compositor.limitFlashRate(
