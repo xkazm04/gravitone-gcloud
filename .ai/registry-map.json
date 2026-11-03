@@ -16708,7 +16708,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/generate.ts:361 A failed render records a 'failed' state with the vendor's sentence only on hunt nodes; a refused score cue is rethrown as a job failure and never becomes a state of the cue, so the spotting surface cannot show refused-silence at the cue's place on the clock.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:5f548f222df2e692",
+          "evaluatedRevision": 20
         },
         {
           "subject": "generative-provider-routing",

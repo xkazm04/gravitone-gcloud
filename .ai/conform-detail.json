@@ -14099,6 +14099,33 @@
           "evidence": "lib/foundry/scout/judge.ts:20 The eye has a separate 'will not say' token instead of being forced to invent an age, and that token fails closed in judgeFailure."
         }
       ]
+    },
+    "b2bfa3eb-ee06-4262-8eaa-d19d9cc16dc2/video-assembly": {
+      "context": "sound-generation-engine",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T23:28:03.440Z",
+      "worker": "106974ef-6590-4254-9997-1b1e9f0d0d34",
+      "techniques": [
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "lib/sound/generate.ts:361 The failure is recorded only for hunt nodes, so a cue's refusal lives in the job log rather than at the site of its cost."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "lib/sound/generate.ts:408 The request side conforms (duration derived from the picture, line 115; tempo required, line 121), but a refused cue is treated as an exception, not as a spotting outcome."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/sound/generate.ts:117 An out-of-window cue length is refused by name before spend, not clamped."
+        }
+      ],
+      "registryProposal": "gap-and-refusal-honesty could name a common failure mode: the refusal is classed correctly at the vendor and kept on the job record, but never written onto the cue the cut draws from, so the cut still shows 'missing'."
     }
   }
 }

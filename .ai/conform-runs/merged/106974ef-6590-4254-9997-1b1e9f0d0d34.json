@@ -1,0 +1,146 @@
+{
+ "schema": "conform-run/1",
+ "worker": "106974ef-6590-4254-9997-1b1e9f0d0d34",
+ "subject": "video-assembly",
+ "evaluatedAt": "2026-11-03T23:28:03.440714+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:114 The sync bench moves a clip only in fixed 50 ms steps on a clock the port sets to 25 fps (one frame is 40 ms), so the smallest correction is more than a frame, where the standard asks for steps well under one; nothing measures the error at the head and the tail either.",
+   "techniques": [
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:114 Snap-to-mark exists (line 118) and the offset is stored as an op, but the only step is 50 ms, over a 40 ms frame at 25 fps, and there is no head/tail diagnosis."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:184 Coverage is computed, but it has no refused-seconds term, and CueView carries no refusal state, so refused and never-rendered cannot be told apart."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:157 Each cue has a purpose field (line 47) and render is blocked until a tempo is set, but a refused generation is drawn as 'missing', not as refused-silence."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:169 One lane per medium (picture/voice/music, lines 30-34); a block is drawn from the same offset-applied start the bench edits; CutClock.tsx:164 puts every block on one seconds-to-pixels scale."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:232 The turn mark is read from the view's derived turn, never typed in the editor."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:76 An undecodable still becomes a named error instead of a blank canvas."
+    },
+    {
+     "technique": "seek-stable-composition-authoring",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:61 The preview frame index comes from elapsed time at the export's FPS, not from counting ticks."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:20 The poster preview is drawn by the export's own compositor before the priced render job is spent."
+    },
+    {
+     "technique": "generated-shot-sourcing",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Motion.tsx:97 A clip is briefed from the accepted plate with its moves and holds stated, Provenance drawn (line 99), and a stale outcome flagged when the plate changes."
+    }
+   ]
+  },
+  {
+   "context": "sound-generation-engine",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/sound/generate.ts:361 A failed render records a 'failed' state with the vendor's sentence only on hunt nodes; a refused score cue is rethrown as a job failure and never becomes a state of the cue, so the spotting surface cannot show refused-silence at the cue's place on the clock.",
+   "techniques": [
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "lib/sound/generate.ts:361 The failure is recorded only for hunt nodes, so a cue's refusal lives in the job log rather than at the site of its cost."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "lib/sound/generate.ts:408 The request side conforms (duration derived from the picture, line 115; tempo required, line 121), but a refused cue is treated as an exception, not as a spotting outcome."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "lib/sound/generate.ts:117 An out-of-window cue length is refused by name before spend, not clamped."
+    }
+   ],
+   "registryProposal": "gap-and-refusal-honesty could name a common failure mode: the refusal is classed correctly at the vendor and kept on the job record, but never written onto the cue the cut draws from, so the cut still shows 'missing'."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "video-assembly",
+   "context": "visual-producers",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "video-assembly",
+   "context": "music-vendors-and-publish",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "video-assembly",
+   "context": "part-editor-writing-research",
+   "reason": "Its files are text editors (scripts, articles, research, beats, words) with no timeline, lanes, cues or render. not-applicable cannot be proven by a directory search, because the context shares app/(studio)/projects/[id]/[part]/_edit/ with Cut.tsx, Score.tsx and CutClock.tsx, so any term from the subject would hit there. I judged nothing for it, rather than guess."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-03T23:28:03.440714+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "generated-shot-sourcing",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "seek-stable-composition-authoring",
+    "silent-defects-get-a-code-or-an-error",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T23:28:03.440714+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "gap-and-refusal-honesty",
+    "music-spotting-against-picture",
+    "silent-defects-get-a-code-or-an-error"
+   ],
+   "deviations": 1,
+   "context": "sound-generation-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
