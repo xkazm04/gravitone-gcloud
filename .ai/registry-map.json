@@ -4954,7 +4954,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/cut/deriveTimeline.ts:314 The act-two turn mark is derived from the material's label, but when two scenes match /turn/ the first is taken silently instead of surfacing the double match as a story defect, and two other techniques (silence spotting, drift threshold) are also missed in this context.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:5f548f222df2e692",
+          "evaluatedRevision": 20
         },
         {
           "subject": "table",

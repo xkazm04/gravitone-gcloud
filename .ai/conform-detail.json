@@ -13913,6 +13913,68 @@
         "at": "2026-11-03T22:34:06.373385+00:00",
         "reason": "reviewer (sonnet): lib/steps/recordRegistry.ts (lines 11-20, 154-181) refuses future-version and malformed records, and its header names this 'refuse, never downgrade' rule. So the claim that no check in this context refuses anything is contradicted, and the cited index.ts:8 anchor does not show that the precondition "
       }
+    },
+    "bba6c91f-7e8c-40e9-acee-8929eb245a8c/video-assembly": {
+      "context": "cut-and-export",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T22:54:44.953Z",
+      "worker": "9a48b6a4-490a-4679-84dc-54ce7d2bdd93",
+      "techniques": [
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "deviation",
+          "evidence": "lib/cut/deriveTimeline.ts:314 Derived from a labelled scene (good), but `find` silently takes the first of several matching scenes; the rule says to surface two candidates as a material defect."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "lib/cut/finishLine.ts:99 Cue spans are re-derived from the scenes (deriveTimeline.ts:264), but the finish line fails any second not under a cue as 'unscored'; no spot kind for silence exists, so silence chosen on purpose cannot be told apart from a hole."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "deviation",
+          "evidence": "lib/cut/finishLine.ts:58 Status is re-derived from the current offset (offsets.ts:37, good), but the tolerance is zero: a clip a few ms off still fails the drift row, against the ~15 ms early / ~45 ms late leave-it threshold, and there is no head/tail measurement."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "lib/cut/cutDocument.ts:146 A missing plate compiles to an explicit gap carrying its reason, and the export renders it black and lists it in sidecar gaps; voice lines are drawn as MISSING 'written, not recorded'."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "lib/cut/finishLine.ts:93 Coverage is a union reduced over the same music clips that drew the lane, not prose; picture, voice and music are kept in separate lanes."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "lib/cut/cutDocument.ts:177 The cut compiles to a deterministic, key-sorted, hashed edit decision list that the export only executes."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "conformant",
+          "evidence": "lib/musicVideoExport.ts:6 The music-video export calls renderFrameAt(frameIndex) with the same compositor the preview uses."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/cutExport.ts:305 A silent stand-in take, which would otherwise mix as plausible narration, becomes an unreachable row that names it; plate-only drawing is declared as `drawn: \"plates\"`."
+        },
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "conformant",
+          "evidence": "lib/cutExport.ts:341 The document's shape and that the picture tiles the clock are checked before any ffmpeg spawn, and the render is a stills animatic; there is no contact-sheet rung."
+        },
+        {
+          "technique": "unreferenced-channels-resample",
+          "verdict": "conformant",
+          "evidence": "lib/adRender.ts:384 Generated clips' own sound is explicitly stripped rather than left to occupy a lane; this is the honest 'strip and author in the cut' route."
+        }
+      ],
+      "registryProposal": "drift-correction states a perceptual tolerance (~15 ms early / ~45 ms late) but the golden path also asks for a snap that returns the offset to exactly zero; a technique line saying whether a gate should pass an offset inside the tolerance (vs. requiring zero) would settle whether a zero-tolerance finish gate is a deviation."
     }
   }
 }
