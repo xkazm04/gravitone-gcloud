@@ -1,0 +1,218 @@
+{
+ "schema": "conform-run/1",
+ "worker": "13237af0-8881-4903-9070-0fe592168a0a",
+ "subject": "prompt-assembly",
+ "evaluatedAt": "2026-11-03T17:19:58.080023+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "agent-cli-and-turns",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/turns/assemble/research.ts:135 The retrieval prompt's tool list is written by hand instead of being built from RETRIEVE_TOOLS (lib/text/providers/claudeCliRetrieve.ts:61), so the prompt and the dispatcher learn the roster from two places and can drift apart. That is the capability-drift failure the standard exists to prevent.",
+   "techniques": [
+    {
+     "technique": "capability-documentation",
+     "verdict": "deviation",
+     "evidence": "lib/turns/assemble/research.ts:135 The tool list is hand-written next to an existing RETRIEVE_TOOLS constant. There is a second case: frames.ts:42 injects pipeline/FRAMES-SCENE-PROMPT.md:3 verbatim, which tells a tool-less run (claudeCli.ts:285-286) to read two files it cannot open."
+    },
+    {
+     "technique": "layered-composition",
+     "verdict": "deviation",
+     "evidence": "lib/turns/kinds/recalibrate.ts:102 Each family has one pure assembler built from named blocks (manifest.ts joinBlocks), but the assembled string is not sealed. lib/text/router.ts:437 appends schemaInstruction after assembly, outside the manifest and the digest, and the schema is already in the RUN block."
+    },
+    {
+     "technique": "variable-interpolation",
+     "verdict": "deviation",
+     "evidence": "lib/turns/assemble/manifest.ts:60 An absent input renders as an empty string under its heading (SCOPE; frames NOTEBOOK when facts is absent). This is kept on purpose for byte parity; it is the empty-success render the technique forbids."
+    },
+    {
+     "technique": "fingerprinting-and-cache-keys",
+     "verdict": "deviation",
+     "evidence": "lib/turns/ledger.ts:98 The record holds a digest and size of the whole prompt, payload included, so no record stamps which version of RECALIBRATE-PROMPT.md or FRAMES-SCENE-PROMPT.md a turn received. It is also 'as built', so it misses the router's appended schema block."
+    },
+    {
+     "technique": "context-budgeting",
+     "verdict": "deviation",
+     "evidence": "lib/turns/assemble/frames.ts:65 The ceiling is counted in characters converted to tokens by an assumed ratio, and it is not derived from the window minus the response reservation. Per-block sizes in the manifest and the named 'NOT SENT' cuts do conform."
+    },
+    {
+     "technique": "context-reachability",
+     "verdict": "conformant",
+     "evidence": "lib/turns/assemble/recalibrate.ts:116 Material the tool-less engine cannot reach is kept as a floor; only slices no beat can cite are cut."
+    },
+    {
+     "technique": "task-envelope",
+     "verdict": "conformant",
+     "evidence": "lib/agent/reviewerEngines.ts:65 A locate pointer, a permission fact and a done criterion stated as an artifact, with no role priming."
+    },
+    {
+     "technique": "pinned-prompt-clock",
+     "verdict": "not-applicable",
+     "evidence": "lib/turns/assemble/frames.ts:125 Assembly is pure and reads no clock; a search for new Date, Date.now, toISOString and today in lib/turns/assemble found nothing."
+    },
+    {
+     "technique": "cache-breakpoint-allocation",
+     "verdict": "not-applicable",
+     "evidence": "lib/turns/assemble/recalibrate.ts:12 The CLI rung has no cross-call prompt caching, so there are no cut points to allocate."
+    },
+    {
+     "technique": "history-compaction",
+     "verdict": "not-applicable",
+     "evidence": "lib/claudeCli.ts:286 Reasoning turns are single-shot; the client keeps no transcript to compact."
+    },
+    {
+     "technique": "endpoint-sealed-continuation-metadata",
+     "verdict": "not-applicable",
+     "evidence": "lib/agent/agentArgs.ts:44 Agent turns keep no session, so no stored assistant turn is ever replayed."
+    },
+    {
+     "technique": "contributed-document-admission",
+     "verdict": "not-applicable",
+     "evidence": "lib/agent/agentArgs.ts:37 safe-mode turns off CLAUDE.md, skills and plugins, so no installed document is admitted."
+    },
+    {
+     "technique": "context-ownership-regimes",
+     "verdict": "not-applicable",
+     "evidence": "lib/agent/cliSeam.ts:3 One prompt in, one answer out; the client neither holds nor edits a message list."
+    },
+    {
+     "technique": "foreign-harness-history-folding",
+     "verdict": "not-applicable",
+     "evidence": "lib/agent/reviewerCommand.ts:22 Reviewer runs are ephemeral, and no foreign-harness history is imported."
+    },
+    {
+     "technique": "continuation-prompts",
+     "verdict": "not-applicable",
+     "evidence": "lib/turns/ledger.ts:32 An interrupted turn is marked orphaned, never resumed."
+    },
+    {
+     "technique": "response-reservation-sizing",
+     "verdict": "not-applicable",
+     "evidence": "lib/turns/assemble/recalibrate.ts:187 Measured prompts are about 40k characters, far below the window, so the input side is not under pressure (the technique's own when-not clause)."
+    }
+   ]
+  },
+  {
+   "context": "studio-shell",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/facts.ts:1 The shell is UI chrome over kernel events; a grep of app/(studio)/_shell for prompt, systemPrompt, compaction, transcript and joinBlocks found nothing, so this context assembles no model prompt.",
+   "techniques": [],
+   "absenceTerms": [
+    "prompt",
+    "systemPrompt",
+    "compaction",
+    "transcript",
+    "joinBlocks"
+   ]
+  },
+  {
+   "context": "ui-keymap-layers-storage",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/keymap/keymap.ts:1 This is keymap, layer, storage, window and freshness plumbing; a grep of those five directories for systemPrompt, compaction, transcript, joinBlocks and tokenBudget found nothing (the one 'prompt' hit, bindings.ts:292, means a label input field), so no model prompt is assembled here.",
+   "techniques": [],
+   "absenceTerms": [
+    "systemPrompt",
+    "compaction",
+    "transcript",
+    "joinBlocks",
+    "tokenBudget"
+   ]
+  },
+  {
+   "context": "part-editor-writing-research",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:3 The editors send ops through the part port; a grep of the route for systemPrompt, compaction, transcript, joinBlocks and tokenBudget found nothing. Notebook.tsx's follow-up 'prompt' is a user field sent as an op, and it is assembled elsewhere.",
+   "techniques": [],
+   "absenceTerms": [
+    "systemPrompt",
+    "compaction",
+    "transcript",
+    "joinBlocks",
+    "tokenBudget"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "prompt-assembly",
+   "context": "audio-composer-briefs",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-03T17:19:58.080023+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [
+    "cache-breakpoint-allocation",
+    "capability-documentation",
+    "context-budgeting",
+    "context-ownership-regimes",
+    "context-reachability",
+    "continuation-prompts",
+    "contributed-document-admission",
+    "endpoint-sealed-continuation-metadata",
+    "fingerprinting-and-cache-keys",
+    "foreign-harness-history-folding",
+    "history-compaction",
+    "layered-composition",
+    "pinned-prompt-clock",
+    "response-reservation-sizing",
+    "task-envelope",
+    "variable-interpolation"
+   ],
+   "deviations": 1,
+   "context": "agent-cli-and-turns",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T17:19:58.080023+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T17:19:58.080023+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ui-keymap-layers-storage",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T17:19:58.080023+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

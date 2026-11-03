@@ -1407,7 +1407,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/turns/assemble/research.ts:135 The retrieval prompt's tool list is written by hand instead of being built from RETRIEVE_TOOLS (lib/text/providers/claudeCliRetrieve.ts:61), so the prompt and the dispatcher learn the roster from two places and can drift apart. That is the capability-drift failure the standard exists to prevent.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "agent-cli-transport",
@@ -19281,7 +19285,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/keymap/keymap.ts:1 This is keymap, layer, storage, window and freshness plumbing; a grep of those five directories for systemPrompt, compaction, transcript, joinBlocks and tokenBudget found nothing (the one 'prompt' hit, bindings.ts:292, means a label input field), so no model prompt is assembled here.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "agent-memory",
