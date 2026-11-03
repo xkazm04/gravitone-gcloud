@@ -1,0 +1,106 @@
+{
+  "schema": "conform-run/1",
+  "worker": "959bb37c-8d92-4228-a246-174dff8d718e",
+  "subject": "prompt-assembly",
+  "evaluatedAt": "2026-11-03T11:31:07.271737+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "library-projection-feeds",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/library/feeds/types.ts:9 The feeds read v1 stores and upsert Library items. The searched terms (systemPrompt, llm, lib/text, anthropic) have no hits in lib/library. The many `prompt` hits are generation prompts stored as item metadata (sound.ts:76, foundry.ts:100), not text assembled and sent to a model, so no prompt is assembled here.",
+      "techniques": [],
+      "absenceTerms": [
+        "systemPrompt",
+        "llm",
+        "lib/text",
+        "anthropic"
+      ]
+    },
+    {
+      "context": "project-step-store",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/steps/index.ts:8 This is IndexedDB persistence of per-project step content. A search of lib/steps for prompt, llm, systemPrompt and lib/text found no hits, so nothing here composes or sends a model prompt.",
+      "techniques": [],
+      "absenceTerms": [
+        "prompt",
+        "llm",
+        "systemPrompt",
+        "lib/text"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "prompt-assembly",
+      "context": "text-reasoning-engine",
+      "reason": "evidence leans on providers/google.ts, which is not a tracked file"
+    },
+    {
+      "subject": "prompt-assembly",
+      "context": "studio-shell",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "prompt-assembly",
+      "context": "agent-cli-and-turns",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors (lib/turns/assemble/research.ts and recalibrate.ts, manifest.ts) are real and say what is claimed, but none is among the context's 12 mapped paths (lib/agent/*, lib/claudeCli.ts, lib/harness/protocol.ts), and none of those files call lib/turns/assemble, so the verdict is not about this c"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-03T11:31:07.271737+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "prompt-assembly"
+      ],
+      "techniques": [
+        "cache-breakpoint-allocation",
+        "capability-documentation",
+        "consumer-coupled-decoration",
+        "context-budgeting",
+        "context-reachability",
+        "continuation-prompts",
+        "fingerprinting-and-cache-keys",
+        "history-compaction",
+        "layered-composition",
+        "pinned-prompt-clock",
+        "task-envelope",
+        "variable-interpolation"
+      ],
+      "deviations": 1,
+      "context": "agent-cli-and-turns",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-03T11:31:07.271737+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "prompt-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "library-projection-feeds",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-03T11:31:07.271737+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "prompt-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "project-step-store",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

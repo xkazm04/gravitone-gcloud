@@ -13674,6 +13674,102 @@
       "evaluatedTs": "2026-11-03T10:22:16.126Z",
       "worker": "bbeb8f67-1a35-4f48-aa87-96dbb8e86882",
       "techniques": []
+    },
+    "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3/prompt-assembly": {
+      "context": "agent-cli-and-turns",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T11:31:07.271Z",
+      "techniques": [
+        {
+          "technique": "context-reachability",
+          "verdict": "deviation",
+          "evidence": "lib/turns/assemble/research.ts:114 For a no-tool run the schema document's prose rules are unreachable and therefore a floor. They are referenced but not sent, and only the JSON schema travels. RESEARCH-PROMPT.md:4 also tells the engine to read NOTEBOOK-SCHEMA.md and CRAFT-BASELINE.md."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "conformant",
+          "evidence": "lib/turns/assemble/recalibrate.ts:318 Each family (frames, recalibrate, research) has one pure assembler. It renders named blocks with the standing system first and the volatile notes and scope last. The route, the preview and the turn runner all build the same bytes."
+        },
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "lib/turns/assemble/recalibrate.ts:244 The only budget is one ceiling in characters, glossed as roughly 250k tokens, which is the chars-divided-by-a-constant pattern the technique rules out. It is not derived from the model window minus a response reservation. For recalibrate it bounds the caller's material, not the assembled prompt, and there are no per-layer floors or elastic allocations. The named withholding does give one rung of a ladder (RENDERS/CONCLUSIONS NOT SENT)."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "lib/turns/assemble/recalibrate.ts:379 When scope is absent, JSON.stringify returns undefined, which join renders as an empty line. The heading is then rendered over nothing, and manifest.ts:58-61 keeps this deliberately for byte parity. That is the empty-string render of a missing variable. The same happens to frames' body.facts."
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "deviation",
+          "evidence": "lib/turns/assemble/research.ts:135 The tool roster is written by hand in the prompt. The authority is RETRIEVE_TOOLS in lib/text/providers/claudeCliRetrieve.ts:61, which the argv is built from, so the two can drift."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "lib/turns/ledger.ts:98 The floor is met: a content digest and size are kept per turn record, and runner.ts:275 re-digests when dispatch sent a different prompt. But there is no standing-layer fingerprint or version stamp for the system-prompt file, so a template change cannot be told apart from a payload change. The digest also covers the prompt before lib/text/router.ts appends the schema."
+        },
+        {
+          "technique": "consumer-coupled-decoration",
+          "verdict": "conformant",
+          "evidence": "lib/turns/assemble/recalibrate.ts:128 Each dropped key is justified by naming who reads it: render checks have no consumer in the plan or the app, and NOTEBOOK_DROP (line 120) argues engineFit, sources and conclusions the same way."
+        },
+        {
+          "technique": "task-envelope",
+          "verdict": "conformant",
+          "evidence": "lib/turns/assemble/research.ts:92 The task layer opens with THE RUN and THE TOPIC and makes no expertise claim. Its identity-like lines state facts about permission (no tools, or exactly two tools), which is what the technique keeps."
+        },
+        {
+          "technique": "cache-breakpoint-allocation",
+          "verdict": "not-applicable",
+          "evidence": "lib/turns/assemble/recalibrate.ts:11 No prompt caching on the CLI rung, so there are no breakpoints to allocate."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "lib/agent/agentArgs.ts:44 Agent turns are one-shot with no persisted session. The app owns no transcript to compact."
+        },
+        {
+          "technique": "continuation-prompts",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:286 Reasoning calls are single-turn and never resumed."
+        },
+        {
+          "technique": "pinned-prompt-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/turns/assemble/frames.ts:124 Assembly reads no clock, and no date is rendered into these prompts."
+        }
+      ],
+      "withdrawn": {
+        "worker": "959bb37c-8d92-4228-a246-174dff8d718e",
+        "state": "deviation",
+        "at": "2026-11-03T11:32:12.583444+00:00",
+        "reason": "reviewer (sonnet): The anchors (lib/turns/assemble/research.ts and recalibrate.ts, manifest.ts) are real and say what is claimed, but none is among the context's 12 mapped paths (lib/agent/*, lib/claudeCli.ts, lib/harness/protocol.ts), and none of those files call lib/turns/assemble, so the verdict is not about this c"
+      }
+    },
+    "04e4702a-4221-4673-9cfa-130cbd21f93e/prompt-assembly": {
+      "context": "library-projection-feeds",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T11:31:07.271Z",
+      "worker": "959bb37c-8d92-4228-a246-174dff8d718e",
+      "techniques": []
+    },
+    "868afe8a-01af-428e-9f7c-d561ee033d4c/prompt-assembly": {
+      "context": "project-step-store",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T11:31:07.271Z",
+      "worker": "959bb37c-8d92-4228-a246-174dff8d718e",
+      "techniques": []
     }
   }
 }

@@ -1329,11 +1329,7 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "deviation",
-          "evidence": "lib/turns/assemble/research.ts:114 The reasoned research run has no tools and no file access, yet its prompt binds the engine to the rules of a 22 KB document (pipeline/NOTEBOOK-SCHEMA.md) that is never injected. Unreachable material the run is held to is missing from the prompt, and the recalibrate assembler's own header names this as the failure: a prompt describing a payload it did not receive.",
-          "evaluatedAt": "2026-11-03",
-          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
-          "evaluatedRevision": 44
+          "state": "unknown"
         },
         {
           "subject": "agent-cli-transport",
