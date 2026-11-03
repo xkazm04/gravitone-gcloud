@@ -13770,6 +13770,32 @@
       "evaluatedTs": "2026-11-03T11:31:07.271Z",
       "worker": "959bb37c-8d92-4228-a246-174dff8d718e",
       "techniques": []
+    },
+    "38f619c8-80eb-4040-986c-10c9e35e734e/test-harness": {
+      "context": "floor-hub-screen",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T14:58:47.655Z",
+      "worker": "08ac3fff-5bc3-45e8-99f4-9eb22091539e",
+      "techniques": [
+        {
+          "technique": "isolation-lanes",
+          "verdict": "deviation",
+          "evidence": "tests/live/floor.live.spec.ts:52 The fixture universe is opt-in through env. By default the lane inherits the machine's v1 data, while the board-exit lane seeds its own universe."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/floor.live.spec.ts:5 The browser-rendered lanes are checked against the store's own live read."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:5118 Only 1 mutant covers _floor, and it is not in the ledger. Floor.tsx, LaneCells, Month, Composers and load.ts have none."
+        }
+      ]
     }
   }
 }

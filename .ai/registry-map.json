@@ -6242,7 +6242,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/live/floor.live.spec.ts:52 playwright.live.config.ts never sets NEXT_PUBLIC_GRAVITONE_DATA, so by default the Floor's live lane seeds nothing and checks the page against whatever v1 stores this machine holds: the lane inherits the developer's world and fails on a clean clone (its own 'no pile anywhere fails loudly' floor).",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:c96e1ee699a88119",
+          "evaluatedRevision": 27
         },
         {
           "subject": "supply-chain",
