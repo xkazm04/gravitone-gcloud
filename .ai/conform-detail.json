@@ -13592,6 +13592,88 @@
       "evaluatedTs": "2026-11-03T09:18:47.438Z",
       "worker": "e480e214-bcc1-415c-8648-74a28500e9e4",
       "techniques": []
+    },
+    "ad4279e3-e7c5-48d5-b166-db447059b183/mcp-tools": {
+      "context": "mcp-agent-door",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T10:22:16.126Z",
+      "worker": "bbeb8f67-1a35-4f48-aa87-96dbb8e86882",
+      "techniques": [
+        {
+          "technique": "authentication-and-scoping",
+          "verdict": "deviation",
+          "evidence": "app/_server/mcp/principal.ts:52 Per-consumer tokens with scopes, checked at one door before dispatch, are conformant. The identity is the token's name, though, and the minted tokenId is dropped even though the principal carries it. The audit actor and the spend list key are both name-keyed."
+        },
+        {
+          "technique": "server-composition",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/registry.ts:21 One registry. tools/list and tools/call both resolve through it (projection.ts). The dispatch door in rpc.ts catches a handler throw as an isError tool result, so a crash does not kill the transport."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/rpc.ts:25 Message errors come back as JSON-RPC errors and work errors as isError results with {code, detail}. Every op door is a strict zod object enforced at dispatch. Names are namespaced gt_<family>_<op>, and registryFaults caps descriptions at 240 chars."
+        },
+        {
+          "technique": "catalog-projection-modes",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/registry.ts:41 A family tool carries the most severe annotations of its ops. Write policy is checked again on the resolved op (rpc.ts:78), and both projections reach the same handler. The family schema publishes every op's door as a oneOf, so the model keeps its map. A call naming no op gets a -32602 error listing the known ops, not a returned sub-catalog."
+        },
+        {
+          "technique": "transport-selection",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/principal.ts:46 Streamable HTTP with identity carried by a bearer credential. A browser Origin that is not loopback is refused (DNS rebinding), and there is no GET or SSE listener."
+        },
+        {
+          "technique": "write-freshness-gate",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/tools/launch.ts:133 A write must carry the plan rev or the receipt token it read. A stale one gets the fresh receipt back and nothing is written (set_part, rename and discard carry rev too)."
+        },
+        {
+          "technique": "caller-differentiated-capability",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/tools/launch.ts:44 The invariant \"an agent never spends\" is named (packages/domain/src/mcp.ts:6) and stated in INSTRUCTIONS and in each tool description. It is enforced by a runtime rule in the handlers (liveRule here, isLive in job.ts), not by removing live from the schema. That rule must be repeated in every spending op."
+        },
+        {
+          "technique": "first-party-agent-is-a-principal",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/rpc.ts:136 Every caller, the studio's own agent included, must present a minted CLI token, and write ops are admitted by scope grant (mayAct). A grep found no other door into the REGISTRY handlers outside tests."
+        },
+        {
+          "technique": "enumeration-without-a-scope",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/tools/spend.ts:31 The spend-request list is scoped to the caller. The scope key is the token name, so it inherits the authentication-and-scoping deviation. Other listings cover the whole single-operator studio."
+        },
+        {
+          "technique": "budgeted-partial-response",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/tools/read.ts:78 Listings are capped by count, not by a time budget. A cut page says truncated and gives the next probe. The packets op and spend list report truncated with no next probe."
+        },
+        {
+          "technique": "suspendable-request-classes",
+          "verdict": "not-applicable",
+          "evidence": "app/_server/mcp/rpc.ts:17 There is no elicitation or server-to-client request, so no call can pause for a human. Metadata verbs (initialize, ping, tools/list) are answered by machine."
+        },
+        {
+          "technique": "sanctioned-session-state",
+          "verdict": "not-applicable",
+          "evidence": "app/_server/mcp/rpc.ts:16 The door is stateless with no protocol sessions and no sticky routing. State spanning calls is an explicit handle (rev, receipt token, cursor)."
+        }
+      ],
+      "registryProposal": "catalog-projection-modes: its self-teaching rule assumes compression removes the per-operation schemas. Here a routing tool publishes every op's full schema as a discriminated oneOf, so the model keeps its map and the 'operation name optional, return a sub-catalog' remedy may not be needed. The technique could name this variant (fewer tools without losing schemas) and say which rung of self-teaching still applies."
+    },
+    "333e954c-3d86-400f-a6c8-48777a94ccba/mcp-tools": {
+      "context": "foundry-extract-engine",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T10:22:16.126Z",
+      "worker": "bbeb8f67-1a35-4f48-aa87-96dbb8e86882",
+      "techniques": []
     }
   }
 }

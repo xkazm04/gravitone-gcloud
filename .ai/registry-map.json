@@ -6342,8 +6342,12 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "lib/foundry/extract/engine.ts:13 The extract engine is a step machine driven by a kernel job and a CLI, not a tool server. A case-insensitive search of lib/foundry/extract for mcp, tools/call, inputSchema and jsonrpc found nothing, so the tool-protocol precondition does not hold.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34
         },
         {
           "subject": "voice-io",
@@ -10728,8 +10732,12 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown",
-          "arrived": true
+          "state": "deviation",
+          "arrived": true,
+          "evidence": "app/_server/mcp/principal.ts:52 The door takes the agent's ledger actor and its spend-request listing key from the token's name, not from the minted id (the principal carries tokenId, lib/principal.ts:462). Token names are not unique (packages/kernel/src/token.ts tokens table: only id and hash are keyed), so two tokens minted as `athena` share one audit actor and each lists the other's spend requests. The technique names this exact failure.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34
         },
         {
           "subject": "prompt-assembly",
