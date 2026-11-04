@@ -130,6 +130,8 @@ function candidates(source: AbSource, lab: readonly Lab[]): Proposal[] {
 /** The desk over its ports; the exported functions below are this desk over the real ones. */
 export function abDesk<T extends AbTake>(deps: AbDeps<T>) {
   async function proposePairs(store: Store, source: AbSource, limit: number): Promise<Result<readonly AbPair[]>> {
+    // A knockout pair is a match of a draw (lib/yue2/draw.ts bookNext); every other read treats it like any pair.
+    if (source === "knockout") return err("invalid", "knockout pairs are booked by a draw");
     if (!Number.isInteger(limit) || limit < 0) return err("invalid", `yue2: a proposal limit is a whole number, not ${limit}`);
     const facts = await deps.allFacts();
     if (!facts.ok) return facts;
