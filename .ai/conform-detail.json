@@ -9860,14 +9860,14 @@
       "subject": "agent-memory",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T00:00:33.219Z",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T09:18:47.438Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
+        "worker": "e480e214-bcc1-415c-8648-74a28500e9e4",
         "state": "not-applicable",
-        "at": "2026-10-24T00:00:56.990991+00:00",
-        "reason": "reviewer (sonnet): The claim that no agent recalls this context's verdicts is contradicted. verdictLog.ts is the shared verdict writer that lib/foundry/scout/store.ts and lib/foundry/training/store.ts use. scout/taste.ts reads the operator's last verdicts back into each new night as taste.md for the skill (\"rejections"
+        "at": "2026-11-03T09:19:37.989999+00:00",
+        "reason": "reviewer (sonnet): The claim that no agent recalls its own experience is contradicted in the same lib/foundry tree: lib/foundry/scout/taste.ts writes the operator's last committed nights' verdicts, reasons and notes into each new night's taste.md for the skill to read before it searches. That is cross-run recall feedi"
       }
     },
     "b412ea73-0dc3-4362-93c4-2a9b913f9a61/agent-memory": {
@@ -13562,6 +13562,271 @@
         "at": "2026-10-26T01:00:34.523751+00:00",
         "reason": "reviewer (sonnet): The anchors in UpstreamBreak.tsx (lines 1, 6, 8) are header comments about a failed pipeline step and what was kept from v1, so they do not show that no vendored tree or patch set exists. That file is also not among the context's listed files (status, tally, piprow, stackbar, facts, facet). I did no"
       }
+    },
+    "14632859-df56-4340-9e16-c420ff681ee3/agent-memory": {
+      "context": "article-run-engine",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T09:18:47.438Z",
+      "worker": "e480e214-bcc1-415c-8648-74a28500e9e4",
+      "techniques": []
+    },
+    "c425f431-c0d1-4f34-b736-1a5d70683ef4/agent-memory": {
+      "context": "notebook-contract-validation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T09:18:47.438Z",
+      "worker": "e480e214-bcc1-415c-8648-74a28500e9e4",
+      "techniques": []
+    },
+    "f8036604-75f5-4f7d-898c-734511ac5e86/agent-memory": {
+      "context": "script-composition-and-validation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T09:18:47.438Z",
+      "worker": "e480e214-bcc1-415c-8648-74a28500e9e4",
+      "techniques": []
+    },
+    "ad4279e3-e7c5-48d5-b166-db447059b183/mcp-tools": {
+      "context": "mcp-agent-door",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T10:22:16.126Z",
+      "worker": "bbeb8f67-1a35-4f48-aa87-96dbb8e86882",
+      "techniques": [
+        {
+          "technique": "authentication-and-scoping",
+          "verdict": "deviation",
+          "evidence": "app/_server/mcp/principal.ts:52 Per-consumer tokens with scopes, checked at one door before dispatch, are conformant. The identity is the token's name, though, and the minted tokenId is dropped even though the principal carries it. The audit actor and the spend list key are both name-keyed."
+        },
+        {
+          "technique": "server-composition",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/registry.ts:21 One registry. tools/list and tools/call both resolve through it (projection.ts). The dispatch door in rpc.ts catches a handler throw as an isError tool result, so a crash does not kill the transport."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/rpc.ts:25 Message errors come back as JSON-RPC errors and work errors as isError results with {code, detail}. Every op door is a strict zod object enforced at dispatch. Names are namespaced gt_<family>_<op>, and registryFaults caps descriptions at 240 chars."
+        },
+        {
+          "technique": "catalog-projection-modes",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/registry.ts:41 A family tool carries the most severe annotations of its ops. Write policy is checked again on the resolved op (rpc.ts:78), and both projections reach the same handler. The family schema publishes every op's door as a oneOf, so the model keeps its map. A call naming no op gets a -32602 error listing the known ops, not a returned sub-catalog."
+        },
+        {
+          "technique": "transport-selection",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/principal.ts:46 Streamable HTTP with identity carried by a bearer credential. A browser Origin that is not loopback is refused (DNS rebinding), and there is no GET or SSE listener."
+        },
+        {
+          "technique": "write-freshness-gate",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/tools/launch.ts:133 A write must carry the plan rev or the receipt token it read. A stale one gets the fresh receipt back and nothing is written (set_part, rename and discard carry rev too)."
+        },
+        {
+          "technique": "caller-differentiated-capability",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/tools/launch.ts:44 The invariant \"an agent never spends\" is named (packages/domain/src/mcp.ts:6) and stated in INSTRUCTIONS and in each tool description. It is enforced by a runtime rule in the handlers (liveRule here, isLive in job.ts), not by removing live from the schema. That rule must be repeated in every spending op."
+        },
+        {
+          "technique": "first-party-agent-is-a-principal",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/rpc.ts:136 Every caller, the studio's own agent included, must present a minted CLI token, and write ops are admitted by scope grant (mayAct). A grep found no other door into the REGISTRY handlers outside tests."
+        },
+        {
+          "technique": "enumeration-without-a-scope",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/tools/spend.ts:31 The spend-request list is scoped to the caller. The scope key is the token name, so it inherits the authentication-and-scoping deviation. Other listings cover the whole single-operator studio."
+        },
+        {
+          "technique": "budgeted-partial-response",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/tools/read.ts:78 Listings are capped by count, not by a time budget. A cut page says truncated and gives the next probe. The packets op and spend list report truncated with no next probe."
+        },
+        {
+          "technique": "suspendable-request-classes",
+          "verdict": "not-applicable",
+          "evidence": "app/_server/mcp/rpc.ts:17 There is no elicitation or server-to-client request, so no call can pause for a human. Metadata verbs (initialize, ping, tools/list) are answered by machine."
+        },
+        {
+          "technique": "sanctioned-session-state",
+          "verdict": "not-applicable",
+          "evidence": "app/_server/mcp/rpc.ts:16 The door is stateless with no protocol sessions and no sticky routing. State spanning calls is an explicit handle (rev, receipt token, cursor)."
+        }
+      ],
+      "registryProposal": "catalog-projection-modes: its self-teaching rule assumes compression removes the per-operation schemas. Here a routing tool publishes every op's full schema as a discriminated oneOf, so the model keeps its map and the 'operation name optional, return a sub-catalog' remedy may not be needed. The technique could name this variant (fewer tools without losing schemas) and say which rung of self-teaching still applies."
+    },
+    "333e954c-3d86-400f-a6c8-48777a94ccba/mcp-tools": {
+      "context": "foundry-extract-engine",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T10:22:16.126Z",
+      "worker": "bbeb8f67-1a35-4f48-aa87-96dbb8e86882",
+      "techniques": []
+    },
+    "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3/prompt-assembly": {
+      "context": "agent-cli-and-turns",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T17:19:58.080Z",
+      "worker": "13237af0-8881-4903-9070-0fe592168a0a",
+      "techniques": [
+        {
+          "technique": "capability-documentation",
+          "verdict": "deviation",
+          "evidence": "lib/turns/assemble/research.ts:135 The tool list is hand-written next to an existing RETRIEVE_TOOLS constant. There is a second case: frames.ts:42 injects pipeline/FRAMES-SCENE-PROMPT.md:3 verbatim, which tells a tool-less run (claudeCli.ts:285-286) to read two files it cannot open."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "lib/turns/kinds/recalibrate.ts:102 Each family has one pure assembler built from named blocks (manifest.ts joinBlocks), but the assembled string is not sealed. lib/text/router.ts:437 appends schemaInstruction after assembly, outside the manifest and the digest, and the schema is already in the RUN block."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "lib/turns/assemble/manifest.ts:60 An absent input renders as an empty string under its heading (SCOPE; frames NOTEBOOK when facts is absent). This is kept on purpose for byte parity; it is the empty-success render the technique forbids."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "lib/turns/ledger.ts:98 The record holds a digest and size of the whole prompt, payload included, so no record stamps which version of RECALIBRATE-PROMPT.md or FRAMES-SCENE-PROMPT.md a turn received. It is also 'as built', so it misses the router's appended schema block."
+        },
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "lib/turns/assemble/frames.ts:65 The ceiling is counted in characters converted to tokens by an assumed ratio, and it is not derived from the window minus the response reservation. Per-block sizes in the manifest and the named 'NOT SENT' cuts do conform."
+        },
+        {
+          "technique": "context-reachability",
+          "verdict": "conformant",
+          "evidence": "lib/turns/assemble/recalibrate.ts:116 Material the tool-less engine cannot reach is kept as a floor; only slices no beat can cite are cut."
+        },
+        {
+          "technique": "task-envelope",
+          "verdict": "conformant",
+          "evidence": "lib/agent/reviewerEngines.ts:65 A locate pointer, a permission fact and a done criterion stated as an artifact, with no role priming."
+        },
+        {
+          "technique": "pinned-prompt-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/turns/assemble/frames.ts:125 Assembly is pure and reads no clock; a search for new Date, Date.now, toISOString and today in lib/turns/assemble found nothing."
+        },
+        {
+          "technique": "cache-breakpoint-allocation",
+          "verdict": "not-applicable",
+          "evidence": "lib/turns/assemble/recalibrate.ts:12 The CLI rung has no cross-call prompt caching, so there are no cut points to allocate."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:286 Reasoning turns are single-shot; the client keeps no transcript to compact."
+        },
+        {
+          "technique": "endpoint-sealed-continuation-metadata",
+          "verdict": "not-applicable",
+          "evidence": "lib/agent/agentArgs.ts:44 Agent turns keep no session, so no stored assistant turn is ever replayed."
+        },
+        {
+          "technique": "contributed-document-admission",
+          "verdict": "not-applicable",
+          "evidence": "lib/agent/agentArgs.ts:37 safe-mode turns off CLAUDE.md, skills and plugins, so no installed document is admitted."
+        },
+        {
+          "technique": "context-ownership-regimes",
+          "verdict": "not-applicable",
+          "evidence": "lib/agent/cliSeam.ts:3 One prompt in, one answer out; the client neither holds nor edits a message list."
+        },
+        {
+          "technique": "foreign-harness-history-folding",
+          "verdict": "not-applicable",
+          "evidence": "lib/agent/reviewerCommand.ts:22 Reviewer runs are ephemeral, and no foreign-harness history is imported."
+        },
+        {
+          "technique": "continuation-prompts",
+          "verdict": "not-applicable",
+          "evidence": "lib/turns/ledger.ts:32 An interrupted turn is marked orphaned, never resumed."
+        },
+        {
+          "technique": "response-reservation-sizing",
+          "verdict": "not-applicable",
+          "evidence": "lib/turns/assemble/recalibrate.ts:187 Measured prompts are about 40k characters, far below the window, so the input side is not under pressure (the technique's own when-not clause)."
+        },
+        {
+          "technique": "consumer-coupled-decoration",
+          "verdict": "conformant",
+          "evidence": "lib/turns/assemble/recalibrate.ts:128 Each dropped key is justified by naming who reads it: render checks have no consumer in the plan or the app, and NOTEBOOK_DROP (line 120) argues engineFit, sources and conclusions the same way.",
+          "carriedFrom": "2026-11-03"
+        }
+      ]
+    },
+    "04e4702a-4221-4673-9cfa-130cbd21f93e/prompt-assembly": {
+      "context": "library-projection-feeds",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T11:31:07.271Z",
+      "worker": "959bb37c-8d92-4228-a246-174dff8d718e",
+      "techniques": []
+    },
+    "868afe8a-01af-428e-9f7c-d561ee033d4c/prompt-assembly": {
+      "context": "project-step-store",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T11:31:07.271Z",
+      "worker": "959bb37c-8d92-4228-a246-174dff8d718e",
+      "techniques": []
+    },
+    "38f619c8-80eb-4040-986c-10c9e35e734e/test-harness": {
+      "context": "floor-hub-screen",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T14:58:47.655Z",
+      "worker": "08ac3fff-5bc3-45e8-99f4-9eb22091539e",
+      "techniques": [
+        {
+          "technique": "isolation-lanes",
+          "verdict": "deviation",
+          "evidence": "tests/live/floor.live.spec.ts:52 The fixture universe is opt-in through env. By default the lane inherits the machine's v1 data, while the board-exit lane seeds its own universe."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/floor.live.spec.ts:5 The browser-rendered lanes are checked against the store's own live read."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:5118 Only 1 mutant covers _floor, and it is not in the ledger. Floor.tsx, LaneCells, Month, Composers and load.ts have none."
+        }
+      ]
+    },
+    "57aecc2d-d579-4f82-8772-3dc68bf0d2b5/prompt-assembly": {
+      "context": "ui-keymap-layers-storage",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-03",
+      "evaluatedTs": "2026-11-03T17:19:58.080Z",
+      "worker": "13237af0-8881-4903-9070-0fe592168a0a",
+      "techniques": []
     }
   }
 }
