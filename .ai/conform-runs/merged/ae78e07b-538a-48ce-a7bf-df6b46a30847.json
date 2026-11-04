@@ -1,0 +1,127 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ae78e07b-538a-48ce-a7bf-df6b46a30847",
+ "subject": "voice-io",
+ "evaluatedAt": "2026-11-04T05:31:26.151088+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-arrange-desk",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/audio/_audio/useTransport.ts:6 The audio desk produces music and plays back takes through one shared <audio> transport governed by media-playback; a recursive search of app/(studio)/audio found no speech capture, synthesis, transcript or utterance code, and the golden path gives 'producing it to a creative brief' to another craft.",
+   "techniques": [],
+   "absenceTerms": [
+    "speechSynthesis",
+    "SpeechRecognition",
+    "getUserMedia",
+    "transcrib",
+    "utterance"
+   ]
+  },
+  {
+   "context": "audio-hunt",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/audio/_hunt/read.ts:17 The Hunt tab searches and judges generated music takes from the sound store (its vendors are music providers reached by render or by hand); a search of _hunt and hunt-return found no microphone, transcription, speech-synthesis queue or utterance code, so voice I/O plumbing is not present.",
+   "techniques": [],
+   "absenceTerms": [
+    "speechSynthesis",
+    "SpeechRecognition",
+    "getUserMedia",
+    "transcrib",
+    "utterance"
+   ]
+  },
+  {
+   "context": "studio-shell",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/nav.ts:1 The shell is navigation, header facts, toasts, a job bell and a live re-read feed; a search of _shell found no speech capture, no synthesis, no global voice mute and no utterance handling (its only audio hits are a nav entry and a CSS reset), so no voice channel exists here.",
+   "techniques": [],
+   "absenceTerms": [
+    "speechSynthesis",
+    "SpeechRecognition",
+    "getUserMedia",
+    "transcrib",
+    "utterance"
+   ]
+  },
+  {
+   "context": "ledger-screen",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/ledger/_ledger/read.ts:12 The ledger is a bounded, paginated read of kernel events with facets and an SSE refresh; a search of app/(studio)/ledger found no audio, speech or transcript code at all, so the subject's precondition (the product listens or speaks) does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "speechSynthesis",
+    "SpeechRecognition",
+    "getUserMedia",
+    "transcrib",
+    "utterance"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "voice-io",
+   "context": "part-editor-media-cut-score",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T05:31:26.151088+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-arrange-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T05:31:26.151088+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-hunt",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T05:31:26.151088+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T05:31:26.151088+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
