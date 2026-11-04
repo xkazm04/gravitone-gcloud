@@ -9,10 +9,10 @@ import { familyAnnotations, opsOf, REGISTRY } from "./registry.ts";
 
 // THE PROJECTION - how the one registry (./registry.ts) is published (catalog-projection-modes).
 //
-//   family     four routing tools, `gt_read`, `gt_launch`, `gt_job`, `gt_spend`, each taking
+//   family     five routing tools, `gt_read`, `gt_launch`, `gt_job`, `gt_spend`, `gt_songlab`, each taking
 //              `{op, ...args}`; its inputSchema is the ops' doors as one JSON-Schema `oneOf`
 //              discriminated by `op`, its annotations the most severe of its ops'. The default:
-//              a model choosing among four tools reads four descriptions.
+//              a model choosing among five tools reads five descriptions.
 //   operation  one tool per op, `gt_<family>_<op>`, its inputSchema that op's door alone.
 //
 // Either way a call resolves to the SAME row and its handler gets the SAME args, so the result and
@@ -48,6 +48,8 @@ const FAMILY_WORDS: { readonly [F in McpFamily]: { readonly title: string; reado
   launch: { title: "Compose and launch", lead: "Compose, launch, render; paid live asks to spend." },
   job: { title: "Act on jobs", lead: "Pause, resume, retry, reorder, re-route or cancel a job; acknowledge a held lane." },
   spend: { title: "Spend requests", lead: "Spend requests this token filed, and the operator's verdicts." },
+  // The YuE2 song lab (spark yue2-song-lab): renders, scores, post-chains and blind pairs; never a verdict.
+  songlab: { title: "Song lab", lead: "YuE2 song lab on this machine, $0: render a batch, list takes with scores, post-chain a take, queue blind pairs." },
 };
 
 const familyName = (f: McpFamily): string => `gt_${f}`;

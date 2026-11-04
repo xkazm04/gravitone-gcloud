@@ -38,6 +38,7 @@ import { scoutReelsProducer } from "./scoutReel.ts";
 import { scoutPieceProducer } from "./scoutPiece.ts";
 import { scoutSheetProducer } from "./scoutSheet.ts";
 import { scoutStoryboardProducer } from "./scoutStoryboard.ts";
+import { yue2PostProducer, yue2RenderProducer, yue2ScoreProducer } from "./yue2.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
 import { huntProducer } from "../sound/huntRender.ts";
@@ -157,6 +158,11 @@ export const BOUND: readonly Bound[] = [
   // A kept character's reference sheet (spark scout-vision S3): one Flux 2 still, her kept portrait as a late reference,
   // one job per sheet on gpu.local (engine comfy).
   { name: "scout-sheet", producer: scoutSheetProducer() },
+  // The song lab (spark yue2-song-lab): YuE2 in WSL on this box's card - a batch of seeds rendered, every take scored,
+  // a post-chain or a blind window made from a take; three jobs on gpu.local, each $0 (lib/producers/yue2.ts).
+  { name: "yue2-render", producer: yue2RenderProducer() },
+  { name: "yue2-score", producer: yue2ScoreProducer() },
+  { name: "yue2-post", producer: yue2PostProducer() },
   ...stepsBound(),
 ];
 

@@ -6,13 +6,14 @@ import { AUDIO_STUDIO_LAUNCH_OPS, AUDIO_STUDIO_READ_OPS } from "./tools/audioStu
 import { JOB_OPS } from "./tools/job.ts";
 import { LAUNCH_OPS } from "./tools/launch.ts";
 import { READ_OPS } from "./tools/read.ts";
+import { SONGLAB_OPS } from "./tools/songlab.ts";
 import { SPEND_OPS } from "./tools/spend.ts";
 import { STEER_OPS } from "./tools/steer.ts";
 
 // THE ONE TOOL REGISTRY of the agent door (spark athena-control-mcp; registry mcp-tools:
 // catalog-projection-modes). Every op is one McpToolSpec row in ./tools/*.ts; this module gathers
 // them and nothing else defines a tool. Both projections (./projection.ts) are views of these rows -
-// four family tools or one tool per op - so a handler, its door and the ledger events it writes
+// five family tools or one tool per op - so a handler, its door and the ledger events it writes
 // cannot differ between them.
 
 export type { McpToolSpec } from "./op.ts";
@@ -28,6 +29,7 @@ export const REGISTRY: readonly McpToolSpec[] = [
   ...AUDIO_LAUNCH_OPS,
   ...JOB_OPS,
   ...SPEND_OPS,
+  ...SONGLAB_OPS,
 ];
 
 /** A description is a tool's whole introduction to a model; past this it is a paragraph. */

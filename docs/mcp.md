@@ -93,7 +93,7 @@ screen shows the thing, the value carries `view`, a deep-link path: `/projects/<
 
 `GRAVITONE_MCP_PROJECTION` is read once when the server starts. It is server-only.
 
-- `family` (default): four tools, `gt_read`, `gt_launch`, `gt_job` and `gt_spend`. Each takes
+- `family` (default): five tools, `gt_read`, `gt_launch`, `gt_job`, `gt_spend` and `gt_songlab`. Each takes
   `{op, ...args}`. Its `inputSchema` is a JSON-Schema `oneOf` over its ops, discriminated by `op`. Its
   annotations are the most severe of its ops'.
 - `operation`: one tool per op, `gt_<family>_<op>` (44 today).
@@ -255,3 +255,42 @@ mp3 they downloaded. The skill's "Suno advisor mode" is the agent's side.
   1.32.2, a devDependency imported only there) completes initialize, lists the tools and calls
   `gt_read projects`. It reaches the route's own `POST` through a fetch shim that answers any other
   method 405.
+
+## The song lab (spark yue2-song-lab)
+
+The song lab runs YuE2-3B (open weights) on this machine's card in WSL, for $0. Its four ops are their own
+family, `gt_songlab`, because the read and launch tools' descriptions are at the 240-character limit. In the
+operation projection they are `gt_songlab_launch`, `gt_songlab_takes`, `gt_songlab_queue_pairs` and
+`gt_songlab_post`. The family projection therefore publishes five tools.
+
+| family | op | args | writes |
+|---|---|---|---|
+| songlab | `launch` | `style`, `lyrics`, `seeds?` (1..16), `cot?`, `cfg?`, `adapter?`, `adapterStrength?` | yes |
+| songlab | `takes` | `limit?` (1..200, default 50) | |
+| songlab | `queue_pairs` | `source` (`post-variant`, `best-of-n`, `across-conditions`), `limit?` (1..20, default 4) | yes |
+| songlab | `post` | `takeId`, `stages` (in order: `stems`, `debuzz`, `master`), `referenceTakeId?` | yes |
+
+- `launch` enqueues one `yue2-render` job on `gpu.local` and answers `{jobId, receipt, view}`. The receipt is
+  $0. An absent `cot`, `cfg` or `seeds` is the measured recipe (`YUE2_RECIPE`: cot `off`, cfg 1.5, seeds 1..8).
+  The worker renders one take per seed and then hands every take the batch filed to one `yue2-score` job.
+  Each take is filed with `origin: "agent"`.
+- `takes` lists the newest YuE2 takes, newest first. Each row is `{takeId, title, href, createdAt, parentId?,
+  facts, scores?, gated?}`. `facts` holds the condition, style, lyrics digest, length, rights and lineage; the
+  lyrics themselves are left out. `scores` is the newest scorer's row (`wer`, `werSd`, `per`, `songEval`,
+  `aesthetics`, `buzzIdx`, `transcript`); a metric that was not computed is absent, and an unscored take has
+  no `scores`. `gated` is `wer <= gate.max`. The answer also carries `rights`, the CC BY-NC 4.0 line that
+  every YuE2 take carries. The rights policy is warn-only: it is shown, and nothing is blocked.
+- `queue_pairs` queues blind pairs of one source for the owner (`lib/yue2/ab.ts`). It then enqueues one
+  `yue2-post` ab-window job per arm, which cuts a 25 s loudness-matched window from the first vocal onset into
+  `<sound store>/yue2-ab/<pairId>-<arm>.flac`. The answer is `{pairs: [{pairId, jobIds}]}`. It never says which
+  take plays as A.
+- `post` enqueues one `yue2-post` chain job. The chain files a new take whose parent is the source, with the
+  source's facts and a lineage of `{sourceTakeId, postStages, referenceTakeId?}`, and then hands it to scoring.
+  `master` with a `referenceTakeId` matches that reference (Matchering), then limits to -14 LUFS / -1 dBTP. A
+  reference is uploaded by the person through `POST /audio/songlab/reference`.
+- There is no vote op. A blind pair's verdict is the owner's, recorded through the song lab's Server Action
+  (`app/(studio)/audio/_songlab/acts.ts` `voteAb`).
+- A WSL that is down, a missing venv or a script's own refusal fails the job's step with the engine's
+  sentence verbatim (`gt_job status`). No take is filed for a render that did not happen.
+- Tests: `tests/next-server/yue2-mcp.test.ts` (the family, no vote tool, each op through the JSON-RPC layer)
+  and `tests/next-server/yue2-producers.test.ts` (the three producers over a faked WSL door).
