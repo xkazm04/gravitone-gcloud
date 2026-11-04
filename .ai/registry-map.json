@@ -4435,7 +4435,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/spend.ts:193 When a live launch comes back stale after the operator's K, the apply swaps in the fresh receipt and launches it without asking again (bounded only by a ceiling re-priced at apply time), so what runs can differ from what the operator was shown.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "eval-harness",

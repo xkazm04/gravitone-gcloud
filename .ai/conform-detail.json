@@ -15650,6 +15650,48 @@
       "evaluatedTs": "2026-11-04T05:16:26.500Z",
       "worker": "c8acfbba-0086-438b-aae7-36d7d18174fb",
       "techniques": []
+    },
+    "eb8e4f16-65ba-445e-9299-2e00abf63aaa/hitl-approval": {
+      "context": "board-scout-spend-sources",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T05:28:06.520Z",
+      "worker": "88345074-94eb-4f2d-9186-6ada2b45f750",
+      "techniques": [
+        {
+          "technique": "resume-after-decision",
+          "verdict": "deviation",
+          "evidence": "lib/decision/v1/sources/spend.ts:193 The technique says a stale-world resume asks again or fails loudly. Here the fresh receipt is launched once. The /produce Receipt (Receipt.tsx:9-11) does the opposite and shows the changes before a re-confirm. Mitigations: an interrupted confirm is failed, never re-launched (spend.ts:213), and a project subject pins its revision (spendLive.ts:76)."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/spend.ts:164 An agent's keep cannot open the spend gate. Only an operator decision previews into a live launch."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/spend.ts:204 The applier enforces the truncation as well as the preview, so an agent has no expression for 'spend' at either component."
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/spend.ts:167 The disclosure is in units of consequence (what, provider/model lines, total), read from the live receipt."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/spend.ts:226 A refusal carries its reasons and note back to the requesting agent. A reasonless reject is skipped and named."
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/spend.ts:262 Spend piles are derived from every request still 'requested' in the kernel store, so the queue is complete by construction."
+        }
+      ],
+      "registryProposal": "resume-after-decision could settle whether a fresh receipt launched under a dollar ceiling taken from the confirmed card counts as 'what was shown'. This code treats the ceiling as the consent boundary; the technique, read literally, requires a re-ask."
     }
   }
 }
