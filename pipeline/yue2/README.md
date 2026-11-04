@@ -20,7 +20,9 @@ faster-whisper, WER/PER, SongEval, Audiobox. Each model loads alone and is freed
 so the GPU peak is that of the largest single model. Runs in `.venv-eval`.
 
 **`post.py`** makes a variant of a take: `stems` (RoFormer + htdemucs_6s, with pre-scaling to stay below
-the separator's normaliser, and the 44.1 kHz separator output resampled back to 48 kHz), `debuzz` (the
+the separator's normaliser, and the 44.1 kHz separator output resampled back to 48 kHz), `buses`
+(yue2-lab's vocal, drum and bass chains over the stems, each RMS-matched, then re-summed with `other`
+and the separation residual; it separates first when `stems` is not in the list; `_buses.py`), `debuzz` (the
 unbiased moving-average Ruach debuzz on the full mix) and `master` (Matchering to a reference when one
 is given, then the -14 LUFS / -1 dBTP limiter). `--op ab-window` cuts the 25 s blind-A/B window from
 the first vocal onset, with fades and the same loudness match. Runs in `.venv-eval`.
@@ -31,7 +33,8 @@ the moved scorer's answers.
 
 The shared modules are `_contract.py` (the answer, the paths, the GPU helpers), `_audio.py` (the
 limiter, the loudness match, the buzz metric), `_text.py` (lyrics and WER/PER), `_post_dsp.py`
-(separation, debuzz, mastering, the onset finder) and `_adapter.py` (LoRA). `install-gen.sh` and
+(separation, debuzz, mastering, the onset finder), `_buses.py` (the stem buses, with the energy-weighted
+gain-reduction measure) and `_adapter.py` (LoRA). `install-gen.sh` and
 `install-eval.sh` create the two venvs; the doctor's hint names whichever one is missing.
 
 ## Venvs (inside WSL, under `YUE2_HOME`, default `~/yue2-lab`)
@@ -48,8 +51,7 @@ limiter, the loudness match, the buzz metric), `_text.py` (lyrics and WER/PER), 
 - **matchering** and **pedalboard**: **GPL-3.0**. Both live only in the WSL eval venv and are reached only
   across the process boundary: Node spawns `post.py` and reads one JSON line, and nothing in the app
   imports or links them. This is the same arrangement as the audio sidecar (`pipeline/audio`).
-  pedalboard is installed for yue2-lab's stem chains, which were not moved. The moved scripts do not
-  import it.
+  pedalboard runs the stem buses (`_buses.py`), and only `post.py`'s `buses` stage imports it.
 - The debuzz is a re-implementation of the Ruach Studio algorithm (AGPL). It was written from that
   description, and no code was copied.
 - SongEval (ASLP-lab), MuQ, Qwen3-ASR, faster-whisper, audio-separator, Demucs and Audiobox Aesthetics

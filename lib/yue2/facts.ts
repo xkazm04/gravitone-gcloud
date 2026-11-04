@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -103,6 +104,17 @@ export async function allYue2Facts(): Promise<Result<Readonly<Record<string, Yue
 
 const same = (a: unknown, b: unknown): boolean => canonical(a) === canonical(b);
 
+/** The facts without the cached sha (S2): what a record SAYS about the render, apart from its bytes' key. */
+function withoutSha(f: Yue2TakeFacts): Omit<Yue2TakeFacts, "sha"> {
+  const { sha: _sha, ...rest } = f;
+  return rest;
+}
+
+/** Held and offered facts are the same filing: equal words, and no two different shas. A record filed
+ *  before S2 holds no sha; the same facts offered again with one is that record, not a conflict. */
+const sameFiling = (held: Yue2TakeFacts, offered: Yue2TakeFacts): boolean =>
+  same(withoutSha(held), withoutSha(offered)) && (held.sha === undefined || offered.sha === undefined || held.sha === offered.sha);
+
 /** Put the facts of a take the transaction holds; the caller holds the lock. Same facts: no write. */
 async function putHeld(tx: StoreTx, takeId: string, facts: Yue2TakeFacts): Promise<Result<Yue2TakeFacts>> {
   const take = (await tx.get("takes")).takes.find((t) => t.id === takeId);
@@ -112,7 +124,7 @@ async function putHeld(tx: StoreTx, takeId: string, facts: Yue2TakeFacts): Promi
   if (have !== undefined) {
     const p = parseYue2TakeFacts(have);
     if (!p.ok) return err("conflict", `take ${takeId} holds a facts record that does not read (${p.error.message}); settle it in ${YUE2_FACTS_FILE} before filing new facts`);
-    if (same(p.value, facts)) return ok(p.value);
+    if (sameFiling(p.value, facts)) return ok(p.value);
     return err("conflict", `take ${takeId} already holds other YuE2 facts; facts are filed once and never rewritten`);
   }
   file.facts[takeId] = facts;
@@ -136,9 +148,13 @@ export async function putYue2Facts(takeId: string, facts: Yue2TakeFacts): Promis
  * File a YuE2 take AND its facts under ONE store lock (the precedent lib/sound/suno/facts.ts
  * fileSunoTake): a crash can lose the whole filing but never leave a take the lab cannot describe.
  * The facts are held to their door before anything is written.
+ *
+ * THE SHA (S2): the sha256 of the bytes filed is computed here, once, and stored as `facts.sha`, so
+ * lib/yue2/sha.ts takeSha answers from the facts and pairing never re-reads audio. A sha the caller
+ * passed is replaced by the bytes' own.
  */
 export async function fileYue2Take(meta: Partial<SoundTake>, file: IncomingFile, facts: Yue2TakeFacts, now = new Date()): Promise<Result<{ take: SoundTake; created: boolean; facts: Yue2TakeFacts }>> {
-  const p = parseYue2TakeFacts(facts);
+  const p = parseYue2TakeFacts({ ...facts, sha: createHash("sha256").update(file.bytes).digest("hex") });
   if (!p.ok) return p;
   try {
     return await withStore(async (tx) => {

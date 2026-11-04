@@ -20,6 +20,7 @@ const ROOT = vi.hoisted(() => {
   return dir;
 });
 
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -113,7 +114,10 @@ describe("fileYue2Take", () => {
     expect(r.value.created).toBe(true);
     expect(r.value.take.provider).toBe("local");
     expect(existsSync(path.join(ROOT, "sound", r.value.take.file!.path))).toBe(true);
-    expect(await readYue2Facts([r.value.take.id])).toEqual({ ok: true, value: { [r.value.take.id]: f } });
+    // The facts carry the sha256 of the bytes filed (S2), computed once here.
+    const bytesSha = createHash("sha256").update(wav(990)).digest("hex");
+    expect(r.value.facts).toEqual({ ...f, sha: bytesSha });
+    expect(await readYue2Facts([r.value.take.id])).toEqual({ ok: true, value: { [r.value.take.id]: { ...f, sha: bytesSha } } });
     // A new take carries no verdict: the git-tracked ledger is never read or written.
     expect(existsSync(path.join(ROOT, "ledger.json"))).toBe(false);
   });

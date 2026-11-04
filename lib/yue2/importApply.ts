@@ -29,6 +29,10 @@ import { putSongScores, readSongScores } from "./scores.ts";
 // facts under ONE lock (./facts.ts fileYue2Take): provider local, origin import, kind music. A new
 // take carries no verdict, so the git-tracked verdict ledger is not read or written (createTakeTx
 // syncs it only for a judged take). Scores are upserted by sha; a row already held is `unchanged`.
+//
+// THE SHA IN THE FACTS (S2): each filed take's facts carry `sha` (the plan's hash of the bytes,
+// checked again against the bytes at filing), so lib/yue2/sha.ts takeSha never re-reads them. The
+// fileName+facts match compares the facts apart from `sha`: a take filed before S2 holds none.
 
 export type MatchedBy = "sha" | "fileName+facts";
 
@@ -53,6 +57,12 @@ export type ImportReport = {
 export type ApplyOptions = { readonly apply: boolean; readonly store?: Store; readonly now?: Date };
 
 const sha256 = (b: Uint8Array): string => createHash("sha256").update(b).digest("hex");
+
+/** The facts' words apart from the cached sha, for the fileName+facts match. */
+function wordsOf(f: Yue2TakeFacts): string {
+  const { sha: _sha, ...words } = f;
+  return canonical(words);
+}
 
 /** The sha of every YuE2 take's stored bytes, and every YuE2 take by file name. A take whose bytes are gone is only in the second. */
 async function existingIndex(): Promise<Result<{ bySha: Map<string, string>; byName: Map<string, { id: string; facts: Yue2TakeFacts }[]> }>> {
@@ -118,10 +128,11 @@ export async function applyPlan(plan: ImportPlan, o: ApplyOptions): Promise<Resu
     }
     relOfSha.set(t.sha, t.rel);
     const parentId = t.sourceRel === undefined ? undefined : idOfRel.get(t.sourceRel);
-    const facts: Yue2TakeFacts = parentId === undefined ? t.facts : { ...t.facts, lineage: { ...t.facts.lineage, sourceTakeId: parentId } };
+    const words: Yue2TakeFacts = parentId === undefined ? t.facts : { ...t.facts, lineage: { ...t.facts.lineage, sourceTakeId: parentId } };
+    const facts: Yue2TakeFacts = { ...words, sha: t.sha };
 
     const bySame = bySha.get(t.sha);
-    const byFacts = bySame === undefined ? byName.get(t.fileName)?.find((c) => canonical(c.facts) === canonical(facts))?.id : undefined;
+    const byFacts = bySame === undefined ? byName.get(t.fileName)?.find((c) => wordsOf(c.facts) === wordsOf(facts) && (c.facts.sha === undefined || c.facts.sha === t.sha))?.id : undefined;
     const existing = bySame ?? byFacts;
     if (existing !== undefined) {
       idOfRel.set(t.rel, existing);

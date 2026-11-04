@@ -186,6 +186,8 @@ describe("dry, apply, re-run", () => {
     if (!facts.ok) throw new Error(facts.error.message);
     expect(facts.value[varId]?.lineage).toEqual({ sourceTakeId: rawId, postStages: ["stems", "debuzz", "master"] });
     expect(facts.value[rawId]?.rights).toEqual(YUE2_RIGHTS);
+    // Each filed take's facts carry the sha of its bytes (S2), so takeSha never re-reads them.
+    expect([facts.value[rawId]?.sha, facts.value[varId]?.sha]).toEqual([sha("hh_s1_cotoff.wav"), sha("post/hh_s1_cotoff/v3s_stems_debuzzS_master.wav")]);
     expect(r.scores).toEqual({ written: 2, unchanged: 0, wouldWrite: 0, failed: 0 });
     const scores = must(readSongScores(kernel.store, [sha("hh_s1_cotoff.wav"), sha("grid/hh_cotfull_cfg2.0_s2.wav"), sha("post/hh_s1_cotoff/v3s_stems_debuzzS_master.wav")]));
     expect(scores[sha("hh_s1_cotoff.wav")]?.wer).toBe(0.0385);

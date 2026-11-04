@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """post.py - the YuE2 post-chain and the blind A/B window (moved from kiro/yue2-lab post.py; YUE2_HOME/.venv-eval).
 
-  python post.py --in F --out F --stages stems,debuzz,master [--reference F] [--debuzz-strength 0.8]
-    -> {"ok":true,"out":F,"stages":[...],"lufs":n,"truePeakDb":n[,"stems":{"vocals":F,"drums":F,"bass":F,"other":F,"residual":F}]}
+  python post.py --in F --out F --stages stems,buses,debuzz,master [--reference F] [--debuzz-strength 0.8]
+    -> {"ok":true,"out":F,"stages":[...],"lufs":n,"truePeakDb":n[,"stems":{"vocals":F,"drums":F,"bass":F,"other":F,"residual":F}]
+        [,"buses":{"sepResidualDb":n,"resumResidualDb":n,"vocals":{"grDb":n,...},"drums":{"grDb":n,...},"bass":{"grDb":n,...}}]}
   python post.py --op ab-window --in F --out F --window-s 25 [--start S]
     -> {"ok":true,"out":F,"windowS":[start,end],"vocalOnsetS":n}
 
@@ -11,6 +12,11 @@ Stages (any subset, applied in this order):
           separation residual, written as float WAVs to <out without suffix>_stems/. The mix passes through
           unchanged (stems + residual sum back to it exactly). The separators run at 44.1 kHz; their stems are
           resampled back to the take's own rate (48 kHz for YuE2).
+  buses   the stem buses (_buses.py, ported from yue2-lab): vocals HPF 80 Hz / de-ess 5-9 kHz / comp 3:1 at
+          -18 dB / +2 dB @ 3.5 kHz / plate 12 %; drums comp 4:1 for ~3 dB GR + 20 % parallel saturation; bass
+          mono below 120 Hz + comp 2:1 for ~1.5 dB GR; each RMS-matched to its stem, then re-summed with
+          `other` and the separation residual. Gain reduction is energy-weighted. Without `stems` in the
+          stages, `buses` separates first (the same cached separation) and writes no stem files.
   debuzz  the unbiased (`smooth`) Ruach debuzz of the VAE frame-seam ripple, on the full mix (48 kHz takes only).
   master  WITH --reference: Matchering to the reference, then the limiter to -14 LUFS / -1 dBTP.
           WITHOUT: the limiter only.
@@ -31,7 +37,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _contract import EVAL_BIN, Parser, Refused, log, need_file, run  # noqa: E402
 
-STAGE_ORDER = ["stems", "debuzz", "master"]
+STAGE_ORDER = ["stems", "buses", "debuzz", "master"]   # = YUE2_POST_STAGES (packages/domain/src/audio.yue2.ts)
 OUT_SUFFIXES = {".flac", ".wav"}
 
 
@@ -48,7 +54,7 @@ def chain(args, inp: Path, out: Path):
     from _post_dsp import debuzz_verified, limit_master, matchering, separate
 
     if not args.stages:
-        raise Refused("post.py: --stages is required (comma list of stems, debuzz, master)")
+        raise Refused("post.py: --stages is required (comma list of stems, buses, debuzz, master)")
     stages = [s.strip() for s in args.stages.split(",") if s.strip()]
     bad = set(stages) - set(STAGE_ORDER)
     if bad or not stages:
@@ -61,6 +67,7 @@ def chain(args, inp: Path, out: Path):
     fields = {}
     tmp = out.with_name(f"_{out.stem}_tmp")
 
+    stems = meta = None
     if "stems" in stages:
         t = time.time()
         stems, meta, _cache = separate(inp, x, sr)
@@ -72,6 +79,17 @@ def chain(args, inp: Path, out: Path):
             sf.write(str(p), v, sr, subtype="FLOAT")
             fields["stems"][k] = str(p)
         log(f"stems: residual {meta['residual_db']} (cached={meta['cached']}) in {time.time() - t:.1f} s")
+
+    if "buses" in stages:
+        from _buses import buses
+        if stems is None:   # buses needs stems: separate first, as yue2-lab did (no stem files written)
+            t = time.time()
+            stems, meta, _cache = separate(inp, x, sr)
+            log(f"buses: separated, residual {meta['residual_db']} (cached={meta['cached']}) in {time.time() - t:.1f} s")
+        t = time.time()
+        x, rep = buses(stems, x, sr)
+        fields["buses"] = {"sepResidualDb": meta["residual_db"]["all_stems_vs_mix"], **rep}
+        log(f"buses: {fields['buses']} in {time.time() - t:.1f} s")
 
     if "debuzz" in stages:
         t = time.time()

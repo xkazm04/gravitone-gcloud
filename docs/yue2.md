@@ -9,7 +9,8 @@ on the `gpu.local` lane.
 | --- | --- |
 | `pipeline/yue2/gen.py` | one take per call (style, lyrics, seed, cot, cfg, optional LoRA). |
 | `pipeline/yue2/score.py` | one take's `SongScores`: WER, PER, SongEval, Audiobox, buzz, transcript. |
-| `pipeline/yue2/post.py` | stems, debuzz, master (optionally to a reference), and the A/B window. |
+| `pipeline/yue2/post.py` | stems, buses, debuzz, master (optionally to a reference), and the A/B window. |
+| `pipeline/yue2/_buses.py` | the stem buses of the `buses` stage (vocals, drums, bass, then the re-sum). |
 | `pipeline/yue2/analyze.py` | a dev CLI: per-condition summary and the gated ranking. Node does not run it. |
 | `pipeline/yue2/_contract.py` | the last-line JSON answer, `YUE2_HOME`, the GPU helpers. |
 | `pipeline/yue2/install-{gen,eval}.sh` | create the two venvs. These are what the doctor's hint runs. |
@@ -136,14 +137,40 @@ by the path, its mtime and the cache version.
 
 ### post
 
-`--in F --out F --stages stems,debuzz,master [--reference F] [--debuzz-strength 0.8]`. The answer is
-`{ok, out, stages, lufs, truePeakDb, stems?}`.
+`--in F --out F --stages stems,buses,debuzz,master [--reference F] [--debuzz-strength 0.8]`. The stages
+run in that order (`YUE2_POST_STAGES`), whatever order they are given in. The answer is
+`{ok, out, stages, lufs, truePeakDb, stems?, buses?}`.
 
 - `stems` writes vocals, drums, bass, other and the separation residual to `<out>_stems/*.wav` (float).
   The mix passes through unchanged, because the stems sum back to it exactly.
+- `buses` processes the separated stems and re-sums them. These are yue2-lab's own chains, with its
+  measured settings:
+  - vocals: HPF 80 Hz, a 5-9 kHz band-split de-esser, comp 3:1 at -18 dB (5 ms / 80 ms), presence
+    +2 dB at 3.5 kHz, and a plate send at 12 % (room size calibrated to RT60 1.2 s);
+  - drums: comp 4:1 (10 ms / 100 ms) with the threshold searched for 3 dB of gain reduction, then 20 %
+    parallel saturation;
+  - bass: mono below 120 Hz, then a gentle 2:1 comp for 1.5 dB of gain reduction.
+
+  Each bus is RMS-matched back to its stem. The buses are then summed with `other` and the
+  separation residual. Gain reduction is energy-weighted: it is the RMS drop. yue2-lab's earlier
+  "loudest 25 % of frames" measure read +4.3 dB on a mostly silent bass stem. Without `stems` in the
+  list, `buses` separates first (the same cached separation) and writes no stem files. The `buses`
+  answer field holds `sepResidualDb` (the separation residual, which is summed back in) and
+  `resumResidualDb` (untouched stems plus residual against the input; float rounding only). It also
+  holds, per bus (`vocals`, `drums`, `bass`), `grDb` and `outputGainDb`, plus each bus's own settings.
 - `debuzz` is the unbiased (`smooth`) debuzz on the full mix, for 48 kHz takes only.
 - `master` with `--reference` runs Matchering to the reference, then the limiter to -14 LUFS / -1
   dBTP. Without a reference it runs the limiter only.
+
+A live run of `buses,master` on yue2-lab `outputs/hiphop_s3_cotfull.flac` (2026-11-04, separation
+cached) gave -14.0 LUFS and -1.0 dBTP. The separation residual was -22.77 dB and the re-sum residual
+-188.7 dB. The gain reduction was 2.16 dB on vocals (6.83 dB on the de-ess band), 3.0 dB on drums
+and 1.5 dB on bass. The chain took 6.7 s.
+
+A take's sha (`lib/yue2/sha.ts` `takeSha`) is the sha256 of its stored bytes. It is computed once,
+when `lib/yue2/facts.ts` `fileYue2Take` files the take, and is stored as `facts.sha`. The backfill
+sets it too. `takeSha` answers from the facts, so pairing never re-reads audio. It hashes the
+stored file only for facts filed before S2, which carry no sha.
 
 `--op ab-window --in F --out F --window-s 25 [--start S]` answers `{ok, out, windowS: [start, end],
 vocalOnsetS}`. The window starts at the first vocal onset, read from the RoFormer vocal stem, which
