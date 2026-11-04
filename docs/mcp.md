@@ -261,7 +261,7 @@ mp3 they downloaded. The skill's "Suno advisor mode" is the agent's side.
 The song lab runs YuE2-3B (open weights) on this machine's card in WSL, for $0. Its six ops are their own
 family, `gt_songlab`, because the read and launch tools' descriptions are at the 240-character limit. In the
 operation projection they are `gt_songlab_launch`, `gt_songlab_takes`, `gt_songlab_queue_pairs`,
-`gt_songlab_post`, `gt_songlab_inbox` and `gt_songlab_turn`. The family projection therefore publishes five
+`gt_songlab_post`, `gt_songlab_draw`, `gt_songlab_inbox` and `gt_songlab_turn`. The family projection therefore publishes five
 tools. The `gt_songlab` description is 163 of 240 characters.
 
 | family | op | args | writes |
@@ -270,6 +270,7 @@ tools. The `gt_songlab` description is 163 of 240 characters.
 | songlab | `takes` | `limit?` (1..200, default 50) | |
 | songlab | `queue_pairs` | `source` (`post-variant`, `best-of-n`, `across-conditions`), `limit?` (1..20, default 4) | yes |
 | songlab | `post` | `takeId`, `stages` (in order: `stems`, `debuzz`, `master`), `referenceTakeId?` | yes |
+| songlab | `draw` | `field?` (`main` or `post:<takeId>`), `rules?` (`only`, `exclude`, `seed-by`, `size`) | yes |
 | songlab | `inbox` | `session?`, `after?` (the last answer's `next`), `waitS?` (0..25) | |
 | songlab | `turn` | `session`, `turnId?`, `answers?`, `line`, `ran?`, `learned?`, `proposals?` (0..3), `check?` | yes |
 

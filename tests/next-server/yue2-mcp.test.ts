@@ -78,12 +78,12 @@ const VOTE = /vote|verdict|judge/i;
 const DECIDE = /keep|drop|remove|decide/i;
 
 describe("the songlab family", () => {
-  it("holds exactly launch, takes, queue_pairs, post, inbox and turn - and no tool in either projection votes, keeps or drops", () => {
-    expect(opsOf("songlab").map((s) => s.op)).toEqual(["launch", "takes", "queue_pairs", "post", "inbox", "turn"]);
-    expect(opsOf("songlab").map((s) => s.writes)).toEqual([true, false, true, true, false, true]);
+  it("holds exactly launch, takes, queue_pairs, post, draw, inbox and turn - and no tool in either projection votes, keeps or drops", () => {
+    expect(opsOf("songlab").map((s) => s.op)).toEqual(["launch", "takes", "queue_pairs", "post", "draw", "inbox", "turn"]);
+    expect(opsOf("songlab").map((s) => s.writes)).toEqual([true, false, true, true, true, false, true]);
     for (const s of REGISTRY) expect(s.op, `${s.family}.${s.op}`).not.toMatch(VOTE);
     for (const s of opsOf("songlab")) expect(s.op).not.toMatch(DECIDE);
-    expect(toolsOf("operation").map((t) => t.name)).toEqual(expect.arrayContaining(["gt_songlab_launch", "gt_songlab_takes", "gt_songlab_queue_pairs", "gt_songlab_post", "gt_songlab_inbox", "gt_songlab_turn"]));
+    expect(toolsOf("operation").map((t) => t.name)).toEqual(expect.arrayContaining(["gt_songlab_launch", "gt_songlab_takes", "gt_songlab_queue_pairs", "gt_songlab_post", "gt_songlab_draw", "gt_songlab_inbox", "gt_songlab_turn"]));
     for (const t of toolsOf("operation")) expect(t.name).not.toMatch(VOTE);
     for (const t of toolsOf("operation").filter((x) => x.name.startsWith("gt_songlab"))) {
       expect(t.name).not.toMatch(DECIDE);

@@ -163,7 +163,8 @@ export async function labTakes(store: Store, limit: number, deps: LabDeps = LIVE
     .slice(0, limit);
   const shas = new Map<string, string>();
   for (const t of lab) {
-    // A take whose file is gone is listed unscored: its scores are keyed by bytes no longer here.
+    // A take's sha is its facts' (cached at filing, S2), so its scores outlive its file; a pre-S2 take whose
+    // file is gone has no sha to read and is listed unscored.
     const sha = await takeSha(t);
     if (sha.ok) shas.set(t.id, sha.value);
   }

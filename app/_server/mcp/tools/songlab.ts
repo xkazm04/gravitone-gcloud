@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { AB_SOURCES, YUE2_POST_STAGES, YUE2_RECIPE } from "@gt/domain/audio.yue2";
 import { LAB_MAX } from "@gt/domain/audio.yue2.lab";
+import { labRuleSchema } from "@gt/domain/audio.yue2.lab.schema";
 import { YUE2_SEEDS_MAX } from "@gt/domain/audio.yue2.jobs.schema";
 import { yue2ConditionSchema } from "@gt/domain/audio.yue2.schema";
 import { ok, type Result } from "@gt/domain/errors";
@@ -116,6 +117,23 @@ export const SONGLAB_OPS: readonly McpToolSpec[] = [
       if (!s.ok) return s;
       const { launchPost } = await import("../../../../lib/producers/yue2Jobs.ts");
       return launched(launchPost(s.value, { ...args, op: "chain", origin: "agent" }, { actor: ctx.agent.actor }));
+    },
+  }),
+  defineOp({
+    family: "songlab",
+    op: "draw",
+    title: "Draw a knockout",
+    description: "Draw a knockout over the lyric-gate passers (field main) or one raw take's post variants (post:<takeId>), seeded by rules (only, exclude, seed-by, size; default SongEval, 8 or 16), and book its first round.",
+    input: z.object({ field: z.string().regex(/^(main|post:[A-Za-z0-9_-]{1,80})$/).optional(), rules: z.array(labRuleSchema).max(12).optional() }).strict(),
+    annotations: WRITES,
+    writes: true,
+    run: async (a, ctx) => {
+      const s = store(ctx);
+      if (!s.ok) return s;
+      const { drawFor } = await import("../../../../lib/yue2/draw.ts");
+      const field = (a.field ?? "main") as "main" | `post:${string}`;
+      const d = await drawFor(s.value, field, a.rules ?? [], ctx.agent.actor);
+      return d.ok ? ok({ drawId: d.value.drawId, version: d.value.version, size: d.value.size, entrants: d.value.entrants.length, view: VIEW }) : d;
     },
   }),
   defineOp({

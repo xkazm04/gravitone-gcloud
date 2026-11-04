@@ -49,7 +49,7 @@ const FAMILY_WORDS: { readonly [F in McpFamily]: { readonly title: string; reado
   job: { title: "Act on jobs", lead: "Pause, resume, retry, reorder, re-route or cancel a job; acknowledge a held lane." },
   spend: { title: "Spend requests", lead: "Spend requests this token filed, and the operator's verdicts." },
   // The YuE2 song lab (spark yue2-song-lab): renders, scores, post-chains and blind pairs; never a verdict.
-  songlab: { title: "Song lab", lead: "YuE2 song lab on this machine, $0: render a batch, list takes with scores, post-chain a take, queue blind pairs." },
+  songlab: { title: "Song lab", lead: "YuE2 song lab, $0: render, list scored takes, post-chain, queue blind pairs, draw a knockout, answer the owner's directions." },
 };
 
 const familyName = (f: McpFamily): string => `gt_${f}`;

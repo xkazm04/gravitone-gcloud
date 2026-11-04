@@ -31,6 +31,7 @@ import { kernel } from "../../../../lib/kernelStore.ts";
 import { actorOf } from "../../../../lib/principal.ts";
 import { launchPost, launchRender } from "../../../../lib/producers/yue2Jobs.ts";
 import { voteAb as recordVote, type JudgedPair } from "../../../../lib/yue2/ab.ts";
+import { bookAfterVote } from "../../../../lib/yue2/draw.ts";
 import { queueBlindPairs, type QueuedBlind } from "../../../../lib/yue2/lab.ts";
 import { appendLabSay } from "../../../../lib/yue2/labRelay.ts";
 import { dropProposal, keepProposal } from "../../../../lib/yue2/proposals.ts";
@@ -82,7 +83,11 @@ const voteAction = action("song lab vote", abVoteSchema, async (i, who): Promise
   const k = kernel();
   if (!k.ok) return k;
   const r = recordVote(k.value.store, i, actorOf(who), new Date().toISOString());
-  return r.ok ? ok(r.value) : r;
+  if (!r.ok) return r;
+  // A knockout vote books the match its winner advances into. The verdict stands whatever booking says;
+  // the desk re-books on its next read (book.ts bookDraw), and booking is idempotent.
+  await bookAfterVote(k.value.store, r.value.pair, actorOf(who));
+  return ok(r.value);
 });
 
 /** The owner's verdict on a blind pair; the answer reveals which take played as A. */

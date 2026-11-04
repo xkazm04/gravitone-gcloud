@@ -367,3 +367,20 @@ export async function bracketOf(store: Store, drawId: string): Promise<Result<Br
 export function draws(store: Store): Result<readonly Draw[]> {
   return desk.draws(store);
 }
+
+/** After a knockout vote: book the next match in every draw holding both takes (the vote itself
+ *  never books). Idempotent - bookNext queues only matches with no pair. Not a knockout pair: nothing. */
+export async function bookAfterVote(store: Store, pair: AbPair, actor: Actor): Promise<Result<readonly string[]>> {
+  if (pair.source !== "knockout") return ok([]);
+  const all = draws(store);
+  if (!all.ok) return all;
+  const booked: string[] = [];
+  for (const d of all.value) {
+    const ids = new Set(d.entrants.map((e) => e.takeId));
+    if (!ids.has(pair.takeA) || !ids.has(pair.takeB)) continue;
+    const r = await bookNext(store, d.drawId, actor);
+    if (!r.ok) return r;
+    booked.push(...r.value);
+  }
+  return ok(booked);
+}
