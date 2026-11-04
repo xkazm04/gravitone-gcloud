@@ -14583,62 +14583,70 @@
       "context": "domain-run-job-steps",
       "subject": "hitl-approval",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "conformant",
       "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T02:37:43.713Z",
+      "evaluatedTs": "2026-11-04T03:25:44.861Z",
+      "worker": "32949800-68c0-43a7-b00b-a1064b455766",
       "techniques": [
         {
           "technique": "gate-state-machines",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/plan.ts:80 Each gate is a per-phase boundary in the plan, and it opens only on recorded human state."
-        },
-        {
-          "technique": "truncated-verdict-space",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/plan.ts:105 A job that finished cleanly (done) resolves to awaiting_gate, never to ratified. The machine has no positive arm."
-        },
-        {
-          "technique": "consent-gates",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/produce.ts:100 The receipt shows price, lane and ETA lines and carries a digest of inputs, quotes and queue state. The confirm must bring that digest back, so consent is bound to the disclosure shown."
-        },
-        {
-          "technique": "resume-after-decision",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/produce.ts:127 A confirm against a world that has moved launches nothing and returns the fresh receipt, which asks again."
-        },
-        {
-          "technique": "decision-records",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/job.ts:86 Every live spend records who armed it, when and why on the job record."
-        },
-        {
-          "technique": "fail-closed-profile-for-headless",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/job.ts:80 With no arm a job is dry; spending requires a named authority, so a headless job cannot spend by default."
+          "evidence": "packages/domain/src/run.machine.ts:29 Enumerated pending state as data; ratified reachable only from awaiting_gate."
         },
         {
           "technique": "fail-loud-classification-default",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/job.machine.ts:17 An unknown outcome (the vendor may have been paid) goes to interrupted with an interruption record as its marker, not to retryable failed, and only an operator may take it out."
+          "evidence": "packages/domain/src/plan.ts:105 An absent or unknown packet fact falls through to awaiting_gate (held), never to ratified."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:86 Every live-spend authorization records who, when and why on the job."
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/produce.ts:99 Launch is a priced receipt first; the confirm carries the digest of exactly what was disclosed."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/produce.ts:126 A confirm against a changed world launches nothing and returns the fresh receipt."
+        },
+        {
+          "technique": "fail-closed-profile-for-headless",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:80 With no human arm a job is dry; spending requires an explicit recorded arm."
+        },
+        {
+          "technique": "fixed-policy-amendable-plan",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:115 The money boundary is fixed outside the executor; steer is only a preference within the plan."
+        },
+        {
+          "technique": "handoff-is-a-declared-door",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/produce.ts:134 Humans enter only at declared gate parts of the plan; no model-raised escalation exists in this model."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/plan.ts:105 A job that finished cleanly (done) resolves to awaiting_gate, never to ratified. The machine has no positive arm.",
+          "carriedFrom": "2026-11-04"
         },
         {
           "technique": "review-queues",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/produce.ts:134 Every gate part is a packet on the one Board surface. There is no per-gate side channel."
+          "evidence": "packages/domain/src/produce.ts:134 Every gate part is a packet on the one Board surface. There is no per-gate side channel.",
+          "carriedFrom": "2026-11-04"
         },
         {
           "technique": "cosmetic-vs-enforced-threshold-invariant",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/produce.ts:124 Analog, not the aging-queue case: one predicate feeds both the receipt's 'may stop at ceiling' mark, shown before the spend, and the kernel's enforcing stop, so the two cannot diverge."
+          "evidence": "packages/domain/src/produce.ts:124 Analog, not the aging-queue case: one predicate feeds both the receipt's 'may stop at ceiling' mark, shown before the spend, and the kernel's enforcing stop, so the two cannot diverge.",
+          "carriedFrom": "2026-11-04"
         }
-      ],
-      "withdrawn": {
-        "worker": "bf78888a-0a53-4566-ba9c-7a189f1e54bc",
-        "state": "conformant",
-        "at": "2026-11-04T02:38:23.384959+00:00",
-        "reason": "reviewer (sonnet): The claim \"the machine has no positive arm\" is contradicted by plan.ts:41-42, where ofJob maps a done job part to \"ratified\" with no packet. Only runStateOf (plan.ts:105) resolves done to awaiting_gate. The produce.ts:100 and :127 anchors are bare type declarations (Receipt.token, StaleReceipt), so "
-      }
+      ]
     },
     "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3/module-design": {
       "context": "agent-cli-and-turns",
@@ -14670,6 +14678,125 @@
           "evidence": "lib/agent/cliSeam.ts:9 The reasoning door and the agent door are separate seams, not one function with a mode flag, and the one rule they share is imported once so it cannot drift."
         }
       ]
+    },
+    "868afe8a-01af-428e-9f7c-d561ee033d4c/hitl-approval": {
+      "context": "project-step-store",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T03:25:44.861Z",
+      "worker": "32949800-68c0-43a7-b00b-a1064b455766",
+      "techniques": []
+    },
+    "946b3fa8-75ef-47c1-94b1-40703a9401b1/hitl-approval": {
+      "context": "foundry-strips-and-training",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T03:25:44.861Z",
+      "worker": "32949800-68c0-43a7-b00b-a1064b455766",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/store.ts:432 The version check at the door is optional; an omitted token commits unbound."
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/store.ts:184 An unreadable verdict map is summarized as decided: 0 with only a console warning, so the count cannot be told apart from an untouched run."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/author.ts:7 The authoring agent cannot render or grade its own strip; only the human triage keeps a card."
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/blind.ts:8 The reviewer compares paired baseline/challenger outputs blind, and judge-vs-human agreement is measured per pair."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/types.ts:106 Each ledger row records what the decider was shown; who/when sit on the append-only verdict log."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/store.ts:18 Rejection disposes of the staged media while keeping the evidence; undecided items keep theirs."
+        },
+        {
+          "technique": "fail-closed-profile-for-headless",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/author.ts:111 The headless author turn gets a closed three-tool allowlist with no shell or web."
+        }
+      ]
+    },
+    "d968dc62-e28c-4437-abb1-af18df448216/hitl-approval": {
+      "context": "article-run-engine",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T03:25:44.861Z",
+      "worker": "32949800-68c0-43a7-b00b-a1064b455766",
+      "techniques": [
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "lib/articles/types.ts:103 ArticleApproval is {at, patches}: the who and the what-exactly (version) fields are missing."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "lib/articles/types.ts:531 approved is reachable only from the gate, and landing only from approved."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "lib/articles/resume.ts:12 A failed landing resumes at approved: it re-lands and never re-approves or re-generates."
+        },
+        {
+          "technique": "unattended-mode",
+          "verdict": "conformant",
+          "evidence": "lib/articles/loop.ts:5 The unattended loop is budgeted and stops at the human gate; it never approves."
+        },
+        {
+          "technique": "fail-closed-profile-for-headless",
+          "verdict": "conformant",
+          "evidence": "lib/articles/loop.ts:21 A run that hits its ceiling is held for a person rather than auto-continued."
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "lib/articles/types.ts:475 The cost of a run is disclosed before the spend is authorized."
+        }
+      ]
+    },
+    "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3/hitl-approval": {
+      "context": "agent-cli-and-turns",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T03:25:44.861Z",
+      "worker": "32949800-68c0-43a7-b00b-a1064b455766",
+      "techniques": [
+        {
+          "technique": "fail-closed-profile-for-headless",
+          "verdict": "deviation",
+          "evidence": "lib/agent/reviewerCommand.ts:37 agy gets the open policy; reviewerEngines.ts:47 admits writes are not stopped by flag. The claude profile (agentArgs.ts:40, dontAsk plus a closed allowlist at :25) is conformant."
+        },
+        {
+          "technique": "author-advisories-yield-to-the-users-mode",
+          "verdict": "not-applicable",
+          "evidence": "lib/agent/cliSeam.ts:26 No author-written agent definition or settings file is loaded at all, so no author/user rule merge happens."
+        }
+      ],
+      "registryProposal": "fail-closed-profile-for-headless has no rule for a vendor CLI whose headless mode cannot express a narrow allow (agy auto-denies read_url unless every permission is skipped); it should say whether workspace isolation plus recorded writes is an acceptable compensating control or remains a deviation."
     }
   }
 }

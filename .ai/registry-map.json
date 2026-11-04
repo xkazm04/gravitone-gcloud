@@ -1567,7 +1567,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/agent/reviewerCommand.ts:37 The headless agy reviewer runs under an allow-everything profile and is contained only by workspace isolation, while the claude writer and reviewer run a closed allowlist with dontAsk and no prompts; one engine of the seam is therefore open rather than fail-closed.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         }
       ],
       "governance": "governed"
@@ -2350,7 +2354,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/types.ts:103 The approval record holds only a timestamp and patch ids, with no decider identity and no fingerprint of the draft that was shown, so an approval cannot be proven to cover the post that later lands.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "eval-harness",
@@ -5723,7 +5731,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/domain/src/run.machine.ts:29 The run machine models a durable pending gate whose only exits are ratified, blocked or sent back, and the receipt/live-arm/stale-confirm records around it bind consent to what was shown; who may drive the gate transition lives in the kernel/Board, not here.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "fleet-orchestration",
@@ -7350,7 +7362,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/strips/store.ts:432 The destructive strips commit verifies that its preview token still matches only when a caller supplies one, so binding the commit to what the operator saw depends on the caller (triage.ts:35 promises it unconditionally), and the Dojo's commitCycle takes no binding at all.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "agent-memory",
@@ -13676,7 +13692,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:2 A recursive search of lib/steps for approv, consent, pending, awaiting and hitl found no hits: the module is IndexedDB persistence of the creator's own step content (scope picks, adopted script pointer, cut edit log), with no machine-initiated pause, decision surface or continuation for this subject to govern.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "mcp-tools",
