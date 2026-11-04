@@ -9377,14 +9377,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/engine/paper.ts:2 Canvas paint, RNG and worker raster code produce pixels for the app's landing page and hold no repository front-page prose, badges or host metadata; a search of app/_landing for README, shields, README.md and markdown found nothing.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
-          "evaluatedRevision": 4,
+          "evidence": "app/_landing/cosmos/engine/paper.ts:2 Paint, RNG and worker raster code produces pixels for the app's landing page and holds no repository front-page document; a search of app/_landing for README, README.md, shields.io, front page and landing document found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:21e7be3c68f38a9a",
+          "evaluatedRevision": 5,
           "source": "renamed",
           "renamedFrom": "ff0b289f-5f39-4747-acce-5d56797b9c43",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "engine-host-contract",
@@ -9611,14 +9610,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/engine/scene.ts:1 Scene composition and camera code for the app's own animated landing page has no repository front-page document in it; a search of app/_landing for README, shields, README.md and markdown found nothing.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
-          "evaluatedRevision": 4,
+          "evidence": "app/_landing/cosmos/engine/scene.ts:1 Scene, camera and plane code paints the app's animated landing and contains no repository front-page prose, badges, figures or host metadata; a search of app/_landing for README, README.md, shields.io, front page and landing document found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:21e7be3c68f38a9a",
+          "evaluatedRevision": 5,
           "source": "renamed",
           "renamedFrom": "076622f1-4906-4cdc-9a76-307df47fdd14",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "voice-io",
@@ -9792,14 +9790,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/Cosmos.tsx:3 This context is a page the app renders itself (a React and canvas client component), not the repository's front-page document, and the golden path leaves claims an application renders out of scope; a search of app/_landing for README, shields, README.md and markdown found nothing, and the only 'badge' hit is the app's StaleBadge UI component.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
-          "evaluatedRevision": 4,
+          "evidence": "app/_landing/cosmos/Cosmos.tsx:3 This is the app's own landing page, a React and canvas client component, not the repository's front-page document, and the golden path puts claims the application renders out of scope; a search of app/_landing for README, README.md, shields.io, front page and landing document found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:21e7be3c68f38a9a",
+          "evaluatedRevision": 5,
           "source": "renamed",
           "renamedFrom": "e5f8b2b5-3ac7-422b-9950-c7431117591a",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "table",
@@ -18431,14 +18428,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/ui/src/components/style/LockGate.tsx:22 These are @gt/ui React components for culling and locking styles inside the studio, not a repository front page; a search of the style, cull, cut and pair component directories for README, shields, README.md and markdown found nothing (the 'badge' hits are CSS class names, and the figcaption hits are app UI, not a landing document).",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
-          "evaluatedRevision": 4,
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:1 These are @gt/ui studio components for trialling, culling and locking styles, not a repository front page; a search of the style, cull, cut and pair component directories for README, README.md, shields.io, front page and landing document found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:21e7be3c68f38a9a",
+          "evaluatedRevision": 5,
           "source": "renamed",
           "renamedFrom": "cc39e764-df6c-4508-a8a9-e13944674461",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
