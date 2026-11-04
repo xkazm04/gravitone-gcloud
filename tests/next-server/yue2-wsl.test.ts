@@ -2,10 +2,10 @@
 // is replaced by a fake: a real child process (this Node binary running a few lines of script) that plays
 // the part the arguments ask for - `-l -q` lists distros, the doctor's probe prints its key=value lines,
 // `printenv HOME` prints a home, `kill` is recorded, and an op echoes its argv, answers a fixed last line,
-// or sleeps until it is killed. So the argument array, the last-line rules, the kind mapping, the doctor's
+// sleeps until it is killed, or ends when its stdin closes. So the argument array, the last-line rules, the kind mapping, the doctor's
 // hints and both kills are asserted on real processes, and no test needs WSL or the GPU.
 
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -13,12 +13,12 @@ vi.mock("server-only", () => ({}));
 vi.setConfig({ testTimeout: 20_000 });
 
 import { forgetWslHome, runYue2With, toWslPath, yue2Argv, yue2DoctorWith, type Yue2Deps } from "../../lib/yue2/wsl.ts";
-import { LAUNCH_SCRIPT, PID_GRACE_MS, realKillTree } from "../../lib/yue2/wslSpawn.ts";
+import { LAUNCH_SCRIPT, PID_GRACE_MS, realKillTree, realSpawn } from "../../lib/yue2/wslSpawn.ts";
 
 type Call = { readonly file: string; readonly args: readonly string[]; readonly child: ChildProcess };
 
 const node = (script: string, args: readonly string[]): ChildProcess =>
-  spawn(process.execPath, ["-e", script, "--", ...args], { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+  spawn(process.execPath, ["-e", script, "--", ...args], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
 
 const ECHO_ARGV = 'console.log("yue2-pid 4242"); console.log("log line"); console.log(JSON.stringify({ ok: true, argv: process.argv.slice(1) }));';
 const SLEEP = (pidLine: boolean): string => `${pidLine ? 'console.log("yue2-pid 4242");' : ""} setTimeout(() => {}, 60000);`;
@@ -179,6 +179,76 @@ describe("yue2 WSL door: stopping kills both sides", () => {
     expect(Date.now() - t0).toBeLessThan(200 + PID_GRACE_MS + 5_000);
     expect(await gone(calls.find((c) => c.args.includes("setsid"))?.child.pid)).toBe(true);
     expect(calls.some((c) => c.args.includes("kill"))).toBe(false);
+  });
+});
+
+describe("yue2 WSL door: the owner's death ends the Linux side (stdin EOF)", () => {
+  // The fake plays the launcher's watcher: it prints the pid line and exits 137 when its stdin reaches EOF.
+  const WATCH = 'console.log("yue2-pid 4242"); process.stdin.on("end", () => process.exit(137)); process.stdin.resume(); setInterval(Number, 60000);';
+  const launched = (calls: Call[]) => calls.find((c) => c.args.includes("setsid"))?.child;
+
+  it("a launched command's stdin is a pipe held open while it runs; closing it ends the child", async () => {
+    const { deps, calls } = fakeDeps({ op: WATCH }, { env: { YUE2_HOME: "/h" } });
+    const pending = runYue2With(deps, "score", [], { timeoutMs: 60_000 });
+    for (let i = 0; i < 50 && launched(calls) === undefined; i++) await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 800));
+    const child = launched(calls);
+    expect(child?.stdin).not.toBeNull();
+    expect(child?.stdin?.writableEnded).toBe(false);
+    expect(alive(child?.pid)).toBe(true);
+    child?.stdin?.end(); // what the pipe does when the Node owner dies
+    expect(await gone(child?.pid)).toBe(true);
+    const r = await pending;
+    expect(r.ok ? "" : r.error.message).toMatch(/exited 137/);
+  });
+
+  it("a stop closes the held stdin too; calls outside the launcher get theirs ended at once", async () => {
+    const { deps, calls } = fakeDeps({ op: SLEEP(true) });
+    await runYue2With(deps, "gen", [], { timeoutMs: 400 });
+    const printenv = calls.find((c) => c.args.includes("printenv"));
+    expect(printenv?.child.stdin?.writableEnded).toBe(true);
+    expect(launched(calls)?.stdin?.writableEnded).toBe(true);
+    expect(calls.find((c) => c.args.includes("kill"))?.child.stdin?.writableEnded).toBe(true);
+    const doc = fakeDeps({});
+    await yue2DoctorWith(doc.deps);
+    expect(doc.calls.every((c) => c.child.stdin?.writableEnded === true)).toBe(true);
+  });
+
+  it("the real spawn opens stdin as a pipe (not ignore), so Node holds the far side's EOF", async () => {
+    const c = realSpawn(process.execPath, ["-e", "process.stdin.on('end', () => process.exit(0)); process.stdin.resume();"]);
+    expect(c.stdin).not.toBeNull();
+    c.stdin?.end();
+    expect(await gone(c.pid)).toBe(true);
+  });
+
+  it("the launcher keeps stdin for an EOF watcher that kills its own group, and gives the command /dev/null", () => {
+    const lines = LAUNCH_SCRIPT.split("\n");
+    expect(lines[0]).toBe('echo "yue2-pid $$"');
+    expect(lines).toContain("( while read -r _; do :; done; kill -KILL -$$ ) <&3 &");
+    expect(lines).toContain('"$@" </dev/null 3<&- &');
+    expect(lines.at(-1)).toBe('exit "$r"');
+    expect(LAUNCH_SCRIPT).not.toMatch(/kill -KILL --/); // dash's builtin kill refuses `--`
+  });
+
+  const hasSh = spawnSync("sh", ["-c", "exit 0"], { windowsHide: true }).status === 0;
+  it.skipIf(!hasSh)("under a real sh: the command's exit code passes through, and a closed stdin kills the command", async () => {
+    const run = (cmd: readonly string[], endAfterMs?: number) =>
+      new Promise<{ code: number | null; out: string }>((resolve) => {
+        const c = spawn("sh", ["-c", LAUNCH_SCRIPT, "yue2", ...cmd], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+        let out = "";
+        c.stdout.on("data", (b: Buffer) => (out += b.toString("utf8")));
+        if (endAfterMs !== undefined) setTimeout(() => c.stdin.end(), endAfterMs);
+        c.on("close", (code) => resolve({ code, out }));
+      });
+    const done = await run([process.execPath, "-e", "console.log('hi'); process.exitCode = 3"]);
+    expect(done.code).toBe(3);
+    expect(done.out).toMatch(/^yue2-pid \d+\nhi\n$/);
+    const eof = await run([process.execPath, "-e", "console.log(process.pid); setInterval(Number, 60000)"], 1_500);
+    const cmdPid = Number(eof.out.split("\n")[1]);
+    expect(cmdPid).toBeGreaterThan(0);
+    const ended = await gone(cmdPid);
+    if (!ended) process.kill(cmdPid); // a red run must not leak its command
+    expect(ended).toBe(true);
   });
 });
 

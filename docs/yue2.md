@@ -79,13 +79,25 @@ wsl.exe -d <distro> --exec setsid -w sh -c 'echo "yue2-pid $$"; exec "$@"' yue2 
 - **No shell on the Windows side.** Node spawns with an argument array, `windowsHide`, and `shell:
   false`. The `sh -c` script inside WSL is a constant, and the real command arrives as its
   positional arguments.
-- **Stopping kills both sides.** `setsid` makes the script a process-group leader, and the launcher
-  prints its pid first (Node strips that line). A timeout or an abort sends `wsl.exe --exec kill
-  -KILL -- -<pid>`, which reaches the whole Linux group (python and its ffmpeg and nvidia-smi
-  children), and `taskkill /T /F` on the relay. On this box the relay kill alone already ended the
-  Linux tree, even a group that ignored HUP and TERM. The pid kill is the guarantee that does not
-  depend on how WSL behaves. A stop before the pid line arrives waits up to 2 s for it, then kills
-  the relay alone.
+- **Stopping kills both sides.** `setsid` makes the launcher shell a process-group leader. The
+  launcher prints its pid first (Node strips that line), runs the script as a background child with
+  stdin from `/dev/null`, and keeps its own stdin for a watcher.
+  - **A timeout or an abort** sends `wsl.exe --exec kill -KILL -- -<pid>`, which reaches the whole
+    Linux group (python and its ffmpeg and nvidia-smi children). It also closes stdin and runs
+    `taskkill /T /F` on the relay. A stop before the pid line arrives waits up to 2 s for it, then
+    kills the relay.
+  - **When the Node process dies** (a crash, a `taskkill`, a memory reaper), the Linux side ends too.
+    Node holds the relay's stdin as a pipe. When Node dies the pipe closes, `wsl.exe` passes that
+    EOF into the distro, and the watcher runs `kill -KILL -$$` on its own group.
+  - **Killing the relay alone does NOT end the Linux tree.** Measured 2026-11-04: a `score.py` whose
+    Node owner was killed with `taskkill /T /F` kept running, reparented to init. With the
+    watcher, the group was gone within one 2 s sample in three cases: the owner killed with `/T`,
+    the owner killed without `/T`, and only the relay killed. The measurement is in
+    `sp-yue2-scratch/s2-e/measure.md`.
+  - **One score shows more than one `score.py` in `ps`.** The `setsid` parent's arguments name the
+    script. Python also forks briefly (`nvidia-smi` every 0.5 s, and ffmpeg), and a fork that has
+    not yet exec'd shows the same argv. Count the processes whose `comm` is `python` and whose ppid
+    is the launcher shell: there is one.
 - **Posture.** When `canSpawnLocalBinaries()` is false (a managed platform, or `LOCAL_BINARIES=off`),
   nothing is spawned and the answer is `unavailable` with that posture's own sentence.
 
