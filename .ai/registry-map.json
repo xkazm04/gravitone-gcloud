@@ -1514,7 +1514,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/agent/reviewerEnv.ts:39 The per-engine environment is decided inside the argv builder, so reviewerEnv has to build a fake reviewer call (model \"m\", cwd \".\", empty prompt) to read the env field back out; the env decision sits in the wrong module and its caller works around it.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "agent-memory",

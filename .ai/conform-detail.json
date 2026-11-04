@@ -14639,6 +14639,37 @@
         "at": "2026-11-04T02:38:23.384959+00:00",
         "reason": "reviewer (sonnet): The claim \"the machine has no positive arm\" is contradicted by plan.ts:41-42, where ofJob maps a done job part to \"ratified\" with no packet. Only runStateOf (plan.ts:105) resolves done to awaiting_gate. The produce.ts:100 and :127 anchors are bare type declarations (Receipt.token, StaleReceipt), so "
       }
+    },
+    "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3/module-design": {
+      "context": "agent-cli-and-turns",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:51:50.447Z",
+      "worker": "82c29715-2cd4-4fbf-be4a-ce35b0897cab",
+      "techniques": [
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "lib/agent/reviewerEnv.ts:39 The standard calls this depth in the wrong place: the caller reaches past the module with made-up inputs to get one decision out. Every engine's env is {} today, so nothing breaks yet, but any engine whose env depends on its call would be computed from fake values."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "lib/agent/agentArgs.ts:62 The binary is a real substitution point: ARTICLES_AGENT_BIN swaps in the stub agent, and env is a parameter, not a global read."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "lib/agent/reviewerCommand.ts:13 Each engine's fence is a pure function a probe can assert without spawning anything. Spawning is kept in spawnTurn.ts."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "lib/agent/cliSeam.ts:9 The reasoning door and the agent door are separate seams, not one function with a mode flag, and the one rule they share is imported once so it cannot drift."
+        }
+      ]
     }
   }
 }
