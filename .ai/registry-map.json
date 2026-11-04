@@ -3086,8 +3086,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "packages/ui/src/components/audio/brief.ts:1 These are the authoring forms and pure models for music briefs (tempo, key, length, instruments). The 'voice' hits in packages/ui/src/components/audio are instrument roles (choir), Web Audio mix voices in useMix.ts and voiceover-bed steers. None of them captures speech or synthesizes it, and no speechSynthesis, SpeechRecognition, getUserMedia, transcrib or MediaRecorder appears.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "prompt-assembly",
@@ -6664,8 +6668,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "lib/foundry/extract/engine.ts:1 This is an image-style extraction step machine (read, group, replicate, transfer). A search of lib/foundry/extract found no speech, voice, microphone, transcription or TTS identifiers, so it has no audio channel at all.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "image-prompt-composition",
@@ -16949,8 +16957,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "lib/sound/hunt.ts:4 The hunt drafts and measures music and sfx takes against a rubric, which is producing sound to a brief. The golden path puts that outside voice-io. A search of lib/sound found no speechSynthesis, SpeechRecognition, getUserMedia, transcrib or MediaRecorder; the only 'speech' hit (huntEngine.ts:62) is a stub lesson about a music bed sitting under speech.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "agent-memory",

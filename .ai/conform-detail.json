@@ -15493,6 +15493,36 @@
         "at": "2026-11-04T04:44:22.150754+00:00",
         "reason": "reviewer (sonnet): The anchor (partOptions.ts:97) is a comment about `isFreeReceipt` in @gt/domain/mcp, so it is incidental and does not show that no tools are registered or served. The 'only MCP contact' claim is also contradicted: packages/ui/src/components/audio/steer.ts:4 names the agent door `app/_server/mcp/tool"
       }
+    },
+    "4f4a61e0-df30-4a71-b7e9-b0f355e4e848/voice-io": {
+      "context": "sound-hunt-and-measure",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:48:42.764Z",
+      "worker": "7b6398aa-e05a-4c7d-8a44-48696a243510",
+      "techniques": []
+    },
+    "03bbdce3-27bb-4361-947c-ba8f0d70fa2c/voice-io": {
+      "context": "audio-composer-briefs",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:48:42.764Z",
+      "worker": "7b6398aa-e05a-4c7d-8a44-48696a243510",
+      "techniques": []
+    },
+    "333e954c-3d86-400f-a6c8-48777a94ccba/voice-io": {
+      "context": "foundry-extract-engine",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:48:42.764Z",
+      "worker": "7b6398aa-e05a-4c7d-8a44-48696a243510",
+      "techniques": []
     }
   }
 }
