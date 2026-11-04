@@ -4025,7 +4025,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/decision/v1/types.ts:330 Each adapter previews from v1's own planners and folds a digest of the v1 state it read into the commit token, so a commit over a v1 that moved is refused. The apply half is idempotent on the same outcome and refuses a conflicting one loudly.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "multi-provider-gateway-plane",

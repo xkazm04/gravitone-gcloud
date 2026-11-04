@@ -14486,6 +14486,57 @@
       "evaluatedTs": "2026-11-04T01:45:40.565Z",
       "worker": "4eb4a95a-cff3-4381-97ca-9996db29f5c0",
       "techniques": []
+    },
+    "9508a262-9b09-4e7e-ab74-ff10c182a001/hitl-approval": {
+      "context": "board-decision-adapters",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:25:17.384Z",
+      "worker": "416fbfd5-24da-4d79-86d5-d1e69090451a",
+      "techniques": [
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/types.ts:330 The decision binds to the exact decisions and to a content digest (media sha256) of what was previewed."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/article.ts:262 The preview refuses unless the v1 gate is still pending; illegal states are conflicts."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/article.ts:401 A duplicate of the same verdict succeeds; a conflicting one is refused. These paths are kept separate, as the technique requires."
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/article.ts:286 The outward effect is disclosed from the bound action (slug, branch, PR title) before commit."
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/registry.ts:62 The queue is complete by construction: a packet source with no adapter line is a compile error."
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/dojo.ts:297 A claim needs its blind picks (the independent read) before the Board can change it."
+        },
+        {
+          "technique": "fail-loud-classification-default",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/types.ts:55 A record that does not fit the kernel's vocabulary is carried with a named loss, not absorbed silently."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/forge.ts:63 The admitting outcome (proven) is minted only by a human; a model's keep is recorded as the agent's."
+        }
+      ]
     }
   }
 }
