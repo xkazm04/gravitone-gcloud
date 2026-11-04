@@ -16271,7 +16271,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/gate.ts:269 A probe that declares only `whenMentions` and `tests` (PROBES['u-cohorts'], or any draft or notebook probe written the same way) can only ever come back as `pass` or `not-engaged`: it reports a pass it never checked, which breaks the file's own honesty rule, and that pass is counted in the `enforced` percentage.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "agent-memory",

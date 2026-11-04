@@ -14229,6 +14229,82 @@
         }
       ],
       "registryProposal": "capability-documentation could say how its sync check applies when the capability layer is published to a foreign harness (an MCP server's tools/list and instructions): there the per-tool description is the only doctrine, and cross-references between tool descriptions are the side door to check."
+    },
+    "1c2ac174-ba41-4264-b184-6b7aa04507d4/quality-gates": {
+      "context": "script-composition-and-validation",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T00:36:31.816Z",
+      "worker": "a7b619f6-832b-42ea-8882-57e8fb7eb999",
+      "techniques": [
+        {
+          "technique": "vacuous-by-evaluation",
+          "verdict": "deviation",
+          "evidence": "lib/script/gate.ts:269 When a probe has no forbid, requireOne or noCausalLink, `tripped` stays false, so whenever it engages it falls through to `pass`. u-cohorts at line 651 is exactly that shape, so no render can ever fail it."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "deviation",
+          "evidence": "lib/script/versions.ts:146 The override is one blanket over the whole rollup. The receipt keeps a count and the blocking render ids, but no finding identity (rule plus site), so it waives every violation, including ones it never names."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/script/gate.ts:189 A missing probe gives `unmeasured`, which is counted on its own and kept out of pass."
+        },
+        {
+          "technique": "unparseable-form-is-a-finding",
+          "verdict": "conformant",
+          "evidence": "lib/script/gate.ts:445 Figures the digit matcher cannot parse (spelled-out numbers) are reported as their own finding, not passed silently."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "lib/script/gate.ts:103 compileProbe throws on a bad pattern, so the instrument is asserted before the result. u-yield-causality (line 647) is kept as a seeded known-red control."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "lib/script/gate.ts:578 Any violation sets `blocked`, and the accept op refuses on it. That refusal is outside this context, in app/(studio)/projects/[id]/_part/fixtureScript.ts:181."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "lib/script/versions.ts:114 A version that moves forward over a blocking verdict carries a receipt frozen at the click, so the hole is written into the row."
+        },
+        {
+          "technique": "instrument-answers-only-its-own-question",
+          "verdict": "conformant",
+          "evidence": "lib/script/versions.ts:102 The code says the lexical gate cannot see seam breaks and carries chainBreaks from the instrument that can."
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "lib/script/validate.ts:446 The parse door and runGate both call the same connector law, so there is one authority across both rungs."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/script/gate.ts:490 The violation names an in-tree remedy that the author can act on."
+        },
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "conformant",
+          "evidence": "lib/script/gate.ts:23 It replaces the hand-typed CONSTRAINT_LEDGER prose with functions that read the render."
+        },
+        {
+          "technique": "decidable-in-a-window",
+          "verdict": "conformant",
+          "evidence": "lib/script/gate.ts:152 The causal rule is narrowed to a local, sentence-sized window, and the code says that it was narrowed."
+        },
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "conformant",
+          "evidence": "lib/script/gate.ts:165 g/y flags are stripped so a reused pattern really answers 'does this text contain it'. Serializable patterns stop a RegExp from collapsing to {} (lines 84-87)."
+        }
+      ]
     }
   }
 }
