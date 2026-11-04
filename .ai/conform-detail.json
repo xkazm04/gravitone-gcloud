@@ -15478,6 +15478,21 @@
           "evidence": "packages/producers/src/publish/tick.ts:81 The tick publishes claims one after another. async only carries I/O; there is no offload region and no hand-rolled coordination."
         }
       ]
+    },
+    "7cfc1d67-f77b-480c-a052-25c3217f0b1b/mcp-tools": {
+      "context": "ui-tokens-and-catalog",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:44:00.759Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "5c6c4bd9-3b19-4911-b0e8-767d330ee201",
+        "state": "not-applicable",
+        "at": "2026-11-04T04:44:22.150754+00:00",
+        "reason": "reviewer (sonnet): The anchor (partOptions.ts:97) is a comment about `isFreeReceipt` in @gt/domain/mcp, so it is incidental and does not show that no tools are registered or served. The 'only MCP contact' claim is also contradicted: packages/ui/src/components/audio/steer.ts:4 names the agent door `app/_server/mcp/tool"
+      }
     }
   }
 }

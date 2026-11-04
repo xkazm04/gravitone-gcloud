@@ -20223,8 +20223,8 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "priorNotApplicable": 2,
+          "state": "unknown"
         },
         {
           "subject": "design-tokens",
