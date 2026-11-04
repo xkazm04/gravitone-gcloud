@@ -15216,6 +15216,91 @@
           "reason": "replaced by a165906f-6232-4872-b923-dca2dd45a8bb"
         }
       ]
+    },
+    "b94edc9f-f1d4-4be0-99cb-4483648000eb/audit-logging": {
+      "context": "ledger-v1-sources",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:12:01.770Z",
+      "worker": "4a0bf4ba-ee62-4295-a4a1-5a93a72db109",
+      "techniques": [
+        {
+          "technique": "write-path-sanitization",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sources/clips.ts:91 Free-form vendor error goes in uncapped and unscrubbed. The same pattern appears in extract.ts:156, forge.ts:130 and mv.ts:122."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/sound.ts:74 The v1 instant is passed as the effective time. The earlier deviation is not upheld: a null judgedAt becomes atSrc 'derived', which the store keeps and the Ledger renders as '≈'. The defaulted rows stay distinguishable, which the named failure mode says they are not."
+        },
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/sound.ts:62 A re-verdict is keyed as a new fact rather than overwriting the old one, so the trail keeps kept→rejected→kept."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/clips.ts:78 An unreadable record is counted with its reason (it becomes an ingest.skip fact), never silently dropped."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sources/sound.ts:68 Passing nullable effective timestamps into f.recorded causes missing times to default to the sync clock, misattributing historical decisions to the time of projection.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by 4a0bf4ba-ee62-4295-a4a1-5a93a72db109"
+        }
+      ]
+    },
+    "e175da72-0e26-4725-95bf-eecd8c3ffc6f/audit-logging": {
+      "context": "ledger-v1-projection-core",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:12:01.770Z",
+      "worker": "4a0bf4ba-ee62-4295-a4a1-5a93a72db109",
+      "techniques": [
+        {
+          "technique": "write-path-sanitization",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/facts.ts:102 No cap or redaction at the projection's chokepoint. The kernel's eventDataSchema accepts any JSON."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/facts.ts:92 Effective time is kept apart from the kernel's recorded `at`. An unknown instant is labelled 'derived' and keeps the raw text. Nuance: line 90 still fills occurredAt with the sync time rather than leaving it absent. That is distinguishable through atSrc, so it is not the named unrecoverable failure, which is why the earlier deviation is not upheld."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:36 Failures are classed, recorded as ingest.fail events and counted in a per-source streak table."
+        },
+        {
+          "technique": "write-chokepoint",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:133 Every projected event enters through a single appendOnce door, in batches."
+        },
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:68 A changed key is counted as drift, never rewritten in place."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/facts.ts:72 Replacing missing effective times with the sync execution timestamp conflates recorded time with event time and prevents the ledger from recording genuine timestamp absence.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by 4a0bf4ba-ee62-4295-a4a1-5a93a72db109"
+        }
+      ]
     }
   }
 }

@@ -10243,14 +10243,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/ledger/v1/facts.ts:72 Replacing missing effective times with the sync execution timestamp conflates recorded time with event time and prevents the ledger from recording genuine timestamp absence.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
-          "evaluatedRevision": 10,
+          "evidence": "lib/ledger/v1/facts.ts:102 The shared fact builder, which every adapter goes through, copies each v1 log line whole into event data, and nothing between it and appendOnce applies an allowlist, size cap or secret scrub. The ledger, append-only and hash-chained, archives whatever a log line held, against write-path-sanitization.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11,
           "source": "renamed",
           "renamedFrom": "bd05d347-c5c6-4eb4-8de2-b68a6102ac01",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "sync-replication",
@@ -10426,14 +10425,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/ledger/v1/sources/sound.ts:68 Passing nullable effective timestamps into f.recorded causes missing times to default to the sync clock, misattributing historical decisions to the time of projection.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
-          "evaluatedRevision": 10,
+          "evidence": "lib/ledger/v1/sources/clips.ts:91 Adapters copy vendor error strings (clips, extract, forge, mv) and whole v1 log lines (extract.ts:150) verbatim into the data of an append-only, hash-chained ledger, with no allowlist, size cap or redaction. Any credential or oversized text in a vendor message is archived for good, against write-path-sanitization.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11,
           "source": "renamed",
           "renamedFrom": "86dbb3bb-044c-4ed3-810a-93d088bcad64",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "mcp-tools",
