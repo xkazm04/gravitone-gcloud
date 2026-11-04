@@ -14192,6 +14192,43 @@
       "evaluatedTs": "2026-11-03T23:43:57.013Z",
       "worker": "ee87a618-eabe-4f50-a3af-ccb2ad1a8d60",
       "techniques": []
+    },
+    "ad4279e3-e7c5-48d5-b166-db447059b183/prompt-assembly": {
+      "context": "mcp-agent-door",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T00:17:12.375Z",
+      "worker": "8a997360-983c-4203-88f8-d7b14154e4dc",
+      "techniques": [
+        {
+          "technique": "capability-documentation",
+          "verdict": "deviation",
+          "evidence": "app/_server/mcp/tools/read.ts:58 Mostly realized: tools/list is projected from the one REGISTRY (projection.ts:86), family descriptions are generated from opsOf and tested for completeness (mcp-registry.test.ts:65), and each description is capped at 240 chars. Missing: the doctrine-mention sync check. No test extracts the op names that description prose mentions and asserts they resolve."
+        },
+        {
+          "technique": "consumer-coupled-decoration",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/rpc.ts:53 The duplicated result representation names its consumer for each half (model reads text, client parses structuredContent), as the technique requires."
+        },
+        {
+          "technique": "pinned-prompt-clock",
+          "verdict": "not-applicable",
+          "evidence": "app/_server/mcp/rpc.ts:36 The one standing instruction is a static constant with no date or time in it."
+        },
+        {
+          "technique": "context-ownership-regimes",
+          "verdict": "not-applicable",
+          "evidence": "app/_server/mcp/rpc.ts:16 The door is stateless and holds no transcript; the client owns the conversation, so there is no regime to route."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "not-applicable",
+          "evidence": "app/_server/mcp/rpc.ts:34 The door supplies a policy sentence and a capability roster to a client's assembler; it owns no prompt assembly of its own."
+        }
+      ],
+      "registryProposal": "capability-documentation could say how its sync check applies when the capability layer is published to a foreign harness (an MCP server's tools/list and instructions): there the per-tool description is the only doctrine, and cross-references between tool descriptions are the side door to check."
     }
   }
 }
