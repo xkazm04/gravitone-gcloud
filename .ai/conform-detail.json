@@ -15301,6 +15301,53 @@
           "reason": "replaced by 4a0bf4ba-ee62-4295-a4a1-5a93a72db109"
         }
       ]
+    },
+    "d968dc62-e28c-4437-abb1-af18df448216/eval-harness": {
+      "context": "article-run-engine",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:21:42.594Z",
+      "worker": "d80ab54f-4dff-49a5-8204-5a9335b9a24d",
+      "techniques": [
+        {
+          "technique": "resolution-precondition",
+          "verdict": "deviation",
+          "evidence": "lib/articles/types.ts:689 Only the declared band decides (types.ts:624 minEffect). Nothing compares delta with sd before upheld or challenged is emitted, so an order can be published inside the noise."
+        },
+        {
+          "technique": "metric-role-contract",
+          "verdict": "conformant",
+          "evidence": "lib/articles/types.ts:584 Exactly one optimized metric, plus TrialThreshold guards that each arm must clear to win."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "lib/articles/types.ts:679 The verdict is code over prereg and results; the model reviewers critique the prose only. engine.ts:18 makes the post check code as well."
+        },
+        {
+          "technique": "eval-economics",
+          "verdict": "conformant",
+          "evidence": "lib/articles/types.ts:634 The model-call and wall-time budget is sealed in the prereg, and going over it voids the trial. The dry stand-in (dryAgent.ts) is a mock mode at the job level."
+        },
+        {
+          "technique": "comparison-modes",
+          "verdict": "conformant",
+          "evidence": "lib/articles/types.ts:566 A two-arm question with a declared vocabulary of winners, including null and void, so a tie or a broken protocol is not reported as a win."
+        }
+      ],
+      "registryProposal": "candidate-write-access covers only the CANDIDATE writing to the instrument. Here an agent with a shell and a declared prior (types.ts:617) writes the harness that measures both arms and the results.json the coded verdict reads, and only the prereg is sealed. The technique could name the experimenter-writes-the-measurement surface: an agent arbitrating between two techniques, rather than being scored itself."
+    },
+    "18bf2edc-835f-4f6d-85cd-1d95474fb6bb/eval-harness": {
+      "context": "cull-run-desk",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:21:42.594Z",
+      "worker": "d80ab54f-4dff-49a5-8204-5a9335b9a24d",
+      "techniques": []
     }
   }
 }

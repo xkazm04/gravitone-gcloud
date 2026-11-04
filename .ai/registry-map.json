@@ -2377,7 +2377,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/types.ts:689 The trial contract this engine writes posts around decides upheld or challenged only by comparing delta with a declared minimum-effect band, and the per-arm sd and the CI are reported but never decide; nothing checks that the between-arm spread clears the within-arm SD, so with n=3 and a wide sd a band-clearing delta still publishes an order that sits inside the noise (computeVerdict in lib/articles/trial/verdict.ts, in another context, works the same way).",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-instruction-files",
@@ -4833,7 +4837,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/cull/useRunDesk.ts:10 This is an operator's keyboard triage desk for keeping or rejecting generated runs: no model is run against declared scenarios and nothing is scored or aggregated across trials. A grep of components/cull and components/desk for benchmark, scenario, rubric and harness found no hits.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "voice-io",
