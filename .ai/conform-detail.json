@@ -15630,6 +15630,26 @@
           "evidence": "lib/agent/cliSeam.ts:65 The candidate writer runs in an isolated workspace (checked by assertIsolatedWorkspace) that cannot hold the reviewer's REVIEW.md rubric."
         }
       ]
+    },
+    "f666874c-d32c-49e2-a1bc-70363f3ca4f2/voice-io": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T05:16:26.500Z",
+      "worker": "c8acfbba-0086-438b-aae7-36d7d18174fb",
+      "techniques": []
+    },
+    "63ca5808-c5b5-4e64-840b-69d8c3c6991f/voice-io": {
+      "context": "text-reasoning-engine",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T05:16:26.500Z",
+      "worker": "c8acfbba-0086-438b-aae7-36d7d18174fb",
+      "techniques": []
     }
   }
 }
