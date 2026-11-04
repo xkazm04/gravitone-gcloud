@@ -15348,6 +15348,136 @@
       "evaluatedTs": "2026-11-04T04:21:42.594Z",
       "worker": "d80ab54f-4dff-49a5-8204-5a9335b9a24d",
       "techniques": []
+    },
+    "ce5ef2e0-d944-4b79-a500-32f8a081923f/module-design": {
+      "context": "scout-producers",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:32:12.313Z",
+      "worker": "4ea610bd-ed9f-4868-912f-109e50769dee",
+      "techniques": [
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/scout-ideas/define.ts:51 Information leakage: one decision has two hand-maintained encodings. lib could import this constant, since the dependency direction allows it."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/scout-ingest/gates.ts:5 The keyframe gates are pure. ingest.ts runs ffmpeg at the edge and passes values in."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutIdeaActs.ts:50 The imaging engine is a seam with two adapters. The router is the real one, and tests/next-server/scout-idea.test.ts:63 passes a fake generate."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/scout-ideas/define.ts:83 The pure plan is a single-output transformation, written as a pipeline."
+        }
+      ]
+    },
+    "67420468-b503-4a5c-bf04-0e24a9bbc225/module-design": {
+      "context": "scout-engine-core",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:32:12.313Z",
+      "worker": "4ea610bd-ed9f-4868-912f-109e50769dee",
+      "techniques": [
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/planDoors.ts:44 Scattered change that the code admits to. The other plan kinds call the verb's own function, but the asset launch was copied because the CLI holds it inline."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/nightFill.ts:40 The plan doors are injected. tests/next-server/scout-night-fill.test.ts:101 builds fake doors, so the seam is exercised."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/nightFill.ts:51 The band decision is a pure function of a load value. The tick takes now as a parameter (nightFill.ts:38)."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/plan.ts:33 Plan kinds are a closed set, and PlanDoors is keyed on every member, so the compiler walks a new kind through each door."
+        }
+      ]
+    },
+    "df7b69e1-8e03-4636-a7bc-91e117f32faa/module-design": {
+      "context": "produce-compose-receipt",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:32:12.313Z",
+      "worker": "4ea610bd-ed9f-4868-912f-109e50769dee",
+      "techniques": [
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/produce/produce.ts:117 This is the closed-set detection signal: a routine matches on the content of a text parameter. The set is this repo's to close; the domain comment names it as credits, seat, subscription."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:8 Cost formatting is gathered into one writer that every renderer shares, which removes the prototype's disagreeing per-renderer copies."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:215 The rules module does no I/O, and time is passed in as a value."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:148 receiptChanges fills several outputs (lines, totals) with an explicit loop and uses map/filter for the single-output lists."
+        }
+      ],
+      "registryProposal": "module-depth's closed-set detection signal ('a routine that matches on the content of a text parameter') also catches produce.ts:94 leanOf, which parses words written by relDur/relUsd in the same module. It does this on purpose, so there is only one threshold. The signal could exempt matching on text whose only writer is the same module."
+    },
+    "d8928803-1de2-497f-882c-809d029b705b/module-design": {
+      "context": "publish-producers",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:32:12.313Z",
+      "worker": "4ea610bd-ed9f-4868-912f-109e50769dee",
+      "techniques": [
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/publish/standing.ts:57 Information leakage of the kernel's event-data layout. standing.ts:64 also identifies a stop by comparing to the STOPPED_TEXT sentence."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/adapter.ts:47 The channel seam has a real adapter (lib/producers/publish.ts youtubeAdapter) and a test stub (packages/producers/test/publish.test.ts:59). Selection goes through one door, adapterFor."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/mode.ts:28 Mode is decided from facts passed in as values (env, credentials and time are inputs), not fetched by the function."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/standing.ts:40 One pass builds a failure tally and the last success with an early break, written as explicit sequential code."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:81 The tick publishes claims one after another. async only carries I/O; there is no offload region and no hand-rolled coordination."
+        }
+      ]
     }
   }
 }

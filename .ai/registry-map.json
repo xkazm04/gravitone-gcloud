@@ -13363,7 +13363,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/produce/produce.ts:117 unpricedKind sorts a free-prose unpricedReason (written in lib/producers, lib/imaging and the fixtures) into seat, credits or no-price by substring, and both the Unpriced chip and receipt change detection (sameCost) branch on that result, so rewording a reason silently changes the chip and the diff.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "hitl-approval",
@@ -14021,7 +14025,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/publish/standing.ts:57 Channel standing reads the payload keys of the kernel's slot.fail and publish events through raw SQL. The kernel's sweep writes those keys (packages/kernel/src/slots/sweep.ts:129: data { error, interrupted }), so one record layout is encoded in two packages, and renaming a key would silently count interrupted claims as channel failures.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -15488,7 +15496,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/planDoors.ts:44 The asset launch procedure (originWith, then assetAct, then markOrigin) is written out twice, at planDoors.ts:150-153 and pipeline/scout.mts:481-484, so a change to how an asset is launched must be made in two files that do not reference each other.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "prompt-assembly",
@@ -15969,7 +15981,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/scout-ideas/define.ts:51 The scout-wing idea cap is hand-copied from lib/foundry/scout/types.ts:52 (MAX_IDEA_CAP = 40) with only a comment linking them and no test that asserts they are equal, so raising one cap silently desyncs the CLI's limit from the request door's.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "review-iteration-loops",
