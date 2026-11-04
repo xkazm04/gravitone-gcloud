@@ -1428,7 +1428,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/claudeCli.ts:383 The reasoning (generate) door spawns `claude` with no `cwd` and its argv (cliArgs) carries no isolation flag, so every recalibrate/frames/text turn inherits the server's working directory (the repo root) and loads the repo's CLAUDE.md, settings and hooks as ambient context. The golden path's generate mode requires a neutral working directory, and the agent and retrieval seams already use `--safe-mode` for exactly this.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",
@@ -2298,14 +2302,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "lib/articles/agentSteps.ts:36 Every writer step runs a fresh headless turn in an isolated temp workspace holding only inputs/ and out/. A non-completed outcome or a missing or empty out/ file fails the step by name, and dry runs are answered by a labeled stand-in rather than the seat. The context consumes the transport correctly; the spawn door itself lives in lib/agent and lib/claudeCli.ts.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
+          "evidence": "lib/articles/agentSteps.ts:95 Every writer step runs one fresh headless turn in an isolated inputs/ and out/ workspace, with a per-step tool subset. Any outcome other than completed fails the step by name, and a missing or empty out/ file fails ingest. The spawn, env strip and envelope parse are delegated to lib/agent.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
           "source": "renamed",
           "renamedFrom": "14632859-df56-4340-9e16-c420ff681ee3",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "prompt-assembly",
@@ -14568,15 +14571,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "not-applicable",
-          "evidence": "packages/ui/src/components/runs/lanes.ts:16 A case-insensitive search of packages/ui/src/components/review and runs for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. These are client UI components and pure models over @gt/domain types, with no process or agent transport.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
           "source": "renamed",
           "renamedFrom": "571eae96-e297-40c6-a556-3a3bf8f48e3f",
-          "revisionsBehind": 1,
-          "stale": true
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/runs/lanes.ts:16 A case-insensitive search of packages/ui/src/components/review and runs for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. These are client UI components and pure models over @gt/domain types, with no process or agent transport.",
+          "evaluatedAt": "2026-10-24"
         },
         {
           "subject": "quality-gates",
@@ -18517,14 +18516,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/sound/suno/propose.ts:18 A case-insensitive search of lib/sound/suno for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. Proposals reach a model only through the text router's contract, and generation goes through a browser driver, so this context spawns no agent CLI.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
+          "evidence": "lib/sound/suno/propose.ts:16 A case-insensitive search of lib/sound/suno for spawn, child_process, seatOnlyEnv, output-format and claude found nothing. Proposals reach a model only through the text router's reason(), and generation goes through the Suno driver, so this context spawns no agent CLI.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
           "source": "renamed",
           "renamedFrom": "ab872012-f902-4f43-b9c7-f13137e36f24",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "generative-provider-routing",
@@ -18762,14 +18760,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/text/providers/claudeCliRetrieve.ts:181 Both Claude CLI rungs collapse unparseable or result-less output into an opaque 'failed' with no bounded prefix of the raw stdout, accumulate stdout without a byte cap, and accept an empty `result` as a successful answer, so a login prompt, rate-limit notice or empty envelope all reach the router as the same undiagnosable failure or as success.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:194 A retrieval run with no result event fails with an opaque message and no bounded prefix of the raw stream, and a success envelope with an empty `result` is returned as an answer (line 203). A login prompt, a rate-limit notice and an empty answer therefore all reach the router as undiagnosable failure or as success.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
           "source": "renamed",
           "renamedFrom": "94e6b933-0f6a-4631-b2f0-4c98b0799c28",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "fleet-orchestration",
