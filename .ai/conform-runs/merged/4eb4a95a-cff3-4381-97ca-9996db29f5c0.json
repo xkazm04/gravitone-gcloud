@@ -1,0 +1,158 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4eb4a95a-cff3-4381-97ca-9996db29f5c0",
+ "subject": "agent-instruction-files",
+ "evaluatedAt": "2026-11-04T01:45:40.565657+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "agent-cli-and-turns",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/claudeCli.ts:279 The reasoning door's argv (-p, --output-format, --model, --effort, --allowed-tools \"\", --max-turns 1) has no --safe-mode, and its spawn at lib/claudeCli.ts:383 passes no cwd. So every frames, research and recalibrate turn (lib/turns/runner.ts -> reason -> runClaude) starts in the server's own directory, the repo root, and is briefed by the developer CLAUDE.md, which was written about a different job. The writer and reviewer seams in the same context, and the sibling claudeCliRetrieve door, all close that path with --safe-mode.",
+   "techniques": [
+    {
+     "technique": "workspace-ancestry-isolation",
+     "verdict": "deviation",
+     "evidence": "lib/claudeCli.ts:279 Product reasoning turns inherit the repo's developer instruction file because the argv has no --safe-mode and the process runs from the repo root. The agentic seam gets this right: --safe-mode at lib/agent/agentArgs.ts:37, an os.tmpdir() workspace at lib/articles/agentSteps.ts:36, and assertIsolatedWorkspace at lib/agent/agentArgs.ts:91."
+    },
+    {
+     "technique": "enforcement-demotion",
+     "verdict": "conformant",
+     "evidence": "lib/agent/cliSeam.ts:13 The tool set, file scope and config loading are enforced through CLI flags and a pre-spawn workspace check rather than prose in the prompt. Where agy has no flag that can enforce read-only, the code says so and isolates the run (reviewerEngines.ts:47)."
+    },
+    {
+     "technique": "host-contract-compilation",
+     "verdict": "not-applicable",
+     "evidence": "lib/agent/reviewerCommand.ts:22 No skill set is compiled for several hosts. The per-engine reviewer argv suppresses the reviewers' own rule loading, but that is not skill compilation."
+    }
+   ],
+   "registryProposal": "workspace-ancestry-isolation could name a third case beside upward inheritance and downward injection: a product that shells out to a coding-agent CLI as a reasoning engine from its own repo root. That turn is briefed by the developer instruction file on every product call, and the fix is a config-suppression flag on that spawn, not a workspace move."
+  },
+  {
+   "context": "part-editor-writing-research",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:3 These are client editor components that send ops through the part port; a grep of app/(studio)/projects for CLAUDE.md, AGENTS.md, GEMINI.md and .cursorrules found nothing, and no file here spawns an agent or authors or loads an instruction file.",
+   "techniques": [],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    ".cursorrules"
+   ]
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:3 These are media editor UI components; a grep of app/(studio)/projects for CLAUDE.md, AGENTS.md, GEMINI.md and .cursorrules found nothing, and none of them spawns an agent or touches an instruction file.",
+   "techniques": [],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    ".cursorrules"
+   ]
+  },
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/port.ts:11 This is the fixture/real data port and the server actions behind the part editors; a grep of app/(studio)/projects for CLAUDE.md, AGENTS.md, GEMINI.md and .cursorrules (and for child_process/spawn/runAgent/claudeCli) found nothing, so no instruction file is authored, loaded or delivered here.",
+   "techniques": [],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    ".cursorrules"
+   ]
+  },
+  {
+   "context": "server-seam",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_server/http.ts:8 The server seam is route/action/session/auth code that spawns no agent and loads no instruction file. Searching its files for AGENTS.md, GEMINI.md, .cursorrules and copilot-instructions found nothing. The only instruction-file mention is a code comment at app/_server/http.ts:20 that cites CLAUDE.md as the source of the verbatim-error rule; it reads no file.",
+   "techniques": [],
+   "absenceTerms": [
+    "AGENTS.md",
+    "GEMINI.md",
+    ".cursorrules",
+    "copilot-instructions"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-04T01:45:40.565657+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [
+    "enforcement-demotion",
+    "host-contract-compilation",
+    "workspace-ancestry-isolation"
+   ],
+   "deviations": 1,
+   "context": "agent-cli-and-turns",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T01:45:40.565657+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T01:45:40.565657+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T01:45:40.565657+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T01:45:40.565657+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "server-seam",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
