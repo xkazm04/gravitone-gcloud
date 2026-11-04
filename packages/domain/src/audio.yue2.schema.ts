@@ -45,6 +45,7 @@ export const yue2TakeFactsSchema = z.strictObject({
     postStages: z.array(z.enum(YUE2_POST_STAGES)).max(YUE2_POST_STAGES.length),
     referenceTakeId: id.optional(),
   }),
+  sha: z.string().regex(/^[0-9a-f]{64}$/).optional(),
 });
 
 export function parseYue2TakeFacts(input: unknown): Result<Yue2TakeFacts> {

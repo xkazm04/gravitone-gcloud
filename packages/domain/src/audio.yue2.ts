@@ -41,8 +41,10 @@ export type Yue2Rights = {
 };
 export const YUE2_RIGHTS: Yue2Rights = { model: "m-a-p/YuE2-3B", licence: "CC BY-NC 4.0", policy: "warn" };
 
-/** Post-chain stages a variant can carry, in the order they are applied. */
-export const YUE2_POST_STAGES = ["stems", "debuzz", "master"] as const;
+/** Post-chain stages a variant can carry, in the order they are applied. `buses` processes the separated
+ *  stems (vocal HPF/de-ess/comp/presence/plate, drum comp + parallel saturation, bass mono < 120 Hz) and
+ *  re-sums them (spark yue2-song-lab S2; measured in yue2-lab round 1: SongEval +0.035..+0.10). */
+export const YUE2_POST_STAGES = ["stems", "buses", "debuzz", "master"] as const;
 export type Yue2PostStage = (typeof YUE2_POST_STAGES)[number];
 
 /** Where a take came from, beyond its own render. */
@@ -65,6 +67,9 @@ export type Yue2TakeFacts = {
   readonly durationS: number;
   readonly rights: Yue2Rights;
   readonly lineage: Yue2Lineage;
+  /** sha256 of the stored file, computed once at filing (S2) so pairing never re-reads audio; absent on
+   *  facts filed before it, where takeSha falls back to hashing the bytes. */
+  readonly sha?: string;
 };
 
 /** The scorer's version; a new scorer bumps it and the derived table keeps both rows. */
@@ -93,8 +98,8 @@ export type SongScores = {
   readonly scoredAt: string;
 };
 
-/** The three pair kinds the blind desk serves. */
-export const AB_SOURCES = ["post-variant", "best-of-n", "across-conditions"] as const;
+/** The pair kinds the blind desk serves. `knockout` pairs are booked by a draw (./audio.yue2.lab.ts), never proposed. */
+export const AB_SOURCES = ["post-variant", "best-of-n", "across-conditions", "knockout"] as const;
 export type AbSource = (typeof AB_SOURCES)[number];
 
 /** The three forced-choice questions, in the order they are asked. */
