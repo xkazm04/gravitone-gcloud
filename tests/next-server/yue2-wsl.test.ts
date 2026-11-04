@@ -23,7 +23,7 @@ const node = (script: string, args: readonly string[]): ChildProcess =>
 const ECHO_ARGV = 'console.log("yue2-pid 4242"); console.log("log line"); console.log(JSON.stringify({ ok: true, argv: process.argv.slice(1) }));';
 const SLEEP = (pidLine: boolean): string => `${pidLine ? 'console.log("yue2-pid 4242");' : ""} setTimeout(() => {}, 60000);`;
 const SAY = (line: string, code: number): string => `console.log("yue2-pid 4242"); console.log("working"); console.log(${JSON.stringify(line)}); process.exitCode = ${code};`;
-const PROBE_ALL = 'for (const l of ["home=/home/u", "gen=1", "eval=1", "gpu=GPU 0: NVIDIA GeForce RTX 4090", "ffmpeg=/home/u/yue2-lab/.eval-bin/ffmpeg"]) console.log(l);';
+const PROBE_ALL = 'for (const l of ["home=/srv/lab", "gen=1", "eval=1", "gpu=GPU 0: NVIDIA GeForce RTX 4090", "ffmpeg=/srv/lab/yue2-lab/.eval-bin/ffmpeg"]) console.log(l);';
 
 type Fake = { readonly op?: string; readonly list?: string; readonly probe?: string; readonly noWsl?: boolean };
 
@@ -35,7 +35,7 @@ function fakeDeps(fake: Fake, over: Partial<Yue2Deps> = {}): { deps: Yue2Deps; c
       if (fake.noWsl === true) child = spawn("yue2-no-such-binary-for-tests", [], { windowsHide: true });
       else if (args[0] === "-l") child = node(fake.list ?? 'console.log("docker-desktop"); console.log("Ubuntu");', args);
       else if (args.includes("yue2-doctor")) child = node(fake.probe ?? PROBE_ALL, args);
-      else if (args.includes("printenv")) child = node('console.log("/home/u");', args);
+      else if (args.includes("printenv")) child = node('console.log("/srv/lab");', args);
       else if (args.includes("kill")) child = node("", args);
       else child = node(fake.op ?? ECHO_ARGV, args);
       calls.push({ file, args, child });
@@ -80,7 +80,7 @@ describe("yue2 WSL door: the argument array", () => {
     expect(run?.file).toBe("wsl.exe");
     expect(run?.args).toEqual([
       "-d", "Ubuntu", "--exec", "setsid", "-w", "sh", "-c", LAUNCH_SCRIPT, "yue2",
-      "/home/u/yue2-lab/.venv-eval/bin/python", "/mnt/c/repo root/gt/pipeline/yue2/score.py",
+      "/srv/lab/yue2-lab/.venv-eval/bin/python", "/mnt/c/repo root/gt/pipeline/yue2/score.py",
       "--in", "/mnt/c/x/take.flac", "--lyrics", "/mnt/c/x/l.txt",
     ]);
     expect(run?.args).not.toContain("--");
@@ -116,7 +116,7 @@ describe("yue2 WSL door: the argument array", () => {
 
   it("toWslPath maps a drive path and leaves a WSL path alone", () => {
     expect(toWslPath("C:\\Users\\a b\\x.flac")).toBe("/mnt/c/Users/a b/x.flac");
-    expect(toWslPath("/home/u/x")).toBe("/home/u/x");
+    expect(toWslPath("/srv/lab/x")).toBe("/srv/lab/x");
   });
 });
 
@@ -208,10 +208,10 @@ describe("yue2 WSL door: posture and the doctor", () => {
     const probe = (lines: string[]) => `for (const l of ${JSON.stringify(lines)}) console.log(l);`;
     expect(await hint({ noWsl: true })).toBe("wsl --install");
     expect(await hint({ list: 'console.log("docker-desktop")' })).toBe("wsl --install -d Ubuntu");
-    expect(await hint({ probe: probe(["home=/home/u", "gen=0", "eval=1"]) })).toBe('wsl.exe -d Ubuntu --exec bash "/mnt/c/repo root/gt/pipeline/yue2/install-gen.sh"');
-    expect(await hint({ probe: probe(["home=/home/u", "gen=1", "eval=0"]) })).toMatch(/install-eval\.sh"$/);
-    expect(await hint({ probe: probe(["home=/home/u", "gen=1", "eval=1", "ffmpeg=/f"]) })).toBe("wsl --update");
-    expect(await hint({ probe: probe(["home=/home/u", "gen=1", "eval=1", "gpu=GPU 0"]) })).toMatch(/install-eval\.sh"$/);
+    expect(await hint({ probe: probe(["home=/srv/lab", "gen=0", "eval=1"]) })).toBe('wsl.exe -d Ubuntu --exec bash "/mnt/c/repo root/gt/pipeline/yue2/install-gen.sh"');
+    expect(await hint({ probe: probe(["home=/srv/lab", "gen=1", "eval=0"]) })).toMatch(/install-eval\.sh"$/);
+    expect(await hint({ probe: probe(["home=/srv/lab", "gen=1", "eval=1", "ffmpeg=/f"]) })).toBe("wsl --update");
+    expect(await hint({ probe: probe(["home=/srv/lab", "gen=1", "eval=1", "gpu=GPU 0"]) })).toMatch(/install-eval\.sh"$/);
   });
 
   it("a run that cannot start (no wsl.exe, or a missing venv) answers unavailable WITH the doctor's fix", async () => {
@@ -219,8 +219,8 @@ describe("yue2 WSL door: posture and the doctor", () => {
     expect(noWsl.ok ? null : noWsl.error.code).toBe("unavailable");
     expect(noWsl.ok ? "" : noWsl.error.message).toMatch(/fix: wsl --install$/);
     const noVenv = fakeDeps({
-      op: 'console.log("yue2-pid 7"); console.error("setsid: failed to execute /home/u/yue2-lab/.venv/bin/python: No such file or directory"); process.exitCode = 1;',
-      probe: `for (const l of ${JSON.stringify(["home=/home/u", "gen=0", "eval=1"])}) console.log(l);`,
+      op: 'console.log("yue2-pid 7"); console.error("setsid: failed to execute /srv/lab/yue2-lab/.venv/bin/python: No such file or directory"); process.exitCode = 1;',
+      probe: `for (const l of ${JSON.stringify(["home=/srv/lab", "gen=0", "eval=1"])}) console.log(l);`,
     });
     const r = await runYue2With(noVenv.deps, "gen", [], { timeoutMs: 5000 });
     expect(r.ok ? null : r.error.code).toBe("unavailable");

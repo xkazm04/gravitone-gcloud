@@ -50,7 +50,7 @@ const mtimeNs = (rel: string): number => statSync(path.join(OUT, rel)).mtimeMs *
 const scoreRow = (rel: string, over: Record<string, unknown> = {}) => ({
   file: `${WSL}/${rel}`,
   mtime_ns: mtimeNs(rel),
-  lyrics_file: "/home/u/yue2-lab/inputs/lyrics.txt",
+  lyrics_file: "/srv/lab/yue2-lab/inputs/lyrics.txt",
   scored_at: "2026-11-04T13:12:05",
   wer_min: 0.0385,
   wer_sd_min: 0.02,
