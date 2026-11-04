@@ -14797,6 +14797,139 @@
         }
       ],
       "registryProposal": "fail-closed-profile-for-headless has no rule for a vendor CLI whose headless mode cannot express a narrow allow (agy auto-denies read_url unless every permission is skipped); it should say whether workspace isolation plus recorded writes is an acceptable compensating control or remains a deviation."
+    },
+    "92742f06-a6dc-418e-8c50-42c050345bc7/module-design": {
+      "context": "decision-and-gates",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T03:38:09.439Z",
+      "worker": "ea158e64-f5da-4606-9b46-d99cd8a06f09",
+      "techniques": [
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/decision/apply.ts:221 applyNext and drainApplies take the full Effects but call only fx.tx and fx.call. The interface is one capability too wide, which pushes a blob-refusing adapter onto the applier."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/apply-core.ts:65 The outbox core takes the row and the instant as values and returns a plan. packages/kernel/test/decision.apply.test.ts tests it without doubles."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/apply.ts:244 Only the drain at the edge is async, and it is a bounded sequential loop. core.ts, apply-core.ts and the Tx-taking writers are synchronous."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/apply-core.ts:43 The outbox state is one named value with an enumerated set of states, not booleans, and the TakePlan/FinishPlan unions are explicit."
+        },
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/schema.ts:191 SQL rows come back through a zod door (parseAt) rather than a type assertion. No `as` casts were found in decision/ or parts/."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/parts/driver.ts:97 The caller supplies one pure function. The driver hides the write planning, the op log, the revision check and undo behind writePartIn."
+        },
+        {
+          "technique": "mirror-type-at-the-edge",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/decision/core.ts:43 Core inputs are plain rows a test can build. No host-bound type has to be mirrored."
+        }
+      ]
+    },
+    "6deb060a-3f7b-4426-a66b-970a7bb54a5e/module-design": {
+      "context": "spend-and-pricing",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T03:38:09.439Z",
+      "worker": "ea158e64-f5da-4606-9b46-d99cd8a06f09",
+      "techniques": [
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend/core.ts:93 Pure admission over values. Time reaches the ledger as the Tx's `at` (ledger.ts nowOf), not from a clock."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend/v1Port.ts:15 The v1 SpendStore contract is re-declared in the kernel's own vocabulary. packages/kernel/test/spend.v1port.test.ts runs the meter conformance kit's core against this adapter."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend/core.ts:62 The reservation lifecycle is an explicit state machine held as data."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend/settler.ts:117 The only awaits are the vendor call through the port (settler and meter). Ledger writes are synchronous Tx functions."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/pricing/quote.ts:86 One function over one table replaces four v1 pricers, and the basis and dated-rate rules stay hidden behind it."
+        },
+        {
+          "technique": "state-carrier-decides-the-lane",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend/settler.ts:19 A deferred settle is carried as data (reservation id and entries) and settle is idempotent on it, so it can be replayed or crossed to another process. Closures could not."
+        },
+        {
+          "technique": "structure-is-not-delegable",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend/v1Port.ts:28 Moving an enforcing class from the file store to SQLite is reserved for the operator. Executing the agreed switch is spelled out step by step."
+        },
+        {
+          "technique": "mirror-type-at-the-edge",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/core.ts:37 Every spend input is a plain constructible value. No host-bound input type exists here."
+        }
+      ]
+    },
+    "9508a262-9b09-4e7e-ab74-ff10c182a001/module-design": {
+      "context": "board-decision-adapters",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T03:38:09.439Z",
+      "worker": "ea158e64-f5da-4606-9b46-d99cd8a06f09",
+      "techniques": [
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "deviation",
+          "evidence": "lib/decision/v1/applier.ts:62 The comment at lines 35-37 owns the choice, but the standard puts the fix in the interface: split Effects so drainApplies names only tx and call."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/types.ts:107 The adapter contract splits each source into pure packet/consequence halves and I/O read/apply halves."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/forge.ts:234 The planning half is synchronous. Only read and apply, which touch v1's stores, are async."
+        },
+        {
+          "technique": "borrowed-surface",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/registry.ts:62 The registry restates the domain's source set as an exhaustive contract it owns. A new upstream source is a compile error, not a silent gap."
+        },
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/types.ts:93 The one unsound step, method-parameter bivariance into DecisionAdapter<unknown>, is deliberate and comes with its written justification."
+        }
+      ]
     }
   }
 }

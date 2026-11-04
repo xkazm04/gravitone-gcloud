@@ -4084,7 +4084,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/applier.ts:62 applyEffects claims to be a full Effects but refuses the blob verb. This is the 'adapter that refuses a verb is not an adapter' failure: it type-checks as a substitute anywhere an Effects is expected and fails only at runtime.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "prompt-assembly",
@@ -5202,7 +5206,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/decision/apply.ts:221 The apply driver asks for the whole Effects port (tx, blob, call) but only uses tx and call, so its one production caller (lib/decision/v1/applier.ts) has to pass an adapter that refuses `blob`; seams-and-adapters says the fix belongs here, in the consumer naming only the contract it uses.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "eval-harness",
@@ -17125,7 +17133,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/src/spend/core.ts:93 Ceiling admission is a pure function over a class, totals and an amount. The ledger runs it inside the caller's Tx, and the vendor call goes through the Effects port, so the core is tested as a value.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "plan-entitlements",
