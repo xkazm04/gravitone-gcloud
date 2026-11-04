@@ -2021,7 +2021,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/humanActs.ts:36 The approval record holds only a timestamp and patch ids: there is no decider and no fingerprint of the post that was shown. landing.ts then re-reads post/ from disk at land time, so nothing checks that what lands is what the human approved.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "agent-memory",

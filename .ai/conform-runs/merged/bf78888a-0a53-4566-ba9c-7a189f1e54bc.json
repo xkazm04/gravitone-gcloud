@@ -1,0 +1,114 @@
+{
+  "schema": "conform-run/1",
+  "worker": "bf78888a-0a53-4566-ba9c-7a189f1e54bc",
+  "subject": "hitl-approval",
+  "evaluatedAt": "2026-11-04T02:37:43.713317+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "article-human-gate-and-landing",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/articles/humanActs.ts:36 The approval record holds only a timestamp and patch ids: there is no decider and no fingerprint of the post that was shown. landing.ts then re-reads post/ from disk at land time, so nothing checks that what lands is what the human approved.",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "lib/articles/humanActs.ts:35 Approve can only leave awaiting-approval; an approve after a reject or a double approve is a loud 409, not a merge. The missing version binding is recorded under decision-records."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "lib/articles/humanActs.ts:36 The record has no who and no version or fingerprint of the approved post. A rejection reason is mandatory (humanNote.ts trimmedNote), so the why half does exist."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "conformant",
+          "evidence": "lib/articles/landing.ts:29 The machine's check and critique cannot produce an admit. Landing requires a recorded human approval."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryWrite.ts:330 A retried landing whose PR failed reuses the branch already pushed at the recorded commit instead of pushing a second one, so the continuation is idempotent."
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryWrite.ts:307 The landing PR names which dimensions the deterministic check measured and which were left to human judgement, so it is visible where an instrument existed."
+        },
+        {
+          "technique": "human-performed-steps",
+          "verdict": "deviation",
+          "evidence": "lib/articles/mediumPackage.ts:266 The hand path for the Medium post is a prose numbered README (steps 1-4: drag in PNGs in order, swap each table), which is the artifact this technique names as wrong. lib/medium does automate a private draft, but that code is outside this context."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "hitl-approval",
+      "context": "project-step-store",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "hitl-approval",
+      "context": "foundry-strips-and-training",
+      "reason": "evidence leans on training/store.ts, which is not a tracked file"
+    },
+    {
+      "subject": "hitl-approval",
+      "context": "article-run-engine",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "hitl-approval",
+      "context": "domain-run-job-steps",
+      "reason": "withdrawn after review: reviewer (sonnet): The claim \"the machine has no positive arm\" is contradicted by plan.ts:41-42, where ofJob maps a done job part to \"ratified\" with no packet. Only runStateOf (plan.ts:105) resolves done to awaiting_gate. The produce.ts:100 and :127 anchors are bare type declarations (Receipt.token, StaleReceipt), so "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-04T02:37:43.713317+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "decision-records",
+        "gate-state-machines",
+        "human-performed-steps",
+        "oracle-before-gate",
+        "resume-after-decision",
+        "truncated-verdict-space"
+      ],
+      "deviations": 1,
+      "context": "article-human-gate-and-landing",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T02:37:43.713317+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "consent-gates",
+        "cosmetic-vs-enforced-threshold-invariant",
+        "decision-records",
+        "fail-closed-profile-for-headless",
+        "fail-loud-classification-default",
+        "gate-state-machines",
+        "resume-after-decision",
+        "review-queues",
+        "truncated-verdict-space"
+      ],
+      "deviations": 0,
+      "context": "domain-run-job-steps",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

@@ -14537,6 +14537,108 @@
           "evidence": "lib/decision/v1/sources/forge.ts:63 The admitting outcome (proven) is minted only by a human; a model's keep is recorded as the agent's."
         }
       ]
+    },
+    "6a878b5f-8652-4265-839a-dce38680a9c7/hitl-approval": {
+      "context": "article-human-gate-and-landing",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:37:43.713Z",
+      "worker": "bf78888a-0a53-4566-ba9c-7a189f1e54bc",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "lib/articles/humanActs.ts:35 Approve can only leave awaiting-approval; an approve after a reject or a double approve is a loud 409, not a merge. The missing version binding is recorded under decision-records."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "lib/articles/humanActs.ts:36 The record has no who and no version or fingerprint of the approved post. A rejection reason is mandatory (humanNote.ts trimmedNote), so the why half does exist."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "conformant",
+          "evidence": "lib/articles/landing.ts:29 The machine's check and critique cannot produce an admit. Landing requires a recorded human approval."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryWrite.ts:330 A retried landing whose PR failed reuses the branch already pushed at the recorded commit instead of pushing a second one, so the continuation is idempotent."
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryWrite.ts:307 The landing PR names which dimensions the deterministic check measured and which were left to human judgement, so it is visible where an instrument existed."
+        },
+        {
+          "technique": "human-performed-steps",
+          "verdict": "deviation",
+          "evidence": "lib/articles/mediumPackage.ts:266 The hand path for the Medium post is a prose numbered README (steps 1-4: drag in PNGs in order, swap each table), which is the artifact this technique names as wrong. lib/medium does automate a private draft, but that code is outside this context."
+        }
+      ]
+    },
+    "1155c1ec-f832-471a-929c-2a16f06cfbb7/hitl-approval": {
+      "context": "domain-run-job-steps",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T02:37:43.713Z",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/plan.ts:80 Each gate is a per-phase boundary in the plan, and it opens only on recorded human state."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/plan.ts:105 A job that finished cleanly (done) resolves to awaiting_gate, never to ratified. The machine has no positive arm."
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/produce.ts:100 The receipt shows price, lane and ETA lines and carries a digest of inputs, quotes and queue state. The confirm must bring that digest back, so consent is bound to the disclosure shown."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/produce.ts:127 A confirm against a world that has moved launches nothing and returns the fresh receipt, which asks again."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:86 Every live spend records who armed it, when and why on the job record."
+        },
+        {
+          "technique": "fail-closed-profile-for-headless",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:80 With no arm a job is dry; spending requires a named authority, so a headless job cannot spend by default."
+        },
+        {
+          "technique": "fail-loud-classification-default",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.machine.ts:17 An unknown outcome (the vendor may have been paid) goes to interrupted with an interruption record as its marker, not to retryable failed, and only an operator may take it out."
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/produce.ts:134 Every gate part is a packet on the one Board surface. There is no per-gate side channel."
+        },
+        {
+          "technique": "cosmetic-vs-enforced-threshold-invariant",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/produce.ts:124 Analog, not the aging-queue case: one predicate feeds both the receipt's 'may stop at ceiling' mark, shown before the spend, and the kernel's enforcing stop, so the two cannot diverge."
+        }
+      ],
+      "withdrawn": {
+        "worker": "bf78888a-0a53-4566-ba9c-7a189f1e54bc",
+        "state": "conformant",
+        "at": "2026-11-04T02:38:23.384959+00:00",
+        "reason": "reviewer (sonnet): The claim \"the machine has no positive arm\" is contradicted by plan.ts:41-42, where ofJob maps a done job part to \"ratified\" with no packet. Only runStateOf (plan.ts:105) resolves done to awaiting_gate. The produce.ts:100 and :127 anchors are bare type declarations (Receipt.token, StaleReceipt), so "
+      }
     }
   }
 }
