@@ -1,9 +1,10 @@
 "use server";
 
 // THE SONG LAB'S ACTS (spark yue2-song-lab WP3) - a batch launched, a post-chain run, blind pairs queued,
-// a vote recorded - as Server Actions through the one action core (app/_server/action.ts: who, the input
-// door, the body, the envelope). There is no screen in S1: these are what S2's song-lab views call, and
-// the agent door (app/_server/mcp/tools/songlab.ts) reaches the same lib functions without the vote.
+// a vote recorded, and (S2) the owner's direction to the agent and the keep/remove of its proposals - as
+// Server Actions through the one action core (app/_server/action.ts: who, the input door, the body, the
+// envelope). The agent door (app/_server/mcp/tools/songlab.ts) reaches the same lib functions without the
+// vote, the keep and the remove: those are the owner's alone.
 //
 // THE DOORS ARE THE DOMAIN'S. A launch's input is held by @gt/domain/audio.yue2.jobs.schema inside
 // lib/producers/yue2Jobs.ts; the action's own schema only takes the object and stamps `origin: "lab"`,
@@ -19,6 +20,7 @@
 import { z } from "zod";
 
 import { AB_SOURCES, YUE2_RECIPE } from "@gt/domain/audio.yue2";
+import { LAB_MAX, type LabDecision, type LabSay } from "@gt/domain/audio.yue2.lab";
 import { abVoteSchema } from "@gt/domain/audio.yue2.schema";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Receipt } from "@gt/domain/produce";
@@ -30,6 +32,8 @@ import { actorOf } from "../../../../lib/principal.ts";
 import { launchPost, launchRender } from "../../../../lib/producers/yue2Jobs.ts";
 import { voteAb as recordVote, type JudgedPair } from "../../../../lib/yue2/ab.ts";
 import { queueBlindPairs, type QueuedBlind } from "../../../../lib/yue2/lab.ts";
+import { appendLabSay } from "../../../../lib/yue2/labRelay.ts";
+import { dropProposal, keepProposal } from "../../../../lib/yue2/proposals.ts";
 
 export type Launched = { readonly jobId: string; readonly receipt: Receipt };
 
@@ -84,4 +88,44 @@ const voteAction = action("song lab vote", abVoteSchema, async (i, who): Promise
 /** The owner's verdict on a blind pair; the answer reveals which take played as A. */
 export async function voteAb(input: z.input<typeof abVoteSchema>): Promise<ActionResult<JudgedPair>> {
   return voteAction(input);
+}
+
+/* ── the agent's room (spark yue2-song-lab S2): the owner's direction, and keep/remove of a proposal ── */
+
+const sayInput = z.strictObject({ session: z.string().max(48).optional(), text: z.string().max(LAB_MAX.direction * 2) });
+
+const sayAction = action("song lab say", sayInput, async (i, who): Promise<Result<LabSay>> => {
+  const k = kernel();
+  if (!k.ok) return k;
+  // The lab say door (@gt/domain/audio.yue2.lab.schema) holds the words and the session; none given mints one.
+  return appendLabSay(k.value.store, { session: i.session ?? "", text: i.text }, actorOf(who));
+});
+
+/** The owner's one-line direction to the agent; absent `session` opens a new one. */
+export async function labSay(input: z.input<typeof sayInput>): Promise<ActionResult<LabSay>> {
+  return sayAction(input);
+}
+
+const decisionInput = z.strictObject({ turnId: z.string().min(1).max(64), proposalId: z.string().min(1).max(64) });
+
+const keepAction = action("song lab keep", decisionInput, async (i, who): Promise<Result<LabDecision>> => {
+  const k = kernel();
+  if (!k.ok) return k;
+  return keepProposal(k.value.store, i, actorOf(who));
+});
+
+/** Keep one of the agent's proposals: its act (a batch, a post-chain, a reseed) runs now, then the keep is filed. */
+export async function keepLabProposal(input: z.input<typeof decisionInput>): Promise<ActionResult<LabDecision>> {
+  return keepAction(input);
+}
+
+const dropAction = action("song lab drop", decisionInput, async (i, who): Promise<Result<LabDecision>> => {
+  const k = kernel();
+  if (!k.ok) return k;
+  return dropProposal(k.value.store, i, actorOf(who));
+});
+
+/** Remove one of the agent's proposals; a kept one cannot be removed. */
+export async function dropLabProposal(input: z.input<typeof decisionInput>): Promise<ActionResult<LabDecision>> {
+  return dropAction(input);
 }

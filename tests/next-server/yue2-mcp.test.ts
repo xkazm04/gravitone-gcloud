@@ -22,7 +22,8 @@ const ROOT = vi.hoisted(() => {
 
 const ab = vi.hoisted(() => ({ propose: vi.fn(), queue: vi.fn() }));
 
-vi.mock("../../lib/yue2/ab.ts", () => ({ proposePairs: ab.propose, queuePairs: ab.queue, voteAb: vi.fn() }));
+// The rest of ab.ts stays real: S2's inbox reads the draws (lib/yue2/draw.ts), which imports its helpers.
+vi.mock("../../lib/yue2/ab.ts", async (importOriginal) => ({ ...(await importOriginal<object>()), proposePairs: ab.propose, queuePairs: ab.queue, voteAb: vi.fn() }));
 vi.mock("../../lib/yue2/facts.ts", () => ({ allYue2Facts: async () => ({ ok: true, value: {} }), readYue2Facts: vi.fn(), putYue2Facts: vi.fn() }));
 vi.mock("../../lib/yue2/scores.ts", () => ({ readSongScores: () => ({ ok: true, value: {} }), putSongScores: vi.fn() }));
 
@@ -73,14 +74,21 @@ async function tool(name: string, args: Record<string, unknown>): Promise<ToolOu
 }
 
 const VOTE = /vote|verdict|judge/i;
+/** S2: the owner keeps or removes the agent's proposals; no tool does either. */
+const DECIDE = /keep|drop|remove|decide/i;
 
 describe("the songlab family", () => {
-  it("holds exactly launch, takes, queue_pairs and post - and no tool in either projection votes", () => {
-    expect(opsOf("songlab").map((s) => s.op)).toEqual(["launch", "takes", "queue_pairs", "post"]);
-    expect(opsOf("songlab").map((s) => s.writes)).toEqual([true, false, true, true]);
+  it("holds exactly launch, takes, queue_pairs, post, inbox and turn - and no tool in either projection votes, keeps or drops", () => {
+    expect(opsOf("songlab").map((s) => s.op)).toEqual(["launch", "takes", "queue_pairs", "post", "inbox", "turn"]);
+    expect(opsOf("songlab").map((s) => s.writes)).toEqual([true, false, true, true, false, true]);
     for (const s of REGISTRY) expect(s.op, `${s.family}.${s.op}`).not.toMatch(VOTE);
-    expect(toolsOf("operation").map((t) => t.name)).toEqual(expect.arrayContaining(["gt_songlab_launch", "gt_songlab_takes", "gt_songlab_queue_pairs", "gt_songlab_post"]));
+    for (const s of opsOf("songlab")) expect(s.op).not.toMatch(DECIDE);
+    expect(toolsOf("operation").map((t) => t.name)).toEqual(expect.arrayContaining(["gt_songlab_launch", "gt_songlab_takes", "gt_songlab_queue_pairs", "gt_songlab_post", "gt_songlab_inbox", "gt_songlab_turn"]));
     for (const t of toolsOf("operation")) expect(t.name).not.toMatch(VOTE);
+    for (const t of toolsOf("operation").filter((x) => x.name.startsWith("gt_songlab"))) {
+      expect(t.name).not.toMatch(DECIDE);
+      expect(t.description.length, t.name).toBeLessThanOrEqual(240);
+    }
     const family = toolsOf("family").find((t) => t.name === "gt_songlab")!;
     expect(family.description.length).toBeLessThanOrEqual(240);
     expect(JSON.stringify(family.inputSchema)).not.toMatch(VOTE);
@@ -136,5 +144,31 @@ describe("the songlab ops", () => {
     expect(String(out.structuredContent["rights"])).toContain("CC BY-NC 4.0");
     expect(out.structuredContent["gate"]).toEqual({ metric: "wer", max: YUE2_RECIPE.gateWer });
     expect(out.structuredContent["takes"]).toEqual([]);
+  });
+});
+
+describe("the song lab relay ops (S2)", () => {
+  it("inbox answers the owner's unanswered direction; turn files the agent's answer and names a dropped proposal", async () => {
+    const { appendLabSay } = await import("../../lib/yue2/labRelay.ts");
+    const say = must(appendLabSay(store, { session: "lab-mcp-1", text: "less chorus looping" }, { kind: "operator", id: "owner" }));
+    const inbox = await tool("gt_songlab", { op: "inbox", waitS: 0 });
+    expect(inbox.isError).toBeFalsy();
+    expect((inbox.structuredContent["says"] as { turnId: string }[]).map((x) => x.turnId)).toEqual([say.turnId]);
+    expect(String(inbox.structuredContent["next"])).toMatch(/^\d+$/);
+    expect(inbox.structuredContent["session"]).toBe("lab-mcp-1");
+
+    const launch = { id: "p-mcp-launch", kind: "launch", label: "8 seeds at the recipe", why: "a fresh field", launch: { style: "dream pop", lyrics: "[verse] hold", seeds: [1, 2, 3, 4, 5, 6, 7, 8], cot: "off" } };
+    const turn = { op: "turn", session: say.session, answers: say.turnId, line: "two ideas", ran: ["read the takes"], proposals: [launch, { id: "p-mcp-bad", kind: "vote" }] };
+    const checked = await tool("gt_songlab", { ...turn, check: true });
+    expect(checked.structuredContent).toMatchObject({ checked: true, appended: false, proposed: ["p-mcp-launch"] });
+    const filed = await tool("gt_songlab", turn);
+    expect(filed.isError).toBeFalsy();
+    expect(filed.structuredContent).toMatchObject({ appended: true, proposed: ["p-mcp-launch"] });
+    expect(String((filed.structuredContent["dropped"] as string[])[0])).toMatch(/^p-mcp-bad /);
+
+    const after = await tool("gt_songlab", { op: "inbox", session: say.session });
+    expect(after.structuredContent["says"]).toEqual([]);
+    expect(after.structuredContent["proposals"]).toEqual([expect.objectContaining({ id: "p-mcp-launch", kind: "launch" })]);
+    expect((await tool("gt_songlab", { op: "turn", session: "lab-nobody-1", line: "hi" })).isError).toBe(true);
   });
 });

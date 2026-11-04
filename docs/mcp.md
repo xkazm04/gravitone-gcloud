@@ -258,10 +258,11 @@ mp3 they downloaded. The skill's "Suno advisor mode" is the agent's side.
 
 ## The song lab (spark yue2-song-lab)
 
-The song lab runs YuE2-3B (open weights) on this machine's card in WSL, for $0. Its four ops are their own
+The song lab runs YuE2-3B (open weights) on this machine's card in WSL, for $0. Its six ops are their own
 family, `gt_songlab`, because the read and launch tools' descriptions are at the 240-character limit. In the
-operation projection they are `gt_songlab_launch`, `gt_songlab_takes`, `gt_songlab_queue_pairs` and
-`gt_songlab_post`. The family projection therefore publishes five tools.
+operation projection they are `gt_songlab_launch`, `gt_songlab_takes`, `gt_songlab_queue_pairs`,
+`gt_songlab_post`, `gt_songlab_inbox` and `gt_songlab_turn`. The family projection therefore publishes five
+tools. The `gt_songlab` description is 163 of 240 characters.
 
 | family | op | args | writes |
 |---|---|---|---|
@@ -269,6 +270,8 @@ operation projection they are `gt_songlab_launch`, `gt_songlab_takes`, `gt_songl
 | songlab | `takes` | `limit?` (1..200, default 50) | |
 | songlab | `queue_pairs` | `source` (`post-variant`, `best-of-n`, `across-conditions`), `limit?` (1..20, default 4) | yes |
 | songlab | `post` | `takeId`, `stages` (in order: `stems`, `debuzz`, `master`), `referenceTakeId?` | yes |
+| songlab | `inbox` | `session?`, `after?` (the last answer's `next`), `waitS?` (0..25) | |
+| songlab | `turn` | `session`, `turnId?`, `answers?`, `line`, `ran?`, `learned?`, `proposals?` (0..3), `check?` | yes |
 
 - `launch` enqueues one `yue2-render` job on `gpu.local` and answers `{jobId, receipt, view}`. The receipt is
   $0. An absent `cot`, `cfg` or `seeds` is the measured recipe (`YUE2_RECIPE`: cot `off`, cfg 1.5, seeds 1..8).
@@ -292,5 +295,40 @@ operation projection they are `gt_songlab_launch`, `gt_songlab_takes`, `gt_songl
   (`app/(studio)/audio/_songlab/acts.ts` `voteAb`).
 - A WSL that is down, a missing venv or a script's own refusal fails the job's step with the engine's
   sentence verbatim (`gt_job status`). No take is filed for a render that did not happen.
-- Tests: `tests/next-server/yue2-mcp.test.ts` (the family, no vote tool, each op through the JSON-RPC layer)
-  and `tests/next-server/yue2-producers.test.ts` (the three producers over a faked WSL door).
+- Tests: `tests/next-server/yue2-mcp.test.ts` (the family, no vote, keep or drop tool, each op through the
+  JSON-RPC layer), `tests/next-server/yue2-producers.test.ts` (the three producers over a faked WSL door),
+  `tests/next-server/yue2-lab-relay.test.ts` (say, turn, inbox long-poll, the compose read isolated) and
+  `tests/next-server/yue2-proposals.test.ts` (keep and drop over faked acts).
+
+### The lab's agent relay (S2)
+
+The song lab tab has its own conversation with the outside agent (`/studio-agent`, song-lab mode), built on
+the compose studio's relay but on its OWN event types, so a lab message never appears in the compose
+conversation list (the compose page reads `audio.say`/`audio.turn` by type with no subject filter). Code:
+`lib/yue2/labRelay.ts` and `lib/yue2/proposals.ts`; doors: `@gt/domain/audio.yue2.lab.schema`.
+
+- The owner's one-line direction is an `audio.lab.say` event (subject `songlab-session`, lane `audio`, key
+  `audio-lab-say:<turnId>`), filed by the Server Action `labSay`. A turn id is `u-<time36>-<4>`; a direction
+  without a session opens one (`lab-<4>-<yyyymmdd>`).
+- `inbox` long-polls like `audio_inbox`: up to `waitS` seconds, every 500 ms, for directions newer than
+  `after`; with no `after`, the unanswered ones. A turn whose `answers` names a direction answers it and
+  every earlier direction of its session; a turn without `answers` (opened after background work) answers
+  nothing. The answer is `{says, next, session?, proposals, draws | drawsNote, view}`: `proposals` are the
+  session's newest three turns' proposals with `state` `kept` or `dropped` once the owner decided, and
+  `draws` are the knockout draws' newest versions (`drawId`, `version`, `field`, `size`, `entrants`,
+  `rules`), which a `rule` proposal names. Pass `next` back as `after`.
+- `turn` files one `audio.lab.turn` (key `audio-lab-turn:<turnId>`): `line` (one line), `ran` and
+  `learned` (up to 6 each), and up to 3 proposals from the closed set `rule` (`{drawId, rules}`), `launch`
+  (`{style, lyrics, seeds, cot, cfg?, adapter?, adapterStrength?}`) or `post` (`{takeIds, stages,
+  referenceTakeId?}`), each with `id`, `label` and `why`. The door fills `turnId` and `at` when they are left
+  out. A bad envelope refuses the whole turn; a bad proposal (or one whose `id` another turn already holds)
+  is dropped and named in `dropped`. A session with no direction refuses the turn. A retry under the same
+  `turnId` appends nothing twice; other content under it is a conflict. `check: true` appends nothing.
+- There is no keep, drop or vote op. The owner keeps or removes a proposal through the Server Actions
+  `keepLabProposal` / `dropLabProposal`. A keep runs the act first (`launch` -> one `yue2-render` job,
+  `post` -> one `yue2-post` chain per take, `rule` -> a new draw version) and then files `audio.lab.keep`
+  (key `audio-lab-keep:<proposalId>`) with `started`: the job id, the post jobs as a range
+  (`job:yue2-post:lab-<id>-1..<n>`) or `draw:<drawId>:v<version>`. A refused act files nothing and its
+  refusal is returned verbatim. A second keep is a conflict; a kept proposal cannot be removed, and a removed
+  one cannot be kept. A keep's jobs have ids derived from the proposal, so a keep retried after a failure
+  part-way does not enqueue a job twice.
