@@ -2548,7 +2548,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/trial/store.ts:107 The file store decodes exec records (and, through readJsonFile, trial.json, prereg and verdict) by type assertion. Non-JSON fails loudly, but a record with a wrong shape or an unknown status is handed to callers as a valid TrialExecRecord or TrialRecord.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "agent-runtime-assembly",
@@ -8487,7 +8491,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/py/lease.py:208 Python decodes rows by position, with the order kept in step by hand with the SELECT list a few lines above (lease.py:204), and job records come back from json.loads with no shape or enum check (job_record.py:126). A column reorder or a malformed record therefore reaches callers as wrong values or a late KeyError, not a decode error at the seam.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "mcp-tools",
@@ -8786,7 +8794,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/store.ts:54 The Store port hands raw SQL text execution to every importer (package exports \"./*\"), and code outside the kernel uses it to run its own statements, for example app/(studio)/projects/runs/_runs/load.ts:107 `SELECT count(*) AS n FROM jobs` and lib/import/commit.ts:273. So the kernel does not own the query language and 'who reads or writes this table' cannot be answered from one tree.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "agent-memory",

@@ -15768,6 +15768,109 @@
           "reason": "replaced by c31d5da1-ef18-4871-9607-bbe2a6dbc965"
         }
       ]
+    },
+    "8cd64732-19d4-4f28-9919-51939b0b58d0/data-access": {
+      "context": "kernel-store-and-events",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T22:24:53.493Z",
+      "worker": "e63b494f-1511-45fe-ad5c-8e94386b415c",
+      "techniques": [
+        {
+          "technique": "layering-rules",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/store.ts:54 The raw statement handle is exported past the layer. About 20 files in app/ and lib/ issue SELECT/INSERT strings through store.read and store.tx, which is the 'one tiny count query inline' leak the technique names."
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/events.ts:285 There is a single rowToEvent decode seam through zod. EVENT_COLUMNS (line 142) is the one column list that both the INSERT and every SELECT use. A corrupt row fails the whole list instead of being skipped."
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/events-query.ts:131 The clause builder appends each predicate together with its bound values in one step. Facet columns come from the closed GROUPS map in events-count.ts:32, and the input passes the eventQuerySchema door first."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/events.ts:178 append runs inside the caller's Tx, so an event commits together with the state change it records. store.ts:171 refuses a nested transaction loudly instead of silently escaping the outer one."
+        },
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/events-query.ts:136 The surface offers a set-shaped read by many subject ids, capped at MAX_IDS=200, alongside the single-id read."
+        },
+        {
+          "technique": "repo-testing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/events.test.ts:74 The tests run on the real engine, including a corruption drill that writes illegal state directly. kernel.ts:113 runs the production migration chain on each opened test store."
+        }
+      ]
+    },
+    "969da751-61f5-40a0-a5fc-dfca59f20636/data-access": {
+      "context": "kernel-python-protocol",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T22:24:53.493Z",
+      "worker": "e63b494f-1511-45fe-ad5c-8e94386b415c",
+      "techniques": [
+        {
+          "technique": "row-mapping",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/py/lease.py:208 This is positional decoding kept in step by hand with a separate select string, which the technique names as the most fragile form of the parallel-copy defect."
+        },
+        {
+          "technique": "cross-driver-invariant-parity",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/kernel_ledger.py:10 Two language drivers write one store. Parity is checked by running Node's verifier over rows that Python wrote (lease.mixed.test.ts, job.python.test.ts, events.python.test.ts)."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:188 The Tx context manager mirrors Node's store.tx: it takes the write lock before the first read and rolls back on any exception. append(t, ...) composes inside the caller's unit of work."
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job_record.py:130 Values are bound. The only % interpolation is a membership list of '?' marks generated from a count (job_settle.py:66)."
+        },
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/py/job_settle.py:67 recover selects the ids of running jobs and then loads each record with its own SELECT. The first query could return the record column directly. The cost is low here because the store is embedded and few jobs run per producer."
+        }
+      ]
+    },
+    "492013a4-a2b2-4f74-b6e3-9dde233632a9/data-access": {
+      "context": "article-trials-and-medium",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T22:24:53.493Z",
+      "worker": "e63b494f-1511-45fe-ad5c-8e94386b415c",
+      "techniques": [
+        {
+          "technique": "row-mapping",
+          "verdict": "deviation",
+          "evidence": "lib/articles/trial/store.ts:107 The decode seam asserts the type instead of checking the shape. scanTrials does degrade visibly by naming `damaged` (line 503), but openTrial (line 440) discards that list during its claim check."
+        },
+        {
+          "technique": "existence-authority-written-last",
+          "verdict": "conformant",
+          "evidence": "lib/articles/trial/store.ts:474 trial.json is what scanTrials enumerates. It is written after the brief files on open (line 475), and after verdict.json on close (line 777)."
+        },
+        {
+          "technique": "layering-rules",
+          "verdict": "conformant",
+          "evidence": "app/api/articles/[runId]/medium/route.ts:24 The route handler calls one named engine operation and does no file-store I/O itself."
+        }
+      ]
     }
   }
 }
