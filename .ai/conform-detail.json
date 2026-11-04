@@ -15523,6 +15523,82 @@
       "evaluatedTs": "2026-11-04T04:48:42.764Z",
       "worker": "7b6398aa-e05a-4c7d-8a44-48696a243510",
       "techniques": []
+    },
+    "1c2ac174-ba41-4264-b184-6b7aa04507d4/live-system-demo-film": {
+      "context": "script-composition-and-validation",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:55:12.515Z",
+      "worker": "92572ae8-8c25-47c5-9080-0f23757c7c11",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/script/types.ts:1 lib/script writes the narration for generated factual films from notebook cards. It never drives or records the software as a demo, and a search of lib/script for recorder, screencast, playwright, recordVideo and 'demo film' found nothing, so the subject's precondition (a demo film of a working software system) does not hold here.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 92572ae8-8c25-47c5-9080-0f23757c7c11"
+        }
+      ]
+    },
+    "35c4885c-477a-4fa4-8e6d-356b3af05959/live-system-demo-film": {
+      "context": "audio-hunt-arrange",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:55:12.515Z",
+      "worker": "92572ae8-8c25-47c5-9080-0f23757c7c11",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:1 These are pure models and boards for auditioning and arranging generated music takes. Nothing here captures or narrates a software demo, and a search of packages/ui/src/components/audio for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 92572ae8-8c25-47c5-9080-0f23757c7c11"
+        }
+      ]
+    },
+    "daafd078-1722-4200-983a-9b8bcf1cc3a8/live-system-demo-film": {
+      "context": "audio-lessons-measures",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:55:12.515Z",
+      "worker": "92572ae8-8c25-47c5-9080-0f23757c7c11",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:1 This context scores generated audio takes and records lessons from them; no demo film is produced. A search of packages/ui/src/components/audio for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 92572ae8-8c25-47c5-9080-0f23757c7c11"
+        }
+      ]
+    },
+    "368829fe-5714-4cbb-af3a-2a71bbe73607/live-system-demo-film": {
+      "context": "part-workspace-desk",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T04:55:12.515Z",
+      "worker": "92572ae8-8c25-47c5-9080-0f23757c7c11",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/part/part.ts:1 These are workspace and Board-desk UI rules (verdicts, tabs, clocks, keyboard walk) for a film part. Nothing here drives or records the system as a demo, and a search of packages/ui/src/components/part and packages/ui/src/components/desk for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 92572ae8-8c25-47c5-9080-0f23757c7c11"
+        }
+      ]
     }
   }
 }
