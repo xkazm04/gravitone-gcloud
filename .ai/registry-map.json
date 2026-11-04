@@ -2261,7 +2261,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/agentSteps.ts:82 Each headless writer session is dispatched under only enforced caps (timeoutMin, and --max-budget-usd added by the loop guard), while the brief built above it carries no derived turn or cost budget and no early-stop conditions, so the soft-budget-under-the-hard-cap pair of limits is missing and a cap-fired turn is just a failed step rather than a measured cap-fired fraction.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "agent-cli-transport",
@@ -4592,7 +4596,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/article.ts:125 One article drive is tracked by two state machines, the kernel job (jobMachine) and run.json (ARTICLE_STATUSES), and the binding copies kernel stops across by hand. The comment at line 360 admits the two can disagree (a job killed after its check leaves the run at the gate, unbooked), which is the two-truths defect session-registry forbids.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "video-assembly",
@@ -14703,7 +14711,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/slots/sweep-core.ts:69 When a publishing claim's heartbeat budget expires (stale) or its lease is absent, the sweep takes the fence from the claimant and fails the slot with \"interrupted before the publish finished\". The expired budget therefore lands on a terminal verdict that asserts non-completion, and a slow-but-alive uploader loses its guarded section, which is the failure evidence-outranks-a-liveness-claim names (land on unknown and label the outcome unresolved).",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "mcp-tools",

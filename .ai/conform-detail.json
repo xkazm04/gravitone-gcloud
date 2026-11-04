@@ -14305,6 +14305,150 @@
           "evidence": "lib/script/gate.ts:165 g/y flags are stripped so a reused pattern really answers 'does this text contain it'. Serializable patterns stop a RegExp from collapsing to {} (lines 84-87)."
         }
       ]
+    },
+    "d968dc62-e28c-4437-abb1-af18df448216/fleet-orchestration": {
+      "context": "article-run-engine",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:14:49.816Z",
+      "worker": "fee5fc50-af47-4b81-b4ef-7cf098f1017d",
+      "techniques": [
+        {
+          "technique": "soft-budget-under-the-hard-cap",
+          "verdict": "deviation",
+          "evidence": "lib/articles/agentSteps.ts:82 Hard caps only. promptSlots (prompt.ts) has no turn or cost budget slot, and the only round count in the brief (MAX_ROUNDS) equals the cap instead of sitting below it."
+        },
+        {
+          "technique": "session-registry",
+          "verdict": "conformant",
+          "evidence": "lib/articles/store.ts:232 run.json status comes from the closed ARTICLE_STATUSES vocabulary, and updateRun is the one door that refuses an illegal transition, whoever asks for it."
+        },
+        {
+          "technique": "durable-fleet-state",
+          "verdict": "conformant",
+          "evidence": "lib/articles/store.ts:235 Every accepted transition is written durably with tmp+rename under a cross-process lock before the call returns."
+        },
+        {
+          "technique": "completion-claim-verification",
+          "verdict": "conformant",
+          "evidence": "lib/articles/ingestDraft.ts:36 The parent reads and validates the declared out/ artifacts (ingestResearch, ingestOutline, ingestPost) on top of the outcome check at agentSteps.ts:93. It does not take the agent's word that it finished."
+        },
+        {
+          "technique": "result-harvest",
+          "verdict": "conformant",
+          "evidence": "lib/articles/loop.ts:451 Every dispatched topic gets a roster row before any work starts, and each row ends classified as at-the-gate, ceiling-stopped, halted or failed. Orphaned and damaged runs are reported too."
+        },
+        {
+          "technique": "absent-status-passthrough",
+          "verdict": "conformant",
+          "evidence": "lib/articles/loop.ts:450 A row whose run has not yet been read carries an explicit \"unknown\" member, not a guessed status."
+        },
+        {
+          "technique": "parallel-dispatch",
+          "verdict": "conformant",
+          "evidence": "lib/articles/loop.ts:386 Slot cap at the loop's one dispatch door, plus a run-total budget (loop.ts:511) that defers the next launch. Claimed subjects keep two runs off the same topic."
+        },
+        {
+          "technique": "brief-carries-the-session",
+          "verdict": "conformant",
+          "evidence": "lib/articles/agentSteps.ts:79 Each fresh session gets the topic, the registry material, the standard resolved now and the operator's rework note restated in its own brief and inputs."
+        },
+        {
+          "technique": "inherited-state-provenance",
+          "verdict": "conformant",
+          "evidence": "lib/articles/agentSteps.ts:142 Every turn gets a fresh mkdtemp workspace. A predecessor's output is handed over under a name that says what it is (previous-post), not left in place."
+        },
+        {
+          "technique": "hibernation-and-resume",
+          "verdict": "conformant",
+          "evidence": "lib/articles/resume.ts:22 A resumed run keeps its identity and its completed steps, and goes back to the state whose step did not finish."
+        },
+        {
+          "technique": "heterogeneous-model-panels",
+          "verdict": "conformant",
+          "evidence": "lib/articles/types.ts:143 The critique panel spans providers, reviewers are blind to each other (engine.ts header) and rounds are capped at two. The panel driver itself (critiqueStep.ts) is outside this context."
+        },
+        {
+          "technique": "worker-trajectory-anatomy",
+          "verdict": "conformant",
+          "evidence": "lib/articles/loop.ts:388 The recovery budget is fixed at dispatch, and a run that hits its ceiling goes to a human and is never auto-resumed."
+        },
+        {
+          "technique": "outbound-compute-plane",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/loop.ts:32 Executors are local CLIs started through cliSeam in the same process tree. There is no remote executor plane."
+        }
+      ]
+    },
+    "7d7b94f7-f312-4ea4-b315-23df705c2286/fleet-orchestration": {
+      "context": "bound-producers",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:14:49.816Z",
+      "worker": "fee5fc50-af47-4b81-b4ef-7cf098f1017d",
+      "techniques": [
+        {
+          "technique": "session-registry",
+          "verdict": "deviation",
+          "evidence": "lib/producers/article.ts:360 Two registries for one session. Readers must join the job and run.json, and the binding settles the disagreement case by case."
+        },
+        {
+          "technique": "parallel-dispatch",
+          "verdict": "conformant",
+          "evidence": "lib/producers/article.ts:354 Second drivers are refused under the kernel's fenced seat.text slot lease. One writer per run."
+        },
+        {
+          "technique": "hibernation-and-resume",
+          "verdict": "conformant",
+          "evidence": "lib/producers/article.ts:371 A resume is a retry of the same job id, so the session's identity survives the fresh process."
+        },
+        {
+          "technique": "evidence-outranks-a-liveness-claim",
+          "verdict": "conformant",
+          "evidence": "lib/producers/article.ts:340 An interrupted job is treated as an unresolved outcome that may have spent, and it is retried only by an operator."
+        },
+        {
+          "technique": "result-harvest",
+          "verdict": "conformant",
+          "evidence": "lib/producers/article.ts:393 A job that was not driven is a named outcome, not a silent success."
+        }
+      ]
+    },
+    "7d68ed0e-8d1f-44d9-a825-4a8b7f6504c0/fleet-orchestration": {
+      "context": "run-records-and-slots",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T01:14:49.816Z",
+      "worker": "fee5fc50-af47-4b81-b4ef-7cf098f1017d",
+      "techniques": [
+        {
+          "technique": "evidence-outranks-a-liveness-claim",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/slots/sweep-core.ts:69 A stale claim is treated like an absent one and goes to failed (sweep.ts:27, core.ts:55 \"dead claimant\"). No evidence the upload itself wrote is consulted, and there is no unknown outcome."
+        },
+        {
+          "technique": "lifecycle-signals",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/sweep.ts:34 Two tiers: the publisher heartbeats per chunk, and the sweep fills the gap on a TTL."
+        },
+        {
+          "technique": "session-registry",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/sweep.ts:20 The claim, its owner and its fence commit with the state change, so ownership is part of the record."
+        },
+        {
+          "technique": "durable-fleet-state",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/records/launch.ts:25 A run record and its job are committed in one transaction before anything can act on them."
+        }
+      ],
+      "registryProposal": "evidence-outranks-a-liveness-claim could say how it meets at-most-once external effects (a publish upload): here the code deliberately fails a stale claim instead of leaving it unknown, so that nothing re-fires it. The technique should say whether an unknown-and-held state (no auto re-fire, operator resolves) is the required alternative, so that both properties hold."
     }
   }
 }
