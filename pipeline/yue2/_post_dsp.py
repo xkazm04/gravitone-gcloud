@@ -159,7 +159,9 @@ def vocal_onset(voc, sr, frame_ms=50, below_peak_db=25.0, hold_frames=10, need=6
     m = len(voc) // h
     if m == 0:
         return 0.0
-    p = (voc[: m * h].astype(np.float64) ** 2).mean(1).reshape(m, h).mean(1)
+    sq = voc[: m * h].astype(np.float64) ** 2
+    # A mono stem (ab_window passes the stem's channel mean) is 1-D; a stereo one is (n, ch).
+    p = (sq.mean(1) if sq.ndim == 2 else sq).reshape(m, h).mean(1)
     fdb = 10 * np.log10(p + 1e-20)
     on = fdb >= fdb.max() - below_peak_db
     for i in range(max(1, m - hold_frames + 1)):
