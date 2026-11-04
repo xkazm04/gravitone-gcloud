@@ -1485,7 +1485,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/agent/envelope.ts:34 Reviewer engines act as judges inside the article critique loop, yet the parsed envelope keeps only final, errors, turns and costUsd and never the model the call resolved to, so a verdict is stamped with the requested slug (lib/articles/critique.ts rv.model) and not with the instrument that actually scored it.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-runtime-assembly",
@@ -14384,7 +14388,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/resource.ts:3 These modules decide machine capacity, GPU leases and deployment capabilities. A search of the context's files found no scenarios, judges, rubrics or pass rates (its only 'judge' and 'golden' hits are comments about capability probes in tests/golden-path), so no model output is scored here.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-instruction-files",

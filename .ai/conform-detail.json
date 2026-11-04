@@ -14987,16 +14987,11 @@
       "context": "resource-gates-and-gpu",
       "subject": "eval-harness",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T03:50:49.125Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "fcc88a97-d113-4c08-b82c-919499414d56",
-        "state": "not-applicable",
-        "at": "2026-11-04T03:51:15.385229+00:00",
-        "reason": "reviewer (sonnet): The anchor gate.ts:16 is only a comment describing the admission gate. It does not show that scored scenarios, judges or pass-rate aggregation are absent. My grep of the context's files found no eval vocabulary, but the cited line doesn't carry that absence, so the anchor is incidental."
-      }
+      "evaluatedTs": "2026-11-04T05:08:23.808Z",
+      "worker": "622cbf6f-5118-46fb-9463-6118264663f9",
+      "techniques": []
     },
     "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3/agent-cli-transport": {
       "context": "agent-cli-and-turns",
@@ -15597,6 +15592,42 @@
           "evaluatedAt": "2026-10-24",
           "worker": null,
           "reason": "replaced by 92572ae8-8c25-47c5-9080-0f23757c7c11"
+        }
+      ]
+    },
+    "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3/eval-harness": {
+      "context": "agent-cli-and-turns",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T05:08:23.808Z",
+      "worker": "622cbf6f-5118-46fb-9463-6118264663f9",
+      "techniques": [
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "lib/agent/envelope.ts:34 The standard says a pin is verified by what it resolved to, stamped on the run artifact. The envelope drops the resolved model identifier, leaving only the requested slug."
+        },
+        {
+          "technique": "monitor-inside-the-loop",
+          "verdict": "conformant",
+          "evidence": "lib/agent/reviewerEngines.ts:22 The reviewer reads the work product itself (the post, its sources and the experiment files), not the writer's account of it."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "lib/agent/reviewerEngines.ts:16 The judge returns its verdict as structured output, and nothing it writes to disk is read back, so measuring cannot contaminate what is measured."
+        },
+        {
+          "technique": "outcome-conditioned-cost",
+          "verdict": "conformant",
+          "evidence": "lib/agent/cliSeam.ts:45 Unavailable and seat-limit runs are classified as runs that did not happen, kept apart from completed or errored work. This separates harness failures from arm failures."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "conformant",
+          "evidence": "lib/agent/cliSeam.ts:65 The candidate writer runs in an isolated workspace (checked by assertIsolatedWorkspace) that cannot hold the reviewer's REVIEW.md rubric."
         }
       ]
     }
