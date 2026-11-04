@@ -2452,7 +2452,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/trial/verdict.ts:369 computeVerdict calls a trial challenged or upheld when the delta clears the preregistered band, and never compares that delta with the arms' within-condition SD, which it computes and only reports; so an order can be published that sits inside one SD of run-to-run noise.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "test-harness",

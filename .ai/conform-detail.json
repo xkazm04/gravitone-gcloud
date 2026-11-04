@@ -14930,6 +14930,73 @@
           "evidence": "lib/decision/v1/types.ts:93 The one unsound step, method-parameter bivariance into DecisionAdapter<unknown>, is deliberate and comes with its written justification."
         }
       ]
+    },
+    "492013a4-a2b2-4f74-b6e3-9dde233632a9/eval-harness": {
+      "context": "article-trials-and-medium",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T03:50:49.125Z",
+      "worker": "fcc88a97-d113-4c08-b82c-919499414d56",
+      "techniques": [
+        {
+          "technique": "resolution-precondition",
+          "verdict": "deviation",
+          "evidence": "lib/articles/trial/verdict.ts:369 The order is decided by delta > minEffect band only. sampleSd is computed per arm but never gates the verdict, so a two-arm order can be published inside one SD of the arms' own spread."
+        },
+        {
+          "technique": "metric-role-contract",
+          "verdict": "conformant",
+          "evidence": "lib/articles/trial/registryRecord.ts:119 There is exactly one optimized metric with a direction, and every other metric is a threshold guard. An arm that fails a guard cannot win (verdict.ts:335 failedGuards)."
+        },
+        {
+          "technique": "scenario-design",
+          "verdict": "conformant",
+          "evidence": "lib/articles/trial/store.ts:236 The prereg is sealed by sha256. Exec and close refuse a prereg changed since the seal, so the exam cannot change under a stable trial id."
+        },
+        {
+          "technique": "selection-over-noise",
+          "verdict": "conformant",
+          "evidence": "lib/articles/trial/registryRecord.ts:135 Every measured command after the seal is printed in the published record, so the attempt count travels with the number. Pilots are counted separately (line 140)."
+        },
+        {
+          "technique": "eval-economics",
+          "verdict": "conformant",
+          "evidence": "lib/articles/trial/verdict.ts:362 The model-call and wall budgets are declared and sealed before measurement. Overspending voids the trial instead of producing a result."
+        },
+        {
+          "technique": "reliability-aggregation",
+          "verdict": "conformant",
+          "evidence": "lib/articles/trial/verdict.ts:156 N is declared before the run with a floor of 3, and an arm short of n voids the trial (line 361). The aggregation rule is the mean, declared in the header contract."
+        },
+        {
+          "technique": "failure-attribution",
+          "verdict": "conformant",
+          "evidence": "lib/articles/trial/verdict.ts:357 A failed control or a short arm is attributed to the protocol layer (void, plus a registry lead at store.ts:775), not counted against either arm."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/trial/store.ts:21 The arms are the techniques under test, not agents with a shell. The agent that writes results.json is the experimenter, a surface the code names openly; see registryProposal."
+        }
+      ],
+      "registryProposal": "candidate-write-access lists the candidate's write surfaces, but it has no row for an experimenter-agent that frames the prereg, builds the harness, and itself writes the results file the verdict computes from. A sha256 seal plus an exec log (store.ts:17-21) catches drift but not fabrication. The technique could say what a harness must assert when the measurer, not the candidate, holds the pen."
+    },
+    "d74a16c1-aca7-4dee-9935-c890f5785336/eval-harness": {
+      "context": "resource-gates-and-gpu",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-04",
+      "evaluatedTs": "2026-11-04T03:50:49.125Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "fcc88a97-d113-4c08-b82c-919499414d56",
+        "state": "not-applicable",
+        "at": "2026-11-04T03:51:15.385229+00:00",
+        "reason": "reviewer (sonnet): The anchor gate.ts:16 is only a comment describing the admission gate. It does not show that scored scenarios, judges or pass-rate aggregation are absent. My grep of the context's files found no eval vocabulary, but the cited line doesn't carry that absence, so the anchor is incidental."
+      }
     }
   }
 }
