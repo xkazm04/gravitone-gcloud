@@ -44,11 +44,19 @@ npx tsx pipeline/trailer/cut.mts "<folder>" <out.mp4> [--edit edit.json] [--dry]
 4. **STOP.** Give the paths of `board.html` and the sheet. The answer is `pick <id>` or free text (revise, re-shoot,
    stop again).
 
+## After the pick - what the trailer withholds
+
+Before the shot plan, the operator sets a budget (registry: trailer-structure/withholding-budget): spend, imply or hold
+for the turn, the reveal, the resolution, the best moment and the novum, one line each, in `<folder>/brief.md`. The
+default holds the turn and resolution and implies the reveal.
+
 ## Stage 2 - sound test before the plan
 
 Before a whole shot plan rests on it, prove on 3-4 H3 clips what the picked concept needs from native sound: speech
 with a robot and no mouth, impacts, gunfire on steel, room tone. Put the sound in the `motion` line and say "no music".
-Listen, or measure at the least; tell the operator what was and was not heard. This is the first gate that uses the
+Listen, or measure at the least; tell the operator what was and was not heard.
+Test one recurring voice across two seeds: a jointly generated channel is re-sampled on every call, and a description in
+the prompt does not pin it (registry: video-assembly/unreferenced-channels-resample, a register apart on one line). This is the first gate that uses the
 card: 7-8.5 min a clip alone on it, queued only on an empty ComfyUI queue. **STOP** with the takes.
 
 ## Stage 3 - keyframes and clips
@@ -61,6 +69,10 @@ card: 7-8.5 min a clip alone on it, queued only on an empty ComfyUI queue. **STO
    one place at one distance; a location change gets none. Look at frames at 0.1, 2.6 and 5.0 s of every clip.
 
 ## Stage 4 - the cut
+
+With no cue, the structure has to come from the picture: shot length falling act by act, a reset to near-silence before
+the peak as well as the black (registry: trailer-structure/dynamic-reset), a cut or impact on the last sound before it.
+A cue added later means a re-cut, not a swap (registry: trailer-structure/cue-first-assembly): keep edit.json as the source.
 
 1. Write `music-clip/edit.json` (`{ "scenes": [ { "id", "in", "out", "gainDb", "fadeIn", "fadeOut", "dir", "rate" } | { "black": seconds } ] }`).
    `cut.mts --dry` prints each clip's measured level: H3's swings by clip (measured -42 dB to -14 dB), and gainDb
