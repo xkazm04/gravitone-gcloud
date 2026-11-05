@@ -15947,6 +15947,33 @@
           "reason": "replaced by db65e5d0-c459-4659-b485-491bf0e3fe45"
         }
       ]
+    },
+    "4f4a61e0-df30-4a71-b7e9-b0f355e4e848/eval-harness": {
+      "context": "sound-hunt-and-measure",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T22:19:49.843Z",
+      "worker": "5a195021-056d-4c52-8b5d-4c79a3d7dff1",
+      "techniques": [
+        {
+          "technique": "resolution-precondition",
+          "verdict": "deviation",
+          "evidence": "lib/sound/knowledge.ts:81 The order over providers and terms is published with no between- vs within-condition spread check. At n=3 the binomial noise swamps every gap, but the sort still puts 3/3 above 29/30."
+        },
+        {
+          "technique": "failure-signatures-beside-the-pass-rate",
+          "verdict": "conformant",
+          "evidence": "lib/sound/knowledge.ts:178 Every strength row prints the most common rejection defect next to the keep rate (computed per case in insights.ts computeInsights), so two equal rates can be told apart by how they failed."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "lib/sound/measure.ts:9 DSP measures the mechanical properties (duration, tempo, key, energy) and does not judge them. Key and tempo are withheld for sfx, where they would mean nothing. Aesthetic quality goes to the human rubric."
+        }
+      ],
+      "registryProposal": "The resolution-precondition technique assumes repeated trials per condition. Here each 'condition' (provider × term) is a population of distinct, human-judged generations, so the within-condition SD is a binomial interval on keep rate. The technique could name that case (Wilson/Beta interval overlap as the resolution test for keep-rate rankings) explicitly."
     }
   }
 }

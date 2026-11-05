@@ -17059,7 +17059,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/knowledge.ts:81 strengthsOf sorts provider × term cells by raw keep rate, with only an n ≥ 3 floor and no check of spread against noise, so a 3-of-3 cell ranks above a 29-of-30 cell. That sorted list goes into params.json and the hunt prompt's top-24 STRENGTHS, which publishes an order that its own sample sizes cannot resolve.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "video-assembly",
