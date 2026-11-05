@@ -16016,6 +16016,53 @@
         }
       ],
       "registryProposal": "truncated-verdict-space could name the legacy-compatibility case explicitly: when records older than the decider field must keep counting, the old rows should be migrated or stamped, rather than letting 'absent' read as the human class at write time too."
+    },
+    "c027c39d-d8fd-4768-add8-4ecc5f206783/image-prompt-composition": {
+      "context": "studio-local-store-and-projects",
+      "subject": "image-prompt-composition",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:25:08.654Z",
+      "techniques": [
+        {
+          "technique": "two-block-style-and-action",
+          "verdict": "conformant",
+          "evidence": "lib/stylePrompt.ts:62 One compiler; the full style block is restated on every call with no short form, and the subject is swappable."
+        },
+        {
+          "technique": "style-first-token-ordering",
+          "verdict": "conformant",
+          "evidence": "lib/stylePrompt.ts:56 Style, then subject, then constraint, so truncation drops late subject detail rather than the look."
+        },
+        {
+          "technique": "assigned-colour-roles",
+          "verdict": "conformant",
+          "evidence": "lib/stylePrompt.ts:26 Each colour gets a role phrase; the accent carries the 'only ... nowhere else' clause."
+        },
+        {
+          "technique": "negative-prompting",
+          "verdict": "deviation",
+          "evidence": "lib/stylePrompt.ts:50 The 'style's opposites' family should be authored with each style block. Here it is global, so it negates the photographic, shadowed and glowing presets."
+        },
+        {
+          "technique": "prompt-budget-limits",
+          "verdict": "conformant",
+          "evidence": "lib/stylePrompt.ts:67 The vendor's hard character ceiling is exposed so the UI can warn before a 400. The token window is handled by ordering, not a token count."
+        },
+        {
+          "technique": "verbatim-text-locking",
+          "verdict": "not-applicable",
+          "evidence": "lib/stylePrompt.ts:15 Composited architecture; the model never sets text, so the verbatim contract does not apply."
+        }
+      ],
+      "registryProposal": "negative-prompting Procedure step 1 gives a flat-vector 'style's opposites' list, and step 3 says 'weld it into the compiler'. This repo copied that example list verbatim into a compiler-global constant applied to every style family. The technique should state that the architectural ban is compiler-global, while the style's opposites are per style block and must never sit in a global constant.",
+      "withdrawn": {
+        "worker": "7c0ef02f-084f-4a35-85fc-2c6adbf1bd18",
+        "state": "deviation",
+        "at": "2026-11-05T23:25:41.199516+00:00",
+        "reason": "reviewer (sonnet): The claim does hold in lib/stylePrompt.ts and lib/producers/style.ts, but neither file belongs to this context. Its files are the studio store, archive, projects and scenes code, so the verdict is about a different context's code."
+      }
     }
   }
 }
