@@ -16063,6 +16063,190 @@
         "at": "2026-11-05T23:25:41.199516+00:00",
         "reason": "reviewer (sonnet): The claim does hold in lib/stylePrompt.ts and lib/producers/style.ts, but neither file belongs to this context. Its files are the studio store, archive, projects and scenes code, so the verdict is about a different context's code."
       }
+    },
+    "0735052e-7b05-4df7-b581-eaa0bc632249/module-design": {
+      "context": "job-queue-and-leases",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:45:22.939Z",
+      "worker": "39745d98-8488-4acc-9e50-487e8f01143d",
+      "techniques": [
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/lease-core.ts:4 A transition function: inputs and outputs are values, time is a parameter (expired(heartbeatAt, ttlS, nowMs)), and the returned Write[] is applied by the lease.ts driver."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/effects.ts:24 Single-door Effects port with real substitutes: crash.ts instrument() wraps it for crash-prefix enumeration, and dryrun wraps it so no driver can forget dry mode. lease-core.ts:6-8 also holds the TS and Python lease implementations to one spec table."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/effects.ts:7 Three verbs (tx, blob, call) carry every driver's effects, which makes for a deep port. Queue position is computed rather than stored, so callers cannot hold a stale one."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/process.ts:13 The store handle was moved into the kernel specifically so that 'where the store lives' is encoded once, not in a second accessor."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/effects.ts:22 Transaction bodies are typed non-async and the cores are synchronous. Concurrency (several drives in flight) lives only in the job-worker driver loop."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-queue-core.ts:73 pickWork fills two outputs (picks, orphans) in one pass. Condition 1 holds, so explicit sequential code is the right form here."
+        },
+        {
+          "technique": "mirror-type-at-the-edge",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/lease-core.ts:65 The core's input is an ordinary constructible value, not a host-minted type, so no mirror is needed."
+        },
+        {
+          "technique": "state-carrier-decides-the-lane",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-worker.ts:170 Parallel drives share one in-process closure and one runOpts object. No state is copied across a lane boundary, and the reports accumulator is a loop-scoped sink."
+        }
+      ]
+    },
+    "ea68a117-e84a-4b1b-bff1-c49133e939a9/module-design": {
+      "context": "domain-decision-board-core",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:45:22.939Z",
+      "techniques": [
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/errors.ts:2 The accepted-value set is closed in the type (AppErrorCode, PACKET_SOURCES, PICK_OUTCOMES), which moves that slice of the interface into the checked half."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/board.ts:36 The domain decisions are total functions of values. A grep of the nine files found no node: import, Date.now, randomUUID or process.env."
+        },
+        {
+          "technique": "borrowed-surface",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/ids.ts:6 The brand wrapper exists to draw a distinction. It forwards only immutable string readers, and a branded value is minted only at a schema door, so delegation does not dissolve the distinction."
+        },
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/door.ts:67 The one cast the checker cannot verify sits inside the single door. It is minimal, and its invariant is stated where Parsed is defined: 'parseAt guarantees this at runtime' via omitUndefined."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/packet.machine.ts:21 The packet lifecycle is a transition table held as data, not branches scattered through code."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/board.ts:34 Placement is argued from a change class: a per-source pick rule is a one-line edit. The client and server checks share checkEditPlan (decision.ts) instead of re-encoding it."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/door.ts:65 The library is model-free: the door and the checks are synchronous Result-returning functions, so no flow-control model is imposed on callers."
+        },
+        {
+          "technique": "mirror-type-at-the-edge",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/door.ts:55 Every input enters as unknown plain data through the door, and no host-minted type reaches these modules."
+        }
+      ],
+      "withdrawn": {
+        "worker": "39745d98-8488-4acc-9e50-487e8f01143d",
+        "state": "conformant",
+        "at": "2026-11-05T23:47:26.629366+00:00",
+        "reason": "reviewer (sonnet): The ids.ts:6 technique claims the brand wrapper \"forwards only immutable string readers\", but ids.ts has no wrapper. `Brand<T,B>` is a plain intersection type with `z.$brand`, so the claim doesn't match the line; the door.ts:55 anchor is only the `at()` helper, not the closed-vocabulary or single-ca"
+      }
+    },
+    "04e4702a-4221-4673-9cfa-130cbd21f93e/module-design": {
+      "context": "library-projection-feeds",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:45:22.939Z",
+      "worker": "39745d98-8488-4acc-9e50-487e8f01143d",
+      "techniques": [
+        {
+          "technique": "borrowed-surface",
+          "verdict": "deviation",
+          "evidence": "lib/library/project.ts:98 Implicit delegation on a wrapper whose job is a distinction. The guard lives in one method and the rest of Set's reader surface is forwarded, so the invariant has become caller discipline. A predicate (id) => boolean would forward nothing."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "lib/library/media.ts:4 Information leakage, declared in the code itself: the blob route's address format is hand-encoded here and in lib/parts/gates.ts:59, two encodings of one decision."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "lib/library/feeds/types.ts:39 One small Feed interface with 16 adapters. syncLibrary takes the feeds as a parameter, and tests/next-server/library-sync.test.ts drives it."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "lib/library/feeds/studio.ts:36 One pass fills items and skipped and awaits a file stat per record (conditions 1 and 2), so the explicit loop is the right form."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "lib/library/project.ts:134 The fan-out over feeds lives in the one sync driver. Each feed is a single async read that imposes no flow-control model."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "lib/library/fresh.ts:25 Adding a source is one feed file plus one line in LIBRARY_FEEDS, so this change class stays local."
+        }
+      ]
+    },
+    "9afe60ec-09d0-49f1-be50-24cbf0b835f0/module-design": {
+      "context": "research-producers",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:45:22.939Z",
+      "worker": "39745d98-8488-4acc-9e50-487e8f01143d",
+      "techniques": [
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/research/partJob.ts:28 The job-id layout is encoded in partAct.ts (partJobId, askOf) and re-spelled in partJob.ts even though that file imports the owner (partJob.ts:12). Mitigated by the of.id re-check on line 31, but still two encodings of one decision."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/media-facts/core.ts:7 factsOf is a pure function of the probe output, luma and an instant, tested on recorded ffprobe output. researchPlan (define.ts) is likewise a pure plan or refusal."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/media-facts/run.ts:26 MediaProbe is a three-verb capability, so an adapter is the honest form. It has a real binding and an in-process test binding, and the clock is a parameter."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/partAct.ts:12 One part-act shape (plan, units, land, with the PartActPorts at line 94) serves nine studio producers. A step binding learns three verbs and inherits resume, crash and receipt semantics."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/media-facts/run.ts:46 One pass builds out, failed and an undecodable tally while writing batches, so the explicit loop is correct."
+        }
+      ]
     }
   }
 }

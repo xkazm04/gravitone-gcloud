@@ -8371,7 +8371,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/src/lease-core.ts:4 The lease, queue-pick and job-outcome decisions are pure functions over snapshots and an instant (lease-core, job-queue-core, job-core). One driver each applies the writes through an Effects port, which crash.ts and the dry-run wrapper substitute at. So the decisions are testable without doubles and crash points can be enumerated.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "durable-agent-operations",
@@ -11247,7 +11251,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/library/project.ts:98 keepSet makes the prune's keep-set answer held prefixes by subclassing Set and overriding only has(). The size, iteration, forEach and set-algebra readers forwarded through ReadonlySet still describe the narrower set. The 'held prefixes are kept' invariant therefore holds only while pruneFeed (in another package) happens to call nothing but has().",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "agent-runtime-assembly",
@@ -14253,7 +14261,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/research/partJob.ts:28 partJob.ts imports partJobId/askOf, yet spells the part-job id shape ('job:part:<partId>' and its ':' suffix) by hand a second time. A change to the id format owned by partAct.ts:61 must also be found here, which is a small, real information leak.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "short-form-narrative-structure",
