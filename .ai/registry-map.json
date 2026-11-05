@@ -6973,7 +6973,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/verdictLog.ts:172 A verdict write that does not name its decider (any PUT, any PATCH without `by`, and the commit's own inline/auto-reject rewrite) is logged as a human verdict, and humanKeep counts it as a vote toward `proven`, the admitting state that adoptInStore accepts. The admission therefore stays reachable through an unmarked default, not only through an authenticated human decision.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "trust-base",

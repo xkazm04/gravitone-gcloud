@@ -15974,6 +15974,48 @@
         }
       ],
       "registryProposal": "The resolution-precondition technique assumes repeated trials per condition. Here each 'condition' (provider × term) is a population of distinct, human-judged generations, so the within-condition SD is a binomial interval on keep rate. The technique could name that case (Wilson/Beta interval overlap as the resolution test for keep-rate rankings) explicitly."
+    },
+    "47a52ae3-c07c-4d24-86e1-da7d59861f7e/hitl-approval": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T23:06:00.375Z",
+      "worker": "efea3952-9811-4614-ab1c-e7239ae4c675",
+      "techniques": [
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/commitPlan.ts:37 The intent is truncation: a model keep is evidence, never a vote. But only an explicit by:'model' is excluded. An absent `by` (kept for legacy rows) admits, which is the 'default that degrades to open' the technique forbids."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/verdictLog.ts:62 The log is append-only and revisioned, which is good. But 'who' is a caller-declared class ('human' | 'model') plus a free-text surface, not an authenticated decider, and the record does not store what was shown."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/adopt.ts:230 The executor door refuses anything but the recorded proven state. A committed run refuses further verdict writes (store.ts:167)."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:293 The commit re-derives the plan inside the run and catalogue locks, and refuses with 409 when the state moved since the preview the operator read. The token parameter is optional, but the only production caller (lib/decision/v1/sources/forge.ts:396) passes it."
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/verdictLog.ts:202 Concurrent verdicts resolve to one winner. A stale base is a 409 carrying the current revision, never last-write-wins, and the log line is appended before the map is written (line 183)."
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/calibration.ts:15 The module measures whether the grades shown to the reviewer predict human verdicts (AUC with a bootstrap CI). When the data is thin it reports the status 'insufficient' instead of a number."
+        }
+      ],
+      "registryProposal": "truncated-verdict-space could name the legacy-compatibility case explicitly: when records older than the decider field must keep counting, the old rows should be migrated or stamped, rather than letting 'absent' read as the human class at write time too."
     }
   }
 }
