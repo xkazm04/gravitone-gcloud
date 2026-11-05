@@ -23,7 +23,7 @@ npx tsx pipeline/trailer.mts keys "<folder>" [--only a,b] [--again] [--jobs 3] -
 npx tsx pipeline/trailer.mts keysheet "<folder>"
 npx tsx pipeline/trailer.mts plan "<folder>" [--drop concept,concept]
 npx tsx pipeline/trailer/cut.mts "<folder>" <out.mp4> [--edit edit.json] [--dry]
-powershell -NoProfile -ExecutionPolicy Bypass -File pipeline	railer\day-run.ps1 -Folder "<folder>" [-DryRun | -Register 2026-11-06T09:00]
+powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/trailer/day-run.ps1 -Folder "<folder>" [-DryRun | -Register 2026-11-06T09:00]
 ```
 
 ## What differs from /music-clip
