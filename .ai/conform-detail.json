@@ -15871,6 +15871,82 @@
           "evidence": "app/api/articles/[runId]/medium/route.ts:24 The route handler calls one named engine operation and does no file-store I/O itself."
         }
       ]
+    },
+    "969da751-61f5-40a0-a5fc-dfca59f20636/engine-host-contract": {
+      "context": "kernel-python-protocol",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T22:02:11.106Z",
+      "worker": "db65e5d0-c459-4659-b485-491bf0e3fe45",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:85 Context searches found none of the listed engine-contract identifiers, and the queue contains durable SQLite records, which the standard explicitly excludes.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by db65e5d0-c459-4659-b485-491bf0e3fe45"
+        }
+      ]
+    },
+    "0735052e-7b05-4df7-b581-eaa0bc632249/engine-host-contract": {
+      "context": "job-queue-and-leases",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T22:02:11.106Z",
+      "worker": "db65e5d0-c459-4659-b485-491bf0e3fe45",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/job.ts:194 Context searches found none of the listed engine-contract identifiers, and these persisted vendor jobs belong to the standard's explicitly excluded durable-job coordination scope.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by db65e5d0-c459-4659-b485-491bf0e3fe45"
+        }
+      ]
+    },
+    "052f74ff-87c5-45a8-a5ea-6fbb2ae44102/engine-host-contract": {
+      "context": "v1-import-and-archive",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T22:02:11.106Z",
+      "worker": "db65e5d0-c459-4659-b485-491bf0e3fe45",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/import/archive.ts:163 Context searches found none of the listed engine-contract identifiers, and the importer parses application archive data without exposing an embedded language engine.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by db65e5d0-c459-4659-b485-491bf0e3fe45"
+        }
+      ]
+    },
+    "2ffc5528-1ffc-4179-bd6a-1a5f35e36da9/engine-host-contract": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-05",
+      "evaluatedTs": "2026-11-05T22:02:11.106Z",
+      "worker": "db65e5d0-c459-4659-b485-491bf0e3fe45",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:89 Context searches found none of the listed engine-contract identifiers, and raster execution uses a browser Worker without implementing a language-engine host contract.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by db65e5d0-c459-4659-b485-491bf0e3fe45"
+        }
+      ]
     }
   }
 }

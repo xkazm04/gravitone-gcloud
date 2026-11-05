@@ -8329,14 +8329,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/src/job.ts:194 Context searches found none of the listed engine-contract identifiers, and these persisted vendor jobs belong to the standard's explicitly excluded durable-job coordination scope.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evidence": "packages/kernel/src/job.ts:15 These jobs are durable store records run by a worker fleet under leases, which is exactly the scope the golden path excludes and sends to job-coordination; a search of packages/kernel/src for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits, so there is no in-memory engine job queue and no host hook.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "0c02b354-237b-44cb-9283-518ed620e846",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "test-harness",
@@ -8570,14 +8569,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/py/job.py:85 Context searches found none of the listed engine-contract identifiers, and the queue contains durable SQLite records, which the standard explicitly excludes.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evidence": "packages/kernel/py/job.py:3 The Python job protocol is a second driver over durable SQLite job records, which the golden path sends to job-coordination; a search of packages/kernel/py for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits, so no embedded language engine or host-hook surface exists here.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "3eb496e8-52aa-446d-bf75-07dc7c891b16",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "supply-chain",
@@ -9412,14 +9410,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/engine/raster.ts:89 Context searches found none of the listed engine-contract identifiers, and raster execution uses a browser Worker without implementing a language-engine host contract.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evidence": "app/_landing/cosmos/engine/rasterJobs.ts:3 A raster 'job' here is plain data that is structured-cloned to a browser Worker and painted. The 'engine' directory is a paint engine, not an embedded language engine. A search of app/_landing/cosmos/engine for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "ff0b289f-5f39-4747-acce-5d56797b9c43",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "canvas-graph",
@@ -20558,14 +20555,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/import/archive.ts:163 Context searches found none of the listed engine-contract identifiers, and the importer parses application archive data without exposing an embedded language engine.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evidence": "lib/import/archive.ts:9 The importer parses and writes an NDJSON data archive and evaluates no guest source; a search of lib/import for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits, so there is no engine whose loader, clock or executor could be a seam.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "b412ea73-0dc3-4362-93c4-2a9b913f9a61",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
