@@ -4,6 +4,9 @@
 //   npx tsx pipeline/trailer.mts art "<folder>" [--only a,b] [--again] [--jobs 3] --dry|--yes
 //   npx tsx pipeline/trailer.mts board "<folder>"
 //   npx tsx pipeline/trailer.mts pick "<folder>" <concept id>
+//   npx tsx pipeline/trailer.mts keys "<folder>" [--only a,b] [--again] [--jobs 3] --dry|--yes
+//   npx tsx pipeline/trailer.mts keysheet "<folder>"
+//   npx tsx pipeline/trailer.mts plan "<folder>" [--drop concept,concept]
 //
 // Everything lives in <folder>/music-clip/ on purpose: clips-h3.py and deliver.mts read that path, so the trailer
 // runs on them unchanged. What differs from /music-clip is that there is no track and no beat grid. The timeline is
@@ -14,8 +17,9 @@
 // 1672x941, 3 in parallel). The prompt goes in on stdin: `-i` takes several files and would swallow an argument.
 import fs from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { boardPage, BEATS, type Concepts } from "./trailer/board.mts";
+import { codexImage } from "./trailer/codex.mts";
+import { keysPage, loadKeys, runKeys, writePlan } from "./trailer/keys.mts";
 
 const argv = process.argv.slice(2);
 const flag = (n: string) => { const i = argv.indexOf(n); if (i < 0) return false; argv.splice(i, 1); return true; };
@@ -23,8 +27,9 @@ const opt = (n: string) => { const i = argv.indexOf(n); if (i < 0) return undefi
 const dry = flag("--dry"), yes = flag("--yes"), again = flag("--again"), asJson = flag("--json");
 const only = opt("--only")?.split(",").map((s) => s.trim()).filter(Boolean);
 const jobs = Math.max(1, Number(opt("--jobs") ?? 3));
+const drop = opt("--drop")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
 const [verb, folder, arg] = argv;
-if (!verb || !folder) { console.error('usage: trailer.mts <status|art|board|pick> "<folder>" [...]'); process.exit(2); }
+if (!verb || !folder) { console.error('usage: trailer.mts <status|art|board|pick|keys|keysheet|plan> "<folder>" [...]'); process.exit(2); }
 
 const clip = path.join(path.resolve(folder), "music-clip");
 const file = (...p: string[]) => path.join(clip, ...p);
@@ -80,27 +85,8 @@ function fullPrompt(c: Concepts, id: string): { prompt: string; refs: string[] }
 }
 
 function codexOne(id: string): Promise<boolean> {
-  const c = load();
-  const { prompt, refs } = fullPrompt(c, id);
-  const full = `Use your built-in image_gen tool to make exactly ONE image, wide 16:9 landscape (the widest landscape size you have). ${prompt} After generating, copy the image file into the current working directory as ${id}.png and print its pixel size. Do nothing else.`;
-  const log = fs.openSync(path.join(artDir, `${id}.log`), "w");
-  const args = ["exec", "--skip-git-repo-check", "-s", "workspace-write", "-C", `"${artDir}"`, ...refs.flatMap((r) => ["-i", `"${r}"`]), "--", "-"];
-  return new Promise((resolve) => {
-    const t0 = Date.now();
-    // shell: the npm shim is a .cmd on Windows, and spawn refuses a .cmd without one
-    const p = spawn("codex", args, { shell: true, stdio: ["pipe", log, log], windowsHide: true });
-    p.stdin.end(full);
-    const finish = (code: number | null) => {
-      fs.closeSync(log);
-      const ok = code === 0 && fs.existsSync(artOf(id));
-      const line = { id, ok, code, seconds: Math.round((Date.now() - t0) / 1000), refs: refs.length, at: new Date().toISOString() };
-      fs.appendFileSync(path.join(artDir, "ledger.jsonl"), JSON.stringify(line) + "\n");
-      console.log(`${id}: ${ok ? "ok" : `FAILED (see ${path.join(artDir, id + ".log")})`} in ${line.seconds} s`);
-      resolve(ok);
-    };
-    p.on("error", () => finish(-1));
-    p.on("close", finish);
-  });
+  const { prompt, refs } = fullPrompt(load(), id);
+  return codexImage(artDir, id, prompt, refs);
 }
 
 async function art() {
@@ -117,11 +103,9 @@ async function art() {
   let failed = 0;
   // The cast comes first and alone: every concept image attaches it.
   if (todo.includes(CAST)) {
-    if (again) fs.rmSync(artOf(CAST), { force: true });
     if (!(await codexOne(CAST))) failed++;
   }
   const rest = todo.filter((id) => id !== CAST);
-  if (again) for (const id of rest) fs.rmSync(artOf(id), { force: true });
   let next = 0;
   await Promise.all(Array.from({ length: Math.min(jobs, rest.length) }, async () => {
     while (next < rest.length) { if (!(await codexOne(rest[next++]))) failed++; }
@@ -135,15 +119,29 @@ async function board() {
   const missing = c.concepts.filter((x) => !fs.existsSync(artOf(x.id))).map((x) => x.id);
   const html = file("board.html");
   fs.writeFileSync(html, boardPage(c, (id) => fs.existsSync(artOf(id)), state().pick));
+  await shot(html, file("board-sheet.png"));
+  console.log(JSON.stringify({ html, sheet: file("board-sheet.png"), concepts: c.concepts.length, missingArt: missing }, null, 2));
+}
+
+async function shot(html: string, png: string) {
   const { chromium } = await import("playwright");
   const b = await chromium.launch({ headless: true, args: ["--disable-gpu"] });
   try {
     const p = await b.newPage({ viewport: { width: 1920, height: 1080 } });
     await p.goto("file:///" + html.replace(/\\/g, "/"));
     await p.waitForLoadState("networkidle");
-    await p.screenshot({ path: file("board-sheet.png"), fullPage: true });
+    await p.screenshot({ path: png, fullPage: true });
   } finally { await b.close(); }
-  console.log(JSON.stringify({ html, sheet: file("board-sheet.png"), concepts: c.concepts.length, missingArt: missing }, null, 2));
+}
+
+async function keysheet() {
+  const c = load();
+  const k = loadKeys(clip, c.concepts.map((x) => x.id));
+  const html = file("keyframes.html");
+  fs.writeFileSync(html, keysPage(k, (id) => c.concepts.find((x) => x.id === id)?.name ?? id));
+  await shot(html, file("keyframes-sheet.png"));
+  const missing = k.frames.filter((f) => !fs.existsSync(file("keyframes", `${f.id}.jpg`))).map((f) => f.id);
+  console.log(JSON.stringify({ html, sheet: file("keyframes-sheet.png"), frames: k.frames.length, missing }, null, 2));
 }
 
 function status() {
@@ -152,11 +150,12 @@ function status() {
   const missing = c ? [CAST, ...c.concepts.map((x) => x.id)].filter((id) => !fs.existsSync(artOf(id))) : [];
   const clips = fs.existsSync(file("clips")) ? fs.readdirSync(file("clips")).filter((f) => f.endsWith(".mp4")).length : 0;
   const s = state();
+  const keysFile = fs.existsSync(file("keyframes.json"));
   const next = !has ? "write concepts.json"
     : missing.length ? "art --yes"
     : !fs.existsSync(file("board.html")) ? "board"
-    : !s.pick ? "STOP: waiting for pick <id>"
-    : !fs.existsSync(file("keyframes.json")) ? "write the shot plan and keyframes.json"
+    : !s.pick && !keysFile ? "STOP: waiting for pick <id>"
+    : !keysFile ? "write the shot plan and keyframes.json"
     : !clips ? "sound test on H3 (clips-h3.py), then the clips"
     : !fs.existsSync(file("edit.json")) ? "write edit.json"
     : "cut";
@@ -175,4 +174,7 @@ if (verb === "art") await art();
 else if (verb === "board") await board();
 else if (verb === "status") status();
 else if (verb === "pick") pick();
+else if (verb === "keys") { const c = load(); await runKeys(loadKeys(clip, c.concepts.map((x) => x.id)), { clip, look: c.look, again, dry, yes, jobs, only }); }
+else if (verb === "keysheet") await keysheet();
+else if (verb === "plan") { const c = load(); writePlan(loadKeys(clip, c.concepts.map((x) => x.id)), clip, drop); }
 else { console.error(`unknown verb ${verb}`); process.exit(2); }

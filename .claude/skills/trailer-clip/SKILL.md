@@ -19,7 +19,11 @@ npx tsx pipeline/trailer.mts status "<folder>" [--json]
 npx tsx pipeline/trailer.mts art "<folder>" [--only a,b] [--again] [--jobs 3] --dry|--yes
 npx tsx pipeline/trailer.mts board "<folder>"
 npx tsx pipeline/trailer.mts pick "<folder>" <concept id>
+npx tsx pipeline/trailer.mts keys "<folder>" [--only a,b] [--again] [--jobs 3] --dry|--yes
+npx tsx pipeline/trailer.mts keysheet "<folder>"
+npx tsx pipeline/trailer.mts plan "<folder>" [--drop concept,concept]
 npx tsx pipeline/trailer/cut.mts "<folder>" <out.mp4> [--edit edit.json] [--dry]
+powershell -NoProfile -ExecutionPolicy Bypass -File pipeline	railer\day-run.ps1 -Folder "<folder>" [-DryRun | -Register 2026-11-06T09:00]
 ```
 
 ## What differs from /music-clip
@@ -61,12 +65,21 @@ card: 7-8.5 min a clip alone on it, queued only on an empty ComfyUI queue. **STO
 
 ## Stage 3 - keyframes and clips
 
-1. Write `keyframes.json` (frames: id, prompt, motion, scene) from the picked concept's beats: one shot per 5.2 s H3
-   clip at most, trimmed down in the edit. Codex keyframes: plate plus character sheet; a pose that matters goes on
-   the plate as a drawn skeleton (Unlatched, film 3).
-2. Draw first-pass keyframes, sheet them, **STOP** for approval.
-3. `python -I pipeline/music-clip/clips-h3.py <folder> --plan <plan.json> [--only ids] [--dry]`: an end frame only in
-   one place at one distance; a location change gets none. Look at frames at 0.1, 2.6 and 5.0 s of every clip.
+Concepts may be proven side by side on their first scenes before one wins (RTAI: Shift and Blast of all six, then fuse
+or pick).
+
+1. Write `keyframes.json` (`pipeline/trailer/keys.mts`). `bible` holds one shared world, plates and a crew sheet, so
+   shots of different concepts can be fused. `who` holds one fixed phrase per character. Frames name their `refs`
+   (`plate-*`, `cast`, `crew`, or another frame); one shot per 5.2 s H3 clip at most. A pose that matters goes on the
+   plate as a drawn skeleton (Unlatched, film 3).
+2. `keys --only <first plate> --yes`, look, then the rest of the bible, look, then all frames. An end frame is painted
+   from its own start frame at the same camera. Open every frame at a size where figures read: a contact-sheet
+   thumbnail hides a second head or a human in the background. Fix with `--only <id>,<its end> --again`.
+3. `plan` writes `clips-plan.json`: every concept's opening, then every blast, then the rest in turn, so a short day
+   still compares like with like. **STOP** for approval unless the operator has already set the start.
+4. `day-run.ps1` starts `clips-h3.py` once the card is free and retries failures once (`-Register` for a set hour). Test
+   with `-DryRun`. Log: `music-clip/clips/day-run.log`. Then look at frames at 0.1, 2.6 and 5.0 s of every clip. An end
+   frame only in one place at one distance; a location change gets none.
 
 ## Stage 4 - the cut
 
