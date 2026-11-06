@@ -22,6 +22,7 @@ npx tsx pipeline/trailer.mts pick "<folder>" <concept id>
 npx tsx pipeline/trailer.mts keys "<folder>" [--only a,b] [--again] [--jobs 3] --dry|--yes
 npx tsx pipeline/trailer.mts keysheet "<folder>"
 npx tsx pipeline/trailer.mts plan "<folder>" [--drop concept,concept]
+npx tsx pipeline/trailer/rushes.mts "<folder>" [--only concept,concept]
 npx tsx pipeline/trailer/cut.mts "<folder>" <out.mp4> [--edit edit.json] [--dry]
 powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/trailer/day-run.ps1 -Folder "<folder>" [-DryRun | -Register 2026-11-06T09:00]
 ```
@@ -83,6 +84,8 @@ or pick).
 
    `clips-h3.py` reads the plan once. To change a live run: rewrite the plan, stop the run's own process tree, collect the
    clip still in ComfyUI through `/history/<prompt id>`, and register the run again. ComfyUI finishes that clip regardless.
+5. When concepts are proven side by side, `rushes.mts` cuts each into one whole-clip film with its raw sound, and writes a
+   sheet per concept and `rushes/verdict.html`. Read every sheet and name the faults by shot. **STOP** for the verdict.
 
 ## Stage 4 - the cut
 
