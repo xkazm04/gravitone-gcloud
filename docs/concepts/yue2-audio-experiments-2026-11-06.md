@@ -4,6 +4,8 @@
 
 **Licence first: the weights are CC BY-NC 4.0 (non-commercial).** Experiments are fine. Do not put YuE2 output in a monetized video or a shipped game until the licence question has been answered for that use. This is the main reason it is not a drop-in supplier next to ElevenLabs and Suno.
 
+**Scope: music generation only.** The owner listened on 2026-11-06 and would not use it for sound effects.
+
 ## What it is
 
 Two sampling stages after an optional notation step:
