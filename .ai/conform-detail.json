@@ -17606,6 +17606,43 @@
           "evidence": "lib/ledger/v1/sources/spend.ts:29 The adapters are pure projections that never write back to a v1 store. spend deliberately bypasses a meter read that would prune and write."
         }
       ]
+    },
+    "06a49bc3-5cc1-4701-9869-efbacdcf5f6c/generated-music-acceptance": {
+      "context": "audio-text-producers",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T23:22:14.504Z",
+      "worker": "bc62dd3f-b143-4c62-8f9a-06869358925d",
+      "techniques": [
+        {
+          "technique": "rights-and-provenance-record",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/suno/producer.ts:74 Searched lib/producers/suno.ts, lib/sound/suno/*, lib/suno/types.ts and lib/sound/*.ts for account, plan, tier, commercial and rights. No music rights record exists anywhere."
+        },
+        {
+          "technique": "generated-audio-defect-taxonomy",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/score/define.ts:12 Remedy routing has a section re-render act (the noted section is re-rendered and every other section is kept), which is the smallest generation-side fix the taxonomy prescribes. The revision note is free text, not a defect class."
+        }
+      ]
+    },
+    "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/generated-music-acceptance": {
+      "context": "scout-engine-creative",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T23:22:14.504Z",
+      "worker": "bc62dd3f-b143-4c62-8f9a-06869358925d",
+      "techniques": [
+        {
+          "technique": "rights-and-provenance-record",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/track.ts:226 TrackClip (types.ts:498) has no rights fields, and keptClips feeds visualizers that build the published video and Short."
+        }
+      ]
     }
   }
 }

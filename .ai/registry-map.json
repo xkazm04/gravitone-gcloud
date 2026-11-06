@@ -3901,7 +3901,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/suno/producer.ts:74 The Suno producer runs on the operator's Chrome profile under subscription credits, but books only the model name per create, so the account and plan tier that decide the commercial grant are lost at generation time.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "fleet-orchestration",
@@ -15865,7 +15869,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/track.ts:226 A scout track clip, made on the signed-in Suno browser and kept on the Board, goes straight into the visualizer and music-video ladder carrying only part, path, model, title, clipId and duration, with no account, plan tier or terms record behind its commercial use.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "test-input-generation",
