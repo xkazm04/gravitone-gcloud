@@ -17250,6 +17250,97 @@
       "evaluatedTs": "2026-11-06T04:26:56.491Z",
       "worker": "f1f63d27-72b7-4cca-8cbb-024c6fb2201e",
       "techniques": []
+    },
+    "47a52ae3-c07c-4d24-86e1-da7d59861f7e/transactions-over-a-replicated-log": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "transactions-over-a-replicated-log",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:38:08.288Z",
+      "worker": "8af19e0b-a469-493b-bad7-7a012356dcb7",
+      "techniques": [
+        {
+          "technique": "same-value-still-conflicts",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:11 An optimistic check against a map-wide revision under a local lock. There is no verify-list apply step in a replicated log."
+        },
+        {
+          "technique": "no-writes-no-log",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:27 Follows the spirit of the rule (an empty change logs nothing), but the log is a local audit file, not a consensus log that would carry proposals."
+        },
+        {
+          "technique": "snapshot-read-plus-verify-log",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:32 The writer is a local disk lock held for the whole read-modify-write. No consensus round trip separates the read from the apply."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:163 Context and repository searches found local file logging and SQLite transactions but no consensus write path for Foundry, so the replicated-log precondition does not hold.",
+          "evaluatedAt": "2026-10-19",
+          "worker": null,
+          "reason": "replaced by 8af19e0b-a469-493b-bad7-7a012356dcb7"
+        }
+      ]
+    },
+    "8cd64732-19d4-4f28-9919-51939b0b58d0/transactions-over-a-replicated-log": {
+      "context": "kernel-store-and-events",
+      "subject": "transactions-over-a-replicated-log",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:38:08.288Z",
+      "worker": "8af19e0b-a469-493b-bad7-7a012356dcb7",
+      "techniques": [
+        {
+          "technique": "snapshot-read-plus-verify-log",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:234 Holds the engine's write lock for the transaction body. That is correct here because the store is not replicated and there is no round trip (the technique's own 'when not to reach' case)."
+        },
+        {
+          "technique": "live-file-is-the-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:74 The snapshots are backup copies made with VACUUM INTO. No log library asks for compaction snapshots."
+        },
+        {
+          "technique": "capture-index-before-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:71 A read transaction records no log index, so there is no index/snapshot ordering to get wrong."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:234 Context and repository searches found direct SQLite transactions and an audit event table but no implemented consensus adapter, so replicated-log transaction rules are not applicable.",
+          "evaluatedAt": "2026-10-19",
+          "worker": null,
+          "reason": "replaced by 8af19e0b-a469-493b-bad7-7a012356dcb7"
+        }
+      ]
+    },
+    "052f74ff-87c5-45a8-a5ea-6fbb2ae44102/transactions-over-a-replicated-log": {
+      "context": "v1-import-and-archive",
+      "subject": "transactions-over-a-replicated-log",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:38:08.288Z",
+      "worker": "8af19e0b-a469-493b-bad7-7a012356dcb7",
+      "techniques": [
+        {
+          "technique": "compose-then-conform",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/commit.ts:96 A Store wrapper that runs inside the caller's transaction, over a local engine that is not replicated. The subject's conformance matrix is for layers above a replicated transactional store."
+        },
+        {
+          "technique": "snapshot-read-plus-verify-log",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/commit.ts:46 The transaction body is synchronous and local. Staleness is caught by re-staging the preview token, not by a verify list checked at apply."
+        }
+      ]
     }
   }
 }

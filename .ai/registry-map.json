@@ -6977,14 +6977,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/foundry/verdictLog.ts:163 Context and repository searches found local file logging and SQLite transactions but no consensus write path for Foundry, so the replicated-log precondition does not hold.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:230a37319e1dd059",
-          "evaluatedRevision": 2,
+          "evidence": "lib/foundry/verdictLog.ts:14 Foundry verdicts are written under a local exclusive-create lock file (diskTx acquireLock) into one run directory, and the append-only verdicts.log.jsonl is a local history file rather than a replicated consensus log; searching lib/foundry for consensus, quorum, follower and appliedIndex found nothing, so the subject's precondition (writes ordered by a consensus log and applied on every node) does not hold.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:10473b2ddfd2ef20",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "e481098a-3532-46d9-bdc9-de84fbc2ce01",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "hitl-approval",
@@ -8981,14 +8980,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/src/store.ts:234 Context and repository searches found direct SQLite transactions and an audit event table but no implemented consensus adapter, so replicated-log transaction rules are not applicable.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:230a37319e1dd059",
-          "evaluatedRevision": 2,
+          "evidence": "packages/kernel/src/store.ts:37 The kernel store is a single-process node:sqlite file whose writes run under BEGIN IMMEDIATE inside a synchronous callback; the header names this subject only as the shape a future hosted adapter would need, and no such adapter exists (searching packages/kernel for consensus, quorum, follower and appliedIndex found nothing), so no write goes through a replicated log.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:10473b2ddfd2ef20",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "e5b296e2-cccf-47a5-b8bd-ce730d40ace8",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -20645,8 +20643,12 @@
           "revision": 3,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "lib/import/commit.ts:33 An import commits each project as one local SQLite transaction through the kernel store's tx port, with blobs written first outside it; searching lib/import for consensus, quorum, follower and appliedIndex found nothing, so no consensus log or replicated apply step exists for the techniques to govern.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:10473b2ddfd2ef20",
+          "evaluatedRevision": 3
         },
         {
           "subject": "engine-host-contract",
