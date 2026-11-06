@@ -19692,7 +19692,11 @@
           "revision": 5,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/keymap/dispatch.ts:41 The keymap is one document-level keydown listener reading browser KeyboardEvents. Nothing is synthesized into a foreign application, no keys are forwarded from a native wrapper, and packages/ui/src has no native-host terms (ipcRenderer, __TAURI__, webview, nativeBridge, capacitor).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:838495bb60a986c6",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"

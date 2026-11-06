@@ -17643,6 +17643,63 @@
           "evidence": "lib/foundry/scout/track.ts:226 TrackClip (types.ts:498) has no rights fields, and keptClips feeds visualizers that build the published video and Short."
         }
       ]
+    },
+    "83b32ed7-9fa1-4a2a-b1ec-2cdd1b5926d3/native-shell-integration": {
+      "context": "app-root-and-dev-inspector",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T23:44:36.382Z",
+      "techniques": [
+        {
+          "technique": "query-transparent-overlay",
+          "verdict": "not-applicable",
+          "evidence": "app/_dev-inspector/DevInspector.tsx:206 pointerEvents:none keeps an in-document highlight out of DOM hit tests. The technique is about OS-level point queries over other applications."
+        },
+        {
+          "technique": "non-stealing-overlay",
+          "verdict": "not-applicable",
+          "evidence": "app/_dev-inspector/DevInspector.tsx:192 There's no always-on-top native window over another app's work, only an in-page HUD."
+        },
+        {
+          "technique": "capability-presence-contract",
+          "verdict": "not-applicable",
+          "evidence": "app/_dev-inspector/DevInspector.tsx:22 The compile-out here is a dev/prod build gate, not a per-host OS capability class."
+        }
+      ],
+      "withdrawn": {
+        "worker": "ae5fd84b-123f-42e3-a10f-c0f99857dfb6",
+        "state": "not-applicable",
+        "at": "2026-11-06T23:46:24.559561+00:00",
+        "reason": "reviewer (sonnet): app/layout.tsx mounts HarnessBridge, a dev-gated window control surface that an external harness drives, and the verdict never examined it; its anchors cover only the in-page overlay, so a not-applicable for the whole context is unconfirmed."
+      }
+    },
+    "57aecc2d-d579-4f82-8772-3dc68bf0d2b5/native-shell-integration": {
+      "context": "ui-keymap-layers-storage",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T23:44:36.382Z",
+      "worker": "ae5fd84b-123f-42e3-a10f-c0f99857dfb6",
+      "techniques": [
+        {
+          "technique": "host-forwarded-key-contract",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/keymap/dispatch.ts:41 Keys arrive as ordinary browser events. No remote or controller has keys forwarded by a host."
+        },
+        {
+          "technique": "layout-resolved-input-synthesis",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/keymap/dispatch.ts:46 Input is read, never synthesized into another app."
+        },
+        {
+          "technique": "native-owned-stream",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/freshness/poll.ts:12 An in-document polling backstop. There's no native process to own a stream."
+        }
+      ]
     }
   }
 }
