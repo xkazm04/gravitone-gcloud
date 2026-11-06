@@ -16491,6 +16491,37 @@
       "evaluatedTs": "2026-11-06T01:12:37.195Z",
       "worker": "06554e9d-4663-4920-833b-528bf15f325c",
       "techniques": []
+    },
+    "47a52ae3-c07c-4d24-86e1-da7d59861f7e/data-access": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:26:26.370Z",
+      "worker": "53ed943e-385c-4ac1-9fed-8780b7af2ebf",
+      "techniques": [
+        {
+          "technique": "layering-rules",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/catalogue.ts:123 The exact leak the technique names: an inline count/exists query outside the data layer."
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/store.ts:112 scanRuns drops a run with a damaged verdicts.json from both items and the warnings channel (listManifests ignores a null summary). Only a console line records it, so the feed sees the run as gone. readJson also casts with no shape check (runStore.ts:64). Single-record reads do keep unreadable and absent apart (store.ts:88)."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:310 Evidence rows and run grades are written in one store transaction before any file is touched. A failure leaves the banner 'nothing was deleted' true."
+        },
+        {
+          "technique": "existence-authority-written-last",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:357 Order is store, then indices (store.ts:326), then unlinks, then run.json marked committed last. Readers gate on run.status, so a crash leaves the run retryable."
+        }
+      ]
     }
   }
 }

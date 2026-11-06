@@ -7020,7 +7020,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/catalogue.ts:123 A lib/ adapter holds the kernel Store and runs its own 'one tiny' SQL probe against the styles table instead of calling a named kernel operation, so the query language leaks outside the kernel's module tree.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "test-harness",
