@@ -16522,6 +16522,48 @@
           "evidence": "lib/foundry/store.ts:357 Order is store, then indices (store.ts:326), then unlinks, then run.json marked committed last. Readers gate on run.status, so a crash leaves the run retryable."
         }
       ]
+    },
+    "b2bfa3eb-ee06-4262-8eaa-d19d9cc16dc2/generated-music-acceptance": {
+      "context": "sound-generation-engine",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:39:23.174Z",
+      "worker": "c56fb571-7edb-4e2a-a56e-3aa782c59372",
+      "techniques": [
+        {
+          "technique": "rights-and-provenance-record",
+          "verdict": "deviation",
+          "evidence": "lib/sound/arrange.ts:155 The only finalize gate is a label. SoundTake (types.ts) has `provider: ProviderId` but no account/plan-tier/terms/destination fields."
+        },
+        {
+          "technique": "generated-audio-defect-taxonomy",
+          "verdict": "conformant",
+          "evidence": "lib/sound/types.ts:45 DEFECTS names all nine taxonomy classes plus brief and technical misses as wire codes stored on each take and ledgered per verdict. editPlan.ts keeps sections by range so one section can be re-rendered."
+        }
+      ]
+    },
+    "311a7f00-ddc9-4938-b67a-60807c67e0b4/generated-music-acceptance": {
+      "context": "music-video-pipeline",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:39:23.174Z",
+      "worker": "c56fb571-7edb-4e2a-a56e-3aa782c59372",
+      "techniques": [
+        {
+          "technique": "rights-and-provenance-record",
+          "verdict": "deviation",
+          "evidence": "lib/sound/mv/types.ts:21 The source is identified only by kind/id/title. Nothing re-clears a generated track against a record before YouTube publication."
+        },
+        {
+          "technique": "loudness-and-peak-acceptance",
+          "verdict": "deviation",
+          "evidence": "lib/musicVideoExport.ts:469 The render core (called from render.ts:256) measures and gain-sets toward the YouTube target of -14 LUFS / -1 dBTP. But a failed measure falls back to gain 0 and the master ships unmeasured, and the measured number is not recorded on the job with its basis."
+        }
+      ]
     }
   }
 }

@@ -11947,7 +11947,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/mv/types.ts:21 The pipeline takes a generated Suno clip or take straight to a YouTube video plus metadata. MvSource/MvJob carry only kind, id and title, with no rights record and no re-clearance for the widened destination.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -16924,7 +16928,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/arrange.ts:155 A Suno return is filed `kept` and can land finalized with only a library label. The take record carries provider, prompt and reference id but no account, plan tier, terms date or cleared destination, so the commercial-use claim outruns its evidence.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "agent-runtime-assembly",
