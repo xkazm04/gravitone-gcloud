@@ -17187,7 +17187,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/huntRender.ts:353 A hunt render files its take knowing only the provider and a coarse 'music'/'sfx' model, with no account, plan tier, terms date or cleared destination, so a take that is later kept or finalized has no rights record. The measure side of this context is strong: loudness and peak, structure against the brief, and defect counts are all present.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"

@@ -17095,6 +17095,42 @@
           "evidence": "lib/decision/v1/sources/spendWords.ts:77 Each request names the stable actor kind and id that asked."
         }
       ]
+    },
+    "4f4a61e0-df30-4a71-b7e9-b0f355e4e848/generated-music-acceptance": {
+      "context": "sound-hunt-and-measure",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:46:43.378Z",
+      "worker": "4e2b847f-5563-4dac-ab0b-c6523dc5eba6",
+      "techniques": [
+        {
+          "technique": "loudness-and-peak-acceptance",
+          "verdict": "conformant",
+          "evidence": "lib/sound/measureRun.ts:88 Every ingested blob gets integrated LUFS, true peak, LRA, clipping and tail silence, measured by the sidecar on the original file. The header at :22 explains why it is not taken from the 11 kHz decode. A sidecar failure leaves NULL, never a pass."
+        },
+        {
+          "technique": "structure-verification-against-plan",
+          "verdict": "conformant",
+          "evidence": "lib/sound/measureRun.ts:199 The triage pass checks each take against what its brief committed to: asked length, tempo, loop, and plan sections laid on the take's clock. A check whose number was never committed is skipped, per the 'verify what was committed' rule."
+        },
+        {
+          "technique": "generated-audio-defect-taxonomy",
+          "verdict": "conformant",
+          "evidence": "lib/sound/insights.ts:90 Rejects carry classed reasons (types.ts DEFECTS mirrors the taxonomy), counted per provider × term/technique cell with a top defect. That is the recurrence record. Repair/re-render/condemn routing is not encoded."
+        },
+        {
+          "technique": "brief-conformance-listen",
+          "verdict": "deviation",
+          "evidence": "lib/sound/rubric.ts:47 A judged take is scored on the kind's fixed dimensions (types.ts RUBRIC music: melody, instrument_choice, instrument_quality). These are taste axes, not a checklist built from the brief's own commitments (named exclusions, vocal/instrumental, ending shape)."
+        },
+        {
+          "technique": "rights-and-provenance-record",
+          "verdict": "deviation",
+          "evidence": "lib/sound/huntRender.ts:330 A take record holds provider, prompt and terms but no account, plan tier, terms date, model version or cleared destination. The SoundTake type has no such fields at all."
+        }
+      ]
     }
   }
 }
