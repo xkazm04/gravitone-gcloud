@@ -16878,38 +16878,35 @@
       "context": "sound-generation-engine",
       "subject": "review-iteration-loops",
       "bundle": "media-generation",
-      "state": "unknown",
+      "state": "deviation",
       "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T03:19:34.951Z",
+      "evaluatedTs": "2026-11-06T04:07:21.897Z",
+      "worker": "c7bce9af-b2e9-4ff0-8969-c4a8b7d1fe2e",
       "techniques": [
-        {
-          "technique": "partial-regeneration-seams",
-          "verdict": "deviation",
-          "evidence": "lib/sound/editPlan.ts:55 Two of the three structures hold: kept sections are referenced by range (editPlan.ts:57), and the seam strength is declared as condition_strength (editPlan.ts:64). Grep for anchor/first section/global in lib/sound found no anchor-region identification."
-        },
         {
           "technique": "edit-plan-over-regeneration",
           "verdict": "conformant",
-          "evidence": "lib/sound/generate.ts:19 A revision is a section edit against the stored song, with kept sections by reference, not a fresh compose. Its parentId is the source take."
+          "evidence": "lib/sound/generate.ts:19 Revision is a per-section mode plan against the stored take, not a fresh compose. An edit where every section is kept is refused because it has nothing to render (generate.ts:199)."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "deviation",
+          "evidence": "lib/sound/editPlan.ts:55 Kept sections are referenced by range (line 57), and seam adherence is a declared condition_strength per section (line 64). The third structure is missing: no anchor region is identified, so an edit to section 0 is not treated as global."
         },
         {
           "technique": "refusal-as-valid-outcome",
           "verdict": "conformant",
-          "evidence": "lib/sound/generate.ts:194 Every section's fate must be declared, so kept is explicit. A typo'd mode and an all-keep edit are refused by name before anything is spent (generate.ts:199)."
+          "evidence": "lib/sound/generate.ts:194 Every section's fate must be declared, so kept is explicit. A typo'd mode and an all-keep edit are refused by name before anything is spent (generate.ts:199).",
+          "carriedFrom": "2026-11-06"
         },
         {
           "technique": "gate-record-outlives-the-media",
           "verdict": "deviation",
-          "evidence": "lib/sound/takes.ts:476 The verdict travels in git without the bytes (ledger.ts:17), which is the right split. But the only delete is for fixtures: rejected takes' bytes are never destroyed with the decision, and no ledger row keeps a piece of evidence."
+          "evidence": "lib/sound/takes.ts:476 The verdict travels in git without the bytes (ledger.ts:17), which is the right split. But the only delete is for fixtures: rejected takes' bytes are never destroyed with the decision, and no ledger row keeps a piece of evidence.",
+          "carriedFrom": "2026-11-06"
         }
       ],
-      "registryProposal": "partial-regeneration-seams assumes one region anchors the global frame. Section-edit APIs that carry style per chunk (positive_styles on every chunk, no global block) spread the frame across sections, and the technique could say how to find the anchor in that case.",
-      "withdrawn": {
-        "worker": "bffd584b-808b-4044-82ad-d3ff69c6faec",
-        "state": "deviation",
-        "at": "2026-11-06T03:20:47.749265+00:00",
-        "reason": "reviewer (sonnet): editPlan.ts:55 does show every section getting its mode through modeOf with no anchor check, but I found nothing in lib/sound showing that a receipt or review treats a regenerated first section as a local edit, and the claim that no ledger row keeps evidence was not confirmed either."
-      }
+      "registryProposal": "partial-regeneration-seams says to identify the anchor region (the opening section). In wire plans where every chunk restates its own positive/negative styles (lib/music/types.ts WireGenerationChunk), part of the global frame is restated per section. The technique could say how to locate the anchor when the style is restated per chunk instead of inherited from the opener."
     },
     "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/review-iteration-loops": {
       "context": "scout-engine-creative",
@@ -17129,6 +17126,42 @@
           "technique": "rights-and-provenance-record",
           "verdict": "deviation",
           "evidence": "lib/sound/huntRender.ts:330 A take record holds provider, prompt and terms but no account, plan tier, terms date, model version or cleared destination. The SoundTake type has no such fields at all."
+        }
+      ]
+    },
+    "1c2ac174-ba41-4264-b184-6b7aa04507d4/review-iteration-loops": {
+      "context": "script-composition-and-validation",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:07:21.897Z",
+      "worker": "c7bce9af-b2e9-4ff0-8969-c4a8b7d1fe2e",
+      "techniques": [
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "lib/script/editPlan.ts:20 The engine returns a closed list of four operations, never whole scripts (file header lines 3-6). Every edit needs a `why` (line 404). Marks are re-laid from durations, and chain seams are re-checked on every apply (line 238)."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "deviation",
+          "evidence": "lib/script/editPlan.ts:98 Refusals are first-class, and required material is refused before apply (recalibrate.ts:339). Conflicts with a named winner exist in recalibrate.ts. But the explicitly-unchanged list that the prompt asks for has no field in the schema or in the EditPlan type, so it is dropped."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "lib/script/recalibrate.ts:115 GUARD 2 refuses focus notes on descoped cards and points to the triage board. GUARD 1 refuses a descope of required material, using the card's own requiredWhy."
+        },
+        {
+          "technique": "note-taxonomy-focus-scope-order",
+          "verdict": "conformant",
+          "evidence": "lib/script/versions.ts:33 A closed vocabulary: more-focus, less-focus, descope, move-earlier, move-later, plus custom as the escape hatch, with labels such as 'cut it back, keep it' that keep less-focus distinct from descope."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "conformant",
+          "evidence": "lib/script/impact.ts:100 A beat's seconds are split across its cards so the totals sum to the runtime. The model path (editPlan.ts impactFrom) uses the same function and seeds the cut records, so cut and absent stay distinct."
         }
       ]
     }
