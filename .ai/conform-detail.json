@@ -17164,6 +17164,44 @@
           "evidence": "lib/script/impact.ts:100 A beat's seconds are split across its cards so the totals sum to the runtime. The model path (editPlan.ts impactFrom) uses the same function and seeds the cut records, so cut and absent stay distinct."
         }
       ]
+    },
+    "6deb060a-3f7b-4426-a66b-970a7bb54a5e/plan-entitlements": {
+      "context": "spend-and-pricing",
+      "subject": "plan-entitlements",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:14:04.982Z",
+      "worker": "3d73a6b2-d3dd-4c5c-839e-657819648f21",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/spend/core.ts:96 Context searches found no entitlement, tierId, or subscriptionId references, and the inspected code enforces vendor-spend ceilings, which the standard explicitly excludes from entitlement gating.",
+          "evaluatedAt": "2026-10-19",
+          "worker": null,
+          "reason": "replaced by 3d73a6b2-d3dd-4c5c-839e-657819648f21"
+        }
+      ]
+    },
+    "df7b69e1-8e03-4636-a7bc-91e117f32faa/plan-entitlements": {
+      "context": "produce-compose-receipt",
+      "subject": "plan-entitlements",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:14:04.982Z",
+      "worker": "3d73a6b2-d3dd-4c5c-839e-657819648f21",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/Unpriced.tsx:15 The only plan vocabulary in this context is a vendor's credit or subscription plan that the operator pays for, shown as an unpriced figure. The product sells no tier to anyone. Searching produce/ for entitlement, tier, paywall, billing and stripe found nothing, so the receipt and composer price vendor jobs under cost-metering, not plan entitlements.",
+          "evaluatedAt": "2026-10-25",
+          "worker": null,
+          "reason": "replaced by 3d73a6b2-d3dd-4c5c-839e-657819648f21"
+        }
+      ]
     }
   }
 }

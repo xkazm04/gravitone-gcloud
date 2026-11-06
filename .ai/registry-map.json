@@ -13558,14 +13558,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/Unpriced.tsx:15 The only plan vocabulary in this context is a vendor's credit or subscription plan that the operator pays for, shown as an unpriced figure. The product sells no tier to anyone. Searching produce/ for entitlement, tier, paywall, billing and stripe found nothing, so the receipt and composer price vendor jobs under cost-metering, not plan entitlements.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:58f21c0561a86e45",
-          "evaluatedRevision": 7,
+          "evidence": "packages/ui/src/components/produce/produce.ts:118 The only 'subscription' in this context labels an unpriced cost on a receipt line, because the operator pays a vendor through a credit or subscription plan, so it is not a tier this product sells, and a search of packages/ui/src/components/produce for entitle, paywall, stripe and tierId found nothing, so the composer and receipt price vendor jobs (cost-metering) and gate nothing on a plan.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:66961f93b3ce02ba",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "cd263cf6-0195-4db1-820d-2435a3af746c",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-runtime-assembly",
@@ -17301,14 +17300,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/src/spend/core.ts:96 Context searches found no entitlement, tierId, or subscriptionId references, and the inspected code enforces vendor-spend ceilings, which the standard explicitly excludes from entitlement gating.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:58f21c0561a86e45",
-          "evaluatedRevision": 7,
+          "evidence": "packages/kernel/src/spend/core.ts:93 The only gate here asks whether a reservation fits under a vendor-spend class ceiling, which the golden path assigns to cost-metering, and a search of packages/kernel/src/pricing and packages/kernel/src/spend for entitle, paywall, stripe and tierId found nothing, so this context holds no tier model, no capability gate and no subscription lifecycle (its 'tier' and 'subscription' hits are vendor rate-card citations in table.ts that describe the operator's own vendor plans).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:66961f93b3ce02ba",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "5e00d05c-885e-4eac-ad26-f937df9d612f",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "voice-io",
