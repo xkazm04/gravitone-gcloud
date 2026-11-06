@@ -16119,57 +16119,63 @@
       "context": "domain-decision-board-core",
       "subject": "module-design",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-05",
-      "evaluatedTs": "2026-11-05T23:45:22.939Z",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:05:11.913Z",
+      "worker": "6604b13e-31c4-493a-80e2-67877d231001",
       "techniques": [
         {
           "technique": "module-depth",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/errors.ts:2 The accepted-value set is closed in the type (AppErrorCode, PACKET_SOURCES, PICK_OUTCOMES), which moves that slice of the interface into the checked half."
+          "evidence": "packages/domain/src/door.ts:61 Three parameters and a Result. Behind it: omitUndefined, brand-preserving Parsed<T>, and the error path formatted as invalid with the door name. A deep module."
         },
         {
-          "technique": "io-free-core",
+          "technique": "seams-and-adapters",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/board.ts:36 The domain decisions are total functions of values. A grep of the nine files found no node: import, Date.now, randomUUID or process.env."
+          "evidence": "packages/domain/src/door.ts:71 Single-door rule held by construction: git grep finds no JSON.parse in packages/ outside door.ts, and a hygiene gate fixture (tests/next-gates/fixtures/hygiene--json-parse) enforces it."
         },
         {
           "technique": "borrowed-surface",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/ids.ts:6 The brand wrapper exists to draw a distinction. It forwards only immutable string readers, and a branded value is minted only at a schema door, so delegation does not dissolve the distinction."
+          "evidence": "packages/domain/src/errors.ts:47 Does not rely on the runtime's instanceof identity, which breaks across duplicate module graphs. The error identity is restated in a brand the domain owns."
         },
         {
-          "technique": "marked-unverifiable-region",
+          "technique": "io-free-core",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/door.ts:67 The one cast the checker cannot verify sits inside the single door. It is minimal, and its invariant is stated where Parsed is defined: 'parseAt guarantees this at runtime' via omitUndefined."
+          "evidence": "packages/domain/src/source.ts:307 Verdict rules are a pure function: values in, a Result out. A grep of the nine files finds no async, Promise or await."
         },
         {
           "technique": "declarative-or-sequential",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/packet.machine.ts:21 The packet lifecycle is a transition table held as data, not branches scattered through code."
+          "evidence": "packages/domain/src/packet.machine.ts:21 The packet lifecycle is an explicit, enumerated state table, not booleans spread around the code."
+        },
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/door.ts:67 The one unchecked cast is enclosed inside the door, minimal, and its invariant is stated on the Parsed type (line 12: parseAt guarantees this at runtime)."
         },
         {
           "technique": "locality-and-leverage",
           "verdict": "conformant",
-          "evidence": "packages/domain/src/board.ts:34 Placement is argued from a change class: a per-source pick rule is a one-line edit. The client and server checks share checkEditPlan (decision.ts) instead of re-encoding it."
+          "evidence": "packages/domain/src/source.ts:169 Per-source tables are exhaustive mapped types in one file, so adding a source is a compiler-guided change in one place."
         },
         {
           "technique": "concurrency-at-the-edge",
-          "verdict": "conformant",
-          "evidence": "packages/domain/src/door.ts:65 The library is model-free: the door and the checks are synchronous Result-returning functions, so no flow-control model is imposed on callers."
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/door.ts:66 Everything is synchronous: grep for async, Promise, await and setTimeout across the context's files finds none, so there is no flow-control model to place."
+        },
+        {
+          "technique": "emitted-code-names-from-a-root",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/ids.ts:12 Ids come from an ordinary factory function, not a generator or macro that splices code into a caller's scope."
         },
         {
           "technique": "mirror-type-at-the-edge",
           "verdict": "not-applicable",
-          "evidence": "packages/domain/src/door.ts:55 Every input enters as unknown plain data through the door, and no host-minted type reaches these modules."
+          "evidence": "packages/domain/src/door.ts:55 Every input enters as unknown plain data through the door, and no host-minted type reaches these modules.",
+          "carriedFrom": "2026-11-05"
         }
-      ],
-      "withdrawn": {
-        "worker": "39745d98-8488-4acc-9e50-487e8f01143d",
-        "state": "conformant",
-        "at": "2026-11-05T23:47:26.629366+00:00",
-        "reason": "reviewer (sonnet): The ids.ts:6 technique claims the brand wrapper \"forwards only immutable string readers\", but ids.ts has no wrapper. `Brand<T,B>` is a plain intersection type with `z.$brand`, so the claim doesn't match the line; the door.ts:55 anchor is only the `at()` helper, not the closed-vocabulary or single-ca"
-      }
+      ]
     },
     "04e4702a-4221-4673-9cfa-130cbd21f93e/module-design": {
       "context": "library-projection-feeds",
@@ -16620,6 +16626,42 @@
         "at": "2026-11-06T01:54:54.712800+00:00",
         "reason": "reviewer (sonnet): Nothing in the context's files shows that the confirm token pins the receipt version. produce.ts:161 is only a comment that the token binds the ceiling, and a search of the produce directory found no token or version logic, so the \"only its confirm spends\" and \"pins receipt version\" claims could not"
       }
+    },
+    "eb8e4f16-65ba-445e-9299-2e00abf63aaa/module-design": {
+      "context": "board-scout-spend-sources",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:05:11.913Z",
+      "worker": "6604b13e-31c4-493a-80e2-67877d231001",
+      "techniques": [
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "deviation",
+          "evidence": "lib/decision/v1/sources/scoutReelCells.ts:33 Line 32 admits the copy exists only to avoid an import cycle. A shared helper that lives in a source-specific planner is a boundary in the wrong place."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/seeds.ts:206 Each v1 store hides behind a four-verb adapter interface (read, packet, consequence, apply)."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/spend.ts:104 Deps are injected and substituted in tests/next-server/decision-v1-spend.test.ts. makeScoutAdapter (scout.ts:611) does the same."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/scout.ts:548 The commit record is built by a pure function that takes the time as a parameter. The clock is read only in apply, at the I/O edge."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/scout.ts:601 Apply is all effects and its order is the job (crash-safe by order), so it is a plain sequence with the order stated."
+        }
+      ]
     }
   }
 }

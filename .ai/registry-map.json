@@ -4527,7 +4527,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/scoutReelCells.ts:33 The words-cell content-address rule is written twice, because the canonical textRef lives in the scout-specific scoutPlan.ts (which also imports scoutReelCells.ts). One decision is now encoded in two modules, and spend.ts and seeds.ts both reach into scoutPlan.ts for it.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "audit-logging",
@@ -5363,7 +5367,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/domain/src/door.ts:61 Unknown data becomes typed only through one small door that hides zod's undefined-key and brand quirks, and the rest of the domain is pure values, enumerated tables and a state machine as data.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "hitl-approval",
