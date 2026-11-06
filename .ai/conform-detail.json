@@ -17452,6 +17452,83 @@
           "reason": "replaced by bed909b6-af6e-4270-afcd-b94bfdf95cd2"
         }
       ]
+    },
+    "51e3f5c9-f984-40e7-9588-f8eab2b916f9/cinematic-language": {
+      "context": "score-and-ads",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:12:19.933Z",
+      "techniques": [
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotTypes.ts:247 Size comes from the role (setup EWS/MS, rung WS/MCU, peak EWS/MS/ECU). The angle is deliberately never seeded. Diagonal placement exists in the vocabulary (line 131), but the placement chooser in shots.ts (outside this context) never emits it on its own."
+        },
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotTypes.ts:122 Screen-direction words are typed on each shot, and the two-step size rule (lines 231-235) stops stutter cuts before generation."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "conformant",
+          "evidence": "lib/motion/direction.ts:109 An explicit camera refusal in the i2v prompt, backed by a code filter that drops camera moves. This prevents aimless drift; the editor owns any camera motion."
+        },
+        {
+          "technique": "performance-direction",
+          "verdict": "conformant",
+          "evidence": "lib/motion/direction.ts:105 Every motion line names what holds still, which avoids the silent-hold failure. Moves are tied to named elements in the frame, at most three of them."
+        }
+      ],
+      "withdrawn": {
+        "worker": "3ef64bd8-aa5e-438c-afed-616332ee6969",
+        "state": "conformant",
+        "at": "2026-11-06T05:13:13.977555+00:00",
+        "reason": "reviewer (sonnet): The conformant verdict rests on lib/frames/shotTypes.ts, which is not in the score-and-ads context. Only lib/frames/shots.ts imports it, and nothing in the context's files does, so the claim is about the frames context. The lib/motion/direction.ts anchors are in the context, but the verdict depends "
+      }
+    },
+    "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/cinematic-language": {
+      "context": "scout-engine-creative",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:12:19.933Z",
+      "worker": "3ef64bd8-aa5e-438c-afed-616332ee6969",
+      "techniques": [
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/storyboard.ts:157 The door checks only shape and names. No screen-direction or size-progression field, and no review of the panel list (the scout skill does not carry one either)."
+        },
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/scene.ts:68 The scene recipe requires source, quality, temperature and a darkness clause."
+        },
+        {
+          "technique": "lens-effect-language",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/scene.ts:65 Lenses are described by their effect, not by focal numbers."
+        },
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/scene.ts:64 Each recipe gets one of six shot sizes, plus height, angle and placement in film vocabulary."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/scene.ts:66 Motion is stated per carrier, camera included, and limited to observed change. The stand-in at line 336 says 'camera holds' and gives a speed adverb."
+        },
+        {
+          "technique": "genre-visual-contracts",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/direction.ts:45 A direction fixes genre, style and tone before any panel is written, and a storyboard is a trial of at most one genre. The contract is still free words, not a full lighting/camera ensemble."
+        }
+      ]
     }
   }
 }

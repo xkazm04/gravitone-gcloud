@@ -15788,7 +15788,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/storyboard.ts:157 Storyboard panels are free per-frame Flux prompts with no per-beat size/angle and no axis, eyeline or progression check before frames and per-panel LTX clips are spent, so a trial can come out as a mood reel rather than a directed scene.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "voice-io",
