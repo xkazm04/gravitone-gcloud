@@ -12201,14 +12201,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/notebook/schema.ts:16 This context validates generated research answers rather than distributing trained models, and searches found none of the five model-package terms in lib/notebook.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:d22f4172adbc5004",
-          "evaluatedRevision": 1,
+          "evidence": "lib/notebook/schema.ts:16 This context's JSON schema constrains an LLM's generated notebook answer, not a packaged trained model, and a search of lib/notebook for onnx, safetensors, torchscript and tensor found no hits, so there are no weights, layout, shapes or compiled artifacts for the techniques to govern.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:bd272d2a3cc87197",
+          "evaluatedRevision": 2,
           "source": "renamed",
           "renamedFrom": "c425f431-c0d1-4f34-b736-1a5d70683ef4",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "quality-gates",
@@ -16635,8 +16634,12 @@
           "revision": 2,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "lib/script/compose.ts:2 This context assembles a prompt and validates a hosted model's answer through a zod door, so it consumes a vendor model and does not package one; a search of lib/script for onnx, safetensors, torchscript and tensor found no hits (\"checkpoint\" and \"weights\" do appear, but they mean script history restore and beat re-weighting).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:bd272d2a3cc87197",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -19899,14 +19902,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/ui/src/components/INVENTORY.md:93 These modules render ledger records and timeline graphics, and searches found none of the five model-package terms across packages/ui/src/components.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:d22f4172adbc5004",
-          "evaluatedRevision": 1,
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:1 These are React presentation components for ledger rows and timeline graphics, and a search of packages/ui/src/components for onnx, safetensors, torchscript and tensor found no hits, so the precondition (distributing a trained model package) does not hold.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:bd272d2a3cc87197",
+          "evaluatedRevision": 2,
           "source": "renamed",
           "renamedFrom": "2e702395-189e-4eb9-910c-dc4b76ff6e9a",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"

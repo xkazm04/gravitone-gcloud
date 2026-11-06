@@ -17202,6 +17202,54 @@
           "reason": "replaced by 3d73a6b2-d3dd-4c5c-839e-657819648f21"
         }
       ]
+    },
+    "f13ec7fd-bc87-4556-bbbe-e46b4cd046cd/self-describing-model-packages": {
+      "context": "notebook-contract-validation",
+      "subject": "self-describing-model-packages",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:26:56.491Z",
+      "worker": "f1f63d27-72b7-4cca-8cbb-024c6fb2201e",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/notebook/schema.ts:16 This context validates generated research answers rather than distributing trained models, and searches found none of the five model-package terms in lib/notebook.",
+          "evaluatedAt": "2026-10-19",
+          "worker": null,
+          "reason": "replaced by f1f63d27-72b7-4cca-8cbb-024c6fb2201e"
+        }
+      ]
+    },
+    "00c6177f-43a3-4f35-8252-59c9ae8110e0/self-describing-model-packages": {
+      "context": "ui-ledger-timeline",
+      "subject": "self-describing-model-packages",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:26:56.491Z",
+      "worker": "f1f63d27-72b7-4cca-8cbb-024c6fb2201e",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/INVENTORY.md:93 These modules render ledger records and timeline graphics, and searches found none of the five model-package terms across packages/ui/src/components.",
+          "evaluatedAt": "2026-10-19",
+          "worker": null,
+          "reason": "replaced by f1f63d27-72b7-4cca-8cbb-024c6fb2201e"
+        }
+      ]
+    },
+    "1c2ac174-ba41-4264-b184-6b7aa04507d4/self-describing-model-packages": {
+      "context": "script-composition-and-validation",
+      "subject": "self-describing-model-packages",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:26:56.491Z",
+      "worker": "f1f63d27-72b7-4cca-8cbb-024c6fb2201e",
+      "techniques": []
     }
   }
 }
