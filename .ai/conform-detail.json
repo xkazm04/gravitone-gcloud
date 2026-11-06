@@ -16262,6 +16262,49 @@
         "at": "2026-11-06T00:04:57.222386+00:00",
         "reason": "reviewer (sonnet): The anchor, scout.ts:260, is an error string ('nothing rendered to judge') that does not itself show that no eval harness is present. The context's adapters also build an oracle pass/fail summary and gate verdicts and scores into packets (scout.ts:281, scoutPlan.ts:269). The 'judge means a human rul"
       }
+    },
+    "95dd9201-2503-481d-8cdd-a863f6566283/generated-music-acceptance": {
+      "context": "music-vendors-and-publish",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:21:37.755Z",
+      "worker": "90face09-13e4-41f3-834a-c12477e04819",
+      "techniques": [
+        {
+          "technique": "rights-and-provenance-record",
+          "verdict": "deviation",
+          "evidence": "lib/music/types.ts:129 Vendor, model, brief and date are recorded; account and plan tier, reference status and destination are missing. Suno clips (lib/suno/types.ts:104) likewise record the model but not the account the browser was signed in to (lib/suno/browser.ts:6)."
+        }
+      ]
+    },
+    "35c4885c-477a-4fa4-8e6d-356b3af05959/generated-music-acceptance": {
+      "context": "audio-hunt-arrange",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:21:37.755Z",
+      "worker": "90face09-13e4-41f3-834a-c12477e04819",
+      "techniques": [
+        {
+          "technique": "loudness-and-peak-acceptance",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:47 AuditionTake carries peaks and length but no loudness. The playhead is matched between takes (HuntAudition.tsx:8-11) but the level is not, and the take file route serves raw bytes."
+        },
+        {
+          "technique": "rights-and-provenance-record",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/arrange.ts:157 The only condition for finalizing is a label; a missing rights or provenance record does not stop acceptance into the agent-selectable pool."
+        },
+        {
+          "technique": "brief-conformance-listen",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:3 A hunt is exploring variants and crowning one (selection), which the technique exempts from the full checklist; the briefed numbers are still shown beside each take (AskedChips)."
+        }
+      ],
+      "registryProposal": "The matched-level rule for comparative listens between takes is only mentioned under 'When not to use this' in loudness-and-peak-acceptance. A variant audition that crowns a winner relies on it, so it should be stated as its own decision rule: when crowning between sibling takes, match their levels first."
     }
   }
 }

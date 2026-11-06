@@ -3413,7 +3413,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:47 The audition crowns a winner by stepping between sibling takes played at their raw served level, with no loudness on the take and no level matching, so the louder take reads as better in exactly the comparative listen the technique says must be level-matched.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
@@ -11703,7 +11707,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/music/types.ts:129 Every ElevenLabs cue records vendor, modelId, requestedMs, plan and generatedAt, and the type's own comment calls this what the rights record needs, yet it leaves out the field the technique calls load-bearing (the account and plan tier) along with reference-material status and the destination it was cleared for.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "prompt-assembly",
