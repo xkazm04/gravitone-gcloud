@@ -1,6 +1,6 @@
 # Experimenting with YuE2: a local open-weights song model
 
-**Status: first measurements, 2026-11-06, Lynx. Nothing in gravitone calls YuE2 yet.** Every number below is from a real render on this box. Nothing here says the songs are good: no one has judged them by ear yet, and the blind steps verdict is still open.
+**Status: first measurements, 2026-11-06, Lynx. Nothing in gravitone calls YuE2 yet.** Every number below is from a real render on this box. The owner has judged one thing by ear, 6 vs 32 steps, blind. Nothing here says the songs are good enough to use.
 
 **Licence first: the weights are CC BY-NC 4.0 (non-commercial).** Experiments are fine. Do not put YuE2 output in a monetized video or a shipped game until the licence question has been answered for that use. This is the main reason it is not a drop-in supplier next to ElevenLabs and Suno.
 
@@ -64,12 +64,11 @@ Three original songs, so n is small. "Sound" is mean log-mel distance per bar, "
 3. **A chord edit is not a partial edit.** Changing one chord moved the whole song as far as a new seed did: 1.07 vs 1.02 on one song, 0.68 vs 0.65 on the other. Bars *before* the edit moved as much as bars after it. The edit changes what every token is conditioned on. It guides a new take; it does not repair an approved one. **If you like the audio, keep the audio file**, and splice instead of regenerating.
 4. **`max_duration` is a ceiling for length and a seed for everything else.** On song 1, length stayed near 120 s at 180, 300 and 720, but the audio changed each time (sound 0.53-1.26). Set it once and leave it; 360 has been enough. Why 360.04 does not change it was not investigated.
 5. **Too low a ceiling cuts the song off.** At 60 it stopped at -10 dB, where natural endings fade to about -60 dB. Measure the delivered length; never use this control to fit a song to picture. The second output of `YuE2GenerateMusic` is the true length.
-6. **Six steps saves about a quarter of a render, not most of it.** 36.8 s vs 47.9 s. The gain is large only when tokens are cached, which fits rule 2: audition with 6 steps, re-render the keeper at 32. The 6-step result differed from 32 by less than a different sound seed does (0.07-0.08 vs 0.26-0.30). Whether anyone can hear it awaits the blind pick.
+6. **Six steps saves about a quarter of a render, not most of it.** 36.8 s vs 47.9 s. The gain is large only when tokens are cached, which fits rule 2: audition with 6 steps, re-render the keeper at 32. The 6-step result differed from 32 by less than a different sound seed does (0.07-0.08 vs 0.26-0.30). In the owner's blind listen 32 steps won neither pair: a tie on the folk song, and 6 steps preferred on the synth song. Two pairs, one listener, and each pair's difference sits below the sound-seed floor, so this is a working default rather than a proven rule.
 7. **The cover route carries the reference's melody strongly.** Different style and lyrics, reference's notation: notes 0.107 from the reference, against 0.407 without it, closer than the reference's own notation at a new seed (0.143). n=1, using our own song as the reference. "It's not a copy" is not a safe assumption, so use only material we own or have cleared.
 
 ## What to try next
 
-- **Blind verdict on 6 vs 32 steps** (open).
 - **Listening pass:** do lyrics come through, does the vocal hold, is any take usable under a clip? The trust question for gravitone, and unmeasured.
 - **Fit to the trailer pipeline:** render a cue for a real clip, compare to the same brief from ElevenLabs on the same review page. Cost is near zero per take, so generate takes rather than iterating on one.
 - **Stems:** nothing here separates voice from instruments. Instrumental via style or empty lyrics is untried.
