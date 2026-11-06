@@ -15720,7 +15720,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/idea.ts:129 The ideas door requires an anchor per artboard but lets kind \"free\" pass with an empty ref. That admits the unanchored candidate the slate technique names as its failure: it converges on the model's modal answer.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "multi-speaker-speech-production",

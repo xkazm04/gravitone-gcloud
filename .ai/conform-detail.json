@@ -16873,6 +16873,74 @@
         }
       ],
       "registryProposal": "approval-reads-forward assumes the shared asset belongs to one production with a known beat list. A library-level style contract reused across projects has no beats at lock time; the technique should say whether a fixed battery of downstream trial problems satisfies the forward read, or whether the forward check must be repeated per project when the locked style is adopted."
+    },
+    "b2bfa3eb-ee06-4262-8eaa-d19d9cc16dc2/review-iteration-loops": {
+      "context": "sound-generation-engine",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:19:34.951Z",
+      "techniques": [
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "deviation",
+          "evidence": "lib/sound/editPlan.ts:55 Two of the three structures hold: kept sections are referenced by range (editPlan.ts:57), and the seam strength is declared as condition_strength (editPlan.ts:64). Grep for anchor/first section/global in lib/sound found no anchor-region identification."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "lib/sound/generate.ts:19 A revision is a section edit against the stored song, with kept sections by reference, not a fresh compose. Its parentId is the source take."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "lib/sound/generate.ts:194 Every section's fate must be declared, so kept is explicit. A typo'd mode and an all-keep edit are refused by name before anything is spent (generate.ts:199)."
+        },
+        {
+          "technique": "gate-record-outlives-the-media",
+          "verdict": "deviation",
+          "evidence": "lib/sound/takes.ts:476 The verdict travels in git without the bytes (ledger.ts:17), which is the right split. But the only delete is for fixtures: rejected takes' bytes are never destroyed with the decision, and no ledger row keeps a piece of evidence."
+        }
+      ],
+      "registryProposal": "partial-regeneration-seams assumes one region anchors the global frame. Section-edit APIs that carry style per chunk (positive_styles on every chunk, no global block) spread the frame across sections, and the technique could say how to find the anchor in that case.",
+      "withdrawn": {
+        "worker": "bffd584b-808b-4044-82ad-d3ff69c6faec",
+        "state": "deviation",
+        "at": "2026-11-06T03:20:47.749265+00:00",
+        "reason": "reviewer (sonnet): editPlan.ts:55 does show every section getting its mode through modeOf with no anchor check, but I found nothing in lib/sound showing that a receipt or review treats a regenerated first section as a local edit, and the claim that no ledger row keeps evidence was not confirmed either."
+      }
+    },
+    "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/review-iteration-loops": {
+      "context": "scout-engine-creative",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:19:34.951Z",
+      "worker": "bffd584b-808b-4044-82ad-d3ff69c6faec",
+      "techniques": [
+        {
+          "technique": "anchored-variation-slate",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/idea.ts:129 watch and gap anchors must quote an outside line. free needs nothing, and a gap is a need, not a reference artifact."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/piece.ts:8 A piece re-makes only the clips the operator rejected and keeps the approved ones."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/ideaRepeat.ts:6 A thrown character cannot be redrawn by a later brief, so out stays out, and the refusal names the earlier one."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/direction.ts:101 A direction standing on a cell that was not kept is refused before it is written, naming the entry and why."
+        }
+      ]
     }
   }
 }
