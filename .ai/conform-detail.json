@@ -16247,6 +16247,21 @@
           "evidence": "packages/producers/src/media-facts/run.ts:46 One pass builds out, failed and an undecodable tally while writing batches, so the explicit loop is correct."
         }
       ]
+    },
+    "eb8e4f16-65ba-445e-9299-2e00abf63aaa/eval-harness": {
+      "context": "board-scout-spend-sources",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:03:59.034Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "eaf5e8ab-0772-4d12-b720-af765f02e401",
+        "state": "not-applicable",
+        "at": "2026-11-06T00:04:57.222386+00:00",
+        "reason": "reviewer (sonnet): The anchor, scout.ts:260, is an error string ('nothing rendered to judge') that does not itself show that no eval harness is present. The context's adapters also build an oracle pass/fail summary and gate verdicts and scores into packets (scout.ts:281, scoutPlan.ts:269). The 'judge means a human rul"
+      }
     }
   }
 }
