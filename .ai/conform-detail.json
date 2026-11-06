@@ -16305,6 +16305,32 @@
         }
       ],
       "registryProposal": "The matched-level rule for comparative listens between takes is only mentioned under 'When not to use this' in loudness-and-peak-acceptance. A variant audition that crowns a winner relies on it, so it should be stated as its own decision rule: when crowning between sibling takes, match their levels first."
+    },
+    "333e954c-3d86-400f-a6c8-48777a94ccba/hitl-approval": {
+      "context": "foundry-extract-engine",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:36:59.835Z",
+      "worker": "60ad902e-6efc-482d-938a-5454957b9df8",
+      "techniques": [
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/store.ts:406 Binding the verdict to a version is optional, so whether it happens depends on the caller. The Board adapter passes a token and the CLI does not."
+        },
+        {
+          "technique": "handoff-is-a-declared-door",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/store.ts:327 The decider class is taken from the record payload when present, overriding the door's `by`. This is a claim of who decided carried in the requester's own message."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/store.ts:394 Commit runs under the run lock against the recorded manifest status. Dry runs and runs still in progress are refused."
+        }
+      ]
     }
   }
 }

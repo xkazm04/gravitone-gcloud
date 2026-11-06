@@ -6799,7 +6799,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/store.ts:406 commitExtractRun checks that the preview token still matches only when a caller supplies one, and the CLI commit (pipeline/foundry/extract.mts:128) calls it with inline verdicts and no token, so styles can be written to the catalogue with no binding to any preview the operator saw.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "guest-execution-bounding",
