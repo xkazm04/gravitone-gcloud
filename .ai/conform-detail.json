@@ -17529,6 +17529,83 @@
           "evidence": "lib/foundry/scout/direction.ts:45 A direction fixes genre, style and tone before any panel is written, and a storyboard is a trial of at most one genre. The contract is still free words, not a full lighting/camera ensemble."
         }
       ]
+    },
+    "4b7d0aa8-b99a-48cb-86b7-986a7c99f9d5/data-access": {
+      "context": "asset-library-store",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:24:30.857Z",
+      "worker": "c627ec15-1775-4a34-86aa-e8a5f1085ad7",
+      "techniques": [
+        {
+          "technique": "row-mapping",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/library/query.ts:85 The serialized face column is parsed through a zod door and throws on failure, which is correct. The enum columns are unchecked casts."
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/library/clauses.ts:53 A dynamic identifier reaches SQL only through the COLUMN_GROUPS allowlist. Values are bound. FTS escaping lives in one place (core.ts ftsExpression). ORDER BY comes from a closed map."
+        },
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/library/query.ts:115 Page rows and chips (chipsFor) are fetched as membership sets keyed into a Map. There is no per-row query."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/library/write.ts:86 Row writes compose inside the caller's Tx. upsertItems and actOnItem own one transaction each, and the mark commits with its event."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/library/schema.ts:8 A stored read model with a named recomputation (lib/library/project.ts). Digest-keyed upsert makes a re-projection idempotent."
+        },
+        {
+          "technique": "repo-testing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/library.test.ts:24 Tested on a real SQLite kernel."
+        }
+      ]
+    },
+    "b94edc9f-f1d4-4be0-99cb-4483648000eb/data-access": {
+      "context": "ledger-v1-sources",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:24:30.857Z",
+      "worker": "c627ec15-1775-4a34-86aa-e8a5f1085ad7",
+      "techniques": [
+        {
+          "technique": "layering-rules",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sources/spend.ts:119 spend_rows, spend_reservations and spend_counters are kernel tables (packages/kernel/src/spend/v1Port.ts) queried directly from lib/ledger. publish.ts:134 queries `parts` the same way."
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/spend.ts:120 Values are bound parameters. No interpolation of external text."
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/articles.ts:141 The corrupt-row policy is visible degradation: an undecodable v1 record is skipped with its id and the door's reason, carried on Projection.skipped."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/spend.ts:118 Rows, holds and counters are read in one read transaction, so the tally checks a consistent snapshot."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/spend.ts:29 The adapters are pure projections that never write back to a v1 store. spend deliberately bypasses a meter read that would prune and write."
+        }
+      ]
     }
   }
 }

@@ -2828,7 +2828,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/library/query.ts:85 rowOf casts the closed-vocabulary text columns (kind, state, origin, source) straight to the domain enum, and library_items.state carries no CHECK, so an unknown variant passes through as if it were a member. This is the silent third option row-mapping bans.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "mcp-tools",
@@ -10599,7 +10603,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sources/spend.ts:119 An app-level adapter in lib/ writes raw SQL against tables that packages/kernel/src/spend owns (publish.ts does the same against `parts`). The query language leaks outside the kernel's store modules, and 'who reads spend_rows' is no longer a directory listing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "agent-runtime-assembly",
