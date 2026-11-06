@@ -17402,6 +17402,56 @@
       "evaluatedTs": "2026-11-06T04:51:21.119Z",
       "worker": "eb04dc4a-45f5-496c-8eff-cc7f5d75739c",
       "techniques": []
+    },
+    "eb037310-8dca-433e-81ce-73ebf2d545fa/accessibility": {
+      "context": "ui-marks-and-text",
+      "subject": "accessibility",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T05:02:51.370Z",
+      "worker": "bed909b6-af6e-4270-afcd-b94bfdf95cd2",
+      "techniques": [
+        {
+          "technique": "live-region-architecture",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/errorline/ErrorLine.tsx:12 The primitive owns a region instead of asking the one provider. The region arrives with its text, and repeats have no re-announce mechanism. Many pairings voice an inserted alert, which softens rule 1 but not one-writer or repeats."
+        },
+        {
+          "technique": "a11y-verification",
+          "verdict": "deviation",
+          "evidence": "packages/ui/test/components/signal.test.ts:140 The test asserts that the live-region attribute is present, which is the proxy the gate-sees-target trap names. No voiced sequence or repeat is asserted."
+        },
+        {
+          "technique": "hidden-but-mounted-inertness",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/hint/Hint.module.css:11 The closed tip is `visibility:hidden` (line 8) and flips with opacity from the same data-open condition, so both channels close together. It is still referenced by aria-describedby, which is allowed. This resolves the earlier stale verdict."
+        },
+        {
+          "technique": "name-and-description-wiring",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/hint/Hint.tsx:37 The icon-only '?' glyph has a REQUIRED name prop, and its tip is wired as the description. Glyph SVGs are aria-hidden throughout Glyph.tsx."
+        },
+        {
+          "technique": "primitive-level-a11y",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/ghost/Ghost.tsx:14 A meaning drawn only as an outline is put back on the element as a spoken label. The outlines are aria-hidden, and the label is required by the prop type."
+        },
+        {
+          "technique": "preference-respect",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/chip/Chip.module.css:13 The ghost mark is held to 3:1 non-text contrast, mixed from the text colour so tones keep the floor. The hover state is handled the same way on line 20."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/hint/Hint.module.css:6 A closed Hint hides its mounted tooltip through opacity and pointer events while leaving the tooltip exposed to accessibility-tree navigation.",
+          "evaluatedAt": "2026-10-19",
+          "worker": null,
+          "reason": "replaced by bed909b6-af6e-4270-afcd-b94bfdf95cd2"
+        }
+      ]
     }
   }
 }

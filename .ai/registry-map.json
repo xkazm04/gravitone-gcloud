@@ -20112,14 +20112,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/ui/src/components/hint/Hint.module.css:6 A closed Hint hides its mounted tooltip through opacity and pointer events while leaving the tooltip exposed to accessibility-tree navigation.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:5e30485ee0c7c123",
-          "evaluatedRevision": 7,
+          "evidence": "packages/ui/src/components/errorline/ErrorLine.tsx:12 A live ErrorLine owns its own role=alert region, mounted together with its message (callers do `{refusal !== null && <ErrorLine message={refusal} live />}`). It bypasses the shell announcer (lib/announcer.tsx rules 1-2), and an identical refusal on retry makes no DOM change, so it is not voiced a second time.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:d839f62eac6007da",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "5414e8ac-5105-43f0-a153-088e12501c9d",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
