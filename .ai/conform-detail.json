@@ -15479,14 +15479,14 @@
       "subject": "mcp-tools",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T04:44:00.759Z",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T22:10:50.562Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "5c6c4bd9-3b19-4911-b0e8-767d330ee201",
+        "worker": "4bed5dad-7047-4dfb-9a6e-b39b57585757",
         "state": "not-applicable",
-        "at": "2026-11-04T04:44:22.150754+00:00",
-        "reason": "reviewer (sonnet): The anchor (partOptions.ts:97) is a comment about `isFreeReceipt` in @gt/domain/mcp, so it is incidental and does not show that no tools are registered or served. The 'only MCP contact' claim is also contradicted: packages/ui/src/components/audio/steer.ts:4 names the agent door `app/_server/mcp/tool"
+        "at": "2026-11-06T22:11:42.679838+00:00",
+        "reason": "reviewer (sonnet): The anchor partOptions.ts:97 is a comment on a constant that the MCP door reads. It shows a link to the MCP code and says nothing about whether the precondition is absent, so it is an incidental anchor for a not-applicable. The packages/ui/src search also matched components/audio/steer.ts, whose com"
       }
     },
     "4f4a61e0-df30-4a71-b7e9-b0f355e4e848/voice-io": {
