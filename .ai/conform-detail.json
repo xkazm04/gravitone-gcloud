@@ -17341,6 +17341,67 @@
           "evidence": "lib/import/commit.ts:46 The transaction body is synchronous and local. Staleness is caught by re-staging the preview token, not by a verify list checked at apply."
         }
       ]
+    },
+    "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3/agent-runtime-assembly": {
+      "context": "agent-cli-and-turns",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:51:21.119Z",
+      "worker": "eb04dc4a-45f5-496c-8eff-cc7f5d75739c",
+      "techniques": [
+        {
+          "technique": "nested-run-is-not-its-parent",
+          "verdict": "deviation",
+          "evidence": "lib/claudeCli.ts:161 The one spawn door strips a 4-name billing list, not the runtime's ambient identifier family (no CLAUDECODE/CLAUDE_CODE_* scrub anywhere in lib/); the agent seam adds --no-session-persistence, the reasoning door (cliArgs) does not."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "conformant",
+          "evidence": "lib/turns/ledger.ts:54 A turn whose owner died gets a first-class `orphaned` status, not `failed`, and the sweep never re-dispatches it."
+        },
+        {
+          "technique": "bounded-projection-of-external-work",
+          "verdict": "conformant",
+          "evidence": "lib/turns/runner.ts:257 The record is minted before dispatch and is the truth, and an engine answer that lands after a cancel is discarded rather than written. No model polling exists, so this is only a partial fit."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "conformant",
+          "evidence": "lib/agent/agentArgs.ts:36 The fence lives in argv built by host code. --restricted ignores the settings files the agent could write in its workspace, so the agent cannot rewrite its own policy."
+        },
+        {
+          "technique": "substituted-result-attribution",
+          "verdict": "conformant",
+          "evidence": "lib/turns/runner.ts:275 When a kind's dispatch falls back to another rung, the record names the prompt that actually reached the serving engine, beside its receipt."
+        },
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "not-applicable",
+          "evidence": "lib/turns/runner.ts:164 Turn kinds are registered by in-repo modules only. There is no operator- or service-tier code loading."
+        },
+        {
+          "technique": "observer-and-mutator-surfaces",
+          "verdict": "not-applicable",
+          "evidence": "lib/turns/runner.ts:108 settle refuses by throwing, but every spec is team-owned, which is the technique's own 'when not to use'."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:286 Each turn is a single headless shot. No mid-unit input channel exists."
+        }
+      ]
+    },
+    "3ceb5985-07f1-4504-830b-fca7669a4404/agent-runtime-assembly": {
+      "context": "review-and-runs-history",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T04:51:21.119Z",
+      "worker": "eb04dc4a-45f5-496c-8eff-cc7f5d75739c",
+      "techniques": []
     }
   }
 }

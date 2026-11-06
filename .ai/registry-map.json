@@ -1505,8 +1505,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "deviation",
+          "priorNotApplicable": 2,
+          "evidence": "lib/claudeCli.ts:388 Every nested `claude` run (reasoning door and agent seam alike) inherits this process's whole environment minus four metered-auth variables, so the parent runtime's ambient CLAUDE* identifiers reach the child unscrubbed, and the reasoning door also runs without --safe-mode, so user-wide hooks fire from it as if it were the parent session.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "module-design",
@@ -14735,8 +14739,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "packages/ui/src/components/runs/thread.ts:1 These are pure presentation models and components for Board review and the runs day line. A search of packages/ui/src/components/review and runs for conversation, registerTool, plugin, subagent and checkpoint found nothing; the only 'agent' hit is an icon name in RunsDayline.tsx:310. No agent loop, hook chain, extension loading or durable conversation state exists here.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "hitl-approval",
