@@ -16481,6 +16481,16 @@
           "evidence": "lib/ledger/v1/sources/scout.ts:126 Sources are pure projectors returning events; the one sync door writes them (keyed, idempotent)."
         }
       ]
+    },
+    "033fc22c-e0c0-47fb-8668-5dbc8cb2ada6/hitl-approval": {
+      "context": "trailer-structure-rules",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:12:37.195Z",
+      "worker": "06554e9d-4663-4920-833b-528bf15f325c",
+      "techniques": []
     }
   }
 }

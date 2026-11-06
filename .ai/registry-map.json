@@ -19183,7 +19183,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/trailer/rules/spine.ts:1 These are pure dramaturgy checkers that emit findings and say they are never a gate. A search of lib/script/trailer/rules found no consent, hitl or awaiting construct and no pending or decision state. Their 'unmeasured' verdict leaves judgement to a human (cards.ts:54) but holds no approval mechanism.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "test-harness",
