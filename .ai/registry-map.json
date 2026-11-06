@@ -9878,14 +9878,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "app/_landing/cosmos/engine/nav.ts:196 Cosmos implements an internal multi-level navigation and back stack within a browser tab without integrating into the browser's history or address, causing the browser Back gesture to leave the application rather than traverse sections.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:62a9a7fc993ea8b5",
-          "evaluatedRevision": 6,
+          "evidence": "app/_landing/cosmos/Cosmos.tsx:51 The engine and registry chunks are loaded with a bare .then and no catch, retry or stated failure, so a chunk that fails to load (offline, post-deploy version skew) leaves the static sky skeleton with no account of why and no cure, which lazy-section-loading forbids.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:b55c5172e3d9fac0",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "e5f8b2b5-3ac7-422b-9950-c7431117591a",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "voice-io",

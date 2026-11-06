@@ -16662,6 +16662,41 @@
           "evidence": "lib/decision/v1/sources/scout.ts:601 Apply is all effects and its order is the job (crash-safe by order), so it is a plain sequence with the order stated."
         }
       ]
+    },
+    "1f3a062b-ff35-4626-bdb1-d590720c665b/app-shell": {
+      "context": "landing-cosmos-shell",
+      "subject": "app-shell",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:18:42.396Z",
+      "worker": "0940969d-0156-4981-8d50-bf1e4e49df77",
+      "techniques": [
+        {
+          "technique": "lazy-section-loading",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/Cosmos.tsx:51 The frame-eager split is right: the skeleton paints first and the engine is its own chunk. But a failed import is an unhandled rejection with no retry and no failure in the viewport."
+        },
+        {
+          "technique": "navigation-model",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/nav.ts:64 The earlier stale deviation is fixed. Each level now pushes a same-URL browser entry carrying pcDepth, and popstate steps the stack (onPopState), so browser Back moves between levels instead of leaving the page. navTo (line 194) is the one navigate door, and the comment above the history code says the location is kept in state."
+        },
+        {
+          "technique": "shell-hosted-services",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/index.ts:154 Every listener, timer, frame, observer and the raster worker goes through one Life owner, and destroy() reaps all of them. Each resident has a named reaper."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/_landing/cosmos/engine/nav.ts:196 Cosmos implements an internal multi-level navigation and back stack within a browser tab without integrating into the browser's history or address, causing the browser Back gesture to leave the application rather than traverse sections.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by 0940969d-0156-4981-8d50-bf1e4e49df77"
+        }
+      ]
     }
   }
 }
