@@ -77,9 +77,12 @@ or pick).
    thumbnail hides a second head or a human in the background. Fix with `--only <id>,<its end> --again`.
 3. `plan` writes `clips-plan.json`: every concept's opening, then every blast, then the rest in turn, so a short day
    still compares like with like. **STOP** for approval unless the operator has already set the start.
-4. `day-run.ps1` starts `clips-h3.py` once the card is free and retries failures once (`-Register` for a set hour). Test
-   with `-DryRun`. Log: `music-clip/clips/day-run.log`. Then look at frames at 0.1, 2.6 and 5.0 s of every clip. An end
-   frame only in one place at one distance; a location change gets none.
+4. `day-run.ps1` starts `clips-h3.py` once the card is free, holds the display on and retries failures once (`-Register`
+   for a set hour). Test with `-DryRun`. Log: `music-clip/clips/day-run.log`. Then look at frames at 0.1, 2.6 and 5.0 s of
+   every clip. An end frame only in one place at one distance; a location change gets none.
+
+   `clips-h3.py` reads the plan once. To change a live run: rewrite the plan, stop the run's own process tree, collect the
+   clip still in ComfyUI through `/history/<prompt id>`, and register the run again. ComfyUI finishes that clip regardless.
 
 ## Stage 4 - the cut
 

@@ -10,6 +10,11 @@
 # ComfyUI's own /free, a thing clips.mts does too, and only then is the ceiling read. If something outside ComfyUI still holds
 # the memory after -HoldMinutes, the clips start anyway: H3 has run sharing the card (10-23 min a clip, Stay Here v5).
 #
+# The run holds the display and the system on for as long as it lives. Display-off Modern Standby (Kernel-Power 506) is
+# not system sleep and "never sleep" does not stop it: on 2026-11-06 it began 66 s into this run and H3 clips took 1022-1115 s
+# instead of about 480 s. The request belongs to this process's thread, changes no Windows setting and ends with it.
+# A closed lid still sleeps.
+#
 # Never stops another process. ComfyUI is started only when it is unreachable and no ComfyUI process exists.
 # Output: <folder>\music-clip\clips\day-run.log, and clips\ledger.jsonl from clips-h3.py.
 param(
@@ -91,6 +96,11 @@ if ($DryRun) {
   Say "dry run end"
   exit 0
 }
+
+Add-Type -Namespace TrailerRun -Name Power -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint esFlags);'
+# ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED
+if ([TrailerRun.Power]::SetThreadExecutionState([uint32]2147483651) -eq 0) { Say "WARNING: the keep-awake request was refused; standby makes clips about 2x slower" }
+else { Say "holding the display and system on until this run ends" }
 
 $idleSince = $null
 $heldSince = $null
