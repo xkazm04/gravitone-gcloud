@@ -4567,7 +4567,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/spend.ts:138 The packet meta adds every unpriced request as $0 and shows no unpriced share, so a pile of unpriced asks reads as a measured small total, which contradicts totalWords' own rule that unpriced is never $0.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "review-iteration-loops",
@@ -7911,7 +7915,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/router.ts:300 Recognize calls are billed per token and their price-table rows are deliberately unpriced, so every recognize call books $0 into the imaging ceiling (only the unpriced counter moves) instead of a declared conservative default; budget.ts:375 also reserves 0 when no per-image rate is declared at all.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "voice-io",
@@ -10553,7 +10561,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sources/spend.ts:42 The ledger receives spend.book rows only if they are still inside the v1 window when it syncs, so per-call rows (with their attribution) can be missing, and the tally checks v1's own booked/evicted identity rather than counting rows the ledger missed.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "concurrency-guards",
@@ -17370,7 +17382,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/spend/meter.ts:249 A call that reached a vendor but carries no positive figure bumps the `unpriced` counter and writes no row, so its model, outcome and attribution axes are lost; on the file store, rows are also pruned out of the state once the rolling window passes, so the meter is a ceiling window rather than a durable ledger.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "mcp-tools",

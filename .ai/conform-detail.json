@@ -16941,6 +16941,160 @@
           "evidence": "lib/foundry/scout/direction.ts:101 A direction standing on a cell that was not kept is refused before it is written, naming the entry and why."
         }
       ]
+    },
+    "95a47cdb-181e-41d7-8dcd-2e2277a63d3e/cost-metering": {
+      "context": "spend-meter-and-requests",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:31:48.673Z",
+      "worker": "835e3ffc-ddde-4713-a8be-36d0eef5c162",
+      "techniques": [
+        {
+          "technique": "budget-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/spend/meter.ts:343 The ceiling check and the hold run in one transaction, counting spent + held, so concurrent calls cannot all pass against the same total; 0 means spend nothing and an unset ceiling gets a bounded default (classes.ts header)."
+        },
+        {
+          "technique": "reversible-debit-and-settle",
+          "verdict": "conformant",
+          "evidence": "lib/spend/meter.ts:400 Reserve returns a hold; settle replaces it, and if a row cannot be read the hold is still released; release of an already-settled hold does nothing."
+        },
+        {
+          "technique": "usage-ledgers",
+          "verdict": "deviation",
+          "evidence": "lib/spend/meter.ts:249 Failed calls are booked as rows (line 256), but an unpriced call becomes a counter instead of a row, and prune drops window-expired rows, so per-call history is not kept on transactional terms."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "conformant",
+          "evidence": "lib/spend/classes.ts:62 Each class declares its axes and an attribution axis; byAxis reports the spend that lacks it as `unattributed`."
+        },
+        {
+          "technique": "spend-observability",
+          "verdict": "conformant",
+          "evidence": "lib/spend/meter.ts:446 stats() returns the window boundary together with the total, plus refusal, failed, unpriced, evicted and late-write counters."
+        },
+        {
+          "technique": "preflight-estimation",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend-requests/schema.ts:100 A spend request carries its estimate as a structure (lines, range, unpriced count, figure source), not a bare scalar."
+        }
+      ]
+    },
+    "f666874c-d32c-49e2-a1bc-70363f3ca4f2/cost-metering": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:31:48.673Z",
+      "worker": "835e3ffc-ddde-4713-a8be-36d0eef5c162",
+      "techniques": [
+        {
+          "technique": "budget-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:312 A single router chokepoint reserves before any vendor is called, and takes a fresh reserve for each later candidate after a billed failure (line 391)."
+        },
+        {
+          "technique": "reversible-debit-and-settle",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:328 The hold is released in `finally` on every exit that did not settle it."
+        },
+        {
+          "technique": "usage-ledgers",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:465 A billed failure is settled as an `outcome: failed` row with an estimate basis and a price ref."
+        },
+        {
+          "technique": "price-tables",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/router.ts:300 Rows are versioned (priceRef provider/model@checked) and vendor figures win, but a known-unpriced class costs zero in the ledger rather than a declared default."
+        },
+        {
+          "technique": "preflight-estimation",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/pricing.ts:374 The estimate is the dearest declared per-image rate, with that assumption written into its note, and it hard-gates the call."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/budget.ts:233 Rows carry capability, the provider that actually served, the model, and the price row used."
+        },
+        {
+          "technique": "spend-observability",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/budget.ts:320 budgetStats returns the window boundary with the total and the counters; budgetForecast projects affordability and when spend can resume."
+        }
+      ]
+    },
+    "b94edc9f-f1d4-4be0-99cb-4483648000eb/cost-metering": {
+      "context": "ledger-v1-sources",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:31:48.673Z",
+      "worker": "835e3ffc-ddde-4713-a8be-36d0eef5c162",
+      "techniques": [
+        {
+          "technique": "usage-ledgers",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sources/spend.ts:42 The cumulative counters fact keeps amounts reconcilable, but missed rows are a gap the ledger does not count."
+        },
+        {
+          "technique": "spend-observability",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/spend.ts:203 Any class whose rows and evictions do not add up is named as `unaccounted`."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/spend.ts:188 Class, unit, outcome, basis and every axis are carried onto the event."
+        },
+        {
+          "technique": "price-tables",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/spend.ts:176 The projected cost keeps whether it is the vendor's figure (real) or a table estimate (model)."
+        },
+        {
+          "technique": "budget-enforcement",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/spend.ts:29 These sources are read-only projections and start no metered spend."
+        }
+      ]
+    },
+    "eb8e4f16-65ba-445e-9299-2e00abf63aaa/cost-metering": {
+      "context": "board-scout-spend-sources",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:31:48.673Z",
+      "worker": "835e3ffc-ddde-4713-a8be-36d0eef5c162",
+      "techniques": [
+        {
+          "technique": "spend-observability",
+          "verdict": "deviation",
+          "evidence": "lib/decision/v1/sources/spend.ts:138 The aggregate total drops the unpriced or default-priced share instead of marking it."
+        },
+        {
+          "technique": "budget-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/spend.ts:164 An agent's keep is refused, so only the operator can authorize spend."
+        },
+        {
+          "technique": "preflight-estimation",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/spend.ts:186 The receipt is re-priced live, and its worst case becomes the launch's stop point; a price that changes between preview and commit refuses the commit."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/spendWords.ts:77 Each request names the stable actor kind and id that asked."
+        }
+      ]
     }
   }
 }
