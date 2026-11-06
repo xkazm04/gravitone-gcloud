@@ -16388,6 +16388,99 @@
           "reason": "replaced by c8999e89-0df2-4aae-8c5b-7529a7ae88e9"
         }
       ]
+    },
+    "969da751-61f5-40a0-a5fc-dfca59f20636/audit-logging": {
+      "context": "kernel-python-protocol",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:59:07.465Z",
+      "worker": "daf157ed-34a5-41e8-b25f-557cd20d2f8c",
+      "techniques": [
+        {
+          "technique": "absent-not-null-in-hashed-records",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/py/verify_events.py:173 Absent-not-null holds (line 129 drops NULL columns), but an unknown covered column is not refused as a version verdict; the verdict set is intact/tampered only."
+        },
+        {
+          "technique": "tamper-evidence",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/verify_events.py:152 A chain with serialized writers (BEGIN IMMEDIATE) and an external anchor for a cut tail; the digest is unkeyed sha256, which events.ts says plainly ('tamper-evident, not tamper-proof')."
+        },
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/kernel_ledger.py:35 The Python ledger module exports append and nothing that mutates."
+        },
+        {
+          "technique": "write-chokepoint",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/kernel_ledger.py:12 One Python append shared by lease and job writers."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/kernel_ledger.py:37 A control-record inversion: the event commits with the state or the act fails, as documented."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/kernel_ledger.py:18 The ledger is the origin of the fact here, so one clock is correct and occurredAt is never written."
+        },
+        {
+          "technique": "write-path-sanitization",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/py/job.py:356 str(exception) from any worker drive goes into hashed, permanent ledger data with no size cap or scrub."
+        }
+      ],
+      "registryProposal": "absent-not-null-in-hashed-records speaks of record keys; on a relational store the unknown 'key' is an unknown column, and a verifier that selects columns by a hard-coded list (PRAGMA table_info filtered against it) is the column-shaped form of the same failure. Naming it would help."
+    },
+    "eb8e4f16-65ba-445e-9299-2e00abf63aaa/audit-logging": {
+      "context": "board-scout-spend-sources",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T00:59:07.465Z",
+      "worker": "daf157ed-34a5-41e8-b25f-557cd20d2f8c",
+      "techniques": [
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/seeds.ts:20 Identity before wording; reasons are required on reject from an allowlisted vocabulary (spend.ts:22, domain source.ts)."
+        },
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/seeds.ts:33 A different outcome is refused rather than edited in place."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/scout.ts:86 Projected facts carry occurredAt plus atSrc (recorded vs derived) apart from the ledger's own `at`."
+        },
+        {
+          "technique": "absent-not-null-in-hashed-records",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/scout.ts:84 Optional fields are omitted rather than set to null in hashed event data."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/spend.ts:43 The spend request record doubles as the at-most-once guard and is treated as a control record."
+        },
+        {
+          "technique": "audit-querying",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/scout.ts:83 Events carry a durable subject id plus runId for the Ledger's run lookup."
+        },
+        {
+          "technique": "write-chokepoint",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/scout.ts:126 Sources are pure projectors returning events; the one sync door writes them (keyed, idempotent)."
+        }
+      ]
     }
   }
 }

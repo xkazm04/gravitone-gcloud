@@ -4543,7 +4543,11 @@
           "revision": 11,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/decision/v1/sources/seeds.ts:20 Decisions are keyed on durable item ids, rejects need a reason from a capped vocabulary, the applied state is compared rather than overwritten, and the ledger projections keep both clocks and omit absent fields from hashed event data.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11
         },
         {
           "subject": "cost-metering",
@@ -8645,7 +8649,11 @@
           "revision": 11,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/py/verify_events.py:173 The verifier keeps only the optional columns it knows and silently ignores any other, so a newer events schema adding a covered column would make this reader recompute without it and report 'hash mismatch: the row's content changed after it was written' (tampered) instead of 'written by a newer version'.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11
         },
         {
           "subject": "job-coordination",
