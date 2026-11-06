@@ -16800,6 +16800,79 @@
           "evidence": "packages/kernel/test/decision.test.ts:10 real migrated SQLite, a fresh copy per test"
         }
       ]
+    },
+    "76331df3-dc8c-4421-bb81-6c2bbe2f688b/production-pipeline-phasing": {
+      "context": "frames-picture-composition",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:07:08.894Z",
+      "worker": "639308b4-5e54-4651-9c21-e2420b48bc51",
+      "techniques": [
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "conformant",
+          "evidence": "lib/frames/picture/unit.ts:77 startS is in seconds and null when the beat cannot be placed, never a guessed 0. Shot spans tile each beat's span."
+        },
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "conformant",
+          "evidence": "lib/frames/stepData.ts:31 Frames are derived from the script render, never authored (frames.ts:15). A different render marks them stale, so a change upstream invalidates the work built downstream of it."
+        },
+        {
+          "technique": "asset-vs-disposable-render",
+          "verdict": "conformant",
+          "evidence": "lib/frames/frames.ts:35 A human-touched layer is an asset. The direction pass becomes per-beat proposals whose conflicts default to KEEP (directionPlan.ts:13-14), with a revert checkpoint. isStalePlate tracks the rendered subject separately from the asked subject."
+        },
+        {
+          "technique": "worst-news-first-progress",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotReview.ts:271 The shot-list gate returns pass/violation/not-engaged/unmeasured and records how many sites it examined (0 can never pass); unknowns never become pass."
+        },
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "conformant",
+          "evidence": "lib/frames/frames.ts:93 A plate's in-flight render key is saved with the cut, so a reload re-issues under the same idempotency key and the paid result is not lost. Generating and refused are persisted plate states."
+        },
+        {
+          "technique": "approval-reads-forward",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/picture/unit.ts:89 Each picture unit owns its own plate, which conditions only that unit's clip. By the technique's decision rule, an artifact conditioning exactly one request needs no forward read."
+        }
+      ]
+    },
+    "862d474e-1da6-4513-a2c9-f7c8b54c7a29/production-pipeline-phasing": {
+      "context": "style-trials-cull",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T03:07:08.894Z",
+      "worker": "639308b4-5e54-4651-9c21-e2420b48bc51",
+      "techniques": [
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A one-way ratchet. The blocker is the server's own sentence, not a view's re-derivation, so the drawn gate is the gate the write enforces."
+        },
+        {
+          "technique": "asset-vs-disposable-render",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/ProofSheet.tsx:6 An annotated trial crosses into asset (as the technique requires). Proofs under an earlier block are marked stale and no longer sent as references, so the style is versioned and supersession is explicit."
+        },
+        {
+          "technique": "worst-news-first-progress",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/style.ts:11 A stale approval reads idle, not done. Trial columns count stale proofs apart and never show them as the face. Unpriced spend is counted, never zeroed (style.ts:58)."
+        },
+        {
+          "technique": "approval-reads-forward",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:44 Before the shared style contract can lock, it must cover a fixed battery of downstream trial problems (TrialMatrix.tsx:9). That battery is the forward list, but it is generic, not the beats of a specific project."
+        }
+      ],
+      "registryProposal": "approval-reads-forward assumes the shared asset belongs to one production with a known beat list. A library-level style contract reused across projects has no beats at lock time; the technique should say whether a fixed battery of downstream trial problems satisfies the forward read, or whether the forward check must be repeated per project when the locked style is adopted."
     }
   }
 }

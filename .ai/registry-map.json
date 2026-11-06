@@ -7704,7 +7704,11 @@
           "revision": 5,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/frames/picture/unit.ts:77 Picture units carry startS/holdS in film seconds and leave startS null when a beat cannot be placed (unplaceableBeats surfaces it), so the frames phase speaks the shared clock and shows absence on it.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-memory",
@@ -18452,7 +18456,11 @@
           "revision": 5,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A style graduates candidate → proven → locked one way only: proven by operator keeps, locked by an explicit act the server admits only when the trial-coverage gate holds, and stale approvals stop vouching. The shared style asset graduates by human act against a checked gate.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
+          "evaluatedRevision": 5
         },
         {
           "subject": "video-assembly",
