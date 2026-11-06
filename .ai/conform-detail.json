@@ -16697,6 +16697,27 @@
           "reason": "replaced by 0940969d-0156-4981-8d50-bf1e4e49df77"
         }
       ]
+    },
+    "f13ec7fd-bc87-4556-bbbe-e46b4cd046cd/retrieval": {
+      "context": "notebook-contract-validation",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:27:59.445Z",
+      "techniques": [
+        {
+          "technique": "retrieval-triggering",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/retrieval.ts:96 The decision to retrieve (TEXT_RETRIEVE rung) is made elsewhere. This line only refuses a zero-fetch notebook that does not admit no search ran. That is close to the 'a skip is not an empty result' spirit, but it does not realize the triggering decision."
+        }
+      ],
+      "withdrawn": {
+        "worker": "f0c28464-07bd-4d92-a7bd-5d0c0c3364f1",
+        "state": "not-applicable",
+        "at": "2026-11-06T02:28:26.291007+00:00",
+        "reason": "reviewer (sonnet): The context does contain retrieval-run handling (lib/notebook/retrieval.ts:92-113 refuses a zero-receipt notebook whose researchGaps[0] doesn't admit no search ran, and downgrades citations that weren't fetched), and the seat's own technique note calls this close to the 'a skip is not an empty resul"
+      }
     }
   }
 }
