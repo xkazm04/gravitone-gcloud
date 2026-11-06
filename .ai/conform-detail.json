@@ -16718,6 +16718,88 @@
         "at": "2026-11-06T02:28:26.291007+00:00",
         "reason": "reviewer (sonnet): The context does contain retrieval-run handling (lib/notebook/retrieval.ts:92-113 refuses a zero-receipt notebook whose researchGaps[0] doesn't admit no search ran, and downgrades citations that weren't fetched), and the seat's own technique note calls this close to the 'a skip is not an empty resul"
       }
+    },
+    "95a47cdb-181e-41d7-8dcd-2e2277a63d3e/data-access": {
+      "context": "spend-meter-and-requests",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:57:28.899Z",
+      "worker": "dbbcc624-93f3-424f-9f98-c52bbb67c245",
+      "techniques": [
+        {
+          "technique": "capability-declared-in-the-type",
+          "verdict": "deviation",
+          "evidence": "lib/spend/store.ts:115 optional member with an empty-state default, neither required nor a declared flag nor a refusal; consumed at lib/spend/meter.ts:475"
+        },
+        {
+          "technique": "cross-driver-invariant-parity",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/spend.v1port.test.ts:112 one behaviour suite runs against the memory reference and the kernel port; the file store runs the conformance kit in tests/golden-path/spend-ledger.probe.spec.ts"
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend-requests/store.ts:39 each row is parsed through rowSchema plus JSON doors; a corrupt row refuses instead of reading as a smaller ask"
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend-requests/store.ts:109 filter columns are code literals and the values and limit are bound"
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend-requests/store.ts:126 store operations take the caller's Tx and never open their own boundary"
+        },
+        {
+          "technique": "layering-rules",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend-requests/store.ts:89 a grep of app/, lib/, workers/ and pipeline/ found no spend_requests SQL outside this module"
+        },
+        {
+          "technique": "repo-testing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/spend-requests.test.ts:13 real SQLite, migrated by the production migrations, a copied template per test"
+        }
+      ]
+    },
+    "92742f06-a6dc-418e-8c50-42c050345bc7/data-access": {
+      "context": "decision-and-gates",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T02:57:28.899Z",
+      "worker": "dbbcc624-93f3-424f-9f98-c52bbb67c245",
+      "techniques": [
+        {
+          "technique": "layering-rules",
+          "verdict": "deviation",
+          "evidence": "lib/library/feeds/kernel.ts:31 query language over a table this context owns, issued outside its module"
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:65 the commit writes its outbox intent in the caller's transaction along with the decision; drivers take a Tx"
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/parts/driver.ts:65 the collection read degrades visibly: refused records come back with their error, never silently dropped"
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/apply.ts:159 conditional claims use bound values only"
+        },
+        {
+          "technique": "repo-testing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/decision.test.ts:10 real migrated SQLite, a fresh copy per test"
+        }
+      ]
     }
   }
 }

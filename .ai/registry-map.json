@@ -5299,7 +5299,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/library/feeds/kernel.ts:31 part_records (owned by packages/kernel/src/parts/schema.ts) is read by a raw json_tree scan in a lib/ Library feed instead of through a named parts operation, so the parts module is not the only reader of its table.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "mcp-tools",
@@ -17488,7 +17492,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/spend/store.ts:115 SpendStore has three implementations (memory, file, sqlite) and lastSeen is an optional capability whose absence callers turn into an empty state (meter.ts:475 `store.lastSeen?.().rows ?? []`, sqliteStore.ts:58 `?? emptyState`), which is the 'default that returns empty' the technique bans: a missing capability becomes wrong data instead of a refusal.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         }
       ],
       "governance": "governed"
