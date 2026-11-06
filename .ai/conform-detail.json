@@ -16564,6 +16564,62 @@
           "evidence": "lib/musicVideoExport.ts:469 The render core (called from render.ts:256) measures and gain-sets toward the YouTube target of -14 LUFS / -1 dBTP. But a failed measure falls back to gain 0 and the master ships unmeasured, and the measured number is not recorded on the job with its basis."
         }
       ]
+    },
+    "df7b69e1-8e03-4636-a7bc-91e117f32faa/hitl-approval": {
+      "context": "produce-compose-receipt",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-06",
+      "evaluatedTs": "2026-11-06T01:54:28.358Z",
+      "techniques": [
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:69 Each line discloses the bound provider, model, units, time and cost; re-route also goes through a receipt (RerouteList.tsx:8)."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:144 When what would run is no longer what was read, the receipt is diffed against the old one and the diff is shown before a second yes."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:161 The confirm token pins the receipt version and the ceiling, so the approval is tied to exact parameters."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/LaneHold.tsx:2 A lane hold is a durable pending state that only the operator's acknowledgement lifts; interrupted jobs never auto-resume (line 7)."
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:81 Every figure names where it came from, so the approver can tell a measured price from a declared one."
+        },
+        {
+          "technique": "fail-loud-classification-default",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:98 Absent and invalid are kept apart: an empty ceiling means none (produce.ts:185); a present but invalid one blocks the confirm with its own error."
+        },
+        {
+          "technique": "cosmetic-vs-enforced-threshold-invariant",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:201 Judged by analogy: this is a spend threshold, not an ageing queue. The 'may stop at ceiling' mark uses the shared domain predicate on the worst-case band top, so it shows no later than the kernel's stop, and at the read ceiling it shows the server's verdict (Receipt.tsx:97)."
+        },
+        {
+          "technique": "unattended-mode",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:5 Each launch is confirmed by hand. No standing auto-approval grant exists here (searched auto|unattended|grant: only 'never auto-resume')."
+        }
+      ],
+      "withdrawn": {
+        "worker": "b289baf3-e18e-46bb-a268-2e3e0028539e",
+        "state": "conformant",
+        "at": "2026-11-06T01:54:54.712800+00:00",
+        "reason": "reviewer (sonnet): Nothing in the context's files shows that the confirm token pins the receipt version. produce.ts:161 is only a comment that the token binds the ceiling, and a search of the produce directory found no token or version logic, so the \"only its confirm spends\" and \"pins receipt version\" claims could not"
+      }
     }
   }
 }
