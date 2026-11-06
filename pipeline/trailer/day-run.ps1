@@ -15,6 +15,11 @@
 # instead of about 480 s. The request belongs to this process's thread, changes no Windows setting and ends with it.
 # A closed lid still sleeps.
 #
+# The batch holds the card's lease through a sidecar (pipeline/gpu/hold.py): clips-h3.py submits one clip at a time, so a
+# queue of 0 cannot tell another tenant whether this run is between clips or done. The sidecar starts once the gate above
+# has passed and is told to stop after the last pass. clips-h3.py reads no lease, so a sidecar that fails costs a log line
+# and nothing else. Its own output: clips\day-run-hold.log.
+#
 # Never stops another process. ComfyUI is started only when it is unreachable and no ComfyUI process exists.
 # Output: <folder>\music-clip\clips\day-run.log, and clips\ledger.jsonl from clips-h3.py.
 param(
@@ -135,6 +140,55 @@ while ($true) {
   $idleSince = $null
 }
 
+$holdLog = Join-Path $clipsDir "day-run-hold.log"
+$holdStop = Join-Path $clipsDir "day-run-hold.stop"
+$hold = $null
+
+function HoldWords {
+  try { return (Get-Content -LiteralPath $holdLog -Tail 1 -ErrorAction Stop) } catch { return "no output" }
+}
+
+# Everything here is advisory to the clips: it logs through Say and returns, whatever happens. Up to 15 s, then on regardless.
+function StartHold {
+  try {
+    Remove-Item -LiteralPath $holdStop -Force -ErrorAction SilentlyContinue
+    $py = (Resolve-Path (Join-Path $PSScriptRoot "..\gpu\hold.py") -ErrorAction Stop).Path
+    $tenant = "trailer-day-run/" + (Split-Path $Folder -Leaf)
+    # Start-Process joins an argument array with bare spaces, so the quoting is written out. -I: as the clips are run below.
+    $a = "-I -u `"$py`" --tenant `"$tenant`" --engine comfy --while-pid $PID --wait 900 --stop-file `"$holdStop`""
+    $script:hold = Start-Process -FilePath "python" -ArgumentList $a -WindowStyle Hidden -RedirectStandardOutput $holdLog -RedirectStandardError "$holdLog.err" -PassThru -ErrorAction Stop
+    $null = $script:hold.Handle  # .ExitCode reads empty later unless the handle was taken while it ran
+    $until = (Get-Date).AddSeconds(15)
+    while ((Get-Date) -lt $until) {
+      if ($script:hold.HasExited) {
+        Say ("gpu lease not held, sidecar exit {0}: {1}; clips start anyway" -f $script:hold.ExitCode, (HoldWords))
+        $script:hold = $null
+        return
+      }
+      if ((HoldWords) -match "^hold: holding") { Say (HoldWords); return }
+      Start-Sleep -Seconds 1
+    }
+    Say ("gpu lease not held yet after 15 s, sidecar keeps trying: {0}; clips start anyway" -f (HoldWords))
+  } catch {
+    Say "gpu lease sidecar did not start: $_; clips start anyway"
+    $script:hold = $null
+  }
+}
+
+# A stop file, not Stop-Process: that is TerminateProcess, which releases nothing. One that ignores the file ends with this process.
+function StopHold {
+  if (-not $script:hold) { return }
+  try {
+    if ($script:hold.HasExited) { Say ("gpu lease sidecar ended before the batch, exit {0}: {1}" -f $script:hold.ExitCode, (HoldWords)); return }
+    Set-Content -LiteralPath $holdStop -Value "stop" -Encoding ASCII -ErrorAction Stop
+    if ($script:hold.WaitForExit(15000)) { Say ("gpu lease sidecar exit {0}: {1}" -f $script:hold.ExitCode, (HoldWords)) }
+    else { Say "gpu lease sidecar still running after 15 s; it ends with this process" }
+    Remove-Item -LiteralPath $holdStop -Force -ErrorAction SilentlyContinue
+  } catch { Say "gpu lease sidecar stop failed: $_; it ends with this process" }
+}
+
+StartHold
+
 # clips-h3.py skips clips already on disk, so a second pass retries only what failed.
 $env:PYTHONIOENCODING = "utf-8"
 foreach ($pass in 1, 2) {
@@ -144,4 +198,5 @@ foreach ($pass in 1, 2) {
   Say "clips pass $pass end, exit $code"
   if ($code -eq 0) { break }
 }
+StopHold
 Say "day run end"
