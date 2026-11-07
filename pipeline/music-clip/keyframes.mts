@@ -61,6 +61,7 @@ function apiKey(): string {
 const key = apiKey();
 const H = { authorization: `Bearer ${key}`, accept: "application/json", "content-type": "application/json" };
 const hide = (s: string) => s.split(key).join("[redacted]").slice(0, 400);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- a vendor's JSON, read field by field below
 type J = Record<string, any>;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

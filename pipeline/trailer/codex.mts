@@ -18,7 +18,7 @@ export function codexImage(dir: string, name: string, prompt: string, refs: stri
     let done = false;
     // shell: the npm shim is a .cmd on Windows, and spawn refuses a .cmd without one
     const p = spawn("codex", args, { shell: true, stdio: ["pipe", log, log], windowsHide: true });
-    p.stdin.end(full);
+    if (p.stdin !== null) p.stdin.end(full);
     const finish = (code: number | null) => {
       if (done) return;
       done = true;

@@ -35,7 +35,7 @@ export const LIBRARY_SOURCES = ["real", "fixture", "derived"] as const;
 export type LibrarySource = (typeof LIBRARY_SOURCES)[number];
 
 /** Which mill or door an item came through. */
-export const LIBRARY_ORIGINS = ["forge", "extract", "dojo", "strips", "suno", "elevenlabs", "studio", "registry", "import", "agent", "scout", "mesh"] as const;
+export const LIBRARY_ORIGINS = ["forge", "extract", "dojo", "strips", "suno", "elevenlabs", "studio", "registry", "import", "agent", "scout", "mesh", "cover"] as const;
 export type LibraryOrigin = (typeof LIBRARY_ORIGINS)[number];
 
 /** Why an item cannot lead: its media is gone, or it is there and does not decode

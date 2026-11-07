@@ -68,6 +68,9 @@ export const PRODUCERS = [
   // A genre's piece (spark scout-vision S2): its best kept trial's rejected clips re-made on LTX and the clips cut into
   // one video with ffmpeg on this box, one job per piece (lib/producers/scoutPiece.ts).
   "scout-piece",
+  // A cover (spark track-mirror-studio): a song's section transcribed and rendered as five YuE2 takes on this
+  // box's ComfyUI, one job per cover (lib/producers/cover.ts).
+  "cover",
   // A kept character's reference sheet (spark scout-vision S3): one neutral 1:1 Flux 2 still on this box's ComfyUI, her
   // kept portrait admitted late as the reference, one job per sheet (lib/producers/scoutSheet.ts).
   "scout-sheet",
