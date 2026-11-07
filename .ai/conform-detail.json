@@ -17458,35 +17458,36 @@
       "subject": "cinematic-language",
       "bundle": "media-generation",
       "state": "unknown",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T05:12:19.933Z",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T01:34:14.670Z",
       "techniques": [
         {
           "technique": "camera-position-semantics",
-          "verdict": "conformant",
-          "evidence": "lib/frames/shotTypes.ts:247 Size comes from the role (setup EWS/MS, rung WS/MCU, peak EWS/MS/ECU). The angle is deliberately never seeded. Diagonal placement exists in the vocabulary (line 131), but the placement chooser in shots.ts (outside this context) never emits it on its own."
+          "verdict": "deviation",
+          "evidence": "lib/frames/shotTypes.ts:128 The size ladder (EWS→ECU, line 105), the LA/eye/HA angle and the three-value SubjectPlacement (line 131) all exist. But the seeded placement only ever chooses between crosshair and thirds, even on action wides, where the decision rule says to name the diagonal."
         },
         {
           "technique": "scene-grammar-progression",
           "verdict": "conformant",
-          "evidence": "lib/frames/shotTypes.ts:122 Screen-direction words are typed on each shot, and the two-step size rule (lines 231-235) stops stutter cuts before generation."
+          "evidence": "lib/frames/shotTypes.ts:232 The 'change enough between shots' rule is applied when sizes are derived. ScreenDirection (line 122) adds screen-left and screen-right axis vocabulary, and SIZE_LADDER escalates size by trailer role."
         },
         {
           "technique": "movement-motivation",
           "verdict": "conformant",
-          "evidence": "lib/motion/direction.ts:109 An explicit camera refusal in the i2v prompt, backed by a code filter that drops camera moves. This prevents aimless drift; the editor owns any camera motion."
+          "evidence": "lib/motion/direction.ts:105 The locked-off camera is named on purpose in every motion line, never left to drift. The code filter also drops camera moves (line 109), and the ad shot motion field is limited to one primary motion (lib/ads/types.ts:138)."
         },
         {
           "technique": "performance-direction",
           "verdict": "conformant",
-          "evidence": "lib/motion/direction.ts:105 Every motion line names what holds still, which avoids the silent-hold failure. Moves are tied to named elements in the frame, at most three of them."
+          "evidence": "lib/motion/direction.ts:104 Motion is tied to named in-frame elements, each with its own verb, at most three, plus an explicit holds_still list. That matches anchoring beats to named things and stating what does not move."
         }
       ],
+      "registryProposal": "lib/ads/validate.ts:547 refuses any negation in an ad motion line ('state stillness positively', citing motion-line-composition). movement-motivation recommends 'static locked-off shot, no camera movement' and says explicit refusal is a directive that works, and performance-direction says to state what the performer does not do. The two subjects give opposite advice on negation in motion prose and should be reconciled.",
       "withdrawn": {
-        "worker": "3ef64bd8-aa5e-438c-afed-616332ee6969",
-        "state": "conformant",
-        "at": "2026-11-06T05:13:13.977555+00:00",
-        "reason": "reviewer (sonnet): The conformant verdict rests on lib/frames/shotTypes.ts, which is not in the score-and-ads context. Only lib/frames/shots.ts imports it, and nothing in the context's files does, so the claim is about the frames context. The lib/motion/direction.ts anchors are in the context, but the verdict depends "
+        "worker": "7dbeafff-c22a-4ef2-bef2-e144a5930ba2",
+        "state": "deviation",
+        "at": "2026-11-07T01:35:15.025166+00:00",
+        "reason": "reviewer (sonnet): The claim is about placementFor in lib/frames/shots.ts, which is not in this context's files. The code also says on purpose that diagonal is an art director's or beat layer's choice, not a hold-time default (shotTypes.ts:125-130). Only picture.ts imports from lib/frames, and only for Frame and Pictu"
       }
     },
     "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/cinematic-language": {
@@ -17779,6 +17780,32 @@
           "evidence": "lib/studioArchiveRead.ts:128 Rows are data-only JSON, so no type instantiation is possible."
         }
       ]
+    },
+    "ce5ef2e0-d944-4b79-a500-32f8a081923f/cinematic-language": {
+      "context": "scout-producers",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T01:34:14.670Z",
+      "worker": "7dbeafff-c22a-4ef2-bef2-e144a5930ba2",
+      "techniques": [
+        {
+          "technique": "movement-motivation",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutStoryboardActs.ts:191 The still prompt doubles as the motion line, so the camera and motion are left unset. By contrast, the scene act's motion comes from clipRequestOf, which appends 'Camera:' and 'Light:' clauses (lib/foundry/scout/scene.ts:326, outside this context)."
+        }
+      ]
+    },
+    "1eb57510-dcfa-4549-97ed-56f3f97519ec/cinematic-language": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T01:34:14.670Z",
+      "worker": "7dbeafff-c22a-4ef2-bef2-e144a5930ba2",
+      "techniques": []
     }
   }
 }

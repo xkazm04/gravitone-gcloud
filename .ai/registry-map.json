@@ -8176,7 +8176,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/imaging/video/types.ts:44 These are vendor transport adapters that pass the caller's prompt or motion line through verbatim (Leonardo's prompt_enhance is off, lib/imaging/video/leonardo.ts:17). A case-insensitive search of lib/imaging/providers, lib/imaging/studio and lib/imaging/video found no lighting, shadow, close-up, push-in or eyeline vocabulary, so no cinematic decision is made here.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "voice-io",
@@ -16244,7 +16248,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/scoutStoryboardActs.ts:191 A genre trial's LTX clip is rendered with the panel's Flux still prompt as its motion line (line 36 says so). The clip therefore gets no movement instruction, no speed adverb and no stated hold, which is the 'aimless drift' failure where the model chooses its own motion.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "multi-speaker-speech-production",
