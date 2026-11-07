@@ -19843,8 +19843,12 @@
           "revision": 8,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "packages/ui/src/components/timestrip/strip.ts:1 These components draw the operator UI's ledger time strip, event rows, JSON and waveform, not a rendered data video. A case-insensitive search of the crumbs, header, eventrow, ledgerlink, jsonl, timestrip and wave directories for bar race, StatReel, evidence card, timing plan and data video found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "fleet-orchestration",

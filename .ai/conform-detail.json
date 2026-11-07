@@ -18238,6 +18238,16 @@
       "evaluatedTs": "2026-11-07T23:05:47.673Z",
       "worker": "11633bbc-cb4e-484e-a5de-5279c2db499b",
       "techniques": []
+    },
+    "00c6177f-43a3-4f35-8252-59c9ae8110e0/data-video-art-direction": {
+      "context": "ui-ledger-timeline",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:23:27.094Z",
+      "worker": "95fd05da-c743-4315-8569-e88dc96530de",
+      "techniques": []
     }
   }
 }
