@@ -17758,6 +17758,27 @@
           "evidence": "lib/kernelProcess.ts:36 The context only opens the process's kernel handle. Any recovery of interrupted jobs would belong to the kernel/worker contexts, not to this handle."
         }
       ]
+    },
+    "c027c39d-d8fd-4768-add8-4ecc5f206783/supply-chain": {
+      "context": "studio-local-store-and-projects",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:33:19.167Z",
+      "worker": "97b13273-1a4c-43a7-ade6-a7e55ad3b5ef",
+      "techniques": [
+        {
+          "technique": "archive-extraction-safety",
+          "verdict": "deviation",
+          "evidence": "lib/studioArchiveRead.ts:59 The bomb class is unguarded: no total-bytes, per-line or entry-count budget while streaming. lib/import/archive.ts itself says 'v1 read whatever it was handed'. Verify-before-write does hold (parse at studioArchiveImport.ts:51 before the single readwrite transaction at :92)."
+        },
+        {
+          "technique": "unsafe-deserialization-off-by-default",
+          "verdict": "conformant",
+          "evidence": "lib/studioArchiveRead.ts:128 Rows are data-only JSON, so no type instantiation is possible."
+        }
+      ]
     }
   }
 }

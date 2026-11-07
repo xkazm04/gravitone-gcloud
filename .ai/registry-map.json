@@ -17642,8 +17642,12 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "deviation",
+          "priorNotApplicable": 2,
+          "evidence": "lib/studioArchiveRead.ts:59 The browser reader inflates a user-picked .gravitone file (ImportView.tsx readFile → inspectArchive → parseArchive) with no budget on inflated bytes, line length or line count, so a small gzip bomb exhausts the tab before the server's capped reader ever sees it. The two extraction sites are not routed through one defended door.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "image-prompt-composition",
