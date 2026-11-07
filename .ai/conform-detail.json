@@ -17989,6 +17989,57 @@
         }
       ],
       "registryProposal": "gate-record-outlives-the-media assumes generation and review run on different machines. Where both run on one box and rejected media feeds later taste learning, the standard should say whether destroying it is still required or only recommended."
+    },
+    "35c4885c-477a-4fa4-8e6d-356b3af05959/status-vocabulary": {
+      "context": "audio-hunt-arrange",
+      "subject": "status-vocabulary",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:31:55.629Z",
+      "worker": "4138fb04-09b1-42dd-998c-696e3bf94726",
+      "techniques": [
+        {
+          "technique": "vocabulary-chain-integrity",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:54 The verdict is typed as a bare string, and HuntMap.tsx:132 renders the raw token as the label. TakeCard renders the stage token raw as well."
+        },
+        {
+          "technique": "number-formatting",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:184 lengthOf renders zero and absent the same way ('–'), and lengthOf/HuntRenderBar glue the unit on at the call site (`${t}s`; a raw 'seconds' value)."
+        },
+        {
+          "technique": "timestamp-display",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/HuntShelf.tsx:84 The date is a slice of a raw ISO string (a UTC date): no fixed-moment primitive, no locale and no relative/absolute hover."
+        },
+        {
+          "technique": "status-color-mapping",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/HuntMap.tsx:82 A feature-local table, keyed by the leaf-state union, holds label and tone in one entry. Below the shared-palette scale threshold this is allowed."
+        },
+        {
+          "technique": "reserved-attention-hue",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/HuntMap.tsx:86 Amber is used only for leaves that wait on the operator's manual Suno step, and the tone is derived from the row's own state."
+        },
+        {
+          "technique": "claim-rests-on-its-source",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/HuntRenderBar.tsx:24 'Settled' is split into heard and rendering rather than claiming that every settled leaf was heard."
+        },
+        {
+          "technique": "epistemic-marks",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/Arrange.module.css:26 A card whose move is not yet confirmed is drawn with a dashed provisional rim on the value, not with a status hue."
+        },
+        {
+          "technique": "untrusted-label-rendering",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/HuntMap.tsx:115 Model-drafted prompt and rationale text is rendered as escaped text nodes, and row names are capped at maxLength 80."
+        }
+      ]
     }
   }
 }

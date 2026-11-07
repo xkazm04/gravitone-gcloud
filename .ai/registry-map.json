@@ -3579,7 +3579,11 @@
           "revision": 6,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:54 A take's verdict and stage cross into the UI as bare strings and are rendered as raw tokens in a Chip (HuntMap.tsx:132 `label={take.verdict}`, with every non-'kept' value painted rose), so there is no closed union and no label table, and a new verdict shows its raw spelling.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6a9ab99285e2cac0",
+          "evaluatedRevision": 6
         },
         {
           "subject": "structured-output",
