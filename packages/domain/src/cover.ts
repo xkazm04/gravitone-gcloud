@@ -24,6 +24,24 @@ export type CoverState = (typeof COVER_STATES)[number];
 export const COVER_TAKE_STATES = ["pending", "done", "failed"] as const;
 export type CoverTakeState = (typeof COVER_TAKE_STATES)[number];
 
+/** A cover's brief: one Claude Code job that measures the song, listens to it through Gemini three times and writes
+ *  the title, the source style, the cover style and the section, then launches the cover itself. */
+export const COVER_BRIEF_STATES = ["queued", "running", "done", "failed"] as const;
+export type CoverBriefState = (typeof COVER_BRIEF_STATES)[number];
+
+export type CoverBrief = {
+  readonly state: CoverBriefState;
+  readonly jobId: string;
+  /** When the state last changed (ISO). */
+  readonly at: string;
+  /** The job's own sentence when it failed, verbatim. */
+  readonly error?: string;
+  /** Claude's one-paragraph reason for the genre and section it wrote: shown beside the style as its hypothesis. */
+  readonly why?: string;
+  /** How many of the three listens agreed on the genre Claude used. */
+  readonly agreed?: number;
+};
+
 export const COVER_TAKE_COUNT = 5;
 /** YuE2 reads a longer score than this past the 360 s ceiling docs/concepts/yue2-audio-experiments-2026-11-06.md keeps fixed. */
 export const COVER_SECTION_MAX_S = 360;
@@ -73,6 +91,7 @@ export type CoverRecord = {
   readonly exportFile?: string;
   readonly remix?: { readonly file: string; readonly mime: string; readonly name: string; readonly style: string };
   readonly jobId?: string;
+  readonly brief?: CoverBrief;
 };
 
 /** The screen's copy of a cover: the record plus the addresses its audio plays from. */

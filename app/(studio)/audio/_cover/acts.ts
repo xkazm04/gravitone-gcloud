@@ -31,6 +31,9 @@ const stylesAction = action("audio cover styles", stylesInput, async (i) => save
 export async function launchCoverAct(plan: CoverPlan, token?: string): Promise<ActionResult<CoverLaunch>> {
   return launchAction({ plan, ...(token === undefined ? {} : { token }) });
 }
+export async function briefCoverAct(_id: string, _token?: string): Promise<ActionResult<CoverLaunch>> {
+  return { ok: false, error: { error: "not built yet", code: "unavailable" } };
+}
 export async function pickCoverAct(id: string, seed: number): Promise<ActionResult<{ readonly winnerUrl: string }>> {
   return pickAction({ id, seed });
 }

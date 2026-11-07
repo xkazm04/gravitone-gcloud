@@ -17,9 +17,16 @@ export type CoverActs = {
   readonly launch: (plan: CoverPlan, token?: string) => Promise<ActionResult<CoverLaunch>>;
   /** Picks the winner and makes its mp3. */
   readonly pick: (id: string, seed: number) => Promise<ActionResult<{ readonly winnerUrl: string }>>;
+  /** The brief: with no token answers its receipt (three Gemini listens priced, the Claude turn on the seat);
+   *  with the receipt's token queues `job:cover-brief:<id>`, which launches the cover when it is done. */
+  readonly brief: (id: string, token?: string) => Promise<ActionResult<CoverLaunch>>;
   /** The back-filled style prompts. */
   readonly saveStyles: (id: string, styles: { readonly sourceStyle?: string; readonly remixStyle?: string }) => Promise<ActionResult<void>>;
 };
+
+/** How often the desk re-reads its view while a brief or a cover job is queued or running: the owner asked for
+ *  once a minute, which is coarse beside a 10 s render and fine beside a queue measured in hours. */
+export const COVER_POLL_MS = 60_000;
 
 export type CoverLayout = "steps" | "bench" | "chain";
 export const COVER_LAYOUTS: readonly CoverLayout[] = ["steps", "bench", "chain"];

@@ -177,6 +177,8 @@ export function useFixture(state: FixtureState): FixtureDesk {
         change(plan.id, (r) => ({ ...r, state: "queued", section: { startS: plan.startS, endS: plan.endS }, style: plan.style, lyrics: plan.lyrics, ...(plan.sourceStyle === undefined ? {} : { sourceStyle: plan.sourceStyle }), takes: takesFor("queued"), jobId: `job:cover:${plan.id}` }));
         return ok({ kind: "launched", jobId: `job:cover:${plan.id}` });
       },
+      // WP0 stand-in; WP-B makes the fixture walk queued -> running -> done and launch the cover.
+      brief: async () => ok({ kind: "launched", jobId: "job:cover-brief:fixture" }),
       pick: async (id, seed) => {
         change(id, (r) => ({ ...r, state: "picked", winnerSeed: seed, exportFile: "winner.mp3" }));
         return ok({ winnerUrl: sounds?.takes[1] ?? "" });
