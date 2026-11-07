@@ -6757,7 +6757,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/store.ts:292 The live IO keeps only provider/model/cost/basis from the router's provenance and drops `reroutedFrom` (lib/imaging/types.ts:193; grep of lib/foundry/extract finds no reroute field), so a replica or transfer served by a fallback vendor (e.g. after an unhonoured `prefer` steer) leaves no record on the manifest of why the first choice dropped out.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "generated-output-grading",
@@ -16979,7 +16983,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/sound/batch.ts:65 A batch names a kind (music|sfx) and the desk's engine registry answers which engine may make it, returning the registry's own withheld reason verbatim when none can, so the engine choice is made at one chokepoint rather than at the surface.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "review-iteration-loops",
@@ -17542,7 +17550,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/spend/meter.ts:249 A settled call whose figure is absent books no row (only `counters.unpriced++`), so the window total that the next `spent + held + amount > ceiling` check reads treats an unpriced call as free once its hold is released, the 'unreported cost still counts against the next ceiling check' rule the technique requires.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "voice-io",
