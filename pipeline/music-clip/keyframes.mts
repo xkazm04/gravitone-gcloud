@@ -141,7 +141,7 @@ const before = await balance();
 const queue = [...todo];
 let made = 0, failed = 0, reportedTotal = 0;
 await Promise.all(Array.from({ length: Math.min(jobs, queue.length) }, async () => {
-  for (let f = queue.shift(); f; f = queue.shift()) { const r = await one(f); r.ok ? made++ : failed++; reportedTotal += r.credits ?? 0; }
+  for (let f = queue.shift(); f; f = queue.shift()) { const r = await one(f); if (r.ok) made++; else failed++; reportedTotal += r.credits ?? 0; }
 }));
 const after = await balance();
 const delta = before !== null && after !== null ? before - after : null;
