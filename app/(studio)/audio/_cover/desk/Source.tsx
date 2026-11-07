@@ -1,0 +1,182 @@
+"use client";
+
+// THE SONG: the covers made so far (each a link, `?cover=<id>`), the upload of a new one, and the facts of the
+// one in hand. An upload names its rights with no default - the declaration is the owner's, and a choice made
+// for them is not one (registry: rights-and-provenance-record). The file's peaks are drawn the moment it is
+// dropped, decoded here, and the decode is carried to the cover the upload answers.
+import { useRef, useState, type DragEvent } from "react";
+
+import { COVER_NOTE_MAX, COVER_RIGHTS, COVER_TITLE_MAX, type CoverCard, type CoverDeskView, type CoverRights } from "@gt/domain/cover";
+import { Button } from "@gt/ui/components/button/Button.tsx";
+import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
+import { Field } from "@gt/ui/components/field/Field.tsx";
+import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
+import { Seg } from "@gt/ui/components/seg/Seg.tsx";
+import { Wave } from "@gt/ui/components/wave/Wave.tsx";
+
+import type { CoverLayout } from "../contract.ts";
+import { hearFile, rekey } from "./audio.ts";
+import type { Desk } from "./useDesk.ts";
+import { clock, RIGHTS_LABEL, RIGHTS_TONE, STATE_TONE } from "./words.ts";
+import s from "./cover.module.css";
+
+export function CoverList({ desk, view, layout }: { readonly desk: Desk; readonly view: CoverDeskView; readonly layout: CoverLayout }) {
+  const here = view.current?.record.id;
+  return (
+    <nav className={s.bar} aria-label="covers">
+      <Button label="New cover" size="sm" tone="cyan" onPress={() => desk.open(undefined)} />
+      <ul className={s.covers}>
+        {view.covers.map((c) => (
+          <li key={c.record.id}>
+            <a
+              className={s.cover}
+              href={desk.hrefOf(c.record.id, layout)}
+              aria-current={c.record.id === here ? "page" : undefined}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                e.preventDefault();
+                desk.open(c.record.id);
+              }}
+            >
+              <span className={s.coverTitle}>{c.record.title}</span>
+              <Chip label={c.record.state} tone={STATE_TONE[c.record.state]} casing="lower" dot />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+type Pick = CoverRights | "undeclared";
+const RIGHTS_OPTIONS = COVER_RIGHTS.map((r) => ({ value: r, label: RIGHTS_LABEL[r] }));
+const DROP_KEY = "dropped";
+
+const titleOf = (name: string): string => name.replace(/\.[a-z0-9]{2,4}$/i, "").slice(0, COVER_TITLE_MAX);
+
+export function SourceDrop({ desk }: { readonly desk: Desk }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [peaks, setPeaks] = useState<readonly number[]>([]);
+  const [lenS, setLenS] = useState<number | null>(null);
+  const [decodeError, setDecodeError] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [rights, setRights] = useState<Pick>("undeclared");
+  const [holder, setHolder] = useState("");
+  const [note, setNote] = useState("");
+  const [over, setOver] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const seq = useRef(0);
+
+  const take = (f: File | undefined): void => {
+    if (f === undefined) return;
+    const mine = ++seq.current;
+    setFile(f);
+    setError(null);
+    setDecodeError(null);
+    setPeaks([]);
+    setLenS(null);
+    if (title === "") setTitle(titleOf(f.name));
+    void hearFile(DROP_KEY, f).then((a) => {
+      if (mine !== seq.current) return;
+      if (a.ok) {
+        setPeaks(a.value.peaks);
+        setLenS(a.value.lenS);
+      } else setDecodeError(a.error);
+    });
+  };
+  const drop = (e: DragEvent<HTMLDivElement>): void => {
+    e.preventDefault();
+    setOver(false);
+    take(e.dataTransfer.files[0]);
+  };
+
+  const ready = file !== null && title.trim() !== "" && rights !== "undeclared" && !busy;
+  const send = (): void => {
+    if (!ready) return;
+    setBusy(true);
+    setError(null);
+    desk.sender
+      .source({ file, title: title.trim(), rights, holder, note })
+      .then(
+        (a) => {
+          if (!a.ok) return setError(a.error);
+          rekey(DROP_KEY, a.id);
+          desk.open(a.id);
+        },
+        (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+      )
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <section className={s.block} aria-label="new cover">
+      <div className={s.head}>
+        <CapsHeading text="song" level={3} />
+        {file !== null && <Chip label={file.name} casing="lower" />}
+        {lenS !== null && <Chip label="length" value={clock(lenS)} />}
+      </div>
+      <div
+        className={over ? `${s.drop} ${s.dropOn}` : s.drop}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={drop}
+      >
+        {file === null ? null : (
+          <div className={s.strip}>
+            <Wave peaks={peaks} width={1000} height={86} tone="cyan" stretch />
+          </div>
+        )}
+        <div className={s.row}>
+          <label className={s.choose}>
+            <input className={s.file} type="file" accept="audio/mpeg,audio/*,.mp3" aria-label="song file" onChange={(e) => take(e.currentTarget.files?.[0])} />
+            {file === null ? "Choose mp3" : "Another file"}
+          </label>
+          {file === null && <span className={s.count}>mp3 · flac · wav</span>}
+        </div>
+        {decodeError !== null && <ErrorLine message={decodeError} live />}
+      </div>
+      <div className={s.pair}>
+        <div className={s.fields}>
+          <span className={s.label}>title</span>
+          <Field label="title" value={title} onChange={setTitle} maxLength={COVER_TITLE_MAX} />
+        </div>
+        <div className={s.fields}>
+          <span className={s.label}>holder</span>
+          <Field label="rights holder" value={holder} onChange={setHolder} maxLength={COVER_TITLE_MAX} placeholder="Tears for Fears" />
+        </div>
+      </div>
+      <div className={s.fields}>
+        <span className={s.label}>rights</span>
+        <Seg<Pick> label="rights" options={RIGHTS_OPTIONS} value={rights} onChange={setRights} />
+      </div>
+      <div className={s.fields}>
+        <span className={s.label}>note</span>
+        <Field label="rights note" value={note} onChange={setNote} maxLength={COVER_NOTE_MAX} />
+      </div>
+      <div className={s.row}>
+        <Button label={busy ? "Uploading" : "Upload"} tone="cyan" disabled={!ready} onPress={send} />
+        {rights === "undeclared" && <Chip label="rights undeclared" tone="amber" casing="lower" />}
+      </div>
+      {error !== null && <ErrorLine message={error} live />}
+    </section>
+  );
+}
+
+export function SourceFacts({ card, lenS }: { readonly card: CoverCard; readonly lenS: number }) {
+  const r = card.record;
+  return (
+    <div className={s.row}>
+      <Chip label={RIGHTS_LABEL[r.rights]} tone={RIGHTS_TONE[r.rights]} dot name={`rights ${RIGHTS_LABEL[r.rights]}`} />
+      {r.holder !== undefined && <Chip label="holder" value={r.holder} casing="lower" />}
+      <Chip label={r.source.name} casing="lower" />
+      <Chip label="length" value={clock(lenS)} />
+      <Chip label={r.state} tone={STATE_TONE[r.state]} dot casing="lower" />
+      {r.note !== undefined && <span className={s.mono}>{r.note}</span>}
+    </div>
+  );
+}

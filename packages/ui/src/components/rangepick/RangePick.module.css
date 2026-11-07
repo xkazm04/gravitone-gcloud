@@ -1,0 +1,17 @@
+/* The section pick: the wave on its ground, a veil over the song outside the span, the span ringed in bright
+   ink, two grips a finger wide (the hit area, the drawn grip inside it), a playhead in amber, the three times
+   under it in mono. Tokens only. */
+.pick{display:grid;gap:var(--sp-2);min-width:0}
+.track{position:relative;height:var(--h-wavebox);border-radius:var(--r-control);background:var(--wave-ground);border:1px solid var(--hair-2);overflow:hidden;touch-action:none;user-select:none}
+.track svg{position:absolute;inset:var(--sp-2) 0;width:100%;height:calc(100% - 2 * var(--sp-2))}
+.veil{position:absolute;top:0;bottom:0;background:var(--ink-veil);opacity:.6;pointer-events:none}
+.span{position:absolute;top:0;bottom:0;border-top:var(--stroke-mark) solid var(--ink-bright);border-bottom:var(--stroke-mark) solid var(--ink-bright);background:var(--wash);cursor:grab}
+.span:active{cursor:grabbing}
+.head{position:absolute;top:0;bottom:0;width:var(--stroke-mark);margin-left:calc(var(--stroke-mark) / -2);background:var(--amber);pointer-events:none}
+.handle{position:absolute;top:0;bottom:0;width:var(--h-chip);margin-left:calc(var(--h-chip) / -2);display:flex;justify-content:center;cursor:ew-resize;outline:none;z-index:1}
+.grip{width:var(--sp-2);height:100%;border-radius:var(--r-meter);background:var(--ink-bright);box-shadow:0 0 0 1px var(--ink)}
+.handle:focus-visible .grip{background:var(--cyan);box-shadow:0 0 0 var(--stroke-mark) var(--cyan)}
+.pick[data-disabled] .span,.pick[data-disabled] .handle{cursor:not-allowed}
+.pick[data-disabled] .grip{background:var(--muted)}
+.read{display:flex;justify-content:space-between;gap:var(--sp-3);font:500 var(--fs-micro)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.len{color:var(--ink-bright)}

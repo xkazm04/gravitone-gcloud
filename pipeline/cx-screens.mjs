@@ -129,6 +129,11 @@ export const SCREENS = {
   "audio-rubric": { url: "/audio?s=rubric" },
   "audio-batch": { url: "/audio?s=batch" },
   "audio-batch-sfx": { url: "/audio?s=batch&kind=sfx" },
+  // the cover desk (spark track-mirror-studio): its three layouts over the dev-only fixture (_cover/desk/fixture.ts),
+  // one cover per state; a store with no covers draws the upload instead
+  "audio-cover": { url: "/audio?s=cover&fixture=judging" },
+  "audio-cover-bench": { url: "/audio?s=cover&layout=bench&fixture=rendering" },
+  "audio-cover-chain": { url: "/audio?s=cover&layout=chain&fixture=remixed" },
   // Spark suno-advisor: the scripted Suno conversation, and its kit pieces.
   "audio-suno": { url: "/audio?s=studio&source=fixture&session=night-drive" },
   "kit-suno": { url: "/kit#suno" },

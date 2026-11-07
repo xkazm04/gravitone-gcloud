@@ -1360,6 +1360,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "A reference that joins at the very last step is accepted, so it never shapes the frame.",
   },
   {
+    id: "cover-plan-rerenders-booked",
+    test: "packages/producers/test/cover-define.test.ts",
+    file: "packages/producers/src/cover/define.ts",
+    find: "COVER_STEPS.filter((s) => !outputs.has(s)).map(",
+    replace: "COVER_STEPS.map(",
+    why: "A resumed cover job transcribes and renders again every take it already booked.",
+  },
+  {
+    id: "ui-rangepick-start-bound",
+    test: "packages/ui/test/components/rangepick.test.ts",
+    file: "packages/ui/src/components/rangepick/rangepick.ts",
+    find: "max: tenth(Math.max(0, span.endS - e.minS))",
+    replace: "max: tenth(span.endS)",
+    why: "The start handle reaches the end: a section shorter than the 10 s minimum, or none at all.",
+  },
+  {
     id: "cli-wing-muse-status-only",
     test: "tests/next-server/scout-wing.test.ts",
     file: "pipeline/scout.mts",
