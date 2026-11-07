@@ -155,6 +155,7 @@ One AskUserQuestion call of up to 4 questions per wave.
 
 ## Question taste
 
+- 2026-11-07 (track-mirror): on a feasibility test the operator picks the strongest route over the safer recommended one and defers the rights question until something works ("if we succeed we will resolve licence"). Offer "strongest route, local only, settle rights on success" first-class. Name the vendor model in a Suno question: "latest" drew a mid-run correction to v6.
 - 2026-10-29 (suno-advisor): for a NEW surface the operator adds "prototype 3 variants of composition" even when the
   pieces are settled - offer a staged S1 (contract + variants on scripted data, backend in parallel) as a first option.
   A conditional risk written INTO the option text ("if CI lacks numpy it goes red and you decide then") turned a later
