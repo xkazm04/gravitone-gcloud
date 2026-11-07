@@ -17649,32 +17649,33 @@
       "context": "app-root-and-dev-inspector",
       "subject": "native-shell-integration",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T23:44:36.382Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:03:15.879Z",
+      "worker": "d35f9425-c304-42ca-80ab-4d7ff4c180df",
       "techniques": [
         {
           "technique": "query-transparent-overlay",
           "verdict": "not-applicable",
-          "evidence": "app/_dev-inspector/DevInspector.tsx:206 pointerEvents:none keeps an in-document highlight out of DOM hit tests. The technique is about OS-level point queries over other applications."
-        },
-        {
-          "technique": "non-stealing-overlay",
-          "verdict": "not-applicable",
-          "evidence": "app/_dev-inspector/DevInspector.tsx:192 There's no always-on-top native window over another app's work, only an in-page HUD."
+          "evidence": "app/_dev-inspector/DevInspector.tsx:30 The inspector overlay is a React portal inside the product's own document. It never covers a foreign application."
         },
         {
           "technique": "capability-presence-contract",
           "verdict": "not-applicable",
-          "evidence": "app/_dev-inspector/DevInspector.tsx:22 The compile-out here is a dev/prod build gate, not a per-host OS capability class."
+          "evidence": "app/_dev-inspector/DevInspector.tsx:37 This is a browser feature check. There is no set of native hosts to declare it against."
+        },
+        {
+          "technique": "host-forwarded-key-contract",
+          "verdict": "not-applicable",
+          "evidence": "app/layout.tsx:34 A plain document root. No native wrapper forwards hardware keys into it."
+        },
+        {
+          "technique": "non-stealing-overlay",
+          "verdict": "not-applicable",
+          "evidence": "app/_dev-inspector/DevInspector.tsx:192 There's no always-on-top native window over another app's work, only an in-page HUD.",
+          "carriedFrom": "2026-11-06"
         }
-      ],
-      "withdrawn": {
-        "worker": "ae5fd84b-123f-42e3-a10f-c0f99857dfb6",
-        "state": "not-applicable",
-        "at": "2026-11-06T23:46:24.559561+00:00",
-        "reason": "reviewer (sonnet): app/layout.tsx mounts HarnessBridge, a dev-gated window control surface that an external harness drives, and the verdict never examined it; its anchors cover only the in-page overlay, so a not-applicable for the whole context is unconfirmed."
-      }
+      ]
     },
     "57aecc2d-d579-4f82-8772-3dc68bf0d2b5/native-shell-integration": {
       "context": "ui-keymap-layers-storage",

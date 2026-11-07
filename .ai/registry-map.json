@@ -1621,7 +1621,11 @@
           "revision": 5,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_dev-inspector/DevInspector.tsx:38 The root and the dev inspector reach host capabilities only through browser APIs such as navigator.clipboard, and searching the context files for tauri/electron/ipcRenderer/__TAURI__/contextBridge/webview found nothing, so the subject's native-process precondition does not hold.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:838495bb60a986c6",
+          "evaluatedRevision": 6
         },
         {
           "subject": "error-handling",
