@@ -32,11 +32,14 @@ export function ffprobeBin(env: Readonly<Record<string, string | undefined>> = p
   return "ffprobe";
 }
 
-function run(bin: string, args: readonly string[], what: string): Promise<Result<string>> {
+/** `exited`: the code when the binary ran and exited non-zero (it read the input and refused it). A binary that could
+ *  not be started, or was killed at the timeout, is always `unavailable`. */
+function run(bin: string, args: readonly string[], what: string, exited: "invalid" | "unavailable" = "unavailable"): Promise<Result<string>> {
   if (!canSpawnLocalBinaries()) return Promise.resolve(err("refused", `${what}: ${describePosture()}`));
   return new Promise((resolve) => {
     execFile(bin, [...args], { encoding: "utf8", timeout: TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true }, (e, stdout, stderr) => {
-      if (e !== null) return resolve(err("unavailable", `${what}: ${stderr.trim().split("\n").pop() || e.message}`));
+      const ran = e !== null && typeof e.code === "number" && !e.killed;
+      if (e !== null) return resolve(err(ran ? exited : "unavailable", `${what}: ${stderr.trim().split("\n").pop() || e.message}`));
       resolve(ok(stdout));
     });
   });
@@ -61,7 +64,7 @@ async function into(out: string, args: (tmp: string) => readonly string[], what:
 }
 
 export async function probeDurationS(abs: string): Promise<Result<number>> {
-  const r = await run(ffprobeBin(), ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", abs], "ffprobe duration");
+  const r = await run(ffprobeBin(), ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", abs], "ffprobe duration", "invalid");
   if (!r.ok) return r;
   const s = Number.parseFloat(r.value.trim());
   return Number.isFinite(s) && s > 0 ? ok(s) : err("invalid", `ffprobe read no duration from ${path.basename(abs)}: ${JSON.stringify(r.value.trim()).slice(0, 80)}`);
