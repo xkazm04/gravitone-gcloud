@@ -13243,7 +13243,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/part/part.ts:4 I searched part/ and desk/ under packages/ui/src/components for SQL, kernel imports, sqlite and prepare calls and found none. The components import only domain types and UI siblings, and their data arrives as props, so there is no data-access seam here to judge.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         }
       ],
       "governance": "governed"
@@ -14991,7 +14995,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/records/read.ts:305 listProjects builds the full projectModel for each of up to 100 listed projects. Each model costs one load of the project, one load of its parts, one jobOf per part and one ranAt per finished part. The module already batches by id in quotedSecondsMap but does not use that pattern on the list path.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "subprocess-lifecycle",

@@ -18040,6 +18040,57 @@
           "evidence": "packages/ui/src/components/audio/HuntMap.tsx:115 Model-drafted prompt and rationale text is rendered as escaped text nodes, and row names are capped at maxLength 80."
         }
       ]
+    },
+    "7d68ed0e-8d1f-44d9-a825-4a8b7f6504c0/data-access": {
+      "context": "run-records-and-slots",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:45:30.515Z",
+      "worker": "9b2c72cb-1199-4099-95b9-a0a1bcb1aad8",
+      "techniques": [
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/records/read.ts:159 Fetches one job per part inside a per-project loop on the list screen. A by-ids map read (the shape quotedSecondsMap at line 133 already uses) is missing here."
+        },
+        {
+          "technique": "layering-rules",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/_port/real.ts:109 Raw SQL against the records tables (projects, parts, runs) is issued and decoded outside the records module: in app ports, lib/parts/gates.ts and lib/import. So 'who reads or writes projects' is no longer one directory listing."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/records/write.ts:181 Each `*In(t, …)` writer composes inside the caller's transaction. The job driver books the job done and releases dependents in one transaction, and every verb's record and event commit together."
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/schema.ts:113 The column list is declared once and shared by every select. One mapper, readSlotRow, decodes through the domain schema and fails loudly on a corrupt row."
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/read.ts:64 The dynamic filter interpolates only placeholders and fixed column names. Every value is bound."
+        },
+        {
+          "technique": "repo-testing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/records.test.ts:23 Tests use a real in-memory SQLite built by the production migrations."
+        }
+      ]
+    },
+    "368829fe-5714-4cbb-af3a-2a71bbe73607/data-access": {
+      "context": "part-workspace-desk",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:45:30.515Z",
+      "worker": "9b2c72cb-1199-4099-95b9-a0a1bcb1aad8",
+      "techniques": []
     }
   }
 }
