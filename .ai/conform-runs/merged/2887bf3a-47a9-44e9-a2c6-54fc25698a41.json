@@ -1,0 +1,107 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2887bf3a-47a9-44e9-a2c6-54fc25698a41",
+ "subject": "native-shell-integration",
+ "evaluatedAt": "2026-11-07T03:11:24.529274+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "studio-shell",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/keys.ts:1 The shell is an in-document Next.js chrome whose only persistent capability is browser localStorage; a search of the shell directory, the root and package manifests for tauri/electron/capacitor/ipcRenderer/webview found no native wrapper process, so the subject's precondition (a native process holding capabilities the presentation layer cannot reach) does not hold.",
+   "techniques": [
+    {
+     "technique": "host-forwarded-key-contract",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/keys.ts:20 keys.ts registers storage keys, not hardware key codes; no wrapper forwards remote/controller keys"
+    }
+   ],
+   "absenceTerms": [
+    "tauri",
+    "ipcRenderer",
+    "webview",
+    "capacitor"
+   ]
+  },
+  {
+   "context": "studio-routes-and-redirects",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/clipboard.ts:9 Even the one host-capability call in this context (copy) goes through the browser's navigator.clipboard with a secure-context refusal, not a native bridge; searches for tauri/ipcRenderer/webview/capacitor across app/(studio) and the package manifests found nothing, so there is no native side to integrate.",
+   "techniques": [
+    {
+     "technique": "capability-presence-contract",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/clipboard.ts:11 a browser secure-context absence refusal, not a per-host native capability declaration; the technique presumes a native host set"
+    }
+   ],
+   "absenceTerms": [
+    "tauri",
+    "ipcRenderer",
+    "webview",
+    "capacitor"
+   ]
+  },
+  {
+   "context": "scout-screen",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/scout/page.tsx:6 The scout screen is a Next.js Server Component plus one client island reading server stores through a port; the search of app/(studio)/scout for tauri/ipcRenderer/webview/capacitor found no hits, and no native shell exists in the repo's manifests, so none of the subject's native-side concerns arise.",
+   "techniques": [],
+   "absenceTerms": [
+    "tauri",
+    "ipcRenderer",
+    "webview",
+    "capacitor"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-07T03:11:24.529274+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "host-forwarded-key-contract"
+   ],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T03:11:24.529274+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "capability-presence-contract"
+   ],
+   "deviations": 0,
+   "context": "studio-routes-and-redirects",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T03:11:24.529274+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "scout-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
