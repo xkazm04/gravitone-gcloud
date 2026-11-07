@@ -16268,7 +16268,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/scoutStoryboardActs.ts:126 Each of a storyboard's up-to-five Flux panels is drawn from the seat's free per-panel prompt. Kept cast identity blocks are compiled in, but no style block is: the storyboard's look exists only as a bullet the model never sees, so the five sibling frames each re-derive their own look.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "cinematic-language",

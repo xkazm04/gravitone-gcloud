@@ -18186,6 +18186,38 @@
         "at": "2026-11-07T22:17:28.877914+00:00",
         "reason": "reviewer (sonnet): The anchor at board.ts:80 (checkEditPlan) only shows operator-written plans, but decision.ts:52 and board.ts:159 carry `by: \"operator\" | \"agent\"`, so agent-written verdicts exist in this context. I could not confirm the claim that they arrive as tool calls rather than parsed model output, and the cl"
       }
+    },
+    "ce5ef2e0-d944-4b79-a500-32f8a081923f/visual-style-locking": {
+      "context": "scout-producers",
+      "subject": "visual-style-locking",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T22:53:44.683Z",
+      "worker": "244af99c-2ba7-4c78-9741-a25818415386",
+      "techniques": [
+        {
+          "technique": "style-block-restated-every-call",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutStoryboardActs.ts:126 The panel prompt goes to Flux as-is. The door (lib/foundry/scout/storyboard.ts castPanels) compiles only character identity blocks into panels. 'the look in words' is a bullet field and is not compiled per call. The still-to-clip hop does reuse the panel prompt, and the scene clip restates recipe motion, camera and light (scene.ts clipRequestOf)."
+        },
+        {
+          "technique": "approved-reference-sheet",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutStoryboardActs.ts:122 This is the identity-sheet variant. Only a character's operator-kept portrait or sheet passes castStillOf as a reference, and a refused sheet fails the panel rather than drawing it unconditioned. Reference count is bounded by CAST_MAX, which is tied to FLUX_REFS_MAX."
+        },
+        {
+          "technique": "style-onboarding-from-sample",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutSceneActs.ts:189 A found scene is read keyframe by keyframe into a schema'd recipe (palette with jobs, camera, motion, lighting). The sample never reaches a generator as a reference. The human edit happens downstream: a kept look becomes a candidate style that is adopted and edited in the atelier."
+        },
+        {
+          "technique": "motion-sampled-under-a-frame-budget",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutSceneActs.ts:148 Cut timing is measured over every frame by ffmpeg scene detection (instrument-routed), and each keyframe's timestamp is stated. But the instruction says 'Keyframe k of n' with n the picked count, not kept of available. Picks come from spreadEvenly/pickFrames with possibly irregular strides that go undeclared, and the reader is not told that removed frames are the sampler's doing."
+        }
+      ],
+      "registryProposal": "The standard has no rule for scout-style exploratory batches: a small sibling set such as a five-panel storyboard, made before any project style exists. The 'throwaway exploration' exemption and the 'styled set' trigger both partly fit. A sentence on whether a per-candidate look bullet must be compiled into each frame would settle it."
     }
   }
 }
