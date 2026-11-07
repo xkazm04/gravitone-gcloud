@@ -18144,6 +18144,48 @@
           "evidence": "app/(studio)/projects/_plan/CompositionList.tsx:111 List rows are keyed by id, drill to the plan by id, and keep the current row highlighted beside the plan, so the drill holds its context."
         }
       ]
+    },
+    "1155c1ec-f832-471a-929c-2a16f06cfbb7/structured-output": {
+      "context": "domain-run-job-steps",
+      "subject": "structured-output",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T22:13:54.306Z",
+      "worker": "ca7bbdea-8d3b-406b-a4de-40e095841620",
+      "techniques": [
+        {
+          "technique": "artifact-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/job.machine.ts:21 The job machine is a lifecycle for vendor and turn jobs (background-jobs territory). It has no extracting state, because extraction is not done here. It does follow the technique's rule of one failed state with the reason carried as data."
+        },
+        {
+          "technique": "schema-validation-and-repair",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/steps/research.ts:36 The validation door for model output is lib/notebook/validate.ts, not this context. The zod step schemas here guard stored records."
+        }
+      ]
+    },
+    "ea68a117-e84a-4b1b-bff1-c49133e939a9/structured-output": {
+      "context": "domain-decision-board-core",
+      "subject": "structured-output",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T22:13:54.306Z",
+      "techniques": [
+        {
+          "technique": "op-grammar-allowlisting",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/board.ts:80 The directive allowlist checks an edit plan the operator writes on a review, not one a model writes. It is the same shape the technique asks for, but the input is not model output."
+        }
+      ],
+      "withdrawn": {
+        "worker": "ca7bbdea-8d3b-406b-a4de-40e095841620",
+        "state": "not-applicable",
+        "at": "2026-11-07T22:17:28.877914+00:00",
+        "reason": "reviewer (sonnet): The anchor at board.ts:80 (checkEditPlan) only shows operator-written plans, but decision.ts:52 and board.ts:159 carry `by: \"operator\" | \"agent\"`, so agent-written verdicts exist in this context. I could not confirm the claim that they arrive as tool calls rather than parsed model output, and the cl"
+      }
     }
   }
 }

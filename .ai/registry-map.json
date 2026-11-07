@@ -5799,7 +5799,11 @@
           "revision": 15,
           "changedAt": "2026-09-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/research.ts:36 These files hold the run and job state machines and the persistence schemas for step records. The one record that carries model output stores a notebook that was already validated by lib/notebook/validate.ts, outside this context, so no extraction from model text happens here; a search of packages/domain/src for max_tokens, stop_reason, responseSchema, json_schema and tool_use found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:d51aec71411ccb2b",
+          "evaluatedRevision": 15
         },
         {
           "subject": "hitl-approval",
