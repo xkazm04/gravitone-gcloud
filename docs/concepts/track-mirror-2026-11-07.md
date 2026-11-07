@@ -24,24 +24,35 @@ node pipeline/track-mirror/server.mts <track>                                   
 | Tempo | 99.99 BPM, 99.9-100.3 across every window | librosa; SheetSage2 `Q:1/4=100` agrees |
 | Key | B minor, strength 0.23, runner-up F# minor | librosa; SheetSage2 `K:Bm` agrees |
 | Harmony | Bm, A, F#m, G, two bars each | chroma templates; SheetSage2 agrees |
-| Form | 8 bars of clean guitar and pad, band enters at about 19 s, flat to a fade from 76 s, 82 s in all | energy curve, Demucs stems |
+| Form | 8 bars of guitar and warm chords, beat and bass enter at about 19 s, flat to a fade from 76 s, 82 s in all | energy curve, Demucs stems |
 | Low end | 29% of power under 60 Hz, -8.1 LUFS | STFT bands, ffmpeg |
-| Voice | Female, wordless, background, bursts at 29-38, 48-58, 67-77 s | Demucs stem + 2 of 2 Gemini reads of the stem. SheetSage2 left the Vocal voice empty |
+| Top end | Dark: 95% of energy under 3.4 kHz in the intro, 4.8 kHz with the band | spectral rolloff |
+| Hats | Straight eighths: offbeat at 0.45 of the beat (0.50 straight, 0.67 swung), n=53 | Demucs drum stem |
+| Genre | Lo-fi hip-hop, on the owner's ear | The owner, against Gemini: see below |
+| Lead | Guitar with vibrato, acoustic or electric open. The burst stem at 29-38, 48-58, 67-77 s is probably this, not a voice | 2 of 3 Gemini reads, when guitar was offered. Unsettled |
 
-**What each instrument got wrong.** All three Gemini reads of the full mix described a gradual crescendo; the energy curve is a step at 19 s and then flat. On the full mix they split on the voice: male tenor, none, female. They said post-rock, while the sub-bass measures closer to electronic pop. Listening to isolated stems settled the voice. So words come from a listener, numbers from measurement, and a stem resolves what a mix cannot.
+## Round 1 failed on genre, and no instrument caught it
 
-## What moved the YuE2 takes
+Round 1 briefed post-rock, from three Gemini reads, and scored up to 86.7 "closeness" on the wrong genre. **The owner heard it at once.** What that showed:
 
-10 prompts, 3 seeds each, 3 small comparisons at n=3 per arm. "Closeness" is a weighted rank of distances, for ordering one prompt's seeds. It says a take is near in numbers, not that it sounds close.
+- **The audio listener follows its question.** Asked for a neutral ranking, three reads put slowcore or post-rock first and lo-fi hip-hop at 8-12 of 100. Asked yes or no, the same model and the same file said boom-bap yes, swing yes, three times. A vinyl crackle question split 2-1. The owner's own Gemini answer said lo-fi. So a listener's genre is a hypothesis to put to the owner, never a finding. The same applies to the "wordless female voice" round 1 reported as settled: asked with guitar on the list, it went to guitar.
+- **The figures cannot see genre.** Tempo, form, chords and bands fit post-rock and lo-fi alike. Round 1 even measured the dark top end and the sub-bass and read them as "electronic pop", with rock guitars left in every prompt.
+- **Ask the owner what they hear before writing a prompt.** It costs one question. Round 1 cost 30 renders.
 
-- **The score carries pacing.** Across 30 takes: length 81.6-83.5 s, tempo within 0.6% of 100. The band entered at 19-20 s on 19 takes, at 38 s on 7, and at 0, 9, 26 and 34 s on one each. Key was less reliable: 23 read B minor, 4 D major (the relative major, same notes), 3 F# minor.
-- **Seeds spread as much as prompts.** Within one prompt, closeness ranged by up to 16.7 points, while the prompts' best seeds sit within 75.8-86.7. A comparison at n=3 is a hint. This is the case for rendering several seeds.
-- **Name the source of a sound, not its adjective.** Band wording, even "deep sub bass, huge low end", left the sub share at 4-28%, mostly under 17%. "808 sub bass, sidechained pad, programmed kick" gave 22-42%, against the reference's 29%. It costs the low mids: 7-24% against 35%. Adding "thick wall of overdriven guitars, dense warm low mids" did not bring them back (7-18%).
-- **Stronger guidance did not help.** `cfg_scale` 1.2 gave no visible gain on palette, and one seed fell to F# minor, a 38 s entry and 66.7.
-- **A vocal line in the score hurt the form.** With the stem's phrases in the Vocal voice, all three seeds moved the band's entry to 38 s.
-- **Relabelling the score did not fix entries.** Late entries fall on the score's chorus label at 38 s, so a verse label went in at bar 9. 2 of 3 still entered at 38 s, so the hypothesis failed at this n.
-- **Not settled:** temperature 0.8, and melody-only vs full score. Both are inside seed spread.
-- **Loudness stayed under the reference,** -11.1 to -17.2 LUFS against -8.1, however hard the words asked. A mastering step would decide this rather than a prompt.
+Round 1 is in `foundry-out/track-mirror/tears/archive/round1-postrock/`. Its findings on the score, seeds and `cfg_scale` still stand, at n=3 per arm, and closeness is not comparable between rounds: round 2 added the top end to it.
+
+## What moved the YuE2 takes (round 2, lo-fi)
+
+10 prompts, 3 seeds each, the same transcribed score. "Closeness" is a weighted rank of distances, for ordering one prompt's seeds. It says a take is near in numbers, not that it sounds close.
+
+- **The score carries tempo.** All 30 takes read 100 BPM. Length 75.0-83.2 s, most at about 82. The beat entered at 19 s on 20 takes, at 38 s on 3, from the start on 3, and at 14, 18, 29 and 41 s on one each.
+- **Lo-fi words reach the palette unaided.** Median sub share 29% against the reference's 29%, without naming an 808, and median top end 4.7 kHz against 4.4. Each take still varies, 1.8 to 8.7 kHz. Low mids stay thin: median 17% against 35%.
+- **Lo-fi words pull against the harmony.** Chord match fell to a median 63%, from about 85% in round 1, as low as 7%. Key: 19 B minor, 6 F# minor, 5 D major. The score and the words are arguing.
+- **A melody-only score made it worse:** chords 18-47%.
+- **Stating B minor did not hold the key** (Y16: 2 of 3). **Lower temperature looks useful:** at 0.8 (Y20) all three seeds read B minor and entered at 19 s, with the narrowest spread, 2.4 points. n=3.
+- **Measured closest:** Y17, an electric lead with vibrato, at 90.2. The same prompt's other seeds sit at 77.9 and below, so this is a seed as much as a prompt.
+- **Seeds spread as much as prompts.** Up to 22.1 points within one prompt. Compare prompts by ear on several seeds, or not at all.
+- **Loudness stayed under the reference,** -12.5 to -17.1 LUFS against -8.1. A mastering step would decide this rather than a prompt.
 
 ## Suno v6: what is known
 
@@ -49,7 +60,7 @@ Official (Suno's v6 post and help pages): three models, `v6` ("reliable, precise
 
 Third party only: style limit 1,000 characters, tag syntax in any form, bar counts in tags, BPM or key being honoured, total length lines. Each prompt tests one of these. Suno documents no tag specification, and no source says duration can be set, so a take is compared on its opening 82 s. **`lib/sound/suno/store.ts` caps style at `STYLE_MAX = 200`, well under what v6 appears to allow. Stage 2 must check this against the composer.**
 
-Words cannot carry a melody (registry: `sonic-style-vocabulary`). If Suno gets close on palette and pacing without the tune, that is the more shippable result: a style mirror needs no cover licence.
+The prompts are written to be pasted with the Instrumental toggle off, because the structure sits in the Lyrics box, and whether v6 follows that is itself untested. Words cannot carry a melody (registry: `sonic-style-vocabulary`). If Suno gets close on palette and pacing without the tune, that is the more shippable result: a style mirror needs no cover licence.
 
 ## Stage-2 gate (proposed)
 

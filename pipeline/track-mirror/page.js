@@ -193,6 +193,7 @@ function figuresRow(take) {
     item("chords", `${Math.round(f.chord_hits * 100)}%`),
     item("timbre gap", f.timbre_gap),
     item("sub", f.bands ? `${Math.round(f.bands.sub * 100)}%` : null),
+    item("top end", f.rolloff_hz ? `${(f.rolloff_hz / 1000).toFixed(1)} kHz` : null),
     item("LUFS", f.lufs));
 }
 
@@ -340,7 +341,7 @@ function render() {
 async function reload() {
   state = await (await fetch("/api/state")).json();
   const s = state.source;
-  $("#facts").textContent = `${s.duration_s} s · ${Math.round(s.bpm)} BPM · ${s.key} · band in ${s.entry_s} s · sub ${Math.round(s.bands.sub * 100)}% · ${s.lufs} LUFS`;
+  $("#facts").textContent = [`${s.duration_s} s`, `${Math.round(s.bpm)} BPM`, s.key, s.entry_s != null ? `band in ${s.entry_s} s` : null, `sub ${Math.round(s.bands.sub * 100)}%`, `top end ${(s.rolloff_hz / 1000).toFixed(1)} kHz`, s.lufs != null ? `${s.lufs} LUFS` : null].filter(Boolean).join(" · ");
   if (!a.src) a.src = s.url;
   applyLevels();
   render();

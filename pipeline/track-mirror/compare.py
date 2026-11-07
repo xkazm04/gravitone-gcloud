@@ -2,7 +2,8 @@
 
     python -I pipeline/track-mirror/compare.py <reference.json> <take audio> <take.json> [--audio-ref <reference audio>]
 
-Every figure says how far a take sits from the reference, and none says it is good. Ears decide; these
+Every figure says how far a take sits from the reference, and none says it is good. None of them can
+see genre: the post-rock round scored 85 here on the wrong genre, and only a listen caught it. Ears decide; these
 keep the ear honest on what ears are bad at (registry: brief-conformance-listen, "properties the brief
 committed to numbers are measured"), and rank the three seeds of a prompt so the page leads with one.
 
@@ -111,8 +112,9 @@ def score(figures):
     palette = min(figures["timbre_gap"] / 12, 1)
     bands = min(figures["band_gap"] / 0.4, 1)
     notes = 1 - figures["chord_hits"]
+    dark = min(abs(figures["rolloff_hz"] - figures["reference_rolloff_hz"]) / figures["reference_rolloff_hz"], 1)
     key = min((figures["key_gap"] if figures["key_gap"] is not None else 6) / 6, 1)
-    distance = 0.15 * tempo + 0.05 * length + 0.2 * arc + 0.1 * entry + 0.2 * palette + 0.1 * bands + 0.15 * notes + 0.05 * key
+    distance = 0.1 * tempo + 0.05 * length + 0.15 * arc + 0.1 * entry + 0.15 * palette + 0.1 * bands + 0.2 * dark + 0.1 * notes + 0.05 * key
     return round(100 * (1 - distance), 1)
 
 
@@ -134,6 +136,8 @@ def compare(reference, ref_audio, take_audio):
         "lufs": lufs(take_audio),
         "reference_lufs": lufs(ref_audio),
         "bands": measured["bands"],
+        "rolloff_hz": measured["rolloff_hz"],
+        "reference_rolloff_hz": reference["rolloff_hz"],
         "duration_s": measured["duration_s"],
         "reference_duration_s": seconds,
         "bpm": measured["tempo"]["bpm"],

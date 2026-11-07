@@ -66,7 +66,7 @@ def stage_input(path):
 class Tenancy:
     """The card's lease for this process's lifetime: hold.py watches our pid, a stop file releases it."""
 
-    def __init__(self, tenant, wait_s=3600):
+    def __init__(self, tenant, wait_s=6 * 3600):
         self.stop = Path(tempfile.gettempdir()) / f"track-mirror-{uuid.uuid4().hex}.stop"
         self.tenant = tenant
         self.wait_s = wait_s
@@ -78,11 +78,14 @@ class Tenancy:
              "--while-pid", str(os.getpid()), "--wait", str(self.wait_s), "--stop-file", str(self.stop), "--vram", "8"],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=REPO,
         )
-        line = self.process.stdout.readline().strip()
-        print(line, flush=True)
-        if "holding" not in line:
-            raise RuntimeError(f"no lease: {line}")
-        return self
+        # hold.py says "waiting" while another tenant has the card, then "holding" or why it gave up.
+        while True:
+            line = self.process.stdout.readline().strip()
+            print(line, flush=True)
+            if "holding" in line:
+                return self
+            if "waiting" not in line:
+                raise RuntimeError(f"no lease: {line}")
 
     def __exit__(self, *_):
         self.stop.write_text("done")

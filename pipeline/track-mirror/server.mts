@@ -43,7 +43,7 @@ interface Figures {
   reference_entry_s?: number;
 }
 
-function takesIn(folder: string, tool: string, id: string): unknown[] {
+function takesIn(folder: string, tool: string, id: string) {
   if (!existsSync(folder)) return [];
   const audio = readdirSync(folder).filter((f) => extname(f) in AUDIO_TYPES && !f.includes("-"));
   return audio
@@ -68,10 +68,14 @@ function state(): unknown {
     key?: { key: string };
     bands?: unknown;
     energy_curve_2s_db?: number[];
+    rolloff_hz?: number;
   }>(join(track, "analysis.json"), {});
-  const anyFigures = json<Figures>(join(track, "yue2/Y01/s4201.figures.json"), {});
   const withTakes = (tool: string, file: string) =>
     json<{ prompts: { id: string }[] }>(join(track, file), { prompts: [] }).prompts.map((p) => ({ ...p, takes: takesIn(join(track, tool, p.id), tool, p.id) }));
+  const yue2 = withTakes("yue2", "yue2-prompts.json");
+  // Every take's figures carry the reference's own, so any one will do.
+  const suno = withTakes("suno", "suno-prompts.json");
+  const anyFigures = [...yue2, ...suno].flatMap((p) => p.takes).find((t) => t.figures)?.figures ?? ({} as Figures);
   return {
     source: {
       url: "/audio/source/tears.mp3",
@@ -79,13 +83,14 @@ function state(): unknown {
       bpm: analysis.tempo?.bpm,
       key: analysis.key?.key,
       bands: analysis.bands,
+      rolloff_hz: analysis.rolloff_hz,
       energy: analysis.energy_curve_2s_db,
       lufs: anyFigures.reference_lufs,
       entry_s: anyFigures.reference_entry_s,
     },
-    suno: withTakes("suno", "suno-prompts.json"),
+    suno,
     sunoDefaults: json<{ defaults?: string }>(join(track, "suno-prompts.json"), {}).defaults,
-    yue2: withTakes("yue2", "yue2-prompts.json"),
+    yue2,
     verdicts: json(join(track, "verdicts.json"), {}),
   };
 }

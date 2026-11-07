@@ -207,6 +207,7 @@ def analyze(path, stem_dir=None):
         "sections": rows,
         "energy_curve_2s_db": curve,
         "centroid_hz_mean": int(centroid.mean()),
+        "rolloff_hz": int(np.median(librosa.feature.spectral_rolloff(y=y, sr=SR, hop_length=HOP, roll_percent=0.95)[0])),
         "onsets_per_s": round(len(onsets) / duration, 2),
         "bands": band_share(stft, freqs, 0, stft.shape[1], None),
     }
