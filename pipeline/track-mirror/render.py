@@ -24,10 +24,18 @@ HERE = Path(__file__).resolve().parent
 VENV = os.environ.get("TRACK_MIRROR_PYTHON", "C:/Users/kazda/ai/tools/track-mirror-venv/Scripts/python.exe")
 
 
+def reference_wav(track):
+    """The track's first *-44k.wav in source/: tears-44k.wav for Tears, falling-44k.wav for Falling."""
+    found = sorted((track / "source").glob("*-44k.wav"))
+    if not found:
+        raise RuntimeError(f"no *-44k.wav in {track / 'source'}")
+    return found[0]
+
+
 def measure(track, audio, out):
     done = subprocess.run(
         [VENV, "-I", str(HERE / "compare.py"), str(track / "analysis.json"), str(audio), str(out),
-         "--audio-ref", str(track / "source/tears-44k.wav")],
+         "--audio-ref", str(reference_wav(track))],
         capture_output=True, text=True, cwd=HERE.parents[1],
     )
     if done.returncode != 0:

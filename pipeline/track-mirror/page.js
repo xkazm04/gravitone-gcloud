@@ -341,6 +341,9 @@ function render() {
 async function reload() {
   state = await (await fetch("/api/state")).json();
   const s = state.source;
+  const name = s.title.charAt(0).toUpperCase() + s.title.slice(1);
+  $("#title").textContent = name;
+  document.title = `Track Mirror: ${name}`;
   $("#facts").textContent = [`${s.duration_s} s`, `${Math.round(s.bpm)} BPM`, s.key, s.entry_s != null ? `band in ${s.entry_s} s` : null, `sub ${Math.round(s.bands.sub * 100)}%`, `top end ${(s.rolloff_hz / 1000).toFixed(1)} kHz`, s.lufs != null ? `${s.lufs} LUFS` : null].filter(Boolean).join(" · ");
   if (!a.src) a.src = s.url;
   applyLevels();

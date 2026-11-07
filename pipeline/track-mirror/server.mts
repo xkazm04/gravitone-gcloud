@@ -12,7 +12,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { dirname, extname, join, resolve, sep } from "node:path";
+import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -26,6 +26,13 @@ const AUDIO_TYPES: Record<string, string> = { ".mp3": "audio/mpeg", ".flac": "au
 if (!existsSync(join(track, "analysis.json"))) {
   console.error(`${track} has no analysis.json`);
   process.exit(2);
+}
+
+// The first *-44k.wav in source/ is the reference to measure against; its mp3 sits beside it, same stem.
+function sourceStem(): string {
+  const wav = readdirSync(join(track, "source")).filter((f) => f.endsWith("-44k.wav")).sort()[0];
+  if (!wav) throw new Error(`no *-44k.wav in ${join(track, "source")}`);
+  return wav.slice(0, -"-44k.wav".length);
 }
 
 function json<T>(path: string, fallback: T): T {
@@ -78,7 +85,8 @@ function state(): unknown {
   const anyFigures = [...yue2, ...suno].flatMap((p) => p.takes).find((t) => t.figures)?.figures ?? ({} as Figures);
   return {
     source: {
-      url: "/audio/source/tears.mp3",
+      title: basename(track),
+      url: `/audio/source/${sourceStem()}.mp3`,
       duration_s: analysis.duration_s,
       bpm: analysis.tempo?.bpm,
       key: analysis.key?.key,
@@ -124,7 +132,7 @@ function measure(audio: string, out: string): Promise<string | null> {
   return new Promise((done) => {
     const child = spawn(
       VENV,
-      ["-I", join(HERE, "compare.py"), join(track, "analysis.json"), audio, out, "--audio-ref", join(track, "source/tears-44k.wav")],
+      ["-I", join(HERE, "compare.py"), join(track, "analysis.json"), audio, out, "--audio-ref", join(track, "source", `${sourceStem()}-44k.wav`)],
       { stdio: ["ignore", "ignore", "pipe"] },
     );
     let err = "";
