@@ -17910,6 +17910,85 @@
           "evidence": "packages/kernel/src/spend-requests/schema.ts:84 Every receipt line carries its figure source, and usd is nullable with an unpricedReason, so an estimate cannot pass as a receipt."
         }
       ]
+    },
+    "e44cfa27-83ec-470a-adec-674d8a2a8037/review-iteration-loops": {
+      "context": "trailer-structure-engine",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:22:06.003Z",
+      "worker": "2debe46d-b3f7-4bda-b383-8859ede5a3d7",
+      "techniques": [
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "deviation",
+          "evidence": "lib/script/trailer/plan.ts:27 Refusing an invalid plan before it is applied is right (parseTrailerPlan runs before the replay), but refusal is not a first-class engine output next to the ops, and there is no explicitly-unchanged list."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/plan.ts:157 The plan is a list of per-beat patches replayed over the saved cut, so beats no op names stay untouched. It is all-or-nothing (line 106), and the saved cut does not change until the creator accepts."
+        },
+        {
+          "technique": "critique-carries-its-fix",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/notes.ts:3 Each violation becomes a typed suggested note carrying the finding's sentence, located by beat. Unmeasured rows propose nothing."
+        },
+        {
+          "technique": "note-taxonomy-focus-scope-order",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/notes.ts:15 A closed vocabulary (fix-connector, collapse-raises, name-payer, hold-asset) plus a custom hatch, each kind named for its repair. Its registers are rule repairs rather than focus/scope/order."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/plan.ts:131 The spine (kind, movement) the creator confirmed in Step 1 beats any model plan: a patch that touches it is refused and the governing decision is named."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/plan.ts:42 Patchable fields are text only (label, text, connector, raises, spends). Discrete media have no acoustic or visual seam."
+        }
+      ]
+    },
+    "ce5ef2e0-d944-4b79-a500-32f8a081923f/review-iteration-loops": {
+      "context": "scout-producers",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:22:06.003Z",
+      "worker": "2debe46d-b3f7-4bda-b383-8859ede5a3d7",
+      "techniques": [
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:197 Kept clips are held by reference (line 152, reusedOf checks the priced path), and re-made clips get a new seed (scoutPiece.ts:97). cutArgs only normalises stream shape, with no loudness match and no seam gate before the piece is booked."
+        },
+        {
+          "technique": "critique-carries-its-fix",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutReelActs.ts:291 Lint findings (each rule phrased as the requirement, with a line excerpt) go to the automated fix turn along with the current page, and the strip is linted again after the fix (line 297). A strip still failing lint fails the reel."
+        }
+      ]
+    },
+    "eb8e4f16-65ba-445e-9299-2e00abf63aaa/review-iteration-loops": {
+      "context": "board-scout-spend-sources",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:22:06.003Z",
+      "worker": "2debe46d-b3f7-4bda-b383-8859ede5a3d7",
+      "techniques": [
+        {
+          "technique": "gate-record-outlives-the-media",
+          "verdict": "deviation",
+          "evidence": "lib/decision/v1/sources/scout.ts:90 The record half is sound: rejects carry reasons (line 399), and committed is written last, so the record works as a queue of completed writes (line 91). The destruction half is missing: no prune of rejected media, no 'gone' entry, no rule that only one frame per approval is kept."
+        }
+      ],
+      "registryProposal": "gate-record-outlives-the-media assumes generation and review run on different machines. Where both run on one box and rejected media feeds later taste learning, the standard should say whether destroying it is still required or only recommended."
     }
   }
 }

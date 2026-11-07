@@ -4603,7 +4603,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/scout.ts:90 Committing a scout night writes every verdict, reason and note into night.json in the night's own media folder, last and idempotently. No rejected or unchosen media is destroyed in the same operation, and the record never says what is gone, so judgement and bytes stay stored together.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "fleet-orchestration",
@@ -16144,7 +16148,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:197 A piece reuses the kept trial clips by reference and re-makes only the rejected panels, then records the concatenated cut straight away. Nothing gates the joins between kept and re-made clips (no level match, no continuity check), so per-clip approval stands in for a verdict on the whole piece.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "video-assembly",
@@ -19184,7 +19192,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/trailer/plan.ts:27 The trailer revision engine's output schema is only {ops, summary}, with no refusals field (the sibling lib/script/editPlan.ts:42 has one). So the model cannot refuse a note with a reason, and the only refusal is the validator rejecting the whole plan, not the engine declining a note.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "sound-effect-generation",
