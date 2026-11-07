@@ -1,5 +1,6 @@
 import type { CoverDeskView, CoverLaunch, CoverPlan } from "@gt/domain/cover";
-import type { Result } from "@gt/domain/errors";
+
+import type { ActionResult } from "../../../_server/actionCore.ts";
 
 // WHAT THE COVER SURFACE IS HANDED (spark track-mirror-studio, WP0): WP2 fills it, WP3 reads it. File bytes go
 // through the routes under /audio/cover/, because an action's body is capped far below a song.
@@ -9,13 +10,15 @@ export type { CoverDeskView, CoverLaunch, CoverPlan };
 export const COVER_SOURCE_ROUTE = "/audio/cover/source";
 export const COVER_REMIX_ROUTE = "/audio/cover/remix";
 
+// An ActionResult, not a Result: AppError is a class and React drops an Error crossing the action boundary,
+// so the browser would see no refusal sentence (found by WP2; app/_server/actionCore.ts point 4).
 export type CoverActs = {
   /** With no token: answers the receipt and queues nothing. With the receipt's token: queues the job. */
-  readonly launch: (plan: CoverPlan, token?: string) => Promise<Result<CoverLaunch>>;
+  readonly launch: (plan: CoverPlan, token?: string) => Promise<ActionResult<CoverLaunch>>;
   /** Picks the winner and makes its mp3. */
-  readonly pick: (id: string, seed: number) => Promise<Result<{ readonly winnerUrl: string }>>;
+  readonly pick: (id: string, seed: number) => Promise<ActionResult<{ readonly winnerUrl: string }>>;
   /** The back-filled style prompts. */
-  readonly saveStyles: (id: string, styles: { readonly sourceStyle?: string; readonly remixStyle?: string }) => Promise<Result<void>>;
+  readonly saveStyles: (id: string, styles: { readonly sourceStyle?: string; readonly remixStyle?: string }) => Promise<ActionResult<void>>;
 };
 
 export type CoverLayout = "steps" | "bench" | "chain";
