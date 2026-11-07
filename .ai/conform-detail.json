@@ -18248,6 +18248,57 @@
       "evaluatedTs": "2026-11-07T23:23:27.094Z",
       "worker": "95fd05da-c743-4315-8569-e88dc96530de",
       "techniques": []
+    },
+    "992eaeaf-aaba-458d-8a06-475cb8281107/accessibility": {
+      "context": "ui-controls-shell",
+      "subject": "accessibility",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:46:02.362Z",
+      "worker": "3ec6ab4c-4bf0-4fe9-99ef-895a185e9e0e",
+      "techniques": [
+        {
+          "technique": "live-region-architecture",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 The earlier re-announce defect is fixed: line 24 keys the text by seq, so an identical receipt now remounts. But the toast is still an out-of-band notification with its own region, outside the shell's drain queue in lib/announcer.tsx, so the cross-region last-write-wins race remains."
+        },
+        {
+          "technique": "primitive-level-a11y",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/button/Button.tsx:67 Native button with a required label prop. Disablement is honest: the button stays focusable, reads as aria-disabled, and the press is cancelled (line 68). Toggle and Seg are native buttons with aria-pressed."
+        },
+        {
+          "technique": "name-and-description-wiring",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/field/Field.tsx:40 Field, TextArea and Select all require a label, wired as aria-label rather than placeholder. A description is attached through aria-describedby (line 30). Toggle's count is voiced through SrOnly unless an explicit name overrides it."
+        },
+        {
+          "technique": "hidden-but-mounted-inertness",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/fold/Fold.tsx:56 A Fold keeps its body mounted after the first open and hides it with the hidden attribute, which closes the visual and accessibility channels from one condition. A closed Toast fades to opacity 0 but also empties its text and unmounts its ledger chip, so nothing stays reachable."
+        },
+        {
+          "technique": "preference-respect",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/toast/Toast.module.css:9 Under reduced motion the toast drops the rise and still appears, so the feedback is replaced rather than removed. The blanket rule in app/globals.css:358 is the single signal that zeroes every transition; Fold and LevelSheet also carry local guards."
+        },
+        {
+          "technique": "keyboard-navigation-models",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/seg/Seg.tsx:1 Seg and TabRail deliberately do not claim composite roles (radiogroup, tablist), so there is no half-implemented roving pattern. Each stop is a native button or link that does something. Field restyles its focus indicator (Field.module.css:5) rather than removing it. The --focus-line contrast was not measured."
+        }
+      ],
+      "registryProposal": "keyboard-navigation-models ('Focusable implies operable': every stop that does nothing on activation is a defect) and primitive-level-a11y ('prefer focusable-but-inoperable with an explanation') conflict over a disabled control that keeps its tab stop, such as TabRail's locked tab with tabIndex=0 and no href. The standard should state that an aria-disabled stop which announces 'unavailable' is not a false affordance.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 The region is always mounted, but its text is written straight into it with no node keyed to each announcement, so the same receipt shown twice in a row (e.g. a retried act that fails the same way) makes no DOM change and is not spoken the second time; a correct shell scheduler still could not force a remount through this primitive.",
+          "evaluatedAt": "2026-10-25",
+          "worker": null,
+          "reason": "replaced by 3ec6ab4c-4bf0-4fe9-99ef-895a185e9e0e"
+        }
+      ]
     }
   }
 }

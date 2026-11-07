@@ -19609,14 +19609,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 The region is always mounted, but its text is written straight into it with no node keyed to each announcement, so the same receipt shown twice in a row (e.g. a retried act that fails the same way) makes no DOM change and is not spoken the second time; a correct shell scheduler still could not force a remount through this primitive.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:5e30485ee0c7c123",
-          "evaluatedRevision": 7,
+          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 Toast owns a second polite live region of its own, beside the two regions that app/layout.tsx already mounts through AnnouncerProvider (lib/announcer.tsx), so a toast receipt and an announcer message written in the same breath race across regions and one is dropped with no trace, which is exactly what the technique's 'components request announcements; they never own regions' rule and the announcer's own 'ONE WRITER' rule exist to prevent.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:d839f62eac6007da",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "5b95d7b7-d2b7-4625-a5bb-4585b8ab9dbc",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "settings",
