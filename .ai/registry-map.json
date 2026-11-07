@@ -7967,8 +7967,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "lib/imaging/router.ts:1 The gateway routes image-generation calls by capability across vendors, with budget holds and a reroute trail. It assembles no agent runtime (no model/tool hook chain, no contributed extensions, no conversation checkpoints), and git grep for middleware, hookChain, toolCall and tool_call over lib/imaging found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "guest-execution-bounding",
@@ -15312,8 +15316,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "lib/kernelProcess.ts:16 This is process plumbing: the kernel/store handle, disk transactions, env files, rename retry, local mode and fixture roots. Nothing here composes code around a model call or resumes a conversation, and git grep for middleware, hookChain, toolCall and tool_call over lib, packages/kernel/src and packages/domain/src found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "untrusted-extension-host",
@@ -16720,8 +16728,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "app/_server/route.ts:13 The seam wraps HTTP handlers (guard, body, handler) and resolves principals; it builds no hook chain around a model or tool call, loads no contributed code and holds no conversation state, and a case-insensitive git grep for middleware, hookChain, toolCall and tool_call over app/_server, app/api and lib found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "prompt-assembly",
@@ -19659,8 +19671,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "packages/ui/src/keymap/dispatch.ts:3 These are browser UI primitives (keyboard routing, layer stack, stored state, window sizing, poll freshness) with no agent loop, model or tool call chain, or extension host; git grep for middleware, hookChain, toolCall and tool_call over packages/ui/src found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "embedded-db",

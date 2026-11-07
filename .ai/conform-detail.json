@@ -17700,6 +17700,64 @@
           "evidence": "packages/ui/src/freshness/poll.ts:12 An in-document polling backstop. There's no native process to own a stream."
         }
       ]
+    },
+    "14864630-7306-4708-b9a9-e557f4fa10de/agent-runtime-assembly": {
+      "context": "server-seam",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:19:19.037Z",
+      "worker": "4cf9061e-e7e4-45ce-b87b-f6b4976e5e4f",
+      "techniques": [
+        {
+          "technique": "semantic-hook-placement",
+          "verdict": "not-applicable",
+          "evidence": "app/_server/route.ts:18 The order it fixes is guard, then body, then handler for an HTTP request. That is an authorization chokepoint and does not wrap a model or tool call."
+        }
+      ]
+    },
+    "f666874c-d32c-49e2-a1bc-70363f3ca4f2/agent-runtime-assembly": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:19:19.037Z",
+      "worker": "4cf9061e-e7e4-45ce-b87b-f6b4976e5e4f",
+      "techniques": [
+        {
+          "technique": "substituted-result-attribution",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:21 A vendor fallback that names the provider that actually answered is close to the technique's 'make a fallback name the producer' rule. But this is a vendor router, not a frame wrapping an agent's tool call."
+        }
+      ]
+    },
+    "57aecc2d-d579-4f82-8772-3dc68bf0d2b5/agent-runtime-assembly": {
+      "context": "ui-keymap-layers-storage",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:19:19.037Z",
+      "worker": "4cf9061e-e7e4-45ce-b87b-f6b4976e5e4f",
+      "techniques": []
+    },
+    "4eabdc72-cf31-48f3-a218-98ebd0914ff1/agent-runtime-assembly": {
+      "context": "runtime-support-and-local-mode",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:19:19.037Z",
+      "worker": "4cf9061e-e7e4-45ce-b87b-f6b4976e5e4f",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "not-applicable",
+          "evidence": "lib/kernelProcess.ts:36 The context only opens the process's kernel handle. Any recovery of interrupted jobs would belong to the kernel/worker contexts, not to this handle."
+        }
+      ]
     }
   }
 }
