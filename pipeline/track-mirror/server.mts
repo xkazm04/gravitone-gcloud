@@ -12,11 +12,12 @@
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { homedir } from "node:os";
 import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const VENV = process.env.TRACK_MIRROR_PYTHON ?? "C:/Users/kazda/ai/tools/track-mirror-venv/Scripts/python.exe";
+const VENV = process.env.TRACK_MIRROR_PYTHON ?? join(homedir(), "ai", "tools", "track-mirror-venv", "Scripts", "python.exe");
 const track = resolve(process.argv[2] ?? "");
 const port = process.argv.includes("--port") ? Number(process.argv[process.argv.indexOf("--port") + 1]) : 3199;
 const MAX_UPLOAD = 60_000_000;

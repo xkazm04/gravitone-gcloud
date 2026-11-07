@@ -34,6 +34,13 @@ export const EXEMPT: Record<string, string> = {
   // spark audio-agent-studio: writes the playhead onto a ref'd timeline every animation frame; its
   // arithmetic (fracAt) is unit-tested in packages/ui/test/components/studio-desk.test.ts.
   "app/(studio)/audio/studio/_view/usePlayhead.ts": NEEDS_DOM,
+  // spark track-mirror-studio: the cover desk. The A/B player owns two HTMLAudioElements; the cover hook decodes the
+  // song with Web Audio to draw its peaks; the desk hook reads and writes the URL through next/navigation's router.
+  // Their pure parts are tested: the span arithmetic in packages/ui/test/components/rangepick.test.ts, the acts in
+  // tests/next-server/cover-doors.test.ts.
+  "app/(studio)/audio/_cover/desk/useAB.ts": NEEDS_DOM,
+  "app/(studio)/audio/_cover/desk/useCover.ts": "decodes the uploaded song with Web Audio (AudioContext), which this DOM-less lane has none of",
+  "app/(studio)/audio/_cover/desk/useDesk.ts": "reads and writes the URL through next/navigation's useRouter and useSearchParams, which need a mounted App Router",
 };
 
 /* ───────────────────────────── derivation (pure) ──────────────────────────── */

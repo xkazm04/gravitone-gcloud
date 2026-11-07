@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import comfy  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-VENV = os.environ.get("TRACK_MIRROR_PYTHON", "C:/Users/kazda/ai/tools/track-mirror-venv/Scripts/python.exe")
+VENV = os.environ.get("TRACK_MIRROR_PYTHON") or str(Path.home() / "ai" / "tools" / "track-mirror-venv" / "Scripts" / "python.exe")
 
 
 def reference_wav(track):

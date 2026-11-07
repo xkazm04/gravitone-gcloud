@@ -18,7 +18,8 @@ import uuid
 from pathlib import Path
 
 COMFY = "http://127.0.0.1:8188"
-COMFY_ROOT = Path("C:/Users/kazda/ai/ComfyUI/ComfyUI")
+# Where this box keeps ComfyUI; COMFY_ROOT names another.
+COMFY_ROOT = Path(os.environ.get("COMFY_ROOT") or Path.home() / "ai" / "ComfyUI" / "ComfyUI")
 REPO = Path(__file__).resolve().parents[2]
 CHECKPOINT = "yue2_3b_int8_convrot.safetensors"
 ENCODER = "sheetsage2_bf16.safetensors"
