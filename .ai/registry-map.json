@@ -13414,7 +13414,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/import/project.ts:105 The import door derives the kernel project id from the foreign v1 id instead of minting a local key and storing a mapping. Duplicate detection (exists(id), line 197) only matches the same v1 id. A v1 project that was re-minted on its way through another account's archive import comes in as a second, unrelated twin.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "module-design",
@@ -17723,7 +17727,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/projects.ts:211 v1 browser projects get an opaque id minted at creation. Edits never touch it, the list reads summary rows only, and deletion counts what it will destroy before acting, so the identity, density and removal rules hold.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"

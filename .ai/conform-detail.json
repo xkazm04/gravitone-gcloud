@@ -18091,6 +18091,59 @@
       "evaluatedTs": "2026-11-07T02:45:30.515Z",
       "worker": "9b2c72cb-1199-4099-95b9-a0a1bcb1aad8",
       "techniques": []
+    },
+    "c027c39d-d8fd-4768-add8-4ecc5f206783/multi-project": {
+      "context": "studio-local-store-and-projects",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:04:35.192Z",
+      "worker": "817a03e4-8bfa-4bef-b8f5-9fefc262b185",
+      "techniques": [
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "conformant",
+          "evidence": "lib/projects.ts:211 The id is opaque and minted at admission. editProject cannot overwrite it (the comment at line 479). Archive import re-mints rows owned by another account (studioArchive.ts:67)."
+        },
+        {
+          "technique": "portfolio-drill-hierarchy",
+          "verdict": "conformant",
+          "evidence": "lib/projects.ts:279 The list reads only the project rows. Their progress rollup is kept by reportPhase, and the heavy step records are never loaded for the list."
+        },
+        {
+          "technique": "project-onboarding-lifecycle",
+          "verdict": "conformant",
+          "evidence": "lib/projects.ts:587 Removal counts what it will destroy before acting and refuses when the count cannot be read. v1 has no archived state, only delete, so this conforms to the 'removal enumerates' clause only."
+        }
+      ],
+      "registryProposal": "project-onboarding-lifecycle does not say whether a manager with no archived state, whose only exit is a delete that enumerates and is confirmed, conforms or deviates; the technique should state it."
+    },
+    "68c509d8-83c3-4e03-bf76-78e85000433b/multi-project": {
+      "context": "plan-and-import",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:04:35.192Z",
+      "worker": "817a03e4-8bfa-4bef-b8f5-9fefc262b185",
+      "techniques": [
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "deviation",
+          "evidence": "lib/import/project.ts:105 The foreign id becomes the local identity, which the 'foreign identity is quarantined' rule forbids. Inside the plan, rename and the ledger link are correctly id-keyed (Plan.tsx:119)."
+        },
+        {
+          "technique": "project-onboarding-lifecycle",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:157 After a discard the project's history is still reachable in the ledger by its id, so discard preserves rather than erases."
+        },
+        {
+          "technique": "portfolio-drill-hierarchy",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/_plan/CompositionList.tsx:111 List rows are keyed by id, drill to the plan by id, and keep the current row highlighted beside the plan, so the drill holds its context."
+        }
+      ]
     }
   }
 }
