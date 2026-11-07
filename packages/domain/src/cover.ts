@@ -10,6 +10,8 @@
 //
 // Absent-value convention: an optional field is OMITTED, never null.
 
+import type { Receipt } from "./produce.ts";
+
 /** The owner's declaration at upload. There is no default: an upload without one is refused. */
 export const COVER_RIGHTS = ["own", "licensed", "third-party-uncleared"] as const;
 export type CoverRights = (typeof COVER_RIGHTS)[number];
@@ -81,6 +83,15 @@ export type CoverCard = {
   readonly winnerUrl?: string;
   readonly remixUrl?: string;
 };
+
+/** What the owner asks a cover for: the section and the words the five takes are rendered with. */
+export type CoverPlan = { readonly id: string; readonly startS: number; readonly endS: number; readonly style: string; readonly lyrics: string; readonly sourceStyle?: string };
+
+export type CoverLaunch =
+  | { readonly kind: "receipt"; readonly receipt: Receipt }
+  | { readonly kind: "stale"; readonly fresh: Receipt }
+  | { readonly kind: "launched"; readonly jobId: string }
+  | { readonly kind: "existing"; readonly jobId: string };
 
 export type CoverDeskView = {
   readonly covers: readonly CoverCard[];
