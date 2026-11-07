@@ -13,8 +13,9 @@ const el = (tag, props = {}, ...kids) => {
 
 let state = null;
 let tab = "yue2";
-let current = null; // the take on side B
-let side = "a";
+let current = null; // the take loaded on the player
+let side = "b";
+const positions = new Map(); // where each take was left
 const a = $("#a");
 const b = $("#b");
 
@@ -23,67 +24,137 @@ const allTakes = () => [...state.yue2, ...state.suno].flatMap((p) => p.takes);
 const levelFor = (lufs) => (lufs == null ? 0.5 : Math.min(1, 10 ** ((LOUDNESS_TARGET - lufs) / 20)));
 
 function applyLevels() {
+  if (!state) return;
   a.volume = side === "a" ? levelFor(state.source.lufs) : 0;
   b.volume = side === "b" ? levelFor(current?.figures?.lufs) : 0;
 }
 
-function setSide(next) {
-  if (next === "b" && !current) return;
-  side = next;
-  $("#sideA").setAttribute("aria-pressed", String(side === "a"));
-  $("#sideB").setAttribute("aria-pressed", String(side === "b"));
-  applyLevels();
+// The take drives the clock: a Suno take can outrun the source, and then the source side is silence.
+function syncSource() {
+  const inside = a.duration ? b.currentTime < a.duration : true;
+  if (!inside || b.paused) return a.pause();
+  if (a.paused) a.play();
 }
 
-function togglePlay() {
-  if (a.paused) {
-    if (current && Math.abs(a.currentTime - b.currentTime) > 0.05) b.currentTime = a.currentTime;
-    a.play();
-    if (current) b.play();
-  } else {
-    a.pause();
-    b.pause();
-  }
-}
-
-function seek(t) {
-  const end = Math.max(a.duration || 0, b.duration || 0) || state.source.duration_s;
-  const to = Math.max(0, Math.min(t, end));
-  a.currentTime = to;
-  if (current) b.currentTime = to;
-  drawCurve();
-}
-
-function selectTake(take) {
+function load(take, at) {
+  if (current) positions.set(current.id, b.currentTime);
   current = take;
-  const at = a.currentTime;
-  const was = !a.paused;
   b.src = take.url;
-  b.addEventListener("loadedmetadata", () => {
-    b.currentTime = at;
-    if (was) b.play();
-  }, { once: true });
-  $("#sideB").disabled = false;
-  $("#now").textContent = `${take.prompt} · ${take.label}`;
-  setSide("b");
-  drawCurve();
-  document.querySelectorAll(".take").forEach((n) => n.classList.toggle("playing", n.dataset.id === take.id));
+  return new Promise((done) => {
+    b.addEventListener("loadedmetadata", () => {
+      b.currentTime = at;
+      a.currentTime = Math.min(at, a.duration || at);
+      applyLevels();
+      paint();
+      done();
+    }, { once: true });
+  });
 }
 
-function curvePath(values, seconds, total) {
-  const y = (db) => 60 - ((Math.max(-40, Math.min(-4, db)) + 40) / 36) * 56;
+async function startOn(take, at) {
+  a.pause();
+  b.pause();
+  side = "b";
+  await load(take, at);
+  return b.play();
+}
+
+function toggle(take) {
+  if (current?.id !== take.id) return startOn(take, positions.get(take.id) ?? 0);
+  return b.paused ? b.play() : b.pause();
+}
+
+function seekTo(take, seconds) {
+  if (current?.id !== take.id) return startOn(take, seconds);
+  b.currentTime = Math.max(0, seconds);
+  a.currentTime = Math.min(b.currentTime, a.duration || b.currentTime);
+  syncSource();
+  paint();
+}
+
+async function setSide(take, next) {
+  if (current?.id !== take.id) await load(take, positions.get(take.id) ?? 0);
+  side = next;
+  applyLevels();
+  paint();
+}
+
+const totalOf = (take) => Math.max(state.source.duration_s, take.figures?.duration_s ?? 0);
+
+function curvePath(values, total) {
+  const y = (db) => 40 - ((Math.max(-40, Math.min(-4, db)) + 40) / 36) * 36;
   return values.map((db, i) => `${i ? "L" : "M"}${(((i * 2) / total) * 1000).toFixed(1)} ${y(db).toFixed(1)}`).join(" ");
 }
 
-function drawCurve() {
-  const svg = $("#curve");
-  const total = Math.max(state.source.duration_s, current?.figures?.duration_s ?? 0);
-  const take = current?.figures?.energy_curve_2s_db;
-  const at = (a.currentTime / total) * 1000;
-  svg.innerHTML =
-    `<path d="${curvePath(state.source.energy, 0, total)}" fill="none" stroke="#e7b45c" stroke-width="2" vector-effect="non-scaling-stroke"/>` +
-    (take ? `<path d="${curvePath(take, 0, total)}" fill="none" stroke="#63c7c1" stroke-width="2" vector-effect="non-scaling-stroke"/>` : "") +
-    `<line x1="${at}" x2="${at}" y1="0" y2="64" stroke="#e9edf1" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+function curveMarkup(take) {
+  const total = totalOf(take);
+  const own = take.figures?.energy_curve_2s_db;
+  return `<path d="${curvePath(state.source.energy, total)}" fill="none" stroke="#e7b45c" stroke-width="2" vector-effect="non-scaling-stroke"/>` +
+    (own ? `<path d="${curvePath(own, total)}" fill="none" stroke="#63c7c1" stroke-width="2" vector-effect="non-scaling-stroke"/>` : "") +
+    `<line class="head" x1="0" x2="0" y1="0" y2="44" stroke="#e9edf1" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+}
+
+// Every control for a take, wherever it is drawn, reads from here. Rows are rebuilt on tab changes and
+// uploads while the audio keeps playing, so no control may hold its own state.
+function paint() {
+  document.querySelectorAll("[data-player]").forEach((node) => {
+    const id = node.dataset.player;
+    const live = current?.id === id;
+    const playing = live && !b.paused;
+    const at = live ? b.currentTime : positions.get(id) ?? 0;
+    const name = node.dataset.name;
+    const play = $(".play", node);
+    if (play) {
+      play.textContent = playing ? "Pause" : "Play";
+      play.setAttribute("aria-label", `${playing ? "Pause" : "Play"} ${name}`);
+    }
+    const own = $(".side-b", node);
+    if (own) {
+      own.setAttribute("aria-pressed", String(!live || side === "b"));
+      $(".side-a", node).setAttribute("aria-pressed", String(live && side === "a"));
+    }
+    const time = $(".time", node);
+    if (time) time.textContent = clock(at);
+    const head = $(".head", node);
+    if (head) {
+      const x = (at / Number(node.dataset.total)) * 1000;
+      head.setAttribute("x1", x);
+      head.setAttribute("x2", x);
+    }
+  });
+  document.querySelectorAll(".take").forEach((n) => n.classList.toggle("playing", n.dataset.id === current?.id));
+}
+
+function player(take) {
+  const name = `${take.prompt} ${take.label}`;
+  const play = el("button", { className: "play", textContent: "Play" });
+  play.onclick = () => toggle(take);
+  const source = el("button", { className: "side-a src", textContent: "Source", ariaLabel: `Hear the source during ${name}` });
+  source.onclick = () => setSide(take, "a");
+  const own = el("button", { className: "side-b", textContent: "Take", ariaLabel: `Hear ${name}` });
+  own.onclick = () => setSide(take, "b");
+  const curve = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  curve.setAttribute("class", "curve");
+  curve.setAttribute("role", "img");
+  curve.setAttribute("aria-label", `Energy over time: source and ${name}`);
+  curve.setAttribute("viewBox", "0 0 1000 44");
+  curve.setAttribute("preserveAspectRatio", "none");
+  curve.innerHTML = curveMarkup(take);
+  curve.onclick = (e) => {
+    const box = curve.getBoundingClientRect();
+    seekTo(take, ((e.clientX - box.left) / box.width) * totalOf(take));
+  };
+  const node = el("div", { className: "player" },
+    el("div", { className: "controls" },
+      play,
+      el("div", { className: "sides", role: "group", ariaLabel: "Which side plays" }, source, own),
+      el("span", { className: "time", textContent: "0:00" }),
+      el("span", { className: "takename", textContent: take.label })),
+    curve);
+  node.dataset.player = take.id;
+  node.dataset.name = name;
+  node.dataset.total = String(totalOf(take));
+  return node;
 }
 
 function copyButton(text, name) {
@@ -129,7 +200,6 @@ function takeRow(take) {
   const verdict = state.verdicts[take.id] ?? {};
   const row = el("div", { className: "take" });
   row.dataset.id = take.id;
-  if (current?.id === take.id) row.classList.add("playing");
   const reveal = el("div", {});
   const showFigures = () => {
     reveal.replaceChildren();
@@ -167,16 +237,7 @@ function takeRow(take) {
     }));
   const note = el("textarea", { placeholder: "Note", value: verdict.note ?? "", ariaLabel: `Note on ${take.id}` });
   note.onchange = () => saveVerdict(take, { note: note.value });
-  const listen = el("button", { textContent: current?.id === take.id ? "Selected" : "Listen" });
-  listen.onclick = () => {
-    selectTake(take);
-    document.querySelectorAll(".take button.listen").forEach((n) => (n.textContent = "Listen"));
-    listen.textContent = "Selected";
-  };
-  listen.classList.add("listen");
-  row.append(
-    el("div", {}, el("div", { className: "takename", textContent: take.label }), listen),
-    el("div", {}, el("div", { className: "sheet" }, ...AXES.map(axis), overall), note, reveal));
+  row.append(player(take), el("div", {}, el("div", { className: "sheet" }, ...AXES.map(axis), overall), note, reveal));
   showFigures();
   return row;
 }
@@ -243,10 +304,14 @@ function board() {
   const table = el("table", {},
     el("thead", {}, el("tr", {}, ...["Take", "Tool", ...AXES.map(([, l]) => l), "Overall", "Closeness", "Note"].map((t) => el("th", { textContent: t })))),
     el("tbody", {}, ...rows.sort((x, y) => sumScore(y.v) - sumScore(x.v)).map(({ take, v }) => {
-      const open = el("button", { textContent: take.id });
-      open.onclick = () => selectTake(take);
+      const play = el("button", { className: "play", textContent: "Play" });
+      play.onclick = () => toggle(take);
+      const cell = el("td", { className: "boardplay" }, play, ` ${take.id}`);
+      cell.dataset.player = take.id;
+      cell.dataset.name = take.id;
+      cell.dataset.total = String(totalOf(take));
       return el("tr", {},
-        el("td", {}, open), el("td", { textContent: take.tool }),
+        cell, el("td", { textContent: take.tool }),
         ...AXES.map(([k]) => el("td", { className: "num", textContent: v[k] ?? "–" })),
         el("td", { className: passes(v) ? "pass" : "", textContent: v.overall }),
         el("td", { className: "num", textContent: take.figures?.closeness ?? "–" }),
@@ -259,13 +324,17 @@ function board() {
 
 function render() {
   const main = $("#main");
-  if (tab === "board") return main.replaceChildren(board());
+  if (tab === "board") {
+    main.replaceChildren(board());
+    return paint();
+  }
   const prompts = state[tab];
   const open = new Set([...main.querySelectorAll("details[open]")].map((d) => d.closest("article")?.querySelector(".pid")?.textContent));
   main.replaceChildren(...prompts.map((p) => promptCard(p, tab)));
   main.querySelectorAll("article").forEach((card) => {
     if (open.has(card.querySelector(".pid").textContent)) card.querySelectorAll("details").forEach((d) => (d.open = true));
   });
+  paint();
 }
 
 async function reload() {
@@ -274,24 +343,20 @@ async function reload() {
   $("#facts").textContent = `${s.duration_s} s · ${Math.round(s.bpm)} BPM · ${s.key} · band in ${s.entry_s} s · sub ${Math.round(s.bands.sub * 100)}% · ${s.lufs} LUFS`;
   if (!a.src) a.src = s.url;
   applyLevels();
-  drawCurve();
   render();
 }
 
-$("#sideA").onclick = () => setSide("a");
-$("#sideB").onclick = () => setSide("b");
-$("#play").onclick = togglePlay;
-a.onplay = () => ($("#play").textContent = "Pause");
-a.onpause = () => ($("#play").textContent = "Play");
-a.ontimeupdate = () => {
-  $("#time").textContent = clock(a.currentTime);
-  drawCurve();
-  if (current && !b.paused && Math.abs(a.currentTime - b.currentTime) > 0.12) b.currentTime = a.currentTime;
-};
-$("#curve").onclick = (e) => {
-  const box = e.currentTarget.getBoundingClientRect();
-  const total = Math.max(state.source.duration_s, current?.figures?.duration_s ?? 0);
-  seek(((e.clientX - box.left) / box.width) * total);
+b.onplay = () => { syncSource(); paint(); };
+b.onpause = () => { a.pause(); paint(); };
+b.onended = () => { a.pause(); paint(); };
+b.ontimeupdate = () => {
+  syncSource();
+  // Only the side nobody is hearing is ever corrected, so a correction cannot be heard as a skip.
+  if (!a.paused && Math.abs(a.currentTime - b.currentTime) > 0.12) {
+    if (side === "b") a.currentTime = b.currentTime;
+    else b.currentTime = a.currentTime;
+  }
+  paint();
 };
 document.querySelectorAll("nav button").forEach((button) => {
   button.onclick = () => {
@@ -300,11 +365,15 @@ document.querySelectorAll("nav button").forEach((button) => {
     render();
   };
 });
+// A mouse click leaves focus on the button, where Space would press it again instead of playing.
+document.addEventListener("click", (e) => {
+  if (e.detail > 0 && e.target.closest("button")) e.target.closest("button").blur();
+});
 document.addEventListener("keydown", (e) => {
-  if (e.target.matches("textarea, input")) return;
-  if (e.code === "Space") { e.preventDefault(); togglePlay(); }
-  if (e.key === "s" || e.key === "S") setSide(side === "a" ? "b" : "a");
-  if (e.key === "ArrowLeft") seek(a.currentTime - 5);
-  if (e.key === "ArrowRight") seek(a.currentTime + 5);
+  if (e.target.matches("textarea, input, button, summary") || !current) return;
+  if (e.code === "Space") { e.preventDefault(); toggle(current); }
+  if (e.key === "s" || e.key === "S") setSide(current, side === "a" ? "b" : "a");
+  if (e.key === "ArrowLeft") seekTo(current, b.currentTime - 5);
+  if (e.key === "ArrowRight") seekTo(current, b.currentTime + 5);
 });
 reload();
