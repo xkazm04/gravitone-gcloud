@@ -50,7 +50,7 @@ Round 1 is in `foundry-out/track-mirror/tears/archive/round1-postrock/`. Its fin
 - **Lo-fi words pull against the harmony.** Chord match fell to a median 63%, from about 85% in round 1, as low as 7%. Key: 19 B minor, 6 F# minor, 5 D major. The score and the words are arguing.
 - **A melody-only score made it worse:** chords 18-47%.
 - **Stating B minor did not hold the key** (Y16: 2 of 3). **Lower temperature looks useful:** at 0.8 (Y20) all three seeds read B minor and entered at 19 s, with the narrowest spread, 2.4 points. n=3.
-- **Measured closest:** Y17, an electric lead with vibrato, at 90.2. The same prompt's other seeds sit at 77.9 and below, so this is a seed as much as a prompt.
+- **Measured closest:** Y17, an electric lead with vibrato, at 90.2. The same prompt's other seeds sit at 80.9 and 77.9, so this is a seed as much as a prompt.
 - **Seeds spread as much as prompts.** Up to 22.1 points within one prompt. Compare prompts by ear on several seeds, or not at all.
 - **Loudness stayed under the reference,** -12.5 to -17.1 LUFS against -8.1. A mastering step would decide this rather than a prompt.
 
