@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Track Mirror</title>
+<style>
+:root {
+  --ink: #101317; --panel: #181c22; --raise: #20262e; --line: #313a45;
+  --text: #e9edf1; --dim: #a6b0bb; --source: #e7b45c; --take: #63c7c1;
+  --bad: #f08a7a; --mid: #e7b45c; --good: #7fd18b;
+  --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ink); color: var(--text); font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+button, input, textarea { font: inherit; color: inherit; }
+button { background: var(--raise); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+button:hover { border-color: var(--dim); }
+button:focus-visible, textarea:focus-visible, label.drop:focus-within { outline: 2px solid var(--take); outline-offset: 1px; }
+button[aria-pressed="true"] { background: var(--take); color: #06201f; border-color: var(--take); font-weight: 600; }
+
+#deck { position: sticky; top: 0; z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 20px; }
+.deckrow { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+#title { font-weight: 650; }
+#facts { color: var(--dim); font-family: var(--mono); font-size: 13px; }
+#ab { display: flex; gap: 4px; }
+#ab button.src[aria-pressed="true"] { background: var(--source); border-color: var(--source); color: #2a1d05; }
+#now { min-width: 0; flex: 1 1 200px; font-family: var(--mono); font-size: 13px; color: var(--take); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#time { font-family: var(--mono); font-size: 13px; color: var(--dim); }
+#curve { display: block; width: 100%; height: 64px; margin-top: 8px; cursor: pointer; background: var(--ink); border-radius: 4px; }
+kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--dim); }
+#keys { color: var(--dim); font-size: 13px; }
+
+nav { display: flex; gap: 6px; padding: 14px 20px 0; flex-wrap: wrap; }
+main { padding: 12px 20px 60px; max-width: 1180px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.cardhead { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.pid { font-family: var(--mono); font-weight: 700; color: var(--take); }
+.hyp { flex: 1 1 400px; }
+.settings { font-family: var(--mono); font-size: 13px; color: var(--source); }
+.field { margin-top: 10px; }
+.fieldhead { display: flex; justify-content: space-between; align-items: center; color: var(--dim); font-size: 13px; }
+pre { margin: 4px 0 0; padding: 8px 10px; background: var(--ink); border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.45 var(--mono); max-height: 320px; overflow-y: auto; }
+details > summary { cursor: pointer; color: var(--dim); font-size: 13px; margin-top: 8px; }
+
+.take { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; display: grid; grid-template-columns: minmax(150px, 190px) 1fr; gap: 12px; }
+.take.playing { box-shadow: inset 3px 0 0 var(--take); padding-left: 10px; }
+.takename { font-family: var(--mono); font-size: 13px; }
+.sheet { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+.axis { display: flex; gap: 3px; align-items: center; }
+.axis > span { width: 92px; color: var(--dim); font-size: 13px; }
+.axis button { width: 30px; padding: 3px 0; }
+.overall button[aria-pressed="true"][data-v="close"] { background: var(--good); border-color: var(--good); color: #082010; }
+.overall button[aria-pressed="true"][data-v="partway"] { background: var(--mid); border-color: var(--mid); color: #2a1d05; }
+.overall button[aria-pressed="true"][data-v="far"] { background: var(--bad); border-color: var(--bad); color: #2d0b06; }
+textarea { width: 100%; min-height: 34px; background: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; margin-top: 8px; resize: vertical; }
+.figures { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font: 12.5px var(--mono); color: var(--dim); }
+.figures b { color: var(--text); font-weight: 600; }
+label.drop { display: block; margin-top: 12px; border: 1px dashed var(--line); border-radius: 6px; padding: 10px; text-align: center; color: var(--dim); cursor: pointer; }
+label.drop.over { border-color: var(--take); color: var(--take); }
+label.drop input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.err { color: var(--bad); font-family: var(--mono); font-size: 13px; margin-top: 6px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+th { color: var(--dim); font-weight: 500; }
+td.num, th.num { text-align: right; font-family: var(--mono); }
+.pass { color: var(--good); font-weight: 650; }
+.toolgate { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.toolgate h3 { margin: 0 0 4px; font-size: 15px; }
+.big { font: 600 24px var(--mono); }
+.empty { color: var(--dim); padding: 24px 0; }
+@media (max-width: 720px) {
+  #deck, main, nav { padding-left: 16px; padding-right: 16px; }
+  .take { grid-template-columns: 1fr; }
+  #keys { display: none; }
+  .axis > span { width: 78px; }
+}
+</style>
+</head>
+<body>
+<section id="deck" aria-label="A/B player">
+  <div class="deckrow">
+    <span id="title">Tears</span>
+    <span id="facts"></span>
+    <div id="ab" role="group" aria-label="Which side plays">
+      <button class="src" id="sideA" aria-pressed="true">Source</button>
+      <button id="sideB" aria-pressed="false" disabled>Take</button>
+    </div>
+    <button id="play" aria-label="Play or pause">Play</button>
+    <span id="time">0:00</span>
+    <span id="now"></span>
+    <span id="keys"><kbd>Space</kbd> play <kbd>S</kbd> swap <kbd>←</kbd><kbd>→</kbd> 5 s</span>
+  </div>
+  <svg id="curve" role="img" aria-label="Energy over time: source and selected take" preserveAspectRatio="none" viewBox="0 0 1000 64"></svg>
+</section>
+<nav role="tablist" aria-label="Views">
+  <button role="tab" data-tab="yue2" aria-pressed="true">YuE2</button>
+  <button role="tab" data-tab="suno" aria-pressed="false">Suno v6</button>
+  <button role="tab" data-tab="board" aria-pressed="false">Verdict</button>
+</nav>
+<main id="main"></main>
+<audio id="a" preload="auto"></audio>
+<audio id="b" preload="auto"></audio>
+<script src="/page.js"></script>
+</body>
+</html>
