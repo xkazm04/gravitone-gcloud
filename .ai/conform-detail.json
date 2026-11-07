@@ -18218,6 +18218,26 @@
         }
       ],
       "registryProposal": "The standard has no rule for scout-style exploratory batches: a small sibling set such as a five-panel storyboard, made before any project style exists. The 'throwaway exploration' exemption and the 'styled set' trigger both partly fit. A sentence on whether a per-candidate look bullet must be compiled into each frame would settle it."
+    },
+    "18bf2edc-835f-4f6d-85cd-1d95474fb6bb/data-video-art-direction": {
+      "context": "cull-run-desk",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:05:47.673Z",
+      "worker": "11633bbc-cb4e-484e-a5de-5279c2db499b",
+      "techniques": []
+    },
+    "bba6c91f-7e8c-40e9-acee-8929eb245a8c/data-video-art-direction": {
+      "context": "cut-and-export",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:05:47.673Z",
+      "worker": "11633bbc-cb4e-484e-a5de-5279c2db499b",
+      "techniques": []
     }
   }
 }

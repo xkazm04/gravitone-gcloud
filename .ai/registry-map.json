@@ -4873,8 +4873,12 @@
           "revision": 8,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "packages/ui/src/components/cull/RunCard.tsx:3 The cull desk shows generated runs and their variants for keep/reject triage. It does not design a data-video frame. A grep of packages/ui/src/components/cull for chart/stats/dataset/ranking/reel/logo/race found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "eval-harness",
@@ -5115,8 +5119,12 @@
           "revision": 8,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "lib/cut/explainer.ts:3 This context cuts and exports voiced explainers, ads (supers plus an end card with a brand logo, lib/adOverlayPage.ts) and music videos as animatics. There is no narration-free data video, chart race, time warp or evidence card here. The ad end card and safe-zone table belong to ads, not to this subject's data-video ending or legibility floor.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "prompt-assembly",
