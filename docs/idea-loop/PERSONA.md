@@ -1,9 +1,10 @@
 # The idea loop persona
 
-`idea-loop.persona.json` is a Personas `.persona.json` bundle, schema version 1. Import it with the Personas app open
-(Settings, portability, import). This build did not import it.
+`idea-loop.persona.json` is a Personas `.persona.json` bundle, schema version 1. Import it through the Personas app's
+persona import, with the app open. This build did not import it and has not run it through the importer.
 
-The import arrives disabled, and its trigger is stored disabled too. Enable both once the first manual run looks right.
+The importer names it "Gravitone Idea Loop (imported)" and creates it disabled, and its trigger is stored disabled too.
+Enable both once the first manual run looks right.
 
 ## What it runs
 

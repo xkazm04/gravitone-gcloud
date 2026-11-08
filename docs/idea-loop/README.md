@@ -64,3 +64,6 @@ npx tsx pipeline/scout.mts storyboard <night> --draw codex --json briefs.json
 the idea `il-20261108-001` was drawn 3/3 panels, 165 s wall, `jobIds: []`. Panels decode at 1672x941 and show the scenes.
 
 **Real Codex draws in this build: 4** (1 in stage 1, 3 in stage 3).
+
+Each panel is an independent Codex call with no reference image and no seed, so characters do not carry between panels:
+in the proof storyboard the street cleaner is a man in panel 1 and a woman in panels 2 and 3.
