@@ -38,7 +38,8 @@ export type NewCover = {
   readonly rights: CoverRights;
   readonly holder?: string;
   readonly note?: string;
-  readonly source: { readonly bytes: Uint8Array; readonly mime: string; readonly name: string; readonly durationS: number };
+  /** `url`: the canonical link the song was fetched from (the link door); absent for a file upload. */
+  readonly source: { readonly bytes: Uint8Array; readonly mime: string; readonly name: string; readonly durationS: number; readonly url?: string };
 };
 
 export const newCoverId = (): CoverId => `cov-${randomBytes(6).toString("hex")}`;
@@ -98,7 +99,7 @@ export async function createCover(c: NewCover): Promise<CoverRecord> {
     ...(c.holder === undefined ? {} : { holder: c.holder }),
     ...(c.note === undefined ? {} : { note: c.note }),
     state: "draft",
-    source: { file, mime: c.source.mime, name: c.source.name, durationS: c.source.durationS },
+    source: { file, mime: c.source.mime, name: c.source.name, durationS: c.source.durationS, ...(c.source.url === undefined ? {} : { url: c.source.url }) },
     section: { startS: 0, endS: Math.min(c.source.durationS, COVER_SECTION_MAX_S) },
     style: "",
     lyrics: "",

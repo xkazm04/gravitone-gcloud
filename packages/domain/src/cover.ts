@@ -75,7 +75,9 @@ export type CoverRecord = {
   readonly holder?: string;
   readonly note?: string;
   readonly state: CoverState;
-  readonly source: { readonly file: string; readonly mime: string; readonly name: string; readonly durationS: number };
+  /** `url`: the canonical link the song was fetched from (registry: rights-and-provenance-record); absent for a
+   *  file upload. */
+  readonly source: { readonly file: string; readonly mime: string; readonly name: string; readonly durationS: number; readonly url?: string };
   readonly section: { readonly startS: number; readonly endS: number };
   /** The style prompt the owner back-fills for the uploaded song. */
   readonly sourceStyle?: string;

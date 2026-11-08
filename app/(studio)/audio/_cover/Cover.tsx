@@ -5,7 +5,7 @@
 // island holds only the owner's unsaved edits and the players; every write is an act or a route, and the view
 // is re-read after it (./desk/useDesk.ts). Three compositions of the same parts sit behind `?layout=`
 // (./desk/Layouts.tsx) until the owner picks one.
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import type { CoverCard } from "@gt/domain/cover";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
@@ -24,6 +24,15 @@ function Current({ card, desk, layout }: { readonly card: CoverCard; readonly de
   const { heard, span } = flow;
   const rms = useMemo(() => heard?.rms(span.startS, span.endS), [heard, span.startS, span.endS]);
   const ab = useAB(card.sourceUrl, span, rms);
+  // A cover made from a link opens on its brief's receipt (desk.briefOnOpen): asked once, here, as it mounts.
+  const askNow = desk.briefOnOpen === card.record.id;
+  const { briefAsked } = desk;
+  const ask = flow.brief.ask;
+  useEffect(() => {
+    if (!askNow) return;
+    briefAsked();
+    ask();
+  }, [askNow, briefAsked, ask]);
   return <CoverLayoutOf layout={layout} flow={flow} ab={ab} />;
 }
 

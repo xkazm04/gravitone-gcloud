@@ -16,7 +16,7 @@ import { comfyBase, comfyStats, missingModels, type ComfyFetch } from "../../ima
 import { SUNO_CDP_PORT, type SunoDriverHealth } from "../../suno/types";
 import type { OllamaFetch } from "../../text/providers/ollama";
 import { ollamaCheck } from "./doctorOllama";
-import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
+import { BIN_REMEDY, binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
 import { REGISTRY_REMEDY, resolveRegistry, techniqueCount } from "./registry";
 import { WING_STORE_ENV } from "./store";
 
@@ -66,11 +66,6 @@ export type Check = {
 /** The keys a live night's launches reach: extract's pixels and eyes, the scene's still and clip. */
 export const NIGHT_KEYS = ["GOOGLE_AI_API_KEY", "LEONARDO_API_KEY"] as const;
 
-const BIN_REMEDY: Readonly<Record<keyof Bins, string>> = {
-  ytdlp: "install yt-dlp (https://github.com/yt-dlp/yt-dlp/releases) onto PATH, or set YTDLP to its full path",
-  ffmpeg: "install ffmpeg (https://www.gyan.dev/ffmpeg/builds/) onto PATH, or set FFMPEG to its full path",
-  ffprobe: "ffprobe ships with ffmpeg: put it on PATH, or set FFPROBE to its full path",
-};
 const BIN_NAME: Readonly<Record<keyof Bins, string>> = { ytdlp: "yt-dlp", ffmpeg: "ffmpeg", ffprobe: "ffprobe" };
 
 async function binary(spawn: Spawn, bins: Bins, k: keyof Bins): Promise<Check> {

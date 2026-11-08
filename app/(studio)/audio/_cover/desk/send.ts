@@ -5,19 +5,23 @@
 import { errorMessage } from "@gt/domain/errors";
 import type { CoverRights } from "@gt/domain/cover";
 
-import { COVER_REMIX_ROUTE, COVER_SOURCE_ROUTE } from "../contract.ts";
+import { COVER_LINK_ROUTE, COVER_REMIX_ROUTE, COVER_SOURCE_ROUTE } from "../contract.ts";
 
 export type Sent = { readonly ok: true; readonly id: string } | { readonly ok: false; readonly error: string };
 
 export type SourceForm = { readonly file: File; readonly title: string; readonly rights: CoverRights; readonly holder: string; readonly note: string };
 export type RemixForm = { readonly id: string; readonly file: File; readonly style: string };
+/** A song by its link: the server downloads it. An empty title takes the video's. */
+export type LinkForm = { readonly url: string; readonly title: string; readonly rights: CoverRights; readonly holder: string; readonly note: string };
 
 /** What a page uses to send: the routes, or the fixture's stand-in. */
-export type Sender = { readonly source: (f: SourceForm) => Promise<Sent>; readonly remix: (f: RemixForm) => Promise<Sent> };
+export type Sender = { readonly source: (f: SourceForm) => Promise<Sent>; readonly remix: (f: RemixForm) => Promise<Sent>; readonly link: (f: LinkForm) => Promise<Sent> };
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
 const deadlineMs = (bytes: number): number => 30_000 + Math.ceil((bytes * 1000) / 131_072);
+/** The link route's own budget (its maxDuration, 300 s) and a margin: the server's answer, not ours, ends a slow fetch. */
+const LINK_DEADLINE_MS = 330_000;
 
 function idOf(body: unknown): string | undefined {
   if (!isObject(body)) return undefined;
@@ -26,8 +30,7 @@ function idOf(body: unknown): string | undefined {
   return isObject(rec) && typeof rec["id"] === "string" ? rec["id"] : undefined;
 }
 
-async function post(route: string, form: FormData, bytes: number): Promise<Sent> {
-  const ms = deadlineMs(bytes);
+async function post(route: string, form: FormData | string, bytes: number, ms = deadlineMs(bytes)): Promise<Sent> {
   const ctl = new AbortController();
   let late = false;
   const timer = setTimeout(() => {
@@ -38,7 +41,8 @@ async function post(route: string, form: FormData, bytes: number): Promise<Sent>
   try {
     let res: Response;
     try {
-      res = await fetch(route, { method: "POST", body: form, credentials: "same-origin", signal: ctl.signal });
+      const headers: HeadersInit | undefined = typeof form === "string" ? { "content-type": "application/json" } : undefined;
+      res = await fetch(route, { method: "POST", body: form, credentials: "same-origin", signal: ctl.signal, ...(headers === undefined ? {} : { headers }) });
     } catch (e) {
       return { ok: false, error: late ? lateWords : `the upload did not arrive: ${errorMessage(e)}` };
     }
@@ -67,5 +71,15 @@ export const routeSender: Sender = {
     form.set("file", f.file, f.file.name);
     form.set("style", f.style);
     return post(COVER_REMIX_ROUTE, form, f.file.size);
+  },
+  link: (f) => {
+    const body = {
+      url: f.url.trim(),
+      rights: f.rights,
+      ...(f.title.trim() === "" ? {} : { title: f.title.trim() }),
+      ...(f.holder.trim() === "" ? {} : { holder: f.holder.trim() }),
+      ...(f.note.trim() === "" ? {} : { note: f.note.trim() }),
+    };
+    return post(COVER_LINK_ROUTE, JSON.stringify(body), 0, LINK_DEADLINE_MS);
   },
 };

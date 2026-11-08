@@ -98,7 +98,7 @@ export function ChainPart({ flow, quiet }: { readonly flow: CoverFlow; readonly 
   if (r.remix === undefined || c.remixUrl === undefined) return null;
   const winner = r.takes.find((t) => t.seed === r.winnerSeed);
   const links = [
-    { name: "source", url: c.sourceUrl, fact: r.source.name, style: r.sourceStyle },
+    { name: "source", url: c.sourceUrl, fact: r.source.name, style: r.sourceStyle, from: r.source.url },
     { name: "winner", url: c.winnerUrl, fact: winner === undefined ? "winner" : `take ${winner.n} · seed ${winner.seed}`, style: r.style },
     { name: "remix", url: c.remixUrl, fact: r.remix.name, style: r.remix.style },
   ];
@@ -114,7 +114,13 @@ export function ChainPart({ flow, quiet }: { readonly flow: CoverFlow; readonly 
                 }} />}
             <span className={s.row}>
               <span className={s.label}>{l.name}</span>
-              <span className={s.mono}>{l.fact}</span>
+              {"from" in l && l.from !== undefined ? (
+                <a className={s.mono} href={l.from}>
+                  {l.fact}
+                </a>
+              ) : (
+                <span className={s.mono}>{l.fact}</span>
+              )}
             </span>
             {l.style !== undefined && l.style !== "" && <span className={s.linkStyle}>{l.style}</span>}
           </li>

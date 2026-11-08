@@ -5,7 +5,8 @@
 // a pick, a remix), so the three layouts are driven before the engine and the doors exist. A draft's brief walks
 // queued -> running -> done, one state per re-read, and on done writes the fields and launches the cover. Reached with
 // `/audio?s=cover&fixture=<state>` on a development build only (./useDesk.ts reads the switch); a production
-// build never honours it. Nothing here touches a store, a route or a vendor.
+// build never honours it. Nothing here touches a store, a route or a vendor. A link sent here (cover from a link,
+// WP-C) is "fetched" for LINK_FETCH_MS, so the fetching state can be seen, then made a draft carrying its link.
 import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import type { CoverCard, CoverDeskView, CoverRecord, CoverState, CoverTake } from "@gt/domain/cover";
@@ -24,6 +25,10 @@ const RATE = 16_000;
 const SONG_S = 64;
 const SEEDS = [41_877_203, 9_020_114, 77_310_552, 3_405_918, 60_118_734];
 const NOTES = [220, 246.9, 277.2, 329.6, 370, 440, 493.9, 554.4];
+/** How long the fixture's link takes to "download": long enough to be seen and photographed. */
+const LINK_FETCH_MS = 2_500;
+/** The video the fixture's link turns out to be. */
+const LINK_TITLE = "Rain on Tin";
 
 /** A 16-bit mono WAV of a little tune: phrases of eighth notes, louder in its middle third, the timbre the seed's. */
 function wav(seconds: number, seed: number): string {
@@ -266,6 +271,24 @@ export function useFixture(state: FixtureState): FixtureDesk {
       remix: async (f) => {
         change(f.id, (r) => ({ ...r, remix: { file: "remix.mp3", mime: f.file.type, name: f.file.name, style: f.style } }));
         return { ok: true, id: f.id };
+      },
+      link: async (f) => {
+        await new Promise((done) => setTimeout(done, LINK_FETCH_MS));
+        const v = /(?:v=|youtu\.be\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/.exec(f.url)?.[1] ?? "dQw4w9WgXcQ";
+        const id = `cov-${Date.now().toString(16).slice(-12).padStart(12, "0")}`;
+        const title = f.title.trim() === "" ? LINK_TITLE : f.title.trim();
+        const { holder: _h, ...rest } = base(id.slice(4), title, 0);
+        const r: CoverRecord = {
+          ...rest,
+          rights: f.rights,
+          ...(f.holder.trim() === "" ? {} : { holder: f.holder.trim() }),
+          state: "draft",
+          takes: [],
+          source: { file: "source.mp3", mime: "audio/mpeg", name: `${LINK_TITLE} [${v}].mp3`, durationS: SONG_S, url: `https://www.youtube.com/watch?v=${v}` },
+        };
+        setRecs((rs) => [r, ...rs]);
+        setCurrentId(r.id);
+        return { ok: true, id: r.id };
       },
     }),
     [change],

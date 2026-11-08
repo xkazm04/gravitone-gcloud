@@ -9,6 +9,8 @@ export type { CoverDeskView, CoverLaunch, CoverPlan };
 
 export const COVER_SOURCE_ROUTE = "/audio/cover/source";
 export const COVER_REMIX_ROUTE = "/audio/cover/remix";
+/** JSON `{ url, rights, title?, holder?, note? }`: the song fetched from a YouTube link, answered as `{ id }`. */
+export const COVER_LINK_ROUTE = "/audio/cover/link";
 
 // An ActionResult, not a Result: AppError is a class and React drops an Error crossing the action boundary,
 // so the browser would see no refusal sentence (found by WP2; app/_server/actionCore.ts point 4).

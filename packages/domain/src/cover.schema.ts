@@ -8,6 +8,8 @@ import { COVER_BRIEF_STATES, COVER_LYRICS_MAX, COVER_NOTE_MAX, COVER_RIGHTS, COV
 
 export const coverIdSchema = z.string().regex(/^cov-[0-9a-f]{12}$/);
 const rel = z.string().min(1).max(200);
+/** A source link on the record: the canonical form is 43 characters; the cap is room, not a target. */
+const COVER_SOURCE_URL_MAX = 200;
 const seed = z.number().int().min(0).max(2 ** 48 - 1);
 
 export const coverTakeSchema = z.strictObject({
@@ -27,7 +29,7 @@ export const coverRecordSchema = z.strictObject({
   holder: z.string().min(1).max(COVER_TITLE_MAX).optional(),
   note: z.string().min(1).max(COVER_NOTE_MAX).optional(),
   state: z.enum(COVER_STATES),
-  source: z.strictObject({ file: rel, mime: z.string().min(1).max(100), name: z.string().min(1).max(255), durationS: z.number().positive() }),
+  source: z.strictObject({ file: rel, mime: z.string().min(1).max(100), name: z.string().min(1).max(255), durationS: z.number().positive(), url: z.url({ protocol: /^https$/ }).max(COVER_SOURCE_URL_MAX).optional() }),
   section: z.strictObject({ startS: z.number().min(0), endS: z.number().positive() }),
   sourceStyle: z.string().min(1).max(COVER_STYLE_MAX).optional(),
   style: z.string().max(COVER_STYLE_MAX),
@@ -58,4 +60,14 @@ export const coverUploadSchema = z.strictObject({
   rights: z.enum(COVER_RIGHTS),
   holder: z.string().min(1).max(COVER_TITLE_MAX).optional(),
   note: z.string().min(1).max(COVER_NOTE_MAX).optional(),
+});
+
+/** A link's fields: the link itself (its host and id judged by lib/sound/cover/link/parse.ts), the declaration, and
+ *  the title, which defaults to the video's own. */
+export const coverLinkSchema = z.strictObject({
+  url: z.string().trim().min(1).max(2000),
+  rights: z.enum(COVER_RIGHTS),
+  title: z.string().trim().min(1).max(COVER_TITLE_MAX).optional(),
+  holder: z.string().trim().min(1).max(COVER_TITLE_MAX).optional(),
+  note: z.string().trim().min(1).max(COVER_NOTE_MAX).optional(),
 });

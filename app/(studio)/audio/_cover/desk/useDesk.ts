@@ -5,8 +5,11 @@
 // a sender for the two file routes, a re-read, and a way to open a cover. While the cover's brief is queued or
 // running, or its job queued or rendering, the view is re-read once a minute (COVER_POLL_MS, router.refresh) and
 // again when the tab comes back into view; nothing in flight, no timer.
+//
+// A cover made from a link is opened with its brief's receipt already asked (cover from a link, WP-C): `briefOnOpen`
+// names that cover until the desk has asked once, so the one Confirm left is the receipt's.
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { CoverDeskView } from "@gt/domain/cover";
 
@@ -25,6 +28,10 @@ export type Desk = {
   readonly open: (id: string | undefined) => void;
   readonly hrefOf: (id: string | undefined, layout: CoverLayout) => string;
   readonly fixture: FixtureState | null;
+  /** The cover whose brief receipt is asked the moment it opens (a link's cover), until `briefAsked`. */
+  readonly briefOnOpen: string | null;
+  readonly openWithBrief: (id: string) => void;
+  readonly briefAsked: () => void;
 };
 
 function fixtureOf(raw: string | null): FixtureState | null {
@@ -84,5 +91,15 @@ export function useDesk(view: CoverDeskView, acts: CoverActs, layout: CoverLayou
     };
   }, [working, refresh]);
 
-  return { view: shown, acts: fixture !== null ? fx.acts : acts, sender: fixture !== null ? fx.sender : routeSender, refresh, open, hrefOf, fixture };
+  const [briefOnOpen, setBriefOnOpen] = useState<string | null>(null);
+  const openWithBrief = useCallback(
+    (id: string) => {
+      setBriefOnOpen(id);
+      open(id);
+    },
+    [open],
+  );
+  const briefAsked = useCallback(() => setBriefOnOpen(null), []);
+
+  return { view: shown, acts: fixture !== null ? fx.acts : acts, sender: fixture !== null ? fx.sender : routeSender, refresh, open, hrefOf, fixture, briefOnOpen, openWithBrief, briefAsked };
 }

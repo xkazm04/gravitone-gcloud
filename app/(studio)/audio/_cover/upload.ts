@@ -65,6 +65,13 @@ export async function measuredUpload(form: FormData, what: string): Promise<Resu
   const name = f.name.slice(0, 255) || "upload";
   const ext = extOf(name, mime.value);
   const bytes = new Uint8Array(await f.arrayBuffer());
+  const d = await measuredBytes(bytes, name, ext);
+  if (!d.ok) return d;
+  return ok({ bytes, mime: mime.value, name, ext, durationS: d.value });
+}
+
+/** ffprobe's duration of bytes about to be filed, or its refusal naming the file. The link door's measure too. */
+export async function measuredBytes(bytes: Uint8Array, name: string, ext: string): Promise<Result<number>> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "gt-cover-upload-"));
   try {
     // The name's own extension, so a decoder that sniffs by name reads it as what it is.
@@ -72,7 +79,7 @@ export async function measuredUpload(form: FormData, what: string): Promise<Resu
     await writeFile(tmp, bytes);
     const d = await probeDurationS(tmp);
     if (!d.ok) return err(d.error.code, `${name} could not be read: ${d.error.message}`);
-    return ok({ bytes, mime: mime.value, name, ext, durationS: d.value });
+    return ok(d.value);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

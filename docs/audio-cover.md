@@ -36,6 +36,18 @@ The record's `brief` carries the state; the desk re-reads its view every 60 s (`
 
 **Agreement is not truth.** The first real write turn (2026-11-08, Tears, fed round 1's three stored reads) wrote post-rock: all three reads agreed on the genre the owner rejected, and the two-of-three rule passed it. Only the neutral listen prompt can change that, and it has not met a live song yet. Read the reason beside the style before trusting the genre; the takes cost only GPU time to redo. That turn took 51 s and $0.27 of seat time.
 
+## From a link (2026-11-08)
+
+The song can be a YouTube link instead of a file: `POST /audio/cover/link` (`COVER_LINK_ROUTE`), JSON `{ url, rights, title?, holder?, note? }`.
+
+- **What it checks.** `lib/sound/cover/link/parse.ts` takes https only, on youtube.com, www/m/music.youtube.com (`/watch?v=`, `/shorts/`, `/live/`) or youtu.be, one 11-character video id; a playlist-only link, another host or scheme are refused in words. The desk's link field runs the same judge. Rights are declared with no default, as for a file.
+- **The 20 minute cap.** yt-dlp reads the length and title first (`--skip-download`); a video past 20 min (`MAX_VIDEO_S`, the scout's) is refused before a byte is downloaded. Then `-f bestaudio -x --audio-format mp3 --audio-quality 0 --max-filesize 60M --no-playlist --js-runtimes node` into a temp folder removed on every path. The download is held to 270 s, under the route's 300 s budget. The duration on the record is ffprobe's on the downloaded bytes, as for an upload.
+- **Binaries.** `YTDLP` (default `yt-dlp` on PATH) and `FFMPEG` (handed to yt-dlp as `--ffmpeg-location` when set). A missing yt-dlp is refused with the scout doctor's install line; a failed download answers yt-dlp's last stderr line verbatim.
+- **Provenance.** The record keeps the canonical `https://www.youtube.com/watch?v=<id>` as `source.url`; the source's name on the desk links out to it. A declaration is still the owner's: a video being on YouTube is not a clearance.
+
+A new cover from a link opens on its brief's receipt: the listens are priced on the downloaded length, so the receipt is never skipped, and one Confirm starts the brief, which launches the cover.
+
+Measured 2026-11-08: *Caminandes 3: Llamigos* (Blender, YouTube `SkVqJ1SGeL0`, licence on YouTube "Creative Commons Attribution"), 150 s, fetched in 8.2 s as a 4.76 MB mp3, ffprobe 150.09 s.
 ## Measured
 
 The first real job (2026-11-07, a 20 s section of the Tears reference, temp stores, after an hour queued behind another tenant): transcribe 2.4 s, renders 10-12 s each, 55 s in all; five takes of 20-27 s. Stage 1 measured about a minute per two-minute take.
