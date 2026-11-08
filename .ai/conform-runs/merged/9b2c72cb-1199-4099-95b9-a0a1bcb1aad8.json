@@ -1,0 +1,149 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9b2c72cb-1199-4099-95b9-a0a1bcb1aad8",
+ "subject": "data-access",
+ "evaluatedAt": "2026-11-07T02:45:30.515934+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/ledger/_ledger/read.ts:214 readStrip runs one countEvents read transaction for each of up to 84 days on every render, and readFacets runs another per held project. The technique wants a grouped aggregate query here, one round trip per question, so the strip's per-day loop is the N+1 it names.",
+   "techniques": [
+    {
+     "technique": "batching-and-n-plus-one",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:214 One count call per strip day inside `for (const day of days)`. The kernel has no count grouped by day. Line 171 loops the same way, one count per project."
+    },
+    {
+     "technique": "layering-rules",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:12 The screen issues no SQL. It calls the kernel's named operations queryEvents and countEvents through one read module that the page and the actions share."
+    },
+    {
+     "technique": "read-models-and-projections",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:274 View, Page, Facets and Strip are read-only projections shaped for the screen. Nothing is written back from them."
+    },
+    {
+     "technique": "repo-testing",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/ledger-read.test.ts:24 The reads are tested against a real in-memory kernel that openKernel builds by running the production migrations. The store is not mocked."
+    }
+   ]
+  },
+  {
+   "context": "run-records-and-slots",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/records/read.ts:305 listProjects builds the full projectModel for each of up to 100 listed projects. Each model costs one load of the project, one load of its parts, one jobOf per part and one ranAt per finished part. The module already batches by id in quotedSecondsMap but does not use that pattern on the list path.",
+   "techniques": [
+    {
+     "technique": "batching-and-n-plus-one",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/records/read.ts:159 Fetches one job per part inside a per-project loop on the list screen. A by-ids map read (the shape quotedSecondsMap at line 133 already uses) is missing here."
+    },
+    {
+     "technique": "layering-rules",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/_port/real.ts:109 Raw SQL against the records tables (projects, parts, runs) is issued and decoded outside the records module: in app ports, lib/parts/gates.ts and lib/import. So 'who reads or writes projects' is no longer one directory listing."
+    },
+    {
+     "technique": "transactions-and-units-of-work",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/records/write.ts:181 Each `*In(t, \u2026)` writer composes inside the caller's transaction. The job driver books the job done and releases dependents in one transaction, and every verb's record and event commit together."
+    },
+    {
+     "technique": "row-mapping",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/schema.ts:113 The column list is declared once and shared by every select. One mapper, readSlotRow, decodes through the domain schema and fails loudly on a corrupt row."
+    },
+    {
+     "technique": "query-construction",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/read.ts:64 The dynamic filter interpolates only placeholders and fixed column names. Every value is bound."
+    },
+    {
+     "technique": "repo-testing",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/records.test.ts:23 Tests use a real in-memory SQLite built by the production migrations."
+    }
+   ]
+  },
+  {
+   "context": "part-workspace-desk",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/part/part.ts:4 I searched part/ and desk/ under packages/ui/src/components for SQL, kernel imports, sqlite and prepare calls and found none. The components import only domain types and UI siblings, and their data arrives as props, so there is no data-access seam here to judge.",
+   "techniques": [],
+   "absenceTerms": [
+    "INSERT INTO",
+    "@gt/kernel",
+    "sqlite",
+    ".prepare("
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "data-access",
+   "context": "style-store",
+   "reason": "evidence leans on py/styles.py, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T02:45:30.515934+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [
+    "batching-and-n-plus-one",
+    "layering-rules",
+    "read-models-and-projections",
+    "repo-testing"
+   ],
+   "deviations": 1,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T02:45:30.515934+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [
+    "batching-and-n-plus-one",
+    "layering-rules",
+    "query-construction",
+    "repo-testing",
+    "row-mapping",
+    "transactions-and-units-of-work"
+   ],
+   "deviations": 1,
+   "context": "run-records-and-slots",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T02:45:30.515934+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-workspace-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

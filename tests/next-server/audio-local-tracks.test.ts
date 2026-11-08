@@ -35,7 +35,7 @@ import { FULL_BAND_SPEC, templateById } from "@gt/domain/audio.score.templates";
 import { GET as takeFile } from "../../app/api/sound/takes/[id]/file/route.ts";
 import { ACCESS_SECRET_VAR } from "../../lib/apiAuth.ts";
 import { stopWorkers } from "../../lib/audio/renderWorker.ts";
-import { renderScore } from "../../lib/audio/sidecar.ts";
+import { renderScore, sidecarDoctor } from "../../lib/audio/sidecar.ts";
 import { closeKernel } from "../../lib/kernelStore.ts";
 import { renderLocalScore } from "../../lib/sound/localScore.ts";
 import { mixLocalTake, rewriteLocalStem } from "../../lib/sound/localScoreVerbs.ts";
@@ -73,6 +73,12 @@ const noGain = (): ScoreSpec => {
   return { ...t, tracks: t.tracks.map(({ gainDb: _g, pan: _p, ...rest }) => rest) };
 };
 const ids = (xs: readonly { readonly id: string }[]): string[] => xs.map((x) => x.id);
+
+// The refusal below is the sidecar's own (`invalid`). On a box whose Python lacks the sidecar's
+// requirements (numpy, scipy ... - the CI `gates` runner) the sidecar cannot start and answers
+// `unavailable` for every request, so there is no refusal to observe: skip, as the other sidecar suites do.
+const SIDECAR_READY = (await sidecarDoctor()).ok;
+if (!SIDECAR_READY) console.warn("audio-local-tracks: stand-in refusal case skipped, the audio sidecar is not runnable here");
 
 describe("local band tracks, rendered", () => {
   it.skipIf(!SAMPLES)("renders a v1 spec bit-identically to before stage S2, warm and cold alike", async () => {
@@ -148,7 +154,7 @@ describe("local band tracks, rendered", () => {
     expect(moved.value.plan.reusedIds.length).toBe(7);
   }, 600_000);
 
-  it("refuses a stand-in synth unless the request allows one, naming what is missing", async () => {
+  it.skipIf(!SIDECAR_READY)("refuses a stand-in synth unless the request allows one, naming what is missing", async () => {
     const spec: ScoreSpec = {
       ...noGain(),
       tracks: [

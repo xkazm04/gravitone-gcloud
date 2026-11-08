@@ -1,0 +1,230 @@
+{
+  "schema": "conform-run/1",
+  "worker": "86f55423-a56d-4634-b5fa-8274125bcb1b",
+  "subject": "table",
+  "evaluatedAt": "2026-11-08T04:20:11.855371+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "ledger-screen",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/ledger/_ledger/List.tsx:109 The event list declares a grid, but its gridcells never take focus (focus stays on the scroller, the subject link is tabIndex -1, and there is no aria-activedescendant), so a screen-reader user in application mode never hears the cell values J/K step through; separately, an order change remounts the whole Ledger, so no spoken status names the new sort.",
+      "techniques": [
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:109 Grid role with one tab stop on the container; J/K/PgUp/Home/End move the selection only. No cell or row ever takes focus and nothing points aria-activedescendant at one, which is the 'cells that cannot take focus' anti-pattern. Home/End (Ledger.tsx edge) land on the last LOADED row while capped, and nothing says the landing is partial."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:92 The order is total and deterministic (kernel ORDER BY t, seq with seq as tiebreaker, events-query.ts:162). But the header button is not a columnheader and carries no aria-sort, and the change is never spoken: page.tsx:36 keys Ledger by order, so the aria-live Tally remounts as a new node instead of announcing the change."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:16 Keyset on the (t, seq) tuple with an identity tiebreaker; limit+1 gives the capped flag; 'older' is a load-more button; text-scan counts are written as `N+` with a 'searched N' chip."
+        },
+        {
+          "technique": "client-server-split",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:18 All-server: filter, order, window and counts are the kernel's. The two client-side figures (cost over loaded rows, the text scan) are marked '+' or page-local and not shown as totals."
+        },
+        {
+          "technique": "filtering",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:57 Free text is a draft committed on submit or Enter; facets and Seg commit on change into the URL (the applied predicate). Ledger is keyed by filter identity, so the rows, older pages and selection reset whenever the predicate changes."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:120 The server render settles before any empty state appears. Empties are typed by cause: nothing recorded, a partial scan ('0 in the newest N'), or filtered with a clear action. Navigations run inside a transition, so rendered rows are kept. Gap: a store failure (page.tsx ErrorLine) replaces the chrome and offers no retry."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:61 Pagination first (PAGE 500), then fixed-height windowing with heights taken from the tokens, and aria-rowindex on each row. aria-rowcount is the loaded count rather than the matching total."
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:34 Rows arrive in 500-row pages through an explicit 'older' press, so the spacer grows only by user action and stays far below the browser's scroll ceiling."
+        },
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:88 The only copy is whole rows as JSON Lines (JSON escapes tabs and newlines). There is no cell-range copy and no paste."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/page.tsx:1 The ledger is read-only and append-only, with no editable cells."
+        },
+        {
+          "technique": "export-escapes-for-its-consumer",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:84 The export is JSONL for agents and is built from the applied URL predicate. There is no CSV or spreadsheet consumer."
+        }
+      ]
+    },
+    {
+      "context": "library-browser-screen",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/library/_library/Toolbar.tsx:82 Free-text search commits a server render 220 ms after typing pauses, which is the debounce-as-a-guess that the filtering technique names as the failure for round-trip commits; the rows follow a predicate the user has not finished stating.",
+      "techniques": [
+        {
+          "technique": "filtering",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_library/Toolbar.tsx:82 Every application is a server render (all-server regime), yet text commits on a typing pause rather than on an explicit act. Enter and ↓ also commit. Facets commit on click, and the draft resyncs from the URL (applied)."
+        },
+        {
+          "technique": "client-server-split",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_library/blocks.ts:6 All-server. Blocks are fetched by index into a sparse per-identity cache, and a stale response is dropped by identity."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/library/query.ts:31 Each order ends in the seq identity tiebreaker, and items without media (bad) have one declared home, last. Sort is a named Select whose value is spoken, held in the URL as identifying state."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/library/query.ts:22 Offset is chosen on purpose because the virtual scroller needs random access by index, and each order walks an index. Residual risk: a sync landing between block reads can shift later blocks."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_library/Results.tsx:84 Unfetched blocks render as same-size slots under the chrome, with aria-busy. Empty appears only for a settled total of 0, typed filtered/unfiltered with a clear action. A block error is tracked separately from empty."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_library/Results.tsx:48 Bounded block fetches plus windowing over the total, with options memoized on stable handlers."
+        }
+      ]
+    },
+    {
+      "context": "ui-controls-shell",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "packages/ui/src/components/field/Field.tsx:1 These are controlled primitives (button, toggle, seg, field, tab rail, panel, toast, sheet) with no rows, columns, pagination, sort or export of their own; when they act as filter controls, the commit point is the calling table's decision. A search of the components tree for sortBy, pageSize, keyset and text/csv found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "sortBy",
+        "pageSize",
+        "keyset",
+        "text/csv"
+      ]
+    },
+    {
+      "context": "cut-and-export",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/cutExport.ts:1 This context's 'export' renders an mp4 or video from an edit decision list; there is no tabular surface or CSV export. A search of lib/ for columnheader, aria-sort, gridcell, keyset and text/csv returned no hits.",
+      "techniques": [],
+      "absenceTerms": [
+        "columnheader",
+        "aria-sort",
+        "gridcell",
+        "text/csv",
+        "keyset"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "table",
+      "context": "floor-lanes-runs",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor RunRow.tsx:5 only says a row with a page is a link. That doesn't show the Floor has no sort, columns or export. I found no grid in the context's own files, but the absence rests on a grep rather than the anchor."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-08T04:20:11.855371+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [
+        "client-server-split",
+        "clipboard-range-round-trip",
+        "compressed-scroll-space",
+        "export-escapes-for-its-consumer",
+        "filtering",
+        "grid-keyboard-model",
+        "loading-and-empty-states",
+        "one-door-for-range-writes",
+        "pagination",
+        "performance",
+        "sorting"
+      ],
+      "deviations": 1,
+      "context": "ledger-screen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T04:20:11.855371+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [
+        "client-server-split",
+        "filtering",
+        "loading-and-empty-states",
+        "pagination",
+        "performance",
+        "sorting"
+      ],
+      "deviations": 1,
+      "context": "library-browser-screen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T04:20:11.855371+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ui-controls-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T04:20:11.855371+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "cut-and-export",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T04:20:11.855371+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "floor-lanes-runs",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

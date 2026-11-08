@@ -1,0 +1,101 @@
+{
+  "schema": "conform-run/1",
+  "worker": "7dbeafff-c22a-4ef2-bef2-e144a5930ba2",
+  "subject": "cinematic-language",
+  "evaluatedAt": "2026-11-07T01:34:14.670566+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "scout-producers",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "lib/producers/scoutStoryboardActs.ts:191 A genre trial's LTX clip is rendered with the panel's Flux still prompt as its motion line (line 36 says so). The clip therefore gets no movement instruction, no speed adverb and no stated hold, which is the 'aimless drift' failure where the model chooses its own motion.",
+      "techniques": [
+        {
+          "technique": "movement-motivation",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutStoryboardActs.ts:191 The still prompt doubles as the motion line, so the camera and motion are left unset. By contrast, the scene act's motion comes from clipRequestOf, which appends 'Camera:' and 'Light:' clauses (lib/foundry/scout/scene.ts:326, outside this context)."
+        }
+      ]
+    },
+    {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "lib/imaging/video/types.ts:44 These are vendor transport adapters that pass the caller's prompt or motion line through verbatim (Leonardo's prompt_enhance is off, lib/imaging/video/leonardo.ts:17). A case-insensitive search of lib/imaging/providers, lib/imaging/studio and lib/imaging/video found no lighting, shadow, close-up, push-in or eyeline vocabulary, so no cinematic decision is made here.",
+      "techniques": [],
+      "absenceTerms": [
+        "lighting",
+        "shadow",
+        "close-up",
+        "push-in",
+        "eyeline"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "cinematic-language",
+      "context": "visual-producers",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "cinematic-language",
+      "context": "library-characters-models",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "cinematic-language",
+      "context": "score-and-ads",
+      "reason": "withdrawn after review: reviewer (sonnet): The claim is about placementFor in lib/frames/shots.ts, which is not in this context's files. The code also says on purpose that diagonal is an art director's or beat layer's choice, not a hold-time default (shotTypes.ts:125-130). Only picture.ts imports from lib/frames, and only for Frame and Pictu"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T01:34:14.670566+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [
+        "camera-position-semantics",
+        "movement-motivation",
+        "performance-direction",
+        "scene-grammar-progression"
+      ],
+      "deviations": 1,
+      "context": "score-and-ads",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T01:34:14.670566+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [
+        "movement-motivation"
+      ],
+      "deviations": 1,
+      "context": "scout-producers",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T01:34:14.670566+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "imaging-vendor-providers-and-video",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

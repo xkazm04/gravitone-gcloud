@@ -1,0 +1,168 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b802ede7-a10f-4e97-aa0e-8e3983495c7b",
+ "subject": "production-pipeline-phasing",
+ "evaluatedAt": "2026-11-07T00:01:45.695079+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:102 The cut draws every clip on the score's single clock with ok, drift or missing as first-class states. Gaps and drift therefore have an address, and the media editors gate their expensive acts on settled upstream state.",
+   "techniques": [
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:3 Score and cut share one ruler. Clips carry startS/durS and offsetMs drift (Cut.tsx:108-115), and Frames offers 'rederive' when the cut moved (Frames.tsx:200)."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Motion.tsx:140 Motion can be directed only on a ready plate. CutFinish also blocks a render while a blocking check fails."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx:71 Takes are kept or rejected by a human mark, and revisions are per-section notes rather than fresh generations. No low-fidelity probe tier is visible in these files."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:7 Renders and clips launch through act() as priced kernel jobs, never as a blocking fetch. A take whose bytes are gone shows 'gone' (ScoreTakes.tsx:59)."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:7 Finish checks keep 'unmeasured' separate from pass and fail. Any failing finish row turns the open chip rose (Cut.tsx:171)."
+    }
+   ]
+  },
+  {
+   "context": "runs-console",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/runs/_runs/view.ts:20 Runs counts interrupted jobs with the failed, blocks the dependents of stuck work, and draws a fraction only from counted units. The console reports long jobs honestly and worst news first.",
+   "techniques": [
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/runs/_runs/view.ts:20 Interrupted is never folded into running or done. An unreadable source is drawn as a failure, not as 'nothing running' (model.ts:10-11)."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/runs/_runs/view.ts:76 A fraction is drawn only for running jobs with counted units. There is no invented ETA (model.ts:18-20), lane caps limit concurrency per kind (view.ts:170), and an interrupted paid job places a hold on its lane (Acts.tsx:10)."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/runs/_runs/view.ts:16 Work downstream of a failed, interrupted or cancelled upstream is drawn blocked, not scheduled. This is display only; the gating itself is the kernel's."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/model.ts:18 Runs is wall-clock job scheduling, which the technique explicitly keeps off the product's internal clock."
+    }
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/_port/schedule.ts:85 The port schedules human gates between parts and draws dependents of a failed upstream as blocked. Project state takes the worst of its parts, and launches only enqueue work for the worker, so graduation stays a human act and spend never runs ahead of a stuck phase.",
+   "techniques": [
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/schedule.ts:85 Gates wait on the operator, and dependents of a failed or paused upstream are drawn BLOCKED (schedule.ts:9). The real side reads committed gate packets as ratified (real.ts:86-88)."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/fixtureRead.ts:115 projectStateOf ranks failed/blocked above awaiting_gate above running. Shown on the fixture side; the real side goes through the kernel's listProjects, outside this context."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/real.ts:46 A launch enqueues kernel jobs that the worker drives. Unbound kinds wait queued as 'unknown' and are never failed (real.ts:47-48)."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/_port/schedule.ts:22 The port's clock is wall-clock job scheduling, which the technique says belongs to the job layer."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "production-pipeline-phasing",
+   "context": "article-trials-and-medium",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "production-pipeline-phasing",
+   "context": "plan-and-import",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T00:01:45.695079+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T00:01:45.695079+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "runs-console",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T00:01:45.695079+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

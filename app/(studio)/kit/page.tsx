@@ -32,6 +32,7 @@ import { SignalSections } from "./Signal.tsx";
 import { StatusSection } from "./Status.tsx";
 import { StyleSection } from "./StyleKit.tsx";
 import { StudioSection } from "./StudioKit.tsx";
+import { SongLabSection } from "./SongLabKit.tsx";
 import { SunoSection } from "./SunoKit.tsx";
 import { StructureSection } from "./Structure.tsx";
 import { PartSection } from "./PartKit.tsx";
@@ -80,6 +81,7 @@ export default function KitPage() {
         <EarSection />
         <StudioSection />
         <SunoSection />
+        <SongLabSection />
         <GraphSection />
         <LibrarySection />
         <StyleSection />

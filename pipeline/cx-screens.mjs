@@ -140,4 +140,11 @@ export const SCREENS = {
   // Spark suno-advisor: the scripted Suno conversation, and its kit pieces.
   "audio-suno": { url: "/audio?s=studio&source=fixture&session=night-drive" },
   "kit-suno": { url: "/kit#suno" },
+  // Spark yue2-song-lab S2: the knockout on the fixture side (the contest's staged field, a scripted
+  // agent) - the main draw with its first match glowing; the post · s3 draw with its upset quarter-final
+  // open in the booth, revealed (that draw opens with its quarter-finals judged); the field sheet open.
+  "audio-songlab": { url: "/audio?s=songlab&source=fixture" },
+  "audio-songlab-match": { url: "/audio?s=songlab&source=fixture&d=037e2bd84636&m=QF-2" },
+  "audio-songlab-field": { url: "/audio?s=songlab&source=fixture&f=1" },
+  "kit-songlab": { url: "/kit#songlab" },
 };

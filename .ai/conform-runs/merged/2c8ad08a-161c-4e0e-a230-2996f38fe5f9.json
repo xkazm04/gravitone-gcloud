@@ -1,0 +1,136 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2c8ad08a-161c-4e0e-a230-2996f38fe5f9",
+ "subject": "app-shell",
+ "evaluatedAt": "2026-11-07T01:09:06.754462+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "studio-shell",
+   "subject": "app-shell",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/_shell/HeaderBar.tsx:57 Every section link sets prefetch={false}, which in this App Router never prefetches on viewport or on hover (node_modules/next/dist/docs link.md:304), so no section is warmed on expressed intent and every switch is a cold click-path load.",
+   "techniques": [
+    {
+     "technique": "navigation-model",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/nav.ts:47 One closed SECTIONS registry with stable ids; the current section is derived from the pathname by longest prefix, and the header, the agent tools and the kit all read it. Board overlays and section sub-addresses (?lane=, ?cal=) are not declared in the registry. They are spelled in links.ts and agentNav.ts instead, a coverage gap the technique calls debt."
+    },
+    {
+     "technique": "nav-hierarchy",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/HeaderBar.tsx:52 One flat level, grouped by separators that are not destinations. There is no shell sub-nav and no third level, and the header has no collapse posture to persist."
+    },
+    {
+     "technique": "lazy-section-loading",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/_shell/HeaderBar.tsx:57 Prefetch on intent is turned off deliberately: the comment says the Floor walks every v1 store. But a hover never warms a section, which the technique asks for. The frame itself holds still because the layout persists."
+    },
+    {
+     "technique": "shell-hosted-services",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/Providers.tsx:85 Residents are listed in one header comment, and each one names its reaper. The cookie-renewal worker returns its unsubscribe and reports failure through the always-mounted toast region (line 119), so it does not die silently. Sign-out does a full load as the session-end reaper."
+    },
+    {
+     "technique": "badge-and-attention",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/headerFacts.ts:71 Nav entries carry no badge, so the steady state is quiet; the ledger +N newness badge and its seen-mark were removed (keys.ts:271). The one count in the chrome, spend 24h, is re-derived from the ledger on every request, and an unreadable store gives null rather than $0."
+    },
+    {
+     "technique": "entitlement-gating",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/nav.ts:23 The registry declares no tiers, roles or flags: this is a single-operator studio. `built` marks an unbuilt section, which is honestly temporary-disabled and not a lock. The one access gate is the layout's principal() (the studio-routes context)."
+    },
+    {
+     "technique": "screen-contributed-second-level",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/HeaderBar.tsx:49 The shell is a header bar with no sidebar slot. Screens that need a column (e.g. /kit) draw their own inside the page."
+    }
+   ],
+   "registryProposal": "lazy-section-loading's prefetch-on-intent assumes warming a section costs only code. In a server-rendered router a prefetch can run the section's data loader too (here, a walk of every v1 store). The technique could name 'warm code without running the loader' as the target, and treat full-loader prefetch as the competing-cost case."
+  },
+  {
+   "context": "studio-routes-and-redirects",
+   "subject": "app-shell",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/layout.tsx:59 No error.tsx or boundary sits under the (studio) layout (searched: the only route boundaries are app/error.tsx and app/global-error.tsx), so a section that throws or fails to load its chunk bubbles to the root boundary, which replaces the whole studio frame (header, nav, spend) rather than only the main region.",
+   "techniques": [
+    {
+     "technique": "lazy-section-loading",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/layout.tsx:59 The failure should occupy only the section's territory while the frame and nav stay alive. With the nearest boundary at app/error.tsx, above this layout, the nav goes down with the section."
+    },
+    {
+     "technique": "entitlement-gating",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/layout.tsx:40 One server-side authority guards every (studio) entrance, the @sheet slot and deep links included. A refusal lands on a defined surface: an ErrorLine for 503, the Handoff for 401. It is never a blank page or silent access."
+    },
+    {
+     "technique": "navigation-model",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/articles/redirect.ts:29 Retired v1 addresses are validated and fall back to a defined page that renders. redirect() in page components replaces rather than pushes history (Next redirect.md:31), and the Handoff uses router.replace."
+    },
+    {
+     "technique": "shell-hosted-services",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/AgentNav.tsx:80 The agent-nav worker is mounted once in the persistent layout, inside Providers and as a sibling of main (above the swap point). Its tool registration names its reaper. It is not listed in Providers' resident comment, which is a minor gap in enumerability."
+    },
+    {
+     "technique": "screen-contributed-second-level",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/layout.tsx:54 The layout hosts a header, main and an overlay sheet slot filled by route interception. It has no sidebar slot that screens contribute to."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "app-shell",
+   "context": "kit-design-system-specimens",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T01:09:06.754462+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "app-shell"
+   ],
+   "techniques": [
+    "badge-and-attention",
+    "entitlement-gating",
+    "lazy-section-loading",
+    "nav-hierarchy",
+    "navigation-model",
+    "screen-contributed-second-level",
+    "shell-hosted-services"
+   ],
+   "deviations": 1,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T01:09:06.754462+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "app-shell"
+   ],
+   "techniques": [
+    "entitlement-gating",
+    "lazy-section-loading",
+    "navigation-model",
+    "screen-contributed-second-level",
+    "shell-hosted-services"
+   ],
+   "deviations": 1,
+   "context": "studio-routes-and-redirects",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

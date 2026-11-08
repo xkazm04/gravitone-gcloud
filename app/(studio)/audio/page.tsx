@@ -15,7 +15,10 @@
 //   lessons   "when X, brief Y, because Z", saved only on the operator's confirm (./_lessons);
 //   strengths provider x facet, per provider, nothing printed under three takes (./_insight);
 //   rubric    1-10 per dimension on a judged take, the ledger's own mean;
-//   batch     N identical briefs priced through a receipt, to measure a provider's spread.
+//   batch     N identical briefs priced through a receipt, to measure a provider's spread;
+//   song lab  the YuE2 knockout (spark yue2-song-lab S2): the agent seeds a bracket of lyric-gate
+//             passers and books every match, the owner judges blind matches and keeps or removes
+//             the agent's proposals (./_songlab); music only, so the kind rail is not drawn.
 // What the desk does not do is judge: keep and reject belong to the Board's audio triage.
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -37,13 +40,16 @@ import { confirmLessonAct } from "./_lessons/acts.ts";
 import { Lessons } from "./_lessons/Lessons.tsx";
 import { readLessons } from "./_lessons/read.ts";
 import { BatchDesk } from "./_insight/Batch.tsx";
-import { CoverDesk } from "./_cover/Cover.tsx";
+import { CoverDesk } from "./_cover/LazyCover.tsx";
 import { briefCoverAct, launchCoverAct, pickCoverAct, saveCoverStylesAct } from "./_cover/acts.ts";
 import { readCoverDesk } from "./_cover/read.ts";
 import { RubricDesk } from "./_insight/Rubric.tsx";
 import { StrengthsDesk } from "./_insight/Strengths.tsx";
 import { batchConfirm, batchReceipt, scoreTake } from "./_insight/acts.ts";
 import { readBatch, readRubricPile, readStrengths, unscoredCount } from "./_insight/read.ts";
+import { openMatches } from "./_songlab/read.ts";
+import { SongLabSection } from "./_songlab/Section.tsx";
+import { parseSongLabUrl } from "./_songlab/url.ts";
 import { StudioSection } from "./studio/Studio.tsx";
 import { parseStudioUrl } from "./studio/url.ts";
 import s from "./_audio/audio.module.css";
@@ -56,13 +62,15 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   const q = await searchParams;
   const url = parseDeskUrl(q);
   const registry = deskEngines();
-  const [final, unscored] = await Promise.all([finalizedCount(url.kind), unscoredCount(url.kind)]);
+  const lab = parseSongLabUrl(q);
+  const [final, unscored, open] = await Promise.all([finalizedCount(url.kind), unscoredCount(url.kind), openMatches(lab)]);
   const tabs = SECTIONS.map((x) => ({
     id: x.id,
     label: x.label,
     href: deskHref({ ...url, section: x.id }),
     ...(x.id === "arrange" && final.ok ? { tally: { value: final.value, label: "final" } } : {}),
     ...(x.id === "rubric" && unscored.ok ? { tally: { value: unscored.value, label: "unscored" } } : {}),
+    ...(x.id === "songlab" && open !== undefined ? { tally: { value: open, label: "open" } } : {}),
   }));
   const kinds = KINDS.map((k) => ({ id: k, label: k, href: deskHref({ ...url, kind: k }) }));
   let body: ReactNode;
@@ -72,6 +80,7 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   else if (url.section === "lessons") body = <Lessons view={await readLessons(url.kind)} />;
   else if (url.section === "strengths") body = <StrengthsDesk key={url.kind} view={await readStrengths(url.kind)} lessonDoor={confirmLessonAct} />;
   else if (url.section === "rubric") body = <RubricDesk key={url.kind} view={await readRubricPile(url.kind)} acts={{ scoreTake }} />;
+  else if (url.section === "songlab") body = <SongLabSection url={lab} />;
   else if (url.section === "batch") body = <BatchDesk key={url.kind} view={readBatch(url.kind, registry)} nowMs={audioNow()} acts={{ batchReceipt, batchConfirm }} />;
   else {
     // The studio: one way in to composing. Its candidates are auditioned on this machine's samples,
@@ -83,7 +92,7 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
     <div className={s.desk}>
       <div className={s.bar}>
         <TabRail label="audio desk" mode="audio" tabs={tabs} current={url.section} />
-        {url.section !== "compose" && url.section !== "cover" && <TabRail label="kind" mode="audio" tabs={kinds} current={url.kind} />}
+        {url.section !== "compose" && url.section !== "cover" && url.section !== "songlab" && <TabRail label="kind" mode="audio" tabs={kinds} current={url.kind} />}
       </div>
       {body}
     </div>

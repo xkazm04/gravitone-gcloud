@@ -1,0 +1,75 @@
+{
+  "schema": "conform-run/1",
+  "worker": "f0c28464-07bd-4d92-a7bd-5d0c0c3364f1",
+  "subject": "retrieval",
+  "evaluatedAt": "2026-11-06T02:27:59.445422+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "floor-hub-screen",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/floor/_floor/model.ts:21 The Floor's 'lanes' are media lanes that group running jobs and waiting piles by media type; no query, index, ranking or relevance step exists here. Searching app/(studio)/floor for embedding, cosine, rerank, bm25 and similarity found 0 hits; the registry-map match came from the word 'lane'.",
+      "techniques": [],
+      "absenceTerms": [
+        "embedding",
+        "cosine",
+        "rerank",
+        "bm25",
+        "similarity"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "retrieval",
+      "context": "library-projection-feeds",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "retrieval",
+      "context": "domain-style-library-assets",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "retrieval",
+      "context": "asset-library-store",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "retrieval",
+      "context": "notebook-contract-validation",
+      "reason": "withdrawn after review: reviewer (sonnet): The context does contain retrieval-run handling (lib/notebook/retrieval.ts:92-113 refuses a zero-receipt notebook whose researchGaps[0] doesn't admit no search ran, and downgrades citations that weren't fetched), and the seat's own technique note calls this close to the 'a skip is not an empty resul"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T02:27:59.445422+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "retrieval"
+      ],
+      "techniques": [
+        "retrieval-triggering"
+      ],
+      "deviations": 0,
+      "context": "notebook-contract-validation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T02:27:59.445422+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "retrieval"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "floor-hub-screen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

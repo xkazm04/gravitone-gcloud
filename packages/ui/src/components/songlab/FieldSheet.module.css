@@ -1,0 +1,16 @@
+/* The field: a head of tallies and the reference slot, then one dense row per take (28 = --h-row). */
+.field{width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-4);padding:var(--sp-4) var(--sp-wide) var(--sp-6);min-width:0}
+.head{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.ref{margin-left:auto;display:inline-flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.caps{font:500 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.none{font:400 var(--fs-bar) var(--mono);color:var(--muted)}
+.file{display:none}
+.rows{width:100%;border-collapse:collapse;font:400 var(--fs-bar)/1 var(--mono);color:var(--text)}
+.rows th{height:var(--h-row);text-align:left;font:500 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--hair-2);padding:0 var(--sp-3)}
+.rows td{height:var(--h-row);padding:0 var(--sp-3);border-bottom:1px solid var(--hair);white-space:nowrap}
+.rows tbody tr:hover{background:var(--wash)}
+.num{text-align:right}
+.rows th.num{text-align:right}
+.sd{color:var(--faint);text-align:right;width:var(--size-badge)}
+.lb{color:var(--ink-bright)}
+.cond{color:var(--muted);max-width:var(--w-detail);overflow:hidden;text-overflow:ellipsis}

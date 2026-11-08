@@ -220,6 +220,7 @@ const EXPECT: Record<string, Expectation> = {
   // this probe's requests do not carry, so every cell refuses it; tests/next-server/session.test.ts holds the grant.
   "app/api/session/route.ts": { door: "public", ok: { GET: "2xx", POST: "4xx", PUT: "4xx", DELETE: "2xx" } },
   "app/api/sound/mv/jobs/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
+  "app/api/sound/ab/[pairId]/[arm]/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/sound/takes/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
 
 };

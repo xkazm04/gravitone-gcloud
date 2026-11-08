@@ -1,0 +1,127 @@
+{
+ "schema": "conform-run/1",
+ "worker": "35af6e0b-56ba-4cbc-b66d-cc4319e86ae2",
+ "subject": "prompt-assembly",
+ "evaluatedAt": "2026-11-03T22:09:48.926610+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "studio-shell",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/facts.ts:1 The shell is page chrome (header facts, session cookie, toasts, bell, live feed) and makes no language-model call; a search of app/(studio)/_shell for prompt, systemPrompt, anthropic, compaction and contextWindow found nothing (the only 'token' hits are Firebase ID tokens and design tokens), so there is no prompt for this subject to govern.",
+   "techniques": [],
+   "absenceTerms": [
+    "prompt",
+    "systemPrompt",
+    "anthropic",
+    "compaction",
+    "contextWindow"
+   ]
+  },
+  {
+   "context": "part-editor-writing-research",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx:118 The editors only hand the server typed ops (here a follow-up question as a plain field of a queue-follow-up op) and never render or assemble model prompt text; a search of the part directory for systemPrompt, anthropic, compaction, contextWindow and maxTokens found nothing, so the assembler that turns this question into a prompt lives outside this context.",
+   "techniques": [],
+   "absenceTerms": [
+    "systemPrompt",
+    "anthropic",
+    "compaction",
+    "contextWindow",
+    "maxTokens"
+   ]
+  },
+  {
+   "context": "publish-producers",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/producers/src/publish/adapter.ts:5 The publish producers are channel adapters, a claim/record tick and metrics refresh against platform APIs, with no model call; a search of packages/producers/src/publish for prompt, systemPrompt, anthropic, compaction and contextWindow found nothing (the 'token' hits are OAuth refresh tokens).",
+   "techniques": [],
+   "absenceTerms": [
+    "prompt",
+    "systemPrompt",
+    "anthropic",
+    "compaction",
+    "contextWindow"
+   ]
+  },
+  {
+   "context": "domain-run-job-steps",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/domain/src/steps/registry.ts:13 The context holds zod persistence schemas, state machines and estimates for runs, jobs and step records; 'prompt' shows up only as a stored field (for example still takes' prompt string), and a search of packages/domain/src for systemPrompt, anthropic, compaction, contextWindow and maxTokens found nothing, so nothing here assembles a model prompt.",
+   "techniques": [],
+   "absenceTerms": [
+    "systemPrompt",
+    "anthropic",
+    "compaction",
+    "contextWindow",
+    "maxTokens"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "prompt-assembly",
+   "context": "audio-composer-briefs",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-03T22:09:48.926610+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:09:48.926610+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:09:48.926610+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "publish-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:09:48.926610+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "domain-run-job-steps",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

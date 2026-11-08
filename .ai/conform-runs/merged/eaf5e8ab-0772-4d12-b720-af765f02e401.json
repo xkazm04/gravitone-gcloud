@@ -1,0 +1,72 @@
+{
+  "schema": "conform-run/1",
+  "worker": "eaf5e8ab-0772-4d12-b720-af765f02e401",
+  "subject": "eval-harness",
+  "evaluatedAt": "2026-11-06T00:03:59.034126+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "kit-design-system-specimens",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/kit/page.tsx:1 /kit is a page of design-system specimens: tokens, controls and status words drawn in their states. Nothing in it runs or scores a model. A search of app/(studio)/kit/ for scenario, benchmark, pass rate/passRate and win rate/winRate found no hits; the one 'judge' mention is a specimen chip label in Contract.tsx.",
+      "techniques": [],
+      "absenceTerms": [
+        "scenario",
+        "benchmark",
+        "passRate",
+        "winRate"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "eval-harness",
+      "context": "style-trials-cull",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "eval-harness",
+      "context": "notebook-contract-validation",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "eval-harness",
+      "context": "audio-composer-briefs",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "eval-harness",
+      "context": "board-scout-spend-sources",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor, scout.ts:260, is an error string ('nothing rendered to judge') that does not itself show that no eval harness is present. The context's adapters also build an oracle pass/fail summary and gate verdicts and scores into packets (scout.ts:281, scoutPlan.ts:269). The 'judge means a human rul"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T00:03:59.034126+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "board-scout-spend-sources",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T00:03:59.034126+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "kit-design-system-specimens",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

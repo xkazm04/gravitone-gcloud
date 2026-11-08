@@ -1,0 +1,121 @@
+{
+ "schema": "conform-run/1",
+ "worker": "db65e5d0-c459-4659-b485-491bf0e3fe45",
+ "subject": "engine-host-contract",
+ "evaluatedAt": "2026-11-05T22:02:11.106917+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "kernel-python-protocol",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/py/job.py:3 The Python job protocol is a second driver over durable SQLite job records, which the golden path sends to job-coordination; a search of packages/kernel/py for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits, so no embedded language engine or host-hook surface exists here.",
+   "techniques": [],
+   "absenceTerms": [
+    "JobExecutor",
+    "HostHooks",
+    "ModuleLoader",
+    "quickjs",
+    "node:vm"
+   ]
+  },
+  {
+   "context": "job-queue-and-leases",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/src/job.ts:15 These jobs are durable store records run by a worker fleet under leases, which is exactly the scope the golden path excludes and sends to job-coordination; a search of packages/kernel/src for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits, so there is no in-memory engine job queue and no host hook.",
+   "techniques": [],
+   "absenceTerms": [
+    "JobExecutor",
+    "HostHooks",
+    "ModuleLoader",
+    "quickjs",
+    "node:vm"
+   ]
+  },
+  {
+   "context": "v1-import-and-archive",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/import/archive.ts:9 The importer parses and writes an NDJSON data archive and evaluates no guest source; a search of lib/import for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits, so there is no engine whose loader, clock or executor could be a seam.",
+   "techniques": [],
+   "absenceTerms": [
+    "JobExecutor",
+    "HostHooks",
+    "ModuleLoader",
+    "quickjs",
+    "node:vm"
+   ]
+  },
+  {
+   "context": "landing-cosmos-paper-raster",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/rasterJobs.ts:3 A raster 'job' here is plain data that is structured-cloned to a browser Worker and painted. The 'engine' directory is a paint engine, not an embedded language engine. A search of app/_landing/cosmos/engine for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "JobExecutor",
+    "HostHooks",
+    "ModuleLoader",
+    "quickjs",
+    "node:vm"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-05T22:02:11.106917+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "kernel-python-protocol",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-05T22:02:11.106917+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "job-queue-and-leases",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-05T22:02:11.106917+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "v1-import-and-archive",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-05T22:02:11.106917+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "landing-cosmos-paper-raster",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
