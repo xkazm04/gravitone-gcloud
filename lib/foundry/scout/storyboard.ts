@@ -78,14 +78,15 @@ import { settledBoard, type StoryboardClip, type StoryboardDraw } from "../../pr
 import { launchable, Refusal, type ActContext } from "./acts";
 import { archivedFromIdea } from "./baseline";
 import { requireComfy } from "./comfyGate";
-import { castAllow, castLine, castOf, CAST_MAX, CAST_PROMPT_MAX, rootedNights } from "./cast";
-import { castPrompt, keptCharacters, type KeptCharacter } from "./characters";
+import { composeLook, lookOf } from "./channelLook";
+import { castPanels } from "./storyboardPanels";
+import { castAllow, castLine, CAST_MAX, rootedNights } from "./cast";
+import { keptCharacters, type KeptCharacter } from "./characters";
 import { IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
 import { followEpisodes } from "./episodeMoves";
 import { genreViews, headsOf, takesTrials, trialSlots, trialsOn, ventureRefusal, type GenreView } from "./genres";
 import { STEP_NAME_RE, STEP_RULE, TEMPLATE_NAME_RE, TEMPLATE_RULE, templateProblem } from "./knowledge";
 import { namesIn } from "./scene";
-import { listSeedBatches, seedOf } from "./seedStore";
 import { mutateNight, nextCandidateId, readAllNights, readNight, withCandidate } from "./store";
 import { dueEpisode, episodeBoardOf, episodeUseAim, type EpisodeHeld } from "./storyboardEpisode";
 import { storyboardOf } from "./storyboardKept";
@@ -317,7 +318,10 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
     if (!k.ok) throw new Refusal(`storyboard ${i + 1}: fromIdea: ${k.error.message}`);
     ideas.push(k.value);
   }
-  const casted = await castPanels(briefs, ideas, kept);
+  // The channel's look leads each panel before any cast does (channelLook.ts); a channel with none draws its words untouched.
+  const looks = episodes.map((e) => (e === undefined ? undefined : lookOf(e.channel)));
+  const drawn = briefs.map((b, i) => composeLook(looks[i], b.panels, `storyboard ${i + 1}`));
+  const casted = await castPanels(briefs.map((b, i) => ({ ...b, panels: drawn[i] ?? b.panels })), ideas, kept);
   const all = await readAllNights();
   const others = all.filter((n) => n.id !== id);
   for (const [i, b] of briefs.entries()) {
@@ -357,7 +361,8 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
         title: b.title,
         paragraph: b.paragraph,
         bullets: b.bullets,
-        panels: cast?.panels ?? b.panels,
+        panels: cast?.panels ?? drawn[i] ?? b.panels,
+        ...(looks[i] === undefined ? {} : { look: looks[i] }),
         ...(aspect === "16:9" ? {} : { aspect }),
         ...use,
         ...(aim === undefined ? {} : { aim }),
@@ -420,30 +425,6 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   }
   await followEpisodes(id, cids);
   return { candidates: await batchOf(id, cids), jobIds, outcome };
-}
-
-/* ── The cast ─────────────────────────────────────────────────────────────── */
-
-/**
- * Each brief's cast (by place; undefined: none) and its COMPILED panels - every member's identity block verbatim, then
- * the panel's own words. Refused - nothing written - when a member is not kept, breaks the audience rule (the work's
- * audience is its idea's seed's), or a compiled panel is past what Flux takes.
- */
-async function castPanels(briefs: readonly StoryboardBrief[], ideas: readonly (KeptIdea | undefined)[], kept: readonly KeptCharacter[]): Promise<({ readonly members: readonly KeptCharacter[]; readonly panels: readonly string[] } | undefined)[]> {
-  if (!briefs.some((b) => b.cast !== undefined)) return briefs.map(() => undefined);
-  const batches = await listSeedBatches();
-  return briefs.map((b, i) => {
-    if (b.cast === undefined) return undefined;
-    const ref = ideas[i]?.idea.fromSeed;
-    const audience = ref === undefined ? undefined : seedOf(batches, ref)?.seed.audience;
-    const members = castOf(b.cast, kept, audience);
-    if (!members.ok) throw new Refusal(`storyboard ${i + 1}: ${members.error.message}`);
-    const cards = members.value.map((m) => m.card);
-    const panels = b.panels.map((p) => castPrompt(cards, p));
-    const long = panels.findIndex((p) => p.length > CAST_PROMPT_MAX);
-    if (long >= 0) throw new Refusal(`storyboard ${i + 1}: panel ${long + 1} with its cast's identity blocks is ${panels[long]?.length} characters; a Flux prompt is at most ${CAST_PROMPT_MAX}`);
-    return { members: members.value, panels };
-  });
 }
 
 /* ── Collect ──────────────────────────────────────────────────────────────── */

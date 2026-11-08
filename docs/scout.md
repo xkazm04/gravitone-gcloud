@@ -23,6 +23,7 @@ ventures, characters and music describes the spread era and is archived (`.claud
   accepted outline is imported (`episodes import --outlines <file> --report <file>`), and moves outline-kept ->
   in-production -> made -> kept | thrown as its night's candidate is launched, rendered and judged on the packet
   (lib/foundry/scout/channels.ts, episodeMoves.ts). `channel list`, `channel show <id>`, `episodes due`.
+- **A channel's look** is optional text (at most 400 characters; the operator's own words) set with `channel-look <channelId> "<text>"` (empty text clears it; an import never touches it). The storyboard door writes it in FRONT of every panel prompt of that channel's episodes (`channelLook.ts composeLook`; after a cast's identity blocks when there are any), skips a panel that already opens with the same words, refuses a composed prompt past Flux's 2000 characters, and records it on the candidate as `look`. A channel with no look draws the seat's words untouched; a reel channel never reads it.
 - **The night's doors take episodes**: `storyboard` takes `{fromEpisode, title, paragraph, bullets, panels}` for a
   storyboard channel (one panel per beat; use/aim default from the channel); `reel` takes `{fromEpisode, brief,
   approach, source, data, cut}` for a data channel. The taste brief opens with `## Episodes due`. Under each channel it also lists the kept and thrown episodes with the reasons and notes the operator gave (newest 8 per channel, `VERDICT_LINES`); the words ride the move that ends the episode (`verdict` on the episode, optional, so older files read).
@@ -453,7 +454,9 @@ It is kept when its words cell is kept, or when any cell is kept and none reject
 night (a night committed in parts counts only its committed cells). A kept storyboard is the root any
 full-video act must name - `keptStoryboardFor(nights, <night>/<c-id>)` is the code check, and the skill's
 rule is that no full-video act runs for an idea not under `## Ready for full video`. No full-video act
-exists yet; scene clips stay ungated. The taste brief lists `## Storyboards to make` (kept ideas with no
+exists yet; scene clips stay ungated. Made from a channel episode, a kept storyboard ends its episode
+kept and a rejected one throws it (`episodeTarget`), and the packet's preview says exactly that, not a full
+video; a dry night moves no episode and its preview says so. The taste brief lists `## Storyboards to make` (kept ideas with no
 storyboard) and `## Ready for full video` (kept storyboards, with their idea, title and paragraph). A
 storyboard does not take its idea off `## Ideas to develop`: the idea's scene, style or asset act is
 independent of it. On the graph a storyboard sits in its own `board` column between idea and run, linked

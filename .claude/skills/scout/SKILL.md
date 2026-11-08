@@ -172,6 +172,8 @@ its five beats and its spec. Take them oldest first, spread across channels, up 
      **S1**: the brand is the spec's fictional one; never a real brand, logo or product. **K1**: stylised, gentle,
      never photoreal children, nothing frightening left unresolved;
    - `use` / `aim` - omit them: the channel's name and promise are filled in.
+   When the channel holds a look (`channel show <id> --json`: `channel.look`) the door writes it in front of every panel: do not
+   repeat its words in `panels`, only the subject, staging, framing and light.
    The words are craft, not content: no person, studio, title or franchise. In `panels` write lower case after each
    sentence's first word (the door refuses a capital mid-sentence as a name).
 2. One JSON array -> `npx tsx pipeline/scout.mts storyboard <night> --json <file> --detach`. One bad brief refuses
@@ -346,7 +348,8 @@ interrupted job ids.
   that is not `illustrative: true`: real data goes through `reel`, for a KEPT idea only.
 - **Do not run a full-video act for an idea without a kept storyboard** - the idea must be under
   `## Ready for full video` in the taste brief (lib/foundry/scout/storyboard.ts `keptStoryboardFor`), and
-  the act names that storyboard. A scene clip is not a full video and stays ungated.
+  the act names that storyboard. A scene clip is not a full video and stays ungated. An episode's kept
+  storyboard ends the episode kept (rejected: thrown) and no full video follows it; the preview says so.
 
 ## Lessons
 

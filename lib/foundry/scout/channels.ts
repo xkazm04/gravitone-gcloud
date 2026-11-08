@@ -20,6 +20,7 @@ import { readJson, writeJsonAtomic } from "../runStore";
 import { withRunLock } from "../verdictLog";
 import { Refusal } from "./acts";
 import type { EpisodeVerdict, VerdictedEpisode } from "./episodeVerdict";
+import { LOOK_MAX, type LookedChannel } from "./channelLook";
 import { CANDIDATE_ID_RE, NIGHT_ID_RE } from "./types";
 
 // THE CHANNELS' STORE (spark project-baseline). The scout stopped spreading across genres and serves the channels the
@@ -35,7 +36,7 @@ import { CANDIDATE_ID_RE, NIGHT_ID_RE } from "./types";
 // Episodes arrive only through `importEpisodes` (the session's accepted outlines); a night never invents one. Nothing
 // here spends.
 
-export type ChannelFile = { readonly channel: Channel; readonly episodes: readonly VerdictedEpisode[] };
+export type ChannelFile = { readonly channel: LookedChannel; readonly episodes: readonly VerdictedEpisode[] };
 
 /** What `episodes import` reads: the session's outlines (a JSON array of channels with items) and the pasted
  *  outline-triage report (lines `  F1-03 keep · Title · note`). Only `keep` lines import. */
@@ -71,6 +72,8 @@ const channelSchema = z
     gap: text,
     edge: text,
     medium: z.enum(CHANNEL_MEDIA),
+    // Optional so every file written before it still reads (the schema is strict). The operator's words; channelLook.ts.
+    look: text.max(LOOK_MAX).optional(),
   })
   .strict();
 
@@ -250,6 +253,22 @@ export async function setEpisodeState(id: string, next: EpisodeState, patch: { r
     const out = new Map(files);
     out.set(chId, { channel: f.channel, episodes: f.episodes.map((e) => (e.id === id ? moved : e)) });
     return { next: out, out: moved };
+  });
+}
+
+/** Set (or, with empty text, clear) a channel's look under the store's lock. Only this writes it: an import keeps the channel it holds. */
+export async function setChannelLook(id: string, look: string): Promise<LookedChannel> {
+  if (!CHANNEL_ID_RE.test(id)) throw new Refusal(`channels: that is not a channel id: ${id}`);
+  const said = look.trim();
+  if (said.length > LOOK_MAX) throw new Refusal(`channels: a look is at most ${LOOK_MAX} characters, got ${said.length}`);
+  return mutateChannels((files) => {
+    const f = files.get(id);
+    if (f === undefined) throw new Refusal(`channels: no channel ${id} in ${channelsDir()}`);
+    const { look: _was, ...rest } = f.channel;
+    const channel: LookedChannel = said === "" ? rest : { ...rest, look: said };
+    const out = new Map(files);
+    out.set(id, { channel, episodes: f.episodes });
+    return { next: out, out: channel };
   });
 }
 

@@ -572,6 +572,8 @@ export type StoryboardCandidate = CandidateBase & {
   /** Kept characters it casts, by name (spark scout-vision S3): every panel leads with each one's identity block, and
    *  a character with a kept sheet rides it as a late-admitted Flux reference. */
   readonly cast?: readonly string[];
+  /** The channel's look the panels were drawn under (channelLook.ts), so a verdict is attributable to it. Omitted: none. */
+  readonly look?: string;
 };
 
 /**

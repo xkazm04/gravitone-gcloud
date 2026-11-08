@@ -112,6 +112,7 @@ const USAGE = [
   "  plan <night> --json <file|->              [{kind: storyboards|ideas|extract|scenes|assets|sheets|reels|draft, payload, why}]   (the night-fill queue)",
   "  reel <night> --json <file|-> [--detach] · reel <night> --collect   [{fromIdea, source: {kind: table|article|what-if, title, url?, quote?, premise?}, data, cut}]",
   "  channel list | channel show <id>             (the channels the night serves; spark project-baseline)",
+  "  channel-look <channelId> \"<text>\"            (the look every panel of the channel is drawn under; empty text clears it)",
   "  episodes import --outlines <file> --report <file> · episodes due",
   "  reel-cut <night> --json <file|-> [--detach]   [{fromReel: <night>/<c-id>, seconds: 30-120}]   (a kept real reel, cut in full)",
   "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
@@ -121,7 +122,7 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet", "plan", "reel", "reel-cut", "channel", "episodes"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet", "plan", "reel", "reel-cut", "channel", "channel-look", "episodes"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas, storyboard, lead and seeds new. */
@@ -564,6 +565,14 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
 
       // The night's plan queue (spark scout-vision S6): the worker's night-fill timer launches it while the box idles.
       // The channels and their episodes (spark project-baseline): the night serves accepted outlines only.
+      if (cmd === "channel-look") {
+        const [, chId, said] = pos;
+        if (chId === undefined || said === undefined) throw new Usage('channel-look <channelId> "<text>"   (empty text clears the look)');
+        const c = await (await import("../lib/foundry/scout/channels.ts")).setChannelLook(chId, said);
+        say(c.look === undefined ? `${c.id} ${c.name} · no look` : `${c.id} ${c.name} · look: ${c.look}`);
+        if (json) doc({ ok: true, channel: c });
+        return 0;
+      }
       if (cmd === "channel" || cmd === "episodes") {
         const ch = await import("../lib/foundry/scout/channels.ts");
         const sub = pos[1];
