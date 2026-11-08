@@ -4980,7 +4980,11 @@
           "revision": 7,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/cull/useRunDesk.ts:3 The run desk is a generic keep/reject verdict UI over any Board packet's cells. A case-insensitive search of packages/ui/src/components/cull and packages/ui/src/components/desk for race, overtake, accelerator, comparable and granularity found no hits, so the desk does not choose or score data-video ideas.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:857308a4204852e8",
+          "evaluatedRevision": 7
         },
         {
           "subject": "hitl-approval",
@@ -15847,7 +15851,11 @@
           "revision": 7,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/idea.ts:84 A stats idea comes in through the ideas door as case/title/hook/unit/kind/illustrative data plus optional steps. Nothing records granularity, span, entity count, expected lead changes, dated events, a measure or comparables, so none of the subject's gates can run before the operator triages.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:857308a4204852e8",
+          "evaluatedRevision": 7
         },
         {
           "subject": "cinematic-language",
@@ -16271,7 +16279,11 @@
           "revision": 7,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/scout-reels/define.ts:97 The reels producer's brief door, which every idea, real reel and full cut passes through, has the same shape: kind, hook, optional free-text steps and a premise-only what-if. So the producer authors and renders a 30 s to 2 min cut with no recorded continuity, path or event plan to check the finished render against.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:857308a4204852e8",
+          "evaluatedRevision": 7
         },
         {
           "subject": "visual-style-locking",

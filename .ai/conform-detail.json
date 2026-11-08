@@ -18531,6 +18531,83 @@
           "evidence": "packages/ui/src/tokenLint.ts:15 The context's only lint is a CSS design-token gate with no copy layer, so it is not the copy gate this technique describes."
         }
       ]
+    },
+    "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/data-video-virality": {
+      "context": "scout-engine-creative",
+      "subject": "data-video-virality",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:24:11.452Z",
+      "worker": "0939c0c1-5494-458a-b09a-115e5fdb5071",
+      "techniques": [
+        {
+          "technique": "continuity-gate",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/idea.ts:93 The format is classified (level-race, cumulative-race, counter, ranking, share), but no field counts real steps or entities and no shape is refused. 'counter' is a single-value format, and it is accepted. The data is illustrative, so the step floor is never checked against data that can actually be obtained."
+        },
+        {
+          "technique": "path-over-conclusion",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/idea.ts:91 The hook only has to be non-empty text of at most 200 chars. There is no keep-watching rationale that must name at least two dates and two entities, and the technique names exactly this as a failure."
+        },
+        {
+          "technique": "accelerator-events",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/idea.ts:96 Steps are optional free text, minimum 1, with no date or on-screen effect. Nothing enforces the 5-event floor inside the animated span, or how the events spread across it."
+        },
+        {
+          "technique": "speculative-grounding",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/reelDoor.ts:58 Partly realized: what-if sources get an on-screen fiction label (reelTaste.ts:16 sourceLine). But a what-if needs only a premise. No real-data end year, stated model, horizon at most twice the baseline, or 2100 cap is recorded or refused, and reelDoor.ts:15-22 accepts 'what if fantasy scenarios', which the technique fails as invented narrative."
+        },
+        {
+          "technique": "topic-duplicate-screen",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/ideaRepeat.ts:41 The only repeat guard at the ideas door checks character briefs. Stats ideas pass untouched (the header says 'every other target passes untouched'), and no measure is stored to screen subject+measure+span."
+        }
+      ]
+    },
+    "ce5ef2e0-d944-4b79-a500-32f8a081923f/data-video-virality": {
+      "context": "scout-producers",
+      "subject": "data-video-virality",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:24:11.452Z",
+      "worker": "0939c0c1-5494-458a-b09a-115e5fdb5071",
+      "techniques": [
+        {
+          "technique": "continuity-gate",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/scout-reels/define.ts:103 The format is named, but no step count, granularity, entity count or lead-change estimate is carried. The technique requires the estimate so it can be checked against the render, yet the lint at lib/producers/scoutReelActs.ts:102 checks only frame purity and the data block."
+        },
+        {
+          "technique": "path-over-conclusion",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/scout-reels/define.ts:101 The hook is any 1-2000 char string. There is no rationale with counted dates and entities."
+        },
+        {
+          "technique": "accelerator-events",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/scout-reels/define.ts:105 Optional untyped strings with no date, no effect and no 5-15 bound. A full cut gets no events at all."
+        },
+        {
+          "technique": "speculative-grounding",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/scout-reels/define.ts:95 A what-if source carries only a premise and a name line. No baseline end year, model or horizon is checked before the seat authors it."
+        }
+      ]
+    },
+    "18bf2edc-835f-4f6d-85cd-1d95474fb6bb/data-video-virality": {
+      "context": "cull-run-desk",
+      "subject": "data-video-virality",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:24:11.452Z",
+      "worker": "0939c0c1-5494-458a-b09a-115e5fdb5071",
+      "techniques": []
     }
   }
 }
