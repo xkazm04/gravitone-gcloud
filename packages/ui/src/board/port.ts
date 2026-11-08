@@ -45,6 +45,8 @@ export type RowWords = {
   readonly id: string;
   readonly label: string;
   readonly ref?: string;
+  /** The face of a run whose first variant is a video: a still of its own output, so never a reference. */
+  readonly poster?: string;
   readonly inCatalogue?: boolean;
   readonly group?: string;
   readonly aim?: string;

@@ -177,7 +177,8 @@ describe("the Board's reel cell", () => {
     expect([b.cells[0]?.id, b.cells[0]?.kind, b.cells[0]?.media.mime]).toEqual(["c-02/reel", "reel", "video/mp4"]);
     expect(b.cells[0]?.url).toContain(encodeURIComponent("reels/c-02/strip.mp4"));
     expect(b.rows[0]).toMatchObject({ id: "c-02", group: "reels" });
-    expect(b.rows[0]?.ref).toContain(encodeURIComponent("reels/c-02.png"));
+    expect(b.rows[0]?.poster).toContain(encodeURIComponent("reels/c-02.png"));
+    expect(b.rows[0]?.ref).toBeUndefined();
   });
 
   it("a reel without a video is exactly as it was: the still, no poster ref, no sentence", () => {

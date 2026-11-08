@@ -66,7 +66,7 @@ export function reelCells(night: Night, c: ReelCandidate | ReelCutCandidate, med
     const still = c.image !== undefined && media[c.image] !== undefined ? scoutFileUrl(night.id, c.image) : undefined;
     const said = c.videoError !== undefined && !moving ? [`video: ${c.videoError}`] : [];
     cell(night, c, moving ? c.video : c.image, media, out, reelCell(c.id), [meta, ...said].join(" · "), [`reel · ${c.title}`, line, ...c.cut.map((b) => `- ${b}`), ...said]);
-    out.rows.push({ id: c.id, label: clip40(c.title), group: "reels", prompt: c.cut.join(" / "), ...(moving && still !== undefined ? { ref: still } : {}), ...use, ...aim, ...episodeRow(c.fromEpisode, episodes) });
+    out.rows.push({ id: c.id, label: clip40(c.title), group: "reels", prompt: c.cut.join(" / "), ...(moving && still !== undefined ? { poster: still } : {}), ...use, ...aim, ...episodeRow(c.fromEpisode, episodes) });
     return;
   }
   const meta = [line, `reel ${c.fromReel}`, `${c.seconds}s`].join(" · ");

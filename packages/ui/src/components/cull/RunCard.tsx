@@ -46,7 +46,8 @@ export function RunFace({ run, cells, mediaOf, wordsOf }: Pick<RunCardProps, "ru
       </span>
     );
   }
-  if (run.words?.ref !== undefined) return <Plate className={s.face} src={run.words.ref} alt="" lazy />;
+  const face = run.words?.ref ?? run.words?.poster;
+  if (face !== undefined) return <Plate className={s.face} src={face} alt="" lazy />;
   if (kind === "model") {
     // A model run is its first variant's poster render; a glb is never drawn on a card.
     const poster = wordsOf(firstId).poster;
