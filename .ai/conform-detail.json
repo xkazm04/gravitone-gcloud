@@ -18608,6 +18608,48 @@
       "evaluatedTs": "2026-11-08T01:24:11.452Z",
       "worker": "0939c0c1-5494-458a-b09a-115e5fdb5071",
       "techniques": []
+    },
+    "83b32ed7-9fa1-4a2a-b1ec-2cdd1b5926d3/docs-sync": {
+      "context": "app-root-and-dev-inspector",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:37:33.890Z",
+      "worker": "1f2cd79e-8e5d-4808-8a04-fab0470a9cfb",
+      "techniques": [
+        {
+          "technique": "doc-rot-detection",
+          "verdict": "deviation",
+          "evidence": "app/_dev-inspector/devLocate.ts:30 Rot that shipped with the v1 cutover and was never caught. Line 36 still names the retired app/_phases/_shared/, and the current primitive shelf (packages/ui) is not listed."
+        },
+        {
+          "technique": "named-duplication-points",
+          "verdict": "deviation",
+          "evidence": "app/layout.tsx:22 The public metadata hand-types the catalog's PHASES list (packages/catalog/src/projects.ts:17) and names neither the authority nor a check. The values match today. The landing beside it reads from the registries instead (page.tsx:2)."
+        },
+        {
+          "technique": "dated-corrections",
+          "verdict": "conformant",
+          "evidence": "app/page.tsx:13 Earlier states stay visible with their dates and the reason they were replaced ('the atlas was hand-placed and already behind the registries')."
+        },
+        {
+          "technique": "source-doc-mapping",
+          "verdict": "conformant",
+          "evidence": "app/page.tsx:2 The landing's claims about the product come from the owning registries, not from hand-placed copies."
+        },
+        {
+          "technique": "prose-as-an-execution-surface",
+          "verdict": "conformant",
+          "evidence": "app/_dev-inspector/devInspectorUi.tsx:170 The command the program prints for the reader to run is a script the repo owns (package.json:24). It takes no credential and names no unowned package."
+        },
+        {
+          "technique": "negative-claims-are-pinned",
+          "verdict": "conformant",
+          "evidence": "app/_dev-inspector/DevInspectorAbsent.tsx:18 The claim 'nothing ships in production' carries a measurement and date (:10, Measured 2026-08-30) and is held by a forbidden-substring sweep over the build output (check-bundle.mjs:236, data-devinspector)."
+        }
+      ],
+      "registryProposal": "negative-claims-are-pinned is written about pinning a document's wording. It does not say what to do when the negative claim lives in a code comment and a gate over the build output can check the truth itself, which is stronger than pinning the wording. A sentence saying that an artifact-level forbidden-substring gate satisfies the technique would make this case easy to judge."
     }
   }
 }

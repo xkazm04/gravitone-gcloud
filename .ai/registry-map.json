@@ -1770,7 +1770,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_dev-inspector/devLocate.ts:30 This comment and the next line say lib/ holds no JSX beyond GlobalErrorBridge. GlobalErrorBridge is retired (layout.tsx:26), and lib/announcer.tsx in this same context renders JSX (:233, :239). Line 36 also still lists app/_phases/_shared/, which no longer exists. The v1 retirement left these claims stale, and nothing coupled to them noticed.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         }
       ],
       "governance": "governed"
