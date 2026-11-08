@@ -5103,7 +5103,11 @@
           "changedAt": "2026-10-14",
           "confidence": "probable",
           "priorNotApplicable": 2,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/cutExport.ts:1 This context's 'export' renders an mp4 or video from an edit decision list; there is no tabular surface or CSV export. A search of lib/ for columnheader, aria-sort, gridcell, keyset and text/csv returned no hits.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "music-video-production",
@@ -6609,8 +6613,8 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "priorNotApplicable": 2,
+          "state": "unknown"
         },
         {
           "subject": "agent-instruction-files",
@@ -19649,7 +19653,11 @@
           "changedAt": "2026-10-14",
           "confidence": "probable",
           "priorNotApplicable": 2,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/field/Field.tsx:1 These are controlled primitives (button, toggle, seg, field, tab rail, panel, toast, sheet) with no rows, columns, pagination, sort or export of their own; when they act as filter controls, the commit point is the calling table's decision. A search of the components tree for sortBy, pageSize, keyset and text/csv found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "accessibility",

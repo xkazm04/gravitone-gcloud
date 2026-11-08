@@ -18932,31 +18932,21 @@
       "context": "ui-controls-shell",
       "subject": "table",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T03:58:25.650Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "53848205-9e41-4bbe-b739-61d1c82ed058",
-        "state": "not-applicable",
-        "at": "2026-11-08T03:59:19.844304+00:00",
-        "reason": "reviewer (sonnet): The anchor Field.tsx:1 is only a header comment about text entry. It does not show that table preconditions are absent, and the claim rests on a grep. The evidence also names panel, toast and sheet, which are not among the context files."
-      }
+      "evaluatedTs": "2026-11-08T04:20:11.855Z",
+      "worker": "86f55423-a56d-4634-b5fa-8274125bcb1b",
+      "techniques": []
     },
     "bba6c91f-7e8c-40e9-acee-8929eb245a8c/table": {
       "context": "cut-and-export",
       "subject": "table",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T03:58:25.650Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "53848205-9e41-4bbe-b739-61d1c82ed058",
-        "state": "not-applicable",
-        "at": "2026-11-08T03:59:19.984887+00:00",
-        "reason": "reviewer (sonnet): The anchor lib/cutExport.ts:1 is a header comment about the animatic export. It does not itself show that no tabular surface or row export exists, and the claim rests on a grep. The grep terms (csv, keyset, columnheader) are also thin proof of absence."
-      }
+      "evaluatedTs": "2026-11-08T04:20:11.855Z",
+      "worker": "86f55423-a56d-4634-b5fa-8274125bcb1b",
+      "techniques": []
     },
     "7d7b94f7-f312-4ea4-b315-23df705c2286/live-system-demo-film": {
       "context": "bound-producers",
@@ -18998,6 +18988,21 @@
       "worker": "adc18113-d51e-4945-91c6-56dc256fcfae",
       "techniques": [],
       "registryProposal": "The explainer cut holds each card for its line's measured take, falling back to the line's spoken length (lib/cut/explainer.ts:3-4). That is audio-first pacing applied to a generated-still film. The rule is wider than live-system capture, and it might belong in the voice or assembly subjects as a shared technique instead of living only under this subject."
+    },
+    "59d40b40-c1eb-4e42-8187-018bb749c736/table": {
+      "context": "floor-lanes-runs",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:20:11.855Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "86f55423-a56d-4634-b5fa-8274125bcb1b",
+        "state": "not-applicable",
+        "at": "2026-11-08T04:21:53.862104+00:00",
+        "reason": "reviewer (sonnet): The anchor RunRow.tsx:5 only says a row with a page is a link. That doesn't show the Floor has no sort, columns or export. I found no grid in the context's own files, but the absence rests on a grep rather than the anchor."
+      }
     }
   }
 }
