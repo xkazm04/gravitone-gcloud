@@ -1,0 +1,155 @@
+{
+ "schema": "conform-run/1",
+ "worker": "bc62dd3f-b143-4c62-8f9a-06869358925d",
+ "subject": "generated-music-acceptance",
+ "evaluatedAt": "2026-11-06T23:22:14.504457+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-insight-lessons",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/_insight/read.ts:127 Takes are scored 1-10 on fixed dimensions per kind (music: melody, instrument_choice, instrument_quality), and the take's own word commitments (terms.instrument, negative, mood) never become pass/fail/unmeasured check items, so the listen measures taste instead of brief conformance.",
+   "techniques": [
+    {
+     "technique": "brief-conformance-listen",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_insight/read.ts:127 The rubric dimensions come from @gt/ui rubric.ts RUBRIC[kind] and are the same for every take. They are not derived from the brief, and RubricTake carries no terms or negative, so named inclusions and exclusions are never checked item by item."
+    },
+    {
+     "technique": "structure-verification-against-plan",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/_insight/read.ts:114 Tempo, key and length asked are checked by tool against the ingest measure, with held, missed, octave, unmeasured and unasked kept apart. Section boundaries and ending shape are not checked, but this batch brief commits no sections."
+    },
+    {
+     "technique": "generated-audio-defect-taxonomy",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/audio/strengths.ts:189 The anchor is off-context: it is the claimDraft that Strengths.tsx calls. Each provider \u00d7 facet cell carries its top classified defect (lib/sound/types.ts DEFECTS mirrors the taxonomy) into the signed lesson, which is the recurrence rule's record of which brief\u2013model pair buys which defect."
+    }
+   ]
+  },
+  {
+   "context": "audio-text-producers",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/producers/src/suno/producer.ts:74 The Suno producer runs on the operator's Chrome profile under subscription credits, but books only the model name per create, so the account and plan tier that decide the commercial grant are lost at generation time.",
+   "techniques": [
+    {
+     "technique": "rights-and-provenance-record",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/suno/producer.ts:74 Searched lib/producers/suno.ts, lib/sound/suno/*, lib/suno/types.ts and lib/sound/*.ts for account, plan, tier, commercial and rights. No music rights record exists anywhere."
+    },
+    {
+     "technique": "generated-audio-defect-taxonomy",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/score/define.ts:12 Remedy routing has a section re-render act (the noted section is re-rendered and every other section is kept), which is the smallest generation-side fix the taxonomy prescribes. The revision note is free text, not a defect class."
+    }
+   ]
+  },
+  {
+   "context": "audio-hunt",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/_hunt/Hunt.tsx:80 Hunt takes are auditioned against each other and the winner is crowned, but each file plays at its raw generated level with no level matching (useTransport just sets a.src and plays), so a louder take reads as better.",
+   "techniques": [
+    {
+     "technique": "loudness-and-peak-acceptance",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_hunt/Hunt.tsx:6 The technique says listens that compare takes need levels matched to each other before judging. No gain or LUFS matching exists in the audition path, even though the measures table holds lufs per take."
+    },
+    {
+     "technique": "brief-conformance-listen",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/audio/_hunt/Hunt.tsx:7 The hunt picks among exploration candidates, and the crowned take lands pending rather than accepted. The technique exempts exploration slates from the full sheet."
+    }
+   ]
+  },
+  {
+   "context": "scout-engine-creative",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/foundry/scout/track.ts:226 A scout track clip, made on the signed-in Suno browser and kept on the Board, goes straight into the visualizer and music-video ladder carrying only part, path, model, title, clipId and duration, with no account, plan tier or terms record behind its commercial use.",
+   "techniques": [
+    {
+     "technique": "rights-and-provenance-record",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/scout/track.ts:226 TrackClip (types.ts:498) has no rights fields, and keptClips feeds visualizers that build the published video and Short."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "generated-music-acceptance",
+   "context": "audio-arrange-desk",
+   "reason": "evidence leans on return/route.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T23:22:14.504457+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "brief-conformance-listen",
+    "generated-audio-defect-taxonomy",
+    "structure-verification-against-plan"
+   ],
+   "deviations": 1,
+   "context": "audio-insight-lessons",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T23:22:14.504457+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "generated-audio-defect-taxonomy",
+    "rights-and-provenance-record"
+   ],
+   "deviations": 1,
+   "context": "audio-text-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T23:22:14.504457+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "brief-conformance-listen",
+    "loudness-and-peak-acceptance"
+   ],
+   "deviations": 1,
+   "context": "audio-hunt",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T23:22:14.504457+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "rights-and-provenance-record"
+   ],
+   "deviations": 1,
+   "context": "scout-engine-creative",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

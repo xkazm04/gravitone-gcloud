@@ -312,8 +312,19 @@ const audio: Binding[] = [
   { mode: "audio.duel", keys: ["0"], verb: "same", does: "no difference" },
 ];
 
+// spark yue2-song-lab S2 - the knockout booth (the contest winner's keys; components/songlab/keys.ts reads them).
+const songlab: Binding[] = [
+  { mode: "audio.songlab", keys: ["1"], verb: "play-a", does: "play A", when: "match" },
+  { mode: "audio.songlab", keys: ["2"], verb: "play-b", does: "play B", when: "match" },
+  { mode: "audio.songlab", keys: ["F"], verb: "flip", does: "flip", when: "match" },
+  { mode: "audio.songlab", keys: ["Space"], verb: "toggle", does: "play", when: "match" },
+  { mode: "audio.songlab", keys: ["←", "→"], verb: "seek", does: "2 s", when: "match", repeat: true },
+  { mode: "audio.songlab", keys: ["A", "B", "N"], verb: "answer", does: "answer", when: "blind" },
+  { mode: "audio.songlab", keys: ["⏎"], verb: "send", does: "send vote", when: "match" },
+];
+
 export const BINDINGS: readonly Binding[] = [...floor, ...calendar,
-  ...slot, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40, ...style, ...audio];
+  ...slot, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40, ...style, ...audio, ...songlab];
 
 /** The app's one compiled keymap. */
 export const KEYMAP = compile(BINDINGS);

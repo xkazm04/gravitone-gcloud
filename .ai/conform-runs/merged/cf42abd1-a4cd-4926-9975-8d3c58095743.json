@@ -1,0 +1,163 @@
+{
+ "schema": "conform-run/1",
+ "worker": "cf42abd1-a4cd-4926-9975-8d3c58095743",
+ "subject": "video-assembly",
+ "evaluatedAt": "2026-11-04T00:02:09.229182+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:157 A cue the music vendor refused and a cue nobody has rendered both draw as \"missing\" (and the cut's ClipView status is only ok|missing|drift), so a refused region is never a drawn state of the cut with its cost, which is exactly the collapse gap-and-refusal-honesty forbids.",
+   "techniques": [
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:157 Missing is drawn in place, which is good, but there is no refused state: refused-by-provider and never-requested are merged into one look."
+    },
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:114 The only nudge step is \u00b150 ms on a 25 fps cut (a 40 ms frame), so it is not the sub-frame step the technique requires. Snap-to-mark (line 118) and the signed offset readout are present."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:169 Picture, voice and music lanes keep a fixed order (LANES at line 30) on one CutClock. Blocks are drawn to scale from drawnS, the same value the offset readout edits."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:47 Each cue carries a stated purpose and a tempo, and its span is first-to-last scene (snapped to scene marks), so it moves with the picture."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:253 The derived turn is drawn once on the shared ruler. An absent turn draws no mark rather than zero. The derivation itself lives in the fixtures/lib (see part-port-fixtures)."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:76 An undecodable still no longer leaves a blank canvas under a 'poster preview' label. It becomes an error that names the input."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:62 The poster preview runs the export's own compositor frame function in the browser before the priced mv render job."
+    },
+    {
+     "technique": "generated-shot-sourcing",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Motion.tsx:99 Motion for a still is a proposal with moves, held-still elements and model/vendor provenance. A decline to animate is shown verbatim (line 85), and a re-drawn plate marks the outcome stale."
+    }
+   ]
+  },
+  {
+   "context": "part-port-fixtures",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 The score's turn takes the first scene whose mood matches /turn/ without surfacing a second match. It is also a second derivation beside the cut's turnOf (fixtureCut.ts:143), so the same structural fact has two derivations that can age apart.",
+   "techniques": [
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 The turn is derived from material, and absence gives null, but two matches silently take the first, and this derivation is separate from turnOf, breaking 'one derivation, all consumers'."
+    },
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 Offsets are stored as data and snap returns to exactly 0. But status only flips drift->ok at zero, and deriveTimeline never emits drift for a project, so a clip nudged 300 ms off its mark still reads ok. The status is not derived from the offset."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:84 Gaps and covered seconds are computed (lines 88-89), but a cue's only failure signal is a null active take. Nothing in the score record or view holds a refused render."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:121 The drawn start is computed from the same offsets value the bench reports (offsetMs, line 127): same fact, same pixels."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:265 A cue's take has one section per scene it spans, timed from the picture."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:100 The cut is compiled to a deterministic EDL whose digest is carried with each export."
+    },
+    {
+     "technique": "generated-shot-sourcing",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureMotion.ts:85 Deciding not to animate a still is a recorded outcome with its reason and its provenance basis."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "video-assembly",
+   "context": "part-editor-writing-research",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "video-assembly",
+   "context": "visual-producers",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "video-assembly",
+   "context": "music-vendors-and-publish",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T00:02:09.229182+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "generated-shot-sourcing",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "silent-defects-get-a-code-or-an-error",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T00:02:09.229182+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "generated-shot-sourcing",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture"
+   ],
+   "deviations": 1,
+   "context": "part-port-fixtures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

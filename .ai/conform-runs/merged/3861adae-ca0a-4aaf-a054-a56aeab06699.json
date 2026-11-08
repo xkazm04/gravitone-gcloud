@@ -1,0 +1,77 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3861adae-ca0a-4aaf-a054-a56aeab06699",
+ "subject": "agent-host-experience",
+ "evaluatedAt": "2026-11-08T04:28:06.508494+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "mcp-agent-door",
+   "subject": "agent-host-experience",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/_server/mcp/rpc.ts:112 tools/list publishes the same catalog to every token whatever its scope, so a read-scope agent's model sees the launch and job writes it can only be refused on; the standard asks for a catalog computed from what the role is granted, and the money-bearing path's pending spend request has no expiry or reaper.",
+   "techniques": [
+    {
+     "technique": "journey-shaped-tool-surface",
+     "verdict": "deviation",
+     "evidence": "app/_server/mcp/rpc.ts:112 Five family tools with paged, filtered reads, blast-radius descriptions and in-band {code, detail, reason} refusals do follow the technique. Two gaps: the catalog depends only on the projection mode, not on the agent's grant (scope is checked per call, rpc.ts callTool), and no read has a concise/detailed response mode."
+    },
+    {
+     "technique": "depth-handoff",
+     "verdict": "deviation",
+     "evidence": "packages/domain/src/mcp.ts:39 Money comes home correctly: a non-free live launch is filed as a spend request and the operator confirms it on the Board (launch.ts:44), with an opaque sr_ id and a /board link. But a pending request never expires and nothing reaps it (creation-names-reaper). The answer has no sentence saying nothing has happened yet; that is said only once, in the initialize instructions."
+    },
+    {
+     "technique": "in-host-views",
+     "verdict": "not-applicable",
+     "evidence": "app/_server/mcp/rpc.ts:106 Only the tools capability is declared; there are no resources and no ui:// view resources, so no rendered view ships. The text floor holds: every result carries text plus structuredContent."
+    },
+    {
+     "technique": "portable-view-spec",
+     "verdict": "not-applicable",
+     "evidence": "app/_server/mcp/rpc.ts:55 Results are text plus structured JSON. No declarative view spec is projected outward; `view` is only a deep-link path."
+    },
+    {
+     "technique": "agent-ui-event-stream",
+     "verdict": "not-applicable",
+     "evidence": "app/_server/mcp/rpc.ts:17 This door is the outside tier (the tool protocol). It does not drive the product's own windows, so it keeps the two tiers apart as the standard asks."
+    },
+    {
+     "technique": "peer-agent-delegation",
+     "verdict": "not-applicable",
+     "evidence": "app/api/mcp/route.ts:1 Capability form only: a stateless tool server with no agent card and no task lifecycle. That is the default the standard recommends."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-host-experience",
+   "context": "domain-parts-projects-slots",
+   "reason": "absence contradicted: packages/domain/src/audio.intent.schema.ts:29 contains 'inputSchema' (20 hit(s) in the context's directories)"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T04:28:06.508494+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-host-experience"
+   ],
+   "techniques": [
+    "agent-ui-event-stream",
+    "depth-handoff",
+    "in-host-views",
+    "journey-shaped-tool-surface",
+    "peer-agent-delegation",
+    "portable-view-spec"
+   ],
+   "deviations": 1,
+   "context": "mcp-agent-door",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

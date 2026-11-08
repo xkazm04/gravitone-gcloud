@@ -1,0 +1,81 @@
+{
+ "schema": "conform-run/1",
+ "worker": "849ce14d-4fa5-4a7c-b127-3cbd739502df",
+ "subject": "agent-instruction-files",
+ "evaluatedAt": "2026-11-04T02:01:07.061018+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-writing-research",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:3 These files are React editor screens, not an agent instruction file, skill or rule. A search of app/(studio)/projects for CLAUDE.md, AGENTS.md, SKILL.md and instructions found no hit, so the subject's precondition (a repo-owned file a harness injects into an agent's context) does not hold here.",
+   "techniques": [],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "SKILL.md",
+    "instructions"
+   ]
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:3 The media editors (Cut, Frames, Score, Voice and the rest) live in the same _edit directory as the part editor island and are UI components. A search of app/(studio)/projects for CLAUDE.md, AGENTS.md, SKILL.md and instructions found no hit, so no agent instruction file is authored or delivered here.",
+   "techniques": [],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "SKILL.md",
+    "instructions"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-instruction-files",
+   "context": "part-port-real-and-contract",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-instruction-files",
+   "context": "ui-marks-and-text",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-instruction-files",
+   "context": "mcp-agent-door",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T02:01:07.061018+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T02:01:07.061018+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

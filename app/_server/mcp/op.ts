@@ -13,7 +13,7 @@ import type { Agent } from "./principal.ts";
 
 // ONE OP OF THE AGENT DOOR - its words, its door (zod), its annotations and its handler. The rows
 // live in ./tools/*.ts, the one registry that gathers them is ./registry.ts, and the projection
-// (./projection.ts) publishes them as four family tools or one tool per op; a handler never knows
+// (./projection.ts) publishes them as five family tools or one tool per op; a handler never knows
 // which. Split from the registry so a tools module and the registry do not import each other.
 
 /** The server ports an op calls - the studio's own (`serverProduce()` and its siblings), handed in

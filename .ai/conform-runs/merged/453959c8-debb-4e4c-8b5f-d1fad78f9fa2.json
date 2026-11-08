@@ -1,0 +1,37 @@
+{
+ "schema": "conform-run/1",
+ "worker": "453959c8-debb-4e4c-8b5f-d1fad78f9fa2",
+ "subject": "fleet-orchestration",
+ "evaluatedAt": "2026-11-04T03:03:05.616829+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "fleet-orchestration",
+   "context": "domain-run-job-steps",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "fleet-orchestration",
+   "context": "scout-engine-core",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "fleet-orchestration",
+   "context": "studio-shell",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "fleet-orchestration",
+   "context": "ui-status-provenance",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "fleet-orchestration",
+   "context": "server-seam",
+   "reason": "These files are transport and identity: the route and action envelope, the session token, Firebase and dev auth, SSE over the ledger cursor, and file serving. None of them registers, dispatches, sweeps or harvests sessions, so no technique of this subject has a realization to judge here. not-applicable cannot be claimed either, because the context's paths include lib/ files and the driver's absence re-run over lib/ would hit the subject's terms through other modules (lib/foundry/scout, lib/producers)."
+  }
+ ],
+ "consults": []
+}

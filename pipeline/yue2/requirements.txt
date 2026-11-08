@@ -1,0 +1,27 @@
+# What pipeline/yue2/*.py import, which runs in the two WSL venvs the install scripts build (see
+# docs/yue2.md), NOT in the CI python job and NOT from pipeline/requirements.txt. This file is the
+# declaration the foundry selftest's requirements guard checks those scripts against; the install
+# scripts (install-gen.sh, install-eval.sh) pin and install the real versions, so keep the names in step.
+#
+# generation venv (install-gen.sh)
+yue2-infer
+safetensors
+huggingface-hub
+# scoring + post venv (install-eval.sh)
+torch
+torchaudio
+qwen-asr
+audio-separator
+faster-whisper
+jiwer
+phonemizer
+pyloudnorm
+audiobox-aesthetics
+espeakng-loader
+librosa
+muq
+hydra-core
+omegaconf
+zhconv
+matchering
+pedalboard

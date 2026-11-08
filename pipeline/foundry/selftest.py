@@ -893,7 +893,7 @@ def test_every_third_party_import_is_declared_in_requirements():
 
     # import name -> distribution name, where they differ
     dist_of = {"PIL": "Pillow", "facenet_pytorch": "facenet-pytorch", "cv2": "opencv-python",
-               "yaml": "PyYAML", "sklearn": "scikit-learn"}
+               "yaml": "PyYAML", "sklearn": "scikit-learn", "hydra": "hydra-core", "yue2": "yue2-infer"}
     # modules importable by bare name from a script under pipeline/ (the scripts
     # insert vlm-probe/ and foundry/ onto sys.path), plus each file's own siblings
     pipeline_local = {Path(f).stem for f in files if f.startswith("pipeline/")}
@@ -932,13 +932,20 @@ def test_every_third_party_import_is_declared_in_requirements():
                     # does not provide them, so they are never "undeclared" there
                     if f.startswith("pipeline/mesh/blender/") and top in blender_host:
                         continue
-                    if norm(dist_of.get(top, top)) not in declared:
+                    # pipeline/yue2/ runs in its own WSL venvs: its imports are checked against its own
+                    # declaration (pipeline/yue2/requirements.txt), not the CI python job's file
+                    have = declared | yue2_declared if f.startswith("pipeline/yue2/") else declared
+                    if norm(dist_of.get(top, top)) not in have:
                         out.add(f"{f}: {top}")
         return sorted(out)
 
-    lines = (root / "pipeline" / "requirements.txt").read_text(encoding="utf-8").splitlines()
-    declared = {norm(re.split(r"[<>=!~\[; ]", l.strip())[0]) for l in lines
+    def read_declared(rel):
+        ls = (root / rel).read_text(encoding="utf-8").splitlines()
+        return {norm(re.split(r"[<>=!~\[; ]", l.strip())[0]) for l in ls
                 if l.strip() and not l.strip().startswith("#")}
+
+    yue2_declared = read_declared("pipeline/yue2/requirements.txt")
+    declared = read_declared("pipeline/requirements.txt")
     check("requirements guard: nothing imported is undeclared", undeclared(declared), [])
     # the control: drop one name and the same walk must name its importers
     got = undeclared(declared - {"facenet-pytorch"})

@@ -1428,7 +1428,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/claudeCli.ts:383 The reasoning (generate) door spawns `claude` with no `cwd` and its argv (cliArgs) carries no isolation flag, so every recalibrate/frames/text turn inherits the server's working directory (the repo root) and loads the repo's CLAUDE.md, settings and hooks as ambient context. The golden path's generate mode requires a neutral working directory, and the agent and retrieval seams already use `--safe-mode` for exactly this.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",
@@ -1461,7 +1465,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/claudeCli.ts:279 The reasoning door's argv (-p, --output-format, --model, --effort, --allowed-tools \"\", --max-turns 1) has no --safe-mode, and its spawn at lib/claudeCli.ts:383 passes no cwd. So every frames, research and recalibrate turn (lib/turns/runner.ts -> reason -> runClaude) starts in the server's own directory, the repo root, and is briefed by the developer CLAUDE.md, which was written about a different job. The writer and reviewer seams in the same context, and the sibling claudeCliRetrieve door, all close that path with --safe-mode.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "eval-harness",
@@ -1477,7 +1485,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/agent/envelope.ts:34 Reviewer engines act as judges inside the article critique loop, yet the parsed envelope keeps only final, errors, turns and costUsd and never the model the call resolved to, so a verdict is stamped with the requested slug (lib/articles/critique.ts rv.model) and not with the instrument that actually scored it.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-runtime-assembly",
@@ -1493,8 +1505,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "deviation",
+          "priorNotApplicable": 2,
+          "evidence": "lib/claudeCli.ts:388 Every nested `claude` run (reasoning door and agent seam alike) inherits this process's whole environment minus four metered-auth variables, so the parent runtime's ambient CLAUDE* identifiers reach the child unscrubbed, and the reasoning door also runs without --safe-mode, so user-wide hooks fire from it as if it were the parent session.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "module-design",
@@ -1510,7 +1526,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/agent/reviewerEnv.ts:39 The per-engine environment is decided inside the argv builder, so reviewerEnv has to build a fake reviewer call (model \"m\", cwd \".\", empty prompt) to read the env field back out; the env decision sits in the wrong module and its caller works around it.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "agent-memory",
@@ -1559,7 +1579,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/agent/reviewerCommand.ts:37 The headless agy reviewer runs under an allow-everything profile and is contained only by workspace isolation, while the claude writer and reviewer run a closed allowlist with dontAsk and no prompts; one engine of the seam is therefore open rather than fail-closed.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         }
       ],
       "governance": "governed"
@@ -1597,7 +1621,11 @@
           "revision": 5,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_dev-inspector/DevInspector.tsx:38 The root and the dev inspector reach host capabilities only through browser APIs such as navigator.clipboard, and searching the context files for tauri/electron/ipcRenderer/__TAURI__/contextBridge/webview found nothing, so the subject's native-process precondition does not hold.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:838495bb60a986c6",
+          "evaluatedRevision": 6
         },
         {
           "subject": "error-handling",
@@ -1742,7 +1770,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_dev-inspector/devLocate.ts:30 This comment and the next line say lib/ holds no JSX beyond GlobalErrorBridge. GlobalErrorBridge is retired (layout.tsx:26), and lib/announcer.tsx in this same context renders JSX (:233, :239). Line 36 also still lists app/_phases/_shared/, which no longer exists. The v1 retirement left these claims stale, and nothing coupled to them noticed.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         }
       ],
       "governance": "governed"
@@ -2017,7 +2049,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/humanActs.ts:36 The approval record holds only a timestamp and patch ids: there is no decider and no fingerprint of the post that was shown. landing.ts then re-reads post/ from disk at land time, so nothing checks that what lands is what the human approved.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "agent-memory",
@@ -2051,14 +2087,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/articles/mediumPackage.ts:257 The Medium package and the registry landing ship one post in one fixed language (lang=\"en\"). There are no translated variants, derived store or fallback. A grep of lib/articles for translation, i18n, hreflang and pseudo-loc found nothing.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
-          "evaluatedRevision": 12,
+          "evidence": "lib/articles/mediumPackage.ts:259 The Medium package and the registry landing ship each post in one fixed language (lang=\"en\"), with no translated variants, derived store or canonical fallback; a grep of lib/articles for translation, i18n, hreflang and pseudoloc found nothing (the only 'localization' hit is a tag string inside the dry stand-in fixture post).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7a5b5afa04e7f7ad",
+          "evaluatedRevision": 13,
           "source": "renamed",
           "renamedFrom": "e660bf0f-199c-4cd9-91e1-1a13e318e55f",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-instruction-files",
@@ -2261,7 +2296,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/agentSteps.ts:82 Each headless writer session is dispatched under only enforced caps (timeoutMin, and --max-budget-usd added by the loop guard), while the brief built above it carries no derived turn or cost budget and no early-stop conditions, so the soft-budget-under-the-hard-cap pair of limits is missing and a cap-fired turn is just a failed step rather than a measured cap-fired fraction.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "agent-cli-transport",
@@ -2278,14 +2317,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "lib/articles/agentSteps.ts:36 Every writer step runs a fresh headless turn in an isolated temp workspace holding only inputs/ and out/. A non-completed outcome or a missing or empty out/ file fails the step by name, and dry runs are answered by a labeled stand-in rather than the seat. The context consumes the transport correctly; the spawn door itself lives in lib/agent and lib/claudeCli.ts.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
+          "evidence": "lib/articles/agentSteps.ts:95 Every writer step runs one fresh headless turn in an isolated inputs/ and out/ workspace, with a per-step tool subset. Any outcome other than completed fails the step by name, and a missing or empty out/ file fails ingest. The spawn, env strip and envelope parse are delegated to lib/agent.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
           "source": "renamed",
           "renamedFrom": "14632859-df56-4340-9e16-c420ff681ee3",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "prompt-assembly",
@@ -2334,7 +2372,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/types.ts:103 The approval record holds only a timestamp and patch ids, with no decider identity and no fingerprint of the draft that was shown, so an approval cannot be proven to cover the post that later lands.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "eval-harness",
@@ -2350,7 +2392,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/types.ts:689 The trial contract this engine writes posts around decides upheld or challenged only by comparing delta with a declared minimum-effect band, and the per-arm sd and the CI are reported but never decide; nothing checks that the between-arm spread clears the within-arm SD, so with n=3 and a wide sd a band-clearing delta still publishes an order that sits inside the noise (computeVerdict in lib/articles/trial/verdict.ts, in another context, works the same way).",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-instruction-files",
@@ -2428,7 +2474,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/trial/verdict.ts:369 computeVerdict calls a trial challenged or upheld when the delta clears the preregistered band, and never compares that delta with the arms' within-condition SD, which it computes and only reports; so an order can be published that sits inside one SD of run-to-run noise.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "test-harness",
@@ -2509,7 +2559,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/trial/store.ts:107 The file store decodes exec records (and, through readJsonFile, trial.json, prereg and verdict) by type assertion. Non-JSON fails loudly, but a record with a wrong shape or an unknown status is handed to callers as a valid TrialExecRecord or TrialRecord.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "agent-runtime-assembly",
@@ -2782,7 +2836,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/library/query.ts:85 rowOf casts the closed-vocabulary text columns (kind, state, origin, source) straight to the domain enum, and library_items.state carries no CHECK, so an unknown variant passes through as if it were a member. This is the silent third option row-mapping bans.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "mcp-tools",
@@ -3051,8 +3109,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "packages/ui/src/components/audio/brief.ts:1 These are the authoring forms and pure models for music briefs (tempo, key, length, instruments). The 'voice' hits in packages/ui/src/components/audio are instrument roles (choir), Web Audio mix voices in useMix.ts and voiceover-bed steers. None of them captures speech or synthesizes it, and no speechSynthesis, SpeechRecognition, getUserMedia, transcrib or MediaRecorder appears.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "prompt-assembly",
@@ -3068,7 +3130,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/batch.ts:7 The prompts assembled here (composeSfxPrompt, the Suno fields in recipe.ts) go to audio-generation vendors, not to a language model, and the file names sound-effect-generation as its governing technique. A search of packages/ui/src/components/audio for systemPrompt, max_tokens, anthropic, compaction and fingerprint returned no hits.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "video-assembly",
@@ -3362,7 +3428,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:47 The audition crowns a winner by stepping between sibling takes played at their raw served level, with no loudness on the take and no level matching, so the louder take reads as better in exactly the comparative listen the technique says must be level-matched.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
@@ -3419,14 +3489,13 @@
           "changedAt": "2026-10-29",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/ui/src/components/audio/hunt.ts:1 These are pure models and boards for auditioning and arranging generated music takes. Nothing here captures or narrates a software demo, and a search of packages/ui/src/components/audio for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
-          "evaluatedRevision": 2,
+          "evidence": "packages/ui/src/components/audio/hunt.ts:1 These are pure models and boards for drafting, auditioning and arranging generated audio takes. No software demo is captured or narrated, and a search of packages/ui/src/components/audio for screencast, recordVideo, playwright and 'demo film' found nothing (the only 'demo' hit is a 'product demo' music-genre cue in lexicon.rows.ts).",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "c909310e-6f47-45b3-b06e-b18cfb3ab27c",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "quality-gates",
@@ -3514,7 +3583,11 @@
           "revision": 6,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:54 A take's verdict and stage cross into the UI as bare strings and are rendered as raw tokens in a Chip (HuntMap.tsx:132 `label={take.verdict}`, with every non-'kept' value painted rose), so there is no closed union and no label table, and a new verdict shows its raw spelling.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6a9ab99285e2cac0",
+          "evaluatedRevision": 6
         },
         {
           "subject": "structured-output",
@@ -3718,14 +3791,13 @@
           "changedAt": "2026-10-29",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/ui/src/components/audio/rubric.ts:1 This context scores generated audio takes and records lessons from them; no demo film is produced. A search of packages/ui/src/components/audio for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
-          "evaluatedRevision": 2,
+          "evidence": "packages/ui/src/components/audio/rubric.ts:1 This context scores generated audio takes and records lessons from them; it produces no demo film of a running system, and a search of packages/ui/src/components/audio for screencast, recordVideo, playwright and 'demo film' found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "f54f23e7-c790-44ff-beaf-a5cb83c8d5c4",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "scoring-rubrics",
@@ -3808,8 +3880,12 @@
           "revision": 3,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "packages/producers/src/set.ts:6 These are pure producer definitions for music video, score, Suno, voice, words, script, article, dojo and forge that the kernel prices and runs; there is no demo recorder, captured take or assertion pass over a running system, and searches for screencast, demo film, getDisplayMedia, gdigrab and screen recording found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "video-assembly",
@@ -3841,7 +3917,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/suno/producer.ts:74 The Suno producer runs on the operator's Chrome profile under subscription credits, but books only the model name per create, so the account and plan tier that decide the commercial grant are lost at generation time.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "fleet-orchestration",
@@ -4013,7 +4093,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/decision/v1/types.ts:330 Each adapter previews from v1's own planners and folds a digest of the v1 state it read into the commit token, so a commit over a v1 that moved is refused. The apply half is idempotent on the same outcome and refuses a conflicting one loudly.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -4052,7 +4136,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/applier.ts:62 applyEffects claims to be a full Effects but refuses the blob verb. This is the 'adapter that refuses a verb is not an adapter' failure: it type-checks as a substitute anywhere an Effects is expected and fails only at runtime.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "prompt-assembly",
@@ -4382,7 +4470,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/spend.ts:193 When a live launch comes back stale after the operator's K, the apply swaps in the fresh receipt and launches it without asking again (bounded only by a ceiling re-priced at apply time), so what runs can differ from what the operator was shown.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "eval-harness",
@@ -4463,7 +4555,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/scoutReelCells.ts:33 The words-cell content-address rule is written twice, because the canonical textRef lives in the scout-specific scoutPlan.ts (which also imports scoutReelCells.ts). One decision is now encoded in two modules, and spend.ts and seeds.ts both reach into scoutPlan.ts for it.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "audit-logging",
@@ -4479,7 +4575,11 @@
           "revision": 11,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/decision/v1/sources/seeds.ts:20 Decisions are keyed on durable item ids, rejects need a reason from a capped vocabulary, the applied state is compared rather than overwritten, and the ledger projections keep both clocks and omit absent fields from hashed event data.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11
         },
         {
           "subject": "cost-metering",
@@ -4495,7 +4595,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/spend.ts:138 The packet meta adds every unpriced request as $0 and shows no unpriced share, so a pile of unpriced asks reads as a measured small total, which contradicts totalWords' own rule that unpriced is never $0.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "review-iteration-loops",
@@ -4511,7 +4615,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/scout.ts:90 Committing a scout night writes every verdict, reason and note into night.json in the night's own media folder, last and idempotently. No rejected or unchosen media is destroyed in the same operation, and the record never says what is gone, so judgement and bytes stay stored together.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "fleet-orchestration",
@@ -4588,7 +4696,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/article.ts:125 One article drive is tracked by two state machines, the kernel job (jobMachine) and run.json (ARTICLE_STATUSES), and the binding copies kernel stops across by hand. The comment at line 360 admits the two can disagree (a job killed after its check leaves the run at the gate, unbooked), which is the two-truths defect session-registry forbids.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "video-assembly",
@@ -4691,8 +4803,12 @@
           "revision": 3,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "lib/producers/registry.ts:21 The bound producers (article, research, script, frames, motion, score, cut, voice, music video and so on) make generated media as kernel jobs; none captures a live system under a script, and searches for screencast, demo film, getDisplayMedia, gdigrab and screen recording across the source trees found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "media-playback",
@@ -4769,8 +4885,12 @@
           "revision": 8,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "packages/ui/src/components/cull/RunCard.tsx:3 The cull desk shows generated runs and their variants for keep/reject triage. It does not design a data-video frame. A grep of packages/ui/src/components/cull for chart/stats/dataset/ranking/reel/logo/race found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "eval-harness",
@@ -4786,7 +4906,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/cull/useRunDesk.ts:10 This is an operator's keyboard triage desk for keeping or rejecting generated runs: no model is run against declared scenarios and nothing is scored or aggregated across trials. A grep of components/cull and components/desk for benchmark, scenario, rubric and harness found no hits.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "voice-io",
@@ -4868,7 +4992,11 @@
           "revision": 7,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/cull/useRunDesk.ts:3 The run desk is a generic keep/reject verdict UI over any Board packet's cells. A case-insensitive search of packages/ui/src/components/cull and packages/ui/src/components/desk for race, overtake, accelerator, comparable and granularity found no hits, so the desk does not choose or score data-video ideas.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:857308a4204852e8",
+          "evaluatedRevision": 7
         },
         {
           "subject": "hitl-approval",
@@ -4954,7 +5082,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/cut/deriveTimeline.ts:314 The act-two turn mark is derived from the material's label, but when two scenes match /turn/ the first is taken silently instead of surfacing the double match as a story defect, and two other techniques (silence spotting, drift threshold) are also missed in this context.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:5f548f222df2e692",
+          "evaluatedRevision": 20
         },
         {
           "subject": "table",
@@ -4970,8 +5102,12 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "priorNotApplicable": 2,
+          "state": "not-applicable",
+          "evidence": "lib/cutExport.ts:1 This context's 'export' renders an mp4 or video from an edit decision list; there is no tabular surface or CSV export. A search of lib/ for columnheader, aria-sort, gridcell, keyset and text/csv returned no hits.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "music-video-production",
@@ -5003,8 +5139,12 @@
           "revision": 8,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "lib/cut/explainer.ts:3 This context cuts and exports voiced explainers, ads (supers plus an end card with a brand logo, lib/adOverlayPage.ts) and music videos as animatics. There is no narration-free data video, chart race, time warp or evidence card here. The ad end card and safe-zone table belong to ads, not to this subject's data-video ending or legibility floor.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "prompt-assembly",
@@ -5036,8 +5176,12 @@
           "revision": 3,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "lib/cut/explainer.ts:3 The cut, explainer, ad and music-video exports assemble generated stills, strips and takes, and headless Chromium renders composed pages, not captures of a live system; searches for screencast, demo film, getDisplayMedia, gdigrab and screen recording found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "trailer-structure",
@@ -5162,7 +5306,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/decision/apply.ts:221 The apply driver asks for the whole Effects port (tx, blob, call) but only uses tx and call, so its one production caller (lib/decision/v1/applier.ts) has to pass an adapter that refuses `blob`; seams-and-adapters says the fix belongs here, in the consumer naming only the contract it uses.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "eval-harness",
@@ -5211,7 +5359,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/library/feeds/kernel.ts:31 part_records (owned by packages/kernel/src/parts/schema.ts) is read by a raw json_tree scan in a lib/ Library feed instead of through a named parts operation, so the parts module is not the only reader of its table.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "mcp-tools",
@@ -5279,7 +5431,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/domain/src/door.ts:61 Unknown data becomes typed only through one small door that hides zod's undefined-key and brand quirks, and the rest of the domain is pure values, enumerated tables and a state machine as data.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "hitl-approval",
@@ -5581,7 +5737,11 @@
           "revision": 15,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/partView.ts:2 These files are pure type contracts, state-machine tables and projections with no transport, request or cache construction. A case-insensitive search of the 12 files for fetch, cache, memo, prefetch, swr and revalidate found nothing, and a search of all of packages/domain/src for prefetch, revalidate, useSWR and staleTime found nothing, so the client-fetch-cache subject has nothing to govern here.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:20824426732ffb6a",
+          "evaluatedRevision": 15
         },
         {
           "subject": "data-video-art-direction",
@@ -5675,7 +5835,11 @@
           "revision": 15,
           "changedAt": "2026-09-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/research.ts:36 These files hold the run and job state machines and the persistence schemas for step records. The one record that carries model output stores a notebook that was already validated by lib/notebook/validate.ts, outside this context, so no extraction from model text happens here; a search of packages/domain/src for max_tokens, stop_reason, responseSchema, json_schema and tool_use found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:d51aec71411ccb2b",
+          "evaluatedRevision": 15
         },
         {
           "subject": "hitl-approval",
@@ -5691,7 +5855,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/domain/src/run.machine.ts:29 The run machine models a durable pending gate whose only exits are ratified, blocked or sent back, and the receipt/live-arm/stale-confirm records around it bind consent to what was shown; who may drive the gate transition lives in the kernel/Board, not here.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "fleet-orchestration",
@@ -5723,7 +5891,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/registry.ts:13 The context holds zod persistence schemas, state machines and estimates for runs, jobs and step records; 'prompt' shows up only as a stored field (for example still takes' prompt string), and a search of packages/domain/src for systemPrompt, anthropic, compaction, contextWindow and maxTokens found nothing, so nothing here assembles a model prompt.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "job-coordination",
@@ -6445,8 +6617,12 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "priorNotApplicable": 2,
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/RunRow.tsx:5 These components draw four fixed lanes (floor.ts FLOOR_LANES), pile cards, read-only run rows and shelf cells. A grep of packages/ui/src/components/floor found no table markup, sort state, pagination or cursor, so no filter, sort or window axis exists here for the subject to govern.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "agent-instruction-files",
@@ -6593,8 +6769,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "lib/foundry/extract/engine.ts:1 This is an image-style extraction step machine (read, group, replicate, transfer). A search of lib/foundry/extract found no speech, voice, microphone, transcription or TTS identifiers, so it has no audio channel at all.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "image-prompt-composition",
@@ -6633,7 +6813,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/store.ts:292 The live IO keeps only provider/model/cost/basis from the router's provenance and drops `reroutedFrom` (lib/imaging/types.ts:193; grep of lib/foundry/extract finds no reroute field), so a replica or transfer served by a fallback vendor (e.g. after an unhonoured `prefer` steer) leaves no record on the manifest of why the first choice dropped out.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "generated-output-grading",
@@ -6706,7 +6890,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/store.ts:406 commitExtractRun checks that the preview token still matches only when a caller supplies one, and the CLI commit (pipeline/foundry/extract.mts:128) calls it with inline verdicts and no token, so styles can be written to the catalogue with no binding to any preview the operator saw.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "guest-execution-bounding",
@@ -6844,7 +7032,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/store.ts:15 The forge store writes git-tracked index files (ledger.json, styles.json) but never stages, commits, stashes or opens worktrees; a search of lib/foundry for worktree, git stash, GIT_INDEX_FILE and git commit found nothing, so the subject's precondition of sessions committing in a shared checkout does not hold here - only the generic shared-resource technique applies, and it is conformant.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         },
         {
           "subject": "transactions-over-a-replicated-log",
@@ -6861,14 +7053,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/foundry/verdictLog.ts:163 Context and repository searches found local file logging and SQLite transactions but no consensus write path for Foundry, so the replicated-log precondition does not hold.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:230a37319e1dd059",
-          "evaluatedRevision": 2,
+          "evidence": "lib/foundry/verdictLog.ts:14 Foundry verdicts are written under a local exclusive-create lock file (diskTx acquireLock) into one run directory, and the append-only verdicts.log.jsonl is a local history file rather than a replicated consensus log; searching lib/foundry for consensus, quorum, follower and appliedIndex found nothing, so the subject's precondition (writes ordered by a consensus log and applied on every node) does not hold.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:10473b2ddfd2ef20",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "e481098a-3532-46d9-bdc9-de84fbc2ce01",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "hitl-approval",
@@ -6884,7 +7075,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/verdictLog.ts:172 A verdict write that does not name its decider (any PUT, any PATCH without `by`, and the commit's own inline/auto-reject rewrite) is logged as a human verdict, and humanKeep counts it as a vote toward `proven`, the admitting state that adoptInStore accepts. The admission therefore stays reachable through an unmarked default, not only through an authenticated human decision.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "trust-base",
@@ -6900,7 +7095,11 @@
           "revision": 6,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/runStore.ts:64 The run store's one JSON decoder casts JSON.parse's unchecked any straight to the caller's T with no validating function, so verdicts.json (store.ts:94) and the catalogue docs (catalogue.ts:262) enter typed code as trust-base members that no directive census counts.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:0fd52192b37a88e4",
+          "evaluatedRevision": 6
         },
         {
           "subject": "data-access",
@@ -6916,7 +7115,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/catalogue.ts:123 A lib/ adapter holds the kernel Store and runs its own 'one tiny' SQL probe against the styles table instead of calling a named kernel operation, so the query language leaks outside the kernel's module tree.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "test-harness",
@@ -6993,7 +7196,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/mesh/gates/rig-gate.ts:149 The rig gate reads skin weights, zero-weight vertices and the vertex count from the first primitive of the first mesh only. It still reports them as the whole asset ('N of M vertices carry no weight'), so a multi-primitive or multi-shell character passes with unweighted geometry the gate never saw, or fails as unrigged when its skin sits on a later mesh.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "talking-avatar",
@@ -7025,7 +7232,11 @@
           "revision": 10,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/mesh/gates/mesh-score.ts:61 These files grade mesh geometry, rigs and scale, not source-language copy. A search of lib/foundry/mesh/gates for locale, i18n, termbase, copy-contract and copy:check found 0 hits. The only strings are budget-preset labels and scorecard reasons, keyed by FindingCode rather than prose, so the subject's precondition (a copy catalog that a gate admits) does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:f00a2dbd4e8fdce1",
+          "evaluatedRevision": 10
         },
         {
           "subject": "translation-quality-measurement",
@@ -7310,7 +7521,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/strips/store.ts:432 The destructive strips commit verifies that its preview token still matches only when a caller supplies one, so binding the commit to what the operator saw depends on the caller (triage.ts:35 promises it unconditionally), and the Dojo's commitCycle takes no binding at all.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "agent-memory",
@@ -7576,7 +7791,11 @@
           "revision": 5,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/frames/picture/unit.ts:77 Picture units carry startS/holdS in film seconds and leave startS null when a beat cannot be placed (unplaceableBeats surfaces it), so the frames phase speaks the shared clock and shows absence on it.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-memory",
@@ -7779,7 +7998,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/router.ts:300 Recognize calls are billed per token and their price-table rows are deliberately unpriced, so every recognize call books $0 into the imaging ceiling (only the unpriced counter moves) instead of a declared conservative default; budget.ts:375 also reserves 0 when no per-image rate is declared at all.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "voice-io",
@@ -7795,8 +8018,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "lib/imaging/router.ts:1 This is the image-generation chokepoint and its pricing and budget code. A search of lib/imaging for speech, getUserMedia, SpeechRecognition, microphone and transcri found nothing; the only 'voice' hits are inside the word 'invoice'. No speech input or output passes through this context.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "agent-runtime-assembly",
@@ -7812,8 +8039,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "lib/imaging/router.ts:1 The gateway routes image-generation calls by capability across vendors, with budget holds and a reroute trail. It assembles no agent runtime (no model/tool hook chain, no contributed extensions, no conversation checkpoints), and git grep for middleware, hookChain, toolCall and tool_call over lib/imaging found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "guest-execution-bounding",
@@ -8017,7 +8248,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/imaging/video/types.ts:44 These are vendor transport adapters that pass the caller's prompt or motion line through verbatim (Leonardo's prompt_enhance is off, lib/imaging/video/leonardo.ts:17). A case-insensitive search of lib/imaging/providers, lib/imaging/studio and lib/imaging/video found no lighting, shadow, close-up, push-in or eyeline vocabulary, so no cinematic decision is made here.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "voice-io",
@@ -8228,14 +8463,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/src/job.ts:194 Context searches found none of the listed engine-contract identifiers, and these persisted vendor jobs belong to the standard's explicitly excluded durable-job coordination scope.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evidence": "packages/kernel/src/job.ts:15 These jobs are durable store records run by a worker fleet under leases, which is exactly the scope the golden path excludes and sends to job-coordination; a search of packages/kernel/src for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits, so there is no in-memory engine job queue and no host hook.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "0c02b354-237b-44cb-9283-518ed620e846",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "test-harness",
@@ -8267,7 +8501,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/src/lease-core.ts:4 The lease, queue-pick and job-outcome decisions are pure functions over snapshots and an instant (lease-core, job-queue-core, job-core). One driver each applies the writes through an Effects port, which crash.ts and the dry-run wrapper substitute at. So the decisions are testable without doubles and crash points can be enumerated.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "durable-agent-operations",
@@ -8390,7 +8628,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/py/lease.py:208 Python decodes rows by position, with the order kept in step by hand with the SELECT list a few lines above (lease.py:204), and job records come back from json.loads with no shape or enum check (job_record.py:126). A column reorder or a malformed record therefore reaches callers as wrong values or a late KeyError, not a decode error at the seam.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "mcp-tools",
@@ -8441,14 +8683,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/py/job.py:7 These modules are the Python side of the SQLite kernel protocols (job queue, lease, ledger, meter, styles). Here 'languages' means Python and Node, not human locales. A grep of packages/kernel/py for translation, i18n, hreflang and pseudo-loc found nothing, so this context has no translated content, catalog or pipeline for the subject to govern.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
-          "evaluatedRevision": 12,
+          "evidence": "packages/kernel/py/job.py:7 These modules are the Python side of the SQLite kernel protocols (jobs, lease, ledger, meter, styles), and 'languages' here means Python and Node, not human locales; a grep of packages/kernel (py and src) for i18n, hreflang, pseudoloc and gettext found nothing, so there is no translated content, catalog or pipeline for the subject to govern.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7a5b5afa04e7f7ad",
+          "evaluatedRevision": 13,
           "source": "renamed",
           "renamedFrom": "3eb496e8-52aa-446d-bf75-07dc7c891b16",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "engine-host-contract",
@@ -8465,14 +8706,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/py/job.py:85 Context searches found none of the listed engine-contract identifiers, and the queue contains durable SQLite records, which the standard explicitly excludes.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evidence": "packages/kernel/py/job.py:3 The Python job protocol is a second driver over durable SQLite job records, which the golden path sends to job-coordination; a search of packages/kernel/py for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits, so no embedded language engine or host-hook surface exists here.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "3eb496e8-52aa-446d-bf75-07dc7c891b16",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "supply-chain",
@@ -8528,7 +8768,11 @@
           "revision": 11,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/py/verify_events.py:173 The verifier keeps only the optional columns it knows and silently ignores any other, so a newer events schema adding a covered column would make this reader recompute without it and report 'hash mismatch: the row's content changed after it was written' (tampered) instead of 'written by a newer version'.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11
         },
         {
           "subject": "job-coordination",
@@ -8689,7 +8933,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/store.ts:54 The Store port hands raw SQL text execution to every importer (package exports \"./*\"), and code outside the kernel uses it to run its own statements, for example app/(studio)/projects/runs/_runs/load.ts:107 `SELECT count(*) AS n FROM jobs` and lib/import/commit.ts:273. So the kernel does not own the query language and 'who reads or writes this table' cannot be answered from one tree.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "agent-memory",
@@ -8824,14 +9072,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/src/store.ts:234 Context and repository searches found direct SQLite transactions and an audit event table but no implemented consensus adapter, so replicated-log transaction rules are not applicable.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:230a37319e1dd059",
-          "evaluatedRevision": 2,
+          "evidence": "packages/kernel/src/store.ts:37 The kernel store is a single-process node:sqlite file whose writes run under BEGIN IMMEDIATE inside a synchronous callback; the header names this subject only as the shape a future hosted adapter would need, and no such adapter exists (searching packages/kernel for consensus, quorum, follower and appliedIndex found nothing), so no write goes through a replicated log.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:10473b2ddfd2ef20",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "e5b296e2-cccf-47a5-b8bd-ce730d40ace8",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -9256,14 +9503,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/engine/layout.ts:353 The cosmos engine paints paper and raster layers. Its one locale touch hard-pins number formatting to en-US. It holds no translated strings, catalog or serving path. A grep for translation, i18n, hreflang and pseudo-loc found nothing; the 'translate' hits are CSS/canvas transforms.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:678c2208c5b0dfc0",
-          "evaluatedRevision": 12,
+          "evidence": "app/_landing/cosmos/engine/layout.ts:351 The cosmos engine paints paper and raster layers and touches locale only once, to hard-pin number formatting to en-US; it holds no translatable strings, catalog or serving path, and a grep of app/_landing for translation, i18n, hreflang and pseudoloc found nothing (the 'translate' hits are CSS and canvas transforms).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7a5b5afa04e7f7ad",
+          "evaluatedRevision": 13,
           "source": "renamed",
           "renamedFrom": "ff0b289f-5f39-4747-acce-5d56797b9c43",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "repository-landing-document",
@@ -9280,14 +9526,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/engine/paper.ts:2 Canvas paint, RNG and worker raster code produce pixels for the app's landing page and hold no repository front-page prose, badges or host metadata; a search of app/_landing for README, shields, README.md and markdown found nothing.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
-          "evaluatedRevision": 4,
+          "evidence": "app/_landing/cosmos/engine/paper.ts:2 Paint, RNG and worker raster code produces pixels for the app's landing page and holds no repository front-page document; a search of app/_landing for README, README.md, shields.io, front page and landing document found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:21e7be3c68f38a9a",
+          "evaluatedRevision": 5,
           "source": "renamed",
           "renamedFrom": "ff0b289f-5f39-4747-acce-5d56797b9c43",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "engine-host-contract",
@@ -9304,14 +9549,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/engine/raster.ts:89 Context searches found none of the listed engine-contract identifiers, and raster execution uses a browser Worker without implementing a language-engine host contract.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evidence": "app/_landing/cosmos/engine/rasterJobs.ts:3 A raster 'job' here is plain data that is structured-cloned to a browser Worker and painted. The 'engine' directory is a paint engine, not an embedded language engine. A search of app/_landing/cosmos/engine for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "ff0b289f-5f39-4747-acce-5d56797b9c43",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "canvas-graph",
@@ -9445,14 +9689,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/engine/raster.ts:89 The raster service runs repository-owned TypeScript through browser APIs, and context and repository searches found no WebAssembly, PhantomData, or thread_local constructs indicating the foreign binding obligations covered by this subject.",
-          "evaluatedAt": "2026-10-22",
-          "evaluatedAgainst": "sha256-b2:823cd55ac89d000b",
-          "evaluatedRevision": 2,
+          "evidence": "app/_landing/cosmos/engine/raster.worker.ts:3 The worker and the main-thread fallback both run the repository's own TypeScript job runner over standard browser canvas APIs, and a search of the context directory found no WebAssembly, wasm, PhantomData, thread_local or extern \"C\" (zero hits), so this code has no binding layer over a foreign engine for the subject to govern.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:cf656e76f4ec68fa",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "ff0b289f-5f39-4747-acce-5d56797b9c43",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -9514,14 +9757,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/engine/scene.ts:1 Scene composition and camera code for the app's own animated landing page has no repository front-page document in it; a search of app/_landing for README, shields, README.md and markdown found nothing.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
-          "evaluatedRevision": 4,
+          "evidence": "app/_landing/cosmos/engine/scene.ts:1 Scene, camera and plane code paints the app's animated landing and contains no repository front-page prose, badges, figures or host metadata; a search of app/_landing for README, README.md, shields.io, front page and landing document found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:21e7be3c68f38a9a",
+          "evaluatedRevision": 5,
           "source": "renamed",
           "renamedFrom": "076622f1-4906-4cdc-9a76-307df47fdd14",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "voice-io",
@@ -9695,14 +9937,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/Cosmos.tsx:3 This context is a page the app renders itself (a React and canvas client component), not the repository's front-page document, and the golden path leaves claims an application renders out of scope; a search of app/_landing for README, shields, README.md and markdown found nothing, and the only 'badge' hit is the app's StaleBadge UI component.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
-          "evaluatedRevision": 4,
+          "evidence": "app/_landing/cosmos/Cosmos.tsx:3 This is the app's own landing page, a React and canvas client component, not the repository's front-page document, and the golden path puts claims the application renders out of scope; a search of app/_landing for README, README.md, shields.io, front page and landing document found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:21e7be3c68f38a9a",
+          "evaluatedRevision": 5,
           "source": "renamed",
           "renamedFrom": "e5f8b2b5-3ac7-422b-9950-c7431117591a",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "table",
@@ -9742,14 +9983,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "app/_landing/cosmos/engine/nav.ts:196 Cosmos implements an internal multi-level navigation and back stack within a browser tab without integrating into the browser's history or address, causing the browser Back gesture to leave the application rather than traverse sections.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:62a9a7fc993ea8b5",
-          "evaluatedRevision": 6,
+          "evidence": "app/_landing/cosmos/Cosmos.tsx:51 The engine and registry chunks are loaded with a bare .then and no catch, retry or stated failure, so a chunk that fails to load (offline, post-deploy version skew) leaves the static sky skeleton with no account of why and no cure, which lazy-section-loading forbids.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:b55c5172e3d9fac0",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "e5f8b2b5-3ac7-422b-9950-c7431117591a",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "voice-io",
@@ -10172,14 +10412,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/ledger/v1/facts.ts:72 Replacing missing effective times with the sync execution timestamp conflates recorded time with event time and prevents the ledger from recording genuine timestamp absence.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
-          "evaluatedRevision": 10,
+          "evidence": "lib/ledger/v1/facts.ts:102 The shared fact builder, which every adapter goes through, copies each v1 log line whole into event data, and nothing between it and appendOnce applies an allowlist, size cap or secret scrub. The ledger, append-only and hash-chained, archives whatever a log line held, against write-path-sanitization.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11,
           "source": "renamed",
           "renamedFrom": "bd05d347-c5c6-4eb4-8de2-b68a6102ac01",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "sync-replication",
@@ -10218,7 +10457,11 @@
           "revision": 3,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/ledger/v1/types.ts:10 In this contract a 'Source' is a reader of a v1 store that feeds the ledger, not a broadcast source or scene. I searched lib/ledger/v1 for obs-websocket, CreateInput, RemoveInput, GetSceneList and websocket and found none, so there is no control socket and no created source or scene for the six techniques to govern.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a1b7eb09c11f92e6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "supply-chain",
@@ -10338,7 +10581,11 @@
           "revision": 3,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/publish.ts:19 These adapters only read v1 JSON stores on local disk and project them into ledger events. I searched lib/ledger/v1 and the whole tracked repo for obs-websocket, CreateInput, RemoveInput, GetSceneList, websocket and streamlabs, and nothing in the tree drives broadcasting software over a control socket (the only repo-wide hit, 'vmix' in lib/cut/narrationMix.ts, is an ffmpeg filter label), so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a1b7eb09c11f92e6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "audit-logging",
@@ -10355,14 +10602,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/ledger/v1/sources/sound.ts:68 Passing nullable effective timestamps into f.recorded causes missing times to default to the sync clock, misattributing historical decisions to the time of projection.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
-          "evaluatedRevision": 10,
+          "evidence": "lib/ledger/v1/sources/clips.ts:91 Adapters copy vendor error strings (clips, extract, forge, mv) and whole v1 log lines (extract.ts:150) verbatim into the data of an append-only, hash-chained ledger, with no allowlist, size cap or redaction. Any credential or oversized text in a vendor message is archived for good, against write-path-sanitization.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11,
           "source": "renamed",
           "renamedFrom": "86dbb3bb-044c-4ed3-810a-93d088bcad64",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "mcp-tools",
@@ -10412,7 +10658,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sources/spend.ts:42 The ledger receives spend.book rows only if they are still inside the v1 window when it syncs, so per-call rows (with their attribution) can be missing, and the tally checks v1's own booked/evicted identity rather than counting rows the ledger missed.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "concurrency-guards",
@@ -10428,7 +10678,11 @@
           "revision": 16,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/ledger/v1/sources/mv.ts:118 These sources are read-only projections. Their concurrency duty is to make re-syncs and restarted attempts converge, and they do it with natural event keys: each fact is keyed on purpose by record, fact and attempt. A replayed sync appends nothing, and a late or overwritten attempt stays its own event instead of merging into the next one.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18
         },
         {
           "subject": "data-access",
@@ -10444,7 +10698,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sources/spend.ts:119 An app-level adapter in lib/ writes raw SQL against tables that packages/kernel/src/spend owns (publish.ts does the same against `parts`). The query language leaks outside the kernel's store modules, and 'who reads spend_rows' is no longer a directory listing.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "agent-runtime-assembly",
@@ -11142,7 +11400,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/library/project.ts:98 keepSet makes the prune's keep-set answer held prefixes by subclassing Set and overriding only has(). The size, iteration, forEach and set-algebra readers forwarded through ReadonlySet still describe the narrower set. The 'held prefixes are kept' invariant therefore holds only while pruneFeed (in another package) happens to call nothing but has().",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "agent-runtime-assembly",
@@ -11416,7 +11678,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_server/mcp/tools/read.ts:58 The capability layer is rendered from one registry, but authored per-op descriptions name other ops (set_part, rename, discard, plan_launch; elsewhere composer_receipt, composer_run, compose, plan{id}, audio_guide) and no gate checks that those names resolve in REGISTRY. A rename would ship as a phantom instruction; today every mention does resolve, so the gap is latent.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "agent-instruction-files",
@@ -11465,7 +11731,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_server/mcp/principal.ts:9 The MCP door is the inverse of this subject: an outside agent calls in over JSON-RPC with a Gravitone bearer token, and the door spawns no agent CLI. A search of app/api/mcp, app/_server/mcp and packages/domain/src for child_process, spawn(, execFile, ANTHROPIC_API_KEY and --permission-mode found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "agent-runtime-assembly",
@@ -11498,7 +11768,11 @@
           "revision": 2,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_server/mcp/rpc.ts:112 tools/list publishes the same catalog to every token whatever its scope, so a read-scope agent's model sees the launch and job writes it can only be refused on; the standard asks for a catalog computed from what the role is granted, and the money-bearing path's pending spend request has no expiry or reaper.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:1ba6c714c7d9ee8c",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
@@ -11586,7 +11860,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/music/types.ts:129 Every ElevenLabs cue records vendor, modelId, requestedMs, plan and generatedAt, and the type's own comment calls this what the rights record needs, yet it leaves out the field the technique calls load-bearing (the account and plan tier) along with reference-material status and the destination it was cleared for.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "prompt-assembly",
@@ -11634,8 +11912,12 @@
           "revision": 3,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "lib/suno/driver.ts:1 The only driven browser in this context drives a third-party music vendor to generate tracks, not a system being filmed; the rest is music vendors, budgets and publish helpers, and searches for screencast, demo film, getDisplayMedia, gdigrab and screen recording found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "voice-io",
@@ -11809,7 +12091,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/mv/types.ts:21 The pipeline takes a generated Suno clip or take straight to a YouTube video plus metadata. MvSource/MvJob carry only kind, id and title, with no rights record and no re-clearance for the widened destination.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -12032,14 +12318,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/notebook/schema.ts:16 This context validates generated research answers rather than distributing trained models, and searches found none of the five model-package terms in lib/notebook.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:d22f4172adbc5004",
-          "evaluatedRevision": 1,
+          "evidence": "lib/notebook/schema.ts:16 This context's JSON schema constrains an LLM's generated notebook answer, not a packaged trained model, and a search of lib/notebook for onnx, safetensors, torchscript and tensor found no hits, so there are no weights, layout, shapes or compiled artifacts for the techniques to govern.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:bd272d2a3cc87197",
+          "evaluatedRevision": 2,
           "source": "renamed",
           "renamedFrom": "c425f431-c0d1-4f34-b736-1a5d70683ef4",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "quality-gates",
@@ -12999,14 +13284,13 @@
           "changedAt": "2026-10-29",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/ui/src/components/part/part.ts:1 These are workspace and Board-desk UI rules (verdicts, tabs, clocks, keyboard walk) for a film part. Nothing here drives or records the system as a demo, and a search of packages/ui/src/components/part and packages/ui/src/components/desk for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
-          "evaluatedRevision": 2,
+          "evidence": "packages/ui/src/components/part/part.ts:1 These are the workspace and Board-desk UI rules (verdict looks, tab marks, clocks, keyboard walk) for a film part. Nothing drives or records the system as a demo, and a search of packages/ui/src/components/part and packages/ui/src/components/desk for screencast, recordVideo, playwright and 'demo film' found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "430ace14-ef3a-4ef0-acd0-71c989368950",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "frame-direction",
@@ -13038,7 +13322,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/part/part.ts:4 I searched part/ and desk/ under packages/ui/src/components for SQL, kernel imports, sqlite and prepare calls and found none. The components import only domain types and UI siblings, and their data arrives as props, so there is no data-access seam here to judge.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         }
       ],
       "governance": "governed"
@@ -13205,7 +13493,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/import/project.ts:105 The import door derives the kernel project id from the foreign v1 id instead of minting a local key and storing a mapping. Duplicate detection (exists(id), line 197) only matches the same v1 id. A v1 project that was re-minted on its way through another account's archive import comes in as a second, unrelated twin.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "module-design",
@@ -13282,7 +13574,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/produce/produce.ts:117 unpricedKind sorts a free-prose unpricedReason (written in lib/producers, lib/imaging and the fixtures) into seat, credits or no-price by substring, and both the Unpriced chip and receipt change detection (sameCost) branch on that result, so rewording a reason silently changes the chip and the diff.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "hitl-approval",
@@ -13386,14 +13682,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/ui/src/components/produce/Unpriced.tsx:15 The only plan vocabulary in this context is a vendor's credit or subscription plan that the operator pays for, shown as an unpriced figure. The product sells no tier to anyone. Searching produce/ for entitlement, tier, paywall, billing and stripe found nothing, so the receipt and composer price vendor jobs under cost-metering, not plan entitlements.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:58f21c0561a86e45",
-          "evaluatedRevision": 7,
+          "evidence": "packages/ui/src/components/produce/produce.ts:118 The only 'subscription' in this context labels an unpriced cost on a receipt line, because the operator pays a vendor through a credit or subscription plan, so it is not a tier this product sells, and a search of packages/ui/src/components/produce for entitle, paywall, stripe and tierId found nothing, so the composer and receipt price vendor jobs (cost-metering) and gate nothing on a plan.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:66961f93b3ce02ba",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "cd263cf6-0195-4db1-820d-2435a3af746c",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-runtime-assembly",
@@ -13566,7 +13861,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/step-record-literal-keys.probe.spec.ts:70 The ratchet that guards this context's step-key rule tells the reader to use patchRecord and useRecord, but both retired with app/_phases (recordRegistry.ts:27, patchStep.ts:40-41) and neither exists in lib/steps. Only readRecord resolves, so most of the refusal's remedy is a dead end.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "migrations",
@@ -13628,7 +13927,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:2 A recursive search of lib/steps for approv, consent, pending, awaiting and hitl found no hits: the module is IndexedDB persistence of the creator's own step content (scope picks, adopted script pointer, cut edit log), with no machine-initiated pause, decision surface or continuation for this subject to govern.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "mcp-tools",
@@ -13872,7 +14175,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/publish/adapter.ts:5 The publish producers are channel adapters, a claim/record tick and metrics refresh against platform APIs, with no model call; a search of packages/producers/src/publish for prompt, systemPrompt, anthropic, compaction and contextWindow found nothing (the 'token' hits are OAuth refresh tokens).",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "background-jobs",
@@ -13889,14 +14196,13 @@
           "changedAt": "2026-10-27",
           "confidence": "strong",
           "state": "conformant",
-          "evidence": "packages/producers/src/publish/timers.ts:20 The publish context's two loops are named once from a closed set, and each TimerSpec registers its cadence, deadline and staggered first firing. The tick body reports when the next slot is due, sweeps orphans and downtime misses through the steady-state code path, and stops at safe points between claims. A store-read status surface also exposes staleness, standing failure and quarantine, so this context supplies what the background-jobs envelope needs.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:22ed2a99172ae050",
-          "evaluatedRevision": 5,
+          "evidence": "packages/producers/src/publish/timers.ts:23 The publish loops are named once from a closed set, and each TimerSpec carries a cadence, a deadline and a first delay that the worker's one roster registers. The tick reports when the next slot is due, records the downtime it was handed and stops between claims. timerStatusIn reads staleness, any standing failure and quarantine from the store, and no technique that applies is realized the way the standard names as a failure.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:e3e7a428140a2fbb",
+          "evaluatedRevision": 6,
           "source": "renamed",
           "renamedFrom": "7226db68-4ca8-41ee-a2f8-3012d05e4acd",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "fleet-orchestration",
@@ -13928,7 +14234,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/publish/standing.ts:57 Channel standing reads the payload keys of the kernel's slot.fail and publish events through raw SQL. The kernel's sweep writes those keys (packages/kernel/src/slots/sweep.ts:129: data { error, interrupted }), so one record layout is encoded in two packages, and renaming a key would silently count interrupted claims as channel failures.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -14125,7 +14435,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/research/partJob.ts:28 partJob.ts imports partJobId/askOf, yet spells the part-job id shape ('job:part:<partId>' and its ':' suffix) by hand a second time. A change to the id format owned by partAct.ts:61 must also be found here, which is a small, real information leak.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "short-form-narrative-structure",
@@ -14241,7 +14555,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/resource.ts:161 When the probe cannot read CPU load, the admission gate admits the CPU-costly job and records nothing about the missing reading, so 'could not check' looks the same as 'checked and clean' to the operator, while an unread commit charge two conditions earlier (line 152) is refused out loud.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "mcp-tools",
@@ -14274,7 +14592,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/resource.ts:3 These modules decide machine capacity, GPU leases and deployment capabilities. A search of the context's files found no scenarios, judges, rubrics or pass rates (its only 'judge' and 'golden' hits are comments about capability probes in tests/golden-path), so no model output is scored here.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-instruction-files",
@@ -14371,7 +14693,11 @@
           "revision": 17,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/resources/probe.ts:202 A present but malformed MACHINE_MEM_HIGH/MEM_LOW/CPU_HIGH (e.g. 1.5 or a typo) silently becomes the kernel default instead of refusing at boot, which is the tunable collapse the standard names as the commonest spelling of malformed-treated-as-absent.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:641cb6bf0b2c6916",
+          "evaluatedRevision": 17
         },
         {
           "subject": "test-harness",
@@ -14480,15 +14806,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "not-applicable",
-          "evidence": "packages/ui/src/components/runs/lanes.ts:16 A case-insensitive search of packages/ui/src/components/review and runs for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. These are client UI components and pure models over @gt/domain types, with no process or agent transport.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
           "source": "renamed",
           "renamedFrom": "571eae96-e297-40c6-a556-3a3bf8f48e3f",
-          "revisionsBehind": 1,
-          "stale": true
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/runs/lanes.ts:16 A case-insensitive search of packages/ui/src/components/review and runs for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. These are client UI components and pure models over @gt/domain types, with no process or agent transport.",
+          "evaluatedAt": "2026-10-24"
         },
         {
           "subject": "quality-gates",
@@ -14543,8 +14865,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "packages/ui/src/components/runs/thread.ts:1 These are pure presentation models and components for Board review and the runs day line. A search of packages/ui/src/components/review and runs for conversation, registerTool, plugin, subagent and checkpoint found nothing; the only 'agent' hit is an icon name in RunsDayline.tsx:310. No agent loop, hook chain, extension loading or durable conversation state exists here.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "hitl-approval",
@@ -14671,7 +14997,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/slots/sweep-core.ts:69 When a publishing claim's heartbeat budget expires (stale) or its lease is absent, the sweep takes the fence from the claimant and fails the slot with \"interrupted before the publish finished\". The expired budget therefore lands on a terminal verdict that asserts non-completion, and a slow-but-alive uploader loses its guarded section, which is the failure evidence-outranks-a-liveness-claim names (land on unknown and label the outcome unresolved).",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "mcp-tools",
@@ -14751,7 +15081,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/records/read.ts:305 listProjects builds the full projectModel for each of up to 100 listed projects. Each model costs one load of the project, one load of its parts, one jobOf per part and one ranAt per finished part. The module already batches by id in quotedSecondsMap but does not use that pattern on the list path.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         },
         {
           "subject": "subprocess-lifecycle",
@@ -14768,14 +15102,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/src/records/schedule.ts:4 The context's 'slots' are pure lane-schedule computations and calendar publishing records over the kernel store, and a case-insensitive grep of packages/kernel/src/records and packages/kernel/src/slots for child_process, spawn, execFile, SIGTERM and SIGKILL found nothing, so no child process is spawned, supervised or reaped here and the subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-26",
-          "evaluatedAgainst": "sha256-b2:bad19520d32fbc43",
-          "evaluatedRevision": 15,
+          "evidence": "packages/kernel/src/records/schedule.ts:3 The context's 'slots' are lane-schedule computations and calendar publishing records over the kernel store, and a case-insensitive grep of packages/kernel/src/records and packages/kernel/src/slots for child_process, spawn, execFile, SIGTERM and SIGKILL found no hits (the only 'pid' hits are comments about v1's claim file being replaced by a store lease), so this context spawns, supervises and reaps no child process and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:73d266b807387855",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "fe524e46-e5d6-4aba-b475-fe39c41f3819",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "digest-bound-operator-writes",
@@ -15096,8 +15429,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "lib/kernelProcess.ts:16 This is process plumbing: the kernel/store handle, disk transactions, env files, rename retry, local mode and fixture roots. Nothing here composes code around a model call or resumes a conversation, and git grep for middleware, hookChain, toolCall and tool_call over lib, packages/kernel/src and packages/domain/src found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "untrusted-extension-host",
@@ -15147,7 +15484,11 @@
           "revision": 16,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/diskTx.ts:76 The cross-process lock breaks a stale lock with a plain delete and retries, not an atomic replace-if-unchanged. Two contenders that both saw the lock as stale can therefore both take it over, and the race comes back one level up.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18
         },
         {
           "subject": "serving-process-topology",
@@ -15267,7 +15608,11 @@
           "revision": 2,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/motion/direction.ts:115 The motion-direction turn reads only the rendered plate (no beat, no function) and asks for up to three independently moving elements as an image-to-video prompt that is stored in FrameClip.motion, so the move can be neither one semantic change nor the beat's argument, and the intent field is filled with renderer prompt text.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:b936a9a456cd5767",
+          "evaluatedRevision": 2
         },
         {
           "subject": "motion",
@@ -15321,7 +15666,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/needs.ts:109 The stale-needs refusal tells the reader to run a command in a sibling checkout as the literal 'in pof', even though the module resolves that root itself (needsRoot: EXPORT_ROOT_POF or ../pof). The remedy is not printed where it would actually run.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "agent-memory",
@@ -15387,7 +15736,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/planDoors.ts:44 The asset launch procedure (originWith, then assetAct, then markOrigin) is written out twice, at planDoors.ts:150-153 and pipeline/scout.mts:481-484, so a change to how an asset is launched must be made in two files that do not reference each other.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "prompt-assembly",
@@ -15524,7 +15877,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/idea.ts:129 The ideas door requires an anchor per artboard but lets kind \"free\" pass with an empty ref. That admits the unanchored candidate the slate technique names as its failure: it converges on the model's modal answer.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "multi-speaker-speech-production",
@@ -15556,7 +15913,11 @@
           "revision": 7,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/idea.ts:84 A stats idea comes in through the ideas door as case/title/hook/unit/kind/illustrative data plus optional steps. Nothing records granularity, span, entity count, expected lead changes, dated events, a measure or comparables, so none of the subject's gates can run before the operator triages.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:857308a4204852e8",
+          "evaluatedRevision": 7
         },
         {
           "subject": "cinematic-language",
@@ -15572,7 +15933,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/storyboard.ts:157 Storyboard panels are free per-frame Flux prompts with no per-beat size/angle and no axis, eyeline or progression check before frames and per-panel LTX clips are spent, so a trial can come out as a mood reel rather than a directed scene.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "voice-io",
@@ -15637,7 +16002,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/track.ts:226 A scout track clip, made on the signed-in Suno browser and kept on the Board, goes straight into the visualizer and music-video ladder carrying only part, path, model, title, clipId and duration, with no account, plan tier or terms record behind its commercial use.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "test-input-generation",
@@ -15868,7 +16237,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/scout-ideas/define.ts:51 The scout-wing idea cap is hand-copied from lib/foundry/scout/types.ts:52 (MAX_IDEA_CAP = 40) with only a comment linking them and no test that asserts they are equal, so raising one cap silently desyncs the CLI's limit from the request door's.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "review-iteration-loops",
@@ -15884,7 +16257,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:197 A piece reuses the kept trial clips by reference and re-makes only the rejected panels, then records the concatenated cut straight away. Nothing gates the joins between kept and re-made clips (no level match, no continuity check), so per-clip approval stands in for a verdict on the whole piece.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "video-assembly",
@@ -15964,7 +16341,11 @@
           "revision": 7,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/scout-reels/define.ts:97 The reels producer's brief door, which every idea, real reel and full cut passes through, has the same shape: kind, hook, optional free-text steps and a premise-only what-if. So the producer authors and renders a 30 s to 2 min cut with no recorded continuity, path or event plan to check the finished render against.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:857308a4204852e8",
+          "evaluatedRevision": 7
         },
         {
           "subject": "visual-style-locking",
@@ -15980,7 +16361,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/scoutStoryboardActs.ts:126 Each of a storyboard's up-to-five Flux panels is drawn from the seat's free per-panel prompt. Kept cast identity blocks are compiled in, but no style block is: the storyboard's look exists only as a bullet the model never sees, so the five sibling frames each re-derive their own look.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "cinematic-language",
@@ -15996,7 +16381,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/scoutStoryboardActs.ts:191 A genre trial's LTX clip is rendered with the panel's Flux still prompt as its motion line (line 36 says so). The clip therefore gets no movement instruction, no speed adverb and no stated hold, which is the 'aimless drift' failure where the model chooses its own motion.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "multi-speaker-speech-production",
@@ -16235,7 +16624,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/gate.ts:269 A probe that declares only `whenMentions` and `tests` (PROBES['u-cohorts'], or any draft or notebook probe written the same way) can only ever come back as `pass` or `not-engaged`: it reports a pass it never checked, which breaks the file's own honesty rule, and that pass is counted in the `enforced` percentage.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "agent-memory",
@@ -16274,7 +16667,11 @@
           "revision": 44,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/compose.ts:102 The compose turn's only budget is a whole-material ceiling in serialised characters (the comment just above converts it to 'roughly a quarter of a million tokens'). Past it the run is refused outright. No per-section allocation, degradation ladder or token-unit counter exists, which falls short of context-budgeting.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:ad13b2ee69c25e8d",
+          "evaluatedRevision": 44
         },
         {
           "subject": "supply-chain",
@@ -16314,14 +16711,13 @@
           "changedAt": "2026-10-29",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/script/types.ts:1 lib/script writes the narration for generated factual films from notebook cards. It never drives or records the software as a demo, and a search of lib/script for recorder, screencast, playwright, recordVideo and 'demo film' found nothing, so the subject's precondition (a demo film of a working software system) does not hold here.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
-          "evaluatedRevision": 2,
+          "evidence": "lib/script/types.ts:1 lib/script composes and gates narration for generated factual films from notebook cards (beats hook/question/verdict, compose prompt in compose.ts). Nothing here drives or records a running software system, and a search of lib/script for screencast, recordVideo, playwright and 'demo film' found nothing, so the subject's precondition (a demo film of a live system) does not hold.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "f8036604-75f5-4f7d-898c-734511ac5e86",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "mcp-tools",
@@ -16377,7 +16773,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/editPlan.ts:98 The edit-plan contract has refusals and a summary but no `unchanged` field, and the schema sets additionalProperties:false, even though pipeline/RECALIBRATE-PROMPT.md:71 asks the engine for `unchanged[]`; so a render that was considered and left alone looks the same as one that was forgotten, which the refusal technique counts as a verdict that must be kept.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "video-assembly",
@@ -16409,8 +16809,12 @@
           "revision": 2,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "lib/script/compose.ts:2 This context assembles a prompt and validates a hosted model's answer through a zod door, so it consumes a vendor model and does not package one; a search of lib/script for onnx, safetensors, torchscript and tensor found no hits (\"checkpoint\" and \"weights\" do appear, but they mean script history restore and beat re-weighting).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:bd272d2a3cc87197",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -16465,8 +16869,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "app/_server/route.ts:13 The seam wraps HTTP handlers (guard, body, handler) and resolves principals; it builds no hook chain around a model or tool call, loads no contributed code and holds no conversation state, and a case-insensitive git grep for middleware, hookChain, toolCall and tool_call over app/_server, app/api and lib found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "prompt-assembly",
@@ -16515,7 +16923,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_server/http.ts:8 The server seam is route/action/session/auth code that spawns no agent and loads no instruction file. Searching its files for AGENTS.md, GEMINI.md, .cursorrules and copilot-instructions found nothing. The only instruction-file mention is a code comment at app/_server/http.ts:20 that cites CLAUDE.md as the source of the verbatim-error rule; it reads no file.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "terminal-multiplexing",
@@ -16680,7 +17092,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/generate.ts:361 A failed render records a 'failed' state with the vendor's sentence only on hunt nodes; a refused score cue is rethrown as a job failure and never becomes a state of the cue, so the spotting surface cannot show refused-silence at the cue's place on the clock.",
+          "evaluatedAt": "2026-11-03",
+          "evaluatedAgainst": "sha256-b2:5f548f222df2e692",
+          "evaluatedRevision": 20
         },
         {
           "subject": "generative-provider-routing",
@@ -16696,7 +17112,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/sound/batch.ts:65 A batch names a kind (music|sfx) and the desk's engine registry answers which engine may make it, returning the registry's own withheld reason verbatim when none can, so the engine choice is made at one chokepoint rather than at the surface.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "review-iteration-loops",
@@ -16712,7 +17132,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/editPlan.ts:55 buildEditPlan treats every generation chunk the same way whatever its position, so regenerating the opening section, which sets the track's genre and tone, is priced and filed as a local section edit rather than flagged as a global restyle with its review clock restarted.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "generated-music-acceptance",
@@ -16728,7 +17152,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/arrange.ts:155 A Suno return is filed `kept` and can land finalized with only a library label. The take record carries provider, prompt and reference id but no account, plan tier, terms date or cleared destination, so the commercial-use claim outruns its evidence.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "agent-runtime-assembly",
@@ -16816,8 +17244,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "lib/sound/hunt.ts:4 The hunt drafts and measures music and sfx takes against a rubric, which is producing sound to a brief. The golden path puts that outside voice-io. A search of lib/sound found no speechSynthesis, SpeechRecognition, getUserMedia, transcrib or MediaRecorder; the only 'speech' hit (huntEngine.ts:62) is a stub lesson about a music bed sitting under speech.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "agent-memory",
@@ -16896,7 +17328,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/knowledge.ts:81 strengthsOf sorts provider × term cells by raw keep rate, with only an n ≥ 3 floor and no check of spread against noise, so a 3-of-3 cell ranks above a 29-of-30 cell. That sorted list goes into params.json and the hunt prompt's top-24 STRENGTHS, which publishes an order that its own sample sizes cannot resolve.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "video-assembly",
@@ -16944,7 +17380,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/huntRender.ts:353 A hunt render files its take knowing only the provider and a coarse 'music'/'sfx' model, with no account, plan tier, terms date or cleared destination, so a take that is later kept or finalized has no rights record. The measure side of this context is strong: loudness and peak, structure against the brief, and defect counts are all present.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -17025,7 +17465,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/src/spend/core.ts:93 Ceiling admission is a pure function over a class, totals and an amount. The ledger runs it inside the caller's Tx, and the vendor call goes through the Effects port, so the core is tested as a value.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "plan-entitlements",
@@ -17042,14 +17486,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/src/spend/core.ts:96 Context searches found no entitlement, tierId, or subscriptionId references, and the inspected code enforces vendor-spend ceilings, which the standard explicitly excludes from entitlement gating.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:58f21c0561a86e45",
-          "evaluatedRevision": 7,
+          "evidence": "packages/kernel/src/spend/core.ts:93 The only gate here asks whether a reservation fits under a vendor-spend class ceiling, which the golden path assigns to cost-metering, and a search of packages/kernel/src/pricing and packages/kernel/src/spend for entitle, paywall, stripe and tierId found nothing, so this context holds no tier model, no capability gate and no subscription lifecycle (its 'tier' and 'subscription' hits are vendor rate-card citations in table.ts that describe the operator's own vendor plans).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:66961f93b3ce02ba",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "5e00d05c-885e-4eac-ad26-f937df9d612f",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "voice-io",
@@ -17135,7 +17578,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/spend/meter.ts:249 A call that reached a vendor but carries no positive figure bumps the `unpriced` counter and writes no row, so its model, outcome and attribution axes are lost; on the file store, rows are also pruned out of the state once the rolling window passes, so the meter is a ceiling window rather than a durable ledger.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "mcp-tools",
@@ -17168,7 +17615,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/spend/fileStore.ts:34 The spend classes, meter, stores and spend-request schema only book holds and file requests. A search of lib/spend, packages/kernel/src/spend-requests and packages/kernel/src/records for child_process, spawn(, ANTHROPIC_API_KEY and --output-format found nothing, so no agent CLI is spawned here and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "prompt-assembly",
@@ -17232,7 +17683,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/spend/meter.ts:249 A settled call whose figure is absent books no row (only `counters.unpriced++`), so the window total that the next `spent + held + amount > ceiling` check reads treats an unpriced call as free once its hold is released, the 'unreported cost still counts against the next ceiling check' rule the technique requires.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "voice-io",
@@ -17265,7 +17720,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/spend/store.ts:115 SpendStore has three implementations (memory, file, sqlite) and lastSeen is an optional capability whose absence callers turn into an empty state (meter.ts:475 `store.lastSeen?.().rows ?? []`, sqliteStore.ts:58 `?? emptyState`), which is the 'default that returns empty' the technique bans: a missing capability becomes wrong data instead of a refusal.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:2dba94be6400dea1",
+          "evaluatedRevision": 19
         }
       ],
       "governance": "governed"
@@ -17336,8 +17795,12 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "deviation",
+          "priorNotApplicable": 2,
+          "evidence": "lib/studioArchiveRead.ts:59 The browser reader inflates a user-picked .gravitone file (ImportView.tsx readFile → inspectArchive → parseArchive) with no budget on inflated bytes, line length or line count, so a small gzip bomb exhausts the tab before the server's capped reader ever sees it. The two extraction sites are not routed through one defended door.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "image-prompt-composition",
@@ -17369,7 +17832,11 @@
           "revision": 3,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/projects.ts:211 v1 browser projects get an opaque id minted at creation. Edits never touch it, the list reads summary rows only, and deletion counts what it will destroy before acting, so the identity, density and removal rules hold.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:07b32de44fd25fc6",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"
@@ -18221,7 +18688,11 @@
           "revision": 5,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A style graduates candidate → proven → locked one way only: proven by operator keeps, locked by an explicit act the server admits only when the trial-coverage gate holds, and stale approvals stop vouching. The shared style asset graduates by human act against a checked gate.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
+          "evaluatedRevision": 5
         },
         {
           "subject": "video-assembly",
@@ -18270,14 +18741,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/ui/src/components/style/LockGate.tsx:22 These are @gt/ui React components for culling and locking styles inside the studio, not a repository front page; a search of the style, cull, cut and pair component directories for README, shields, README.md and markdown found nothing (the 'badge' hits are CSS class names, and the figcaption hits are app UI, not a landing document).",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
-          "evaluatedRevision": 4,
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:1 These are @gt/ui studio components for trialling, culling and locking styles, not a repository front page; a search of the style, cull, cut and pair component directories for README, README.md, shields.io, front page and landing document found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:21e7be3c68f38a9a",
+          "evaluatedRevision": 5,
           "source": "renamed",
           "renamedFrom": "cc39e764-df6c-4508-a8a9-e13944674461",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -18401,14 +18871,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/sound/suno/propose.ts:18 A case-insensitive search of lib/sound/suno for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. Proposals reach a model only through the text router's contract, and generation goes through a browser driver, so this context spawns no agent CLI.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
+          "evidence": "lib/sound/suno/propose.ts:16 A case-insensitive search of lib/sound/suno for spawn, child_process, seatOnlyEnv, output-format and claude found nothing. Proposals reach a model only through the text router's reason(), and generation goes through the Suno driver, so this context spawns no agent CLI.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
           "source": "renamed",
           "renamedFrom": "ab872012-f902-4f43-b9c7-f13137e36f24",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "generative-provider-routing",
@@ -18539,8 +19008,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "lib/text/router.ts:111 The only voice-related item here is the 'voice-fx' text task: an LLM turns an operator's words into a DSP effect chain (lib/text/types.ts), which is text in and JSON out, not speech capture or synthesis. A search of lib/text for speech, getUserMedia, SpeechRecognition, microphone and transcri found nothing.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "mcp-tools",
@@ -18646,14 +19119,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/text/providers/claudeCliRetrieve.ts:181 Both Claude CLI rungs collapse unparseable or result-less output into an opaque 'failed' with no bounded prefix of the raw stdout, accumulate stdout without a byte cap, and accept an empty `result` as a successful answer, so a login prompt, rate-limit notice or empty envelope all reach the router as the same undiagnosable failure or as success.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
-          "evaluatedRevision": 9,
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:194 A retrieval run with no result event fails with an opaque message and no bounded prefix of the raw stream, and a success envelope with an empty `result` is returned as an answer (line 203). A login prompt, a rate-limit notice and an empty answer therefore all reach the router as undiagnosable failure or as success.",
+          "evaluatedAt": "2026-11-04",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10,
           "source": "renamed",
           "renamedFrom": "94e6b933-0f6a-4631-b2f0-4c98b0799c28",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "fleet-orchestration",
@@ -18845,7 +19317,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/trailer/plan.ts:27 The trailer revision engine's output schema is only {ops, summary}, with no refusals field (the sibling lib/script/editPlan.ts:42 has one). So the model cannot refuse a note with a reason, and the only refusal is the validator rejecting the whole plan, not the engine declining a note.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "sound-effect-generation",
@@ -18978,7 +19454,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/trailer/rules/spine.ts:1 These are pure dramaturgy checkers that emit findings and say they are never a gate. A search of lib/script/trailer/rules found no consent, hitl or awaiting construct and no pending or decision state. Their 'unmeasured' verdict leaves judgement to a human (cards.ts:54) but holds no approval mechanism.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "test-harness",
@@ -19146,7 +19626,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/board/commit.ts:20 The board's \"commit\" is a pure UI state machine for confirming a review packet, and its only concurrency control is a server revision with retry on conflict; a search of packages/ui/src for worktree, git stash, GIT_INDEX_FILE, git commit and git add found nothing, so no version-control technique has anything to govern here.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         }
       ],
       "governance": "governed"
@@ -19200,8 +19684,12 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "priorNotApplicable": 2,
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/field/Field.tsx:1 These are controlled primitives (button, toggle, seg, field, tab rail, panel, toast, sheet) with no rows, columns, pagination, sort or export of their own; when they act as filter controls, the commit point is the calling table's decision. A search of the components tree for sortBy, pageSize, keyset and text/csv found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "accessibility",
@@ -19218,14 +19706,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 The region is always mounted, but its text is written straight into it with no node keyed to each announcement, so the same receipt shown twice in a row (e.g. a retried act that fails the same way) makes no DOM change and is not spoken the second time; a correct shell scheduler still could not force a remount through this primitive.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:5e30485ee0c7c123",
-          "evaluatedRevision": 7,
+          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 Toast owns a second polite live region of its own, beside the two regions that app/layout.tsx already mounts through AnnouncerProvider (lib/announcer.tsx), so a toast receipt and an announcer message written in the same breath race across regions and one is dropped with no trace, which is exactly what the technique's 'components request announcements; they never own regions' rule and the announcer's own 'ONE WRITER' rule exist to prevent.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:d839f62eac6007da",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "5b95d7b7-d2b7-4625-a5bb-4585b8ab9dbc",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "settings",
@@ -19356,8 +19843,12 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "packages/ui/src/keymap/dispatch.ts:3 These are browser UI primitives (keyboard routing, layer stack, stored state, window sizing, poll freshness) with no agent loop, model or tool call chain, or extension host; git grep for middleware, hookChain, toolCall and tool_call over packages/ui/src found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "embedded-db",
@@ -19389,7 +19880,11 @@
           "revision": 5,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/keymap/dispatch.ts:41 The keymap is one document-level keydown listener reading browser KeyboardEvents. Nothing is synthesized into a foreign application, no keys are forwarded from a native wrapper, and packages/ui/src has no native-host terms (ipcRenderer, __TAURI__, webview, nativeBridge, capacitor).",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:838495bb60a986c6",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"
@@ -19427,8 +19922,12 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "deviation",
+          "priorNotApplicable": 2,
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:63 EventRow emits role=row/gridcell cells that carry no tabindex or id for activedescendant, and its one link is tabIndex -1, so inside the Ledger's grid no cell can receive focus and the row is never heard by keyboard navigation.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "data-video-art-direction",
@@ -19444,8 +19943,12 @@
           "revision": 8,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "packages/ui/src/components/timestrip/strip.ts:1 These components draw the operator UI's ledger time strip, event rows, JSON and waveform, not a rendered data video. A case-insensitive search of the crumbs, header, eventrow, ledgerlink, jsonl, timestrip and wave directories for bar race, StatReel, evidence card, timing plan and data video found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:9e140bec9e8eb951",
+          "evaluatedRevision": 8
         },
         {
           "subject": "fleet-orchestration",
@@ -19625,14 +20128,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/ui/src/components/INVENTORY.md:93 These modules render ledger records and timeline graphics, and searches found none of the five model-package terms across packages/ui/src/components.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:d22f4172adbc5004",
-          "evaluatedRevision": 1,
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:1 These are React presentation components for ledger rows and timeline graphics, and a search of packages/ui/src/components for onnx, safetensors, torchscript and tensor found no hits, so the precondition (distributing a trained model package) does not hold.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:bd272d2a3cc87197",
+          "evaluatedRevision": 2,
           "source": "renamed",
           "renamedFrom": "2e702395-189e-4eb9-910c-dc4b76ff6e9a",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -19830,14 +20332,13 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/ui/src/components/hint/Hint.module.css:6 A closed Hint hides its mounted tooltip through opacity and pointer events while leaving the tooltip exposed to accessibility-tree navigation.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:5e30485ee0c7c123",
-          "evaluatedRevision": 7,
+          "evidence": "packages/ui/src/components/errorline/ErrorLine.tsx:12 A live ErrorLine owns its own role=alert region, mounted together with its message (callers do `{refusal !== null && <ErrorLine message={refusal} live />}`). It bypasses the shell announcer (lib/announcer.tsx rules 1-2), and an identical refusal on retry makes no DOM change, so it is not voiced a second time.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:d839f62eac6007da",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "5414e8ac-5105-43f0-a153-088e12501c9d",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -20088,8 +20589,8 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "priorNotApplicable": 2,
+          "state": "unknown"
         },
         {
           "subject": "design-tokens",
@@ -20105,7 +20606,11 @@
           "revision": 7,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/tokens.css:88 The role tier holds call-site addresses (ledger-cols, w-lib-nav, w-packet-rail and the other per-route groups), and the lint lets components use primitives directly. The semantic layer grows with the interface instead of recording classes of intent, even though generation and an allow-list gate are in place.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:165125b7a54d0de3",
+          "evaluatedRevision": 7
         },
         {
           "subject": "copy-quality-gates",
@@ -20121,7 +20626,11 @@
           "revision": 10,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/catalog/src/projects.ts:49 @gt/catalog holds rendered product copy: DISCIPLINE_NOTE is shown under each discipline pill in the create dialog, preset lines are shown in the showcase, and labels are shown on the landing and the Library. It includes about 11 em dashes in projects.ts alone, which docs/i18n/copy-contract.json bans. The contract's sources (app/**/page.tsx, app/_landing/*.tsx, app/layout.tsx) never reach packages/catalog, and its out-of-scope note does not name it, so these strings sit in an undeclared coverage hole behind a green copy:check.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:f00a2dbd4e8fdce1",
+          "evaluatedRevision": 10
         },
         {
           "subject": "connector-catalog",
@@ -20300,14 +20809,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/import/serve.ts:17 This context implements application data migration through HTTP and CLI entry points, and searches of its files and the repository found no embeddable, registrar, or WinterCG constructs requiring standards-layered guest-runtime design.",
-          "evaluatedAt": "2026-10-22",
-          "evaluatedAgainst": "sha256-b2:9cfe5aba03ea1a19",
-          "evaluatedRevision": 1,
+          "evidence": "lib/import/serve.ts:17 This context is application data migration (a v1 NDJSON archive read, staged and committed into the kernel store behind /api/import), not an embeddable guest-language runtime; a search of lib/import/ and of lib, packages, app and pipeline for wintercg, registrar, embedder, guest and isolate found nothing, so no standards-layered package graph exists to judge.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:72be2b66c8d50db7",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "b412ea73-0dc3-4362-93c4-2a9b913f9a61",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "signed-artifacts",
@@ -20369,8 +20877,12 @@
           "revision": 3,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "lib/import/commit.ts:33 An import commits each project as one local SQLite transaction through the kernel store's tx port, with blobs written first outside it; searching lib/import for consensus, quorum, follower and appliedIndex found nothing, so no consensus log or replicated apply step exists for the techniques to govern.",
+          "evaluatedAt": "2026-11-06",
+          "evaluatedAgainst": "sha256-b2:10473b2ddfd2ef20",
+          "evaluatedRevision": 3
         },
         {
           "subject": "engine-host-contract",
@@ -20387,14 +20899,13 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/import/archive.ts:163 Context searches found none of the listed engine-contract identifiers, and the importer parses application archive data without exposing an embedded language engine.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
-          "evaluatedRevision": 2,
+          "evidence": "lib/import/archive.ts:9 The importer parses and writes an NDJSON data archive and evaluates no guest source; a search of lib/import for JobExecutor, HostHooks, ModuleLoader, quickjs and node:vm found 0 hits, so there is no engine whose loader, clock or executor could be a seam.",
+          "evaluatedAt": "2026-11-05",
+          "evaluatedAgainst": "sha256-b2:dcbd96d1274205ef",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "b412ea73-0dc3-4362-93c4-2a9b913f9a61",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -20623,7 +21134,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/still/define.ts:17 These producer definitions only plan, price and schedule units: the prompt and the motion line arrive as opaque strings written elsewhere (lib/motion/direction.ts, the ad scenario's image line, the style block). A case-insensitive search of the frames/still/motion/style/strips/extract/cut directories for lighting, lens, shadow, genre and cinemat found 0 hits, so no camera, light, lens or genre choice is made at this layer.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "data-video-art-direction",

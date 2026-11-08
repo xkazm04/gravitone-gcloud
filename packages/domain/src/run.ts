@@ -77,6 +77,12 @@ export const PRODUCERS = [
   // A kept character's reference sheet (spark scout-vision S3): one neutral 1:1 Flux 2 still on this box's ComfyUI, her
   // kept portrait admitted late as the reference, one job per sheet (lib/producers/scoutSheet.ts).
   "scout-sheet",
+  // The song lab (spark yue2-song-lab): YuE2 renders a batch of seeds in WSL, every take is scored (lyric WER,
+  // SongEval, aesthetics, buzz), and a post-chain or a blind window is made from a take - three jobs on gpu.local
+  // (lib/producers/yue2.ts).
+  "yue2-render",
+  "yue2-score",
+  "yue2-post",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;
