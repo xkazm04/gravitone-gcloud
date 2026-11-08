@@ -4499,11 +4499,11 @@ export const MUTANTS: UnitMutant[] = [
   },
   {
     id: "l43-cut-verdict-client-url",
-    test: "tests/next-server/parts-verdict-server.test.ts",
-    file: "lib/parts/verdict.ts",
-    find: "    takes,\n    storeTakeIds: null,",
-    replace: "    takes,\n    storeTakeIds: i.takeIds ?? null,",
-    why: "The server's cut verdict calls the client-only takeFileUrl and the route answers 500.",
+    test: "tests/next-server/cut-export-held-take.test.ts",
+    file: "lib/cut/deriveTimeline.ts",
+    find: '(typeof window === "undefined" ? takeFileHref(id) : takeFileUrl(id))',
+    replace: "takeFileUrl(id)",
+    why: "A held take's URL is built with the client-only takeFileUrl on the server, and the export step (and any verdict handed a store listing) throws."
   },
   {
     id: "l45-store-classify-instanceof",
