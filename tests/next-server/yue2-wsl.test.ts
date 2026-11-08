@@ -231,10 +231,16 @@ describe("yue2 WSL door: the owner's death ends the Linux side (stdin EOF)", () 
   });
 
   const hasSh = spawnSync("sh", ["-c", "exit 0"], { windowsHide: true }).status === 0;
+  const hasSetsid = spawnSync("setsid", ["-w", "true"], { windowsHide: true }).status === 0;
   it.skipIf(!hasSh)("under a real sh: the command's exit code passes through, and a closed stdin kills the command", async () => {
     const run = (cmd: readonly string[], endAfterMs?: number) =>
       new Promise<{ code: number | null; out: string }>((resolve) => {
-        const c = spawn("sh", ["-c", LAUNCH_SCRIPT, "yue2", ...cmd], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+        // The door runs the launcher under `setsid -w` (yue2Argv), which makes it a group leader: the watcher's
+        // `kill -KILL -$$` kills the group only then. Without setsid a Linux sh is no leader and the kill finds
+        // no such process, so mirror the door where setsid exists (Linux); a sh without it keeps the old path.
+        const c = hasSetsid
+          ? spawn("setsid", ["-w", "sh", "-c", LAUNCH_SCRIPT, "yue2", ...cmd], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] })
+          : spawn("sh", ["-c", LAUNCH_SCRIPT, "yue2", ...cmd], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
         let out = "";
         c.stdout.on("data", (b: Buffer) => (out += b.toString("utf8")));
         if (endAfterMs !== undefined) setTimeout(() => c.stdin.end(), endAfterMs);
