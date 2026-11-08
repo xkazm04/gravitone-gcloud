@@ -38,6 +38,7 @@ import { scoutReelsProducer } from "./scoutReel.ts";
 import { scoutPieceProducer } from "./scoutPiece.ts";
 import { scoutSheetProducer } from "./scoutSheet.ts";
 import { coverProducer } from "./cover.ts";
+import { coverBriefProducer } from "./coverBrief.ts";
 import { scoutStoryboardProducer } from "./scoutStoryboard.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
@@ -161,6 +162,9 @@ export const BOUND: readonly Bound[] = [
   // A cover (spark track-mirror-studio): a song's section transcribed by SheetSage2 and rendered as five YuE2 takes,
   // one job per cover on gpu.local (engine comfy).
   { name: "cover", producer: coverProducer() },
+  // A cover's brief (cover brief WP-A): the song measured, heard three times through Gemini and written up by a Claude
+  // Code turn, then its cover launched; one job per cover on seat.text.
+  { name: "cover-brief", producer: coverBriefProducer() },
   ...stepsBound(),
 ];
 
