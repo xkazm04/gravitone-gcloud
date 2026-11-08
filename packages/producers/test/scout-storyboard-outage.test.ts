@@ -13,7 +13,7 @@ import { defineScoutStoryboard, STORYBOARD_OUTAGE_LIMIT, type StoryboardPorts, t
 // The bound probe is tests/next-server/scout-storyboard-outage.test.ts.
 
 const req: StoryboardRequest = { nightId: "n", candidateId: "c-01", aspect: "16:9", panels: [{ prompt: "a", seed: 1 }], estimates: { panel: { seconds: 96, usd: 0 } }, by: "op" };
-const job = { id: "job:x", lane: "gpu.local" } as unknown as Job;
+const job = { id: "job:x", lane: "gpu.local" } as Job;
 
 describe("the storyboard producer under an outage", () => {
   it("names its own breaker limit, past the kernel's default of three and under an hour of backoff", () => {
@@ -38,7 +38,7 @@ describe("the storyboard producer under an outage", () => {
     };
     const p = defineScoutStoryboard("gpu.local" as ResourceLane, ports);
     await p.health?.(job);
-    expect(await p.perform({ name: "panel:1", estimate: req.estimates.panel }, { job } as unknown as StepContext)).toBe(away);
+    expect(await p.perform({ name: "panel:1", estimate: req.estimates.panel }, { job } as StepContext)).toBe(away);
     expect(told).toEqual([]);
   });
 });
