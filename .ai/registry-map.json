@@ -15054,14 +15054,13 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "packages/kernel/src/records/schedule.ts:4 The context's 'slots' are pure lane-schedule computations and calendar publishing records over the kernel store, and a case-insensitive grep of packages/kernel/src/records and packages/kernel/src/slots for child_process, spawn, execFile, SIGTERM and SIGKILL found nothing, so no child process is spawned, supervised or reaped here and the subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-26",
-          "evaluatedAgainst": "sha256-b2:bad19520d32fbc43",
-          "evaluatedRevision": 15,
+          "evidence": "packages/kernel/src/records/schedule.ts:3 The context's 'slots' are lane-schedule computations and calendar publishing records over the kernel store, and a case-insensitive grep of packages/kernel/src/records and packages/kernel/src/slots for child_process, spawn, execFile, SIGTERM and SIGKILL found no hits (the only 'pid' hits are comments about v1's claim file being replaced by a store lease), so this context spawns, supervises and reaps no child process and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:73d266b807387855",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "fe524e46-e5d6-4aba-b475-fe39c41f3819",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "digest-bound-operator-writes",

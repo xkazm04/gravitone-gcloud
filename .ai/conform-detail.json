@@ -18861,6 +18861,46 @@
         }
       ],
       "registryProposal": "verdict-pins-its-checker assumes the checker is code. For a model-as-grader, the instrument is model weights plus prompts plus scoring code. A worked rule for LLM/vision graders (hash the prompt/schema data AND the scoring module's import closure; pin the model by digest rather than by tag) would make the technique directly usable for grader calibration."
+    },
+    "7d68ed0e-8d1f-44d9-a825-4a8b7f6504c0/subprocess-lifecycle": {
+      "context": "run-records-and-slots",
+      "subject": "subprocess-lifecycle",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:29:01.391Z",
+      "worker": "edfc9da8-8dc5-4d59-86a7-5b1ef7d095eb",
+      "techniques": [
+        {
+          "technique": "concurrency-and-slots",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/records/schedule.ts:3 Slots here are lane capacity in a pure scheduler, not slots held by live child processes."
+        },
+        {
+          "technique": "liveness-and-heartbeats",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/sweep.ts:34 The heartbeat is on a store lease held by the publisher, not on a child process, so no child is supervised here."
+        },
+        {
+          "technique": "termination-and-reaping",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/schema.ts:17 v1's pid-based claim became a fenced kernel lease. Nothing is killed or reaped."
+        },
+        {
+          "technique": "spawn-contract",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/core.ts:6 These are pure record transitions. There is no spawn site, argv or env here."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/records/schedule.ts:4 The context's 'slots' are pure lane-schedule computations and calendar publishing records over the kernel store, and a case-insensitive grep of packages/kernel/src/records and packages/kernel/src/slots for child_process, spawn, execFile, SIGTERM and SIGKILL found nothing, so no child process is spawned, supervised or reaped here and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-26",
+          "worker": null,
+          "reason": "replaced by edfc9da8-8dc5-4d59-86a7-5b1ef7d095eb"
+        }
+      ]
     }
   }
 }
