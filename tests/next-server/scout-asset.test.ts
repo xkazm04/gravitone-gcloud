@@ -348,7 +348,7 @@ describe("engines the worker admits by", () => {
     expect(scoutSceneProducer("box.chrome").engine).toBeUndefined();
   });
 
-  it("an asset's concepts on the card (local Flux) name the comfy engine; on the studio's lane or Flare's, none (spark scout-vision S6)", () => {
+  it("an asset's concepts on the card name the comfy engine; on the studio's lane or Flare's, none (spark scout-vision S6)", () => {
     expect(scoutAssetProducer().lane).toBe("cloud.leonardo");
     expect(scoutAssetProducer().engine).toBeUndefined();
     expect(scoutAssetProducer({ lane: "box.chrome" })).toMatchObject({ lane: "box.chrome" });

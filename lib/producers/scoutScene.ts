@@ -50,7 +50,7 @@ import { scoutStillOption } from "./scoutStillOption.ts";
 //                    SCOUT_REPLICA_GENERATOR), priced by it (./scoutStillOption.ts): the Leonardo
 //                    studio at Low by default, UNPRICED (prepaid studio credits, 8 a still); Flare at
 //                    lib/imaging/pricing.ts's per-image fallback ($0.01542, 6 credits; the API's
-//                    reported credits win); local Flux 2 free.
+//                    reported credits win); Codex $0 on the seat.
 //   render-clip      by `SCOUT_CLIP_ENGINE` (operator, 2026-10-22: video on a LOCAL model, tagged free):
 //                    `ltx-local` (the default) - LTX-2.5 distilled through the ComfyUI on this box
 //                    (lib/imaging/video/comfyLtx.ts), $0, no spend row, and the whole job waits on
@@ -68,7 +68,7 @@ import { scoutStillOption } from "./scoutStillOption.ts";
 // while the card idles, against splitting a candidate into two jobs that the night, the budget
 // and the Board would all have to learn to pair. Without one, the stills are the scarce half and
 // the job waits on their engine's lane (stillEngine.ts `stillLane`): box.chrome for the studio,
-// gpu.local for local Flux (admitted by the comfy profile, never drawn from a cloud lane),
+// seat.text for Codex,
 // cloud.leonardo for Flare. Studio stills inside a gpu.local job share the tab through the studio
 // lock (lib/imaging/studio/lock.ts). The lane names the engines: the clip act renders locally on
 // gpu.local and on Leonardo anywhere else, and the still act reads the lane first, so the request
@@ -88,7 +88,7 @@ export type LaunchSceneOptions = {
   readonly dryOnly: boolean;
   /** Absent: `SCOUT_CLIP_ENGINE` (default `ltx-local`). */
   readonly clipEngine?: ClipEngine;
-  /** Absent: `SCOUT_REPLICA_GENERATOR` (default `leonardo-studio`). */
+  /** Absent: `SCOUT_REPLICA_GENERATOR` (default `codex`). */
   readonly generator?: ReplicaGenerator;
   readonly now?: number;
 };
@@ -114,7 +114,7 @@ export function clipEngineFrom(env: Readonly<Record<string, string | undefined>>
  * Every lane a scene job can wait on: the worker binds the producer on each. cloud.google stays
  * bound for a scene enqueued before the stills moved to Leonardo (2026-10-22); nothing new goes there.
  */
-export const SCOUT_SCENE_LANES: readonly ResourceLane[] = ["cloud.google", "cloud.leonardo", "gpu.local", "box.chrome"];
+export const SCOUT_SCENE_LANES: readonly ResourceLane[] = ["cloud.google", "cloud.leonardo", "gpu.local", "box.chrome", "seat.text"];
 /**
  * The lane of the scarce half: the card for a local clip; otherwise the stills' engine's
  * (stillEngine.ts `stillLane`), whose stills (and a hosted clip) outweigh the Gemini reads.
@@ -200,10 +200,6 @@ function readIn(r: Reader, t: SceneTarget, o: ReadAsk): Result<Read> {
   const c = checkCandidate(night.value, t.candidateId, o.mode);
   if (!c.ok) return c;
   const keyframes = pickFrames(c.value.keyframes);
-  // A hosted clip runs off the card and local Flux runs on it: no one lane holds both (the clip act reads
-  // gpu.local as LTX), so the pair is refused rather than rendered on an engine the receipt did not price.
-  if (o.clip && o.engine === "hailuo" && o.generator === "comfy-flux2")
-    return err("refused", `scene ${night.value.id}/${c.value.id}: comfy-flux2 replicas and a hailuo clip share no lane; set SCOUT_CLIP_ENGINE=ltx-local or SCOUT_REPLICA_GENERATOR to a Leonardo engine`);
   const lane = sceneLane(o.clip, o.engine, o.generator);
   const read = readOption(lane);
   const still = scoutStillOption("scout-scene", "replica still", lane, o.generator);

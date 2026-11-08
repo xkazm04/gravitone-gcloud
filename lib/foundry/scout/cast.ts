@@ -1,4 +1,4 @@
-// CASTING A KEPT CHARACTER (spark scout-vision S3) - the one door a character's picture passes to reach a Flux frame,
+// CASTING A KEPT CHARACTER (spark scout-vision S3) - the one door a character's picture passes to reach a frame,
 // and the one place her identity is written into a prompt.
 //
 // THE GUARD, `castStillOf`. Every reference still Flux receives - her kept portrait for her reference sheet, her kept
@@ -23,17 +23,17 @@ import { readFile } from "node:fs/promises";
 
 import { err, ok, type Result } from "@gt/domain/errors";
 
-import { REFERENCE_LATE } from "../../imaging/local/flux2.ts";
+import { REFERENCE_LATE } from "../../imaging/local/codex.ts";
 import { characterKey, keptCharacters, type KeptCharacter, type RootedNight } from "./characters";
 import { readRootedNights, resolveInNight } from "./store";
 import type { SeedAudience } from "./types";
 import { withWing } from "./wingScope";
 
-/** The most characters one brief casts (each kept sheet is one Flux reference: flux2.ts FLUX_REFS_MAX). */
+/** The most characters one brief casts (each kept sheet is one reference: codex.ts CODEX_REFS_MAX). */
 export const CAST_MAX = 3;
-/** Where a cast member's kept sheet joins a frame's denoise: the model's frozen value (flux2.ts REFERENCE_LATE). */
+/** Where a cast member's kept sheet joins a frame's denoise: recorded on the request, no effect on Codex (codex.ts REFERENCE_LATE). */
 export const CAST_LATE = REFERENCE_LATE;
-/** The longest compiled prompt Flux takes (flux2.ts PROMPT_MAX). */
+/** The longest compiled prompt a panel may carry. */
 export const CAST_PROMPT_MAX = 2_000;
 
 /** The scout nights and the muse archive, each beside its root (night ids COLLIDE across roots). */
@@ -67,7 +67,7 @@ function fileRefusal(file: string, sources: RootedNight["night"]["sources"]): st
 }
 
 /**
- * THE ONE DOOR a character's picture passes to reach Flux: the bytes of her kept portrait or her kept sheet, asked for
+ * THE ONE DOOR a character's picture passes to reach an engine: the bytes of her kept portrait or her kept sheet, asked for
  * by its `<runId>/<c-id>` ref - or why not. `kept` defaults to keptCharacters(nights).
  */
 export async function castStillOf(nights: readonly RootedNight[], ask: { readonly name: string; readonly ref: string }, kept: readonly KeptCharacter[] = keptCharacters(nights)): Promise<Result<CastStill>> {

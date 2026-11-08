@@ -10,7 +10,7 @@ import { madePaid } from "@gt/producers/research/partAct";
 import { meteredCall } from "@gt/producers/research/metered";
 import type { SheetPorts, SheetRequest } from "@gt/producers/scout-sheet/define";
 
-import { FLUX_MODEL } from "../imaging/local/flux2.ts";
+import { CODEX_MODEL } from "../imaging/local/codex.ts";
 import { recognize as LIVE_RECOGNIZE } from "../imaging/router.ts";
 import type { Recognition, RecognizeRequest } from "../imaging/types.ts";
 import { castStillOf, rootedNights } from "../foundry/scout/cast.ts";
@@ -21,12 +21,12 @@ import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundr
 import type { SheetCandidate } from "../foundry/scout/types.ts";
 import { standIdea } from "./scoutIdeaActs.ts";
 
-// THE SHEET'S ACT - the ports of packages/producers/src/scout-sheet/define.ts over the local Flux client, the eye and
+// THE SHEET'S ACT - the ports of packages/producers/src/scout-sheet/define.ts over the Codex client, the eye and
 // the night store (spark scout-vision S3).
 //
 //   draw   THE GUARD first: her kept portrait's bytes through lib/foundry/scout/cast.ts castStillOf - the one door, the
 //          request's portrait ref re-checked against her kept portrait as the nights hold it NOW; anything else fails
-//          the sheet with the guard's sentence and nothing is drawn. Then one Flux 2 still at 1:1 from the compiled
+//          the sheet with the guard's sentence and nothing is drawn. Then one Codex still at 1:1 from the compiled
 //          prompt, the portrait admitted late (the request's `late`). A LOCAL STILL IS FREE (no spend row); a dry job
 //          declares it to the meter and is answered by a stand-in. Then THE EYE (the idea eye's call, metered; a dry job
 //          reads STAND_JUDGE, a parody card adds the eye's parody clause): an adult-audience character is read by the
@@ -97,17 +97,17 @@ async function drawAct(e: SheetActEngines, req: SheetRequest, ctx: StepContext):
   let got: { readonly png: Uint8Array; readonly seed: number; readonly model: string };
   try {
     if (draw === undefined) throw new AppError("unavailable", "no sheet engine is bound");
-    const render = async () => ({ ...(await draw(req.prompt, { refs: [portrait.value.bytes], late: req.late, seed: req.seed })), model: FLUX_MODEL });
+    const render = async () => ({ ...(await draw(req.prompt, { refs: [portrait.value.bytes], late: req.late, seed: req.seed })), model: CODEX_MODEL });
     got =
       ctx.job.mode.kind === "live"
         ? await render()
         : await meteredCall<{ png: Uint8Array; seed: number; model: string }>(ctx, {
-            provider: "comfyui",
-            model: FLUX_MODEL,
+            provider: "codex",
+            model: CODEX_MODEL,
             payload: { prompt: req.prompt, aspect: "1:1", seed: req.seed, refs: [portrait.value.ref], late: req.late },
             estimate: req.estimates.draw,
             stand: () => ({ png: new Uint8Array(standIdea(7)), seed: req.seed, model: "dry stand-in" }),
-            live: async () => ({ value: await render(), unpriced: "free: a local model" }),
+            live: async () => ({ value: await render(), unpriced: "the operator's ChatGPT seat: no per-image bill; its quota is the limit" }),
           });
   } catch (x) {
     return failed(errorMessage(x));
@@ -125,7 +125,7 @@ async function drawAct(e: SheetActEngines, req: SheetRequest, ctx: StepContext):
     const { error: _e, ...base } = s;
     return { ...base, image: rel, seed: got.seed };
   });
-  return madePaid(data({ sheet: c.id, file: rel, seed: got.seed, from: portrait.value.ref, late: req.late, provider: "comfyui", model: got.model, dry: got.model === "dry stand-in", costUsd: 0, ...(read.ok ? { judge: read.value } : {}) }), ctx);
+  return madePaid(data({ sheet: c.id, file: rel, seed: got.seed, from: portrait.value.ref, late: req.late, provider: "codex", model: got.model, dry: got.model === "dry stand-in", costUsd: 0, ...(read.ok ? { judge: read.value } : {}) }), ctx);
 }
 
 /* ── The ending ───────────────────────────────────────────────────────────── */

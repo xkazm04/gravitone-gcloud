@@ -44,7 +44,7 @@ export type ImportResult = { readonly imported: readonly string[]; readonly skip
 /** The env var that moves the store (server-only; no client module may spell it - check:bundle). */
 const CHANNELS_ENV = "SCOUT_CHANNELS_DIR";
 
-/** The group whose episodes are made as real-data reels; every other group's as Flux storyboards. */
+/** The group whose episodes are made as real-data reels; every other group's as drawn storyboards. */
 const REEL_GROUP = "Data explainer";
 
 /** The store. A shell that moved the night store (`SCOUT_STORE_DIR`: a test, a rehearsal) and named no channels

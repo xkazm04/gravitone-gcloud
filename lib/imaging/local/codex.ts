@@ -9,7 +9,7 @@
 // file from upstream LLM output, so it never touches the shell command line.
 //
 // NOT gpu.local. Nothing here occupies the card, so a job drawing only stills waits on seat.text (the operator's CLI
-// seats, as agy does) and never on the card's lane. A seat is a quota, not a USD meter: the receipt line is unpriced.
+// seats, as agy does) and never on the card's lane. A seat is a quota, not a USD meter: the receipt line books $0.
 //
 // NO SEED AND NO DENOISE WINDOW. Codex takes neither: a request's seed is recorded and handed back unchanged, so a
 // retry is another draw, not the same frame; and a reference is an attached image the turn looks at, not a latent.

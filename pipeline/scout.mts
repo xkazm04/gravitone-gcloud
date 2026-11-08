@@ -75,7 +75,7 @@ export type CliPorts = {
   /** `track`'s Suno browser and clip download; `visualizer`'s mv queue, launch and drive. A test hands fakes. */
   readonly track?: TrackEngines;
   readonly visualizer?: VisualizerEngines;
-  /** `storyboard`'s Flux frame; a test hands a fake (absent: the scout-storyboard producer on gpu.local). */
+  /** `storyboard`'s frame; a test hands a fake (absent: the scout-storyboard producer on its lane). */
   readonly storyboard?: StoryboardEngines;
   readonly piece?: PieceEngines;
   readonly sheet?: SheetEngines;
@@ -503,7 +503,7 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
         return failed ? 1 : 0;
       }
 
-      // A kept idea composed as a storyboard: up to five local Flux frames + the seat's words (spark scout-storyboards).
+      // A kept idea composed as a storyboard: up to five Codex frames + the seat's words (spark scout-storyboards).
       if (cmd === "storyboard") {
         const id = nightArg();
         const sb = await import("../lib/foundry/scout/storyboard.ts");
@@ -542,7 +542,7 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
         return failed ? 1 : 0;
       }
 
-      // A kept character's reference sheet (spark scout-vision S3): local Flux, her kept portrait as a late reference.
+      // A kept character's reference sheet (spark scout-vision S3): Codex, her kept portrait attached as a reference.
       if (cmd === "sheet") {
         const id = nightArg();
         const sh = await import("../lib/foundry/scout/sheet.ts");

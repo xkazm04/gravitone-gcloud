@@ -274,7 +274,7 @@ export function recipeOf(raw: unknown, ctx: { readonly deny: readonly string[]; 
 
 /* ── Replicas and the clip ───────────────────────────────────────────────── */
 
-// The engine a replica still is drawn by - the Leonardo studio at Low by default, Flare or local Flux 2 by
+// The engine a replica still is drawn by - Codex's image_gen by default, the Leonardo studio or Flare by
 // SCOUT_REPLICA_GENERATOR - and the lane its job waits on are ./stillEngine.ts's; re-exported here, where
 // the replica's callers have always found them. Each is prefer-only in the router, so naming it is the whole
 // chain. The readback stays on Google (scoutSceneActs.ts `prefer: "google"`).

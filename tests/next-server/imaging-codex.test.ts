@@ -98,7 +98,7 @@ describe("drawCodex", () => {
 describe("codexProvider", () => {
   const stillOf = { png: new Uint8Array(png(1672, 941)), seed: 3, model: CODEX_MODEL, width: 1672, height: 941, wallMs: 5 } as const;
 
-  it("draws one still, a negative riding in the prompt, and books it unpriced", async () => {
+  it("draws one still, a negative riding in the prompt, and books it at $0", async () => {
     const calls: unknown[] = [];
     const p = codexProvider({
       draw: async (r) => {
@@ -108,7 +108,7 @@ describe("codexProvider", () => {
     });
     const out = await p.generate?.({ prompt: "a door", negativePrompt: "text", aspect: "16:9", count: 1, seed: 3 } as never);
     expect(calls).toEqual([{ prompt: "a door Avoid: text.", aspect: "16:9", seed: 3 }]);
-    expect(out?.provenance).toMatchObject({ provider: "codex", model: CODEX_MODEL, costBasis: "unpriced", negativePromptChannel: "prose" });
+    expect(out?.provenance).toMatchObject({ provider: "codex", model: CODEX_MODEL, costUsd: 0, negativePromptChannel: "prose" });
     expect(out?.images[0]).toMatchObject({ mime: "image/png", width: 1672, height: 941 });
   });
 

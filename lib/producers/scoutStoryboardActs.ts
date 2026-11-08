@@ -10,7 +10,7 @@ import { madePaid } from "@gt/producers/research/partAct";
 import { meteredCall } from "@gt/producers/research/metered";
 import type { StoryboardPorts, StoryboardRequest } from "@gt/producers/scout-storyboard/define";
 
-import { FLUX_MODEL, type FluxAspect } from "../imaging/local/flux2.ts";
+import { CODEX_MODEL, type CodexAspect } from "../imaging/local/codex.ts";
 import { LTX_MODEL } from "../imaging/video/comfyLtx.ts";
 import { castRefs, CAST_LATE } from "../foundry/scout/cast.ts";
 import { followEpisodes } from "../foundry/scout/episodeMoves.ts";
@@ -18,10 +18,10 @@ import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundr
 import { CLIP_SECONDS, type CandidateId, type Night, type SceneClip, type StoryboardCandidate } from "../foundry/scout/types.ts";
 import { standIdea } from "./scoutIdeaActs.ts";
 
-// THE STORYBOARD'S ACTS - the ports of packages/producers/src/scout-storyboard/define.ts over the local Flux
+// THE STORYBOARD'S ACTS - the ports of packages/producers/src/scout-storyboard/define.ts over the Codex
 // client and the night store.
 //
-//   panel  one Flux 2 frame from the panel's prompt and its launch-chosen seed, written to
+//   panel  one Codex frame from the panel's prompt and its launch-chosen seed, written to
 //          storyboards/<c-NN>/panel-N.png and recorded at its index in the candidate's `images` and `seeds`.
 //          A LOCAL FRAME IS FREE, so a live one is not a paid call: it is made directly, books no spend
 //          row, and the step reports $0 (the scene's local clip rule, scoutSceneActs.ts `clipAct`). A dry
@@ -42,10 +42,10 @@ import { standIdea } from "./scoutIdeaActs.ts";
 //
 // Every night write is fenced against the job's slot first (the scene and ideas acts' `fence`).
 
-/** The frame engine a storyboard draws with: production's is lib/imaging/local/flux2.ts; a test hands a fake. */
-export type StoryboardDraw = (prompt: string, o: { readonly aspect: FluxAspect; readonly seed?: number; readonly refs?: readonly Uint8Array[]; readonly late?: number }) => Promise<{ readonly png: Uint8Array; readonly seed: number }>;
+/** The frame engine a storyboard draws with: production's is lib/imaging/local/codex.ts; a test hands a fake. */
+export type StoryboardDraw = (prompt: string, o: { readonly aspect: CodexAspect; readonly seed?: number; readonly refs?: readonly Uint8Array[]; readonly late?: number }) => Promise<{ readonly png: Uint8Array; readonly seed: number }>;
 /** A trial's clip engine: one LTX clip of a panel still (PNG bytes); production's is lib/imaging/video/comfyLtx.ts. */
-export type StoryboardClip = (still: Uint8Array, prompt: string, o: { readonly aspect: FluxAspect; readonly seed: number }) => Promise<{ readonly bytes: Uint8Array; readonly durationS: number }>;
+export type StoryboardClip = (still: Uint8Array, prompt: string, o: { readonly aspect: CodexAspect; readonly seed: number }) => Promise<{ readonly bytes: Uint8Array; readonly durationS: number }>;
 export type StoryboardActEngines = { readonly draw: StoryboardDraw; readonly clip?: StoryboardClip };
 
 /** A few bytes a dry clip stands on: obviously not a video (lib/foundry/scout/scene.ts DRY_CLIP). */
@@ -126,14 +126,14 @@ async function panelAct(e: StoryboardActEngines, req: StoryboardRequest, k: numb
     const draw = () => e.draw(ask.prompt, { aspect: req.aspect, seed: ask.seed, ...refs });
     got =
       ctx.job.mode.kind === "live"
-        ? { ...(await draw()), model: FLUX_MODEL }
+        ? { ...(await draw()), model: CODEX_MODEL }
         : await meteredCall<{ png: Uint8Array; seed: number; model: string }>(ctx, {
-            provider: "comfyui",
-            model: FLUX_MODEL,
+            provider: "codex",
+            model: CODEX_MODEL,
             payload: { prompt: ask.prompt, aspect: req.aspect, seed: ask.seed, ...(cast.value.from.length === 0 ? {} : { refs: cast.value.from, late: CAST_LATE }) },
             estimate: req.estimates.panel,
             stand: () => ({ png: new Uint8Array(standIdea(k)), seed: ask.seed, model: "dry stand-in" }),
-            live: async () => ({ value: { ...(await draw()), model: FLUX_MODEL }, unpriced: "free: a local model" }),
+            live: async () => ({ value: { ...(await draw()), model: CODEX_MODEL }, unpriced: "the operator's ChatGPT seat: no per-image bill; its quota is the limit" }),
           });
   } catch (x) {
     const why = errorMessage(x);
@@ -147,7 +147,7 @@ async function panelAct(e: StoryboardActEngines, req: StoryboardRequest, k: numb
   await mkdir(path.dirname(abs), { recursive: true });
   await writeFile(abs, got.png);
   await writeBoard(req, ctx.job.id, (b) => withPanel(b, of, k, rel, got.seed));
-  return madePaid(data({ panel: k, file: rel, seed: got.seed, provider: "comfyui", model: got.model, dry: got.model === "dry stand-in", costUsd: 0 }), ctx);
+  return madePaid(data({ panel: k, file: rel, seed: got.seed, provider: "codex", model: got.model, dry: got.model === "dry stand-in", costUsd: 0 }), ctx);
 }
 
 /* ── clip (a trial's) ─────────────────────────────────────────────────────── */

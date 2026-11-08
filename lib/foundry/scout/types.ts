@@ -97,7 +97,7 @@ export const MAX_TRACK_CAP = 8;
 export const DEFAULT_VISUALIZER_CAP = 2;
 export const MAX_VISUALIZER_CAP = 4;
 
-/** Storyboards a night draws from kept ideas (spark scout-storyboards): up to five local Flux stills each, ~8 GPU min.
+/** Storyboards a night draws from kept ideas (spark scout-storyboards): up to five Codex stills each.
  *  Raised 2026-10-25 (spark scout-vision, the operator: "raise max to 20") - storyboards are the free local work the
  *  night develops its backlog with. */
 export const DEFAULT_STORYBOARD_CAP = 12;
@@ -540,7 +540,7 @@ export type VisualizerCandidate = CandidateBase & {
 
 /**
  * A kept idea composed as a video before any video is made (spark scout-storyboards): up to five rough
- * frames drawn by the local Flux model from OUR words (the idea's artboard is read as words, never as a
+ * frames drawn by Codex from OUR words (the idea's artboard is read as words, never as a
  * reference - the frames are a plan, not the final video's baseline), a paragraph and bullets saying the
  * vision. Judged whole; kept, it is the root any full-video act must name (`keptStoryboardFor`).
  */
@@ -553,13 +553,13 @@ export type StoryboardCandidate = CandidateBase & {
   readonly title: string;
   readonly paragraph: string;
   readonly bullets: readonly string[];
-  /** One Flux prompt per frame, in order (1..STORYBOARD_PANELS_MAX), seat-written. */
+  /** One frame prompt per frame, in order (1..STORYBOARD_PANELS_MAX), seat-written. */
   readonly panels: readonly string[];
   /** The frames' aspect: the idea's. Absent: 16:9. */
   readonly aspect?: Aspect;
   /** Night-relative stills (`storyboards/c-NN/panel-1.png`), by panel index; null where that panel failed. */
   readonly images?: readonly (string | null)[];
-  /** The Flux seed each panel drew with, by panel index. */
+  /** The seed each panel carried, by panel index (recorded; Codex draws without one). */
   readonly seeds?: readonly number[];
   /** The execution technique the night researched and the panels apply (spark scout-vision); a kept storyboard files
    *  it as a finding. Omitted when the brief names none. */
@@ -570,7 +570,7 @@ export type StoryboardCandidate = CandidateBase & {
    *  that clip failed. Omitted on a plain storyboard and before the clip step ran. Packet cells `c-NN/clip-N`. */
   readonly clips?: readonly (SceneClip | null)[];
   /** Kept characters it casts, by name (spark scout-vision S3): every panel leads with each one's identity block, and
-   *  a character with a kept sheet rides it as a late-admitted Flux reference. */
+   *  a character with a kept sheet rides it as an attached reference. */
   readonly cast?: readonly string[];
 };
 
@@ -616,10 +616,10 @@ export type ReelCutCandidate = CandidateBase & {
 };
 
 /**
- * A kept character's REFERENCE SHEET (spark scout-vision S3): one neutral 1:1 still drawn by local Flux with her kept
+ * A kept character's REFERENCE SHEET (spark scout-vision S3): one neutral 1:1 still drawn by Codex with her kept
  * portrait as a late-admitted reference - rest expression, three-quarter head, even light, plain field, invariant
  * wardrobe (registry character-identity-continuity / reference-shows-only-invariants). Judged on the Board (cell
- * `c-NN/sheet`); kept, it is her reference for every Flux frame she is cast in.
+ * `c-NN/sheet`); kept, it is her reference for every frame she is cast in.
  */
 export type SheetCandidate = CandidateBase & {
   readonly kind: "sheet";

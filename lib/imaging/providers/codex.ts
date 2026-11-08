@@ -5,7 +5,7 @@
 // fallback, so a request that names another vendor is not silently served by Codex. A scout replica or concept names
 // it through SCOUT_REPLICA_GENERATOR, whose default it is (foundry/scout/stillEngine.ts).
 //
-// Unpriced: the seat is a subscription, not a USD meter, and no rate card is checked. One image per call.
+// $0: the seat bills no image; its quota is the real limit. One image per call.
 
 import { CODEX_MODEL, drawCodex, type CodexAspect } from "../local/codex";
 import { invalidRequest } from "../errors";
