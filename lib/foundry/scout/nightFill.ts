@@ -37,7 +37,9 @@ import { withWing } from "./wingScope";
 //                 Refusal (a cap, the money, a kept idea no longer kept) is `refused`; any other throw `failed`;
 //                 neither is retried. An
 //                 EngineUnreachable (./comfyGate.ts: the engine could not be asked, nothing spent) is neither: the item
-//                 stays `queued` and the tick idles with a reason naming ComfyUI.
+//                 stays `queued`, and the same tick goes on to the next
+//                 eligible item that shares none of its lanes (still one launch); with nothing else to go it idles
+//                 with the reason naming ComfyUI.
 
 export const NIGHT_FILL_ACTOR: Actor = { kind: "machine", id: "night-fill" };
 export const NIGHT_FILL_WINDOW_MIN = 15;
@@ -136,7 +138,7 @@ export async function nightFillTick(o: NightFillOptions): Promise<NightFillOutco
         seen.set(lane, b);
         return b;
       };
-      return queued.find((x) => {
+      return queued.filter((x) => {
         const lanes = o.doors[x.kind].lanes();
         if (lanes.some(isBusy)) return false;
         const over = overBandOn(load, bandResourcesOf(lanes));
@@ -145,28 +147,42 @@ export async function nightFillTick(o: NightFillOptions): Promise<NightFillOutco
       });
     });
     if (!busy.ok) return { kind: "idle", why: `the queue did not read: ${busy.error.message}`, night: night.id };
-    const item = busy.value;
-    if (item === undefined && hold !== undefined) return { kind: "idle", why: hold, night: night.id };
-    if (item === undefined && held !== undefined) return { kind: "idle", why: held, night: night.id };
-    if (item === undefined) return { kind: "idle", why: `every queued item's lane is busy (${queued.length} queued)`, night: night.id };
+    const eligible = busy.value;
+    if (eligible.length === 0 && hold !== undefined) return { kind: "idle", why: hold, night: night.id };
+    if (eligible.length === 0 && held !== undefined) return { kind: "idle", why: held, night: night.id };
+    if (eligible.length === 0) return { kind: "idle", why: `every queued item's lane is busy (${queued.length} queued)`, night: night.id };
 
     const ctx: ActContext = { store: o.store, location: o.location, actor: NIGHT_FILL_ACTOR, dryOnly: o.dryOnly, live: !night.dry, detach: true, say: (l) => o.say?.(`  ${l}`), now: () => o.now };
-    let next: Pick<PlanItem, "state" | "at" | "jobId" | "reason">;
-    try {
-      const r = await o.doors[item.kind].launch(ctx, night.id, item);
-      next = { state: "launched", at: o.now.toISOString(), ...(r.jobId === undefined ? {} : { jobId: r.jobId }) };
-    } catch (e) {
-      // Could not ask is not refused: the engine was not there, no attempt was made, nothing was spent. The item
-      // stays queued and the tick idles; the next tick asks again.
-      if (e instanceof EngineUnreachable) {
-        const why = e.message;
-        o.say?.(`${night.id} ${item.id} ${item.kind} stays queued · ${why}`);
-        return { kind: "idle", why, night: night.id };
+    // Could not ask is not refused: an engine that was not there means no attempt was made and nothing was spent. The
+    // item stays queued and the tick moves on to the next eligible item, skipping any that shares a lane with it (the
+    // probe is asked once per lane per tick). Still at most one launch; with nothing else to go, the tick idles on it.
+    const dead = new Set<ResourceLane>();
+    let unreachable: string | undefined;
+    let item: PlanItem | undefined;
+    let next: Pick<PlanItem, "state" | "at" | "jobId" | "reason"> | undefined;
+    for (const x of eligible) {
+      const lanes = o.doors[x.kind].lanes();
+      if (lanes.some((l) => dead.has(l))) continue;
+      try {
+        const r = await o.doors[x.kind].launch(ctx, night.id, x);
+        next = { state: "launched", at: o.now.toISOString(), ...(r.jobId === undefined ? {} : { jobId: r.jobId }) };
+      } catch (e) {
+        if (e instanceof EngineUnreachable) {
+          for (const l of lanes) dead.add(l);
+          unreachable ??= e.message;
+          o.say?.(`${night.id} ${x.id} ${x.kind} stays queued · ${e.message}`);
+          continue;
+        }
+        const reason = e instanceof Error ? e.message : String(e);
+        next = { state: e instanceof Refusal ? "refused" : "failed", at: o.now.toISOString(), reason };
       }
-      const reason = e instanceof Error ? e.message : String(e);
-      next = { state: e instanceof Refusal ? "refused" : "failed", at: o.now.toISOString(), reason };
+      item = x;
+      break;
     }
-    await mutatePlan(night.id, (items) => settleItem(items, item.id, next));
+    if (item === undefined || next === undefined) return { kind: "idle", why: unreachable ?? `every queued item's lane is busy (${queued.length} queued)`, night: night.id };
+    const settled = next;
+    const done = item;
+    await mutatePlan(night.id, (items) => settleItem(items, done.id, settled));
     o.say?.(`${night.id} ${item.id} ${item.kind} ${next.state}${next.jobId === undefined ? "" : ` as ${next.jobId}`}${next.reason === undefined ? "" : ` · ${next.reason}`}`);
     return { kind: next.state as "launched" | "refused" | "failed", night: night.id, item: item.id, ...(next.jobId === undefined ? {} : { jobId: next.jobId }), ...(next.reason === undefined ? {} : { reason: next.reason }) };
   });

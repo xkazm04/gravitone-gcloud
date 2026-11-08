@@ -43,7 +43,7 @@ import { planAct, readPlan, type PlanKind } from "../../lib/foundry/scout/plan.t
 import type { PlanDoor, PlanDoors } from "../../lib/foundry/scout/planDoors.ts";
 import { DEFAULT_STORYBOARD_CAP, type Night } from "../../lib/foundry/scout/types.ts";
 import { storyboardCapOf, storyboardsUsed } from "../../lib/foundry/scout/storyboard.ts";
-import { createNight } from "../../lib/foundry/scout/store.ts";
+import { createNight, readNight } from "../../lib/foundry/scout/store.ts";
 
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
@@ -153,5 +153,30 @@ describe("the night-fill tick and an engine that could not be asked", () => {
     up = true;
     expect(await tick(T0 + 60 * MIN)).toMatchObject({ kind: "launched", item: "pl-01", jobId: "job:pl-01" });
     expect(await tick(T0 + 61 * MIN)).toMatchObject({ kind: "refused", item: "pl-02" });
+  });
+});
+
+describe("an engine that is down does not starve the items behind it", () => {
+  it("a queued storyboard first and a draft second: the draft launches, the storyboard stays queued; alone, the tick idles naming ComfyUI", async () => {
+    const nt = await createNight({ dry: false, day: "2026-10-26", now: new Date(T0), deadline: UNTIL });
+    const asked: string[] = [];
+    const d = doors(async (_c, _id, item) => {
+      asked.push(item.id);
+      if (item.kind === "storyboards") throw new EngineUnreachable(NOT_THERE);
+      return { jobId: `job:${item.id}` };
+    });
+    const ctx = { store, location: ":memory:", actor, dryOnly: true, live: false, detach: true, say: () => {}, now: () => new Date(T0) } as const;
+    await planAct(ctx, nt.id, [{ kind: "storyboards", payload: [1], why: "a" }, { kind: "storyboards", payload: [2], why: "b" }, { kind: "draft", payload: { prompt: "p", title: "t" }, why: "c" }], d);
+    samples(T0 + 70 * MIN, 0.2);
+    const tick = (ms: number) => nightFillTick({ store, location: ":memory:", now: new Date(ms), dryOnly: false, doors: d });
+    expect(await tick(T0 + 20 * MIN)).toMatchObject({ kind: "launched", item: "pl-03", jobId: "job:pl-03" });
+    // The probe is asked once for the lane: the second storyboard shares gpu.local and is skipped unasked.
+    expect(asked).toEqual(["pl-01", "pl-03"]);
+    expect((await readPlan(nt.id)).map((x) => [x.id, x.state])).toEqual([["pl-01", "queued"], ["pl-02", "queued"], ["pl-03", "launched"]]);
+    expect((await readNight(nt.id)).candidates).toEqual([]);
+    const alone = await tick(T0 + 21 * MIN);
+    expect(alone).toMatchObject({ kind: "idle", night: nt.id });
+    expect(alone.kind === "idle" ? alone.why : "").toBe(NOT_THERE);
+    expect(asked.slice(2)).toEqual(["pl-01"]);
   });
 });
