@@ -17459,27 +17459,27 @@
       "bundle": "media-generation",
       "state": "unknown",
       "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T00:39:55.255Z",
+      "evaluatedTs": "2026-11-08T04:57:35.351Z",
       "techniques": [
         {
           "technique": "camera-position-semantics",
           "verdict": "conformant",
-          "evidence": "lib/frames/shotTypes.ts:131 Placement has three values (centred, thirds, diagonal), as the decision rule for wide action beats asks. Diagonal was added from a corpus study. Size comes from the per-role SIZE_LADDER. Angle is a typed LA/eye/HA field that is never seeded."
+          "evidence": "lib/frames/shotTypes.ts:104 Size is the distance ladder (SIZE_ORDER, line 105). SIZE_LADDER assigns sizes per role. The angle is never seeded as a default eye-level (line 184). 'diagonal' was added to SubjectPlacement (line 131). placementFor (lib/frames/shots.ts:227) emits only crosshair or thirds, but thirds only lands on held shots of 3 s or more, and those are setup/quiet wides, not action wides."
         },
         {
           "technique": "scene-grammar-progression",
           "verdict": "conformant",
-          "evidence": "lib/frames/shotTypes.ts:122 Screen direction is typed vocabulary (screen-left, screen-right, toward-camera), and sizeSteps (line 106) holds the two-step size change between consecutive shots."
+          "evidence": "lib/frames/shotTypes.ts:122 Screen-direction words are typed vocabulary. The sequence direction is fixed, and the only reversal is a neutral shot (shots.ts directionFor). pickSize enforces a change of at least 2 size steps at each cut (sizeSteps, line 106), so the beats get their sizes before any generation."
         },
         {
           "technique": "movement-motivation",
           "verdict": "conformant",
-          "evidence": "lib/ads/types.ts:138 One move per shot for ad clips. For plate clips, lib/motion/direction.ts:109 locks the camera outright ('MOVE THE OBJECTS, NOT THE CAMERA'), which is an explicit refusal against drift."
+          "evidence": "lib/ads/types.ts:138 One move per shot for ads. The plate motion turn (lib/motion/direction.ts:105,109) does the opposite: it locks the camera and states positively what holds still, including the camera. That is the 'explicit refusal' and 'locked' carriage, chosen because of spoiled renders."
         },
         {
           "technique": "lens-effect-language",
           "verdict": "conformant",
-          "evidence": "lib/ads/validate.ts:549 The scenario's medium (texture/era) phrase must appear verbatim in every shot's motion line: one texture register for the piece, restated on each call."
+          "evidence": "lib/ads/validate.ts:549 One texture/medium register per scenario, restated verbatim in every shot's motion line, which matches the rule 'era signals are style contract, restated per call'. Separately, the readback vocabulary (pipeline/vocab/cinematography.json lens_impression) judges lens by visible effect, 'NOT a guessed focal length'."
         },
         {
           "technique": "performance-direction",
@@ -17488,11 +17488,12 @@
           "carriedFrom": "2026-11-07"
         }
       ],
+      "registryProposal": "Two registry subjects collide on the ad motion line. lib/ads/validate.ts:461 refuses any negation ('state stillness positively', motion-line-composition), which rejects movement-motivation's own example of an explicit refusal that works ('one continuous shot, locked horizon, no cuts'). The techniques should name which one wins, or confirm that the positive half ('locked horizon') is enough.",
       "withdrawn": {
-        "worker": "53577a7d-fa27-48c9-8a0b-44ed7d5fddb4",
+        "worker": "1fa7e74a-1dbd-4c0e-955a-5d3a72247509",
         "state": "conformant",
-        "at": "2026-11-08T00:41:06.763631+00:00",
-        "reason": "reviewer (sonnet): The main anchor, lib/frames/shotTypes.ts (SIZE_LADDER, sizeSteps), is imported only by lib/frames/shots.ts. It is not one of the score-and-ads context files, and nothing in lib/score, lib/ads, lib/studio/score.ts, lib/motion or lib/vocab references it, so the verdict is about the frames context."
+        "at": "2026-11-08T04:58:19.970773+00:00",
+        "reason": "reviewer (sonnet): The main anchor and the size-ladder, angle, direction and placement claims are in lib/frames/shotTypes.ts and lib/frames/shots.ts, which are not among score-and-ads's context files. The claim that the ad motion line is 'gated to one camera-led move' rests only on a doc comment in lib/ads/types.ts. I"
       }
     },
     "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/cinematic-language": {
