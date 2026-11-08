@@ -210,9 +210,9 @@ export async function episodesDue(): Promise<readonly { readonly channel: Channe
 /* ── the state machine ────────────────────────────────────────────────────── */
 
 /** The moves the store allows, as data: a night takes a kept outline, makes it or hands it back (its candidate failed);
- *  the operator's verdict on what it made ends it. */
+ *  the operator's verdict on what it made ends it, and the operator may throw a kept outline no night has made. */
 const MOVES: Readonly<Record<EpisodeState, readonly EpisodeState[]>> = {
-  "outline-kept": ["in-production"],
+  "outline-kept": ["in-production", "thrown"],
   "in-production": ["made", "outline-kept"],
   made: ["kept", "thrown"],
   kept: [],

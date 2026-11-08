@@ -250,6 +250,13 @@ describe("the episode state machine", () => {
     expect((await setEpisodeState("F1-02", "thrown")).state).toBe("thrown");
   });
 
+  it("the operator can throw a kept outline no night has made, and it stops being due", async () => {
+    const t = await setEpisodeState("F1-01", "thrown", { verdict: { reasons: [], notes: ["not interesting use case"] } });
+    expect(t.state).toBe("thrown");
+    expect(t.verdict?.notes).toEqual(["not interesting use case"]);
+    expect((await episodesDue()).flatMap((d) => d.episodes.map((e) => e.id))).not.toContain("F1-01");
+  });
+
   it("refuses a forbidden move by name, and in-production without a night's candidate", async () => {
     await expect(setEpisodeState("F1-01", "kept")).rejects.toThrow("F1-01 cannot move outline-kept -> kept");
     await expect(setEpisodeState("F1-01", "in-production")).rejects.toThrow(/names the night's candidate/);
