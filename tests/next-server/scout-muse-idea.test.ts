@@ -43,7 +43,7 @@ import { readNight, resolveInNight } from "../../lib/foundry/scout/store.ts";
 import type { IdeaCandidate, Seed, SeedBatch } from "../../lib/foundry/scout/types.ts";
 import { __resetBudget } from "../../lib/imaging/budget.ts";
 import { FAKE_LEONARDO_STUDIO, resetFakeLeonardoStudio } from "../../lib/imaging/providers/leonardoStudio.ts";
-import { generate } from "../../lib/imaging/router.ts";
+import { fakeCodexIdeas } from "./fake-codex-ideas.ts";
 import type { GenerateRequest, Recognition, RecognizeRequest } from "../../lib/imaging/types.ts";
 
 const DRY = { ...process.env, GRAVITONE_DRY_ONLY: "1" };
@@ -279,8 +279,9 @@ describe("a scout night's character ideas job", () => {
     expect(existsSync(path.join(ROOT, "scout-muse", night))).toBe(false);
   }, 60_000); // a night's ideas job: ~1 s alone, past vitest's 5 s default under the pre-push gate's load
 
-  it("live on the fake studio: a character drawn 9:16 at quality low; a failing or unread still is never written, its candidate failed `judge: ...`", async () => {
+  it("live on a fake Codex: a character drawn 9:16; a failing or unread still is never written, its candidate failed `judge: ...`", async () => {
     const seen: GenerateRequest[] = [];
+    const codex = fakeCodexIdeas();
     const answers: (() => Promise<Recognition>)[] = [
       async () => ({ text: "", json: read(), provenance: { provider: "ollama", model: "eye", modelBasis: "requested", durationMs: 1 } }),
       async () => ({ text: "", json: read({ adult: "unsure", apparentAge: 20 }), provenance: { provider: "ollama", model: "eye", modelBasis: "requested", durationMs: 1 } }),
@@ -292,7 +293,7 @@ describe("a scout night's character ideas job", () => {
       ideas: {
         generate: async (req) => {
           seen.push(req);
-          return generate(req);
+          return codex.generate(req);
         },
         recognize: async () => {
           const next = answers.shift();
@@ -304,9 +305,7 @@ describe("a scout night's character ideas job", () => {
     const night = await open(LIVE, ["--live"]);
     const r = await cli(["ideas", night, "--json", batch(LIVE_IDEAS)], { env: LIVE, ports });
     expect(r.code, r.err).toBe(0);
-    expect(seen.map((g) => [g.aspect, g.quality, g.prefer])).toEqual([["16:9", undefined, "leonardo-studio"], ...Array(3).fill(["9:16", "low", "leonardo-studio"])]);
-    // Every studio generation is deleted once held, whatever the eye then said.
-    expect(FAKE_LEONARDO_STUDIO.deletes).toEqual(["fake-gen-0001", "fake-gen-0002", "fake-gen-0003", "fake-gen-0004"]);
+    expect(seen.map((g) => [g.aspect, g.quality, g.prefer])).toEqual([["16:9", undefined, "codex"], ...Array(3).fill(["9:16", undefined, "codex"])]);
     const ideas = await ideasOf(night);
     expect(ideas.map((c) => [c.status, c.image, c.error])).toEqual([
       ["rendered", "ideas/c-01.png", undefined],

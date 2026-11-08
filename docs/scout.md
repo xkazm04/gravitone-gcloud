@@ -242,9 +242,9 @@ ideation's bans) and `## Genres`.
 ## The money
 
 - **Stills come from Codex** (operator, 2026-11-08: "Our main image engine for now will be codex with its image
-  generation"; Flux 2 was removed the same day). Style replicas and transfers, scene replicas, asset concepts,
+  generation"; Flux 2 was removed the same day). Idea artboards, style replicas and transfers, scene replicas, asset concepts,
   storyboard frames and reference sheets draw through Codex's `image_gen` on the operator's ChatGPT seat, $0 per
-  image against the seat's quota. `SCOUT_REPLICA_GENERATOR=leonardo-studio|leonardo-flare` moves them to the studio
+  image against the seat's quota. `SCOUT_REPLICA_GENERATOR=leonardo-studio|leonardo-flare` moves all but the artboards, storyboards and sheets to the studio
   at Low (8 credits, unpriced) or Flare, and a leftover `comfy-flux2` refuses. Codex jobs wait on seat.text, studio
   jobs on box.chrome, Flare on cloud.leonardo (lib/foundry/scout/stillEngine.ts);
   a scene whose clip renders locally runs on gpu.local either way. One studio tab at a time across processes
@@ -269,7 +269,7 @@ ideation's bans) and `## Genres`.
   One counts once it may reach the GPU - pending, or handed off to a mesh asset; one whose concepts the
   input gate refused, or whose job failed before the hand-off, spent no GPU minute and gives its place
   back. The check and the candidate's row are one write under the night's lock.
-- **Ideas and stats reels**: at most `--ideas` studio artboards (default 25) and `--reels` stats ideas
+- **Ideas and stats reels**: at most `--ideas` Codex artboards (default 25) and `--reels` stats ideas
   (default 6, at most 12) per night, each counted toward its own cap only and never toward `--target` or
   the clips; a failed one still counts. Both are uncapped by the ceiling (studio credits, the seat), so a
   batch is refused by its caps and never by the night's money.

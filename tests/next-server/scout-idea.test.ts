@@ -44,6 +44,7 @@ import { parseIdeas } from "../../lib/foundry/scout/idea.ts";
 import { mutateNight, readNight, resolveInNight, summarise } from "../../lib/foundry/scout/store.ts";
 import type { IdeaCandidate } from "../../lib/foundry/scout/types.ts";
 import { ImagingError } from "../../lib/imaging/errors.ts";
+import { fakeCodexIdeas } from "./fake-codex-ideas.ts";
 import { producers } from "../../lib/producers/registry.ts";
 import { driveIdeas } from "../../lib/producers/scoutIdea.ts";
 import { __resetBudget } from "../../lib/imaging/budget.ts";
@@ -167,7 +168,7 @@ describe("a dry night draws stand-ins", () => {
     expect(r.doc["outcome"]).toBe("done");
     expect(r.doc["jobId"]).toBe(`job:scout-ideas:${night}:c-01`);
     expect(r.doc["ideas"]).toEqual({ used: 3, cap: 25 });
-    expect(r.err).toMatch(/receipt \(dry\): ideas c-01\.\.c-03 · 3 artboard\(s\) on box\.chrome · leonardo-studio · unpriced \(studio credits, prepaid\)/);
+    expect(r.err).toMatch(/receipt \(dry\): ideas c-01\.\.c-03 · 3 artboard\(s\) on seat\.text · codex · \$0 \(the ChatGPT seat\)/);
     const ideas = await ideasOf(night);
     expect(ideas.map((c) => [c.id, c.status, c.image, c.target, c.sourceIds])).toEqual([
       ["c-01", "rendered", "ideas/c-01.png", "scene", []],
@@ -200,7 +201,7 @@ describe("a dry night draws stand-ins", () => {
 });
 
 describe("--detach", () => {
-  it("leaves the batch's job queued for the worker, which carries scout-ideas on box.chrome and draws it", async () => {
+  it("leaves the batch's job queued for the worker, which carries scout-ideas on seat.text and draws it", async () => {
     const night = await open();
     const r = await cli(["ideas", night, "--json", batch(THREE.slice(0, 2)), "--detach"], { ports: NEVER });
     expect(r.code, r.err).toBe(0);
@@ -211,7 +212,7 @@ describe("--detach", () => {
       ["pending", jobId],
     ]);
     const bound = producers();
-    expect(bound.ok && bound.value.has("scout-ideas@box.chrome")).toBe(true);
+    expect(bound.ok && bound.value.has("scout-ideas@seat.text")).toBe(true);
     const k = openKernel(LOC);
     if (!k.ok) throw k.error;
     try {
@@ -255,10 +256,11 @@ describe("refusals, before anything is written", () => {
   });
 });
 
-describe("a live night, on the fake studio", () => {
-  it("draws every idea through the router, deletes each studio generation once, and books it uncapped", async () => {
+describe("a live night, on a fake Codex", () => {
+  it("draws every idea on Codex and books no credits", async () => {
     const night = await open(["--live"], LIVE);
-    const r = await cli(["ideas", night, "--json", batch(THREE)], { env: LIVE });
+    const codex = fakeCodexIdeas();
+    const r = await cli(["ideas", night, "--json", batch(THREE)], { env: LIVE, ports: { ideas: { generate: codex.generate } } });
     expect(r.code, r.err).toBe(0);
     expect(r.err).toMatch(/receipt \(live\): ideas c-01\.\.c-03/);
     const ideas = await ideasOf(night);
@@ -268,17 +270,15 @@ describe("a live night, on the fake studio", () => {
       ["rendered", "ideas/c-03.png"],
     ]);
     for (const c of ideas) expect(existsSync(resolveInNight(night, c.image ?? ""))).toBe(true);
-    expect(FAKE_LEONARDO_STUDIO.calls.map((x) => [x.prompt, x.aspect])).toEqual(THREE.map((i) => [i.prompt, "16:9"]));
-    expect(FAKE_LEONARDO_STUDIO.deletes).toEqual(["fake-gen-0001", "fake-gen-0002", "fake-gen-0003"]);
+    expect(codex.calls.map((x) => [x.prompt, x.aspect, x.prefer])).toEqual(THREE.map((i) => [i.prompt, "16:9", "codex"]));
     const k = openKernel(LOC);
     if (!k.ok) throw k.error;
     try {
       const jobId = `job:scout-ideas:${night}:c-01`;
-      // Studio credits are booked unpriced, with the reason and the credits; no dollar row reaches the ceiling.
+      // A Codex still is booked unpriced with the seat as its reason; no dollar row reaches the ceiling.
       const rows = k.value.store.read((x) => ({ priced: x.all("SELECT axes FROM spend_rows WHERE job_id = ?", jobId), unpriced: x.all("SELECT reason FROM spend_unpriced WHERE job_id = ?", jobId) }));
       if (!rows.ok) throw rows.error;
-      expect(rows.value.priced).toEqual([]);
-      expect(rows.value.unpriced.map((row) => row["reason"])).toEqual(Array(3).fill("leonardo-studio bills studio credits, prepaid (8 for this artboard)"));
+      expect(rows.value.unpriced.map((row) => row["reason"])).toEqual(Array(3).fill("the operator's ChatGPT seat: no per-image bill; its quota is the limit"));
       const b = nightBudget(k.value.store, await readNight(night));
       expect(b.ok && b.value).toMatchObject({ settledUsd: 0, heldUsd: 0, remainingUsd: 15 });
     } finally {
@@ -286,36 +286,35 @@ describe("a live night, on the fake studio", () => {
     }
   });
 
-  it("one idea the studio refuses fails with its sentence verbatim; the batch draws the rest", async () => {
+  it("one idea Codex refuses fails with its sentence verbatim; the batch draws the rest", async () => {
     const night = await open(["--live"], LIVE);
-    FAKE_LEONARDO_STUDIO.failWith = (p) => (p.includes("salt flats") ? "Leonardo declined this prompt: content filter" : null);
-    const r = await cli(["ideas", night, "--json", batch(THREE)], { env: LIVE });
+    const codex = fakeCodexIdeas((p) => (p.includes("salt flats") ? "Codex declined this prompt: content filter" : null));
+    const r = await cli(["ideas", night, "--json", batch(THREE)], { env: LIVE, ports: { ideas: { generate: codex.generate } } });
     expect(r.code, r.err).toBe(0);
     expect(r.doc["outcome"]).toBe("done");
     expect((await ideasOf(night)).map((c) => [c.status, c.error])).toEqual([
       ["rendered", undefined],
-      ["failed", "Leonardo declined this prompt: content filter"],
+      ["failed", "Codex declined this prompt: content filter"],
       ["rendered", undefined],
     ]);
-    expect(FAKE_LEONARDO_STUDIO.calls).toHaveLength(3);
-    expect(FAKE_LEONARDO_STUDIO.deletes).toEqual(["fake-gen-0001", "fake-gen-0002"]);
+    expect(codex.calls).toHaveLength(3);
   });
 
-  it("a signed-out studio fails the remaining ideas with its one sentence, asked once", async () => {
+  it("a signed-out Codex fails the remaining ideas with its one sentence, asked once", async () => {
     const night = await open(["--live"], LIVE);
     let asked = 0;
     const signedOut: CliPorts = {
       ideas: {
         generate: async () => {
           asked++;
-          throw new ImagingError("not signed in to leonardo", "no-key", "leonardo-studio");
+          throw new ImagingError("not signed in to codex", "no-key", "codex");
         },
       },
     };
     const r = await cli(["ideas", night, "--json", batch(THREE)], { env: LIVE, ports: signedOut });
     expect(r.code).toBe(1);
     expect(asked).toBe(1);
-    expect((await ideasOf(night)).map((c) => [c.status, c.error])).toEqual(Array(3).fill(["failed", "not signed in to leonardo"]));
+    expect((await ideasOf(night)).map((c) => [c.status, c.error])).toEqual(Array(3).fill(["failed", "not signed in to codex"]));
   });
 
   it("a night with no Gemini left still draws its ideas: the batch is unpriced and never refused for money", async () => {
@@ -333,7 +332,7 @@ describe("a live night, on the fake studio", () => {
     } finally {
       k.value.close();
     }
-    const r = await cli(["ideas", night, "--json", batch(THREE.slice(0, 1))], { env: LIVE });
+    const r = await cli(["ideas", night, "--json", batch(THREE.slice(0, 1))], { env: LIVE, ports: { ideas: { generate: fakeCodexIdeas().generate } } });
     expect(r.code, r.err).toBe(0);
     expect((await ideasOf(night)).map((c) => c.status)).toEqual(["rendered"]);
   });
@@ -350,7 +349,7 @@ describe("doctor, the studio", () => {
   it("reads ok when the studio is ready, and a note - never a failure - with its reason when not", async () => {
     expect(await studioLine(async () => ({ ok: true }))).toEqual({ line: "ok   studio              leonardo studio signed in, with credits", blocked: false });
     const down = await studioLine(async () => ({ ok: false, reason: "leonardo studio browser not running" }));
-    expect(down.line).toMatch(/^note studio +leonardo studio browser not running -> the night's idea artboards are drawn there, and replicas with SCOUT_REPLICA_GENERATOR=leonardo-studio: set LEONARDO_STUDIO_CDP/);
+    expect(down.line).toMatch(/^note studio +leonardo studio browser not running -> replicas with SCOUT_REPLICA_GENERATOR=leonardo-studio are drawn there: set LEONARDO_STUDIO_CDP/);
     expect(down.blocked).toBe(false);
   });
 
