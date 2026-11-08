@@ -11744,7 +11744,11 @@
           "revision": 2,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_server/mcp/rpc.ts:112 tools/list publishes the same catalog to every token whatever its scope, so a read-scope agent's model sees the launch and job writes it can only be refused on; the standard asks for a catalog computed from what the role is granted, and the money-bearing path's pending spend request has no expiry or reaper.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:1ba6c714c7d9ee8c",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
