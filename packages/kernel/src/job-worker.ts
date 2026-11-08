@@ -5,6 +5,7 @@ import type { Effects } from "./effects.ts";
 import type { Producer } from "./job-core.ts";
 import { coolingOf, pickWork, producerKey, type LaneLook, type Pick, type ProducerKey, type Waiting } from "./job-queue-core.ts";
 import { laneHold, nextClaimable } from "./job-queue.ts";
+import { resumeFreeWork } from "./job-resume.ts";
 import { recover, runJob, type RunOptions, type RunReport } from "./job-run.ts";
 import type { Alive } from "./lease-core.ts";
 import { processHolder } from "./lease.ts";
@@ -62,6 +63,8 @@ export type WorkSummary = {
   readonly looks: number;
   readonly started: number;
   readonly recovered: number;
+  /** Of those, the free-lane jobs the machine put back in the queue (job-resume.ts). */
+  readonly resumed: number;
   readonly reports: readonly { readonly pick: Pick; readonly report: Result<RunReport> }[];
   /** Heads that waited because no producer here makes them, by job id, as last seen. */
   readonly orphans: readonly Pick[];
@@ -86,6 +89,8 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
   const recoverOpts = { holder, ...(alive === undefined ? {} : { alive }), ...(opts.spendClasses === undefined ? {} : { spendClasses: opts.spendClasses }) };
   const swept = recover(fx, recoverOpts);
   if (!swept.ok) return swept;
+  const first = resumeFreeWork(fx, swept.value, holder);
+  if (!first.ok) return first;
 
   const inFlight = new Map<string, { pick: Pick; done: Promise<void> }>();
   // What refused a drive, until when (job-queue-core: a cooling lane or producer takes nothing).
@@ -130,6 +135,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
   const gate = opts.admission === undefined ? undefined : admissionGate(fx, producers, opts.admission, holder, opts.onWait, clock);
 
   let recovered = swept.value.length;
+  let resumed = first.value.length;
   while (!opts.signal.aborted) {
     let seen = look(fx);
     if (!seen.ok) return seen;
@@ -147,6 +153,9 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
       if (!reaped.ok) return reaped;
       if (reaped.value.length > 0) {
         recovered += reaped.value.length;
+        const back = resumeFreeWork(fx, reaped.value, holder);
+        if (!back.ok) return back;
+        resumed += back.value.length;
         seen = look(fx);
         if (!seen.ok) return seen;
       }
@@ -186,7 +195,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
     await idle(idleMs, opts.signal, [...inFlight.values()].map((f) => f.done));
   }
   await Promise.all([...inFlight.values()].map((f) => f.done));
-  return ok({ looks, started, recovered, reports, orphans });
+  return ok({ looks, started, recovered, resumed, reports, orphans });
 }
 
 /**

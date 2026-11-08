@@ -2494,6 +2494,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "One restart on the free Claude seat holds seat.text until an operator looks, and every reel and draft waits behind a lane that spends nothing.",
   },
   {
+    id: "resume-seat-too",
+    test: "packages/kernel/test/job.resume.test.ts",
+    file: "packages/kernel/src/job-resume.ts",
+    find: "[\"gpu.local\", \"box.render\"];",
+    replace: "[\"gpu.local\", \"box.render\", \"seat.text\"];",
+    why: "A worker restart re-queues a reel whose orphaned claude child is still writing the same strip directory, and two writers race on it.",
+  },
+  {
+    id: "resume-no-attempt-limit",
+    test: "packages/kernel/test/job.resume.test.ts",
+    file: "packages/kernel/src/job-resume.ts",
+    find: "      if (done >= MAX_AUTO_RESUMES) return undefined;",
+    replace: "      void done;",
+    why: "A job that kills its worker every time is re-queued by every restart for the whole night instead of staying interrupted where the operator sees it.",
+  },
+  {
     id: "produce-ceiling-ignores-the-band",
     test: "packages/ui/test/components/produce.test.ts",
     file: "packages/ui/src/components/produce/produce.ts",
