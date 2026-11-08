@@ -14133,14 +14133,13 @@
           "changedAt": "2026-10-27",
           "confidence": "strong",
           "state": "conformant",
-          "evidence": "packages/producers/src/publish/timers.ts:20 The publish context's two loops are named once from a closed set, and each TimerSpec registers its cadence, deadline and staggered first firing. The tick body reports when the next slot is due, sweeps orphans and downtime misses through the steady-state code path, and stops at safe points between claims. A store-read status surface also exposes staleness, standing failure and quarantine, so this context supplies what the background-jobs envelope needs.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:22ed2a99172ae050",
-          "evaluatedRevision": 5,
+          "evidence": "packages/producers/src/publish/timers.ts:23 The publish loops are named once from a closed set, and each TimerSpec carries a cadence, a deadline and a first delay that the worker's one roster registers. The tick reports when the next slot is due, records the downtime it was handed and stops between claims. timerStatusIn reads staleness, any standing failure and quarantine from the store, and no technique that applies is realized the way the standard names as a failure.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:e3e7a428140a2fbb",
+          "evaluatedRevision": 6,
           "source": "renamed",
           "renamedFrom": "7226db68-4ca8-41ee-a2f8-3012d05e4acd",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "fleet-orchestration",
