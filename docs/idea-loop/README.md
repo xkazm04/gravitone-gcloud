@@ -36,9 +36,31 @@ Each verdict is scored out of fold and measured through `lib/foundry/calibration
 
 **Verdicts counted 2026-11-08: n = 0. Status `insufficient`. The bar (0.5) is provisional and nothing here is
 calibrated.** This machine holds no scout night manifest (no `foundry-out/scout-nights/` or `foundry-out/scout/`),
-and a temp copy of the store has 0 rows in `decisions` and `packet_commits`. Those 58 keeps and 114 rejects in its
-events are image-level forge verdicts, not idea verdicts.
+and a temp copy of the store has 0 rows in `decisions` and `packet_commits`. The `verdict.*` events in it sit on forge
+candidates, styles, improvements and cards; none is on an idea.
 
 Under a provisional bar every idea scores 0.5 and clears it, so the bar selects nothing yet. The operator's triage on
 the Board is the only gate until both classes reach the floor. `chance` and `inverted` get the same provisional bar;
 only `calibrated` gets a measured cut.
+
+## Stage 3: storyboards drawn by Codex
+
+```bash
+npx tsx pipeline/idea-loop/run.mts --count 3 --panels 3 --top 1 --briefs briefs.json
+npx tsx pipeline/scout.mts storyboard <night> --draw codex --json briefs.json
+```
+
+`--draw codex` draws every panel through `lib/foundry/scout/codexDraw.ts`. Nothing changes without the option.
+
+- A brief names `fromLoop: il-YYYYMMDD-NNN`, which the door checks against the idea's record: it must have cleared the
+  bar. The candidate names `idea-loop/<id>` as its idea.
+- **No kernel job.** A job can be claimed by the worker, whose bound engine is Flux, and the job books `FLUX_MODEL` on
+  every panel. Drawing in-process is what makes "never falls back to Flux" true, so `--detach` is refused, and so are
+  `genre` (a trial clips video) and `cast` (reference sheets).
+- A panel failed by a non-zero exit, a missing or blank image, or a refusal that exited 0 stays failed. Nothing retries.
+- A dry night draws nothing, and `GRAVITONE_DRY_ONLY=1` refuses a live night, as on every other launch.
+
+**Proven 2026-11-08 on a temp store only**, not the operator's Board: the generator wrote 3 ideas (1 Codex text call),
+the idea `il-20261108-001` was drawn 3/3 panels, 165 s wall, `jobIds: []`. Panels decode at 1672x941 and show the scenes.
+
+**Real Codex draws in this build: 4** (1 in stage 1, 3 in stage 3).
