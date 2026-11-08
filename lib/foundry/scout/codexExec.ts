@@ -12,6 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import { inflateSync } from "node:zlib";
 
+import { killTree } from "../../agent/envelope.ts";
 import { resolveEngineBin } from "../../agent/resolveEngineBin.ts";
 
 const KEY_NAME = /(KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIAL)|^OPENAI_|^AZURE_OPENAI/i;
@@ -51,7 +52,9 @@ export async function runCodex(prompt: string, o: { readonly timeoutS?: number; 
     child.stdout.on("data", (d: Buffer) => (stdout += d.toString("utf8")));
     child.stderr.on("data", (d: Buffer) => (stderr += d.toString("utf8")));
     child.stdin.end(prompt);
-    const killer = setTimeout(() => child.kill(), (o.timeoutS ?? 480) * 1000);
+    // The whole tree: on Windows the child is the `node codex.js` wrapper, and `child.kill()` ends it alone (lib/claudeCli.ts
+    // measured the grandchild alive after that call on this spawn shape), keeping the seat busy past its timeout.
+    const killer = setTimeout(() => killTree(child.pid, () => child.kill()), (o.timeoutS ?? 480) * 1000);
     const exit = await new Promise<number | null>((resolve, reject) => {
       child.on("error", reject);
       child.on("close", resolve);
