@@ -73,6 +73,14 @@ describe("Esc while noting in the opened run cancels the note and keeps the run"
     expect(at({ key: "Escape", target: inField })).toBe("cancel-note");
     expect(at({ key: "Escape", target: NO_TARGET })).toBe("close:zoom");
   });
+  test("on the Board the desk is in a sheet that owns its mode, and the field still owns Esc", () => {
+    const sheet = push(EMPTY_STACK, { id: "sheet", kind: "sheet", mode: "board.cull", close: noop } satisfies LayerEntry);
+    const over = push(sheet, { id: "zoom", kind: "zoom", close: noop } satisfies LayerEntry);
+    const d = route(KEYMAP, { key: "Escape", target: inField }, { layers: over, page: "board", facts: new Set(["notes"]) });
+    expect(d.kind === "binding" ? d.match.binding.verb : d.kind).toBe("cancel-note");
+    const out = route(KEYMAP, { key: "Escape", target: NO_TARGET }, { layers: over, page: "board", facts: new Set(["notes"]) });
+    expect(out.kind === "close-layer" ? out.id : out.kind).toBe("zoom");
+  });
   test("a tooltip over the field still takes its own Esc", () => {
     const tip = push(zoom, { id: "tip", kind: "tooltip", close: noop } satisfies LayerEntry);
     expect(at({ key: "Escape", target: inField }, tip)).toBe("close:tip");
