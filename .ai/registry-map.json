@@ -20606,7 +20606,11 @@
           "revision": 7,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/tokens.css:88 The role tier holds call-site addresses (ledger-cols, w-lib-nav, w-packet-rail and the other per-route groups), and the lint lets components use primitives directly. The semantic layer grows with the interface instead of recording classes of intent, even though generation and an allow-list gate are in place.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:165125b7a54d0de3",
+          "evaluatedRevision": 7
         },
         {
           "subject": "copy-quality-gates",
