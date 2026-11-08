@@ -47,9 +47,15 @@ describe("T switches tabs", () => {
     expect(nextLane([lanes[0] as Lane], 0)).toBeNull();
   });
   test("T is bound on the cull and drawn in Keycaps", () => {
-    const m = resolve(KEYMAP, { chords: chordsOf({ key: "t" }), repeat: false, target: NO_TARGET }, "board.cull", new Set());
-    expect(m?.binding.verb).toBe("next-tab");
-    expect(keyTable(KEYMAP, "board.cull").find((r) => r.keys.includes("T"))).toEqual({ keys: ["T"], does: "tab" });
+    const press = { chords: chordsOf({ key: "t" }), repeat: false, target: NO_TARGET };
+    expect(resolve(KEYMAP, press, "board.cull", new Set(["tabs"]))?.binding.verb).toBe("next-tab");
+    expect(keyTable(KEYMAP, "board.cull", { facts: new Set(["tabs"]) }).find((r) => r.keys.includes("T"))).toEqual({ keys: ["T"], does: "tab" });
+  });
+
+  test("T is neither armed nor drawn where the packet has one tab", () => {
+    const press = { chords: chordsOf({ key: "t" }), repeat: false, target: NO_TARGET };
+    expect(resolve(KEYMAP, press, "board.cull", new Set())?.binding.verb).not.toBe("next-tab");
+    expect(keyTable(KEYMAP, "board.cull", { facts: new Set() }).find((r) => r.keys.includes("T"))).toBeUndefined();
   });
 });
 

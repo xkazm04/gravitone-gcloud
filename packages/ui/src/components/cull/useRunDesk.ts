@@ -306,7 +306,7 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
       },
       commit,
     },
-    { enabled: keys, facts: cullFacts(view.reasons) },
+    { enabled: keys, facts: cullFacts(view.reasons, lanes.length) },
   );
 
   const openRun = (i: number) => {

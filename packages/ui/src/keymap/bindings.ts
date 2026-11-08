@@ -67,7 +67,7 @@ const board: Binding[] = [
   { mode: "board.cull", keys: ["⇧2"], verb: "reject-item", does: "item" },
   { mode: "board.cull", keys: ["Z"], verb: "zoom", does: "zoom" },
   // T carries the cursor to the next tab's first run (storyboards, reels, images ... wrapping round).
-  { mode: "board.cull", keys: ["T"], verb: "next-tab", does: "tab" },
+  { mode: "board.cull", keys: ["T"], verb: "next-tab", does: "tab", when: "tabs" },
   // A note on the decision under the cursor (spark scout-decision-graph), for a source that keeps one:
   // E opens the row's one-line field, ⏎ in it saves the note with the verdict, Esc leaves it unsaved.
   { mode: "board.cull", keys: ["E"], verb: "note", does: "note", when: "notes" },
