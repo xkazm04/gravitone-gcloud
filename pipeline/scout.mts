@@ -243,7 +243,7 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
       const { blocking, doctor, doctorLine } = await import("../lib/foundry/scout/doctor.ts");
       const { storeLocation } = await import("@gt/kernel/process");
       const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
-      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), tracks: num("tracks", DEFAULT_TRACK_CAP), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }), ...(io.ports?.keyFetch === undefined ? {} : { keyFetch: io.ports.keyFetch }) });
+      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), ...(str("tracks") === undefined ? {} : { tracks: num("tracks", DEFAULT_TRACK_CAP) }), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }), ...(io.ports?.keyFetch === undefined ? {} : { keyFetch: io.ports.keyFetch }) });
       const failed = blocking(checks);
       if (json) doc({ ok: failed.length === 0, checks });
       else for (const c of checks) io.out(doctorLine(c));

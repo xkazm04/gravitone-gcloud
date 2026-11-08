@@ -89,7 +89,7 @@ the operator's hour; the operator may also type it after a workday. Either way:
 ### 0. Preflight - no spend
 
 1. `npx tsx pipeline/scout.mts doctor` - with `--dry` when the night will be dry (the vendor keys and
-   the dry pin are then notes, not failures). Exit 1 -> write the failing lines into the night summary
+   the dry pin are then notes, not failures; Suno is a note unless `--tracks N` is named). Exit 1 -> write the failing lines into the night summary
    (step 12) and stop. Never install, configure or work around a missing binary or key.
 2. **Commit yesterday's kept knowledge.** The Board's apply wrote kept findings into
    `knowledge/templates/**/PATTERNS.md` and kept watch lines into `knowledge/scout/watchlist.md`.

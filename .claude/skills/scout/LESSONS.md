@@ -258,8 +258,9 @@ run 3's clusters + run 2's rows are complementary evidence over the same gallery
   ComfyUI's queue is empty and the worker's last line says a gpu.local job waits on vram (never a restart). Lasting
   fixes: `MACHINE_VRAM_GB` from ComfyUI's `vram_total` in lib/resources/probe.ts, and the resident-aware ComfyUI
   charge in packages/domain/src/resource.ts admit already named above.
-- `doctor` exits 1 on the suno line whenever music is paused, and `--tracks 0` is a usage error (exit 2): read the
-  failing lines, and when suno is the only one the night goes on.
+- SUPERSEDED 2026-11-08 (perfect suno-stops-failing-doctor): `doctor` now passes `tracks` only when `--tracks` is named, so the suno
+  line is a note and exit 0 while music is paused; `doctor --tracks N` (N>0) still blocks. The old rule read: `doctor` exits 1 on the suno
+  line whenever music is paused, and when suno is the only failing line the night goes on. Any exit 1 now means stop, as SKILL.md says.
 - The pre-push gate's next-unit failed on scout-graph (3 cases) because tests/next-server/scout-cli-harness.ts never
   set SCOUT_MUSE_STORE_DIR: on this box the test read the operator's foundry-out/scout-muse, empty in CI. Fixed.
 - The night finished 12 storyboards and 2 reels (0 failed), but all 7 `draft` plan items expired at the deadline:
