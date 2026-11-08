@@ -173,6 +173,13 @@ EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CL
 
 ## Skill improvement log
 
+### 2026-11-08 - round 2 (10 accepted, 10 shipped)
+
+- **The Director caught what a builder's own honest report named.** A builder listed "starves the tick" as a risk in round 1 and "resumable until named here" in round 2; both were defects worth a redo. Read a builder's open risks as review input before its diff.
+- **Scouts who are told what is already settled stop re-finding it.** Passing the shipped and refused lists kept four briefs on new ground.
+- **Check a direction against the deaths of its neighbours.** Automatic resume looked safe until the seat scout found no reaper for an orphaned claude; that narrowed an already accepted direction before build.
+- 3 builders reporting, 3 friction lines, 3 distinct causes, 1 seen twice or more, 0 fixed.
+
 ### 2026-11-08 - re-adoption, Scout engine and desk (14 accepted, 13 shipped, 1 dropped on measurement)
 
 - **Driving the real Board caught what every gate passed, twice.** Esc in a note closed the run because on the Board a sheet layer owns board.cull, and the keymap test had no sheet on its stack. A reel's poster travelled as a reference and drew "REFERENCE, NOT OUTPUT". Run the visual gate on a temp COPY of a real night (SCOUT_STORE_DIR, SCOUT_CHANNELS_DIR, GRAVITONE_STORE_PATH): fixtures would not have shown either.
