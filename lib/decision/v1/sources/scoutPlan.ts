@@ -21,6 +21,7 @@ import { decisionMap, type Loss } from "../types.ts";
 import { extractAdapter, planLooks, type ExtractV1 } from "./extract.ts";
 import { panelLosses } from "./scoutBoardLoss.ts";
 import { lookBrief, sceneBrief } from "./scoutBrief.ts";
+import { episodeRow, type EpisodeWords } from "./scoutEpisodeWords.ts";
 import { reelCells } from "./scoutReelCells.ts";
 import { museFacts, scoutFileUrl } from "./scoutWing.ts";
 
@@ -68,32 +69,26 @@ import { museFacts, scoutFileUrl } from "./scoutWing.ts";
 //            `c-10/panel-N` (N its panel index, 1-based), then ONE text cell `c-10/words` - the paragraph, a
 //            blank line, the bullets as `- ` lines - so the run's face is a still. The row is its title and its
 //            paragraph; the words cell's meta the idea it composes, the frame count, `local · free` and its seed.
-//            A dry or words-only board is the words cell alone; a failed board is a Loss. The cell ids are what
-//            lib/foundry/scout/storyboardKept.ts parses: the words kept, or any cell kept and none rejected.
-//   genre    (spark scout-vision S2) a night's proposal to birth a genre, ONE words cell `c-11/words` under `genres`: its
-//   venture  name the label, the look and grammar (a venture's frame) and the cells it stands on its words. Kept, the
-//            Board's apply births the genre or venture in the kernel (./scout.ts).
+//            A dry or words-only board is the words cell alone; a failed board is a Loss, as is each panel that drew nothing
+//            (./scoutBoardLoss.ts). Made from a channel episode, its row names the channel, logline and beats (./scoutEpisodeWords.ts).
+//            The cell ids are what lib/foundry/scout/storyboardKept.ts parses: the words kept, or any cell kept and none rejected.
+//   genre    (spark scout-vision S2) a night's proposal, ONE words cell `c-11/words` under `genres`: its name the label,
+//   venture  the look and grammar (a venture's frame) and the cells it stands on its words. Kept, the apply births it (./scout.ts).
 //   trial    (spark scout-vision S2) a storyboard WITH a genre: its frames, then each panel's LTX clip as a video cell
 //            `c-10/clip-N` (the scene's clip cell), then its words - one run, judged whole by the storyboard rule.
-//   piece    a genre's piece, ONE cell `c-12/video` under `pieces` (the visualizer's video cell): the trial's title its
-//            label; a dry or not-yet-cut piece is that cell as words. Kept, the genre is publishable (derived, nothing
-//            written) and its `genre-publishable` registry lead queues (./scout.ts).
+//   piece    a genre's piece, ONE cell `c-12/video` under `pieces`: the trial's title its label; a dry or not-yet-cut piece
+//            is that cell as words. Kept, the genre is publishable (derived) and its `genre-publishable` lead queues (./scout.ts).
 //            An idea, a seed or a storyboard made inside a venture names it in its meta (`venture: vn-...`).
 //   sheet    (spark scout-vision S3) a kept character's reference sheet, ONE image cell `c-07/sheet` under `sheets` (the
 //            images tab): her name the label, the portrait it is drawn from its meta. A dry sheet is that cell as words.
-//            Kept, it is her reference (derived by lib/foundry/scout/characters.ts keptCharacters, nothing written);
-//            rejected, she is due a sheet again (lib/foundry/scout/sheet.ts sheetsDue).
-//            A cast idea or storyboard names its cast in its meta (`cast: Ilse Marrow, ...`), a character idea cited
-//            from a web source its source (`source: s-03`).
+//            Kept, it is her reference (derived, characters.ts keptCharacters); rejected, she is due a sheet again (sheet.ts sheetsDue).
+//            A cast idea or storyboard names its cast in its meta (`cast: Ilse Marrow, ...`), a web character idea its source.
 //   reel     (spark scout-vision S5) a kept stats idea on real data, ONE image cell `c-NN/reel` under `reels`; a full cut,
 //   reel-cut ONE video cell `c-NN/video` under `reel cuts` (./scoutReelCells.ts).
-// A text cell's media is the content address of its own words (text/plain):
-// the kernel holds candidates by blob, and the words are the thing judged.
+// A text cell's media is the content address of its own words (text/plain): the kernel holds candidates by blob.
 //
-// A CANDIDATE WITH NOTHING TO JUDGE is a Loss, not a cell: the Board has no
-// cell it can draw and refuse to keep, and a failed render kept by a stray K
-// would admit nothing anyway. Its `error` rides in the Loss verbatim, which
-// the gate draws before the commit.
+// A CANDIDATE WITH NOTHING TO JUDGE is a Loss, not a cell: the Board has no cell it can draw and refuse to keep.
+// Its `error` rides in the Loss verbatim, which the gate draws before the commit.
 
 export type StyleRead = { readonly kind: "read"; readonly v1: ExtractV1 } | { readonly kind: "unread"; readonly error: string };
 export type AssetRead = { readonly kind: "read"; readonly asset: MeshAsset } | { readonly kind: "unread"; readonly error: string };
@@ -116,6 +111,8 @@ export type ScoutV1 = {
   readonly tracks?: Readonly<Record<string, { readonly title: string; readonly sentence: string }>>;
   /** By idea ref (`<night>/<c-id>`): the title of each idea a storyboard composes, where its night was readable. */
   readonly ideas?: Readonly<Record<string, string>>;
+  /** By episode id: the channel, logline and beats of each episode a storyboard or reel was made from (absent: none read). */
+  readonly episodes?: Readonly<Record<string, EpisodeWords>>;
 };
 
 export type Cell = {
@@ -456,7 +453,7 @@ export const wordsCell = (candidate: CandidateId): string => cellId(candidate, W
 /** A storyboard's words as the card reads them: the paragraph, a blank line, then each bullet as a `- ` line. */
 export const storyboardBody = (c: Pick<StoryboardCandidate, "paragraph" | "bullets">): string => [c.paragraph, "", ...c.bullets.map((b) => `- ${b}`)].join("\n");
 
-function storyboardCells(night: Night, c: StoryboardCandidate, v1: Pick<ScoutV1, "media" | "seeds" | "ideas">, out: Mutable): void {
+function storyboardCells(night: Night, c: StoryboardCandidate, v1: Pick<ScoutV1, "media" | "seeds" | "ideas" | "episodes">, out: Mutable): void {
   if (c.status === "failed") {
     out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     return;
@@ -495,7 +492,7 @@ function storyboardCells(night: Night, c: StoryboardCandidate, v1: Pick<ScoutV1,
   const trial = c.genre === undefined ? undefined : `trial: ${c.genre}${c.clips === undefined ? "" : ` · ${clips} of ${c.panels.length} clips`}`;
   const meta = [c.fromEpisode !== undefined ? `episode: ${c.fromEpisode}` : `idea: ${idea === undefined ? c.fromIdea : clip40(idea)}`, framesWord, trial, castOfMeta(c), "local · free", seedHead(c, v1.seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · ");
   out.cells.push({ id: wordsCell(c.id), candidate: c.id, kind: "storyboard", row: c.id, jobId, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words: { label: c.title, meta, prompt: body } });
-  out.rows.push({ id: c.id, label: c.title, group: "storyboards", prompt: c.paragraph, ...(c.aim === undefined ? {} : { aim: c.aim }), ...(c.use === undefined ? {} : { use: c.use }) });
+  out.rows.push({ id: c.id, label: c.title, group: "storyboards", prompt: c.paragraph, ...(c.aim === undefined ? {} : { aim: c.aim }), ...(c.use === undefined ? {} : { use: c.use }), ...episodeRow(c.fromEpisode, v1.episodes) });
 }
 
 /** A piece's one cell (`c-12/video`): its verdict is the piece's (lib/foundry/scout/genres.ts PIECE_PART). */
@@ -605,7 +602,7 @@ export function build(v1: ScoutV1): Built {
     else if (c.kind === "genre" || c.kind === "venture") proposalCell(night, c, out);
     else if (c.kind === "piece") pieceCells(night, c, v1.media, out);
     else if (c.kind === "sheet") sheetCells(night, c, v1.media, out);
-    else if (c.kind === "reel" || c.kind === "reel-cut") reelCells(night, c, v1.media, out);
+    else if (c.kind === "reel" || c.kind === "reel-cut") reelCells(night, c, v1.media, out, v1.episodes);
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

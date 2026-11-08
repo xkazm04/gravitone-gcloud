@@ -32,28 +32,13 @@ import { kernel } from "../../../kernelStore.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { modelItemId } from "../../../library/feeds/mesh.ts";
 import { sceneShelf } from "../../../library/feeds/scout.ts";
-import {
-  buildConsequence,
-  committedOutcome,
-  decisionMap,
-  fromV1,
-  mediaRefs,
-  mintPacket,
-  runIdOf,
-  v1Call,
-  v1DigestOf,
-  type AdapterRef,
-  type ConsequenceParts,
-  type DecisionAdapter,
-  type DecisionsAt,
-  type OpenPlan,
-  type Preview,
-} from "../types.ts";
+import { buildConsequence, committedOutcome, decisionMap, fromV1, mediaRefs, mintPacket, runIdOf, v1Call, v1DigestOf, type AdapterRef, type ConsequenceParts, type DecisionAdapter, type DecisionsAt, type OpenPlan, type Preview } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
 import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, PROPOSAL_REJECTED, STORYBOARD_VERDICT, bornLine, build, commitOf, extractDecisions, ideaCell, meshKey, pieceCell, pieceVerdictLine, sameOutcome, sheetCellOf, sheetVerdictLine, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
 import { reelCutVerdictLine, reelVerdictLine } from "./scoutReelCells.ts";
 import { reelCell, reelCutCell } from "../../../foundry/scout/reelTaste.ts";
 import { musicOf } from "./scoutMusic.ts";
+import { episodesOf } from "./scoutEpisodeWords.ts";
 import { nightRefusal, partOfBuilt, partWords, settledPart, withPart } from "./scoutPart.ts";
 import { inWing, isCharacter, keptTechnique, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta, partOfRun } from "./scoutWing.ts";
 
@@ -246,7 +231,7 @@ async function read(ref: AdapterRef, storeOf: () => Result<Store>): Promise<Resu
   if (!music.ok) return music;
   const genres = genresFor(night, storeOf);
   if (!genres.ok) return genres;
-  return ok({ ...(genres.value === undefined ? {} : { genres: genres.value }), ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...(part === 1 ? {} : { part }), ...music.value, wing, night, styles, assets, media: Object.fromEntries(media.value), knowledge: knowledge.value, at: { scout: rel(nightRoot(night.id)), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
+  return ok({ ...(genres.value === undefined ? {} : { genres: genres.value }), ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...(part === 1 ? {} : { part }), ...music.value, ...(await episodesOf(night)), wing, night, styles, assets, media: Object.fromEntries(media.value), knowledge: knowledge.value, at: { scout: rel(nightRoot(night.id)), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */

@@ -8,6 +8,7 @@ import { reelCell, reelCutCell, sourceLine } from "../../../foundry/scout/reelTa
 import type { Night, ReelCandidate, ReelCutCandidate } from "../../../foundry/scout/types.ts";
 import type { Loss } from "../types.ts";
 import type { Cell, ScoutV1 } from "./scoutPlan.ts";
+import { episodeRow } from "./scoutEpisodeWords.ts";
 import { scoutFileUrl } from "./scoutWing.ts";
 
 // A REAL REEL AND A FULL CUT ON THE SCOUT PACKET (spark scout-vision S5) - pure, beside ./scoutPlan.ts whose `build`
@@ -48,7 +49,7 @@ function cell(night: Night, c: ReelCandidate | ReelCutCandidate, file: string | 
   }
 }
 
-export function reelCells(night: Night, c: ReelCandidate | ReelCutCandidate, media: ScoutV1["media"], out: Out): void {
+export function reelCells(night: Night, c: ReelCandidate | ReelCutCandidate, media: ScoutV1["media"], out: Out, episodes?: ScoutV1["episodes"]): void {
   if (c.status === "failed") {
     out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     return;
@@ -59,7 +60,7 @@ export function reelCells(night: Night, c: ReelCandidate | ReelCutCandidate, med
   if (c.kind === "reel") {
     const meta = [line, c.fromEpisode !== undefined ? `episode: ${c.fromEpisode}` : `idea ${c.fromIdea ?? "-"}`, `${c.cut.length} beat${c.cut.length === 1 ? "" : "s"}`].join(" · ");
     cell(night, c, c.image, media, out, reelCell(c.id), meta, [`reel · ${c.title}`, line, ...c.cut.map((b) => `- ${b}`)]);
-    out.rows.push({ id: c.id, label: clip40(c.title), group: "reels", prompt: c.cut.join(" / "), ...use, ...aim });
+    out.rows.push({ id: c.id, label: clip40(c.title), group: "reels", prompt: c.cut.join(" / "), ...use, ...aim, ...episodeRow(c.fromEpisode, episodes) });
     return;
   }
   const meta = [line, `reel ${c.fromReel}`, `${c.seconds}s`].join(" · ");

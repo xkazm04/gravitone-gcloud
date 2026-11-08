@@ -5,6 +5,8 @@
 //           content it can serve, as stated at launch), what it tried to make (`aim`), a verdict on
 //           the whole run by click and the note on the variant under the cursor (saved, or its field
 //           while E is open); right half: the reference it was read from - not output.
+//           A run made from a channel episode names its channel in the head line and, with no reference,
+//           draws the episode's logline and beats in that right half.
 //   body    the variants, as large as the screen leaves them (RunView).
 //   checks  the attributes the run is judged on, one row across the full width.
 //   foot    the cull's own bar.
@@ -14,6 +16,7 @@ import { useRef, type ReactNode } from "react";
 
 import type { BoardVerdict } from "../../board/boardGate.ts";
 import { useLayer } from "../../layers/useLayer.ts";
+import { Chip } from "../chip/Chip.tsx";
 import { Plate } from "../desk/Plate.tsx";
 import { Keycap } from "../keycaps/Keycaps.tsx";
 import { VerdictPick, type VerdictReasons } from "./VerdictPick.tsx";
@@ -28,6 +31,10 @@ export type RunModalProps = {
   /** The prompt the run was drawn from (an idea's studio prompt), after the aim. */
   readonly prompt?: string;
   readonly checks?: readonly string[];
+  /** A run made from a channel episode: the channel, its logline and the five beats, verbatim. Any may be absent. */
+  readonly channel?: string;
+  readonly logline?: string;
+  readonly beats?: readonly string[];
   /** The reference the run was read from (third-party, reference-only). */
   readonly reference?: string;
   /** The whole run's verdict when every variant agrees, else undefined. */
@@ -46,9 +53,23 @@ export type RunModalProps = {
   readonly children: ReactNode;
 };
 
-export function RunModal({ category, label, position, use, aim, prompt, checks, reference, runVerdict, reasons, ask = false, onRunVerdict, note, onClose, live = true, foot, children }: RunModalProps) {
+export function RunModal({ category, label, position, use, aim, prompt, checks, channel, logline, beats, reference, runVerdict, reasons, ask = false, onRunVerdict, note, onClose, live = true, foot, children }: RunModalProps) {
   const panel = useRef<HTMLDivElement | null>(null);
   useLayer(live, { kind: "zoom", panelRef: panel, onClose });
+  // A run with no reference leaves the head's right half empty; the outline takes it, so the frames keep their height.
+  const outline =
+    logline === undefined && (beats === undefined || beats.length === 0) ? undefined : (
+      <div className={s.outline}>
+        {logline !== undefined && <p className={s.logline}>{logline}</p>}
+        {beats !== undefined && beats.length > 0 && (
+          <ol className={s.beats} aria-label="beats">
+            {beats.map((b, i) => (
+              <li key={`${i}:${b}`}>{b}</li>
+            ))}
+          </ol>
+        )}
+      </div>
+    );
   return (
     <div ref={panel} className={s.modal} role="region" aria-label={`run ${label}`}>
       <header className={s.modalHead}>
@@ -56,6 +77,7 @@ export function RunModal({ category, label, position, use, aim, prompt, checks, 
           <div className={s.headLine}>
             <span className={s.eyebrow}>{category}</span>
             <h3 className={s.modalTitle}>{label}</h3>
+            {channel !== undefined && <Chip label={channel} casing="lower" />}
             <span className={s.runPos}>{position}</span>
           </div>
           <dl className={s.purpose}>
@@ -81,7 +103,9 @@ export function RunModal({ category, label, position, use, aim, prompt, checks, 
             </button>
           </div>
           {note}
+          {reference !== undefined && outline}
         </div>
+        {reference === undefined && outline}
         {reference !== undefined && (
           <figure className={s.headRef}>
             <Plate className={s.headRefFace} src={reference} alt={`reference ${label}`} />

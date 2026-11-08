@@ -104,6 +104,32 @@ describe("scout adapter - a channel episode's cells and verdict", () => {
     expect(flow.plan.present.items["c-02/reel"]?.meta).toBe("Source: List of countries by coffee production (Wikipedia) · episode: D1-01 · 2 beats");
   });
 
+  it("the rows carry the channel, logline and beats of each episode; the store absent or damaged leaves them out and the row still draws", async () => {
+    seed();
+    const made = { ...ep("F1-01", `${NIGHT}/c-01`), logline: "A bubble that rides the whole boil.", beats: ["It forms.", "It climbs.", "It splits.", "It rises.", "It breaks."] };
+    setEpisodeDoorForTests(fakeStore([made, ep("D1-01", `${NIGHT}/c-02`)]).door);
+    const flow = await openFlow(scoutAdapter, NIGHT, blobDir);
+    const rows = flow.plan.present.rows;
+    expect(rows.find((r) => r.id === "c-01")).toMatchObject({ channel: "While It Works", logline: "A bubble that rides the whole boil.", beats: made.beats });
+    expect(rows.find((r) => r.id === "c-02")).toMatchObject({ group: "reels", channel: "While It Works", logline: "l", beats: ["1", "2", "3", "4", "5"] });
+
+    // An episode the store does not hold, and a store that throws: the packet builds and the fields are absent.
+    setEpisodeDoorForTests({ episodeOf: async () => undefined, setEpisodeState: fakeStore([]).door.setEpisodeState });
+    const none = await openFlow(scoutAdapter, NIGHT, blobDir);
+    expect(none.plan.present.rows.map((r) => r.id)).toEqual(["c-01", "c-02"]);
+    for (const r of none.plan.present.rows) expect(r).not.toHaveProperty("channel");
+    setEpisodeDoorForTests({
+      episodeOf: async () => {
+        throw new Refusal("channels: F1.json is damaged");
+      },
+      setEpisodeState: fakeStore([]).door.setEpisodeState,
+    });
+    const damaged = await openFlow(scoutAdapter, NIGHT, blobDir);
+    expect(damaged.plan.present.rows.map((r) => r.id)).toEqual(["c-01", "c-02"]);
+    for (const r of damaged.plan.present.rows) expect(r).not.toHaveProperty("logline");
+    expect(damaged.plan.present.items["c-01/words"]?.meta).toBe("episode: F1-01 · 0 of 1 frames · local · free");
+  });
+
   it("the commit keeps the kept storyboard's episode and throws the rejected reel's - once", async () => {
     seed();
     const fake = fakeStore([ep("F1-01", `${NIGHT}/c-01`), ep("D1-01", `${NIGHT}/c-02`)]);
