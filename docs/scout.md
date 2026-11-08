@@ -556,7 +556,12 @@ remaining work as a queue and ends its turn with the night open:
   the hold. One launch a tick; a door's refusal is `refused`, any other error `failed`, neither retried. An
   unreachable ComfyUI (comfyGate.ts, nothing spent) is neither: the storyboard item stays `queued`, the tick goes
   on to the next item on another lane, and with nothing else to go it idles naming ComfyUI. A failed storyboard
-  does not count against `storyboardCap`. At `until` the rest become `expired` and the timer runs the same close
+  does not count against `storyboardCap`. A ComfyUI that goes away after launch leaves no empty panel: the step backs
+  off and asks again (`STORYBOARD_OUTAGE_LIMIT`, under an hour), then the job fails and the episode returns to due. A
+  draw's 15-minute limit runs from when its prompt starts; a wait behind other prompts has its own 90. A worker that
+  dies mid-job: `gpu.local` and `box.render` jobs of producers read as safe re-queue themselves, twice at most
+  (`packages/kernel/src/job-resume.ts`, `job.auto-resumed`); `seat.text` jobs stay interrupted for a look, because
+  an orphaned `claude` may still be writing, but the seat no longer holds its lane. At `until` the rest become `expired` and the timer runs the same close
   as `close --stop deadline`; an open night past its `until` with no plan is closed the same way, its stranded
   pending candidates failed first where their jobs are gone.
 - **`draft` items** `{title, prompt}` run the `draft` text turn - local Ollama (`qwen3.8:27b`, $0) first, the
