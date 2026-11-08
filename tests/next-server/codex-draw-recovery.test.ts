@@ -159,7 +159,7 @@ describe("a codex board whose draw died", { timeout: 60_000 }, () => {
     loopIdea(ID(3));
     const n = await night();
     void storyboardAct(ctx, n.id, [brief(ID(3), 3)], stalls(0));
-    await new Promise((r) => setTimeout(r, 500));
+    await waitFor(n.id, 0);
     expect((await board(n.id)).status).toBe("pending");
     // pending, the idea is held
     const held = await night();
@@ -181,7 +181,7 @@ describe("a retry after a draw that died, with no --collect", { timeout: 60_000 
     loopIdea(ID(5));
     const n = await night();
     void storyboardAct(ctx, n.id, [brief(ID(5), 3)], stalls(0));
-    await new Promise((r) => setTimeout(r, 500));
+    await waitFor(n.id, 0);
     await killOwner(n.id);
     const r = await again(n.id, ID(5));
     expect(r.candidates.at(-1)?.status).toBe("rendered");
@@ -192,7 +192,7 @@ describe("a retry after a draw that died, with no --collect", { timeout: 60_000 
     loopIdea(ID(6));
     const n = await night();
     void storyboardAct(ctx, n.id, [brief(ID(6), 3)], stalls(0));
-    await new Promise((r) => setTimeout(r, 500));
+    await waitFor(n.id, 0);
     await killOwner(n.id);
     const later = await night();
     const r = await again(later.id, ID(6));
@@ -204,7 +204,7 @@ describe("a retry after a draw that died, with no --collect", { timeout: 60_000 
     loopIdea(ID(7));
     const n = await night();
     void storyboardAct(ctx, n.id, [brief(ID(7), 3)], stalls(0));
-    await new Promise((r) => setTimeout(r, 500));
+    await waitFor(n.id, 0);
     const later = await night();
     await expect(again(later.id, ID(7))).rejects.toThrow(/already has storyboard/);
     expect((await board(n.id)).status).toBe("pending");
@@ -226,7 +226,7 @@ describe("a retry after a draw that died, with no --collect", { timeout: 60_000 
     loopIdea(ID(10));
     const n = await night();
     void storyboardAct(ctx, n.id, [brief(ID(9), 3)], stalls(0));
-    await new Promise((r) => setTimeout(r, 500));
+    await waitFor(n.id, 0);
     await killOwner(n.id);
     await mutateNight(n.id, (m) => ({ ...m, state: "committed" }));
     const before = await readNight(n.id);
