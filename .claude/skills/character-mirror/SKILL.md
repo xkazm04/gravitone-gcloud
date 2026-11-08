@@ -1,13 +1,15 @@
 ---
 name: character-mirror
-version: 1.0.0
+version: 1.0.1
 category: Development
-description: Mirror a fictional film character on local Flux 2 from film stills used as reference images, then extend it into new scenes and styles for parody. Measured on the parody cast 2026-10-27, where Vader and Yoda came out as copies, Chewbacca came close and Gollum stayed far. Masked, costumed and creature characters are mirrored whole. A human character played by an actor is mirrored neck-down, with an invented face. Invoke with /character-mirror <character> [<character> ...].
+description: REFUSED SINCE 2026-11-08 (Flux 2 removed, no Codex replacement yet). Mirror a fictional film character on local Flux 2 from film stills used as reference images, then extend it into new scenes and styles for parody. Measured on the parody cast 2026-10-27, where Vader and Yoda came out as copies, Chewbacca came close and Gollum stayed far. Masked, costumed and creature characters are mirrored whole. A human character played by an actor is mirrored neck-down, with an invented face. Invoke with /character-mirror <character> [<character> ...].
 argument-hint: "<character> [<character> ...]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch, Monitor
 ---
 
 # Character mirror - film stills in, an on-model character out
+
+> **Refused since 2026-11-08.** Flux 2 was removed (outdated output quality); `runner.mts` exits with that sentence until this method is rebuilt on Codex. What follows records how it worked.
 
 Words carry a style, but they do not carry an identity (ai-registry `character-identity-continuity`). Bibles written
 from film study got the costume close and the face and body wrong. Three film stills passed to Flux 2 as reference

@@ -129,61 +129,9 @@ def prompt_for(shot_clause):
     return f"{shot_clause} The subject is {CHARACTER}. The setting is {LOCATION}. {NEGATIVE_STYLE}"
 
 
-def flux_workflow(prompt, seed, refs=(), width=1280, height=720, steps=20, prefix="shot", late=0.0):
-    """Flux 2 text-to-image, optionally conditioned on reference stills.
-
-    Each reference is VAE-encoded and chained through its own `ReferenceLatent`,
-    which is how Flux 2 takes more than one -- the node's own description says
-    "chain multiple to set multiple reference images". The chain sits between
-    the text encode and `FluxGuidance`, matching the order the Kontext template
-    uses; putting guidance first silently drops the references.
-    """
-    w = {
-        "1": {"class_type": "UNETLoader",
-              "inputs": {"unet_name": "flux2_dev_fp8mixed.safetensors", "weight_dtype": "default"}},
-        "2": {"class_type": "CLIPLoader",
-              "inputs": {"clip_name": "mistral_3_small_flux2_fp8.safetensors",
-                         "type": "flux2", "device": "default"}},
-        "3": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}},
-        "4": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": prompt}},
-        "6": {"class_type": "EmptyFlux2LatentImage",
-              "inputs": {"width": width, "height": height, "batch_size": 1}},
-        "7": {"class_type": "Flux2Scheduler",
-              "inputs": {"steps": steps, "width": width, "height": height}},
-        "8": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "euler"}},
-        "9": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
-    }
-    cond = ["4", 0]
-    for i, name in enumerate(refs):
-        load, enc, ref = f"20{i}", f"21{i}", f"22{i}"
-        w[load] = {"class_type": "LoadImage", "inputs": {"image": name}}
-        w[enc] = {"class_type": "VAEEncode", "inputs": {"pixels": [load, 0], "vae": ["3", 0]}}
-        w[ref] = {"class_type": "ReferenceLatent",
-                  "inputs": {"conditioning": cond, "latent": [enc, 0]}}
-        cond = [ref, 0]
-    if refs and late:
-        # The reference at full strength does not condition the shot, it
-        # replaces it -- measured: two shots came back as the hero image with
-        # a look distance of 0.0002 and the camera direction ignored entirely.
-        # Composition is decided in the early denoising steps and identity in
-        # the later ones, so the text gets the frame to itself until `late`,
-        # and only then does the reference join to assert the face.
-        w["30"] = {"class_type": "ConditioningSetTimestepRange",
-                   "inputs": {"conditioning": ["4", 0], "start": 0.0, "end": late}}
-        w["31"] = {"class_type": "ConditioningSetTimestepRange",
-                   "inputs": {"conditioning": cond, "start": late, "end": 1.0}}
-        w["32"] = {"class_type": "ConditioningCombine",
-                   "inputs": {"conditioning_1": ["30", 0], "conditioning_2": ["31", 0]}}
-        cond = ["32", 0]
-    w["5"] = {"class_type": "FluxGuidance", "inputs": {"conditioning": cond, "guidance": 4.0}}
-    w["10"] = {"class_type": "BasicGuider", "inputs": {"model": ["1", 0], "conditioning": ["5", 0]}}
-    w["11"] = {"class_type": "SamplerCustomAdvanced",
-               "inputs": {"noise": ["9", 0], "guider": ["10", 0], "sampler": ["8", 0],
-                          "sigmas": ["7", 0], "latent_image": ["6", 0]}}
-    w["12"] = {"class_type": "VAEDecode", "inputs": {"samples": ["11", 0], "vae": ["3", 0]}}
-    w["13"] = {"class_type": "SaveImage",
-               "inputs": {"images": ["12", 0], "filename_prefix": prefix}}
-    return w
+def flux_workflow(*_args, **_kwargs):
+    """Flux 2 was this module's still engine; removed 2026-11-08, so the stills lane refuses here."""
+    guard.refuse_flux2("the consistency stills lane")
 
 
 def generate(workflow, timeout=900, kinds=("images",), exts=None):

@@ -15,7 +15,7 @@ with the moving element erased -- and then does the motion itself, in numpy:
     1 READ     what is in the picture, and which element should move where
                (motion_author.py: the same two passes, plus a grounding pass
                that returns pixel boxes)
-    2 PLATE    erase that element with Flux 2 inpainting, and composite the
+    2 PLATE    erase that element by inpainting (Flux 2's; refused since its removal), and composite the
                result back into the ORIGINAL so every pixel outside the erased
                box is bit-identical. The VAE round-trip alters the whole frame
                by ~2/255 even where the noise mask is zero; left in, that is a
@@ -121,33 +121,9 @@ def ground(image, moving, path, model=motion_author.MODEL):
     return tuple(a), (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
 
 
-def inpaint_workflow(image_name, mask_name, prompt, seed, width, height, steps, prefix):
-    """consistency.flux_workflow's chain with the empty latent swapped for the
-    real image plus a noise mask, which is what turns it into an eraser."""
-    return {
-        "1": {"class_type": "UNETLoader",
-              "inputs": {"unet_name": "flux2_dev_fp8mixed.safetensors", "weight_dtype": "default"}},
-        "2": {"class_type": "CLIPLoader",
-              "inputs": {"clip_name": "mistral_3_small_flux2_fp8.safetensors",
-                         "type": "flux2", "device": "default"}},
-        "3": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}},
-        "4": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": prompt}},
-        "10": {"class_type": "LoadImage", "inputs": {"image": image_name}},
-        "11": {"class_type": "VAEEncode", "inputs": {"pixels": ["10", 0], "vae": ["3", 0]}},
-        "12": {"class_type": "LoadImage", "inputs": {"image": mask_name}},
-        "13": {"class_type": "ImageToMask", "inputs": {"image": ["12", 0], "channel": "red"}},
-        "14": {"class_type": "SetLatentNoiseMask", "inputs": {"samples": ["11", 0], "mask": ["13", 0]}},
-        "7": {"class_type": "Flux2Scheduler", "inputs": {"steps": steps, "width": width, "height": height}},
-        "8": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "euler"}},
-        "9": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
-        "15": {"class_type": "FluxGuidance", "inputs": {"conditioning": ["4", 0], "guidance": 3.5}},
-        "16": {"class_type": "BasicGuider", "inputs": {"model": ["1", 0], "conditioning": ["15", 0]}},
-        "17": {"class_type": "SamplerCustomAdvanced",
-               "inputs": {"noise": ["9", 0], "guider": ["16", 0], "sampler": ["8", 0],
-                          "sigmas": ["7", 0], "latent_image": ["14", 0]}},
-        "18": {"class_type": "VAEDecode", "inputs": {"samples": ["17", 0], "vae": ["3", 0]}},
-        "19": {"class_type": "SaveImage", "inputs": {"images": ["18", 0], "filename_prefix": prefix}},
-    }
+def inpaint_workflow(*_args, **_kwargs):
+    """The plate's eraser was Flux 2 inpainting; removed 2026-11-08, so the plate stage refuses here."""
+    guard.refuse_flux2("compose_clip's plate stage")
 
 
 def grow(box, size, frac=MASK_GROW):
@@ -162,6 +138,7 @@ def to_px(box, w, h):
 
 def make_plate(swatch, box, scene, work, seed=991, steps=20):
     """The picture with the element gone, bit-identical everywhere else."""
+    guard.refuse_flux2("compose_clip's plate stage")
     im = Image.open(swatch).convert("RGB")
     w, h = im.size
     mbox = to_px(grow(box, (w, h)), w, h)
