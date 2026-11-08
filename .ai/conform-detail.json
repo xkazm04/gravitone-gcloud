@@ -18839,6 +18839,28 @@
         "at": "2026-11-08T02:53:06.502295+00:00",
         "reason": "reviewer (sonnet): The anchor at rig-gate.ts:333 is a facial-deformation gate. It fails a character with 0 morph targets because it 'cannot blink, speak or change expression', so this context does touch the face-capability precondition of a talking avatar. The not-applicable verdict is contradicted rather than support"
       }
+    },
+    "47a52ae3-c07c-4d24-86e1-da7d59861f7e/trust-base": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "trust-base",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:08:08.865Z",
+      "worker": "fd83a240-4ab6-44ec-a75d-105544fc82a7",
+      "techniques": [
+        {
+          "technique": "census-counts-unmarked-members",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/runStore.ts:64 A standard decoder returns the unchecked type and is asserted to T. The technique's cure, decoding into unknown and passing it through one checking function, is absent. Callers include readJson<Verdicts> at store.ts:94, whose verdicts then reach ledger rows (commitPlan.ts:109)."
+        },
+        {
+          "technique": "verdict-pins-its-checker",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/calibration.ts:47 Grades are stored verdicts and carry a pin (grader_digest), and calibration keeps each pin as its own series (seriesKey, calibration.ts:117), so the pin is compared. But the pin covers only the model name plus prompt/schema data. pipeline/foundry/grade.py grader_digest() hashes grader_parts() (prompts, schemas, enums) and not the import closure, so a change to the scoring code (craft_score/credit), which produces the stored craft score, moves no pin."
+        }
+      ],
+      "registryProposal": "verdict-pins-its-checker assumes the checker is code. For a model-as-grader, the instrument is model weights plus prompts plus scoring code. A worked rule for LLM/vision graders (hash the prompt/schema data AND the scoring module's import closure; pin the model by digest rather than by tag) would make the technique directly usable for grader calibration."
     }
   }
 }

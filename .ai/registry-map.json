@@ -7067,7 +7067,11 @@
           "revision": 6,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/runStore.ts:64 The run store's one JSON decoder casts JSON.parse's unchecked any straight to the caller's T with no validating function, so verdicts.json (store.ts:94) and the catalogue docs (catalogue.ts:262) enter typed code as trust-base members that no directive census counts.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:0fd52192b37a88e4",
+          "evaluatedRevision": 6
         },
         {
           "subject": "data-access",
