@@ -490,7 +490,7 @@ function storyboardCells(night: Night, c: StoryboardCandidate, v1: Pick<ScoutV1,
   const framesWord = frames === c.panels.length ? `${frames} frame${frames === 1 ? "" : "s"}` : `${frames} of ${c.panels.length} frames`;
   const idea = c.fromIdea === undefined ? undefined : v1.ideas?.[c.fromIdea];
   const trial = c.genre === undefined ? undefined : `trial: ${c.genre}${c.clips === undefined ? "" : ` · ${clips} of ${c.panels.length} clips`}`;
-  const meta = [c.fromEpisode !== undefined ? `episode: ${c.fromEpisode}` : `idea: ${idea === undefined ? c.fromIdea : clip40(idea)}`, framesWord, trial, castOfMeta(c), "local · free", seedHead(c, v1.seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · ");
+  const meta = [c.fromEpisode !== undefined ? `episode: ${c.fromEpisode}` : `idea: ${idea === undefined ? c.fromIdea : clip40(idea)}`, framesWord, trial, castOfMeta(c), c.drawnBy === "codex" ? "codex · subscription" : "local · free", seedHead(c, v1.seeds), ventureOf(c)].filter((x) => x !== undefined).join(" · ");
   out.cells.push({ id: wordsCell(c.id), candidate: c.id, kind: "storyboard", row: c.id, jobId, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words: { label: c.title, meta, prompt: body } });
   out.rows.push({ id: c.id, label: c.title, group: "storyboards", prompt: c.paragraph, ...(c.aim === undefined ? {} : { aim: c.aim }), ...(c.use === undefined ? {} : { use: c.use }) });
 }

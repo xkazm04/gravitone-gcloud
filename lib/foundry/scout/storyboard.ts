@@ -375,6 +375,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
         ...(b.genre === undefined ? {} : { genre: b.genre }),
         ...(cast === undefined ? {} : { cast: cast.members.map((m) => m.card.name) }),
         ...(n.dry ? { images: [] } : {}),
+        ...(engines.drawnBy === "codex" && engines.draw !== undefined && mode !== "dry" ? { drawnBy: "codex" as const } : {}),
       };
       next = { ...next, candidates: [...next.candidates, c] };
       made.push(c);

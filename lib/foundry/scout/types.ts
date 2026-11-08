@@ -572,6 +572,9 @@ export type StoryboardCandidate = CandidateBase & {
   /** Kept characters it casts, by name (spark scout-vision S3): every panel leads with each one's identity block, and
    *  a character with a kept sheet rides it as a late-admitted Flux reference. */
   readonly cast?: readonly string[];
+  /** Who drew the panels, when it was not the local Flux: `codex` (`--draw codex`, the operator's subscription). Absent
+   *  on a Flux draw and on every night written before the marker; the Board's meta reads it. */
+  readonly drawnBy?: "codex";
 };
 
 /**

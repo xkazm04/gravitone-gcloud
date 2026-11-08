@@ -103,6 +103,22 @@ function seed(): void {
 const nightOf = (id: string): Night => JSON.parse(readFileSync(path.join(out, "scout", id, "night.json"), "utf8")) as Night;
 
 describe("scout adapter - a storyboard is one run, its frames then its words", () => {
+  it("a Codex-drawn board says `codex · subscription`; a Flux one, and a night with no marker, say `local · free`", async () => {
+    seed();
+    const CODEX = "2026-10-23";
+    writeNight(CODEX, false, [
+      board("c-20", { title: "Drawn by codex", images: frames("c-20", 4), drawnBy: "codex" }),
+      board("c-21", { title: "Drawn by flux", images: frames("c-21", 4) }),
+    ]);
+    for (const f of [...frames("c-20", 4), ...frames("c-21", 4)]) {
+      mkdirSync(path.dirname(path.join(out, "scout", CODEX, f)), { recursive: true });
+      writeFileSync(path.join(out, "scout", CODEX, f), `png ${f}`);
+    }
+    const { present } = (await openFlow(scoutAdapter, CODEX, blobDir)).plan;
+    expect(present.items["c-20/words"]?.meta).toBe("idea: Lantern-lit stairwell · 4 frames · codex · subscription");
+    expect(present.items["c-21/words"]?.meta).toBe("idea: Lantern-lit stairwell · 4 frames · local · free");
+  });
+
   it("draws the frames on disk then one words cell under a storyboards row; words-only is one cell; failed is a loss", async () => {
     seed();
     const flow = await openFlow(scoutAdapter, NIGHT, blobDir);
