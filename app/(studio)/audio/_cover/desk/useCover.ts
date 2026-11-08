@@ -7,7 +7,10 @@
 // THE RECEIPT. Launch asks acts.launch with no token and shows what comes back; Confirm sends its token. A stale
 // answer replaces the receipt with the fresh one, its moved cells marked (receiptChanges), and waits for a second
 // Confirm: nothing is queued on a receipt the owner has not read.
-import { useEffect, useRef, useState } from "react";
+//
+// THE BRIEF (cover brief, WP-B) is read and confirmed the same way through acts.brief; its state is the record's.
+// When the record says the brief is done, the fields are reset to what it wrote, once per brief.
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { COVER_SECTION_MAX_S, COVER_SECTION_MIN_S, type CoverCard, type CoverPlan } from "@gt/domain/cover";
 import type { Receipt } from "@gt/domain/produce";
@@ -16,9 +19,23 @@ import { fitSpan, type Span } from "@gt/ui/components/rangepick/rangepick.ts";
 
 import type { CoverActs } from "../contract.ts";
 import { hearUrl, type Heard } from "./audio.ts";
+import { readSnapshot, serverReadSnapshot, subscribeRead } from "./brief/readClock.ts";
 import type { Sender } from "./send.ts";
 
 export type Launching = { readonly receipt: Receipt; readonly changes?: ReceiptChanges; readonly readAtMs: number };
+
+export type BriefFlow = {
+  readonly launching: Launching | null;
+  readonly busy: boolean;
+  readonly error: string | null;
+  readonly ask: () => void;
+  readonly confirm: () => void;
+  readonly cancel: () => void;
+  /** The job the brief's act answered already exists: nothing new was queued. */
+  readonly existing: string | null;
+  /** When the view was last read (client only): the brief's age is measured against it. */
+  readonly readAtMs: number | null;
+};
 
 export type CoverFlow = {
   readonly card: CoverCard;
@@ -51,6 +68,7 @@ export type CoverFlow = {
   readonly stylesError: string | null;
   readonly stylesSaved: boolean;
   readonly saveStyles: (sourceStyle: string, remixStyle: string) => void;
+  readonly brief: BriefFlow;
 };
 
 const fail = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -76,6 +94,24 @@ export function useCover(card: CoverCard, acts: CoverActs, sender: Sender, refre
   const [stylesError, setStylesError] = useState<string | null>(null);
   const [stylesSaved, setStylesSaved] = useState(false);
   const inflight = useRef(false);
+  const [briefing, setBriefing] = useState<Launching | null>(null);
+  const [briefError, setBriefError] = useState<string | null>(null);
+  const [briefExisting, setBriefExisting] = useState<string | null>(null);
+  const readAtMs = useSyncExternalStore(subscribeRead, readSnapshot, serverReadSnapshot);
+
+  // What a finished brief wrote is the record's; the fields take it once per brief (React's reset-on-prop pattern).
+  const wrote = r.brief?.state === "done" ? r.brief.at : null;
+  const [wroteSeen, setWroteSeen] = useState(wrote);
+  if (wroteSeen !== wrote) {
+    setWroteSeen(wrote);
+    if (wrote !== null) {
+      setSpanRaw(fitSpan(r.section, limits));
+      setStyle(r.style);
+      setSourceStyle(r.sourceStyle ?? "");
+      setLyrics(r.lyrics);
+      setLaunching(null);
+    }
+  }
 
   useEffect(() => {
     let live = true;
@@ -133,6 +169,35 @@ export function useCover(card: CoverCard, acts: CoverActs, sender: Sender, refre
       else if (v.kind === "receipt") setLaunching({ receipt: v.receipt, readAtMs: Date.now() });
       else {
         setLaunching(null);
+        refresh();
+      }
+    });
+
+  const briefAsk = (): void =>
+    void once(async () => {
+      setBriefError(null);
+      setBriefExisting(null);
+      const a = await acts.brief(r.id);
+      if (!a.ok) return setBriefError(a.error.error);
+      if (a.value.kind === "receipt") setBriefing({ receipt: a.value.receipt, readAtMs: Date.now() });
+      else {
+        if (a.value.kind === "existing") setBriefExisting(a.value.jobId);
+        refresh();
+      }
+    });
+
+  const briefConfirm = (): void =>
+    void once(async () => {
+      if (briefing === null) return;
+      setBriefError(null);
+      const a = await acts.brief(r.id, briefing.receipt.token);
+      if (!a.ok) return setBriefError(a.error.error);
+      const v = a.value;
+      if (v.kind === "stale") setBriefing({ receipt: v.fresh, changes: receiptChanges(briefing.receipt, v.fresh), readAtMs: Date.now() });
+      else if (v.kind === "receipt") setBriefing({ receipt: v.receipt, readAtMs: Date.now() });
+      else {
+        setBriefing(null);
+        if (v.kind === "existing") setBriefExisting(v.jobId);
         refresh();
       }
     });
@@ -211,5 +276,6 @@ export function useCover(card: CoverCard, acts: CoverActs, sender: Sender, refre
     stylesError,
     stylesSaved,
     saveStyles,
+    brief: { launching: briefing, busy, error: briefError, existing: briefExisting, ask: briefAsk, confirm: briefConfirm, cancel: () => setBriefing(null), readAtMs },
   };
 }

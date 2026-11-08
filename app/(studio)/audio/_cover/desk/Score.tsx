@@ -15,6 +15,7 @@ import { TextArea } from "@gt/ui/components/field/Field.tsx";
 import { Receipt } from "@gt/ui/components/produce/Receipt.tsx";
 import { RangePick } from "@gt/ui/components/rangepick/RangePick.tsx";
 
+import { BriefHypothesis } from "./brief/Brief.tsx";
 import { SECTION_KEY, type AB } from "./useAB.ts";
 import type { CoverFlow } from "./useCover.ts";
 import { clock } from "./words.ts";
@@ -70,6 +71,7 @@ export function ScorePart({ flow }: { readonly flow: CoverFlow }) {
   return (
     <div className={s.fields}>
       <Counted label="style" value={flow.style} max={COVER_STYLE_MAX} onChange={flow.setStyle} rows={3} disabled={off} />
+      <BriefHypothesis brief={flow.card.record.brief} />
       <Counted label="source style" value={flow.sourceStyle} max={COVER_STYLE_MAX} onChange={flow.setSourceStyle} rows={2} disabled={off} />
       <Counted label="lyrics" value={flow.lyrics} max={COVER_LYRICS_MAX} onChange={flow.setLyrics} rows={4} disabled={off} />
       {flow.lyrics.trim() === "" && <Chip label="lyrics: score tags" casing="lower" ghost />}

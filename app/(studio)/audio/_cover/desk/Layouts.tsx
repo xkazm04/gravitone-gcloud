@@ -5,6 +5,8 @@
 //   steps  one column; a part opens as the one before it completes
 //   bench  the section and the style across the top, the takes in a stack, winner and remix in a rail
 //   chain  the work as nodes left to right, source section -> score -> takes -> winner -> remix; a node opens its part
+// The brief sits after the song's facts and before the section in all three: inside the section part in steps and
+// bench, above the nodes in chain (whose section node is not the one a draft opens on).
 import { useState, type ReactNode } from "react";
 
 import { COVER_TAKE_COUNT, type CoverState } from "@gt/domain/cover";
@@ -14,6 +16,7 @@ import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 
 import type { CoverLayout } from "../contract.ts";
 import { ChainPart, RemixPart, WinnerPart } from "./After.tsx";
+import { BriefPart } from "./brief/Brief.tsx";
 import { ScorePart, SectionPart } from "./Score.tsx";
 import { SourceFacts } from "./Source.tsx";
 import { doneCount, TakesPart } from "./Takes.tsx";
@@ -47,7 +50,7 @@ function Block({ n, title, open, extra, children }: { readonly n?: number; reado
 
 type Props = { readonly flow: CoverFlow; readonly ab: AB };
 
-function parts({ flow, ab }: Props): Record<PartId, { readonly title: string; readonly extra?: ReactNode; readonly body: ReactNode }> {
+function parts({ flow, ab }: Props, brief: boolean): Record<PartId, { readonly title: string; readonly extra?: ReactNode; readonly body: ReactNode }> {
   const r = flow.card.record;
   const done = doneCount(r.takes);
   return {
@@ -57,6 +60,7 @@ function parts({ flow, ab }: Props): Record<PartId, { readonly title: string; re
       body: (
         <>
           <SourceFacts card={flow.card} lenS={flow.lenS} />
+          {brief && <BriefPart flow={flow} />}
           <SectionPart flow={flow} ab={ab} />
         </>
       ),
@@ -78,7 +82,7 @@ function parts({ flow, ab }: Props): Record<PartId, { readonly title: string; re
 }
 
 export function StepsLayout(p: Props) {
-  const all = parts(p);
+  const all = parts(p, true);
   const upTo = reached(p.flow.card.record.state);
   return (
     <div className={s.steps}>
@@ -92,7 +96,7 @@ export function StepsLayout(p: Props) {
 }
 
 export function BenchLayout(p: Props) {
-  const all = parts(p);
+  const all = parts(p, true);
   const upTo = reached(p.flow.card.record.state);
   const b = (id: PartId) => (
     <Block title={all[id].title} open={ORDER.indexOf(id) < upTo} extra={all[id].extra}>
@@ -129,13 +133,14 @@ function fact(id: PartId, flow: CoverFlow): string {
 }
 
 export function ChainLayout(p: Props) {
-  const all = parts(p);
+  const all = parts(p, false);
   const r = p.flow.card.record;
   const upTo = reached(r.state);
   const [open, setOpen] = useState<PartId>(ORDER[Math.min(upTo, ORDER.length) - 1] ?? "section");
   const here = all[open];
   return (
     <div className={s.chain}>
+      <BriefPart flow={p.flow} />
       <ol className={s.nodes} aria-label="chain of work">
         {ORDER.map((id, i) => (
           <li key={id} className={s.node}>

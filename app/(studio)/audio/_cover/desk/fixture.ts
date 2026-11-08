@@ -2,7 +2,8 @@
 
 // THE COVER DESK'S FIXTURE (spark track-mirror-studio, WP3): one cover per state, audio synthesized in the
 // browser, and stand-in acts that move the fixture through the flow (receipt, a stale confirm once, five takes,
-// a pick, a remix), so the three layouts are driven before the engine and the doors exist. Reached with
+// a pick, a remix), so the three layouts are driven before the engine and the doors exist. A draft's brief walks
+// queued -> running -> done, one state per re-read, and on done writes the fields and launches the cover. Reached with
 // `/audio?s=cover&fixture=<state>` on a development build only (./useDesk.ts reads the switch); a production
 // build never honours it. Nothing here touches a store, a route or a vendor.
 import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -118,6 +119,40 @@ function records(): Record<Exclude<FixtureState, "empty">, CoverRecord> {
   };
 }
 
+/** The brief's receipt as lib/producers/coverBrief.ts draws it: the song measured here, three Gemini listens priced
+ *  over its length, the Claude turn on the seat. */
+function briefReceipt(id: string): Receipt {
+  const now = Date.UTC(2026, 10, 7, 20, 0);
+  const iso = (s: number): string => new Date(now + s * 1000).toISOString();
+  const line = (key: string, label: string, lane: "seat.text" | "cloud.google", provider: string, model: string, from: number, seconds: number, usd: number) =>
+    ({ key, label, lane, provider, model, units: 1, seconds, usd, src: "illustrative", queuePos: 1, start: iso(from), end: iso(from + seconds) }) as const;
+  const lines = [
+    line("measure", "measure", "seat.text", "local", "librosa", 0, 20, 0),
+    ...[1, 2, 3].map((n) => line(`listen-${n}`, `listen-${n}`, "cloud.google", "gemini", "gemini-3.8-flash", 20 + (n - 1) * 30, 30, 0.012)),
+    line("write", "write", "seat.text", "claude-code", "seat", 110, 90, 0),
+  ];
+  const seconds = lines.reduce((a, l) => a + l.seconds, 0);
+  const usd = lines.reduce((a, l) => a + l.usd, 0);
+  return { token: `fx-brief-${id}`, subject: { kind: "run", lane: "audio" }, mode: "dry", lines, totals: { seconds, usd, unpriced: 0, src: "illustrative" }, queuePos: 1, etaAt: iso(seconds), overCeiling: false, readAt: iso(0) };
+}
+
+/** What the fixture's brief writes on done: the fields, its reason, the listens that agreed, and the cover launched. */
+function briefDone(r: CoverRecord, at: string): CoverRecord {
+  const jobId = r.brief?.jobId ?? `job:cover-brief:${r.id}`;
+  const why = "Two of three listens heard slow 80s synth-pop with a drum machine and a sparse piano; the third heard darkwave. The measured 92 bpm and F minor fit both. The section is the whole song, 64 s.";
+  return {
+    ...r,
+    style: "lo-fi hip hop, dusty rhodes, vinyl crackle, slow swung drums, warm bass, 92 bpm, F minor",
+    sourceStyle: "80s synth-pop, drum machine, sparse piano, wide pads, 92 bpm, F minor",
+    section: { startS: 0, endS: SONG_S },
+    lyrics: "",
+    brief: { state: "done", jobId, at, why, agreed: 2 },
+    state: "queued",
+    takes: takesFor("queued"),
+    jobId: `job:cover:${r.id}`,
+  };
+}
+
 function receipt(id: string, startS: number, endS: number, salt: number): Receipt {
   const now = Date.UTC(2026, 10, 7, 20, 0);
   const iso = (s: number): string => new Date(now + s * 1000).toISOString();
@@ -154,6 +189,8 @@ export function useFixture(state: FixtureState): FixtureDesk {
     setCurrentId(currentFor(state));
   }
   const staleOnce = useRef(true);
+  // The re-read a confirm makes at once finds the brief still queued: it moves on the re-read after that.
+  const briefJustQueued = useRef<string | null>(null);
   // A song dropped on the fixture plays as itself.
   const [dropped, setDropped] = useState<ReadonlyMap<string, string>>(new Map());
 
@@ -177,8 +214,13 @@ export function useFixture(state: FixtureState): FixtureDesk {
         change(plan.id, (r) => ({ ...r, state: "queued", section: { startS: plan.startS, endS: plan.endS }, style: plan.style, lyrics: plan.lyrics, ...(plan.sourceStyle === undefined ? {} : { sourceStyle: plan.sourceStyle }), takes: takesFor("queued"), jobId: `job:cover:${plan.id}` }));
         return ok({ kind: "launched", jobId: `job:cover:${plan.id}` });
       },
-      // WP0 stand-in; WP-B makes the fixture walk queued -> running -> done and launch the cover.
-      brief: async () => ok({ kind: "launched", jobId: "job:cover-brief:fixture" }),
+      brief: async (id, token) => {
+        if (token === undefined) return ok({ kind: "receipt", receipt: briefReceipt(id) });
+        const jobId = `job:cover-brief:${id}`;
+        briefJustQueued.current = id;
+        change(id, (r) => ({ ...r, brief: { state: "queued", jobId, at: new Date().toISOString() } }));
+        return ok({ kind: "launched", jobId });
+      },
       pick: async (id, seed) => {
         change(id, (r) => ({ ...r, state: "picked", winnerSeed: seed, exportFile: "winner.mp3" }));
         return ok({ winnerUrl: sounds?.takes[1] ?? "" });
@@ -191,10 +233,16 @@ export function useFixture(state: FixtureState): FixtureDesk {
     [change, sounds],
   );
 
-  // A queued fixture advances one take per refresh, as the job would between two reads.
+  // A brief moves one state per refresh, and a queued cover one take, as the jobs would between two reads.
   const refresh = useCallback(() => {
+    const now = new Date().toISOString();
+    const hold = briefJustQueued.current;
+    briefJustQueued.current = null;
     setRecs((rs) =>
       rs.map((r) => {
+        if (r.brief?.state === "queued" && r.id === hold) return r;
+        if (r.brief?.state === "queued") return { ...r, brief: { ...r.brief, state: "running", at: now } };
+        if (r.brief?.state === "running") return briefDone(r, now);
         if (r.state !== "queued" && r.state !== "rendering") return r;
         const next = r.takes.findIndex((t) => t.state === "pending");
         if (next < 0) return { ...r, state: "judging" };

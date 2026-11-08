@@ -2,14 +2,17 @@
 
 // WHERE THE DESK'S DATA COMES FROM: the server's view and acts as handed down, or - on a development build,
 // under `?fixture=<state>` - ./fixture.ts's stand-ins. Either way the layouts see one shape: a view, the acts,
-// a sender for the two file routes, a re-read, and a way to open a cover. While a cover's job is queued or
-// rendering the view is re-read on an interval (router.refresh), so takes land in their rows as they finish.
+// a sender for the two file routes, a re-read, and a way to open a cover. While the cover's brief is queued or
+// running, or its job queued or rendering, the view is re-read once a minute (COVER_POLL_MS, router.refresh) and
+// again when the tab comes back into view; nothing in flight, no timer.
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect } from "react";
 
 import type { CoverDeskView } from "@gt/domain/cover";
 
-import type { CoverActs, CoverLayout } from "../contract.ts";
+import { COVER_POLL_MS, type CoverActs, type CoverLayout } from "../contract.ts";
+import { inFlight } from "./brief/brief.ts";
+import { markRead } from "./brief/readClock.ts";
 import { FIXTURE_STATES, useFixture, type FixtureState } from "./fixture.ts";
 import { routeSender, type Sender } from "./send.ts";
 
@@ -23,8 +26,6 @@ export type Desk = {
   readonly hrefOf: (id: string | undefined, layout: CoverLayout) => string;
   readonly fixture: FixtureState | null;
 };
-
-export const POLL_MS = 5000;
 
 function fixtureOf(raw: string | null): FixtureState | null {
   if (process.env.NODE_ENV === "production") return null;
@@ -50,10 +51,13 @@ export function useDesk(view: CoverDeskView, acts: CoverActs, layout: CoverLayou
     [fixture],
   );
 
+  // Stable across renders (the fixture's own re-read is), so the minute's interval is not restarted by a render.
+  const fxRefresh = fx.refresh;
   const refresh = useCallback(() => {
-    if (fixture !== null) fx.refresh();
+    markRead();
+    if (fixture !== null) fxRefresh();
     else router.refresh();
-  }, [fixture, fx, router]);
+  }, [fixture, fxRefresh, router]);
 
   const open = useCallback(
     (id: string | undefined) => {
@@ -66,12 +70,18 @@ export function useDesk(view: CoverDeskView, acts: CoverActs, layout: CoverLayou
   // `?cover=new` asks for the upload: the server's read answers its newest cover for an id it does not hold.
   const asked = q.get("cover");
   const shown: CoverDeskView | null = fixture !== null ? fx.view : asked === "new" ? { covers: view.covers } : view;
-  const state = shown?.current?.record.state;
-  const working = state === "queued" || state === "rendering";
+  const working = inFlight(shown?.current?.record);
   useEffect(() => {
     if (!working) return;
-    const t = setInterval(refresh, POLL_MS);
-    return () => clearInterval(t);
+    const t = setInterval(refresh, COVER_POLL_MS);
+    const back = (): void => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", back);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", back);
+    };
   }, [working, refresh]);
 
   return { view: shown, acts: fixture !== null ? fx.acts : acts, sender: fixture !== null ? fx.sender : routeSender, refresh, open, hrefOf, fixture };

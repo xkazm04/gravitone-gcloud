@@ -9,6 +9,7 @@ import type { Actor } from "@gt/domain/event";
 import type { Store } from "@gt/kernel/store";
 
 import { launchCover } from "../../../../lib/producers/cover.ts";
+import { launchCoverBrief } from "../../../../lib/producers/coverBrief.ts";
 import { exportMp3 } from "../../../../lib/sound/cover/cut.ts";
 import { coverFileHref, WINNER_FILE } from "../../../../lib/sound/cover/href.ts";
 import { coverFileAbs, mutateCover, readCover } from "../../../../lib/sound/cover/store.ts";
@@ -28,6 +29,7 @@ export const launchInput = z.strictObject({
   plan: z.strictObject({ id: coverIdSchema, startS: z.number().finite().min(0), endS: z.number().finite().positive(), style, lyrics: z.string().max(COVER_LYRICS_MAX), sourceStyle: backFilled }),
   token: z.string().min(8).max(200).optional(),
 });
+export const briefInput = z.strictObject({ id: coverIdSchema, token: z.string().min(8).max(200).optional() });
 export const pickInput = z.strictObject({ id: coverIdSchema, seed });
 export const stylesInput = z.strictObject({ id: coverIdSchema, styles: z.strictObject({ sourceStyle: backFilled, remixStyle: backFilled }) });
 
@@ -75,6 +77,16 @@ export async function launchCoverBody(i: z.output<typeof launchInput>, store: St
   if (!m.ok) return m;
   const saved = { id: plan.id, startS: plan.startS, endS: plan.endS, style: plan.style, lyrics: plan.lyrics, ...(sourceStyle === undefined ? {} : { sourceStyle }) };
   return launchCover(store, saved, { mode: "live", actor, dryOnly, ...(token === undefined ? {} : { token }) });
+}
+
+/** The brief (lib/producers/coverBrief.ts): its receipt with no token, its job with one. The producer owns the
+ *  record's `brief` (queued on confirm, then running, done or failed); this door only refuses a cover the brief
+ *  could not write into, before any receipt is read. */
+export async function briefCoverBody(i: z.output<typeof briefInput>, store: Store, actor: Actor, dryOnly: boolean): Promise<Result<CoverLaunch>> {
+  const c = await readCover(i.id);
+  if (c === undefined) return err("not-found", `no cover ${i.id}`);
+  if (!LAUNCHABLE.has(c.state)) return err("refused", `cover ${i.id} is ${c.state}; a brief is written for a draft or a failed cover`);
+  return launchCoverBrief(store, i.id, { actor, dryOnly, ...(i.token === undefined ? {} : { token: i.token }) });
 }
 
 export async function pickCoverBody(i: z.output<typeof pickInput>): Promise<Result<{ readonly winnerUrl: string }>> {
