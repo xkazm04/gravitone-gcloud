@@ -6,7 +6,8 @@
 //   node tests/next-server/fixtures/worker-stub.mts [worker flags]
 //
 // The stub is `research` on seat.text: two steps, each booked with the job's id;
-// a job whose id contains "fail" fails its second step fatally.
+// a job whose id contains "fail" fails its second step fatally. `research` is bound a second time, the same stub,
+// on cloud.google, a paying lane, for the tests of what a crash there holds.
 import { producerSet } from "@gt/producers/set";
 import type { Producer } from "@gt/kernel/job-core";
 
@@ -21,7 +22,9 @@ const stub: Producer = {
       : { kind: "produced", output: { step: step.name, job: ctx.job.id } },
 };
 
-process.exitCode = await runWorker(process.argv.slice(2), producerSet([{ name: "research", producer: stub }]), {
+const paid: Producer = { ...stub, lane: "cloud.google" };
+
+process.exitCode = await runWorker(process.argv.slice(2), producerSet([{ name: "research", producer: stub }, { name: "research", producer: paid }]), {
   out: (line) => void process.stdout.write(`${line}\n`),
   err: (line) => void process.stderr.write(`${line}\n`),
   env: process.env,

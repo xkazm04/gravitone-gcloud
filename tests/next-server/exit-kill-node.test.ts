@@ -10,7 +10,7 @@ import { parseAt, parseJsonAt } from "@gt/domain/door";
 import type { Actor } from "@gt/domain/event";
 import { jobIdSchema, type JobId } from "@gt/domain/ids";
 import type { Job } from "@gt/domain/job";
-import { ackLane, laneHold } from "@gt/kernel/job-queue";
+import { laneHold } from "@gt/kernel/job-queue";
 import { get, retry } from "@gt/kernel/job";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { reconcileJobSpend } from "@gt/kernel/spend/projection";
@@ -28,11 +28,9 @@ import { REPO_LOCATING_GIT_VARS } from "../../lib/gitEnv.ts";
 // Nth call - a step in flight, unbooked. The worker is SIGKILLed (TerminateProcess on
 // Windows: no finally, no release, no heartbeat stop). Then, as an operator meets it:
 //   restart   the real worker again; its recovery sweep names the job interrupted with
-//             the step that was in flight, and seat.text - a PAID lane - HOLDS: a
-//             neighbour article enqueued after the crash is not claimed;
-//   retry     before the ack, the retried job is still not claimed;
-//   ack       the operator acknowledges; the real worker drives both jobs to done, the
-//             retried one at attempt 2 WITHOUT starting a step it had booked before the
+//             the step that was in flight, and seat.text - the FREE seat - holds
+//             nothing: a neighbour article enqueued after the crash is claimed and done;
+//   retry     the operator retries; the real worker drives the job to done, at attempt 2, WITHOUT starting a step it had booked before the
 //             kill - only the one in flight runs again - and its spend equals its meter.
 
 const ROOT = process.cwd();
@@ -179,7 +177,7 @@ async function until(test: () => boolean, what: string, ms: number): Promise<voi
 }
 
 describe("the real Node worker, SIGKILLed while an article turn blocks", () => {
-  it("restarted, names the job interrupted at its step and holds seat.text until acknowledged; the retry finishes without re-performing a booked step", { timeout: 600_000 }, async () => {
+  it("restarted, names the job interrupted at its step and holds no lane; the retry finishes without re-performing a booked step", { timeout: 600_000 }, async () => {
     writeWrapper();
     const env = universeEnv();
     const pre = kernel();
@@ -219,42 +217,31 @@ describe("the real Node worker, SIGKILLed while an article turn blocks", () => {
       }
       expect(jobOf(k, id).state, "nobody has looked yet: the record still says running").toBe("running");
 
-      // A neighbour on the same paid lane, enqueued after the crash by the same CLI.
-      const second = articleCli(env, 'run --topic "a neighbour on the held seat" --dry --detach');
+      // A neighbour on the same lane, enqueued after the crash by the same CLI.
+      const second = articleCli(env, 'run --topic "a neighbour on the free seat" --dry --detach');
       const neighbour = String(second["jobId"]);
-      const turnsAtKill = turns();
 
       // RESTART: the real worker's recovery sweep comes first.
       const r1 = workerOnce(env);
       expect(r1.code, r1.err).toBe(0);
       expect(r1.err).toContain("1 recovered as interrupted");
       expect(jobOf(k, id)).toMatchObject({ state: "interrupted", attempt: 1, interruption: { stage, holder: { pid: holderPid } } });
+      // The seat is free (lane.ts LANE_PAYS): no lane holds, the neighbour is claimed by the very
+      // drain that recovered, and the interrupted job waits only for the operator's retry.
       const hold = k.store.read((t) => laneHold(t, "seat.text"));
-      expect(hold.ok && hold.value).toMatchObject({ jobId: id, stage });
-      // A held lane has no claimable head (kernel nextClaimable): the drain does not even look at the
-      // neighbour - no line, no claim. It waits in the line, not failed, not driven.
-      expect(r1.lines.filter((l) => l["jobId"] === neighbour)).toEqual([]);
-      expect(jobOf(k, neighbour).state).toBe("queued");
-      expect(claims(k, neighbour)).toBe(0);
+      expect(hold.ok && hold.value).toBeUndefined();
+      expect(r1.lines.filter((l) => l["jobId"] === neighbour && l["outcome"] === "done")).toHaveLength(1);
+      expect(jobOf(k, neighbour).state).toBe("done");
+      expect(jobOf(k, id)).toMatchObject({ state: "interrupted", attempt: 1 });
 
       // The CLI's own status names the job and where it stopped.
       const status = articleCli(env, `status ${runId}`);
       expect(status["jobs"]).toEqual([expect.objectContaining({ id, state: "interrupted", stage })]);
 
-      // A retry before the acknowledgement is not claimed either.
+      // The operator's retry puts it back in the queue, and the next drain finishes it.
       const re = retry(k.store, jid(id), OP);
       expect(re.ok && re.value).toMatchObject({ state: "queued", attempt: 2 });
-      const r2 = workerOnce(env);
-      expect(r2.code, r2.err).toBe(0);
-      expect(r2.lines.filter((l) => l["outcome"] === "done")).toEqual([]);
-      expect(jobOf(k, id)).toMatchObject({ state: "queued", attempt: 2 });
       expect(claims(k, id), "claimed once, by the killed worker").toBe(1);
-      expect(claims(k, neighbour)).toBe(0);
-      expect(turns(), "nothing ran while the lane held").toBe(turnsAtKill);
-
-      // The operator looked.
-      const acked = ackLane(k.store, "seat.text", OP);
-      expect(acked.ok && acked.value.map((h) => h.jobId)).toEqual([id]);
       const r3 = workerOnce(env);
       expect(r3.code, r3.err).toBe(0);
       expect(jobOf(k, id)).toMatchObject({ state: "done", attempt: 2 });

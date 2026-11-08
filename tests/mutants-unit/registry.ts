@@ -2486,6 +2486,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A crash on the free GPU lane holds it until acknowledged, stalling every forge and Dojo job behind a lane that spends nothing.",
   },
   {
+    id: "lane-seat-pays",
+    test: "packages/domain/test/lane.test.ts",
+    file: "packages/domain/src/lane.ts",
+    find: "  \"seat.text\": false,",
+    replace: "  \"seat.text\": true,",
+    why: "One restart on the free Claude seat holds seat.text until an operator looks, and every reel and draft waits behind a lane that spends nothing.",
+  },
+  {
     id: "produce-ceiling-ignores-the-band",
     test: "packages/ui/test/components/produce.test.ts",
     file: "packages/ui/src/components/produce/produce.ts",

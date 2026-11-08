@@ -20,7 +20,7 @@ const tmp = scratch("job-states");
 afterAll(() => tmp.dispose());
 let n = 0;
 const J = jobId("job-1");
-const LANE = "seat.text";
+const LANE = "cloud.google";
 
 /** The durable record in `state`, built by the same transition helpers the kernel writes with. */
 function construct(w: World, state: JobState): void {
