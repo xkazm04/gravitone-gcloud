@@ -33,10 +33,11 @@ import { Toast, type ToastLedger } from "@gt/ui/components/toast/Toast.tsx";
 import { useAuth } from "@/lib/useAuth";
 
 import { KEYS, LAST_IDENTITY } from "./keys.ts";
+import { readJson } from "./plain.ts";
 import { subscribeSessionCookie } from "./session.ts";
 import { noReceipt, receipt, showToast, subscribeReceipts } from "./toast.ts";
 
-const made = createStore(KEYS, () => (typeof window === "undefined" ? null : window.localStorage));
+const made = createStore(KEYS, () => (typeof window === "undefined" ? null : window.localStorage), readJson);
 // A registration that could lie (a duplicate key, a key outside the namespace) is a
 // programming error in keys.ts, not a runtime condition: fail the module, loudly.
 if (!made.ok) throw made.error;

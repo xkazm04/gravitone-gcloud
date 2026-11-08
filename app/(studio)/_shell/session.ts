@@ -16,24 +16,22 @@
 // resolves both postures itself (resolveSession), and a post would be refused as malformed.
 
 import { onIdTokenChanged } from "firebase/auth";
-// zod/mini, not classic zod: this file is in the shell's client bundle (see @gt/domain/door).
-import { object, string } from "zod/mini";
 
-import { parseJsonAt } from "@gt/domain/door";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { DEV_AUTH } from "@/lib/devAuth";
 import { authClient, firebaseReady } from "@/lib/firebase";
 import { LOCAL_MODE } from "@/lib/localMode";
 
+// Hand-written, not zod: this file is in the shell's client bundle (see ./plain.ts).
+import { readRefusal } from "./plain.ts";
+
 /** True where a Firebase session exists to bridge at all. */
 export const BRIDGED = firebaseReady && !DEV_AUTH && !LOCAL_MODE;
 
-/** A refusal's body: app/_server/http.ts `envelope` - the sentence is `error`. */
-const REFUSAL = object({ error: string() });
 
 /** The server's sentence out of its envelope, else the body as it came (a proxy's page, a bare text). */
 function refusalWords(body: string): string {
-  const e = parseJsonAt("session refusal", REFUSAL, body);
+  const e = readRefusal(body);
   return e.ok ? e.value.error : body;
 }
 

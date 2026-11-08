@@ -13,21 +13,20 @@
 // store.test.ts; this only subscribes.
 
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
-import type { z } from "zod";
 import type { Parsed } from "@gt/domain/door";
 import type { AppError, Result } from "@gt/domain/errors";
 
-import { decode, type KeyDef, type Store } from "./store.ts";
+import type { In, KeyDef, Out, Schema, Store } from "./store.ts";
 
 const serverSnapshot = (): null => null;
 
-export function useStored<S extends z.ZodType>(
+export function useStored<S extends Schema>(
   store: Store,
   def: KeyDef<S>,
-  fallback: Parsed<z.output<S>>,
+  fallback: Parsed<Out<S>>,
   /** A stored value that fails its schema reaches this door (telemetry, the bell) instead of vanishing. */
   onCorrupt?: (e: AppError) => void,
-): [Parsed<z.output<S>>, (next: z.input<S>) => Result<null>] {
+): [Parsed<Out<S>>, (next: In<S>) => Result<null>] {
   const subscribe = useCallback(
     (listener: () => void) => {
       const off = store.subscribe(listener);
@@ -43,7 +42,7 @@ export function useStored<S extends z.ZodType>(
     [store, def],
   );
   const raw = useSyncExternalStore(subscribe, () => store.snapshot(def), serverSnapshot);
-  const decoded = useMemo(() => decode(def, raw), [def, raw]);
+  const decoded = useMemo(() => store.decode(def, raw), [store, def, raw]);
   const report = useRef(onCorrupt);
   useEffect(() => {
     report.current = onCorrupt;
@@ -52,6 +51,6 @@ export function useStored<S extends z.ZodType>(
     if (!decoded.ok) report.current?.(decoded.error);
   }, [decoded]);
   const value = decoded.ok && decoded.value !== undefined ? decoded.value : fallback;
-  const set = useCallback((next: z.input<S>) => store.write(def, next), [store, def]);
+  const set = useCallback((next: In<S>) => store.write(def, next), [store, def]);
   return [value, set];
 }
