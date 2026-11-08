@@ -32,6 +32,7 @@ import type { Channel, Episode, EpisodeState } from "@gt/domain/channel";
 
 import { closeKernel } from "../../lib/kernelStore.ts";
 import { scoutAdapter } from "../../lib/decision/v1/sources/scout.ts";
+import { storyboardVerdictLine } from "../../lib/decision/v1/sources/scoutEpisodeWords.ts";
 import { Refusal } from "../../lib/foundry/scout/acts.ts";
 import { setEpisodeDoorForTests, type EpisodeDoor } from "../../lib/foundry/scout/episodeMoves.ts";
 import type { Candidate, Night } from "../../lib/foundry/scout/types.ts";
@@ -128,6 +129,24 @@ describe("scout adapter - a channel episode's cells and verdict", () => {
     expect(damaged.plan.present.rows.map((r) => r.id)).toEqual(["c-01", "c-02"]);
     for (const r of damaged.plan.present.rows) expect(r).not.toHaveProperty("logline");
     expect(damaged.plan.present.items["c-01/words"]?.meta).toBe("episode: F1-01 · 0 of 1 frames · local · free");
+  });
+
+  it("the preview of an episode's storyboard names its real outcome, not a full video", async () => {
+    seed();
+    const flow = await openFlow(scoutAdapter, NIGHT, blobDir);
+    flow.patch([
+      { candidate: "c-01/words", verdict: "keep" },
+      { candidate: "c-02/reel", verdict: "keep" },
+    ]);
+    const detail = (id: string) => must(flow.preview()).consequence.writes.find((w) => w.candidate === id)?.detail;
+    expect(detail("c-01/words")).toBe("the episode ends kept");
+    flow.patch([{ candidate: "c-01/words", verdict: "reject", reasons: ["generic"] }]);
+    expect(detail("c-01/words")).toBe("refused: the episode ends thrown");
+    expect(storyboardVerdictLine({ dry: true }, { fromEpisode: "F1-01" }, "keep")).toBe("kept; a dry night moves no episode");
+    expect(storyboardVerdictLine({ dry: true }, { fromEpisode: "F1-01" }, "reject")).toBe("refused; a dry night moves no episode");
+    // A board made from an idea keeps the shared words (an archived chain; nothing tells it apart).
+    expect(storyboardVerdictLine({ dry: false }, {}, "keep")).toBe("ready for a full video");
+    expect(storyboardVerdictLine({ dry: false }, {}, "reject")).toBe("refused: no full video grows from it");
   });
 
   it("the commit keeps the kept storyboard's episode and throws the rejected reel's - once", async () => {

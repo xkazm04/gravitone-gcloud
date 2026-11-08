@@ -1,7 +1,7 @@
 import type { RowWords } from "@gt/ui/board/port";
 
 import { episodeDoor } from "../../../foundry/scout/episodeMoves.ts";
-import type { Night } from "../../../foundry/scout/types.ts";
+import type { Night, StoryboardCandidate } from "../../../foundry/scout/types.ts";
 
 // A CHANNEL EPISODE'S OUTLINE ON THE PACKET (perfect 2026-11-08, outline-beside-frames) - beside ./scoutPlan.ts.
 //
@@ -36,4 +36,19 @@ export async function episodesOf(night: Night): Promise<{ readonly episodes?: Re
 export function episodeRow(fromEpisode: string | undefined, episodes: Readonly<Record<string, EpisodeWords>> | undefined): Pick<RowWords, "channel" | "logline" | "beats"> {
   const e = fromEpisode === undefined ? undefined : episodes?.[fromEpisode];
   return e === undefined ? {} : { channel: e.channel, logline: e.logline, beats: e.beats };
+}
+
+/** What a kept storyboard does made from no episode (an archived path: the idea chain), as the preview says it. */
+export const STORYBOARD_VERDICT = { keep: "ready for a full video", reject: "refused: no full video grows from it" } as const;
+
+/**
+ * What a verdict on a storyboard does, as the preview says it (perfect 2026-11-08, keep-states-real-effect). Made from a
+ * channel episode, the commit ends the episode - kept, or thrown (lib/foundry/scout/episodeMoves.ts `episodeTarget`) -
+ * and no full video follows, so that is what the line says; on a dry night nothing moves, and it says that. A board from an
+ * idea keeps the shared words: that chain is archived and nothing distinguishes it from the one it was written for.
+ */
+export function storyboardVerdictLine(night: Pick<Night, "dry">, c: Pick<StoryboardCandidate, "fromEpisode">, verdict: "keep" | "reject"): string {
+  if (c.fromEpisode === undefined) return STORYBOARD_VERDICT[verdict];
+  if (night.dry === true) return verdict === "keep" ? "kept; a dry night moves no episode" : "refused; a dry night moves no episode";
+  return verdict === "keep" ? "the episode ends kept" : "refused: the episode ends thrown";
 }

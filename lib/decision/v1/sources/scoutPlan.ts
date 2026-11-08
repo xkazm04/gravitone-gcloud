@@ -441,8 +441,7 @@ function visualizerCells(night: Night, c: VisualizerCandidate, v1: Pick<ScoutV1,
   out.rows.push({ id: c.id, label: clip40(song?.title ?? `visualizer · ${c.track}`), group: "videos", ...(c.use === undefined ? {} : { use: c.use }), ...(ref === undefined ? {} : { ref }) });
 }
 
-/** What a kept storyboard does, as the preview says it. */
-export const STORYBOARD_VERDICT = { keep: "ready for a full video", reject: "refused: no full video grows from it" } as const;
+export { STORYBOARD_VERDICT } from "./scoutEpisodeWords.ts";
 
 /** A storyboard's frame cell (`c-10/panel-2`) and its words cell (`c-10/words`). */
 export const panelCell = (candidate: CandidateId, i: number): string => cellId(candidate, `panel-${i + 1}`);

@@ -34,11 +34,11 @@ import { modelItemId } from "../../../library/feeds/mesh.ts";
 import { sceneShelf } from "../../../library/feeds/scout.ts";
 import { buildConsequence, committedOutcome, decisionMap, fromV1, mediaRefs, mintPacket, runIdOf, v1Call, v1DigestOf, type AdapterRef, type ConsequenceParts, type DecisionAdapter, type DecisionsAt, type OpenPlan, type Preview } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
-import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, PROPOSAL_REJECTED, STORYBOARD_VERDICT, bornLine, build, commitOf, extractDecisions, ideaCell, meshKey, pieceCell, pieceVerdictLine, sameOutcome, sheetCellOf, sheetVerdictLine, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, PROPOSAL_REJECTED, bornLine, build, commitOf, extractDecisions, ideaCell, meshKey, pieceCell, pieceVerdictLine, sameOutcome, sheetCellOf, sheetVerdictLine, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
 import { reelCutVerdictLine, reelVerdictLine } from "./scoutReelCells.ts";
 import { reelCell, reelCutCell } from "../../../foundry/scout/reelTaste.ts";
 import { musicOf } from "./scoutMusic.ts";
-import { episodesOf } from "./scoutEpisodeWords.ts";
+import { episodesOf, storyboardVerdictLine } from "./scoutEpisodeWords.ts";
 import { nightRefusal, partOfBuilt, partWords, settledPart, withPart } from "./scoutPart.ts";
 import { inWing, isCharacter, keptTechnique, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta, partOfRun } from "./scoutWing.ts";
 
@@ -389,7 +389,7 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
       const words = wordsCell(c.id);
       const rejected = mine.some(([, v]) => v === "reject");
       const verdict = kept.has(words) || (mine.some(([, v]) => v === "keep") && !rejected) ? "keep" : rejected ? "reject" : undefined;
-      if (verdict !== undefined) parts.writes.push({ ...nightFile, candidate: words, detail: STORYBOARD_VERDICT[verdict] });
+      if (verdict !== undefined) parts.writes.push({ ...nightFile, candidate: words, detail: storyboardVerdictLine(v1.night, c, verdict) });
       const k = v1.knowledge[c.id];
       if (verdict === "keep" && k !== undefined) parts.writes.push(knowledgeWrite(v1.at.knowledge, c, k, words));
     } else if (c.kind === "genre" || c.kind === "venture") {
