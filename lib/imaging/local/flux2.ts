@@ -6,8 +6,9 @@
 //   1b. POST /upload/image  each reference still (spark scout-vision S3), fitted to 1024 px first (refResize.ts), then
 //                           named by its bytes (comfyLtx.ts's rule);
 //   2. POST /prompt         the graph below, our prompt, size and seed set, under our own client id;
-//   3. GET  /history/{id}   every 3 s until it is there, capped at 15 min (another session's prompts
-//                           may run ahead of ours; that wait counts against the cap);
+//   3. GET  /history/{id}   every 3 s until it is there (fluxWait.ts): 15 min once OUR prompt is running, counted
+//                           from the poll that finds it in queue_running; the wait behind another session's
+//                           prompts has its own, larger bound (90 min) and does not eat the running cap;
 //   4. GET  /view           the PNG SaveImage wrote.
 //
 // THE GRAPH is pipeline/vlm-probe/consistency.py `flux_workflow()` ported node for node. With no reference it is
@@ -27,7 +28,8 @@
 //
 // A SHARED SERVICE, TREATED AS ONE (lib/foundry/mesh/comfy.ts, docs/resources.md): this client never POSTs
 // /free - another tenant's models stay loaded - and never restarts anything. At the cap ours, and only ours,
-// leaves the queue: deleted while pending, interrupted BY ITS ID while running. Admission already waited on
+// leaves the queue: deleted while pending, interrupted BY ITS ID while running, on EVERY failure that leaves
+// it there (the cap, a lost prompt) - a withdrawal never throws over the sentence that caused it. Admission already waited on
 // the ComfyUI queue before the job started (@gt/domain/resource `admit`, engine "comfy").
 //
 // A COMFYUI ERROR IS KEPT VERBATIM (comfyLtx.ts's rule): the node's class, its id and its exception text, or
@@ -39,6 +41,7 @@ import { AppError } from "@gt/domain/errors";
 
 import { sleep as realSleep } from "../../sleep";
 import { fitReference } from "./refResize";
+import { awaitPrompt, comfyUnreachable, type Place } from "./fluxWait";
 
 export const FLUX_MODEL = "flux2-dev-fp8";
 /** The three files the graph's loaders name, by loader class and input (consistency.py `flux_workflow`). */
@@ -64,9 +67,6 @@ const MAX_REF_BYTES = 16 * 1024 * 1024;
 /** The seed range ComfyUI's RandomNoise takes and a JSON number holds exactly. */
 export const FLUX_SEED_MAX = 2 ** 48 - 1;
 const SAVE = "13";
-const POLL_MS = 3_000;
-const CAP_MS = 15 * 60_000;
-const LOST_POLLS = 6;
 const MAX_IMAGE_BYTES = 64 * 1024 * 1024;
 const PROMPT_MAX = 2_000;
 const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47];
@@ -88,7 +88,10 @@ export type FluxDeps = {
   readonly now?: () => number;
   readonly sleep?: (ms: number) => Promise<void>;
   readonly pollMs?: number;
+  /** The RUNNING cap, from when our prompt is seen running (default 15 min). */
   readonly capMs?: number;
+  /** The PENDING bound, from acceptance to start (default 90 min). */
+  readonly pendingCapMs?: number;
   /** The seed drawn when the request names none (default a random one). */
   readonly seed?: () => number;
 };
@@ -120,7 +123,7 @@ async function call(c: Ctx, rel: string, init: RequestInit & { readonly ms: numb
   try {
     return await c.f(`${c.base}${rel}`, { ...rest, signal: AbortSignal.timeout(ms) });
   } catch (e) {
-    throw unavailable(`ComfyUI at ${c.base} did not answer ${rel.split("?")[0]}: ${e instanceof Error ? e.message : String(e)}`);
+    throw comfyUnreachable(`ComfyUI at ${c.base} did not answer ${rel.split("?")[0]}: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
@@ -267,17 +270,19 @@ function imageOf(e: Entry): { filename: string; subfolder: string; type: string 
 
 const holds = (q: QueueDoc, id: string, which: "queue_running" | "queue_pending"): boolean => (q[which] ?? []).some((row) => row[1] === id);
 
-/** Ours, and only ours, out of the queue. */
+/** Where the queue holds our prompt; `null` when ComfyUI would not say. */
+async function placeOf(c: Ctx, id: string): Promise<Place | null> {
+  const q = await json<QueueDoc>(c, "/queue", { method: "GET", ms: 10_000 }).catch(() => null);
+  return q === null ? null : holds(q, id, "queue_running") ? "running" : holds(q, id, "queue_pending") ? "pending" : "neither";
+}
+
+/** Ours, and only ours, out of the queue. The sentence says what is KNOWN: a POST ComfyUI did not accept is not a withdrawal. Never throws. */
 async function withdraw(c: Ctx, id: string): Promise<string> {
-  const q = await json<QueueDoc>(c, "/queue", { method: "GET", ms: 10_000 }).catch(() => ({}) as QueueDoc);
-  if (holds(q, id, "queue_pending")) {
-    await call(c, "/queue", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ delete: [id] }), ms: 10_000 }).catch(() => undefined);
-    return "still queued behind other prompts, and was withdrawn";
-  }
-  if (holds(q, id, "queue_running")) {
-    await call(c, "/interrupt", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt_id: id }), ms: 10_000 }).catch(() => undefined);
-    return "still running, and was interrupted";
-  }
+  const where = await placeOf(c, id);
+  const post = async (rel: string, body: unknown): Promise<boolean> => (await call(c, rel, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), ms: 10_000 }).catch(() => null))?.ok === true;
+  if (where === null) return "not located: ComfyUI did not answer /queue, so it may still be queued or running";
+  if (where === "pending") return (await post("/queue", { delete: [id] })) ? "still queued behind other prompts, and was withdrawn" : "still queued behind other prompts; the withdrawal was not accepted, so it may still be queued";
+  if (where === "running") return (await post("/interrupt", { prompt_id: id })) ? "still running, and was interrupted" : "still running; the interrupt was not accepted, so it may still be running";
   return "in neither queue";
 }
 
@@ -291,7 +296,7 @@ export async function drawFlux(req: FluxRequest, deps: FluxDeps = {}): Promise<F
   const sleep = deps.sleep ?? realSleep;
   const t0 = now();
   await json<unknown>(c, "/system_stats", { method: "GET", ms: 10_000 }).catch((e: unknown) => {
-    throw unavailable(`ComfyUI is not reachable at ${c.base}, so no Flux frame was drawn (${e instanceof Error ? e.message : String(e)})`);
+    throw comfyUnreachable(`ComfyUI is not reachable at ${c.base}, so no Flux frame was drawn (${e instanceof Error ? e.message : String(e)})`);
   });
   const names: string[] = [];
   for (const b of refs) names.push(await upload(c, await fitReference(b)));
@@ -306,26 +311,20 @@ export async function drawFlux(req: FluxRequest, deps: FluxDeps = {}): Promise<F
     id = undefined;
   }
   if (typeof id !== "string" || id === "") throw unavailable(`ComfyUI queued the Flux graph but returned no prompt id: ${short(sentText)}`);
-  const cap = deps.capMs ?? CAP_MS;
-  let lost = 0;
-  let entry: Entry | undefined;
-  for (;;) {
-    const h = await json<Record<string, Entry>>(c, `/history/${encodeURIComponent(id)}`, { method: "GET", ms: 15_000 }).catch(() => null);
-    entry = h?.[id];
-    if (entry !== undefined && (entry.status?.completed === true || entry.status?.status_str === "error" || imageOf(entry) !== undefined)) break;
-    if (h === null) lost++;
-    else {
-      const q = await json<QueueDoc>(c, "/queue", { method: "GET", ms: 10_000 }).catch(() => null);
-      lost = q === null || (!holds(q, id, "queue_running") && !holds(q, id, "queue_pending") && entry === undefined) ? lost + 1 : 0;
-    }
-    if (lost >= LOST_POLLS) throw unavailable(`ComfyUI at ${c.base} lost prompt ${id}: unreachable, or holding it in neither its queue nor its history, for ${LOST_POLLS} polls (restarted?)`);
-    const waited = now() - t0;
-    if (waited >= cap) {
-      const was = await withdraw(c, id);
-      throw unavailable(`ComfyUI did not finish Flux prompt ${id} within ${Math.round(cap / 60_000)} min (waited ${Math.round(waited / 1000)} s); it was ${was}`);
-    }
-    await sleep(deps.pollMs ?? POLL_MS);
-  }
+  const entry = await awaitPrompt<Entry>(
+    id,
+    now(),
+    {
+      history: async () => {
+        const h = await json<Record<string, Entry>>(c, `/history/${encodeURIComponent(id)}`, { method: "GET", ms: 15_000 }).catch(() => null);
+        return h === null ? null : h[id];
+      },
+      place: () => placeOf(c, id),
+      withdraw: () => withdraw(c, id),
+      done: (e) => e.status?.completed === true || e.status?.status_str === "error" || imageOf(e) !== undefined,
+    },
+    { now, sleep, ...(deps.pollMs === undefined ? {} : { pollMs: deps.pollMs }), ...(deps.capMs === undefined ? {} : { capMs: deps.capMs }), ...(deps.pendingCapMs === undefined ? {} : { pendingCapMs: deps.pendingCapMs }) },
+  );
   const failed = failureOf(id, entry);
   if (failed !== null) throw unavailable(failed);
   const img = imageOf(entry);

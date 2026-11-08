@@ -82,7 +82,7 @@ describe("drawFlux", () => {
   it("at the cap withdraws ours from the queue, and refuses a bad request before anything is sent", async () => {
     const c = comfy({ never: true });
     let t = 0;
-    await expect(drawFlux({ prompt: "p" }, { fetch: c.f, base: "http://comfy.test", now: () => t, sleep: async (ms) => void (t += ms), capMs: 10_000, pollMs: 4_000 })).rejects.toThrow("ComfyUI did not finish Flux prompt p-1 within 0 min (waited 12 s); it was still queued behind other prompts, and was withdrawn");
+    await expect(drawFlux({ prompt: "p" }, { fetch: c.f, base: "http://comfy.test", now: () => t, sleep: async (ms) => void (t += ms), pendingCapMs: 10_000, pollMs: 4_000 })).rejects.toThrow("ComfyUI did not start Flux prompt p-1: it waited 12 s behind other prompts (limit 10 s, last seen pending); it was still queued behind other prompts, and was withdrawn");
     expect(c.asked).toContain("POST /queue");
     expect(c.asked.some((a) => a.includes("/free") || a.includes("/interrupt"))).toBe(false);
     const quiet = comfy();
