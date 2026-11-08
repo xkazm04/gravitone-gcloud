@@ -157,16 +157,18 @@ describe("the CLI, the Floor and Runs act on the same job", () => {
     mkdirSync(env.TMP, { recursive: true });
     return env;
   };
-  // The CLI exactly as the operator and the /article-run skill run it (`npx tsx`), in its own process.
+  // The CLI in its own process, through `node --import tsx` (one launcher layer fewer than `npx tsx`).
+  // `viaNpx` runs it exactly as the operator and the /article-run skill do (`npx --no-install tsx`); one case keeps that.
   // `status` prints one pretty document; every other verb ends with its one-line document.
-  const cli = (argv: string, whole = false): Record<string, unknown> => {
-    const out = execSync(`npx --no-install tsx pipeline/article.mts ${argv} --json`, { cwd: ROOT, env: cliEnv(), encoding: "utf8" });
+  const cli = (argv: string, whole = false, viaNpx = false): Record<string, unknown> => {
+    const launch = viaNpx ? "npx --no-install tsx" : `"${process.execPath}" --import tsx`;
+    const out = execSync(`${launch} pipeline/article.mts ${argv} --json`, { cwd: ROOT, env: cliEnv(), encoding: "utf8" });
     return JSON.parse(whole ? out : out.trim().split("\n").at(-1) ?? "{}") as Record<string, unknown>;
   };
 
   it("`article.mts run --detach` enqueues job:run:<id>; Runs draws and pauses and resumes THAT job; `resume <id>` drives it to the gate", { timeout: 240_000 }, async () => {
     withStubVendor();
-    const made = cli(`run --topic "the shared tax" --dry --detach`);
+    const made = cli(`run --topic "the shared tax" --dry --detach`, false, true);
     const runId = String(made["runId"]);
     const jobId = String(made["jobId"]);
     expect(jobId).toBe(`job:run:${runId}`);

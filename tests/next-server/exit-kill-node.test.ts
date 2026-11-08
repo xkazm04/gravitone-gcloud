@@ -127,9 +127,9 @@ const linesOf = (stdout: string): Record<string, unknown>[] =>
       return d.value;
     });
 
-/** `article.mts` exactly as the operator and the /article-run skill run it. */
+/** `article.mts` through `node --import tsx`: the same loader `npx tsx` resolves, one process layer fewer under load. */
 function articleCli(env: NodeJS.ProcessEnv, args: string): Record<string, unknown> {
-  return lastDoc(execSync(`npx --no-install tsx pipeline/article.mts ${args} --json`, { cwd: ROOT, env, encoding: "utf8", timeout: 120_000 }));
+  return lastDoc(execSync(`"${process.execPath}" --import tsx pipeline/article.mts ${args} --json`, { cwd: ROOT, env, encoding: "utf8", timeout: 120_000 }));
 }
 
 const WORKER_ARGS = ["--disable-warning=ExperimentalWarning", "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", RUNNER, "--once", "--json", "--lanes", "seat.text", "--idle-ms", "100"];

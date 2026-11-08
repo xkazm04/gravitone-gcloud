@@ -1,4 +1,4 @@
-// /music-clip END TO END through the real CLI (`npx tsx pipeline/music-clip.mts`,
+// /music-clip END TO END through the real CLI (`node --import tsx pipeline/music-clip.mts`,
 // spawned without a shell), in a temp folder: a 30 s tone as the track, the
 // fixture timeline as the analysis (WP1's analyser is not called - the analyze
 // verb itself is exercised only for its no-spend refusal), then board a, the
@@ -21,11 +21,10 @@ import { sha1File, writeClipJson, writeState } from "../../lib/music-clip/folder
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const run = promisify(execFile);
-const NPX = [path.join(path.dirname(process.execPath), "node_modules/npm/bin/npx-cli.js"), path.join(path.dirname(process.execPath), "../lib/node_modules/npm/bin/npx-cli.js")].find((p) => fs.existsSync(p)) as string;
 
 async function cli(...args: string[]): Promise<{ code: number; json: Record<string, unknown> }> {
   try {
-    const { stdout } = await run(process.execPath, [NPX, "--no-install", "tsx", "pipeline/music-clip.mts", ...args, "--json"], { cwd: ROOT, timeout: 120_000, windowsHide: true, env: { ...process.env, GRAVITONE_STORE_PATH: path.join(tmpdir(), "music-clip-never.sqlite") } });
+    const { stdout } = await run(process.execPath, ["--import", "tsx", "pipeline/music-clip.mts", ...args, "--json"], { cwd: ROOT, timeout: 120_000, windowsHide: true, env: { ...process.env, GRAVITONE_STORE_PATH: path.join(tmpdir(), "music-clip-never.sqlite") } });
     return { code: 0, json: JSON.parse(stdout.trim().split("\n").pop() as string) };
   } catch (e) {
     const x = e as { code?: number; stdout?: string };
