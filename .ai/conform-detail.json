@@ -18433,6 +18433,57 @@
           "evidence": "packages/producers/src/still/define.ts:17 The still prompt is passed through unchanged. Light is never set here."
         }
       ]
+    },
+    "4eabdc72-cf31-48f3-a218-98ebd0914ff1/concurrency-guards": {
+      "context": "runtime-support-and-local-mode",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:54:37.737Z",
+      "worker": "bcc0708a-bf59-452c-9f0f-1ca0f3a63bf4",
+      "techniques": [
+        {
+          "technique": "cross-process-exclusion",
+          "verdict": "deviation",
+          "evidence": "lib/diskTx.ts:76 The lock has holder identity ({pid, at, by}), creates exclusively (wx) and has a staleness bound. The takeover is still check-then-delete: contender B can stat the old lock, then A deletes it and creates a fresh one, and B's rm then removes A's live lock. The technique names this exact failure."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "deviation",
+          "evidence": "lib/diskTx.ts:68 Release does not check who it is releasing. A holder that ran past staleMs and lost its lock to a takeover deletes the new holder's lock when it releases. Structural release itself is correct: try/finally in exclusiveSection, staleMs for a dead holder, waitMs for a hung wait."
+        },
+        {
+          "technique": "atomic-file-publish",
+          "verdict": "deviation",
+          "evidence": "lib/renameRetry.ts:27 The retry is classified (EPERM/EBUSY/EACCES only) and bounded with caller-chosen backoff. When the budget runs out it rethrows the bare permission error without the attempt count or elapsed time, which is the failure the technique names. Cleaning up the temp file is left to each caller (renameRetrySync.ts header)."
+        },
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "conformant",
+          "evidence": "lib/diskTx.ts:102 One reusable run-with-guard primitive for every multi-writer JSON store. The second caller is queued (in-process FIFO, then a file-lock wait). A timeout surfaces as a distinct LockTimeout or a store-specific error, not as an operation failure."
+        },
+        {
+          "technique": "critical-section-across-a-suspension",
+          "verdict": "conformant",
+          "evidence": "lib/diskTx.ts:108 The read-modify-write body is held under the lock across its awaits on purpose and is not split, so no check-to-use gap is opened."
+        },
+        {
+          "technique": "guard-key-design",
+          "verdict": "conformant",
+          "evidence": "lib/diskTx.ts:3 The key is the store's own lock file (one per store, resolved per call), shared with the Python writers through the same protocol. The granularity is one store, chosen deliberately."
+        },
+        {
+          "technique": "cache-value-not-handle",
+          "verdict": "not-applicable",
+          "evidence": "lib/diskTx.ts:91 The serializer queues and never hands joiners a shared completion handle. A failed job does not poison the queue, and Node does not tear down continuations, so the join precondition does not arise."
+        },
+        {
+          "technique": "renewal-deadline-two-thirds-ttl",
+          "verdict": "not-applicable",
+          "evidence": "lib/diskTx.ts:37 This is a machine-local lock with a creation-mtime TTL and no renewal, justified because a mutation takes milliseconds. There is no cluster lock heartbeat to size."
+        }
+      ]
     }
   }
 }

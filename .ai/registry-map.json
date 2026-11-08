@@ -15418,7 +15418,11 @@
           "revision": 16,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/diskTx.ts:76 The cross-process lock breaks a stale lock with a plain delete and retries, not an atomic replace-if-unchanged. Two contenders that both saw the lock as stale can therefore both take it over, and the race comes back one level up.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18
         },
         {
           "subject": "serving-process-topology",
