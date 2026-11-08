@@ -10674,7 +10674,11 @@
           "revision": 16,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/ledger/v1/sources/mv.ts:118 These sources are read-only projections. Their concurrency duty is to make re-syncs and restarted attempts converge, and they do it with natural event keys: each fact is keyed on purpose by record, fact and attempt. A replayed sync appends nothing, and a late or overwritten attempt stays its own event instead of merging into the next one.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18
         },
         {
           "subject": "data-access",
