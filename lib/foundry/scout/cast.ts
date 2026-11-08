@@ -1,7 +1,7 @@
 // CASTING A KEPT CHARACTER (spark scout-vision S3) - the one door a character's picture passes to reach a frame,
 // and the one place her identity is written into a prompt.
 //
-// THE GUARD, `castStillOf`. Every reference still Flux receives - her kept portrait for her reference sheet, her kept
+// THE GUARD, `castStillOf`. Every reference still an engine receives - her kept portrait for her reference sheet, her kept
 // sheet for a frame she is cast in - is read here and nowhere else, and only when ALL of this holds:
 //   - the character is a kept one (./characters.ts keptCharacters, over the scout nights and the muse archive);
 //   - the ref asked for IS her kept portrait's `<runId>/<c-id>` or her kept sheet's - a ref, never a path, and never

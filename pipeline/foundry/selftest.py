@@ -980,6 +980,7 @@ def test_replicate_poll_survives_a_busy_card_and_names_a_dead_one():
     import urllib.error
     import urllib.request
     R = load_vlm("replicate")
+    R.flux_workflow = lambda *_a, **_k: {}  # the refused graph stubbed: this case tests the poll loop
     done = {"p1": {"outputs": {"13": {"images": [{"filename": "replica_00001_.png", "subfolder": ""}]}}}}
 
     def run(alive, history):
@@ -1060,6 +1061,7 @@ def test_motion_chain_refuses_to_restart_from_the_hero():
             read=lambda *a: {}, write_shot=lambda *a, **k: None)
         M.stage_reference = lambda p: staged.append(Path(p).name) or Path(p).name
         M.generate = lambda wf, timeout=0: None
+        M.flux_workflow = lambda *_a, **_k: {}
         M.collect = lambda prefix, dest, length: collected(prefix)
         M.guard.recycle_comfy = lambda *a: True
         M.guard.vram_ok = lambda: True

@@ -305,6 +305,16 @@ export const PART_OPTIONS: Readonly<Record<WorkKind, KindOptions>> = {
         pace: proto(20, "`Dojo · 2 cycles` drawn at 40 min"),
         usd: { unpriced: "a Dojo cycle's render count is set by its gen-spec, unknown until the cycle is planned; the judge calls Gemini unmetered (pipeline/foundry/dojo_judge.py)" },
       },
+      {
+        // The local stack's video pairs (Wan, H3); its image pairs were Flux 2's and refuse in dojo_pairs.py.
+        via: "local",
+        provider: "comfy",
+        model: "wan-h3-local",
+        lane: "gpu.local",
+        label: "Wan 2.2 · H3 · local pairs",
+        pace: proto(20, "a local cycle assumed alike"),
+        usd: LOCAL_FREE,
+      },
     ],
   },
 };

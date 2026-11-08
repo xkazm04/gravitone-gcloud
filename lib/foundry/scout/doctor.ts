@@ -46,9 +46,7 @@ import { WING_STORE_ENV } from "./store";
 // ONE NIGHT TYPE (spark scout-vision S3): the muse wing folded into the scout loop, so there is no stills-only preflight -
 // a night's character ideas are drawn on the studio line above, like every other idea.
 // (This preflight has no TRELLIS or Blender line: a game asset's mesh job meets those on
-// the worker, lib/foundry/mesh.) The STORYBOARDS' Flux files (spark scout-storyboards) are read off the same
-// ComfyUI once it answers, as a note: a missing file fails those storyboards' frames with ComfyUI's own
-// sentence, and the night goes on. The local Ollama model (spark scout-vision S6) is a note too
+// the worker, lib/foundry/mesh.) The local Ollama model (spark scout-vision S6) is a note too
 // (./doctorOllama.ts): without it a draft is the CLI's and the eye is Gemini's - money, not a step.
 
 export type Check = {

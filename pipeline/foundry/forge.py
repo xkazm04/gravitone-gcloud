@@ -214,6 +214,50 @@ def flux_workflow(*_args, **_kwargs):
     guard.refuse_flux2("the forge")
 
 
+# ── the run ─────────────────────────────────────────────────────────────────
+
+def build_manifest(plan, run_id, styles):
+    scenes = []
+    for s in plan["scenes"]:
+        scenes.append({"id": s["id"], "frame": s["frame"], "note": s.get("note", ""),
+                       "source": f"scenes/{s['id']}/source.jpg",
+                       "annotation": None, "annotation_from": None})
+    candidates = []
+    for s in plan["scenes"]:
+        for sid in plan["styles"]:
+            for m in plan["mechanisms"]:
+                for seed in plan.get("seeds", [20260826]):
+                    cid = f"{sid}--{m['id']}--s{seed}"
+                    candidates.append({
+                        "id": f"{s['id']}/{cid}", "scene": s["id"], "style": sid,
+                        "mechanism": m["id"], "seed": seed,
+                        "file": f"scenes/{s['id']}/candidates/{cid}.png",
+                        "sidecar": f"scenes/{s['id']}/candidates/{cid}.json",
+                        "status": "pending", "grade": None, "error": None,
+                    })
+    return {
+        "id": run_id, "created": now(), "plan": plan,
+        "styles": {sid: styles[sid] for sid in plan["styles"]},
+        "status": "created", "progress": {"stage": "created", "done": 0, "total": 0},
+        "scenes": scenes, "candidates": candidates, "log": [],
+    }
+
+
+# ── the stand-ins a DRY job runs on (Phase 4, decision 4) ───────────────────
+#
+# A dry job runs the whole plan with no ComfyUI and no Ollama: every vendor call
+# is answered here, and what it would have sent is kept on the sidecar, so a dry
+# run still shows the prompts and workflows the evening would have spent. The
+# plate is a real file (a 1x1 PNG), so the disk path - the resume rule, the
+# reader, the cull - runs whole. A dry run is marked `dry: true` on run.json and
+# on every grade; its plates are not worth culling.
+
+DRY_MODEL = "dry/stand-in"
+DRY_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
+DRY_ANNOTATION = {"shot_size": "full shot", "camera_angle": "eye level", "note": "a dry stand-in: no annotator was called"}
+
+
 def dry_pause():
     """FOUNDRY_DRY_STEP_MS: how long a stand-in takes. A kill test needs a step
     still in flight when the signal lands; nothing else sets it."""
