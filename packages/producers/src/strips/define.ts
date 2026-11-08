@@ -34,9 +34,9 @@ import { lintOutput, parseStep, planStrips, renderOutput, turnOutput, type CardS
 //     and a dry job is answered by stand-ins (a placeholder page, a placeholder image, a capture
 //     that is not taken): one mechanism where v1's `--dry` only printed the card list.
 //
-// THE CEILING HOLDS INSIDE A TURN (cost-metering: one-pot-across-delegation). The kernel admits
-// a turn against its $3.20 estimate; one turn has reported $13. So the writer's own
-// `--max-budget-usd` is set to what the job has left, as lib/articles/loop.ts did for its runs.
+// THE CEILING HOLDS BETWEEN TURNS (cost-metering: one-pot-across-delegation). The kernel admits
+// a turn against its $3.20 estimate; one turn has reported $13. The seat takes no budget flag
+// (operator, 2026-10-23), so the ceiling refuses the turn after, from what the ledger booked.
 
 /** What a seat turn's result must carry for the meter and the classification. */
 export type TurnReport = { readonly outcome: string; readonly costUsd?: number; readonly errors: readonly string[] };

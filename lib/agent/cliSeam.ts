@@ -71,7 +71,7 @@ export interface RunAgentInput {
   tools?: readonly AgentTool[];
   timeoutMin: number;
   turn: AgentTurnClass;
-  /** Passed as `--max-budget-usd` when set. */
+  /** What this turn may be charged against a ceiling, for the caller's books. Never reaches the CLI (agentArgs.ts). */
   maxBudgetUsd?: number;
 }
 
