@@ -18650,6 +18650,41 @@
         }
       ],
       "registryProposal": "negative-claims-are-pinned is written about pinning a document's wording. It does not say what to do when the negative claim lives in a code comment and a gate over the build output can check the truth itself, which is stronger than pinning the wording. A sentence saying that an artifact-level forbidden-substring gate satisfies the technique would make this case easy to judge."
+    },
+    "2ffc5528-1ffc-4179-bd6a-1a5f35e36da9/engine-binding-surface": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "engine-binding-surface",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:54:02.568Z",
+      "worker": "dd1e4661-defc-451f-ac38-4a93d471e564",
+      "techniques": [
+        {
+          "technique": "capability-deferred-release",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:333 ImageBitmap.close() is legal on whichever thread holds the transferred bitmap. This release is not limited to one thread, so the technique's precondition does not hold."
+        },
+        {
+          "technique": "hierarchy-as-three-relations",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:20 This is a closed two-member union narrowed with instanceof, not a re-expressed foreign class hierarchy. The technique's 'closed set' when-not-to-use case applies."
+        },
+        {
+          "technique": "pre-resolve-what-the-engine-cannot-await",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.worker.ts:51 The worker's handler is itself async, and no unchangeable engine calls back synchronously for a resource."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:89 The raster service runs repository-owned TypeScript through browser APIs, and context and repository searches found no WebAssembly, PhantomData, or thread_local constructs indicating the foreign binding obligations covered by this subject.",
+          "evaluatedAt": "2026-10-22",
+          "worker": null,
+          "reason": "replaced by dd1e4661-defc-451f-ac38-4a93d471e564"
+        }
+      ]
     }
   }
 }

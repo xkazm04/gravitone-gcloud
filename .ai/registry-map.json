@@ -9657,14 +9657,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_landing/cosmos/engine/raster.ts:89 The raster service runs repository-owned TypeScript through browser APIs, and context and repository searches found no WebAssembly, PhantomData, or thread_local constructs indicating the foreign binding obligations covered by this subject.",
-          "evaluatedAt": "2026-10-22",
-          "evaluatedAgainst": "sha256-b2:823cd55ac89d000b",
-          "evaluatedRevision": 2,
+          "evidence": "app/_landing/cosmos/engine/raster.worker.ts:3 The worker and the main-thread fallback both run the repository's own TypeScript job runner over standard browser canvas APIs, and a search of the context directory found no WebAssembly, wasm, PhantomData, thread_local or extern \"C\" (zero hits), so this code has no binding layer over a foreign engine for the subject to govern.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:cf656e76f4ec68fa",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "ff0b289f-5f39-4747-acce-5d56797b9c43",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
