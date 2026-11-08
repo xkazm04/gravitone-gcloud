@@ -18685,6 +18685,33 @@
           "reason": "replaced by dd1e4661-defc-451f-ac38-4a93d471e564"
         }
       ]
+    },
+    "51e3f5c9-f984-40e7-9588-f8eab2b916f9/frame-direction": {
+      "context": "score-and-ads",
+      "subject": "frame-direction",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:09:46.968Z",
+      "worker": "cb9aebfc-d306-4d7a-98bc-5cb21fa2e051",
+      "techniques": [
+        {
+          "technique": "motion-intent-authoring",
+          "verdict": "deviation",
+          "evidence": "lib/motion/direction.ts:115 Up to three element moves per frame breaks the one-move rule. directMotion's only input is the plate (line 226), so rule 4 (let the move carry the beat's argument) cannot hold. Line 91 frames the output as 'the text prompt for an image-to-video model', which is renderer configuration and not medium-independent intent. A decline leaves the field empty instead of authoring stillness. Text bans (line 116) and camera-move filtering do conform."
+        },
+        {
+          "technique": "plate-elements-text-split",
+          "verdict": "conformant",
+          "evidence": "lib/ads/types.ts:140 An ad shot's super is its own field and is drawn by code at Finish, never by the image model. The image line (line 137) carries only the picture."
+        },
+        {
+          "technique": "per-beat-rejection",
+          "verdict": "not-applicable",
+          "evidence": "lib/ads/validate.ts:23 The ad scenarios validator refuses the whole round on any shot finding and lists every finding per shot. The round is a first generation with no earlier content and its shots are coupled by rung structure, so the technique's own exception applies: batch the fixes before applying anything. It is not a direction pass over existing frames. Separately, line 546 rejects duration words in motion, which the technique's restraint list forbids (see registryProposal)."
+        }
+      ],
+      "registryProposal": "Two techniques disagree on durations in motion text. per-beat-rejection lists 'no duration or easing vocabulary checks' among the things a validator must not enforce. motion-intent-authoring bans durations in motion text ('no durations, no frame rates, no easing vocabulary'), and a defect that is measurable by construction is exactly what per-beat-rejection says to enforce. lib/ads/validate.ts:546 enforces the ban and is right by one technique and wrong by the other. The standard should say which one wins."
     }
   }
 }

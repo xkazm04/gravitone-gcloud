@@ -15553,7 +15553,11 @@
           "revision": 2,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/motion/direction.ts:115 The motion-direction turn reads only the rendered plate (no beat, no function) and asks for up to three independently moving elements as an image-to-video prompt that is stored in FrameClip.motion, so the move can be neither one semantic change nor the beat's argument, and the intent field is filled with renderer prompt text.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:b936a9a456cd5767",
+          "evaluatedRevision": 2
         },
         {
           "subject": "motion",
