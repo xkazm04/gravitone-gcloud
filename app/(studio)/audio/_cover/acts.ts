@@ -10,21 +10,26 @@
 //
 // The answer is the action core's envelope (./contract.ts CoverActs): an Error does not survive the action boundary.
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
-import type { Result } from "@gt/domain/errors";
+import { err, type Result } from "@gt/domain/errors";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
 import { action } from "../../../_server/action.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { actorOf } from "../../../../lib/principal.ts";
+import { storesDisagree } from "../../../../lib/sound/cover/reconcile.ts";
 import { briefCoverBody, briefInput, launchCoverBody, launchInput, pickCoverBody, pickInput, saveCoverStylesBody, stylesInput } from "./actsCore.ts";
 import type { CoverLaunch, CoverPlan } from "./contract.ts";
 
 const launchAction = action("audio cover launch", launchInput, async (i, who): Promise<Result<CoverLaunch>> => {
+  const stores = storesDisagree(process.env);
+  if (stores !== undefined) return err("refused", stores);
   const k = kernel();
   if (!k.ok) return k;
   return launchCoverBody(i, k.value.store, actorOf(who), dryOnlyFrom(process.env));
 });
 const briefAction = action("audio cover brief", briefInput, async (i, who): Promise<Result<CoverLaunch>> => {
+  const stores = storesDisagree(process.env);
+  if (stores !== undefined) return err("refused", stores);
   const k = kernel();
   if (!k.ok) return k;
   return briefCoverBody(i, k.value.store, actorOf(who), dryOnlyFrom(process.env));

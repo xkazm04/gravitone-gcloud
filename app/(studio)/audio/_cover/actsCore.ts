@@ -12,6 +12,7 @@ import { launchCover } from "../../../../lib/producers/cover.ts";
 import { launchCoverBrief } from "../../../../lib/producers/coverBrief.ts";
 import { exportMp3 } from "../../../../lib/sound/cover/cut.ts";
 import { coverFileHref, WINNER_FILE } from "../../../../lib/sound/cover/href.ts";
+import { jobExistsIn, reconcileCover } from "../../../../lib/sound/cover/reconcile.ts";
 import { coverFileAbs, mutateCover, readCover } from "../../../../lib/sound/cover/store.ts";
 
 // THE COVER'S ACTS, BODIES (spark track-mirror-studio, WP2): what ./acts.ts's Server Actions run once the action
@@ -59,9 +60,17 @@ export function sectionProblem(c: CoverRecord, startS: number, endS: number): st
   return undefined;
 }
 
+/** The cover as the job store has it, written back when a job turned out to be lost, so a launch can start clean. */
+async function healed(id: string, store: Store): Promise<CoverRecord | undefined> {
+  const c = await readCover(id);
+  if (c === undefined) return undefined;
+  const exists = jobExistsIn(store);
+  return reconcileCover(c, exists) === c ? c : mutateCover(id, (r) => reconcileCover(r, exists));
+}
+
 export async function launchCoverBody(i: z.output<typeof launchInput>, store: Store, actor: Actor, dryOnly: boolean): Promise<Result<CoverLaunch>> {
   const { plan, token } = i;
-  const c = await readCover(plan.id);
+  const c = await healed(plan.id, store);
   if (c === undefined) return err("not-found", `no cover ${plan.id}`);
   const launchable = (s: CoverRecord["state"]): string | undefined => (LAUNCHABLE.has(s) ? undefined : `cover ${plan.id} is ${s}; it launches from draft or failed`);
   const first = launchable(c.state) ?? sectionProblem(c, plan.startS, plan.endS);
@@ -83,7 +92,7 @@ export async function launchCoverBody(i: z.output<typeof launchInput>, store: St
  *  record's `brief` (queued on confirm, then running, done or failed); this door only refuses a cover the brief
  *  could not write into, before any receipt is read. */
 export async function briefCoverBody(i: z.output<typeof briefInput>, store: Store, actor: Actor, dryOnly: boolean): Promise<Result<CoverLaunch>> {
-  const c = await readCover(i.id);
+  const c = await healed(i.id, store);
   if (c === undefined) return err("not-found", `no cover ${i.id}`);
   if (!LAUNCHABLE.has(c.state)) return err("refused", `cover ${i.id} is ${c.state}; a brief is written for a draft or a failed cover`);
   return launchCoverBrief(store, i.id, { actor, dryOnly, ...(i.token === undefined ? {} : { token: i.token }) });

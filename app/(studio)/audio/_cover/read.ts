@@ -3,6 +3,8 @@ import "server-only";
 import type { CoverCard, CoverDeskView, CoverRecord } from "@gt/domain/cover";
 
 import { coverFileHref } from "../../../../lib/sound/cover/href.ts";
+import { kernel } from "../../../../lib/kernelStore.ts";
+import { jobExistsIn, reconcileCover, storesDisagree } from "../../../../lib/sound/cover/reconcile.ts";
 import { listCovers } from "../../../../lib/sound/cover/store.ts";
 
 // THE COVER DESK'S READ (spark track-mirror-studio, WP2): every cover newest first, each with the addresses its
@@ -24,9 +26,19 @@ export function coverCard(record: CoverRecord): CoverCard {
   };
 }
 
+/** Each record as the job store has it: shown, not written. A server whose stores disagree, or whose kernel is
+ *  down, cannot tell a lost job from a job it was never pointed at, and leaves the records as they are. */
+function truthful(records: readonly CoverRecord[]): readonly CoverRecord[] {
+  if (storesDisagree(process.env) !== undefined) return records;
+  const k = kernel();
+  if (!k.ok) return records;
+  const exists = jobExistsIn(k.value.store);
+  return records.map((r) => reconcileCover(r, exists));
+}
+
 export async function readCoverDesk(q: Q): Promise<CoverDeskView> {
   const records = [...(await listCovers())].sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : a.id < b.id ? 1 : -1));
-  const covers = records.map(coverCard);
+  const covers = truthful(records).map(coverCard);
   const asked = one(q["cover"]);
   const current = covers.find((c) => c.record.id === asked) ?? covers[0];
   return { covers, ...(current === undefined ? {} : { current }) };

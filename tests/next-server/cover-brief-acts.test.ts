@@ -7,6 +7,12 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+// The stand-in producer below writes "queued" without enqueueing a job, so every job counts as present here; the rule
+// for a job that is really gone has its own test (cover-reconcile.test.ts).
+vi.mock("../../lib/sound/cover/reconcile.ts", async (real) => ({
+  ...(await real<typeof import("../../lib/sound/cover/reconcile.ts")>()),
+  jobExistsIn: () => () => true,
+}));
 
 const ROOT = vi.hoisted(() => {
   const fs = process.getBuiltinModule("node:fs");
