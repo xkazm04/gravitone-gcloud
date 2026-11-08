@@ -19,6 +19,7 @@ import { stillOf } from "../../../foundry/scout/visualizer.ts";
 import { meshFileUrl } from "../../../library/feeds/mesh.ts";
 import { decisionMap, type Loss } from "../types.ts";
 import { extractAdapter, planLooks, type ExtractV1 } from "./extract.ts";
+import { panelLosses } from "./scoutBoardLoss.ts";
 import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 import { reelCells } from "./scoutReelCells.ts";
 import { museFacts, scoutFileUrl } from "./scoutWing.ts";
@@ -462,6 +463,8 @@ function storyboardCells(night: Night, c: StoryboardCandidate, v1: Pick<ScoutV1,
   }
   const jobId = c.jobId ?? `scout:${night.id}`;
   let frames = 0;
+  const gone = panelLosses(c, panelCell);
+  out.losses.push(...gone.losses);
   (c.images ?? []).forEach((file, i) => {
     if (file === null) return;
     const m = v1.media[file];
@@ -484,8 +487,8 @@ function storyboardCells(night: Night, c: StoryboardCandidate, v1: Pick<ScoutV1,
     out.cells.push({ id: trialClipCell(c.id, i), candidate: c.id, kind: "storyboard", row: c.id, jobId, media: m, grades: [], url: scoutFileUrl(night.id, clip.path), words: { label: `clip ${i + 1}`, meta: clipMeta(clip), ...(c.panels[i] === undefined ? {} : { prompt: c.panels[i] }) } });
     clips++;
   });
-  // A panel the engine refused names itself in `error` (`panel N: ...`), beside the frames that drew.
-  if (c.error !== undefined) out.losses.push({ candidate: c.id, grade: "approximate", reason: c.error });
+  // A panel the engine refused is its own loss above; what else `error` holds (a clip's sentence, the job's) rides here.
+  if (gone.rest !== undefined) out.losses.push({ candidate: c.id, grade: "approximate", reason: gone.rest });
   const body = storyboardBody(c);
   const framesWord = frames === c.panels.length ? `${frames} frame${frames === 1 ? "" : "s"}` : `${frames} of ${c.panels.length} frames`;
   const idea = c.fromIdea === undefined ? undefined : v1.ideas?.[c.fromIdea];
