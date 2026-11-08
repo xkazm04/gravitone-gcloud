@@ -209,8 +209,10 @@ async function read(ref: AdapterRef, storeOf: () => Result<Store>): Promise<Resu
             ? [...(c.images ?? []).map((f) => f ?? undefined), ...(c.clips ?? []).map((x) => x?.path)]
             : c.kind === "piece"
               ? [c.video]
-              : c.kind === "sheet" || c.kind === "reel"
+              : c.kind === "sheet"
                 ? [c.image]
+                : c.kind === "reel"
+                  ? [c.image, c.video]
                 : c.kind === "reel-cut"
                   ? [c.video]
                 : [c.video, c.still];
