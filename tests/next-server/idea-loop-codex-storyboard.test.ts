@@ -137,6 +137,7 @@ describe("a codex-drawn storyboard of a passing idea", { timeout: 60_000 }, () =
     const c = r.candidates[0];
     expect(c).toMatchObject({ status: "rendered", fromIdea: `idea-loop/${ID(1)}`, seeds: [0, 0, 0] });
     expect(c?.jobId).toBeUndefined();
+    expect(c?.drawnBy).toBe("codex");
     expect(c?.images).toHaveLength(3);
     for (const f of c?.images ?? []) expect(inspectPng(readFileSync(resolveInNight(n.id, String(f)))).width).toBe(300);
     expect(calls().map((x) => x.mode)).toEqual(["ok", "ok", "ok"]);
@@ -188,6 +189,7 @@ describe("a codex-drawn storyboard of a passing idea", { timeout: 60_000 }, () =
     const r = await withKernel((k) => storyboardAct(ctxOf(k, { live: false }), n.id, [brief(ID(4), 2)], codex()));
     expect(r.dry).toBe(true);
     expect(r.candidates[0]?.images).toEqual([]);
+    expect(r.candidates[0]?.drawnBy).toBeUndefined();
     expect(calls()).toEqual([]);
   });
 });
