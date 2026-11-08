@@ -97,7 +97,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   closeProcessKernel();
 });
-afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
+afterAll(() => rmSync(ROOT, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
 
 const guardedRunCli = guardOrphans(runCli);
 
