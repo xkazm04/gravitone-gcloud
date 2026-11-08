@@ -10449,7 +10449,11 @@
           "revision": 3,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/ledger/v1/types.ts:10 In this contract a 'Source' is a reader of a v1 store that feeds the ledger, not a broadcast source or scene. I searched lib/ledger/v1 for obs-websocket, CreateInput, RemoveInput, GetSceneList and websocket and found none, so there is no control socket and no created source or scene for the six techniques to govern.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a1b7eb09c11f92e6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "supply-chain",
@@ -10569,7 +10573,11 @@
           "revision": 3,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/publish.ts:19 These adapters only read v1 JSON stores on local disk and project them into ledger events. I searched lib/ledger/v1 and the whole tracked repo for obs-websocket, CreateInput, RemoveInput, GetSceneList, websocket and streamlabs, and nothing in the tree drives broadcasting software over a control socket (the only repo-wide hit, 'vmix' in lib/cut/narrationMix.ts, is an ffmpeg filter label), so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a1b7eb09c11f92e6",
+          "evaluatedRevision": 3
         },
         {
           "subject": "audit-logging",

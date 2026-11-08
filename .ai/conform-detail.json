@@ -19039,6 +19039,26 @@
           "evidence": "app/api/mcp/route.ts:1 Capability form only: a stateless tool server with no agent card and no task lifecycle. That is the default the standard recommends."
         }
       ]
+    },
+    "b94edc9f-f1d4-4be0-99cb-4483648000eb/broadcast-software-control": {
+      "context": "ledger-v1-sources",
+      "subject": "broadcast-software-control",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:50:24.453Z",
+      "worker": "42d8a224-31ad-42dd-9abc-48a00b9c8524",
+      "techniques": []
+    },
+    "e175da72-0e26-4725-95bf-eecd8c3ffc6f/broadcast-software-control": {
+      "context": "ledger-v1-projection-core",
+      "subject": "broadcast-software-control",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:50:24.453Z",
+      "worker": "42d8a224-31ad-42dd-9abc-48a00b9c8524",
+      "techniques": []
     }
   }
 }
