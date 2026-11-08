@@ -5,7 +5,7 @@ file is what THIS machine can do and what THIS repo trains.
 
 ## runner
 
-This box is a GPU box: one RTX 4090 (24 GB), ComfyUI + Flux 2 for stills,
+This box is a GPU box: one RTX 4090 (24 GB), ComfyUI for video (image stills via Flux 2 are refused since its removal, 2026-11-08),
 Ollama (`qwen3.8:27b`) for annotation and grading. The forge manages the
 engine turn itself (`pipeline/vlm-probe/guard.py` starts/recycles ComfyUI and
 enforces the one-engine-at-a-time rule) — the runner template never starts
@@ -20,7 +20,7 @@ verdict is about the stack its cycle names:
 
 | | **local** ($0) | **google** (billed) |
 |---|---|---|
-| image | Flux 2 via ComfyUI (`dojo_pairs.py`), seed-matched | Nano Banana 2 via router (`dojo-pairs-nb.mts`), no seed → k repeats per arm |
+| image | refused since Flux 2's removal (2026-11-08) (`dojo_pairs.py`), was seed-matched | Nano Banana 2 via router (`dojo-pairs-nb.mts`), no seed → k repeats per arm |
 | video | Wan 2.2 t2v; **MiniMax H3** ref2va/fl2va for reference-conditioned and serial cycles (operator authorization: research use, app non-commercial; H3's EU license row stands recorded and the call is the operator's, revisited when licensed peers land) | none declared |
 | eyes | ollama qwen3.8:27b | gemini-3.6-flash (`prefer: "google"`) |
 
