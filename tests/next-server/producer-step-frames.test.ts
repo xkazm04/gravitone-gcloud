@@ -23,7 +23,6 @@ import type { Holder } from "@gt/domain/job";
 import { blobStore } from "@gt/kernel/blob";
 import { get, list, retry } from "@gt/kernel/job";
 import { recover } from "@gt/kernel/job-run";
-import { ackLane } from "@gt/kernel/job-queue";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { readPart, writePart } from "@gt/kernel/parts/driver";
 import { compose } from "@gt/kernel/records/write";
@@ -159,8 +158,6 @@ describe("render plates", () => {
     must(recover(effectsOf(store), { holder: second, alive: () => false }));
     expect(must(get(store, jobId as never)).job).toMatchObject({ state: "interrupted", interruption: { stage: "unit:plate:u3" } });
     must(retry(store, jobId as never, OP));
-    // seat.text is a paying lane: a crash holds it until the operator has looked (LANE_PAYS).
-    must(ackLane(store, "seat.text", OP));
     const run = must(await driveStep((lane, hooks) => framesProducer(lane, hooks, eng), store, jobId, { dryOnly: false, run: { holder: second, alive: (pid) => pid !== first.pid } }));
     expect(run.outcome).toBe("done");
     expect(asked).toEqual(["u1", "u2", "u3"]);
