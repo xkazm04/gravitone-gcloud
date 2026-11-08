@@ -3,7 +3,8 @@
 // no websocket, no Python: four plain requests, each bounded by its own timeout, the whole draw by one cap.
 //
 //   1. GET  /system_stats   reachable, or refused with a sentence before anything is queued;
-//   1b. POST /upload/image  each reference still (spark scout-vision S3), named by its bytes (comfyLtx.ts's rule);
+//   1b. POST /upload/image  each reference still (spark scout-vision S3), fitted to 1024 px first (refResize.ts), then
+//                           named by its bytes (comfyLtx.ts's rule);
 //   2. POST /prompt         the graph below, our prompt, size and seed set, under our own client id;
 //   3. GET  /history/{id}   every 3 s until it is there, capped at 15 min (another session's prompts
 //                           may run ahead of ours; that wait counts against the cap);
@@ -37,6 +38,7 @@ import { createHash, randomInt, randomUUID } from "node:crypto";
 import { AppError } from "@gt/domain/errors";
 
 import { sleep as realSleep } from "../../sleep";
+import { fitReference } from "./refResize";
 
 export const FLUX_MODEL = "flux2-dev-fp8";
 /** The three files the graph's loaders name, by loader class and input (consistency.py `flux_workflow`). */
@@ -292,7 +294,7 @@ export async function drawFlux(req: FluxRequest, deps: FluxDeps = {}): Promise<F
     throw unavailable(`ComfyUI is not reachable at ${c.base}, so no Flux frame was drawn (${e instanceof Error ? e.message : String(e)})`);
   });
   const names: string[] = [];
-  for (const b of refs) names.push(await upload(c, b));
+  for (const b of refs) names.push(await upload(c, await fitReference(b)));
   const graph = fluxGraph({ prompt, seed, width, height, prefix: `gravitone/flux2-${seed}`, ...(names.length === 0 ? {} : { refs: names, late }) });
   const sent = await call(c, "/prompt", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt: graph, client_id: `gravitone-${randomUUID()}` }), ms: 30_000 });
   const sentText = await sent.text();
