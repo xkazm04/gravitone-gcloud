@@ -17458,36 +17458,41 @@
       "subject": "cinematic-language",
       "bundle": "media-generation",
       "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T01:34:14.670Z",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:39:55.255Z",
       "techniques": [
         {
           "technique": "camera-position-semantics",
-          "verdict": "deviation",
-          "evidence": "lib/frames/shotTypes.ts:128 The size ladder (EWS→ECU, line 105), the LA/eye/HA angle and the three-value SubjectPlacement (line 131) all exist. But the seeded placement only ever chooses between crosshair and thirds, even on action wides, where the decision rule says to name the diagonal."
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotTypes.ts:131 Placement has three values (centred, thirds, diagonal), as the decision rule for wide action beats asks. Diagonal was added from a corpus study. Size comes from the per-role SIZE_LADDER. Angle is a typed LA/eye/HA field that is never seeded."
         },
         {
           "technique": "scene-grammar-progression",
           "verdict": "conformant",
-          "evidence": "lib/frames/shotTypes.ts:232 The 'change enough between shots' rule is applied when sizes are derived. ScreenDirection (line 122) adds screen-left and screen-right axis vocabulary, and SIZE_LADDER escalates size by trailer role."
+          "evidence": "lib/frames/shotTypes.ts:122 Screen direction is typed vocabulary (screen-left, screen-right, toward-camera), and sizeSteps (line 106) holds the two-step size change between consecutive shots."
         },
         {
           "technique": "movement-motivation",
           "verdict": "conformant",
-          "evidence": "lib/motion/direction.ts:105 The locked-off camera is named on purpose in every motion line, never left to drift. The code filter also drops camera moves (line 109), and the ad shot motion field is limited to one primary motion (lib/ads/types.ts:138)."
+          "evidence": "lib/ads/types.ts:138 One move per shot for ad clips. For plate clips, lib/motion/direction.ts:109 locks the camera outright ('MOVE THE OBJECTS, NOT THE CAMERA'), which is an explicit refusal against drift."
+        },
+        {
+          "technique": "lens-effect-language",
+          "verdict": "conformant",
+          "evidence": "lib/ads/validate.ts:549 The scenario's medium (texture/era) phrase must appear verbatim in every shot's motion line: one texture register for the piece, restated on each call."
         },
         {
           "technique": "performance-direction",
           "verdict": "conformant",
-          "evidence": "lib/motion/direction.ts:104 Motion is tied to named in-frame elements, each with its own verb, at most three, plus an explicit holds_still list. That matches anchoring beats to named things and stating what does not move."
+          "evidence": "lib/motion/direction.ts:104 Motion is tied to named in-frame elements, each with its own verb, at most three, plus an explicit holds_still list. That matches anchoring beats to named things and stating what does not move.",
+          "carriedFrom": "2026-11-07"
         }
       ],
-      "registryProposal": "lib/ads/validate.ts:547 refuses any negation in an ad motion line ('state stillness positively', citing motion-line-composition). movement-motivation recommends 'static locked-off shot, no camera movement' and says explicit refusal is a directive that works, and performance-direction says to state what the performer does not do. The two subjects give opposite advice on negation in motion prose and should be reconciled.",
       "withdrawn": {
-        "worker": "7dbeafff-c22a-4ef2-bef2-e144a5930ba2",
-        "state": "deviation",
-        "at": "2026-11-07T01:35:15.025166+00:00",
-        "reason": "reviewer (sonnet): The claim is about placementFor in lib/frames/shots.ts, which is not in this context's files. The code also says on purpose that diagonal is an art director's or beat layer's choice, not a hold-time default (shotTypes.ts:125-130). Only picture.ts imports from lib/frames, and only for Frame and Pictu"
+        "worker": "53577a7d-fa27-48c9-8a0b-44ed7d5fddb4",
+        "state": "conformant",
+        "at": "2026-11-08T00:41:06.763631+00:00",
+        "reason": "reviewer (sonnet): The main anchor, lib/frames/shotTypes.ts (SIZE_LADDER, sizeSteps), is imported only by lib/frames/shots.ts. It is not one of the score-and-ads context files, and nothing in lib/score, lib/ads, lib/studio/score.ts, lib/motion or lib/vocab references it, so the verdict is about the frames context."
       }
     },
     "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/cinematic-language": {
@@ -18400,6 +18405,32 @@
           "evaluatedAt": "2026-10-25",
           "worker": null,
           "reason": "replaced by 960f2f0d-fc46-40ef-a49c-22bbf625c4e9"
+        }
+      ]
+    },
+    "e3a63c9a-324f-417a-b93b-bfddb63e7aa5/cinematic-language": {
+      "context": "visual-producers",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:39:55.255Z",
+      "worker": "53577a7d-fa27-48c9-8a0b-44ed7d5fddb4",
+      "techniques": [
+        {
+          "technique": "movement-motivation",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/motion/define.ts:8 The camera-move refusal is lib/motion/direction.ts's; this producer only runs that function as a priced unit."
+        },
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/frames/define.ts:53 Shot staging comes in with the shot's image line. The frames producer turns it into take units."
+        },
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/still/define.ts:17 The still prompt is passed through unchanged. Light is never set here."
         }
       ]
     }

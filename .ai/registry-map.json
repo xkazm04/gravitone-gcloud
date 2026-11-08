@@ -21033,7 +21033,11 @@
           "revision": 11,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/still/define.ts:17 These producer definitions only plan, price and schedule units: the prompt and the motion line arrive as opaque strings written elsewhere (lib/motion/direction.ts, the ad scenario's image line, the style block). A case-insensitive search of the frames/still/motion/style/strips/extract/cut directories for lighting, lens, shadow, genre and cinemat found 0 hits, so no camera, light, lens or genre choice is made at this layer.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:b0a6b6d577cdcffc",
+          "evaluatedRevision": 11
         },
         {
           "subject": "data-video-art-direction",
