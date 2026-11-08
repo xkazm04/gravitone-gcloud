@@ -1,5 +1,5 @@
 // A REFERENCE STILL'S LONG SIDE IS HELD TO 1024 PX BEFORE IT LEAVES THIS PROCESS (character-mirror skill: refs <=1024).
-// The rule lived only in a skill document; on 2026-11-08 a 21 MP reference hung a draw for over ten minutes inside
+// The rule lived only in a skill document; on 2026-10-27 a 21 MP reference hung a draw for over ten minutes inside
 // VAEEncode. A reference at or under the limit is returned as the very same bytes (the caller names its upload by
 // them, so the downscale must come first and the name follow the result). A larger one is fitted inside the limit,
 // same format, never enlarged. Bytes sharp cannot read are returned as they came: the engine refuses them in its own
