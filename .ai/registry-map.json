@@ -11676,7 +11676,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_server/mcp/principal.ts:9 The MCP door is the inverse of this subject: an outside agent calls in over JSON-RPC with a Gravitone bearer token, and the door spawns no agent CLI. A search of app/api/mcp, app/_server/mcp and packages/domain/src for child_process, spawn(, execFile, ANTHROPIC_API_KEY and --permission-mode found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "agent-runtime-assembly",
@@ -17530,7 +17534,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/spend/fileStore.ts:34 The spend classes, meter, stores and spend-request schema only book holds and file requests. A search of lib/spend, packages/kernel/src/spend-requests and packages/kernel/src/records for child_process, spawn(, ANTHROPIC_API_KEY and --output-format found nothing, so no agent CLI is spawned here and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "prompt-assembly",

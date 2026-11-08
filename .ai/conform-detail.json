@@ -18299,6 +18299,49 @@
           "reason": "replaced by 3ec6ab4c-4bf0-4fe9-99ef-895a185e9e0e"
         }
       ]
+    },
+    "95a47cdb-181e-41d7-8dcd-2e2277a63d3e/agent-cli-transport": {
+      "context": "spend-meter-and-requests",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:04:57.839Z",
+      "worker": "d9083bfc-ea82-4c7c-af0e-1172f79d98a7",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "not-applicable",
+          "evidence": "lib/spend/fileStore.ts:34 The store names the CLI-spawn posture only to say it is not this store's question. It probes no binary."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "not-applicable",
+          "evidence": "lib/spend/sqliteStore.ts:18 The store is opened under the operator's CLIs but builds no child environment, so there is no key to strip or inject."
+        }
+      ]
+    },
+    "ad4279e3-e7c5-48d5-b166-db447059b183/agent-cli-transport": {
+      "context": "mcp-agent-door",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:04:57.839Z",
+      "worker": "d9083bfc-ea82-4c7c-af0e-1172f79d98a7",
+      "techniques": [
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/mcp.ts:83 The seat counts as free in receipt pricing. The door builds no child environment, so it has no billing direction to choose."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "app/_server/mcp/tools/launch.ts:20 A spend request is the operator approving the host's own gated op. It is not a spawned child's mid-turn permission request routed through the host."
+        }
+      ],
+      "registryProposal": "The subject could name its inverse, a server that agents call in to through its own gated tools, as out of scope and point to mcp-tools. Here the 'CLI token' wording and the seat-as-free receipt rule make such a door look like a transport adapter at first."
     }
   }
 }
