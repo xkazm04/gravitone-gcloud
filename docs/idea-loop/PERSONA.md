@@ -4,7 +4,7 @@
 persona import, with the app open. This build did not import it and has not run it through the importer.
 
 The importer names it "Gravitone Idea Loop (imported)" and creates it disabled, and its trigger is stored disabled too.
-Enable both once the first manual run looks right.
+Set its working directory to the Gravitone checkout, then enable both once the first manual run looks right.
 
 ## What it runs
 
