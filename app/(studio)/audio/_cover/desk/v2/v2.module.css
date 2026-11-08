@@ -1,0 +1,80 @@
+/* v2 Sleeve: the crate on the left, the cover in hand on the right - its face, the groove, one station's panel.
+   Tokens only. Below 1500px the takes fall to three across, below 1100px the crate rises above the cover. */
+.desk{display:grid;grid-template-columns:var(--w-rail) minmax(0,1fr);gap:var(--sp-5);align-items:start;min-width:0}
+.alone{display:grid;min-width:0}
+.main{display:grid;gap:var(--sp-4);min-width:0;align-content:start}
+
+/* the crate */
+.crate{position:sticky;top:0;display:grid;gap:var(--sp-3);align-content:start;min-width:0;max-height:calc(100vh - var(--hdr-h) - var(--sp-page-end));overflow:auto;padding-right:var(--sp-1)}
+.day{display:grid;gap:var(--sp-1)}
+.dayLabel{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:var(--sp-2) 0 var(--sp-1);border-bottom:1px solid var(--hair)}
+.sleeves{list-style:none;margin:0;padding:0;display:grid;gap:var(--sp-1)}
+.sleeveItem{min-width:0}
+.sleeve{position:relative;display:grid;gap:var(--sp-1);padding:var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-4);border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-1);color:var(--text);text-decoration:none;min-width:0;transition:background var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease)}
+.sleeve:hover{background:var(--wash-hi)}
+.sleeve:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.sleeve[aria-current]{border-color:var(--cyan);background:var(--ink-2)}
+.edge{position:absolute;left:0;top:var(--sp-2);bottom:var(--sp-2);width:var(--stroke-mark);border-radius:var(--r-xs);background:var(--cyan)}
+.sleeveWave{display:block;height:var(--sp-5);border-radius:var(--r-xs);background:var(--wave-ground);overflow:hidden}
+.sleeveWave svg{display:block;width:100%;height:100%}
+.sleeveTitle{font:600 var(--fs-ui)/1.25 var(--sans);color:var(--ink-bright);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sleeveFacts{display:flex;align-items:center;gap:var(--sp-1) var(--sp-2);flex-wrap:wrap;min-width:0}
+
+/* the cover in hand */
+.disc{display:grid;gap:var(--sp-3);min-width:0}
+.face{display:grid;gap:var(--sp-2);min-width:0}
+.title{margin:0;font:600 var(--fs-title)/1.15 var(--serif);color:var(--ink-bright);overflow-wrap:anywhere}
+
+/* the groove: a line lit up to the last station reached, a mark under the open one */
+.groove{list-style:none;margin:0;padding:0 0 var(--sp-2);display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-3);border-bottom:1px solid var(--hair-2)}
+.station{position:relative;flex:1 1 auto;display:flex;align-items:center;gap:var(--sp-2);min-width:0;padding-bottom:var(--sp-2)}
+.station::after{content:"";position:absolute;left:0;right:calc(-1 * var(--sp-3));bottom:calc(-1 * var(--sp-2) - 1px);height:var(--stroke-bar);background:var(--hair-2)}
+.station[data-reached]::after{background:var(--cyan-a)}
+.stationN{font:700 var(--fs-micro)/1 var(--mono);color:var(--faint);font-variant-numeric:tabular-nums}
+.station[data-reached] .stationN{color:var(--muted)}
+.station[aria-current] .stationN{color:var(--cyan)}
+.stationMark{position:absolute;left:0;right:0;bottom:calc(-1 * var(--sp-2) - 1px);height:var(--stroke-bar);background:var(--cyan);z-index:1}
+
+/* both panels share one cell while one slides out and the next in */
+.stage{position:relative;display:grid;min-width:0}
+.stage > .panel{grid-area:1 / 1}
+.panel{display:grid;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-tile);border:1px solid var(--hair-2);background:var(--panel-ground);min-width:0;align-content:start}
+
+.fields{display:grid;gap:var(--sp-3);min-width:0}
+.row{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;min-width:0}
+.label{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.count{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.time{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* takes, five across */
+.takes{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--sp-2)}
+.take{display:grid;gap:var(--sp-2);padding:var(--sp-3);border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-1);min-width:0;align-content:start}
+.take[data-state="pending"]{border-style:dashed}
+.take[data-live]{border-color:var(--cyan)}
+.take[data-winner]{border-color:var(--emerald);background:var(--ink-2)}
+.takeHead{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.takeN{font:700 var(--fs-h3)/1 var(--mono);color:var(--ink-bright);font-variant-numeric:tabular-nums}
+.takeFacts{display:flex;align-items:center;gap:var(--sp-1) var(--sp-2);flex-wrap:wrap}
+.takeBody{display:grid;gap:var(--sp-2);min-width:0;justify-items:start}
+.takeBody > .player{justify-self:stretch}
+.player{display:grid;gap:var(--sp-2);min-width:0}
+.mini{height:var(--h-chip);overflow:hidden;border-radius:var(--r-xs);background:var(--wave-ground)}
+.mini svg{display:block;width:100%;height:100%}
+.wait{font:500 var(--fs-meta)/1.3 var(--mono);color:var(--muted)}
+
+/* take against take */
+.compare{display:flex;align-items:center;gap:var(--sp-2) var(--sp-3);flex-wrap:wrap;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-1);min-width:0}
+.compareScrub{flex:1;min-width:var(--w-tile-audio)}
+.wide{flex-basis:100%}
+
+/* the winner: its card beside the download */
+.winnerRow{display:grid;grid-template-columns:minmax(0,var(--w-desk-side)) minmax(0,1fr);gap:var(--sp-4);align-items:start}
+
+@media (max-width:1500px){
+  .takes{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:1100px){
+  .desk{grid-template-columns:minmax(0,1fr)}
+  .crate{position:static;max-height:none}
+  .winnerRow{grid-template-columns:minmax(0,1fr)}
+}
