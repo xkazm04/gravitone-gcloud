@@ -18957,6 +18957,47 @@
         "at": "2026-11-08T03:59:19.984887+00:00",
         "reason": "reviewer (sonnet): The anchor lib/cutExport.ts:1 is a header comment about the animatic export. It does not itself show that no tabular surface or row export exists, and the claim rests on a grep. The grep terms (csv, keyset, columnheader) are also thin proof of absence."
       }
+    },
+    "7d7b94f7-f312-4ea4-b315-23df705c2286/live-system-demo-film": {
+      "context": "bound-producers",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:06:28.248Z",
+      "worker": "adc18113-d51e-4945-91c6-56dc256fcfae",
+      "techniques": []
+    },
+    "06a49bc3-5cc1-4701-9869-efbacdcf5f6c/live-system-demo-film": {
+      "context": "audio-text-producers",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:06:28.248Z",
+      "worker": "adc18113-d51e-4945-91c6-56dc256fcfae",
+      "techniques": []
+    },
+    "95dd9201-2503-481d-8cdd-a863f6566283/live-system-demo-film": {
+      "context": "music-vendors-and-publish",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:06:28.248Z",
+      "worker": "adc18113-d51e-4945-91c6-56dc256fcfae",
+      "techniques": []
+    },
+    "bba6c91f-7e8c-40e9-acee-8929eb245a8c/live-system-demo-film": {
+      "context": "cut-and-export",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:06:28.248Z",
+      "worker": "adc18113-d51e-4945-91c6-56dc256fcfae",
+      "techniques": [],
+      "registryProposal": "The explainer cut holds each card for its line's measured take, falling back to the line's spoken length (lib/cut/explainer.ts:3-4). That is audio-first pacing applied to a generated-still film. The rule is wider than live-system capture, and it might belong in the voice or assembly subjects as a shared technique instead of living only under this subject."
     }
   }
 }

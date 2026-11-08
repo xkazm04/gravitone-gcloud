@@ -3880,8 +3880,12 @@
           "revision": 3,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "packages/producers/src/set.ts:6 These are pure producer definitions for music video, score, Suno, voice, words, script, article, dojo and forge that the kernel prices and runs; there is no demo recorder, captured take or assertion pass over a running system, and searches for screencast, demo film, getDisplayMedia, gdigrab and screen recording found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "video-assembly",
@@ -4799,8 +4803,12 @@
           "revision": 3,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "lib/producers/registry.ts:21 The bound producers (article, research, script, frames, motion, score, cut, voice, music video and so on) make generated media as kernel jobs; none captures a live system under a script, and searches for screencast, demo film, getDisplayMedia, gdigrab and screen recording across the source trees found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "media-playback",
@@ -5164,8 +5172,12 @@
           "revision": 3,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "lib/cut/explainer.ts:3 The cut, explainer, ad and music-video exports assemble generated stills, strips and takes, and headless Chromium renders composed pages, not captures of a live system; searches for screencast, demo film, getDisplayMedia, gdigrab and screen recording found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "trailer-structure",
@@ -11868,8 +11880,12 @@
           "revision": 3,
           "changedAt": "2026-10-29",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "lib/suno/driver.ts:1 The only driven browser in this context drives a third-party music vendor to generate tracks, not a system being filmed; the rest is music vendors, budgets and publish helpers, and searches for screencast, demo film, getDisplayMedia, gdigrab and screen recording found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:e3bb8c209c3765f1",
+          "evaluatedRevision": 3
         },
         {
           "subject": "voice-io",
