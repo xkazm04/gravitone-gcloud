@@ -12,6 +12,8 @@ export type MatrixCullProps = {
   readonly busy?: boolean;
   /** Say it aloud (the shell's polite region). */
   readonly announce?: (message: string) => void;
+  /** A refusal the operator must see, not only hear (the shell's toast). */
+  readonly refuse?: (message: string) => void;
   /** Off on a /kit specimen, whose keys are not the page's. */
   readonly keys?: boolean;
 };

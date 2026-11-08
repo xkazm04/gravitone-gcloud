@@ -186,7 +186,7 @@ function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }
             })}
       />
     ) : packet.view.mode === "matrix-cull" ? (
-      <MatrixCull key={id} {...common} verdicts={verdicts} decide={decide} undo={() => void gate.undo()} />
+      <MatrixCull key={id} {...common} refuse={toast} verdicts={verdicts} decide={decide} undo={() => void gate.undo()} />
     ) : packet.view.mode === "blind-pair" ? (
       <BlindPair key={id} {...common} onPick={onPick} undo={() => void gate.undo()} />
     ) : packet.present.cut !== undefined ? (

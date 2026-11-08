@@ -14,7 +14,7 @@
 // under the cursor: in place on a words row, in the opened run's head on a picture run.
 import { useEffect, useRef, useState } from "react";
 
-import { cullCells, tallyOf } from "../../board/cull.ts";
+import { cullCells, noteOfRun, tallyOf } from "../../board/cull.ts";
 import { categoriesOf, categoryOf, columnsOf, inWordsCard, runsOf, runVerdictOf, tabOf, tabsOf, wordsOnly, type Run, type Tab } from "../../board/runs.ts";
 import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { Seg } from "../seg/Seg.tsx";
@@ -31,7 +31,7 @@ import s from "./Runs.module.css";
 
 export type { MatrixCullProps } from "./props.ts";
 
-export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = false, announce = () => undefined, keys = true }: MatrixCullProps) {
+export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = false, announce = () => undefined, refuse, keys = true }: MatrixCullProps) {
   const { view, present } = packet;
   const grid = useRef<HTMLDivElement | null>(null);
   const [cols, setCols] = useState(1);
@@ -47,7 +47,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
   const orderOf = (t: Tab) => (tabs.find((x) => x.tab === t)?.categories ?? []).flatMap((c) => c.runs.map((r) => r.at));
   const wordy = (r: Run) => wordsOnly(firstMime(r));
   // A words-only run is one line of a list: ↑ ↓ move a line, whatever the tiles above it measure.
-  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns: () => (d.run !== undefined && wordy(d.run) ? 1 : cols), arrange: (runs, at) => orderOf(tabOfRun(runs[at])), wordy });
+  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, ...(refuse === undefined ? {} : { refuse }), keys, columns: () => (d.run !== undefined && wordy(d.run) ? 1 : cols), arrange: (runs, at) => orderOf(tabOfRun(runs[at])), wordy });
   const tab = tabOfRun(d.run);
   const here = tabs.find((t) => t.tab === tab) ?? tabs[0];
   const { setOpen } = d;
@@ -70,7 +70,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
   const note = d.note;
   const noteField =
     note === undefined ? undefined : <NoteField key={note.cell} label={d.wordsOf(d.cells[note.cell]?.id ?? "").label} value={note.draft} max={note.max} onChange={note.setDraft} onSave={note.save} />;
-  const curNote = verdicts[d.cells[d.cur]?.id ?? ""]?.note;
+  const curNote = d.run === undefined ? undefined : noteOfRun(d.run.members, d.cells, verdicts);
   const pick = (t: Tab) => {
     const first = tabs.find((x) => x.tab === t)?.categories[0]?.runs[0];
     if (first !== undefined) d.setCur(first.run.members[0] ?? 0);
@@ -105,8 +105,8 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             onRunVerdict={(v) => d.decideCells(run.members, v, run.words?.label ?? run.row)}
             {...(note !== undefined && run.members.includes(note.cell) ? { note: noteField } : curNote !== undefined ? { note: <NoteText text={curNote} /> } : {})}
             onClose={() => {
-              setOpen(false);
               d.cancelNote();
+              setOpen(false);
             }}
             live={keys}
             foot={foot}

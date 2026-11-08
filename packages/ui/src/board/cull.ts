@@ -193,3 +193,27 @@ export function keepingNote(prev: BoardVerdict | undefined, next: BoardVerdict |
   if (next === null || next.note !== undefined || prev?.note === undefined) return next;
   return { ...next, note: prev.note };
 }
+
+/**
+ * A NOTE BELONGS TO THE RUN, and a run is noted where it was judged (spark perfect, note-on-judged-run): after a
+ * verdict key the cursor has moved on, so E would land on the next undecided run and refuse. The run the keys just
+ * judged (`judged`, kept until the cursor is deliberately moved) takes the note while the cursor's own run holds
+ * no verdict of its own; a cursor run that has one is the one noted. Returns an index into `runs`.
+ */
+export function noteRunOf(runs: readonly { readonly members: readonly number[] }[], cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>, at: number, judged: number | null): number {
+  if (judged === null || judged === at || runs[judged] === undefined) return at;
+  const own = runs[at]?.members.some((m) => verdicts[cells[m]?.id ?? ""] !== undefined) === true;
+  return own ? at : judged;
+}
+
+/** The cell a run's note is written on: its first, so the note travels the existing decision path (notes[cell]). */
+export const noteCellOf = (run: { readonly members: readonly number[] }): number => run.members[0] ?? 0;
+
+/** The note a run holds: its first cell's, else the first any other member carries (an older, per-variant one). */
+export function noteOfRun(members: readonly number[], cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>): string | undefined {
+  for (const m of members) {
+    const note = verdicts[cells[m]?.id ?? ""]?.note;
+    if (note !== undefined) return note;
+  }
+  return undefined;
+}

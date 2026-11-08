@@ -67,6 +67,11 @@ export function route(
       const inner = resolve(map, press, layer.mode, ctx.facts);
       if (inner !== null) return { kind: "binding", match: inner };
     }
+    // The zoom is a lens with no mode of its own: a field open inside it (the cull's note) still owns Escape.
+    if (layer.kind === "zoom" && ctx.page !== null) {
+      const field = resolve(map, press, ctx.page, ctx.facts);
+      if (field !== null && field.binding.field !== undefined) return { kind: "binding", match: field };
+    }
     return { kind: "close-layer", id: layer.id };
   }
   const mode = activeMode(ctx.layers, ctx.page);
