@@ -220,6 +220,7 @@ describe("the real Node worker, SIGKILLed while an article turn blocks", () => {
       // A neighbour on the same lane, enqueued after the crash by the same CLI.
       const second = articleCli(env, 'run --topic "a neighbour on the free seat" --dry --detach');
       const neighbour = String(second["jobId"]);
+      const turnsAtKill = turns();
 
       // RESTART: the real worker's recovery sweep comes first.
       const r1 = workerOnce(env);
@@ -232,6 +233,7 @@ describe("the real Node worker, SIGKILLed while an article turn blocks", () => {
       expect(hold.ok && hold.value).toBeUndefined();
       expect(r1.lines.filter((l) => l["jobId"] === neighbour && l["outcome"] === "done")).toHaveLength(1);
       expect(jobOf(k, neighbour).state).toBe("done");
+      expect(turns(), "the free seat ran the neighbour's turns after the crash").toBeGreaterThan(turnsAtKill);
       expect(jobOf(k, id)).toMatchObject({ state: "interrupted", attempt: 1 });
 
       // The CLI's own status names the job and where it stopped.
