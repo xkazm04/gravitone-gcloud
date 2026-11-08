@@ -1,28 +1,28 @@
 "use client";
 
-// THE THREE COMPOSITIONS of one cover's parts (the prototype skill's variants, behind `?layout=`; the owner picks
-// by using them). Same data, same acts, same parts - only where each part sits differs:
-//   steps  one column; a part opens as the one before it completes
-//   bench  the section and the style across the top, the takes in a stack, winner and remix in a rail
-//   chain  the work as nodes left to right, source section -> score -> takes -> winner -> remix; a node opens its part
-// The brief sits after the song's facts and before the section in all three: inside the section part in steps and
-// bench, above the nodes in chain (whose section node is not the one a draft opens on).
-import { useState, type ReactNode } from "react";
+// THE COVER DESK'S COMPOSITION: the covers made so far, then the one in hand as a column of steps - a part opens as
+// the one before it completes. The brief sits after the song's facts and before the section, inside the section part.
+// The owner kept steps (2026-11-08) over the two compositions it was tried beside, and they are gone.
+//
+// `Baseline` is the whole desk as it stands; the prototype variants (./v1, ./v2, ./v3) receive exactly its props.
+// It lives here, not in ../Cover.tsx, so a variant can render it without importing the switcher that imports it.
+import { useEffect, useMemo, type ReactNode } from "react";
 
-import { COVER_TAKE_COUNT, type CoverState } from "@gt/domain/cover";
+import { COVER_TAKE_COUNT, type CoverCard, type CoverDeskView, type CoverState } from "@gt/domain/cover";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 
-import type { CoverLayout } from "../contract.ts";
 import { ChainPart, RemixPart, WinnerPart } from "./After.tsx";
 import { BriefPart } from "./brief/Brief.tsx";
 import { ScorePart, SectionPart } from "./Score.tsx";
-import { SourceFacts } from "./Source.tsx";
+import { CoverList, SourceDrop, SourceFacts } from "./Source.tsx";
 import { doneCount, TakesPart } from "./Takes.tsx";
-import type { AB } from "./useAB.ts";
-import type { CoverFlow } from "./useCover.ts";
-import { clock, STATE_TONE } from "./words.ts";
+import { useAB, type AB } from "./useAB.ts";
+import { useCover, type CoverFlow } from "./useCover.ts";
+import type { Desk } from "./useDesk.ts";
+import { clock } from "./words.ts";
 import s from "./cover.module.css";
 
 type PartId = "section" | "score" | "takes" | "winner" | "remix";
@@ -50,7 +50,7 @@ function Block({ n, title, open, extra, children }: { readonly n?: number; reado
 
 type Props = { readonly flow: CoverFlow; readonly ab: AB };
 
-function parts({ flow, ab }: Props, brief: boolean): Record<PartId, { readonly title: string; readonly extra?: ReactNode; readonly body: ReactNode }> {
+export function parts({ flow, ab }: Props): Record<PartId, { readonly title: string; readonly extra?: ReactNode; readonly body: ReactNode }> {
   const r = flow.card.record;
   const done = doneCount(r.takes);
   return {
@@ -60,7 +60,7 @@ function parts({ flow, ab }: Props, brief: boolean): Record<PartId, { readonly t
       body: (
         <>
           <SourceFacts card={flow.card} lenS={flow.lenS} />
-          {brief && <BriefPart flow={flow} />}
+          <BriefPart flow={flow} />
           <SectionPart flow={flow} ab={ab} />
         </>
       ),
@@ -82,7 +82,7 @@ function parts({ flow, ab }: Props, brief: boolean): Record<PartId, { readonly t
 }
 
 export function StepsLayout(p: Props) {
-  const all = parts(p, true);
+  const all = parts(p);
   const upTo = reached(p.flow.card.record.state);
   return (
     <div className={s.steps}>
@@ -95,75 +95,39 @@ export function StepsLayout(p: Props) {
   );
 }
 
-export function BenchLayout(p: Props) {
-  const all = parts(p, true);
-  const upTo = reached(p.flow.card.record.state);
-  const b = (id: PartId) => (
-    <Block title={all[id].title} open={ORDER.indexOf(id) < upTo} extra={all[id].extra}>
-      {all[id].body}
-    </Block>
-  );
+function Current({ card, desk }: { readonly card: CoverCard; readonly desk: Desk }) {
+  const flow = useCover(card, desk.acts, desk.sender, desk.refresh);
+  const { heard, span } = flow;
+  const rms = useMemo(() => heard?.rms(span.startS, span.endS), [heard, span.startS, span.endS]);
+  const ab = useAB(card.sourceUrl, span, rms);
+  // A cover made from a link opens on its brief's receipt (desk.briefOnOpen): asked once, here, as it mounts.
+  const askNow = desk.briefOnOpen === card.record.id;
+  const { briefAsked } = desk;
+  const ask = flow.brief.ask;
+  useEffect(() => {
+    if (!askNow) return;
+    briefAsked();
+    ask();
+  }, [askNow, briefAsked, ask]);
+  return <StepsLayout flow={flow} ab={ab} />;
+}
+
+/** What the desk and every prototype variant of it is handed: the desk from useDesk, and the view it shows. */
+export type DeskProps = { readonly desk: Desk; readonly view: CoverDeskView | null };
+
+export function Baseline({ desk, view }: DeskProps) {
+  const current = view?.current;
   return (
     <>
-      <div className={s.bench}>
-        {b("section")}
-        {b("score")}
-      </div>
-      <div className={s.bench}>
-        {b("takes")}
-        <div className={s.benchRail}>
-          {b("winner")}
-          {b("remix")}
-        </div>
-      </div>
+      {view !== null && view.covers.length > 0 && <CoverList desk={desk} view={view} />}
+      {view === null ? null : current === undefined ? (
+        <>
+          {view.covers.length === 0 && <Empty label="no covers yet" />}
+          <SourceDrop desk={desk} />
+        </>
+      ) : (
+        <Current key={current.record.id} card={current} desk={desk} />
+      )}
     </>
   );
-}
-
-function fact(id: PartId, flow: CoverFlow): string {
-  const r = flow.card.record;
-  if (id === "section") return `${clock(flow.span.startS)}–${clock(flow.span.endS)} of ${r.source.name}`;
-  if (id === "score") return r.score !== undefined ? (r.style === "" ? "score" : r.style) : flow.style.trim() === "" ? "no style" : flow.style;
-  if (id === "takes") return `${doneCount(r.takes)} of ${COVER_TAKE_COUNT}`;
-  if (id === "winner") {
-    const t = r.takes.find((x) => x.seed === r.winnerSeed);
-    return t === undefined ? "—" : `take ${t.n}`;
-  }
-  return r.remix?.name ?? "—";
-}
-
-export function ChainLayout(p: Props) {
-  const all = parts(p, false);
-  const r = p.flow.card.record;
-  const upTo = reached(r.state);
-  const [open, setOpen] = useState<PartId>(ORDER[Math.min(upTo, ORDER.length) - 1] ?? "section");
-  const here = all[open];
-  return (
-    <div className={s.chain}>
-      <BriefPart flow={p.flow} />
-      <ol className={s.nodes} aria-label="chain of work">
-        {ORDER.map((id, i) => (
-          <li key={id} className={s.node}>
-            <button type="button" className={s.nodeBtn} aria-pressed={open === id} data-reached={i < upTo ? "true" : "false"} onClick={() => setOpen(id)}>
-              <span className={s.nodeName}>{all[id].title}</span>
-              <span className={s.nodeFact}>{fact(id, p.flow)}</span>
-              <span className={s.nodeChips}>
-                {id === "takes" && r.state !== "draft" && <Chip label={r.state} tone={STATE_TONE[r.state]} casing="lower" dot />}
-                {all[id].extra}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ol>
-      <Block title={here.title} open>
-        {here.body}
-      </Block>
-    </div>
-  );
-}
-
-export function CoverLayoutOf({ layout, ...p }: Props & { readonly layout: CoverLayout }) {
-  if (layout === "bench") return <BenchLayout {...p} />;
-  if (layout === "chain") return <ChainLayout {...p} />;
-  return <StepsLayout {...p} />;
 }

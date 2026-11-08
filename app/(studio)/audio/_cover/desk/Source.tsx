@@ -17,14 +17,13 @@ import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import { Wave } from "@gt/ui/components/wave/Wave.tsx";
 
-import type { CoverLayout } from "../contract.ts";
 import { hearFile, rekey } from "./audio.ts";
 import { LinkBox, linkProblem, SOURCE_MODES, SourceName, type SourceMode } from "./link/LinkSource.tsx";
 import type { Desk } from "./useDesk.ts";
 import { clock, RIGHTS_LABEL, RIGHTS_TONE, STATE_TONE } from "./words.ts";
 import s from "./cover.module.css";
 
-export function CoverList({ desk, view, layout }: { readonly desk: Desk; readonly view: CoverDeskView; readonly layout: CoverLayout }) {
+export function CoverList({ desk, view }: { readonly desk: Desk; readonly view: CoverDeskView }) {
   const here = view.current?.record.id;
   return (
     <nav className={s.bar} aria-label="covers">
@@ -34,7 +33,7 @@ export function CoverList({ desk, view, layout }: { readonly desk: Desk; readonl
           <li key={c.record.id}>
             <a
               className={s.cover}
-              href={desk.hrefOf(c.record.id, layout)}
+              href={desk.hrefOf(c.record.id)}
               aria-current={c.record.id === here ? "page" : undefined}
               onClick={(e) => {
                 if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;

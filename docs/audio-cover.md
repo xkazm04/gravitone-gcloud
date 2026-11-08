@@ -57,5 +57,5 @@ The first real job (2026-11-07, a 20 s section of the Tears reference, temp stor
 - **A failed cover or brief is retried as the same job, not relaunched.** The brief shows the existing job's id. The job id is fixed per cover, so a second launch answers `existing`; Runs' retry resumes at the first missing step. A ComfyUI failure is a vendor failure the kernel retries three times before the job fails; the take keeps ComfyUI's sentence.
 - **ComfyUI's output folder keeps every rendered flac.** Its HTTP API cannot delete them; the cover's own copies are the ones the app reads.
 - **Queued behind any GPU tenant.** H3 batches and benches hold the same lease, sometimes for hours.
-- **Unmeasured:** a song with a sung line (both test songs transcribed with an empty Vocal voice), a section cut from inside a longer source in a real job, and the layouts on real covers. `?fixture=<state>` drives the layouts on stand-in data in development only.
+- **Unmeasured:** a song with a sung line (both test songs transcribed with an empty Vocal voice), a section cut from inside a longer source in a real job, and the desk on real covers. `?fixture=<state>` drives the desk on stand-in data in development only.
 - **The worker runs the code it started with:** after landing, restart the Gravitone worker task before the first cover.

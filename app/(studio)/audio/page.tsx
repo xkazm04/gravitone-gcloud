@@ -39,7 +39,7 @@ import { readLessons } from "./_lessons/read.ts";
 import { BatchDesk } from "./_insight/Batch.tsx";
 import { CoverDesk } from "./_cover/Cover.tsx";
 import { briefCoverAct, launchCoverAct, pickCoverAct, saveCoverStylesAct } from "./_cover/acts.ts";
-import { coverLayout, readCoverDesk } from "./_cover/read.ts";
+import { readCoverDesk } from "./_cover/read.ts";
 import { RubricDesk } from "./_insight/Rubric.tsx";
 import { StrengthsDesk } from "./_insight/Strengths.tsx";
 import { batchConfirm, batchReceipt, scoreTake } from "./_insight/acts.ts";
@@ -67,7 +67,7 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   const kinds = KINDS.map((k) => ({ id: k, label: k, href: deskHref({ ...url, kind: k }) }));
   let body: ReactNode;
   if (url.section === "arrange") body = <Arrange view={await readArrange(url.kind)} acts={{ moveCard, editRows }} />;
-  else if (url.section === "cover") body = <CoverDesk view={await readCoverDesk(q)} acts={{ launch: launchCoverAct, brief: briefCoverAct, pick: pickCoverAct, saveStyles: saveCoverStylesAct }} layout={coverLayout(q)} />;
+  else if (url.section === "cover") body = <CoverDesk view={await readCoverDesk(q)} acts={{ launch: launchCoverAct, brief: briefCoverAct, pick: pickCoverAct, saveStyles: saveCoverStylesAct }} />;
   else if (url.section === "hunt") body = <Hunt view={await readHunt(url.kind, huntParam(q))} acts={{ draftHuntMap, renderLeaves, crownTake, draftHuntLesson, confirmLessonAct }} nowMs={audioNow()} />;
   else if (url.section === "lessons") body = <Lessons view={await readLessons(url.kind)} />;
   else if (url.section === "strengths") body = <StrengthsDesk key={url.kind} view={await readStrengths(url.kind)} lessonDoor={confirmLessonAct} />;

@@ -3,58 +3,50 @@
 // THE COVER DESK (spark track-mirror-studio, WP3): an uploaded song, a section of it, a style; five YuE2 takes
 // heard against the section; a winner picked and downloaded; the Suno remix brought back with its style. The
 // island holds only the owner's unsaved edits and the players; every write is an act or a route, and the view
-// is re-read after it (./desk/useDesk.ts). Three compositions of the same parts sit behind `?layout=`
-// (./desk/Layouts.tsx) until the owner picks one.
-import { useEffect, useMemo } from "react";
+// is re-read after it (./desk/useDesk.ts). The desk itself is ./desk/Layouts.tsx `Baseline`, a column of steps.
+//
+// TODO(prototype, 2026-11-08): consolidate the cover desk switcher. `?v=` picks the baseline or one of three
+// directional variants (./desk/v1, v2, v3), each handed exactly the baseline's props; an unknown value is the
+// baseline. The rail's links keep `cover` and `fixture`. Phase 5 of the prototype skill deletes this rail, the
+// losing variants and the `v` that ./desk/useDesk.ts carries.
+import { useSearchParams } from "next/navigation";
+import type { ReactNode } from "react";
 
-import type { CoverCard } from "@gt/domain/cover";
-import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
 
-import { COVER_LAYOUTS, type CoverActs, type CoverDeskView, type CoverLayout } from "./contract.ts";
-import { CoverLayoutOf } from "./desk/Layouts.tsx";
-import { CoverList, SourceDrop } from "./desk/Source.tsx";
-import { useAB } from "./desk/useAB.ts";
-import { useCover } from "./desk/useCover.ts";
-import { useDesk, type Desk } from "./desk/useDesk.ts";
+import type { CoverActs, CoverDeskView } from "./contract.ts";
+import { Baseline, type DeskProps } from "./desk/Layouts.tsx";
+import { useDesk } from "./desk/useDesk.ts";
+import { DeskV1 } from "./desk/v1/Desk.tsx";
+import { DeskV2 } from "./desk/v2/Desk.tsx";
+import { DeskV3 } from "./desk/v3/Desk.tsx";
 import s from "./desk/cover.module.css";
 
-function Current({ card, desk, layout }: { readonly card: CoverCard; readonly desk: Desk; readonly layout: CoverLayout }) {
-  const flow = useCover(card, desk.acts, desk.sender, desk.refresh);
-  const { heard, span } = flow;
-  const rms = useMemo(() => heard?.rms(span.startS, span.endS), [heard, span.startS, span.endS]);
-  const ab = useAB(card.sourceUrl, span, rms);
-  // A cover made from a link opens on its brief's receipt (desk.briefOnOpen): asked once, here, as it mounts.
-  const askNow = desk.briefOnOpen === card.record.id;
-  const { briefAsked } = desk;
-  const ask = flow.brief.ask;
-  useEffect(() => {
-    if (!askNow) return;
-    briefAsked();
-    ask();
-  }, [askNow, briefAsked, ask]);
-  return <CoverLayoutOf layout={layout} flow={flow} ab={ab} />;
-}
+const VARIANTS = ["baseline", "v1", "v2", "v3"] as const;
+type Variant = (typeof VARIANTS)[number];
+const BODY: Readonly<Record<Variant, (p: DeskProps) => ReactNode>> = { baseline: Baseline, v1: DeskV1, v2: DeskV2, v3: DeskV3 };
 
-export function CoverDesk({ view, acts, layout }: { readonly view: CoverDeskView; readonly acts: CoverActs; readonly layout: CoverLayout }) {
-  const desk = useDesk(view, acts, layout);
-  const shown = desk.view;
-  const current = shown?.current;
-  const tabs = COVER_LAYOUTS.map((l) => ({ id: l, label: l, href: desk.hrefOf(current?.record.id, l) }));
+export function CoverDesk({ view, acts }: { readonly view: CoverDeskView; readonly acts: CoverActs }) {
+  const desk = useDesk(view, acts);
+  const q = useSearchParams();
+  const variant = VARIANTS.find((v) => v === q.get("v")) ?? "baseline";
+  const tabs = VARIANTS.map((v) => {
+    const p = new URLSearchParams();
+    p.set("s", "cover");
+    for (const k of ["cover", "fixture"]) {
+      const x = q.get(k);
+      if (x !== null) p.set(k, x);
+    }
+    if (v !== "baseline") p.set("v", v);
+    return { id: v, label: v, href: `/audio?${p.toString()}` };
+  });
+  const Body = BODY[variant];
   return (
     <div className={s.section}>
       <div className={s.bar}>
-        <TabRail label="cover layout" mode="audio" tabs={tabs} current={layout} />
+        <TabRail label="cover desk variant" mode="audio" tabs={tabs} current={variant} />
       </div>
-      {shown !== null && shown.covers.length > 0 && <CoverList desk={desk} view={shown} layout={layout} />}
-      {shown === null ? null : current === undefined ? (
-        <>
-          {shown.covers.length === 0 && <Empty label="no covers yet" />}
-          <SourceDrop desk={desk} />
-        </>
-      ) : (
-        <Current key={current.record.id} card={current} desk={desk} layout={layout} />
-      )}
+      <Body desk={desk} view={desk.view} />
     </div>
   );
 }

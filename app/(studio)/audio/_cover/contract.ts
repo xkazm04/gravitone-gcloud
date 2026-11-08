@@ -29,6 +29,3 @@ export type CoverActs = {
 /** How often the desk re-reads its view while a brief or a cover job is queued or running: the owner asked for
  *  once a minute, which is coarse beside a 10 s render and fine beside a queue measured in hours. */
 export const COVER_POLL_MS = 60_000;
-
-export type CoverLayout = "steps" | "bench" | "chain";
-export const COVER_LAYOUTS: readonly CoverLayout[] = ["steps", "bench", "chain"];

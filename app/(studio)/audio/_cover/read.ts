@@ -4,7 +4,6 @@ import type { CoverCard, CoverDeskView, CoverRecord } from "@gt/domain/cover";
 
 import { coverFileHref } from "../../../../lib/sound/cover/href.ts";
 import { listCovers } from "../../../../lib/sound/cover/store.ts";
-import { COVER_LAYOUTS, type CoverLayout } from "./contract.ts";
 
 // THE COVER DESK'S READ (spark track-mirror-studio, WP2): every cover newest first, each with the addresses its
 // audio plays from (the file route, lib/sound/cover/href.ts), and the one in hand - `?cover=<id>`, else the
@@ -31,9 +30,4 @@ export async function readCoverDesk(q: Q): Promise<CoverDeskView> {
   const asked = one(q["cover"]);
   const current = covers.find((c) => c.record.id === asked) ?? covers[0];
   return { covers, ...(current === undefined ? {} : { current }) };
-}
-
-export function coverLayout(q: Q): CoverLayout {
-  const raw = q["layout"];
-  return COVER_LAYOUTS.find((l) => l === raw) ?? "steps";
 }

@@ -1,19 +1,20 @@
 "use client";
 
-// THE COVER DESK'S FIXTURE (spark track-mirror-studio, WP3): one cover per state, audio synthesized in the
-// browser, and stand-in acts that move the fixture through the flow (receipt, a stale confirm once, five takes,
-// a pick, a remix), so the three layouts are driven before the engine and the doors exist. A draft's brief walks
+// THE COVER DESK'S FIXTURE (spark track-mirror-studio, WP3): a history of covers, one per state plus a draft whose
+// brief is running, audio synthesized in the browser, and stand-in acts that move the fixture through the flow
+// (receipt, a stale confirm once, five takes, a pick, a remix), so the desk is driven before the engine and the doors exist. A draft's brief walks
 // queued -> running -> done, one state per re-read, and on done writes the fields and launches the cover. Reached with
 // `/audio?s=cover&fixture=<state>` on a development build only (./useDesk.ts reads the switch); a production
 // build never honours it. Nothing here touches a store, a route or a vendor. A link sent here (cover from a link,
 // WP-C) is "fetched" for LINK_FETCH_MS, so the fetching state can be seen, then made a draft carrying its link.
 import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
-import type { CoverCard, CoverDeskView, CoverRecord, CoverState, CoverTake } from "@gt/domain/cover";
+import { COVER_SECTION_MAX_S, type CoverCard, type CoverDeskView, type CoverRecord, type CoverState, type CoverTake } from "@gt/domain/cover";
 import type { Receipt } from "@gt/domain/produce";
 
 import type { CoverActs } from "../contract.ts";
 import type { Sender } from "./send.ts";
+import { clock } from "./words.ts";
 
 // An act's success, in the ActionResult shape the contract answers.
 const ok = <T,>(value: T) => ({ ok: true as const, value });
@@ -30,9 +31,15 @@ const LINK_FETCH_MS = 2_500;
 /** The video the fixture's link turns out to be. */
 const LINK_TITLE = "Rain on Tin";
 
-/** A 16-bit mono WAV of a little tune: phrases of eighth notes, louder in its middle third, the timbre the seed's. */
-function wav(seconds: number, seed: number): string {
-  const n = Math.floor(seconds * RATE);
+/** A whole song's rate: a history of 3-5 minute songs at 16 kHz would hold ~60 MB of blobs in a dev tab. */
+const SONG_RATE = 8_000;
+/** A song is this phrase played over and over under a slow verse/chorus swell, so its length costs a copy, not a synth. */
+const PHRASE_S = 16;
+
+/** A 16-bit mono WAV of a little tune: phrases of eighth notes, louder in its middle third, the timbre the seed's.
+ *  Past `phraseS` the tune repeats under a slow swell, so a five-minute song costs a copy, not a synth. */
+function wav(seconds: number, seed: number, rate = RATE, phraseS = seconds): string {
+  const n = Math.floor(seconds * rate);
   const buf = new ArrayBuffer(44 + n * 2);
   const v = new DataView(buf);
   const str = (o: number, s: string): void => {
@@ -44,31 +51,41 @@ function wav(seconds: number, seed: number): string {
   v.setUint32(16, 16, true);
   v.setUint16(20, 1, true);
   v.setUint16(22, 1, true);
-  v.setUint32(24, RATE, true);
-  v.setUint32(28, RATE * 2, true);
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true);
   v.setUint16(32, 2, true);
   v.setUint16(34, 16, true);
   str(36, "data");
   v.setUint32(40, n * 2, true);
   const beat = 0.25;
   const bright = 1 + (seed % 4);
-  for (let i = 0; i < n; i++) {
-    const t = i / RATE;
+  const pn = Math.min(n, Math.floor(phraseS * rate));
+  const phrase = new Float32Array(pn);
+  for (let i = 0; i < pn; i++) {
+    const t = i / rate;
     const k = Math.floor(t / beat);
     const f = NOTES[(k * 3 + Math.floor(k / 8) + seed) % NOTES.length] ?? 220;
     const inNote = (t % beat) / beat;
-    const env = Math.exp(-inNote * 4) * (0.35 + 0.65 * Math.abs(Math.sin((t / seconds) * Math.PI * 1.5)));
+    const env = Math.exp(-inNote * 4) * (0.35 + 0.65 * Math.abs(Math.sin((t / phraseS) * Math.PI * 1.5)));
     let s = 0;
     for (let h = 1; h <= bright; h++) s += Math.sin(2 * Math.PI * f * h * t) / h;
     const kick = t % 1 < 0.08 ? Math.sin(2 * Math.PI * 55 * t) * (1 - (t % 1) / 0.08) : 0;
-    v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, s * env * 0.3 + kick * 0.5)) * 32_767, true);
+    phrase[i] = s * env * 0.3 + kick * 0.5;
+  }
+  const swells = pn < n;
+  for (let i = 0; i < n; i++) {
+    const swell = swells ? 0.45 + 0.55 * Math.abs(Math.sin((i / n) * Math.PI * 3)) : 1;
+    v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, (phrase[i % pn] ?? 0) * swell)) * 32_767, true);
   }
   return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
 }
 
-type Sounds = { readonly source: string; readonly takes: readonly string[]; readonly remix: string };
+/** `songs`: each history cover's source at its own length, by id; `source`: the 64 s song a fixture upload stands on. */
+type Sounds = { readonly source: string; readonly songs: ReadonlyMap<string, string>; readonly takes: readonly string[]; readonly remix: string };
 
-const at = (minutesAgo: number): string => new Date(Date.UTC(2026, 10, 7, 20, 0) - minutesAgo * 60_000).toISOString();
+const minutesAgo = (m: number): string => new Date(Date.now() - m * 60_000).toISOString();
+const HOUR = 60;
+const DAY = 24 * HOUR;
 
 function takesFor(state: CoverState | "rendering-2" | "failed-1"): CoverTake[] {
   return SEEDS.map((seed, i): CoverTake => {
@@ -86,12 +103,13 @@ function card(sounds: Sounds, r: CoverRecord, dropped: ReadonlyMap<string, strin
   r.takes.forEach((t, i) => {
     if (t.file !== undefined) takeUrls[t.seed] = sounds.takes[i] ?? sounds.source;
   });
-  return { record: r, sourceUrl: dropped.get(r.id) ?? sounds.source, takeUrls, ...(r.exportFile === undefined ? {} : { winnerUrl: sounds.takes[1] ?? sounds.source }), ...(r.remix === undefined ? {} : { remixUrl: sounds.remix }) };
+  const sourceUrl = dropped.get(r.id) ?? sounds.songs.get(r.id) ?? sounds.source;
+  return { record: r, sourceUrl, takeUrls, ...(r.exportFile === undefined ? {} : { winnerUrl: sounds.takes[1] ?? sounds.source }), ...(r.remix === undefined ? {} : { remixUrl: sounds.remix }) };
 }
 
-const base = (id: string, title: string, minutesAgo: number): Omit<CoverRecord, "state" | "takes"> => ({
+const base = (id: string, title: string, ago: number): Omit<CoverRecord, "state" | "takes"> => ({
   id: `cov-${id}`,
-  createdAt: at(minutesAgo),
+  createdAt: minutesAgo(ago),
   title,
   rights: "third-party-uncleared",
   holder: "Tears for Fears",
@@ -101,28 +119,97 @@ const base = (id: string, title: string, minutesAgo: number): Omit<CoverRecord, 
   lyrics: "",
 });
 
-function records(): Record<Exclude<FixtureState, "empty">, CoverRecord> {
-  const styled = { style: "lo-fi hip hop, dusty rhodes, vinyl crackle, slow swung drums, warm bass", sourceStyle: "80s synth-pop, gated snare, driving bass, wide pads" };
-  return {
-    draft: { ...base("0000000000a1", "Mad World", 4), rights: "own", state: "draft", takes: [] },
-    queued: { ...base("0000000000a2", "Shout", 30), ...styled, state: "queued", takes: takesFor("queued"), jobId: "job:cover:cov-0000000000a2" },
-    rendering: { ...base("0000000000a3", "Head Over Heels", 60), ...styled, state: "rendering", score: "score.abc", takes: takesFor("rendering-2"), jobId: "job:cover:cov-0000000000a3" },
-    failed: { ...base("0000000000a4", "Pale Shelter", 120), ...styled, rights: "licensed", state: "failed", score: "score.abc", takes: takesFor("failed-1"), jobId: "job:cover:cov-0000000000a4" },
-    judging: { ...base("0000000000a5", "Everybody Wants to Rule the World", 200), ...styled, state: "judging", score: "score.abc", takes: takesFor("judging"), jobId: "job:cover:cov-0000000000a5" },
-    picked: { ...base("0000000000a6", "Sowing the Seeds", 400), ...styled, state: "picked", score: "score.abc", takes: takesFor("picked"), winnerSeed: SEEDS[1] ?? 0, exportFile: "winner.mp3", jobId: "job:cover:cov-0000000000a6" },
-    remixed: {
-      ...base("0000000000a7", "Woman in Chains", 900),
-      ...styled,
+type Song = { readonly id: string; readonly title: string; readonly ago: number; readonly lenS: number; readonly rights: CoverRecord["rights"]; readonly holder?: string; readonly note?: string; readonly video?: string; readonly section: readonly [number, number] };
+
+/** A cover's song: uploaded as a file, or fetched from a link (`video`, an 11-character YouTube id). */
+function song({ id, title, ago, lenS, rights, holder, note, video, section }: Song): Omit<CoverRecord, "state" | "takes"> {
+  const file = { file: "source.mp3", mime: "audio/mpeg", durationS: lenS };
+  const source = video === undefined ? { ...file, name: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.mp3` } : { ...file, name: `${title} [${video}].mp3`, url: `https://www.youtube.com/watch?v=${video}` };
+  return { id: `cov-${id}`, createdAt: minutesAgo(ago), title, rights, ...(holder === undefined ? {} : { holder }), ...(note === undefined ? {} : { note }), source, section: { startS: section[0], endS: section[1] }, style: "", lyrics: "" };
+}
+
+const STYLED = { style: "lo-fi hip hop, dusty rhodes, vinyl crackle, slow swung drums, warm bass", sourceStyle: "80s synth-pop, gated snare, driving bass, wide pads" };
+const briefOf = (id: string, ago: number, why: string, agreed: number) => ({ state: "done" as const, jobId: `job:cover-brief:cov-${id}`, at: minutesAgo(ago), why, agreed });
+
+/** The history, newest first: two weeks of covers, one per state `?fixture=` opens on, plus a draft whose brief is
+ *  still running. Mixed rights, some songs from a link and some from a file, real song lengths. */
+function records(): CoverRecord[] {
+  const w = (id: string) => ({ jobId: `job:cover:cov-${id}` });
+  return [
+    { ...song({ id: "0000000000a1", title: "Paper Lanterns", ago: 6, lenS: 218, rights: "own", section: [52, 98] }), state: "draft", takes: [] },
+    {
+      ...song({ id: "0000000000a8", title: "Midnight Ferry", ago: 14, lenS: 243, rights: "third-party-uncleared", holder: "Harbour Sound Records", video: "q8Lw2mT4xZc", section: [0, 30] }),
+      state: "draft",
+      takes: [],
+      brief: { state: "running", jobId: "job:cover-brief:cov-0000000000a8", at: minutesAgo(9) },
+    },
+    {
+      ...song({ id: "0000000000a3", title: "Harbour Lights", ago: 40, lenS: 261, rights: "own", note: "demo bounce, 2026-10-30 session", section: [64, 196] }),
+      ...STYLED,
+      state: "rendering",
+      score: "score.abc",
+      takes: takesFor("rendering-2"),
+      ...w("0000000000a3"),
+    },
+    {
+      ...song({ id: "0000000000a2", title: "Mad World", ago: 9 * HOUR + 20, lenS: 215, rights: "third-party-uncleared", holder: "Tears for Fears", video: "u1ZvPSpLxCg", section: [0, 215] }),
+      style: "slowcore, brushed snare, felt piano, upright bass, 84 bpm, F minor",
+      sourceStyle: "80s synth-pop, drum machine, sparse piano, wide pads, 89 bpm, F minor",
+      brief: briefOf("0000000000a2", 9 * HOUR + 4, "All three listens heard 80s synth-pop over a drum machine and a sparse piano. The measured 89 bpm and F minor fit. The section is the whole song, 3:35.", 3),
+      state: "queued",
+      takes: takesFor("queued"),
+      ...w("0000000000a2"),
+    },
+    {
+      ...song({ id: "0000000000a4", title: "Pale Shelter", ago: 2 * DAY + 3 * HOUR, lenS: 271, rights: "licensed", holder: "Mercury Records", note: "sync licence ML-2026-0412, covers for demo use", section: [41, 161] }),
+      ...STYLED,
+      state: "failed",
+      score: "score.abc",
+      takes: takesFor("failed-1"),
+      ...w("0000000000a4"),
+    },
+    {
+      ...song({ id: "0000000000a5", title: "Everybody Wants to Rule the World", ago: 3 * DAY + 5 * HOUR, lenS: 251, rights: "third-party-uncleared", holder: "Tears for Fears", section: [0, 251] }),
+      ...STYLED,
+      state: "judging",
+      score: "score.abc",
+      takes: takesFor("judging"),
+      ...w("0000000000a5"),
+    },
+    {
+      ...song({ id: "0000000000a6", title: "Low Tide Choir", ago: 6 * DAY + 2 * HOUR, lenS: 192, rights: "own", section: [30, 150] }),
+      ...STYLED,
+      state: "picked",
+      score: "score.abc",
+      takes: takesFor("picked"),
+      winnerSeed: SEEDS[1] ?? 0,
+      exportFile: "winner.mp3",
+      ...w("0000000000a6"),
+    },
+    {
+      ...song({ id: "0000000000a7", title: "Woman in Chains", ago: 13 * DAY + 7 * HOUR, lenS: 292, rights: "third-party-uncleared", holder: "Tears for Fears", video: "Jr0h3eOXbDg", section: [12, 292] }),
+      ...STYLED,
       state: "picked",
       score: "score.abc",
       takes: takesFor("picked"),
       winnerSeed: SEEDS[1] ?? 0,
       exportFile: "winner.mp3",
       remix: { file: "remix.mp3", mime: "audio/mpeg", name: "woman-in-chains-suno-v5.mp3", style: "lo-fi hip hop, tape-saturated rhodes, brushed drums, upright bass, 72 bpm" },
-      jobId: "job:cover:cov-0000000000a7",
+      ...w("0000000000a7"),
     },
-  };
+  ];
 }
+
+/** The cover each `?fixture=<state>` opens on. */
+const OPENS_ON: Readonly<Record<Exclude<FixtureState, "empty">, string>> = {
+  draft: "cov-0000000000a1",
+  queued: "cov-0000000000a2",
+  rendering: "cov-0000000000a3",
+  failed: "cov-0000000000a4",
+  judging: "cov-0000000000a5",
+  picked: "cov-0000000000a6",
+  remixed: "cov-0000000000a7",
+};
 
 /** The brief's receipt as lib/producers/coverBrief.ts draws it: the song measured here, three Gemini listens priced
  *  over its length, the Claude turn on the seat. */
@@ -144,12 +231,13 @@ function briefReceipt(id: string): Receipt {
 /** What the fixture's brief writes on done: the fields, its reason, the listens that agreed, and the cover launched. */
 function briefDone(r: CoverRecord, at: string): CoverRecord {
   const jobId = r.brief?.jobId ?? `job:cover-brief:${r.id}`;
-  const why = "Two of three listens heard slow 80s synth-pop with a drum machine and a sparse piano; the third heard darkwave. The measured 92 bpm and F minor fit both. The section is the whole song, 64 s.";
+  const endS = Math.min(r.source.durationS, COVER_SECTION_MAX_S);
+  const why = `Two of three listens heard slow 80s synth-pop with a drum machine and a sparse piano; the third heard darkwave. The measured 92 bpm and F minor fit both. The section is the whole song, ${clock(endS)}.`;
   return {
     ...r,
     style: "lo-fi hip hop, dusty rhodes, vinyl crackle, slow swung drums, warm bass, 92 bpm, F minor",
     sourceStyle: "80s synth-pop, drum machine, sparse piano, wide pads, 92 bpm, F minor",
-    section: { startS: 0, endS: SONG_S },
+    section: { startS: 0, endS },
     lyrics: "",
     brief: { state: "done", jobId, at, why, agreed: 2 },
     state: "queued",
@@ -171,12 +259,18 @@ function receipt(id: string, startS: number, endS: number, salt: number): Receip
 // One set of sounds per page load, kept for its life: a fixture is a development page, and its blob URLs go
 // with the tab.
 let made: Sounds | null = null;
-const clientSounds = (): Sounds => (made ??= { source: wav(SONG_S, 0), takes: SEEDS.map((seed) => wav(24, seed)), remix: wav(30, 7) });
+const clientSounds = (): Sounds =>
+  (made ??= {
+    source: wav(SONG_S, 0),
+    songs: new Map(records().map((r, i) => [r.id, wav(r.source.durationS, i + 1, SONG_RATE, PHRASE_S)])),
+    takes: SEEDS.map((seed) => wav(24, seed)),
+    remix: wav(30, 7),
+  });
 const serverSounds = (): Sounds | null => null;
 const noSubscribe = (): (() => void) => () => undefined;
 
-const recordsFor = (state: FixtureState): CoverRecord[] => (state === "empty" ? [] : Object.values(records()));
-const currentFor = (state: FixtureState): string | undefined => (state === "empty" ? undefined : records()[state].id);
+const recordsFor = (state: FixtureState): CoverRecord[] => (state === "empty" ? [] : records());
+const currentFor = (state: FixtureState): string | undefined => (state === "empty" ? undefined : OPENS_ON[state]);
 
 export type FixtureDesk = { readonly view: CoverDeskView | null; readonly acts: CoverActs; readonly sender: Sender; readonly refresh: () => void; readonly select: (id: string | undefined) => void };
 
