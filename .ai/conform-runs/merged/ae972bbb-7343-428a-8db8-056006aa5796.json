@@ -1,0 +1,65 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ae972bbb-7343-428a-8db8-056006aa5796",
+ "subject": "docs-sync",
+ "evaluatedAt": "2026-11-08T05:42:54.515537+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "kit-screen-specimens",
+   "subject": "docs-sync",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/kit/FloorKit.tsx:52 The Floor specimen restates the readiness command as a third hand-typed copy (lines 52-53), while the named authority PUBLISH_CLI in app/(studio)/floor/_calendar/readiness.ts:33 is imported by both the real side and fixture.ts:33/241; nothing checks the kit copy, so if the CLI changes, /kit keeps showing the old command.",
+   "techniques": [
+    {
+     "technique": "named-duplication-points",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/kit/FloorKit.tsx:52 A literal copy of a fact that already has a named authority (PUBLISH_CLI, whose comment says 'the fixture side names the same'). The technique says a literal copy is asserted mechanically or derived. This one is neither: rg found no test comparing the kit copy to PUBLISH_CLI."
+    },
+    {
+     "technique": "source-doc-mapping",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/kit/BoardKit.tsx:84 Each screen card declares which @gt/ui exports it draws (data-specimen). Coverage is then gated by walking the package's exports, not by checking only the names the map lists (tests/live/kit.live.spec.ts:24-58)."
+    },
+    {
+     "technique": "coupled-surface-inventory",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/kit/LibraryKit.tsx:86 The rail and the set summary read one object, matching the live screen. Before the fix the kit handed them two objects that disagreed (kit-sheet.test.ts case 9)."
+    },
+    {
+     "technique": "prose-as-an-execution-surface",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/FloorKit.tsx:54 The commands shown can be pasted, but none takes a credential as a positional argument and none is an install line. The technique's two populations are absent; the drift risk falls under named-duplication-points."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "docs-sync",
+   "context": "kit-design-system-specimens",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T05:42:54.515537+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-sync"
+   ],
+   "techniques": [
+    "coupled-surface-inventory",
+    "named-duplication-points",
+    "prose-as-an-execution-surface",
+    "source-doc-mapping"
+   ],
+   "deviations": 1,
+   "context": "kit-screen-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
