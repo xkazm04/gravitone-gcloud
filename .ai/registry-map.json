@@ -5094,8 +5094,8 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "priorNotApplicable": 2,
+          "state": "unknown"
         },
         {
           "subject": "music-video-production",
@@ -19632,8 +19632,8 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "priorNotApplicable": 2,
+          "state": "unknown"
         },
         {
           "subject": "accessibility",
@@ -19866,8 +19866,12 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "deviation",
+          "priorNotApplicable": 2,
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:63 EventRow emits role=row/gridcell cells that carry no tabindex or id for activedescendant, and its one link is tabIndex -1, so inside the Ledger's grid no cell can receive focus and the row is never heard by keyboard navigation.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "data-video-art-direction",

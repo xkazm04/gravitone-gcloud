@@ -18901,6 +18901,62 @@
           "reason": "replaced by edfc9da8-8dc5-4d59-86a7-5b1ef7d095eb"
         }
       ]
+    },
+    "00c6177f-43a3-4f35-8252-59c9ae8110e0/table": {
+      "context": "ui-ledger-timeline",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:58:25.650Z",
+      "worker": "53848205-9e41-4bbe-b739-61d1c82ed058",
+      "techniques": [
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:63 Gridcells that cannot take focus; the subject link is removed from tab order (line 82) with no cell-focus model replacing it."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:3 One fixed row height from a token, with CSS contain:layout paint. Rows are keyed by seq (data-seq)."
+        },
+        {
+          "technique": "filtering",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:134 The date range commits on an explicit act (drag release or keyboard apply), and the range state belongs to the caller's URL."
+        }
+      ]
+    },
+    "992eaeaf-aaba-458d-8a06-475cb8281107/table": {
+      "context": "ui-controls-shell",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:58:25.650Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "53848205-9e41-4bbe-b739-61d1c82ed058",
+        "state": "not-applicable",
+        "at": "2026-11-08T03:59:19.844304+00:00",
+        "reason": "reviewer (sonnet): The anchor Field.tsx:1 is only a header comment about text entry. It does not show that table preconditions are absent, and the claim rests on a grep. The evidence also names panel, toast and sheet, which are not among the context files."
+      }
+    },
+    "bba6c91f-7e8c-40e9-acee-8929eb245a8c/table": {
+      "context": "cut-and-export",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:58:25.650Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "53848205-9e41-4bbe-b739-61d1c82ed058",
+        "state": "not-applicable",
+        "at": "2026-11-08T03:59:19.984887+00:00",
+        "reason": "reviewer (sonnet): The anchor lib/cutExport.ts:1 is a header comment about the animatic export. It does not itself show that no tabular surface or row export exists, and the claim rests on a grep. The grep terms (csv, keyset, columnheader) are also thin proof of absence."
+      }
     }
   }
 }

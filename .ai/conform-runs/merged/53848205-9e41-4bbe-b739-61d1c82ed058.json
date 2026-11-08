@@ -1,0 +1,234 @@
+{
+  "schema": "conform-run/1",
+  "worker": "53848205-9e41-4bbe-b739-61d1c82ed058",
+  "subject": "table",
+  "evaluatedAt": "2026-11-08T03:58:25.650853+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "ledger-screen",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/ledger/_ledger/List.tsx:109 The scroller carries role=grid with tabIndex 0, but EventRow's gridcells never take focus and no aria-activedescendant names the selected row, so J/K/arrow movement only flips aria-selected and a screen-reader user in application mode hears no row or cell; the column headers also sit in a separate div outside the grid element.",
+      "techniques": [
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:109 Grid role, one tab stop, but no cell or row ever takes focus (no activedescendant either): the anti-pattern 'a grid in which some cells cannot take focus'. The columnheader row (List.tsx:91) sits outside the grid."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:186 A filter change is a transition, and its pending flag is discarded (Ledger.tsx:136 `const [, startTransition]`). The previous filter's rows stay on screen with no indicator until the new render lands, where the technique says to clear to EMPTY-LOADING. The empty states are typed well: none recorded, partial scan, filtered."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:103 Keyset on the (t, seq) cursor, never offset. A capped flag drives the 'older' load-more."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:59 Total order: time, then the immutable seq identity as tiebreaker, the same as the kernel's ORDER BY t, seq."
+        },
+        {
+          "technique": "client-server-split",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:19 Filter, sort, window and counts all run on the server. The two page-local figures (cost sum, text scan) are marked `+` / 'searched N'."
+        },
+        {
+          "technique": "filtering",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:57 Free text commits on submit or Enter from a separate draft. Facets and actor commit on change. page.tsx:36 keys the client by filter identity, so the window and older pages reset."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:61 Bounded page (500) plus fixed-height windowing, with aria-rowcount/rowindex declared."
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:34 Server-paged 500 rows at a time, 34 px each. Nowhere near the browser scroll ceiling unless 'older' is pressed thousands of times."
+        },
+        {
+          "technique": "export-escapes-for-its-consumer",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/List.tsx:88 The only export is JSON Lines via JSON.stringify, which is escaped for a JSON parser. There is no CSV or spreadsheet consumer."
+        },
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:265 Copy is one-way (JSONL or an id). There is no cell-range selection and no paste."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/ledger/page.tsx:1 Read-only, append-only ledger with no editable cells."
+        }
+      ]
+    },
+    {
+      "context": "library-browser-screen",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/library/_library/Toolbar.tsx:82 Free-text search commits on a 220 ms typing pause, and each commit is a server render. That is the debounce-as-guess the filtering technique names for round-trip commits, and while the navigation is in flight the old predicate's rows stay drawn.",
+      "techniques": [
+        {
+          "technique": "filtering",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_library/Toolbar.tsx:82 A server-round-trip text filter applied on a debounce pause, not on an explicit act. Enter and the down arrow also apply it, but the pause commits first."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_library/Library.tsx:8 A filter/query change keeps the abandoned predicate's rows drawn, which the technique explicitly rejects ('a dimmed wrong answer is a wrong answer'). Same-size slot placeholders (Results.tsx:84) and typed filtered/unfiltered empties are good."
+        },
+        {
+          "technique": "client-server-split",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_library/blocks.ts:6 Filter, sort and window are all server-side. The client holds a sparse block cache only."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_library/blocks.ts:71 Offset blocks, chosen because a virtual grid needs random access (the kernel's query.ts records the choice). Responses are keyed by query identity, so stale blocks are dropped."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_library/Results.tsx:48 Windowed over the total, with options memoized and stable handlers via ref."
+        },
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_library/Results.tsx:98 Results are a listbox of cards/rows with aria-activedescendant and one tab stop, not a native table or a grid."
+        }
+      ]
+    },
+    {
+      "context": "ui-ledger-timeline",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:63 EventRow emits role=row/gridcell cells that carry no tabindex or id for activedescendant, and its one link is tabIndex -1, so inside the Ledger's grid no cell can receive focus and the row is never heard by keyboard navigation.",
+      "techniques": [
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:63 Gridcells that cannot take focus; the subject link is removed from tab order (line 82) with no cell-focus model replacing it."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:3 One fixed row height from a token, with CSS contain:layout paint. Rows are keyed by seq (data-seq)."
+        },
+        {
+          "technique": "filtering",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/timestrip/TimeStrip.tsx:134 The date range commits on an explicit act (drag release or keyboard apply), and the range state belongs to the caller's URL."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "table",
+      "context": "ui-controls-shell",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor Field.tsx:1 is only a header comment about text entry. It does not show that table preconditions are absent, and the claim rests on a grep. The evidence also names panel, toast and sheet, which are not among the context files."
+    },
+    {
+      "subject": "table",
+      "context": "cut-and-export",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor lib/cutExport.ts:1 is a header comment about the animatic export. It does not itself show that no tabular surface or row export exists, and the claim rests on a grep. The grep terms (csv, keyset, columnheader) are also thin proof of absence."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-08T03:58:25.650853+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [
+        "client-server-split",
+        "clipboard-range-round-trip",
+        "compressed-scroll-space",
+        "export-escapes-for-its-consumer",
+        "filtering",
+        "grid-keyboard-model",
+        "loading-and-empty-states",
+        "one-door-for-range-writes",
+        "pagination",
+        "performance",
+        "sorting"
+      ],
+      "deviations": 1,
+      "context": "ledger-screen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T03:58:25.650853+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [
+        "client-server-split",
+        "filtering",
+        "grid-keyboard-model",
+        "loading-and-empty-states",
+        "pagination",
+        "performance"
+      ],
+      "deviations": 1,
+      "context": "library-browser-screen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T03:58:25.650853+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [
+        "filtering",
+        "grid-keyboard-model",
+        "performance"
+      ],
+      "deviations": 1,
+      "context": "ui-ledger-timeline",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T03:58:25.650853+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ui-controls-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T03:58:25.650853+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "table"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "cut-and-export",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
