@@ -18712,6 +18712,21 @@
         }
       ],
       "registryProposal": "Two techniques disagree on durations in motion text. per-beat-rejection lists 'no duration or easing vocabulary checks' among the things a validator must not enforce. motion-intent-authoring bans durations in motion text ('no durations, no frame rates, no easing vocabulary'), and a defect that is measurable by construction is exactly what per-beat-rejection says to enforce. lib/ads/validate.ts:546 enforces the ban and is right by one technique and wrong by the other. The standard should say which one wins."
+    },
+    "7d7b94f7-f312-4ea4-b315-23df705c2286/media-playback": {
+      "context": "bound-producers",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:22:52.322Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "0d0aaba1-6ae0-4f6a-9cc6-d4a6468ea562",
+        "state": "not-applicable",
+        "at": "2026-11-08T02:23:41.250359+00:00",
+        "reason": "reviewer (sonnet): The anchor lib/producers/registry.ts:6 is only an import line (`Reader` from kernel/store) and does not show that no surface drives time. My grep of lib/producers for playhead, currentTime, new Audio, requestAnimationFrame, playback and .play( found nothing, but I did not read the producer files to "
+      }
     }
   }
 }

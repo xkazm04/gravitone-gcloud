@@ -1,0 +1,147 @@
+{
+  "schema": "conform-run/1",
+  "worker": "0d0aaba1-6ae0-4f6a-9cc6-d4a6468ea562",
+  "subject": "media-playback",
+  "evaluatedAt": "2026-11-08T02:22:52.322780+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "audio-arrange-desk",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/audio/_audio/useTransport.ts:96 The card's play button flips to its 'pause' face when the request is issued, before the element echoes `playing`, and no `waiting`/`stalled` listener exists, so loading, buffering and playing all look the same on the card — the request-versus-fact split the transport-contract requires.",
+      "techniques": [
+        {
+          "technique": "transport-contract",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:96 The state comes from the request, not the engine echo (TakeCard renders `on={playing === h.id}`). There is no loading or buffering state. The watchdog (line 98) and gen-based supersession (line 86) are present and correct."
+        },
+        {
+          "technique": "media-resource-lifecycle",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:66 On unmount the cleanup clears the watchdog, removes the listeners, pauses, drops the src and calls load(), so no audio outlives the surface."
+        },
+        {
+          "technique": "playback-clock",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:114 Position is read on demand from the element, the single authority. Nothing stores it in React state."
+        },
+        {
+          "technique": "engine-adapters",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:86 There is one native HTMLAudioElement and no seek or volume affordance, so no capabilities need declaring. The exclusivity claim is made synchronously when the request is issued."
+        },
+        {
+          "technique": "source-resilience",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:53 Playback here is one take at a time, chosen by the user, so there is no blacklist or fallback ladder to design. A failure is reported in words."
+        },
+        {
+          "technique": "timeline-scheduling",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/audio/_audio/useTransport.ts:98 One take plays at a time and nothing is composed on a timeline."
+        }
+      ]
+    },
+    {
+      "context": "part-editor-media-cut-score",
+      "subject": "media-playback",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:30 The cut and score editors share one clock store that lives outside React and is advanced by a rAF loop; the needle, readout and monitor subscribe through selectors and derive the shown scene from clock time.",
+      "techniques": [
+        {
+          "technique": "playback-clock",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:30 The clock is a mutable store fed by rAF. useClockT selects at each consumer's own cadence (the Readout at Cut.tsx:62 re-renders only when the timecode changes)."
+        },
+        {
+          "technique": "timeline-scheduling",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:67 The monitor's scene is a pure function of clock time over the composition, so a seek simply re-derives it. Nothing is chained clip to clip. The sound lanes are not voiced under the clock; this is a silent picture preview."
+        },
+        {
+          "technique": "media-resource-lifecycle",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:300 The frame loop is cancelled on pause and on unmount. Render.tsx:70 does the same for the poster preview loop."
+        },
+        {
+          "technique": "transport-contract",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:314 The transport drives a virtual clock with no media engine behind it, so there is no transition to await or put a watchdog on. The end is handled (line 297)."
+        },
+        {
+          "technique": "engine-adapters",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:123 Take audio plays through the platform's stock controls, with no transport owned by the app. The golden path exempts that case."
+        },
+        {
+          "technique": "source-resilience",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:40 Nothing plays continuously from a stream. An undecodable still is reported through an ErrorLine."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "media-playback",
+      "context": "bound-producers",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor lib/producers/registry.ts:6 is only an import line (`Reader` from kernel/store) and does not show that no surface drives time. My grep of lib/producers for playhead, currentTime, new Audio, requestAnimationFrame, playback and .play( found nothing, but I did not read the producer files to "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-08T02:22:52.322780+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "media-playback"
+      ],
+      "techniques": [
+        "engine-adapters",
+        "media-resource-lifecycle",
+        "playback-clock",
+        "source-resilience",
+        "timeline-scheduling",
+        "transport-contract"
+      ],
+      "deviations": 1,
+      "context": "audio-arrange-desk",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T02:22:52.322780+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "media-playback"
+      ],
+      "techniques": [
+        "engine-adapters",
+        "media-resource-lifecycle",
+        "playback-clock",
+        "source-resilience",
+        "timeline-scheduling",
+        "transport-contract"
+      ],
+      "deviations": 0,
+      "context": "part-editor-media-cut-score",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T02:22:52.322780+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "media-playback"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "bound-producers",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
