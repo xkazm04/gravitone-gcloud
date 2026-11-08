@@ -19,8 +19,9 @@
 // tree from a hook, from the pipeline, and from a shell in any subdirectory.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -81,11 +82,67 @@ try {
   // No git (an exported tree): lint everything, as before.
 }
 
+// --- the cache, and why only HALF the tree gets a per-file one ----------------
+// ESLint's per-file cache is sound for a rule that reads one file. eslint.config.mjs turns on
+// `parserOptions.projectService` for `**/*.{ts,tsx}` (no-floating-promises): that verdict
+// depends on the TYPES of every module a file imports, so a per-file cache would keep a stale
+// "this call returns a Promise" after the callee's file changed. So the walk is split in two:
+//   - everything that is not .ts/.tsx (no type information): ESLint's own content cache.
+//   - .ts/.tsx: a cache whose FILE NAME is a fingerprint of everything the TypeScript program
+//     reads (sources, json, lockfile, tsconfigs, generated .next types). Any change to any of
+//     them is a different file name, i.e. a cold run for that half. Sound by construction.
+// CI (`CI` set) and `--cold` / LINT_RATCHET_COLD=1 skip both and run the old uncached walk.
+// Cached results still carry `messages`, so the filesFloor assertion and the tally below read
+// them unchanged.
+const COLD = Boolean(process.env.CI) || process.argv.includes("--cold") || process.env.LINT_RATCHET_COLD === "1";
+const CACHE_DIR = resolve(ROOT, ".lint-ratchet-cache");
+
+const TYPED_INPUT = /\.(?:[cm]?[jt]sx?|json)$/;
+function typedFingerprint() {
+  const h = createHash("sha256");
+  const listed = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+    .split("\0").filter((p) => p && TYPED_INPUT.test(p)).sort();
+  const extra = ["next-env.d.ts", "package-lock.json", "node_modules/.package-lock.json"];
+  for (const d of readdirSync(ROOT)) {
+    if (!d.startsWith(".next")) continue;
+    for (const sub of ["types", "dev/types"]) walk(resolve(ROOT, d, sub), (f) => extra.push(relative(ROOT, f).split(sep).join("/")));
+  }
+  function walk(dir, fn) {
+    let ents;
+    try { ents = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      if (e.isDirectory()) walk(resolve(dir, e.name), fn);
+      else fn(resolve(dir, e.name));
+    }
+  }
+  for (const f of [...new Set([...listed, ...extra])].sort()) {
+    let buf;
+    try { buf = readFileSync(resolve(ROOT, f)); } catch { continue; }
+    h.update(f).update("\0").update(buf).update("\0");
+  }
+  h.update(process.version);
+  return h.digest("hex").slice(0, 16);
+}
+
 let results;
 try {
   const { ESLint } = await import("eslint");
-  const eslint = new ESLint({ cwd: ROOT, ignorePatterns: gitIgnored });
-  results = await eslint.lintFiles([ROOT]);
+  if (COLD) {
+    const eslint = new ESLint({ cwd: ROOT, ignorePatterns: gitIgnored });
+    results = await eslint.lintFiles([ROOT]);
+  } else {
+    mkdirSync(CACHE_DIR, { recursive: true });
+    const fp = typedFingerprint();
+    const typedCache = resolve(CACHE_DIR, `typed-${fp}`);
+    for (const f of readdirSync(CACHE_DIR)) {
+      if (f.startsWith("typed-") && f !== `typed-${fp}`) rmSync(resolve(CACHE_DIR, f), { force: true });
+    }
+    const cached = (cacheLocation, ignorePatterns) =>
+      new ESLint({ cwd: ROOT, ignorePatterns, cache: true, cacheStrategy: "content", cacheLocation });
+    const untyped = await cached(resolve(CACHE_DIR, "untyped"), [...gitIgnored, "**/*.ts", "**/*.tsx"]).lintFiles([ROOT]);
+    const typed = await cached(typedCache, gitIgnored).lintFiles(["**/*.ts", "**/*.tsx"]);
+    results = [...untyped, ...typed];
+  }
 } catch (err) {
   die(2, "COULD NOT RUN: ESLint failed to load or threw while linting.", [
     String(err && err.stack ? err.stack : err),
