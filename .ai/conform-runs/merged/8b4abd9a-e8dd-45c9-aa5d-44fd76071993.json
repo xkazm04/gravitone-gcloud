@@ -1,0 +1,116 @@
+{
+  "schema": "conform-run/1",
+  "worker": "8b4abd9a-e8dd-45c9-aa5d-44fd76071993",
+  "subject": "quality-gates",
+  "evaluatedAt": "2026-11-03T22:33:45.341826+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "foundry-mesh-gates",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/foundry/mesh/gates/rig-gate.ts:149 The rig gate reads skin weights, zero-weight vertices and the vertex count from the first primitive of the first mesh only. It still reports them as the whole asset ('N of M vertices carry no weight'), so a multi-primitive or multi-shell character passes with unweighted geometry the gate never saw, or fails as unrigged when its skin sits on a later mesh.",
+      "techniques": [
+        {
+          "technique": "gate-liveness",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/mesh/gates/rig-gate.ts:149 The population is cut to one primitive by structure and reported in the same words as a whole-asset verdict. Morph targets are read across every mesh (line 129), so the narrower weight read is known, and nothing asserts it."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/face-budget.ts:115 A missing request or measurement returns 'unmeasured' with a reason, never 'honored'. The rig gate also fails closed on unread joint names and morph counts."
+        },
+        {
+          "technique": "false-positive-economics",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/mesh-score.ts:163 A component-count rule that misfired on assembled characters was narrowed with a face-share histogram, not deleted. The blunt rule stays wherever the histogram is absent."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/mesh-score.ts:56 The thresholds are exported so the download door derives its ceiling from the number the grader uses, with no second hand-written copy."
+        },
+        {
+          "technique": "instrument-answers-only-its-own-question",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/mesh-score.ts:231 The three.js geometry scorer names the topology codes it cannot measure (GATE_ONLY_CODES) and does not let its green stand for them."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/version.ts:6 Each GateResult carries the exact ported rule version that judged it, so a satisfied verdict points at the version it was measured on."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/face-budget.ts:132 Budget findings name a remedy the reader can act on. The quad-trap branch points at providerFaceLimit, which ships in the same tree."
+        },
+        {
+          "technique": "unparseable-form-is-a-finding",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/mesh/gates/rig-gate.ts:376 Bytes the parser cannot read get their own outcome, separate from both pass and fail, and are never read as a clean rig."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "quality-gates",
+      "context": "article-human-gate-and-landing",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "scout-engine-core",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "resource-gates-and-gpu",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "project-step-store",
+      "reason": "withdrawn after review: reviewer (sonnet): lib/steps/recordRegistry.ts (lines 11-20, 154-181) refuses future-version and malformed records, and its header names this 'refuse, never downgrade' rule. So the claim that no check in this context refuses anything is contradicted, and the cited index.ts:8 anchor does not show that the precondition "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-03T22:33:45.341826+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "advancement-evidence-fields",
+        "false-positive-economics",
+        "gate-liveness",
+        "instrument-answers-only-its-own-question",
+        "policy-projection",
+        "refusal-names-a-reachable-remedy",
+        "unmeasurable-criteria",
+        "unparseable-form-is-a-finding"
+      ],
+      "deviations": 1,
+      "context": "foundry-mesh-gates",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-03T22:33:45.341826+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "project-step-store",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

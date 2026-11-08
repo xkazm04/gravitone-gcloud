@@ -74,7 +74,7 @@ async function shim(url: string | URL, init?: RequestInit): Promise<Response> {
   return POST(new Request(url, init));
 }
 
-test("the SDK client initializes, lists the four family tools and calls gt_read projects", async () => {
+test("the SDK client initializes, lists the five family tools and calls gt_read projects", async () => {
   const transport = new StreamableHTTPClientTransport(new URL(URL0), { fetch: shim, requestInit: { headers: { authorization: `Bearer ${token}` } } });
   const client = new Client({ name: "conformance-probe", version: "0.0.0" });
   await client.connect(transport);
@@ -85,7 +85,7 @@ test("the SDK client initializes, lists the four family tools and calls gt_read 
 
     const { tools } = await client.listTools();
     console.log(`[mcp] tools/list -> ${tools.map((t) => t.name).join(", ")}`);
-    expect(tools.map((t) => t.name)).toEqual(["gt_read", "gt_launch", "gt_job", "gt_spend"]);
+    expect(tools.map((t) => t.name)).toEqual(["gt_read", "gt_launch", "gt_job", "gt_spend", "gt_songlab"]);
     for (const t of tools) expect(t.inputSchema.type).toBe("object");
 
     const r = await client.callTool({ name: "gt_read", arguments: { op: "projects" } });

@@ -1,0 +1,156 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4e2b847f-5563-4dac-ab0b-c6523dc5eba6",
+ "subject": "generated-music-acceptance",
+ "evaluatedAt": "2026-11-06T03:46:43.378431+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "sound-hunt-and-measure",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/sound/huntRender.ts:353 A hunt render files its take knowing only the provider and a coarse 'music'/'sfx' model, with no account, plan tier, terms date or cleared destination, so a take that is later kept or finalized has no rights record. The measure side of this context is strong: loudness and peak, structure against the brief, and defect counts are all present.",
+   "techniques": [
+    {
+     "technique": "loudness-and-peak-acceptance",
+     "verdict": "conformant",
+     "evidence": "lib/sound/measureRun.ts:88 Every ingested blob gets integrated LUFS, true peak, LRA, clipping and tail silence, measured by the sidecar on the original file. The header at :22 explains why it is not taken from the 11 kHz decode. A sidecar failure leaves NULL, never a pass."
+    },
+    {
+     "technique": "structure-verification-against-plan",
+     "verdict": "conformant",
+     "evidence": "lib/sound/measureRun.ts:199 The triage pass checks each take against what its brief committed to: asked length, tempo, loop, and plan sections laid on the take's clock. A check whose number was never committed is skipped, per the 'verify what was committed' rule."
+    },
+    {
+     "technique": "generated-audio-defect-taxonomy",
+     "verdict": "conformant",
+     "evidence": "lib/sound/insights.ts:90 Rejects carry classed reasons (types.ts DEFECTS mirrors the taxonomy), counted per provider \u00d7 term/technique cell with a top defect. That is the recurrence record. Repair/re-render/condemn routing is not encoded."
+    },
+    {
+     "technique": "brief-conformance-listen",
+     "verdict": "deviation",
+     "evidence": "lib/sound/rubric.ts:47 A judged take is scored on the kind's fixed dimensions (types.ts RUBRIC music: melody, instrument_choice, instrument_quality). These are taste axes, not a checklist built from the brief's own commitments (named exclusions, vocal/instrumental, ending shape)."
+    },
+    {
+     "technique": "rights-and-provenance-record",
+     "verdict": "deviation",
+     "evidence": "lib/sound/huntRender.ts:330 A take record holds provider, prompt and terms but no account, plan tier, terms date, model version or cleared destination. The SoundTake type has no such fields at all."
+    }
+   ]
+  },
+  {
+   "context": "audio-arrange-desk",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/_audio/arrangeActs.ts:3 Finalizing a take gives it the library label agents select by, and it needs only a label. Nothing checks its measured loudness or true peak, and nothing records its rights, so a finalized asset can be unmeasured and uncleared.",
+   "techniques": [
+    {
+     "technique": "loudness-and-peak-acceptance",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/arrangeActs.ts:3 Finalize is a move plus a label (lib/sound/arrange.ts moveTake has no measurement check). The card read at arrangeRead.ts:70 carries length and peaks but not the LUFS or true peak the measure row holds."
+    },
+    {
+     "technique": "brief-conformance-listen",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/return/route.ts:3 A Suno return is a new audio file filed as the card's next version. fileReturn sets verdict 'kept' from the head (lib/sound/arrange.ts:168), and it can land straight in finalized with no listen of its own."
+    },
+    {
+     "technique": "rights-and-provenance-record",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/return/route.ts:68 A hand-made Suno return brings only bytes, mime and file name: no account, plan tier or terms date. Suno's commercial grant is exactly the plan-scoped, non-retroactive case the technique names."
+    }
+   ]
+  },
+  {
+   "context": "audio-hunt",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/_hunt/leafReturn.ts:62 A Suno leaf rendered by hand in the operator's own Suno session is filed with provider 'suno' and no account, plan tier or terms date, and crowning it makes it a kept take on the Arrange board. The asset reaches the commercial path with no rights record.",
+   "techniques": [
+    {
+     "technique": "rights-and-provenance-record",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_hunt/leafReturn.ts:62 The return writes provider and 'manual' op only. Account and plan tier, the load-bearing facts, are never captured."
+    },
+    {
+     "technique": "loudness-and-peak-acceptance",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_hunt/read.ts:81 The crown is a side-by-side comparative listen, which the technique says needs matched levels. auditionOf passes only peaks (normalised per take) and length, and HuntAudition applies no gain matching, so louder reads as better."
+    },
+    {
+     "technique": "brief-conformance-listen",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/audio/_hunt/Hunt.tsx:4 A hunt is exploration across axes, which the technique exempts ('slating directions is selection, not acceptance'). The asked chips sit beside each audition take."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "generated-music-acceptance",
+   "context": "audio-insight-lessons",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "generated-music-acceptance",
+   "context": "audio-text-producers",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T03:46:43.378431+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "brief-conformance-listen",
+    "generated-audio-defect-taxonomy",
+    "loudness-and-peak-acceptance",
+    "rights-and-provenance-record",
+    "structure-verification-against-plan"
+   ],
+   "deviations": 1,
+   "context": "sound-hunt-and-measure",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T03:46:43.378431+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "brief-conformance-listen",
+    "loudness-and-peak-acceptance",
+    "rights-and-provenance-record"
+   ],
+   "deviations": 1,
+   "context": "audio-arrange-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T03:46:43.378431+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "brief-conformance-listen",
+    "loudness-and-peak-acceptance",
+    "rights-and-provenance-record"
+   ],
+   "deviations": 1,
+   "context": "audio-hunt",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

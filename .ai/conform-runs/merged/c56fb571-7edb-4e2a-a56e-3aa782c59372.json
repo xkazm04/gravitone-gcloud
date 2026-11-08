@@ -1,0 +1,149 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c56fb571-7edb-4e2a-a56e-3aa782c59372",
+ "subject": "generated-music-acceptance",
+ "evaluatedAt": "2026-11-06T01:39:23.174631+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-insight-lessons",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/_insight/Rubric.tsx:4 The acceptance surface scores music takes 1-10 on taste dimensions (melody, instrument choice, instrument quality). It has no pass/fail/unmeasured checklist built from what the brief committed to in words (named instruments, excludes, vocal or instrumental, ending shape), so the verdict drifts toward 'do I like it'.",
+   "techniques": [
+    {
+     "technique": "brief-conformance-listen",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_insight/Rubric.tsx:4 The rubric dimensions (RUBRIC.music = melody/instrument_choice/instrument_quality in @gt/ui rubric.ts) are taste scores. No item is derived from the brief, and fails are never routed."
+    },
+    {
+     "technique": "structure-verification-against-plan",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/_insight/read.ts:114 Asked tempo, key and length are checked against the ingest measure with held/missed/unmeasured/unasked states, so only committed numbers are verified. Section boundaries are not checked here."
+    }
+   ]
+  },
+  {
+   "context": "audio-arrange-desk",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/_audio/arrangeActs.ts:21 Finalizing a take, which puts it in the pool agents select from (arrangeRead.ts:109), is a move that carries only a library label. No rights or provenance record (account, plan tier, terms, destination) is asked for or checked, so takes reach production use without the record the standard requires.",
+   "techniques": [
+    {
+     "technique": "rights-and-provenance-record",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/arrangeActs.ts:21 The finalize input is id/from/to/label/opId only, with no rights record at the acceptance moment."
+    }
+   ]
+  },
+  {
+   "context": "sound-generation-engine",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/sound/arrange.ts:155 A Suno return is filed `kept` and can land finalized with only a library label. The take record carries provider, prompt and reference id but no account, plan tier, terms date or cleared destination, so the commercial-use claim outruns its evidence.",
+   "techniques": [
+    {
+     "technique": "rights-and-provenance-record",
+     "verdict": "deviation",
+     "evidence": "lib/sound/arrange.ts:155 The only finalize gate is a label. SoundTake (types.ts) has `provider: ProviderId` but no account/plan-tier/terms/destination fields."
+    },
+    {
+     "technique": "generated-audio-defect-taxonomy",
+     "verdict": "conformant",
+     "evidence": "lib/sound/types.ts:45 DEFECTS names all nine taxonomy classes plus brief and technical misses as wire codes stored on each take and ledgered per verdict. editPlan.ts keeps sections by range so one section can be re-rendered."
+    }
+   ]
+  },
+  {
+   "context": "music-video-pipeline",
+   "subject": "generated-music-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/sound/mv/types.ts:21 The pipeline takes a generated Suno clip or take straight to a YouTube video plus metadata. MvSource/MvJob carry only kind, id and title, with no rights record and no re-clearance for the widened destination.",
+   "techniques": [
+    {
+     "technique": "rights-and-provenance-record",
+     "verdict": "deviation",
+     "evidence": "lib/sound/mv/types.ts:21 The source is identified only by kind/id/title. Nothing re-clears a generated track against a record before YouTube publication."
+    },
+    {
+     "technique": "loudness-and-peak-acceptance",
+     "verdict": "deviation",
+     "evidence": "lib/musicVideoExport.ts:469 The render core (called from render.ts:256) measures and gain-sets toward the YouTube target of -14 LUFS / -1 dBTP. But a failed measure falls back to gain 0 and the master ships unmeasured, and the measured number is not recorded on the job with its basis."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "generated-music-acceptance",
+   "context": "audio-text-producers",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T01:39:23.174631+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "brief-conformance-listen",
+    "structure-verification-against-plan"
+   ],
+   "deviations": 1,
+   "context": "audio-insight-lessons",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T01:39:23.174631+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "rights-and-provenance-record"
+   ],
+   "deviations": 1,
+   "context": "audio-arrange-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T01:39:23.174631+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "generated-audio-defect-taxonomy",
+    "rights-and-provenance-record"
+   ],
+   "deviations": 1,
+   "context": "sound-generation-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T01:39:23.174631+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-music-acceptance"
+   ],
+   "techniques": [
+    "loudness-and-peak-acceptance",
+    "rights-and-provenance-record"
+   ],
+   "deviations": 1,
+   "context": "music-video-pipeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

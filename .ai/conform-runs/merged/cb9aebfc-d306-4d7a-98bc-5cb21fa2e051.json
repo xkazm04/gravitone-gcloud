@@ -1,0 +1,65 @@
+{
+ "schema": "conform-run/1",
+ "worker": "cb9aebfc-d306-4d7a-98bc-5cb21fa2e051",
+ "subject": "frame-direction",
+ "evaluatedAt": "2026-11-08T02:09:46.968911+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "score-and-ads",
+   "subject": "frame-direction",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/motion/direction.ts:115 The motion-direction turn reads only the rendered plate (no beat, no function) and asks for up to three independently moving elements as an image-to-video prompt that is stored in FrameClip.motion, so the move can be neither one semantic change nor the beat's argument, and the intent field is filled with renderer prompt text.",
+   "techniques": [
+    {
+     "technique": "motion-intent-authoring",
+     "verdict": "deviation",
+     "evidence": "lib/motion/direction.ts:115 Up to three element moves per frame breaks the one-move rule. directMotion's only input is the plate (line 226), so rule 4 (let the move carry the beat's argument) cannot hold. Line 91 frames the output as 'the text prompt for an image-to-video model', which is renderer configuration and not medium-independent intent. A decline leaves the field empty instead of authoring stillness. Text bans (line 116) and camera-move filtering do conform."
+    },
+    {
+     "technique": "plate-elements-text-split",
+     "verdict": "conformant",
+     "evidence": "lib/ads/types.ts:140 An ad shot's super is its own field and is drawn by code at Finish, never by the image model. The image line (line 137) carries only the picture."
+    },
+    {
+     "technique": "per-beat-rejection",
+     "verdict": "not-applicable",
+     "evidence": "lib/ads/validate.ts:23 The ad scenarios validator refuses the whole round on any shot finding and lists every finding per shot. The round is a first generation with no earlier content and its shots are coupled by rung structure, so the technique's own exception applies: batch the fixes before applying anything. It is not a direction pass over existing frames. Separately, line 546 rejects duration words in motion, which the technique's restraint list forbids (see registryProposal)."
+    }
+   ],
+   "registryProposal": "Two techniques disagree on durations in motion text. per-beat-rejection lists 'no duration or easing vocabulary checks' among the things a validator must not enforce. motion-intent-authoring bans durations in motion text ('no durations, no frame rates, no easing vocabulary'), and a defect that is measurable by construction is exactly what per-beat-rejection says to enforce. lib/ads/validate.ts:546 enforces the ban and is right by one technique and wrong by the other. The standard should say which one wins."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "frame-direction",
+   "context": "visual-producers",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "frame-direction",
+   "context": "part-workspace-desk",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T02:09:46.968911+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "frame-direction"
+   ],
+   "techniques": [
+    "motion-intent-authoring",
+    "per-beat-rejection",
+    "plate-elements-text-split"
+   ],
+   "deviations": 1,
+   "context": "score-and-ads",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

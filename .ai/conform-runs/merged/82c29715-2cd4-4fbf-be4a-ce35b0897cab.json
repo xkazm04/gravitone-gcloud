@@ -1,0 +1,109 @@
+{
+ "schema": "conform-run/1",
+ "worker": "82c29715-2cd4-4fbf-be4a-ce35b0897cab",
+ "subject": "module-design",
+ "evaluatedAt": "2026-11-04T02:51:50.447924+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "agent-cli-and-turns",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/agent/reviewerEnv.ts:39 The per-engine environment is decided inside the argv builder, so reviewerEnv has to build a fake reviewer call (model \"m\", cwd \".\", empty prompt) to read the env field back out; the env decision sits in the wrong module and its caller works around it.",
+   "techniques": [
+    {
+     "technique": "module-depth",
+     "verdict": "deviation",
+     "evidence": "lib/agent/reviewerEnv.ts:39 The standard calls this depth in the wrong place: the caller reaches past the module with made-up inputs to get one decision out. Every engine's env is {} today, so nothing breaks yet, but any engine whose env depends on its call would be computed from fake values."
+    },
+    {
+     "technique": "seams-and-adapters",
+     "verdict": "conformant",
+     "evidence": "lib/agent/agentArgs.ts:62 The binary is a real substitution point: ARTICLES_AGENT_BIN swaps in the stub agent, and env is a parameter, not a global read."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "lib/agent/reviewerCommand.ts:13 Each engine's fence is a pure function a probe can assert without spawning anything. Spawning is kept in spawnTurn.ts."
+    },
+    {
+     "technique": "locality-and-leverage",
+     "verdict": "conformant",
+     "evidence": "lib/agent/cliSeam.ts:9 The reasoning door and the agent door are separate seams, not one function with a mode flag, and the one rule they share is imported once so it cannot drift."
+    }
+   ]
+  },
+  {
+   "context": "board-decision-desk",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/board/_port/port.ts:35 The Board port's switch is a hardcoded constant, so the 374-line fixture adapter (fixture.ts) is never reached by any route, test or kit specimen (grep finds only port.ts importing fixtureBoard). It is a seam nobody substitutes at, carrying a hand-written copy of the kernel's decision rules.",
+   "techniques": [
+    {
+     "technique": "seams-and-adapters",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/board/_port/port.ts:35 The standard says a seam nobody substitutes at is already the failure, and a double must be checked against the same contract; the fixture side has no callers and no contract suite. The real side's Deps injection (real.ts:63, used by tests/next-server/board-real.test.ts) is the seam that is actually used."
+    },
+    {
+     "technique": "locality-and-leverage",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/board/_port/fixture.ts:5 The kernel's decision rules (stale base, undo inverse, the blind EXISTS guard, commit refusal, the token) are written a second time in a file nothing runs, so one decision is encoded in two places and the copy can drift without anyone noticing."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "module-design",
+   "context": "decision-and-gates",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "module-design",
+   "context": "spend-and-pricing",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "module-design",
+   "context": "board-decision-adapters",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T02:51:50.447924+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "io-free-core",
+    "locality-and-leverage",
+    "module-depth",
+    "seams-and-adapters"
+   ],
+   "deviations": 1,
+   "context": "agent-cli-and-turns",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T02:51:50.447924+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "locality-and-leverage",
+    "seams-and-adapters"
+   ],
+   "deviations": 1,
+   "context": "board-decision-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

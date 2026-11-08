@@ -1,0 +1,15 @@
+/* The winner's booth side (Knockout app.css .side, .nrow, .jrow), in tokens. */
+.side{border-top:1px solid var(--hair);padding:var(--sp-3) 0 var(--sp-1)}
+.shead{display:flex;align-items:center;gap:var(--sp-3);height:var(--h-row);padding:0 var(--sp-loose)}
+.caps{font:500 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-right:auto}
+.nrow{display:grid;grid-template-columns:calc(var(--sp-7) * 2 + var(--sp-1)) minmax(0,1fr) auto;align-items:center;gap:var(--sp-3);height:var(--h-row);padding:0 var(--sp-loose);font:400 var(--fs-bar) var(--mono);color:var(--text);cursor:pointer;border:0;background:none;width:100%;text-align:left}
+.nrow:hover{background:var(--wash)}
+.still{cursor:default}
+.still:hover{background:none}
+.rd{color:var(--faint)}
+.lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--sp-1) var(--sp-3);padding:var(--sp-tight) var(--sp-loose);font:400 var(--fs-bar) var(--mono);color:var(--text);align-items:center}
+.state{color:var(--muted)}
+.bar{grid-column:1/-1;height:var(--h-progress);background:var(--ink-4);border-radius:var(--r-box);overflow:hidden}
+.bar i{--f:0%;display:block;height:100%;width:var(--f);background:var(--cyan)}
+.done .bar i{background:var(--faint)}

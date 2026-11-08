@@ -1,6 +1,9 @@
 # The pre-push hook is POSIX sh run by git's sh.exe on Windows — a CRLF
 # checkout breaks it at the shebang. Pin LF regardless of core.autocrlf.
 .githooks/* text eol=lf
+# The song lab's scripts run inside WSL (bash + Linux python): a CRLF checkout breaks a shell script
+# at `$'\r'` and a python shebang/heredoc the same way (spark yue2-song-lab).
+pipeline/yue2/** text eol=lf
 # Generated token outputs are compared byte-for-byte by `npm run tokens:check`
 # (pipeline/check-tokens.mts). A CRLF checkout would read as drift on every Windows clone.
 packages/ui/src/tokens.css text eol=lf

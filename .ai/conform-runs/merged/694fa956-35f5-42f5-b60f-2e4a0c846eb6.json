@@ -1,0 +1,112 @@
+{
+ "schema": "conform-run/1",
+ "worker": "694fa956-35f5-42f5-b60f-2e4a0c846eb6",
+ "subject": "concurrent-vcs",
+ "evaluatedAt": "2026-11-08T05:29:40.506512+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "foundry-forge-store-and-verdicts",
+   "subject": "concurrent-vcs",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/foundry/store.ts:15 The forge store writes git-tracked index files (ledger.json, styles.json) but never stages, commits, stashes or opens worktrees; a search of lib/foundry for worktree, git stash, GIT_INDEX_FILE and git commit found nothing, so the subject's precondition of sessions committing in a shared checkout does not hold here - only the generic shared-resource technique applies, and it is conformant.",
+   "techniques": [
+    {
+     "technique": "shared-resource-arbitration",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/runStore.ts:88 Scratch files are namespaced per process and call; the singular indices are gated by an exclusive-create lock that names its owner (by: \"app\") and has a stale rule (lib/diskTx.ts staleMs, outside the context), and a timeout returns a 503 telling the operator what to check instead of polling forever (catalogue.ts:243)."
+    },
+    {
+     "technique": "commit-verification",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/fsPort.ts:12 Here \"commit\" means a multi-file write to disk, not a git commit, so there is no log to read back."
+    },
+    {
+     "technique": "isolated-index-commits",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/store.ts:15 Nothing in the context touches the git staging index."
+    },
+    {
+     "technique": "never-lose-work-rules",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/store.ts:15 No stash, bulk add or reset; the files are left for a later git commit made elsewhere."
+    },
+    {
+     "technique": "physical-isolation",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/fsPort.ts:12 No worktree creation or removal in this context."
+    }
+   ],
+   "absenceTerms": [
+    "worktree",
+    "git stash",
+    "GIT_INDEX_FILE",
+    "git commit"
+   ]
+  },
+  {
+   "context": "ui-board-state",
+   "subject": "concurrent-vcs",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/board/commit.ts:20 The board's \"commit\" is a pure UI state machine for confirming a review packet, and its only concurrency control is a server revision with retry on conflict; a search of packages/ui/src for worktree, git stash, GIT_INDEX_FILE, git commit and git add found nothing, so no version-control technique has anything to govern here.",
+   "techniques": [
+    {
+     "technique": "commit-verification",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/board/commit.ts:20 A packet commit flow (preview, token, confirm), not a git commit."
+    },
+    {
+     "technique": "shared-resource-arbitration",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/board/boardGate.ts:6 Optimistic concurrency over a server record, not arbitration of a machine resource shared between sessions."
+    }
+   ],
+   "absenceTerms": [
+    "worktree",
+    "git stash",
+    "GIT_INDEX_FILE",
+    "git commit",
+    "git add"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T05:29:40.506512+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrent-vcs"
+   ],
+   "techniques": [
+    "commit-verification",
+    "isolated-index-commits",
+    "never-lose-work-rules",
+    "physical-isolation",
+    "shared-resource-arbitration"
+   ],
+   "deviations": 0,
+   "context": "foundry-forge-store-and-verdicts",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T05:29:40.506512+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrent-vcs"
+   ],
+   "techniques": [
+    "commit-verification",
+    "shared-resource-arbitration"
+   ],
+   "deviations": 0,
+   "context": "ui-board-state",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

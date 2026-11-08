@@ -1,0 +1,91 @@
+{
+  "schema": "conform-run/1",
+  "worker": "0d4a9526-bb7a-48a8-8286-a310463e3704",
+  "subject": "data-access",
+  "evaluatedAt": "2026-11-08T05:24:39.425051+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "ledger-screen",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/ledger/_ledger/read.ts:214 readStrip runs a loop that issues one kernel count per strip day, up to 84 count statements per render (plus one per held project in readFacets), because the kernel's countEvents has no grouped per-day aggregate; this is the loop-of-queries shape the technique says the layer should replace with one grouped aggregate query.",
+      "techniques": [
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:214 One countEvents per day inside `for (const day of days)`. A per-day count is an aggregate summary, and the technique's cure is a grouped aggregate (GROUP BY day). events-count.ts has GROUP BY only per facet column, with no day bucket."
+        },
+        {
+          "technique": "layering-rules",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:6 The screen calls only named kernel operations (queryEvents, countEvents). A grep of the context's files for prepare/SELECT/sql found no query text."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:274 Page, Facets, Strip and View are read-only projections shaped for the screen, and none is handed back to a write. The page, the JSONL route and the actions share this one read module."
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/filter.ts:139 The query grammar is a closed prefix allowlist, and an unknown x:y stays a literal word. Type, src and actor values are validated (typePattern, SOURCE, isActor), and the ones that fail are named in `ignored` instead of being passed through. Values go to the kernel as data."
+        },
+        {
+          "technique": "repo-testing",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/ledger-read.test.ts:24 The read module is tested against a real in-memory kernel built by openKernel, the production road, with a fresh store per test and fixtures appended through the kernel's append."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "data-access",
+      "context": "style-store",
+      "reason": "withdrawn after review: reviewer (sonnet): The deviation rests on the `SELECT EXISTS (SELECT 1 FROM styles)` probe in lib/foundry/catalogue.ts:123, which is outside this context's files (packages/kernel/src/styles/*). It is a caller's leak, so the verdict is about another context's code."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-08T05:24:39.425051+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "data-access"
+      ],
+      "techniques": [
+        "batching-and-n-plus-one",
+        "layering-rules",
+        "query-construction",
+        "read-models-and-projections",
+        "repo-testing"
+      ],
+      "deviations": 1,
+      "context": "ledger-screen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T05:24:39.425051+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "data-access"
+      ],
+      "techniques": [
+        "batching-and-n-plus-one",
+        "layering-rules",
+        "query-construction",
+        "read-models-and-projections",
+        "repo-testing",
+        "row-mapping",
+        "transactions-and-units-of-work"
+      ],
+      "deviations": 1,
+      "context": "style-store",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

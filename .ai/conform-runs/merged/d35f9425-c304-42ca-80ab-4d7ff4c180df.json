@@ -1,0 +1,142 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d35f9425-c304-42ca-80ab-4d7ff4c180df",
+ "subject": "native-shell-integration",
+ "evaluatedAt": "2026-11-07T02:03:15.879189+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "studio-shell",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/liveFeed.ts:9 The shell's long-lived stream is a browser EventSource owned by the page, and searching the shell files for tauri/electron/ipcRenderer/__TAURI__/contextBridge/webview found nothing, so no native process exists to own streams, overlays or permissions.",
+   "techniques": [
+    {
+     "technique": "native-owned-stream",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/liveFeed.ts:23 The stream lives in the document and closes on pagehide by design. No native host could own it instead."
+    },
+    {
+     "technique": "capability-presence-contract",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/liveFeed.ts:61 It uses only standard browser APIs, so no capability differs from one native host to another."
+    }
+   ],
+   "absenceTerms": [
+    "tauri",
+    "electron",
+    "ipcRenderer",
+    "__TAURI__",
+    "contextBridge"
+   ]
+  },
+  {
+   "context": "app-root-and-dev-inspector",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_dev-inspector/DevInspector.tsx:38 The root and the dev inspector reach host capabilities only through browser APIs such as navigator.clipboard, and searching the context files for tauri/electron/ipcRenderer/__TAURI__/contextBridge/webview found nothing, so the subject's native-process precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "query-transparent-overlay",
+     "verdict": "not-applicable",
+     "evidence": "app/_dev-inspector/DevInspector.tsx:30 The inspector overlay is a React portal inside the product's own document. It never covers a foreign application."
+    },
+    {
+     "technique": "capability-presence-contract",
+     "verdict": "not-applicable",
+     "evidence": "app/_dev-inspector/DevInspector.tsx:37 This is a browser feature check. There is no set of native hosts to declare it against."
+    },
+    {
+     "technique": "host-forwarded-key-contract",
+     "verdict": "not-applicable",
+     "evidence": "app/layout.tsx:34 A plain document root. No native wrapper forwards hardware keys into it."
+    }
+   ],
+   "absenceTerms": [
+    "tauri",
+    "electron",
+    "ipcRenderer",
+    "__TAURI__",
+    "contextBridge"
+   ]
+  },
+  {
+   "context": "scout-screen",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/scout/_port/port.ts:17 The scout screen's only seam is a server-side fixture/real port reached through server actions, and searching its files for tauri/electron/ipcRenderer/__TAURI__/contextBridge/webview found nothing, so there is no native host boundary for the subject to govern.",
+   "techniques": [
+    {
+     "technique": "native-side-owns-the-target-set",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/scout/_port/port.ts:1 Server code receives the writes through server actions. No native command takes a list of targets from the page."
+    }
+   ],
+   "absenceTerms": [
+    "tauri",
+    "electron",
+    "ipcRenderer",
+    "__TAURI__",
+    "contextBridge"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "native-shell-integration",
+   "context": "studio-routes-and-redirects",
+   "reason": "absence contradicted: app/(studio)/audio/studio/_port/fixtureSessions.ts:124 contains 'electron' (1 hit(s) in the context's directories)"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T02:03:15.879189+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "capability-presence-contract",
+    "native-owned-stream"
+   ],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T02:03:15.879189+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "capability-presence-contract",
+    "host-forwarded-key-contract",
+    "query-transparent-overlay"
+   ],
+   "deviations": 0,
+   "context": "app-root-and-dev-inspector",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T02:03:15.879189+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "native-side-owns-the-target-set"
+   ],
+   "deviations": 0,
+   "context": "scout-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

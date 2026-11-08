@@ -1,0 +1,117 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f3d57e23-822e-45d6-a3fe-39bd49496b3a",
+ "subject": "design-tokens",
+ "evaluatedAt": "2026-11-08T05:36:21.181133+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ui-tokens-and-catalog",
+   "subject": "design-tokens",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/ui/src/tokens.css:88 The role tier holds call-site addresses (ledger-cols, w-lib-nav, w-packet-rail and the other per-route groups), and the lint lets components use primitives directly. The semantic layer grows with the interface instead of recording classes of intent, even though generation and an allow-list gate are in place.",
+   "techniques": [
+    {
+     "technique": "cross-language-token-parity",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/tokenRender.ts:32 Strategy 1. tokens.css and tokens.ts are both generated from source.json and carry a do-not-edit provenance line. pipeline/check-tokens.mts compares each one with a fresh render. There is one binding set, so generation is the right strategy for colours too."
+    },
+    {
+     "technique": "token-taxonomy",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/tokens.css:241 Many roles name a call site, not a class of use: w-lib-*, lib-cols*, ledger-cols, w-packet-rail, w-cull-label, dur-sheet. Primitives carry hue names (cyan, amber) and are what components actually use, so the skipped-layer anti-pattern is the norm. Counted in *.module.css: var(--cyan) 303, var(--sp-3) 451, var(--muted) 251."
+    },
+    {
+     "technique": "token-enforcement",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/tokenLint.ts:77 In its favour: membership is an allow-list against source.json, findings fail the build (tokens:check is in verify), and the one-off escape hatch is loud and capped by a budget. The gaps: the allowed set includes primitives, so the skipped-layer ban is missing. Only colour and px literals are checked (line 6), so raw durations such as .22s and .9s pass. Findings do not name the equivalent token. Only *.module.css is read, not inline style={}. check-tokens.mts:95 exits 0 when it walks zero files (it only prints 'nothing to check')."
+    },
+    {
+     "technique": "motion-tokens",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/tokens.css:69 There is one easing, with no enter, exit, move or expressive roles. The duration ladder has three steps plus a call-site dur-sheet. tokens.css has no reduced-motion rebinding: reduced motion is a blanket animation:none rule elsewhere, plus per-component deny-list blocks (28 files). The lint does not police raw durations."
+    },
+    {
+     "technique": "theme-architecture",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/tokenRender.ts:18 The renderer emits a single :root binding set. A grep of packages/ui/src for prefers-color-scheme and data-theme found nothing, so there is no second theme for the technique to govern."
+    }
+   ]
+  },
+  {
+   "context": "kit-design-system-specimens",
+   "subject": "design-tokens",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/kit/kit.module.css:68 The kit's motion specimens use durations that are not on the ladder (.22s, .9s, .4s), one with no easing token, and the reduced-motion row presents 'none' as the policy. The page that shows the system as shipped is itself showing the motion vocabulary being broken.",
+   "techniques": [
+    {
+     "technique": "cross-language-token-parity",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/kit/page.tsx:62 The kit reads source.json, the generator's authority, not a hand list. It shows an ErrorLine for any token group it has no section for, so a group can't silently go missing (set equality). Specimens paint through var(--name), which reads back the resolved value (Tokens.tsx:41)."
+    },
+    {
+     "technique": "motion-tokens",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/kit/kit.module.css:68 The act specimens use .9s, .22s and .4s, none of which is on the dur-fast/dur/dur-slow ladder. Tokens.tsx:141 presents reduced motion as 'prefers-reduced-motion \u2192 none', which the technique explicitly rejects: reduced is not none, and a duration of exactly zero breaks completion events. Motion.tsx relies on onAnimationEnd."
+    },
+    {
+     "technique": "token-taxonomy",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/kit/kit.module.css:60 Layout rules on the kit sheet use primitives directly (cyan, sp-5, ink-2, r-sm) instead of roles. This is the skipped-layer anti-pattern."
+    },
+    {
+     "technique": "token-enforcement",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/kit/kit.module.css:70 A raw duration with no easing token passes tokens:check, because the lint reads only colour and px literals. The gate cannot see this violation in the kit's own stylesheet."
+    },
+    {
+     "technique": "theme-architecture",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/Tokens.tsx:41 Specimens consume roles only through var() and never branch on theme. There is one binding set, so the technique's precondition does not hold."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T05:36:21.181133+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "design-tokens"
+   ],
+   "techniques": [
+    "cross-language-token-parity",
+    "motion-tokens",
+    "theme-architecture",
+    "token-enforcement",
+    "token-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "ui-tokens-and-catalog",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T05:36:21.181133+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "design-tokens"
+   ],
+   "techniques": [
+    "cross-language-token-parity",
+    "motion-tokens",
+    "theme-architecture",
+    "token-enforcement",
+    "token-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "kit-design-system-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

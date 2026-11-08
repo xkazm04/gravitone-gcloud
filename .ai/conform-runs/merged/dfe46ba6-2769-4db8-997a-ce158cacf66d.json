@@ -1,0 +1,193 @@
+{
+ "schema": "conform-run/1",
+ "worker": "dfe46ba6-2769-4db8-997a-ce158cacf66d",
+ "subject": "browser-credential-boundary",
+ "evaluatedAt": "2026-11-04T22:09:11.500829+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "studio-shell",
+   "subject": "browser-credential-boundary",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "app/(studio)/_shell/live.ts:1 The shell's store-reading modules are marked server-only, its one data action resolves the principal before it reads, and the browser half sends only the user's own Firebase ID token to the same-origin /api/session, so no store or vendor credential reaches the bundle.",
+   "techniques": [
+    {
+     "technique": "public-vs-server-env-split",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/live.ts:1 The module is marked server-only (live.ts, headerFacts.ts), so the build refuses to put it in the client bundle. The technique's 'mark the module' rule is met."
+    },
+    {
+     "technique": "broker-proxy-attaches-secret",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/bellJobs.ts:22 The bell's server action authenticates the caller through the action core before it touches the kernel store with server privilege; the browser holds only its own session (session.ts:46 posts its idToken)."
+    },
+    {
+     "technique": "aggregate-view-not-base-table",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/headerFacts.ts:9 The store is reached only from a server-only module, so the browser never queries tables directly. Regime one does not hold."
+    },
+    {
+     "technique": "outbound-fetch-destination-validation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/Providers.tsx:99 The shell's only fetches run in the browser against fixed same-origin paths. No server fetch takes an address that arrived as data."
+    },
+    {
+     "technique": "server-sealed-client-roundtrip",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/liveFeed.ts:61 The only value the client carries back is its own resume cursor. The client is the authority on its own position, and the cursor is not a server verdict that is trusted on return."
+    }
+   ]
+  },
+  {
+   "context": "floor-hub-screen",
+   "subject": "browser-credential-boundary",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "app/(studio)/floor/_floor/load.ts:1 The Floor reads every store in a server-only loader and hands the client island data plus port references, and an internal failure of the slot read reaches the browser through publicError as an opaque ref; no credential or raw internal fault crosses to the bundle.",
+   "techniques": [
+    {
+     "technique": "public-vs-server-env-split",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/floor/_floor/load.ts:1 The loader that touches the kernel and v1 stores is marked server-only."
+    },
+    {
+     "technique": "opaque-upstream-errors",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/floor/page.tsx:39 publicError keeps the classified codes and replaces an internal fault with an 'internal error (ref \u2026)' envelope, logging the detail on the server."
+    },
+    {
+     "technique": "aggregate-view-not-base-table",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_floor/load.ts:11 The SQLite store is opened server-side only, so the browser holds no store role."
+    },
+    {
+     "technique": "default-deny-plus-defaulted-owner",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_floor/load.ts:21 The browser never writes rows directly, so no row policy or defaulted owner column is in play."
+    },
+    {
+     "technique": "outbound-fetch-destination-validation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_floor/Floor.tsx:119 The live feed is a browser-side EventSource to a fixed same-origin path. No server-side fetch takes a data-borne destination."
+    },
+    {
+     "technique": "server-sealed-client-roundtrip",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/page.tsx:34 Round-tripped state is the person's own lane, month and slot address, parsed as input. No server verdict is carried back."
+    }
+   ]
+  },
+  {
+   "context": "board-decision-desk",
+   "subject": "browser-credential-boundary",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "app/(studio)/board/_port/real.ts:49 The commit does not trust the preview token the browser carries back: it re-derives the v1 digest from a fresh read and the kernel recomputes the token, refusing a stale or forged one; every Board door authenticates its caller before it touches the server-privileged store.",
+   "techniques": [
+    {
+     "technique": "server-sealed-client-roundtrip",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/real.ts:49 This is the technique's 're-derive it' branch. The client's token is compared against a server recomputation (real.ts:245 hands the token and a fresh v1Digest to kernelCommit), so a client cannot manufacture a pass."
+    },
+    {
+     "technique": "broker-proxy-attaches-secret",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/[packet]/keepalive/route.ts:24 The same-origin route guards the caller, caps the body and passes the input through a zod schema before it reaches the store. The server actions use principal('read') in the same way (actions.ts:33)."
+    },
+    {
+     "technique": "public-vs-server-env-split",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/real.ts:1 The real port, the fixture port and load.ts are all marked server-only."
+    },
+    {
+     "technique": "opaque-upstream-errors",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_board/load.ts:43 Load and rail failures go through publicError (load.ts:49 for the rail), so an internal fault becomes a ref and the detail stays in the server log."
+    },
+    {
+     "technique": "aggregate-view-not-base-table",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/board/_board/load.ts:32 The kernel store is opened on the server only, so the browser holds no store role."
+    },
+    {
+     "technique": "outbound-fetch-destination-validation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/board/_board/Board.tsx:44 This is the browser's own keepalive to a same-origin path built from boardFor(id). No server fetch takes a data-borne address."
+    }
+   ],
+   "registryProposal": "server-sealed-client-roundtrip could name the shape found here as a recognised realisation: a client-carried preview token is checked by comparing it against a server-side recomputation over freshly read state (optimistic concurrency), rather than by sealing. Today only the 're-derive it' exclusion covers it, in one sentence."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "browser-credential-boundary",
+   "context": "ui-status-provenance",
+   "reason": "evidence leans on tally/count.ts, which is not a tracked file"
+  },
+  {
+   "subject": "browser-credential-boundary",
+   "context": "library-browser-screen",
+   "reason": "evidence leans on _port/port.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T22:09:11.500829+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "browser-credential-boundary"
+   ],
+   "techniques": [
+    "aggregate-view-not-base-table",
+    "broker-proxy-attaches-secret",
+    "outbound-fetch-destination-validation",
+    "public-vs-server-env-split",
+    "server-sealed-client-roundtrip"
+   ],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T22:09:11.500829+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "browser-credential-boundary"
+   ],
+   "techniques": [
+    "aggregate-view-not-base-table",
+    "default-deny-plus-defaulted-owner",
+    "opaque-upstream-errors",
+    "outbound-fetch-destination-validation",
+    "public-vs-server-env-split",
+    "server-sealed-client-roundtrip"
+   ],
+   "deviations": 0,
+   "context": "floor-hub-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T22:09:11.500829+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "browser-credential-boundary"
+   ],
+   "techniques": [
+    "aggregate-view-not-base-table",
+    "broker-proxy-attaches-secret",
+    "opaque-upstream-errors",
+    "outbound-fetch-destination-validation",
+    "public-vs-server-env-split",
+    "server-sealed-client-roundtrip"
+   ],
+   "deviations": 0,
+   "context": "board-decision-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
