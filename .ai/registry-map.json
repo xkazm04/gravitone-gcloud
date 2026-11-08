@@ -7032,7 +7032,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/store.ts:15 The forge store writes git-tracked index files (ledger.json, styles.json) but never stages, commits, stashes or opens worktrees; a search of lib/foundry for worktree, git stash, GIT_INDEX_FILE and git commit found nothing, so the subject's precondition of sessions committing in a shared checkout does not hold here - only the generic shared-resource technique applies, and it is conformant.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         },
         {
           "subject": "transactions-over-a-replicated-log",
@@ -19622,7 +19626,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/board/commit.ts:20 The board's \"commit\" is a pure UI state machine for confirming a review packet, and its only concurrency control is a server revision with retry on conflict; a search of packages/ui/src for worktree, git stash, GIT_INDEX_FILE, git commit and git add found nothing, so no version-control technique has anything to govern here.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         }
       ],
       "governance": "governed"

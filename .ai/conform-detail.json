@@ -19173,6 +19173,63 @@
         "at": "2026-11-08T05:25:19.831744+00:00",
         "reason": "reviewer (sonnet): The deviation rests on the `SELECT EXISTS (SELECT 1 FROM styles)` probe in lib/foundry/catalogue.ts:123, which is outside this context's files (packages/kernel/src/styles/*). It is a caller's leak, so the verdict is about another context's code."
       }
+    },
+    "47a52ae3-c07c-4d24-86e1-da7d59861f7e/concurrent-vcs": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:29:40.506Z",
+      "worker": "694fa956-35f5-42f5-b60f-2e4a0c846eb6",
+      "techniques": [
+        {
+          "technique": "shared-resource-arbitration",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/runStore.ts:88 Scratch files are namespaced per process and call; the singular indices are gated by an exclusive-create lock that names its owner (by: \"app\") and has a stale rule (lib/diskTx.ts staleMs, outside the context), and a timeout returns a 503 telling the operator what to check instead of polling forever (catalogue.ts:243)."
+        },
+        {
+          "technique": "commit-verification",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/fsPort.ts:12 Here \"commit\" means a multi-file write to disk, not a git commit, so there is no log to read back."
+        },
+        {
+          "technique": "isolated-index-commits",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/store.ts:15 Nothing in the context touches the git staging index."
+        },
+        {
+          "technique": "never-lose-work-rules",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/store.ts:15 No stash, bulk add or reset; the files are left for a later git commit made elsewhere."
+        },
+        {
+          "technique": "physical-isolation",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/fsPort.ts:12 No worktree creation or removal in this context."
+        }
+      ]
+    },
+    "dbc8253a-d568-4111-9b0b-a85e938e539c/concurrent-vcs": {
+      "context": "ui-board-state",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:29:40.506Z",
+      "worker": "694fa956-35f5-42f5-b60f-2e4a0c846eb6",
+      "techniques": [
+        {
+          "technique": "commit-verification",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/board/commit.ts:20 A packet commit flow (preview, token, confirm), not a git commit."
+        },
+        {
+          "technique": "shared-resource-arbitration",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/board/boardGate.ts:6 Optimistic concurrency over a server record, not arbitration of a machine resource shared between sessions."
+        }
+      ]
     }
   }
 }
