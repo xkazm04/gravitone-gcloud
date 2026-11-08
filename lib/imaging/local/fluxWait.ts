@@ -14,9 +14,11 @@
 // the sentence that caused it, and its sentence says only what it knows: a POST that failed is not "withdrawn".
 // The error names where the prompt was (queued or running), as it always has.
 //
-// A prompt ComfyUI stopped answering for, or dropped, is the ENGINE's absence, not the panel's fault: its error
-// carries COMFY_UNREACHABLE (flux2.ts), which the scout board reads to wait the outage out instead of booking an
-// empty panel. A timed-out draw is `unavailable` without it: the engine was alive, the panel is what failed.
+// A prompt ComfyUI stopped ANSWERING for is the ENGINE's absence, not the panel's fault: its error carries
+// COMFY_UNREACHABLE (flux2.ts), which the scout board reads to wait the outage out instead of booking an empty
+// panel. A prompt it answered for and simply no longer held (a restart that wiped its queue, answering throughout),
+// and a timed-out draw, are `unavailable` without it: the engine was alive, and a graph that kills it must not be
+// retried as if it were weather.
 
 import { AppError, isAppError } from "@gt/domain/errors";
 
@@ -52,6 +54,7 @@ export async function awaitPrompt<E>(id: string, sentAt: number, p: WaitPorts<E>
   const cap = k.capMs ?? CAP_MS;
   const pendingCap = k.pendingCapMs ?? PENDING_CAP_MS;
   let lost = 0;
+  let silent = false;
   let startedAt: number | undefined;
   let seen: Place = "pending";
   const fail = async (build: (withdrawn: string) => AppError): Promise<never> => {
@@ -69,10 +72,15 @@ export async function awaitPrompt<E>(id: string, sentAt: number, p: WaitPorts<E>
         where = await p.place().catch(() => null);
         lost = where === null || (where === "neither" && entry === undefined) ? lost + 1 : 0;
       }
+      if (h === null || where === null) silent = true;
+      if (lost === 0) silent = false;
       if (where !== null) seen = where;
       const t = k.now();
       if (where === "running" && startedAt === undefined) startedAt = t;
-      if (lost >= LOST_POLLS) return await fail((w) => comfyUnreachable(`ComfyUI lost prompt ${id}: unreachable, or holding it in neither its queue nor its history, for ${LOST_POLLS} polls (restarted?); the prompt ${w}`));
+      if (lost >= LOST_POLLS) return await fail((w) => {
+          const said = `ComfyUI lost prompt ${id}: unreachable, or holding it in neither its queue nor its history, for ${LOST_POLLS} polls (restarted?); the prompt ${w}`;
+          return silent ? comfyUnreachable(said) : new AppError("unavailable", said);
+        });
       if (startedAt !== undefined && t - startedAt >= cap) {
         return await fail((w) => new AppError("unavailable", `ComfyUI did not finish Flux prompt ${id}: it ran ${min(t - startedAt!)} (limit ${min(cap)}); it was ${w}`));
       }

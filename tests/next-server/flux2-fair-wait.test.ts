@@ -74,13 +74,12 @@ describe("the fair wait", () => {
     expect(e.message).not.toContain("was interrupted");
   });
 
-  it("a lost prompt is withdrawn (looked for) before the throw, and the sentence is typed unreachable", async () => {
-    // Held for a while, then in neither queue nor history for 6 polls; the queue answers, so the withdrawal finds it gone.
+  it("a prompt ComfyUI answered for and no longer holds is looked for before the throw, and is NOT typed unreachable", async () => {
+    // Held for a while, then in neither queue nor history for 6 polls, every request answered: the engine was alive.
     const s = script({ at: (t) => (t < 30_000 ? "running" : "neither") });
     const e = await fails(run(s));
     expect(e.message).toMatch(/^ComfyUI lost prompt p-1: .* for 6 polls \(restarted\?\); the prompt in neither queue$/);
-    expect((e as { detail?: string }).detail).toBe(COMFY_UNREACHABLE);
-    expect(isComfyUnreachable(e)).toBe(true);
+    expect(isComfyUnreachable(e)).toBe(false);
   });
 
   it("the server gone mid-draw: the lost throw survives a withdrawal that cannot reach it", async () => {
@@ -88,6 +87,7 @@ describe("the fair wait", () => {
     const e = await fails(run(s));
     expect(e.message).toMatch(/^ComfyUI lost prompt p-1: .*; the prompt not located: ComfyUI did not answer \/queue, so it may still be queued or running$/);
     expect(isComfyUnreachable(e)).toBe(true);
+    expect((e as { detail?: string }).detail).toBe(COMFY_UNREACHABLE);
   });
 
   it("refused to start (/system_stats) is typed unreachable; a refused graph is not", async () => {
