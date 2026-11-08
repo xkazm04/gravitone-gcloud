@@ -2502,6 +2502,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A worker restart re-queues a reel whose orphaned claude child is still writing the same strip directory, and two writers race on it.",
   },
   {
+    id: "resume-unknown-producer",
+    test: "packages/kernel/test/job.resume.test.ts",
+    file: "packages/kernel/src/job-resume.ts",
+    find: "RESUMABLE_PRODUCERS.has(job.producer)",
+    replace: "true",
+    why: "A producer nobody read is re-run unattended after a crash, possibly buying a second still or adopting a torn file.",
+  },
+  {
     id: "resume-no-attempt-limit",
     test: "packages/kernel/test/job.resume.test.ts",
     file: "packages/kernel/src/job-resume.ts",

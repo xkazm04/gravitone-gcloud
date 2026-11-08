@@ -236,10 +236,10 @@ describe("workLoop", () => {
     await until(() => must(get(w.store, jobId("next"))).job.state === "done", 2_000).catch(() => undefined);
     stop.abort();
     const summary = must(await loop);
-    // gpu.local is a free lane: the reaper names the corpse's job interrupted and the worker puts it back (job-resume.ts).
-    expect(must(get(w.store, jobId("dead"))).job).toMatchObject({ state: "done", attempt: 2 });
+    // `gpu` is no audited producer (job-resume.ts RESUMABLE_PRODUCERS): the job stays interrupted for the operator.
+    expect(must(get(w.store, jobId("dead"))).job.state).toBe("interrupted");
     expect(must(get(w.store, jobId("next"))).job.state).toBe("done");
-    expect(summary).toMatchObject({ recovered: 1, resumed: 1 });
+    expect(summary).toMatchObject({ recovered: 1, resumed: 0 });
     w.store.close();
   }, 20_000);
 
@@ -255,8 +255,7 @@ describe("workLoop", () => {
     const stop = new AbortController();
     const loop = workLoop(w.fx, new Map([[producerKey("gpu", "box.render"), render.p]]), { signal: stop.signal, holder: hostA, alive: (pid) => pid !== corpse.pid, idleMs: 5 });
     await until(() => render.seen.length === 1);
-    // Interrupted by the sweep, then re-queued on its free lane; this worker carries no gpu.local producer, so it waits there.
-    expect(must(get(w.store, jobId("dead"))).job).toMatchObject({ state: "queued", attempt: 2 });
+    expect(must(get(w.store, jobId("dead"))).job.state).toBe("interrupted");
     stop.abort();
     render.open();
     const summary = must(await loop);

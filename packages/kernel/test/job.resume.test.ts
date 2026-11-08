@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import type { Holder } from "@gt/domain/job";
 import type { ResourceLane } from "@gt/domain/lane";
 import { producerKey } from "../src/job-queue-core.ts";
-import { AUTO_RESUME_LANES, EXCLUDED_PRODUCERS, MAX_AUTO_RESUMES, resumeFreeWork } from "../src/job-resume.ts";
+import { AUTO_RESUME_LANES, RESUMABLE_PRODUCERS, MAX_AUTO_RESUMES, resumeFreeWork } from "../src/job-resume.ts";
 import { recover, runJob, type RunOptions } from "../src/job-run.ts";
 import { workLoop } from "../src/job-worker.ts";
 import { enqueue, get, retry } from "../src/job.ts";
@@ -29,7 +29,7 @@ const until = async (cond: () => boolean, ms = 10_000): Promise<void> => {
 const deadHolder = (pid: number): Holder => ({ bootId: `boot-dead-${pid}`, pid, host: hostA.host });
 const lease: RunOptions = { alive: () => true, sleep: async () => {}, heartbeatMs: 3_600_000 };
 
-function put(w: World, id: string, lane: ResourceLane, name = "test"): void {
+function put(w: World, id: string, lane: ResourceLane, name = "cut"): void {
   must(enqueue(w.store, { id, of: { kind: "run", id: `run-${id}` }, producer: name, lane, mode: LIVE }, operator));
 }
 
@@ -55,7 +55,7 @@ describe("the machine resumes a free lane's interrupted job", () => {
       return { kind: "produced", output: { made: s.name } };
     });
     const stop = new AbortController();
-    const loop = workLoop(w.fx, new Map([[producerKey("test", lane), p]]), { signal: stop.signal, holder: hostA, alive: (pid) => pid === hostA.pid, idleMs: 5, run: { sleep: async () => {} } });
+    const loop = workLoop(w.fx, new Map([[producerKey("cut", lane), p]]), { signal: stop.signal, holder: hostA, alive: (pid) => pid === hostA.pid, idleMs: 5, run: { sleep: async () => {} } });
     await until(() => stateOf(w, "j") === "done");
     stop.abort();
     const summary = must(await loop);
@@ -96,7 +96,17 @@ describe("the machine resumes a free lane's interrupted job", () => {
     await dieInB(w, "board", "gpu.local", 7503);
     expect(must(resumeFreeWork(w.fx, sweep(w), hostA)).map((j) => j.id)).toEqual(["board"]);
     expect([stateOf(w, "mv"), stateOf(w, "forge"), stateOf(w, "board")]).toEqual(["interrupted", "interrupted", "queued"]);
-    for (const name of ["mv", "frames", "still", "motion", "scout-scene", "scout-asset", "scout-sheet", "scout-ingest", "profile", "forge", "dojo"]) expect(EXCLUDED_PRODUCERS.has(name), name).toBe(true);
+    for (const name of ["mv", "frames", "still", "motion", "scout-scene", "scout-asset", "scout-sheet", "scout-ingest", "profile", "forge", "dojo"]) expect(RESUMABLE_PRODUCERS.has(name), name).toBe(false);
+    expect([...RESUMABLE_PRODUCERS].sort()).toEqual(["cover", "cut", "media-facts", "mesh", "scout-piece", "scout-storyboard", "yue2-post", "yue2-render", "yue2-score"]);
+    w.store.close();
+  }, 30_000);
+
+  it("a producer nobody has audited is not re-queued on an allowed lane: unknown means interrupted", async () => {
+    const w = world();
+    put(w, "new", "gpu.local", "brand-new-producer");
+    await dieInB(w, "new", "gpu.local", 7600);
+    expect(must(resumeFreeWork(w.fx, sweep(w), hostA))).toEqual([]);
+    expect(stateOf(w, "new")).toBe("interrupted");
     w.store.close();
   }, 30_000);
 

@@ -19,7 +19,7 @@ import { jobEvent, loadJob, putJob } from "./job.ts";
 //     writing the same strip directory. The operator looks first.
 //   - box.chrome drives a signed-in browser (Suno, the Leonardo studio): it pays, it holds.
 //   - box.blender keeps the operator's retry as it was.
-// A producer on an allowed lane that cannot be redone unattended is named in EXCLUDED_PRODUCERS (why, below).
+// A producer on an allowed lane that cannot be redone unattended is simply absent from RESUMABLE_PRODUCERS (why, below).
 //
 // THE ATTEMPT LIMIT. A job is resumed by the machine at most MAX_AUTO_RESUMES times in a row; an
 // attempt is one `job.auto-resumed` event since the operator's last `job.retried`. So a job may die
@@ -39,10 +39,10 @@ import { jobEvent, loadJob, putJob } from "./job.ts";
 export const AUTO_RESUME_LANES: readonly ResourceLane[] = ["gpu.local", "box.render"];
 export const MAX_AUTO_RESUMES = 2;
 /**
- * Producers on an allowed lane whose in-flight step is NOT safe to run again unattended (read producer
- * by producer, 2026-11-08). What stays resumable is cut, media-facts, mesh, scout-storyboard, scout-piece,
- * cover and the yue2 producers: each books a step only after its artefact landed and re-draws nothing it
- * holds. The rest, and why:
+ * THE ALLOW-LIST: the producers read one by one (2026-11-08) and found safe to run again unattended, by
+ * exact name. The set is closed: a producer not named here stays `interrupted` for the operator, as it
+ * always did, so a new one must be read and added before the machine touches it. Each of these books a step only after its artefact landed and
+ * re-draws nothing it holds. Read and left OUT, and why:
  *   mv                  its `still` step buys a Leonardo studio still; its own guard (mv.ts `stuckAtStill`)
  *                       reads only INTERRUPTED jobs, so a re-queued one would walk past the look it forces.
  *   frames, still       a gpu.local option still calls the router's unpinned `generate` (agy, google, leonardo).
@@ -53,15 +53,14 @@ export const MAX_AUTO_RESUMES = 2;
  *   scout-ingest        a crash leaves .media/frames the second run's ffmpeg (no -y) refuses: a false `failed`.
  *   profile             it runs an arbitrary argv; an orphan child inflates the new run's peaks.
  *   forge, dojo         Python drivers adopt "a PNG on disk" as finished, and a copy cut short is a torn PNG.
- * A producer new to these lanes is resumable until it is named here: read it before it ships.
  */
-export const EXCLUDED_PRODUCERS: ReadonlySet<string> = new Set(["mv", "frames", "still", "motion", "scout-scene", "scout-asset", "scout-sheet", "scout-ingest", "profile", "forge", "dojo"]);
+export const RESUMABLE_PRODUCERS: ReadonlySet<string> = new Set(["cut", "media-facts", "mesh", "scout-storyboard", "scout-piece", "cover", "yue2-render", "yue2-score", "yue2-post"]);
 
 export const AUTO_RESUMED = "job.auto-resumed";
 export const resumeActor = (by: Holder): Actor => ({ kind: "machine", id: `auto-resume:${by.host}/${by.pid}` });
 
 /** Whether the machine may put this interrupted job back, before the count of earlier resumes. */
-export const resumable = (job: Job): boolean => job.state === "interrupted" && AUTO_RESUME_LANES.includes(job.lane) && !EXCLUDED_PRODUCERS.has(job.producer);
+export const resumable = (job: Job): boolean => job.state === "interrupted" && AUTO_RESUME_LANES.includes(job.lane) && RESUMABLE_PRODUCERS.has(job.producer);
 
 /**
  * Re-queue each of `interrupted` that is resumable and under the limit, one transaction per job,
