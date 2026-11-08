@@ -25,3 +25,20 @@ evidence that counts.
 
 The stock `reviewerEnv` pattern does not match a name like `ANTHROPIC_KEY_LANE_X`, so the image child strips
 every variable whose name contains `KEY`, and every `OPENAI_*`, on top of it.
+
+## Stage 2: generator and scorer
+
+`lib/foundry/scout/idea-loop/`. `pipeline/idea-loop/run.mts` runs one pass.
+
+The prediction is **what the operator will keep**. The training data is `night.committed` over idea artboards.
+Each verdict is scored out of fold and measured through `lib/foundry/calibration.ts`: same statuses, same floor
+(8 keeps and 8 throws).
+
+**Verdicts counted 2026-11-08: n = 0. Status `insufficient`. The bar (0.5) is provisional and nothing here is
+calibrated.** This machine holds no scout night manifest (no `foundry-out/scout-nights/` or `foundry-out/scout/`),
+and a temp copy of the store has 0 rows in `decisions` and `packet_commits`. Those 58 keeps and 114 rejects in its
+events are image-level forge verdicts, not idea verdicts.
+
+Under a provisional bar every idea scores 0.5 and clears it, so the bar selects nothing yet. The operator's triage on
+the Board is the only gate until both classes reach the floor. `chance` and `inverted` get the same provisional bar;
+only `calibrated` gets a measured cut.
