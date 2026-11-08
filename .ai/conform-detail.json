@@ -19122,6 +19122,57 @@
         }
       ],
       "registryProposal": "Most of the techniques assume the code being judged acquires or writes. For read-only projections over other processes' stores, what applies is idempotent re-ingest and attempt-keyed facts. A short note on the reader's role (natural keys on replay; no staleness bound in a dead-holder probe that is display-only) would make verdicts on such contexts less forced."
+    },
+    "945bdecb-65ee-4232-9e43-9d1216c620df/data-access": {
+      "context": "style-store",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:24:39.425Z",
+      "techniques": [
+        {
+          "technique": "layering-rules",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/catalogue.ts:123 Raw SQL against `styles` outside packages/kernel/src/styles. The Python door (packages/kernel/py/styles.py) is a second, declared writer held to a shared spec, so I did not count it as a leak."
+        },
+        {
+          "technique": "query-construction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/driver.ts:27 Statements are static strings and every value is a bound parameter. The only interpolation is the module's own column constant."
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/schema.ts:84 There is one decode seam (readStyleRow), and the JSON record is parsed through the domain door there. A corrupt row throws loudly, and listStylesIn maps through it, so a list fails whole instead of skipping silently."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/driver.ts:71 Writes take the caller's Tx explicitly, so they compose with it. The row, the op-log row and the ledger event commit together. applyStyleOp owns the boundary for an operator op."
+        },
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/writers.ts:42 The forge commit reads the whole catalogue once and stitches verdict rows in memory, with no per-style fetch loop."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/export.ts:12 styles.json is a stored read model with a single named recomputation (writeStylesExport). Hand edits return through the importer and are never written back from the projection."
+        },
+        {
+          "technique": "repo-testing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/styles.test.ts:43 Real SQLite through openKernel, with migrations run by the production road and a fresh store per test. The triggers are exercised with raw UPDATE/DELETE."
+        }
+      ],
+      "withdrawn": {
+        "worker": "0d4a9526-bb7a-48a8-8286-a310463e3704",
+        "state": "deviation",
+        "at": "2026-11-08T05:25:19.831744+00:00",
+        "reason": "reviewer (sonnet): The deviation rests on the `SELECT EXISTS (SELECT 1 FROM styles)` probe in lib/foundry/catalogue.ts:123, which is outside this context's files (packages/kernel/src/styles/*). It is a caller's leak, so the verdict is about another context's code."
+      }
     }
   }
 }
