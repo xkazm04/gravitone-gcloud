@@ -47,7 +47,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
   const orderOf = (t: Tab) => (tabs.find((x) => x.tab === t)?.categories ?? []).flatMap((c) => c.runs.map((r) => r.at));
   const wordy = (r: Run) => wordsOnly(firstMime(r));
   // A words-only run is one line of a list: ↑ ↓ move a line, whatever the tiles above it measure.
-  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, ...(refuse === undefined ? {} : { refuse }), keys, columns: () => (d.run !== undefined && wordy(d.run) ? 1 : cols), arrange: (runs, at) => orderOf(tabOfRun(runs[at])), wordy });
+  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, ...(refuse === undefined ? {} : { refuse }), keys, columns: () => (d.run !== undefined && wordy(d.run) ? 1 : cols), arrange: (runs, at) => orderOf(tabOfRun(runs[at])), wordy, lanes: tabs.map((t) => ({ tab: t.tab, order: orderOf(t.tab) })) });
   const tab = tabOfRun(d.run);
   const here = tabs.find((t) => t.tab === tab) ?? tabs[0];
   const { setOpen } = d;

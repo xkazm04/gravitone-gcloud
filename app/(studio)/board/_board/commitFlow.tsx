@@ -4,7 +4,7 @@
 // kernel answers 409 stale-preview, preview again and show the fresh one (Phase 3 decision 6).
 // The steps are @gt/ui/board/commit.ts `commitFlow`; the plan and its ticketing are the gate's
 // (`prepareCommit`, `commit`), so a plan that lands after a cancel is dropped there.
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { Consequence } from "@gt/domain/board";
 import { isAppError } from "@gt/domain/errors";
@@ -12,6 +12,9 @@ import type { BoardPacket, CommitReceipt } from "@gt/ui/board/port";
 import type { BoardVerdict } from "@gt/ui/board/boardGate";
 import type { Gate } from "@gt/ui/board/gate";
 import { isStalePreview } from "@gt/ui/board/port";
+import { useLayer } from "@gt/ui/layers/useLayer";
+import { Button } from "@gt/ui/components/button/Button.tsx";
+import c from "@gt/ui/components/consequence/Consequence.module.css";
 import { ConsequencePanel } from "@gt/ui/components/consequence/ConsequencePanel.tsx";
 
 type BoardGateT = Gate<BoardPacket, BoardVerdict, Consequence, CommitReceipt>;
@@ -22,7 +25,12 @@ export type CommitFlow = {
   readonly consequence: Consequence | null;
   readonly refreshed: boolean;
   readonly error?: string;
-  readonly start: () => void;
+  /** What the commit leaves behind in tabs never opened, asked first (a statement of consequence), or null. */
+  readonly asking: readonly string[] | null;
+  /** Commit; handed `heldBack` lines, it asks about them before it previews. */
+  readonly start: (heldBack?: readonly string[]) => void;
+  readonly proceed: () => void;
+  readonly dismiss: () => void;
   readonly confirm: () => void;
   readonly cancel: () => void;
 };
@@ -35,12 +43,17 @@ export function useCommitFlow(gate: BoardGateT, opts: { readonly onDone: () => v
   const [error, setError] = useState<string | undefined>(undefined);
   const { onDone, toast, announce } = opts;
 
-  const start = useCallback(() => {
+  const [asking, setAsking] = useState<readonly string[] | null>(null);
+  const begin = useCallback(() => {
+    setAsking(null);
     setOpen(true);
     setRefreshed(false);
     setError(undefined);
     void gate.prepareCommit();
   }, [gate]);
+  // A deliberate partial still works: the ask is only a pause before the same preview.
+  const start = useCallback((heldBack?: readonly string[]) => (heldBack !== undefined && heldBack.length > 0 ? setAsking(heldBack) : begin()), [begin]);
+  const dismiss = useCallback(() => setAsking(null), []);
 
   const cancel = useCallback(() => {
     gate.clearPlan();
@@ -82,13 +95,47 @@ export function useCommitFlow(gate: BoardGateT, opts: { readonly onDone: () => v
     consequence: plan.plan,
     refreshed,
     ...(shownError === undefined ? {} : { error: shownError }),
+    asking,
     start,
+    proceed: begin,
+    dismiss,
     confirm,
     cancel,
   };
 }
 
+/** The statement of what a partial commit leaves in tabs never opened, before the preview: Commit goes on, Back returns to the desk. */
+function HeldBack({ lines, onConfirm, onCancel }: { readonly lines: readonly string[]; readonly onConfirm: () => void; readonly onCancel: () => void }) {
+  const panel = useRef<HTMLDivElement | null>(null);
+  useLayer(true, { kind: "dialog", panelRef: panel, onClose: onCancel });
+  useEffect(() => {
+    const buttons = panel.current?.querySelectorAll("button");
+    buttons?.[buttons.length - 1]?.focus();
+  }, []);
+  return (
+    <div className={c.backdrop}>
+      <div ref={panel} className={c.panel} role="alertdialog" aria-modal="true" aria-label="Commit · tabs never opened">
+        <div className={c.head}>
+          <h3 className={c.title}>Commit</h3>
+        </div>
+        <ul className={c.rows}>
+          {lines.map((line) => (
+            <li key={line} className={c.amber}>
+              {line}
+            </li>
+          ))}
+        </ul>
+        <div className={c.foot}>
+          <Button label="Back" onPress={onCancel} />
+          <Button label="Commit" tone="amber" onPress={onConfirm} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CommitLayer({ flow }: { readonly flow: CommitFlow }) {
+  if (flow.asking !== null) return <HeldBack lines={flow.asking} onConfirm={flow.proceed} onCancel={flow.dismiss} />;
   return (
     <ConsequencePanel
       consequence={flow.consequence}

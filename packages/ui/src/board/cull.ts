@@ -217,3 +217,51 @@ export function noteOfRun(members: readonly number[], cells: readonly Cell[], ve
   }
   return undefined;
 }
+
+/* ── one pass over every tab ───────────────────────────────────────────────── */
+
+/** A tab and its runs in the order the desk walks them (indices into the packet's runs). */
+export type Lane = { readonly tab: string; readonly order: readonly number[] };
+
+type RunOf = { readonly members: readonly number[] };
+const laneOf = (lanes: readonly Lane[], at: number): number => lanes.findIndex((l) => l.order.includes(at));
+
+/**
+ * The walk at the end of a tab (spark perfect, one-pass-both-tabs): the first run still open in the NEXT tab that
+ * has one, in tab order and wrapping round, else null (the walk then clamps where it is, as it always did).
+ */
+export function carryTo(lanes: readonly Lane[], at: number, runs: readonly RunOf[], cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>, required: boolean): number | null {
+  const here = laneOf(lanes, at);
+  if (here < 0) return null;
+  for (let k = 1; k < lanes.length; k++) {
+    const lane = lanes[(here + k) % lanes.length];
+    const hit = lane?.order.find((i) => runs[i]?.members.some((m) => stillOpen(verdicts[cells[m]?.id ?? ""], required)) === true);
+    if (hit !== undefined) return hit;
+  }
+  return null;
+}
+
+/** The key that switches tabs: the first run of the next tab (wrapping), or null where there is only one tab. */
+export function nextLane(lanes: readonly Lane[], at: number): number | null {
+  const here = laneOf(lanes, at);
+  if (here < 0 || lanes.length < 2) return null;
+  return lanes[(here + 1) % lanes.length]?.order[0] ?? null;
+}
+
+/** What a commit would leave behind in the OTHER tabs: undecided runs the cursor never stood on, per tab. */
+export type HeldBack = { readonly tab: string; readonly runs: number };
+
+export function heldBackOf(lanes: readonly Lane[], at: number, runs: readonly RunOf[], cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>, visited: ReadonlySet<number>): HeldBack[] {
+  const here = laneOf(lanes, at);
+  return lanes.flatMap((lane, k) => {
+    if (k === here) return [];
+    const n = lane.order.filter((i) => !visited.has(i) && runs[i]?.members.some((m) => verdicts[cells[m]?.id ?? ""] === undefined) === true).length;
+    return n > 0 ? [{ tab: lane.tab, runs: n }] : [];
+  });
+}
+
+/** The statement of consequence the commit asks with: each tab's count of runs never opened, and where they go. */
+export function heldBackWords(held: readonly HeldBack[]): string[] {
+  if (held.length === 0) return [];
+  return [...held.map((h) => `${h.tab} · ${h.runs} run${h.runs === 1 ? "" : "s"} never opened, undecided`), "undecided runs go on to the remainder packet"];
+}

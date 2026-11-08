@@ -217,7 +217,7 @@ function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }
       <BoardDesk rail={<PacketRail packets={rail} current={id} hrefOf={hrefOf} onOpen={go} />}>
         {packet.view.state === "open" && packet.present.losses !== undefined && <Losses losses={packet.present.losses} />}
         {desk}
-        {flow.open && <CommitLayer flow={flow} />}
+        {(flow.open || flow.asking !== null) && <CommitLayer flow={flow} />}
       </BoardDesk>
       <div aria-live="polite">
         <SrOnly text={said} />
