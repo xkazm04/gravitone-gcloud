@@ -19060,6 +19060,16 @@
       "evaluatedTs": "2026-11-08T04:50:24.453Z",
       "worker": "42d8a224-31ad-42dd-9abc-48a00b9c8524",
       "techniques": []
+    },
+    "9256d898-a1aa-470e-86db-7f3a9dee0865/client-fetch-cache": {
+      "context": "domain-parts-projects-slots",
+      "subject": "client-fetch-cache",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:05:39.399Z",
+      "worker": "de051eca-d0f4-4d86-86e2-44b7e410c3cd",
+      "techniques": []
     }
   }
 }

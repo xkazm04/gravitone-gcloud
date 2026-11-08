@@ -5737,7 +5737,11 @@
           "revision": 15,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/partView.ts:2 These files are pure type contracts, state-machine tables and projections with no transport, request or cache construction. A case-insensitive search of the 12 files for fetch, cache, memo, prefetch, swr and revalidate found nothing, and a search of all of packages/domain/src for prefetch, revalidate, useSWR and staleTime found nothing, so the client-fetch-cache subject has nothing to govern here.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:20824426732ffb6a",
+          "evaluatedRevision": 15
         },
         {
           "subject": "data-video-art-direction",
