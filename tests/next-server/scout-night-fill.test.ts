@@ -178,7 +178,7 @@ describe("the night-fill tick", () => {
     samples(T0 + 20 * MIN, 0.65);
     const r = await tick(f, T0 + 20 * MIN);
     expect(r).toMatchObject({ kind: "idle", night: id });
-    expect(r.kind === "idle" ? r.why : "").toMatch(/^the box is at the band: cpu 65% · ram 65% · gpu 65%/);
+    expect(r.kind === "idle" ? r.why : "").toMatch(/^the box is at the band: cpu 65% · ram 65% over 15 min \(low 60%\)$/); // ideas sit on box.chrome: judged on cpu and ram (scout-lane-band.test.ts holds the map)
     expect(f.launched).toEqual([]);
   });
 

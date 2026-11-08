@@ -4,6 +4,7 @@ import type { Reader, Store } from "@gt/kernel/store";
 
 import { closeAct, Refusal, type ActContext } from "./acts";
 import { EngineUnreachable } from "./comfyGate";
+import { bandResourcesOf, overBandOn } from "./laneBand";
 import { recentLoad, type RecentLoad } from "./load";
 import { hasPlan, mutatePlan, readPlan, settleItem, type PlanItem } from "./plan";
 import type { PlanDoors } from "./planDoors";
@@ -20,8 +21,9 @@ import { withWing } from "./wingScope";
 //   ITS UNTIL     once passed, the night's queued items become `expired` ("the night's until passed") and the
 //                 night is closed by the same close `close <id> --stop deadline` runs (./acts.ts closeAct).
 //   THE BAND      a launch only while the last 15 minutes of load samples (./load.ts recentLoad, the reading
-//                 `status` prints) average under the band's low on every resource the samples read. No samples is
-//                 no launch: an unread box is not an idle one.
+//                 `status` prints) average under the band's low on every resource the ITEM'S LANES load
+//                 (./laneBand.ts: a draft is judged on cpu and ram, Flux on all three, a cloud lane on none).
+//                 No samples is no launch of an item that loads the box: an unread box is not an idle one.
 //   THE LANE      the oldest queued item whose every lane (./planDoors.ts) holds no queued, planned or running
 //                 job - a busy lane does not block an item behind it on another lane.
 //   ONE LAUNCH    a tick, through the item's door in the night's own mode (a dry night dry, a live one live - the
@@ -50,14 +52,9 @@ export type NightFillOutcome =
   | { readonly kind: "closed"; readonly night: NightId; readonly expired: number }
   | { readonly kind: "launched" | "refused" | "failed"; readonly night: NightId; readonly item: string; readonly jobId?: string; readonly reason?: string };
 
-/** Under the band: every resource the window's samples read averages below its low. Undefined when it is; the reason otherwise. */
+/** Under the band on every resource the samples read: the whole box, the judgement of an item whose lanes are unknown. */
 export function overBand(l: RecentLoad): string | undefined {
-  if (l.samples === 0) return `no load samples in the last ${l.minutes} min`;
-  const read = (["cpu", "ram", "gpu"] as const).filter((k) => l.avg[k] !== undefined);
-  if (read.length === 0) return `no resource read in the last ${l.minutes} min`;
-  const high = read.filter((k) => (l.avg[k] ?? 0) >= l.band.low);
-  if (high.length === 0) return undefined;
-  return `the box is at the band: ${high.map((k) => `${k} ${Math.round((l.avg[k] ?? 0) * 100)}%`).join(" · ")} over ${l.minutes} min (low ${Math.round(l.band.low * 100)}%)`;
+  return overBandOn(l, ["cpu", "ram", "gpu"]);
 }
 
 /** Jobs on `lane` the kernel still has to run or is running. */
@@ -106,9 +103,10 @@ export async function nightFillTick(o: NightFillOptions): Promise<NightFillOutco
 
     const queued = (await readPlan(night.id)).filter((x) => x.state === "queued");
     if (queued.length === 0) return { kind: "idle", why: "the plan has nothing queued", night: night.id };
-    const over = overBand(recentLoad(o.store, nowMs, NIGHT_FILL_WINDOW_MIN));
-    if (over !== undefined) return { kind: "idle", why: over, night: night.id };
+    const load = recentLoad(o.store, nowMs, NIGHT_FILL_WINDOW_MIN);
 
+    // First fit, as before: the oldest item whose lanes are free AND whose own lanes' resources are under the band.
+    let held: string | undefined;
     const busy = o.store.read((r) => {
       const seen = new Map<ResourceLane, boolean>();
       const isBusy = (lane: ResourceLane): boolean => {
@@ -116,10 +114,17 @@ export async function nightFillTick(o: NightFillOptions): Promise<NightFillOutco
         seen.set(lane, b);
         return b;
       };
-      return queued.find((x) => !o.doors[x.kind].lanes().some(isBusy));
+      return queued.find((x) => {
+        const lanes = o.doors[x.kind].lanes();
+        if (lanes.some(isBusy)) return false;
+        const over = overBandOn(load, bandResourcesOf(lanes));
+        if (over !== undefined) held ??= over;
+        return over === undefined;
+      });
     });
     if (!busy.ok) return { kind: "idle", why: `the queue did not read: ${busy.error.message}`, night: night.id };
     const item = busy.value;
+    if (item === undefined && held !== undefined) return { kind: "idle", why: held, night: night.id };
     if (item === undefined) return { kind: "idle", why: `every queued item's lane is busy (${queued.length} queued)`, night: night.id };
 
     const ctx: ActContext = { store: o.store, location: o.location, actor: NIGHT_FILL_ACTOR, dryOnly: o.dryOnly, live: !night.dry, detach: true, say: (l) => o.say?.(`  ${l}`), now: () => o.now };
