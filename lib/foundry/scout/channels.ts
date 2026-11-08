@@ -19,6 +19,7 @@ import { outPath } from "../../fixtures/roots";
 import { readJson, writeJsonAtomic } from "../runStore";
 import { withRunLock } from "../verdictLog";
 import { Refusal } from "./acts";
+import type { EpisodeVerdict, VerdictedEpisode } from "./episodeVerdict";
 import { CANDIDATE_ID_RE, NIGHT_ID_RE } from "./types";
 
 // THE CHANNELS' STORE (spark project-baseline). The scout stopped spreading across genres and serves the channels the
@@ -34,7 +35,7 @@ import { CANDIDATE_ID_RE, NIGHT_ID_RE } from "./types";
 // Episodes arrive only through `importEpisodes` (the session's accepted outlines); a night never invents one. Nothing
 // here spends.
 
-export type ChannelFile = { readonly channel: Channel; readonly episodes: readonly Episode[] };
+export type ChannelFile = { readonly channel: Channel; readonly episodes: readonly VerdictedEpisode[] };
 
 /** What `episodes import` reads: the session's outlines (a JSON array of channels with items) and the pasted
  *  outline-triage report (lines `  F1-03 keep · Title · note`). Only `keep` lines import. */
@@ -85,6 +86,8 @@ const episodeSchema = z
     at: z.iso.datetime(),
     candidate: z.string().optional(),
     note: z.string().optional(),
+    // Optional so every file written before it still reads (the schema is strict).
+    verdict: z.object({ reasons: z.array(z.string()), notes: z.array(z.string()) }).strict().optional(),
   })
   .strict();
 
@@ -184,7 +187,7 @@ export async function readChannel(id: string): Promise<ChannelFile> {
 }
 
 /** The episode by id, with its channel; undefined when unknown. */
-export async function episodeOf(id: string): Promise<{ readonly channel: Channel; readonly episode: Episode } | undefined> {
+export async function episodeOf(id: string): Promise<{ readonly channel: Channel; readonly episode: VerdictedEpisode } | undefined> {
   if (!EPISODE_ID_RE.test(id)) return undefined;
   const f = await loadFile(channelOfEpisode(id));
   const episode = f?.episodes.find((e) => e.id === id);
@@ -192,7 +195,7 @@ export async function episodeOf(id: string): Promise<{ readonly channel: Channel
 }
 
 /** Import order: the time it landed, then its id (one import lands a channel's episodes at one instant). */
-const byImport = (a: Episode, b: Episode): number => (a.at < b.at ? -1 : a.at > b.at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+const byImport = (a: VerdictedEpisode, b: VerdictedEpisode): number => (a.at < b.at ? -1 : a.at > b.at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 /** Episodes whose outline is kept and that no night has taken, oldest import first, per channel. */
 export async function episodesDue(): Promise<readonly { readonly channel: Channel; readonly episodes: readonly Episode[] }[]> {
@@ -221,7 +224,7 @@ function candidateProblem(ref: string): string | undefined {
 
 /** Move one episode; the store refuses a move its state machine does not allow (outline-kept -> in-production ->
  *  made -> kept | thrown; in-production -> outline-kept when the night's candidate failed). */
-export async function setEpisodeState(id: string, next: EpisodeState, patch: { readonly candidate?: string } = {}): Promise<Episode> {
+export async function setEpisodeState(id: string, next: EpisodeState, patch: { readonly candidate?: string; readonly verdict?: EpisodeVerdict } = {}): Promise<VerdictedEpisode> {
   if (!EPISODE_ID_RE.test(id)) throw new Refusal(`episodes: that is not an episode id: ${id}`);
   const chId = channelOfEpisode(id);
   return mutateChannels((files) => {
@@ -241,7 +244,9 @@ export async function setEpisodeState(id: string, next: EpisodeState, patch: { r
     // Handed back: the night's candidate failed, so the episode is due again with no candidate of its own.
     if (next === "outline-kept") candidate = undefined;
     const { candidate: _drop, ...rest } = ep;
-    const moved: Episode = { ...rest, state: next, at: new Date().toISOString(), ...(candidate === undefined ? {} : { candidate }) };
+    // What was said of it rides the move that ends it: kept and thrown are final, so there is no later write to carry it.
+    const verdict = next === "kept" || next === "thrown" ? patch.verdict : undefined;
+    const moved: VerdictedEpisode = { ...rest, state: next, at: new Date().toISOString(), ...(candidate === undefined ? {} : { candidate }), ...(verdict === undefined ? {} : { verdict }) };
     const out = new Map(files);
     out.set(chId, { channel: f.channel, episodes: f.episodes.map((e) => (e.id === id ? moved : e)) });
     return { next: out, out: moved };

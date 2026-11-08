@@ -1,5 +1,6 @@
 import type { Channel, Episode, EpisodeState } from "@gt/domain/channel";
 
+import { verdictOf, type EpisodeVerdict } from "./episodeVerdict";
 import { cellVerdict, reelCell } from "./reelTaste";
 import { readNight } from "./store";
 import { storyboardVerdict } from "./storyboardKept";
@@ -32,7 +33,7 @@ import type { Night, NightId, ReelCandidate, StoryboardCandidate } from "./types
 /** The channel store as the night reads and moves it; a test hands its own (`setEpisodeDoorForTests`). */
 export type EpisodeDoor = {
   readonly episodeOf: (id: string) => Promise<{ readonly channel: Channel; readonly episode: Episode } | undefined>;
-  readonly setEpisodeState: (id: string, next: EpisodeState, patch?: { readonly candidate?: string }) => Promise<Episode>;
+  readonly setEpisodeState: (id: string, next: EpisodeState, patch?: { readonly candidate?: string; readonly verdict?: EpisodeVerdict }) => Promise<Episode>;
 };
 
 // Loaded on first use, so a producer that imports this file does not pull the channel store's graph in with it.
@@ -99,7 +100,12 @@ export async function followNight(n: Night, cids?: readonly string[]): Promise<v
         continue;
       }
       // Only the take names the candidate; the store refuses a later move that tries to change it.
-      for (const next of movesTo(got.episode, target, ref)) await door.setEpisodeState(c.fromEpisode, next, next === "in-production" ? { candidate: ref } : {});
+      // The verdict's words go in the same write as the move that ends the episode: movesTo returns nothing once it has ended.
+      const said = target === "kept" || target === "thrown" ? verdictOf(n, c) : undefined;
+      for (const next of movesTo(got.episode, target, ref)) {
+        const patch = next === "in-production" ? { candidate: ref } : next === target && said !== undefined ? { verdict: said } : {};
+        await door.setEpisodeState(c.fromEpisode, next, patch);
+      }
     } catch (e) {
       say(`${c.fromEpisode} -> ${target} for ${ref} was refused: ${e instanceof Error ? e.message : String(e)}`);
     }

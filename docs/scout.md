@@ -25,7 +25,7 @@ ventures, characters and music describes the spread era and is archived (`.claud
   (lib/foundry/scout/channels.ts, episodeMoves.ts). `channel list`, `channel show <id>`, `episodes due`.
 - **The night's doors take episodes**: `storyboard` takes `{fromEpisode, title, paragraph, bullets, panels}` for a
   storyboard channel (one panel per beat; use/aim default from the channel); `reel` takes `{fromEpisode, brief,
-  approach, source, data, cut}` for a data channel. The taste brief opens with `## Episodes due`.
+  approach, source, data, cut}` for a data channel. The taste brief opens with `## Episodes due`. Under each channel it also lists the kept and thrown episodes with the reasons and notes the operator gave (newest 8 per channel, `VERDICT_LINES`); the words ride the move that ends the episode (`verdict` on the episode, optional, so older files read).
 - **The archive**: new nights live in `foundry-out/scout-nights/`; `foundry-out/scout/` is the read-only pre-baseline
   archive (`SCOUT_PREBASELINE_STORE_DIR`), read under the same night ids - its packets still open and commit on the
   Board, and kept characters, Library styles and knowledge stay. A new night on an archived date is `<date>-2`. On a
