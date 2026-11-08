@@ -5290,7 +5290,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/test/parts.gates.test.ts:21 The gate-fact tests seed packets by raw INSERT with body '{}' and committed or returned rows at rev 0, bypassing openPacket and commit with no invariant check afterwards, so gatePacketFact is certified against rows the product's door would not write.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "module-design",
@@ -12843,7 +12847,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/parts-fixture-parity.test.ts:182 This case drives only the fixture's undoPart and compares it to a literal, so a change to the kernel's wording in planUndo leaves the hand-restated string at fixture.ts:338 and this parity test green.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "video-assembly",
@@ -18359,7 +18367,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/live-feed.test.ts:1 The test claims the wire sse.ts writes, yet its FakeSource hand-spells the frames and imports nothing from sse.ts, while sse.test.ts never feeds openFeed and no file under tests/live, tests/golden-path or tests/next-gates names openFeed or liveFeed, so the string-typed `rotate` crossing is pinned by neither side.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "agent-memory",

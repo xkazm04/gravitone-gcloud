@@ -19266,6 +19266,104 @@
           "evidence": "packages/ui/src/tokenRender.ts:18 The renderer emits a single :root binding set. A grep of packages/ui/src for prefers-color-scheme and data-theme found nothing, so there is no second theme for the technique to govern."
         }
       ]
+    },
+    "693915d1-61ac-4fc1-835d-7dbb074613b2/test-harness": {
+      "context": "part-port-fixtures",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:09:59.611Z",
+      "worker": "990124d0-c425-415e-b2b4-353efecb6327",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/parts-fixture-parity.test.ts:27 The header's claim is false for the undo-conflict case at line 182, whose name also claims the kernel's words; packages/kernel/test/parts.test.ts:148 pins a separate literal, so the crossing is compared by neither file."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/parts-fixture-parity.test.ts:87 Where a case is truly two-sided it runs the same input through the fixture and the real port and compares the outcome code, which is the technique's step 3."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/parts-fixture-parity.test.ts:39 The fixture side's process-wide state has a defined reset before every test."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:4101 Fixture modules carry seeded defects with a named guard test; the entry was read, the mutant was not run."
+        }
+      ]
+    },
+    "92742f06-a6dc-418e-8c50-42c050345bc7/test-harness": {
+      "context": "decision-and-gates",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:09:59.611Z",
+      "worker": "990124d0-c425-415e-b2b4-353efecb6327",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/test/parts.gates.test.ts:21 Build-once-copy is right here (templateStores, also decision.test.ts:10); the seeded-data honesty rule is what fails."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/test/parts.test.ts:22 Narrow: the neutral helper film() opens :memory:, which skips the WAL requirement at store.ts:135, and neither its name nor a comment says so; the file makes no locking claim, so the exposure is future tests."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/decision.crash.test.ts:119 The crash enumeration asserts the effects it actually crossed beside the zero-violation verdict, so an empty scenario cannot pass."
+        },
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/parts.gates.test.ts:64 The index-seek claim is settled by asking SQLite for its plan on the statements actually issued, not by reading the SQL text."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:403 A seeded recovery defect names decision.crash.test.ts as its guard; the entry was read, the mutant was not run."
+        }
+      ]
+    },
+    "95a41c11-42cf-4369-b4c3-1233543bd74f/test-harness": {
+      "context": "studio-shell",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:09:59.611Z",
+      "worker": "990124d0-c425-415e-b2b4-353efecb6327",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/live-feed.test.ts:1 Two suites each pin their own half of a marshalled event name, and the handing-over belongs to neither, which is the case the technique names."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/shell-handoff.test.ts:4 A deliberately cheaper React stand-in that states what it keeps."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/live-feed.test.ts:76 Coalescing is proved under fake timers with a refresh count, not an elapsed-time bound."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:8056 A seeded defect names shell-session-post.test.ts as its guard; the entry was read, the mutant was not run."
+        }
+      ]
     }
   }
 }
