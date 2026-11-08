@@ -173,6 +173,10 @@ EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CL
 
 ## Skill improvement log
 
+### 2026-11-08 - shipping round 2
+
+- **Fetch origin before a wave, not only before a push.** Seven upstream commits had removed the engine three directions were built for; a fetch at Phase B would have dropped them before a builder ran.
+
 ### 2026-11-08 - round 2 (10 accepted, 10 shipped)
 
 - **The Director caught what a builder's own honest report named.** A builder listed "starves the tick" as a risk in round 1 and "resumable until named here" in round 2; both were defects worth a redo. Read a builder's open risks as review input before its diff.
