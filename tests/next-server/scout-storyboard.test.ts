@@ -33,6 +33,7 @@ import { openKernel } from "@gt/kernel/kernel";
 import { closeProcessKernel, processKernel } from "@gt/kernel/process";
 import { storyboardPlan, type StoryboardRequest } from "@gt/producers/scout-storyboard/define";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli, type CliPorts } from "../../pipeline/scout.mts";
 import { developedOf } from "../../lib/foundry/scout/direction.ts";
 import { collectStoryboards, keptStoryboardFor, parseStoryboards } from "../../lib/foundry/scout/storyboard.ts";
@@ -98,10 +99,12 @@ afterEach(() => {
 });
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
+const guardedRunCli = guardOrphans(runCli);
+
 async function cli(argv: string[], o: { env?: Record<string, string | undefined>; ports?: CliPorts } = {}): Promise<{ code: number; out: string; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env: o.env ?? DRY, out: (s) => out.push(s), err: (s) => err.push(s), ...(o.ports === undefined ? {} : { ports: o.ports }) });
+  const code = await guardedRunCli(argv, { env: o.env ?? DRY, out: (s) => out.push(s), err: (s) => err.push(s), ...(o.ports === undefined ? {} : { ports: o.ports }) });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;
