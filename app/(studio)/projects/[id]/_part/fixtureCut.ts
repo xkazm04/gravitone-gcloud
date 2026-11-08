@@ -295,12 +295,24 @@ function toRecords(c: CutRec): Record<string, Obj> {
   return { cut: { offsets: c.offsets, exports: c.exports.filter((e) => e.aspect === undefined) }, ...(c.finish === null ? {} : { "ads-finish": asObj(c.finish) }) };
 }
 
+/** A stored animatic export as the row reads it. The producer writes `id` and `label` now
+    (lib/producers/cut.ts); a record stored before that has neither, so the id falls back to the
+    job that made it (every real record names one; append-only, so stable across renders), then
+    the render's own id, and the label to the fixture side's words by position. `at` is an ISO
+    string on the real side and the document hash is its `document`. */
+function exportOf(raw: unknown, i: number): ExportRec {
+  const x = asObj(typeof raw === "object" && raw !== null ? raw : {});
+  const str = (k: string): string | undefined => (typeof x[k] === "string" && x[k] !== "" ? x[k] : undefined);
+  const at = typeof x["at"] === "number" ? x["at"] : Date.parse(str("at") ?? "");
+  return { ...(x as unknown as ExportRec), id: str("id") ?? str("jobId") ?? str("exportId") ?? `export-${i + 1}`, label: str("label") ?? `animatic ${i + 1}`, at: Number.isNaN(at) ? 0 : at, hash: str("hash") ?? str("document") ?? "", mode: x["mode"] === "dry" ? "dry" : "live" };
+}
+
 function fromRecords(recs: Recs): CutRec {
   const cut = recs.get("cut");
   const fin = recs.get("ads-finish");
   const offsets = (cut?.["offsets"] ?? {}) as Offsets;
   // Both written by `toRecords` through their doors; read back as written.
-  const exports = (Array.isArray(cut?.["exports"]) ? cut["exports"] : []) as ExportRec[];
+  const exports = (Array.isArray(cut?.["exports"]) ? cut["exports"] : []).map(exportOf);
   const finish = fin !== undefined && isFinish(fin) ? fin : null;
   const adExports: ExportRec[] = (finish?.exports ?? []).map((e) => {
     const x = asObj(e);

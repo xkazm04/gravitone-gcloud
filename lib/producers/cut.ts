@@ -251,7 +251,7 @@ function landCut(job: { readonly id: string }, plan: ActPlan, made: ReadonlyMap<
   if (m === undefined) return err("internal", "export-animatic: no render booked");
   const rec = recOf(s, "cut");
   const prior = Array.isArray(rec["exports"]) ? rec["exports"] : [];
-  return ok({ cut: { ...rec, offsets: rec["offsets"] ?? {}, exports: [...prior, { blob: m["blob"], document: m["document"], totalS: m["totalS"], exportId: m["exportId"], unreachable: m["unreachable"], at, jobId: job.id, mode: m["mode"] }] } });
+  return ok({ cut: { ...rec, offsets: rec["offsets"] ?? {}, exports: [...prior, { id: job.id, label: `animatic ${prior.length + 1}`, blob: m["blob"], document: m["document"], totalS: m["totalS"], exportId: m["exportId"], unreachable: m["unreachable"], at, jobId: job.id, mode: m["mode"] }] } });
 }
 
 export function cutProducer(lane: ResourceLane = "box.render", hooks: DriveHooks = {}, engines: Partial<CutEngines> & { readonly adDeps?: AdRenderDeps } = {}): Producer {
