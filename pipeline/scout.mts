@@ -37,6 +37,7 @@
 
 import { USE_MAX } from "../lib/foundry/scout/types.ts";
 import type { KeyFetch } from "../lib/imaging/keyProbe.ts";
+import type { Render } from "../lib/producers/scoutReelMotion.ts";
 import fs from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -79,6 +80,8 @@ export type CliPorts = {
   readonly storyboard?: StoryboardEngines;
   readonly piece?: PieceEngines;
   readonly sheet?: SheetEngines;
+  /** `reel-motion`'s renderer (lib/producers/scoutReelMotion.ts `Render`); a test hands a fake (absent: the strips renderer a full cut uses). */
+  readonly reelMotion?: Render;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
@@ -114,6 +117,7 @@ const USAGE = [
   "  channel list | channel show <id>             (the channels the night serves; spark project-baseline)",
   "  channel-look <channelId> \"<text>\"            (the look every panel of the channel is drawn under; empty text clears it)",
   "  episodes import --outlines <file> --report <file> · episodes due",
+  "  reel-motion <night> [--dry]                 the 8 s video of every rendered reel with a strip and no video, beside the strip (--dry lists, writes nothing)",
   "  reel-cut <night> --json <file|-> [--detach]   [{fromReel: <night>/<c-id>, seconds: 30-120}]   (a kept real reel, cut in full)",
   "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
@@ -122,7 +126,7 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet", "plan", "reel", "reel-cut", "channel", "channel-look", "episodes"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet", "plan", "reel", "reel-motion", "reel-cut", "channel", "channel-look", "episodes"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas, storyboard, lead and seeds new. */
@@ -614,6 +618,14 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
         for (const it of r.items) say(`  ${it.id} ${it.kind} ${it.state} · ${it.why}`);
         if (json) doc({ ok: true, night: id, items: r.items });
         return 0;
+      }
+
+      if (cmd === "reel-motion") {
+        const { reelMotionCommand } = await import("../lib/producers/scoutReelMotion.ts");
+        const r = await reelMotionCommand(nightArg(), { dry: flags.has("dry"), ...(io.ports?.reelMotion === undefined ? {} : { render: io.ports.reelMotion }) });
+        for (const l of r.lines) say(l);
+        if (json) doc(r.doc);
+        return r.code;
       }
 
       // A kept stats idea on real data, and a kept real reel cut in full (spark scout-vision S5).

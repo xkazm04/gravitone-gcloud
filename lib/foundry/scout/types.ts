@@ -593,8 +593,12 @@ export type ReelCandidate = CandidateBase & {
   readonly cut: readonly string[];
   /** Night-relative, under `reels/<c-id>/`; `strip` once the author turn wrote one that passed the lint. */
   readonly files: ReelFiles;
-  /** Night-relative tile (`reels/c-NN.png`): the strip's frame 120, once drawn. */
+  /** Night-relative tile (`reels/c-NN.png`): the strip's frame 120, once drawn. It is the poster of `video`. */
   readonly image?: string;
+  /** Night-relative mp4 of the whole 8 s strip (`reels/c-NN/strip.mp4`), once rendered (lib/producers/scoutReelMotion.ts). */
+  readonly video?: string;
+  /** The render's own sentence when the strip was drawn and its video was not: the still stands. */
+  readonly videoError?: string;
 };
 
 /**

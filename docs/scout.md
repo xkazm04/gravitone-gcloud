@@ -399,7 +399,15 @@ derived data from 'what if' fantasy scenarios." Two acts on the same scout-reels
   article needs its https url, an article its words verbatim (<= 400), a what-if its premise (<= 400). The source
   line reads `Source: <title>` or `What if: <premise> (fiction)`. Refused: an idea not kept on a live committed
   night, not stats, or already holding a live real reel (lib/foundry/scout/reel.ts, reelDoor.ts). Cell `c-NN/reel`,
-  the images tab, group `reels`; files under `reels/<c-NN>/`.
+  the images tab, group `reels`; files under `reels/<c-NN>/`. The approval unit is the whole 8 s strip: the job
+  saves frame 120 as the tile (`reels/<c-NN>.png`), then renders all 240 frames to `reels/<c-NN>/strip.mp4` beside
+  the strip (renderStrip, the renderer a cut uses; free) and records it on the candidate as `video`. The cell
+  carries the mp4 and the row's `ref` is the still, so the mosaic draws the poster; the id, group, tab and reasons
+  are the same with or without a video. A render that fails keeps the reel and its still and records the
+  sentence as `videoError`, which the cell's meta repeats; a dry job renders nothing.
+  `reel-motion <night> [--dry]` renders the video of a live night's rendered reels that have a strip and no
+  video, in place, each recorded through the night's lock; it is idempotent (an mp4 already beside the strip is
+  recorded, not drawn again), a failed one is retried by the next run, and `--dry` lists and writes nothing.
 - **`reel-cut <night> --json`** `[{fromReel, seconds: 30-120}]` - a kept reel (taste `## Reels to cut`) re-authored
   at seconds * 30 frames (CONTRACT.md `window.STRIP.frames`; 240 stays the default) and rendered to mp4. Cell
   `c-NN/video`, the videos tab, group `reel cuts`; files under `cuts/<c-NN>/`. A cut's receipt uses an unmeasured
@@ -539,11 +547,18 @@ remaining work as a queue and ends its turn with the night open:
   each payload validated by its door's own parser, appended to `<night>/plan.json` as `pl-NN`, nothing spent.
   Refused on a night that is not open, has no `until`, or is past it (lib/foundry/scout/plan.ts, planDoors.ts).
 - **The `night-fill` timer** (worker, every 5 min, lib/foundry/scout/nightFill.ts): for the newest open scout
-  night with a plan and a future `until`, when every resource of the last 15 minutes of load samples averages
-  under 60% (no samples: no launch), it launches the oldest queued item whose lane has nothing queued or running,
-  through the same door the CLI calls, in the night's mode, detached. One launch a tick; a door's refusal is
-  `refused`, any other error `failed`, neither retried. At `until` the rest become `expired` and the timer runs
-  the same close as `close --stop deadline`.
+  night with a plan and a future `until`, it launches the oldest queued item whose lanes have nothing queued,
+  planned or running, through the same door the CLI calls, in the night's mode, detached. The band is judged per
+  lane (lib/foundry/scout/laneBand.ts): the last 15 minutes of load samples must average under 60% on the
+  resources the item's own lanes load - cpu and ram for a text turn, cpu, ram and gpu for `gpu.local`, none for a
+  cloud lane; no samples is no launch of an item that loads the box, and a lane not in the table is judged on all
+  three. A lane held by an interrupted paid job is skipped and named in the idle reason, and the tick never clears
+  the hold. One launch a tick; a door's refusal is `refused`, any other error `failed`, neither retried. An
+  unreachable ComfyUI (comfyGate.ts, nothing spent) is neither: the storyboard item stays `queued`, the tick goes
+  on to the next item on another lane, and with nothing else to go it idles naming ComfyUI. A failed storyboard
+  does not count against `storyboardCap`. At `until` the rest become `expired` and the timer runs the same close
+  as `close --stop deadline`; an open night past its `until` with no plan is closed the same way, its stranded
+  pending candidates failed first where their jobs are gone.
 - **`draft` items** `{title, prompt}` run the `draft` text turn - local Ollama (`qwen3.8:27b`, $0) first, the
   claude CLI behind it, never Gemini - and write `<night>/drafts/<pl-NN>.md`; the next taste brief lists them
   under `## Drafts from the night`. Never a candidate. They wait for gpu.local (the model shares the card with
@@ -693,6 +708,7 @@ feed reads the same reader: a character first kept on the archive keeps `charact
 | `ideas/<c-NN>.png` | the ideas and reels producers | an idea's tile: its studio artboard, or a stats idea's frame 120 |
 | `ideas/<c-NN>/brief.json`, `approach.json` | `ideas` | a stats idea's illustrative brief and approach, as sent |
 | `ideas/<c-NN>/strip.html` | the reels producer | a stats idea's strip, once it passed the lint |
+| `reels/<c-NN>/strip.mp4` | the reels producer, `reel-motion` | a real reel's 8 s strip rendered whole; its tile `reels/<c-NN>.png` is the poster |
 | `storyboards/<c-NN>/panel-<k>.png` | the storyboard producer | a storyboard's Flux frames, ours |
 | `tracks/<c-NN>/a<N>.mp3` | `track` (collect) | a track's Suno clips, ours |
 | `visualizers/<c-NN>/visualizer.mp4`, `visualizer - youtube.txt`, `still.<ext>` or `studio.<ext>` | `visualizer` (collect) | a full-song visualizer, its YouTube text and the still it played over |

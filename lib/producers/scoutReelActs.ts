@@ -24,6 +24,7 @@ import { followEpisodes } from "../foundry/scout/episodeMoves.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
 import { REEL_DATA_ID, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, type ReelFiles } from "../foundry/scout/types.ts";
 import { standIdea } from "./scoutIdeaActs.ts";
+import { renderMotion, withMotion, type Motion } from "./scoutReelMotion.ts";
 import { cutOutDir, isHolder, renderedAs, subjectOf, type ReelHolder, type ReelLayout } from "./scoutReelKinds.ts";
 
 export type { ReelLayout } from "./scoutReelKinds.ts";
@@ -44,6 +45,8 @@ export type { ReelLayout } from "./scoutReelKinds.ts";
 // candidate (./scoutReelKinds.ts says where each lives): the lint holds a cut's page to its own frame count, and a cut
 // ends in a whole render to mp4 (`render`, pipeline/strips/render.mts renderStrip) instead of one frame - its poster
 // the tile. A dry cut renders nothing: its strip is its record.
+// A REAL REEL goes one further: after its frame-120 tile it renders the whole 8 s strip to mp4 beside the strip
+// (./scoutReelMotion.ts); a render that fails keeps the reel and its still and records the sentence.
 //
 // LANDING IS THE MARKER (the strips steps' rule). The author turn's page is copied to
 // ideas/<c-NN>/strip.html as soon as the turn leaves it, before the lint: a drive that died after a
@@ -218,7 +221,7 @@ function feedbackText(findings: readonly string[]): string {
 /* ── reel ─────────────────────────────────────────────────────────────────── */
 
 /** The subject's last move: frame 120 as the tile, or - a full cut - the whole render to mp4 with its poster as the tile. */
-async function draw(e: ReelEngines, req: ReelsRequest, c: ReelHolder, s: ReturnType<typeof subjectOf>, stripAbs: string, k: number, at: ReelLayout, ctx: StepContext): Promise<Result<{ tile?: string; video?: string }>> {
+async function draw(e: ReelEngines, req: ReelsRequest, c: ReelHolder, s: ReturnType<typeof subjectOf>, stripAbs: string, k: number, at: ReelLayout, ctx: StepContext, files: Required<ReelFiles>): Promise<Result<{ tile?: string; video?: string; motion?: Motion }>> {
   if (c.kind === "reel-cut") {
     // A dry cut renders nothing: its strip, linted at its own length, is its record.
     if (ctx.job.mode.kind === "dry") return ok({});
@@ -246,7 +249,9 @@ async function draw(e: ReelEngines, req: ReelsRequest, c: ReelHolder, s: ReturnT
   const abs = resolveInNight(req.nightId, s.tile);
   await mkdir(path.dirname(abs), { recursive: true });
   await writeFile(abs, png);
-  return ok({ tile: s.tile });
+  // A reel's 8 s strip, whole, beside its tile; a failed render keeps the still and records its sentence (./scoutReelMotion.ts).
+  if (c.kind !== "reel" || ctx.job.mode.kind === "dry" || e.render === undefined) return ok({ tile: s.tile });
+  return ok({ tile: s.tile, motion: await renderMotion(e.render, REEL_LANE, req.nightId, files.strip) });
 }
 
 async function reelAct(e: ReelEngines, at: ReelLayout, req: ReelsRequest, k: number, ctx: StepContext): Promise<StepOutcome> {
@@ -298,10 +303,10 @@ async function reelAct(e: ReelEngines, at: ReelLayout, req: ReelsRequest, k: num
     if (findings.length > 0) return failOne(req, ctx, c.id, `lint: ${findings.join(" | ")}`);
   }
 
-  const drawn = await draw(e, req, c, s, stripAbs, k, at, ctx);
+  const drawn = await draw(e, req, c, s, stripAbs, k, at, ctx, files);
   if (!drawn.ok) return failOne(req, ctx, c.id, drawn.error.message);
   fence(ctx);
-  await writeIdeas(req, ctx.job.id, [c.id], (x) => renderedAs(x, s, drawn.value));
+  await writeIdeas(req, ctx.job.id, [c.id], (x) => withMotion(renderedAs(x, s, drawn.value), drawn.value.motion));
   return madePaid(data({ reel: c.id, ...(drawn.value.tile === undefined ? {} : { file: drawn.value.tile }), ...(drawn.value.video === undefined ? {} : { video: drawn.value.video }), strip: files.strip, dry: ctx.job.mode.kind === "dry" }), ctx);
 }
 

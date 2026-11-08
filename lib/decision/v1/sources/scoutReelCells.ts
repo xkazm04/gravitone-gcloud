@@ -14,10 +14,12 @@ import { scoutFileUrl } from "./scoutWing.ts";
 // A REAL REEL AND A FULL CUT ON THE SCOUT PACKET (spark scout-vision S5) - pure, beside ./scoutPlan.ts whose `build`
 // calls it (kept apart so that file does not grow past its bound).
 //
-//   reel      ONE image cell `c-NN/reel` under `reels` (the images tab): its tile, the strip's frame 120 - the 8 s strip
-//             the operator approves before a full reel. The label is its title, the meta the source line verbatim, the
-//             kept idea it is made from and its beats. Kept, a full reel is due (taste `## Reels to cut`); nothing else
-//             is written. A dry reel has no tile: that cell as words.
+//   reel      ONE cell `c-NN/reel` under `reels` (the images tab): the 8 s strip the operator approves before a full
+//             reel - its mp4 when it was rendered (the row's `ref` is then the still, frame 120, the mosaic's poster),
+//             else its tile. The id, the group and so the tab and the reason order are the same either way, so a verdict
+//             already given stands. The label is its title, the meta the source line verbatim, the kept idea it is made
+//             from and its beats; a render that failed adds its sentence. Kept, a full reel is due (taste `## Reels to
+//             cut`); nothing else is written. A dry reel has no tile: that cell as words.
 //   reel-cut  ONE video cell `c-NN/video` under `reel cuts` (the videos tab): its mp4. Kept, it IS the output. A dry or
 //             not-yet-rendered cut is that cell as words.
 //
@@ -59,8 +61,12 @@ export function reelCells(night: Night, c: ReelCandidate | ReelCutCandidate, med
   const aim = c.aim === undefined ? {} : { aim: c.aim };
   if (c.kind === "reel") {
     const meta = [line, c.fromEpisode !== undefined ? `episode: ${c.fromEpisode}` : `idea ${c.fromIdea ?? "-"}`, `${c.cut.length} beat${c.cut.length === 1 ? "" : "s"}`].join(" · ");
-    cell(night, c, c.image, media, out, reelCell(c.id), meta, [`reel · ${c.title}`, line, ...c.cut.map((b) => `- ${b}`)]);
-    out.rows.push({ id: c.id, label: clip40(c.title), group: "reels", prompt: c.cut.join(" / "), ...use, ...aim, ...episodeRow(c.fromEpisode, episodes) });
+    // The mp4 is the cell's media only once it is on the packet's disk list; absent, the still stands as it always did.
+    const moving = c.video !== undefined && media[c.video] !== undefined;
+    const still = c.image !== undefined && media[c.image] !== undefined ? scoutFileUrl(night.id, c.image) : undefined;
+    const said = c.videoError !== undefined && !moving ? [`video: ${c.videoError}`] : [];
+    cell(night, c, moving ? c.video : c.image, media, out, reelCell(c.id), [meta, ...said].join(" · "), [`reel · ${c.title}`, line, ...c.cut.map((b) => `- ${b}`), ...said]);
+    out.rows.push({ id: c.id, label: clip40(c.title), group: "reels", prompt: c.cut.join(" / "), ...(moving && still !== undefined ? { ref: still } : {}), ...use, ...aim, ...episodeRow(c.fromEpisode, episodes) });
     return;
   }
   const meta = [line, `reel ${c.fromReel}`, `${c.seconds}s`].join(" · ");

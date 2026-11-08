@@ -185,7 +185,8 @@ its five beats and its spec. Take them oldest first, spread across channels, up 
 ### 3. Episodes due - real-data reels (D1, D2)
 
 Each data episode is an 8 s strip authored in code on the seat from REAL numbers, up to `reelCap` a night (`open
---reels`, default 6; never raise it). The approval unit is the 8 s strip; a kept one makes its full cut due
+--reels`, default 6; never raise it). The approval unit is the 8 s strip, drawn in motion on the Board (the job renders its mp4 beside the frame-120 still;
+`reel-motion <night> [--dry]` fills in an older night's); a kept one makes its full cut due
 (`reel-cut`, 30-120 s, sized by how many beats the data holds).
 
 1. **The source first.** The spec names it (Our World in Data, FAO, a Wikipedia table, a UN revision). Fetch the
