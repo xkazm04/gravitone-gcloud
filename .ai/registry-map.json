@@ -6614,7 +6614,11 @@
           "changedAt": "2026-10-14",
           "confidence": "probable",
           "priorNotApplicable": 2,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/RunRow.tsx:5 These components draw four fixed lanes (floor.ts FLOOR_LANES), pile cards, read-only run rows and shelf cells. A grep of packages/ui/src/components/floor found no table markup, sort state, pagination or cursor, so no filter, sort or window axis exists here for the subject to govern.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "agent-instruction-files",

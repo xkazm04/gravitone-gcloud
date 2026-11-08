@@ -18993,16 +18993,11 @@
       "context": "floor-lanes-runs",
       "subject": "table",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T04:20:11.855Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "86f55423-a56d-4634-b5fa-8274125bcb1b",
-        "state": "not-applicable",
-        "at": "2026-11-08T04:21:53.862104+00:00",
-        "reason": "reviewer (sonnet): The anchor RunRow.tsx:5 only says a row with a page is a link. That doesn't show the Floor has no sort, columns or export. I found no grid in the context's own files, but the absence rests on a grep rather than the anchor."
-      }
+      "evaluatedTs": "2026-11-08T04:39:43.631Z",
+      "worker": "4dc2cc9d-98dc-4edd-8625-31eae8a72e93",
+      "techniques": []
     },
     "ad4279e3-e7c5-48d5-b166-db447059b183/agent-host-experience": {
       "context": "mcp-agent-door",
