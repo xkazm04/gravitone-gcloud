@@ -20742,14 +20742,13 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/import/serve.ts:17 This context implements application data migration through HTTP and CLI entry points, and searches of its files and the repository found no embeddable, registrar, or WinterCG constructs requiring standards-layered guest-runtime design.",
-          "evaluatedAt": "2026-10-22",
-          "evaluatedAgainst": "sha256-b2:9cfe5aba03ea1a19",
-          "evaluatedRevision": 1,
+          "evidence": "lib/import/serve.ts:17 This context is application data migration (a v1 NDJSON archive read, staged and committed into the kernel store behind /api/import), not an embeddable guest-language runtime; a search of lib/import/ and of lib, packages, app and pipeline for wintercg, registrar, embedder, guest and isolate found nothing, so no standards-layered package graph exists to judge.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:72be2b66c8d50db7",
+          "evaluatedRevision": 3,
           "source": "renamed",
           "renamedFrom": "b412ea73-0dc3-4362-93c4-2a9b913f9a61",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "signed-artifacts",

@@ -18773,6 +18773,56 @@
           "evidence": "packages/kernel/src/resources/gate.ts:39 A throw from the bound free() hook is honoured as a refusal: the gate records no resource.freed and does not run anything else in its place."
         }
       ]
+    },
+    "052f74ff-87c5-45a8-a5ea-6fbb2ae44102/standards-layered-runtime": {
+      "context": "v1-import-and-archive",
+      "subject": "standards-layered-runtime",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:38:46.657Z",
+      "worker": "d2a88073-cf70-4542-9c2b-c7791cda5bf0",
+      "techniques": [
+        {
+          "technique": "crate-per-standards-body",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/serve.ts:17 No runtime that implements external platform standards for embedders, so no packages split by standards body."
+        },
+        {
+          "technique": "backend-parameterised-web-api",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/archive.ts:9 The archive code calls Node's host I/O directly as an application, not as a standard API exposed to guest programs."
+        },
+        {
+          "technique": "baseline-plus-extension-tuple",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/serve.ts:17 No API installation into a guest context or registration entry point exists."
+        },
+        {
+          "technique": "cli-as-thin-assembler",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/serve.ts:17 No runtime executable assembles layers here."
+        },
+        {
+          "technique": "re-export-preserves-import-path",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/archive.ts:9 No API moves from an extras layer into a standards package."
+        },
+        {
+          "technique": "status-header-per-api",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/serve.ts:17 There is no standards package whose APIs could carry clause-citing status headers."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/import/serve.ts:17 This context implements application data migration through HTTP and CLI entry points, and searches of its files and the repository found no embeddable, registrar, or WinterCG constructs requiring standards-layered guest-runtime design.",
+          "evaluatedAt": "2026-10-22",
+          "worker": null,
+          "reason": "replaced by d2a88073-cf70-4542-9c2b-c7791cda5bf0"
+        }
+      ]
     }
   }
 }
