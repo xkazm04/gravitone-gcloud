@@ -4284,7 +4284,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/board-keepalive.test.ts:45 The keepalive test hands flushKeepalive a params promise it composed itself, and no test posts to the route, so the beacon URL and body, the route's rev-requiring schema and its guard are pinned by neither this file nor board-gate.test.ts, and neither file names that crossing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "quality-gates",
@@ -5823,7 +5827,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/test/machines.test.ts:43 The suite claims a rule over every machine but runs over seven hand-written closedMachine calls, so an eighth defineMachine export would turn nothing red and the claim is about the list, not the set.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "structured-output",
@@ -6124,7 +6132,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/floor-real.test.ts:87 One kernel store seeded in beforeAll is mutated by every case, and later cases depend on earlier writes: line 222 expects item A already on youtube from the prior test and line 271 finds Glass Harbor, so test order is a hidden input.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "data-video-art-direction",

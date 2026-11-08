@@ -1,0 +1,174 @@
+{
+ "schema": "conform-run/1",
+ "worker": "582093c7-bd51-4762-8300-3322655ae471",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-08T23:35:32.827443+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "board-decision-desk",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/next-server/board-keepalive.test.ts:45 The keepalive test hands flushKeepalive a params promise it composed itself, and no test posts to the route, so the beacon URL and body, the route's rev-requiring schema and its guard are pinned by neither this file nor board-gate.test.ts, and neither file names that crossing.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/board-keepalive.test.ts:6 The header claims how the id arrives, but the test supplies the encoded value and the route never runs. A search of tests/ and packages/ui/test for keepalive finds only this file and a mutant registry entry, and the uncovered crossing is not declared."
+    },
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/board-real.test.ts:73 One mutable store and fixture universe serve the first describe's tests. The first test's 'first sight' check at line 115 expects only decision.opened, which holds only if it runs before the later test commits the same forge pile, so test order is a hidden input."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/board-real.test.ts:85 The test uses the same factory as port.ts over a real file-backed kernel. Only the store handle, weir reader and kick are supplied, and the apply is then driven through the real applier."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/board-real.test.ts:23 A temp universe is created before any store module loads, cwd is redirected and the operator's store variables are deleted, so the file inherits nothing from the machine."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "tests/live/board-exit.live.spec.ts:10 Browser journeys through a real Next server are read back from the store and from v1's files, not from the UI's own response."
+    }
+   ]
+  },
+  {
+   "context": "domain-run-job-steps",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/domain/test/machines.test.ts:43 The suite claims a rule over every machine but runs over seven hand-written closedMachine calls, so an eighth defineMachine export would turn nothing red and the claim is about the list, not the set.",
+   "techniques": [
+    {
+     "technique": "gate-scope-is-not-report-scope",
+     "verdict": "deviation",
+     "evidence": "packages/domain/test/machines.test.ts:44 All seven current defineMachine sites in packages/domain/src are listed today, but nothing derives the population or asserts its count; outside transitions.test.ts's own toy machines, no test or pipeline file references defineMachine."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:146 The break of job.machine.ts is registered as data, and tests/mutants-unit/ledger.json records it killed by machines.test.ts."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "packages/domain/test/machines.test.ts:212 The check drives the real derivation over a population taken from the table itself, so the decision it names is executed for every edge."
+    },
+    {
+     "technique": "fixture-economics",
+     "verdict": "conformant",
+     "evidence": "packages/domain/test/machines.test.ts:133 Pure logic uses in-memory literals, the cheapest fixture that can witness the claim."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "not-applicable",
+     "evidence": "packages/domain/test/transitions.test.ts:10 The test calls the shipped constructor directly; pure logic with no setup has nothing to fork."
+    }
+   ]
+  },
+  {
+   "context": "floor-calendar-port",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/next-server/floor-real.test.ts:87 One kernel store seeded in beforeAll is mutated by every case, and later cases depend on earlier writes: line 222 expects item A already on youtube from the prior test and line 271 finds Glass Harbor, so test order is a hidden input.",
+   "techniques": [
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/floor-real.test.ts:213 This write is the undeclared input of two later cases. The live spec states the opposite discipline for its own tests at tests/live/calendar.live.spec.ts:16."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/floor-real.test.ts:15 The store path is redirected in a hoisted block, and channel variables are cleared, before any store module loads."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/floor-real.test.ts:37 The test reaches the real side through the app's own kernel accessor and real.ts, not a test-only construction."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "tests/live/calendar.live.spec.ts:166 The live lane drives the real side as well as the fixture side, so the port's real wiring is exercised in the running product."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "run-records-and-slots",
+   "reason": "evidence leans on records/launch.ts, which is not a tracked file"
+  },
+  {
+   "subject": "test-harness",
+   "context": "bound-producers",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T23:35:32.827443+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "fixture-economics",
+    "isolation-lanes",
+    "live-app-harness",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "board-decision-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T23:35:32.827443+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "fixture-economics",
+    "gate-scope-is-not-report-scope",
+    "negative-control-tests",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "domain-run-job-steps",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T23:35:32.827443+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "fixture-economics",
+    "isolation-lanes",
+    "live-app-harness"
+   ],
+   "deviations": 1,
+   "context": "floor-calendar-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -19364,6 +19364,109 @@
           "evidence": "tests/mutants-unit/registry.ts:8056 A seeded defect names shell-session-post.test.ts as its guard; the entry was read, the mutant was not run."
         }
       ]
+    },
+    "c1a2a2a3-7561-4522-816b-c2418500374c/test-harness": {
+      "context": "board-decision-desk",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:35:32.827Z",
+      "worker": "582093c7-bd51-4762-8300-3322655ae471",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/board-keepalive.test.ts:6 The header claims how the id arrives, but the test supplies the encoded value and the route never runs. A search of tests/ and packages/ui/test for keepalive finds only this file and a mutant registry entry, and the uncovered crossing is not declared."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/board-real.test.ts:73 One mutable store and fixture universe serve the first describe's tests. The first test's 'first sight' check at line 115 expects only decision.opened, which holds only if it runs before the later test commits the same forge pile, so test order is a hidden input."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/board-real.test.ts:85 The test uses the same factory as port.ts over a real file-backed kernel. Only the store handle, weir reader and kick are supplied, and the apply is then driven through the real applier."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/board-real.test.ts:23 A temp universe is created before any store module loads, cwd is redirected and the operator's store variables are deleted, so the file inherits nothing from the machine."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/board-exit.live.spec.ts:10 Browser journeys through a real Next server are read back from the store and from v1's files, not from the UI's own response."
+        }
+      ]
+    },
+    "1155c1ec-f832-471a-929c-2a16f06cfbb7/test-harness": {
+      "context": "domain-run-job-steps",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:35:32.827Z",
+      "worker": "582093c7-bd51-4762-8300-3322655ae471",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "packages/domain/test/machines.test.ts:44 All seven current defineMachine sites in packages/domain/src are listed today, but nothing derives the population or asserts its count; outside transitions.test.ts's own toy machines, no test or pipeline file references defineMachine."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:146 The break of job.machine.ts is registered as data, and tests/mutants-unit/ledger.json records it killed by machines.test.ts."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "packages/domain/test/machines.test.ts:212 The check drives the real derivation over a population taken from the table itself, so the decision it names is executed for every edge."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "packages/domain/test/machines.test.ts:133 Pure logic uses in-memory literals, the cheapest fixture that can witness the claim."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/test/transitions.test.ts:10 The test calls the shipped constructor directly; pure logic with no setup has nothing to fork."
+        }
+      ]
+    },
+    "453eefad-eacc-4fdc-87fb-37e83ded0b47/test-harness": {
+      "context": "floor-calendar-port",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:35:32.827Z",
+      "worker": "582093c7-bd51-4762-8300-3322655ae471",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/floor-real.test.ts:213 This write is the undeclared input of two later cases. The live spec states the opposite discipline for its own tests at tests/live/calendar.live.spec.ts:16."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/floor-real.test.ts:15 The store path is redirected in a hoisted block, and channel variables are cleared, before any store module loads."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/floor-real.test.ts:37 The test reaches the real side through the app's own kernel accessor and real.ts, not a test-only construction."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/calendar.live.spec.ts:166 The live lane drives the real side as well as the fixture side, so the port's real wiring is exercised in the running product."
+        }
+      ]
     }
   }
 }
