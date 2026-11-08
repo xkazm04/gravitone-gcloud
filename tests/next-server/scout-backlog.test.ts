@@ -24,12 +24,15 @@ const ROOT = vi.hoisted(() => {
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli } from "../../pipeline/scout.mts";
 import { body } from "../../lib/decision/v1/sources/seeds.ts";
 import { backlogOf, backlogSection, freshSeedRefusal, type Backlog } from "../../lib/foundry/scout/backlog.ts";
 import { createSeedBatch, listSeedBatches } from "../../lib/foundry/scout/seedStore.ts";
 import { addSeedBatch, seedFacets } from "../../lib/foundry/scout/seeds.ts";
 import type { Candidate, IdeaCandidate, Night, NightCommit, Seed, SeedBatch, SeedCommit, StoryboardCandidate } from "../../lib/foundry/scout/types.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
@@ -146,7 +149,7 @@ describe("the seeds door holds the gate", () => {
   it("`status <night> --json` carries the backlog, over the scout wing", async () => {
     writeNight(waitingNight(NIGHT, 20));
     const out: string[] = [];
-    const code = await runCli(["status", NIGHT, "--json"], { env: ENV, out: (s) => out.push(s), err: () => undefined });
+    const code = await guardedRunCli(["status", NIGHT, "--json"], { env: ENV, out: (s) => out.push(s), err: () => undefined });
     expect(code).toBe(0);
     const doc = JSON.parse(out.join("\n")) as { backlog: unknown };
     // The parent and the children batches' kept seeds: only the parent is decided and kept, and no idea grows from it.

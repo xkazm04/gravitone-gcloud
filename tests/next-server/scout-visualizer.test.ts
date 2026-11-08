@@ -28,6 +28,7 @@ import path from "node:path";
 
 import { closeProcessKernel, processKernel } from "@gt/kernel/process";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli } from "../../pipeline/scout.mts";
 import { driveMv } from "../../lib/producers/mv.ts";
 import { readMv } from "../../lib/sound/mv/store.ts";
@@ -38,6 +39,8 @@ import { createNight, readNight, saveNight } from "../../lib/foundry/scout/store
 import type { IdeaCandidate, Night, TrackCandidate, VisualizerCandidate } from "../../lib/foundry/scout/types.ts";
 import { parseTrackRef, stillOf, visualizerAct } from "../../lib/foundry/scout/visualizer.ts";
 import { mvFakes } from "./producer-mv-fakes.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 const LOC = path.join(ROOT, "kernel.sqlite");
 const BATCH = "2026-10-20";
@@ -169,7 +172,7 @@ describe("a visualizer of a kept clip", () => {
     expect([r.outcome, r.candidate.status, r.candidate.video]).toEqual(["detached", "pending", undefined]);
     await driveMv([r.candidate.jobId ?? ""], { engines: mvFakes().engines, dryOnly: false });
     const out: string[] = [];
-    const code = await runCli(["visualizer", n.id, "--collect"], { env: { ...process.env }, out: (s) => out.push(s), err: (s) => out.push(s) });
+    const code = await guardedRunCli(["visualizer", n.id, "--collect"], { env: { ...process.env }, out: (s) => out.push(s), err: (s) => out.push(s) });
     expect([code, out]).toEqual([0, ["c-01 visualizer rendered"]]);
     expect((await visualizerOf(n.id, "c-01")).video).toBe("visualizers/c-01/visualizer.mp4");
   });

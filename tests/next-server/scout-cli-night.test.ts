@@ -12,10 +12,13 @@ vi.mock("../../lib/producers/scoutScene.ts", async () => {
   return { launchScene: async () => err("unavailable", "scene 2026: the scout-scene producer is not built yet") };
 });
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli, type CliPorts } from "../../pipeline/scout.mts";
 import { createNight, readNight } from "../../lib/foundry/scout/store.ts";
 import { getExtractRun } from "../../lib/foundry/extract/store.ts";
 import { closeProcessKernel } from "@gt/kernel/process";
+
+const guardedRunCli = guardOrphans(runCli);
 
 // The CLI end to end on a dry night, every store a temp file, every tool a stub,
 // the web a fake. GRAVITONE_DRY_ONLY=1 stands for the test lane: nothing arms live.
@@ -38,7 +41,7 @@ afterAll(() => {
 async function cli(argv: string[], ports: CliPorts = {}, env: Record<string, string | undefined> = ENV): Promise<{ code: number; out: string; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env, out: (s) => out.push(s), err: (s) => err.push(s), ports: { resolve, ingest: stubTools().deps, ...ports } });
+  const code = await guardedRunCli(argv, { env, out: (s) => out.push(s), err: (s) => err.push(s), ports: { resolve, ingest: stubTools().deps, ...ports } });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;
