@@ -37,7 +37,7 @@ import { confirmLessonAct } from "./_lessons/acts.ts";
 import { Lessons } from "./_lessons/Lessons.tsx";
 import { readLessons } from "./_lessons/read.ts";
 import { BatchDesk } from "./_insight/Batch.tsx";
-import { CoverDesk } from "./_cover/Cover.tsx";
+import { CoverDesk } from "./_cover/LazyCover.tsx";
 import { briefCoverAct, launchCoverAct, pickCoverAct, saveCoverStylesAct } from "./_cover/acts.ts";
 import { readCoverDesk } from "./_cover/read.ts";
 import { RubricDesk } from "./_insight/Rubric.tsx";
