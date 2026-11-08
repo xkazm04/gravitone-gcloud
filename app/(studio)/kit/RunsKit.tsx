@@ -25,7 +25,7 @@ const NOW = Date.UTC(2026, 9, 15, 9, 12);
 const at = (h: number): number => NOW + h * HOUR_MS;
 
 const ROWS: readonly DaylineRow[] = [
-  { id: "gpu.local", label: "GPU box", engines: "Flux 2 dev fp8 · Wan 2.2", cap: 1, kind: "local", held: { share: 1, name: "GPU box: 1 of 1 running" } },
+  { id: "gpu.local", label: "GPU box", engines: "LTX 2.5 · Wan 2.2", cap: 1, kind: "local", held: { share: 1, name: "GPU box: 1 of 1 running" } },
   { id: "seat.text", label: "Text seat", engines: "article turns · scripts", cap: 4, kind: "seat", held: { share: 0.25, name: "Text seat: 1 of 4 running" } },
   { id: "cloud.google", label: "Google", engines: "Nano Banana · Gemini", cap: 3, kind: "cloud", held: { share: 0, name: "Google: 0 of 3 running" } },
   { id: "weir", label: "Weir · operator", engines: "verdicts", cap: 1, kind: "weir" },

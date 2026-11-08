@@ -65,7 +65,7 @@ describe("model options", () => {
     const suno = opt("score", "suno");
     expect(suno.usdPerUnit).toBeNull();
     expect(suno.unpricedReason).toMatch(/credits/);
-    expect(opt("frames", "comfy").usdPerUnit).toBe(0);
+    expect(opt("frames", "codex").usdPerUnit).toBe(0);
   });
 
   it("carries the article band as a measured figure with its date", () => {
@@ -78,7 +78,7 @@ describe("model options", () => {
   it("names the producer and whether the router can honour a pin", () => {
     expect(launchOf("score", opt("score", "suno").key, DAY)).toMatchObject({ producer: "suno", routed: true });
     expect(launchOf("score", opt("score", "elevenlabs").key, DAY)).toMatchObject({ producer: "score", routed: true });
-    expect(launchOf("frames", opt("frames", "comfy").key, DAY)).toMatchObject({ producer: "frames", routed: false });
+    expect(launchOf("frames", opt("frames", "codex").key, DAY)).toMatchObject({ producer: "frames", routed: true });
   });
 });
 
@@ -124,7 +124,7 @@ describe("schedule", () => {
 const QUEUE: QueueRead = { others: [], digest: "empty" };
 const plan = (): PlanLine[] => [
   { key: "script", label: "script", lane: "seat.text", units: 1, option: opt("script", "claude-cli"), after: [], order: 1, status: "pending" },
-  { key: "frames", label: "frames", lane: "gpu.local", units: 24, option: opt("frames", "comfy"), after: ["script"], order: 2, status: "pending" },
+  { key: "frames", label: "frames", lane: "gpu.local", units: 24, option: opt("frames", "codex"), after: ["script"], order: 2, status: "pending" },
   { key: "gate:frames", label: "◆", lane: null, units: 0, after: ["frames"], order: 3, status: "pending" },
 ];
 
@@ -136,8 +136,8 @@ describe("receipt", () => {
     const r = receiptFor({ ...base, lines });
     expect(r.lines.map((l) => l.key)).toEqual(["script", "frames"]);
     expect(r.totals).toMatchObject({ usd: 0, unpriced: 1, src: "illustrative" });
-    expect(r.lines[1]?.seconds).toBe(24 * 96);
-    expect(Date.parse(r.etaAt)).toBe(NOW + (14 * 60 + 24 * 96) * 1000);
+    expect(r.lines[1]?.seconds).toBe(24 * 120);
+    expect(Date.parse(r.etaAt)).toBe(NOW + (14 * 60 + 24 * 120) * 1000);
   });
 
   it("changes its token with the quote, the queue, the ceiling or the mode - never with the clock", () => {
@@ -174,7 +174,7 @@ describe("receipt", () => {
 
   it("previews a re-route as the whole plan's ETA and cost delta", () => {
     const d = rerouteDelta(plan(), "frames", opt("frames", "google"), QUEUE, LANE_CAPACITY, NOW);
-    expect(d.dEtaS).toBe(24 * (21 - 96));
+    expect(d.dEtaS).toBe(24 * (21 - 120));
     expect(d.dUsd).toBeCloseTo(24 * 0.045, 2);
     expect(d.queuePos).toBe(1);
   });

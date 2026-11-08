@@ -34,7 +34,7 @@ const WINDOWS = [
 ] as const;
 
 const MODELS = [
-  { value: "flux", label: "Flux 2 dev fp8 · GPU box — 1h 04m · $0" },
+  { value: "codex", label: "Codex · image_gen — 1h 04m · $0" },
   { value: "nano", label: "Nano Banana · Google — 14m · $1.60" },
 ] as const;
 
@@ -51,7 +51,7 @@ export function ControlSections() {
   const [win, setWin] = useState<(typeof WINDOWS)[number]["value"]>("24h");
   const [title, setTitle] = useState("Untitled film");
   const [query, setQuery] = useState("");
-  const [model, setModel] = useState<(typeof MODELS)[number]["value"]>("flux");
+  const [model, setModel] = useState<(typeof MODELS)[number]["value"]>("codex");
   const [facets, setFacets] = useState<ReadonlySet<string>>(new Set(["music"]));
   const [rails, setRails] = useState<ReadonlySet<string>>(new Set());
   const [folded, setFolded] = useState(true);

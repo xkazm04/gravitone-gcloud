@@ -91,6 +91,9 @@ const proto = (minutes: number, what: string): PaceDecl => ({
   src: "illustrative",
   note: `prototype studio.js CATALOG: ${what}, ${minutes} min per unit, a placeholder`,
 });
+/** Codex's image_gen on the operator's ChatGPT seat: $0 per image, its quota is the real limit. */
+const CODEX_SEAT: UsdDecl = { perUnit: 0, src: "real", note: "the operator's ChatGPT seat: no per-image bill; its quota is the limit" };
+
 const LOCAL_FREE: UsdDecl = { perUnit: 0, src: "real", note: "runs on this studio's own machine; nobody invoices it" };
 const STRIPS_SEAT: UsdDecl = { unpriced: "each card's author turn bills the text seat, reported after the run (pipeline/strips/run.mts)" };
 const SEAT: UsdDecl = { unpriced: "billed to the operator's text seat; the CLI reports its own cost after the run, not before" };
@@ -138,15 +141,7 @@ export const PART_OPTIONS: Readonly<Record<WorkKind, KindOptions>> = {
     route: { medium: "image", capability: "generate" },
     producer: "frames",
     options: [
-      {
-        via: "local",
-        provider: "comfy",
-        model: "flux-2-dev-fp8",
-        lane: "gpu.local",
-        label: "Flux 2 dev fp8 · ComfyUI",
-        pace: { secondsPerUnit: 96, src: "illustrative", note: "prototype model.js estimate.forge: ~1.6 min a plate, marked illustrative there" },
-        usd: LOCAL_FREE,
-      },
+      { via: "router", provider: "codex", label: "Codex · image_gen", usage: { unit: "image", perUnit: 1 }, fallback: CODEX_SEAT },
       { via: "router", provider: "google", label: "Nano Banana", usage: { unit: "image", perUnit: 1, size: "1K" } },
       { via: "router", provider: "leonardo", label: "Leonardo · image", usage: { unit: "image", perUnit: 1 } },
       { via: "router", provider: "agy", label: "agy · image", pace: proto(0.5, "assumed alike Leonardo; agy declares no pace"), usage: { unit: "image", perUnit: 1 } },
@@ -161,15 +156,7 @@ export const PART_OPTIONS: Readonly<Record<WorkKind, KindOptions>> = {
       { via: "router", provider: "google", label: "Nano Banana", pace: proto(0.4, "still on Nano Banana"), usage: { unit: "image", perUnit: 1, size: "1K" } },
       { via: "router", provider: "leonardo", label: "Leonardo · image", usage: { unit: "image", perUnit: 1 } },
       { via: "router", provider: "agy", label: "agy · image", pace: proto(0.5, "assumed alike Leonardo; agy declares no pace"), usage: { unit: "image", perUnit: 1 } },
-      {
-        via: "local",
-        provider: "comfy",
-        model: "flux-2-dev-fp8",
-        lane: "gpu.local",
-        label: "Flux 2 dev fp8",
-        pace: { secondsPerUnit: 96, src: "illustrative", note: "prototype model.js estimate.forge: ~1.6 min a plate, marked illustrative there" },
-        usd: LOCAL_FREE,
-      },
+      { via: "router", provider: "codex", label: "Codex · image_gen", usage: { unit: "image", perUnit: 1 }, fallback: CODEX_SEAT },
     ],
   },
   motion: {
@@ -294,12 +281,13 @@ export const PART_OPTIONS: Readonly<Record<WorkKind, KindOptions>> = {
     producer: "forge",
     options: [
       {
+        // Refused: pipeline/foundry/forge.py's reference-window graph was Flux 2's and has no Codex replacement yet.
         via: "local",
         provider: "comfy",
-        model: "flux-2-dev-fp8",
+        model: "forge-refused",
         lane: "gpu.local",
-        label: "Flux 2 dev fp8 · ComfyUI",
-        pace: { secondsPerUnit: 96, src: "illustrative", note: "prototype model.js estimate.forge: ~1.6 min a plate, marked illustrative there" },
+        label: "Forge · refused (Flux 2 removed 2026-11-08)",
+        pace: { secondsPerUnit: 96, src: "illustrative", note: "a figure left from the retired graph; the forge refuses before drawing" },
         usd: LOCAL_FREE,
       },
     ],
@@ -316,15 +304,6 @@ export const PART_OPTIONS: Readonly<Record<WorkKind, KindOptions>> = {
         label: "Nano Banana · Gemini judge",
         pace: proto(20, "`Dojo · 2 cycles` drawn at 40 min"),
         usd: { unpriced: "a Dojo cycle's render count is set by its gen-spec, unknown until the cycle is planned; the judge calls Gemini unmetered (pipeline/foundry/dojo_judge.py)" },
-      },
-      {
-        via: "local",
-        provider: "comfy",
-        model: "flux-2-dev-fp8",
-        lane: "gpu.local",
-        label: "Flux 2 dev fp8 · local pairs",
-        pace: proto(20, "a local cycle assumed alike"),
-        usd: LOCAL_FREE,
       },
     ],
   },

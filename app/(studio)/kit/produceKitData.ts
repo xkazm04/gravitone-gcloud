@@ -20,7 +20,7 @@ const opt = (key: string, lane: ModelOption["lane"], provider: string, model: st
 });
 
 export const FRAMES: readonly ModelOption[] = [
-  opt("frames/comfy/flux", "gpu.local", "comfy", "flux-2-dev-fp8", "Flux 2 dev fp8 · ComfyUI", 96, 0, "model"),
+  opt("frames/codex/image-gen", "seat.text", "codex", "codex-image-gen", "Codex · image_gen", 120, null, "illustrative", { unpricedReason: "the operator's ChatGPT seat" }),
   opt("frames/google/nano", "cloud.google", "google", "nano-banana", "Nano Banana", 21, 0.04, "illustrative"),
   opt("frames/leonardo/phoenix", "cloud.leonardo", "leonardo", "phoenix", "Leonardo · image", 30, 0.06, "illustrative"),
 ];
@@ -36,7 +36,7 @@ const sched = (s: number, e: number, q: number | null) => ({ schedule: { start: 
 
 export const PLAN: readonly PlanPart[] = [
   { id: "p:research", label: "research", after: [], state: "ratified", kind: "research", units: 1, unitNoun: "brief", options: RESEARCH, chosen: "research/claude-cli/research", estimate: { seconds: 540, usd: null, unpricedReason: "billed to the operator's text seat", src: "illustrative" }, ...sched(-90, -81, null) },
-  { id: "p:frames", label: "frames", after: ["p:research"], state: "draft", kind: "frames", units: 24, unitNoun: "plate", unitsRange: [1, 200], options: FRAMES, chosen: "frames/comfy/flux", estimate: { seconds: 2304, usd: 0, src: "model" }, ...sched(20, 58, 2) },
+  { id: "p:frames", label: "frames", after: ["p:research"], state: "draft", kind: "frames", units: 24, unitNoun: "plate", unitsRange: [1, 200], options: FRAMES, chosen: "frames/codex/image-gen", estimate: { seconds: 2304, usd: 0, src: "model" }, ...sched(20, 58, 2) },
   { id: "p:gate:frames", label: "verdict · frames", after: ["p:frames"], state: "draft", kind: "gate", judges: "p:frames", verdict: "matrix-cull", ...sched(58, 78, null) },
   { id: "p:score", label: "score", after: ["p:research"], state: "draft", kind: "score", units: 2, unitNoun: "prompt", unitsRange: [1, 200], options: SCORE, chosen: "score/suno/v6", estimate: { seconds: 480, usd: null, unpricedReason: "Suno bills subscription credits, not dollars", src: "model" }, ...sched(20, 28, 1) },
   { id: "p:slot", label: "slot", after: ["p:gate:frames", "p:score"], state: "draft", kind: "slot", ...sched(78, 88, null) },

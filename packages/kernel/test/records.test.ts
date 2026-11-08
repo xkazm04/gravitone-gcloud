@@ -44,9 +44,9 @@ describe("compose and the plan", () => {
     expect(v.parts.map((p) => p.id.slice(3))).toEqual(["research", "script", "frames", "gate:frames", "motion", "score", "gate:score", "cut", "gate:cut", "slot"]);
     expect(v.parts.every((p) => p.state === "draft")).toBe(true);
     const frames = v.parts.find((p) => p.id === "p1/frames");
-    expect(frames).toMatchObject({ kind: "frames", units: 24, unitNoun: "plate", unitsRange: [1, 200], chosen: "frames/comfy/flux-2-dev-fp8" });
+    expect(frames).toMatchObject({ kind: "frames", units: 24, unitNoun: "plate", unitsRange: [1, 200], chosen: "frames/codex/codex-image-gen" });
     expect(v.totals.gates).toBe(0);
-    expect(v.lanes.find((l) => l.lane === "gpu.local")).toMatchObject({ jobs: 2, queuePos: 1 });
+    expect(v.lanes.find((l) => l.lane === "gpu.local")).toMatchObject({ jobs: 1, queuePos: 1 });
     expect(events(s, "project.composed")).toHaveLength(1);
   });
 
