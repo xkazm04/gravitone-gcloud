@@ -328,7 +328,11 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
     ideas.push(k.value);
   }
   const casted = await castPanels(briefs, ideas, kept);
-  const all = await readAllNights();
+  // A board whose drawing process died holds its idea until settled: settle the nights the held checks read, once.
+  let all = await readAllNights();
+  let settled = false;
+  for (const n of all) settled = (await settleGoneBoards(n)).length > 0 || settled;
+  if (settled) all = await readAllNights();
   const others = all.filter((n) => n.id !== id);
   for (const [i, b] of briefs.entries()) {
     const held = heldFor(others, b, i + 1);
@@ -485,16 +489,14 @@ async function castPanels(briefs: readonly StoryboardBrief[], ideas: readonly (K
 /* ── Collect ──────────────────────────────────────────────────────────────── */
 
 /**
- * Collect detached storyboard jobs into the night. The job writes each frame into the night itself
- * (`storyboards/<c-NN>/panel-N.png`, fenced), so collecting is settling: every pending storyboard whose
- * job has finished is told its ending (lib/producers/scoutStoryboardActs.ts `settledBoard`) - a job the
- * worker drove while no one waited ends exactly as one driven here would. A cancelled job is a failure.
+ * A Codex board has no job: its draw ended if its owner is gone (codexOwner.ts). Settle every such pending board
+ * of an uncommitted night and name the ones settled; a live owner's board is left pending and a committed night
+ * is not written.
  */
-export async function collectStoryboards(id: NightId, o: { readonly store?: Store } = {}): Promise<StoryboardCandidate[]> {
-  const n = await readNight(id);
-  if (n.state === "committed") throw new Refusal(`night ${id} is committed; its packet is decided and nothing more is collected into it`);
+async function settleGoneBoards(n: Night): Promise<CandidateId[]> {
   const out: CandidateId[] = [];
-  // A Codex board has no job: its draw ended if its owner is gone (codexOwner.ts). A live owner's board is left pending.
+  if (n.state === "committed") return out;
+  const id = n.id;
   for (const c of n.candidates) {
     if (c.kind !== "storyboard" || c.status !== "pending" || c.jobId !== undefined || c.owner === undefined || !ownerGone(c.owner)) continue;
     out.push(c.id);
@@ -504,6 +506,19 @@ export async function collectStoryboards(id: NightId, o: { readonly store?: Stor
       return withCandidate(m, settledCodexBoard(now, "failed", `codex:${id}/${c.id}`, `the draw's process (pid ${now.owner.pid}) ended before the board was finished`));
     });
   }
+  return out;
+}
+
+/**
+ * Collect detached storyboard jobs into the night. The job writes each frame into the night itself
+ * (`storyboards/<c-NN>/panel-N.png`, fenced), so collecting is settling: every pending storyboard whose
+ * job has finished is told its ending (lib/producers/scoutStoryboardActs.ts `settledBoard`) - a job the
+ * worker drove while no one waited ends exactly as one driven here would. A cancelled job is a failure.
+ */
+export async function collectStoryboards(id: NightId, o: { readonly store?: Store } = {}): Promise<StoryboardCandidate[]> {
+  const n = await readNight(id);
+  if (n.state === "committed") throw new Refusal(`night ${id} is committed; its packet is decided and nothing more is collected into it`);
+  const out = await settleGoneBoards(n);
   const waiting = n.candidates.filter((c): c is StoryboardCandidate & { readonly jobId: string } => c.kind === "storyboard" && c.status === "pending" && c.jobId !== undefined);
   if (waiting.length === 0 && out.length === 0) return [];
   const store = waiting.length === 0 ? undefined : (o.store ?? (() => {

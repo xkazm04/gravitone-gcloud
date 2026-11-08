@@ -173,3 +173,67 @@ describe("a codex board whose draw died", { timeout: 60_000 }, () => {
     expect(again.candidates[0]?.status).toBe("rendered");
   });
 });
+
+describe("a retry after a draw that died, with no --collect", { timeout: 60_000 }, () => {
+  const again = (nightId: string, id: string) => storyboardAct(ctx, nightId, [brief(id, 1)], { drawnBy: "codex", draw: () => Promise.resolve({ png: new Uint8Array([9]), seed: 0 }) });
+
+  it("(e) draws again on the same night", async () => {
+    loopIdea(ID(5));
+    const n = await night();
+    void storyboardAct(ctx, n.id, [brief(ID(5), 3)], stalls(0));
+    await new Promise((r) => setTimeout(r, 500));
+    await killOwner(n.id);
+    const r = await again(n.id, ID(5));
+    expect(r.candidates.at(-1)?.status).toBe("rendered");
+    expect((await readNight(n.id)).candidates.filter((c) => c.kind === "storyboard" && c.status === "failed")).toHaveLength(1);
+  });
+
+  it("(f) draws again when the stranded board is on an earlier night", async () => {
+    loopIdea(ID(6));
+    const n = await night();
+    void storyboardAct(ctx, n.id, [brief(ID(6), 3)], stalls(0));
+    await new Promise((r) => setTimeout(r, 500));
+    await killOwner(n.id);
+    const later = await night();
+    const r = await again(later.id, ID(6));
+    expect(r.candidates[0]?.status).toBe("rendered");
+    expect((await board(n.id)).status).toBe("failed");
+  });
+
+  it("(g) a live owner still refuses the retry", async () => {
+    loopIdea(ID(7));
+    const n = await night();
+    void storyboardAct(ctx, n.id, [brief(ID(7), 3)], stalls(0));
+    await new Promise((r) => setTimeout(r, 500));
+    const later = await night();
+    await expect(again(later.id, ID(7))).rejects.toThrow(/already has storyboard/);
+    expect((await board(n.id)).status).toBe("pending");
+  });
+
+  it("(h) a stranded board with drawn panels settles to rendered and still holds its idea", async () => {
+    loopIdea(ID(8));
+    const n = await night();
+    void storyboardAct(ctx, n.id, [brief(ID(8), 3)], stalls(2));
+    await waitFor(n.id, 2);
+    await killOwner(n.id);
+    const later = await night();
+    await expect(again(later.id, ID(8))).rejects.toThrow(/already has storyboard/);
+    expect((await board(n.id)).status).toBe("rendered");
+  });
+
+  it("(i) a committed night holding a stranded board is not written, and the act does not throw", async () => {
+    loopIdea(ID(9));
+    loopIdea(ID(10));
+    const n = await night();
+    void storyboardAct(ctx, n.id, [brief(ID(9), 3)], stalls(0));
+    await new Promise((r) => setTimeout(r, 500));
+    await killOwner(n.id);
+    await mutateNight(n.id, (m) => ({ ...m, state: "committed" }));
+    const before = await readNight(n.id);
+    const later = await night();
+    const r = await again(later.id, ID(10));
+    expect(r.candidates[0]?.status).toBe("rendered");
+    expect(await readNight(n.id)).toEqual(before);
+    expect((await board(n.id)).status).toBe("pending");
+  });
+});
