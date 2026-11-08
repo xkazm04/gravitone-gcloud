@@ -314,8 +314,23 @@ describe("a live night - the scout-storyboard job", () => {
     expect(c?.error).toBe("panel 1: ComfyUI SamplerCustomAdvanced (node 11) failed: out of memory; panel 2: ComfyUI SamplerCustomAdvanced (node 11) failed: out of memory");
   });
 
+  it("a live launch asks ComfyUI first: unreachable, no candidate is written and the cap is untouched", async () => {
+    const night = await open(["--live"], LIVE);
+    const r = await cli(["storyboard", night, "--detach", "--json", file([brief(`${KEPT}/c-10`)])], { env: LIVE });
+    expect(r.code).not.toBe(0);
+    expect(`${r.out}
+${r.err}`).toContain("ComfyUI at http://127.0.0.1:8188 did not answer /system_stats");
+    expect(await boardsOf(night)).toEqual([]);
+    expect(await readNight(night).then((n) => n.jobs)).toEqual([]);
+  });
+
   it("--detach leaves the job queued; the worker's drive writes the frames, and collect settles what is still pending", async () => {
     const night = await open(["--live"], LIVE);
+    // ComfyUI answers its stats: the gate (lib/foundry/scout/comfyGate.ts) lets the launch through.
+    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
+      if (String(input).endsWith("/system_stats")) return new Response(JSON.stringify({ system: { comfyui_version: "test" }, devices: [] }));
+      throw new Error(`unexpected fetch ${String(input)}`);
+    });
     const r = await cli(["storyboard", night, "--detach", "--json", file([brief(`${KEPT}/c-10`)])], { env: LIVE });
     expect(r.code, r.err).toBe(0);
     expect(r.doc).toMatchObject({ outcome: "detached" });
