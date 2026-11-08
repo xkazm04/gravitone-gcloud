@@ -18823,6 +18823,22 @@
           "reason": "replaced by d2a88073-cf70-4542-9c2b-c7791cda5bf0"
         }
       ]
+    },
+    "79439a23-e379-41e6-92c6-ea1bbd2516d7/talking-avatar": {
+      "context": "foundry-mesh-gates",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:51:55.299Z",
+      "techniques": [],
+      "registryProposal": "The talking-avatar standard only covers animating one 2D still (layered rig, neural talking head, hybrid). A 3D mesh face driven by morph targets or blend shapes is another route the motion-route-selection rules do not name. Its upstream precondition, that the asset has a facial channel at all (non-zero morph targets, read and never assumed), is a gate this repo enforces and the standard could mention.",
+      "withdrawn": {
+        "worker": "e9826ad0-443c-4fc9-9283-337d553bbc40",
+        "state": "not-applicable",
+        "at": "2026-11-08T02:53:06.502295+00:00",
+        "reason": "reviewer (sonnet): The anchor at rig-gate.ts:333 is a facial-deformation gate. It fails a character with 0 morph targets because it 'cannot blink, speak or change expression', so this context does touch the face-capability precondition of a talking avatar. The not-applicable verdict is contradicted rather than support"
+      }
     }
   }
 }
