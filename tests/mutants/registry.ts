@@ -140,7 +140,7 @@ export const MUTANTS: Mutant[] = [
     id: "exit-login-not-detected",
     probe: "cli-exit-classification.probe.spec.ts",
     file: "lib/claudeCli.ts",
-    find: "/login|auth|credential/i.test(stderr)",
+    find: "/not logged in|\\/login\\b|invalid api key|login expired|session has expired/i.test(stderr)",
     replace: "/zzz-never-matches/i.test(stderr)",
     why: "A logged-out CLI is reported as a generic crash instead of telling the creator to sign in.",
   },
