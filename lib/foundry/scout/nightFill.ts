@@ -3,6 +3,7 @@ import type { Actor } from "@gt/domain/event";
 import type { Reader, Store } from "@gt/kernel/store";
 
 import { closeAct, Refusal, type ActContext } from "./acts";
+import { EngineUnreachable } from "./comfyGate";
 import { recentLoad, type RecentLoad } from "./load";
 import { hasPlan, mutatePlan, readPlan, settleItem, type PlanItem } from "./plan";
 import type { PlanDoors } from "./planDoors";
@@ -26,7 +27,9 @@ import { withWing } from "./wingScope";
 //   ONE LAUNCH    a tick, through the item's door in the night's own mode (a dry night dry, a live one live - the
 //                 shell's GRAVITONE_DRY_ONLY still refuses a live one), detached, the actor naming the timer. A
 //                 Refusal (a cap, the money, a kept idea no longer kept) is `refused`; any other throw `failed`;
-//                 neither is retried.
+//                 neither is retried. An
+//                 EngineUnreachable (./comfyGate.ts: the engine could not be asked, nothing spent) is neither: the item
+//                 stays `queued` and the tick idles with a reason naming ComfyUI.
 
 export const NIGHT_FILL_ACTOR: Actor = { kind: "machine", id: "night-fill" };
 export const NIGHT_FILL_WINDOW_MIN = 15;
@@ -125,6 +128,13 @@ export async function nightFillTick(o: NightFillOptions): Promise<NightFillOutco
       const r = await o.doors[item.kind].launch(ctx, night.id, item);
       next = { state: "launched", at: o.now.toISOString(), ...(r.jobId === undefined ? {} : { jobId: r.jobId }) };
     } catch (e) {
+      // Could not ask is not refused: the engine was not there, no attempt was made, nothing was spent. The item
+      // stays queued and the tick idles; the next tick asks again.
+      if (e instanceof EngineUnreachable) {
+        const why = e.message;
+        o.say?.(`${night.id} ${item.id} ${item.kind} stays queued · ${why}`);
+        return { kind: "idle", why, night: night.id };
+      }
       const reason = e instanceof Error ? e.message : String(e);
       next = { state: e instanceof Refusal ? "refused" : "failed", at: o.now.toISOString(), reason };
     }

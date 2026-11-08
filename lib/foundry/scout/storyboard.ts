@@ -31,9 +31,9 @@
 //   ONE STORYBOARD PER IDEA. A brief for an idea some night already holds a storyboard for is refused, unless
 //   that one failed (a failed storyboard drew nothing to judge).
 //
-//   THE CAP. A night holds at most `storyboardCap` storyboards (DEFAULT_STORYBOARD_CAP on a night opened
-//   before the field); every one counts, a failed one too - it held the card. The check and the rows are one
-//   write under the night's lock, so two batches at once cannot both take the last places.
+//   THE CAP. A night holds at most `storyboardCap` storyboards (DEFAULT_STORYBOARD_CAP before the field); a FAILED one
+//   drew nothing and does not count; check and rows are one write under the lock. A live launch first asks ComfyUI
+//   (./comfyGate.ts `reachable`): unreachable, nothing is written and the cap is untouched.
 //
 //   A TECHNIQUE, OPTIONAL (spark scout-vision): `technique` {claim, quote, url, template, step} is the way of
 //   executing the genre the night researched and the panels apply - a finding's shape, its template and step held
@@ -77,6 +77,7 @@ import { driveStoryboard, launchStoryboard } from "../../producers/scoutStoryboa
 import { settledBoard, type StoryboardClip, type StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
 import { launchable, Refusal, type ActContext } from "./acts";
 import { archivedFromIdea } from "./baseline";
+import { requireComfy } from "./comfyGate";
 import { castAllow, castLine, castOf, CAST_MAX, CAST_PROMPT_MAX, rootedNights } from "./cast";
 import { castPrompt, keptCharacters, type KeptCharacter } from "./characters";
 import { IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
@@ -116,6 +117,7 @@ export type StoryboardEngines = {
   readonly draw?: StoryboardDraw;
   /** Clip one panel still (a trial's): the mp4 bytes and their length. */
   readonly clip?: StoryboardClip;
+  readonly reachable?: () => Promise<void>;
 };
 
 export type StoryboardResult = {
@@ -126,7 +128,7 @@ export type StoryboardResult = {
   readonly dry?: boolean;
 };
 
-export const storyboardsUsed = (n: Night): number => n.candidates.filter((c) => c.kind === "storyboard").length;
+export const storyboardsUsed = (n: Night): number => n.candidates.filter((c) => c.kind === "storyboard" && c.status !== "failed").length;
 
 export function storyboardCapOf(n: Night): number {
   return n.storyboardCap ?? DEFAULT_STORYBOARD_CAP;
@@ -329,9 +331,9 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   const unfit = genreRefusal(briefs, genreViews(all, genres));
   if (unfit !== undefined) throw new Refusal(unfit);
   const { mode } = await launchable(ctx, id);
+  if (mode === "live") await requireComfy(engines); // before a candidate exists: a launch the engine could not hear spends no place
 
-  let made: StoryboardCandidate[] = [];
-  let full: string | undefined;
+  let made: StoryboardCandidate[] = [], full: string | undefined;
   await mutateNight(id, (n) => {
     full = briefs.map((b, i) => heldFor([n], b, i + 1)).find((x) => x !== undefined) ?? capRefusal(n, briefs, trialSlots([...others, n], genres, id));
     if (full !== undefined) return n;
@@ -384,8 +386,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   }
 
   const opts = { mode, actor: ctx.actor, dryOnly: ctx.dryOnly };
-  const jobIds: string[] = [];
-  const refused: string[] = [];
+  const jobIds: string[] = [], refused: string[] = [];
   for (const c of made) {
     const target = { nightId: id, candidateId: c.id };
     const r0 = await launchStoryboard(ctx.store, target, opts);
@@ -395,8 +396,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
       refused.push(`${c.id}: ${why0 ?? "no receipt"}`);
       continue;
     }
-    const rc = r0.value.receipt;
-    const l = rc.lines[0];
+    const rc = r0.value.receipt, l = rc.lines[0];
     ctx.say(`receipt (${rc.mode}): storyboard ${c.id} · ${c.panels.length} frame(s) on ${l?.lane ?? "gpu.local"} · comfyui · $0 (free: a local model) · ~${Math.ceil(rc.totals.seconds / 60)} min`);
     const r1 = await launchStoryboard(ctx.store, target, { ...opts, token: rc.token });
     const why1 = !r1.ok ? r1.error.message : r1.value.kind !== "launched" ? `the receipt moved while it was confirmed (${r1.value.kind}); nothing launched` : undefined;

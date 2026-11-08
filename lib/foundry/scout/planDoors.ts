@@ -13,6 +13,7 @@ import { SCOUT_SHEET_LANE } from "../../producers/scoutSheet.ts";
 import { SCOUT_STORYBOARD_LANE } from "../../producers/scoutStoryboard.ts";
 import { markOrigin, sceneAct, styleAct, type ActContext } from "./acts.ts";
 import { assetAct } from "./asset.ts";
+import type { ComfyProbe } from "./comfyGate.ts";
 import { keptCharacters } from "./characters.ts";
 import { rootedNights } from "./cast.ts";
 import { parseBrief } from "./concept.ts";
@@ -90,8 +91,8 @@ function failedUnless(outcome: string | undefined, error?: string): void {
 
 const first = (ids: readonly string[]): Launched => (ids[0] === undefined ? {} : { jobId: ids[0] });
 
-/** The doors as production binds them; `draftText` is the one seam a test replaces (the text router's `draft` turn), `signal` the tick's stop. */
-export function planDoors(o: { readonly draftText?: DraftText; readonly signal?: AbortSignal } = {}): PlanDoors {
+/** The doors as production binds them; `draftText` is the one seam a test replaces (the text router's `draft` turn), `signal` the tick's stop, `reachable` the engine probe a storyboard asks first (./comfyGate.ts). */
+export function planDoors(o: { readonly draftText?: DraftText; readonly signal?: AbortSignal; readonly reachable?: ComfyProbe } = {}): PlanDoors {
   return {
     storyboards: {
       async parse(p) {
@@ -101,7 +102,7 @@ export function planDoors(o: { readonly draftText?: DraftText; readonly signal?:
       },
       lanes: () => [SCOUT_STORYBOARD_LANE],
       async launch(ctx, id, item) {
-        const r = await storyboardAct(ctx, id, item.payload);
+        const r = await storyboardAct(ctx, id, item.payload, o.reachable === undefined ? {} : { reachable: o.reachable });
         failedUnless(r.outcome);
         return first(r.jobIds);
       },
