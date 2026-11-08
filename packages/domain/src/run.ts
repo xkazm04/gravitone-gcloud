@@ -62,7 +62,7 @@ export const PRODUCERS = [
   // A /scout night's stats-reel ideas (spark stats-reels): each authored as a full 8 s strip in code on the
   // Claude seat, linted, and its frame 120 rendered as the idea's tile (lib/producers/scoutReel.ts).
   "scout-reels",
-  // A /scout night's storyboards (spark scout-storyboards): a kept idea's frames drawn by Flux 2 on this
+  // A /scout night's storyboards (spark scout-storyboards): a kept idea's frames drawn by Codex, not on this
   // box's ComfyUI, one job per storyboard (lib/producers/scoutStoryboard.ts).
   "scout-storyboard",
   // A genre's piece (spark scout-vision S2): its best kept trial's rejected clips re-made on LTX and the clips cut into
@@ -74,7 +74,7 @@ export const PRODUCERS = [
   // A cover's brief (spark track-mirror-studio, follow-up): the song measured, listened to three times through Gemini,
   // its title, styles and section written by a Claude Code turn, then its cover launched (lib/producers/coverBrief.ts).
   "cover-brief",
-  // A kept character's reference sheet (spark scout-vision S3): one neutral 1:1 Flux 2 still on this box's ComfyUI, her
+  // A kept character's reference sheet (spark scout-vision S3): one neutral 1:1 Codex still on the operator's seat, her
   // kept portrait admitted late as the reference, one job per sheet (lib/producers/scoutSheet.ts).
   "scout-sheet",
   // The song lab (spark yue2-song-lab): YuE2 renders a batch of seeds in WSL, every take is scored (lyric WER,

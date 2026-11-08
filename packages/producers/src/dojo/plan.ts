@@ -6,7 +6,7 @@ import type { MissingStep } from "@gt/kernel/job-core";
 // of its units are still missing.
 //
 // STACK PURITY, KEPT (pipeline/foundry/dojo_run.py, operator 2026-09-01): a cycle
-// names its stack - `local` (Flux/Wan/H3 pixels, the Ollama eye, $0) or `google`
+// names its stack - `local` (Wan/H3 pixels, the Ollama eye, $0; its image stills were Flux 2 and are refused since its removal) or `google`
 // (Nano Banana pixels, Gemini eyes, billed) - and a spec that names neither is
 // refused, never guessed: "the wrapper never guesses which bill it is running up".
 // The stack decides the LANE (plan §3.1: a lane is declared, never inferred):
@@ -91,8 +91,8 @@ export function localOrder(spec: GenSpecView, media: DojoMedia): { readonly pair
 }
 
 /**
- * The receipt's pace for a local unit. A still on Flux 2 is the forge's plate
- * (96 s, illustrative in @gt/catalog); a Wan clip is minutes (dojo_video.py: "a
+ * The receipt's pace for a local unit. A still's figure is a leftover from
+ * when local image pairs drew on the card (96 s, illustrative; pipeline/foundry/dojo_pairs.py refuses them now); a Wan clip is minutes (dojo_video.py: "a
  * 121-frame decode is minutes on its own") - five assumed; an H3 clip pays its
  * first load once (~70 min, measured 2026-09-03) and is minutes warm - eight
  * assumed. A readback is a read per still (three per clip). None is a measurement.

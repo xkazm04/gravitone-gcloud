@@ -107,8 +107,8 @@ describe("composeLook", () => {
     expect(out[0]?.length).toBeLessThanOrEqual(2000);
   });
 
-  it("a composed prompt past what Flux takes is refused with a sentence naming the panel", () => {
-    expect(() => composeLook(LOOK, ["a", "b".repeat(1990)], "storyboard 2")).toThrow(/^storyboard 2: panel 2 with its channel's look is \d+ characters; a Flux prompt is at most 2000$/);
+  it("a composed prompt past the frame ceiling is refused with a sentence naming the panel", () => {
+    expect(() => composeLook(LOOK, ["a", "b".repeat(1990)], "storyboard 2")).toThrow(/^storyboard 2: panel 2 with its channel's look is \d+ characters; a frame prompt is at most 2000$/);
     expect(() => composeLook(LOOK, ["b".repeat(1990)])).toThrow(Refusal);
   });
 

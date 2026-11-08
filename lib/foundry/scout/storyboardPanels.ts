@@ -12,7 +12,7 @@ import type { StoryboardBrief } from "./storyboard";
 /**
  * Each brief's cast (by place; undefined: none) and its COMPILED panels - every member's identity block verbatim, then
  * the panel's own words. Refused - nothing written - when a member is not kept, breaks the audience rule (the work's
- * audience is its idea's seed's), or a compiled panel is past what Flux takes.
+ * audience is its idea's seed's), or a compiled panel is past the prompt ceiling.
  */
 export async function castPanels(briefs: readonly (Pick<StoryboardBrief, "cast"> & { readonly panels: readonly string[] })[], ideas: readonly (KeptIdea | undefined)[], kept: readonly KeptCharacter[]): Promise<({ readonly members: readonly KeptCharacter[]; readonly panels: readonly string[] } | undefined)[]> {
   if (!briefs.some((b) => b.cast !== undefined)) return briefs.map(() => undefined);
@@ -26,7 +26,7 @@ export async function castPanels(briefs: readonly (Pick<StoryboardBrief, "cast">
     const cards = members.value.map((m) => m.card);
     const panels = b.panels.map((p) => castPrompt(cards, p));
     const long = panels.findIndex((p) => p.length > CAST_PROMPT_MAX);
-    if (long >= 0) throw new Refusal(`storyboard ${i + 1}: panel ${long + 1} with its cast's identity blocks is ${panels[long]?.length} characters; a Flux prompt is at most ${CAST_PROMPT_MAX}`);
+    if (long >= 0) throw new Refusal(`storyboard ${i + 1}: panel ${long + 1} with its cast's identity blocks is ${panels[long]?.length} characters; a frame prompt is at most ${CAST_PROMPT_MAX}`);
     return { members: members.value, panels };
   });
 }

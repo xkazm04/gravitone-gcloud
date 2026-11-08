@@ -74,6 +74,7 @@ class RenderPass:
         self.staged, self.since = {}, 0
 
     def ready(self):
+        guard.refuse_flux2("dojo's local image pairs")
         guard.require(ram_gb=0, free=["ollama"], verbose=False)
         if guard.comfy_process_ids():
             guard.recycle_comfy("fresh engine for dojo pairs")

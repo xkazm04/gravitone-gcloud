@@ -7,7 +7,6 @@ import { DatabaseSync } from "node:sqlite";
 import { timerResource } from "@gt/producers/publish/timers";
 
 import { probeGoogle, type KeyFetch, type KeyProbe } from "../../imaging/keyProbe";
-import { missingFluxModels } from "../../imaging/local/flux2";
 import { leonardoStudioHealth } from "../../imaging/providers/leonardoStudio";
 import { probeLeonardoApiPool, studioBalanceCheck } from "../../imaging/studio/balance";
 import type { StudioRecon } from "../../imaging/studio/driver";
@@ -47,9 +46,7 @@ import { WING_STORE_ENV } from "./store";
 // ONE NIGHT TYPE (spark scout-vision S3): the muse wing folded into the scout loop, so there is no stills-only preflight -
 // a night's character ideas are drawn on the studio line above, like every other idea.
 // (This preflight has no TRELLIS or Blender line: a game asset's mesh job meets those on
-// the worker, lib/foundry/mesh.) The STORYBOARDS' Flux files (spark scout-storyboards) are read off the same
-// ComfyUI once it answers, as a note: a missing file fails those storyboards' frames with ComfyUI's own
-// sentence, and the night goes on. The local Ollama model (spark scout-vision S6) is a note too
+// the worker, lib/foundry/mesh.) The local Ollama model (spark scout-vision S6) is a note too
 // (./doctorOllama.ts): without it a draft is the CLI's and the eye is Gemini's - money, not a step.
 
 export type Check = {
@@ -153,19 +150,7 @@ async function comfyChecks(input: DoctorInput): Promise<Check[]> {
   } catch (e) {
     out.push({ name: "ltx weights", ok: false, found: (e as Error).message, remedy: `ComfyUI answered /system_stats but not /object_info; restart it with ${start}`, needed });
   }
-  out.push(await fluxCheck(deps, start));
   return out;
-}
-
-/** The storyboards' Flux 2 files listed by ComfyUI (lib/imaging/local/flux2.ts FLUX_FILES): always a note. */
-async function fluxCheck(deps: { readonly base: string; readonly fetch?: ComfyFetch }, start: string): Promise<Check> {
-  try {
-    const w = await missingFluxModels(deps);
-    if (w.missing.length === 0) return { name: "flux weights", ok: true, found: `${w.present} model files present`, needed: false };
-    return { name: "flux weights", ok: false, found: `missing: ${w.missing.join(", ")}`, remedy: "put the missing files under ComfyUI's models folder; without them a storyboard draws no frame", needed: false };
-  } catch (e) {
-    return { name: "flux weights", ok: false, found: (e as Error).message, remedy: `ComfyUI answered /system_stats but not /object_info; restart it with ${start}`, needed: false };
-  }
 }
 
 /** Where the night's registry digest reads from - a note, never a failure. */
@@ -179,7 +164,7 @@ async function registryCheck(input: DoctorInput): Promise<Check> {
 async function studioCheck(input: DoctorInput): Promise<Check> {
   const h = await (input.studio ?? leonardoStudioHealth)().catch((e: unknown): StudioHealth => ({ ok: false, reason: e instanceof Error ? e.message : String(e) }));
   if (h.ok) return { name: "studio", ok: true, found: "leonardo studio signed in, with credits", needed: false };
-  return { name: "studio", ok: false, found: h.reason ?? "leonardo studio is not ready", remedy: "the night's stills are drawn there by default (SCOUT_REPLICA_GENERATOR): set LEONARDO_STUDIO_CDP and sign its Chrome profile in once (.claude/skills/music-video/SKILL.md)", needed: false };
+  return { name: "studio", ok: false, found: h.reason ?? "leonardo studio is not ready", remedy: "the night's idea artboards are drawn there, and replicas with SCOUT_REPLICA_GENERATOR=leonardo-studio: set LEONARDO_STUDIO_CDP and sign its Chrome profile in once (.claude/skills/music-video/SKILL.md)", needed: false };
 }
 
 /** The Suno browser on its own port: attached read-only (its sign-in cookie), never launched. */

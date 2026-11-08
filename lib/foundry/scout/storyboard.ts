@@ -2,13 +2,13 @@
 //
 // The operator: "clips are generated in isolation and full videos are following only short idea approved in
 // the beginning. We will need concept in graph/pipeline to create video composition proving idea can become
-// final content." A storyboard is that proof: up to five rough frames drawn by the local Flux model from the
+// final content." A storyboard is that proof: up to five rough frames drawn by Codex from the
 // seat's words, a paragraph and bullets saying the vision, judged whole on the night's packet. A kept one is
 // the root every full-video act must name (`keptStoryboardFor`); nothing here makes the video.
 //
 // THE ACT - `pipeline/scout.mts storyboard <night> --json <file|->`. The skill writes a batch of briefs, one
 // per kept idea - `{fromIdea, title, paragraph, bullets, panels, use?, aim?}` - and each becomes a `storyboard`
-// candidate drawn as ONE scout-storyboard job on gpu.local (lib/producers/scoutStoryboard.ts). The night's
+// candidate drawn as ONE scout-storyboard job (a plain board on seat.text, a trial on gpu.local; lib/producers/scoutStoryboard.ts). The night's
 // rules are the other launches' (./acts.ts `launchable`): refused when the night is not open or is past its
 // deadline. And its own:
 //
@@ -32,8 +32,7 @@
 //   that one failed (a failed storyboard drew nothing to judge).
 //
 //   THE CAP. A night holds at most `storyboardCap` storyboards (DEFAULT_STORYBOARD_CAP before the field); a FAILED one
-//   drew nothing and does not count; check and rows are one write under the lock. A live launch first asks ComfyUI
-//   (./comfyGate.ts `reachable`): unreachable, nothing is written and the cap is untouched.
+//   drew nothing and does not count; check and rows are one write under the lock. Nothing else spends one.
 //
 //   A TECHNIQUE, OPTIONAL (spark scout-vision): `technique` {claim, quote, url, template, step} is the way of
 //   executing the genre the night researched and the panels apply - a finding's shape, its template and step held
@@ -52,7 +51,7 @@
 //   A CAST, OPTIONAL (spark scout-vision S3): `cast: [<name>]` - kept characters (./cast.ts castOf: each kept, the
 //   audience rule read off the idea's seed). Their names and declared parody origins may stand mid-sentence in the
 //   panels (./scene.ts namesIn `allow`); every panel is then COMPILED here - each member's identity block verbatim,
-//   then the panel's own words (./characters.ts castPrompt) - and that is what the candidate holds and Flux draws. A member
+//   then the panel's own words (./characters.ts castPrompt) - and that is what the candidate holds and Codex draws. A member
 //   with a kept sheet rides it as a late-admitted reference (lib/producers/scoutStoryboardActs.ts); one without is
 //   identity block only, and the receipt line says which.
 //
@@ -77,7 +76,6 @@ import { driveStoryboard, launchStoryboard } from "../../producers/scoutStoryboa
 import { settledBoard, type StoryboardClip, type StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
 import { launchable, Refusal, type ActContext } from "./acts";
 import { archivedFromIdea } from "./baseline";
-import { requireComfy } from "./comfyGate";
 import { composeLook, lookOf } from "./channelLook";
 import { castPanels } from "./storyboardPanels";
 import { castAllow, castLine, CAST_MAX, rootedNights } from "./cast";
@@ -112,13 +110,12 @@ import {
 
 export { keptStoryboardFor } from "./storyboardKept";
 
-/** What a test injects in place of the Flux producer's drive; production passes none. */
+/** What a test injects in place of the frame producer's drive; production passes none. */
 export type StoryboardEngines = {
   /** Draw one frame: the PNG bytes and the seed it drew with. */
   readonly draw?: StoryboardDraw;
   /** Clip one panel still (a trial's): the mp4 bytes and their length. */
   readonly clip?: StoryboardClip;
-  readonly reachable?: () => Promise<void>;
 };
 
 export type StoryboardResult = {
@@ -156,7 +153,7 @@ const briefSchema = z
     paragraph: z.string().trim().min(1).max(STORYBOARD_PARAGRAPH_MAX),
     /** Beats, format and length, audience, the look in words, the hook. */
     bullets: z.array(line(STORYBOARD_BULLET_MAX)).min(STORYBOARD_BULLETS_MIN).max(STORYBOARD_BULLETS_MAX),
-    /** One Flux prompt per frame, in order. */
+    /** One frame prompt per frame, in order. */
     panels: z.array(z.string().trim().min(1).max(IDEA_PROMPT_MAX)).min(1).max(STORYBOARD_PANELS_MAX),
     use: line(USE_MAX).optional(),
     aim: line(AIM_MAX).optional(),
@@ -285,7 +282,7 @@ async function failPending(id: NightId, cid: CandidateId, why: string): Promise<
   });
 }
 
-/** The `storyboard` act: briefs (JSON, one per kept idea) through the door, each drawn as one gpu.local job. */
+/** The `storyboard` act: briefs (JSON, one per kept idea) through the door, each drawn as one job on its lane. */
 export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown, engines: StoryboardEngines = {}): Promise<StoryboardResult> {
   if (activeWing() !== "scout") throw new Refusal(`the ${activeWing()} wing draws no storyboard`);
   const shut = archivedFromIdea(id, input); // a kept idea's storyboard is the spread's (spark project-baseline); an episode's is not
@@ -307,7 +304,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   const episodes: (EpisodeHeld | undefined)[] = [];
   for (const [i, b] of briefs.entries()) {
     const held = b.fromEpisode === undefined ? undefined : await dueEpisode(`storyboard ${i + 1}`, b.fromEpisode);
-    // A data channel's episode is made as a real-data reel, never as Flux frames (the reel door refuses the mirror case).
+    // A data channel's episode is made as a real-data reel, never as drawn frames (the reel door refuses the mirror case).
     if (held !== undefined && held.channel.medium !== "storyboard") throw new Refusal(`storyboard ${i + 1}: fromEpisode: ${held.episode.id} is channel ${held.channel.id}'s, made as a ${held.channel.medium}; only a storyboard channel's episode is storyboarded`);
     episodes.push(held);
     if (b.fromIdea === undefined) {
@@ -335,7 +332,6 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   const unfit = genreRefusal(briefs, genreViews(all, genres));
   if (unfit !== undefined) throw new Refusal(unfit);
   const { mode } = await launchable(ctx, id);
-  if (mode === "live") await requireComfy(engines); // before a candidate exists: a launch the engine could not hear spends no place
 
   let made: StoryboardCandidate[] = [], full: string | undefined;
   await mutateNight(id, (n) => {
@@ -401,8 +397,9 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
       refused.push(`${c.id}: ${why0 ?? "no receipt"}`);
       continue;
     }
-    const rc = r0.value.receipt, l = rc.lines[0];
-    ctx.say(`receipt (${rc.mode}): storyboard ${c.id} · ${c.panels.length} frame(s) on ${l?.lane ?? "gpu.local"} · comfyui · $0 (free: a local model) · ~${Math.ceil(rc.totals.seconds / 60)} min`);
+    const rc = r0.value.receipt;
+    const l = rc.lines[0];
+    ctx.say(`receipt (${rc.mode}): storyboard ${c.id} · ${c.panels.length} frame(s) on ${l?.lane ?? "seat.text"} · codex · $0 (the ChatGPT seat) · ~${Math.ceil(rc.totals.seconds / 60)} min`);
     const r1 = await launchStoryboard(ctx.store, target, { ...opts, token: rc.token });
     const why1 = !r1.ok ? r1.error.message : r1.value.kind !== "launched" ? `the receipt moved while it was confirmed (${r1.value.kind}); nothing launched` : undefined;
     if (why1 !== undefined || !r1.ok || r1.value.kind !== "launched") {

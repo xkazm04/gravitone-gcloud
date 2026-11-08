@@ -3,7 +3,7 @@
 //   npx tsx pipeline/foundry/dojo-pairs-nb.mts foundry-out/training/<cycle-id>
 //
 // One of the two PURE STACKS (operator, 2026-09-01): a cycle runs entirely
-// local (Flux/Wan/H3 pixels, ollama eyes, $0) or entirely Google (Nano
+// local (Wan/H3 pixels, ollama eyes, $0; image pairs refused since Flux 2's removal) or entirely Google (Nano
 // Banana pixels, Gemini eyes, billed) — never mixed, so a verdict is about
 // the stack it names. This is the Google half: generation AND readback
 // through the router with an explicit `prefer: "google"` steer, so the local

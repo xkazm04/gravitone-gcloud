@@ -108,8 +108,8 @@ describe.skipIf(PYTHON === undefined)("a dry forge job end to end", () => {
       expect(c.status).toBe("graded");
       expect(c.grade).toMatchObject({ grader: "dry/stand-in", dry: true });
       expect(statSync(path.join(u.runs, "r1", c.file)).size).toBeGreaterThan(0);
-      const side = parseJsonAt("sidecar", z.object({ dry: z.literal(true), workflow: z.record(z.string(), z.unknown()) }), readFileSync(path.join(u.runs, "r1", c.file.replace(/\.png$/, ".json")), "utf8"));
-      expect(side.ok, "a dry plate keeps the workflow it would have sent").toBe(true);
+      const side = parseJsonAt("sidecar", z.object({ dry: z.literal(true), workflow: z.null() }), readFileSync(path.join(u.runs, "r1", c.file.replace(/\.png$/, ".json")), "utf8"));
+      expect(side.ok, "a dry plate names no workflow: the forge graph was Flux 2 and refuses live").toBe(true);
     }
   });
 

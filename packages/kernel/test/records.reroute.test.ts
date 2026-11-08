@@ -50,6 +50,7 @@ describe("relaunchIn - another lane", () => {
     const old = "job:part:p1/frames";
     const ord = ordOf(s, old);
     // Somebody is already in the target lane's line: the successor still takes the old job's place, not the back.
+    for (let i = 1; i < Number(ord); i++) must(enqueue(s, { id: `job:run:filler-${i}`, of: { kind: "run", id: "filler" }, producer: "extract", lane: "cloud.google" }, OP));
     must(enqueue(s, { id: "job:run:other", of: { kind: "run", id: "other" }, producer: "extract", lane: "cloud.google" }, OP));
     expect(ordOf(s, "job:run:other")).toBe(ord);
     expect(must(s.read((r) => routeKind(r, { jobId: old, key: GOOGLE, now: NOW, judge: routed })))).toBe("relaunch");

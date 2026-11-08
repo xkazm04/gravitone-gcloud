@@ -77,6 +77,7 @@ SCENARIOS = [
 
 
 def main():
+    guard.refuse_flux2("scenario_probe")
     cyc = Path(sys.argv[1])
     if not cyc.is_absolute():
         cyc = ROOT / cyc

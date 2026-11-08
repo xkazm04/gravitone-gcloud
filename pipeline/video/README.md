@@ -120,7 +120,7 @@ underneath it is the wrong tool for this content.
 ## The route that works: compose_clip.py
 
 Interpolating between two GENERATED stills was the first idea and it does not
-work either: Flux at full reference strength redraws the whole scene rather than
+work either: an image model at full reference strength (measured on Flux 2) redraws the whole scene rather than
 editing one element — measured on blueprint, the bars, the curve and the corner
 schematic all moved — so an interpolation between them is soft everywhere, which
 is the defect being removed.
@@ -130,7 +130,7 @@ What works is to generate ONE new still and do the motion in numpy:
 1. **read** the picture, choose the element and where it goes, and ground both
    as pixel boxes (`motion_author.py` plus a grounding pass; the boxes land on
    the element accurately).
-2. **plate** — erase the element with Flux 2 inpainting, then composite the
+2. **plate** — erase the element by inpainting (Flux 2's graph, refused by `compose_clip.py` since its removal 2026-11-08 until a Codex or other edit replaces it), then composite the
    result back into the ORIGINAL so every pixel outside the erased box is
    bit-identical. Skipping that composite leaves a background that shimmers: a
    VAE round-trip moves every pixel by about 2/255 even where the noise mask is

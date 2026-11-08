@@ -10,29 +10,20 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 // A KEPT IDEA'S STORYBOARD, DRAWN (spark scout-storyboards) - one /scout `storyboard` candidate's frames as
 // the steps of ONE kernel job, priced on a receipt before it runs:
 //
-//   panel:1..N  one Flux 2 dev frame per panel prompt (OUR words, no reference image), drawn on this box's
-//               ComfyUI (lib/imaging/local/flux2.ts), written to storyboards/<c-NN>/panel-N.png in the night
+//   panel:1..N  one Codex frame per panel prompt (OUR words, with a cast's kept sheets attached), drawn on the operator's
+//               ChatGPT seat (lib/imaging/local/codex.ts), written to storyboards/<c-NN>/panel-N.png in the night
 //   clip:1..N   a TRIAL's only (spark scout-vision S2: a storyboard with a genre): after every panel, one LTX clip
 //               of each drawn panel still, its prompt the motion line, written to storyboards/<c-NN>/clip-N.mp4.
 //               A plain storyboard's request carries no `clips` and plans no clip step.
 //
-// ONE JOB, THE CARD'S LANE. Every step is the local model, so the job waits on `gpu.local` (capacity 1) and
-// names the `comfy` engine, so admission waits on the ComfyUI queue (the scene producer's clip rule).
+// ONE JOB, ITS LANE. A plain storyboard waits on seat.text. A trial's clips are the card's, so it waits on `gpu.local`
+// (capacity 1) and names the `comfy` engine, so admission waits on the ComfyUI queue (the scene producer's clip rule).
 //
-// ONE PANEL'S FAILURE IS THAT PANEL'S (the ideas producer's rule) - when the engine ANSWERED. A ComfyUI sentence
-// for one prompt (a refused graph, a node's exception, a draw that timed out while the engine was alive) leaves
+// ONE PANEL'S FAILURE IS THAT PANEL'S (the ideas producer's rule). An engine's sentence for one prompt leaves
 // that panel empty with the sentence recorded, and the step is booked: the storyboard goes on, and a resumed
 // job never redraws a panel it already drew or already failed. A storyboard that ends with no frame at all
 // is a loss (lib/producers/scoutStoryboardActs.ts `ended`). ONE CLIP'S FAILURE IS THAT CLIP'S, the same way: a
 // clip the engine refused (or a panel that drew no still) leaves its index null, and the frames stand.
-//
-// AN ENGINE THAT COULD NOT BE REACHED IS NOT A PANEL'S FAILURE (retry-backoff: suspension-is-not-failure). The gate
-// checks ComfyUI once, at the launch; when it goes away later, every queued panel used to fail in seconds and book
-// itself an empty frame (160 of 330 panels on the nights of 2026-10-26). flux2.ts types that case (`isComfyUnreachable`:
-// the /system_stats refusal, a prompt it stopped answering for), and the panel step answers it as a retryable
-// `vendor-failure`: nothing is booked, nothing written, the kernel backs off and draws the same panel again. The limit
-// is STORYBOARD_OUTAGE_LIMIT consecutive attempts, so the wait is bounded; the job then ends failed with the engine's
-// own sentence, and the candidate and its episode settle as an all-failed board does (`ended`).
 //
 // THE PAUSE HOLDS WHAT THE RESUME NEEDS. The launch records the request - each panel's prompt and the seed
 // it will draw with (chosen at launch, so a retry draws the same frame), the aspect, one frame's estimate -
@@ -41,14 +32,6 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 export const SCOUT_STORYBOARD = "scout-storyboard";
 /** The event that carries a storyboard job's request (subject: the job). */
 export const STORYBOARD_REQUEST = "scout.storyboard-requested";
-
-/**
- * Consecutive unreachable attempts before the job ends failed. The kernel's backoff doubles from 1 s and caps at
- * 30 s with half-to-full jitter (job-run.ts `defaultBackoff`), so 80 attempts wait 31 s + 74 x 30 s: at most ~38 min,
- * about 28 min on average, plus at most 10 s per attempt for /system_stats to time out (13 min) - under an hour
- * against a night, and long enough to cover a ComfyUI restart or a model update.
- */
-export const STORYBOARD_OUTAGE_LIMIT = 80;
 
 export const panelStep = (k: number): string => `panel:${k}`;
 export const clipStep = (k: number): string => `clip:${k}`;
@@ -88,7 +71,7 @@ export const parseStoryboardRequest = (raw: unknown): Result<StoryboardRequest> 
 export function storyboardPlan(req: StoryboardRequest, outputs: Outputs): MissingStep[] {
   const panels = req.panels.map((_, i) => ({ name: panelStep(i + 1), estimate: req.estimates.panel }));
   const clip = req.estimates.clip;
-  // Every panel first, then a trial's clips: the card loads Flux once, then LTX once.
+  // Every panel first, then a trial's clips.
   const clips = req.clips === undefined || clip === undefined ? [] : req.clips.map((_, i) => ({ name: clipStep(i + 1), estimate: clip }));
   return [...panels, ...clips].filter((s) => !outputs.has(s.name));
 }
@@ -116,7 +99,6 @@ export function defineScoutStoryboard(lane: ResourceLane, ports: StoryboardPorts
   };
   return {
     lane,
-    breakerLimit: STORYBOARD_OUTAGE_LIMIT,
     async health(job) {
       if (job !== undefined) requestOf(job);
       return { ok: true };

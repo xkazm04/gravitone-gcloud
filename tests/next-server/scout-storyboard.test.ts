@@ -1,6 +1,6 @@
 // A KEPT IDEA'S STORYBOARD (spark scout-storyboards WP4a) - `pipeline/scout.mts storyboard` end to end, every
 // store a temp directory set below before any lib/ module loads: the batch's door (each refusal its own
-// case), the cap under the night's lock, the dry night's words-only rows, a scout-storyboard job on gpu.local
+// case), the cap under the night's lock, the dry night's words-only rows, a scout-storyboard job on seat.text
 // driven with a fake frame engine (frames + seeds written, a failed panel kept to that panel, no frame at all
 // is a loss), collect, the gate (`keptStoryboardFor`: kept, rejected, dry, an open part), `developedOf`
 // ignoring storyboards, and the taste brief's two sections. No ComfyUI, no vendor, no network: fetch throws.
@@ -273,12 +273,12 @@ describe("a dry night - words only", () => {
 });
 
 describe("a live night - the scout-storyboard job", () => {
-  it("launches one job on gpu.local at $0 and drives it with the fake engine: frames and seeds written", async () => {
+  it("launches one job on seat.text at $0 and drives it with the fake engine: frames and seeds written", async () => {
     const night = await open(["--live"], LIVE);
     const fake = engine();
     const r = await cli(["storyboard", night, "--json", file([brief(`${KEPT}/c-03`)])], { env: LIVE, ports: fake.ports });
     expect(r.code, r.err).toBe(0);
-    expect(r.err).toMatch(/receipt \(live\): storyboard c-01 · 3 frame\(s\) on gpu\.local · comfyui · \$0 \(free: a local model\)/);
+    expect(r.err).toMatch(/receipt \(live\): storyboard c-01 · 3 frame\(s\) on seat\.text · codex · \$0 \(the ChatGPT seat\)/);
     const jobId = `job:scout-storyboard:${night}:c-01`;
     expect(r.doc).toMatchObject({ ok: true, jobIds: [jobId], outcome: "done" });
     const [c] = await boardsOf(night);
@@ -290,7 +290,7 @@ describe("a live night - the scout-storyboard job", () => {
     const k = processKernel(LOC);
     if (!k.ok) throw k.error;
     const j = get(k.value.store, jobId as never);
-    expect(j.ok && [j.value.job.producer, j.value.job.lane, j.value.job.state, j.value.job.ceilingUsd]).toEqual(["scout-storyboard", "gpu.local", "done", undefined]);
+    expect(j.ok && [j.value.job.producer, j.value.job.lane, j.value.job.state, j.value.job.ceilingUsd]).toEqual(["scout-storyboard", "seat.text", "done", undefined]);
     const spent = k.value.store.read((rd) => rd.all("SELECT 1 AS x FROM spend_rows WHERE job_id = ?", jobId).length);
     expect(spent.ok && spent.value).toBe(0);
   });
@@ -314,23 +314,8 @@ describe("a live night - the scout-storyboard job", () => {
     expect(c?.error).toBe("panel 1: ComfyUI SamplerCustomAdvanced (node 11) failed: out of memory; panel 2: ComfyUI SamplerCustomAdvanced (node 11) failed: out of memory");
   });
 
-  it("a live launch asks ComfyUI first: unreachable, no candidate is written and the cap is untouched", async () => {
-    const night = await open(["--live"], LIVE);
-    const r = await cli(["storyboard", night, "--detach", "--json", file([brief(`${KEPT}/c-10`)])], { env: LIVE });
-    expect(r.code).not.toBe(0);
-    expect(`${r.out}
-${r.err}`).toContain("ComfyUI at http://127.0.0.1:8188 did not answer /system_stats");
-    expect(await boardsOf(night)).toEqual([]);
-    expect(await readNight(night).then((n) => n.jobs)).toEqual([]);
-  });
-
   it("--detach leaves the job queued; the worker's drive writes the frames, and collect settles what is still pending", async () => {
     const night = await open(["--live"], LIVE);
-    // ComfyUI answers its stats: the gate (lib/foundry/scout/comfyGate.ts) lets the launch through.
-    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
-      if (String(input).endsWith("/system_stats")) return new Response(JSON.stringify({ system: { comfyui_version: "test" }, devices: [] }));
-      throw new Error(`unexpected fetch ${String(input)}`);
-    });
     const r = await cli(["storyboard", night, "--detach", "--json", file([brief(`${KEPT}/c-10`)])], { env: LIVE });
     expect(r.code, r.err).toBe(0);
     expect(r.doc).toMatchObject({ outcome: "detached" });
@@ -357,9 +342,10 @@ ${r.err}`).toContain("ComfyUI at http://127.0.0.1:8188 did not answer /system_st
     }
   });
 
-  it("is bound on gpu.local with the comfy engine; a resumed job plans only its missing panels; a dry or rendered board is not priced", async () => {
+  it("is bound on seat.text for a plain board and on gpu.local with the comfy engine for a trial; a resumed job plans only its missing panels; a dry or rendered board is not priced", async () => {
     const bound = producers();
     expect(bound.ok && bound.value.get("scout-storyboard@gpu.local" as never)?.engine).toBe("comfy");
+    expect(bound.ok && bound.value.get("scout-storyboard@seat.text" as never)?.engine).toBeUndefined();
     const req: StoryboardRequest = { nightId: "n", candidateId: "c-01", aspect: "16:9", panels: [{ prompt: "a", seed: 1 }, { prompt: "b", seed: 2 }], estimates: { panel: { seconds: 96, usd: 0 } }, by: "op" };
     expect(storyboardPlan(req, new Map([["panel:1", {} as never]])).map((s) => s.name)).toEqual(["panel:2"]);
     const n = (await readNight(KEPT)) as Night;

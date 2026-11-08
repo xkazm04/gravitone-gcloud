@@ -1,12 +1,12 @@
-// A KEPT CHARACTER'S REFERENCE SHEET (spark scout-vision S3): one neutral 1:1 still on local Flux, her kept portrait
+// A KEPT CHARACTER'S REFERENCE SHEET (spark scout-vision S3): one neutral 1:1 still on Codex, her kept portrait
 // admitted late as the reference (OUR picture - never a source file), the prompt her identity block plus the neutral
 // framing (rest expression, three-quarter head, even light, plain field, invariant wardrobe). Judged on the Board; a
-// kept sheet becomes her reference for every Flux frame she is cast in.
+// kept sheet becomes her reference for every frame she is cast in.
 //
 // THE ACT - `pipeline/scout.mts sheet <night> [--character <name>]`. Every kept character (./characters.ts
 // keptCharacters, over the scout nights and the muse archive) with NO kept sheet and none in flight - or only
 // `--character`'s, refused with why when she is not due - becomes ONE `sheet` candidate {character, name, fromPortrait}
-// and ONE scout-sheet job on gpu.local (lib/producers/scoutSheet.ts). IN FLIGHT: a sheet of hers on a scout night that is
+// and ONE scout-sheet job on seat.text (lib/producers/scoutSheet.ts). IN FLIGHT: a sheet of hers on a scout night that is
 // pending, or rendered and not yet decided (a night still open, or the cell left on a remainder). A REJECTED sheet makes
 // her due again (taste `## Sheets to draw`, `sheetsToDraw`, says with which reasons); a failed one too. A dry night's
 // sheet holds nothing up. The night's rules are the other launches' (./acts.ts `launchable`); the candidates are
@@ -22,7 +22,7 @@ import { jobIdSchema } from "@gt/domain/ids";
 import { get } from "@gt/kernel/job";
 import type { Store } from "@gt/kernel/store";
 
-import { REFERENCE_LATE } from "../../imaging/local/flux2.ts";
+import { REFERENCE_LATE } from "../../imaging/local/codex.ts";
 import { driveSheet, launchSheet } from "../../producers/scoutSheet.ts";
 import { settledSheet } from "../../producers/scoutSheetActs.ts";
 import { launchable, Refusal, type ActContext } from "./acts";
@@ -34,7 +34,7 @@ import { mutateNight, nextCandidateId, readNight, withCandidate } from "./store"
 import { cellId, type CandidateId, type Night, type NightId, type SheetCandidate } from "./types";
 import { activeWing } from "./wingScope";
 
-/** The sheet's local engine, injectable for tests: one Flux still from a prompt and our own reference stills. */
+/** The sheet's engine, injectable for tests: one still from a prompt and our own reference stills. */
 export type SheetEngines = {
   readonly draw?: (prompt: string, o: { readonly refs: readonly Uint8Array[]; readonly late: number; readonly seed?: number }) => Promise<{ readonly png: Uint8Array; readonly seed: number }>;
 };
@@ -51,7 +51,7 @@ export const SHEET_PART = "sheet";
 export const sheetCell = (cid: CandidateId): string => cellId(cid, SHEET_PART);
 /** Night-relative: `sheets/c-07.png`. */
 export const sheetFile = (cid: CandidateId): string => `sheets/${cid}.png`;
-/** Where her portrait joins the sheet's denoise: the model's frozen value (flux2.ts REFERENCE_LATE). */
+/** Where her portrait joins the sheet's denoise: recorded on the request, no effect on Codex (codex.ts REFERENCE_LATE). */
 export const SHEET_LATE = REFERENCE_LATE;
 
 /**
@@ -195,7 +195,7 @@ export async function sheetAct(ctx: ActContext, id: NightId, o: { readonly chara
       continue;
     }
     const rc = r0.value.receipt;
-    ctx.say(`receipt (${rc.mode}): sheet ${c.id} of ${c.name} · 1 still on ${rc.lines[0]?.lane ?? "gpu.local"} · her portrait ${c.fromPortrait} late ${SHEET_LATE} · comfyui · $0 (free: a local model) · ~${Math.ceil(rc.totals.seconds / 60)} min`);
+    ctx.say(`receipt (${rc.mode}): sheet ${c.id} of ${c.name} · 1 still on ${rc.lines[0]?.lane ?? "seat.text"} · her portrait ${c.fromPortrait} · codex · $0 (the ChatGPT seat) · ~${Math.ceil(rc.totals.seconds / 60)} min`);
     const r1 = await launchSheet(ctx.store, target, k, { ...opts, token: rc.token });
     const why1 = !r1.ok ? r1.error.message : r1.value.kind !== "launched" ? `the receipt moved while it was confirmed (${r1.value.kind}); nothing launched` : undefined;
     if (why1 !== undefined || !r1.ok || r1.value.kind !== "launched") {
