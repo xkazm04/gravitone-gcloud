@@ -18484,6 +18484,53 @@
           "evidence": "lib/diskTx.ts:37 This is a machine-local lock with a creation-mtime TTL and no renewal, justified because a mutation takes milliseconds. There is no cluster lock heartbeat to size."
         }
       ]
+    },
+    "79439a23-e379-41e6-92c6-ea1bbd2516d7/copy-quality-gates": {
+      "context": "foundry-mesh-gates",
+      "subject": "copy-quality-gates",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:13:37.325Z",
+      "worker": "6c2d43b1-c1d6-43ba-97a2-bcafd78dc282",
+      "techniques": [
+        {
+          "technique": "rendered-string-extraction",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/mesh/gates/polycount.ts:57 The only display strings are preset names in a geometry budget table, not a copy catalog. They are listed so the absence claim is not overstated."
+        }
+      ]
+    },
+    "7cfc1d67-f77b-480c-a052-25c3217f0b1b/copy-quality-gates": {
+      "context": "ui-tokens-and-catalog",
+      "subject": "copy-quality-gates",
+      "bundle": "localization",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:13:37.325Z",
+      "worker": "6c2d43b1-c1d6-43ba-97a2-bcafd78dc282",
+      "techniques": [
+        {
+          "technique": "rendered-string-extraction",
+          "verdict": "deviation",
+          "evidence": "packages/catalog/src/projects.ts:49 The copy sits outside the gate's sources and is not declared out of scope. Checking matchGlob against the contract globs gave false for packages/catalog/src/libraryAreas.ts. A banned em dash survives here."
+        },
+        {
+          "technique": "format-aware-check-catalog",
+          "verdict": "deviation",
+          "evidence": "packages/catalog/src/presets.ts:67 This TS dictionary module is a serialization the gate never registered, so no structural, typography or case check runs on its full-sentence units."
+        },
+        {
+          "technique": "source-defects-from-cross-language-agreement",
+          "verdict": "not-applicable",
+          "evidence": "packages/catalog/src/libraryAreas.ts:22 The labels are literal single-locale English with no target locales, so no target findings exist to group."
+        },
+        {
+          "technique": "layered-mechanical-gate",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/tokenLint.ts:15 The context's only lint is a CSS design-token gate with no copy layer, so it is not the copy gate this technique describes."
+        }
+      ]
     }
   }
 }

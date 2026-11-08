@@ -7192,7 +7192,11 @@
           "revision": 10,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/mesh/gates/mesh-score.ts:61 These files grade mesh geometry, rigs and scale, not source-language copy. A search of lib/foundry/mesh/gates for locale, i18n, termbase, copy-contract and copy:check found 0 hits. The only strings are budget-preset labels and scorecard reasons, keyed by FindingCode rather than prose, so the subject's precondition (a copy catalog that a gate admits) does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:f00a2dbd4e8fdce1",
+          "evaluatedRevision": 10
         },
         {
           "subject": "translation-quality-measurement",
@@ -20532,7 +20536,11 @@
           "revision": 10,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/catalog/src/projects.ts:49 @gt/catalog holds rendered product copy: DISCIPLINE_NOTE is shown under each discipline pill in the create dialog, preset lines are shown in the showcase, and labels are shown on the landing and the Library. It includes about 11 em dashes in projects.ts alone, which docs/i18n/copy-contract.json bans. The contract's sources (app/**/page.tsx, app/_landing/*.tsx, app/layout.tsx) never reach packages/catalog, and its out-of-scope note does not name it, so these strings sit in an undeclared coverage hole behind a green copy:check.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:f00a2dbd4e8fdce1",
+          "evaluatedRevision": 10
         },
         {
           "subject": "connector-catalog",
