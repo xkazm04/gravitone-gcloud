@@ -78,6 +78,7 @@ import { settledBoard, type StoryboardClip, type StoryboardDraw } from "../../pr
 import { launchable, Refusal, type ActContext } from "./acts";
 import { archivedFromIdea } from "./baseline";
 import { drawInProcess } from "./codexDraw";
+import { ownerGone, ownerNow, settledCodexBoard } from "./codexOwner";
 import { LOOP_IDEA_RE, loopRef, readLoopIdea } from "./idea-loop/loop";
 import { castAllow, castLine, castOf, CAST_MAX, CAST_PROMPT_MAX, rootedNights } from "./cast";
 import { castPrompt, keptCharacters, type KeptCharacter } from "./characters";
@@ -375,7 +376,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
         ...(b.genre === undefined ? {} : { genre: b.genre }),
         ...(cast === undefined ? {} : { cast: cast.members.map((m) => m.card.name) }),
         ...(n.dry ? { images: [] } : {}),
-        ...(engines.drawnBy === "codex" && engines.draw !== undefined && mode !== "dry" ? { drawnBy: "codex" as const } : {}),
+        ...(engines.drawnBy === "codex" && engines.draw !== undefined && mode !== "dry" ? { drawnBy: "codex" as const, owner: ownerNow() } : {}),
       };
       next = { ...next, candidates: [...next.candidates, c] };
       made.push(c);
@@ -492,15 +493,26 @@ async function castPanels(briefs: readonly StoryboardBrief[], ideas: readonly (K
 export async function collectStoryboards(id: NightId, o: { readonly store?: Store } = {}): Promise<StoryboardCandidate[]> {
   const n = await readNight(id);
   if (n.state === "committed") throw new Refusal(`night ${id} is committed; its packet is decided and nothing more is collected into it`);
+  const out: CandidateId[] = [];
+  // A Codex board has no job: its draw ended if its owner is gone (codexOwner.ts). A live owner's board is left pending.
+  for (const c of n.candidates) {
+    if (c.kind !== "storyboard" || c.status !== "pending" || c.jobId !== undefined || c.owner === undefined || !ownerGone(c.owner)) continue;
+    out.push(c.id);
+    await mutateNight(id, (m) => {
+      const now = m.candidates.find((x): x is StoryboardCandidate => x.id === c.id && x.kind === "storyboard");
+      if (now === undefined || now.status !== "pending" || now.owner === undefined || !ownerGone(now.owner)) return m;
+      return withCandidate(m, settledCodexBoard(now, "failed", `codex:${id}/${c.id}`, `the draw's process (pid ${now.owner.pid}) ended before the board was finished`));
+    });
+  }
   const waiting = n.candidates.filter((c): c is StoryboardCandidate & { readonly jobId: string } => c.kind === "storyboard" && c.status === "pending" && c.jobId !== undefined);
-  if (waiting.length === 0) return [];
-  const store = o.store ?? (() => {
+  if (waiting.length === 0 && out.length === 0) return [];
+  const store = waiting.length === 0 ? undefined : (o.store ?? (() => {
     const k = kernel();
     if (!k.ok) throw k.error;
     return k.value.store;
-  })();
-  const out: CandidateId[] = [];
+  })());
   for (const c of waiting) {
+    if (store === undefined) break;
     out.push(c.id);
     const jid = parseAt("job id", jobIdSchema, c.jobId);
     if (!jid.ok) continue;

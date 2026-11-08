@@ -11,8 +11,9 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
-import { settledBoard, withPanel, panelFile } from "../../producers/scoutStoryboardActs.ts";
+import { withPanel, panelFile } from "../../producers/scoutStoryboardActs.ts";
 import type { ActContext } from "./acts";
+import { settledCodexBoard } from "./codexOwner";
 import { imagesOf, inspectPng, notAPicture, runCodex } from "./codexExec";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "./store";
 import type { CandidateId, NightId, StoryboardCandidate } from "./types";
@@ -72,12 +73,7 @@ export async function drawInProcess(ctx: Pick<ActContext, "say">, id: NightId, m
         ctx.say(`  ${c.id} panel ${k}/${of}: failed: ${why}`);
       }
     }
-    await fileBoard(id, c.id, (b) => {
-      const settled = settledBoard(b, "done", { id: `codex:${id}/${c.id}` });
-      if (settled === null) return b;
-      const { jobId: _noJob, ...rest } = settled;
-      return rest as StoryboardCandidate;
-    });
+    await fileBoard(id, c.id, (b) => settledCodexBoard(b, "done", `codex:${id}/${c.id}`));
     const now = (await readNight(id)).candidates.find((x) => x.id === c.id);
     if (now?.status === "failed") outcome = "failed";
   }

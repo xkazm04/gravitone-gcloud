@@ -575,7 +575,12 @@ export type StoryboardCandidate = CandidateBase & {
   /** Who drew the panels, when it was not the local Flux: `codex` (`--draw codex`, the operator's subscription). Absent
    *  on a Flux draw and on every night written before the marker; the Board's meta reads it. */
   readonly drawnBy?: "codex";
+  /** The process drawing a Codex board, stamped while it is pending and dropped when it settles: how a draw whose
+   *  process died is told from one in flight (lib/foundry/scout/codexOwner.ts). */
+  readonly owner?: CodexOwner;
 };
+
+export type CodexOwner = { readonly bootId: string; readonly pid: number; readonly host: string };
 
 /**
  * A kept stats idea ON REAL DATA (spark scout-vision S5): the idea's own approach and brief shape, its numbers replaced
