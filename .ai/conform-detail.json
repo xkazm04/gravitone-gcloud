@@ -18727,6 +18727,52 @@
         "at": "2026-11-08T02:23:41.250359+00:00",
         "reason": "reviewer (sonnet): The anchor lib/producers/registry.ts:6 is only an import line (`Reader` from kernel/store) and does not show that no surface drives time. My grep of lib/producers for playhead, currentTime, new Audio, requestAnimationFrame, playback and .play( found nothing, but I did not read the producer files to "
       }
+    },
+    "d74a16c1-aca7-4dee-9935-c890f5785336/optional-dependency-degradation": {
+      "context": "resource-gates-and-gpu",
+      "subject": "optional-dependency-degradation",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:32:54.932Z",
+      "worker": "4da149ce-cb23-45bc-8385-568d17171cd9",
+      "techniques": [
+        {
+          "technique": "absent-degrades-malformed-fails-fast",
+          "verdict": "deviation",
+          "evidence": "lib/resources/probe.ts:202 fraction() returns the default for unset AND unparseable values; msFrom (probe.ts:271) does the same for GPU_SKIP_AHEAD_MS/COMFY_UNLOAD_AFTER_MS; no boot validation names the bad value."
+        },
+        {
+          "technique": "misconfiguration-never-reaches-a-fallback",
+          "verdict": "deviation",
+          "evidence": "lib/deployment.ts:99 LOCAL_BINARIES set to anything but on/off (e.g. 0, false, of) falls through to the marker heuristic, so an operator's intent to forbid spawning lands on 'available' on a laptop. capabilities.ts:45 `return fallback;` does the same for every NEXT_PUBLIC_CAP_* flag."
+        },
+        {
+          "technique": "per-variable-blast-radius",
+          "verdict": "deviation",
+          "evidence": "lib/resources/probe.ts:213 These overrides, COMFY_URL, GPU_SKIP_AHEAD_MS and COMFY_UNLOAD_AFTER_MS are named only in code comments and docs/resources.md / docs/scout.md; grep of .env.example finds none of them (only GPU_LEASE_DIR), so the template does not carry their unset/consequence facts. LOCAL_BINARIES and the CAP flags are documented in the template."
+        },
+        {
+          "technique": "capability-honest-refusal",
+          "verdict": "conformant",
+          "evidence": "lib/capabilities.ts:228 A capability needs its server fact (key or posture), so a keyless deployment hides the control instead of showing a button that answers 503. FACT_ABSENT (capabilities.ts:314) names the missing thing without the variable name, and laneDoors.ts:183 refuses a live sfx launch before it is queued."
+        },
+        {
+          "technique": "guarded-singleton-accessor",
+          "verdict": "conformant",
+          "evidence": "lib/gpu/lease.ts:212 The lease's store handle is opened on first use and memoised; a failed open throws a typed LeaseError and clears the memo, so success is memoised and failure is not."
+        },
+        {
+          "technique": "probe-the-grant-not-the-config",
+          "verdict": "conformant",
+          "evidence": "lib/resources/comfyFree.ts:56 The unload asks the live ComfyUI (queue, then POST /free status) and classifies the answer instead of assuming capability because COMFY_URL is set. The probe's readings are absent, not zero (probe.ts:182)."
+        },
+        {
+          "technique": "refusal-is-not-failure",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/resources/gate.ts:39 A throw from the bound free() hook is honoured as a refusal: the gate records no resource.freed and does not run anything else in its place."
+        }
+      ]
     }
   }
 }

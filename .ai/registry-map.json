@@ -14641,7 +14641,11 @@
           "revision": 17,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/resources/probe.ts:202 A present but malformed MACHINE_MEM_HIGH/MEM_LOW/CPU_HIGH (e.g. 1.5 or a typo) silently becomes the kernel default instead of refusing at boot, which is the tunable collapse the standard names as the commonest spelling of malformed-treated-as-absent.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:641cb6bf0b2c6916",
+          "evaluatedRevision": 17
         },
         {
           "subject": "test-harness",
