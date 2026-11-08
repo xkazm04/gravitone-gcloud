@@ -7,12 +7,12 @@ import { bookDraw, drawMain } from "./book.ts";
 import { fixtureDropAct, fixtureKeepAct, fixtureSayAct, fixtureVoteAct } from "./fixtureActs.ts";
 import type { SongLabUrl } from "./_port/port.ts";
 import { readSongLab } from "./read.ts";
-import { SongLab } from "./SongLab.tsx";
+import { LazySongLab } from "../_audio/Lazy.tsx";
 
 export async function SongLabSection({ url }: { readonly url: SongLabUrl }) {
   const read = await readSongLab(url);
   return (
-    <SongLab
+    <LazySongLab
       read={read}
       url={url}
       acts={
