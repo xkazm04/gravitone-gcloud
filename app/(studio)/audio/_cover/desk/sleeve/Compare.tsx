@@ -1,6 +1,6 @@
 "use client";
 
-// TAKE AGAINST TAKE (prototype v2, ask 4): two done takes chosen, heard together at one loudness from the same second,
+// TAKE AGAINST TAKE: two done takes chosen, heard together at one loudness from the same second,
 // one side at a time (./usePair.ts). Drawn once two takes are done; until then there is nothing to hold up.
 import { useState } from "react";
 
@@ -14,7 +14,7 @@ import type { CoverFlow } from "../useCover.ts";
 import { clock, takeUrl } from "../words.ts";
 import { useHeard } from "./TakeGrid.tsx";
 import type { Pair, PairSide } from "./usePair.ts";
-import s from "./v2.module.css";
+import s from "./sleeve.module.css";
 
 type Done = { readonly t: CoverTake; readonly url: string };
 

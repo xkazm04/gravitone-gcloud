@@ -1,4 +1,4 @@
-/* v2 Sleeve: the crate on the left, the cover in hand on the right - its face, the groove, one station's panel.
+/* The sleeve: the crate on the left, the cover in hand on the right - its face, the groove, one station's panel.
    Tokens only. Below 1500px the takes fall to three across, below 1100px the crate rises above the cover. */
 .desk{display:grid;grid-template-columns:var(--w-rail) minmax(0,1fr);gap:var(--sp-5);align-items:start;min-width:0}
 .alone{display:grid;min-width:0}
@@ -39,6 +39,8 @@
 .stage{position:relative;display:grid;min-width:0}
 .stage > .panel{grid-area:1 / 1}
 .panel{display:grid;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-tile);border:1px solid var(--hair-2);background:var(--panel-ground);min-width:0;align-content:start}
+/* a station holding a control or two: the panel wraps it, centred under the groove */
+.panel[data-fit]{justify-self:center;min-width:min(100%,var(--w-detail));max-width:min(100%,calc(var(--w-detail) * 2))}
 
 .fields{display:grid;gap:var(--sp-3);min-width:0}
 .row{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;min-width:0}
@@ -66,6 +68,10 @@
 .compare{display:flex;align-items:center;gap:var(--sp-2) var(--sp-3);flex-wrap:wrap;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-1);min-width:0}
 .compareScrub{flex:1;min-width:var(--w-tile-audio)}
 .wide{flex-basis:100%}
+
+/* the remix: its form and the chain, side by side where there is room, each at a reading measure */
+.remix{display:flex;flex-wrap:wrap;gap:var(--sp-4) var(--sp-5);align-items:start;min-width:0}
+.remix > *{flex:1 1 var(--w-detail);min-width:0;max-width:72ch}
 
 /* the winner: its card beside the download */
 .winnerRow{display:grid;grid-template-columns:minmax(0,var(--w-desk-side)) minmax(0,1fr);gap:var(--sp-4);align-items:start}

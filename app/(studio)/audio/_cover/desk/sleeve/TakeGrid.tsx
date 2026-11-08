@@ -1,7 +1,6 @@
 "use client";
 
-// THE TAKES STATION (prototype v2, Sleeve; copied from ../Takes.tsx and changed): the five takes as five cards side by
-// side rather than five rows, each landing as it finishes. A card keeps everything the row had - its state, ComfyUI's
+// THE TAKES STATION: the five takes as five cards side by side, each landing as it finishes. A card keeps its state, ComfyUI's
 // sentence verbatim on a failure, the rights (every take carries the source's melody), its seed and render time, the
 // A/B against the section at matched level with seek, and the pick - stacked to a fifth of the width. Each done card
 // carries the layoutId the winner station's card answers, so a pick carries the card across.
@@ -21,7 +20,7 @@ import { hearUrl, type Heard } from "../audio.ts";
 import type { AB, Side } from "../useAB.ts";
 import type { CoverFlow } from "../useCover.ts";
 import { clock, fiveTakes, RIGHTS_LABEL, RIGHTS_TONE, seconds, TAKE_TONE, takeUrl } from "../words.ts";
-import s from "./v2.module.css";
+import s from "./sleeve.module.css";
 
 const SIDES = [
   { value: "a" as const, label: "section" },
@@ -29,7 +28,7 @@ const SIDES = [
 ];
 
 /** The layoutId a take's card wears on the takes station and the winner station alike. */
-export const takeLayout = (coverId: string, seed: number): string => `v2-take-${coverId}-${seed}`;
+export const takeLayout = (coverId: string, seed: number): string => `take-${coverId}-${seed}`;
 
 export function useHeard(url: string | undefined): Heard | null {
   const [heard, setHeard] = useState<Heard | null>(null);
@@ -82,7 +81,7 @@ function TakeCard({ t, flow, ab, i }: { readonly t: CoverTake; readonly flow: Co
       data-winner={winner ? "" : undefined}
       data-state={t.state}
       aria-label={name}
-      {...(done ? { layoutId: takeLayout(r.id, t.seed) } : {})}
+      {...(done && !reduce ? { layoutId: takeLayout(r.id, t.seed) } : {})}
       initial={reduce ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={reduce ? { duration: 0 } : { duration: 0.32, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}

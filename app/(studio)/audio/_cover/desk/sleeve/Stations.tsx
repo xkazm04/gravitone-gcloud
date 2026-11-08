@@ -1,11 +1,10 @@
 "use client";
 
-// ONE COVER ON THE TURNTABLE (prototype v2, Sleeve): the sleeve's face (its title and the song's facts), the groove, and
+// ONE COVER ON THE TURNTABLE: the sleeve's face (its title and the song's facts), the groove, and
 // one station's panel at a time. The cover opens at the station its work stands at (./stations.ts frontier) and moves
 // there again when the record moves - a brief finishing, takes landing, a pick - so a state change is a slide, not a
-// scroll. Pressing a station slides the panel forward (left) or back (right). The flow and the players are the
-// baseline's own (../useCover.ts, ../useAB.ts); the take-against-take player (./usePair.ts) and the A/B never sound
-// together.
+// scroll. Pressing a station slides the panel forward (left) or back (right). The take-against-take player
+// (./usePair.ts) and the A/B (../useAB.ts) never sound together.
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -16,19 +15,18 @@ import { BRIEF_TONE } from "../brief/brief.ts";
 import { BriefHypothesis, BriefPart } from "../brief/Brief.tsx";
 import { ScorePart, SectionPart } from "../Score.tsx";
 import { SourceFacts } from "../Source.tsx";
-import { doneCount } from "../Takes.tsx";
 import { useAB, type AB } from "../useAB.ts";
 import { useCover, type CoverFlow } from "../useCover.ts";
 import type { Desk } from "../useDesk.ts";
-import { clock } from "../words.ts";
+import { clock, doneCount } from "../words.ts";
 import { Compare } from "./Compare.tsx";
 import { Groove, type StationFacts } from "./Groove.tsx";
 import { keepPeaks, sectionPeaks } from "./peaks.ts";
-import { direction, frontier, reachedOf, type Station } from "./stations.ts";
+import { direction, FITTED, frontier, reachedOf, type Station } from "./stations.ts";
 import { TakeGrid } from "./TakeGrid.tsx";
 import { usePair, type Pair } from "./usePair.ts";
 import { WinnerCard } from "./WinnerCard.tsx";
-import s from "./v2.module.css";
+import s from "./sleeve.module.css";
 
 function factsOf(flow: CoverFlow): Partial<Record<Station, StationFacts>> {
   const r = flow.card.record;
@@ -75,7 +73,7 @@ function Panel({ at, flow, ab, pair, quiet }: { readonly at: Station; readonly f
       );
     case "remix":
       return (
-        <div className={s.fields}>
+        <div className={s.remix}>
           <RemixPart flow={flow} />
           <ChainPart flow={flow} quiet={quiet} />
         </div>
@@ -120,7 +118,7 @@ export function Stations({ card, desk }: { readonly card: CoverCard; readonly de
     pair.stop();
   };
 
-  // The baseline's open-on-brief (../Layouts.tsx Current): a cover made from a link opens on its brief's receipt.
+  // A cover made from a link opens on its brief's receipt (desk.briefOnOpen): asked once, here, as it mounts.
   const askNow = desk.briefOnOpen === card.record.id;
   const { briefAsked } = desk;
   const ask = flow.brief.ask;
@@ -166,13 +164,14 @@ export function Stations({ card, desk }: { readonly card: CoverCard; readonly de
           </motion.div>
         </AnimatePresence>
       </header>
-      <LayoutGroup id={`v2-${r.id}`}>
+      <LayoutGroup id={`sleeve-${r.id}`}>
         <Groove at={shown} reached={reached} facts={factsOf(flow)} onGo={go} />
         <div className={s.stage}>
           <AnimatePresence initial={false} custom={dir}>
             <motion.section
               key={shown}
               className={s.panel}
+              data-fit={FITTED.has(shown) ? "" : undefined}
               aria-label={shown}
               custom={dir}
               variants={slide}

@@ -13,65 +13,17 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { COVER_SECTION_MAX_S, COVER_SECTION_MIN_S, type CoverCard, type CoverPlan } from "@gt/domain/cover";
-import type { Receipt } from "@gt/domain/produce";
-import { receiptChanges, type ReceiptChanges } from "@gt/ui/components/produce/produce.ts";
+import { receiptChanges } from "@gt/ui/components/produce/produce.ts";
 import { fitSpan, type Span } from "@gt/ui/components/rangepick/rangepick.ts";
 
 import type { CoverActs } from "../contract.ts";
 import { hearUrl, type Heard } from "./audio.ts";
 import { readSnapshot, serverReadSnapshot, subscribeRead } from "./brief/readClock.ts";
+import type { CoverFlow, Launching } from "./coverFlow.ts";
 import type { Sender } from "./send.ts";
+import { failWords, useAfterPick } from "./useAfterPick.ts";
 
-export type Launching = { readonly receipt: Receipt; readonly changes?: ReceiptChanges; readonly readAtMs: number };
-
-export type BriefFlow = {
-  readonly launching: Launching | null;
-  readonly busy: boolean;
-  readonly error: string | null;
-  readonly ask: () => void;
-  readonly confirm: () => void;
-  readonly cancel: () => void;
-  /** The job the brief's act answered already exists: nothing new was queued. */
-  readonly existing: string | null;
-  /** When the view was last read (client only): the brief's age is measured against it. */
-  readonly readAtMs: number | null;
-};
-
-export type CoverFlow = {
-  readonly card: CoverCard;
-  readonly heard: Heard | null;
-  readonly heardError: string | null;
-  readonly lenS: number;
-  readonly span: Span;
-  readonly setSpan: (s: Span) => void;
-  readonly style: string;
-  readonly setStyle: (s: string) => void;
-  readonly sourceStyle: string;
-  readonly setSourceStyle: (s: string) => void;
-  readonly lyrics: string;
-  readonly setLyrics: (s: string) => void;
-  /** The plan may still change: nothing is queued, or the last job failed. */
-  readonly editable: boolean;
-  readonly launching: Launching | null;
-  readonly busy: boolean;
-  readonly error: string | null;
-  readonly launch: () => void;
-  readonly confirm: () => void;
-  readonly cancel: () => void;
-  readonly picking: number | null;
-  readonly pickError: string | null;
-  readonly pick: (seed: number) => void;
-  readonly remixError: string | null;
-  readonly remixBusy: boolean;
-  readonly sendRemix: (file: File, style: string) => void;
-  readonly stylesBusy: boolean;
-  readonly stylesError: string | null;
-  readonly stylesSaved: boolean;
-  readonly saveStyles: (sourceStyle: string, remixStyle: string) => void;
-  readonly brief: BriefFlow;
-};
-
-const fail = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+export type { BriefFlow, CoverFlow, Launching } from "./coverFlow.ts";
 
 export function useCover(card: CoverCard, acts: CoverActs, sender: Sender, refresh: () => void): CoverFlow {
   const r = card.record;
@@ -88,11 +40,6 @@ export function useCover(card: CoverCard, acts: CoverActs, sender: Sender, refre
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState<number | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
-  const [remixBusy, setRemixBusy] = useState(false);
-  const [remixError, setRemixError] = useState<string | null>(null);
-  const [stylesBusy, setStylesBusy] = useState(false);
-  const [stylesError, setStylesError] = useState<string | null>(null);
-  const [stylesSaved, setStylesSaved] = useState(false);
   const inflight = useRef(false);
   const [briefing, setBriefing] = useState<Launching | null>(null);
   const [briefError, setBriefError] = useState<string | null>(null);
@@ -142,7 +89,7 @@ export function useCover(card: CoverCard, acts: CoverActs, sender: Sender, refre
     try {
       await f();
     } catch (e) {
-      setError(fail(e));
+      setError(failWords(e));
     } finally {
       inflight.current = false;
       setBusy(false);
@@ -211,39 +158,8 @@ export function useCover(card: CoverCard, acts: CoverActs, sender: Sender, refre
       .then((a) => {
         if (!a.ok) setPickError(a.error.error);
         else refresh();
-      }, (e: unknown) => setPickError(fail(e)))
+      }, (e: unknown) => setPickError(failWords(e)))
       .finally(() => setPicking(null));
-  };
-
-  const sendRemix = (file: File, remixStyle: string): void => {
-    if (remixBusy) return;
-    setRemixBusy(true);
-    setRemixError(null);
-    sender
-      .remix({ id: r.id, file, style: remixStyle })
-      .then((a) => {
-        if (!a.ok) setRemixError(a.error);
-        else refresh();
-      }, (e: unknown) => setRemixError(fail(e)))
-      .finally(() => setRemixBusy(false));
-  };
-
-  const saveStyles = (src: string, remixStyle: string): void => {
-    if (stylesBusy) return;
-    setStylesBusy(true);
-    setStylesError(null);
-    setStylesSaved(false);
-    const styles = { ...(src.trim() === "" ? {} : { sourceStyle: src.trim() }), ...(r.remix === undefined || remixStyle.trim() === "" ? {} : { remixStyle: remixStyle.trim() }) };
-    acts
-      .saveStyles(r.id, styles)
-      .then((a) => {
-        if (!a.ok) setStylesError(a.error.error);
-        else {
-          setStylesSaved(true);
-          refresh();
-        }
-      }, (e: unknown) => setStylesError(fail(e)))
-      .finally(() => setStylesBusy(false));
   };
 
   return {
@@ -269,13 +185,7 @@ export function useCover(card: CoverCard, acts: CoverActs, sender: Sender, refre
     picking,
     pickError,
     pick,
-    remixError,
-    remixBusy,
-    sendRemix,
-    stylesBusy,
-    stylesError,
-    stylesSaved,
-    saveStyles,
+    ...useAfterPick(r, acts, sender, refresh),
     brief: { launching: briefing, busy, error: briefError, existing: briefExisting, ask: briefAsk, confirm: briefConfirm, cancel: () => setBriefing(null), readAtMs },
   };
 }

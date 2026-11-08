@@ -1,6 +1,6 @@
 "use client";
 
-// THE GROOVE (prototype v2, Sleeve): the stations a cover's work runs through, as one line across the top - both how far
+// THE GROOVE: the stations a cover's work runs through, as one line across the top - both how far
 // the work has come (the line is lit up to the last station reached) and the way between them. A station the work has
 // not reached is drawn and named, and refuses to open (Button's aria-disabled). The mark under the open station moves
 // with a shared layoutId when another is pressed.
@@ -9,7 +9,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { Button, type ButtonProps } from "@gt/ui/components/button/Button.tsx";
 
 import { STATIONS, type Station } from "./stations.ts";
-import s from "./v2.module.css";
+import s from "./sleeve.module.css";
 
 export type StationFacts = Pick<ButtonProps, "badge" | "tally">;
 
@@ -24,7 +24,7 @@ export function Groove({ at, reached, facts, onGo }: { readonly at: Station; rea
               {i + 1}
             </span>
             <Button label={id} size="sm" tone={id === at ? "cyan" : "neutral"} disabled={!reached[id]} onPress={() => onGo(id)} {...facts[id]} />
-            {id === at && <motion.span layoutId="v2-station-mark" className={s.stationMark} transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }} aria-hidden="true" />}
+            {id === at && (reduce ? <span className={s.stationMark} aria-hidden="true" /> : <motion.span layoutId="station-mark" className={s.stationMark} transition={{ type: "spring", stiffness: 500, damping: 40 }} aria-hidden="true" />)}
           </li>
         ))}
       </ol>

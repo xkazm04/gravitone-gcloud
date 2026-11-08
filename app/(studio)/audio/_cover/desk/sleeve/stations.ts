@@ -1,4 +1,4 @@
-// THE GROOVE'S STATIONS (prototype v2, Sleeve): where a cover's work has come to, read off its record alone. Pure.
+// THE GROOVE'S STATIONS: where a cover's work has come to, read off its record alone. Pure.
 //
 // The order puts the brief before the section, where the spec drew it after: a finished brief writes the section
 // and the style (../useCover.ts resets both fields on `brief.state === "done"`; ../fixture.ts briefDone sets the
@@ -9,6 +9,9 @@ import { briefOffered } from "../brief/brief.ts";
 
 export const STATIONS = ["brief", "section", "score", "takes", "winner", "remix"] as const;
 export type Station = (typeof STATIONS)[number];
+
+/** The stations whose panel is sized to what it holds: a control or two, not a width's worth of work. */
+export const FITTED: ReadonlySet<Station> = new Set<Station>(["brief", "winner"]);
 
 /** Whether a station can open for this record: one the work has reached. */
 export function reachedOf(r: CoverRecord): Readonly<Record<Station, boolean>> {

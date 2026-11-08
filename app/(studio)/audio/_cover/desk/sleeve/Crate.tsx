@@ -1,6 +1,6 @@
 "use client";
 
-// THE CRATE (prototype v2, Sleeve): every cover made so far as a sleeve, newest first, filed under the UTC day it was
+// THE CRATE: every cover made so far as a sleeve, newest first, filed under the UTC day it was
 // made. A sleeve carries what the owner picks a cover by: its section's waveform (./peaks.ts - drawn only from a
 // decode this tab already holds), its title, its state, the brief while one is under way, and the winner's take.
 // Opening one is the desk's own `open` (`?cover=<id>`); the lit edge follows the open sleeve (a shared layoutId).
@@ -15,7 +15,7 @@ import { BRIEF_TONE, briefInFlight } from "../brief/brief.ts";
 import type { Desk } from "../useDesk.ts";
 import { clock, STATE_TONE } from "../words.ts";
 import { peaksOf, usePeaksVersion } from "./peaks.ts";
-import s from "./v2.module.css";
+import s from "./sleeve.module.css";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -54,7 +54,7 @@ function Sleeve({ c, here, desk, i }: { readonly c: CoverCard; readonly here: bo
           desk.open(r.id);
         }}
       >
-        {here && <motion.span layoutId="v2-sleeve-edge" className={s.edge} transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 42 }} aria-hidden="true" />}
+        {here && (reduce ? <span className={s.edge} aria-hidden="true" /> : <motion.span layoutId="sleeve-edge" className={s.edge} transition={{ type: "spring", stiffness: 520, damping: 42 }} aria-hidden="true" />)}
         <span className={s.sleeveWave}>
           <Wave peaks={peaksOf(r.id)} width={240} height={24} tone={r.state === "picked" ? "emerald" : "cyan"} stretch />
         </span>

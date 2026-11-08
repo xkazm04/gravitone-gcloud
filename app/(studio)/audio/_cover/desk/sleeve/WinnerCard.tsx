@@ -1,6 +1,6 @@
 "use client";
 
-// THE WINNER'S CARD (prototype v2, Sleeve): the picked take as it stood on the takes station - the same card, carried
+// THE WINNER'S CARD: the picked take as it stood on the takes station - the same card, carried
 // here by its layoutId (./TakeGrid.tsx takeLayout) - still heard against the section, beside the download.
 import { motion, useReducedMotion } from "motion/react";
 
@@ -10,7 +10,7 @@ import type { AB } from "../useAB.ts";
 import type { CoverFlow } from "../useCover.ts";
 import { RIGHTS_LABEL, RIGHTS_TONE, seconds, takeUrl } from "../words.ts";
 import { takeLayout, TakePlayer } from "./TakeGrid.tsx";
-import s from "./v2.module.css";
+import s from "./sleeve.module.css";
 
 export function WinnerCard({ flow, ab }: { readonly flow: CoverFlow; readonly ab: AB }) {
   const reduce = useReducedMotion() === true;
@@ -19,7 +19,8 @@ export function WinnerCard({ flow, ab }: { readonly flow: CoverFlow; readonly ab
   const url = t === undefined ? undefined : takeUrl(flow.card, t);
   if (t === undefined || url === undefined) return null;
   return (
-    <motion.div layoutId={takeLayout(r.id, t.seed)} transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 36 }} className={s.take} data-winner="" aria-label={`take ${t.n}, the winner`}>
+    // Under reduced motion it carries no layoutId, so the card is drawn where it lands: a zero-length flight is still a flight.
+    <motion.div {...(reduce ? {} : { layoutId: takeLayout(r.id, t.seed), transition: { type: "spring" as const, stiffness: 380, damping: 36 } })} className={s.take} data-winner="" aria-label={`take ${t.n}, the winner`}>
       <div className={s.takeHead}>
         <span className={s.takeN}>{t.n}</span>
         <Chip label="winner" tone="emerald" />

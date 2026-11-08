@@ -130,12 +130,13 @@ export const SCREENS = {
   "audio-batch": { url: "/audio?s=batch" },
   "audio-batch-sfx": { url: "/audio?s=batch&kind=sfx" },
   // the cover desk (spark track-mirror-studio) over the dev-only fixture (_cover/desk/fixture.ts), one cover per
-  // state among a history; a store with no covers draws the upload instead. The -vN rows are the prototype's
-  // variants behind `?v=` (TODO(prototype, 2026-11-08): consolidate the cover desk switcher, and drop these rows).
+  // state among a history; a store with no covers draws the upload instead. One row per station a state opens on.
   "audio-cover": { url: "/audio?s=cover&fixture=judging" },
-  "audio-cover-v1": { url: "/audio?s=cover&fixture=judging&v=v1" },
-  "audio-cover-v2": { url: "/audio?s=cover&fixture=judging&v=v2" },
-  "audio-cover-v3": { url: "/audio?s=cover&fixture=judging&v=v3" },
+  "audio-cover-empty": { url: "/audio?s=cover&fixture=empty" },
+  "audio-cover-draft": { url: "/audio?s=cover&fixture=draft" },
+  "audio-cover-failed": { url: "/audio?s=cover&fixture=failed" },
+  "audio-cover-picked": { url: "/audio?s=cover&fixture=picked" },
+  "audio-cover-remixed": { url: "/audio?s=cover&fixture=remixed" },
   // Spark suno-advisor: the scripted Suno conversation, and its kit pieces.
   "audio-suno": { url: "/audio?s=studio&source=fixture&session=night-drive" },
   "kit-suno": { url: "/kit#suno" },

@@ -84,7 +84,9 @@ export function RangePick({ label, peaks, lenS, minS, maxS, value, onChange, pla
     <div
       className={s.handle}
       data-grip={kind}
-      style={{ left: `${at}%` }}
+      // The track clips its children, so a grip centred on 0 or 100 % would lose half its width and its hit area:
+      // it slides from flush-inside at the edges to centred mid-track. The time it stands for is unchanged.
+      style={{ left: `${at}%`, marginLeft: `calc(var(--h-chip) * ${(-at / 100).toFixed(4)})` }}
       role="slider"
       tabIndex={0}
       aria-label={`section ${kind} of ${label}`}

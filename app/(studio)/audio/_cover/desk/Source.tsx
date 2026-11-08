@@ -1,14 +1,13 @@
 "use client";
 
-// THE SONG: the covers made so far (each a link, `?cover=<id>`), the upload of a new one, and the facts of the
-// one in hand. An upload names its rights with no default - the declaration is the owner's, and a choice made
+// THE SONG: the upload of a new one, and the facts of the one in hand. An upload names its rights with no default - the declaration is the owner's, and a choice made
 // for them is not one (registry: rights-and-provenance-record). The file's peaks are drawn the moment it is
 // dropped, decoded here, and the decode is carried to the cover the upload answers. Or the song is a YouTube link
 // (./link/, cover from a link WP-C): the same declaration, the server downloads it, and the new cover opens on its
 // brief's receipt.
 import { useRef, useState, type DragEvent } from "react";
 
-import { COVER_NOTE_MAX, COVER_RIGHTS, COVER_TITLE_MAX, type CoverCard, type CoverDeskView, type CoverRights } from "@gt/domain/cover";
+import { COVER_NOTE_MAX, COVER_RIGHTS, COVER_TITLE_MAX, type CoverCard, type CoverRights } from "@gt/domain/cover";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
@@ -22,34 +21,6 @@ import { LinkBox, linkProblem, SOURCE_MODES, SourceName, type SourceMode } from 
 import type { Desk } from "./useDesk.ts";
 import { clock, RIGHTS_LABEL, RIGHTS_TONE, STATE_TONE } from "./words.ts";
 import s from "./cover.module.css";
-
-export function CoverList({ desk, view }: { readonly desk: Desk; readonly view: CoverDeskView }) {
-  const here = view.current?.record.id;
-  return (
-    <nav className={s.bar} aria-label="covers">
-      <Button label="New cover" size="sm" tone="cyan" onPress={() => desk.open(undefined)} />
-      <ul className={s.covers}>
-        {view.covers.map((c) => (
-          <li key={c.record.id}>
-            <a
-              className={s.cover}
-              href={desk.hrefOf(c.record.id)}
-              aria-current={c.record.id === here ? "page" : undefined}
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-                e.preventDefault();
-                desk.open(c.record.id);
-              }}
-            >
-              <span className={s.coverTitle}>{c.record.title}</span>
-              <Chip label={c.record.state} tone={STATE_TONE[c.record.state]} casing="lower" dot />
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
-}
 
 type Pick = CoverRights | "undeclared";
 const RIGHTS_OPTIONS = COVER_RIGHTS.map((r) => ({ value: r, label: RIGHTS_LABEL[r] }));

@@ -10,28 +10,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { mediaErrorWords } from "@gt/ui/components/audio/AudioPreview.tsx";
 
+import { advance, audioOf, reap, type AB, type Loaded, type Side } from "./abElements.ts";
 import { hearUrl, levelFor } from "./audio.ts";
 
-export type Side = "a" | "b";
+export type { AB, Side } from "./abElements.ts";
 export const SECTION_KEY = "section";
-
-export type AB = {
-  readonly at: string | null;
-  readonly playing: boolean;
-  readonly side: Side;
-  /** Seconds into what is loaded: the take, or the section. */
-  readonly clock: number;
-  readonly failed: string | null;
-  readonly positionOf: (key: string) => number;
-  readonly toggle: (key: string, url: string | null) => void;
-  readonly seek: (key: string, url: string | null, s: number) => void;
-  readonly hear: (key: string, url: string, side: Side) => void;
-  readonly stop: () => void;
-};
-
-type Loaded = { readonly key: string; readonly url: string | null };
-
-const DRIFT_S = 0.15;
 
 export function useAB(sourceUrl: string | undefined, section: { readonly startS: number; readonly endS: number }, sourceRms: number | undefined): AB {
   const a = useRef<HTMLAudioElement | null>(null);
@@ -47,14 +30,6 @@ export function useAB(sourceUrl: string | undefined, section: { readonly startS:
   const [clock, setClock] = useState(0);
   const [failed, setFailed] = useState<string | null>(null);
 
-  const el = (r: { current: HTMLAudioElement | null }): HTMLAudioElement => {
-    if (r.current === null) {
-      r.current = new Audio();
-      r.current.preload = "auto";
-    }
-    return r.current;
-  };
-
   const apply = useCallback((): void => {
     const take = cur.current?.url !== null && cur.current !== null;
     if (a.current !== null) a.current.volume = !take || sideRef.current === "a" ? levels.current.a : 0;
@@ -69,36 +44,14 @@ export function useAB(sourceUrl: string | undefined, section: { readonly startS:
 
   const tick = useCallback((): void => {
     const c = cur.current;
-    const src = a.current;
-    if (c === null || src === null) return;
-    const { startS, endS } = sec.current;
-    if (c.url === null) {
-      const t = src.currentTime - startS;
-      if (src.currentTime >= endS || src.ended) {
-        halt();
-        positions.current.set(c.key, 0);
-        setClock(0);
-        return;
-      }
-      setClock(t);
-    } else {
-      const take = b.current;
-      if (take === null) return;
-      const t = take.currentTime;
-      if (take.ended) {
-        halt();
-        positions.current.set(c.key, 0);
-        setClock(0);
-        return;
-      }
-      const inside = t < endS - startS;
-      if (!inside) src.pause();
-      else {
-        if (Math.abs(src.currentTime - (startS + t)) > DRIFT_S) src.currentTime = startS + t;
-        if (src.paused) void src.play().catch(() => undefined);
-      }
-      setClock(t);
-    }
+    if (c === null || a.current === null) return;
+    const step = advance(c, a.current, b.current, sec.current);
+    if (step === null) return;
+    if (step === "ended") {
+      halt();
+      positions.current.set(c.key, 0);
+      setClock(0);
+    } else setClock(step);
   }, [halt]);
 
   // The clock runs on animation frames while something sounds, and stops with it.
@@ -128,7 +81,7 @@ export function useAB(sourceUrl: string | undefined, section: { readonly startS:
       if (prev !== null) positions.current.set(prev.key, prev.url === null ? (a.current?.currentTime ?? sec.current.startS) - sec.current.startS : (b.current?.currentTime ?? 0));
       halt();
       setFailed(null);
-      const src = el(a);
+      const src = audioOf(a);
       src.onerror = () => failWith(mediaErrorWords(src.error?.code, sourceUrl));
       if (src.src === "" || !src.src.endsWith(sourceUrl)) src.src = sourceUrl;
       levels.current.a = levelFor(sourceRms);
@@ -138,7 +91,7 @@ export function useAB(sourceUrl: string | undefined, section: { readonly startS:
         sideRef.current = "a";
         src.currentTime = sec.current.startS + from;
       } else {
-        const take = el(b);
+        const take = audioOf(b);
         take.onerror = () => failWith(mediaErrorWords(take.error?.code, url));
         // The take's own level is measured before it is heard, so the first press is already matched.
         const h = await hearUrl(url);
@@ -153,7 +106,7 @@ export function useAB(sourceUrl: string | undefined, section: { readonly startS:
       setSideState(sideRef.current);
       apply();
       try {
-        await (url === null ? src.play() : el(b).play());
+        await (url === null ? src.play() : audioOf(b).play());
       } catch (e) {
         if (e instanceof Error && e.name === "AbortError") return;
         failWith(e instanceof Error ? `${e.name} · ${e.message}` : String(e));
@@ -226,19 +179,7 @@ export function useAB(sourceUrl: string | undefined, section: { readonly startS:
   }, [sourceRms, apply]);
 
   // The reaper: leaving the page pauses both and lets go of their sources.
-  useEffect(() => {
-    const ra = a;
-    const rb = b;
-    return () => {
-      for (const r of [ra, rb]) {
-        const x = r.current;
-        if (x === null) continue;
-        x.pause();
-        x.removeAttribute("src");
-        x.load();
-      }
-    };
-  }, []);
+  useEffect(() => () => reap([a, b]), []);
 
   const positionOf = useCallback((key: string): number => (cur.current?.key === key ? clock : (positions.current.get(key) ?? 0)), [clock]);
   return { at, playing, side, clock, failed, positionOf, toggle, seek, hear, stop };

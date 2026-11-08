@@ -1,6 +1,6 @@
 "use client";
 
-// A SLEEVE'S WAVEFORM (prototype v2): the peaks of a cover's section, kept from the decode the desk already made when
+// A SLEEVE'S WAVEFORM: the peaks of a cover's section, kept from the decode the desk already made when
 // that cover was opened (../useCover.ts hears its source). The view carries no peaks and the crate never fetches a
 // song to draw one - a five-minute mp3 per sleeve would be the crate's whole cost - so a cover not opened in this
 // tab has none, and its sleeve draws Wave's dashed absent line.

@@ -24,7 +24,7 @@ export type Desk = {
   readonly acts: CoverActs;
   readonly sender: Sender;
   readonly refresh: () => void;
-  /** Open a cover (undefined: a new one), keeping the variant. */
+  /** Open a cover (undefined: a new one). */
   readonly open: (id: string | undefined) => void;
   readonly hrefOf: (id: string | undefined) => string;
   readonly fixture: FixtureState | null;
@@ -44,21 +44,17 @@ export function useDesk(view: CoverDeskView, acts: CoverActs): Desk {
   const q = useSearchParams();
   const fixture = fixtureOf(q.get("fixture"));
   const fx = useFixture(fixture ?? "empty");
-  // TODO(prototype, 2026-11-08): consolidate the cover desk switcher - `?v=` rides along so a cover opened in a
-  // variant stays in it; this line goes with the switcher (../Cover.tsx).
-  const variant = q.get("v");
 
   const hrefOf = useCallback(
     (id: string | undefined): string => {
       const p = new URLSearchParams();
       p.set("s", "cover");
-      if (variant !== null) p.set("v", variant);
       if (fixture !== null) p.set("fixture", fixture);
       if (id !== undefined) p.set("cover", id);
       else if (fixture === null) p.set("cover", "new");
       return `/audio?${p.toString()}`;
     },
-    [fixture, variant],
+    [fixture],
   );
 
   // Stable across renders (the fixture's own re-read is), so the minute's interval is not restarted by a render.

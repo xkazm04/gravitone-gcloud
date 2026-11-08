@@ -15,7 +15,7 @@ Every upload declares `own`, `licensed` or `third-party-uncleared`, with no defa
 | Receipt ($0), then confirm with its token | `_cover/acts.ts` -> `lib/producers/cover.ts` `launchCover` |
 | One job `job:cover:<id>`, gpu.local, engine comfy | `packages/producers/src/cover/define.ts`, `lib/producers/coverActs.ts` |
 | Steps `transcribe`, `render-1`..`render-5` | `lib/sound/cover/{cut,yue2}.ts` |
-| Takes A/B against the section, pick | `_cover/desk/{Takes,useAB}.tsx`, `pickCoverAct` -> `winner.mp3` 320 kbps |
+| Takes A/B against the section, pick | `_cover/desk/sleeve/TakeGrid.tsx`, `_cover/desk/useAB.ts`, `pickCoverAct` -> `winner.mp3` 320 kbps |
 | Remix and the back-filled styles | `cover/remix/route.ts`, `saveCoverStylesAct` |
 | Library: section, winner, remix as `reference`, origin `cover` | `lib/library/feeds/cover.ts` |
 

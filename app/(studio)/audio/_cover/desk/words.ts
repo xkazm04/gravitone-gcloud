@@ -24,6 +24,8 @@ export function fiveTakes(takes: readonly CoverTake[], count: number): readonly 
   return Array.from({ length: count }, (_, i) => takes.find((t) => t.n === i + 1) ?? { n: i + 1, seed: -1, state: "pending" as const });
 }
 
+export const doneCount = (takes: readonly CoverTake[]): number => takes.filter((t) => t.state === "done").length;
+
 export const seconds = (s: number): string => `${Math.round(s)} s`;
 
 export function clock(s: number): string {

@@ -41,6 +41,10 @@ export const EXEMPT: Record<string, string> = {
   "app/(studio)/audio/_cover/desk/useAB.ts": NEEDS_DOM,
   "app/(studio)/audio/_cover/desk/useCover.ts": "decodes the uploaded song with Web Audio (AudioContext), which this DOM-less lane has none of",
   "app/(studio)/audio/_cover/desk/useDesk.ts": "reads and writes the URL through next/navigation's useRouter and useSearchParams, which need a mounted App Router",
+  // The take-against-take player owns two HTMLAudioElements, as useAB does.
+  "app/(studio)/audio/_cover/desk/sleeve/usePair.ts": NEEDS_DOM,
+  // Split out of useCover; its acts are tested in tests/next-server/cover-doors.test.ts.
+  "app/(studio)/audio/_cover/desk/useAfterPick.ts": NO_DRIVER,
 };
 
 /* ───────────────────────────── derivation (pure) ──────────────────────────── */

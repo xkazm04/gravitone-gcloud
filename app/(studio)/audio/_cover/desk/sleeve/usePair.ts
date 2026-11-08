@@ -1,6 +1,6 @@
 "use client";
 
-// TWO TAKES AGAINST EACH OTHER (prototype v2, the compare): the cover desk's A/B (../useAB.ts) holds a take against
+// TWO TAKES AGAINST EACH OTHER: the cover desk's A/B (../useAB.ts) holds a take against
 // its section; this holds take against take, the owner's question once two takes both pass. The same rules: two
 // elements play together from the same second, the side not heard is muted rather than paused so switching keeps the
 // beat, and each is turned down to one loudness (../audio.ts levelFor, each take's RMS as the browser measured it).
@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { mediaErrorWords } from "@gt/ui/components/audio/AudioPreview.tsx";
 
+import { audioOf, DRIFT_S, reap, type AudioRef } from "../abElements.ts";
 import { hearUrl, levelFor } from "../audio.ts";
 
 export type PairSide = "x" | "y";
@@ -25,8 +26,6 @@ export type Pair = {
   readonly stop: () => void;
 };
 
-const DRIFT_S = 0.15;
-
 export function usePair(): Pair {
   const ex = useRef<HTMLAudioElement | null>(null);
   const ey = useRef<HTMLAudioElement | null>(null);
@@ -36,14 +35,6 @@ export function usePair(): Pair {
   const [side, setSide] = useState<PairSide>("x");
   const [clock, setClock] = useState(0);
   const [failed, setFailed] = useState<string | null>(null);
-
-  const el = (r: { current: HTMLAudioElement | null }): HTMLAudioElement => {
-    if (r.current === null) {
-      r.current = new Audio();
-      r.current.preload = "auto";
-    }
-    return r.current;
-  };
 
   const apply = useCallback((): void => {
     if (ex.current !== null) ex.current.volume = sideRef.current === "x" ? levels.current.x : 0;
@@ -78,8 +69,8 @@ export function usePair(): Pair {
   }, [playing, halt]);
 
   const load = useCallback(
-    async (r: { current: HTMLAudioElement | null }, url: string, key: "x" | "y"): Promise<HTMLAudioElement> => {
-    const a = el(r);
+    async (r: AudioRef, url: string, key: "x" | "y"): Promise<HTMLAudioElement> => {
+    const a = audioOf(r);
     a.onerror = () => {
       halt();
       setFailed(mediaErrorWords(a.error?.code, url));
@@ -154,19 +145,7 @@ export function usePair(): Pair {
   }, [halt]);
 
   // The reaper: leaving the cover pauses both and lets go of their sources.
-  useEffect(() => {
-    const rx = ex;
-    const ry = ey;
-    return () => {
-      for (const r of [rx, ry]) {
-        const a = r.current;
-        if (a === null) continue;
-        a.pause();
-        a.removeAttribute("src");
-        a.load();
-      }
-    };
-  }, []);
+  useEffect(() => () => reap([ex, ey]), []);
 
   return { playing, side, clock, failed, toggle, hear, seek, stop };
 }
