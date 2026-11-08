@@ -11,6 +11,7 @@ import { meteredCall } from "@gt/producers/research/metered";
 import type { StoryboardPorts, StoryboardRequest } from "@gt/producers/scout-storyboard/define";
 
 import { FLUX_MODEL, type FluxAspect } from "../imaging/local/flux2.ts";
+import { isComfyUnreachable } from "../imaging/local/fluxWait.ts";
 import { LTX_MODEL } from "../imaging/video/comfyLtx.ts";
 import { castRefs, CAST_LATE } from "../foundry/scout/cast.ts";
 import { followEpisodes } from "../foundry/scout/episodeMoves.ts";
@@ -26,8 +27,12 @@ import { standIdea } from "./scoutIdeaActs.ts";
 //          A LOCAL FRAME IS FREE, so a live one is not a paid call: it is made directly, books no spend
 //          row, and the step reports $0 (the scene's local clip rule, scoutSceneActs.ts `clipAct`). A dry
 //          job declares it to the meter and is answered by a stand-in picture, so it never reaches the card.
-//          A frame the engine refused leaves its index null and its sentence in `error` (`panel N: ...`);
-//          the step is booked and the storyboard goes on.
+//          A frame the engine refused, or a draw that timed out while it was alive, leaves its index null and its
+//          sentence in `error` (`panel N: ...`); the step is booked and the storyboard goes on.
+//          A frame the engine COULD NOT BE REACHED for (flux2.ts `isComfyUnreachable`: the /system_stats refusal, a
+//          prompt it stopped answering for) is no panel's failure: the step answers a `vendor-failure`, books nothing,
+//          writes nothing, and the kernel waits its backoff and draws the same panel again - up to
+//          STORYBOARD_OUTAGE_LIMIT in a row (define.ts), when the job ends failed with the last sentence.
 //          A CAST storyboard (spark scout-vision S3): its panels already lead with the cast's identity blocks (compiled
 //          at the door, lib/foundry/scout/characters.ts castPrompt); each member's KEPT sheet rides the frame as a reference
 //          admitted late (CAST_LATE), read through the one guard (cast.ts castStillOf via castRefs). A member with no
@@ -136,6 +141,8 @@ async function panelAct(e: StoryboardActEngines, req: StoryboardRequest, k: numb
             live: async () => ({ value: { ...(await draw()), model: FLUX_MODEL }, unpriced: "free: a local model" }),
           });
   } catch (x) {
+    // The engine is away, not the panel at fault: nothing is booked, the kernel backs off and asks again.
+    if (isComfyUnreachable(x)) return { kind: "vendor-failure", message: errorMessage(x) };
     const why = errorMessage(x);
     fence(ctx);
     await writeBoard(req, ctx.job.id, (b) => withPanel(b, of, k, null, ask.seed, why));

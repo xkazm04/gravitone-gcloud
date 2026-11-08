@@ -19,11 +19,20 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 // ONE JOB, THE CARD'S LANE. Every step is the local model, so the job waits on `gpu.local` (capacity 1) and
 // names the `comfy` engine, so admission waits on the ComfyUI queue (the scene producer's clip rule).
 //
-// ONE PANEL'S FAILURE IS THAT PANEL'S (the ideas producer's rule). A ComfyUI sentence for one prompt leaves
+// ONE PANEL'S FAILURE IS THAT PANEL'S (the ideas producer's rule) - when the engine ANSWERED. A ComfyUI sentence
+// for one prompt (a refused graph, a node's exception, a draw that timed out while the engine was alive) leaves
 // that panel empty with the sentence recorded, and the step is booked: the storyboard goes on, and a resumed
 // job never redraws a panel it already drew or already failed. A storyboard that ends with no frame at all
 // is a loss (lib/producers/scoutStoryboardActs.ts `ended`). ONE CLIP'S FAILURE IS THAT CLIP'S, the same way: a
 // clip the engine refused (or a panel that drew no still) leaves its index null, and the frames stand.
+//
+// AN ENGINE THAT COULD NOT BE REACHED IS NOT A PANEL'S FAILURE (retry-backoff: suspension-is-not-failure). The gate
+// checks ComfyUI once, at the launch; when it goes away later, every queued panel used to fail in seconds and book
+// itself an empty frame (160 of 330 panels on the nights of 2026-10-26). flux2.ts types that case (`isComfyUnreachable`:
+// the /system_stats refusal, a prompt it stopped answering for), and the panel step answers it as a retryable
+// `vendor-failure`: nothing is booked, nothing written, the kernel backs off and draws the same panel again. The limit
+// is STORYBOARD_OUTAGE_LIMIT consecutive attempts, so the wait is bounded; the job then ends failed with the engine's
+// own sentence, and the candidate and its episode settle as an all-failed board does (`ended`).
 //
 // THE PAUSE HOLDS WHAT THE RESUME NEEDS. The launch records the request - each panel's prompt and the seed
 // it will draw with (chosen at launch, so a retry draws the same frame), the aspect, one frame's estimate -
@@ -32,6 +41,14 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 export const SCOUT_STORYBOARD = "scout-storyboard";
 /** The event that carries a storyboard job's request (subject: the job). */
 export const STORYBOARD_REQUEST = "scout.storyboard-requested";
+
+/**
+ * Consecutive unreachable attempts before the job ends failed. The kernel's backoff doubles from 1 s and caps at
+ * 30 s with half-to-full jitter (job-run.ts `defaultBackoff`), so 80 attempts wait 31 s + 74 x 30 s: at most ~38 min,
+ * about 28 min on average, plus at most 10 s per attempt for /system_stats to time out (13 min) - under an hour
+ * against a night, and long enough to cover a ComfyUI restart or a model update.
+ */
+export const STORYBOARD_OUTAGE_LIMIT = 80;
 
 export const panelStep = (k: number): string => `panel:${k}`;
 export const clipStep = (k: number): string => `clip:${k}`;
@@ -99,6 +116,7 @@ export function defineScoutStoryboard(lane: ResourceLane, ports: StoryboardPorts
   };
   return {
     lane,
+    breakerLimit: STORYBOARD_OUTAGE_LIMIT,
     async health(job) {
       if (job !== undefined) requestOf(job);
       return { ok: true };
