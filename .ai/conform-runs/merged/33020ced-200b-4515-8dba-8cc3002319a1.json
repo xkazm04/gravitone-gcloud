@@ -1,0 +1,164 @@
+{
+  "schema": "conform-run/1",
+  "worker": "33020ced-200b-4515-8dba-8cc3002319a1",
+  "subject": "agent-runtime-assembly",
+  "evaluatedAt": "2026-11-09T23:49:23.534078+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "agent-cli-and-turns",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/claudeCli.ts:161 Both spawn doors (the reasoning door's spawnTurn and the agent seam's runAgent, which import seatOnlyEnv) build the child's environment by copying process.env and deleting four ANTHROPIC_* names. No CLAUDE*-family identifier is scrubbed by prefix, so a nested headless `claude` inherits whatever session identifiers the parent runtime put in the environment, which is the per-site enumeration the nested-run technique names as the failure.",
+      "techniques": [
+        {
+          "technique": "nested-run-is-not-its-parent",
+          "verdict": "deviation",
+          "evidence": "lib/claudeCli.ts:161 The scrub enumerates four metered-auth names and is not a family/prefix scrub with add-back by name. A grep of lib/agent, lib/turns and lib/claudeCli.ts finds no CLAUDECODE or CLAUDE_CODE_ removal. The reasoning door's cliArgs (claudeCli.ts:279-287) also omits --safe-mode, so user-wide hooks still fire from that child. The agent seam does pass --safe-mode."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "conformant",
+          "evidence": "lib/turns/ledger.ts:302 The boot sweep closes a live record whose owner process is gone with its own `orphaned` status. That is not failed and not done, and the turn is never re-dispatched (ledger.ts:288-293)."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "conformant",
+          "evidence": "lib/agent/cliSeam.ts:59 The tool allowlist is a constant in host code, enforced in agentArgs.ts:25 and passed as argv. It is not read from the agent's workspace, and --restricted ignores project settings files."
+        },
+        {
+          "technique": "checkpoint-mode-custody",
+          "verdict": "not-applicable",
+          "evidence": "lib/agent/agentArgs.ts:44 Agent turns keep no durable conversation state to checkpoint or resume. Each turn is one-shot, and the turn ledger stores the validated result, not the conversation."
+        }
+      ]
+    },
+    {
+      "context": "article-run-engine",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/articles/drive.ts:137 When a dead driver left a step `running`, the next walk overwrites that record with a fresh `running` record and a new startedAt, carrying only costUsd that a finished attempt reported. The interrupted, side-effecting agent turn is therefore never closed with an indeterminate result in run.json, and its spend never reaches the step's cost.",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "lib/articles/drive.ts:137 step() checks only prior.status === \"done\". A stale `running` prior is reopened silently, and StepStatus (types.ts:63) has only running|done|failed. resumeRun (resume.ts:39) returns such a run 'as it stands' with no closure."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "conformant",
+          "evidence": "lib/articles/agentSteps.ts:27 Each step's tool list and timeout are host-code constants. The agent runs in a fresh tmpdir workspace (agentSteps.ts:36) that holds only inputs/ and out/, so it cannot edit its own policy."
+        }
+      ]
+    },
+    {
+      "context": "article-human-gate-and-landing",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/articles/registryWrite.ts:80 The gate's only child processes are deterministic git/gh calls (registryWrite.ts:80) and a diff (diffFiles.ts:31). A grep of the eight files for spawn, runAgent and claude finds no agent run, and a grep of all of lib/articles for registerHook, plugin, checkpoint, safe-mode and registerTool finds nothing, so no runtime is assembled, extended or checkpointed here.",
+      "techniques": [],
+      "absenceTerms": [
+        "registerHook",
+        "plugin",
+        "checkpoint",
+        "safe-mode",
+        "registerTool"
+      ]
+    },
+    {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/foundry/store.ts:3 This context is the disk layer over runs the Python forge writes, plus the verdict log, commit planning and calibration. A grep of lib/foundry finds no registerHook, plugin, checkpoint or safe-mode, and none of the context's ten files spawns or calls runAgent or claude, so no agent runtime is assembled here.",
+      "techniques": [],
+      "absenceTerms": [
+        "registerHook",
+        "plugin",
+        "checkpoint",
+        "safe-mode"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-runtime-assembly",
+      "context": "review-and-runs-history",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor packages/ui/src/components/runs/thread.ts:1 is not one of the context's listed files, and its header comment only says the module is pure. It does not itself show that the context has no agent loop, hooks or durable state. The absence greps for spawn and claude did come back empty."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-09T23:49:23.534078+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [
+        "checkpoint-mode-custody",
+        "guard-input-custody",
+        "indeterminate-closure-on-interruption",
+        "nested-run-is-not-its-parent"
+      ],
+      "deviations": 1,
+      "context": "agent-cli-and-turns",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T23:49:23.534078+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [
+        "guard-input-custody",
+        "indeterminate-closure-on-interruption"
+      ],
+      "deviations": 1,
+      "context": "article-run-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T23:49:23.534078+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "article-human-gate-and-landing",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T23:49:23.534078+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "foundry-forge-store-and-verdicts",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T23:49:23.534078+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "review-and-runs-history",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

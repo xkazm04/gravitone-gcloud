@@ -1822,12 +1822,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/claudeCli.ts:388 Every nested `claude` run (reasoning door and agent seam alike) inherits this process's whole environment minus four metered-auth variables, so the parent runtime's ambient CLAUDE* identifiers reach the child unscrubbed, and the reasoning door also runs without --safe-mode, so user-wide hooks fire from it as if it were the parent session.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
-          "evaluatedRevision": 28,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/claudeCli.ts:161 Both spawn doors (the reasoning door's spawnTurn and the agent seam's runAgent, which import seatOnlyEnv) build the child's environment by copying process.env and deleting four ANTHROPIC_* names. No CLAUDE*-family identifier is scrubbed by prefix, so a nested headless `claude` inherits whatever session identifiers the parent runtime put in the environment, which is the per-site enumeration the nested-run technique names as the failure.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1
         },
         {
           "subject": "module-design",
@@ -2491,14 +2490,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/articles/humanActs.ts:25 The gate records human acts, diffs files and lands an approved post through git/gh (registryWrite.ts execFile with a cwd-bound git env). runAgent, cliSeam, plugin, mcp and registerHook appear in none of its eight files, so this context makes no model call and has no hook chain; the agent turns live in the sibling engine files of lib/articles.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
-          "evaluatedRevision": 28,
+          "evidence": "lib/articles/registryWrite.ts:80 The gate's only child processes are deterministic git/gh calls (registryWrite.ts:80) and a diff (diffFiles.ts:31). A grep of the eight files for spawn, runAgent and claude finds no agent run, and a grep of all of lib/articles for registerHook, plugin, checkpoint, safe-mode and registerTool finds nothing, so no runtime is assembled, extended or checkpointed here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29,
           "source": "renamed",
           "renamedFrom": "e660bf0f-199c-4cd9-91e1-1a13e318e55f",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "test-harness",
@@ -2662,14 +2660,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/articles/drive.ts:143 When a dead driver left a step `running`, the next walk overwrites that record with a fresh `running` record and a new startedAt and carries only the cost a finished attempt reported, so the interrupted metered turn is never closed as indeterminate in run.json and its spend never reaches the step's cost (the kernel job's `interrupted` state, outside this context, is the only honest closure).",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
-          "evaluatedRevision": 28,
+          "evidence": "lib/articles/drive.ts:137 When a dead driver left a step `running`, the next walk overwrites that record with a fresh `running` record and a new startedAt, carrying only costUsd that a finished attempt reported. The interrupted, side-effecting agent turn is therefore never closed with an indeterminate result in run.json, and its spend never reaches the step's cost.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29,
           "source": "renamed",
           "renamedFrom": "14632859-df56-4340-9e16-c420ff681ee3",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-cli-transport",
@@ -9109,14 +9106,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/foundry/store.ts:3 This context is the disk layer over runs the Python forge writes, plus the verdict log, commit planning and calibration. plugin, mcp, checkpoint and registerHook do not appear in lib/foundry and runAgent and cliSeam appear in none of the context's own files (only in lib/foundry/strips, another context), so no agent runtime is assembled here.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
-          "evaluatedRevision": 28,
+          "evidence": "lib/foundry/store.ts:3 This context is the disk layer over runs the Python forge writes, plus the verdict log, commit planning and calibration. A grep of lib/foundry finds no registerHook, plugin, checkpoint or safe-mode, and none of the context's ten files spawns or calls runAgent or claude, so no agent runtime is assembled here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29,
           "source": "renamed",
           "renamedFrom": "e481098a-3532-46d9-bdc9-de84fbc2ce01",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "concurrent-vcs",
@@ -17664,11 +17660,7 @@
           "confidence": "probable",
           "state": "not-applicable",
           "evidence": "packages/ui/src/components/runs/thread.ts:1 These are pure presentation models and components for Board review and the runs day line. A search of packages/ui/src/components/review and runs for conversation, registerTool, plugin, subagent and checkpoint found nothing; the only 'agent' hit is an icon name in RunsDayline.tsx:310. No agent loop, hook chain, extension loading or durable conversation state exists here.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
-          "evaluatedRevision": 28,
-          "revisionsBehind": 1,
-          "stale": true
+          "evaluatedAt": "2026-11-06"
         },
         {
           "subject": "hitl-approval",
