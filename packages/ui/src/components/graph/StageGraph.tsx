@@ -21,7 +21,7 @@ import type { GraphEdge, GraphNode, GraphStage } from "@gt/domain/scoutGraph";
 import { SrOnly } from "../a11y/SrOnly.tsx";
 import { cx } from "../cx.ts";
 import { vars } from "../vars.ts";
-import { GRAPH_LOOK, isDeadNode, layout, nodeBox, spokenGraph, spokenNode, type GraphView } from "./stageGraph.ts";
+import { GRAPH_LOOK, isDeadNode, layout, nodeBox, spokenGraph, spokenNode, type GraphView, type IsGone } from "./stageGraph.ts";
 import s from "./StageGraph.module.css";
 
 export type StageGraphProps = {
@@ -32,12 +32,14 @@ export type StageGraphProps = {
   readonly view: GraphView;
   readonly selected: string | null;
   readonly onSelect: (id: string) => void;
+  /** What `live` hides; a node's own verdict when absent. Keep it stable: the screen memoises this component. */
+  readonly gone?: IsGone;
 };
 
-export function StageGraph({ name, nodes, edges, view, selected, onSelect }: StageGraphProps) {
-  const laid = layout(nodes, edges, view);
+export function StageGraph({ name, nodes, edges, view, selected, onSelect, gone = isDeadNode }: StageGraphProps) {
+  const laid = layout(nodes, edges, view, gone);
   return (
-    <div className={s.scroll} role="group" aria-label={spokenGraph(name, nodes, view)} data-component="StageGraph">
+    <div className={s.scroll} role="group" aria-label={spokenGraph(name, nodes, view, gone)} data-component="StageGraph">
       <div className={s.canvas} style={vars({ "--w": `${laid.width}px`, "--h": `${laid.height}px` })}>
         {laid.columns.map((c, i) => (
           <StageHead key={c.stage} stage={c.stage} x={nodeBox(i, 0).x} hidden={c.hidden} />

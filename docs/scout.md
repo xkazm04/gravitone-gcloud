@@ -149,8 +149,14 @@ audience, genre and subgenre and sits under that seed's pause; a candidate with 
 **Bands**: an audience, its genres inside it, then *before seeds* last. Each band says how many nodes it holds,
 how far its live nodes reached (live = open, pending or kept, not paused; dead = rejected or failed), its share
 of the last 7 live nights' run-stage candidates against the split's target (a genre's target is its audience's
-share times the genre's), and its effort. A band with no live node starts folded; a folded band draws nothing.
-`live | all`: live hides the dead and their links, each column's head counting what it hid (`+N`).
+share times the genre's), and its effort. An audience with something live opens first; every genre and *before seeds*
+start folded, and a folded band draws nothing.
+`live | all`: live hides the dead, the muse archive and a kept node whose every descendant is one of those (a dead
+branch, `bands.ts goneOf`), with their links, each column's head counting what it hid (`+N`). A band left with nothing
+is not listed. A node awaiting a verdict and a kept leaf are never hidden. `all` draws every node.
+
+The media of a rejected cell may be gone from disk: the node, its prompt and its verdict stay, and what was removed is
+listed with its prompt and hash in `foundry-out/_purged/<date>/`.
 
 **Effort** (`lib/foundry/scout/effort.ts`, from the kernel store, never from a night's own figures): per
 candidate `geminiUsd` = its job's spend rows the night ceiling caps (`budget.ts jobMoney` settled),

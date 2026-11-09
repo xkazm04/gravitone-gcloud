@@ -11,12 +11,12 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import { BEFORE_SEEDS } from "@gt/domain/scoutGraph";
 import { Button } from "@gt/ui/components/button/Button.tsx";
-import { isDeadNode, type GraphView } from "@gt/ui/components/graph/stageGraph.ts";
+import type { GraphView, IsGone } from "@gt/ui/components/graph/stageGraph.ts";
 import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 
 import { boardFor } from "../../_shell/links.ts";
 import type { ScoutPort, ScoutView, SplitInput } from "../_port/contract.ts";
-import { ALL_VENTURES, bandsOf, byVenture, nodeOf, openAtFirst } from "./bands.ts";
+import { ALL_VENTURES, bandsOf, byVenture, goneOf, liveBands, nodeOf, openAtFirst } from "./bands.ts";
 import { BandView } from "./Band.tsx";
 import { NodePanel } from "./NodePanel.tsx";
 import { SplitEditor } from "./SplitEditor.tsx";
@@ -39,11 +39,14 @@ export function Scout({ initial, port }: ScoutProps) {
   const ventures = view.ventures ?? [];
   const shown = ventures.some((v) => v.id === venture) ? venture : ALL_VENTURES;
   const bands = useMemo(() => bandsOf(byVenture(g, shown)), [g, shown]);
+  // Read off the whole graph, so a branch whose children sit in another genre's band is judged by all of them.
+  const gone = useMemo(() => goneOf(g), [g]);
+  const isGone = useCallback<IsGone>((n) => gone.has(n.id), [gone]);
+  const drawn = useMemo(() => (mode === "live" ? liveBands(bands, gone) : bands), [mode, bands, gone]);
   const [open, setOpen] = useState<Record<string, boolean>>(() => openAtFirst(bands));
   const panel = useRef<HTMLDivElement | null>(null);
 
   const node = selected === null ? undefined : nodeOf(g, selected);
-  const dead = g.nodes.filter(isDeadNode).length;
   // No audience yet (an empty store, or nothing but work from before seeds): no split to set, no side column.
   const splittable = g.groups.some((x) => x.key !== BEFORE_SEEDS);
   const side = node !== undefined || splittable;
@@ -78,15 +81,15 @@ export function Scout({ initial, port }: ScoutProps) {
           value={mode}
           onChange={setMode}
           options={[
-            { value: "live", label: "live", count: g.nodes.length - dead },
+            { value: "live", label: "live", count: g.nodes.length - gone.size },
             { value: "all", label: "all", count: g.nodes.length },
           ]}
         />
       </header>
       <div className={s.body} data-side={side ? undefined : "none"}>
         <div className={s.bands}>
-          {bands.map((b) => (
-            <BandView key={b.group.key} band={b} view={mode} open={open} onToggle={toggle} selected={selected} onSelect={select} />
+          {drawn.map((b) => (
+            <BandView key={b.group.key} band={b} view={mode} open={open} onToggle={toggle} selected={selected} onSelect={select} gone={gone} isGone={isGone} />
           ))}
         </div>
         {side && (
