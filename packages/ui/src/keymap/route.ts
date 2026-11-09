@@ -13,15 +13,22 @@
 //      or the page's mode when no layer claims the keyboard. A claiming layer with no
 //      mode (a confirm dialog) leaves nothing to resolve - v1's `overlayOpen()` guard,
 //      now a query on the stack instead of a DOM sniff for aria-modal.
+//   3. A press the active mode declined reaches the GLOBAL layer (keymap.ts), heard last
+//      (keyboard-shortcuts: innermost wins). A sheet does not stop it: the claim exists so a
+//      key cannot act on the route the sheet hides, and a global row acts on no route - it
+//      opens Jump or the key sheet above everything, and leaving a sheet by a jump decides
+//      nothing in it (a receipt sheet spends only on its confirm). A claiming dialog or
+//      popover does stop it: a confirm or a compose is an act half made, and a second dialog
+//      opened over one would leave it unanswered underneath.
 //
 // Dropped from v1: the DOM sniff itself (`[data-keys-block], dialog[open],
 // [aria-modal="true"]`) and the Board-loupe exception it needed. It existed because
 // the trays were not on the stack; every overlay now is, so the stack is the truth.
 
 import { chordsOf, type KeyEventLike } from "./chord.ts";
-import { resolve, type Keymap, type Match } from "./keymap.ts";
+import { GLOBAL, resolve, type Keymap, type Match } from "./keymap.ts";
 import type { TargetInfo } from "./target.ts";
-import { activeMode, top, type LayerStack } from "../layers/stack.ts";
+import { activeMode, claims, live, top, type LayerStack } from "../layers/stack.ts";
 
 export type KeyInput = KeyEventLike & {
   readonly repeat?: boolean;
@@ -46,9 +53,15 @@ export function pageMode(scopes: readonly { readonly mode: string }[], layers: L
   const owned = new Set(layers.entries.map((e) => e.mode));
   for (let i = scopes.length - 1; i >= 0; i--) {
     const m = scopes[i]?.mode;
-    if (m !== undefined && !owned.has(m)) return m;
+    // The shell binds the global layer once and outlives every page; it is never the page.
+    if (m !== undefined && m !== GLOBAL && !owned.has(m)) return m;
   }
   return null;
+}
+
+/** Does a press the active mode declined reach the global layer? Not past a claiming dialog or popover. */
+export function globalReachable(layers: LayerStack): boolean {
+  return live(layers).every((e) => e.kind === "sheet" || !claims(e));
 }
 
 export function route(
@@ -77,7 +90,8 @@ export function route(
     return { kind: "close-layer", id: layer.id };
   }
   const mode = activeMode(ctx.layers, ctx.page);
-  if (mode === null) return NONE;
-  const match = resolve(map, press, mode, ctx.facts);
-  return match === null ? NONE : { kind: "binding", match };
+  const match = mode === null ? null : resolve(map, press, mode, ctx.facts);
+  if (match !== null) return { kind: "binding", match };
+  const global = globalReachable(ctx.layers) ? resolve(map, press, GLOBAL, ctx.facts) : null;
+  return global === null ? NONE : { kind: "binding", match: global };
 }
