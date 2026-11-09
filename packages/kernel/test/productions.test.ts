@@ -98,10 +98,18 @@ describe("takes", () => {
     expect(refusalOfTake(r.production, "rough")).toBeUndefined();
   });
 
-  it("the operator proves a ready take; an agent is refused, and a take still rendering cannot be proven", () => {
+  it("a dry stand-in cannot prove a concept", () => {
     const s = tpl.fresh();
     const p = start(s);
     must(s.tx((t) => appendTake(t, p.id, take(), OPERATOR)));
+    must(s.tx((t) => settleTake(t, p.id, "take-1", ready, OPERATOR)));
+    expect(refused(s.tx((t) => markTakeProven(t, p.id, "take-1", OPERATOR)))).toBe("refused: production: take-1 is a dry stand-in; no render ran, so it cannot prove a concept");
+  });
+
+  it("the operator proves a ready take; an agent is refused, and a take still rendering cannot be proven", () => {
+    const s = tpl.fresh();
+    const p = start(s);
+    must(s.tx((t) => appendTake(t, p.id, { ...take(), dry: false }, OPERATOR)));
     expect(refused(s.tx((t) => markTakeProven(t, p.id, "take-1", OPERATOR)))).toBe("refused: production: take-1 is rendering; only a take that landed can be proven");
     must(s.tx((t) => settleTake(t, p.id, "take-1", ready, OPERATOR)));
     expect(refused(s.tx((t) => markTakeProven(t, p.id, "take-1", AGENT)))).toBe("refused: production: only the operator may move a production to proven (agent tried, from hero)");
