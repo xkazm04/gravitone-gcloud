@@ -64,7 +64,7 @@
   },
   "dependencies": {
     "@react-three/fiber": "9.8.2",
-    "firebase": "^12.17.1",
+    "firebase": "^13.2.0",
     "lucide-react": "^1.70.0",
     "motion": "^14.10.1",
     "next": "16.4.5",
