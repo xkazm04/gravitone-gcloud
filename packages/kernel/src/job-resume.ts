@@ -54,7 +54,7 @@ export const MAX_AUTO_RESUMES = 2;
  *   profile             it runs an arbitrary argv; an orphan child inflates the new run's peaks.
  *   forge, dojo         Python drivers adopt "a PNG on disk" as finished, and a copy cut short is a torn PNG.
  */
-export const RESUMABLE_PRODUCERS: ReadonlySet<string> = new Set(["cut", "media-facts", "mesh", "scout-storyboard", "scout-piece", "cover", "yue2-render", "yue2-score", "yue2-post"]);
+export const RESUMABLE_PRODUCERS: ReadonlySet<string> = new Set(["cut", "media-facts", "mesh", "scout-storyboard", "scout-piece", "production-take", "cover", "yue2-render", "yue2-score", "yue2-post"]);
 
 export const AUTO_RESUMED = "job.auto-resumed";
 export const resumeActor = (by: Holder): Actor => ({ kind: "machine", id: `auto-resume:${by.host}/${by.pid}` });

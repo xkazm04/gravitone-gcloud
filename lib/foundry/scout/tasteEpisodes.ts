@@ -1,6 +1,7 @@
 import type { Channel, Episode } from "@gt/domain/channel";
 
 import { readChannels } from "./channels";
+import { takenEpisodes } from "./episodeTaken";
 import type { VerdictedEpisode } from "./episodeVerdict";
 
 // `## Episodes due` (spark project-baseline WP-B) - the night's first work, at the top of the taste brief: every
@@ -64,7 +65,8 @@ export function episodesSection(due: readonly DueChannel[], judged: readonly Jud
 export async function episodesFirst(brief: string, due?: readonly DueChannel[], judged?: readonly JudgedChannel[]): Promise<string> {
   let lines: string[];
   try {
-    const read = due === undefined ? dueAndJudged(await readChannels()) : undefined;
+    const started = await takenEpisodes();
+    const read = due === undefined ? dueAndJudged((await readChannels()).map((f) => ({ channel: f.channel, episodes: f.episodes.filter((e) => e.state !== "outline-kept" || !started.has(e.id)) }))) : undefined;
     lines = episodesSection(due ?? read?.due ?? [], judged ?? read?.judged ?? []);
   } catch (e) {
     lines = [EPISODES_HEADING, "", `- the channel store did not read: ${e instanceof Error ? e.message : String(e)}`, ""];

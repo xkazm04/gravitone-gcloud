@@ -25,11 +25,16 @@ const ROOT = vi.hoisted(() => {
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { closeProcessKernel } from "@gt/kernel/process";
 import { channelsDir, episodeOf, episodesDue, importEpisodes, readChannel, readChannels, setEpisodeState } from "../../lib/foundry/scout/channels.ts";
 
 const DIR = path.join(ROOT, "foundry-out", "scout-channels");
 
-afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
+afterAll(() => {
+  // episodesDue opens the kernel to read what a production has taken; Windows will not delete an open store.
+  closeProcessKernel();
+  rmSync(ROOT, { recursive: true, force: true });
+});
 beforeEach(() => rmSync(DIR, { recursive: true, force: true }));
 
 /** A two-channel subset of the session's outlines.json (2026-10-26), three items each, verbatim. */

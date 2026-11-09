@@ -12,7 +12,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { castRoundSchema, productionLessonSchema, productionSchema } from "@gt/domain/production";
 import type { z } from "zod";
 
-import type { ProductionEntry, ProductionsView } from "./contract.ts";
+import type { KeptConcept, ProductionEntry, ProductionFrame, ProductionsView } from "./contract.ts";
 
 const PICS = "/deck-art/productions";
 const NOW = "2026-11-09T09:00:00Z";
@@ -21,25 +21,29 @@ const BY = "operator";
 type RawProduction = z.input<typeof productionSchema>;
 type RawRound = z.input<typeof castRoundSchema>;
 type RawLesson = z.input<typeof productionLessonSchema>;
-type Raw = { readonly production: RawProduction; readonly logline: string; readonly poster?: string; readonly keptOnly?: true; readonly rounds?: readonly RawRound[]; readonly lessons?: readonly RawLesson[] };
+type Raw = { readonly production: RawProduction; readonly logline: string; readonly poster?: string; readonly keptOnly?: true; readonly frames?: readonly ProductionFrame[]; readonly rounds?: readonly RawRound[]; readonly lessons?: readonly RawLesson[] };
 
 const base = (slug: string, title: string, source: RawProduction["source"], stage: RawProduction["stage"]): RawProduction => ({
   id: `prdn:${slug}`,
   title,
   source,
   stage,
+  board: { logline: "A scripted concept.", aspect: "16:9", panels: [{ id: "panel-1", beat: "the door", prompt: "scripted board panel", still: { sha256: FIXTURE_STILL, bytes: 1, mime: "image/png" } }] },
   takes: [],
   roles: [],
   startedAt: NOW,
   startedBy: BY,
 });
 
+const FIXTURE_STILL = "0".repeat(64);
+const TAKE_FIELDS = { frames: ["panel-1"], prompt: "scripted motion line", seed: 1, engine: "minimax-h3-fl2v-turbo" };
 const BEATS = ["the door", "the wheel turns", "the empty shelf"];
 const hero = (id: string, beat: string, n: number, extra: Partial<RawProduction["takes"][number]> = {}): RawProduction["takes"][number] => ({
   id,
   kind: "hero",
   state: "ready",
   beats: [beat],
+  ...TAKE_FIELDS,
   at: NOW,
   poster: `${PICS}/panel-${n}.webp`,
   ...extra,
@@ -49,6 +53,7 @@ const rough = (id: string, n: number, extra: Partial<RawProduction["takes"][numb
   kind: "rough",
   state: "ready",
   beats: BEATS,
+  ...TAKE_FIELDS,
   at: NOW,
   poster: `${PICS}/panel-${n}.webp`,
   ...extra,
@@ -143,15 +148,23 @@ function entryOf(raw: Raw): Result<ProductionEntry> {
     if (!lesson.ok) return lesson;
     lessons.push(lesson.value);
   }
-  return ok({ production: production.value, logline: raw.logline, ...(raw.poster === undefined ? {} : { poster: raw.poster }), keptOnly: raw.keptOnly === true, rounds, lessons });
+  return ok({ production: production.value, logline: raw.logline, ...(raw.poster === undefined ? {} : { poster: raw.poster }), frames: raw.frames ?? [], progress: {}, rounds, lessons });
 }
 
+/** The scripted slate: on the fixture side it is the whole view; the real side shows only its later-stage panels. */
 export function fixtureProductions(): Result<ProductionsView> {
   const entries: ProductionEntry[] = [];
+  const kept: KeptConcept[] = [];
   for (const raw of SLATE) {
+    if (raw.keptOnly === true) {
+      const { production: p, logline } = raw;
+      kept.push({ source: p.source, title: p.title, logline, beats: [], matches: [] });
+      continue;
+    }
     const e = entryOf(raw);
     if (!e.ok) return err("invalid", e.error.message);
     entries.push(e.value);
   }
-  return ok({ entries, ventures: [{ id: "vn-quiet-desk", name: "Quiet Desk" }, { id: "vn-harbour-tales", name: "Harbour Tales" }] });
+  const scripted = entries.find((e) => e.rounds.length > 0) ?? entries[0];
+  return ok({ entries, kept, ventures: [{ id: "vn-quiet-desk", name: "Quiet Desk" }, { id: "vn-harbour-tales", name: "Harbour Tales" }], ...(scripted === undefined ? {} : { scripted }) });
 }

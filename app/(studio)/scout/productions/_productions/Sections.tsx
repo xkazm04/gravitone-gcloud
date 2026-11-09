@@ -1,17 +1,16 @@
 "use client";
 
-// The blocks a concept is decided in, shared by the three layouts so the comparison is about the layout, never about
-// the pieces. Each block draws from the scripted entry plus what the operator did on this page (./script.ts).
+// The later-stage panels (casting, audio, final cut, lessons, ventures), scripted until S2-S6: each draws the scripted
+// entry and what the operator did on this page (./script.ts), which is never written anywhere.
 
 import { useState } from "react";
 
-import type { CastRound, CharacterCandidate, ProductionRole, VoiceCandidate } from "@gt/domain/production";
+import type { CastRound, CharacterCandidate, ProductionRole, ProductionSource, VoiceCandidate } from "@gt/domain/production";
 import { MUSIC_ROUTES, VOICE_ROUTES, voicePickRefusal, type MusicRoute, type ProductionStage, type VoiceRoute } from "@gt/domain/production.machine";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Plate } from "@gt/ui/components/desk/Plate.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
-import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Facts } from "@gt/ui/components/facts/Facts.tsx";
 import { Field, Select, TextArea } from "@gt/ui/components/field/Field.tsx";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
@@ -22,7 +21,7 @@ import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 
 import type { ProductionEntry, ProductionsView } from "../_port/contract.ts";
 import s from "./productions.module.css";
-import { isKept, reached, stageOf, type Dispatch, type RoundPicks, type ScriptState } from "./script.ts";
+import { reached, stageOf, type Dispatch, type RoundPicks, type ScriptState } from "./script.ts";
 
 export type SectionProps = {
   readonly entry: ProductionEntry;
@@ -43,68 +42,11 @@ export const STAGE_PILL: Readonly<Record<ProductionStage, StatusEntry>> = {
   dropped: { look: "failed", label: "dropped" },
 };
 
-const SOURCE_WORDS: Readonly<Record<ProductionEntry["production"]["source"]["kind"], string>> = { episode: "episode", "codex-board": "codex board", outline: "outline" };
+const SOURCE_WORDS: Readonly<Record<ProductionSource["kind"], string>> = { episode: "episode", "codex-board": "codex board", outline: "outline" };
 
-/** `compact`: the kind as a chip and the ref on its own clipped line, for a card too narrow for both. */
-export function SourceChip({ entry, compact = false }: { readonly entry: ProductionEntry; readonly compact?: boolean }) {
-  const { kind, ref } = entry.production.source;
-  if (compact) {
-    return (
-      <>
-        <Chip label={SOURCE_WORDS[kind]} casing="lower" name={`source: ${SOURCE_WORDS[kind]}`} />
-        <span className={s.ref} title={ref}>{ref}</span>
-      </>
-    );
-  }
+export function SourceChip({ source }: { readonly source: ProductionSource }) {
+  const { kind, ref } = source;
   return <Chip label={SOURCE_WORDS[kind]} value={ref} casing="lower" name={`source: ${SOURCE_WORDS[kind]} ${ref}`} />;
-}
-
-/** The kept concept and its Start button, or a line saying where it came from once started. */
-export function StartBlock({ entry, script, dispatch }: SectionProps) {
-  const kept = isKept(entry, script);
-  return (
-    <div className={s.block}>
-      <CapsHeading text={kept ? "kept concept" : "concept"} variant="section" />
-      <p className={s.words}>{entry.logline}</p>
-      <div className={s.row}>
-        <SourceChip entry={entry} />
-        {kept && <Button label="Start" size="sm" tone="emerald" onPress={() => dispatch({ type: "start", id: entry.production.id })} />}
-        {kept && <span className={s.note}>nothing starts itself</span>}
-      </div>
-    </div>
-  );
-}
-
-export function TakesBlock({ entry, script, dispatch }: SectionProps) {
-  const stage = stageOf(entry, script);
-  const provenTake = script.proven[entry.production.id];
-  const canProve = stage === "hero" || stage === "rough";
-  if (entry.production.takes.length === 0) return <div className={s.block}><CapsHeading text="takes" variant="section" /><Empty label="no takes rendered yet" /></div>;
-  return (
-    <div className={s.block}>
-      <CapsHeading text="takes" variant="section" tally={{ value: entry.production.takes.length, label: entry.production.takes.length === 1 ? "take" : "takes" }} />
-      <div className={s.takes}>
-        {entry.production.takes.map((t) => {
-          const proven = t.provenAt !== undefined || provenTake === t.id;
-          return (
-            <div key={t.id} className={s.take}>
-              <Plate src={t.poster} alt={`${t.kind} take: ${t.beats.join(", ")}`} className={s.plate} lazy />
-              <div className={s.row}>
-                <Chip label={t.kind === "hero" ? "hero" : "rough cut"} tone={t.kind === "hero" ? "cyan" : "violet"} />
-                {proven && <Chip label="proven" tone="emerald" dot />}
-                {t.state !== "ready" && <EntryPill entry={t.state === "failed" ? { look: "failed", label: "failed" } : { look: "running", label: "rendering" }} />}
-              </div>
-              <span className={s.meta}>{t.beats.join(" · ")}</span>
-              {t.error !== undefined && <ErrorLine message={t.error} />}
-              {canProve && t.state === "ready" && !proven && <Button label="Mark proven" size="sm" tone="emerald" onPress={() => dispatch({ type: "proven", id: entry.production.id, from: stage, takeId: t.id })} />}
-            </div>
-          );
-        })}
-      </div>
-      {stage === "hero" && <Button label="Render a rough cut of all beats" size="sm" onPress={() => dispatch({ type: "move", id: entry.production.id, from: "hero", to: "rough" })} />}
-      {stage === "proven" && <Button label="Start casting" size="sm" tone="cyan" onPress={() => dispatch({ type: "move", id: entry.production.id, from: "proven", to: "casting" })} />}
-    </div>
-  );
 }
 
 function CharacterTile({ round, c, picked, onPick }: { readonly round: string; readonly c: CharacterCandidate; readonly picked: boolean; readonly onPick: () => void }) {
@@ -310,77 +252,6 @@ export function VentureBlock({ entry, script, dispatch, view }: SectionProps) {
         <Field label="new venture name" value={name} onChange={setName} placeholder="future channel" />
         <Button label="Start a venture" size="sm" disabled={name.trim() === ""} onPress={() => dispatch({ type: "venture", id: entry.production.id, name: name.trim() })} />
       </div>
-    </div>
-  );
-}
-
-type Section = "start" | "takes" | "casting" | "audio" | "cut" | "lessons" | "venture";
-
-const CURRENT: Readonly<Record<ProductionStage, readonly Section[]>> = {
-  accepted: ["start"],
-  hero: ["takes"],
-  rough: ["takes"],
-  proven: ["takes", "venture"],
-  casting: ["casting"],
-  audio: ["audio"],
-  cutting: ["cut"],
-  done: ["lessons", "venture"],
-  dropped: ["start", "takes"],
-};
-const WHOLE: readonly (readonly [Section, ProductionStage])[] = [
-  ["start", "accepted"],
-  ["takes", "hero"],
-  ["casting", "casting"],
-  ["audio", "audio"],
-  ["cut", "cutting"],
-  ["lessons", "done"],
-  ["venture", "proven"],
-];
-
-function SectionOf({ section, props }: { readonly section: Section; readonly props: SectionProps }) {
-  switch (section) {
-    case "start":
-      return <StartBlock {...props} />;
-    case "takes":
-      return <TakesBlock {...props} />;
-    case "casting":
-      return <CastingBlock {...props} />;
-    case "audio":
-      return <AudioBlock {...props} />;
-    case "cut":
-      return <CutBlock {...props} />;
-    case "lessons":
-      return <LessonsBlock {...props} />;
-    case "venture":
-      return <VentureBlock {...props} />;
-  }
-}
-
-/** `current`: what the concept's present stage asks of the operator. `whole`: the journey down one page. */
-export function Journey({ scope, ...props }: SectionProps & { readonly scope: "current" | "whole" }) {
-  const stage = stageOf(props.entry, props.script);
-  if (scope === "current") {
-    return (
-      <div className={s.journey}>
-        {CURRENT[stage].map((x) => (
-          <SectionOf key={x} section={x} props={props} />
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div className={s.journey}>
-      {WHOLE.map(([section, at]) => {
-        const live = section === "start" ? true : section === "takes" ? stage !== "accepted" : reached(stage, at);
-        return live ? (
-          <SectionOf key={section} section={section} props={props} />
-        ) : (
-          <div key={section} className={s.block} data-reached="no">
-            <CapsHeading text={section === "cut" ? "final cut" : section} variant="section" />
-            <Empty label="not reached yet" />
-          </div>
-        );
-      })}
     </div>
   );
 }

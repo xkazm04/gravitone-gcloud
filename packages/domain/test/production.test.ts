@@ -115,7 +115,7 @@ describe("a casting round's door", () => {
 });
 
 describe("a production's door", () => {
-  const base = { id: "prdn:deep-vault", title: "The Deep Vault", source: { kind: "episode", ref: "chn-heist/ep-14" }, stage: "hero", takes: [], roles: [], startedAt: "2026-11-09", startedBy: "operator" };
+  const base = { id: "prdn:deep-vault", title: "The Deep Vault", source: { kind: "episode", ref: "chn-heist/ep-14" }, stage: "hero", board: { logline: "A vault opens.", aspect: "16:9", panels: [{ id: "panel-1", beat: "the door", prompt: "a door", still: { sha256: "a".repeat(64), bytes: 1, mime: "image/png" } }] }, takes: [], roles: [], startedAt: "2026-11-09", startedBy: "operator" };
   it("reads a started production with its optional keys omitted", () => {
     const r = parseAt("production", productionSchema, base);
     expect(r.ok).toBe(true);

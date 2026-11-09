@@ -39,15 +39,52 @@ sets and event names, so a screen can import them. Records: `Production`, `Produ
 - Event types are the `PRODUCTION_EVENTS` constants. Lessons are `production.lesson-proposed` and
   `production.lesson-accepted`, because `lesson.confirmed` belongs to `lib/sound/lessons.ts`.
 
-Seams for later sessions (stubs with final signatures, every body refuses): `lib/producers/production.ts` (S1),
-`lib/library/characters.ts` (S2), `lib/music/voiceDesign.ts` (S3).
+Stubs still to fill: `lib/library/characters.ts` (S2), `lib/music/voiceDesign.ts` (S3).
 
-## What is scripted so far
+## The record (S1)
 
-`/scout/productions` (a tab of the Scout head) shows three layouts behind one switch: stage board, concept page, and
-graph first. All three read the same slate from `_port/fixture.ts`, which goes through the real door. The fixture control
-reaches loading, empty, failed and refused. Acts on the page live in memory (`_productions/script.ts`) and reset on reload.
+A kernel module, `packages/kernel/src/productions/` (migration `productions` v1): `productions`, `production_takes`.
+A stage is read from this record, never from a night. Each production's concept and frames are captured at Start as
+`board` and held by their bytes in the blob store; later edits to the source cannot move them. Events are
+`PRODUCTION_EVENTS`; a move the machine refuses is refused here with `refusalOfMove`'s sentence, whoever asks.
 
-- No backend, no vendor call, no GPU. Pictures are real renders downscaled into `public/deck-art/productions/`.
+Start, from `lib/producers/production.ts` `startProduction` (only the operator's press reaches it; a Start pressed twice
+is one production). `lib/foundry/scout/concepts.ts` reads what can start:
+
+- a channel episode kept on its night, or `outline-kept` with a kept Codex board. Started (dropped ones too), it stops
+  being due: `episodesDue`, the storyboard door `dueEpisode`, and the taste brief read `@gt/kernel/productions/store`
+  `startedEpisodes` through `lib/foundry/scout/episodeTaken.ts`.
+- a kept Codex board that is not an episode, from `foundry-out/scout-codex/<date>/verdicts.json` joined to `queue.json`.
+- an approved outline, from `foundry-out/scout-outlines/<date>/verdicts.json` (`{items: {<id>: {verdict}}}`, only
+  `approve` offers Start) joined to `outlines.json` and `queue.json`. A folder without that file offers nothing.
+
+Moved stores: `SCOUT_CODEX_DIR`, `SCOUT_OUTLINES_DIR`, else beside a moved `SCOUT_STORE_DIR`.
+
+## Video iterations (S1)
+
+`requestTake` is a receipt, then a confirm, like every launch. It appends a `take-N` (rendering) and enqueues one job,
+`production-take`, on `gpu.local` under the `comfy` engine: `packages/producers/src/production-take/define.ts` (steps)
+and `lib/producers/productionActs.ts` (acts). A dry job is answered by stand-ins and books a would-call; a live one
+renders on `lib/imaging/video/comfyH3.ts`, clips-h3.py's graph and settings.
+
+- `hero`: one clip from the 1-2 frames the operator picks (first-and-last when two). The clip is the take.
+- `rough`: refused until a hero take has landed; one clip per panel, each from its own panel, cut in order with ffmpeg.
+  A clip's failure is that clip's; a rough cut with no clip at all fails the take.
+- Every clip of a take runs on one seed, recorded on the take; takes are appended, never replaced.
+
+Each take records prompt, frames, seed, engine, duration and GPU seconds. Only the operator marks a take proven: an
+agent is refused by the machine. A proven take takes the production to `proven`.
+
+A live render has not been run. It needs the tracked `pipeline/video/h3-fl2v-api.json` on the worker's
+checkout, ComfyUI at `COMFY_URL` with the H3 weights, and about 20 minutes a clip alone on the card.
+
+## The screen
+
+`/scout/productions` is the operator's pick, graph first: columns idea, board, take, stage on the left, the inspector on
+the right. The Scout graph's `NodePanel` links a kept idea or storyboard here (`?from=<ref>`). Later stages (casting,
+audio, final cut, lessons, ventures) stay as a marked, scripted fold on the slate from `_port/fixture.ts` until S2-S6;
+those acts live in memory and reset on reload.
+
 - No fixture audio exists in the repo: each voice preview is a marked silent stub that only records "heard".
-- The Board gate is not wired: "open on Board" is disabled and says so. `serverProductions` has only the fixture side.
+- The Board gate is not wired: "open on Board" is disabled and says so.
+- `GRAVITONE_PRODUCE_SIDE=fixture` shows the scripted slate only and refuses every act.

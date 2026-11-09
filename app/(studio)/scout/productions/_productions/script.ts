@@ -78,7 +78,6 @@ export function scriptReducer(s0: ScriptState, a: ScriptAct): ScriptState {
   }
 }
 
-export const isKept = (e: ProductionEntry, s: ScriptState): boolean => e.keptOnly && s.started[e.production.id] !== true;
 export const stageOf = (e: ProductionEntry, s: ScriptState): ProductionStage => s.stage[e.production.id] ?? e.production.stage;
 
 export const STAGE_ORDER: readonly ProductionStage[] = productionMachine.states.filter((x) => x !== "dropped");

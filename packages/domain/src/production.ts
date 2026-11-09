@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 
+import { blobRefSchema } from "./blob.ts";
 import { VENTURE_ID_RE } from "./genre.ts";
 import {
   CHARACTER_ID_RE,
@@ -88,12 +89,28 @@ export const productionTakeSchema = z.object({
   state: z.enum(TAKE_STATES),
   /** The beats it covers: one or a few for a hero shot, all of them for a rough cut. */
   beats: z.array(text).min(1),
+  /** Panel ids animated, in order: a hero shot's first (and last) frame, or a rough cut's one panel per beat. */
+  frames: z.array(text).min(1),
+  /** The words sent to the engine: one motion line for a hero shot, a rough cut's per-beat lines joined by newlines. */
+  prompt: text,
+  /** The one seed every clip of this take runs on. */
+  seed: z.number().int().nonnegative(),
+  /** The engine that rendered it (a dry take names the engine it stood in for). */
+  engine: text,
   at,
   /** A served address; omitted until the render lands. */
   video: text.optional(),
   poster: text.optional(),
   /** The render's own sentence; only on a failed take. */
   error: text.optional(),
+  /** Seconds of video this take holds; omitted until it lands. */
+  durationS: z.number().nonnegative().optional(),
+  /** Wall seconds its clips held the card, measured around the render; 0 on a dry take; omitted until it lands. */
+  gpuSeconds: z.number().nonnegative().optional(),
+  /** The kernel job that renders it. */
+  jobId: text.optional(),
+  /** Present when a dry stand-in answered: no render ran and there is nothing to watch. */
+  dry: z.literal(true).optional(),
   /** Set by the operator only (OPERATOR_ONLY_STAGES). */
   provenAt: at.optional(),
   provenBy: text.optional(),
@@ -209,11 +226,31 @@ export const productionLessonSchema = z.object({
 });
 export type ProductionLesson = z.output<typeof productionLessonSchema>;
 
+/** One storyboard frame of the concept, held by its bytes at Start so a later change to the source cannot move it. */
+export const productionPanelSchema = z.object({
+  /** `panel-1`, in order. */
+  id: text,
+  /** The beat it draws, in the concept's own words. */
+  beat: text,
+  /** The still's prompt: the default motion line. */
+  prompt: text,
+  still: blobRefSchema,
+});
+export type ProductionPanel = z.output<typeof productionPanelSchema>;
+
+export const PRODUCTION_ASPECTS = ["16:9", "9:16"] as const;
+export type ProductionAspect = (typeof PRODUCTION_ASPECTS)[number];
+
+/** The concept as it stood at Start: its words and frames. Fixed from then on (the kernel record's triggers). */
+export const productionBoardSchema = z.object({ logline: text, aspect: z.enum(PRODUCTION_ASPECTS), panels: z.array(productionPanelSchema).min(1) });
+export type ProductionBoard = z.output<typeof productionBoardSchema>;
+
 export const productionSchema = z.object({
   id: productionIdSchema,
   title: text,
   source: productionSourceSchema,
   stage: productionStageSchema,
+  board: productionBoardSchema,
   takes: z.array(productionTakeSchema),
   roles: z.array(productionRoleSchema),
   audio: productionAudioSchema.optional(),

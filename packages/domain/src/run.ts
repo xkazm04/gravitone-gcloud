@@ -83,6 +83,8 @@ export const PRODUCERS = [
   "yue2-render",
   "yue2-score",
   "yue2-post",
+  // A production's hero shot or rough cut (spark concept-casting-stages S1): H3 clips from its board's frames, on gpu.local.
+  "production-take",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

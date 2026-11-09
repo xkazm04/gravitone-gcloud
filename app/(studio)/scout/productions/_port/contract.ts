@@ -1,7 +1,17 @@
-// THE PRODUCTIONS SCREEN'S VIEW - client-safe (types only). S0 is three layouts on scripted data: the operator picks
-// one, and later sessions swap the scripted side for the production record without changing this shape.
+// THE PRODUCTIONS SCREEN'S VIEW - client-safe (types only). The real side reads the kernel's production record
+// (./real.ts); the fixture side (GRAVITONE_PRODUCE_SIDE=fixture) is the scripted slate. The later stages (casting, audio,
+// cut, lessons, ventures) are scripted panels on both sides until S2-S6: `scripted` is what they draw.
 
-import type { CastRound, Production, ProductionLesson } from "@gt/domain/production";
+import type { ReceiptMode, Receipt } from "@gt/domain/produce";
+import type { CastRound, Production, ProductionId, ProductionLesson, ProductionSource, ProductionStage, TakeKind } from "@gt/domain/production";
+
+import type { ActionResult } from "../../../../_server/actionCore.ts";
+
+/** A board frame, served: `id` is the panel a hero take is asked to animate. */
+export type ProductionFrame = { readonly id: string; readonly beat: string; readonly prompt: string; readonly src: string };
+
+/** How far a rendering take's job got; absent when no job can be read. */
+export type TakeProgress = { readonly jobState: string; readonly done: number; readonly total: number; readonly step?: string };
 
 /** A concept and everything already decided for it. */
 export type ProductionEntry = {
@@ -9,15 +19,42 @@ export type ProductionEntry = {
   readonly logline: string;
   /** A served picture; omitted when the concept has none yet. */
   readonly poster?: string;
-  /** True while it is a kept concept nobody started: it shows a Start button, and its production is scripted ahead. */
-  readonly keptOnly: boolean;
+  readonly frames: readonly ProductionFrame[];
+  readonly progress: Readonly<Record<string, TakeProgress>>;
   readonly rounds: readonly CastRound[];
   readonly lessons: readonly ProductionLesson[];
+};
+
+/** A concept that is kept and that nobody started: it has a Start button and no record yet. */
+export type KeptConcept = {
+  readonly source: ProductionSource;
+  readonly title: string;
+  readonly logline: string;
+  readonly beats: readonly string[];
+  /** Every ref a Scout graph node may name this concept by (`?from=` lands here). */
+  readonly matches: readonly string[];
 };
 
 export type VentureOption = { readonly id: string; readonly name: string };
 
 export type ProductionsView = {
   readonly entries: readonly ProductionEntry[];
+  readonly kept: readonly KeptConcept[];
   readonly ventures: readonly VentureOption[];
+  /** The scripted entry the later-stage panels draw; absent only if the fixture has none. */
+  readonly scripted?: ProductionEntry;
+};
+
+export type TakeRequestInput = { readonly id: ProductionId; readonly kind: TakeKind; readonly frames: readonly string[]; readonly prompt?: string; readonly mode: ReceiptMode; readonly token?: string };
+
+/** A launch's answer: the receipt to confirm, a fresher one, or the take it started, always with the view rebuilt. */
+export type TakeLaunchView = { readonly view: ProductionsView; readonly launch: { readonly kind: "receipt" | "stale"; readonly receipt: Receipt } | { readonly kind: "launched"; readonly jobId: string; readonly takeId: string } };
+
+export type ProductionsPort = {
+  readonly start: (input: { readonly source: ProductionSource }) => Promise<ActionResult<ProductionsView>>;
+  readonly launch: (input: TakeRequestInput) => Promise<ActionResult<TakeLaunchView>>;
+  readonly proven: (input: { readonly id: ProductionId; readonly takeId: string }) => Promise<ActionResult<ProductionsView>>;
+  readonly drop: (input: { readonly id: ProductionId }) => Promise<ActionResult<ProductionsView>>;
+  readonly move: (input: { readonly id: ProductionId; readonly to: ProductionStage }) => Promise<ActionResult<ProductionsView>>;
+  readonly refresh: () => Promise<ActionResult<ProductionsView>>;
 };

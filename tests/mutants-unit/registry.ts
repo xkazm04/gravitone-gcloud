@@ -1304,6 +1304,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "A piece re-renders every clip of its trial, kept ones too: GPU minutes spent re-making what the operator already kept.",
   },
   {
+    id: "production-take-plan-cut-on-hero",
+    test: "packages/producers/test/production-take-define.test.ts",
+    file: "packages/producers/src/production-take/define.ts",
+    find: "const cut: MissingStep[] = req.kind === \"rough\" ?",
+    replace: "const cut: MissingStep[] = req.kind !== \"never\" ?",
+    why: "A hero take gets a cut step: a single clip is sent through ffmpeg it does not need and its video never lands as the take.",
+  },
+  {
+    id: "production-operator-only-start",
+    test: "packages/kernel/test/productions.test.ts",
+    file: "packages/kernel/src/productions/store.ts",
+    find: "if (actor.kind !== \"operator\") throw new AppError(\"refused\", `production: only the operator starts",
+    replace: "if (actor.kind === \"machine\") throw new AppError(\"refused\", `production: only the operator starts",
+    why: "An agent can start a production: nothing starts itself stops being true.",
+  },
+  {
     id: "trial-plan-clips-before-panels",
     test: "packages/producers/test/scout-piece-define.test.ts",
     file: "packages/producers/src/scout-storyboard/define.ts",

@@ -19,6 +19,7 @@ import { outPath } from "../../fixtures/roots";
 import { readJson, writeJsonAtomic } from "../runStore";
 import { withRunLock } from "../verdictLog";
 import { Refusal } from "./acts";
+import { takenEpisodes } from "./episodeTaken";
 import type { EpisodeVerdict, VerdictedEpisode } from "./episodeVerdict";
 import { LOOK_MAX, type LookedChannel } from "./channelLook";
 import { CANDIDATE_ID_RE, NIGHT_ID_RE } from "./types";
@@ -200,10 +201,11 @@ export async function episodeOf(id: string): Promise<{ readonly channel: Channel
 /** Import order: the time it landed, then its id (one import lands a channel's episodes at one instant). */
 const byImport = (a: VerdictedEpisode, b: VerdictedEpisode): number => (a.at < b.at ? -1 : a.at > b.at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-/** Episodes whose outline is kept and that no night has taken, oldest import first, per channel. */
+/** Episodes whose outline is kept and that neither a night nor a production has taken, oldest import first, per channel. */
 export async function episodesDue(): Promise<readonly { readonly channel: Channel; readonly episodes: readonly Episode[] }[]> {
+  const started = await takenEpisodes();
   return (await readChannels())
-    .map((f) => ({ channel: f.channel, episodes: f.episodes.filter((e) => e.state === "outline-kept").sort(byImport) }))
+    .map((f) => ({ channel: f.channel, episodes: f.episodes.filter((e) => e.state === "outline-kept" && !started.has(e.id)).sort(byImport) }))
     .filter((d) => d.episodes.length > 0);
 }
 

@@ -40,6 +40,7 @@ import { scoutSheetProducer } from "./scoutSheet.ts";
 import { coverProducer } from "./cover.ts";
 import { coverBriefProducer } from "./coverBrief.ts";
 import { SCOUT_STORYBOARD_LANES, scoutStoryboardProducer } from "./scoutStoryboard.ts";
+import { productionTakeProducer } from "./production.ts";
 import { yue2PostProducer, yue2RenderProducer, yue2ScoreProducer } from "./yue2.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
@@ -171,6 +172,8 @@ export const BOUND: readonly Bound[] = [
   { name: "yue2-render", producer: yue2RenderProducer() },
   { name: "yue2-score", producer: yue2ScoreProducer() },
   { name: "yue2-post", producer: yue2PostProducer() },
+  // A production's take (spark concept-casting-stages S1): H3 clips from its board's frames, one job per take on gpu.local (engine comfy).
+  { name: "production-take", producer: productionTakeProducer() },
   ...stepsBound(),
 ];
 
