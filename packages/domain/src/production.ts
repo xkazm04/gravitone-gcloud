@@ -13,6 +13,7 @@ import { z } from "zod";
 import { blobRefSchema } from "./blob.ts";
 import { VENTURE_ID_RE } from "./genre.ts";
 import {
+  CHARACTER_AUDIENCES,
   CHARACTER_ID_RE,
   CHARACTER_ORIGINS,
   CREDIT_READS,
@@ -32,6 +33,7 @@ import {
 } from "./production.machine.ts";
 
 export {
+  CHARACTER_AUDIENCES,
   CHARACTER_ID_RE,
   CHARACTER_ORIGINS,
   CREDIT_READS,
@@ -52,6 +54,7 @@ export {
   productionMachine,
   refusalOfMove,
   voicePickRefusal,
+  type CharacterAudience,
   type CharacterOrigin,
   type CreditRead,
   type CutFormat,
@@ -191,6 +194,14 @@ export const characterRecordSchema = z.object({
   images: z.array(text),
   /** The vendor voice it was cast with; omitted until it has one. */
   voiceId: text.optional(),
+  /** The kept reference sheet's address, one of `images`; omitted until there is one. */
+  sheet: text.optional(),
+  /** Who it is for, from a Scout card. Absent reads adult. A kids or family character is never cast into adult work. */
+  audience: z.enum(CHARACTER_AUDIENCES).optional(),
+  /** What the source held beyond the card (a muse-army card's hair, wardrobe, role, rating): searched, never identity. */
+  slots: z.record(text, text).optional(),
+  /** Present when the Library shows it: every import, or the operator's save. Absent, it lives only in its production. */
+  savedToLibrary: z.literal(true).optional(),
   createdAt: at,
 });
 export type CharacterRecord = z.output<typeof characterRecordSchema>;

@@ -85,6 +85,7 @@ export function gotoFor(group: string, role: string, kind: LibraryKindName): Lib
 
 function refOf(n: Node, kind: LibraryKindName, m: Media): LineageRef {
   if (n.ref.kind === "self") return { kind: "text", label: n.label };
+  if (n.href !== undefined) return { kind: "link", href: n.href, label: n.label };
   if (n.itemId !== undefined) return { kind: "item", id: n.itemId, label: n.label, itemKind: n.ref.kind === "style" ? "style" : kind };
   if (n.facet !== undefined) {
     const goto = gotoFor(n.facet.group, n.role, kind);

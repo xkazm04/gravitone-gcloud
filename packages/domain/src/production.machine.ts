@@ -70,6 +70,10 @@ export type CutState = (typeof CUT_STATES)[number];
 export const CHARACTER_ORIGINS = ["scout-character", "muse-army", "codex-kept", "casting-new"] as const;
 export type CharacterOrigin = (typeof CHARACTER_ORIGINS)[number];
 
+/** Who a character is for, as a Scout card says it. Absent reads adult. */
+export const CHARACTER_AUDIENCES = ["kids", "family", "adult"] as const;
+export type CharacterAudience = (typeof CHARACTER_AUDIENCES)[number];
+
 export const LESSON_DIMENSIONS = ["beats", "art-style", "technique"] as const;
 export type LessonDimension = (typeof LESSON_DIMENSIONS)[number];
 export const LESSON_STATES = ["proposed", "accepted"] as const;
@@ -91,6 +95,9 @@ export const PRODUCTION_EVENTS = {
   proven: "production.proven",
   castRound: "cast.round",
   castPicked: "cast.picked",
+  characterAdded: "character.added",
+  characterUpdated: "character.updated",
+  characterSaved: "character.saved",
   characterUsed: "character.used",
   lessonProposed: "production.lesson-proposed",
   lessonAccepted: "production.lesson-accepted",

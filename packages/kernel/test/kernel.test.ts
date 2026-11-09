@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
+import { characterMigrations } from "../src/characters/schema.ts";
 import { eventsMigrations } from "../src/events.ts";
 import { ingestMigrations } from "../src/ingest.ts";
 import { kernelModules, openKernel, orderModules } from "../src/kernel.ts";
@@ -68,7 +69,7 @@ describe("openKernel", () => {
   });
 
   it("a fresh store reaches the union of every per-module fixture's schema, and nothing else", () => {
-    const fixtures: readonly (readonly ModuleMigrations[])[] = [JOB_FIXTURE, DECISION_FIXTURE, [eventsMigrations, productionMigrations, ingestMigrations, receiptsMigrations, spendMigrations, tokenMigrations, recordsMigrations, partsMigrations, stylesMigrations, libraryMigrations, slotsMigrations, resourcesMigrations, loadMigrations, spendRequestMigrations, ventureMigrations]];
+    const fixtures: readonly (readonly ModuleMigrations[])[] = [JOB_FIXTURE, DECISION_FIXTURE, [eventsMigrations, productionMigrations, characterMigrations, ingestMigrations, receiptsMigrations, spendMigrations, tokenMigrations, recordsMigrations, partsMigrations, stylesMigrations, libraryMigrations, slotsMigrations, resourcesMigrations, loadMigrations, spendRequestMigrations, ventureMigrations]];
     const union = new Set<string>();
     for (const mods of fixtures) {
       const s = must(openStore(file()));

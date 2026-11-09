@@ -1,5 +1,6 @@
 import { err, ok, type Result } from "@gt/domain/errors";
 import { calibrationMigrations } from "./calibration/series.ts";
+import { characterMigrations } from "./characters/schema.ts";
 import { decisionMigrations } from "./decision/schema.ts";
 import { eventsMigrations } from "./events.ts";
 import { ingestMigrations } from "./ingest.ts";
@@ -71,6 +72,8 @@ const DECLARED: readonly Entry[] = [
   { migrations: ventureMigrations, after: ["events"] },
   // Kept concepts started as productions and their takes (spark concept-casting-stages S1); `production.*` events in the same transactions.
   { migrations: productionMigrations, after: ["events"] },
+  // The character records and their source keys (S2); a use is a `character.used` event naming a production.
+  { migrations: characterMigrations, after: ["events", "productions"] },
 ];
 
 /** The pure check: `entries` in an order where every module follows what it names. */

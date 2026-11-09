@@ -39,7 +39,7 @@ sets and event names, so a screen can import them. Records: `Production`, `Produ
 - Event types are the `PRODUCTION_EVENTS` constants. Lessons are `production.lesson-proposed` and
   `production.lesson-accepted`, because `lesson.confirmed` belongs to `lib/sound/lessons.ts`.
 
-Stubs still to fill: `lib/library/characters.ts` (S2), `lib/music/voiceDesign.ts` (S3).
+Stubs still to fill: `lib/music/voiceDesign.ts` (S3).
 
 ## The record (S1)
 
@@ -59,6 +59,37 @@ is one production). `lib/foundry/scout/concepts.ts` reads what can start:
   `approve` offers Start) joined to `outlines.json` and `queue.json`. A folder without that file offers nothing.
 
 Moved stores: `SCOUT_CODEX_DIR`, `SCOUT_OUTLINES_DIR`, else beside a moved `SCOUT_STORE_DIR`.
+
+## The character record (S2)
+
+A kernel module, `packages/kernel/src/characters/` (migration `characters` v1): `characters`, `character_sources`. Each
+character has a stable `chr:<ulid>` id; name is not identity, and two may share one. A character is never deleted.
+
+The importers are `lib/library/characterPools.ts` (reading) and `lib/library/characters.ts` `importCharacters` (writing),
+run with `node pipeline/characters-import.mts` (`--dry-run`; `--store <file>` or `--real`; `--pool`). Three pools, each row
+with a stable source key:
+
+- `scout-character`, the kept Scout characters through `keptCharacters`, keyed by folded name.
+- `muse-army`, the structured cards in `muse-army/*/ratings.json` with their image.
+- `codex-kept`, the `keep` sets in `scout-codex/<date>/t6/char-*`, joined to `verdicts.json` and, where `char-` stripped matches,
+  to its muse-army card. That join is one person: a kept set and its muse-army card are one record, whichever pool
+  imported first, and the set's pictures win. A rejected set is not imported.
+
+`parody-cast` is refused by name in code (`refusalOfPool`): its references are fan-site images. Importing a pool twice
+changes nothing; an edited source updates its record by its key, keeping the id. Pictures are held by their bytes in
+the blob store. Every import, and every operator save (`saveCharacterToLibrary`, `saveCastCharacter`), sets
+`savedToLibrary`. A `createCastCharacter` character lives only in its production until saved.
+
+Search is `matchCharacters`: text scoring over card and slots with field weights and rarity, in a scorer of its own
+(`packages/kernel/src/characters/match.ts`) rather than the Library's FTS, which ANDs prefixes over facets and cannot say
+why a word hit. Each match names the fields its words hit. A character the operator rated `no` still matches, after all
+others.
+
+`recordCharacterUse` appends one `character.used` event per character and production; `usedBy` reads them, so a use outlives
+the Library's pruning. The character feed shelves every saved record as `character:<chr id>`; a record imported from a
+kept Scout character stays that night's Library item and takes its used-by. A used-by line links to
+`/scout/productions?from=<id>`. Night casting (`castStillOf`, `keptCharacters`) is untouched: a new record is castable only
+through a production's round (S4).
 
 ## Video iterations (S1)
 

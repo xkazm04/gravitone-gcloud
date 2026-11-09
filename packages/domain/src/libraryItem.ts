@@ -123,8 +123,10 @@ export const rightsSchema = z.object({
  *  the parent may later be gone; the Library shows that as a broken link, never
  *  as an item with no past. */
 export const lineageSchema = z.object({
-  kind: z.enum(["library-item", "run", "job", "candidate", "style", "project"]),
+  kind: z.enum(["library-item", "run", "job", "candidate", "style", "project", "production"]),
   id: word,
+  /** What to call it where the index cannot resolve the pointer (a production's title). */
+  label: word.optional(),
 });
 
 const shared = {
