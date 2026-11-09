@@ -45,7 +45,7 @@ import { checkSeedBatch, seedFacets } from "../../lib/foundry/scout/seeds.ts";
 import { mutateNight, readNight } from "../../lib/foundry/scout/store.ts";
 import type { Candidate, IdeaCandidate, Night, Seed, SeedBatch } from "../../lib/foundry/scout/types.ts";
 import { __resetBudget } from "../../lib/imaging/budget.ts";
-import { FAKE_LEONARDO_STUDIO, resetFakeLeonardoStudio } from "../../lib/imaging/providers/leonardoStudio.ts";
+import { resetFakeLeonardoStudio } from "../../lib/imaging/providers/leonardoStudio.ts";
 import { fakeCodexIdeas } from "./fake-codex-ideas.ts";
 import type { GenerateRequest, Recognition, RecognizeRequest } from "../../lib/imaging/types.ts";
 
