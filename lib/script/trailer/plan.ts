@@ -48,7 +48,7 @@ const PATCH_PROPERTIES = {
 } as const;
 
 /** The fields a patch may carry, as runtime data — the schema's own keys. */
-export const PATCHABLE_FIELDS = Object.keys(PATCH_PROPERTIES) as (keyof typeof PATCH_PROPERTIES)[];
+const PATCHABLE_FIELDS = Object.keys(PATCH_PROPERTIES) as (keyof typeof PATCH_PROPERTIES)[];
 
 type Prop = { readonly type: "string" | "array"; readonly enum?: readonly string[]; readonly items?: Prop };
 

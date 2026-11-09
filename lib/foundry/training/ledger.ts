@@ -11,7 +11,7 @@ import { FoundryError } from "../runStore";
 import type { Improvement, TrainingLedgerRow, TrainingLedgerRowV2, TrainingPin } from "./types";
 
 /** Ledger `thumb` paths are repo-relative with forward slashes on every OS. */
-export const THUMBS_REL = "pipeline/foundry/training/thumbs";
+const THUMBS_REL = "pipeline/foundry/training/thumbs";
 
 /** The picture an approved improvement keeps in git: `src` cycle-relative, `name` in the thumbs
  *  dir, `rel` as the ledger records it. The loop names the chosen arm's FILE as the thumbnail

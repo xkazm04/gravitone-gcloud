@@ -454,6 +454,11 @@ jobs:
       - name: install chromium
         run: npx playwright install --with-deps chromium
 
+      # tests/live/style-exit.live.spec.ts cuts its plates with ffmpeg; a bare
+      # runner has none, and the spec died on `spawnSync ffmpeg ENOENT`.
+      - name: ffmpeg for the style plates
+        run: command -v ffprobe >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg)
+
       # BLOCKING. Starts `next dev` on port 3187 (NOT 3000), waits for it,
       # drives the golden path, and stops the process it started — see
       # playwright.live.config.ts, which owns the launcher and states why the
@@ -483,20 +488,38 @@ jobs:
       # shelf never renders). So the lane is two invocations of the same config,
       # split by file: the store-reading specs with the fixture env, everything
       # else - including any spec added later - without it.
+      #
+      # THE REPORT SURVIVES A CANCEL. Each step tees its reporter into a file
+      # beside the traces, a line per test as it happens, so a run cut off at
+      # the job's limit still says how far it got. `shell: bash` is what turns
+      # on pipefail: without it the step's exit code would be tee's, and a red
+      # lane would read green. Each step has its own --output because Playwright
+      # empties its output directory on start, and the second step would erase
+      # the first one's traces.
       - name: live (golden path, real browser)
-        run: npm run test:live -- "tests/live/(?!(board|floor|ledger|runs)\.live)"
+        shell: bash
+        run: |
+          mkdir -p test-results
+          npm run test:live -- "tests/live/(?!(board|floor|ledger|runs)\.live)" --output=test-results/golden 2>&1 | tee test-results/live-golden.log
 
+      # Runs when the first step failed: the two halves report separately, and
+      # a finding in one must not cost the verdict of the other.
       - name: live (the Floor, Board, Ledger and Runs over the fixture store)
-        run: npm run test:live -- "tests/live/(board|floor|ledger|runs)\.live"
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          mkdir -p test-results
+          npm run test:live -- "tests/live/(board|floor|ledger|runs)\.live" --output=test-results/fixture 2>&1 | tee test-results/live-fixture.log
         env:
           GRAVITONE_STORE_PATH: ${{ runner.temp }}/ledger.sqlite
           NEXT_PUBLIC_GRAVITONE_DATA: fixtures
 
-      # The traces and screenshots the lane keeps ONLY for failures. Uploaded
-      # only when something failed, because a slow lane whose failures cannot be
-      # diagnosed without re-running it is a lane people learn to re-run.
+      # The traces and screenshots the lane keeps ONLY for failures, and the two
+      # reports. Uploaded when something failed or the job was cancelled, because
+      # a slow lane whose failures cannot be diagnosed without re-running it is a
+      # lane people learn to re-run.
       - name: failure artifacts
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: live-lane-traces

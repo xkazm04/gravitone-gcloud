@@ -51,7 +51,7 @@ export function corpusPaths(root: string): string[] {
  * "facts[3].sources is empty" and "facts[7].sources is empty" count as one rule.
  * Graph findings already lead with their `[kind]`.
  */
-export function ruleOf(finding: string): string {
+function ruleOf(finding: string): string {
   const graph = /^\[([a-z-]+)\]/.exec(finding);
   if (graph) return `graph:${graph[1]}`;
   return finding

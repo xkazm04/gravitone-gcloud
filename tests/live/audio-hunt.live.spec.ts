@@ -26,6 +26,8 @@ import { DatabaseSync } from "node:sqlite";
 
 import { expect, test, type Page } from "@playwright/test";
 
+import { hydrated } from "./_control.ts";
+
 const ROOT = process.cwd();
 const PORT = Number(process.env["AUDIO_HUNT_PORT"] ?? 3253);
 const DIST = process.env["AUDIO_HUNT_DIST"] ?? ".next-l65";
@@ -169,7 +171,9 @@ test("the shelf draws past hunts as mini-maps; ?h= opens one whole, a failure in
 test("an idea drafts a map through the text engine, and the URL opens it", async ({ page }) => {
   const before = hunts().length;
   await page.goto("/audio?s=hunt");
-  await page.getByRole("textbox", { name: "music hunt idea" }).fill("a calm bed under a two-minute product walkthrough");
+  const box = page.getByRole("textbox", { name: "music hunt idea" });
+  await hydrated(box, "the hunt idea box");
+  await box.fill("a calm bed under a two-minute product walkthrough");
   await page.getByRole("button", { name: "Draft the map" }).click();
   await expect(page).toHaveURL(/h=hn-/);
   drafted = new URL(page.url()).searchParams.get("h") ?? "";

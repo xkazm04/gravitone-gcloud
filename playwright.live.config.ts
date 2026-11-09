@@ -109,6 +109,11 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",
+    // A control that never becomes actionable ends here, with Playwright's own log of why ("element
+    // is not enabled"). With no limit a click waits out the whole test: two tests cost the lane 8 of
+    // its 20 minutes that way (run 42668461318). Navigation stays on the test's limit, because a
+    // cold `next dev` compile is legitimately slow.
+    actionTimeout: 30_000,
   },
 
   // ── THE LAUNCHER ──────────────────────────────────────────────────────────

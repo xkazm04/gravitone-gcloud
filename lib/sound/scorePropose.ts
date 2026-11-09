@@ -32,11 +32,11 @@ export type ReasonFn = (req: TextRequest) => Promise<TextResult>;
 export const SCORE_PROPOSE_TURN: TurnClass = "sound-hunt";
 export const PROMPT_FILE = path.join("pipeline", "SCORE-PROMPT.md");
 export const SCORE_DOOR = "score spec";
-export const BRIEF_MAX = 400;
+const BRIEF_MAX = 400;
 
 export const READY_INSTRUMENT_IDS: readonly string[] = INSTRUMENT_CATALOG.filter((i) => i.audition.status === "ready").map((i) => i.id);
 
-export const SCORE_SCHEMA: Record<string, unknown> = {
+const SCORE_SCHEMA: Record<string, unknown> = {
   type: "object",
   required: ["v", "title", "seed", "tempoBpm", "key", "controls", "sections", "tracks"],
   properties: {
