@@ -16,7 +16,7 @@ across pages lives in `tokens.css` and `shell.js`, so that is where the kit come
 | `StackBar` | `.stackbar`, GT.StackBar | F L | kept/rejected/undecided; whole-hatched when untouched |
 | `PipRow` | `.piprow .pip.*`, GT.PipRow | F P | pip per Look; capacity (`max`) as bare pips |
 | `Hint`, `Tip` | `.hint`, GT.Hint | F L | Hint: one "?" glyph, text capped at 12 words by type. Tip (2026-10-23): the same `tooltip` layer opened by the control itself, its id handed to the trigger's aria-describedby; a bold `term` for a bare trigger (a key cap); `above` at a desk foot; `seededOpen` for /kit. Its text is data (a reject reason's meaning, @gt/domain/source `REASON_MEANING`), held to 12 words by the domain test |
-| `Keycap`, `Keycaps` | `.keycap`, `.keymap`, GT.Keycaps, every hand-typed `<kbd>` | F P L G | md/sm cap; legend per keymap mode + facts/field; `tips` by row and cap: a cap that stands for something (a reason key) takes focus and opens its `Tip` |
+| `Keycap`, `Keycaps`, `CapText` | `.keycap`, `.keymap`, GT.Keycaps, every hand-typed `<kbd>` | F P L G | md/sm cap; legend per keymap mode + facts/field; `tips` by row and cap: a cap that stands for something (a reason key) takes focus and opens its `Tip`; a cap's text in the platform's modifier (`CapText`: `⌘K` on a Mac, `Ctrl+K` elsewhere, the server and the first client render as declared) |
 | `SourceTag` | `.src.*`, GT.Src | P L G | real, illustrative, model, fixture, derived, session; `value` (the figure it qualifies: `model $417`) |
 | `LedgerLink` | `.ledger-link`, GT.LedgerLink | F P L | one |
 | `ErrorLine` | `.err` (+ I.warn) | F P L G | static / live (role=alert) |

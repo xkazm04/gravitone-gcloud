@@ -2,7 +2,7 @@
    .weir-title, [data-component=RunTrack], [data-component=WeirCell], .piles, .weir-empty,
    .fold-row. The Floor fills the studio frame under the header; each cell scrolls in itself. */
 .floor{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) var(--cal-w)}
-.lanes{--rows:1fr 1fr 1fr 1fr;display:grid;grid-template-rows:var(--head-h) var(--rows) auto;min-height:0;position:relative;transition:grid-template-rows .4s var(--ease)}
+.lanes{--rows:1fr 1fr 1fr 1fr;display:grid;grid-template-rows:var(--head-h) var(--rows) auto;min-height:0;position:relative;transition:grid-template-rows var(--dur) var(--ease)}
 @media (prefers-reduced-motion:reduce){.lanes{transition:none}}
 
 .colheads{display:grid;grid-template-columns:var(--cols);min-height:0}

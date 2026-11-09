@@ -3,7 +3,9 @@
 // newest items that have a picture, and the keys. Every number is the server's, for the whole
 // result - not for the rows this browser happens to hold (a 50,000-item result is never here).
 
+import { tokens } from "../../tokens.ts";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import { Keycaps } from "../keycaps/Keycaps.tsx";
 import { StatusPill } from "../status/StatusPill.tsx";
 import { vars } from "../vars.ts";
@@ -11,6 +13,8 @@ import { DetailSection } from "./DetailPanel.tsx";
 import { STATE_ORDER, count, type LibraryState } from "./library.ts";
 import { KINDS, LibraryGlyph, kindLabel, type KindId } from "./LibraryGlyph.tsx";
 import s from "./SetSummary.module.css";
+
+const NEWEST = Number.parseInt(tokens["w-lib-tile-s"], 10);
 
 export type SetSummaryProps = {
   readonly total: number;
@@ -69,8 +73,8 @@ export function SetSummary(p: SetSummaryProps) {
           <div className={s.recent}>
             {p.newest.map((r) => (
               <button key={r.id} type="button" aria-label={r.title} onClick={() => p.onItem(r.id)}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- a library item is shown as its own bytes (Face.tsx) */}
-                <img src={r.url} alt="" loading="lazy" />
+                {/* A grid-size variant: the newest strip is three thumbs across the detail (desk/Plate.tsx). */}
+                <Plate className={s.newest} src={r.url} alt="" lazy width={NEWEST} />
               </button>
             ))}
           </div>

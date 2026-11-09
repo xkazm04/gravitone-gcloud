@@ -63,7 +63,7 @@ export function ShelfStyle({ name, href, plate }: { readonly name: string; reado
   const body = (
     <>
       {plate === undefined ? (
-        <span className={cx(s.hero, s.noHero)} aria-hidden="true" />
+        <span className={cx(s.hero, s.noHero)} role="img" aria-label="no cover plate" />
       ) : (
         // A grid-size variant: the tile is a shelf's thumb (the browser measures it, `sizes="auto"`).
         <Plate className={s.hero} src={plate} alt={name} lazy width={SHELF_TILE} aspect={16 / 10} />

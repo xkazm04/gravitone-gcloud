@@ -14,7 +14,7 @@
 .tabs{padding:var(--sp-loose) var(--sp-6) 0}
 
 /* the run card: picture edge to edge, label and pips laid over its foot */
-.card{position:relative;display:block;width:100%;aspect-ratio:1/1;padding:0;border-radius:var(--r-tile);overflow:hidden;background:var(--ink-3);border:var(--stroke-mark) solid transparent;text-align:left;transition:border-color .18s,box-shadow .18s}
+.card{position:relative;display:block;width:100%;aspect-ratio:1/1;padding:0;border-radius:var(--r-tile);overflow:hidden;background:var(--ink-3);border:var(--stroke-mark) solid transparent;text-align:left;transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
 .cardWide{aspect-ratio:16/9}
 .face{display:block;width:100%;height:100%;object-fit:cover;background:var(--ink-2)}
 .faceText{display:block;overflow:hidden;height:100%;padding:var(--sp-5) var(--sp-5) calc(var(--size-badge) + var(--sp-5))}

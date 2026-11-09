@@ -18,7 +18,7 @@ import { Dock } from "@gt/ui/components/dock/Dock.tsx";
 import { useMix } from "@gt/ui/components/audio/useMix.ts";
 
 import { answers, NO_ANSWER, OFFLINE_LINE, openingCursor, replyCursor, THINK_MS, visibleTurn } from "./conversation.ts";
-import { dockStateOf, NOBODY_LINE, WAITING_LINE } from "./live.ts";
+import { dockStateOf, WAITING_LINE } from "./live.ts";
 import { soundOf } from "./press.ts";
 import { newestVersion, sunoVersions } from "./suno.ts";
 import { askOf, keptMix, mixChanges, mixText, newestStems, newTurnId, userTurn, type UserAsk } from "./turns.ts";
@@ -232,7 +232,9 @@ function Stage({ session, offline, presence, renders, source, talk, suno }: Room
 
   const state = dockStateOf(offline, talk.thinking, source === "fixture" ? "listening" : presence);
   const waiting = source === "live" && !offline && presence === "nobody";
-  const notice = talk.notice ?? (waiting ? (talk.thinking ? WAITING_LINE : NOBODY_LINE) : null);
+  // Nobody listening is the dock's pill (and its disclosure names /studio-agent); a message sent
+  // into that silence is the one state the pill cannot say - it reads "thinking" - so it gets a line.
+  const notice = talk.notice ?? (waiting && talk.thinking ? WAITING_LINE : null);
   const sunoHost = useMemo<SunoHost>(() => {
     const { upload, ...rest } = suno;
     return {

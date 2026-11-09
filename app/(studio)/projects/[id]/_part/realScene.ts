@@ -110,8 +110,10 @@ export function viewOf(r: Reader, s: Scene): PartView {
     },
     // A gate's packet and a slot's slot ride on its tab, read by the plan (gateFacts), so the walk's
     // "next" opens what exists (../../_plan/doors.ts nextDoor) - only what exists is set.
+    // The plan read names a gate by its verdict mode (`◆ matrix-cull`); a tab names the part it
+    // judges, as the fixture side does (`verdict · frames`): the walk is read by part, not by mode.
     tabs: s.read.plan.parts.map((p) => ({
-      ...refOf(id, p),
+      ...refOf(id, p.kind === "gate" && "judges" in p && typeof p.judges === "string" ? { ...p, label: `verdict · ${byId.get(p.judges)?.kind ?? p.label}` } : p),
       editor: isEditorKind(p.kind),
       verdict: isEditorKind(p.kind) ? verdictOf(s, p.kind).state : null,
       ...("packetId" in p && p.packetId !== undefined ? { packetId: p.packetId } : {}),

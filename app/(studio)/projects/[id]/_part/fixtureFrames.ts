@@ -241,7 +241,10 @@ function acts(ctx: KCtx, r: FramesRec): PartActView[] {
   const owed = units.filter(owes).length;
   const out: PartActView[] = [];
   if (chainOf(ctx)?.lane === "explainer") out.push({ act: "direct-cut", label: "direct the cut", needs: units.length === 0 ? ["units"] : [] });
-  out.push({ act: "render-plates", label: owed === 0 ? "render plates" : `render ${owed} plates`, needs: units.length === 0 ? ["units"] : owed === 0 ? ["a plate to render"] : [] });
+  // Every plate composed is the part done, not an act waiting on a need: nothing is owed, so the
+  // header offers no render (one plate is re-rendered from its own row: render-plate, alternative).
+  if (units.length === 0) out.push({ act: "render-plates", label: "render plates", needs: ["units"] });
+  else if (owed > 0) out.push({ act: "render-plates", label: `render ${owed} plates`, needs: [] });
   return out;
 }
 

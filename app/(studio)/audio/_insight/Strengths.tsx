@@ -78,7 +78,7 @@ function Detail({ cell, view, door }: { readonly cell: StrengthCell; readonly vi
             <>
               <textarea className={s.claim} aria-label="lesson claim" rows={4} value={claim} disabled={signed} onChange={(e) => setClaim(e.currentTarget.value)} />
               {error !== null && <ErrorLine message={error} live />}
-              <Button label={signed ? "Signed" : "Sign lesson"} tone="emerald" disabled={busy || signed || claim.trim() === ""} onPress={() => void sign()} />
+              <Button label={signed ? "Signed" : "Sign lesson"} tone="emerald" disabled={signed || claim.trim() === ""} pending={busy} onPress={() => void sign()} />
             </>
           ) : (
             <Ghost count={2} label={`${cell.n} of ${MIN_N} judged takes; no lesson until the floor`} />

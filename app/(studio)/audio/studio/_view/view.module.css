@@ -27,7 +27,6 @@
 .noteList{margin:0;padding-left:var(--sp-6);display:grid;gap:var(--sp-1)}
 .broken{margin:0;padding:var(--sp-3) var(--sp-4);font:500 var(--fs-meta)/1.4 var(--sans);color:var(--error-text);background:var(--rose-a);border-radius:var(--r-sm)}
 .working{margin:0;font:500 var(--fs-ui)/1.4 var(--sans);color:var(--muted)}
-.quiet{margin:0;font:400 var(--fs-meta)/1.4 var(--sans);color:var(--muted)}
 .skeleton{display:grid;gap:var(--sp-3)}
 .skeleton span{display:block;height:var(--h-row);border-radius:var(--r-sm);background:var(--wash-hi);animation:breathe 1.2s ease-in-out infinite}
 .skeleton span:first-child{height:var(--h-strip)}

@@ -17,6 +17,7 @@ import { useKeys } from "../../keymap/dispatch.ts";
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
+import { Clip } from "../desk/Clip.tsx";
 import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { Keycaps } from "../keycaps/Keycaps.tsx";
@@ -142,7 +143,7 @@ export function CutReview({ packet, decide, onCommit, busy = false, announce = (
       <div className={s.cut} data-component="CutReview">
         <div>
           <div className={s.player}>
-            {cut !== undefined && <video ref={player} className={s.video} src={cut.video} poster={cut.poster} controls playsInline preload="metadata" onLoadedMetadata={() => seekTo(player.current, beats[focus])} />}
+            {cut !== undefined && <Clip ref={player} className={s.video} src={cut.video} poster={cut.poster} label="" controls onLoadedMetadata={(el) => seekTo(el, beats[focus])} />}
           </div>
           <div className={s.kv}>
             {item !== undefined && <Chip label={item.media.mime} casing="lower" />}

@@ -36,7 +36,7 @@
 .mask > *{position:relative}
 .rev{padding:var(--sp-3) var(--sp-control) var(--sp-control);display:flex;flex-direction:column;gap:var(--sp-2);opacity:0}
 .revealed .mask{transform:translateY(-102%);opacity:.2}
-.revealed .second .mask{transition-delay:.12s}
+.revealed .second .mask{transition-delay:var(--dur-fast)}
 .revealed .rev{opacity:1;transition:opacity var(--dur-slow) var(--ease) .2s}
 .revTitle{font:500 var(--fs-meta)/1.35 var(--mono);color:var(--ink-bright);word-break:break-word}
 .chips{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
