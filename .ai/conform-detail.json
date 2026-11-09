@@ -20808,6 +20808,72 @@
           "evidence": "lib/ledger/v1/sources/clips.ts:37 Refused is carried here as a job's terminal status in a ledger event; there is no region of a clock for it to be drawn on."
         }
       ]
+    },
+    "e44cfa27-83ec-470a-adec-674d8a2a8037/quality-gates": {
+      "context": "trailer-structure-engine",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:37:01.710Z",
+      "techniques": [
+        {
+          "technique": "renameable-detector-keys",
+          "verdict": "deviation",
+          "evidence": "lib/script/trailer/structure.ts:142 The regression pins patch {connector: \"BUT\"} as the fix (pipeline/trailer-structure-regression.mts:581). The rule row says 'declared', but the aggregate names the property, and the DECLARED-only limit is stated only in a code comment."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/structure.ts:136 Unmeasured rows stay in the denominator, so a verdict with holes carries a lower enforced figure."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/structure.ts:125 What counts toward malformed is computed here, and the report calls itself a diagnosis rather than a ship gate."
+        },
+        {
+          "technique": "vacuous-by-evaluation",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/structure.ts:122 Not-engaged rows are excluded, so a rule that examined nothing cannot score as enforcement."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/thresholds.ts:42 A drifted params file throws at import instead of running a rule it cannot state; seeded controls live in the regression file."
+        },
+        {
+          "technique": "false-positive-economics",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/thresholds.ts:127 Rules known to fire on correct work are held advisory, by the doctrine's own quoted reason."
+        },
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/thresholds.ts:21 Thresholds that existed as prose plus literals are read from one validated file."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/plan.ts:38 The schema sent to the model and the refusal share one table."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/plan.ts:41 Promise grades are excluded from what a model may write. The connector and raises fields remain writable, which is the deviation recorded above."
+        },
+        {
+          "technique": "oracle-frozen-during-repair",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/plan.ts:131 Patches touching kind or movement are refused at the door. This plan path has only the regression as a caller today."
+        }
+      ],
+      "withdrawn": {
+        "worker": "da67ff08-de11-4400-b11f-dbfc8c9cda5b",
+        "state": "deviation",
+        "at": "2026-11-09T04:37:25.037877+00:00",
+        "reason": "reviewer (sonnet): The claim that the DECLARED-only limit is stated only in a code comment is contradicted by the code. The line 142 message itself says 'well-FORMED... says nothing about whether it works — see the efficacy row', and rules/connectors.ts:59 and :64 report 'declared' adjacencies and 'examined nothing, d"
+      }
     }
   }
 }
