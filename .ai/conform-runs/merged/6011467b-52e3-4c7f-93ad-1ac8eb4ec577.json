@@ -1,0 +1,261 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6011467b-52e3-4c7f-93ad-1ac8eb4ec577",
+ "subject": "generative-provider-routing",
+ "evaluatedAt": "2026-11-09T23:03:56.606710+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "imaging-gateway-and-spend",
+   "subject": "generative-provider-routing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/imaging/router.ts:93 The dev generate plan puts agy first even though agy is unpriced and was only checked to work live, ahead of Google, which won the measured cost-per-usable grid, so for unreferenced requests the plan order is a belief and not a measurement.",
+   "techniques": [
+    {
+     "technique": "capability-to-vendor-plan",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/router.ts:93 The chokepoint, per-env table and steer rules hold (orderFor avoid throws noAlternative, prefer reorders only), but a new vendor entered AHEAD of the measured incumbent instead of behind it."
+    },
+    {
+     "technique": "cost-per-usable-economics",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/router.ts:87 The plan-top position rests on a live check and not on a usable-output grid. The pre-call gate itself conforms: reserve(estimatePendingUsd(pendingImages)) runs once per request at router.ts:312, and a batch is priced as N."
+    },
+    {
+     "technique": "non-silent-elimination",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/router.ts:405 Unsupported, constraint, no-key and called-and-failed each land in the trail. The trail goes on provenance, into the error (with the constraint outranking the vendor error) and into logCall."
+    },
+    {
+     "technique": "refusal-reroute-hop",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/errors.ts:112 Refusal, rate-limit and no-key walk the chain, while over-budget and invalid throw. The Google adapter reads an empty success as a safety block."
+    },
+    {
+     "technique": "vendor-fact-ledger",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/pricing.ts:12 Every price row carries a source and a checked date and may be deliberately unpriced (agy, Lite, recognize). atSize binds a rate to its size, and the three-way CostBasis is carried to settle."
+    },
+    {
+     "technique": "unspent-budget-is-a-defect",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/budget.ts:105 A floor band with an underFloor report exists, and router.ts:181 unreachedPlanTops records plan-top reachability per capability."
+    },
+    {
+     "technique": "resolution-as-stage-property",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/types.ts:33 Aspect is pinned on every call, but GenerateRequest has no per-stage size field. Size is one pixel table per aspect plus one process-wide GOOGLE_IMAGE_SIZE knob, so filmstrip drafts (count>1) render at the final rate and no promotion step exists."
+    }
+   ]
+  },
+  {
+   "context": "text-reasoning-engine",
+   "subject": "generative-provider-routing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/text/spend.ts:5 Text spend is count-only by the operator's 2026-10-07 ruling, so the metered Google fallback can spend with no pre-call ceiling, which the standard calls a report, not a control.",
+   "techniques": [
+    {
+     "technique": "cost-per-usable-economics",
+     "verdict": "deviation",
+     "evidence": "lib/text/spend.ts:5 No code under lib/text calls reserve(), so turns are booked after the call and never gated before it."
+    },
+    {
+     "technique": "capability-to-vendor-plan",
+     "verdict": "conformant",
+     "evidence": "lib/text/router.ts:296 There is one PLAN table per posture (router.ts:95). Avoid removes and fails with no-alternative, and prefer only reorders when the provider is configured."
+    },
+    {
+     "technique": "non-silent-elimination",
+     "verdict": "conformant",
+     "evidence": "lib/text/router.ts:466 The trail rides on the result's provenance, goes into the thrown error (router.ts:491) and into logTurn."
+    },
+    {
+     "technique": "refusal-reroute-hop",
+     "verdict": "conformant",
+     "evidence": "lib/text/errors.ts:113 refused is a reroutable kind. google.ts:402 treats an empty answer with a green status as a failure, not as an empty success."
+    },
+    {
+     "technique": "vendor-fact-ledger",
+     "verdict": "conformant",
+     "evidence": "lib/text/pricing.ts:4 Rows carry a source and a checked date, and metered rows in service are unpriced on the wire, never shown as $0."
+    }
+   ]
+  },
+  {
+   "context": "spend-and-pricing",
+   "subject": "generative-provider-routing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/spend/core.ts:44 The kernel's SpendClass and SpendStats carry only a ceiling and a remaining amount, with no floor or band (a grep of packages/kernel/src finds floor only in calibration), so the rebuilt spend authority looks only upward and cannot report a thrifty run.",
+   "techniques": [
+    {
+     "technique": "unspent-budget-is-a-defect",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/spend/core.ts:44 v1's floorOf/underFloor (lib/spend, used in lib/imaging/budget.ts) was not carried into the kernel class or into stats()."
+    },
+    {
+     "technique": "cost-per-usable-economics",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/spend/core.ts:96 The admit check counts held and lapsed holds before any vendor runs, and the refusal sentence says nothing was spent."
+    },
+    {
+     "technique": "vendor-fact-ledger",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/pricing/table.ts:11 A zod row schema requires source and checked. atSize and validUntil make a mismatched quote unpriced, and quote.ts keeps the three bases apart."
+    }
+   ]
+  },
+  {
+   "context": "vendor-routing-and-calibration",
+   "subject": "generative-provider-routing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/router/tables.ts:142 The kernel table copied v1's plan faithfully, including agy at the top of dev generate with no usable-output measurement, so the rebuilt router acts on an unmeasured plan order.",
+   "techniques": [
+    {
+     "technique": "capability-to-vendor-plan",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/router/tables.ts:142 A new vendor sits ahead of the measured incumbent. The per-posture plans are otherwise data in one table."
+    },
+    {
+     "technique": "cost-per-usable-economics",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/router/tables.ts:10 The comment beside the order cites the Google/Leonardo grid as the reason, but that grid never measured agy."
+    },
+    {
+     "technique": "non-silent-elimination",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/router/route.ts:168 Unsupported, constraint, no-key and steered-out each become an Elimination with a plain-language detail."
+    },
+    {
+     "technique": "refusal-reroute-hop",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/router/route.ts:58 Reroutability is decided once, by kind, at the routing layer."
+    }
+   ]
+  },
+  {
+   "context": "foundry-extract-engine",
+   "subject": "generative-provider-routing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/foundry/extract/store.ts:292 The live IO keeps only provider, model, cost and basis from the router's provenance and drops reroutedFrom (a grep of lib/foundry/extract finds no reroute field), so a replica or transfer served by a fallback vendor leaves no record on the manifest of why the first choice dropped out.",
+   "techniques": [
+    {
+     "technique": "non-silent-elimination",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/extract/store.ts:292 The asset's own record loses the trail, which is the unexplained fallback."
+    },
+    {
+     "technique": "capability-to-vendor-plan",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/store.ts:291 Calls go through the chokepoint by capability. The run's generator option is passed only as a prefer steer."
+    },
+    {
+     "technique": "cost-per-usable-economics",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/perform.ts:33 A run ceiling is checked against the unit's pre-call estimate before the unit starts. The imaging period ceiling also applies, and an unpriced call books its estimate rather than zero."
+    },
+    {
+     "technique": "vendor-fact-ledger",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/engine.ts:47 Cost basis travels from provenance into the manifest's spend. An unpriced call is counted, not read as free."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T23:03:56.606710+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generative-provider-routing"
+   ],
+   "techniques": [
+    "capability-to-vendor-plan",
+    "cost-per-usable-economics",
+    "non-silent-elimination",
+    "refusal-reroute-hop",
+    "resolution-as-stage-property",
+    "unspent-budget-is-a-defect",
+    "vendor-fact-ledger"
+   ],
+   "deviations": 1,
+   "context": "imaging-gateway-and-spend",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:03:56.606710+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generative-provider-routing"
+   ],
+   "techniques": [
+    "capability-to-vendor-plan",
+    "cost-per-usable-economics",
+    "non-silent-elimination",
+    "refusal-reroute-hop",
+    "vendor-fact-ledger"
+   ],
+   "deviations": 1,
+   "context": "text-reasoning-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:03:56.606710+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generative-provider-routing"
+   ],
+   "techniques": [
+    "cost-per-usable-economics",
+    "unspent-budget-is-a-defect",
+    "vendor-fact-ledger"
+   ],
+   "deviations": 1,
+   "context": "spend-and-pricing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:03:56.606710+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generative-provider-routing"
+   ],
+   "techniques": [
+    "capability-to-vendor-plan",
+    "cost-per-usable-economics",
+    "non-silent-elimination",
+    "refusal-reroute-hop"
+   ],
+   "deviations": 1,
+   "context": "vendor-routing-and-calibration",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:03:56.606710+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generative-provider-routing"
+   ],
+   "techniques": [
+    "capability-to-vendor-plan",
+    "cost-per-usable-economics",
+    "non-silent-elimination",
+    "vendor-fact-ledger"
+   ],
+   "deviations": 1,
+   "context": "foundry-extract-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

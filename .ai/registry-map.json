@@ -8879,12 +8879,11 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/extract/store.ts:292 The live IO keeps only provider/model/cost/basis from the router's provenance and drops `reroutedFrom` (lib/imaging/types.ts:193; grep of lib/foundry/extract finds no reroute field), so a replica or transfer served by a fallback vendor (e.g. after an unhonoured `prefer` steer) leaves no record on the manifest of why the first choice dropped out.",
-          "evaluatedAt": "2026-11-07",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "lib/foundry/extract/store.ts:292 The live IO keeps only provider, model, cost and basis from the router's provenance and drops reroutedFrom (a grep of lib/foundry/extract finds no reroute field), so a replica or transfer served by a fallback vendor leaves no record on the manifest of why the first choice dropped out.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
+          "revisionsBehind": 2
         },
         {
           "subject": "generated-output-grading",
@@ -10038,14 +10037,13 @@
           "changedAt": "2026-11-08",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "lib/imaging/router.ts:90 The dev generate plan puts agy, which is unpriced and was only checked to work live, ahead of Google, the measured cost-per-usable winner, so for unreferenced requests the plan order is a belief and not a measurement, even though the router mechanics (steer, trail, refusal walk, pre-call gate, plan-top reachability) all follow the standard.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
+          "evidence": "lib/imaging/router.ts:93 The dev generate plan puts agy first even though agy is unpriced and was only checked to work live, ahead of Google, which won the measured cost-per-usable grid, so for unreferenced requests the plan order is a belief and not a measurement.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
           "source": "renamed",
           "renamedFrom": "8c6c65cc-6679-4c2c-8951-670d77b8ad7c",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -20490,14 +20488,13 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/kernel/src/spend/core.ts:44 The kernel's SpendClass and SpendStats carry only a ceiling and the remaining amount, with no floor or band, so the rebuilt spend authority looks only upward; v1's floorOf/underFloor (lib/spend, outside this context) was not carried into it.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
+          "evidence": "packages/kernel/src/spend/core.ts:44 The kernel's SpendClass and SpendStats carry only a ceiling and a remaining amount, with no floor or band (a grep of packages/kernel/src finds floor only in calibration), so the rebuilt spend authority looks only upward and cannot report a thrifty run.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
           "source": "renamed",
           "renamedFrom": "5e00d05c-885e-4eac-ad26-f937df9d612f",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "module-design",
@@ -22342,14 +22339,13 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/text/spend.ts:5 Text spend is count-only with no pre-call ceiling, so the metered Google fallback can spend without any gate, which the standard calls a report, not a control; the routing, trail, refusal and pricing rules otherwise conform.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
+          "evidence": "lib/text/spend.ts:5 Text spend is count-only by the operator's 2026-10-07 ruling, so the metered Google fallback can spend with no pre-call ceiling, which the standard calls a report, not a control.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
           "source": "renamed",
           "renamedFrom": "94e6b933-0f6a-4631-b2f0-4c98b0799c28",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         }
       ],
       "governance": "governed"
@@ -24661,14 +24657,13 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/kernel/src/router/tables.ts:126 The kernel table copied v1's plan faithfully, including agy at the top of dev generate with no usable-output measurement, while its comment cites the Google/Leonardo grid as the reason for the order; meanwhile route.ts realizes the steer, constraint and refusal-walk rules as a pure function.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
+          "evidence": "packages/kernel/src/router/tables.ts:142 The kernel table copied v1's plan faithfully, including agy at the top of dev generate with no usable-output measurement, so the rebuilt router acts on an unmeasured plan order.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
           "source": "renamed",
           "renamedFrom": "311e06b8-6aea-4a5b-867f-c93a256bc44d",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "model-call-outcome-integrity",
