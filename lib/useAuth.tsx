@@ -15,24 +15,27 @@
 //   authResolved — onAuthStateChanged has fired once (or config is absent)
 // Gated routes wait for authResolved and then fail CLOSED, so a missing config
 // bounces visitors to the landing rather than rendering the studio to everyone.
+//
+// THE SDK IS LOADED, NOT IMPORTED (2026-11-09; lib/firebase.ts `loadAuth`). This
+// context is mounted at the root of every page, so its imports were every page's
+// first load. The first auth effect starts the fetch at the moment it used to
+// subscribe, and never under LOCAL_MODE, a local entry or DEV_AUTH, which resolve
+// identity without Firebase. Neither flag moves earlier: authResolved still waits
+// for onAuthStateChanged's first answer. The (studio) layout's own gate is the
+// server's (app/(studio)/layout.tsx reads the session cookie), so a signed-in
+// reload paints the studio without waiting for this at all.
+//
+// The sign-in button is disabled while `loading` (app/_landing/parts.tsx), and
+// `loading` only clears when onAuthStateChanged answers - after the SDK is here.
+// So the press finds the SDK warm, and signInWithPopup still runs inside the
+// gesture's activation (one await, setPersistence, before it, as it always had).
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import {
-  browserLocalPersistence,
-  getRedirectResult,
-  onAuthStateChanged,
-  setPersistence,
-  signInWithPopup,
-  signInWithRedirect,
-  signOut as fbSignOut,
-  type AuthError,
-  type User,
-} from "firebase/auth";
-// `authClient()` is a guarded accessor, not a constant — see lib/firebase.ts.
-// Every call below sits behind the `firebaseReady` predicate from that same
-// module, which is what makes the throw unreachable here rather than merely
-// unlikely.
-import { authClient, firebaseReady, googleProvider } from "./firebase";
+import type { AuthError, User } from "firebase/auth";
+// `loadAuth()` is the guarded, memoised door to the SDK and its client — see
+// lib/firebase.ts. Every call below sits behind the `firebaseReady` predicate
+// from that same module, so its not-configured rejection is unreachable here.
+import { firebaseReady, loadAuth, type AuthKit } from "./firebase";
 import { DEV_AUTH, DEV_USER } from "./devAuth";
 import { LOCAL_MODE, LOCAL_USER, localEntryChosen } from "./localMode";
 // The eviction OWNER. It imports every user-scoped store; nothing it clears
@@ -133,46 +136,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAuthResolved(true);
       return;
     }
-    const auth = authClient();
     void loadEviction();
-    // Complete a redirect-based sign-in if we came back from one.
-    getRedirectResult(auth).catch((e) =>
-      setError(e instanceof Error ? e.message : "sign-in failed"),
-    );
-    // THE TOKEN CACHE IS FED ELSEWHERE, AND ONLY FED. The server verifies the
-    // Firebase ID token itself now (lib/principal.ts) and accessHeader() is
-    // synchronous, so lib/sessionToken.ts holds the current token through its
-    // own token subscription. That module caches and does nothing else: it
-    // never evicts, never compares identities, never touches a store.
-    const stopToken = subscribeSessionToken(auth);
-    // This context subscribes to onAuthStateChanged, NOT onIdTokenChanged. That
-    // is not an arbitrary choice of subscription: a plain credential refresh
-    // fires the token listener and is NOT an identity flip, so listening there
-    // would wipe the user's own work on Firebase's refresh cadence. See
-    // lib/identityEviction.ts.
-    const stopState = onAuthStateChanged(auth, (u) => {
-      // IDENTITY IS COMPARED BY DURABLE IDENTIFIER. Never by display name or
-      // email — those change without the person changing, and a reclaimed address
-      // stays equal while pointing at somebody else.
-      const was = heldUid.current;
-      const now = u?.uid ?? null;
-      // The trigger table lives at the owner, not here — including the case that
-      // is NOT a flip. This context asks; it does not decide.
-      if (was) {
-        void loadEviction().then(({ evictIdentity, transitionFor }) => {
-          const reason = transitionFor(was, now);
-          if (reason) {
-            setLastTransition(reason);
-            void evictIdentity(was, reason);
+    let live = true;
+    let stopToken = (): void => undefined;
+    let stopState = (): void => undefined;
+    void loadAuth().then(
+      ({ auth, sdk }) => {
+        if (!live) return;
+        const { getRedirectResult, onAuthStateChanged } = sdk;
+        // Complete a redirect-based sign-in if we came back from one.
+        getRedirectResult(auth).catch((e) =>
+          setError(e instanceof Error ? e.message : "sign-in failed"),
+        );
+        // THE TOKEN CACHE IS FED ELSEWHERE, AND ONLY FED. The server verifies the
+        // Firebase ID token itself now (lib/principal.ts) and accessHeader() is
+        // synchronous, so lib/sessionToken.ts holds the current token through its
+        // own token subscription. That module caches and does nothing else: it
+        // never evicts, never compares identities, never touches a store.
+        stopToken = subscribeSessionToken(auth);
+        // This context subscribes to onAuthStateChanged, NOT onIdTokenChanged. That
+        // is not an arbitrary choice of subscription: a plain credential refresh
+        // fires the token listener and is NOT an identity flip, so listening there
+        // would wipe the user's own work on Firebase's refresh cadence. See
+        // lib/identityEviction.ts.
+        stopState = onAuthStateChanged(auth, (u) => {
+          // IDENTITY IS COMPARED BY DURABLE IDENTIFIER. Never by display name or
+          // email — those change without the person changing, and a reclaimed address
+          // stays equal while pointing at somebody else.
+          const was = heldUid.current;
+          const now = u?.uid ?? null;
+          // The trigger table lives at the owner, not here — including the case that
+          // is NOT a flip. This context asks; it does not decide.
+          if (was) {
+            void loadEviction().then(({ evictIdentity, transitionFor }) => {
+              const reason = transitionFor(was, now);
+              if (reason) {
+                setLastTransition(reason);
+                void evictIdentity(was, reason);
+              }
+            });
           }
+          heldUid.current = now;
+          setUser(u);
+          setLoading(false);
+          setAuthResolved(true);
         });
-      }
-      heldUid.current = now;
-      setUser(u);
-      setLoading(false);
-      setAuthResolved(true);
-    });
+      },
+      // The SDK did not arrive (offline, a failed chunk). authResolved stays false - nobody
+      // answered - so a gated surface stays closed; the button comes back so a press retries
+      // the load (a popup that then misses the gesture falls back to the redirect, below).
+      (e: unknown) => {
+        if (!live) return;
+        setError(e instanceof Error ? e.message : "sign-in could not load");
+        setLoading(false);
+      },
+    );
     return () => {
+      live = false;
       stopToken();
       stopState();
     };
@@ -188,16 +208,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError("Firebase is not configured — see .env.example. For a machine-local run with no Google account, set NEXT_PUBLIC_LOCAL_MODE=1.");
       return;
     }
-    const auth = authClient();
+    let kit: AuthKit;
+    try {
+      kit = await loadAuth();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "sign-in could not load");
+      return;
+    }
+    const { auth, sdk, google } = kit;
+    const { browserLocalPersistence, setPersistence, signInWithPopup, signInWithRedirect } = sdk;
     await setPersistence(auth, browserLocalPersistence);
     try {
-      await signInWithPopup(auth, googleProvider);
+      await signInWithPopup(auth, google);
     } catch (e) {
       const code = (e as AuthError)?.code ?? "";
       const coop = /Cross-Origin-Opener-Policy|window\.close/i.test(String(e));
       if (REDIRECT_FALLBACK.has(code) || coop) {
         try {
-          await signInWithRedirect(auth, googleProvider);
+          await signInWithRedirect(auth, google);
           return;
         } catch (e2) {
           setError(e2 instanceof Error ? e2.message : "sign-in failed");
@@ -241,7 +269,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const uid = heldUid.current;
     setLastTransition("signed-out");
     try {
-      await fbSignOut(authClient());
+      const { auth, sdk } = await loadAuth();
+      const fbSignOut = sdk.signOut;
+      await fbSignOut(auth);
     } finally {
       // THE SETTLEMENT PATH, deliberately. Telling Firebase to end the session
       // can fail — offline, timed out, an authority that is down — and the local

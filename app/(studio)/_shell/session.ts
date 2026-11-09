@@ -15,11 +15,11 @@
 // Not posted: the dev fixture and the local owner. Neither has an ID token; the server
 // resolves both postures itself (resolveSession), and a post would be refused as malformed.
 
-import { onIdTokenChanged } from "firebase/auth";
-
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { DEV_AUTH } from "@/lib/devAuth";
-import { authClient, firebaseReady } from "@/lib/firebase";
+// The SDK is loaded, never imported (lib/firebase.ts `loadAuth`): this file is in every studio
+// route's shell, and a static firebase/auth import here kept Firebase's client on all of them.
+import { firebaseReady, loadAuth } from "@/lib/firebase";
 import { LOCAL_MODE } from "@/lib/localMode";
 
 // Hand-written, not zod: this file is in the shell's client bundle (see ./plain.ts).
@@ -60,21 +60,41 @@ export async function postSession(token: string): Promise<Result<null>> {
  * first visit it is the second post after the handoff's. Only a rotation posts then. The price: a
  * token Firebase refreshed while the tab was closed reaches the server at the next rotation, the
  * cookie living its own token's life until then.
+ *
+ * The subscription starts once the SDK has loaded (the auth context started that load at mount,
+ * so it is usually already here). An unsubscribe that comes first - the shell unmounted, or its
+ * identity changed, while the SDK was still on its way - wins: nothing subscribes after it. A
+ * load that fails is `report`ed: no renewal is running, and the operator should know.
  */
 export function subscribeSessionCookie(report: (message: string) => void, cookieHeld = false): () => void {
   if (!BRIDGED) return () => undefined;
   let initial = cookieHeld;
-  return onIdTokenChanged(authClient(), (user) => {
-    if (initial) {
-      initial = false;
-      return;
-    }
-    if (user === null) return;
-    void user
-      .getIdToken()
-      .then(postSession)
-      .then((r) => {
-        if (!r.ok) report(r.error.message);
-      }, (cause: unknown) => report(errorMessage(cause)));
-  });
+  let live = true;
+  let stop: (() => void) | null = null;
+  loadAuth().then(
+    ({ auth, sdk }) => {
+      if (!live) return;
+      stop = sdk.onIdTokenChanged(auth, (user) => {
+        if (initial) {
+          initial = false;
+          return;
+        }
+        if (user === null) return;
+        void user
+          .getIdToken()
+          .then(postSession)
+          .then((r) => {
+            if (!r.ok) report(r.error.message);
+          }, (cause: unknown) => report(errorMessage(cause)));
+      });
+    },
+    (cause: unknown) => {
+      if (live) report(errorMessage(cause));
+    },
+  );
+  return () => {
+    live = false;
+    stop?.();
+    stop = null;
+  };
 }
