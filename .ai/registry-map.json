@@ -1931,7 +1931,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/articles-critique.probe.spec.ts:284 The test's name claims the reviewers run in parallel (lib/articles/critiqueReviews.ts:66 is a Promise.all) but its body only asserts outcomes and files, and neither the stub nor the probe records overlap, so a serialised panel would stay green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "docs-sync",
@@ -6602,7 +6606,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/live/floor.live.spec.ts:52 Run without two env vars that playwright.live.config.ts does not set, the Floor's live spec seeds nothing and compares against whatever v1 work sits in this machine's foundry-out, so its result depends on the developer's data and fails on a machine with no pile waiting.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "retrieval",
@@ -15222,7 +15230,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/live/runs.live.spec.ts:10 The lane's server forces only the produce side to fixture, and load.ts keeps the real v1 reading beside it, so without NEXT_PUBLIC_GRAVITONE_DATA the bar-driven Runs tests depend on this machine's real piles and fail on a machine with none.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "agent-memory",
