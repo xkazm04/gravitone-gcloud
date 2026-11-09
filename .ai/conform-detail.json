@@ -19585,6 +19585,78 @@
           "evidence": "tests/live/runs.live.spec.ts:25 The live lane waits on a product-published identifier and a measured state rather than on a timer or a style hook."
         }
       ]
+    },
+    "e3a63c9a-324f-417a-b93b-bfddb63e7aa5/video-assembly": {
+      "context": "visual-producers",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:25:18.946Z",
+      "worker": "2f891c6a-1a79-41b7-a1fd-8add78fae73e",
+      "techniques": [
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/frames/define.ts:44 A refusal is a terminal outcome needing a re-brief or an accepted hole; here it sits beside empty in the batch."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/motion/define.ts:69 A clip is single-image anchored and needs human-accepted motion, and a decline is a produced outcome. Outside this context, lib/producers/motion.ts:54 fixes durationS at 5 rather than the slot's length."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/cut/define.ts:7 The export is compiled from a deterministic document over the derived timeline."
+        },
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/strips/plan.ts:9 Lint runs before capture, and a passing round looks at a contact sheet (plan.ts:11)."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/strips/plan.ts:17 A failing seek gate sends the card back for a fix; the gate itself re-renders frames cold and out of order (pipeline/strips/render.mts:280)."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/frames/define.ts:13 Plates are per-unit images, the per-shot anchoring the technique says to prefer; rg storyboard|grid over these producers finds only a trial-grid comment."
+        }
+      ]
+    },
+    "95dd9201-2503-481d-8cdd-a863f6566283/video-assembly": {
+      "context": "music-vendors-and-publish",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:25:18.946Z",
+      "worker": "2f891c6a-1a79-41b7-a1fd-8add78fae73e",
+      "techniques": [
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "lib/music/plan.ts:94 Times derive from the picture, which the technique prefers, but there is no offset form, so a mid-scene address is impossible; the purpose sentence is carried at plan.ts:222."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "lib/music/elevenlabs.ts:193 Refusal is a typed outcome kept apart from rate-limit and failure; the studio score view does not yet show it (see part-editor-media-cut-score)."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/music/elevenlabs.ts:279 A truncated body is an error rather than a silent take; the file routes likewise name a missing file."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "conformant",
+          "evidence": "lib/audioEnvelope.ts:7 Audio-driven effects read a precomputed array by frame index, with no live analyser in the path."
+        }
+      ]
     }
   }
 }

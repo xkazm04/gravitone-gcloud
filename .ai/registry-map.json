@@ -11864,7 +11864,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/music/plan.ts:94 A cue brief starts at its first scene and is sized by whole scenes, so the vendor layer cannot express an entry or exit inside a scene even though purpose, exact durations and tempo are briefed well.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "generated-music-acceptance",
@@ -21099,7 +21103,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/frames/define.ts:44 The default render-plates batch plans a refused plate again with nothing changed about its brief, treating a provider refusal as a retriable hole even though the operator confirms the receipt.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "visual-style-locking",
