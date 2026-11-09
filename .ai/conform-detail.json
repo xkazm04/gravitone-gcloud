@@ -14455,37 +14455,55 @@
       "subject": "agent-instruction-files",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T01:45:40.565Z",
-      "worker": "4eb4a95a-cff3-4381-97ca-9996db29f5c0",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:24:32.165Z",
+      "worker": "5fe7f1e8-9456-47ec-9655-245ffa4e70f2",
       "techniques": [
         {
           "technique": "workspace-ancestry-isolation",
           "verdict": "deviation",
-          "evidence": "lib/claudeCli.ts:279 Product reasoning turns inherit the repo's developer instruction file because the argv has no --safe-mode and the process runs from the repo root. The agentic seam gets this right: --safe-mode at lib/agent/agentArgs.ts:37, an os.tmpdir() workspace at lib/articles/agentSteps.ts:36, and assertIsolatedWorkspace at lib/agent/agentArgs.ts:91."
+          "evidence": "lib/claudeCli.ts:383 No cwd and no --safe-mode, so the child inherits the server's cwd (the repo root) and the ancestry walk loads CLAUDE.md, AGENTS.md and the .claude rules into a tool-less reasoning turn. The fenced writer seam shows the fix in this context: agentArgs.ts:37 \"--safe-mode\", plus runAgent.ts:24 assertIsolatedWorkspace."
         },
         {
           "technique": "enforcement-demotion",
           "verdict": "conformant",
-          "evidence": "lib/agent/cliSeam.ts:13 The tool set, file scope and config loading are enforced through CLI flags and a pre-spawn workspace check rather than prose in the prompt. Where agy has no flag that can enforce read-only, the code says so and isolates the run (reviewerEngines.ts:47)."
+          "evidence": "lib/claudeCli.ts:258 RECALIBRATE-PROMPT.md's prose prohibition on outside sourcing is backed by a deterministic flag (--allowed-tools empty, --max-turns 1). This is the prompt-level analogue of demoting a rule to a gate."
         },
         {
           "technique": "host-contract-compilation",
           "verdict": "not-applicable",
-          "evidence": "lib/agent/reviewerCommand.ts:22 No skill set is compiled for several hosts. The per-engine reviewer argv suppresses the reviewers' own rule loading, but that is not skill compilation."
+          "evidence": "lib/agent/reviewerCommand.ts:22 No skill set is compiled for several hosts. The per-engine reviewer argv suppresses the reviewers' own rule loading, but that is not skill compilation.",
+          "carriedFrom": "2026-11-04"
         }
       ],
-      "registryProposal": "workspace-ancestry-isolation could name a third case beside upward inheritance and downward injection: a product that shells out to a coding-agent CLI as a reasoning engine from its own repo root. That turn is briefed by the developer instruction file on every product call, and the fix is a config-suppression flag on that spawn, not a workspace move."
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/claudeCli.ts:279 The reasoning door's argv (-p, --output-format, --model, --effort, --allowed-tools \"\", --max-turns 1) has no --safe-mode, and its spawn at lib/claudeCli.ts:383 passes no cwd. So every frames, research and recalibrate turn (lib/turns/runner.ts -> reason -> runClaude) starts in the server's own directory, the repo root, and is briefed by the developer CLAUDE.md, which was written about a different job. The writer and reviewer seams in the same context, and the sibling claudeCliRetrieve door, all close that path with --safe-mode.",
+          "evaluatedAt": "2026-11-04T01:45:40.565Z",
+          "worker": "4eb4a95a-cff3-4381-97ca-9996db29f5c0",
+          "reason": "replaced by 5fe7f1e8-9456-47ec-9655-245ffa4e70f2"
+        }
+      ]
     },
     "14864630-7306-4708-b9a9-e557f4fa10de/agent-instruction-files": {
       "context": "server-seam",
       "subject": "agent-instruction-files",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T01:45:40.565Z",
-      "worker": "4eb4a95a-cff3-4381-97ca-9996db29f5c0",
-      "techniques": []
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:24:32.165Z",
+      "worker": "5fe7f1e8-9456-47ec-9655-245ffa4e70f2",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "app/_server/http.ts:8 The server seam is route/action/session/auth code that spawns no agent and loads no instruction file. Searching its files for AGENTS.md, GEMINI.md, .cursorrules and copilot-instructions found nothing. The only instruction-file mention is a code comment at app/_server/http.ts:20 that cites CLAUDE.md as the source of the verbatim-error rule; it reads no file.",
+          "evaluatedAt": "2026-11-04T01:45:40.565Z",
+          "worker": "4eb4a95a-cff3-4381-97ca-9996db29f5c0",
+          "reason": "replaced by 5fe7f1e8-9456-47ec-9655-245ffa4e70f2"
+        }
+      ]
     },
     "9508a262-9b09-4e7e-ab74-ff10c182a001/hitl-approval": {
       "context": "board-decision-adapters",
@@ -21821,6 +21839,55 @@
           "evaluatedAt": "2026-10-24",
           "worker": null,
           "reason": "replaced by 2be466ab-0a57-474f-b70b-12e395e62b15"
+        }
+      ]
+    },
+    "6a878b5f-8652-4265-839a-dce38680a9c7/agent-instruction-files": {
+      "context": "article-human-gate-and-landing",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:24:32.165Z",
+      "worker": "5fe7f1e8-9456-47ec-9655-245ffa4e70f2",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/articles/registryWrite.ts:3 The gate and landing code is deterministic: it records human acts and notes, builds diffs and the Medium package, and opens the registry PR. It authors, injects and launches no instruction file. Searching lib/articles for CLAUDE.md, AGENTS.md and SKILL.md found 0 hits.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 5fe7f1e8-9456-47ec-9655-245ffa4e70f2"
+        }
+      ]
+    },
+    "d968dc62-e28c-4437-abb1-af18df448216/agent-instruction-files": {
+      "context": "article-run-engine",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:24:32.165Z",
+      "worker": "5fe7f1e8-9456-47ec-9655-245ffa4e70f2",
+      "techniques": [
+        {
+          "technique": "workspace-ancestry-isolation",
+          "verdict": "deviation",
+          "evidence": "lib/articles/agentSteps.ts:83 The positional rule is met at agentSteps.ts:36, a uniqueDir under os.tmpdir(). The technique's 'make the loaded set an artifact' part is not met: no loaded-instruction list is recorded or asserted, and none of envelope.ts, runAgent.ts, agentSteps.ts or turns.ts mentions one."
+        },
+        {
+          "technique": "write-back-sink-class",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:36 The agent writes into a throwaway out/ that engine code ingests. No instruction file names an outbound sink for the agent to append to."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/articles/agentSteps.ts:83 Each turn's record holds outcome, turns, duration, exit code, cost and errors, but not the instruction files the session loaded. Isolation is shown only by where the workspace sits (os.tmpdir, agentSteps.ts:36) and what it holds (assertIsolatedWorkspace). If an ancestor or user-level brief ever loads, for example after a CLI change to `--safe-mode`, posts and trial critiques would change and nothing in the run record would show why.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 5fe7f1e8-9456-47ec-9655-245ffa4e70f2"
         }
       ]
     }

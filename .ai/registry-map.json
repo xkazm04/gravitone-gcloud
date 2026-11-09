@@ -1757,12 +1757,11 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/claudeCli.ts:279 The reasoning door's argv (-p, --output-format, --model, --effort, --allowed-tools \"\", --max-turns 1) has no --safe-mode, and its spawn at lib/claudeCli.ts:383 passes no cwd. So every frames, research and recalibrate turn (lib/turns/runner.ts -> reason -> runClaude) starts in the server's own directory, the repo root, and is briefed by the developer CLAUDE.md, which was written about a different job. The writer and reviewer seams in the same context, and the sibling claudeCliRetrieve door, all close that path with --safe-mode.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
-          "evaluatedRevision": 31,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "lib/claudeCli.ts:279 The reasoning door's argv (-p, --output-format json, --model, --effort high, --allowed-tools \"\", --max-turns 1) has no --safe-mode or --restricted, and its spawn passes no cwd. Every frames, research and recalibrate turn (runner -> reason -> lib/text/providers/claudeCli.ts:111 runClaude) therefore starts in the server's own directory and is briefed by the repo's developer CLAUDE.md, which was written for a different job. The writer and reviewer seams in this same context (agentArgs.ts:37) and the sibling claudeCliRetrieve door both close that path with --safe-mode.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32,
+          "revisionsBehind": 2
         },
         {
           "subject": "eval-harness",
@@ -2446,14 +2445,13 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/articles/registryWrite.ts:3 The gate and landing code is deterministic: it records human acts and notes, builds diffs and the Medium package, and opens the registry PR. It authors, injects and launches no instruction file. Searching lib/articles for CLAUDE.md, AGENTS.md and SKILL.md found 0 hits.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
-          "evaluatedRevision": 31,
+          "evidence": "lib/articles/registryWrite.ts:3 The gate and landing code is deterministic: it records human acts and notes, builds diffs and the Medium package, and opens the registry PR. It launches no agent session and writes no instruction file. A search of lib/ (lib/articles included) for AGENTS.md, GEMINI.md, cursorrules and copilot-instructions found 0 hits.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32,
           "source": "renamed",
           "renamedFrom": "e660bf0f-199c-4cd9-91e1-1a13e318e55f",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "translation-pipeline-topology",
@@ -2767,14 +2765,13 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/articles/agentSteps.ts:83 Each turn's record holds outcome, turns, duration, exit code, cost and errors, but not the instruction files the session loaded. Isolation is shown only by where the workspace sits (os.tmpdir, agentSteps.ts:36) and what it holds (assertIsolatedWorkspace). If an ancestor or user-level brief ever loads, for example after a CLI change to `--safe-mode`, posts and trial critiques would change and nothing in the run record would show why.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
-          "evaluatedRevision": 31,
+          "evidence": "lib/articles/agentSteps.ts:83 The workspace is positioned correctly: it sits in os.tmpdir(), outside the repo's span, and the seam adds --safe-mode and assertIsolatedWorkspace. But each turn's record holds only outcome, turns, duration, exit code, cost, errors and the final message. Nothing captures or asserts which instruction files the session actually loaded, so isolation is claimed from the layout and flags rather than verified against what loaded, and a CLI change to --safe-mode would contaminate posts and trial critiques with no trace in the run record.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32,
           "source": "renamed",
           "renamedFrom": "14632859-df56-4340-9e16-c420ff681ee3",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "hitl-approval",
@@ -19929,12 +19926,11 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_server/http.ts:8 The server seam is route/action/session/auth code that spawns no agent and loads no instruction file. Searching its files for AGENTS.md, GEMINI.md, .cursorrules and copilot-instructions found nothing. The only instruction-file mention is a code comment at app/_server/http.ts:20 that cites CLAUDE.md as the source of the verbatim-error rule; it reads no file.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
-          "evaluatedRevision": 31,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "app/_server/http.ts:8 The server seam is route, action, session, SSE and auth code: it spawns no agent and authors, injects or loads no instruction file. A search of its files for AGENTS.md, GEMINI.md, cursorrules and copilot-instructions found nothing. The one CLAUDE.md mention is a comment at http.ts:20 that cites the project's verbatim-error rule; it reads no file.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32,
+          "revisionsBehind": 2
         },
         {
           "subject": "voice-io",
