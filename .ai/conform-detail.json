@@ -19467,6 +19467,124 @@
           "evidence": "tests/live/calendar.live.spec.ts:166 The live lane drives the real side as well as the fixture side, so the port's real wiring is exercised in the running product."
         }
       ]
+    },
+    "7d68ed0e-8d1f-44d9-a825-4a8b7f6504c0/test-harness": {
+      "context": "run-records-and-slots",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:05:32.173Z",
+      "worker": "63b50347-e246-4af6-9784-6f4d8c8e54ce",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/test/records.options.test.ts:163 A uniformity claim runs over a hand-written population of three files instead of one derived from the tree. The needle also misses a '>=' comparison."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/test/records.test.ts:23 The helper is named store() and opens :memory:, which store.ts:134 exempts from the WAL requirement production holds. The mode fork is not stated in the name; the same helper is in records.runs, records.reroute and records.preflight. These files make no locking claim, so the defect is the unnamed fork, not a known wrong result."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/slots.process.test.ts:58 The two-process claim is asserted as a count of distinct claimed slots under a fixed clock; the 60 s timeout is only a hang guard."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/slots.claim.test.ts:18 Each file owns an OS-temp scratch directory with a named reaper, so nothing touches the operator's store."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:4949 The slot sweep's window comparison has a named mutant bound to the test file that claims to guard it; the context has further entries for sweep, core, import and records."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/slots.mode.test.ts:104 The L63 cases use a readiness that really reads the store, so the ordering of the existence check against the write is reached instead of answered by a stub."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/slots.child.ts:25 The child process runs the shipped sweep, which production reaches from packages/producers/src/publish/tick.ts."
+        }
+      ]
+    },
+    "7d7b94f7-f312-4ea4-b315-23df705c2286/test-harness": {
+      "context": "bound-producers",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:05:32.173Z",
+      "worker": "63b50347-e246-4af6-9784-6f4d8c8e54ce",
+      "techniques": [
+        {
+          "technique": "platform-quirk-absorption",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/producer-gpu-harness.ts:25 The missing-interpreter quirk is absorbed in the kernel helper with its reason attached, but this copy returns undefined under CI and neither forge nor Dojo tests print a warning, so one entry point stays unabsorbed."
+        },
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/worker-lanes.test.ts:66 The test claims 'every studio step' over a hand copy of the registry's unexported STEPS, so a tenth step bound there is outside the assertion and nothing goes red."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/producer-registry-loads.probe.spec.ts:64 The static-import walk strips comments, skips type-only imports and declares a floor on what it read, and the file explains why the site cannot be witnessed by importing."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/produce-real.test.ts:47 The process kernel is pointed at a temp store before any import resolves, with the incident that forced it recorded beside the line."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:2385 Bound producers carry named mutants on production lines, each tied to the test file claimed to guard it."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/producer-gpu-harness.ts:47 The universe is a file store built by the shipped constructor, so WAL and the full migration chain match what the Python and Node children open."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/worker-lanes.test.ts:18 The test reads the registry the worker binds and spawns the real workers/runner.mts instead of composing its own producer list."
+        }
+      ]
+    },
+    "3ceb5985-07f1-4504-830b-fca7669a4404/test-harness": {
+      "context": "review-and-runs-history",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:05:32.173Z",
+      "worker": "63b50347-e246-4af6-9784-6f4d8c8e54ce",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "packages/ui/test/components/review-schedule.test.ts:47 A closed-set claim runs over three hand-picked members. The Runs half of this context does the opposite and derives its population at runs.test.ts:174."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:1103 The day-line's packing priority has a named mutant bound to runs.test.ts, with further entries for thread, lanes, schedule and packetItems."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/runs.live.spec.ts:25 The live lane waits on a product-published identifier and a measured state rather than on a timer or a style hook."
+        }
+      ]
     }
   }
 }

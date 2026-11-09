@@ -4775,7 +4775,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/producer-gpu-harness.ts:25 This second copy of the interpreter probe lacks the CI throw that packages/kernel/test/helpers.ts:30 added, so on a runner without Python every forge and Dojo describe.skipIf block skips and the lane still reports green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "quality-gates",
@@ -14771,7 +14775,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/test/components/review-schedule.test.ts:47 The test claims 'only' over the PacketSource union but samples article, mv and forge, so adding suno or another source to SCHEDULE_CHANNELS offers a calendar control at the Board with this test green and no other test reading that table.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "prompt-assembly",
@@ -14984,7 +14992,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/test/records.options.test.ts:163 The test named 'no second spelling remains' reads three hand-listed files, so a fourth site spelling the ceiling crossing its own way turns nothing red and the claim covers only the list.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "agent-memory",
