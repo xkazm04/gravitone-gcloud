@@ -20402,6 +20402,117 @@
           "evidence": "tests/mutants-unit/registry.ts:1696 A registered mutant drops the speech-hold release in elevenlabs.ts to prove its test can fail."
         }
       ]
+    },
+    "04e4702a-4221-4673-9cfa-130cbd21f93e/agent-memory": {
+      "context": "library-projection-feeds",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:19:59.616Z",
+      "worker": "62f0f79f-64e7-483e-ad30-b006522c3d32",
+      "techniques": [
+        {
+          "technique": "lane-reconciliation",
+          "verdict": "not-applicable",
+          "evidence": "lib/library/project.ts:171 The index is a derived projection that the sync reconciles with its feeds, but its items are catalogue entries, not memories with a retrieval lane."
+        },
+        {
+          "technique": "probe-without-write-back",
+          "verdict": "not-applicable",
+          "evidence": "lib/library/probe.ts:11 This probe times queries over a generated corpus; this context has no usage term that recall would feed."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/library/project.ts:14 The context is a deterministic projection of studio feeds into the kernel's Library index for the screens, not a store an agent carries forward between sessions; searching lib/library (feeds included) found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hits are the SQLite ':memory:' path and an ingest memo (rememberIngest), which is a content-hash cache.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 62f0f79f-64e7-483e-ad30-b006522c3d32"
+        }
+      ]
+    },
+    "868afe8a-01af-428e-9f7c-d561ee033d4c/agent-memory": {
+      "context": "project-step-store",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:19:59.616Z",
+      "worker": "62f0f79f-64e7-483e-ad30-b006522c3d32",
+      "techniques": [
+        {
+          "technique": "durable-store-failure-posture",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/readStep.ts:14 The read separates missing from failed in the same spirit, but the technique's precondition is a store the model reads and writes, and no model reads this one."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:2 This is an IndexedDB store for UI step content keyed `${projectId}:${phase}`, with no agent reading it as recalled memory; searching lib/steps found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hit is a comment about an in-memory mirror in saveWatchers.ts. Its honest never-written vs failed read path is the same idea as durable-store-failure-posture, but it is not an agent memory store.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 62f0f79f-64e7-483e-ad30-b006522c3d32"
+        }
+      ]
+    },
+    "052f74ff-87c5-45a8-a5ea-6fbb2ae44102/agent-memory": {
+      "context": "v1-import-and-archive",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:19:59.616Z",
+      "worker": "62f0f79f-64e7-483e-ad30-b006522c3d32",
+      "techniques": [
+        {
+          "technique": "observation-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/project.ts:154 The import carries timestamps across unchanged; no distillation pass grounds relative time against them, which is the technique's precondition for imports."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/import/archive.ts:9 This context converts v1 data to and from the NDJSON archive and the kernel store, with no agent and no carried-forward memory; searching lib/import found no hit for recall, consolidat, belief, distill or memories (the one 'memory' hit is an out-of-memory comment in archive.ts).",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 62f0f79f-64e7-483e-ad30-b006522c3d32"
+        }
+      ]
+    },
+    "47a52ae3-c07c-4d24-86e1-da7d59861f7e/agent-memory": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:19:59.616Z",
+      "techniques": [
+        {
+          "technique": "exposure-is-not-credit",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/calibration.ts:318 Human keeps calibrate grade fields per candidate, and the result orders a human's cull; no memory items are delivered to a run and credited."
+        },
+        {
+          "technique": "memory-governance",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:41 This names who decided a plate's keep or reject, an artifact verdict rather than a write to what an agent believes."
+        },
+        {
+          "technique": "procedure-promotion",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/store.ts:11 `proven` marks a visual style a human kept on more than one scene; it does not promote an observed agent workflow into a capability."
+        }
+      ],
+      "withdrawn": {
+        "worker": "62f0f79f-64e7-483e-ad30-b006522c3d32",
+        "state": "not-applicable",
+        "at": "2026-11-09T03:20:33.693799+00:00",
+        "reason": "reviewer (sonnet): The claim that no verdict reaches a model as recalled memory is contradicted inside lib/foundry: lib/foundry/scout/idea-loop/generate.ts:25-38 (`ideaPrompt`) puts the operator's last 20 keep/reject idea verdicts, with reasons, into the generation prompt. The evidence mentions lib/foundry/scout only "
+      }
     }
   }
 }

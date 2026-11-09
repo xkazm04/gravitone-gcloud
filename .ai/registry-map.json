@@ -7013,8 +7013,8 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 6
+          "priorNotApplicable": 6,
+          "state": "unknown"
         },
         {
           "subject": "mcp-tools",
@@ -11372,14 +11372,13 @@
           "changedAt": "2026-10-25",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/library/project.ts:14 The context is a deterministic projection of studio feeds into the kernel's Library index for the screens, not a store an agent carries forward between sessions; searching lib/library (feeds included) found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hits are the SQLite ':memory:' path and an ingest memo (rememberIngest), which is a content-hash cache.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
-          "evaluatedRevision": 51,
+          "evidence": "lib/library/feeds/types.ts:9 Feeds map the studio's finished work into a media catalogue and a recursive search of lib/library for recall, consolidat, belief, distill and memories found nothing; agents can query it through the `library` MCP op (app/_server/mcp/tools/read.ts:121), which the earlier verdict missed, but that op searches produced assets and nothing here is carried forward or injected as a belief.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53,
           "source": "renamed",
           "renamedFrom": "d067e4e3-6739-4666-9103-06dac7f825ac",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "prompt-assembly",
@@ -13861,14 +13860,13 @@
           "changedAt": "2026-10-25",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/steps/index.ts:2 This is an IndexedDB store for UI step content keyed `${projectId}:${phase}`, with no agent reading it as recalled memory; searching lib/steps found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hit is a comment about an in-memory mirror in saveWatchers.ts. Its honest never-written vs failed read path is the same idea as durable-store-failure-posture, but it is not an agent memory store.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
-          "evaluatedRevision": 51,
+          "evidence": "lib/steps/index.ts:8 This is browser IndexedDB storage for UI step content: a recursive search of lib/steps for recall, consolidat, belief, distill and memories found nothing, and no file in lib/producers, lib/script, app/_server, workers or pipeline references lib/steps, so no agent reads it as memory.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53,
           "source": "renamed",
           "renamedFrom": "e2f6231a-d39f-4d39-9465-0a48436cae92",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "settings",
@@ -20826,14 +20824,13 @@
           "changedAt": "2026-10-25",
           "confidence": "strong",
           "state": "not-applicable",
-          "evidence": "lib/import/archive.ts:9 This context converts v1 data to and from the NDJSON archive and the kernel store, with no agent and no carried-forward memory; searching lib/import found no hit for recall, consolidat, belief, distill or memories (the one 'memory' hit is an out-of-memory comment in archive.ts).",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
-          "evaluatedRevision": 51,
+          "evidence": "lib/import/commit.ts:32 The context moves v1 projects, shelves and archive rows into the kernel and back through deterministic mapping, and a recursive search of lib/import for recall, consolidat, belief, distill and memories found nothing, nor any agent, LLM or Claude reference.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53,
           "source": "renamed",
           "renamedFrom": "b412ea73-0dc3-4362-93c4-2a9b913f9a61",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "supply-chain",
