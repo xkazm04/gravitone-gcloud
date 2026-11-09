@@ -315,6 +315,10 @@ describe("a re-route confirm on a job its lane holds for names the hold before t
     await expect(runJob(fx, crash, research, { holder: dead, alive: () => true, heartbeatMs: 60_000 })).rejects.toBe("crash");
     const swept = recover(fx, { holder: { bootId: "boot-sweep", pid: 1, host }, alive: () => false });
     expect(swept.ok && swept.value.map((j) => j.id)).toEqual([research]);
+    // The seat is free, so the sweep wrote no hold; this is one an earlier session left on it (a hold
+    // stays until an operator acknowledges it, whatever the table says since).
+    const stale = store.tx((t) => t.run("INSERT INTO lane_holds (lane, job_id, stage, at) VALUES (?, ?, ?, ?)", "seat.text", research, "a", t.at));
+    expect(stale.ok).toBe(true);
     const realSaid = await said(real.reroute({ jobId: research, option: "research/google/gemini-3.1-pro-preview", token: "moved-queue-token" }, op), research);
     expect(realSaid).toBe("refused: seat.text is on hold for this job: acknowledge the hold first");
     // The fixture's seeded Suno crash holds box.chrome on job:run:run-seed-suno.

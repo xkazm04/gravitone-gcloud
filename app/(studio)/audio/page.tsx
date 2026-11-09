@@ -38,6 +38,9 @@ import { huntParam } from "./_hunt/url.ts";
 import { confirmLessonAct } from "./_lessons/acts.ts";
 import { Lessons } from "./_lessons/Lessons.tsx";
 import { readLessons } from "./_lessons/read.ts";
+import { CoverDesk } from "./_cover/LazyCover.tsx";
+import { briefCoverAct, launchCoverAct, pickCoverAct, saveCoverStylesAct } from "./_cover/acts.ts";
+import { readCoverDesk } from "./_cover/read.ts";
 import { batchConfirm, batchReceipt, scoreTake } from "./_insight/acts.ts";
 import { readBatch, readRubricPile, readStrengths, unscoredCount } from "./_insight/read.ts";
 import { openMatches } from "./_songlab/read.ts";
@@ -68,6 +71,7 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   const kinds = KINDS.map((k) => ({ id: k, label: k, href: deskHref({ ...url, kind: k }) }));
   let body: ReactNode;
   if (url.section === "arrange") body = <LazyArrange view={await readArrange(url.kind)} acts={{ moveCard, editRows }} />;
+  else if (url.section === "cover") body = <CoverDesk view={await readCoverDesk(q)} acts={{ launch: launchCoverAct, brief: briefCoverAct, pick: pickCoverAct, saveStyles: saveCoverStylesAct }} />;
   else if (url.section === "hunt") body = <LazyHunt view={await readHunt(url.kind, huntParam(q))} acts={{ draftHuntMap, renderLeaves, crownTake, draftHuntLesson, confirmLessonAct }} nowMs={audioNow()} />;
   else if (url.section === "lessons") body = <Lessons view={await readLessons(url.kind)} />;
   else if (url.section === "strengths") body = <LazyStrengths key={url.kind} view={await readStrengths(url.kind)} lessonDoor={confirmLessonAct} />;
@@ -84,7 +88,7 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
     <div className={s.desk}>
       <div className={s.bar}>
         <TabRail label="audio desk" mode="audio" tabs={tabs} current={url.section} />
-        {url.section !== "compose" && url.section !== "songlab" && <TabRail label="kind" mode="audio" tabs={kinds} current={url.kind} />}
+        {url.section !== "compose" && url.section !== "cover" && url.section !== "songlab" && <TabRail label="kind" mode="audio" tabs={kinds} current={url.kind} />}
       </div>
       {body}
     </div>

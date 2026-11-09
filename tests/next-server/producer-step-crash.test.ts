@@ -1,7 +1,7 @@
 // A STUDIO PART ACT UNDER CRASHES (Phase 4 wave C, L37). Three queued follow-ups on a notebook,
 // launched LIVE through a fake text engine (never the vendor), so the job is three paid units:
 //   - crash-prefix enumeration (kernel crash.ts): the process dies after every effect the drive
-//     makes; a restarted process sweeps, the operator acknowledges the held seat lane and retries.
+//     makes; a restarted process sweeps, the operator retries; the free seat holds no lane.
 //     INVARIANT at every prefix: no question whose answer the job already booked is asked again
 //     (the never-re-spend rule, by unit), the event chain is intact; recovered, the job is done,
 //     its spend equals the meter and all three answers landed as revisions waiting for a decision;
@@ -29,7 +29,7 @@ import { enumerateCrashes, type CrashSpec } from "@gt/kernel/crash";
 import type { Effects } from "@gt/kernel/effects";
 import { verify } from "@gt/kernel/events";
 import { enqueue, get, retry } from "@gt/kernel/job";
-import { ackLane } from "@gt/kernel/job-queue";
+import { laneHold } from "@gt/kernel/job-queue";
 import { recover, runJob } from "@gt/kernel/job-run";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { readPart, writePart } from "@gt/kernel/parts/driver";
@@ -117,8 +117,8 @@ describe("a part act under crashes", () => {
         must(recover(fx, { holder: second, alive: () => true }));
         const id = must(parseAt("job id", jobIdSchema, w.jobId));
         if (must(get(w.k.store, id)).job.state === "interrupted") {
-          // A paid lane holds after a crash (decision 6): the operator looks, acknowledges, retries.
-          must(ackLane(w.k.store, "seat.text", OP));
+          // The seat is free, so no lane holds after a crash (lane.ts): the operator retries.
+          expect(must(w.k.store.read((r) => laneHold(r, "seat.text")))).toBeUndefined();
           must(retry(w.k.store, id, OP));
         }
         if (must(get(w.k.store, id)).job.state === "queued") must(await drive(fx, w, second));

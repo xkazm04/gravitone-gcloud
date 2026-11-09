@@ -129,6 +129,14 @@ export const SCREENS = {
   "audio-rubric": { url: "/audio?s=rubric" },
   "audio-batch": { url: "/audio?s=batch" },
   "audio-batch-sfx": { url: "/audio?s=batch&kind=sfx" },
+  // the cover desk (spark track-mirror-studio) over the dev-only fixture (_cover/desk/fixture.ts), one cover per
+  // state among a history; a store with no covers draws the upload instead. One row per station a state opens on.
+  "audio-cover": { url: "/audio?s=cover&fixture=judging" },
+  "audio-cover-empty": { url: "/audio?s=cover&fixture=empty" },
+  "audio-cover-draft": { url: "/audio?s=cover&fixture=draft" },
+  "audio-cover-failed": { url: "/audio?s=cover&fixture=failed" },
+  "audio-cover-picked": { url: "/audio?s=cover&fixture=picked" },
+  "audio-cover-remixed": { url: "/audio?s=cover&fixture=remixed" },
   // Spark suno-advisor: the scripted Suno conversation, and its kit pieces.
   "audio-suno": { url: "/audio?s=studio&source=fixture&session=night-drive" },
   "kit-suno": { url: "/kit#suno" },

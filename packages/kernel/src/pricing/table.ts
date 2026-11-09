@@ -136,6 +136,14 @@ export const PRICE_TABLE: readonly PriceRow[] = [
     }),
   ),
   {
+    provider: "codex",
+    model: "codex-image-gen",
+    unit: "image",
+    per: 1,
+    source: "Drawn on the operator's ChatGPT seat through the codex CLI: no per-image USD figure. Its cost is the seat's quota; the receipt line books $0 through the catalog's own fallback.",
+    checked: "2026-11-08",
+  },
+  {
     provider: "agy",
     model: "agy-image-generator",
     unit: "image",

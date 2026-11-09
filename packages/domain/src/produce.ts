@@ -42,7 +42,7 @@ export type ModelOption = {
   readonly lane: ResourceLane;
   readonly provider: string;
   readonly model: string;
-  /** The picker's words for the model ("Flux 2 dev fp8 · ComfyUI"). */
+  /** The picker's words for the model ("Codex · image_gen"). */
   readonly label: string;
   readonly secondsPerUnit: number;
   /** null = unpriced, and then `unpricedReason` says why (credits, a seat, a subscription). */

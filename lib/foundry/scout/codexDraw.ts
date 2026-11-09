@@ -4,8 +4,8 @@
 // caller records as a failed panel: there is no second image path here and nothing retries.
 //
 // WHY NOT THROUGH THE STORYBOARD JOB. A kernel job is claimable: with the worker up, the job could be picked up and
-// drawn by the worker's bound engine, which is Flux, and the job books FLUX_MODEL on every panel whatever drew it. A
-// Codex storyboard is therefore drawn in this process with no job, which also means `--detach` is refused.
+// drawn by the worker instead of this process. An idea-loop storyboard is therefore drawn here with no job, which
+// also means `--detach` is refused.
 
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";

@@ -54,7 +54,12 @@ test("exit: off-shell those numbers are the binary's own and mean nothing specia
 
 test("exit: a login complaint on stderr is `not-logged-in`, anything else is `failed`", () => {
   expect(classifyExit(1, "Not logged in. Please run /login.", true).kind).toBe("not-logged-in");
-  expect(classifyExit(1, "Invalid credentials", false).kind).toBe("not-logged-in");
+  // The CLI's own sign-in sentences, read out of the shipped binary 2026-11-08.
+  for (const line of ["Invalid API key · Please run /login", "Login expired · Please run /login", "Not logged in · Run /login", "Your Claude session has expired. Sign in again to continue"])
+    expect(classifyExit(1, line, false).kind, line).toBe("not-logged-in");
+  // A word that merely CONTAINS one of the old pattern's stems is a crash, not a sign-out.
+  for (const line of ["Error: unknown author flag", "authorization header malformed", "Invalid credentials", "credentials.json: no such file"])
+    expect(classifyExit(1, line, false).kind, line).toBe("failed");
   expect(classifyExit(1, "Error: model does-not-exist is unknown", true).kind).toBe("failed");
   expect(classifyExit(null, "", true).kind).toBe("failed");
 });
@@ -79,7 +84,7 @@ test("exit: a `failed` verdict carries the tail of stderr — the engine's one l
 test("exit: the missing-binary verdict is decided BEFORE stderr is read", () => {
   // cmd's not-found text could one day contain a word the login regex matches;
   // the code decides first, so the remedy cannot flip to "sign in".
-  expect(classifyExit(9009, "authorization: 'claude' is not recognized", true).kind).toBe("not-installed");
+  expect(classifyExit(9009, "Not logged in: 'claude' is not recognized", true).kind).toBe("not-installed");
 });
 
 test("doors: the probe and the run both classify through the one function", () => {
@@ -97,4 +102,6 @@ test("doors: the probe and the run both classify through the one function", () =
   expect(calls.length).toBe(doors.length);
   // And the old inline verdict is gone from the run.
   expect(src).not.toMatch(/const hint = \/login\|auth\|credential\/i\.test\(err\)/);
+  // Nor is the stem pattern that read "author" as a sign-out.
+  expect(src).not.toMatch(/\/login\|auth\|credential\/i/);
 });

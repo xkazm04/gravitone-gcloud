@@ -5,24 +5,28 @@ import { TABLES } from "@gt/kernel/router/tables";
 import { STUDIO_CREDIT } from "@gt/producers/scout-ideas/define";
 
 import type { ReplicaGenerator } from "../foundry/scout/stillEngine.ts";
+import { CODEX_MODEL } from "../imaging/local/codex.ts";
 import { PRICES } from "../imaging/pricing.ts";
 
 // ONE SCOUT STILL ON A RECEIPT, PRICED BY THE ENGINE THAT DRAWS IT (spark scout-vision S6) - the line a
 // scene's replicas and a game asset's concepts carry. Until S6 both were fixed to the Flare row whatever
-// SCOUT_REPLICA_GENERATOR said, so a night drawing on local Flux showed a Leonardo price it never paid.
+// SCOUT_REPLICA_GENERATOR said, so a night drawing on another engine showed a Leonardo price it never paid.
 //   leonardo-studio  UNPRICED: the studio bills prepaid studio credits and no USD-per-studio-credit rate has
 //                    been checked (lib/imaging/pricing.ts's leonardo-studio row) - the idea artboard's
 //                    line (lib/producers/scoutIdea.ts `ideaOption`), 8 credits a still at Low.
-//   comfy-flux2      FREE: Flux 2 dev on this box's card, no vendor paid (the reference sheet's line).
+//   codex            $0: image_gen on the operator's ChatGPT seat bills no image; its quota is the real limit.
 //   leonardo-flare   the router's Flare row at lib/imaging/pricing.ts's per-image fallback, as before;
 //                    the API's reported credits replace it when booked.
+
+/** Why a Codex still books $0: the seat bills no image, so a run's USD ceiling is checkable; its quota is the real limit. */
+export const CODEX_SEAT = "the operator's ChatGPT seat: no per-image bill; its quota is the limit";
 
 /** Seconds one studio still takes - typing, generating, downloading, deleting: the idea artboard's, not yet measured. */
 const STUDIO_SECONDS = 45;
 /** Seconds one Flare still takes: the 2026-10-22 smoke's 15 s, with a poll's slack. */
 const FLARE_SECONDS = 20;
-/** Seconds one Flux 2 dev still takes on the card: the storyboard frame's illustrative figure. */
-const FLUX_SECONDS = 96;
+/** Seconds one Codex image turn takes: illustrative, not yet measured on a night. */
+const CODEX_SECONDS = 120;
 
 /** `<prefix>/<provider>/<model>` keyed, labelled `label`, on `lane`: one still by `generator`. */
 export function scoutStillOption(prefix: string, label: string, lane: ResourceLane, generator: ReplicaGenerator): Result<ModelOption> {
@@ -42,22 +46,17 @@ export function scoutStillOption(prefix: string, label: string, lane: ResourceLa
       basis: { seconds: { src: "illustrative", note: "one studio still at Low with its download and delete, not yet measured" }, usd: { src: "real", note: STUDIO_CREDIT } },
     });
   }
-  if (generator === "comfy-flux2") {
-    const row = PRICES.find((p) => p.provider === "comfy-flux2");
-    if (row === undefined) return err("internal", `the price table has no comfy-flux2 row to price a ${label} with`);
+  if (generator === "codex") {
     return ok({
-      key: `${prefix}/comfy-flux2/${row.model}`,
+      key: `${prefix}/codex/${CODEX_MODEL}`,
       lane,
-      provider: "comfy-flux2",
-      model: row.model,
-      label: `${label} · local`,
-      secondsPerUnit: FLUX_SECONDS,
+      provider: "codex",
+      model: CODEX_MODEL,
+      label: `${label} · codex`,
+      secondsPerUnit: CODEX_SECONDS,
       usdPerUnit: 0,
       src: "illustrative",
-      basis: {
-        seconds: { src: "illustrative", note: "one Flux 2 dev still on this box's ComfyUI, the storyboard frame's figure, not yet measured" },
-        usd: { src: "real", note: "free: a local model on this box's card; no vendor is paid" },
-      },
+      basis: { seconds: { src: "illustrative", note: "one Codex image turn, not yet measured" }, usd: { src: "real", note: CODEX_SEAT } },
     });
   }
   const model = TABLES.image.candidates.find((c) => c.provider === "leonardo-flare")?.models["generate"];

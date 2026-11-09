@@ -53,17 +53,22 @@ export function laneOfSlot(resource: string): ResourceLane | undefined {
 /**
  * WHERE A CRASH COSTS MONEY (owner ruling 2026-10-16). A job interrupted on a
  * PAID lane may already have spent - Suno credits, a Leonardo studio still, a
- * seat's turn, a cloud call - so its lane HOLDS until an operator has looked
+ * cloud call - so its lane HOLDS until an operator has looked
  * (v1 MV/Suno switched the whole queue off: "credits may be spent - look
  * first"). The free local lanes carry on: a crashed render is re-rendered for
  * the price of electricity. Two lists, exhaustive by the mapped type.
+ *
+ * THE SEAT IS FREE (operator ruling 2026-11-08, restating the cost model): only Gemini is real
+ * money, and a seat run is never budget-capped. An interrupted seat.text job cannot have spent
+ * anything a look would protect, and holding its lane stopped every reel and draft behind one
+ * restart for two nights (scout LESSONS, held since 2026-10-24). So it does not hold.
  */
 export const LANE_PAYS: { readonly [L in ResourceLane]: boolean } = {
   "gpu.local": false,
   "box.render": false,
   "box.blender": false,
   "box.chrome": true,
-  "seat.text": true,
+  "seat.text": false,
   "cloud.google": true,
   "cloud.elevenlabs": true,
   "cloud.leonardo": true,

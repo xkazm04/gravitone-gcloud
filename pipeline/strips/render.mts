@@ -11,15 +11,17 @@
 // triage card, because the gate decides what may land in the registry, never
 // what the operator is allowed to look at (intake render-proof v2.12).
 
-import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { errorMessage } from "@gt/domain/errors";
 import { pathToFileURL } from "node:url";
 
 import { chromium, type Browser, type Page } from "playwright";
 
-import { makeWorkDir, run, videoArgs, withEncoderFallback } from "../../lib/export/headless";
+import { makeWorkDir, videoArgs, withEncoderFallback } from "../../lib/export/headless";
 import { STRIP_FPS, STRIP_FRAMES, STRIP_SIZE, type StripGates, type StripLane } from "../../lib/foundry/strips/types";
+import { BUDGET, bounded, ffmpegTo } from "./deadline.mts";
+import { measureText } from "./measure.mts";
 
 /**
  * Chromium for strips, with incremental rasterization switched off.
@@ -42,7 +44,6 @@ const FRAME_TIMEOUT_MS = 15_000;
 const SEEK_FRAMES = [180, 0, 120];
 /** Frames the legibility gate measures text on. */
 const LEGIBILITY_FRAMES = [30, 120, 210];
-const SAFE_INSET = 0.06;
 const FLOOR_AT_1080 = 26;
 const KEEP_NAMES_SHIM = "window.__name = window.__name || function (f) { return f; };";
 
@@ -66,22 +67,26 @@ async function openStrip(browser: Browser, htmlPath: string, lane: StripLane, fr
   await page.addInitScript(KEEP_NAMES_SHIM);
   const pageErrors: string[] = [];
   page.on("pageerror", (e) => pageErrors.push(e.message));
-  await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: READY_TIMEOUT_MS });
-  await page.evaluate(
-    async (ms) => {
-      const w = window as unknown as { STRIP_READY?: unknown; renderFrameAt?: unknown };
-      const t0 = performance.now();
-      while (w.STRIP_READY === undefined || w.STRIP_READY === false) {
-        if (performance.now() - t0 > ms) throw new Error("window.STRIP_READY was never set");
-        await new Promise((r) => setTimeout(r, 50));
-      }
-      await w.STRIP_READY;
-      await document.fonts.ready;
-      if (typeof w.renderFrameAt !== "function") throw new Error("window.renderFrameAt is not a function");
-    },
-    READY_TIMEOUT_MS,
-  );
-  const dims = await page.evaluate(() => (window as unknown as { STRIP?: { width: number; height: number; frames?: number } }).STRIP);
+  // One outer deadline over the load and the ready wait: a loop in the page's top-level script blocks
+  // both, and the in-page timeout below cannot fire inside it (deadline.mts).
+  const dims = await bounded(browser, BUDGET.open, "opening the strip page", async () => {
+    await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: READY_TIMEOUT_MS });
+    await page.evaluate(
+      async (ms) => {
+        const w = window as unknown as { STRIP_READY?: unknown; renderFrameAt?: unknown };
+        const t0 = performance.now();
+        while (w.STRIP_READY === undefined || w.STRIP_READY === false) {
+          if (performance.now() - t0 > ms) throw new Error("window.STRIP_READY was never set");
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        await w.STRIP_READY;
+        await document.fonts.ready;
+        if (typeof w.renderFrameAt !== "function") throw new Error("window.renderFrameAt is not a function");
+      },
+      READY_TIMEOUT_MS,
+    );
+    return page.evaluate(() => (window as unknown as { STRIP?: { width: number; height: number; frames?: number } }).STRIP);
+  });
   if (!dims || dims.width !== width || dims.height !== height) {
     throw new Error(`window.STRIP is ${JSON.stringify(dims)}, the ${lane} lane is ${width}x${height}`);
   }
@@ -107,7 +112,15 @@ export async function renderFrame(opts: { browser: Browser; htmlPath: string; la
   }
 }
 
-async function drawFrame(page: Page, i: number): Promise<void> {
+/** `fn` under an outer deadline of this process (deadline.mts); the page's own timers are not trusted. */
+const guard = <T,>(page: Page, ms: number, what: string, fn: () => Promise<T>): Promise<T> => {
+  const browser = page.context().browser();
+  return browser === null ? fn() : bounded(browser, ms, what, fn);
+};
+
+const drawFrame = (page: Page, i: number): Promise<void> => guard(page, BUDGET.frame, `renderFrameAt(${i})`, () => drawFrameIn(page, i));
+
+async function drawFrameIn(page: Page, i: number): Promise<void> {
   await page.evaluate(
     async ({ i, ms }) => {
       const w = window as unknown as { renderFrameAt: (i: number) => unknown };
@@ -120,56 +133,7 @@ async function drawFrame(page: Page, i: number): Promise<void> {
   );
 }
 
-const shot = (page: Page) => page.screenshot({ type: "png", animations: "disabled", caret: "hide" });
-
-/** Text measured as rendered: the first line box of every visible text node,
- *  converted to an approximate font size and scaled to a 1080-wide frame. */
-async function measureText(page: Page): Promise<{ minPx: number; sample: string; outside: number; measured: number; canvases: number }> {
-  return page.evaluate(
-    ({ inset }) => {
-      const W = innerWidth;
-      const H = innerHeight;
-      const scale = 1080 / W;
-      let minPx = Infinity;
-      let sample = "";
-      let outside = 0;
-      let measured = 0;
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      let n: Node | null;
-      while ((n = walker.nextNode())) {
-        const text = (n.textContent ?? "").trim();
-        const el = n.parentElement;
-        if (!el || text.length < 2) continue;
-        if (el.closest("script,style,title,defs,desc,metadata")) continue;
-        let op = 1;
-        for (let e: Element | null = el; e; e = e.parentElement) {
-          const cs = getComputedStyle(e);
-          if (cs.display === "none" || cs.visibility === "hidden") op = 0;
-          op *= parseFloat(cs.opacity || "1");
-        }
-        if (op < 0.35) continue;
-        let rect: DOMRect | undefined;
-        if (el instanceof SVGElement) rect = el.getBoundingClientRect();
-        else {
-          const r = document.createRange();
-          r.selectNodeContents(n);
-          rect = r.getClientRects()[0];
-        }
-        if (!rect || rect.width < 1 || rect.height < 1) continue;
-        if (rect.right < 0 || rect.bottom < 0 || rect.left > W || rect.top > H) continue;
-        measured++;
-        const px = (rect.height / 1.2) * scale;
-        if (px < minPx) {
-          minPx = px;
-          sample = text.slice(0, 40);
-        }
-        if (rect.left < W * inset - 1 || rect.right > W * (1 - inset) + 1 || rect.top < H * inset - 1 || rect.bottom > H * (1 - inset) + 1) outside++;
-      }
-      return { minPx, sample, outside, measured, canvases: document.querySelectorAll("canvas").length };
-    },
-    { inset: SAFE_INSET },
-  );
-}
+const shot = (page: Page) => guard(page, BUDGET.still, "the screenshot", () => page.screenshot({ type: "png", animations: "disabled", caret: "hide" }));
 
 /** Pixel comparison and motion statistics, computed in a blank page. */
 async function imageLab(browser: Browser) {
@@ -247,8 +211,6 @@ async function imageLab(browser: Browser) {
   };
 }
 
-const ff = (args: string[]) => run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], { maxBuffer: 1 << 26 });
-
 /**
  * `frames` is the brief's (spark scout-vision S5: a full reel runs 30 s - 2 min); absent, STRIP_FRAMES - every strip
  * of the 8 s contract renders exactly as it did. The gates scale with it: motion is judged over its own seconds and
@@ -271,11 +233,14 @@ export async function renderStrip(opts: { browser: Browser; htmlPath: string; ou
     // 1. Sequential capture, measuring text on the way past.
     page = await openStrip(browser, htmlPath, lane, frames);
     const legibility: Awaited<ReturnType<typeof measureText>>[] = [];
-    for (let i = 0; i < frames; i++) {
-      await drawFrame(page, i);
-      await writeFile(fname(i), await shot(page));
-      if (LEGIBILITY_FRAMES.includes(i)) legibility.push(await measureText(page));
-    }
+    const capture = page;
+    await guard(capture, BUDGET.capture(frames), `capturing ${frames} frames`, async () => {
+      for (let i = 0; i < frames; i++) {
+        await drawFrame(capture, i);
+        await writeFile(fname(i), await shot(capture));
+        if (LEGIBILITY_FRAMES.includes(i)) legibility.push(await guard(capture, BUDGET.still, "measuring the text", () => measureText(capture)));
+      }
+    });
 
     // 2. Seek gate: a fresh page, entered cold and out of order.
     cold = await openStrip(browser, htmlPath, lane, frames);
@@ -295,21 +260,23 @@ export async function renderStrip(opts: { browser: Browser; htmlPath: string; ou
     const { width } = STRIP_SIZE[lane];
     const mp4 = path.join(outDir, "strip.mp4");
     await withEncoderFallback("strips/render", async (enc) => {
-      await ff(["-framerate", String(STRIP_FPS), "-i", path.join(framesDir, "f%06d.png"), ...videoArgs(enc), "-pix_fmt", "yuv420p", "-movflags", "+faststart", mp4]);
+      await ffmpegTo(["-framerate", String(STRIP_FPS), "-i", path.join(framesDir, "f%06d.png"), ...videoArgs(enc), "-pix_fmt", "yuv420p", "-movflags", "+faststart"], mp4, BUDGET.mp4(frames));
     });
-    await ff([
+    await ffmpegTo([
       "-framerate", String(STRIP_FPS), "-i", path.join(framesDir, "f%06d.png"),
       "-vf", `scale=${Math.round(width / 2)}:-2`, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "36",
-      "-row-mt", "1", "-deadline", "good", "-cpu-used", "4", "-an", path.join(outDir, "strip.webm"),
-    ]);
-    await ff(["-i", fname(120), "-vf", `scale=${Math.round(width / 2)}:-2`, "-q:v", "3", path.join(outDir, "poster.jpg")]);
+      "-row-mt", "1", "-deadline", "good", "-cpu-used", "4", "-an",
+    ], path.join(outDir, "strip.webm"), BUDGET.webm(frames));
+    await ffmpegTo(["-i", fname(120), "-vf", `scale=${Math.round(width / 2)}:-2`, "-q:v", "3"], path.join(outDir, "poster.jpg"), BUDGET.still);
     const cell = lane === "edu" ? "480:-2" : "270:-2";
-    await ff([
+    await ffmpegTo([
       "-framerate", String(STRIP_FPS), "-i", path.join(framesDir, "f%06d.png"),
       "-vf", `select='not(mod(n\\,${sheetEvery}))',scale=${cell},tile=4x3:padding=6:color=0x111111`,
-      "-frames:v", "1", "-update", "1", path.join(outDir, "sheet.png"),
-    ]);
-    await copyFile(fname(0), path.join(outDir, "frame0.png")).catch(() => {});
+      "-frames:v", "1", "-update", "1",
+    ], path.join(outDir, "sheet.png"), BUDGET.sheet(frames));
+    // Landed by rename, as the encodes are: a copy cut short never sits at the name a reader opens.
+    const f0 = path.join(outDir, "frame0.png");
+    await copyFile(fname(0), `${f0}.partial`).then(() => rename(`${f0}.partial`, f0)).catch(() => rm(`${f0}.partial`, { force: true }).catch(() => {}));
 
     // 5. Gates, recorded.
     const maxSeek = Math.max(...seekDiffs);
@@ -342,8 +309,8 @@ export async function renderStrip(opts: { browser: Browser; htmlPath: string; ou
   } catch (e) {
     return { ok: false, files: {}, renderMs: Date.now() - t0, error: errorMessage(e) };
   } finally {
-    await page?.close().catch(() => {});
-    await cold?.close().catch(() => {});
+    // A close can hang on a renderer that never answers: it too is bounded, and kills the browser.
+    for (const pg of [page, cold]) if (pg !== undefined) await guard(pg, BUDGET.still, "closing the page", () => pg.close()).catch(() => {});
     await rm(work, { recursive: true, force: true }).catch(() => {});
   }
 }

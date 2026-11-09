@@ -1,5 +1,5 @@
 // `scout storyboard --draw codex` over a FAKE codex binary: the file on disk decides a panel, a failed panel stays
-// failed and Flux is never reached, nothing goes through a job, and the key-shaped environment never reaches the child.
+// failed and the job's draw is never reached, nothing goes through a job, and the key-shaped environment never reaches the child.
 // Every store is a temp directory set before any lib/ module loads.
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,12 +28,12 @@ const ROOT = vi.hoisted(() => {
   return dir;
 });
 
-const flux = vi.hoisted(() => ({ calls: 0 }));
-vi.mock("../../lib/imaging/local/flux2.ts", async (orig) => ({
-  ...(await orig<typeof import("../../lib/imaging/local/flux2.ts")>()),
-  drawFlux: async () => {
-    flux.calls++;
-    throw new Error("flux must not be reached");
+const jobDraw = vi.hoisted(() => ({ calls: 0 }));
+vi.mock("../../lib/imaging/local/codex.ts", async (orig) => ({
+  ...(await orig<typeof import("../../lib/imaging/local/codex.ts")>()),
+  drawCodex: async () => {
+    jobDraw.calls++;
+    throw new Error("the job's draw must not be reached");
   },
 }));
 
@@ -95,7 +95,7 @@ beforeEach(() => {
   process.env["CODEX_HOME"] = path.join(ROOT, "codex-home");
   process.env["OPENAI_API_KEY"] = "sk-must-not-reach";
   process.env["ANTHROPIC_KEY_LANE_X"] = "must-not-reach";
-  flux.calls = 0;
+  jobDraw.calls = 0;
 });
 
 async function withKernel<T>(fn: (k: Kernel) => Promise<T>): Promise<T> {
@@ -127,7 +127,7 @@ async function night(dry = false) {
 const ID = (n: number): string => `il-20261108-${String(n).padStart(3, "0")}`;
 
 describe("a codex-drawn storyboard of a passing idea", { timeout: 60_000 }, () => {
-  it("draws every panel from the file on disk, with no job, no Flux and no key in the child", async () => {
+  it("draws every panel from the file on disk, with no job, no job draw and no key in the child", async () => {
     writeFileSync(SCRIPT, JSON.stringify(["ok", "ok", "ok"]));
     loopIdea(ID(1), true);
     const n = await night();
@@ -142,7 +142,7 @@ describe("a codex-drawn storyboard of a passing idea", { timeout: 60_000 }, () =
     for (const f of c?.images ?? []) expect(inspectPng(readFileSync(resolveInNight(n.id, String(f)))).width).toBe(300);
     expect(calls().map((x) => x.mode)).toEqual(["ok", "ok", "ok"]);
     expect(calls().flatMap((x) => x.keys)).toEqual([]);
-    expect(flux.calls).toBe(0);
+    expect(jobDraw.calls).toBe(0);
   });
 
   it("reaches the Board as frame cells, naming its idea-loop record and no undefined", async () => {
@@ -169,7 +169,7 @@ describe("a codex-drawn storyboard of a passing idea", { timeout: 60_000 }, () =
     expect(c?.error).toContain("panel 3: blank");
     expect(c?.error).toContain("panel 4: codex exited 3");
     expect(calls()).toHaveLength(4);
-    expect(flux.calls).toBe(0);
+    expect(jobDraw.calls).toBe(0);
   });
 
   it("fails the storyboard when no panel drew, and reports failed", async () => {
@@ -179,7 +179,7 @@ describe("a codex-drawn storyboard of a passing idea", { timeout: 60_000 }, () =
     const r = await withKernel((k) => storyboardAct(ctxOf(k), n.id, [brief(ID(3), 2)], codex()));
     expect(r.outcome).toBe("failed");
     expect(r.candidates[0]?.status).toBe("failed");
-    expect(flux.calls).toBe(0);
+    expect(jobDraw.calls).toBe(0);
   });
 
   it("draws nothing on a dry night", async () => {
@@ -215,7 +215,7 @@ describe("the door", { timeout: 60_000 }, () => {
     expect(await refused([brief(ID(12), 2)], codex())).toContain("no idea-loop idea");
   });
 
-  it("refuses --detach, a genre and a cast: each would reach Flux, a clip or a reference path", async () => {
+  it("refuses --detach, a genre and a cast: each would reach the job, a clip or a reference path", async () => {
     loopIdea(ID(13), true);
     expect(await refused([brief(ID(13), 2)], codex(), { detach: true })).toContain("--detach");
     expect(await refused([brief(ID(13), 2, { genre: "gn-abc" })], codex())).toContain("takes no genre");

@@ -56,6 +56,13 @@ import { frameOfUnit, unitsFromFrames, type PictureUnit } from "@/lib/frames/pic
 import { pictureFromUnits } from "@/lib/score/picture";
 import { toCueSpots, type ScoreSpot } from "@/lib/score/spots";
 import { takeFileUrl } from "@/lib/sound/client";
+import { takeFileHref } from "@/lib/sound/takeHref";
+
+/** A held take's file URL. In a browser it goes through the client door, which carries the
+    credential an <audio> element cannot send. On the server `takeFileUrl` is a client
+    reference that throws when called (lib/sound/client.ts), so the export reads the plain
+    route href: the document names the take, and the file route judges the request. */
+const takeSrc = (id: string): string => (typeof window === "undefined" ? takeFileHref(id) : takeFileUrl(id));
 
 /** The one seeded project whose story the fixture tells. */
 export const FIXTURE_PROJECT_ID = "seed-glass-harbor";
@@ -268,7 +275,7 @@ export function deriveTimeline(input: CutInput): DerivedCut {
     const pointer = new Map(spots.map((s) => [s.id, s.activeTakeId]));
     for (const cue of cues) {
       const held = pointer.get(cue.id);
-      const stored = held && storeTakeIds?.has(held) ? takeFileUrl(held) : undefined;
+      const stored = held && storeTakeIds?.has(held) ? takeSrc(held) : undefined;
       const take = takes[cue.id] ?? stored;
       const why = held ? (storeTakeIds ? "take gone from the store" : "sound store not read") : "no take in hand";
       clips.push({

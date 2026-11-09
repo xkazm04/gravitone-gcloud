@@ -25,7 +25,7 @@ export const standInTurn = (t: ArticleTurn): Promise<AgentResult> => (t.kind ===
 
 export const refusedTurn = (t: ArticleTurn, reason: string): AgentResult => ({ outcome: t.kind === "writer" ? "errored" : "unavailable", final: "", turns: 0, durationMs: 0, exitCode: null, errors: [reason] });
 
-/** A writer turn's `--max-budget-usd` lowered to `usd`; a reviewer has no such flag. */
+/** A writer turn's booked allowance lowered to `usd`; a reviewer has none. */
 export const cappedTurn = (t: ArticleTurn, usd: number): ArticleTurn =>
   t.kind === "writer" ? { kind: "writer", input: { ...t.input, maxBudgetUsd: Math.min(t.input.maxBudgetUsd ?? Number.POSITIVE_INFINITY, usd) } } : t;
 

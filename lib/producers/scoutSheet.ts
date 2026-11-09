@@ -18,7 +18,7 @@ import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
 import type { Reader, Store } from "@gt/kernel/store";
 import { defineScoutSheet, parseSheetRequest, SCOUT_SHEET, SHEET_REQUEST, type SheetRequest } from "@gt/producers/scout-sheet/define";
 
-import { drawFlux, FLUX_MODEL, FLUX_SEED_MAX, FLUX_STEPS } from "../imaging/local/flux2.ts";
+import { CODEX_MODEL, drawCodex, STILL_SEED_MAX } from "../imaging/local/codex.ts";
 import { kernel } from "../kernelProcess.ts";
 import { FoundryError } from "../foundry/runStore.ts";
 import type { KeptCharacter } from "../foundry/scout/characters.ts";
@@ -26,17 +26,18 @@ import { SHEET_LATE, sheetPrompt } from "../foundry/scout/sheet.ts";
 import { mutateNight, readNightNow, withCandidate } from "../foundry/scout/store.ts";
 import type { CandidateId, Night, NightId, SheetCandidate } from "../foundry/scout/types.ts";
 import { effectsFor } from "./extract.ts";
+import { CODEX_SEAT } from "./scoutStillOption.ts";
 import { sheetActs, type SheetActEngines } from "./scoutSheetActs.ts";
 
 // THE SCOUT SHEET PRODUCER, BOUND (spark scout-vision S3) - one `sheet` candidate as one kernel job
 // (packages/producers/src/scout-sheet/define.ts says which step). This file is the launch - receipt, then confirm - and
 // the binding; the act is ./scoutSheetActs.ts, the act that writes the candidate lib/foundry/scout/sheet.ts.
 //
-// WHAT A SHEET COSTS ON ITS RECEIPT: one line on gpu.local, `draw`, one Flux 2 dev still at 1:1 on this box's ComfyUI -
-// $0, "free: a local model"; its seconds the storyboard frame's illustrative 96 s. The eye's read after it is the
+// WHAT A SHEET COSTS ON ITS RECEIPT: one line on seat.text, `draw`, one Codex image_gen still at 1:1 on the operator's
+// ChatGPT seat - $0 (./scoutStillOption.ts CODEX_SEAT); its seconds the storyboard frame's illustrative 120 s. The eye's read after it is the
 // idea eye's declared call (unpriced on the receipt, as the ideas producer's is). No job ceiling.
 //
-// ONE JOB PER SHEET, on gpu.local, naming the `comfy` engine: `job:scout-sheet:<night>:<c-NN>`. night.json names it on
+// ONE JOB PER SHEET, on seat.text (Codex's lane): `job:scout-sheet:<night>:<c-NN>`. night.json names it on
 // the candidate and on `night.jobs` once the job exists.
 
 export type SheetTarget = { readonly nightId: NightId; readonly candidateId: CandidateId };
@@ -57,31 +58,31 @@ export type SheetLaunch =
   /** The sheet already has its job: that job, never a second. */
   | { readonly kind: "existing"; readonly jobId: string; readonly state: Job["state"] };
 
-export const SCOUT_SHEET_LANE: ResourceLane = "gpu.local";
+export const SCOUT_SHEET_LANE: ResourceLane = "seat.text";
 
-/** Seconds one Flux 2 dev still takes on the card at 20 steps: illustrative, the storyboard frame's (not yet measured). */
-const DRAW_SECONDS = 96;
+/** Seconds one Codex image turn takes: illustrative, the storyboard frame's (not yet measured). */
+const DRAW_SECONDS = 120;
 
 function drawOption(): ModelOption {
   return {
-    key: `scout-sheet/comfyui/${FLUX_MODEL}`,
+    key: `scout-sheet/codex/${CODEX_MODEL}`,
     lane: SCOUT_SHEET_LANE,
-    provider: "comfyui",
-    model: FLUX_MODEL,
-    label: "reference sheet · 1:1 · local",
+    provider: "codex",
+    model: CODEX_MODEL,
+    label: "reference sheet · 1:1 · codex",
     secondsPerUnit: DRAW_SECONDS,
     usdPerUnit: 0,
     src: "illustrative",
     basis: {
-      seconds: { src: "illustrative", note: `one Flux 2 dev still at ${FLUX_STEPS} steps with one reference on this box's ComfyUI, not yet measured; another session's prompts in its queue stretch it` },
-      usd: { src: "real", note: "free: a local model on this box's card; no vendor is paid" },
+      seconds: { src: "illustrative", note: "one Codex image turn with one reference, not yet measured" },
+      usd: { src: "real", note: CODEX_SEAT },
     },
   };
 }
 
 /** The sheet's seed, from its place: a retry draws the same still. */
 export function sheetSeed(t: SheetTarget): number {
-  return Number.parseInt(createHash("sha256").update(`${t.nightId}/${t.candidateId}/sheet`).digest("hex").slice(0, 12), 16) % (FLUX_SEED_MAX + 1);
+  return Number.parseInt(createHash("sha256").update(`${t.nightId}/${t.candidateId}/sheet`).digest("hex").slice(0, 12), 16) % (STILL_SEED_MAX + 1);
 }
 
 /* ── The candidate a launch may price ─────────────────────────────────────── */
@@ -90,7 +91,7 @@ export function sheetSeed(t: SheetTarget): number {
 export function checkSheet(night: Night, cid: string, k: KeptCharacter, mode: ReceiptMode): Result<SheetCandidate> {
   if (night.state === "committed") return err("refused", `night ${night.id} is committed; nothing more renders into it`);
   if (night.dry) return err("refused", `night ${night.id} is dry; its sheets are words only and draw no still`);
-  if (mode !== "live") return err("refused", `a sheet is drawn live on this box's card (free); a ${mode} receipt draws none`);
+  if (mode !== "live") return err("refused", `a sheet is drawn live on the operator's seat; a ${mode} receipt draws none`);
   const c = night.candidates.find((x) => x.id === cid);
   if (c === undefined) return err("not-found", `no candidate ${cid} in night ${night.id}`);
   if (c.kind !== "sheet") return err("refused", `${cid} is a ${c.kind} candidate, not a sheet`);
@@ -186,9 +187,9 @@ export async function launchSheet(store: Store, target: SheetTarget, k: KeptChar
 
 /* ── The binding ──────────────────────────────────────────────────────────── */
 
-/** Production's draw: Flux 2 on this box's ComfyUI at 1:1, the guarded references admitted late. */
+/** Production's draw: Codex at 1:1 with the guarded references attached. */
 export const LIVE_SHEET_DRAW: NonNullable<SheetActEngines["draw"]> = async (prompt, o) => {
-  const r = await drawFlux({ prompt, aspect: "1:1", refs: o.refs, late: o.late, ...(o.seed === undefined ? {} : { seed: o.seed }) });
+  const r = await drawCodex({ prompt, aspect: "1:1", refs: o.refs, ...(o.seed === undefined ? {} : { seed: o.seed }) });
   return { png: r.png, seed: r.seed };
 };
 
@@ -205,7 +206,7 @@ const processStore = (): Result<Store> => {
   return k.ok ? ok(k.value.store) : k;
 };
 
-/** Production's engines are the acts' defaults (Flux on this box's ComfyUI, the imaging router's eye); a test hands fakes. */
+/** Production's engines are the acts' defaults (Codex on the operator's seat, the imaging router's eye); a test hands fakes. */
 export function scoutSheetProducer(o: { readonly store?: () => Result<Store>; readonly engines?: SheetActEngines } = {}): Producer {
   const store = o.store ?? processStore;
   const p = defineScoutSheet(SCOUT_SHEET_LANE, {
@@ -215,8 +216,7 @@ export function scoutSheetProducer(o: { readonly store?: () => Result<Store>; re
     },
     ...sheetActs({ draw: LIVE_SHEET_DRAW, ...o.engines }),
   });
-  // The still is drawn through ComfyUI: the job names the `comfy` engine (the storyboard producer's rule).
-  return { ...p, engine: "comfy" };
+  return p;
 }
 
 /** Drive one sheet job on this process (pipeline/scout.mts after a launch, a test): the worker's rules. */

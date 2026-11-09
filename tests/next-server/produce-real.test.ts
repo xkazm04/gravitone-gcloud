@@ -14,7 +14,7 @@
 //   · a live receipt is refused where only dry may run (GRAVITONE_DRY_ONLY=1);
 //   · a plan whose revision moved under its receipt answers the fresh receipt at the new revision;
 //   · the Runs acts are the kernel's, and a lane a crash holds refuses the retry of its job until
-//     an operator acknowledges it;
+//     an operator acknowledges it (the seat is free, so a crash there leaves none);
 //   · a re-route to another lane relaunches in ONE transaction (old job cancelled, `~2` on the new
 //     lane, the part row moved with its option), a re-route on the same lane is the kernel's
 //     steer on the same job, and a receipt the queue moved under is stale.
@@ -350,7 +350,7 @@ describe("a plan, launched, and the Runs acts", () => {
     expect((await refusal(port.ackLane({ lane: "seat.text" }, who))).code).toBe("refused");
   });
 
-  it("holds a paid lane a crash left, refusing the retry of its job until an operator acknowledges it", async () => {
+  it("leaves no hold after a crash on the free seat: the retry of its job is the operator's, with nothing to acknowledge first", async () => {
     const research = `job:part:${film}/research`;
     // A drive that dies mid-step on the text seat (a throw that is not an Error is the crash
     // harness: the driver lets it pass and the job stays running under its lease) ...
@@ -362,15 +362,12 @@ describe("a plan, launched, and the Runs acts", () => {
       perform: () => Promise.reject("crash"),
     };
     await expect(runJob(fx, crash, research, { holder: dead, alive: () => true, heartbeatMs: 60_000 })).rejects.toBe("crash");
-    // ... is found by the recovery sweep: interrupted, and the paid lane holds.
+    // ... is found by the recovery sweep: interrupted, and the free seat holds nothing (lane.ts LANE_PAYS).
     const swept = recover(fx, { holder: { bootId: "boot-sweep", pid: 1, host }, alive: () => false });
     expect(swept.ok && swept.value.map((j) => j.id)).toEqual([research]);
-    const holds = await v(port.listHolds());
-    expect(holds).toEqual([expect.objectContaining({ lane: "seat.text", jobId: research, title: "Untitled film · research", stage: "a" })]);
-    expect((await v(port.listJobs())).find((j) => j.id === `job:run:${jobs().find((x) => x.producer === "article")?.of.id}`)?.held).toBe(true);
-    const no = await refusal(port.retryJob({ jobId: research }, who));
-    expect(no.message).toMatch(/acknowledge the hold first/);
-    expect((await v(port.ackLane({ lane: "seat.text" }, who))).note).toBe("seat.text hold acknowledged");
+    expect(await v(port.listHolds())).toEqual([]);
+    expect((await v(port.listJobs())).find((j) => j.id === `job:run:${jobs().find((x) => x.producer === "article")?.of.id}`)?.held).toBe(false);
+    expect((await refusal(port.ackLane({ lane: "seat.text" }, who))).code).toBe("refused");
     expect((await v(port.retryJob({ jobId: research, ceilingUsd: 5 }, who))).note).toBe("retry · attempt 2 · same route · ceiling $5");
   });
 

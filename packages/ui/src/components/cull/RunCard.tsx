@@ -6,6 +6,7 @@ import type { BoardVerdict } from "../../board/boardGate.ts";
 import type { Cell } from "../../board/cull.ts";
 import type { ItemWords } from "../../board/port.ts";
 import { runLooks, runState, type Run } from "../../board/runs.ts";
+import { Chip } from "../chip/Chip.tsx";
 import { Plate } from "../desk/Plate.tsx";
 import { cx } from "../cx.ts";
 import { PipRow } from "../piprow/PipRow.tsx";
@@ -45,7 +46,8 @@ export function RunFace({ run, cells, mediaOf, wordsOf }: Pick<RunCardProps, "ru
       </span>
     );
   }
-  if (run.words?.ref !== undefined) return <Plate className={s.face} src={run.words.ref} alt="" lazy />;
+  const face = run.words?.ref ?? run.words?.poster;
+  if (face !== undefined) return <Plate className={s.face} src={face} alt="" lazy />;
   if (kind === "model") {
     // A model run is its first variant's poster render; a glb is never drawn on a card.
     const poster = wordsOf(firstId).poster;
@@ -78,6 +80,11 @@ export function RunCard({ run, at, cells, verdicts, mediaOf, wordsOf, shape = "s
       onClick={() => onPress(at)}
     >
       <RunFace run={run} cells={cells} mediaOf={mediaOf} wordsOf={wordsOf} />
+      {run.words?.channel !== undefined && (
+        <span className={s.channelTag}>
+          <Chip label={run.words.channel} casing="lower" />
+        </span>
+      )}
       <span className={s.foot}>
         <span className={s.label}>{label}</span>
         <PipRow looks={looks} label={`${decided} of ${looks.length} decided`} />

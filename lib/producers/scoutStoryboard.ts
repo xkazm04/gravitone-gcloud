@@ -18,13 +18,14 @@ import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
 import type { Reader, Store } from "@gt/kernel/store";
 import { defineScoutStoryboard, parseStoryboardRequest, SCOUT_STORYBOARD, STORYBOARD_REQUEST, type StoryboardRequest } from "@gt/producers/scout-storyboard/define";
 
-import { drawFlux, FLUX_MODEL, FLUX_SEED_MAX, FLUX_STEPS, type FluxAspect } from "../imaging/local/flux2.ts";
+import { CODEX_MODEL, drawCodex, STILL_SEED_MAX, type CodexAspect } from "../imaging/local/codex.ts";
 import { LTX_DEFAULTS, LTX_MODEL, renderLtxClip } from "../imaging/video/comfyLtx.ts";
 import { kernel } from "../kernelProcess.ts";
 import { FoundryError } from "../foundry/runStore.ts";
 import { mutateNight, readNightNow, withCandidate } from "../foundry/scout/store.ts";
 import { CLIP_SECONDS, type CandidateId, type Night, type NightId, type StoryboardCandidate } from "../foundry/scout/types.ts";
 import { effectsFor } from "./extract.ts";
+import { CODEX_SEAT } from "./scoutStillOption.ts";
 import { storyboardActs, type StoryboardActEngines, type StoryboardClip } from "./scoutStoryboardActs.ts";
 
 // THE SCOUT STORYBOARD PRODUCER, BOUND (spark scout-storyboards) - one `storyboard` candidate's frames as one
@@ -32,21 +33,19 @@ import { storyboardActs, type StoryboardActEngines, type StoryboardClip } from "
 // is not the storyboard's). This file is the launch - receipt, then confirm - and the binding; the acts are
 // ./scoutStoryboardActs.ts, the brief's door lib/foundry/scout/storyboard.ts.
 //
-// WHAT A STORYBOARD COSTS ON ITS RECEIPT: one line on gpu.local, `panel`, one Flux 2 dev frame per panel on
-// this box's ComfyUI - $0, src real, "free: a local model" (the scene's local clip rule, scoutScene.ts
-// `clipOption`); no spend row is ever booked. The pace is illustrative: 96 s a frame is unmeasured on this
-// box (the spark's estimate, ~8 GPU min for five frames); the graph's effort reads the real minutes off the
-// job's gpu.local claim events (lib/foundry/scout/effort.ts). A TRIAL (spark scout-vision S2: a storyboard with a
-// genre) adds a second line, `clip`, one LTX-2.5 clip per panel on the same card - $0, its seconds the scene's
-// measured local clip (lib/producers/scoutScene.ts `clipOption`).
+// WHAT A STORYBOARD COSTS ON ITS RECEIPT: one line on seat.text, `panel`, one Codex image_gen frame per panel on the
+// operator's ChatGPT seat - $0, the seat bills no image and its quota is the real limit (./scoutStillOption.ts CODEX_SEAT).
+// The pace is illustrative: 120 s a frame is unmeasured. A TRIAL (spark scout-vision S2: a storyboard with a genre) adds a
+// second line, `clip`, one LTX-2.5 clip per panel on the card - $0, its seconds the scene's measured local clip.
 //
 // NO JOB CEILING. The night's ceiling caps Gemini only (lib/foundry/scout/budget.ts) and this job books none;
 // a job with no ceiling and no run row holds nothing against the night (budget.ts `promiseOf`).
 //
-// ONE JOB PER STORYBOARD, on gpu.local, naming the `comfy` engine so the worker ADMITS it by that engine's
-// measured profile against the machine's load (@gt/domain/resource) - beside a TRELLIS mesh job or an LTX
-// clip, not on top of one: `job:scout-storyboard:<night>:<c-NN>`. night.json names it on the candidate and
-// on `night.jobs` once the job exists. The storyboard rung is the scout wing's alone (the muse wing has none).
+// ONE JOB PER STORYBOARD, on its lane (`storyboardLane`): a plain storyboard waits on seat.text, Codex's lane, and loads
+// nothing on the card; a TRIAL renders its clips through ComfyUI, so it waits on gpu.local and names the `comfy` engine so
+// the worker ADMITS it by that engine's measured profile, beside a TRELLIS mesh job or an LTX clip, not on top of one:
+// `job:scout-storyboard:<night>:<c-NN>`. night.json names it on the candidate and on `night.jobs` once the job exists.
+// The storyboard rung is the scout wing's alone (the muse wing has none).
 
 export type StoryboardTarget = { readonly nightId: NightId; readonly candidateId: CandidateId };
 
@@ -66,24 +65,28 @@ export type StoryboardLaunch =
   /** The storyboard already has its job: that job, never a second. */
   | { readonly kind: "existing"; readonly jobId: string; readonly state: Job["state"] };
 
-export const SCOUT_STORYBOARD_LANE: ResourceLane = "gpu.local";
+export const SCOUT_STORYBOARD_LANE: ResourceLane = "seat.text";
+/** The lanes a storyboard job may wait on: a plain board on Codex's, a trial on the card (its LTX clips own it). */
+export const SCOUT_STORYBOARD_LANES: readonly ResourceLane[] = [SCOUT_STORYBOARD_LANE, "gpu.local"];
+/** The lane a storyboard's job waits on: the card only for a trial's clips. */
+export const storyboardLane = (trial: boolean): ResourceLane => (trial ? "gpu.local" : SCOUT_STORYBOARD_LANE);
 
-/** Seconds one Flux 2 dev frame takes on the card at 20 steps: illustrative, not yet measured here. */
-const PANEL_SECONDS = 96;
+/** Seconds one Codex image turn takes: illustrative, not yet measured on a night. */
+const PANEL_SECONDS = 120;
 
 function panelOption(): ModelOption {
   return {
-    key: `scout-storyboard/comfyui/${FLUX_MODEL}`,
+    key: `scout-storyboard/codex/${CODEX_MODEL}`,
     lane: SCOUT_STORYBOARD_LANE,
-    provider: "comfyui",
-    model: FLUX_MODEL,
-    label: "storyboard frame · local",
+    provider: "codex",
+    model: CODEX_MODEL,
+    label: "storyboard frame · codex",
     secondsPerUnit: PANEL_SECONDS,
     usdPerUnit: 0,
     src: "illustrative",
     basis: {
-      seconds: { src: "illustrative", note: `one Flux 2 dev frame at ${FLUX_STEPS} steps on this box's ComfyUI, not yet measured; another session's prompts in its queue stretch it` },
-      usd: { src: "real", note: "free: a local model on this box's card; no vendor is paid" },
+      seconds: { src: "illustrative", note: "one Codex image turn, not yet measured" },
+      usd: { src: "real", note: CODEX_SEAT },
     },
   };
 }
@@ -94,7 +97,7 @@ const CLIP_SECONDS_WALL = 101;
 function clipOption(): ModelOption {
   return {
     key: `scout-storyboard/comfyui/${LTX_MODEL}`,
-    lane: SCOUT_STORYBOARD_LANE,
+    lane: storyboardLane(true),
     provider: "comfyui",
     model: LTX_MODEL,
     label: `trial clip · ${CLIP_SECONDS} s · local`,
@@ -114,7 +117,7 @@ export function clipSeed(t: StoryboardTarget, k: number): number {
 }
 
 /** The LTX frame an aspect renders at: 16:9 the model's default, 9:16 the same turned (both on its 64-pixel grid). */
-export const ltxSize = (aspect: FluxAspect | "16:9" | "9:16"): { readonly width: number; readonly height: number } =>
+export const ltxSize = (aspect: CodexAspect | "16:9" | "9:16"): { readonly width: number; readonly height: number } =>
   aspect === "9:16" ? { width: LTX_DEFAULTS.height, height: LTX_DEFAULTS.width } : { width: LTX_DEFAULTS.width, height: LTX_DEFAULTS.height };
 
 /** One LTX clip of a still on this box's ComfyUI, at the aspect's size: the bytes and their length. */
@@ -125,7 +128,7 @@ export const ltxClip: StoryboardClip = async (still, prompt, o) => {
 
 /** A panel's seed, from its place: the same storyboard redraws the same frame on a retry, and the seed is recorded. */
 export function panelSeed(t: StoryboardTarget, k: number): number {
-  return Number.parseInt(createHash("sha256").update(`${t.nightId}/${t.candidateId}/panel-${k}`).digest("hex").slice(0, 12), 16) % (FLUX_SEED_MAX + 1);
+  return Number.parseInt(createHash("sha256").update(`${t.nightId}/${t.candidateId}/panel-${k}`).digest("hex").slice(0, 12), 16) % (STILL_SEED_MAX + 1);
 }
 
 /* ── The candidate a launch may price ─────────────────────────────────────── */
@@ -134,7 +137,7 @@ export function panelSeed(t: StoryboardTarget, k: number): number {
 export function checkStoryboard(night: Night, cid: string, mode: ReceiptMode): Result<StoryboardCandidate> {
   if (night.state === "committed") return err("refused", `night ${night.id} is committed; nothing more renders into it`);
   if (night.dry) return err("refused", `night ${night.id} is dry; its storyboards are words only and draw no frame`);
-  if (mode !== "live") return err("refused", `a storyboard's frames are drawn live on this box's card (free); a ${mode} receipt draws none`);
+  if (mode !== "live") return err("refused", `a storyboard's frames are drawn live on the operator's seat; a ${mode} receipt draws none`);
   const c = night.candidates.find((x) => x.id === cid);
   if (c === undefined) return err("not-found", `no candidate ${cid} in night ${night.id}`);
   if (c.kind !== "storyboard") return err("refused", `${cid} is a ${c.kind} candidate, not a storyboard`);
@@ -168,7 +171,7 @@ function readIn(r: Reader, t: StoryboardTarget, o: { readonly mode: ReceiptMode;
   const line: PlanLine = { key: `${at}/panel`, label: `panel · ${panels.length} frame(s)`, lane: SCOUT_STORYBOARD_LANE, units: panels.length, option, after: [], order: 0, status: "pending" };
   // A trial clips every panel after the frames: a second line on the same card.
   const trial = c.value.genre !== undefined;
-  const clip: PlanLine | undefined = trial ? { key: `${at}/clip`, label: `clip · ${panels.length} trial clip(s)`, lane: SCOUT_STORYBOARD_LANE, units: panels.length, option: clipOption(), after: [line.key], order: 1, status: "pending" } : undefined;
+  const clip: PlanLine | undefined = trial ? { key: `${at}/clip`, label: `clip · ${panels.length} trial clip(s)`, lane: storyboardLane(true), units: panels.length, option: clipOption(), after: [line.key], order: 1, status: "pending" } : undefined;
   const lines = clip === undefined ? [line] : [line, clip];
   const receipt = receiptFor({ subject: { kind: "run", lane: trial ? "video" : "image" }, lines, plan: lines, queue: readQueue(r), capacity: LANE_CAPACITY, now: o.now, mode: o.mode });
   const aspect = c.value.aspect === "9:16" ? "9:16" : "16:9";
@@ -208,7 +211,7 @@ export async function launchStoryboard(store: Store, target: StoryboardTarget, o
     if (read.value.receipt.token !== token) return ok({ kind: "stale", fresh: read.value.receipt });
     const mode = opts.mode === "dry" ? ok(DRY) : armLive(opts.actor, t.at, `storyboard receipt ${token.slice(0, 12)} confirmed`, { dryOnly: opts.dryOnly });
     if (!mode.ok) return mode;
-    enqueueIn(t, { id: jobId, of: { kind: "run", id: `scout:${target.nightId}/${target.candidateId}` }, producer: SCOUT_STORYBOARD, lane: SCOUT_STORYBOARD_LANE, mode: mode.value }, opts.actor);
+    enqueueIn(t, { id: jobId, of: { kind: "run", id: `scout:${target.nightId}/${target.candidateId}` }, producer: SCOUT_STORYBOARD, lane: storyboardLane(read.value.request.clips !== undefined), mode: mode.value }, opts.actor);
     append(t, { actor: opts.actor, type: STORYBOARD_REQUEST, subject: { kind: "job", id: jobId }, data: { ...read.value.request, by: opts.actor.id } });
     return ok({ kind: "launched", jobId, receipt: read.value.receipt });
   });
@@ -227,7 +230,7 @@ export async function launchStoryboard(store: Store, target: StoryboardTarget, o
 
 export const LIVE_STORYBOARD_ENGINES: StoryboardActEngines = {
   draw: async (prompt, o) => {
-    const r = await drawFlux({ prompt, aspect: o.aspect, ...(o.seed === undefined ? {} : { seed: o.seed }), ...(o.refs === undefined ? {} : { refs: o.refs }), ...(o.late === undefined ? {} : { late: o.late }) });
+    const r = await drawCodex({ prompt, aspect: o.aspect, ...(o.seed === undefined ? {} : { seed: o.seed }), ...(o.refs === undefined ? {} : { refs: o.refs }) });
     return { png: r.png, seed: r.seed };
   },
   clip: ltxClip,
@@ -246,9 +249,10 @@ const processStore = (): Result<Store> => {
   return k.ok ? ok(k.value.store) : k;
 };
 
-export function scoutStoryboardProducer(o: { readonly store?: () => Result<Store>; readonly engines?: StoryboardActEngines } = {}): Producer {
+export function scoutStoryboardProducer(o: { readonly lane?: ResourceLane; readonly store?: () => Result<Store>; readonly engines?: StoryboardActEngines } = {}): Producer {
   const store = o.store ?? processStore;
-  const p = defineScoutStoryboard(SCOUT_STORYBOARD_LANE, {
+  const lane = o.lane ?? SCOUT_STORYBOARD_LANE;
+  const p = defineScoutStoryboard(lane, {
     request: (job) => {
       const s = store();
       return s.ok ? storyboardRequestOf(s.value, job.id) : s;
@@ -256,13 +260,14 @@ export function scoutStoryboardProducer(o: { readonly store?: () => Result<Store
     // A test's engines over production's: one that hands only `draw` still clips a trial through the live engine.
     ...storyboardActs({ ...LIVE_STORYBOARD_ENGINES, ...o.engines }),
   });
-  // Every frame is drawn through ComfyUI: the job names the `comfy` engine, so the worker admits it by that
-  // engine's measured profile (lib/producers/scoutScene.ts's local clip rule).
-  return { ...p, engine: "comfy" };
+  // A trial on the card renders its clips through ComfyUI: it names the `comfy` engine, so the worker admits it by that
+  // engine's measured profile (lib/producers/scoutScene.ts's local clip rule). On the seat's lane it loads nothing.
+  return lane === "gpu.local" ? { ...p, engine: "comfy" } : p;
 }
 
 /** Drive one storyboard job on this process (pipeline/scout.mts after a launch, a test): the worker's rules. */
 export function driveStoryboard(store: Store, location: string, jobId: string, o: { readonly dryOnly?: boolean; readonly engines?: StoryboardActEngines } = {}): Promise<Result<RunReport>> {
-  const producer = scoutStoryboardProducer({ store: () => ok(store), ...(o.engines === undefined ? {} : { engines: o.engines }) });
+  const job = jobOf(store, jobId);
+  const producer = scoutStoryboardProducer({ store: () => ok(store), ...(job === undefined ? {} : { lane: job.lane }), ...(o.engines === undefined ? {} : { engines: o.engines }) });
   return runJob(effectsFor(store, location), producer, jobId, { dryOnly: o.dryOnly ?? dryOnlyFrom(process.env) });
 }

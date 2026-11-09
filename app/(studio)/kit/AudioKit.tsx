@@ -35,6 +35,7 @@ import { LessonForm } from "@gt/ui/components/audio/LessonForm.tsx";
 import { LessonList, type LessonRow } from "@gt/ui/components/audio/LessonList.tsx";
 
 import { inert } from "./ContractHooks.tsx";
+import { RangePickSpec } from "./RangePickKit.tsx";
 import { BatchSpecimen, BRIEF_MISSED, BRIEF_MUSIC, BRIEF_SFX, RubricSpecimen, StrengthSpecimen } from "./LocalBandSpecimen.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
 
@@ -373,6 +374,7 @@ export function AudioSection() {
       <StrengthSpecimen />
       <HuntSpecimen />
       <LessonSpecimen />
+      <RangePickSpec />
     </Section>
   );
 }

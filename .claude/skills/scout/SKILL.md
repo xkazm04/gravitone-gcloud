@@ -1,7 +1,7 @@
 ---
 name: scout
 memory: none
-version: 3.0.0
+version: 3.1.0
 category: Development
 description: The nightly loop that makes the operator's channels' episodes (spark project-baseline, 2026-10-26) - six channels designed in session (D1 Came From Nowhere and D2 The What-If Machine as real-data reels; F1 While It Works and F2 Across the Centuries as impossible-camera documentary storyboards; S1 It Builds Itself spec ads; K1 Small Night Stories bedtime shorts). Each night storyboards (five local Flux frames, one per beat) and real-data reels (numbers from a named table, authored in code) are made only from outlines the operator accepted in session, then one third of the night explores for the channels (a channel's gap, looks for a channel's frame, new channel types in words), and ONE Board packet pkt:scout:<night> is left for the morning. Seeds, idea artboards, genres, ventures, characters, music and adult comedy are archived. Wraps pipeline/scout.mts.
 argument-hint: "night [--dry] [--until HH:MM] | folder <dir> | status [<night>]"
@@ -54,16 +54,15 @@ operator's commit of `pkt:scout:<night>` does. You pre-filter; you never keep.
 
 **The night keeps the box's CPU, RAM and GPU in 60-80%** (operator, 2026-10-23). The band steers how much you LAUNCH; it
 never raises a cap or a ceiling, and admission's marks still hold the top. The binding resource on this box is COMMIT
-CHARGE, not RAM (LESSONS 2026-10-26): ComfyUI with Flux resident holds ~56 GB of it, Ollama's model ~26 GB while loaded.
+CHARGE, not RAM (LESSONS 2026-10-26): ComfyUI with a model resident holds ~56 GB of it, Ollama's model ~26 GB while loaded.
 
 ## The money and the rights (read before every night)
 
-- **$15 per night; stills come from the studio pool, clips are local and free** - stills (style replicas and
-  transfers, scene replicas, asset concepts) are drawn in the operator's Leonardo studio at Low (8 credits each,
-  unpriced, one browser tab at a time; operator, 2026-10-26: "Leonardo studio still has plenty of credits ... we
-  should stick with it in future too"). The API pool is empty; `SCOUT_REPLICA_GENERATOR=leonardo-flare` or
-  `comfy-flux2` switches the generator, never on your own. The studio holds no seed and no 4:5 (a 4:5 source draws
-  9:16). Clips are
+- **$15 per night; stills come from Codex, clips are local and free** - stills (style replicas and transfers, scene
+  replicas, asset concepts, storyboard frames, reference sheets) are drawn by Codex's `image_gen` on the operator's
+  ChatGPT seat, $0 per image against its quota (operator, 2026-11-08; Flux 2 is removed and a `comfy-flux2` setting
+  refuses). `SCOUT_REPLICA_GENERATOR=leonardo-studio` or `leonardo-flare` switches the generator, never on your own.
+  The studio holds no seed and no 4:5 (a 4:5 source draws 9:16). Clips are
   LTX-2.5 on this box's ComfyUI (~100 s each, $0, `--clips` caps GPU minutes, default 2). ComfyUI's
   queue is shared with any other session's jobs - a busy card stretches the night, it does not fail it.
   The operator's standing grant for this loop
@@ -89,7 +88,7 @@ the operator's hour; the operator may also type it after a workday. Either way:
 ### 0. Preflight - no spend
 
 1. `npx tsx pipeline/scout.mts doctor` - with `--dry` when the night will be dry (the vendor keys and
-   the dry pin are then notes, not failures). Exit 1 -> write the failing lines into the night summary
+   the dry pin are then notes, not failures; Suno is a note unless `--tracks N` is named). Exit 1 -> write the failing lines into the night summary
    (step 12) and stop. Never install, configure or work around a missing binary or key.
 2. **Commit yesterday's kept knowledge.** The Board's apply wrote kept findings into
    `knowledge/templates/**/PATTERNS.md` and kept watch lines into `knowledge/scout/watchlist.md`.
@@ -153,8 +152,8 @@ notes: a draft is not a verdict.
 
 The night's first hours. Read `## Episodes due` in the taste brief: every due episode per channel with its logline,
 its five beats and its spec. Take them oldest first, spread across channels, up to `storyboardCap` (`open
---storyboards`, default 12, at most 20 - never raise it). Each storyboard is five Flux frames on this box's ComfyUI
-(gpu.local, free), one per beat, judged whole on the packet.
+--storyboards`, default 12, at most 20 - never raise it). Each storyboard is five Codex frames on the operator's seat
+(seat.text, $0), one per beat, judged whole on the packet.
 
 0. **Research the execution first**, once per channel per night: how this kind of video is shot and cut (a
    practitioner breakdown, an editor's or director's own talk, a making-of; never a login, a paywall or an AI-prompt
@@ -166,12 +165,14 @@ its five beats and its spec. Take them oldest first, spread across channels, up 
    - `title` - the episode's title; `paragraph` - the video start to end (<= 480 chars), from the logline and beats;
    - `bullets` - 3-6 lines: the format and length, the audience, the look, the hook, and for F1/F2 the view's GRADE
      (Observed / Reconstructed / Modelled / Illustrative) as the spec states it;
-   - `panels` - exactly one Flux prompt per beat, in order, words only: subject, staging, framing, light. **F1/F2**:
+   - `panels` - exactly one frame prompt per beat, in order, words only: subject, staging, framing, light. **F1/F2**:
      the camera is the spec's impossible view (a probe through glass, a micro-camera riding a particle, an x-ray or
      thermal frame, a same-frame morph across centuries) - realism is the constant, the view is the episode's own.
      **S1**: the brand is the spec's fictional one; never a real brand, logo or product. **K1**: stylised, gentle,
      never photoreal children, nothing frightening left unresolved;
    - `use` / `aim` - omit them: the channel's name and promise are filled in.
+   When the channel holds a look (`channel show <id> --json`: `channel.look`) the door writes it in front of every panel: do not
+   repeat its words in `panels`, only the subject, staging, framing and light.
    The words are craft, not content: no person, studio, title or franchise. In `panels` write lower case after each
    sentence's first word (the door refuses a capital mid-sentence as a name).
 2. One JSON array -> `npx tsx pipeline/scout.mts storyboard <night> --json <file> --detach`. One bad brief refuses
@@ -183,7 +184,8 @@ its five beats and its spec. Take them oldest first, spread across channels, up 
 ### 3. Episodes due - real-data reels (D1, D2)
 
 Each data episode is an 8 s strip authored in code on the seat from REAL numbers, up to `reelCap` a night (`open
---reels`, default 6; never raise it). The approval unit is the 8 s strip; a kept one makes its full cut due
+--reels`, default 6; never raise it). The approval unit is the 8 s strip, drawn in motion on the Board (the job renders its mp4 beside the frame-120 still;
+`reel-motion <night> [--dry]` fills in an older night's); a kept one makes its full cut due
 (`reel-cut`, 30-120 s, sized by how many beats the data holds).
 
 1. **The source first.** The spec names it (Our World in Data, FAO, a Wikipedia table, a UN revision). Fetch the
@@ -346,7 +348,8 @@ interrupted job ids.
   that is not `illustrative: true`: real data goes through `reel`, for a KEPT idea only.
 - **Do not run a full-video act for an idea without a kept storyboard** - the idea must be under
   `## Ready for full video` in the taste brief (lib/foundry/scout/storyboard.ts `keptStoryboardFor`), and
-  the act names that storyboard. A scene clip is not a full video and stays ungated.
+  the act names that storyboard. A scene clip is not a full video and stays ungated. An episode's kept
+  storyboard ends the episode kept (rejected: thrown) and no full video follows it; the preview says so.
 
 ## Lessons
 

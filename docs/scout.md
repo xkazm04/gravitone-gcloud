@@ -23,9 +23,10 @@ ventures, characters and music describes the spread era and is archived (`.claud
   accepted outline is imported (`episodes import --outlines <file> --report <file>`), and moves outline-kept ->
   in-production -> made -> kept | thrown as its night's candidate is launched, rendered and judged on the packet
   (lib/foundry/scout/channels.ts, episodeMoves.ts). `channel list`, `channel show <id>`, `episodes due`.
+- **A channel's look** is optional text (at most 400 characters; the operator's own words) set with `channel-look <channelId> "<text>"` (empty text clears it; an import never touches it). The storyboard door writes it in FRONT of every panel prompt of that channel's episodes (`channelLook.ts composeLook`; after a cast's identity blocks when there are any), skips a panel that already opens with the same words, refuses a composed prompt past Flux's 2000 characters, and records it on the candidate as `look`. A channel with no look draws the seat's words untouched; a reel channel never reads it.
 - **The night's doors take episodes**: `storyboard` takes `{fromEpisode, title, paragraph, bullets, panels}` for a
   storyboard channel (one panel per beat; use/aim default from the channel); `reel` takes `{fromEpisode, brief,
-  approach, source, data, cut}` for a data channel. The taste brief opens with `## Episodes due`.
+  approach, source, data, cut}` for a data channel. The taste brief opens with `## Episodes due`. Under each channel it also lists the kept and thrown episodes with the reasons and notes the operator gave (newest 8 per channel, `VERDICT_LINES`); the words ride the move that ends the episode (`verdict` on the episode, optional, so older files read).
 - **The archive**: new nights live in `foundry-out/scout-nights/`; `foundry-out/scout/` is the read-only pre-baseline
   archive (`SCOUT_PREBASELINE_STORE_DIR`), read under the same night ids - its packets still open and commit on the
   Board, and kept characters, Library styles and knowledge stay. A new night on an archived date is `<date>-2`. On a
@@ -213,7 +214,7 @@ The song is the clock: a track is made and judged on one night, and its visualiz
 ## What the nights are for
 
 **The ladder (spark scout-vision, 2026-10-25).** Every night climbs one: **spread** genres while no venture
-exists; **prove** a kept idea can be executed (a storyboard on local Flux that applies a researched execution
+exists; **prove** a kept idea can be executed (a storyboard on Codex that applies a researched execution
 technique, then a genre's trials with every panel clipped, then a 15-30 s piece kept as "would publish"); and only
 then a **venture** born on the Board - a channel from a publishable genre, an album from kept tracks, a game from its
 asset catalogue (S4). Stage 1 shipped the purpose, the order and the gate below; stage 2 the genres and ventures
@@ -240,10 +241,12 @@ ideation's bans) and `## Genres`.
 
 ## The money
 
-- **Stills come from the studio pool** (spark scout-vision S6; operator, 2026-10-26: "Leonardo studio still has
-  plenty of credits"). Style replicas and transfers, scene replicas and asset concepts draw in the Leonardo
-  studio at Low (8 credits, unpriced) by default; `SCOUT_REPLICA_GENERATOR=leonardo-flare|comfy-flux2` moves them.
-  Studio jobs wait on box.chrome, Flux on gpu.local, Flare on cloud.leonardo (lib/foundry/scout/stillEngine.ts);
+- **Stills come from Codex** (operator, 2026-11-08: "Our main image engine for now will be codex with its image
+  generation"; Flux 2 was removed the same day). Style replicas and transfers, scene replicas, asset concepts,
+  storyboard frames and reference sheets draw through Codex's `image_gen` on the operator's ChatGPT seat, $0 per
+  image against the seat's quota. `SCOUT_REPLICA_GENERATOR=leonardo-studio|leonardo-flare` moves them to the studio
+  at Low (8 credits, unpriced) or Flare, and a leftover `comfy-flux2` refuses. Codex jobs wait on seat.text, studio
+  jobs on box.chrome, Flare on cloud.leonardo (lib/foundry/scout/stillEngine.ts);
   a scene whose clip renders locally runs on gpu.local either way. One studio tab at a time across processes
   (`foundry-out/leonardo-studio.lock`, stale after 5 min). The studio holds no seed and no 4:5 (drawn 9:16); a
   prompt past 1500 characters is cut at a sentence. The doctor reads the API pool (apiSubscriptionTokens +
@@ -398,7 +401,15 @@ derived data from 'what if' fantasy scenarios." Two acts on the same scout-reels
   article needs its https url, an article its words verbatim (<= 400), a what-if its premise (<= 400). The source
   line reads `Source: <title>` or `What if: <premise> (fiction)`. Refused: an idea not kept on a live committed
   night, not stats, or already holding a live real reel (lib/foundry/scout/reel.ts, reelDoor.ts). Cell `c-NN/reel`,
-  the images tab, group `reels`; files under `reels/<c-NN>/`.
+  the images tab, group `reels`; files under `reels/<c-NN>/`. The approval unit is the whole 8 s strip: the job
+  saves frame 120 as the tile (`reels/<c-NN>.png`), then renders all 240 frames to `reels/<c-NN>/strip.mp4` beside
+  the strip (renderStrip, the renderer a cut uses; free) and records it on the candidate as `video`. The cell
+  carries the mp4 and the row's `ref` is the still, so the mosaic draws the poster; the id, group, tab and reasons
+  are the same with or without a video. A render that fails keeps the reel and its still and records the
+  sentence as `videoError`, which the cell's meta repeats; a dry job renders nothing.
+  `reel-motion <night> [--dry]` renders the video of a live night's rendered reels that have a strip and no
+  video, in place, each recorded through the night's lock; it is idempotent (an mp4 already beside the strip is
+  recorded, not drawn again), a failed one is retried by the next run, and `--dry` lists and writes nothing.
 - **`reel-cut <night> --json`** `[{fromReel, seconds: 30-120}]` - a kept reel (taste `## Reels to cut`) re-authored
   at seconds * 30 frames (CONTRACT.md `window.STRIP.frames`; 240 stays the default) and rendered to mp4. Cell
   `c-NN/video`, the videos tab, group `reel cuts`; files under `cuts/<c-NN>/`. A cut's receipt uses an unmeasured
@@ -432,18 +443,15 @@ KEPT on the Board files it as one marked PATTERNS.md line, as a kept finding doe
 nothing, and a second apply writes nothing.
 
 **The frames.** One job per storyboard, `job:scout-storyboard:<night>:<c-NN>` (producer `scout-storyboard`,
-`lib/producers/scoutStoryboard.ts`), steps `panel:1..N`, on `gpu.local` naming the `comfy` engine, so it is
-admitted beside the night's LTX clips and TRELLIS meshes, never on top of them. Each panel is one Flux 2 dev
-frame (`lib/imaging/local/flux2.ts`: `flux2_dev_fp8mixed`, the Mistral 3 small text encoder, the Flux 2
-VAE, 20 steps, 1280x720 or 720x1280) from the panel's words alone - the idea's artboard is read as words,
-never handed in as a reference: the frames are a plan, not the final video's baseline. Each panel's seed is
-chosen at launch and recorded, so a retry draws the same frame. **$0**: a local model, priced
-`free: a local model` on the receipt, no spend row, never against the night's Gemini ceiling; the cost is
-**GPU minutes** (~96 s a frame, illustrative until measured: ~8 min for five), which the decision graph's
-effort reads off the job's gpu.local events. A panel ComfyUI refused leaves its frame empty and its
+`lib/producers/scoutStoryboard.ts`), steps `panel:1..N`, on `seat.text` for a plain storyboard; a trial is on `gpu.local`
+naming the `comfy` engine, admitted beside the night's LTX clips and TRELLIS meshes, because its clips own the card. Each
+panel is one Codex `image_gen` frame (`lib/imaging/local/codex.ts`) from the panel's words, with a cast's kept sheets
+attached - the idea's artboard is read as words, never handed in as a reference: the frames are a plan, not the final
+video's baseline. A panel's recorded seed is not a draw seed (Codex takes none), so a retry is another frame. **$0** at the
+ChatGPT seat, no spend row, never against the night's Gemini ceiling; ~120 s a frame is illustrative until measured.
+A panel Codex refused leaves its frame empty and its
 sentence in `error` (`panel N: ...`); the storyboard goes on. With no frame at all it is `failed`. Frames
-land in `storyboards/<c-NN>/panel-N.png`; `storyboard <night> --collect` settles detached jobs. The client
-never POSTs `/free` - the ComfyUI is shared. `doctor` lists the three Flux files as a note.
+land in `storyboards/<c-NN>/panel-N.png`; `storyboard <night> --collect` settles detached jobs.
 
 **A dry night** writes its storyboards `rendered` with no frame and launches nothing: the packet triages
 the words alone.
@@ -453,7 +461,9 @@ It is kept when its words cell is kept, or when any cell is kept and none reject
 night (a night committed in parts counts only its committed cells). A kept storyboard is the root any
 full-video act must name - `keptStoryboardFor(nights, <night>/<c-id>)` is the code check, and the skill's
 rule is that no full-video act runs for an idea not under `## Ready for full video`. No full-video act
-exists yet; scene clips stay ungated. The taste brief lists `## Storyboards to make` (kept ideas with no
+exists yet; scene clips stay ungated. Made from a channel episode, a kept storyboard ends its episode
+kept and a rejected one throws it (`episodeTarget`), and the packet's preview says exactly that, not a full
+video; a dry night moves no episode and its preview says so. The taste brief lists `## Storyboards to make` (kept ideas with no
 storyboard) and `## Ready for full video` (kept storyboards, with their idea, title and paragraph). A
 storyboard does not take its idea off `## Ideas to develop`: the idea's scene, style or asset act is
 independent of it. On the graph a storyboard sits in its own `board` column between idea and run, linked
@@ -480,7 +490,7 @@ Ideas, seeds and storyboards carry an optional `venture: "vn-..."` (refused when
 brief carries `## Genre ladder` (live genres, kept trials n/4, next step) and `## Ventures` (live frames); `## Genres`
 stays the idea genres the operator kept and threw. The Library has kinds `genre` and `venture` (facets `ladder`,
 `venture`, `type`) with their own detail pages; /scout draws a venture filter above the bands once a venture exists.
-Trials and pieces load the GPU: ~10 trials x (Flux frames + ~4 LTX clips) is about 2.5 GPU hours a night at five
+Trials and pieces load the GPU: ~10 trials x (~4 LTX clips, the frames now Codex's) is about 2.5 GPU hours a night at five
 live genres, governed by the worker's admission and the 60-80% load band.
 
 ## The morning
@@ -536,11 +546,19 @@ remaining work as a queue and ends its turn with the night open:
   each payload validated by its door's own parser, appended to `<night>/plan.json` as `pl-NN`, nothing spent.
   Refused on a night that is not open, has no `until`, or is past it (lib/foundry/scout/plan.ts, planDoors.ts).
 - **The `night-fill` timer** (worker, every 5 min, lib/foundry/scout/nightFill.ts): for the newest open scout
-  night with a plan and a future `until`, when every resource of the last 15 minutes of load samples averages
-  under 60% (no samples: no launch), it launches the oldest queued item whose lane has nothing queued or running,
-  through the same door the CLI calls, in the night's mode, detached. One launch a tick; a door's refusal is
-  `refused`, any other error `failed`, neither retried. At `until` the rest become `expired` and the timer runs
-  the same close as `close --stop deadline`.
+  night with a plan and a future `until`, it launches the oldest queued item whose lanes have nothing queued,
+  planned or running, through the same door the CLI calls, in the night's mode, detached. The band is judged per
+  lane (lib/foundry/scout/laneBand.ts): the last 15 minutes of load samples must average under 60% on the
+  resources the item's own lanes load - cpu and ram for a text turn, cpu, ram and gpu for `gpu.local`, none for a
+  cloud lane; no samples is no launch of an item that loads the box, and a lane not in the table is judged on all
+  three. A lane held by an interrupted paid job is skipped and named in the idle reason, and the tick never clears
+  the hold. One launch a tick; a door's refusal is `refused`, any other error `failed`, neither retried. A failed storyboard
+  does not count against `storyboardCap`. A worker that
+  dies mid-job: `gpu.local` and `box.render` jobs of producers read as safe re-queue themselves, twice at most
+  (`packages/kernel/src/job-resume.ts`, `job.auto-resumed`); `seat.text` jobs stay interrupted for a look, because
+  an orphaned `claude` may still be writing, but the seat no longer holds its lane. At `until` the rest become `expired` and the timer runs the same close
+  as `close --stop deadline`; an open night past its `until` with no plan is closed the same way, its stranded
+  pending candidates failed first where their jobs are gone.
 - **`draft` items** `{title, prompt}` run the `draft` text turn - local Ollama (`qwen3.8:27b`, $0) first, the
   claude CLI behind it, never Gemini - and write `<night>/drafts/<pl-NN>.md`; the next taste brief lists them
   under `## Drafts from the night`. Never a candidate. They wait for gpu.local (the model shares the card with
@@ -671,8 +689,8 @@ feed reads the same reader: a character first kept on the archive keeps `charact
 
 | command | what it does |
 |---|---|
-| `sheet <night> [--character <name>] [--detach]` · `sheet <night> --collect` | Her REFERENCE SHEET: for every kept character with no kept sheet and none in flight, one neutral 1:1 still on local Flux - her identity block plus neutral framing (rest expression, three-quarter head, even light, plain grey field, the signature garment only) - with her kept portrait admitted LATE as the reference (`flux2.ts` reference graph ported from `pipeline/vlm-probe/consistency.py`, `REFERENCE_LATE` 0.25 from the probe's measured lane). Producer `scout-sheet`, gpu.local, $0. One cell `c-NN/sheet` in the packet group `sheets` (style, craft, subject); kept = her reference, rejected = drawn again (the reasons in `## Sheets to draw`). |
-| `cast: [<name>]` on a storyboard / trial, a character scene idea, an idea artboard | Each name a kept character (`cast.ts castOf`, at most 3, the audience rule). Every prompt leads with her identity block VERBATIM (`characters.ts castPrompt`; registry identity-split-from-state). On Flux (storyboards, trials) her kept sheet also rides as a late reference through the one guard `castStillOf` (only her own kept portrait or sheet, never a source file or a brief's path); without a kept sheet the panel is identity block only. The studio (scene stills, artboards) takes no reference: identity block only. `namesIn` exempts cast names and parody origins in storyboard panels; scene recipes keep the no-names rule. |
+| `sheet <night> [--character <name>] [--detach]` · `sheet <night> --collect` | Her REFERENCE SHEET: for every kept character with no kept sheet and none in flight, one neutral 1:1 still on Codex - her identity block plus neutral framing (rest expression, three-quarter head, even light, plain grey field, the signature garment only) - with her kept portrait attached as the reference (`lib/imaging/local/codex.ts`; `REFERENCE_LATE`, recorded but with no effect on Codex). Producer `scout-sheet`, seat.text, $0. One cell `c-NN/sheet` in the packet group `sheets` (style, craft, subject); kept = her reference, rejected = drawn again (the reasons in `## Sheets to draw`). |
+| `cast: [<name>]` on a storyboard / trial, a character scene idea, an idea artboard | Each name a kept character (`cast.ts castOf`, at most 3, the audience rule). Every prompt leads with her identity block VERBATIM (`characters.ts castPrompt`; registry identity-split-from-state). On Codex (storyboards, trials) her kept sheet also rides as an attached reference through the one guard `castStillOf` (only her own kept portrait or sheet, never a source file or a brief's path); without a kept sheet the panel is identity block only. The studio (scene stills, artboards) takes no reference: identity block only. `namesIn` exempts cast names and parody origins in storyboard panels; scene recipes keep the no-names rule. |
 
 ## Files on disk
 
@@ -690,7 +708,8 @@ feed reads the same reader: a character first kept on the archive keeps `charact
 | `ideas/<c-NN>.png` | the ideas and reels producers | an idea's tile: its studio artboard, or a stats idea's frame 120 |
 | `ideas/<c-NN>/brief.json`, `approach.json` | `ideas` | a stats idea's illustrative brief and approach, as sent |
 | `ideas/<c-NN>/strip.html` | the reels producer | a stats idea's strip, once it passed the lint |
-| `storyboards/<c-NN>/panel-<k>.png` | the storyboard producer | a storyboard's Flux frames, ours |
+| `reels/<c-NN>/strip.mp4` | the reels producer, `reel-motion` | a real reel's 8 s strip rendered whole; its tile `reels/<c-NN>.png` is the poster |
+| `storyboards/<c-NN>/panel-<k>.png` | the storyboard producer | a storyboard's Codex frames, ours |
 | `tracks/<c-NN>/a<N>.mp3` | `track` (collect) | a track's Suno clips, ours |
 | `visualizers/<c-NN>/visualizer.mp4`, `visualizer - youtube.txt`, `still.<ext>` or `studio.<ext>` | `visualizer` (collect) | a full-song visualizer, its YouTube text and the still it played over |
 | `../seeds/<batch>/batch.json` | `seeds new` (whole, once); the Board's apply (`committed`, once) - under the batch's lock | one seed batch: `SeedBatch` |

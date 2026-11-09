@@ -11,6 +11,7 @@
 export const SECTIONS = [
   { id: "compose", label: "compose" },
   { id: "arrange", label: "arrange" },
+  { id: "cover", label: "cover" },
   { id: "hunt", label: "hunt" },
   { id: "lessons", label: "lessons" },
   { id: "strengths", label: "strengths" },

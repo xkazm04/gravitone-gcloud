@@ -20,9 +20,9 @@ describe("lane capacity and slots", () => {
 });
 
 describe("paid and free lanes", () => {
-  it("the local GPU, the render box and Blender are free; Chrome, the seat and every cloud pay", () => {
-    expect(FREE_LANES).toEqual(["gpu.local", "box.render", "box.blender"]);
-    expect(PAID_LANES).toEqual(["box.chrome", "seat.text", "cloud.google", "cloud.elevenlabs", "cloud.leonardo", "cloud.qwen"]);
+  it("the local GPU, the render box, Blender and the seat are free; Chrome and every cloud pay", () => {
+    expect(FREE_LANES).toEqual(["gpu.local", "box.render", "box.blender", "seat.text"]);
+    expect(PAID_LANES).toEqual(["box.chrome", "cloud.google", "cloud.elevenlabs", "cloud.leonardo", "cloud.qwen"]);
     for (const l of RESOURCE_LANES) expect(PAID_LANES.includes(l)).toBe(LANE_PAYS[l]);
   });
 });

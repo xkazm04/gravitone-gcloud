@@ -57,7 +57,11 @@ def owed(jobs, job_id):
 def recover(jobs, producers):
     """job-run.ts `recover` for this worker's producers: a running job whose holder is gone or
     whose slot's fence moved is named interrupted (a paid lane holds); then every ending of
-    those producers nobody settled is settled - whoever ended it. Returns the settled ids."""
+    those producers nobody settled is settled - whoever ended it. Returns the settled ids.
+
+    NOT SHARED with Node: job-resume.ts re-queues a free lane's (gpu.local, box.render) interrupted job
+    under a machine actor, and only in the Node worker loop. This sweep names the job interrupted and
+    leaves the retry to the operator, so a job it interrupts first stays interrupted."""
     names = tuple(producers)
     if not names:
         return []

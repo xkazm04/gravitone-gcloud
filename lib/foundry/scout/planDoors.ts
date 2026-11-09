@@ -10,7 +10,7 @@ import { SCOUT_IDEAS_LANE } from "../../producers/scoutIdea.ts";
 import { SCOUT_REELS_LANE } from "../../producers/scoutReel.ts";
 import { sceneLane } from "../../producers/scoutScene.ts";
 import { SCOUT_SHEET_LANE } from "../../producers/scoutSheet.ts";
-import { SCOUT_STORYBOARD_LANE } from "../../producers/scoutStoryboard.ts";
+import { SCOUT_STORYBOARD_LANES } from "../../producers/scoutStoryboard.ts";
 import { markOrigin, sceneAct, styleAct, type ActContext } from "./acts.ts";
 import { assetAct } from "./asset.ts";
 import { keptCharacters } from "./characters.ts";
@@ -99,7 +99,7 @@ export function planDoors(o: { readonly draftText?: DraftText; readonly signal?:
         const casts = Array.isArray(p) && p.some((x) => typeof x === "object" && x !== null && "cast" in x);
         return parsed(parseStoryboards(p, casts ? keptCharacters(await rootedNights()) : []));
       },
-      lanes: () => [SCOUT_STORYBOARD_LANE],
+      lanes: () => [...SCOUT_STORYBOARD_LANES],
       async launch(ctx, id, item) {
         const r = await storyboardAct(ctx, id, item.payload);
         failedUnless(r.outcome);

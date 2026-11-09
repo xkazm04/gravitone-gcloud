@@ -22,7 +22,7 @@ import { studioCredit } from "../scout-ideas/define.ts";
 // "ONE LANE FOR A JOB THAT CALLS TWO KINDS OF VENDOR"). Since 2026-10-22 a scene's clip renders on
 // this box (LTX-2.5 through ComfyUI, free), so a scene with a local clip waits on the card's gpu.local
 // slot; one without waits on its stills' engine's lane (spark scout-vision S6: box.chrome for the
-// Leonardo studio, the default; gpu.local for local Flux; cloud.leonardo for Flare); the reads route
+// Codex's seat.text, the default; box.chrome for the studio; cloud.leonardo for Flare); the reads route
 // inside the step (lib/producers/scoutScene.ts `sceneLane`). cloud.google stays bound for a scene
 // queued before that change. One job per scene keeps the night's
 // arithmetic simple - one job id per candidate on `night.jobs`, one ceiling, one ending - and a

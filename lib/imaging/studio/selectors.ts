@@ -55,9 +55,12 @@ export const STUDIO = {
      *  muse wing's first launch draws 50 stills "at quality Low to spare
      *  credits") was read off the page the same day: quality=LOW at SMALL
      *  reads "Generate 8" (MEDIUM "Generate 20"). The aspect radios the page
-     *  offers are 16:9, 1:1 and 9:16 only. */
-    imageUrl: (aspect: string, quality: "low" | "medium" = "medium") =>
-      `https://app.leonardo.ai/generate?model=${encodeURIComponent(MODEL_ID)}&aspectRatio=${encodeURIComponent(aspect)}&quantity=1&size=SMALL&quality=${quality === "low" ? "LOW" : "MEDIUM"}&promptEnhance=OFF`,
+     *  offers are 16:9, 1:1 and 9:16 only. SIZE MEDIUM (2048x1136 at 16:9) is
+     *  the music-clip keyframe setup (operator, 2026-10-31: "low quality, medium
+     *  resolution"); at LOW it should read ~18 (2.2x SMALL's 8), under the
+     *  ceiling below - the button's own label is still the check. */
+    imageUrl: (aspect: string, quality: "low" | "medium" = "medium", size: "SMALL" | "MEDIUM" = "SMALL") =>
+      `https://app.leonardo.ai/generate?model=${encodeURIComponent(MODEL_ID)}&aspectRatio=${encodeURIComponent(aspect)}&quantity=1&size=${size}&quality=${quality === "low" ? "LOW" : "MEDIUM"}&promptEnhance=OFF`,
     /** UNVERIFIED 2026-10-12 — a signed-out visit is redirected to an auth page. */
     signedOutPath: /\/(auth|login|sign-?in)\b/i,
   },
@@ -95,6 +98,9 @@ export const STUDIO = {
     /** 2026-10-12 recon — the spend button; its label carries the price ("Generate
 8"). */
     generate: "button:has-text('Generate')",
+    /** 2026-10-31 — the prompt box's attachments read "Image Reference 1" / "Start Frame 1" in the page text
+     *  (absent when the box is clean, verified both ways); any of them on the form refuses the generate. */
+    attachedRef: /\b(?:Image|Style|Content|Character) Reference \d+|\b(?:Start|End) Frame \d+/,
   },
   auth: {
     /** 2026-10-12 recon — the session is better-auth's (`__Secure-better-auth.session_token`);

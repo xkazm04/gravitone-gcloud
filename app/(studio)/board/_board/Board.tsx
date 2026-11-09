@@ -186,7 +186,7 @@ function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }
             })}
       />
     ) : packet.view.mode === "matrix-cull" ? (
-      <MatrixCull key={id} {...common} verdicts={verdicts} decide={decide} undo={() => void gate.undo()} />
+      <MatrixCull key={id} {...common} refuse={toast} verdicts={verdicts} decide={decide} undo={() => void gate.undo()} />
     ) : packet.view.mode === "blind-pair" ? (
       <BlindPair key={id} {...common} onPick={onPick} undo={() => void gate.undo()} />
     ) : packet.present.cut !== undefined ? (
@@ -217,7 +217,7 @@ function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }
       <BoardDesk rail={<PacketRail packets={rail} current={id} hrefOf={hrefOf} onOpen={go} />}>
         {packet.view.state === "open" && packet.present.losses !== undefined && <Losses losses={packet.present.losses} />}
         {desk}
-        {flow.open && <CommitLayer flow={flow} />}
+        {(flow.open || flow.asking !== null) && <CommitLayer flow={flow} />}
       </BoardDesk>
       <div aria-live="polite">
         <SrOnly text={said} />

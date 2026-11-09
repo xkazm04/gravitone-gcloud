@@ -37,6 +37,7 @@
 
 import { USE_MAX } from "../lib/foundry/scout/types.ts";
 import type { KeyFetch } from "../lib/imaging/keyProbe.ts";
+import type { Render } from "../lib/producers/scoutReelMotion.ts";
 import fs from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -75,10 +76,12 @@ export type CliPorts = {
   /** `track`'s Suno browser and clip download; `visualizer`'s mv queue, launch and drive. A test hands fakes. */
   readonly track?: TrackEngines;
   readonly visualizer?: VisualizerEngines;
-  /** `storyboard`'s Flux frame; a test hands a fake (absent: the scout-storyboard producer on gpu.local). */
+  /** `storyboard`'s frame; a test hands a fake (absent: the scout-storyboard producer on its lane). */
   readonly storyboard?: StoryboardEngines;
   readonly piece?: PieceEngines;
   readonly sheet?: SheetEngines;
+  /** `reel-motion`'s renderer (lib/producers/scoutReelMotion.ts `Render`); a test hands a fake (absent: the strips renderer a full cut uses). */
+  readonly reelMotion?: Render;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
@@ -112,7 +115,9 @@ const USAGE = [
   "  plan <night> --json <file|->              [{kind: storyboards|ideas|extract|scenes|assets|sheets|reels|draft, payload, why}]   (the night-fill queue)",
   "  reel <night> --json <file|-> [--detach] · reel <night> --collect   [{fromIdea, source: {kind: table|article|what-if, title, url?, quote?, premise?}, data, cut}]",
   "  channel list | channel show <id>             (the channels the night serves; spark project-baseline)",
+  "  channel-look <channelId> \"<text>\"            (the look every panel of the channel is drawn under; empty text clears it)",
   "  episodes import --outlines <file> --report <file> · episodes due",
+  "  reel-motion <night> [--dry]                 the 8 s video of every rendered reel with a strip and no video, beside the strip (--dry lists, writes nothing)",
   "  reel-cut <night> --json <file|-> [--detach]   [{fromReel: <night>/<c-id>, seconds: 30-120}]   (a kept real reel, cut in full)",
   "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
@@ -121,7 +126,7 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet", "plan", "reel", "reel-cut", "channel", "episodes"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard", "propose", "piece", "genre", "venture", "sheet", "plan", "reel", "reel-motion", "reel-cut", "channel", "channel-look", "episodes"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas, storyboard, lead and seeds new. */
@@ -243,7 +248,7 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
       const { blocking, doctor, doctorLine } = await import("../lib/foundry/scout/doctor.ts");
       const { storeLocation } = await import("@gt/kernel/process");
       const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
-      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), tracks: num("tracks", DEFAULT_TRACK_CAP), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }), ...(io.ports?.keyFetch === undefined ? {} : { keyFetch: io.ports.keyFetch }) });
+      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), ...(str("tracks") === undefined ? {} : { tracks: num("tracks", DEFAULT_TRACK_CAP) }), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }), ...(io.ports?.keyFetch === undefined ? {} : { keyFetch: io.ports.keyFetch }) });
       const failed = blocking(checks);
       if (json) doc({ ok: failed.length === 0, checks });
       else for (const c of checks) io.out(doctorLine(c));
@@ -503,7 +508,7 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
         return failed ? 1 : 0;
       }
 
-      // A kept idea composed as a storyboard: up to five local Flux frames + the seat's words (spark scout-storyboards).
+      // A kept idea composed as a storyboard: up to five Codex frames + the seat's words (spark scout-storyboards).
       if (cmd === "storyboard") {
         const id = nightArg();
         const sb = await import("../lib/foundry/scout/storyboard.ts");
@@ -545,7 +550,7 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
         return failed ? 1 : 0;
       }
 
-      // A kept character's reference sheet (spark scout-vision S3): local Flux, her kept portrait as a late reference.
+      // A kept character's reference sheet (spark scout-vision S3): Codex, her kept portrait attached as a reference.
       if (cmd === "sheet") {
         const id = nightArg();
         const sh = await import("../lib/foundry/scout/sheet.ts");
@@ -567,6 +572,14 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
 
       // The night's plan queue (spark scout-vision S6): the worker's night-fill timer launches it while the box idles.
       // The channels and their episodes (spark project-baseline): the night serves accepted outlines only.
+      if (cmd === "channel-look") {
+        const [, chId, said] = pos;
+        if (chId === undefined || said === undefined) throw new Usage('channel-look <channelId> "<text>"   (empty text clears the look)');
+        const c = await (await import("../lib/foundry/scout/channels.ts")).setChannelLook(chId, said);
+        say(c.look === undefined ? `${c.id} ${c.name} · no look` : `${c.id} ${c.name} · look: ${c.look}`);
+        if (json) doc({ ok: true, channel: c });
+        return 0;
+      }
       if (cmd === "channel" || cmd === "episodes") {
         const ch = await import("../lib/foundry/scout/channels.ts");
         const sub = pos[1];
@@ -608,6 +621,14 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
         for (const it of r.items) say(`  ${it.id} ${it.kind} ${it.state} · ${it.why}`);
         if (json) doc({ ok: true, night: id, items: r.items });
         return 0;
+      }
+
+      if (cmd === "reel-motion") {
+        const { reelMotionCommand } = await import("../lib/producers/scoutReelMotion.ts");
+        const r = await reelMotionCommand(nightArg(), { dry: flags.has("dry"), ...(io.ports?.reelMotion === undefined ? {} : { render: io.ports.reelMotion }) });
+        for (const l of r.lines) say(l);
+        if (json) doc(r.doc);
+        return r.code;
       }
 
       // A kept stats idea on real data, and a kept real reel cut in full (spark scout-vision S5).

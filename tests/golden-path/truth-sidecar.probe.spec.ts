@@ -59,6 +59,7 @@ def stub_render(consistency, shots_root):
         f.write_bytes(f"pixels {n[0]}".encode())
         return f
     consistency.generate = fake_generate
+    consistency.flux_workflow = lambda *a, **k: {}
     consistency.stage_reference = lambda p: "ref_" + Path(p).name
     def fake_face(src, dest):
         Path(dest).write_bytes(b"face")

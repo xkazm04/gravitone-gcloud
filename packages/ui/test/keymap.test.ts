@@ -203,7 +203,7 @@ describe("targetInfo reads the press's element", () => {
 
 describe("keyTable is drawn from the same rows", () => {
   it("the cull draws the prototype's desk keymap, in its order", () => {
-    expect(keyTable(KEYMAP, "board.cull", { facts: new Set(["desk"]) })).toEqual([
+    expect(keyTable(KEYMAP, "board.cull", { facts: new Set(["desk", "tabs"]) })).toEqual([
       { keys: ["1"], does: "keep" },
       { keys: ["2", "3", "4"], does: "reason" },
       { keys: ["5"], does: "reject" },
@@ -211,6 +211,7 @@ describe("keyTable is drawn from the same rows", () => {
       { keys: ["←", "→"], does: "move" },
       { keys: ["⇧1", "⇧2"], does: "item" },
       { keys: ["Z"], does: "zoom" },
+      { keys: ["T"], does: "tab" },
       { keys: ["⌫"], does: "undo" },
       { keys: ["⏎"], does: "commit" },
     ]);

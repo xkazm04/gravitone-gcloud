@@ -19,7 +19,7 @@ import { eventTypes, jobId, LIVE, openWorld, operator } from "./job-fixture.ts";
 // operator meets it:
 //   recover   names it interrupted (its holder is a dead pid on this host),
 //             with the step that was in flight;
-//   the lane  seat.text is paid, so it HOLDS: the retried job is not claimed
+//   the lane  cloud.google is paid, so it HOLDS: the retried job is not claimed
 //             until the operator acknowledges having looked;
 //   retry     re-queues it, and the second drive finishes WITHOUT performing
 //             the step the child had already booked - only the one that was
@@ -54,10 +54,10 @@ describe("a job whose process is killed mid-step", () => {
     const log = path.join(tmp.dir, "performs.log");
     writeFileSync(log, "");
     const w = openWorld(db);
-    must(enqueue(w.store, { id: "k1", of: { kind: "run", id: "run-k1" }, producer: "kill", lane: "seat.text", mode: LIVE }, operator));
-    must(enqueue(w.store, { id: "k2", of: { kind: "run", id: "run-k2" }, producer: "kill", lane: "seat.text", mode: LIVE }, operator));
+    must(enqueue(w.store, { id: "k1", of: { kind: "run", id: "run-k1" }, producer: "kill", lane: "cloud.google", mode: LIVE }, operator));
+    must(enqueue(w.store, { id: "k2", of: { kind: "run", id: "run-k2" }, producer: "kill", lane: "cloud.google", mode: LIVE }, operator));
 
-    const c = startChild([db, "k1", "seat.text", log, "b"]);
+    const c = startChild([db, "k1", "cloud.google", log, "b"]);
     await c.blocked;
     expect(must(get(w.store, jobId("k1"))).job).toMatchObject({ state: "running", progress: { stage: "b", done: 1 } });
     c.kill();
@@ -69,10 +69,10 @@ describe("a job whose process is killed mid-step", () => {
     expect(swept.map((j) => j.id)).toEqual(["k1"]);
     const { job } = must(get(w.store, jobId("k1")));
     expect(job).toMatchObject({ state: "interrupted", interruption: { stage: "b", holder: { pid: c.pid } } });
-    expect(must(w.store.read((r) => laneHold(r, "seat.text")))).toMatchObject({ jobId: "k1", stage: "b" });
+    expect(must(w.store.read((r) => laneHold(r, "cloud.google")))).toMatchObject({ jobId: "k1", stage: "b" });
 
     const counted: Producer = {
-      lane: "seat.text",
+      lane: "cloud.google",
       plan: (_j, outputs) => ["a", "b", "c"].filter((s) => !outputs.has(s)).map((name) => ({ name, estimate: { seconds: 1, usd: 0.01 } })),
       perform: async (step) => {
         appendFileSync(log, `parent ${step.name}\n`);
@@ -84,7 +84,7 @@ describe("a job whose process is killed mid-step", () => {
     must(retry(w.store, jobId("k1"), operator));
     expect(must(await runJob(w.fx, counted, "k1"))).toMatchObject({ outcome: "held" });
 
-    must(ackLane(w.store, "seat.text", operator));
+    must(ackLane(w.store, "cloud.google", operator));
     expect(must(await runJob(w.fx, counted, "k1"))).toMatchObject({ outcome: "done", job: { attempt: 2, progress: { done: 3 } } });
     expect(performs(log)).toEqual(["child a", "child b", "parent b", "parent c"]);
     expect(eventTypes(w.store, "k1")).toEqual(expect.arrayContaining(["job.interrupted", "job.retried", "job.done"]));

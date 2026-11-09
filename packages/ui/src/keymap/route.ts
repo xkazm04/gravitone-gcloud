@@ -67,6 +67,13 @@ export function route(
       const inner = resolve(map, press, layer.mode, ctx.facts);
       if (inner !== null) return { kind: "binding", match: inner };
     }
+    // The zoom is a lens with no mode of its own: a field open inside it (the cull's note) still owns Escape.
+    // Beneath it is the mode that owns the desk: a sheet's on the Board, where `page` alone reads the bare route.
+    const beneath = layer.kind === "zoom" ? activeMode(ctx.layers, ctx.page) : null;
+    if (beneath !== null) {
+      const field = resolve(map, press, beneath, ctx.facts);
+      if (field !== null && field.binding.field !== undefined) return { kind: "binding", match: field };
+    }
     return { kind: "close-layer", id: layer.id };
   }
   const mode = activeMode(ctx.layers, ctx.page);

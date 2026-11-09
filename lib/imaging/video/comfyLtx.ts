@@ -12,12 +12,15 @@
 //   4. GET  /history/{id}      every 5 s until it is there, capped at 20 min (the Lynx bench
 //                              measured ~6-7 min for a 5 s 1280x704 clip alone on the card, and
 //                              2-3x that with another session's jobs in the same queue);
-//   5. GET  /view              the mp4 SaveVideo wrote, then POST /free.
+//   5. GET  /view              the mp4 SaveVideo wrote, then POST /free
+//                              unless the caller passed `release: false`.
 //
-// THE FREE IS NOT OPTIONAL (lynx-bench replication EXECUTOR-BRIEF, the commit-charge lesson): on
-// this box the binding limit is Windows' commit charge, not VRAM, and a 22B transformer left
-// loaded between jobs is what pushed the next one over. So every render that reached the queue
-// ends with `{"unload_models": true, "free_memory": true}`, served or failed.
+// THE FREE IS NOT OPTIONAL for the default caller (lynx-bench replication EXECUTOR-BRIEF, the
+// commit-charge lesson): on this box the binding limit is Windows' commit charge, not VRAM, and a
+// 22B transformer left loaded between jobs is what pushed the next one over. So a render that
+// reached the queue ends with `{"unload_models": true, "free_memory": true}`, served or failed.
+// `release: false` is the shared-server exception: `/free` unloads weights for every prompt on
+// that process, so a tenant that does not own the queue skips it and frees only when /queue is empty.
 //
 // THE QUEUE IS SHARED. Another session's prompts may run ahead of ours, and that wait counts
 // against the cap. Nothing here touches a prompt that is not ours: at the cap ours is deleted
@@ -74,6 +77,9 @@ export type ComfyDeps = {
   readonly sleep?: (ms: number) => Promise<void>;
   readonly pollMs?: number;
   readonly capMs?: number;
+  /** Unload ComfyUI models after this clip. Default true. A shared server passes false:
+   *  `/free` unloads weights for every prompt on that process, including another tenant's. */
+  readonly release?: boolean;
 };
 
 export type LtxRequest = {
@@ -338,6 +344,6 @@ export async function renderLtxClip(req: LtxRequest, deps: ComfyDeps = {}): Prom
     if (bytes.byteLength === 0 || bytes.byteLength > MAX_VIDEO_BYTES) throw unavailable(`ComfyUI's ${v.filename} is ${bytes.byteLength} bytes; a clip is 1 byte to ${MAX_VIDEO_BYTES / 1024 ** 2} MB`);
     return { bytes, mime: "video/mp4", model: LTX_MODEL, promptId: id, output: v.subfolder ? `${v.subfolder}/${v.filename}` : v.filename, width, height, frames: seconds * fps + 1, wallMs: now() - t0 };
   } finally {
-    await free(c);
+    if (deps.release !== false) await free(c);
   }
 }

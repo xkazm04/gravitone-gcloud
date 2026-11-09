@@ -226,12 +226,12 @@ describe("the sheet act", () => {
     expect(await sheetsOn(n)).toHaveLength(3);
   });
 
-  it("a live sheet: one gpu.local job at $0, her archive portrait the one reference admitted late, the neutral prompt - and the eye throws a still it could not read", async () => {
+  it("a live sheet: one seat.text job at $0, her archive portrait the one reference attached, the neutral prompt - and the eye throws a still it could not read", async () => {
     const n = await open(LIVE, true);
     const fake = fakeDraw();
     const r = await cli(["sheet", n, "--character", "Mara Venn", "--json"], { env: LIVE, ports: { sheet: { draw: fake.draw } } });
     expect(r.code, r.err).toBe(0);
-    expect(r.err).toMatch(/receipt \(live\): sheet c-01 of Mara Venn · 1 still on gpu\.local · her portrait muse:2026-09-10\/c-03 late 0\.25 · comfyui · \$0/);
+    expect(r.err).toMatch(/receipt \(live\): sheet c-01 of Mara Venn · 1 still on seat\.text · her portrait muse:2026-09-10\/c-03 · codex · \$0/);
     expect(fake.asked).toHaveLength(1);
     expect(fake.asked[0]?.prompt).toBe(sheetPrompt(MARA));
     expect(fake.asked[0]?.late).toBe(0.25);
@@ -244,7 +244,7 @@ describe("the sheet act", () => {
     const k = processKernel(LOC);
     if (!k.ok) throw k.error;
     const j = get(k.value.store, `job:scout-sheet:${n}:c-01` as never);
-    expect(j.ok && [j.value.job.producer, j.value.job.lane, j.value.job.ceilingUsd]).toEqual(["scout-sheet", "gpu.local", undefined]);
+    expect(j.ok && [j.value.job.producer, j.value.job.lane, j.value.job.ceilingUsd]).toEqual(["scout-sheet", "seat.text", undefined]);
   });
 
   it("the eye by her audience: a kids character read as a child passes; an adult read under 21 is thrown", async () => {
@@ -270,8 +270,8 @@ describe("the sheet act", () => {
     expect(existsSync(path.join(ROOT, "scout", n, "sheets", "c-03.png"))).toBe(false);
   });
 
-  it("the producer is registered on gpu.local", () => {
+  it("the producer is registered on seat.text", () => {
     const set = producers();
-    expect(set.ok && set.value.has("scout-sheet@gpu.local" as never)).toBe(true);
+    expect(set.ok && set.value.has("scout-sheet@seat.text" as never)).toBe(true);
   });
 });

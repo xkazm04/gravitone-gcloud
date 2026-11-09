@@ -26,10 +26,10 @@ DEFAULT_TTL_S, FenceConflict, LeaseError, LeaseLost, Tx = _lease.DEFAULT_TTL_S, 
 assert_fence, claim_in, connect, fence_loss, heartbeat_in = _lease.assert_fence, _lease.claim_in, _lease.connect, _lease.fence_loss, _lease.heartbeat_in
 ms, process_holder, read_row, release_in = _lease.ms, _lease.process_holder, _lease.read_row, _lease.release_in
 
-# @gt/domain/lane LANE_CAPACITY and LANE_PAYS; these tables and lease.py's are compared whole by test/job.python.test.ts.
+# @gt/domain/lane LANE_CAPACITY and LANE_PAYS (seat.text is free: only Gemini is real money); these tables and lease.py's are compared whole by test/job.python.test.ts.
 LANE_CAPACITY = {"gpu.local": 1, "box.render": 1, "box.blender": 1, "box.chrome": 1, "seat.text": 4,
                  "cloud.google": 3, "cloud.elevenlabs": 2, "cloud.leonardo": 2, "cloud.qwen": 1}
-LANE_PAYS = {"gpu.local": False, "box.render": False, "box.blender": False, "box.chrome": True, "seat.text": True,
+LANE_PAYS = {"gpu.local": False, "box.render": False, "box.blender": False, "box.chrome": True, "seat.text": False,
              "cloud.google": True, "cloud.elevenlabs": True, "cloud.leonardo": True, "cloud.qwen": True}
 # @gt/domain/job.machine.ts
 MACHINE = {"planned": ("queued", "cancelled"), "queued": ("running", "paused", "cancelled"),

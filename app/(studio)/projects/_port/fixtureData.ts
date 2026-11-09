@@ -61,7 +61,7 @@ export const OPTIONS: Readonly<Record<WorkKind, KindSpec>> = {
   frames: {
     noun: "plate",
     options: [
-      opt("frames", "comfy", "flux-2-dev-fp8", "Flux 2 dev fp8 · ComfyUI", "gpu.local", 1.6, 0, "model"),
+      opt("frames", "codex", "codex-image-gen", "Codex · image_gen", "seat.text", 2, 0, "model"),
       opt("frames", "google", "nano-banana", "Nano Banana", "cloud.google", 0.35, 0.04),
       opt("frames", "leonardo", "phoenix", "Leonardo · image", "cloud.leonardo", 0.5, 0.06),
     ],
@@ -71,7 +71,7 @@ export const OPTIONS: Readonly<Record<WorkKind, KindSpec>> = {
     options: [
       opt("still", "leonardo-studio", "cdp", "Leonardo · CDP", "box.chrome", 3, u(STUDIO)),
       opt("still", "google", "nano-banana", "Nano Banana", "cloud.google", 0.4, 0.04),
-      opt("still", "comfy", "flux-2-dev-fp8", "Flux 2 dev fp8", "gpu.local", 1.6, 0, "model"),
+      opt("still", "codex", "codex-image-gen", "Codex · image_gen", "seat.text", 2, 0, "model"),
     ],
   },
   motion: { noun: "shot", options: [opt("motion", "wan", "wan-2.2-i2v", "Wan 2.2 · i2v", "gpu.local", 6, 0), opt("motion", "strips", "strip-render", "strips · HTML/SVG 240f", "seat.text", STRIPS_ROUND_MIN, u(STRIPS_SEAT), "real", STRIPS_ROUND)] },
@@ -84,8 +84,8 @@ export const OPTIONS: Readonly<Record<WorkKind, KindSpec>> = {
   render: { noun: "encode", options: [opt("render", "ffmpeg", "libx264", "libx264 · full encode", "box.render", 31.5, 0, "model"), opt("render", "ffmpeg", "libx264-draft", "libx264 · draft preset", "box.render", 9, 0)] },
   cut: { noun: "cut", options: [opt("cut", "ffmpeg", "compositor", "ffmpeg · compositor", "box.render", 7, 0)] },
   extract: { noun: "source", options: [opt("extract", "google", "nano-banana", "Nano Banana · read back + replicate", "cloud.google", 0.8, 0.12)] },
-  forge: { noun: "plate", options: [opt("forge", "comfy", "flux-2-dev-fp8", "Flux 2 dev fp8 · ComfyUI", "gpu.local", 1.6, 0, "model")] },
-  dojo: { noun: "cycle", options: [opt("dojo", "google", "judge", "Nano Banana · Gemini judge", "cloud.google", 20, 0.45), opt("dojo", "comfy", "pairs", "Flux 2 dev fp8 · local pairs", "gpu.local", 30, 0)] },
+  forge: { noun: "plate", options: [opt("forge", "comfy", "forge-refused", "Forge · refused (Flux 2 removed)", "gpu.local", 1.6, 0, "model")] },
+  dojo: { noun: "cycle", options: [opt("dojo", "google", "judge", "Nano Banana · Gemini judge", "cloud.google", 20, 0.45)] },
 };
 
 /* ── what the composers and Compose choose from ───────────────────────────── */

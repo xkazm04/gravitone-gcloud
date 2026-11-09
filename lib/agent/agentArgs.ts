@@ -43,7 +43,8 @@ export function agentArgs(input: Pick<RunAgentInput, "model" | "effort" | "tools
     "--disable-slash-commands",
     "--no-session-persistence",
   ];
-  if (typeof input.maxBudgetUsd === "number" && input.maxBudgetUsd > 0) args.push("--max-budget-usd", String(input.maxBudgetUsd));
+  // No budget flag, ever (operator, 2026-10-23): the seat is flat-fee and a mid-turn dollar cap only kills good work.
+  // A job's ceiling is enforced between turns, from what the ledger booked; `maxBudgetUsd` stays on the input for that.
   return args;
 }
 

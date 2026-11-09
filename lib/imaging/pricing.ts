@@ -222,14 +222,14 @@ export const PRICES: readonly ModelPrice[] = [
       "reports credits on every call, and a reported figure always outranks this one.",
     checked: "2026-10-22",
   },
-  // comfy-flux2 - Flux 2 dev on this box's ComfyUI (providers/comfyFlux.ts): no vendor, no meter.
+  // codex - Codex's image_gen on the operator's ChatGPT seat (providers/codex.ts). No per-image bill: a subscription quota, so a run's USD ceiling can be checked.
   {
-    provider: "comfy-flux2",
-    model: "flux2-dev-fp8",
+    provider: "codex",
+    model: "codex-image-gen",
     bills: "per-image",
     usdPerImage: 0,
-    source: "A local model on this box's GPU: no vendor bills it. The card's minutes are the cost, recorded as the job's gpu.local effort, not in USD.",
-    checked: "2026-10-25",
+    source: "Drawn on the operator's ChatGPT seat through the codex CLI: no per-image bill. The cost is the seat's image allowance, not USD.",
+    checked: "2026-11-08",
   },
 ];
 

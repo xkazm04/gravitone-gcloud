@@ -162,7 +162,7 @@ describe("lane slots (decision 5)", () => {
     expect(LANE_CAPACITY).toEqual({ "gpu.local": 1, "box.render": 1, "box.blender": 1, "box.chrome": 1, "seat.text": 4, "cloud.google": 3, "cloud.elevenlabs": 2, "cloud.leonardo": 2, "cloud.qwen": 1 });
     for (const l of RESOURCE_LANES) expect(laneSlots(l)).toHaveLength(LANE_CAPACITY[l]);
     expect([...PAID_LANES, ...FREE_LANES].sort()).toEqual([...RESOURCE_LANES].sort());
-    expect(FREE_LANES).toEqual(["gpu.local", "box.render", "box.blender"]);
+    expect(FREE_LANES).toEqual(["gpu.local", "box.render", "box.blender", "seat.text"]);
   });
 
   it("two cloud.elevenlabs jobs run at once on two slots; a third is busy and stays queued", async () => {
@@ -202,21 +202,32 @@ describe("crash policy: a paid lane holds (decision 6)", () => {
     return w;
   }
 
-  it("an interruption on seat.text holds the lane: nothing is claimed until an operator acknowledges", async () => {
-    const w = await crashOn("seat.text");
-    const held = must(w.store.read((r) => laneHold(r, "seat.text")));
+  it("an interruption on cloud.google holds the lane: nothing is claimed until an operator acknowledges", async () => {
+    const w = await crashOn("cloud.google");
+    const held = must(w.store.read((r) => laneHold(r, "cloud.google")));
     expect(held).toMatchObject({ jobId: "a", stage: "x" });
-    expect(must(w.store.read((r) => nextClaimable(r, "seat.text")))).toBeUndefined();
-    const { p } = producer("seat.text", ["x"]);
+    expect(must(w.store.read((r) => nextClaimable(r, "cloud.google")))).toBeUndefined();
+    const { p } = producer("cloud.google", ["x"]);
     expect(must(await runJob(w.fx, p, "b", opts))).toMatchObject({ outcome: "held" });
-    expect(ackLane(w.store, "seat.text", agent)).toMatchObject({ ok: false, error: { code: "refused" } });
-    const acked = must(ackLane(w.store, "seat.text", operator));
+    expect(ackLane(w.store, "cloud.google", agent)).toMatchObject({ ok: false, error: { code: "refused" } });
+    const acked = must(ackLane(w.store, "cloud.google", operator));
     expect(acked).toEqual([expect.objectContaining({ jobId: "a", stage: "x" })]);
     const ev = must(w.store.read((r) => r.get("SELECT data FROM events WHERE type = 'lane.acknowledged'")));
     expect(String(ev?.["data"])).toContain("job a at x");
-    expect(must(w.store.read((r) => nextClaimable(r, "seat.text")))?.id).toBe("b");
+    expect(must(w.store.read((r) => nextClaimable(r, "cloud.google")))?.id).toBe("b");
     expect(must(await runJob(w.fx, p, "b", opts)).outcome).toBe("done");
-    expect(ackLane(w.store, "seat.text", operator)).toMatchObject({ ok: false, error: { code: "refused" } });
+    expect(ackLane(w.store, "cloud.google", operator)).toMatchObject({ ok: false, error: { code: "refused" } });
+    w.store.close();
+  });
+
+  it("the seat is free: an interrupted seat.text job holds nothing, emits no lane.held, and the next job is claimed", async () => {
+    const w = await crashOn("seat.text");
+    expect(must(get(w.store, jobId("a"))).job.state).toBe("interrupted");
+    expect(must(w.store.read((r) => laneHold(r, "seat.text")))).toBeUndefined();
+    expect(must(w.store.read((r) => r.get("SELECT 1 AS n FROM events WHERE type = 'lane.held'")))).toBeUndefined();
+    expect(must(w.store.read((r) => nextClaimable(r, "seat.text")))?.id).toBe("b");
+    const { p } = producer("seat.text", ["x"]);
+    expect(must(await runJob(w.fx, p, "b", opts)).outcome).toBe("done");
     w.store.close();
   });
 

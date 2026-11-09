@@ -127,7 +127,7 @@ Director-only. Builders REPORT what they need; the Director applies it once.
 ## Context sources
 
 `context-map.json` at the repo root is **generated and owned by the Personas app** (project
-`gravitone`; owner = the file's `project.id`, `d57f858b` since 2026-10-18): its scan writes the contexts into Personas' own SQLite DB and then
+`gravitone`; owner = the file's `project.id`, `89d7cc8b` since 2026-10-24): its scan writes the contexts into Personas' own SQLite DB and then
 EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CLAUDE.md`. It is
 **export-only - there is no import path.**
 
@@ -141,7 +141,7 @@ EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CL
 - The map's `contexts[].name` values ARE the matching set for the memory outbox: same machine, one
   scan. Confirm through the bridge when it is up rather than trusting a remembered name.
 - Repo is Personas-managed (`.personas/` exists). The map belongs to the machine whose project id is
-  in `context-map.json`'s `project.id` (`d57f858b`, the kazda checkout, since 2026-10-18; before that
+  in `context-map.json`'s `project.id` (`89d7cc8b`, this checkout, since 2026-10-24; `d57f858b` from 2026-10-18; before that
   `91d8170c`, the mkdol checkout, which must no longer scan it - `docs/context-map.md`).
 - A wave that added or moved files leaves the map stale by design - say so and ask for a rescan;
   never patch it.
@@ -172,6 +172,22 @@ EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CL
 - Localization - this repo ships English only, and `locale_count: 1` is deliberate.
 
 ## Skill improvement log
+
+### 2026-11-08 - round 2 (10 accepted, 10 shipped)
+
+- **The Director caught what a builder's own honest report named.** A builder listed "starves the tick" as a risk in round 1 and "resumable until named here" in round 2; both were defects worth a redo. Read a builder's open risks as review input before its diff.
+- **Scouts who are told what is already settled stop re-finding it.** Passing the shipped and refused lists kept four briefs on new ground.
+- **Check a direction against the deaths of its neighbours.** Automatic resume looked safe until the seat scout found no reaper for an orphaned claude; that narrowed an already accepted direction before build.
+- 3 builders reporting, 3 friction lines, 3 distinct causes, 1 seen twice or more, 0 fixed.
+
+### 2026-11-08 - re-adoption, Scout engine and desk (14 accepted, 13 shipped, 1 dropped on measurement)
+
+- **Driving the real Board caught what every gate passed, twice.** Esc in a note closed the run because on the Board a sheet layer owns board.cull, and the keymap test had no sheet on its stack. A reel's poster travelled as a reference and drew "REFERENCE, NOT OUTPUT". Run the visual gate on a temp COPY of a real night (SCOUT_STORE_DIR, SCOUT_CHANNELS_DIR, GRAVITONE_STORE_PATH): fixtures would not have shown either.
+- **The skill's worktree recipe is wrong here.** A node_modules junction resolves @gt/* to the main checkout, so builders cannot see their own package edits. `npm ci` in C:/t/<id> works (about 8 minutes) and lets next dev run there.
+- **Moving code reds the mutant registry.** tests/mutants-unit/registry.ts names source strings, and every new package test file needs an entry. Put it in the brief before the wave, not after the gate. Prove entries after the commit.
+- **A packet freezes its cells when first opened.** A direction that adds media to existing nights reaches only unopened packets. Ask that at proposal time.
+- **Main's typecheck and build are red on a clean checkout** while comfyLtx.ts stays uncommitted under committed clips.mts. The chain was measured with that one file borrowed and restored; no gate was weakened.
+- A scout's premise failed usefully: a reel number guard measured 15 of 15 faithful and was never presented. The brief's first draft of direction 2 would have launched Ollama drafts on a busy GPU until draft.ts's own comment settled the map.
 
 ### 2026-08-29 — pass 2, wave 1 (8 directions, 4 lots, all shipped)
 

@@ -47,6 +47,20 @@ export const IMAGE_TABLE: MediumTable = {
   medium: "image",
   candidates: [
     {
+      // Codex's image_gen on the operator's ChatGPT seat (lib/imaging/providers/codex.ts, 2026-11-08). Prefer-only: reached
+      // by name from a catalog pick or SCOUT_REPLICA_GENERATOR, no plan row moved for it, and never a fallback.
+      provider: "codex",
+      capabilities: ["generate"],
+      lane: "seat.text",
+      transport: "local-binary",
+      honours: [],
+      preferOnly: true,
+      models: { generate: "codex-image-gen" },
+      bills: { generate: "image" },
+      pace: { generate: proto(2, "one Codex image turn, not yet measured") },
+      credential: "the codex CLI, signed in to the operator's ChatGPT seat",
+    },
+    {
       provider: "agy",
       capabilities: ["generate"],
       lane: "seat.text",

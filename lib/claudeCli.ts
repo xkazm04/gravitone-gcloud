@@ -110,7 +110,7 @@ export function classifyExit(code: number | null, stderr: string, usesShell: boo
   if (usesShell && (SHELL_NOT_FOUND.test(stderr) || code === 9009 || code === 127)) {
     return new CliError("The `claude` CLI is not installed or not on PATH.", "not-installed");
   }
-  if (/login|auth|credential/i.test(stderr)) {
+  if (/not logged in|\/login\b|invalid api key|login expired|session has expired/i.test(stderr)) {
     return new CliError("The local Claude CLI is not logged in. Run `claude` once and sign in.", "not-logged-in");
   }
   // The tail of stderr travels WITH the verdict. Until 2026-09-05 this branch

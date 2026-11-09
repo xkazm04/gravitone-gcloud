@@ -3,7 +3,7 @@
 // The scout stopped spreading across genres and started serving channels the operator designed in session: a card
 // (who it is for, what it promises, the gap in existing media it beats, its edge) and its episodes. An episode is
 // decided in session as a premise, then an outline (five beats and a spec), and only an ACCEPTED outline reaches a
-// night, where it becomes a storyboard (Flux frames) or, on a data channel, a real-data reel. A night never invents an
+// night, where it becomes a storyboard (drawn frames) or, on a data channel, a real-data reel. A night never invents an
 // episode; the operator's keep of the night's candidate marks the episode kept, a reject throws it.
 //
 // The ids are the session's: a channel `D1`, `F2`, `K1` (a letter and one or two digits), an episode `<channel>-NN`
@@ -15,7 +15,7 @@ export const EPISODE_ID_RE = /^[A-Z][0-9]{1,2}-[0-9]{2}$/;
 /** The channel an episode id belongs to: `F1-03` -> `F1`. */
 export const channelOfEpisode = (episodeId: string): string => episodeId.slice(0, episodeId.lastIndexOf("-"));
 
-/** How a channel's episode is made at night: Flux storyboard frames, or a real-data reel (data channels). */
+/** How a channel's episode is made at night: drawn storyboard frames, or a real-data reel (data channels). */
 export const CHANNEL_MEDIA = ["storyboard", "reel"] as const;
 export type ChannelMedium = (typeof CHANNEL_MEDIA)[number];
 

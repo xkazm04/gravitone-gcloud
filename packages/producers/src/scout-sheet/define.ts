@@ -10,7 +10,7 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 // A KEPT CHARACTER'S REFERENCE SHEET, DRAWN (spark scout-vision S3) - one /scout `sheet` candidate as ONE step of ONE
 // kernel job, priced on a receipt before it runs:
 //
-//   draw   one Flux 2 dev still at 1:1 on this box's ComfyUI: the prompt her identity block plus the neutral framing
+//   draw   one Codex still at 1:1 on the operator's seat: the prompt her identity block plus the neutral framing
 //          (rest expression, three-quarter head, even light, plain field, invariant wardrobe - registry
 //          reference-shows-only-invariants), her KEPT PORTRAIT admitted late as the reference (registry
 //          reference-admitted-late; OUR picture, read through lib/foundry/scout/cast.ts castStillOf), then read by the
