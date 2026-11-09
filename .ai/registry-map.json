@@ -1563,7 +1563,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/agent/cliSeam.ts:35 The agent fence's argv was shown to the real CLI once by hand at no spend and no lane repeats that, so probes assert the flags as strings against a stub that ignores them and a renamed fence flag surfaces only on a real paid turn.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "hitl-approval",
@@ -14037,7 +14041,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/produce-fixture-parity.test.ts:1 The file claims fixture and real sides agree, but it runs over hand-picked verbs with no enumeration of ProducePort, so 7 of 19 verbs (composerChoices, composerReceipt, launchRun, listProjects, composeChoices, discard, pauseJob) are never driven and can drift under a green parity suite.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "agent-memory",
@@ -18111,7 +18119,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/clipboard.test.ts:42 The 'every copy site goes through copyText' pin matches one spelling and declares no floor, so `navigator.clipboard?.writeText(x)` or an aliased clipboard passes it while the click still says nothing, which is the defect clipboard.ts exists to close.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "voice-io",
