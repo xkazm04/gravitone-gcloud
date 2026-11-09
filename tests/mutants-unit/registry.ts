@@ -1312,6 +1312,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A hero take gets a cut step: a single clip is sent through ffmpeg it does not need and its video never lands as the take.",
   },
   {
+    id: "production-voices-plan-rebuys-design",
+    test: "packages/producers/test/production-voices-define.test.ts",
+    file: "packages/producers/src/production-voices/define.ts",
+    find: "if (!outputs.has(designStep(k))) steps.push(",
+    replace: "if (outputs !== undefined) steps.push(",
+    why: "A resumed job calls the vendor again for designs it already stored: the same round is billed twice for previews the operator already has.",
+  },
+  {
     id: "character-covered-lower-pool-overwrites",
     test: "packages/kernel/test/characters.test.ts",
     file: "packages/kernel/src/characters/store.ts",

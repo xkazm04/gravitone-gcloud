@@ -85,6 +85,8 @@ export const PRODUCERS = [
   "yue2-post",
   // A production's hero shot or rough cut (spark concept-casting-stages S1): H3 clips from its board's frames, on gpu.local.
   "production-take",
+  // A casting round's ElevenLabs voices (spark concept-casting-stages S3): designed previews levelled to one loudness, a voice created only on the pick; on cloud.elevenlabs.
+  "production-voices",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

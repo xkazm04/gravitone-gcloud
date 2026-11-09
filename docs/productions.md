@@ -39,7 +39,6 @@ sets and event names, so a screen can import them. Records: `Production`, `Produ
 - Event types are the `PRODUCTION_EVENTS` constants. Lessons are `production.lesson-proposed` and
   `production.lesson-accepted`, because `lesson.confirmed` belongs to `lib/sound/lessons.ts`.
 
-Stubs still to fill: `lib/music/voiceDesign.ts` (S3).
 
 ## The record (S1)
 
@@ -108,6 +107,35 @@ agent is refused by the machine. A proven take takes the production to `proven`.
 
 A live render has not been run. It needs the tracked `pipeline/video/h3-fl2v-api.json` on the worker's
 checkout, ComfyUI at `COMFY_URL` with the H3 weights, and about 20 minutes a clip alone on the card.
+
+## Voices (S3)
+
+Ported from PoF's mechanism. `lib/music/voiceDesign.ts` is the vendor door; one job, `production-voices`, runs a round on
+`cloud.elevenlabs` (`packages/producers/src/production-voices/define.ts` the steps, `lib/producers/productionVoices.ts` the
+acts and the launches). No live call has been made: every test runs a fake fetch and a fake ffmpeg spawn.
+
+A round is two `design:k` calls (`eleven_multilingual_ttv_v2`, 3 previews a call, so 3 then 2) and one `level:i` per preview.
+Each design step stores its bought previews as blobs; levelling is a separate, free step, so a failure there never pays
+for the design again. Every candidate speaks one audition line, written by an `AuditionWriter` (`writeAudition`; the fake is
+`fakeAuditionWriter`, S4 binds the real one): 100-1000 characters and no audio tags, because the design model would speak
+them. A brief is described, not spoken, so it may carry tags.
+
+Previews are compared at one level: two-pass ffmpeg loudnorm to -18 LUFS, -2 dBTP, the second pass applying what the
+first measured, spawned without a shell. `preview.lufs` is the level ffmpeg reports for the written file.
+
+`pickVoice` is the only way a vendor voice is created (`POST /v1/text-to-voice`, a voice slot, 17 of 30 used): operator only,
+after the preview was heard, on a finished round. Picking twice is the same job's conflict.
+
+Credits: no budget and no refusal. Each call reads what it consumed: the `character-cost` response header, else the
+subscription `character_count` delta (polled, because the balance lags). `voiceRoundOf` sums them with the weakest source as
+`creditsRead`, or `unread` with `unreadCalls` when neither answered. The delta counts anything else the account spent meanwhile.
+
+A dry round answers with silent stand-ins, books a would-call per design and runs no ffmpeg. A stand-in's `lufs` is the
+target, not a measurement. Speech is `speakWithVoice` on `eleven_v3`, `direction` as audio tags; a model that would speak tags
+aloud is refused. It has no default voice (`castVoiceIdOf`); George remains the explainer narration's, which expires 2026-12-31.
+
+A crash holds `cloud.elevenlabs` like every paid lane (`holdLaneIn`): the step in flight may have spent, so the operator
+acknowledges and retries. Stored steps are not repeated.
 
 ## The screen
 
