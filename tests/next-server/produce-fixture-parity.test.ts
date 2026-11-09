@@ -173,16 +173,19 @@ describe("a move passes the neighbour in the queue's order, not the schedule's",
     const realMoved = await real.moveJob({ jobId: first.research, dir: "later" }, op);
     if (!realMoved.ok) throw realMoved.error;
     expect(realMoved.value.note).toMatch(/^behind /);
-    // Fixture: three cuts wait on box.render in the order why-bitcoin, the-quiet-tariff, provider-routing,
-    // but the schedule starts them in the reverse order (each waits on a different upstream).
+    // Fixture: four cuts wait on box.render in the order why-bitcoin, the-quiet-tariff, provider-routing,
+    // glass-harbor-teaser, but the schedule starts them in another order (each waits on a different upstream).
     const line = [...universe().jobs.values()].filter((j) => j.option.lane === "box.render" && (j.state === "queued" || j.state === "planned")).sort((a, b) => a.order - b.order);
-    expect(line.map((j) => j.id)).toEqual(["job:part:why-bitcoin:cut", "job:part:the-quiet-tariff:cut", "job:part:provider-routing-explainer:cut"]);
+    expect(line.map((j) => j.id)).toEqual(["job:part:why-bitcoin:cut", "job:part:the-quiet-tariff:cut", "job:part:provider-routing-explainer:cut", "job:part:glass-harbor-teaser:cut"]);
     const moved = await fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op);
     if (!moved.ok) throw moved.error;
     expect(moved.value.note).toBe(`behind ${line[1]!.title}`);
     const end = await fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op);
     if (!end.ok) throw end.error;
     expect(end.value.note).toBe(`behind ${line[2]!.title}`);
+    const last = await fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op);
+    if (!last.ok) throw last.error;
+    expect(last.value.note).toBe(`behind ${line[3]!.title}`);
     expect(await said(fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op))).toBe("refused: end of the lane queue");
   });
 });
