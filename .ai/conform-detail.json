@@ -14491,50 +14491,68 @@
       "context": "board-decision-adapters",
       "subject": "hitl-approval",
       "bundle": "software-engineering",
-      "state": "conformant",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T02:25:17.384Z",
-      "worker": "416fbfd5-24da-4d79-86d5-d1e69090451a",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:23:57.495Z",
+      "worker": "0b8f4aaa-b354-41be-9e62-cc64f654ca1b",
       "techniques": [
+        {
+          "technique": "handoff-is-a-declared-door",
+          "verdict": "deviation",
+          "evidence": "lib/decision/v1/sources/article.ts:381 no operator check before an outward act; compare proof.ts:165, which refuses an agent's verdict"
+        },
         {
           "technique": "decision-records",
           "verdict": "conformant",
-          "evidence": "lib/decision/v1/types.ts:330 The decision binds to the exact decisions and to a content digest (media sha256) of what was previewed."
-        },
-        {
-          "technique": "gate-state-machines",
-          "verdict": "conformant",
-          "evidence": "lib/decision/v1/sources/article.ts:262 The preview refuses unless the v1 gate is still pending; illegal states are conflicts."
+          "evidence": "lib/decision/v1/sources/article.ts:299 the commit token folds in the sha256 of the post and patch media that were shown"
         },
         {
           "technique": "resume-after-decision",
           "verdict": "conformant",
-          "evidence": "lib/decision/v1/sources/article.ts:401 A duplicate of the same verdict succeeds; a conflicting one is refused. These paths are kept separate, as the technique requires."
+          "evidence": "lib/decision/v1/sources/article.ts:401 a redelivered identical outcome succeeds; a conflicting one is refused"
         },
         {
           "technique": "consent-gates",
           "verdict": "conformant",
-          "evidence": "lib/decision/v1/sources/article.ts:286 The outward effect is disclosed from the bound action (slug, branch, PR title) before commit."
+          "evidence": "lib/decision/v1/sources/article.ts:286 the outward impact is disclosed in the preview before commit"
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "lib/decision/v1/sources/article.ts:262 a verdict on an entity whose state moved is a loud conflict"
         },
         {
           "technique": "review-queues",
           "verdict": "conformant",
-          "evidence": "lib/decision/v1/registry.ts:62 The queue is complete by construction: a packet source with no adapter line is a compile error."
+          "evidence": "lib/decision/v1/registry.ts:62 The queue is complete by construction: a packet source with no adapter line is a compile error.",
+          "carriedFrom": "2026-11-04"
         },
         {
           "technique": "oracle-before-gate",
           "verdict": "conformant",
-          "evidence": "lib/decision/v1/sources/dojo.ts:297 A claim needs its blind picks (the independent read) before the Board can change it."
+          "evidence": "lib/decision/v1/sources/dojo.ts:297 A claim needs its blind picks (the independent read) before the Board can change it.",
+          "carriedFrom": "2026-11-04"
         },
         {
           "technique": "fail-loud-classification-default",
           "verdict": "conformant",
-          "evidence": "lib/decision/v1/types.ts:55 A record that does not fit the kernel's vocabulary is carried with a named loss, not absorbed silently."
+          "evidence": "lib/decision/v1/types.ts:55 A record that does not fit the kernel's vocabulary is carried with a named loss, not absorbed silently.",
+          "carriedFrom": "2026-11-04"
         },
         {
           "technique": "truncated-verdict-space",
           "verdict": "conformant",
-          "evidence": "lib/decision/v1/sources/forge.ts:63 The admitting outcome (proven) is minted only by a human; a model's keep is recorded as the agent's."
+          "evidence": "lib/decision/v1/sources/forge.ts:63 The admitting outcome (proven) is minted only by a human; a model's keep is recorded as the agent's.",
+          "carriedFrom": "2026-11-04"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "conformant",
+          "evidence": "lib/decision/v1/types.ts:330 Each adapter previews from v1's own planners and folds a digest of the v1 state it read into the commit token, so a commit over a v1 that moved is refused. The apply half is idempotent on the same outcome and refuses a conflicting one loudly.",
+          "evaluatedAt": "2026-11-04T02:25:17.384Z",
+          "worker": "416fbfd5-24da-4d79-86d5-d1e69090451a",
+          "reason": "replaced by 0b8f4aaa-b354-41be-9e62-cc64f654ca1b"
         }
       ]
     },
@@ -14543,39 +14561,56 @@
       "subject": "hitl-approval",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T02:37:43.713Z",
-      "worker": "bf78888a-0a53-4566-ba9c-7a189f1e54bc",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:23:57.495Z",
+      "worker": "0b8f4aaa-b354-41be-9e62-cc64f654ca1b",
       "techniques": [
-        {
-          "technique": "gate-state-machines",
-          "verdict": "conformant",
-          "evidence": "lib/articles/humanActs.ts:35 Approve can only leave awaiting-approval; an approve after a reject or a double approve is a loud 409, not a merge. The missing version binding is recorded under decision-records."
-        },
         {
           "technique": "decision-records",
           "verdict": "deviation",
-          "evidence": "lib/articles/humanActs.ts:36 The record has no who and no version or fingerprint of the approved post. A rejection reason is mandatory (humanNote.ts trimmedNote), so the why half does exist."
+          "evidence": "lib/articles/humanActs.ts:36 no who and no version/fingerprint field; approveRun takes no decider argument"
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "deviation",
+          "evidence": "lib/articles/registryWrite.ts:273 at land time the patch is re-read from disk with no comparison against what was approved, so the staged artifact is not bound byte for byte"
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "lib/articles/humanActs.ts:35 approve is a guarded transition out of awaiting-approval, and an illegal one is refused loudly with the current state"
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "conformant",
+          "evidence": "lib/articles/diffFiles.ts:15 the Board is shown the real git diff of each registry patch rather than a summary"
         },
         {
           "technique": "truncated-verdict-space",
           "verdict": "conformant",
-          "evidence": "lib/articles/landing.ts:29 The machine's check and critique cannot produce an admit. Landing requires a recorded human approval."
-        },
-        {
-          "technique": "resume-after-decision",
-          "verdict": "conformant",
-          "evidence": "lib/articles/registryWrite.ts:330 A retried landing whose PR failed reuses the branch already pushed at the recorded commit instead of pushing a second one, so the continuation is idempotent."
+          "evidence": "lib/articles/landing.ts:29 The machine's check and critique cannot produce an admit. Landing requires a recorded human approval.",
+          "carriedFrom": "2026-11-04"
         },
         {
           "technique": "oracle-before-gate",
           "verdict": "conformant",
-          "evidence": "lib/articles/registryWrite.ts:307 The landing PR names which dimensions the deterministic check measured and which were left to human judgement, so it is visible where an instrument existed."
+          "evidence": "lib/articles/registryWrite.ts:307 The landing PR names which dimensions the deterministic check measured and which were left to human judgement, so it is visible where an instrument existed.",
+          "carriedFrom": "2026-11-04"
         },
         {
           "technique": "human-performed-steps",
           "verdict": "deviation",
-          "evidence": "lib/articles/mediumPackage.ts:266 The hand path for the Medium post is a prose numbered README (steps 1-4: drag in PNGs in order, swap each table), which is the artifact this technique names as wrong. lib/medium does automate a private draft, but that code is outside this context."
+          "evidence": "lib/articles/mediumPackage.ts:266 The hand path for the Medium post is a prose numbered README (steps 1-4: drag in PNGs in order, swap each table), which is the artifact this technique names as wrong. lib/medium does automate a private draft, but that code is outside this context.",
+          "carriedFrom": "2026-11-04"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/articles/humanActs.ts:36 The approval record holds only a timestamp and patch ids: there is no decider and no fingerprint of the post that was shown. landing.ts then re-reads post/ from disk at land time, so nothing checks that what lands is what the human approved.",
+          "evaluatedAt": "2026-11-04T02:37:43.713Z",
+          "worker": "bf78888a-0a53-4566-ba9c-7a189f1e54bc",
+          "reason": "replaced by 0b8f4aaa-b354-41be-9e62-cc64f654ca1b"
         }
       ]
     },
@@ -14766,39 +14801,50 @@
       "subject": "hitl-approval",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T03:25:44.861Z",
-      "worker": "32949800-68c0-43a7-b00b-a1064b455766",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:23:57.495Z",
+      "worker": "0b8f4aaa-b354-41be-9e62-cc64f654ca1b",
       "techniques": [
         {
           "technique": "decision-records",
           "verdict": "deviation",
-          "evidence": "lib/articles/types.ts:103 ArticleApproval is {at, patches}: the who and the what-exactly (version) fields are missing."
+          "evidence": "lib/articles/types.ts:103 no who and no version field on the approval record"
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "deviation",
+          "evidence": "lib/articles/resume.ts:12 a failed landing re-lands from the bare approval, with no check that the post on disk is what was approved"
         },
         {
           "technique": "gate-state-machines",
           "verdict": "conformant",
-          "evidence": "lib/articles/types.ts:531 approved is reachable only from the gate, and landing only from approved."
-        },
-        {
-          "technique": "resume-after-decision",
-          "verdict": "conformant",
-          "evidence": "lib/articles/resume.ts:12 A failed landing resumes at approved: it re-lands and never re-approves or re-generates."
-        },
-        {
-          "technique": "unattended-mode",
-          "verdict": "conformant",
-          "evidence": "lib/articles/loop.ts:5 The unattended loop is budgeted and stops at the human gate; it never approves."
+          "evidence": "lib/articles/types.ts:531 enumerated gate transitions; landing is reachable only through approved"
         },
         {
           "technique": "fail-closed-profile-for-headless",
           "verdict": "conformant",
-          "evidence": "lib/articles/loop.ts:21 A run that hits its ceiling is held for a person rather than auto-continued."
+          "evidence": "lib/articles/loop.ts:461 the unattended nightly loop stops at the gate and never approves"
+        },
+        {
+          "technique": "unattended-mode",
+          "verdict": "conformant",
+          "evidence": "lib/articles/loop.ts:5 The unattended loop is budgeted and stops at the human gate; it never approves.",
+          "carriedFrom": "2026-11-04"
         },
         {
           "technique": "consent-gates",
           "verdict": "conformant",
-          "evidence": "lib/articles/types.ts:475 The cost of a run is disclosed before the spend is authorized."
+          "evidence": "lib/articles/types.ts:475 The cost of a run is disclosed before the spend is authorized.",
+          "carriedFrom": "2026-11-04"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/articles/types.ts:103 The approval record holds only a timestamp and patch ids, with no decider identity and no fingerprint of the draft that was shown, so an approval cannot be proven to cover the post that later lands.",
+          "evaluatedAt": "2026-11-04T03:25:44.861Z",
+          "worker": "32949800-68c0-43a7-b00b-a1064b455766",
+          "reason": "replaced by 0b8f4aaa-b354-41be-9e62-cc64f654ca1b"
         }
       ]
     },
@@ -21280,6 +21326,51 @@
           "technique": "live-app-harness",
           "verdict": "conformant",
           "evidence": "tests/live/library-real.live.spec.ts:211 After Pin the lane reads the effect back from the store instead of trusting the toast."
+        }
+      ]
+    },
+    "92742f06-a6dc-418e-8c50-42c050345bc7/hitl-approval": {
+      "context": "decision-and-gates",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:23:57.495Z",
+      "worker": "0b8f4aaa-b354-41be-9e62-cc64f654ca1b",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/decision/commit.ts:79 pending to committed is checked against state alone; who may drive the transition is never checked"
+        },
+        {
+          "technique": "handoff-is-a-declared-door",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/parts/gates.ts:33 the gate ratifies on the committed state without asking whether the committer was the human; the answerer is a caller-supplied word (driver.ts By = operator|agent)"
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:84 the commit is bound to the consequence token that was shown; a moved preview is refused"
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:93 the verdict, the state transition and the outbox row commit in one transaction"
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:75 a duplicate commit returns the first result; a different ticket is a loud conflict"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "packages/kernel/src/decision/commit.ts:79 The commit transition checks only the packet's state, never whether the author is the operator, so a caller whose `by` is 'agent' can commit a packet, and gates.ts then reads it as a ratified gate part that releases held jobs.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 0b8f4aaa-b354-41be-9e62-cc64f654ca1b"
         }
       ]
     }

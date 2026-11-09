@@ -1,0 +1,215 @@
+{
+ "schema": "conform-run/1",
+ "worker": "0b8f4aaa-b354-41be-9e62-cc64f654ca1b",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-11-09T22:23:57.495039+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "article-human-gate-and-landing",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/articles/humanActs.ts:36 The approval record is only a timestamp and patch ids, with no decider and no fingerprint of the post or patches shown, so the landing that runs later cannot prove it pushes what the human approved.",
+   "techniques": [
+    {
+     "technique": "decision-records",
+     "verdict": "deviation",
+     "evidence": "lib/articles/humanActs.ts:36 no who and no version/fingerprint field; approveRun takes no decider argument"
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "deviation",
+     "evidence": "lib/articles/registryWrite.ts:273 at land time the patch is re-read from disk with no comparison against what was approved, so the staged artifact is not bound byte for byte"
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "lib/articles/humanActs.ts:35 approve is a guarded transition out of awaiting-approval, and an illegal one is refused loudly with the current state"
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "conformant",
+     "evidence": "lib/articles/diffFiles.ts:15 the Board is shown the real git diff of each registry patch rather than a summary"
+    }
+   ]
+  },
+  {
+   "context": "decision-and-gates",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/decision/commit.ts:79 Commit checks only the packet's state and never whether the author is the operator, so a commit with by='agent' succeeds and gates.ts reads it as a ratified gate that releases held jobs.",
+   "techniques": [
+    {
+     "technique": "gate-state-machines",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/decision/commit.ts:79 pending to committed is checked against state alone; who may drive the transition is never checked"
+    },
+    {
+     "technique": "handoff-is-a-declared-door",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/parts/gates.ts:33 the gate ratifies on the committed state without asking whether the committer was the human; the answerer is a caller-supplied word (driver.ts By = operator|agent)"
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/commit.ts:84 the commit is bound to the consequence token that was shown; a moved preview is refused"
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/commit.ts:93 the verdict, the state transition and the outbox row commit in one transaction"
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/commit.ts:75 a duplicate commit returns the first result; a different ticket is a loud conflict"
+    }
+   ]
+  },
+  {
+   "context": "board-decision-adapters",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/decision/v1/sources/article.ts:381 The article adapter runs approveRun, which pushes a branch and opens a PR, on any keep without checking the decision's `by`. The proof and spend adapters refuse an agent's keep, so an agent-authored commit can land an article.",
+   "techniques": [
+    {
+     "technique": "handoff-is-a-declared-door",
+     "verdict": "deviation",
+     "evidence": "lib/decision/v1/sources/article.ts:381 no operator check before an outward act; compare proof.ts:165, which refuses an agent's verdict"
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/article.ts:299 the commit token folds in the sha256 of the post and patch media that were shown"
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/article.ts:401 a redelivered identical outcome succeeds; a conflicting one is refused"
+    },
+    {
+     "technique": "consent-gates",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/article.ts:286 the outward impact is disclosed in the preview before commit"
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/article.ts:262 a verdict on an entity whose state moved is a loud conflict"
+    }
+   ]
+  },
+  {
+   "context": "article-run-engine",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/articles/types.ts:103 ArticleApproval holds only `at` and patch ids, with no decider and no fingerprint of the draft shown, so an approval cannot be proven to cover the post that later lands or is re-landed on resume.",
+   "techniques": [
+    {
+     "technique": "decision-records",
+     "verdict": "deviation",
+     "evidence": "lib/articles/types.ts:103 no who and no version field on the approval record"
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "deviation",
+     "evidence": "lib/articles/resume.ts:12 a failed landing re-lands from the bare approval, with no check that the post on disk is what was approved"
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "lib/articles/types.ts:531 enumerated gate transitions; landing is reachable only through approved"
+    },
+    {
+     "technique": "fail-closed-profile-for-headless",
+     "verdict": "conformant",
+     "evidence": "lib/articles/loop.ts:461 the unattended nightly loop stops at the gate and never approves"
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "hitl-approval",
+   "context": "domain-run-job-steps",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T22:23:57.495039+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "gate-state-machines",
+    "resume-after-decision",
+    "review-queues"
+   ],
+   "deviations": 1,
+   "context": "article-human-gate-and-landing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:23:57.495039+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "gate-state-machines",
+    "handoff-is-a-declared-door",
+    "resume-after-decision",
+    "review-queues"
+   ],
+   "deviations": 1,
+   "context": "decision-and-gates",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:23:57.495039+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "consent-gates",
+    "decision-records",
+    "gate-state-machines",
+    "handoff-is-a-declared-door",
+    "resume-after-decision"
+   ],
+   "deviations": 1,
+   "context": "board-decision-adapters",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:23:57.495039+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "fail-closed-profile-for-headless",
+    "gate-state-machines",
+    "resume-after-decision"
+   ],
+   "deviations": 1,
+   "context": "article-run-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

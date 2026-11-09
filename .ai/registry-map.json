@@ -2410,12 +2410,11 @@
           "changedAt": "2026-11-06",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "lib/articles/humanActs.ts:36 The approval record holds only a timestamp and patch ids: there is no decider and no fingerprint of the post that was shown. landing.ts then re-reads post/ from disk at land time, so nothing checks that what lands is what the human approved.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/articles/humanActs.ts:36 The approval record is only a timestamp and patch ids, with no decider and no fingerprint of the post or patches shown, so the landing that runs later cannot prove it pushes what the human approved.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-memory",
@@ -2794,12 +2793,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/articles/types.ts:103 The approval record holds only a timestamp and patch ids, with no decider identity and no fingerprint of the draft that was shown, so an approval cannot be proven to cover the post that later lands.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/articles/types.ts:103 ArticleApproval holds only `at` and patch ids, with no decider and no fingerprint of the draft shown, so an approval cannot be proven to cover the post that later lands or is re-landed on resume.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "voice-io",
@@ -5601,13 +5599,12 @@
           "revision": 23,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "conformant",
-          "evidence": "lib/decision/v1/types.ts:330 Each adapter previews from v1's own planners and folds a digest of the v1 state it read into the commit token, so a commit over a v1 that moved is refused. The apply half is idempotent on the same outcome and refuses a conflicting one loudly.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/article.ts:381 The article adapter runs approveRun, which pushes a branch and opens a PR, on any keep without checking the decision's `by`. The proof and spend adapters refuse an agent's keep, so an agent-authored commit can land an article.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -7092,14 +7089,13 @@
           "changedAt": "2026-11-06",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "packages/kernel/src/decision/commit.ts:79 The commit transition checks only the packet's state, never whether the author is the operator, so a caller whose `by` is 'agent' can commit a packet, and gates.ts then reads it as a ratified gate part that releases held jobs.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
+          "evidence": "packages/kernel/src/decision/commit.ts:79 Commit checks only the packet's state and never whether the author is the operator, so a commit with by='agent' succeeds and gates.ts reads it as a ratified gate that releases held jobs.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
           "source": "renamed",
           "renamedFrom": "431b1607-266c-4fcb-93e8-b7f91e5a0ebc",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "module-design",
