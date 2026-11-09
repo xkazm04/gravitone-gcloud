@@ -108,9 +108,22 @@ function motion(ctx: KCtx, m: MotionRec, at: number, jobId: string): Result<Land
   return next.ok ? ok({ next: next.value, label: "render clips" }) : next;
 }
 
-function score(ctx: KCtx, s: ScoreRec, at: number, jobId: string): Result<Landing> | null {
+/** An explainer's picture has no trailer movements to propose cues from: its job spotted the
+ *  Plan's prompts as that many cues over the picture, cut where the scenes fall nearest an even
+ *  split, each titled by the scene it opens on. */
+function spread(ctx: KCtx, prompts: number): ScoreSpot[] {
+  const scenes = pictureOf(ctx)?.scenes ?? [];
+  const n = Math.min(Math.max(1, prompts), scenes.length);
+  return Array.from({ length: n }, (_, i) => scenes.slice(Math.round((i * scenes.length) / n), Math.round(((i + 1) * scenes.length) / n))).flatMap((span, i) => {
+    const first = span[0];
+    return first === undefined ? [] : [{ id: `spot-${i + 1}`, title: first.slug, sceneIds: span.map((x) => x.id), note: "" }];
+  });
+}
+
+function score(ctx: KCtx, s: ScoreRec, at: number, jobId: string, prompts: number): Result<Landing> | null {
   if (ctx.project.discipline === "ads") return null;
-  const spots = proposal(ctx, pictureOf(ctx)).spots;
+  const proposed = proposal(ctx, pictureOf(ctx)).spots;
+  const spots = proposed.length > 0 ? proposed : spread(ctx, prompts);
   if (spots.length === 0) return null;
   const units = unitsOf(ctx, ctx.rec("frames"));
   // The session settles the proposal: every cue is the creator's (v1 useSpots: an edit clears `proposed`).
@@ -127,8 +140,25 @@ function single<K extends LaterKind>(kind: K, act: PartActKind) {
   };
 }
 
-/** The landing a done job leaves on `kind`'s record, or null when this side has none for it. */
-export function landingOf(ctx: KCtx, kind: LaterKind, rec: unknown, at: number, jobId: string): Result<Landing> | null {
+/** What a FAILED frames job left: its plates rendered, then every one culled at the frames gate
+ *  (the job's error is that gate's sentence) - each plate emptied and marked rejected by the
+ *  gate's packet, as lib/parts/gates.ts writes a cull. Its picture stays on the clock. */
+export function failedLandingOf(ctx: KCtx, kind: LaterKind, rec: unknown, at: number, jobId: string, packetId: string): Result<Landing> | null {
+  if (kind !== "frames") return null;
+  const made = frames(ctx, rec as FramesRec, at, jobId);
+  if (made === null || !made.ok) return made;
+  const r = made.value.next as FramesRec;
+  const when = new Date(at).toISOString();
+  const culled = (r.units ?? []).map((u): UnitRec => {
+    const { src: _src, ...plate } = u.plate;
+    return { ...u, plate: { ...plate, state: "empty", rejected: { packetId, at: when } } };
+  });
+  return ok({ next: { ...r, units: culled, alts: {} }, label: "render plates · culled at the gate" });
+}
+
+/** The landing a done job leaves on `kind`'s record, or null when this side has none for it.
+ *  `units` is the Plan row's (a score's prompts). */
+export function landingOf(ctx: KCtx, kind: LaterKind, rec: unknown, at: number, jobId: string, units: number): Result<Landing> | null {
   // The store holds what `seed`/`land` of THIS kind's module returned (../kinds.ts `erase`).
   switch (kind) {
     case "frames":
@@ -136,7 +166,7 @@ export function landingOf(ctx: KCtx, kind: LaterKind, rec: unknown, at: number, 
     case "motion":
       return motion(ctx, rec as MotionRec, at, jobId);
     case "score":
-      return score(ctx, rec as ScoreRec, at, jobId);
+      return score(ctx, rec as ScoreRec, at, jobId, units);
     case "cut":
       return ctx.project.discipline === "ads" ? null : single("cut", "export-animatic")(ctx, rec as RecOf["cut"], at, jobId);
     case "article":

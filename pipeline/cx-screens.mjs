@@ -72,19 +72,21 @@ export const SCREENS = {
   // (projects/[id]/_part/fixtureWorld/), so a screen shows what its project's Plan claims, made or
   // unmade, on a fresh server with no session act. Glass Harbor's trailer is ratified to the cut:
   // its frames, motion, score and cut are MADE (plates composed, every shot moving with its clip,
-  // cues spotted with takes, the animatic exported). The teaser is a cut of the same film that has
+  // cues spotted with takes, the animatic exported). The cinematic is a cut of the same film that has
   // made nothing after Script: its editors are the trailer's UNMADE states (`-empty`). The
   // explainer's frames wait for Script's adopt, and why-bitcoin's script is the turn in flight, so
   // its motion has no plate to direct.
   "part-frames-shots": { url: "/projects/glass-harbor-trailer/frames" },
-  "part-frames-shots-empty": { url: "/projects/glass-harbor-teaser/frames" },
+  "part-frames-shots-empty": { url: "/projects/glass-harbor-cinematic/frames" },
   "part-frames-assembly": { url: "/projects/why-bitcoin/frames" },
+  // a failed frames job: its plates culled at the gate, the job's own sentence drawn over the editor
+  "part-frames-failed": { url: "/projects/the-quiet-tariff/frames" },
   "part-motion-plates": { url: "/projects/glass-harbor-trailer/motion" },
   "part-motion-empty": { url: "/projects/why-bitcoin/motion" },
   "part-score-spotting": { url: "/projects/glass-harbor-trailer/score" },
-  "part-score-spotting-empty": { url: "/projects/glass-harbor-teaser/score" },
+  "part-score-spotting-empty": { url: "/projects/glass-harbor-cinematic/score" },
   "part-cut-timeline": { url: "/projects/glass-harbor-trailer/cut" },
-  "part-cut-timeline-empty": { url: "/projects/glass-harbor-teaser/cut" },
+  "part-cut-timeline-empty": { url: "/projects/glass-harbor-cinematic/cut" },
   // the explainer's voice and strips wait on their runs (its article is written; its strips queue)
   "part-explainer-strips": { url: "/projects/provider-routing-explainer/strips" },
   "part-explainer-voice": { url: "/projects/provider-routing-explainer/voice" },

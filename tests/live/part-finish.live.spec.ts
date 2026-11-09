@@ -54,9 +54,11 @@ async function settledFindings(page: Page): Promise<string[]> {
 }
 
 test("the trailer's score spots its own picture; a cue moves by a scene and ⌫ undoes it; a tempo arms its render", async ({ page }) => {
-  await ready(page, "/projects/glass-harbor-trailer/frames");
+  // The trailer's score is spotted and taken (its Plan is ratified to the cut: the fixture world lands
+  // it); the cinematic cut of the same film has made nothing after Script, so its picture is unspotted.
+  await ready(page, "/projects/glass-harbor-cinematic/frames");
   if (await page.getByRole("button", { name: /render \d+ plates/ }).count()) await confirm(page, /render \d+ plates/);
-  await ready(page, "/projects/glass-harbor-trailer/score");
+  await ready(page, "/projects/glass-harbor-cinematic/score");
   const cues = page.getByRole("listbox", { name: "cues" }).locator('[role="option"]');
   await expect(cues).toHaveCount(8);
   await expect(cues.first()).toContainText("proposed");

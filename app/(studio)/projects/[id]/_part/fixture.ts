@@ -26,7 +26,7 @@ import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
 import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
 import { encodeRecord } from "@gt/domain/steps/registry";
 import { effective, opWrite, undoIn, write, type Rec } from "./fixtureLog.ts";
-import { FIRST_ACT, LANDING_ORDER, landingOf } from "./fixtureWorld/land.ts";
+import { FIRST_ACT, LANDING_ORDER, failedLandingOf, landingOf } from "./fixtureWorld/land.ts";
 import { isLaterKind, later, type KCtx, type LaterKind, type RecOf as KindRecOf } from "./kinds.ts";
 
 // THE FIXTURE PART UNIVERSE - per project, one revisioned record per editor part and its op
@@ -127,10 +127,12 @@ function landWorld(ctx: Ctx): void {
   const k = kctxOf(ctx);
   for (const kind of LANDING_ORDER) {
     const part = ctx.plan.parts.find((p) => p.kind === kind);
-    if (part === undefined || !work(part) || part.state !== "ratified" || part.jobId === undefined) continue;
+    if (part === undefined || !work(part) || (part.state !== "ratified" && part.state !== "failed") || part.jobId === undefined) continue;
     const rec = laterRec(ctx, kind);
     const at = Date.parse(part.schedule?.end ?? "") || ctx.now;
-    const l = landingOf(k, kind, rec.data, at, part.jobId);
+    // A failed job lands what it made before it failed: a frames job's culled plates (its gate's packet).
+    const gate = ctx.plan.parts.find((p) => p.kind === "gate" && p.judges === part.id);
+    const l = part.state === "ratified" ? landingOf(k, kind, rec.data, at, part.jobId, part.units) : failedLandingOf(k, kind, rec.data, at, part.jobId, `pkt:step:${gate?.id ?? part.id}`);
     // A refusal leaves the record as seeded: the consistency law names the row that claims more.
     if (l !== null && l.ok) write(rec, asRec(l.value.next), { label: l.value.label, by: part.jobId, kind: "job", at });
   }
@@ -240,6 +242,7 @@ function viewOf(ctx: Ctx, kind: EditorKind): Result<PartView> {
       .slice(0, OPS_SHOWN)
       .map((e) => ({ n: e.n, label: e.label, by: e.by, at: new Date(e.at).toISOString() })),
     running: runningOf(part),
+    ...failedOf(part),
   };
   if (isLaterKind(kind)) return ok(later(kind).view(kctxOf(ctx), base));
   const r = recOf(ctx, "research").data;
@@ -261,6 +264,12 @@ function runningOf(part: WorkPlanPart): PartView["running"] {
   const job = fixtureProduce().listJobs();
   const stage = job.ok ? job.value.find((j) => j.id === part.jobId)?.stage : undefined;
   return act === undefined ? [] : [{ jobId: part.jobId, act, since: part.schedule?.start ?? new Date(0).toISOString(), ...(stage === undefined ? {} : { stage }) }];
+}
+
+/** The part's newest job when it failed, in the job record's own words (the Plan's `error`). */
+function failedOf(part: WorkPlanPart): { failed?: NonNullable<PartView["failed"]> } {
+  if (part.jobId === undefined || (part.jobState !== "failed" && part.jobState !== "interrupted")) return {};
+  return { failed: { jobId: part.jobId, state: part.jobState, ...(part.error === undefined ? {} : { error: part.error }) } };
 }
 
 /** The editor kind a route key names in this project, or not-found (no such part, no editor). */

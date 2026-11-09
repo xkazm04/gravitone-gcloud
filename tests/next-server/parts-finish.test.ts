@@ -202,8 +202,8 @@ describe("the album on the fixture side", () => {
 describe("the trailer's score and cut on the fixture side", () => {
   it("proposes the cut's movements on the frames record's picture, keeps them on the first edit, and never lets a second render steal the take in use", async () => {
     // The trailer's own score is spotted and its cues taken (its Plan is ratified to the cut); the
-    // teaser, a cut of the same film with nothing made after Script, carries the unspotted picture.
-    const id = "glass-harbor-teaser";
+    // cinematic, a cut of the same film with nothing made after Script, carries the unspotted picture.
+    const id = "glass-harbor-cinematic";
     const frames = await must(loadPart(id, "frames", at));
     const render = frames.acts.find((a) => a.act === "render-plates");
     if (render === undefined) throw new Error("no plate render on frames");

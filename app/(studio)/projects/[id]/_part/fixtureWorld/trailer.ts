@@ -19,14 +19,14 @@ import { GLASS_HARBOR_BUDGET, GLASS_HARBOR_CUE, GLASS_HARBOR_SLOTS } from "@/lib
 // the research seed confirms (../fixtureResearch.ts) - so one cut produces both numbers.
 //
 // The boards are the Glass Harbor film's, hand-written (lib/studio/trailerFixtures.ts, n=0). The
-// teaser is a cut of the same film, so it reads the same board; no other project may.
+// cinematic cut is of the same film, so it reads the same board; no other project may.
 
 export type TrailerSeed = { readonly id: string; readonly title: string; readonly recipe: string };
 
 /** The projects whose research deals a beat board, and the board each deals. */
 export const BEAT_BOARDS: Readonly<Record<string, readonly BeatSlot[]>> = {
   "glass-harbor-trailer": GLASS_HARBOR_SLOTS,
-  "glass-harbor-teaser": GLASS_HARBOR_SLOTS,
+  "glass-harbor-cinematic": GLASS_HARBOR_SLOTS,
 };
 
 /** The spine a seeded board confirms: every slot's first variant. */

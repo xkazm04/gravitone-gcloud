@@ -18,8 +18,10 @@ import { fixtureProduce } from "../../app/(studio)/projects/_port/port.ts";
 //   ratified   the editor's verdict is READY, and what the part MADE equals the Plan's units
 //              (plates composed, clips rendered, cues with a take, exports);
 //   running    the editor's `running` names the Plan's job;
-//   failed     the editor is not READY and made less than the Plan planned;
-//   otherwise  nothing is made (draft, queued, blocked, paused): no unit made, not READY.
+//   failed     the editor is not READY, made less than the Plan planned, and carries `failed`
+//              naming the Plan's job in the Plan's own words;
+//   otherwise  nothing is made (draft, queued, blocked, paused): no unit made, not READY;
+//   and no row but a failed one carries `failed`.
 //
 // And a picture the editor derives is the picture the Plan planned: once Frames has units, their
 // count is the Plan's plate count. Editing either side alone breaks a row here - a Plan literal
@@ -52,16 +54,6 @@ function made(v: PartView): number | null {
   }
 }
 
-/** Rows that claim work the fixture holds nothing to back, each with why. A row listed here must
- *  STILL disagree: the day it agrees, its line comes out (the last test below). */
-const KNOWN_GAPS: Readonly<Record<string, string>> = {
-  // No notebook was ever transcribed for this topic (fixtureResearch REPLAYS holds why-bitcoin's
-  // run only), so research, the script over it and the score over its picture have nothing to show.
-  "the-quiet-tariff/research": "no notebook transcribed for the tariff topic",
-  "the-quiet-tariff/script": "no notebook, so no candidate to adopt",
-  "the-quiet-tariff/score": "no adopted script, so no picture to spot",
-};
-
 type Row = { readonly project: string; readonly key: string; readonly part: Work; readonly view: PartView };
 
 function world(): { plans: PlanView[]; rows: Row[] } {
@@ -92,6 +84,7 @@ function breach(r: Row): string | null {
   const v = r.view;
   const n = made(v);
   const units = r.part.units;
+  if (r.part.state !== "failed" && v.failed !== undefined) return `${r.part.state}, editor carries failed ${v.failed.jobId}`;
   switch (r.part.state) {
     case "ratified":
       if (v.verdict.state !== "ready") return `ratified, editor ${v.verdict.state}: ${v.verdict.codes.map((c) => c.text).join(" · ")}`;
@@ -100,6 +93,7 @@ function breach(r: Row): string | null {
       return v.running.some((x) => x.jobId === r.part.jobId) ? null : `running ${r.part.jobId ?? "(no job)"}, editor shows no running job`;
     case "failed":
       if (v.verdict.state === "ready") return "failed, editor READY";
+      if (v.failed?.jobId !== r.part.jobId || v.failed?.error !== r.part.error) return `failed ${r.part.jobId ?? ""}, editor carries ${JSON.stringify(v.failed ?? null)}`;
       return n !== null && n >= units ? `failed, editor made all ${n}` : null;
     default:
       if (v.verdict.state === "ready") return `${r.part.state}, editor READY`;
@@ -113,18 +107,27 @@ describe("the fixture world: what a Plan row claims, its part editor shows", () 
     const broken = rows.flatMap((r) => {
       const id = `${r.project}/${r.key}`;
       const b = breach(r);
-      return b === null || id in KNOWN_GAPS ? [] : [`${id}: ${b}`];
+      return b === null ? [] : [`${id}: ${b}`];
     });
     expect(broken).toEqual([]);
-    // Every seeded project is read: the five produce seeds, the teaser, and the part side's three.
+    // Every seeded project is read: the five produce seeds, the cinematic cut, and the part side's three.
     expect(new Set(rows.map((r) => r.project)).size).toBeGreaterThanOrEqual(9);
   });
 
   it("draws the picture the Plan planned: once Frames has units, their count is the Plan's plates", () => {
     const { rows } = world();
     const frames = rows.filter((r) => r.view.kind === "frames" && r.view.data.face !== "takes" && r.view.data.tally.total > 0);
-    expect(frames.map((r) => r.project).sort()).toEqual(["glass-harbor-teaser", "glass-harbor-trailer"]);
+    expect(frames.map((r) => r.project).sort()).toEqual(["glass-harbor-cinematic", "glass-harbor-trailer", "the-quiet-tariff"]);
     for (const r of frames) if (r.view.kind === "frames" && r.view.data.face !== "takes") expect(r.view.data.tally.total, r.project).toBe(r.part.units);
+  });
+
+  it("cuts a trailer's picture to its own clock: the last shot ends on the project's target", () => {
+    const { rows } = world();
+    for (const r of rows) {
+      if (r.view.kind !== "frames" || r.view.data.face !== "shots" || r.view.data.units.length === 0) continue;
+      const end = Math.max(...r.view.data.units.map((u) => (u.startS ?? 0) + (u.holdS ?? 0)));
+      expect(Math.abs(end - (r.view.project.targetS ?? 0)), `${r.project}: ${end}s against ${r.view.project.targetS ?? "no"} clock`).toBeLessThanOrEqual(1);
+    }
   });
 
   it("lands each done job as one write the undo trail never offers (a job's write is not an operator's step)", () => {
@@ -142,26 +145,21 @@ describe("the fixture world: what a Plan row claims, its part editor shows", () 
       return r.view;
     };
     // The trailer's unmade picture: shots without plates, cues not spotted, a cut with no picture.
-    expect(at_("glass-harbor-teaser", "frames").verdict.codes).toEqual([{ code: "plates-composed", text: "0 of 30 plates composed" }]);
-    expect(at_("glass-harbor-teaser", "score").verdict.codes).toEqual([{ code: "no-cues", text: "no cues spotted" }]);
-    expect(at_("glass-harbor-teaser", "cut").verdict.codes).toEqual([{ code: "no-picture", text: "no picture to cut" }]);
+    expect(at_("glass-harbor-cinematic", "frames").verdict.codes).toEqual([{ code: "plates-composed", text: "0 of 30 plates composed" }]);
+    expect(at_("glass-harbor-cinematic", "score").verdict.codes).toEqual([{ code: "no-cues", text: "no cues spotted" }]);
+    expect(at_("glass-harbor-cinematic", "cut").verdict.codes).toEqual([{ code: "no-picture", text: "no picture to cut" }]);
     // A plan with nothing made: every editor empty.
     expect(rows.filter((r) => r.project === "untitled-port-strike").map((r) => [r.key, r.view.verdict.state])).toEqual(
       rows.filter((r) => r.project === "untitled-port-strike").map((r) => [r.key, "empty"]),
     );
     // A turn in flight: the script's running job, with the stage the Plan's job reports.
     expect(at_("why-bitcoin", "script").running).toEqual([expect.objectContaining({ jobId: "job:part:why-bitcoin:script", act: "compose-candidates", stage: "turn 2 of 2" })]);
-    // A failed part: the Plan carries the job's own words; its editor is not READY.
+    // A failed part: the editor carries the job and the Plan's sentence for it, and its plates were
+    // culled at the gate the sentence names - every one rejected by the gate's packet.
     const tariff = plans.find((p) => p.project.id === "the-quiet-tariff")?.parts.find((p) => p.id === "the-quiet-tariff:frames");
-    expect(tariff && isWork(tariff) ? [tariff.state, tariff.error] : null).toEqual(["failed", "gate: 0 of 18 plates kept · reason style · re-run needs a new route"]);
-    expect(at_("the-quiet-tariff", "frames").verdict.state).not.toBe("ready");
-  });
-
-  it("names only gaps that are still gaps", () => {
-    const { rows } = world();
-    for (const id of Object.keys(KNOWN_GAPS)) {
-      const r = rows.find((x) => `${x.project}/${x.key}` === id);
-      expect(r === undefined ? "not read" : breach(r), id).not.toBeNull();
-    }
+    const frames = at_("the-quiet-tariff", "frames");
+    expect(tariff && isWork(tariff) ? [tariff.state, tariff.error] : null).toEqual(["failed", `gate: 0 of ${tariff && isWork(tariff) ? tariff.units : "?"} plates kept · reason style · re-run needs a new route`]);
+    expect(frames.failed).toEqual({ jobId: "job:part:the-quiet-tariff:frames", state: "failed", error: tariff && isWork(tariff) ? tariff.error : "" });
+    expect(frames.kind === "frames" && frames.data.face !== "takes" ? [frames.data.tally.rejected, frames.data.tally.total] : null).toEqual([8, 8]);
   });
 });
