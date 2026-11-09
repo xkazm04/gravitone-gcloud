@@ -7565,7 +7565,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:155 The lint's three API presence rules (lines 152, 155, 156) read the raw page while its bans read the comment-blanked one, so a page that only mentions STRIP_READY in a comment satisfies the rule; the failure then surfaces later as a render error after the cheap rung passed it.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56
         },
         {
           "subject": "hitl-approval",

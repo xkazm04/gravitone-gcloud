@@ -20571,24 +20571,26 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-09",
-      "evaluatedTs": "2026-11-09T03:31:10.168Z",
+      "evaluatedTs": "2026-11-09T04:00:36.432Z",
       "techniques": [
         {
           "technique": "unmeasurable-criteria",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/status/status.ts:151 Unknown tokens draw amber rather than calm, which is display honesty; no verdict depends on it."
+          "evidence": "packages/ui/src/components/status/status.ts:151 Unknown tokens draw amber rather than calm, which is display honesty; no verdict depends on it.",
+          "carriedFrom": "2026-11-09"
         },
         {
           "technique": "policy-projection",
           "verdict": "not-applicable",
-          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:90 The panel renders a Consequence built elsewhere; the enumeration and enforcement are the Board's and the kernel's."
+          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:90 The panel renders a Consequence built elsewhere; the enumeration and enforcement are the Board's and the kernel's.",
+          "carriedFrom": "2026-11-09"
         }
       ],
       "withdrawn": {
-        "worker": "f513d6f8-88da-42fc-bee9-a8e14762ba04",
+        "worker": "8261262a-59c8-4b3a-acf3-aa5f58d9dd1c",
         "state": "not-applicable",
-        "at": "2026-11-09T03:31:52.555721+00:00",
-        "reason": "reviewer (sonnet): The not-applicable anchor, status.ts:140, is the generic statusOf lookup. It doesn't show that gate machinery is absent. The absence terms searched (process.exit, pre-commit, husky, waiver) don't fit a UI component library, and the evidence rests on a lexical match."
+        "at": "2026-11-09T04:01:07.624823+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchor, status.ts:1, is only the header comment of a status-vocabulary table. It does not show that the context has no gate or refusal. The claim rests on a keyword search whose terms (process.exit, exitCode, pre-commit, no-verify, waiver) are CLI and commit-hook words, so they do"
       }
     },
     "017c20b1-6e01-4427-b944-83501aef72b3/test-harness": {
@@ -20661,6 +20663,97 @@
           "technique": "a-test-helper-is-a-fork-of-the-driver",
           "verdict": "conformant",
           "evidence": "tests/next-server/kit-source-unreadable.test.ts:26 The failure path is asserted by rendering the shipped page, with only the file read made to fail."
+        }
+      ]
+    },
+    "946b3fa8-75ef-47c1-94b1-40703a9401b1/quality-gates": {
+      "context": "foundry-strips-and-training",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:00:36.432Z",
+      "worker": "8261262a-59c8-4b3a-acf3-aa5f58d9dd1c",
+      "techniques": [
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:155 For a presence rule the raw read is the permissive direction, and it is unexplained: the neighbouring stripFramesRule normalises at line 166. The tests hold no seeded comment-only pair for these rules. render.mts:75 catches the case later."
+        },
+        {
+          "technique": "unparseable-form-is-a-finding",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:35 The blocking regex misses Math[\"random\"](), const {random}=Math and aliased fetch or setTimeout, and no rule refuses computed access or eval. The pages are generated under the project's own contract, so the precondition holds. The blanking-pass obligation is met by the tests."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:149 An unnamed cap of three per rule feeds the fix turn's work list (steps.ts:102) with no sign of truncation, which can cost an extra paid round. The status half is sound: triage.ts:100 is one array read by the store guard and the Board source."
+        },
+        {
+          "technique": "instrument-answers-only-its-own-question",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:15 The header states what the lint cannot answer and which instrument owns that question."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "pipeline/strips/lint.mts:19 A planted bad page and a clean page exit non-zero on a miss, and tests/next-server/strips-lint-comments.test.ts seeds the blanking pass."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/steps.ts:203 Any finding sets the card's failed status, and only a `rendered` card can take a verdict (triage.ts JUDGEABLE)."
+        },
+        {
+          "technique": "blocking-by-input-determinism",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:138 The verdict is a pure function of the page and the brief's frame count, with no external feed."
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:9 The cheap static rung sits ahead of the costly render rung."
+        },
+        {
+          "technique": "decidable-in-a-window",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:7 Window-decidable constructs go to patterns, and the non-local remainder is handed to the seek gate."
+        },
+        {
+          "technique": "false-positive-economics",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:67 A misfire was fixed by narrowing the detector, with tests holding both directions. No precision measurement over a population was found."
+        },
+        {
+          "technique": "oracle-frozen-during-repair",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/author.ts:4 The fixer has only file tools confined by --restricted to a workspace holding inputs/ and out/; the lint and render gates run outside it, by the orchestrator."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/steps.ts:195 The gate reads the landed artifact, not the agent's account of it."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/store.ts:234 The anchored and floorOverride hatches are per-improvement by id, and an unmatched target is refused loudly."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/store.ts:269 The commit that advances the improvement writes its basis into the durable ledger row."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/blind.ts:165 Below the floor the ledger row reads unmeasurable unless explicitly overridden."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/store.ts:206 The refusal names both remedies and the improvements they apply to, and both are available on the gate surface."
         }
       ]
     }
