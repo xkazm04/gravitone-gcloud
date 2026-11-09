@@ -2230,14 +2230,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/articles/critiqueWriter.ts:97 The critique's 'research' follow-up records only how many sources were added. Existing sources are pinned by number (assertSourcesStable), and claims.json is rewritten whole with no typed kill, downgrade or unanswered effect, so the channel can only grow or silently drop evidence, never retract it on the record.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
+          "evidence": "lib/articles/critiqueWriter.ts:97 The critique's research follow-up records only how many sources it added. claims.json is overwritten whole (line 96) with claims that are just {text, source}, and assertSourcesStable forbids dropping a source, so a claim can disappear silently but can never be killed or downgraded on the record.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
           "source": "renamed",
           "renamedFrom": "0572228c-bd2e-42a3-a146-6a91d10fa08f",
-          "revisionsBehind": 4,
-          "stale": true
+          "revisionsBehind": 4
         },
         {
           "subject": "test-harness",
@@ -5575,14 +5574,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/decision/v1/sources/article.ts:43 After human review, the operator's typed per-section edit plan is flattened into one prose note and answered by reworkRun with a whole new draft plus a full critique and check. The reviewed post's approval capital is spent instead of edited.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
+          "evidence": "lib/decision/v1/sources/article.ts:343 The operator's typed per-section edit plan for a human-reviewed article becomes one note for reworkRun. reworkRun archives the critique and check and re-does draft, critique and check (lib/articles/rework.ts), so the post's approval capital is spent on a full redraft rather than an edit.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
           "source": "renamed",
           "renamedFrom": "8c854c7a-5467-4ddc-80ed-76f19b1f5094",
-          "revisionsBehind": 4,
-          "stale": true
+          "revisionsBehind": 4
         },
         {
           "subject": "hitl-approval",
@@ -17178,14 +17176,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "packages/producers/src/research/followUp.ts:22 A follow-up answer is a typed set of effects that includes 'kills' and 'downgrades', with an overall verdict that can be inconclusive, and it passes an allowlist door before it can revise the notebook. Review can therefore retract evidence, not only add it.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
+          "evidence": "packages/producers/src/research/followUp.ts:22 A follow-up answer is a typed set of effects that includes kills and downgrades, with an overall verdict that can be inconclusive. It passes an allowlist door before any revision, so review can retract evidence and not only add it.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
           "source": "renamed",
           "renamedFrom": "5195e631-ab0c-4f12-930b-8c0da09fcd3d",
-          "revisionsBehind": 4,
-          "stale": true
+          "revisionsBehind": 4
         },
         {
           "subject": "short-form-narrative-structure",
@@ -17597,14 +17594,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/ui/src/components/review/PacketReview.tsx:117 On a packet-review source with no schedule channel (the dojo review, which has sections and accepts notes), Approve discards every attached edit note without trace. Where a schedule exists, line 119 truncates the notes to noteMax with no notice, so notes vanish silently.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:63 On Approve, attached edit notes are dropped without trace where the source takes no note (dojo, noteMax 0) and cut to noteMax otherwise. The domain's own over-length refusal (packages/domain/src/source.ts:321) therefore never fires, and the reviewer is never told that notes vanished.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
           "source": "renamed",
           "renamedFrom": "571eae96-e297-40c6-a556-3a3bf8f48e3f",
-          "revisionsBehind": 4,
-          "stale": true
+          "revisionsBehind": 4
         },
         {
           "subject": "eval-harness",
@@ -18746,12 +18742,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/scout/idea.ts:129 The ideas door requires an anchor per artboard but lets kind \"free\" pass with an empty ref. That admits the unanchored candidate the slate technique names as its failure: it converges on the model's modal answer.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 4,
-          "stale": true
+          "evidence": "lib/foundry/scout/idea.ts:129 The ideas door requires an anchor ref for watch and gap kinds but lets kind 'free' through with an empty ref. That admits exactly the unanchored candidate the slate technique says should be dropped, because it converges on the model's modal answer.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
+          "revisionsBehind": 4
         },
         {
           "subject": "multi-speaker-speech-production",
