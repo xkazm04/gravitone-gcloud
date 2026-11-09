@@ -1755,7 +1755,7 @@ export const MUTANTS: UnitMutant[] = [
     id: "stage-graph-live-shows-the-dead",
     test: "packages/ui/test/components/graph.test.ts",
     file: "packages/ui/src/components/graph/stageGraph.ts",
-    find: 'return view === "all" ? [...nodes] : nodes.filter((n) => !isDeadNode(n));',
+    find: 'return view === "all" ? [...nodes] : nodes.filter((n) => !gone(n));',
     replace: 'return view === "all" ? [...nodes] : [...nodes];',
     why: "Under `live` the rejected and failed nodes stay drawn and nothing is counted behind each column's +N, so the operator cannot see which branches are still alive.",
   },
