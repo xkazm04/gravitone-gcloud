@@ -20557,7 +20557,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/status/status.ts:90 These components only draw states computed elsewhere, and a case-insensitive search of their directories for process.exit, exitCode and waiver found nothing, while the blocked and awaiting_gate words are display labels in a look table, so no check, refusal or verdict is built here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56
         },
         {
           "subject": "public-claim-provenance",

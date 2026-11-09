@@ -20569,10 +20569,16 @@
       "context": "ui-status-provenance",
       "subject": "quality-gates",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-09",
-      "evaluatedTs": "2026-11-09T04:00:36.432Z",
+      "evaluatedTs": "2026-11-09T04:15:01.860Z",
+      "worker": "6a43a5d3-2bb4-4e51-8af3-403873a1f575",
       "techniques": [
+        {
+          "technique": "severity-by-construction",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:1 The component draws a break the caller reports; it has no severity or exit path of its own."
+        },
         {
           "technique": "unmeasurable-criteria",
           "verdict": "not-applicable",
@@ -20585,13 +20591,7 @@
           "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:90 The panel renders a Consequence built elsewhere; the enumeration and enforcement are the Board's and the kernel's.",
           "carriedFrom": "2026-11-09"
         }
-      ],
-      "withdrawn": {
-        "worker": "8261262a-59c8-4b3a-acf3-aa5f58d9dd1c",
-        "state": "not-applicable",
-        "at": "2026-11-09T04:01:07.624823+00:00",
-        "reason": "reviewer (sonnet): The not-applicable anchor, status.ts:1, is only the header comment of a status-vocabulary table. It does not show that the context has no gate or refusal. The claim rests on a keyword search whose terms (process.exit, exitCode, pre-commit, no-verify, waiver) are CLI and commit-hook words, so they do"
-      }
+      ]
     },
     "017c20b1-6e01-4427-b944-83501aef72b3/test-harness": {
       "context": "part-port-real-and-contract",
