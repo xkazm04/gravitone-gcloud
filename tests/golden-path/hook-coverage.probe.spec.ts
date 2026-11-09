@@ -49,6 +49,10 @@ export const EXEMPT: Record<string, string> = {
   // operator is typing and rides @gt/ui's visibility-aware poll; its adoption rule (mayAdopt) is unit-tested
   // in packages/ui/test/components/part.test.ts.
   "app/(studio)/projects/[id]/[part]/_edit/walk/useReread.ts": NEEDS_DOM,
+  // spark fable-ten: Runs' selection, written to the address with window.history.replaceState and re-adopted
+  // when a navigation hands the island new search params. Its address grammar (url.ts runsSearch / parse) is
+  // unit-tested in tests/next-server/runs-state-filter.test.ts.
+  "app/(studio)/projects/runs/_runs/useSelection.ts": "reads and writes window.location and window.history, which this DOM-less lane has none of",
 };
 
 /* ───────────────────────────── derivation (pure) ──────────────────────────── */

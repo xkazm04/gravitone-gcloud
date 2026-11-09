@@ -22,6 +22,9 @@
 .crumbs{flex:1;min-width:0}
 .title{font:600 var(--fs-title)/1.15 var(--serif);color:var(--ink-bright);letter-spacing:-.01em;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
 .totals{display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-left:auto;align-items:center}
+/* The filter in force (./Totals.tsx): its chip is rimmed and washed in its own hue, so the narrowed
+   day-line always shows which door narrowed it. */
+.totals button[aria-pressed=true]{border-color:currentColor;background:color-mix(in srgb,currentColor 18%,transparent)}
 
 .runs{flex:1;display:grid;grid-template-columns:minmax(0,1fr) var(--w-inspector);min-height:0;min-width:0}
 .dl{display:flex;flex-direction:column;min-height:0;min-width:0}

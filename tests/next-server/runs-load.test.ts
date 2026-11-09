@@ -16,7 +16,7 @@ vi.mock("server-only", () => ({}));
 const side = vi.hoisted(() => ({ jobs: [] as unknown[], produced: [] as unknown[], lists: 0 }));
 
 vi.mock("../../lib/kernelStore.ts", () => ({
-  kernel: () => ({ ok: true, value: { store: { read: (f: (r: unknown) => unknown) => ({ ok: true, value: f({ get: () => ({ n: side.jobs.length }) }) }) } } }),
+  kernel: () => ({ ok: true, value: { store: { read: (f: (r: unknown) => unknown) => ({ ok: true, value: f({ get: () => ({ n: side.jobs.length }), all: () => [] }) }) } } }),
 }));
 vi.mock("@gt/kernel/events-query", () => ({ queryEvents: () => ({ ok: true, value: { head: 0, events: [], capped: false } }) }));
 vi.mock("@gt/kernel/job", () => ({ list: () => (side.lists++, { ok: true, value: side.jobs }) }));

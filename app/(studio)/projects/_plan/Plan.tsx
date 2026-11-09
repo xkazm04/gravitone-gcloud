@@ -11,7 +11,8 @@
 // race (`conflict`) re-reads the page rather than guessing. Units are typed freely and sent
 // coalesced: one write in flight per page, the newest units waiting behind it.
 //
-// Launch is a receipt and a confirm (../_plan/receipt.tsx), never the press itself.
+// Launch is a receipt and a confirm (../_plan/receipt.tsx), never the press itself. A launch only
+// enqueues: beside the totals, ./WorkerChip.tsx says when jobs are queued and no worker beats.
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -26,6 +27,7 @@ import { costWords, fmtDur, fmtUsd, isWork, when } from "@gt/ui/components/produ
 import { SourceTag } from "@gt/ui/components/source/SourceTag.tsx";
 import { StatusPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
+import { usePollBackstop } from "@gt/ui/freshness/useFreshness";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 import { FIELD_ATTR } from "@gt/ui/keymap/target";
 
@@ -39,6 +41,7 @@ import { PlanSummary } from "./PlanSummary.tsx";
 import { clock } from "./shelf.ts";
 import { titleGate } from "./title.ts";
 import { outcomeOf, useReceipt } from "./receipt.tsx";
+import { WorkerChip, type WorkerDoor, type WorkerRead } from "./WorkerChip.tsx";
 import s from "./Plan.module.css";
 
 export type PlanProps = {
@@ -52,9 +55,14 @@ export type PlanProps = {
   readonly composed: boolean;
   /** Arrived asking to compose (`/projects?compose=1`): the dialog opens over the plan. */
   readonly composing?: boolean;
+  /** The worker read and its re-read (./workerRead.ts, ./workerAction.ts), from the page; absent, no chip. */
+  readonly worker?: WorkerDoor;
 };
 
-export function Plan({ view: first, list, choices, port, nowMs, floorRuns, composed, composing = false }: PlanProps) {
+/** How often the Plan asks whether a worker beats: a timer's lease outlives two minutes of silence. */
+const WORKER_MS = 30_000;
+
+export function Plan({ view: first, list, choices, port, nowMs, floorRuns, composed, composing = false, worker: door }: PlanProps) {
   const router = useRouter();
   const { toast } = useShell();
   const [view, setView] = useState(first);
@@ -73,6 +81,9 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
   const titleRef = useRef<HTMLInputElement | null>(null);
   const p = view.project;
   const draft = !p.launched;
+  // The worker as the page read it, then re-read on the backstop; a re-read that failed is drawn as one.
+  const [worker, setWorker] = useState<WorkerRead | null>(door?.read ?? null);
+  usePollBackstop(() => (door === undefined ? undefined : settled(door.reread()).then((r) => setWorker(r.ok ? r.value : { problem: r.error.error }))), WORKER_MS, door !== undefined);
 
   // Only on arrival from Compose: a later render must not steal the caret back.
   useEffect(() => {
@@ -248,6 +259,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
               <Chip label="est" value={t.usdRange !== undefined ? costWords(t) : fmtUsd(t.usd)} />
               <SourceTag kind={t.src} />
               <Chip label="eta" value={t.etaAt === null ? "—" : when(t.etaAt, nowMs)} tone={p.launched ? "cyan" : "neutral"} />
+              <WorkerChip read={worker} now={nowMs} />
               <LedgerLink href={`/ledger?q=${encodeURIComponent(p.id)}`} subject={p.title} />
             </div>
           </div>

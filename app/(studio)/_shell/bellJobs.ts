@@ -4,6 +4,10 @@
 // were read at (a stream that follows the read resumes from exactly there). Its caller since the
 // JobsProvider retired is the live harness's snapshot (components/ui/HarnessBridge.tsx, handed it
 // by app/layout.tsx). Read-guarded through the one action core, as every produce read is.
+//
+// Beside it, the header's needs count re-read (./FailedSlot.tsx): the same fold the studio header
+// renders with (./headerFacts.ts readNeeds), asked when a job event reaches the chip's stream and on
+// its backstop - so a page that never refreshes itself still shows a job failing.
 import { z } from "zod";
 
 import { ok } from "@gt/domain/errors";
@@ -15,6 +19,7 @@ import { runAction, type ActionResult } from "../../_server/actionCore.ts";
 import { principal } from "../../_server/principal.ts";
 import { serverProduce } from "../projects/_port/port.ts";
 import { bellJobs } from "./bell.ts";
+import { readNeeds, type NeedsFacts } from "./headerFacts.ts";
 
 export async function readBellJobs(): Promise<ActionResult<BellRead>> {
   return runAction(
@@ -32,4 +37,8 @@ export async function readBellJobs(): Promise<ActionResult<BellRead>> {
     },
     undefined,
   );
+}
+
+export async function readNeedsAction(): Promise<ActionResult<NeedsFacts>> {
+  return runAction("needs count", () => principal("read"), z.undefined(), () => ok(readNeeds()), undefined);
 }
