@@ -110,6 +110,33 @@ export function countEvents(store: Store, input: Omit<EventQuery, "limit">, only
   });
 }
 
+export type DayKindCount = { readonly day: string; readonly kind: string; readonly n: number };
+
+/**
+ * Rows per UTC day and actor kind in the half-open window [since, until), under the filter with
+ * its actor-kind predicate left out - the facet rule above, so a kind the filter excludes still
+ * has its count (the caller decides to draw it as 0). The Ledger's strip read this as one
+ * countEvents per day, four statements and a transaction each, ~84 a render (measured by
+ * pipeline/read-cost.mts: 672 statements); this is ONE grouped statement over the `t` index.
+ *
+ * The day is `substr(t, 1, 10)`: every stored instant is toISOString's shape (events-query.ts
+ * `instant`, the door's precision-3 `Z` datetime), so its first ten characters ARE its UTC day,
+ * and a row is in day D exactly when D"T00:00:00.000Z" <= t < D+1"T00:00:00.000Z" - the old
+ * loop's window, compared as the same TEXT. A day with no row is absent from the answer.
+ */
+export function countByDay(store: Store, input: Omit<EventQuery, "limit" | "since" | "until">, since: string, until: string): Result<readonly DayKindCount[]> {
+  const p = parseAt("ledger day count", eventQuerySchema, { ...input, since, until, limit: 1 });
+  if (!p.ok) return p;
+  const { where, params } = whereOf(clausesOf(p.value).filter((c) => c.facet !== "actorKind"));
+  return store.read((r) => {
+    const rows: DayKindCount[] = [];
+    for (const row of r.all(`SELECT substr(t, 1, 10) AS day, actor_kind AS kind, count(*) AS n FROM events${where} GROUP BY day, kind`, ...params)) {
+      if (typeof row["day"] === "string" && typeof row["kind"] === "string" && typeof row["n"] === "number") rows.push({ day: row["day"], kind: row["kind"], n: row["n"] });
+    }
+    return rows;
+  });
+}
+
 /** One facet's counts as a plain map, for a caller that compares (the reconcile probe). */
 export function facetMap(counts: EventCounts, facet: FacetCount["facet"]): Record<string, number> {
   const f = counts.facets.find((x) => x.facet === facet);

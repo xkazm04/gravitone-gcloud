@@ -7,7 +7,10 @@
 // client state.
 //
 //   advice     an EventSource on /api/events/stream from the seq the page rendered at. Any
-//              event but the sync's own bookkeeping (`ingest.*`) is advice to re-read.
+//              event but the sync's own bookkeeping (`ingest.*`) is advice to re-read - or, when
+//              the page names the event families its loader reads (`families`), an event of one
+//              of them: a refresh re-runs the whole loader (pipeline/read-cost.mts times it), so
+//              an event the page cannot show is a read paid for nothing.
 //   coalesce   a burst - a sync appends hundreds of events in one batch - is ONE refresh: the
 //              first event arms a COALESCE_MS timer and later ones ride it (realtime-events:
 //              coalescing-and-batching: the events are level-triggered, "something changed",
@@ -33,9 +36,25 @@ export type Feed = {
   readonly refresh: () => void;
   /** The stream errored: the freshness edge hears a failure. */
   readonly fail: () => void;
+  /**
+   * The event families this page's loader reads (`job` holds `job.done`, `publish.fail` holds
+   * `publish.fail.quota`). Given, an event of another family is not advice to re-read this page.
+   * Absent, every event but `ingest.*` is (the rule before families existed). A frame with no
+   * type, and a `reset`, are advice whatever the families: the feed cannot tell what they missed.
+   * Not a filter on the backstop, which the page runs (usePollBackstop) and which still re-reads
+   * every BACKSTOP_MS - it is the net for whatever the families leave out.
+   */
+  readonly families?: readonly string[];
 };
 
-export function openFeed({ head, refresh, fail }: Feed): () => void {
+/** Whether an event of `type` is advice to a page that reads `families` (absent: all but ingest). */
+export function concerns(type: string, families: readonly string[] | undefined): boolean {
+  if (type === "") return true;
+  if (families === undefined) return !type.startsWith("ingest.");
+  return families.some((f) => type === f || type.startsWith(`${f}.`));
+}
+
+export function openFeed({ head, refresh, fail, families }: Feed): () => void {
   let es: EventSource | null = null;
   let timer: number | null = null;
   let closed = false;
@@ -64,7 +83,7 @@ export function openFeed({ head, refresh, fail }: Feed): () => void {
       if (Number.isSafeInteger(seq) && seq > after) after = seq;
       // The type is all this needs; a frame that does not carry one is still advice.
       const type = /"type":"([^"]+)"/.exec(m.data)?.[1] ?? "";
-      if (!type.startsWith("ingest.")) soon();
+      if (concerns(type, families)) soon();
     };
     es.addEventListener("reset", (m: MessageEvent<string>) => {
       const named = /"head":(\d+)/.exec(m.data)?.[1];

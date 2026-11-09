@@ -8,7 +8,7 @@
 // Path safety, atomic serialization, and manifest resilience rules are
 // defined once here and shared by all three stores.
 
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { catalogueDir } from "../fixtures/roots";
@@ -48,6 +48,99 @@ export function containedIn(dir: string, rel: string, servableOnly = false, noun
   return abs;
 }
 
+// THE READ CACHE - a run's JSON read again only when the file changed (spark fable-ten, package I).
+//
+// The Floor and Runs re-read every v1 store on each router.refresh (an event, or the 20 s
+// backstop), and the foundry listings read run.json + verdicts.json for every run directory,
+// twice per run for the forge (scanRuns, then getRun). Measured by pipeline/read-cost.mts on 50
+// forge + 50 extract runs: ~500 file reads, about half of a warm loadFloor. A `stat` is ~20x
+// cheaper than open+read+close on this box (Windows, 67 manifests: 1.3 ms against 25 ms in
+// parallel), and JSON.parse is ~10% of the read, so the TEXT is kept and parsed on every call:
+// each caller still gets its own fresh object, and nothing a caller mutates can reach another.
+//
+// WHY A HIT IS NEVER STALE. The key is the file's own stat - size, mtime and ctime to the
+// nanosecond, and its inode (file index on Windows) - not its directory's: a directory's mtime
+// does not move when a file inside it is rewritten in place. writeJsonAtomic renames a new file
+// in (a new inode and ctime); an in-place rewrite moves mtime and ctime, and ctime cannot be set
+// back by utimes. The one hole is a same-size rewrite inside one tick of a coarse filesystem
+// clock (FAT's 2 s, a jiffy on some Linux mounts), so git's "racily clean" rule closes it: text
+// read from a file whose mtime is within RACY_MS of now is returned but NOT kept, and the next
+// read goes to the disk until the file has been quiet that long. The stat comes before the read,
+// so a write landing between them leaves newer text under an older key - the next stat misses.
+//
+// BOUNDED: READ_CACHE_ENTRIES files and READ_CACHE_BYTES of text, least recently used out
+// first. Keyed by absolute path, so two store roots (the tests' many temp dirs) never share an
+// entry, and a dead temp root's entries age out instead of pinning memory.
+
+export const READ_CACHE_ENTRIES = 2048;
+export const READ_CACHE_BYTES = 64 * 1024 * 1024;
+const RACY_MS = 2_000;
+
+type Cached = { readonly sig: string; readonly text: string };
+const cache = new Map<string, Cached>();
+let cacheBytes = 0;
+const counts = { hits: 0, misses: 0 };
+
+const sizeOf = (text: string): number => text.length * 2;
+
+function forget(key: string): void {
+  const old = cache.get(key);
+  if (old === undefined) return;
+  cache.delete(key);
+  cacheBytes -= sizeOf(old.text);
+}
+
+function keep(key: string, entry: Cached): void {
+  forget(key);
+  if (sizeOf(entry.text) > READ_CACHE_BYTES) return;
+  cache.set(key, entry);
+  cacheBytes += sizeOf(entry.text);
+  // A Map iterates in insertion order, and a hit re-inserts, so the first key is the coldest.
+  while (cache.size > READ_CACHE_ENTRIES || cacheBytes > READ_CACHE_BYTES) {
+    const coldest = cache.keys().next();
+    if (coldest.done === true) break;
+    forget(coldest.value);
+  }
+}
+
+/** The file's text, from the cache when its stat is unchanged. Throws as readFile does (ENOENT). */
+async function readText(file: string): Promise<string> {
+  const key = path.resolve(file);
+  let s;
+  try {
+    s = await retryTransientFs(() => stat(key, { bigint: true }), FS_RETRY);
+  } catch (e) {
+    forget(key);
+    throw e;
+  }
+  const sig = `${s.size}:${s.mtimeNs}:${s.ctimeNs}:${s.ino}`;
+  const hit = cache.get(key);
+  if (hit !== undefined && hit.sig === sig) {
+    cache.delete(key);
+    cache.set(key, hit);
+    counts.hits++;
+    return hit.text;
+  }
+  counts.misses++;
+  const text = await retryTransientFs(() => readFile(key, "utf8"), FS_RETRY);
+  if (Number(s.mtimeMs) < Date.now() - RACY_MS) keep(key, { sig, text });
+  else forget(key);
+  return text;
+}
+
+/** What the read cache holds and has served (tests, and pipeline/read-cost.mts). */
+export function readCacheStats(): { readonly entries: number; readonly bytes: number; readonly hits: number; readonly misses: number; readonly keys: readonly string[] } {
+  return { entries: cache.size, bytes: cacheBytes, hits: counts.hits, misses: counts.misses, keys: [...cache.keys()] };
+}
+
+/** Empty the read cache (a test's clean start; a measurement's cold read). */
+export function clearReadCache(): void {
+  cache.clear();
+  cacheBytes = 0;
+  counts.hits = 0;
+  counts.misses = 0;
+}
+
 export async function readJson<T>(file: string): Promise<T | null>;
 export async function readJson<T>(file: string, fallback: T): Promise<T>;
 export async function readJson<T>(file: string, fallback: T | null = null): Promise<T | null> {
@@ -56,7 +149,7 @@ export async function readJson<T>(file: string, fallback: T | null = null): Prom
   // the last attempt still throws, so a genuinely unreadable file surfaces.
   let text: string;
   try {
-    text = await retryTransientFs(() => readFile(file, "utf8"), FS_RETRY);
+    text = await readText(file);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return fallback;
     throw e;

@@ -2,7 +2,7 @@ import "server-only";
 
 import { ok, type Result } from "@gt/domain/errors";
 import type { ActorKind, Event } from "@gt/domain/event";
-import { countEvents, type FacetCount } from "@gt/kernel/events-count";
+import { countByDay, countEvents, type FacetCount } from "@gt/kernel/events-count";
 import { queryEvents, type TimeCursor } from "@gt/kernel/events-query";
 import type { Store } from "@gt/kernel/store";
 import { DAY_MS, daysBetween, dayKey, type DayCount } from "@gt/ui/components/timestrip/strip.ts";
@@ -191,32 +191,41 @@ export function readFacets(store: Store, f: LedgerFilter): Result<Facets> {
 export type Strip = { readonly days: readonly DayCount[]; readonly today: string };
 
 /**
- * Events per day under the filter minus its date range, split by actor kind. One count per
- * day up to today (later days are drawn empty and hatched), each the kernel's own count
- * over the day's half-open window - so a bar and the list a click on it opens can never
- * disagree. With an actor filter set the day's total belongs to the kinds it holds alone.
+ * Events per day under the filter minus its date range, split by actor kind, up to today
+ * (later days are drawn empty and hatched). Each day is the rows in its half-open UTC window
+ * [D 00:00, D+1 00:00) - the window a click on the bar opens as the list's from/to, so a bar
+ * and its list can never disagree. With an actor filter set the day's total belongs to the
+ * kinds it holds alone.
+ *
+ * One grouped statement for the whole window (events-count.ts countByDay). Until 2026-11 this
+ * was one countEvents per day: 84 calls, 672 statements a render, ~17 ms on 40k events
+ * (pipeline/read-cost.mts); tests/next-server/ledger-strip-grouped.test.ts holds the two equal on
+ * rows that sit exactly on the day edges.
  */
 export function readStrip(store: Store, f: LedgerFilter, nowMs: number): Result<Strip> {
   const today = dayKey(nowMs);
   const { kernel } = splitFilter({ ...f, from: null, to: null });
   const days = daysBetween(dayKey(nowMs - (STRIP_PAST - 1) * DAY_MS), dayKey(nowMs + STRIP_AHEAD * DAY_MS));
-  // The actor facet counts with its own filter left out, so a kind the filter excludes still
+  const first = days[0] ?? today;
+  const since = `${first}T00:00:00.000Z`;
+  const until = new Date(Date.parse(`${today}T00:00:00.000Z`) + DAY_MS).toISOString();
+  const c = countByDay(store, kernel, since, until);
+  if (!c.ok) return c;
+  const byDay = new Map<string, Map<string, number>>();
+  for (const row of c.value) {
+    const kinds = byDay.get(row.day) ?? new Map<string, number>();
+    kinds.set(row.kind, row.n);
+    byDay.set(row.day, kinds);
+  }
+  // The actor kind is counted with its own filter left out, so a kind the filter excludes still
   // has a count there; it is drawn as 0, or the bar would hold acts the list never shows.
   const held = kernel.actor?.kind;
-  const out: DayCount[] = [];
-  for (const day of days) {
-    if (day > today) {
-      out.push({ day, operator: 0, agent: 0, machine: 0 });
-      continue;
-    }
-    const since = `${day}T00:00:00.000Z`;
-    const until = new Date(Date.parse(since) + DAY_MS).toISOString();
-    const c = countEvents(store, { ...kernel, since, until }, ["actorKind"]);
-    if (!c.ok) return c;
-    const kinds = facet(c.value.facets, "actorKind");
-    const n = (k: ActorKind): number => (held !== undefined && !held.includes(k) ? 0 : (kinds.values.find((v) => v.value === k)?.n ?? 0));
-    out.push({ day, operator: n("operator"), agent: n("agent"), machine: n("machine") });
-  }
+  const out: DayCount[] = days.map((day) => {
+    if (day > today) return { day, operator: 0, agent: 0, machine: 0 };
+    const kinds = byDay.get(day);
+    const n = (k: ActorKind): number => (held !== undefined && !held.includes(k) ? 0 : (kinds?.get(k) ?? 0));
+    return { day, operator: n("operator"), agent: n("agent"), machine: n("machine") };
+  });
   return ok({ days: out, today });
 }
 
