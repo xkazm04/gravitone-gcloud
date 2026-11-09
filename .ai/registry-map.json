@@ -3929,7 +3929,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/score/define.ts:61 A cue the vendor refused has no state of its own, so the plan job treats it as a cue never rendered and asks for it again instead of labelling the region refused-silence.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "generated-music-acceptance",
@@ -10637,7 +10641,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/mv.ts:183 Each source projects v1 job records into events, live jobs, a weir and tallies with no lanes or clock of a cut; a case-insensitive search of lib/ledger/v1/sources for the absence terms found no hits.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "broadcast-software-control",

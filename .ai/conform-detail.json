@@ -20756,6 +20756,58 @@
           "evidence": "lib/foundry/training/store.ts:206 The refusal names both remedies and the improvements they apply to, and both are available on the gate surface."
         }
       ]
+    },
+    "06a49bc3-5cc1-4701-9869-efbacdcf5f6c/video-assembly": {
+      "context": "audio-text-producers",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:24:49.209Z",
+      "worker": "eb3425f0-3bc4-4f2a-ad67-771287a337e6",
+      "techniques": [
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/score/define.ts:31 The cue view knows only taken or not. lib/music/errors.ts:5-7 says a refusal reverts the cue to refused-silence, but lib/producers/score.ts ends it as a job failure and writes nothing on the spot. The brief itself does carry purpose and tempo (cueTakeRequest)."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/voice/define.ts:32 Scoped to no phantom capability: a missing engine is stated as a seam and refused. The vendor-refused cue state is the music-spotting deviation above."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/voice/define.ts:69 A take with no bytes fails by name before the chain runs, rather than rendering silence."
+        },
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/mv/plan.ts:17 The cheap validated step runs before the multi-minute render, in STEP_ORDER."
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/voice/define.ts:7 Each line is one unit held whole; no cue is derived from a position inside a narration clip."
+        }
+      ]
+    },
+    "b94edc9f-f1d4-4be0-99cb-4483648000eb/video-assembly": {
+      "context": "ledger-v1-sources",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:24:49.209Z",
+      "worker": "eb3425f0-3bc4-4f2a-ad67-771287a337e6",
+      "techniques": [
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/clips.ts:37 Refused is carried here as a job's terminal status in a ledger event; there is no region of a clock for it to be drawn on."
+        }
+      ]
     }
   }
 }
