@@ -46,7 +46,10 @@ export async function runCodex(prompt: string, o: { readonly timeoutS?: number; 
   const argv = [...prefix, "exec", "--json", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config", "--ignore-rules", "--enable", "image_generation", "-C", work, "--sandbox", "read-only", "-"];
   const started = Date.now();
   try {
-    const child = spawn(bin, argv, { cwd: work, env, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    // POSIX: its own process group, so killTree reaches the grandchild, which would otherwise hold the stdout pipe and 'close'
+    // with it until its own end (measured 25.9 s on Linux for a 1 s timeout). The cost is that a Ctrl-C at this process no longer
+    // reaches the seat; the seat then runs to its own end, because the timer dies with this process.
+    const child = spawn(bin, argv, { cwd: work, env, stdio: ["pipe", "pipe", "pipe"], windowsHide: true, detached: process.platform !== "win32" });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (d: Buffer) => (stdout += d.toString("utf8")));

@@ -36,10 +36,16 @@ export function spawnBounded(o: BoundOpts): void {
   const limit = o.timeoutMs ?? gateTimeoutMs();
   const grace = o.graceMs ?? KILL_GRACE_MS;
   // One command string with shell:true - `npm` is npm.cmd on Windows.
+  // detached on POSIX makes the shell a group leader, so killTree reaches what the shell started; signalling the shell alone
+  // left the gate running with the pipes open, and every timeout ended on the grace timer.
+  // It also means setsid: the gate leaves the terminal's foreground group. A Ctrl-C at the runner ends the runner and not the
+  // gate, buffered or inherit alike, since run-gates.mts has no signal handler to pass it on. The gate keeps running, with its
+  // limit gone because the timer died with the runner; in the inherit case it also keeps writing to the terminal.
   const child = spawn(o.command, {
     cwd: o.cwd,
     env: o.env,
     shell: true,
+    detached: process.platform !== "win32",
     stdio: o.buffered ? ["ignore", "pipe", "pipe"] : "inherit",
   });
   child.stdout?.on("data", o.onData);
