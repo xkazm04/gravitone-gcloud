@@ -16403,7 +16403,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:183 A refused or missing clip is filtered out and the piece is concatenated without it, so the hole closes into a shorter continuous cut and the failure survives only as a sentence in the candidate's error field.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "agent-memory",

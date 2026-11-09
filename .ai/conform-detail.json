@@ -20874,6 +20874,57 @@
         "at": "2026-11-09T04:37:25.037877+00:00",
         "reason": "reviewer (sonnet): The claim that the DECLARED-only limit is stated only in a code comment is contradicted by the code. The line 142 message itself says 'well-FORMED... says nothing about whether it works — see the efficacy row', and rules/connectors.ts:59 and :64 report 'declared' adjacencies and 'examined nothing, d"
       }
+    },
+    "ce5ef2e0-d944-4b79-a500-32f8a081923f/video-assembly": {
+      "context": "scout-producers",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:47:22.182Z",
+      "worker": "d5539da7-2f9c-42b6-8b8d-c0c39fdaa7d2",
+      "techniques": [
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:183 The failure is recorded per index, but the cut drops the slot rather than holding its place on the clock, an automatic edit nobody approved."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:30 Baked audio is kept by one blanket rule, not decided per clip as keep, demote or strip. Failed clips do revert to a null index with their sentence."
+        },
+        {
+          "technique": "unreferenced-channels-resample",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:132 The clip is conditioned on a still alone and the record says nothing about its unpinned sound channel. The LTX graph file matched an audio-node search; whether a character actually speaks across clips was not established."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutReelActs.ts:209 The assistant's output is a source page; the image or mp4 is rendered from it afterwards."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutReelActs.ts:102 A static frame-purity lint gates each strip, and the tile frame is rendered cold."
+        },
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutReelActs.ts:298 A strip still failing its lint stops before any frame or full render is drawn."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutPieceActs.ts:240 An input with no video stream is an error naming the file rather than black frames."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/scoutStoryboardActs.ts:24 Each panel is its own frame and its own clip anchor; no multi-panel grid conditions one generation."
+        }
+      ]
     }
   }
 }
