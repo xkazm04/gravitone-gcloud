@@ -19919,6 +19919,83 @@
           "evidence": "tests/next-server/runs-act-runner.test.ts:50 This pin strips comments from its haystack and counts call shapes. The sibling pin in runs-legend.test.ts does not strip, which is weaker but was not judged a deviation."
         }
       ]
+    },
+    "03bbdce3-27bb-4361-947c-ba8f0d70fa2c/video-assembly": {
+      "context": "audio-composer-briefs",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:26:34.918Z",
+      "worker": "b7c08f51-7b85-4035-b6c5-9afbcf2226e0",
+      "techniques": [
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/batch.ts:42 A selectable prompt-technique label for standalone sound generation; nothing here places a cue against picture."
+        }
+      ]
+    },
+    "7d7b94f7-f312-4ea4-b315-23df705c2286/video-assembly": {
+      "context": "bound-producers",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:26:34.918Z",
+      "worker": "b7c08f51-7b85-4035-b6c5-9afbcf2226e0",
+      "techniques": [
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "lib/producers/score.ts:103 lib/music/errors.ts keeps refused distinct from failed, but here it is only a job outcome. Motion's WAN_LIVE refusal does say its seam honestly."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "lib/producers/score.ts:182 Landing writes only takes that were made, so no refused-silence outcome reaches the spotting record. Cue durations are correctly derived from the picture at line 67."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "deviation",
+          "evidence": "lib/producers/motion.ts:54 Every clip is briefed at a fixed 5 s and ClipRequest carries no duration, so the brief does not state the length of the timeline slot it must fill."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "lib/producers/cut.ts:184 The export renders a deterministic compiled document, and the job is identified by that document's hash."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "conformant",
+          "evidence": "lib/producers/cut.ts:183 Judged on the producer's share only: dialled offsets are read from the stored record into the render, so a correction ships as data without regenerating material."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/producers/cut.ts:212 Segments the export could not reach are booked on the export record; an absent plate is carried as a gap in a draft animatic, which the technique allows."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "lib/producers/score.ts:67 Cue timing is computed from the same picture projection the cut derives its clock from, so there is one time authority."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/motion.ts:182 Each shot is anchored on its own plate; the technique names per-shot frame anchoring as the stronger instrument when an exact start frame exists."
+        },
+        {
+          "technique": "unreferenced-channels-resample",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/voice.ts:41 Narration comes from an offline speech pipeline with one stored voice and the animatic picture is stills, so no generator-emitted sound channel reaches the cut."
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/voice.ts:33 A line is held whole against its card and nothing places a cue inside a clip; a search of lib/ for alignment payload names hit only music-clip's lyric code."
+        }
+      ]
     }
   }
 }

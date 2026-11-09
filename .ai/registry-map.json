@@ -3158,7 +3158,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/brief.ts:24 A brief here asks only for tempo, key and length with no position on any clock: a case-insensitive search of the whole audio component directory for timeline, compileCut, deriveTimeline, offsetMs and storyboard found nothing, and the one picture word is the sfx technique label picture-as-timing-brief in batch.ts:42.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "image-prompt-composition",
@@ -4728,7 +4732,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/score.ts:103 A music refusal ends the job as a fatal sentence and nothing lands on the spot, so the refusal is never recorded at the region of the clock it costs and the cue reads the same as one never rendered.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "module-design",
