@@ -123,3 +123,18 @@ export function snapshotsIn(r: Reader, publicationId?: string): MetricSnapshot[]
 export function slottedIn(r: Reader, partId: string): boolean {
   return r.get("SELECT 1 AS y FROM slots WHERE part_id = ? AND state IN ('scheduled', 'publishing', 'published') LIMIT 1", partId) !== undefined;
 }
+
+/**
+ * The slot a plan's slot part opens at: one that HOLDS it first (scheduled, publishing,
+ * published), else a missed or failed one, which its record reschedules - the newest of either.
+ * A cancelled slot is history, not a door: the part needs a new slot. Undefined when there is
+ * none, and only then does the plan offer a schedule sheet (a second slot for a part that has
+ * one would be a second publish of the same film).
+ */
+export function slotOfPartIn(r: Reader, partId: string): string | undefined {
+  const row = r.get(
+    "SELECT id FROM slots WHERE part_id = ? AND state IN ('scheduled', 'publishing', 'published', 'missed', 'failed') ORDER BY state IN ('scheduled', 'publishing', 'published') DESC, at DESC, id DESC LIMIT 1",
+    partId,
+  );
+  return row === undefined ? undefined : String(row["id"]);
+}

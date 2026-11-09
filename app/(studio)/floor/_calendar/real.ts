@@ -37,7 +37,7 @@ import type { SlotRow } from "@gt/kernel/slots/schema";
 import { cancelSlot, createSlot, moveSlot, publishNow, type Readiness as Ready } from "@gt/kernel/slots/write";
 import type { Store } from "@gt/kernel/store";
 import type { RailSlot } from "@gt/ui/components/floor/calendar.ts";
-import type { ScheduleDraft, ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
+import type { ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
 import { canPublishNow } from "@gt/ui/components/floor/slot.ts";
 import type { SlotMetrics, SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 
@@ -45,7 +45,7 @@ import { outPath } from "../../../../lib/fixtures/roots.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { blobRoute } from "../../../../lib/library/media.ts";
 import { ledgerFor } from "../../_shell/links.ts";
-import type { CalendarFacts, Problem } from "./contract.ts";
+import type { CalendarFacts, Problem, ScheduleInput } from "./contract.ts";
 import { readinessOf, storeFactsIn, type Readiness } from "./readiness.ts";
 
 const POSTER_TYPE = "image/jpeg";
@@ -264,7 +264,10 @@ export function realPublishNow(v: VerbIn): Result<SlotView> {
 /** A video channel's refusal of an item that is not an export (the adapter's sentence). */
 export const exportOnly = (item: string, channel: string): string => `${item} is not an export; ${channel} publishes exports`;
 
-export function realSchedule(d: ScheduleDraft, who: Who): Result<SlotView> {
+/** A schedule naming a part that is not a plan's slot part (the part it would mark placed). */
+export const notSlotPart = (partId: string): string => `${partId} is not a plan's slot part`;
+
+export function realSchedule(d: ScheduleInput, who: Who): Result<SlotView> {
   const c = ctx();
   if (!c.ok) return c;
   const { store: st, ready } = c.value;
@@ -274,7 +277,16 @@ export function realSchedule(d: ScheduleDraft, who: Who): Result<SlotView> {
   // Every other channel publishes an export (lib/producers/publish.ts youtubeAdapter refuses
   // anything else at its tick, in these words): another Library item would be a slot that can only fail.
   if (exportIdOf(d.item) === undefined) return err("refused", exportOnly(d.item, channel.data));
-  const made = createSlot(st, { libraryItemId: d.item, channel: channel.data, at: d.at, title: d.title, description: d.description, tags: d.tags }, actorOf(who), engineReady(c.value));
+  // The part the slot places is read as placed by the plan (kernel slots/read.ts `slottedIn`), so
+  // only a plan's slot part may be named: a work part or a gate "placed" would be a state the
+  // plan's own rules never reach. The engine takes any id (the CLI's --part is the operator's).
+  if (d.partId !== undefined) {
+    const partId = d.partId;
+    const kind = st.read((r) => r.get("SELECT json_extract(record, '$.part.kind') AS k FROM parts WHERE part_id = ?", partId)?.["k"]);
+    if (!kind.ok) return kind;
+    if (kind.value !== "slot") return err("refused", notSlotPart(partId));
+  }
+  const made = createSlot(st, { libraryItemId: d.item, channel: channel.data, at: d.at, title: d.title, description: d.description, tags: d.tags, ...(d.partId === undefined ? {} : { partId: d.partId }) }, actorOf(who), engineReady(c.value));
   return made.ok ? viewOfRow(st, made.value, modeFor(ready, channel.data)) : made;
 }
 

@@ -265,6 +265,7 @@ export function Floor({ data, initial, produce, calendar, slot, choices }: Floor
           nowMs={data.now}
           day={url.day}
           item={url.schedule.item}
+          part={url.schedule.part ?? null}
           onClose={() => setUrl((u) => ({ ...u, schedule: null }))}
           onFloor={() => setUrl((u) => ({ ...u, schedule: null, cal: false, day: null }))}
           onMade={(id) => {

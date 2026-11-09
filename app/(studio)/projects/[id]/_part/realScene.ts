@@ -9,7 +9,9 @@ import { runningActs } from "@gt/producers/research/partJob";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { WorkPlanPart } from "@gt/domain/produce";
-import { OPS_SHOWN, actBelongs, isEditorKind, opLabel, type EditorKind, type PartOp, type PartProject, type PartRef, type PartRunning, type PartView, type ResearchOp, type ScriptOp } from "@gt/domain/partView";
+import { parseJsonAt } from "@gt/domain/door";
+import { jobSchema } from "@gt/domain/job";
+import { OPS_SHOWN, actBelongs, isEditorKind, opLabel, type EditorKind, type PartFailed, type PartOp, type PartProject, type PartRef, type PartRunning, type PartView, type ResearchOp, type ScriptOp } from "@gt/domain/partView";
 
 import type { Who } from "../../_port/port.ts";
 import { keptTakes } from "../../_port/realChoices.ts";
@@ -57,15 +59,39 @@ export function sceneOf(r: Reader, projectId: string, key: string, now: number):
 const verdictOf = (s: Scene, kind: EditorKind) => (isLaterKind(kind) ? later(kind).verdict(s.ctx) : kind === "research" ? RESEARCH.verdict(s.ctx, s.ctx.research()) : SCRIPT.verdict(s.ctx, scriptOf(s.snap.records)));
 const refOf = (projectId: string, p: { id: string; kind: PartRef["kind"]; label: string }): PartRef => ({ partId: p.id, key: keyOf(projectId, p.id), kind: p.kind, label: p.label });
 
-/** The part's jobs that have not ended, as the view's `running` (an act this editor offers). */
+/**
+ * The part's jobs that have not ended, as the view's `running`: an act this editor offers, and the
+ * Plan's own launch of the part (act null - fable-ten A: it was dropped here, so a job launched
+ * from the Plan left the part screen blank while it ran). An INTERRUPTED job is not running: it
+ * waits on a retry, and the view draws it once, as `failed` (failedOf below).
+ */
 function runningOf(r: Reader, partId: string, kind: EditorKind): PartRunning[] {
   return runningActs(r, partId).flatMap((j) => {
     const act = j.act;
-    if (act === null || !actBelongs(kind, act)) return [];
+    if (j.state === "interrupted" || (act !== null && !actBelongs(kind, act))) return [];
     const since = r.get("SELECT at FROM events WHERE type = 'job.enqueued' AND subject_id = ? ORDER BY seq LIMIT 1", j.jobId)?.["at"];
     return [{ jobId: j.jobId, act, since: typeof since === "string" ? since : new Date(0).toISOString(), ...(j.stage === undefined ? {} : { stage: j.stage }) }];
   });
 }
+
+/**
+ * The part's NEWEST job when it ended failed or interrupted (fable-ten A): the Plan launch's
+ * `job:part:<part>` and every act's `job:part:<part>:<act...>` (@gt/producers partJob's own
+ * spelling), newest by the jobs table's insertion order `n`. A newer job - running, done, anything
+ * - is the newest and clears it, so a retry that landed leaves nothing drawn. The error is the job
+ * record's own message, verbatim.
+ */
+export function failedOf(r: Reader, partId: string): PartFailed | undefined {
+  const row = r.get("SELECT record FROM jobs WHERE id = ? OR substr(id, 1, ?) = ? ORDER BY n DESC LIMIT 1", `job:part:${partId}`, `job:part:${partId}:`.length, `job:part:${partId}:`);
+  if (row === undefined) return undefined;
+  const j = parseJsonAt("job record", jobSchema, String(row["record"]));
+  if (!j.ok) throw j.error;
+  const job = j.value;
+  if (job.of.kind !== "part" || job.of.id !== partId || (job.state !== "failed" && job.state !== "interrupted")) return undefined;
+  return { jobId: job.id, state: job.state, ...(job.error === undefined ? {} : { error: job.error.message }) };
+}
+
+const withFailed = (f: PartFailed | undefined): { failed?: PartFailed } => (f === undefined ? {} : { failed: f });
 
 export function viewOf(r: Reader, s: Scene): PartView {
   const id = s.ctx.project.id;
@@ -82,9 +108,18 @@ export function viewOf(r: Reader, s: Scene): PartView {
         return p === undefined || !isEditorKind(p.kind) || verdictOf(s, p.kind).state === "ready" ? [] : [refOf(id, p)];
       }),
     },
-    tabs: s.read.plan.parts.map((p) => ({ ...refOf(id, p), editor: isEditorKind(p.kind), verdict: isEditorKind(p.kind) ? verdictOf(s, p.kind).state : null })),
+    // A gate's packet and a slot's slot ride on its tab, read by the plan (gateFacts), so the walk's
+    // "next" opens what exists (../../_plan/doors.ts nextDoor) - only what exists is set.
+    tabs: s.read.plan.parts.map((p) => ({
+      ...refOf(id, p),
+      editor: isEditorKind(p.kind),
+      verdict: isEditorKind(p.kind) ? verdictOf(s, p.kind).state : null,
+      ...("packetId" in p && p.packetId !== undefined ? { packetId: p.packetId } : {}),
+      ...("slotId" in p && p.slotId !== undefined ? { slotId: p.slotId } : {}),
+    })),
     ops: partTrail(r, { projectId: id, partId: s.part.id }, OPS_SHOWN).map((o) => ({ n: o.n, label: o.label, by: o.by, at: o.at })),
     running: runningOf(r, s.part.id, s.kind),
+    ...withFailed(failedOf(r, s.part.id)),
   };
   if (isLaterKind(s.kind)) return later(s.kind).view(s.ctx, base);
   if (s.kind === "research") {

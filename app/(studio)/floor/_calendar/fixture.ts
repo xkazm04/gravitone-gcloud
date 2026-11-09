@@ -25,14 +25,14 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { parseAt } from "@gt/domain/door";
 import { channelSchema, exportIdOf, slotMachine, slotSchema, type Slot, type SlotState } from "@gt/domain/slot";
 import type { RailSlot } from "@gt/ui/components/floor/calendar.ts";
-import { canSchedule, holds, type ChannelReady, type ScheduleDraft, type ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
+import { canSchedule, holds, type ChannelReady, type ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
 import { canCancel, canPublishNow, moveProblem } from "@gt/ui/components/floor/slot.ts";
 import type { SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 
 import { ledgerFor } from "../../_shell/links.ts";
 import { ARTICLE_CLI, PUBLISH_CLI } from "./readiness.ts";
-import { exportOnly, notPublishedText, railOfSlot, staleText } from "./real.ts";
-import type { CalendarFacts } from "./contract.ts";
+import { exportOnly, notPublishedText, notSlotPart, railOfSlot, staleText } from "./real.ts";
+import type { CalendarFacts, ScheduleInput } from "./contract.ts";
 import { CHANNEL_SEED, ITEMS, PROJECTS, SLOTS, type FixtureMetric, type FixtureSlot } from "./fixtureData.ts";
 
 const MIN_MS = 60_000;
@@ -75,7 +75,7 @@ function walk(from: SlotState, path: readonly SlotState[]): Result<SlotState> {
   return ok(at);
 }
 
-const door = (s: Omit<Slot, "id" | "libraryItemId"> & { readonly id: string; readonly libraryItemId: string }): Result<Slot> => parseAt(`fixture slot ${s.id}`, slotSchema, s);
+const door = (s: Omit<Slot, "id" | "libraryItemId" | "partId"> & { readonly id: string; readonly libraryItemId: string; readonly partId?: string }): Result<Slot> => parseAt(`fixture slot ${s.id}`, slotSchema, s);
 
 /** The record without the fields a waiting slot does not carry. */
 function waiting(s: Slot): Omit<Slot, "error" | "missedAt" | "claim" | "publicationId"> {
@@ -200,8 +200,11 @@ export function fixtureAct(verb: string, id: string, nowMs: number, act: (row: F
 
 let minted = 0;
 
+/** `<project><sep>slot`: the real side's `/`, the produce fixture's `:`. */
+const SLOT_PART = /^[^\s/:]+[/:]slot$/;
+
 /** A new slot, as the engine would take it (@gt/kernel/slots/write createSlot's refusals). */
-export function fixtureSchedule(d: ScheduleDraft, nowMs: number): Result<SlotView> {
+export function fixtureSchedule(d: ScheduleInput, nowMs: number): Result<SlotView> {
   const t = rows(nowMs);
   if (!t.ok) return t;
   const channel = channelSchema.safeParse(d.channel);
@@ -211,10 +214,16 @@ export function fixtureSchedule(d: ScheduleDraft, nowMs: number): Result<SlotVie
   if (exportIdOf(d.item) === undefined) return err("refused", exportOnly(d.item, d.channel));
   if (!canSchedule(ch)) return err("conflict", `${d.channel} is not wired`, { detail: "channel_not_wired" });
   if (ITEMS[d.item] === undefined) return err("conflict", `unknown item ${d.item}`, { detail: "export_missing" });
+  // The real side refuses a part that is not a plan's slot part (./real.ts). This side cannot read
+  // the fixture projects without reaching into the produce fixture, so it holds the SHAPE: every
+  // recipe's slot part has the key `slot` (@gt/catalog recipes `slot()`), after the project id and
+  // its separator. A work part or a gate is refused in the real side's words; an unknown project's
+  // `…/slot` is not caught here.
+  if (d.partId !== undefined && !SLOT_PART.test(d.partId)) return err("refused", notSlotPart(d.partId));
   const held = [...t.value.values()].find((r) => r.slot.libraryItemId === d.item && r.slot.channel === d.channel && holds(railOfRow(r)));
   if (held !== undefined) return err("conflict", `${d.item} is already on ${d.channel} (slot ${held.slot.id}, ${held.slot.state} for ${held.slot.at})`);
   minted += 1;
-  const slot = door({ id: `sl-new-${minted}`, libraryItemId: d.item, channel: channel.data, at: d.at, state: "scheduled", title: d.title, description: d.description, tags: [...d.tags] });
+  const slot = door({ id: `sl-new-${minted}`, libraryItemId: d.item, ...(d.partId === undefined ? {} : { partId: d.partId }), channel: channel.data, at: d.at, state: "scheduled", title: d.title, description: d.description, tags: [...d.tags] });
   if (!slot.ok) return slot;
   const row: FixtureRow = { slot: slot.value, rev: 1, extra: {} };
   t.value.set(slot.value.id, row);

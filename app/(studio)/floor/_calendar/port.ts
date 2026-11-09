@@ -11,11 +11,11 @@ import "server-only";
 
 import type { Result } from "@gt/domain/errors";
 import type { RailSlot } from "@gt/ui/components/floor/calendar.ts";
-import type { ScheduleDraft, ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
+import type { ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
 import type { SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 
 import { SIDE } from "../../projects/_port/port.ts";
-import type { CalendarFacts, Problem } from "./contract.ts";
+import type { CalendarFacts, Problem, ScheduleInput } from "./contract.ts";
 import { applyCancel, applyMove, applyPublishNow, fixtureAct, fixtureDetail, fixtureFacts, fixtureItems, fixtureSchedule, fixtureSlots } from "./fixture.ts";
 import { realCancel, realDetail, realItems, realMove, realPublishNow, realSchedule, realSlots, type Who } from "./real.ts";
 
@@ -29,7 +29,7 @@ export type ServerCalendar = {
   readonly move: (id: string, at: string, act: Act) => Result<SlotView>;
   readonly cancel: (id: string, act: Act) => Result<SlotView>;
   readonly publishNow: (id: string, act: Act) => Result<SlotView>;
-  readonly schedule: (draft: ScheduleDraft, act: Act) => Result<SlotView>;
+  readonly schedule: (draft: ScheduleInput, act: Act) => Result<SlotView>;
   readonly items: () => Result<readonly ScheduleItem[]>;
 };
 

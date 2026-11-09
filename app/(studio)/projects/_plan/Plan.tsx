@@ -17,7 +17,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import type { PartPatch, PlanView, ProjectList } from "@gt/domain/produce";
-import { isEditorKind } from "@gt/domain/partView";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Crumbs } from "@gt/ui/components/crumbs/Crumbs.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
@@ -35,6 +34,7 @@ import { useShell } from "../../_shell/Providers.tsx";
 import type { ComposeChoices, ProducePort } from "../_port/contract.ts";
 import { CompositionList, ordered } from "./CompositionList.tsx";
 import { useCompose } from "./compose.tsx";
+import { planRowHref } from "./doors.ts";
 import { PlanSummary } from "./PlanSummary.tsx";
 import { clock } from "./shelf.ts";
 import { titleGate } from "./title.ts";
@@ -162,14 +162,14 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
 
   const rows = ordered(list);
   const work = view.parts.filter(isWork);
-  // THE PLAN ROW LINK (Phase 4 wave C, L38): a part with an editor links to it from its title in
-  // the plan (PlanTable `hrefOf`), and the selected row opens it on E.
-  const editorHref = (partId: string): string | null => {
+  // THE PLAN ROW LINK (Phase 4 wave C, L38; gates and the slot since fable-ten A): a row links from
+  // its title to its door (./doors.ts - an editor, a Board packet, the calendar or its schedule
+  // sheet; PlanTable `hrefOf`), and the selected row opens it on E.
+  const rowHref = (partId: string): string | null => {
     const part = view.parts.find((x) => x.id === partId);
-    if (part === undefined || !isEditorKind(part.kind)) return null;
-    return `/projects/${encodeURIComponent(p.id)}/${encodeURIComponent(part.id.slice(p.id.length + 1))}`;
+    return part === undefined ? null : planRowHref(p.id, part);
   };
-  const selHref = sel === null ? null : editorHref(sel);
+  const selHref = sel === null ? null : rowHref(sel);
   const walk = (dir: 1 | -1): void => {
     const ids = work.map((x) => x.id);
     const i = sel === null ? (dir === 1 ? -1 : ids.length) : ids.indexOf(sel);
@@ -255,7 +255,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
         <div className={s.plan} data-component="PlanBreakdown">
           <div className={s.planMain}>
             {err !== null && <ErrorLine message={err} live />}
-            <PlanTable parts={view.parts} selectedId={sel} hrefOf={editorHref} draft={draft} nowMs={nowMs} onModel={(id, option) => patch(id, { option })} onUnits={(id, units) => patch(id, { units })} />
+            <PlanTable parts={view.parts} selectedId={sel} hrefOf={rowHref} draft={draft} nowMs={nowMs} onModel={(id, option) => patch(id, { option })} onUnits={(id, units) => patch(id, { units })} />
           </div>
           <PlanSummary view={view} nowMs={nowMs} busy={flow.reading} onLaunch={() => void launch()} onDiscard={discard} />
         </div>

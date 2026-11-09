@@ -4,7 +4,7 @@ import type { PacketFact } from "@gt/domain/plan";
 import { committedResult } from "../decision/commit.ts";
 import type { ReadContext } from "../records/read.ts";
 import { releaseHeldIn } from "../records/write.ts";
-import { slottedIn } from "../slots/read.ts";
+import { slotOfPartIn, slottedIn } from "../slots/read.ts";
 import type { Reader, Store } from "../store.ts";
 
 // A GATE PART'S FACT - its Board packet (COMMON decision 10). A gate is not a job: the part is
@@ -72,7 +72,16 @@ export function cullRatifies(r: Reader, packetId: string): boolean {
  * alone and every committed gate read "at the Weir" on the Plan.
  */
 export function gateFacts(now: number): ReadContext {
-  return { now, packetOf: (partId, r) => gatePacketFact(r, partId), slottedOf: (partId, r) => slottedIn(r, partId) };
+  return {
+    now,
+    packetOf: (partId, r) => gatePacketFact(r, partId),
+    slottedOf: (partId, r) => slottedIn(r, partId),
+    // Where the Plan's gate and slot rows open (fable-ten A): the gate's NEWEST attempt - the one
+    // its state is read from, so a reopened `#2` is linked, never the returned `#1` - and the slot
+    // that places the slot part.
+    packetIdOf: (partId, r) => latestGatePacket(r, partId)?.id,
+    slotIdOf: (partId, r) => slotOfPartIn(r, partId),
+  };
 }
 
 /**
