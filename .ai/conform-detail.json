@@ -20925,6 +20925,108 @@
           "evidence": "lib/producers/scoutStoryboardActs.ts:24 Each panel is its own frame and its own clip anchor; no multi-panel grid conditions one generation."
         }
       ]
+    },
+    "e44cfa27-83ec-470a-adec-674d8a2a8037/test-harness": {
+      "context": "trailer-structure-engine",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:58:01.062Z",
+      "worker": "08b889b5-dd17-45e4-ace3-867b486f2968",
+      "techniques": [
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "deviation",
+          "evidence": "lib/script/trailer/plan.ts:108 A walk from production entry points finds zero calls to parseTrailerPlan, replayTrailerPlan, structureDelta or notesFromFindings; only the regression script calls them. The green count is evidence about a library."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "pipeline/trailer-structure-regression.mts:513 The consumed_by check matches a bare identifier against unstripped source, so a comment naming the symbol satisfies a claim about the code that reads the value. Its floor on line 515 is sound; the needle is the defect."
+        },
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "pipeline/trailer-structure-regression.mts:515 The walk fails when it selects zero claims."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "pipeline/trailer-structure-regression.mts:22 Cases are fixtures built to be broken, with an opposite control against false findings."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "pipeline/trailer-structure-regression.mts:67 In-memory baseline cut; each case is one edit from it, with no environment cost."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/trailer-cut-log-readers.test.ts:25 Adoption is asserted at each of the three readers, not only ops.ts logFromRecord."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/trailer-cut-log-readers.test.ts:19 The origin cut comes from the shipped composeCut, not a test-only constructor."
+        }
+      ]
+    },
+    "0735052e-7b05-4df7-b581-eaa0bc632249/test-harness": {
+      "context": "job-queue-and-leases",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:58:01.062Z",
+      "worker": "08b889b5-dd17-45e4-ace3-867b486f2968",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/test/job.test.ts:16 Rebuild per test where the build-once copy helper exists one import away."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/job-fixture.ts:31 Same openStore (WAL, pragmas), migrate and liveEffects as production. Caveat: KERNEL is a four-module subset under a neutral name, though a missing table fails loudly."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/job.worker.test.ts:103 Capacity is proved with gated producers and observed in-flight sets. Caveat: the job.test.ts heartbeat cases still lean on slow(150) with heartbeatMs 20."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:363 The crash harness itself has a seeded mutant, and each job and lease test file has entries."
+        },
+        {
+          "technique": "platform-quirk-absorption",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/helpers.ts:30 A missing interpreter becomes a named failure on CI instead of a green skip."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/effects.ts:18 The effect port is a value passed to the driver, not a shared singleton."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "workers/worker.ts:292 The worker entry point calls the same workLoop the tests drive."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/job.kill.test.ts:89 The log names which process performed each step, so the answer carries its producer."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/worker.test.ts:68 The worker's real runner is spawned as a process, and job.kill.test.ts kills a real child mid-step."
+        }
+      ]
     }
   }
 }

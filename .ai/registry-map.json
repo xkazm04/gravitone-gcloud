@@ -8557,7 +8557,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/test/job-fixture.ts:32 openWorld runs the migration chain for every world and the job suites call it once per test (job.test.ts 21 uses of world(), job.queue.test.ts 13), though lease.test.ts and dryrun.test.ts already use the kernel's build-once templateStores; the cost was not measured here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "module-design",
@@ -19408,7 +19412,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/trailer/plan.ts:108 The model-plan refusal layer in plan.ts, and notes.ts beside it, are imported only by pipeline/trailer-structure-regression.mts (git grep over lib, app, packages, workers, pipeline, tests and .claude/skills), so its plan cases prove a path no production entry point takes.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "short-form-narrative-structure",
