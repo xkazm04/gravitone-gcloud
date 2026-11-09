@@ -20590,6 +20590,79 @@
         "at": "2026-11-09T03:31:52.555721+00:00",
         "reason": "reviewer (sonnet): The not-applicable anchor, status.ts:140, is the generic statusOf lookup. It doesn't show that gate machinery is absent. The absence terms searched (process.exit, pre-commit, husky, waiver) don't fit a UI component library, and the evidence rests on a lexical match."
       }
+    },
+    "017c20b1-6e01-4427-b944-83501aef72b3/test-harness": {
+      "context": "part-port-real-and-contract",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:44:18.294Z",
+      "worker": "839fa2e1-0253-403f-8248-740922e6f623",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/parts-real.test.ts:40 openKernel runs migrate() (packages/kernel/src/kernel.ts:113). parts-fixture-parity repeats the shape at its line 47. No template copy was found for these files. The cost per build was not measured, because this seat is read-only, so the deviation is of shape and its size is unknown."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/parts-fixture-parity.test.ts:24 Drives one verb on both sides and compares the code and words, which is rule 3 applied to a whole-implementation fixture."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/real.ts:215 The shipped port is built by the same factory the suite calls, so the tested path is the production construction with only store, clock and gates injected."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:3307 Seeded breaks exist for real.ts, realResearch.ts, realScript.ts, actions.ts and schema.ts in this context."
+        }
+      ],
+      "registryProposal": "fixture-economics gives no floor below which a per-test build of a small embedded store is acceptable; a stated ratio or absolute cost would let a seat tell a real defect from a shape match without timing it."
+    },
+    "21a8a03c-bd42-4bad-a36e-a6e929a471e0/test-harness": {
+      "context": "kit-screen-specimens",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:44:18.294Z",
+      "worker": "839fa2e1-0253-403f-8248-740922e6f623",
+      "techniques": [
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "tests/live/kit.live.spec.ts:31 A needle that matches a syntax shape rather than the resource. LibraryRow and LibraryTile (memo) and ModelStage (default export) are outside the 189 matched. No damage today: the first two have specimens and ModelStage is drawn inside ModelViewer."
+        },
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "tests/live/kit.live.spec.ts:56 A derived population with a declared floor, so an empty walk fails rather than passing. The floor is far under the 189 matched, so it catches emptiness and not shrinkage."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/kit.live.spec.ts:51 Claims that only exist in a rendered page, located through data-specimen identifiers maintained in app/(studio)/kit/Spec.tsx."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:7239 The kit-sheet claims carry seeded breaks in the kit's own files."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/kit/boardKitData.ts:4 Specimen ids are built through the product's validation door rather than written as states it could not produce."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/kit-source-unreadable.test.ts:26 The failure path is asserted by rendering the shipped page, with only the file read made to fail."
+        }
+      ]
     }
   }
 }

@@ -9364,7 +9364,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/live/kit.live.spec.ts:31 The specimen walk claims every exported component, but its needle only sees `export function`, so memo-wrapped and default-exported components leave the required population without any failure, and a future one could ship with no specimen on a green lane.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "data-video-art-direction",
@@ -13144,7 +13148,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/parts-real.test.ts:40 universe() opens a new kernel and runs the full migration chain from inside each test (8 call sites over 9 cases), so the suite pays build per test rather than build once and copy, which fixture-economics names as the failure.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "multi-project",
