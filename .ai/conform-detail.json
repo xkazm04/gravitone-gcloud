@@ -20098,6 +20098,52 @@
           "evidence": "packages/kernel/src/decision/read.ts:166 The preview and the commit evaluate one function, so a preview cannot state a weaker rule than the commit enforces."
         }
       ]
+    },
+    "63ca5808-c5b5-4e64-840b-69d8c3c6991f/video-assembly": {
+      "context": "text-reasoning-engine",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:02:05.803Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "9f9d4c10-f192-493d-b421-7c0cf6647ec9",
+        "state": "not-applicable",
+        "at": "2026-11-09T02:02:39.648930+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchor lib/text/types.ts:58 is an incidental comment on the TextCapability type, and the module does serve this subject: lib/text/router.ts and providers/google.ts route `scene-direction` and `edit-plan` capabilities for the frames, edit and music-video pair callers, which the sea"
+      }
+    },
+    "1eb57510-dcfa-4549-97ed-56f3f97519ec/video-assembly": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:02:05.803Z",
+      "worker": "9f9d4c10-f192-493d-b421-7c0cf6647ec9",
+      "techniques": [
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/video/types.ts:66 Provenance lacks the anchor and the conditioning rung: the base64 image is consumed by startClip and no digest is written. Durations are typed, audio is decided and a refusal is not blind-retried, so the gap is provenance."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:216 A moderation answer is a terminal refused state with the vendor's words, distinct from failed and never retried."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:337 An empty download fails by name instead of landing as a done clip; an unverified aspect is likewise refused at line 172."
+        },
+        {
+          "technique": "unreferenced-channels-resample",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/leonardo.ts:209 The adapter asks for silent clips, so no synthesised channel exists to pin across calls."
+        }
+      ]
     }
   }
 }

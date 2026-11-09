@@ -8195,7 +8195,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/video/types.ts:66 The stored clip record keeps the motion line, model, duration and dates but not the identity of the key image that conditioned it, so a clip's anchor is lost and it can be regenerated but not re-briefed from its own record.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "data-video-art-direction",
