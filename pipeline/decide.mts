@@ -6,11 +6,16 @@
 //        open it on first sight (as the Board does), print rows, arms and decisions
 //   node pipeline/decide.mts pick <packet> <pair> a|b|tie|both-bad  --by agent|operator [--rev n]
 //   node pipeline/decide.mts verdict <packet> <candidate> keep|reject|clear --by ... [--reason r]... [--note "..."] [--rev n]
+//   node pipeline/decide.mts verdicts <packet> --json <file>        --by ... [--rev n]
+//        many cells in one write: [{candidate, verdict: keep|reject|clear, reasons?, note?}]
 //   node pipeline/decide.mts undo <packet>                          --by ... [--rev n]
 //   node pipeline/decide.mts preview <packet>                       [--json]
 //        what the commit would do, and the token that commits exactly that
 //   node pipeline/decide.mts commit <packet> --token <t>            --by ... [--json]
 //        commit, then deliver the packet's apply in this process and say where it landed
+//
+//   node pipeline/decide.mts redrive <packet>                       --by ... [--json]
+//        a commit whose apply went stuck, delivered again once its cause is fixed
 //
 //   --fixtures   NEXT_PUBLIC_GRAVITONE_DATA=fixtures (lib/fixtures/mode.ts), as ledger-sync
 //   --store      the kernel store (default as the app: GRAVITONE_STORE_PATH, else
@@ -29,6 +34,8 @@
 // preview's token, so what lands is what was shown (stale -> exit 1, nothing written), and a
 // retried commit is the same act (its ticket is derived from the token), never a second one.
 //
+// `verdicts` exists because one process per cell took minutes on a night of a hundred cells; it is the same patchMany.
+//
 // `--by` IS REQUIRED ON EVERY WRITE, with no default. The ledger records who decided, and a
 // CLI an agent can run must not record an agent's picks as the operator's because nobody said
 // otherwise. The Board's commits are the operator's; a skill rehearsing the gate says `agent`.
@@ -40,6 +47,7 @@
 import "./lib-hooks.mts";
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import type { Consequence, PacketView, PickOutcome } from "@gt/domain/board";
@@ -51,10 +59,10 @@ import type { Store } from "@gt/kernel/store";
 import type { DecisionAdapter, OpenPlan } from "../lib/decision/v1/types.ts";
 
 const args = process.argv.slice(2);
-const VERBS = ["list", "show", "pick", "verdict", "undo", "preview", "commit"] as const;
+const VERBS = ["list", "show", "pick", "verdict", "verdicts", "undo", "preview", "commit", "redrive"] as const;
 type Verb = (typeof VERBS)[number];
-const WRITES: readonly Verb[] = ["pick", "verdict", "undo", "commit"];
-const VALUED = new Set(["--store", "--by", "--who", "--rev", "--token", "--reason", "--note"]);
+const WRITES: readonly Verb[] = ["pick", "verdict", "verdicts", "undo", "commit", "redrive"];
+const VALUED = new Set(["--store", "--by", "--who", "--rev", "--token", "--reason", "--note", "--json-file"]);
 const FLAGS = new Set(["--json", "--fixtures"]);
 
 const isVerb = (v: string | undefined): v is Verb => VERBS.some((x) => x === v);
@@ -91,7 +99,7 @@ const { err, ok } = await import("@gt/domain/errors");
 const { parseAt } = await import("@gt/domain/door");
 const { packetIdSchema } = await import("@gt/domain/ids");
 const { PACKET_SOURCES } = await import("@gt/domain/source");
-const { applyStatus } = await import("@gt/kernel/decision/apply");
+const { applyStatus, redriveApply } = await import("@gt/kernel/decision/apply");
 const { commit: kernelCommit } = await import("@gt/kernel/decision/commit");
 const { openPacket, patchMany, pick: kernelPick, undo: kernelUndo } = await import("@gt/kernel/decision/driver");
 const { currentDecisions, head } = await import("@gt/kernel/decision/read");
@@ -212,6 +220,18 @@ switch (verb) {
   case "show":
     done(viewOf(store, id, planned), showLines);
     break;
+  case "redrive": {
+    const r = store.tx((t) => redriveApply(t, { ...author(), packetId: packetId.value }));
+    if (!r.ok) done(r, () => []);
+    if (!r.value.ok) done(r.value, () => []);
+    const delivered = await drainNow(store, { packetId: packetId.value, max: 1 });
+    if (!delivered.ok) done(delivered, () => []);
+    const status = store.read((x) => applyStatus(x, id));
+    if (!status.ok) done(status, () => []);
+    closeKernel();
+    out({ packetId: id, apply: status.value }, [`${id} apply ${status.value?.state ?? "none"}${status.value?.lastError === undefined ? "" : ` - ${status.value.lastError}`}`]);
+    process.exit(status.value?.state === "applied" ? 0 : 1);
+  }
   case "pick": {
     const pair = positional[2];
     const outcome = PICK_OUTCOMES.find((o) => o === positional[3]);
@@ -228,6 +248,15 @@ switch (verb) {
     const verdict: "keep" | "reject" | null = word === "clear" ? null : word;
     const change = { key: `${id}::${candidate}`, verdict, reasons: values("--reason"), ...(note === undefined ? {} : { note }) };
     after(store.tx((t) => patchMany(t, { ...author(), packetId: packetId.value, baseRev, changes: [change] })));
+    break;
+  }
+  case "verdicts": {
+    const file = value("--json-file");
+    if (file === undefined) usage("verdicts needs --json-file <file>: [{candidate, verdict: keep|reject|clear, reasons?, note?}]");
+    type Row = { readonly candidate: string; readonly verdict: "keep" | "reject" | "clear"; readonly reasons?: readonly string[]; readonly note?: string };
+    const rows = JSON.parse(readFileSync(file, "utf8")) as readonly Row[];
+    const changes = rows.map((r) => ({ key: `${id}::${r.candidate}`, verdict: r.verdict === "clear" ? null : r.verdict, reasons: [...(r.reasons ?? [])], ...(r.note === undefined ? {} : { note: r.note }) }));
+    after(store.tx((t) => patchMany(t, { ...author(), packetId: packetId.value, baseRev, changes })));
     break;
   }
   case "undo":
