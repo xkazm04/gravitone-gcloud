@@ -4,7 +4,7 @@ import "server-only";
 // the concepts that can Start from Scout's own files (lib/foundry/scout/concepts.ts). A stage is read from the record,
 // never inferred from a night. A concept with a production no longer offers Start.
 //
-// Casting, audio and the final cut read the record (S4, S5); lessons and ventures keep drawing the scripted slate until S6 (`scripted` on the view).
+// Every stage reads the record (S1-S6). The scripted slate is only the fixture side's (./fixture.ts); this side never draws it.
 
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
@@ -12,6 +12,9 @@ import { dryOnlyFrom } from "@gt/kernel/dryrun";
 import type { Store } from "@gt/kernel/store";
 import { listProductions } from "@gt/kernel/productions/store";
 import { roundsOf } from "@gt/kernel/productions/cast";
+import { lessonsOf } from "@gt/kernel/productions/lessons";
+import { joinVentureIn, startVentureIn } from "@gt/kernel/productions/venture";
+import { listVentures } from "@gt/kernel/ventures/store";
 
 import { keptConcepts } from "../../../../../lib/foundry/scout/concepts.ts";
 import { blobRoute } from "../../../../../lib/library/media.ts";
@@ -19,15 +22,20 @@ import { jobOfTake, markProven, moveProduction, requestTake, startProduction } f
 import { castJobsView, castRoundView, markHeard, pickCast, recastRole, requestAudition, requestRoles, requestRound, retryDesigns, retryVoiceCreate, retryVoices, saveRoles } from "../../../../../lib/producers/productionCast.ts";
 import { decideAudio, productionVoiceRoute, requestSpeakingTake } from "../../../../../lib/producers/productionAudio.ts";
 import { jobOfCut, requestCut } from "../../../../../lib/producers/productionCut.ts";
+import { acceptLesson, editLesson, requestLessons } from "../../../../../lib/producers/productionLessons.ts";
 import type { CastRound } from "@gt/domain/production";
 import { kernel } from "../../../../../lib/kernelStore.ts";
-import type { Production, ProductionId } from "@gt/domain/production";
+import type { Production, ProductionId, ProductionLesson } from "@gt/domain/production";
 
 import type { AudioDecisionInput, CastLaunchView, CutLaunchInput, CutLaunchView, KeptConcept, ProductionEntry, ProductionFrame, ProductionsView, RoleEditInput, TakeLaunchView, TakeProgress, TakeRequestInput } from "./contract.ts";
-import { fixtureProductions } from "./fixture.ts";
 import type { ServerProductions } from "./port.ts";
 
 const served = (sha: string, mime: string): string => blobRoute(sha, mime) ?? `/api/blob/${sha}`;
+
+function lessonsOfEntry(store: Store, id: string): readonly ProductionLesson[] {
+  const r = store.read((x) => lessonsOf(x, id));
+  return r.ok ? r.value : [];
+}
 
 function framesOf(p: Production): readonly ProductionFrame[] {
   return p.board.panels.map((x) => ({ id: x.id, beat: x.beat, prompt: x.prompt, src: served(x.still.sha256, x.still.mime) }));
@@ -52,10 +60,10 @@ function entryOf(p: Production, store: Parameters<typeof jobOfTake>[0]): Product
   }
   const job = p.cut?.jobId === undefined ? undefined : jobOfCut(store, p.cut.jobId);
   const cutJob: TakeProgress | undefined = job === undefined ? undefined : { jobState: job.state, done: job.progress.done, total: job.progress.total, ...(job.progress.stage === undefined ? {} : { step: job.progress.stage }) };
-  return { production: p, logline: p.board.logline, ...(first === undefined ? {} : { poster: first.src }), frames, progress, rounds, castJobs: castJobsView(store, p.id), lessons: [], ...(cutJob === undefined ? {} : { cutJob }) };
+  return { production: p, logline: p.board.logline, ...(first === undefined ? {} : { poster: first.src }), frames, progress, rounds, castJobs: castJobsView(store, p.id), lessons: lessonsOfEntry(store, p.id), ...(cutJob === undefined ? {} : { cutJob }) };
 }
 
-/** The screen's whole view: the record's productions, the concepts still to start, and the scripted panels. */
+/** The screen's whole view: the record's productions, the concepts still to start, the live ventures. */
 export async function realView(): Promise<Result<ProductionsView>> {
   const k = kernel();
   if (!k.ok) return k;
@@ -65,11 +73,12 @@ export async function realView(): Promise<Result<ProductionsView>> {
     if (!productions.ok) return productions;
     const started = new Set(productions.value.map((p) => `${p.source.kind}:${p.source.ref}`));
     const kept: readonly KeptConcept[] = (await keptConcepts()).filter((c) => !started.has(`${c.source.kind}:${c.source.ref}`));
-    const script = fixtureProductions();
-    const scripted = script.ok ? script.value.scripted : undefined;
+    const heads = store.read((r) => listVentures(r));
+    if (!heads.ok) return heads;
+    const ventures = heads.value.filter((v) => v.retiredAt === undefined).map((v) => ({ id: v.id, name: v.name }));
     const route = productionVoiceRoute(store);
     if (!route.ok) return route;
-    return ok({ entries: productions.value.map((p) => entryOf(p, store)), kept, ventures: [], voiceRoute: route.value.route, ...(route.value.proof === undefined ? {} : { voiceProof: route.value.proof }), ...(scripted === undefined ? {} : { scripted }) });
+    return ok({ entries: productions.value.map((p) => entryOf(p, store)), kept, ventures, voiceRoute: route.value.route, ...(route.value.proof === undefined ? {} : { voiceProof: route.value.proof }) });
   } catch (e) {
     return err("unavailable", errorMessage(e));
   }
@@ -109,13 +118,21 @@ export const realProductions: ServerProductions = {
     return ok({ view: v.value, launch });
   },
   proven: async (id: ProductionId, takeId: string, who: Actor) => then(await markProven({ id, takeId, by: who.id, actor: who.kind })),
+  editLesson: async (id, lessonId, text, who) => withStore((s) => editLesson(s, id, lessonId, text, who)),
+  acceptLesson: async (id, lessonId, text, who) => {
+    const s = storeOf();
+    if (!s.ok) return s;
+    return then(await acceptLesson(s.value, id, lessonId, text, who));
+  },
+  joinVenture: async (id, ventureId, who) => withStore((s) => s.tx((t) => joinVentureIn(t, id, ventureId, who))),
+  startVenture: async (id, words, who) => withStore((s) => s.tx((t) => startVentureIn(t, id, words, who))),
   drop: async (id: ProductionId, who: Actor) => then(await moveProduction({ id, to: "dropped", by: who.id, actor: who.kind })),
   move: async (id, to, who) => then(await moveProduction({ id, to, by: who.id, actor: who.kind })),
   castLaunch: async (input, who) => {
     const store = storeOf();
     if (!store.ok) return store;
     const ask = { mode: input.mode, by: who.id, actor: who, dryOnly: dryOnlyFrom(process.env), ...(input.token === undefined ? {} : { token: input.token }) };
-    const r = input.kind === "roles" ? requestRoles(store.value, input.id, ask) : input.kind === "audition" ? requestAudition(store.value, input.id, input.roleId ?? "", ask) : input.kind === "round" ? requestRound(store.value, input.id, input.roleId ?? "", ask) : retryDesigns(store.value, input.id, input.roundId ?? "", ask);
+    const r = input.kind === "lessons" ? requestLessons(store.value, input.id, ask) : input.kind === "roles" ? requestRoles(store.value, input.id, ask) : input.kind === "audition" ? requestAudition(store.value, input.id, input.roleId ?? "", ask) : input.kind === "round" ? requestRound(store.value, input.id, input.roleId ?? "", ask) : retryDesigns(store.value, input.id, input.roundId ?? "", ask);
     if (!r.ok) return r;
     const v = await view();
     if (!v.ok) return v;

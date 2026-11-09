@@ -125,9 +125,9 @@ const SLATE: readonly Raw[] = [
     logline: "Everything she filed for thirty years, filed once more.",
     poster: `${PICS}/panel-3.webp`,
     lessons: [
-      { id: "lesson-beats", productionId: "prdn:archivist", dimension: "beats", state: "proposed", text: "Hold the reveal for two beats after the door opens: the pause did the work the music was doing.", proposedAt: NOW },
-      { id: "lesson-art", productionId: "prdn:archivist", dimension: "art-style", state: "proposed", text: "Teal shadows and a single warm practical held across every panel; the warm source is what reads as a place.", proposedAt: NOW },
-      { id: "lesson-technique", productionId: "prdn:archivist", dimension: "technique", state: "proposed", text: "A locked camera survives the first-last-frame handoff; a pan on the same shot broke the plate twice.", proposedAt: NOW },
+      { id: "lesson-beats", productionId: "prdn:archivist", dimension: "beats", state: "proposed", text: "Hold the reveal for two beats after the door opens: the pause did the work the music was doing.", drawnFrom: [{ ref: "take:t-1", words: "t-1 (rough) proven by the operator" }], proposedAt: NOW },
+      { id: "lesson-art", productionId: "prdn:archivist", dimension: "art-style", state: "proposed", text: "Teal shadows and a single warm practical held across every panel; the warm source is what reads as a place.", drawnFrom: [{ ref: "note:cut-1", words: "the operator on cut-1: the warm practical is what sells it" }], proposedAt: NOW },
+      { id: "lesson-technique", productionId: "prdn:archivist", dimension: "technique", state: "proposed", text: "A locked camera survives the first-last-frame handoff; a pan on the same shot broke the plate twice.", drawnFrom: [{ ref: "take:t-1", words: "t-1 (rough) proven by the operator" }], proposedAt: NOW },
     ],
   },
   { production: { ...base("mirror-bay", "Mirror Bay", { kind: "outline", ref: "ol-2026-11-02-06" }, "dropped"), takes: [hero("t-1", "the door", 5)] }, logline: "Dropped after the first hero shot: the idea needed a cast it could not have.", poster: `${PICS}/panel-5.webp` },
@@ -151,7 +151,7 @@ function entryOf(raw: Raw): Result<ProductionEntry> {
   return ok({ production: production.value, logline: raw.logline, ...(raw.poster === undefined ? {} : { poster: raw.poster }), frames: raw.frames ?? [], progress: {}, rounds, castJobs: {}, lessons });
 }
 
-/** The scripted slate: on the fixture side it is the whole view; the real side shows only its later-stage panels. */
+/** The scripted slate, the fixture side's whole view (GRAVITONE_PRODUCE_SIDE=fixture). The real side never draws it. */
 export function fixtureProductions(): Result<ProductionsView> {
   const entries: ProductionEntry[] = [];
   const kept: KeptConcept[] = [];
@@ -165,6 +165,5 @@ export function fixtureProductions(): Result<ProductionsView> {
     if (!e.ok) return err("invalid", e.error.message);
     entries.push(e.value);
   }
-  const scripted = entries.find((e) => e.rounds.length > 0) ?? entries[0];
-  return ok({ entries, kept, ventures: [{ id: "vn-quiet-desk", name: "Quiet Desk" }, { id: "vn-harbour-tales", name: "Harbour Tales" }], voiceRoute: "dub", ...(scripted === undefined ? {} : { scripted }) });
+  return ok({ entries, kept, ventures: [{ id: "vn-quiet-desk", name: "Quiet Desk" }, { id: "vn-harbour-tales", name: "Harbour Tales" }], voiceRoute: "dub" });
 }

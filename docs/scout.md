@@ -461,7 +461,7 @@ It is kept when its words cell is kept, or when any cell is kept and none reject
 night (a night committed in parts counts only its committed cells). A kept storyboard is the root any
 full-video act must name - `keptStoryboardFor(nights, <night>/<c-id>)` is the code check, and the skill's
 rule is that no full-video act runs for an idea not under `## Ready for full video`. No full-video act
-exists yet; scene clips stay ungated. Made from a channel episode, a kept storyboard ends its episode
+exists yet; scene clips stay ungated. (A kept storyboard or outline can be started as a Production at any time on `/scout/productions`: hero shots, casting, audio and a final cut, then lessons and a venture, none of which a night does. See `docs/productions.md`.) Made from a channel episode, a kept storyboard ends its episode
 kept and a rejected one throws it (`episodeTarget`), and the packet's preview says exactly that, not a full
 video; a dry night moves no episode and its preview says so. The taste brief lists `## Storyboards to make` (kept ideas with no
 storyboard) and `## Ready for full video` (kept storyboards, with their idea, title and paragraph). A

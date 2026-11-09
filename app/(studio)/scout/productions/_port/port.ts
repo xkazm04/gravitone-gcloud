@@ -7,7 +7,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { ProductionId, ProductionSource, ProductionStage } from "@gt/domain/production";
 
-import type { AudioDecisionInput, CastLaunchInput, CastLaunchView, CutLaunchInput, CutLaunchView, ProductionsView, RoleEditInput, TakeLaunchView, TakeRequestInput } from "./contract.ts";
+import type { AudioDecisionInput, CastLaunchInput, CastLaunchView, CutLaunchInput, CutLaunchView, ProductionsView, RoleEditInput, TakeLaunchView, TakeRequestInput, VentureWordsInput } from "./contract.ts";
 import { fixtureProductions } from "./fixture.ts";
 import { realProductions } from "./real.ts";
 
@@ -27,6 +27,10 @@ export type ServerProductions = {
   readonly retryCreate: (id: ProductionId, roundId: string, who: Actor) => Promise<Result<ProductionsView>>;
   readonly decideAudio: (input: AudioDecisionInput, who: Actor) => Promise<Result<ProductionsView>>;
   readonly cutLaunch: (input: CutLaunchInput, who: Actor) => Promise<Result<CutLaunchView>>;
+  readonly editLesson: (id: ProductionId, lessonId: string, text: string, who: Actor) => Promise<Result<ProductionsView>>;
+  readonly acceptLesson: (id: ProductionId, lessonId: string, text: string | undefined, who: Actor) => Promise<Result<ProductionsView>>;
+  readonly joinVenture: (id: ProductionId, ventureId: string, who: Actor) => Promise<Result<ProductionsView>>;
+  readonly startVenture: (id: ProductionId, words: VentureWordsInput, who: Actor) => Promise<Result<ProductionsView>>;
 };
 
 const SCRIPTED = "the fixture side has no record to act on (GRAVITONE_PRODUCE_SIDE=fixture)";
@@ -47,6 +51,10 @@ const fixtureSide: ServerProductions = {
   retryCreate: async () => err("refused", SCRIPTED),
   decideAudio: async () => err("refused", SCRIPTED),
   cutLaunch: async () => err("refused", SCRIPTED),
+  editLesson: async () => err("refused", SCRIPTED),
+  acceptLesson: async () => err("refused", SCRIPTED),
+  joinVenture: async () => err("refused", SCRIPTED),
+  startVenture: async () => err("refused", SCRIPTED),
 };
 
 function unwrap(r: Result<ProductionsView>): ProductionsView {

@@ -58,6 +58,7 @@ export {
   VOICE_PROOF_OUTCOMES,
   VOICE_ROUTES,
   cutFormatOf,
+  lessonIdOf,
   productionMachine,
   refusalOfMove,
   voicePickRefusal,
@@ -274,15 +275,23 @@ export type ProductionCut = z.output<typeof productionCutSchema>;
 export const voiceProofSchema = z.object({ outcome: z.enum(VOICE_PROOF_OUTCOMES), note: text.optional(), evidence: text.optional(), at, by: text });
 export type VoiceProof = z.output<typeof voiceProofSchema>;
 
+/** One piece of evidence a lesson rests on: its address in the production and the words it says. */
+export const lessonSourceSchema = z.object({ ref: text, words: text });
+export type LessonSource = z.output<typeof lessonSourceSchema>;
+
 export const productionLessonSchema = z.object({
   id: text,
   productionId: productionIdSchema,
   dimension: z.enum(LESSON_DIMENSIONS),
   state: z.enum(LESSON_STATES),
-  /** The current words: the model's, or the operator's edit of them. */
+  /** The current words: the model's, the operator's edit of them, or (state `nothing`) why the evidence holds none. */
   text,
   /** The model's words, kept only when the operator changed them. */
   proposedText: text.optional(),
+  /** Where the seat says it came from: every entry is a piece of the production's own evidence. Empty only for `nothing`. */
+  drawnFrom: z.array(lessonSourceSchema),
+  /** Present when a dry stand-in wrote it: it can never be accepted. */
+  dry: z.literal(true).optional(),
   proposedAt: at,
   acceptedAt: at.optional(),
   acceptedBy: text.optional(),

@@ -9,7 +9,7 @@ import { scoutHeaderFacts } from "../../_shell/headerFacts.ts";
 import { serverBoard } from "../../board/_port/port.ts";
 import { isScoutPacket, ScoutHead } from "../_scout/ScoutHead.tsx";
 import s from "../_scout/scout.module.css";
-import { castLaunchAction_, cutLaunchAction_, decideAudioAction_, dropProductionAction, heardAction_, launchTakeAction, markProvenAction, moveProductionAction, pickCastAction, recastAction_, refreshProductionsAction, retryCreateAction_, retryVoicesAction_, saveRolesAction_, startProductionAction } from "./_port/actions.ts";
+import { acceptLessonAction, castLaunchAction_, cutLaunchAction_, decideAudioAction_, dropProductionAction, editLessonAction, heardAction_, joinVentureAction, launchTakeAction, markProvenAction, moveProductionAction, pickCastAction, recastAction_, refreshProductionsAction, retryCreateAction_, retryVoicesAction_, saveRolesAction_, startProductionAction, startVentureAction_ } from "./_port/actions.ts";
 import type { ProductionsPort } from "./_port/contract.ts";
 import { serverProductions } from "./_port/port.ts";
 import { Productions } from "./_productions/Productions.tsx";
@@ -17,7 +17,7 @@ import { Productions } from "./_productions/Productions.tsx";
 export const metadata: Metadata = { title: "Gravitone · Productions" };
 
 /** The Server Actions as the island holds them: passed as props, so no client module imports the actions file (or its zod). */
-const port: ProductionsPort = { start: startProductionAction, launch: launchTakeAction, proven: markProvenAction, drop: dropProductionAction, move: moveProductionAction, refresh: refreshProductionsAction, castLaunch: castLaunchAction_, saveRoles: saveRolesAction_, heard: heardAction_, pick: pickCastAction, recast: recastAction_, retryVoices: retryVoicesAction_, decideAudio: decideAudioAction_, cutLaunch: cutLaunchAction_, retryCreate: retryCreateAction_ };
+const port: ProductionsPort = { start: startProductionAction, launch: launchTakeAction, proven: markProvenAction, drop: dropProductionAction, move: moveProductionAction, refresh: refreshProductionsAction, castLaunch: castLaunchAction_, saveRoles: saveRolesAction_, heard: heardAction_, pick: pickCastAction, recast: recastAction_, retryVoices: retryVoicesAction_, decideAudio: decideAudioAction_, cutLaunch: cutLaunchAction_, retryCreate: retryCreateAction_, editLesson: editLessonAction, acceptLesson: acceptLessonAction, joinVenture: joinVentureAction, startVenture: startVentureAction_ };
 
 export default async function ProductionsPage({ searchParams }: { readonly searchParams: Promise<{ readonly from?: string | string[] }> }) {
   await connection();

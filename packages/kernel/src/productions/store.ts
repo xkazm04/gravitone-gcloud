@@ -91,6 +91,11 @@ export function latestCut(r: Reader, id: string): ProductionCut | undefined {
   return row === undefined ? undefined : toCut(row);
 }
 
+/** Every cut of a production, oldest first: what was said of each stays readable after a later cut. */
+export function cutsOf(r: Reader, id: string): readonly ProductionCut[] {
+  return r.all(`SELECT ${CUT_COLUMNS} FROM production_cuts WHERE production_id = ? ORDER BY n`, id).map(toCut);
+}
+
 /** One cut by id. */
 export function readCut(r: Reader, id: string, cutId: string): ProductionCut | undefined {
   const row = r.get(`SELECT ${CUT_COLUMNS} FROM production_cuts WHERE production_id = ? AND id = ?`, id, cutId);
@@ -125,6 +130,7 @@ function toProduction(r: Reader, row: Row): Production {
       roles: must(parseJsonAt(`production ${h.id} roles`, rolesSchema, h.roles)),
       ...(audioOf(h) === undefined ? {} : { audio: audioOf(h) }),
       ...(latestCut(r, h.id) === undefined ? {} : { cut: latestCut(r, h.id) }),
+      ...(h.venture_id === null ? {} : { ventureId: h.venture_id }),
       startedAt: h.started_at,
       startedBy: h.started_by,
     }),

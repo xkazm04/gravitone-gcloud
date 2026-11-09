@@ -1,8 +1,8 @@
 # Productions
 
-A kept concept started as a Production moves through hero shots, a rough cut, casting, audio and a final cut. S0 of
-spark concept-casting-stages fixes the contract and shows three layouts on scripted data. The design note is
-`.vault/Spark/ideas/concept-casting-stages.md`.
+A kept concept started as a Production moves through hero shots, a rough cut, casting, audio and a final cut; a finished
+one proposes lessons the operator accepts and can start or join a venture, the unified model for future YouTube channels.
+Built by spark concept-casting-stages, S0-S6; the design note is `.vault/Spark/ideas/concept-casting-stages.md`.
 
 ## Stages
 
@@ -35,7 +35,8 @@ sets and event names, so a screen can import them. Records: `Production`, `Produ
 - One `CastRound` is one role: 5 character candidates (`reused` with where it was used, or `new`), 5 voice candidates, one
   pick each, `creditsUsed` and where it was read. A voice's pick stays locked until its preview was heard
   (`voicePickRefusal`). A two-role concept is two rounds.
-- Lessons carry `dimension` (`beats`, `art-style`, `technique`) and `state` (`proposed`, `accepted`).
+- Lessons carry `dimension` (`beats`, `art-style`, `technique`), `state` (`proposed`, `accepted`, `nothing`) and `drawnFrom`, the pieces
+  of the production's own record each rests on.
 - Event types are the `PRODUCTION_EVENTS` constants. Lessons are `production.lesson-proposed` and
   `production.lesson-accepted`, because `lesson.confirmed` belongs to `lib/sound/lessons.ts`.
 
@@ -195,11 +196,46 @@ A live cut lands as `pkt:final:<production>/<cut>`, a kernel-native packet sourc
 `liveNow`, as the proofs' and spend's are), so `runs-live` and `ledger-reconcile` have no row for it. Keep approves (`done`); reject
 must name a reason and returns the cut, the production staying at `cutting`. `done` is only ever reached through that approval.
 
+## Ventures (S6)
+
+Ventures unify what `project` used to mean three ways: a kernel venture (`channel`, `album`, `game`; `packages/domain/src/genre.ts`) is the
+future YouTube channel. Migration `ventures` 2 adds `channel_id` and lets a channel name no genre (the rebuild keeps the rows and ties
+of v1; `bornVenture` holds who may). Three new grounds, each the operator's, each a `proposal` prefix, beside a night's kept proposal:
+
+- `channel/<id>`, an imported channel. `node pipeline/ventures-import.mts --dry-run | --store <file> | --real`, one per channel file; a
+  repeat run changes nothing. Its frame is what was imported and fixed; the screen reads the live card from the channel file.
+- `production/<id>`, a proven video, started from the done state's panel (or any stage after proven).
+- `operator/<slug>`, the Start button on `/scout/ventures`.
+
+**Nights do not read these** (`isNightVenture`, read in `lib/foundry/scout/genres.ts` `headsOf` and `ventureRefusal`, and the /scout filter): the channel
+files stay what nights read until parity is proven, and a night's brief naming one of these ventures is refused as unknown. A night's own proposal
+door is unchanged: a channel it proposes still rests on a publishable genre.
+
+`joinVentureIn` and `startVentureIn` (`packages/kernel/src/productions/venture.ts`) are operator only and need a proven take; a production joins one
+venture, once (`production.venture` event; a trigger holds it). `/scout/ventures` (linked from Scout's head) lists every venture with its channel card,
+its productions and its accepted lessons.
+
+## Lessons (S6)
+
+`productions` migration 4: `production_lessons`, one row per dimension, per production. Nothing here has run live: the text seat is a fake in
+`tests/next-server/ventures-lessons.test.ts` and no vendor or seat was called.
+
+The Board's approval of a final cut (`lib/decision/v1/sources/final.ts`, the same transaction that reaches `done`) enqueues one `production-lessons` job
+on `seat.text`, armed live by the operator's own approval unless the box is dry-only. It runs `pipeline/LESSONS-PROMPT.md`'s turn over the production's
+own record (what the operator said on its cuts and audio, its episode's verdict, each take) and writes one proposal per dimension (`lib/producers/productionLessons.ts`). A
+proposal must cite that record: a ref the production does not hold fails the turn. Where the record says nothing on a dimension the seat answers
+`nothing` and the row says so; it can never be accepted. The regression control is `pipeline/lessons-regression.mts` (`npm run check:lessons`).
+
+The operator edits and accepts (agents are refused by name); accepted rows are fixed. A job that failed, or a dry rehearsal, is the panel's Propose lessons, a
+receipt then a confirm; a dry job writes stand-ins that can never be accepted. Accepting queues one registry lead (kinds `lesson-beats`, `lesson-art-style`,
+`lesson-technique`, keyed by production and dimension, so pressing again never writes twice; the queue sits in a different store than the
+kernel, so a queue failure says so and Accept is pressed again) and feeds the taste brief's `## Accepted lessons` section per project
+(`lib/foundry/scout/tasteLessons.ts`), under the production's venture, or the channel of its episode, read on each brief. No accepted lesson is no section, so a brief with none is byte for byte what it was.
+
 ## The screen
 
 `/scout/productions` is the operator's pick, graph first: columns idea, board, take, stage on the left, the inspector on
-the right. The Scout graph's `NodePanel` links a kept idea or storyboard here (`?from=<ref>`). Audio and the final cut are real (`_productions/AudioCut.tsx`); lessons and ventures stay as a marked, scripted fold on the slate from
-`_port/fixture.ts` until S6, those acts living in memory and resetting on reload.
+the right. The Scout graph's `NodePanel` links a kept idea or storyboard here (`?from=<ref>`). Every panel reads the record.
 
 - No fixture audio exists in the repo: each voice preview is a marked silent stub that only records "heard".
-- `GRAVITONE_PRODUCE_SIDE=fixture` shows the scripted slate only and refuses every act.
+- `GRAVITONE_PRODUCE_SIDE=fixture` shows the scripted slate (`_port/fixture.ts`) and refuses every act; no other path reads it.

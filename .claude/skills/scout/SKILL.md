@@ -349,7 +349,10 @@ interrupted job ids.
 - **Do not run a full-video act for an idea without a kept storyboard** - the idea must be under
   `## Ready for full video` in the taste brief (lib/foundry/scout/storyboard.ts `keptStoryboardFor`), and
   the act names that storyboard. A scene clip is not a full video and stays ungated. An episode's kept
-  storyboard ends the episode kept (rejected: thrown) and no full video follows it; the preview says so.
+  storyboard ends the episode kept (rejected: thrown) and no full video follows it from a night; the preview says so. From
+  there the operator can Start a Production on `/scout/productions` (hero shots, casting, audio, final cut). A night never does, and
+  an agent cannot mark a take proven, cast, accept a lesson or join a venture: see docs/productions.md. Accepted lessons reach the brief as
+  `## Accepted lessons` per channel or venture; the ventures it lists are the operator's and a brief may not name them.
 
 ## Lessons
 

@@ -90,6 +90,8 @@ export const PRODUCERS = [
   "production-cast",
   // A production's final cut (spark concept-casting-stages S5): the trailer or music-clip craft by format, on box.render, the result to the Board.
   "production-cut",
+  // A done production's three proposed lessons (spark concept-casting-stages S6): one text turn on seat.text, enqueued by the Board's approval.
+  "production-lessons",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

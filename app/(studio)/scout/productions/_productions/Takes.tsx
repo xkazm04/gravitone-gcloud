@@ -1,10 +1,9 @@
 "use client";
 
-// A concept's real work (spark concept-casting-stages S1, S4, S5): Start, frames, launch, progress, compare, proven, drop,
-// casting, audio and the final cut. Every refusal is the door's sentence, verbatim. Below it, lessons and ventures stay
-// scripted until S6: clearly marked, and nothing they do is written anywhere.
+// A concept's real work (spark concept-casting-stages S1, S4-S6): Start, frames, launch, progress, compare, proven, drop,
+// casting, audio, the final cut, lessons and the venture. Every refusal is the door's sentence, verbatim.
 
-import { useReducer, useState } from "react";
+import { useState } from "react";
 
 import type { Receipt as ReceiptValue, ReceiptMode } from "@gt/domain/produce";
 import type { ProductionId, ProductionTake, TakeKind } from "@gt/domain/production";
@@ -15,7 +14,6 @@ import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Facts } from "@gt/ui/components/facts/Facts.tsx";
 import { TextArea } from "@gt/ui/components/field/Field.tsx";
-import { Fold } from "@gt/ui/components/fold/Fold.tsx";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { Receipt } from "@gt/ui/components/produce/Receipt.tsx";
 import { Seg } from "@gt/ui/components/seg/Seg.tsx";
@@ -24,10 +22,9 @@ import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import type { ActionResult } from "../../../../_server/actionCore.ts";
 import type { KeptConcept, ProductionEntry, ProductionsPort, ProductionsView, TakeLaunchView, TakeRequestInput } from "../_port/contract.ts";
 import s from "./productions.module.css";
-import { LessonsBlock, SourceChip, STAGE_PILL, VentureBlock } from "./Sections.tsx";
+import { LessonsPanel, SourceChip, STAGE_PILL, VenturePanel } from "./Sections.tsx";
 import { AudioPanel, CutPanel } from "./AudioCut.tsx";
 import { CastingPanel } from "./Casting.tsx";
-import { initialScript, scriptReducer } from "./script.ts";
 
 type Act = (run: () => Promise<ActionResult<ProductionsView>>) => Promise<string | undefined>;
 
@@ -252,35 +249,13 @@ export function ProductionInspector({ entry, view, port, act, onView }: { readon
       <CastingPanel entry={entry} port={port} act={act} onView={onView} />
       <AudioPanel entry={entry} view={view} port={port} act={act} onView={onView} />
       <CutPanel entry={entry} port={port} act={act} onView={onView} />
+      <LessonsPanel entry={entry} port={port} act={act} onView={onView} />
+      <VenturePanel entry={entry} view={view} port={port} act={act} />
 
       <div className={s.row}>
         {stage === "proven" && <Button label="Start casting" size="sm" tone="cyan" disabled={busy} onPress={casting} />}
         {stage !== "dropped" && stage !== "done" && <Button label="Drop" size="sm" tone="rose" disabled={busy} onPress={drop} />}
       </div>
-    </div>
-  );
-}
-
-/** The stages S6 builds, as they will read, drawn from the scripted slate. Nothing here reaches a record. */
-export function ScriptedPanels({ entry, view }: { readonly entry: ProductionEntry; readonly view: ProductionsView }) {
-  const [open, setOpen] = useState(false);
-  const [script, dispatch] = useReducer(scriptReducer, initialScript);
-  const props = { entry, script, dispatch, view };
-  return (
-    <div className={s.scripted} data-scripted="later-stages">
-      <Fold title="Later stages, scripted" open={open} onToggle={setOpen} level={3}>
-        <p className={s.note}>lessons and ventures stay scripted until S6. Nothing here is real or written; acts reset on reload.</p>
-        <div className={s.journey}>
-          <section className={s.block} aria-label="lessons, scripted">
-            <Chip label="scripted · S6" ghost casing="lower" />
-            <LessonsBlock {...props} />
-          </section>
-          <section className={s.block} aria-label="ventures, scripted">
-            <Chip label="scripted · S6" ghost casing="lower" />
-            <VentureBlock {...props} />
-          </section>
-        </div>
-      </Fold>
     </div>
   );
 }

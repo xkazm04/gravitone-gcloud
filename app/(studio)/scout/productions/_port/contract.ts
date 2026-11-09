@@ -1,6 +1,5 @@
 // THE PRODUCTIONS SCREEN'S VIEW - client-safe (types only). The real side reads the kernel's production record
-// (./real.ts); the fixture side (GRAVITONE_PRODUCE_SIDE=fixture) is the scripted slate. The later stages (casting, audio,
-// cut, lessons, ventures) are scripted panels on both sides until S2-S6: `scripted` is what they draw.
+// (./real.ts); the fixture side (GRAVITONE_PRODUCE_SIDE=fixture) is the scripted slate.
 
 import type { ReceiptMode, Receipt } from "@gt/domain/produce";
 import type { CastJob, CastRound, MusicRoute, Production, ProductionId, ProductionLesson, ProductionSource, ProductionStage, SoundRoute, TakeKind, VoiceProof, VoiceRoute } from "@gt/domain/production";
@@ -48,8 +47,6 @@ export type ProductionsView = {
   /** The dialogue route the box offers now: `dub` until the ref-audios proof is stored as held. */
   readonly voiceRoute: "ref-audio" | "dub";
   readonly voiceProof?: VoiceProof;
-  /** The scripted entry the later-stage panels draw; absent only if the fixture has none. */
-  readonly scripted?: ProductionEntry;
 };
 
 export type TakeRequestInput = { readonly id: ProductionId; readonly kind: TakeKind; readonly frames: readonly string[]; readonly prompt?: string; readonly mode: ReceiptMode; readonly token?: string };
@@ -57,9 +54,12 @@ export type TakeRequestInput = { readonly id: ProductionId; readonly kind: TakeK
 /** A launch's answer: the receipt to confirm, a fresher one, or the take it started, always with the view rebuilt. */
 export type TakeLaunchView = { readonly view: ProductionsView; readonly launch: { readonly kind: "receipt" | "stale"; readonly receipt: Receipt } | { readonly kind: "launched"; readonly jobId: string; readonly takeId: string } };
 
-/** A casting launch: the concept's roles, one role's line, a round, or a retry of a round's missing designs. */
-export type CastLaunchInput = { readonly kind: "roles" | "audition" | "round" | "retry"; readonly id: ProductionId; readonly roleId?: string; readonly roundId?: string; readonly mode: ReceiptMode; readonly token?: string };
+/** A casting launch: the concept's roles, one role's line, a round, a retry of a round's missing designs, or a done production's lessons. */
+export type CastLaunchInput = { readonly kind: "roles" | "audition" | "round" | "retry" | "lessons"; readonly id: ProductionId; readonly roleId?: string; readonly roundId?: string; readonly mode: ReceiptMode; readonly token?: string };
 export type CastLaunchView = { readonly view: ProductionsView; readonly launch: { readonly kind: "receipt" | "stale"; readonly receipt: Receipt } | { readonly kind: "launched"; readonly jobId: string } };
+/** The operator's words for a venture's frame; a proven video or a press names no genre. */
+export type VentureWordsInput = { readonly name: string; readonly tone: string; readonly audience: string; readonly format: string; readonly look: string };
+
 export type RoleEditInput = { readonly id?: string; readonly name: string; readonly brief: string; readonly auditionScript?: string };
 
 /** The operator's audio decision, as the panel sends it. */
@@ -85,4 +85,8 @@ export type ProductionsPort = {
   readonly retryCreate: (input: { readonly id: ProductionId; readonly roundId: string }) => Promise<ActionResult<ProductionsView>>;
   readonly decideAudio: (input: AudioDecisionInput) => Promise<ActionResult<ProductionsView>>;
   readonly cutLaunch: (input: CutLaunchInput) => Promise<ActionResult<CutLaunchView>>;
+  readonly editLesson: (input: { readonly id: ProductionId; readonly lessonId: string; readonly text: string }) => Promise<ActionResult<ProductionsView>>;
+  readonly acceptLesson: (input: { readonly id: ProductionId; readonly lessonId: string; readonly text?: string }) => Promise<ActionResult<ProductionsView>>;
+  readonly joinVenture: (input: { readonly id: ProductionId; readonly ventureId: string }) => Promise<ActionResult<ProductionsView>>;
+  readonly startVenture: (input: { readonly id: ProductionId; readonly words: VentureWordsInput }) => Promise<ActionResult<ProductionsView>>;
 };

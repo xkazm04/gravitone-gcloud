@@ -54,7 +54,7 @@ const processStore = (): Result<Store> => {
   return k.ok ? ok(k.value.store) : k;
 };
 
-function seatOption(): ModelOption {
+export function seatOption(): ModelOption {
   return { key: `production-cast/claude-seat/${MODEL}`, lane: PRODUCTION_CAST_LANE, provider: "claude-seat", model: MODEL, label: "text turn · seat", secondsPerUnit: TURN_SECONDS, usdPerUnit: null, unpricedReason: TEXT_SEAT, src: "illustrative", basis: { seconds: { src: "illustrative", note: "a short text turn, not yet measured" }, usd: { src: "real", note: TEXT_SEAT } } };
 }
 
@@ -72,10 +72,10 @@ const digest = (s: string): string => createHash("sha256").update(s).digest("hex
 export type CastLaunchInput = { readonly mode: ReceiptMode; readonly by: string; readonly actor: Actor; readonly dryOnly: boolean; readonly token?: string; readonly now?: number };
 export type CastLaunch = { readonly kind: "receipt"; readonly receipt: Receipt } | { readonly kind: "stale"; readonly fresh: Receipt } | { readonly kind: "launched"; readonly jobId: string; readonly receipt: Receipt };
 
-type Plan = { readonly lines: readonly PlanLine[]; readonly lane: "article" | "image" | "audio"; readonly apply: (t: Tx, mode: Job["mode"]) => string };
+export type Plan = { readonly lines: readonly PlanLine[]; readonly lane: "article" | "image" | "audio"; readonly apply: (t: Tx, mode: Job["mode"]) => string };
 type RequestBody = CastRequest extends infer R ? (R extends unknown ? Omit<R, "by"> : never) : never;
 
-function launch(store: Store, input: CastLaunchInput, plan: (r: Reader) => Result<Plan>): Result<CastLaunch> {
+export function launch(store: Store, input: CastLaunchInput, plan: (r: Reader) => Result<Plan>): Result<CastLaunch> {
   const now = input.now ?? Date.now();
   const receiptOf = (r: Reader, p: Plan): Receipt => receiptFor({ subject: { kind: "run", lane: p.lane }, lines: [...p.lines], plan: [...p.lines], queue: readQueue(r), capacity: LANE_CAPACITY, now, mode: input.mode });
   const first = store.read((r) => {

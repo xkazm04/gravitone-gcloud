@@ -1,0 +1,22 @@
+/* /scout/ventures: the ventures on the left, one venture's card, productions and lessons on the right. */
+.page{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+.list{min-width:0;min-height:0;overflow:auto;padding:var(--sp-4) var(--sp-5);display:flex;flex-direction:column;gap:var(--sp-2)}
+.item{display:flex;flex-direction:column;align-items:flex-start;gap:var(--sp-1);width:100%;padding:var(--sp-3);background:var(--ink-2);border:1px solid var(--hair);border-radius:var(--r-tile);color:var(--text);text-align:left;cursor:pointer}
+.item[aria-pressed=true]{border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+.item:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.itemName{font:600 var(--fs-ui)/1.3 var(--sans);color:var(--ink-bright)}
+.meta{font:500 var(--fs-meta)/1.35 var(--sans);color:var(--muted)}
+.detail{min-width:0;min-height:0;overflow:auto;padding:var(--sp-4) var(--sp-5);border-left:1px solid var(--hair);display:flex;flex-direction:column;gap:var(--sp-6)}
+.head{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-3)}
+.title{margin:0;font:600 var(--fs-title)/1.2 var(--sans);color:var(--ink-bright)}
+.block{display:flex;flex-direction:column;align-items:flex-start;gap:var(--sp-3)}
+.row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-2)}
+.words{margin:0;font:500 var(--fs-ui)/1.45 var(--sans);color:var(--ink-bright)}
+.rows{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--sp-2);width:100%}
+.lesson{display:flex;flex-direction:column;align-items:flex-start;gap:var(--sp-2);padding:var(--sp-3);background:var(--ink-2);border:1px solid var(--hair);border-radius:var(--r-tile)}
+.empty{flex:1;padding:var(--sp-5)}
+
+@media (max-width:1099px){
+  .page{display:flex;flex-direction:column;overflow:auto}
+  .list,.detail{flex:none;overflow:visible;border-left:none}
+}

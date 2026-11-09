@@ -44,6 +44,7 @@ import { productionTakeProducer } from "./production.ts";
 import { productionVoicesProducer } from "./productionVoices.ts";
 import { productionCutProducer } from "./productionCut.ts";
 import { productionCastProducer } from "./productionCast.ts";
+import { productionLessonsProducer } from "./productionLessons.ts";
 import { yue2PostProducer, yue2RenderProducer, yue2ScoreProducer } from "./yue2.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
@@ -183,6 +184,8 @@ export const BOUND: readonly Bound[] = [
   { name: "production-cast", producer: productionCastProducer() },
   // A production's final cut (spark concept-casting-stages S5): the trailer or music-clip script over its takes, then the Board; on box.render.
   { name: "production-cut", producer: productionCutProducer() },
+  // A done production's lessons (spark concept-casting-stages S6): one text turn, enqueued by the Board's approval of the cut.
+  { name: "production-lessons", producer: productionLessonsProducer() },
   ...stepsBound(),
 ];
 

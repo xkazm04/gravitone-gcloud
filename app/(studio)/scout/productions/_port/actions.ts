@@ -7,11 +7,12 @@
 import { z } from "zod";
 
 import { RECEIPT_MODES } from "@gt/domain/produce";
+import { VENTURE_ID_RE } from "@gt/domain/genre";
 import { MUSIC_ROUTES, PRODUCTION_SOURCE_KINDS, SOUND_ROUTES, TAKE_KINDS, VOICE_ROUTES, productionIdSchema, productionStageSchema, type ProductionId, type ProductionSource } from "@gt/domain/production";
 
 import { action } from "../../../../_server/action.ts";
 import { actorOf } from "../../../../../lib/principal.ts";
-import type { AudioDecisionInput, CastLaunchInput, CutLaunchInput, ProductionsPort, RoleEditInput, TakeRequestInput } from "./contract.ts";
+import type { AudioDecisionInput, CastLaunchInput, CutLaunchInput, ProductionsPort, RoleEditInput, TakeRequestInput, VentureWordsInput } from "./contract.ts";
 import { serverProductions } from "./port.ts";
 
 const sourceInput = z.object({ source: z.object({ kind: z.enum(PRODUCTION_SOURCE_KINDS), ref: z.string().min(1).max(200) }) });
@@ -36,7 +37,7 @@ const provenAction = action("production proven", provenInput, (i, who) => server
 const dropAction = action("production drop", idInput, (i, who) => serverProductions().drop(i.id as ProductionId, actorOf(who)));
 const moveAction = action("production move", moveInput, (i, who) => serverProductions().move(i.id as ProductionId, i.to, actorOf(who)));
 const viewAction = action("production view", z.object({}).strict(), () => serverProductions().view());
-const castKinds = ["roles", "audition", "round", "retry"] as const;
+const castKinds = ["roles", "audition", "round", "retry", "lessons"] as const;
 const castLaunchInput = z.object({ kind: z.enum(castKinds), id: productionIdSchema, roleId: z.string().min(1).max(80).optional(), roundId: z.string().min(1).max(120).optional(), mode: z.enum(RECEIPT_MODES), token: z.string().min(1).optional() });
 const castLaunchAction = action("cast launch", castLaunchInput, (i, who) => serverProductions().castLaunch(i as unknown as CastLaunchInput, actorOf(who)));
 const roleEdit = z.object({ id: z.string().min(1).max(60).optional(), name: z.string().min(1).max(60), brief: z.string().min(1).max(2000), auditionScript: z.string().min(1).max(1000).optional() });
@@ -57,6 +58,19 @@ const decideAudioAction = action("production audio", audioInput, (i, who) => ser
 const cutKinds = ["cut", "speak"] as const;
 const cutLaunchInput = z.object({ kind: z.enum(cutKinds), id: productionIdSchema, takes: z.array(z.string().min(1).max(40)).max(20).optional(), roleId: z.string().min(1).max(80).optional(), mode: z.enum(RECEIPT_MODES), token: z.string().min(1).optional() });
 const cutLaunchAction = action("cut launch", cutLaunchInput, (i, who) => serverProductions().cutLaunch(i as unknown as CutLaunchInput, actorOf(who)));
+
+const lessonText = z.string().trim().min(1).max(4000);
+const lessonId = z.string().min(1).max(60);
+const lessonEditInput = z.object({ id: productionIdSchema, lessonId, text: lessonText });
+const lessonEditAction = action("lesson edit", lessonEditInput, (i, who) => serverProductions().editLesson(i.id as ProductionId, i.lessonId, i.text, actorOf(who)));
+const lessonAcceptInput = z.object({ id: productionIdSchema, lessonId, text: lessonText.optional() });
+const lessonAcceptAction = action("lesson accept", lessonAcceptInput, (i, who) => serverProductions().acceptLesson(i.id as ProductionId, i.lessonId, i.text, actorOf(who)));
+const frameLine = z.string().trim().min(1).max(200);
+const words = z.object({ name: z.string().trim().min(1).max(90), tone: frameLine, audience: frameLine, format: frameLine, look: frameLine });
+const joinInput = z.object({ id: productionIdSchema, ventureId: z.string().regex(VENTURE_ID_RE) });
+const joinAction = action("production join venture", joinInput, (i, who) => serverProductions().joinVenture(i.id as ProductionId, i.ventureId, actorOf(who)));
+const startVentureInput = z.object({ id: productionIdSchema, words });
+const startVentureAction = action("production start venture", startVentureInput, (i, who) => serverProductions().startVenture(i.id as ProductionId, i.words as VentureWordsInput, actorOf(who)));
 
 export async function startProductionAction(input: In<"start">): Out<"start"> {
   return startAction(input);
@@ -108,6 +122,22 @@ export async function decideAudioAction_(input: In<"decideAudio">): Out<"decideA
 
 export async function cutLaunchAction_(input: In<"cutLaunch">): Out<"cutLaunch"> {
   return cutLaunchAction(input);
+}
+
+export async function editLessonAction(input: In<"editLesson">): Out<"editLesson"> {
+  return lessonEditAction(input);
+}
+
+export async function acceptLessonAction(input: In<"acceptLesson">): Out<"acceptLesson"> {
+  return lessonAcceptAction(input);
+}
+
+export async function joinVentureAction(input: In<"joinVenture">): Out<"joinVenture"> {
+  return joinAction(input);
+}
+
+export async function startVentureAction_(input: In<"startVenture">): Out<"startVenture"> {
+  return startVentureAction(input);
 }
 
 export async function retryCreateAction_(input: In<"retryCreate">): Out<"retryCreate"> {

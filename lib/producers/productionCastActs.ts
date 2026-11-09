@@ -73,10 +73,10 @@ const jobFailure = (x: unknown): StepOutcome => ({ kind: "fatal", code: x instan
 
 /* ── The prompt file and the seat ─────────────────────────────────────────── */
 
-async function promptSection(heading: string, slots: Readonly<Record<string, string>>): Promise<string> {
-  const text = (await readFile(path.join(process.cwd(), "pipeline", PROMPT_FILE), "utf8")).replace(/\r\n/g, "\n");
+export async function promptSection(heading: string, slots: Readonly<Record<string, string>>, file: string = PROMPT_FILE): Promise<string> {
+  const text = (await readFile(path.join(process.cwd(), "pipeline", file), "utf8")).replace(/\r\n/g, "\n");
   const start = text.indexOf(`\n## ${heading}\n`);
-  if (start === -1) throw new AppError("unavailable", `pipeline/${PROMPT_FILE} has no section ${heading}`);
+  if (start === -1) throw new AppError("unavailable", `pipeline/${file} has no section ${heading}`);
   const from = start + heading.length + 5;
   const end = text.indexOf("\n## ", from);
   let body = (end === -1 ? text.slice(from) : text.slice(from, end)).trim();
@@ -85,7 +85,7 @@ async function promptSection(heading: string, slots: Readonly<Record<string, str
 }
 
 /** One seat turn: `concept` in inputs/concept.json, a JSON answer read back from out/answer.json. Throws its failure's sentence. */
-async function seatAnswer<T>(e: CastEngines, ctx: StepContext, turn: string, prompt: string, concept: unknown, schema: z.ZodType<T>, stand: () => T): Promise<T> {
+export async function seatAnswer<T>(e: Pick<CastEngines, "seat">, ctx: StepContext, turn: string, prompt: string, concept: unknown, schema: z.ZodType<T>, stand: () => T): Promise<T> {
   return meteredCall<T>(ctx, {
     provider: "claude-seat",
     model: MODEL,

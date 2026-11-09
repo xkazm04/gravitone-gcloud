@@ -14,9 +14,10 @@
 //            births nothing and holds nothing). A name equal to a live genre's (case and spaces folded) is refused.
 //   A VENTURE {kind: "venture", name, ventureKind, frame: {tone, audience, format, look, genres}, basedOn, use?, aim?}.
 //            Every `basedOn` entry is `<night>/<cell id>` of a cell a live committed night KEPT (./direction.ts's
-//            rule). A CHANNEL names at least one genre and every one is PUBLISHABLE (./genres.ts genreViews), its
+//            rule). A CHANNEL proposed by a night names at least one genre and every one is PUBLISHABLE (./genres.ts genreViews), its
 //            kept piece's cell among `basedOn`. An ALBUM stands on at least ALBUM_TRACKS kept track clips
-//            (`<night>/<c-id>/aN`) of music seeds sharing a genre. A GAME waits for S4 and is refused.
+//            (`<night>/<c-id>/aN`) of music seeds sharing a genre. A GAME waits for S4 and is refused. A night's proposal stays
+//            on these grounds: a proven video or the operator's own press births a channel by @gt/kernel/productions/venture.
 
 import { z } from "zod";
 

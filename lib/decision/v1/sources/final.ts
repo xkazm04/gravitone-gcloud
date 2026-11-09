@@ -2,6 +2,7 @@ import "server-only";
 
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
+import { dryOnlyFrom } from "@gt/kernel/dryrun";
 import { judgeCutIn } from "@gt/kernel/productions/audio";
 import { cutsOnBoard, readCut, readProduction } from "@gt/kernel/productions/store";
 import type { Store } from "@gt/kernel/store";
@@ -11,6 +12,8 @@ import { kernel } from "../../../kernelStore.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import type { WeirItem } from "../../../ledger/v1/types.ts";
 import { blobOfAddress } from "../../../producers/productionCut.ts";
+import { enqueueLessonsIn } from "../../../producers/productionLessons.ts";
+import type { ProductionId } from "@gt/domain/production";
 import { blobRootOf } from "../../../kernelProcess.ts";
 import { buildConsequence, committedOutcome, decisionMap, mintPacket, runIdOf, type AdapterRef, type DecisionAdapter, type DecisionsAt, type OpenPlan, type Preview } from "../types.ts";
 
@@ -105,7 +108,11 @@ export function makeFinalAdapter(deps: FinalDeps): DecisionAdapter<FinalV1> {
     if (d.by !== "operator") return err("refused", `final cut ${run.value}: only an operator approves a final cut`);
     const verdict = d.verdict === "keep" ? "approved" : "returned";
     const note = [...d.reasons, ...(d.note === undefined ? [] : [d.note])].join("; ");
-    const r = s.value.tx((t) => judgeCutIn(t, productionId, cutId, verdict, OPERATOR, note === "" ? undefined : note));
+    // Approved reaches done: the lessons job is enqueued in the same transaction, so an approval never loses it (a redelivery finds it).
+    const r = s.value.tx((t) => {
+      const p = judgeCutIn(t, productionId, cutId, verdict, OPERATOR, note === "" ? undefined : note);
+      if (p.stage === "done") enqueueLessonsIn(t, productionId as ProductionId, OPERATOR, dryOnlyFrom(process.env));
+    });
     return r.ok ? ok(undefined) : r;
   }
 

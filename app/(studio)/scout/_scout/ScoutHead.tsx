@@ -42,7 +42,7 @@ function Backlog({ backlog }: { readonly backlog: ScoutBacklog }) {
   );
 }
 
-export function ScoutHead({ current, undecided, facts, backlog }: { readonly current: "graph" | "runs" | "productions"; readonly undecided?: number; readonly facts: ScoutHeaderFacts; readonly backlog?: ScoutBacklog }) {
+export function ScoutHead({ current, undecided, facts, backlog }: { readonly current: "graph" | "runs" | "productions" | "ventures"; readonly undecided?: number; readonly facts: ScoutHeaderFacts; readonly backlog?: ScoutBacklog }) {
   const next = facts.next;
   return (
     <div className={s.head}>
@@ -55,6 +55,7 @@ export function ScoutHead({ current, undecided, facts, backlog }: { readonly cur
           { id: "graph", label: "Graph", href: "/scout" },
           { id: "runs", label: "Runs", href: "/scout/runs", ...(undecided === undefined ? {} : { tally: { value: undecided, label: "undecided" } }) },
           { id: "productions", label: "Productions", href: "/scout/productions" },
+          { id: "ventures", label: "Ventures", href: "/scout/ventures" },
         ]}
       />
       <div className={s.headEnd}>

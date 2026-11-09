@@ -168,6 +168,38 @@ CREATE TABLE production_voice_proof (
   by_id TEXT NOT NULL CHECK (length(by_id) > 0)
 );`,
     },
+    // Ventures and lessons (spark concept-casting-stages S6): a production joins one venture, once; each dimension's lesson is one row. `venture_id` has no foreign key: this module migrates without `ventures` (its own tests do), and ./venture.ts checks the head exists.
+    {
+      version: 4,
+      sql: `
+ALTER TABLE productions ADD COLUMN venture_id TEXT CHECK (venture_id IS NULL OR venture_id GLOB 'vn-?*');
+CREATE TRIGGER productions_venture_once BEFORE UPDATE OF venture_id ON productions
+WHEN OLD.venture_id IS NOT NULL OR NEW.venture_id IS NULL
+BEGIN SELECT RAISE(ABORT, 'a production joins one venture, once'); END;
+CREATE TABLE production_lessons (
+  production_id TEXT NOT NULL REFERENCES productions (id),
+  id TEXT NOT NULL CHECK (length(id) > 0),
+  dimension TEXT NOT NULL CHECK (dimension IN ('beats', 'art-style', 'technique')),
+  state TEXT NOT NULL CHECK (state IN ('proposed', 'accepted', 'nothing')),
+  text TEXT NOT NULL CHECK (length(text) > 0),
+  proposed_text TEXT CHECK (proposed_text IS NULL OR length(proposed_text) > 0),
+  drawn_from TEXT NOT NULL CHECK (json_valid(drawn_from) AND json_type(drawn_from) = 'array'),
+  dry INTEGER NOT NULL DEFAULT 0 CHECK (dry IN (0, 1)),
+  proposed_at TEXT NOT NULL,
+  accepted_at TEXT,
+  accepted_by TEXT,
+  PRIMARY KEY (production_id, id),
+  UNIQUE (production_id, dimension),
+  CHECK (state <> 'accepted' OR (accepted_at IS NOT NULL AND accepted_by IS NOT NULL AND dry = 0)),
+  CHECK (state = 'nothing' OR json_array_length(drawn_from) > 0)
+);
+CREATE TRIGGER production_lessons_accepted_fixed BEFORE UPDATE ON production_lessons
+WHEN OLD.state <> 'proposed'
+BEGIN SELECT RAISE(ABORT, 'an accepted lesson is fixed'); END;
+CREATE TRIGGER production_lessons_never_deleted BEFORE DELETE ON production_lessons
+BEGIN SELECT RAISE(ABORT, 'a lesson is never deleted'); END;
+CREATE INDEX production_lessons_accepted ON production_lessons (accepted_at) WHERE state = 'accepted';`,
+    },
   ],
 };
 
@@ -175,7 +207,7 @@ CREATE TABLE production_voice_proof (
 
 export const startInputSchema = z.object({ source: productionSourceSchema, title: z.string().trim().min(1), board: productionBoardSchema }).strict();
 
-export const HEAD_COLUMNS = "id, title, source_kind, source_ref, stage, board, started_at, started_by_kind, started_by, roles, cast_jobs, audio";
+export const HEAD_COLUMNS = "id, title, source_kind, source_ref, stage, board, started_at, started_by_kind, started_by, roles, cast_jobs, audio, venture_id";
 export const TAKE_COLUMNS = "production_id, id, n, kind, state, beats, frames, prompt, seed, engine, job_id, dry, at, video, poster, error, duration_s, gpu_seconds, proven_at, proven_by, stale, speaking";
 export const CUT_COLUMNS = "production_id, id, n, format, state, takes, receipt, job_id, dry, packet_id, video, error, duration_s, note, at, judged_at, judged_by";
 
@@ -194,6 +226,7 @@ export const headRowSchema = z.object({
   roles: z.string(),
   cast_jobs: z.string(),
   audio: z.string().nullable(),
+  venture_id: z.string().nullable(),
 });
 
 export const takeRowSchema = z.object({
@@ -239,6 +272,22 @@ export const cutRowSchema = z.object({
   at: z.string(),
   judged_at: opt,
   judged_by: opt,
+});
+
+export const LESSON_COLUMNS = "production_id, id, dimension, state, text, proposed_text, drawn_from, dry, proposed_at, accepted_at, accepted_by";
+
+export const lessonRowSchema = z.object({
+  production_id: z.string(),
+  id: z.string().min(1),
+  dimension: z.string(),
+  state: z.string(),
+  text: z.string().min(1),
+  proposed_text: opt,
+  drawn_from: z.string(),
+  dry: z.number(),
+  proposed_at: z.string(),
+  accepted_at: opt,
+  accepted_by: opt,
 });
 
 export const stringListSchema = z.array(z.string().min(1)).min(1);

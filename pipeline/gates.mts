@@ -154,6 +154,13 @@ export const GATES: readonly Gate[] = [
     rationale: "pipeline/SUNO-LISTEN-PROMPT.md's 8 sections and rules on LF and CRLF copies, the router's LISTEN_SCHEMA against @gt/domain/audio.suno.schema studioListenSchema at every depth, its worked example through readOf and back, and recorded refusals naming their paths. Filesystem only, no model.",
   },
   {
+    id: "lessons",
+    npmScript: "check:lessons",
+    class: "blocking",
+    outcomes: "01",
+    rationale: "The lessons prompt (pipeline/LESSONS-PROMPT.md, spark concept-casting-stages S6): its four rules pinned by tag and sentence, and the door every seat answer passes (lib/producers/productionLessons.ts proposalsOf), which refuses a citation outside the record. Offline, no model.",
+  },
+  {
     id: "score",
     npmScript: "check:score",
     class: "advisory",

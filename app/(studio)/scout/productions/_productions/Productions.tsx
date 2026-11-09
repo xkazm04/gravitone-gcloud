@@ -3,7 +3,7 @@
 // /scout/productions (spark concept-casting-stages S1): the operator's pick, graph-first. The graph on the left reads
 // the production record through the port (idea, board, take, stage); the wide inspector on the right is where a concept
 // is started, its hero frames are chosen, a take is launched and watched, takes are compared, one is marked proven, a
-// concept is dropped. Casting is real (S4); the later stages stay scripted until S5-S6, marked as such in the inspector.
+// concept is dropped. Every stage is real.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -20,7 +20,7 @@ import type { ActionResult } from "../../../../_server/actionCore.ts";
 import type { KeptConcept, ProductionEntry, ProductionsPort, ProductionsView } from "../_port/contract.ts";
 import s from "./productions.module.css";
 import { STAGE_PILL } from "./Sections.tsx";
-import { ConceptInspector, ProductionInspector, ScriptedPanels } from "./Takes.tsx";
+import { ConceptInspector, ProductionInspector } from "./Takes.tsx";
 
 const conceptId = (e: ProductionEntry): string => e.production.id;
 const keptId = (c: KeptConcept): string => `kept:${c.source.kind}:${c.source.ref}`;
@@ -161,7 +161,6 @@ export function Productions({ view: initial, port, from }: { readonly view: Prod
           ) : (
             <Empty label="pick a concept to work on it" />
           )}
-          {view.scripted !== undefined && <ScriptedPanels entry={view.scripted} view={view} />}
         </div>
       </div>
     </div>

@@ -86,8 +86,11 @@ export type CharacterAudience = (typeof CHARACTER_AUDIENCES)[number];
 
 export const LESSON_DIMENSIONS = ["beats", "art-style", "technique"] as const;
 export type LessonDimension = (typeof LESSON_DIMENSIONS)[number];
-export const LESSON_STATES = ["proposed", "accepted"] as const;
+/** `nothing`: the seat found nothing in the evidence on this dimension, and `text` says why. It can never be accepted. */
+export const LESSON_STATES = ["proposed", "accepted", "nothing"] as const;
 export type LessonState = (typeof LESSON_STATES)[number];
+/** The lesson of a dimension has this id on its production. */
+export const lessonIdOf = (dimension: LessonDimension): string => `lesson-${dimension}`;
 
 /** One round offers exactly this many per role, one pick each. A two-role film is two rounds. */
 export const ROUND_CHARACTERS = 5;
@@ -120,6 +123,7 @@ export const PRODUCTION_EVENTS = {
   voiceProof: "production.voice-proof",
   lessonProposed: "production.lesson-proposed",
   lessonAccepted: "production.lesson-accepted",
+  venture: "production.venture",
 } as const;
 
 /** A voice preview must be heard before its pick unlocks. */
