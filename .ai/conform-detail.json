@@ -21890,6 +21890,16 @@
           "reason": "replaced by 5fe7f1e8-9456-47ec-9655-245ffa4e70f2"
         }
       ]
+    },
+    "1155c1ec-f832-471a-929c-2a16f06cfbb7/agent-instruction-files": {
+      "context": "domain-run-job-steps",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:33:20.547Z",
+      "worker": "02c1d9db-eed8-4337-ae75-19c54a96d167",
+      "techniques": []
     }
   }
 }

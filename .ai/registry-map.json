@@ -7962,7 +7962,11 @@
           "revision": 33,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/registry.ts:13 This context is pure domain model code (state machines, step record registry, zod schemas). A grep of packages/domain/src for CLAUDE.md, AGENTS.md and cursorrules found nothing ('instruction' appears only in a board.ts comment about rework, outside this context's files), so there is no instruction file to govern.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32
         },
         {
           "subject": "module-design",
