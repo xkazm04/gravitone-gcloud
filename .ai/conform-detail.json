@@ -14684,54 +14684,80 @@
       "subject": "hitl-approval",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T03:25:44.861Z",
-      "worker": "32949800-68c0-43a7-b00b-a1064b455766",
-      "techniques": []
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:10:57.157Z",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:2 A recursive search of lib/steps for approv, consent, pending, awaiting and hitl found no hits: the module is IndexedDB persistence of the creator's own step content (scope picks, adopted script pointer, cut edit log), with no machine-initiated pause, decision surface or continuation for this subject to govern.",
+          "evaluatedAt": "2026-11-04T03:25:44.861Z",
+          "worker": "32949800-68c0-43a7-b00b-a1064b455766",
+          "reason": "replaced by ec445a10-f380-44d4-9946-d59cea2b3097"
+        }
+      ],
+      "withdrawn": {
+        "worker": "ec445a10-f380-44d4-9946-d59cea2b3097",
+        "state": "not-applicable",
+        "at": "2026-11-09T22:11:33.080692+00:00",
+        "reason": "reviewer (sonnet): The anchor at stepDataResearch.ts:92 is a doc comment on beat-pick storage. It does not show that no pause or pending state exists. The grep terms also missed `confirmed`, `gate` and `draft`, and `BeatPicksStepData` has a `confirmed` field (a frozen spine that Script opens on), so a human-confirm bo"
+      }
     },
     "946b3fa8-75ef-47c1-94b1-40703a9401b1/hitl-approval": {
       "context": "foundry-strips-and-training",
       "subject": "hitl-approval",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T03:25:44.861Z",
-      "worker": "32949800-68c0-43a7-b00b-a1064b455766",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:10:57.157Z",
+      "worker": "ec445a10-f380-44d4-9946-d59cea2b3097",
       "techniques": [
         {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/store.ts:432 The token is optional. The one production caller (lib/decision/v1/sources/strips.ts:298) passes it, but the door itself accepts a commit that is bound to no preview."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/training/store.ts:313 The Dojo commit re-reads verdicts and blind picks at commit time with no token or digest of what was shown at the gate."
+        },
+        {
           "technique": "gate-state-machines",
-          "verdict": "deviation",
-          "evidence": "lib/foundry/strips/store.ts:432 The version check at the door is optional; an omitted token commits unbound."
-        },
-        {
-          "technique": "review-queues",
-          "verdict": "deviation",
-          "evidence": "lib/foundry/strips/store.ts:184 An unreadable verdict map is summarized as decided: 0 with only a console warning, so the count cannot be told apart from an untouched run."
-        },
-        {
-          "technique": "truncated-verdict-space",
           "verdict": "conformant",
-          "evidence": "lib/foundry/strips/author.ts:7 The authoring agent cannot render or grade its own strip; only the human triage keeps a card."
+          "evidence": "lib/foundry/strips/author.ts:4 Work authority (the agent turn) is separated from verdict authority (the operator's triage). The agent's look at its sheet is only a pre-filter."
         },
         {
           "technique": "oracle-before-gate",
           "verdict": "conformant",
-          "evidence": "lib/foundry/training/blind.ts:8 The reviewer compares paired baseline/challenger outputs blind, and judge-vs-human agreement is measured per pair."
+          "evidence": "lib/foundry/training/blind.ts:8 The human judges blind before the judges are unmasked, and BLIND_FLOOR (line 19) marks too few pairs as unmeasurable rather than as a verdict."
         },
         {
-          "technique": "decision-records",
-          "verdict": "conformant",
-          "evidence": "lib/foundry/training/types.ts:106 Each ledger row records what the decider was shown; who/when sit on the append-only verdict log."
+          "technique": "review-queues",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/store.ts:184 An unreadable verdict map is summarized as decided: 0 with only a console warning, so the count cannot be told apart from an untouched run.",
+          "carriedFrom": "2026-11-04"
         },
         {
-          "technique": "resume-after-decision",
+          "technique": "truncated-verdict-space",
           "verdict": "conformant",
-          "evidence": "lib/foundry/strips/store.ts:18 Rejection disposes of the staged media while keeping the evidence; undecided items keep theirs."
+          "evidence": "lib/foundry/strips/author.ts:7 The authoring agent cannot render or grade its own strip; only the human triage keeps a card.",
+          "carriedFrom": "2026-11-04"
         },
         {
           "technique": "fail-closed-profile-for-headless",
           "verdict": "conformant",
-          "evidence": "lib/foundry/strips/author.ts:111 The headless author turn gets a closed three-tool allowlist with no shell or web."
+          "evidence": "lib/foundry/strips/author.ts:111 The headless author turn gets a closed three-tool allowlist with no shell or web.",
+          "carriedFrom": "2026-11-04"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/foundry/strips/store.ts:432 The destructive strips commit verifies that its preview token still matches only when a caller supplies one, so binding the commit to what the operator saw depends on the caller (triage.ts:35 promises it unconditionally), and the Dojo's commitCycle takes no binding at all.",
+          "evaluatedAt": "2026-11-04T03:25:44.861Z",
+          "worker": "32949800-68c0-43a7-b00b-a1064b455766",
+          "reason": "replaced by ec445a10-f380-44d4-9946-d59cea2b3097"
         }
       ]
     },

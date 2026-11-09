@@ -9632,12 +9632,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/strips/store.ts:432 The destructive strips commit verifies that its preview token still matches only when a caller supplies one, so binding the commit to what the operator saw depends on the caller (triage.ts:35 promises it unconditionally), and the Dojo's commitCycle takes no binding at all.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/foundry/strips/store.ts:432 The destructive strips commit (it deletes rejected media) verifies its preview token only when a caller supplies one, so binding the commit to what the operator saw depends on the caller even though triage.ts:35 promises it unconditionally. The Dojo's commitCycle takes no binding at all.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-memory",
@@ -16691,11 +16690,7 @@
           "confidence": "probable",
           "state": "not-applicable",
           "evidence": "lib/steps/index.ts:2 A recursive search of lib/steps for approv, consent, pending, awaiting and hitl found no hits: the module is IndexedDB persistence of the creator's own step content (scope picks, adopted script pointer, cut edit log), with no machine-initiated pause, decision surface or continuation for this subject to govern.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evaluatedAt": "2026-11-04"
         },
         {
           "subject": "mcp-tools",
