@@ -42,6 +42,7 @@ import { coverBriefProducer } from "./coverBrief.ts";
 import { SCOUT_STORYBOARD_LANES, scoutStoryboardProducer } from "./scoutStoryboard.ts";
 import { productionTakeProducer } from "./production.ts";
 import { productionVoicesProducer } from "./productionVoices.ts";
+import { productionCutProducer } from "./productionCut.ts";
 import { productionCastProducer } from "./productionCast.ts";
 import { yue2PostProducer, yue2RenderProducer, yue2ScoreProducer } from "./yue2.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
@@ -180,6 +181,8 @@ export const BOUND: readonly Bound[] = [
   { name: "production-voices", producer: productionVoicesProducer() },
   // A casting round's words and new faces (spark concept-casting-stages S4): on the text and image seats, one job per act.
   { name: "production-cast", producer: productionCastProducer() },
+  // A production's final cut (spark concept-casting-stages S5): the trailer or music-clip script over its takes, then the Board; on box.render.
+  { name: "production-cut", producer: productionCutProducer() },
   ...stepsBound(),
 ];
 

@@ -3,7 +3,7 @@
 // cut, lessons, ventures) are scripted panels on both sides until S2-S6: `scripted` is what they draw.
 
 import type { ReceiptMode, Receipt } from "@gt/domain/produce";
-import type { CastJob, CastRound, Production, ProductionId, ProductionLesson, ProductionSource, ProductionStage, TakeKind } from "@gt/domain/production";
+import type { CastJob, CastRound, MusicRoute, Production, ProductionId, ProductionLesson, ProductionSource, ProductionStage, SoundRoute, TakeKind, VoiceProof, VoiceRoute } from "@gt/domain/production";
 
 import type { ActionResult } from "../../../../_server/actionCore.ts";
 
@@ -25,6 +25,8 @@ export type ProductionEntry = {
   /** The latest job of each casting act (`roles`, `audition:<role>`), so the screen can watch and report it. */
   readonly castJobs: Readonly<Record<string, CastJob>>;
   readonly lessons: readonly ProductionLesson[];
+  /** How far the latest cut's job got; absent when no job can be read. */
+  readonly cutJob?: TakeProgress;
 };
 
 /** A concept that is kept and that nobody started: it has a Start button and no record yet. */
@@ -43,6 +45,9 @@ export type ProductionsView = {
   readonly entries: readonly ProductionEntry[];
   readonly kept: readonly KeptConcept[];
   readonly ventures: readonly VentureOption[];
+  /** The dialogue route the box offers now: `dub` until the ref-audios proof is stored as held. */
+  readonly voiceRoute: "ref-audio" | "dub";
+  readonly voiceProof?: VoiceProof;
   /** The scripted entry the later-stage panels draw; absent only if the fixture has none. */
   readonly scripted?: ProductionEntry;
 };
@@ -56,6 +61,13 @@ export type TakeLaunchView = { readonly view: ProductionsView; readonly launch: 
 export type CastLaunchInput = { readonly kind: "roles" | "audition" | "round" | "retry"; readonly id: ProductionId; readonly roleId?: string; readonly roundId?: string; readonly mode: ReceiptMode; readonly token?: string };
 export type CastLaunchView = { readonly view: ProductionsView; readonly launch: { readonly kind: "receipt" | "stale"; readonly receipt: Receipt } | { readonly kind: "launched"; readonly jobId: string } };
 export type RoleEditInput = { readonly id?: string; readonly name: string; readonly brief: string; readonly auditionScript?: string };
+
+/** The operator's audio decision, as the panel sends it. */
+export type AudioDecisionInput = { readonly id: ProductionId; readonly voice: VoiceRoute; readonly music: MusicRoute; readonly sound: SoundRoute; readonly musicRef?: string; readonly note?: string };
+
+/** A final cut (takes in cut order) or, only once the proof holds, a speaking take. */
+export type CutLaunchInput = { readonly kind: "cut" | "speak"; readonly id: ProductionId; readonly takes?: readonly string[]; readonly roleId?: string; readonly mode: ReceiptMode; readonly token?: string };
+export type CutLaunchView = { readonly view: ProductionsView; readonly launch: { readonly kind: "receipt" | "stale"; readonly receipt: Receipt } | { readonly kind: "launched"; readonly jobId: string } };
 
 export type ProductionsPort = {
   readonly start: (input: { readonly source: ProductionSource }) => Promise<ActionResult<ProductionsView>>;
@@ -71,4 +83,6 @@ export type ProductionsPort = {
   readonly recast: (input: { readonly id: ProductionId; readonly roleId: string }) => Promise<ActionResult<ProductionsView>>;
   readonly retryVoices: (input: { readonly id: ProductionId; readonly roundId: string }) => Promise<ActionResult<ProductionsView>>;
   readonly retryCreate: (input: { readonly id: ProductionId; readonly roundId: string }) => Promise<ActionResult<ProductionsView>>;
+  readonly decideAudio: (input: AudioDecisionInput) => Promise<ActionResult<ProductionsView>>;
+  readonly cutLaunch: (input: CutLaunchInput) => Promise<ActionResult<CutLaunchView>>;
 };

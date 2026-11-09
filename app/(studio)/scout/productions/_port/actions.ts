@@ -7,11 +7,11 @@
 import { z } from "zod";
 
 import { RECEIPT_MODES } from "@gt/domain/produce";
-import { PRODUCTION_SOURCE_KINDS, TAKE_KINDS, productionIdSchema, productionStageSchema, type ProductionId, type ProductionSource } from "@gt/domain/production";
+import { MUSIC_ROUTES, PRODUCTION_SOURCE_KINDS, SOUND_ROUTES, TAKE_KINDS, VOICE_ROUTES, productionIdSchema, productionStageSchema, type ProductionId, type ProductionSource } from "@gt/domain/production";
 
 import { action } from "../../../../_server/action.ts";
 import { actorOf } from "../../../../../lib/principal.ts";
-import type { CastLaunchInput, ProductionsPort, RoleEditInput, TakeRequestInput } from "./contract.ts";
+import type { AudioDecisionInput, CastLaunchInput, CutLaunchInput, ProductionsPort, RoleEditInput, TakeRequestInput } from "./contract.ts";
 import { serverProductions } from "./port.ts";
 
 const sourceInput = z.object({ source: z.object({ kind: z.enum(PRODUCTION_SOURCE_KINDS), ref: z.string().min(1).max(200) }) });
@@ -51,6 +51,12 @@ const recastAction = action("cast recast", recastInput, (i, who) => serverProduc
 const roundInput = z.object({ id: productionIdSchema, roundId: z.string().min(1).max(120) });
 const retryVoicesAction = action("cast retry voices", roundInput, (i, who) => serverProductions().retryVoices(i.id as ProductionId, i.roundId, actorOf(who)));
 const retryCreateAction = action("cast retry voice", roundInput, (i, who) => serverProductions().retryCreate(i.id as ProductionId, i.roundId, actorOf(who)));
+
+const audioInput = z.object({ id: productionIdSchema, voice: z.enum(VOICE_ROUTES), music: z.enum(MUSIC_ROUTES), sound: z.enum(SOUND_ROUTES), musicRef: z.string().min(1).max(400).optional(), note: z.string().min(1).max(2000).optional() });
+const decideAudioAction = action("production audio", audioInput, (i, who) => serverProductions().decideAudio(i as unknown as AudioDecisionInput, actorOf(who)));
+const cutKinds = ["cut", "speak"] as const;
+const cutLaunchInput = z.object({ kind: z.enum(cutKinds), id: productionIdSchema, takes: z.array(z.string().min(1).max(40)).max(20).optional(), roleId: z.string().min(1).max(80).optional(), mode: z.enum(RECEIPT_MODES), token: z.string().min(1).optional() });
+const cutLaunchAction = action("cut launch", cutLaunchInput, (i, who) => serverProductions().cutLaunch(i as unknown as CutLaunchInput, actorOf(who)));
 
 export async function startProductionAction(input: In<"start">): Out<"start"> {
   return startAction(input);
@@ -94,6 +100,14 @@ export async function recastAction_(input: In<"recast">): Out<"recast"> {
 
 export async function retryVoicesAction_(input: In<"retryVoices">): Out<"retryVoices"> {
   return retryVoicesAction(input);
+}
+
+export async function decideAudioAction_(input: In<"decideAudio">): Out<"decideAudio"> {
+  return decideAudioAction(input);
+}
+
+export async function cutLaunchAction_(input: In<"cutLaunch">): Out<"cutLaunch"> {
+  return cutLaunchAction(input);
 }
 
 export async function retryCreateAction_(input: In<"retryCreate">): Out<"retryCreate"> {

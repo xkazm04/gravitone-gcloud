@@ -97,7 +97,7 @@ describe("the machine resumes a free lane's interrupted job", () => {
     expect(must(resumeFreeWork(w.fx, sweep(w), hostA)).map((j) => j.id)).toEqual(["board"]);
     expect([stateOf(w, "mv"), stateOf(w, "forge"), stateOf(w, "board")]).toEqual(["interrupted", "interrupted", "queued"]);
     for (const name of ["mv", "frames", "still", "motion", "scout-scene", "scout-asset", "scout-sheet", "scout-ingest", "profile", "forge", "dojo"]) expect(RESUMABLE_PRODUCERS.has(name), name).toBe(false);
-    expect([...RESUMABLE_PRODUCERS].sort()).toEqual(["cover", "cut", "media-facts", "mesh", "production-take", "scout-piece", "scout-storyboard", "yue2-post", "yue2-render", "yue2-score"]);
+    expect([...RESUMABLE_PRODUCERS].sort()).toEqual(["cover", "cut", "media-facts", "mesh", "production-cut", "production-take", "scout-piece", "scout-storyboard", "yue2-post", "yue2-render", "yue2-score"]);
     w.store.close();
   }, 30_000);
 

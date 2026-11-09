@@ -23,7 +23,7 @@ import { err, ok, type Result } from "./errors.ts";
  *  carried to Phase 4). The first domain also had `triage`; nothing opened a
  *  packet under it, and the word was ambiguous between audio triage (`audio`)
  *  and v1's explainer research scope (not a Weir surface), so it is gone. */
-export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout", "seeds", "spend"] as const;
+export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout", "seeds", "spend", "final"] as const;
 export type PacketSource = (typeof PACKET_SOURCES)[number];
 
 export const PACKET_MODES = ["matrix-cull", "blind-pair", "packet-review"] as const;
@@ -105,6 +105,9 @@ export const SOURCES = {
   // matrix cull with a row per trial problem. v1 had no reason list for a proof - only its note,
   // which the atelier shows beside the plate - so a reject is one thing here too.
   proof: { modes: ["matrix-cull"], reasons: [], maxReasons: 0, noteMax: NOTE_SHORT },
+  // A production's final cut (spark concept-casting-stages S5): one video, judged keep (done) or reject with a reason
+  // (returned to its production, which can re-cut or go back to audio). The reasons are the cut's own axes.
+  final: { modes: ["matrix-cull"], reasons: ["picture", "voice", "sound", "pacing", "story"], maxReasons: 3, noteMax: NOTE_LONG, reasonOnReject: true },
   // One /scout night (spark media-training-loop): a row per candidate - an extracted look, a found
   // scene's replicas and clip, a craft finding, a watchlist line. The forge's three still axes, then
   // `motion` for a clip, `rights` for material that should not have been taken, `generic` for a
@@ -214,6 +217,13 @@ export const REASON_MEANING: { readonly [S in PacketSource]: { readonly [R in Re
   trials: {},
   step: {},
   proof: {},
+  final: {
+    picture: "The picture does not hold: drift, artefacts or a broken shot.",
+    voice: "The dialogue is off: wrong voice, garbled, or out of sync.",
+    sound: "Levels, music or room tone do not sit right.",
+    pacing: "The cut's timing drags or rushes the story.",
+    story: "The finished film does not add up to the concept.",
+  },
   scout: {
     style: STILL_MEANING.style,
     subject: STILL_MEANING.subject,

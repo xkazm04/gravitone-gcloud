@@ -99,7 +99,8 @@ export function Productions({ view: initial, port, from }: { readonly view: Prod
   // Watching a take: while any is rendering, re-read the view until it lands.
   const active = (j?: { readonly state: string }): boolean => j?.state === "queued" || j?.state === "running";
   const casting = view.entries.some((e) => Object.values(e.castJobs).some(active) || e.rounds.some((r) => active(r.drawJob) || active(r.voiceJob) || active(r.createJob)));
-  const rendering = view.entries.some((e) => e.production.takes.some((t) => t.state === "rendering")) || casting;
+  const cutting = view.entries.some((e) => e.production.cut?.state === "assembling");
+  const rendering = view.entries.some((e) => e.production.takes.some((t) => t.state === "rendering")) || casting || cutting;
   useEffect(() => {
     if (!rendering) return;
     const t = window.setInterval(() => {
@@ -154,7 +155,7 @@ export function Productions({ view: initial, port, from }: { readonly view: Prod
         </div>
         <div className={s.inspector}>
           {selected !== undefined ? (
-            <ProductionInspector key={selected.production.id} entry={selected} port={port} act={act} onView={onLaunchedView} />
+            <ProductionInspector key={selected.production.id} entry={selected} view={view} port={port} act={act} onView={onLaunchedView} />
           ) : keptConcept !== undefined ? (
             <ConceptInspector key={keptId(keptConcept)} concept={keptConcept} port={port} act={act} onStarted={(id) => { onStarted(id); setNotice(undefined); }} />
           ) : (

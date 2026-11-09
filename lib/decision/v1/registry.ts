@@ -15,6 +15,7 @@ import { scoutAdapter } from "./sources/scout.ts";
 import { seedsAdapter } from "./sources/seeds.ts";
 import { spendAdapter } from "./sources/spend.ts";
 import { sunoAdapter } from "./sources/suno.ts";
+import { finalAdapter } from "./sources/final.ts";
 import type { DecisionAdapter } from "./types.ts";
 import { stepAdapter } from "@/lib/parts/gates";
 
@@ -59,6 +60,8 @@ export const DECISION_ADAPTERS = {
   seeds: adapter(seedsAdapter),
   // spark athena-control-mcp: a day's agent spend requests, a row per request (./sources/spend.ts).
   spend: adapter(spendAdapter),
+  // spark concept-casting-stages S5: a production's final cut, kept (done) or returned (./sources/final.ts).
+  final: adapter(finalAdapter),
 } as const satisfies { readonly [S in PacketSource]: AdapterEntry };
 
 /** The adapter that decides `source`, or `refused` with the reason none does. */

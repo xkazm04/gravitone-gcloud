@@ -1,8 +1,8 @@
 "use client";
 
-// A concept's real work (spark concept-casting-stages S1): Start, frames, launch, progress, compare, proven, drop. Every
-// refusal is the door's sentence, verbatim. Below it, the later stages stay scripted until S2-S6: clearly marked, and
-// nothing they do is written anywhere.
+// A concept's real work (spark concept-casting-stages S1, S4, S5): Start, frames, launch, progress, compare, proven, drop,
+// casting, audio and the final cut. Every refusal is the door's sentence, verbatim. Below it, lessons and ventures stay
+// scripted until S6: clearly marked, and nothing they do is written anywhere.
 
 import { useReducer, useState } from "react";
 
@@ -24,7 +24,8 @@ import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import type { ActionResult } from "../../../../_server/actionCore.ts";
 import type { KeptConcept, ProductionEntry, ProductionsPort, ProductionsView, TakeLaunchView, TakeRequestInput } from "../_port/contract.ts";
 import s from "./productions.module.css";
-import { AudioBlock, CutBlock, LessonsBlock, SourceChip, STAGE_PILL, VentureBlock } from "./Sections.tsx";
+import { LessonsBlock, SourceChip, STAGE_PILL, VentureBlock } from "./Sections.tsx";
+import { AudioPanel, CutPanel } from "./AudioCut.tsx";
 import { CastingPanel } from "./Casting.tsx";
 import { initialScript, scriptReducer } from "./script.ts";
 
@@ -134,7 +135,7 @@ function TakeCard({ take, entry, onProve, busy }: { readonly take: ProductionTak
 
 type Launching = { readonly receipt: ReceiptValue; readonly kind: TakeKind; readonly frames: readonly string[]; readonly prompt?: string; readonly mode: ReceiptMode };
 
-export function ProductionInspector({ entry, port, act, onView }: { readonly entry: ProductionEntry; readonly port: ProductionsPort; readonly act: Act; readonly onView: (v: ProductionsView) => void }) {
+export function ProductionInspector({ entry, view, port, act, onView }: { readonly entry: ProductionEntry; readonly view: ProductionsView; readonly port: ProductionsPort; readonly act: Act; readonly onView: (v: ProductionsView) => void }) {
   const p = entry.production;
   const id = p.id as ProductionId;
   const [frames, setFrames] = useState<readonly string[]>(entry.frames[0] === undefined ? [] : [entry.frames[0].id]);
@@ -249,6 +250,8 @@ export function ProductionInspector({ entry, port, act, onView }: { readonly ent
       </div>
 
       <CastingPanel entry={entry} port={port} act={act} onView={onView} />
+      <AudioPanel entry={entry} view={view} port={port} act={act} onView={onView} />
+      <CutPanel entry={entry} port={port} act={act} onView={onView} />
 
       <div className={s.row}>
         {stage === "proven" && <Button label="Start casting" size="sm" tone="cyan" disabled={busy} onPress={casting} />}
@@ -258,7 +261,7 @@ export function ProductionInspector({ entry, port, act, onView }: { readonly ent
   );
 }
 
-/** The stages S5-S6 build, as they will read, drawn from the scripted slate. Nothing here reaches a record. */
+/** The stages S6 builds, as they will read, drawn from the scripted slate. Nothing here reaches a record. */
 export function ScriptedPanels({ entry, view }: { readonly entry: ProductionEntry; readonly view: ProductionsView }) {
   const [open, setOpen] = useState(false);
   const [script, dispatch] = useReducer(scriptReducer, initialScript);
@@ -266,16 +269,8 @@ export function ScriptedPanels({ entry, view }: { readonly entry: ProductionEntr
   return (
     <div className={s.scripted} data-scripted="later-stages">
       <Fold title="Later stages, scripted" open={open} onToggle={setOpen} level={3}>
-        <p className={s.note}>audio, final cut, lessons and ventures stay scripted until S5-S6. Nothing here is real or written; acts reset on reload.</p>
+        <p className={s.note}>lessons and ventures stay scripted until S6. Nothing here is real or written; acts reset on reload.</p>
         <div className={s.journey}>
-          <section className={s.block} aria-label="audio, scripted">
-            <Chip label="scripted · S5" ghost casing="lower" />
-            <AudioBlock {...props} />
-          </section>
-          <section className={s.block} aria-label="final cut, scripted">
-            <Chip label="scripted · S5" ghost casing="lower" />
-            <CutBlock {...props} />
-          </section>
           <section className={s.block} aria-label="lessons, scripted">
             <Chip label="scripted · S6" ghost casing="lower" />
             <LessonsBlock {...props} />

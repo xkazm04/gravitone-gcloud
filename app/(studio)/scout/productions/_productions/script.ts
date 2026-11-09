@@ -1,13 +1,12 @@
 // What the operator did on the scripted page, held in memory: pure, client-safe (the stage table comes from
 // @gt/domain/production.machine, never the zod door). Nothing here writes anywhere; a reload starts the story again.
 
-import type { MusicRoute, ProductionStage, VoiceRoute } from "@gt/domain/production.machine";
+import type { ProductionStage } from "@gt/domain/production.machine";
 import { productionMachine, refusalOfMove } from "@gt/domain/production.machine";
 
 import type { ProductionEntry } from "../_port/contract.ts";
 
 export type LessonEdit = { readonly text: string; readonly accepted: boolean };
-export type AudioPick = { readonly voice: VoiceRoute; readonly music: MusicRoute };
 
 export type ScriptState = {
   readonly started: Readonly<Record<string, true>>;
@@ -15,12 +14,11 @@ export type ScriptState = {
   readonly proven: Readonly<Record<string, string>>;
   readonly lessons: Readonly<Record<string, LessonEdit>>;
   readonly venture: Readonly<Record<string, string>>;
-  readonly audio: Readonly<Record<string, AudioPick>>;
   /** The latest move a door refused, in its own sentence; absent when the last act went through. */
   readonly refusal?: string;
 };
 
-export const initialScript: ScriptState = { started: {}, stage: {}, proven: {}, lessons: {}, venture: {}, audio: {} };
+export const initialScript: ScriptState = { started: {}, stage: {}, proven: {}, lessons: {}, venture: {} };
 
 export type ScriptAct =
   | { readonly type: "start"; readonly id: string }
@@ -28,7 +26,6 @@ export type ScriptAct =
   | { readonly type: "proven"; readonly id: string; readonly from: ProductionStage; readonly takeId: string }
   | { readonly type: "lesson"; readonly id: string; readonly edit: LessonEdit }
   | { readonly type: "venture"; readonly id: string; readonly name: string }
-  | { readonly type: "audio"; readonly id: string; readonly audio: AudioPick }
   | { readonly type: "clear-refusal" };
 
 const withoutRefusal = (s: ScriptState): ScriptState => {
@@ -54,8 +51,6 @@ export function scriptReducer(s0: ScriptState, a: ScriptAct): ScriptState {
       return { ...s, lessons: { ...s.lessons, [a.id]: a.edit } };
     case "venture":
       return { ...s, venture: { ...s.venture, [a.id]: a.name } };
-    case "audio":
-      return { ...s, audio: { ...s.audio, [a.id]: a.audio } };
     case "clear-refusal":
       return s;
   }

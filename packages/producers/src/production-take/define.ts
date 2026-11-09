@@ -42,6 +42,8 @@ const clipSchema = z
     /** Its last frame, when the operator chose two. */
     last: blobRefSchema.optional(),
     prompt: z.string().min(1).max(4000),
+    /** A speaking take (S5, behind the voice proof): `first` is the character's still, this the voice line, rendered through ref2va. */
+    speaking: z.object({ voice: blobRefSchema }).strict().optional(),
   })
   .strict();
 

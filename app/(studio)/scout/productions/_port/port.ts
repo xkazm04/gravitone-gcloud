@@ -7,7 +7,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { ProductionId, ProductionSource, ProductionStage } from "@gt/domain/production";
 
-import type { CastLaunchInput, CastLaunchView, ProductionsView, RoleEditInput, TakeLaunchView, TakeRequestInput } from "./contract.ts";
+import type { AudioDecisionInput, CastLaunchInput, CastLaunchView, CutLaunchInput, CutLaunchView, ProductionsView, RoleEditInput, TakeLaunchView, TakeRequestInput } from "./contract.ts";
 import { fixtureProductions } from "./fixture.ts";
 import { realProductions } from "./real.ts";
 
@@ -25,6 +25,8 @@ export type ServerProductions = {
   readonly recast: (id: ProductionId, roleId: string, who: Actor) => Promise<Result<ProductionsView>>;
   readonly retryVoices: (id: ProductionId, roundId: string, who: Actor) => Promise<Result<ProductionsView>>;
   readonly retryCreate: (id: ProductionId, roundId: string, who: Actor) => Promise<Result<ProductionsView>>;
+  readonly decideAudio: (input: AudioDecisionInput, who: Actor) => Promise<Result<ProductionsView>>;
+  readonly cutLaunch: (input: CutLaunchInput, who: Actor) => Promise<Result<CutLaunchView>>;
 };
 
 const SCRIPTED = "the fixture side has no record to act on (GRAVITONE_PRODUCE_SIDE=fixture)";
@@ -43,6 +45,8 @@ const fixtureSide: ServerProductions = {
   recast: async () => err("refused", SCRIPTED),
   retryVoices: async () => err("refused", SCRIPTED),
   retryCreate: async () => err("refused", SCRIPTED),
+  decideAudio: async () => err("refused", SCRIPTED),
+  cutLaunch: async () => err("refused", SCRIPTED),
 };
 
 function unwrap(r: Result<ProductionsView>): ProductionsView {

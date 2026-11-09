@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ACTOR_KINDS } from "@gt/domain/event";
-import { TAKE_KINDS, TAKE_STATES, productionBoardSchema, productionSourceSchema, productionStageSchema } from "@gt/domain/production";
+import { CUT_FORMATS, CUT_STATES, TAKE_KINDS, TAKE_STATES, productionBoardSchema, productionSourceSchema, productionStageSchema } from "@gt/domain/production";
 
 import type { ModuleMigrations } from "../migrate.ts";
 
@@ -124,6 +124,50 @@ CREATE TABLE cast_candidates (
 CREATE TRIGGER cast_candidates_never_deleted BEFORE DELETE ON cast_candidates
 BEGIN SELECT RAISE(ABORT, 'a casting candidate is never deleted'); END;`,
     },
+    // The audio decision and the final cut (spark concept-casting-stages S5): one audio row on the head, cuts appended, the one voice proof.
+    {
+      version: 3,
+      sql: `
+ALTER TABLE productions ADD COLUMN audio TEXT CHECK (audio IS NULL OR (json_valid(audio) AND json_type(audio) = 'object'));
+ALTER TABLE production_takes ADD COLUMN speaking TEXT CHECK (speaking IS NULL OR (json_valid(speaking) AND json_type(speaking) = 'object'));
+CREATE TRIGGER production_takes_speaking_fixed BEFORE UPDATE OF speaking ON production_takes
+BEGIN SELECT RAISE(ABORT, 'a take is fixed when it is requested; only its outcome and proof are written'); END;
+CREATE TABLE production_cuts (
+  production_id TEXT NOT NULL REFERENCES productions (id),
+  id TEXT NOT NULL CHECK (length(id) > 0),
+  n INTEGER NOT NULL CHECK (n > 0),
+  format TEXT NOT NULL CHECK (format IN ('trailer', 'music-clip')),
+  state TEXT NOT NULL CHECK (state IN ('assembling', 'on-board', 'approved', 'returned', 'failed', 'rehearsed')),
+  takes TEXT NOT NULL CHECK (json_valid(takes) AND json_type(takes) = 'array'),
+  receipt TEXT,
+  job_id TEXT NOT NULL CHECK (length(job_id) > 0),
+  dry INTEGER NOT NULL DEFAULT 0 CHECK (dry IN (0, 1)),
+  packet_id TEXT,
+  video TEXT,
+  error TEXT,
+  duration_s REAL CHECK (duration_s IS NULL OR duration_s >= 0),
+  note TEXT,
+  at TEXT NOT NULL,
+  judged_at TEXT,
+  judged_by TEXT,
+  PRIMARY KEY (production_id, id),
+  UNIQUE (production_id, n),
+  CHECK (state <> 'failed' OR error IS NOT NULL),
+  CHECK (state <> 'on-board' OR (video IS NOT NULL AND packet_id IS NOT NULL))
+);
+CREATE TRIGGER production_cuts_fixed BEFORE UPDATE OF production_id, id, n, format, takes, job_id, dry, at ON production_cuts
+BEGIN SELECT RAISE(ABORT, 'a cut is fixed when it is launched; only its outcome and verdict are written'); END;
+CREATE TRIGGER production_cuts_never_deleted BEFORE DELETE ON production_cuts
+BEGIN SELECT RAISE(ABORT, 'a cut is never deleted'); END;
+CREATE TABLE production_voice_proof (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  outcome TEXT NOT NULL CHECK (outcome IN ('held', 'failed')),
+  note TEXT,
+  evidence TEXT,
+  at TEXT NOT NULL,
+  by_id TEXT NOT NULL CHECK (length(by_id) > 0)
+);`,
+    },
   ],
 };
 
@@ -131,8 +175,9 @@ BEGIN SELECT RAISE(ABORT, 'a casting candidate is never deleted'); END;`,
 
 export const startInputSchema = z.object({ source: productionSourceSchema, title: z.string().trim().min(1), board: productionBoardSchema }).strict();
 
-export const HEAD_COLUMNS = "id, title, source_kind, source_ref, stage, board, started_at, started_by_kind, started_by, roles, cast_jobs";
-export const TAKE_COLUMNS = "production_id, id, n, kind, state, beats, frames, prompt, seed, engine, job_id, dry, at, video, poster, error, duration_s, gpu_seconds, proven_at, proven_by, stale";
+export const HEAD_COLUMNS = "id, title, source_kind, source_ref, stage, board, started_at, started_by_kind, started_by, roles, cast_jobs, audio";
+export const TAKE_COLUMNS = "production_id, id, n, kind, state, beats, frames, prompt, seed, engine, job_id, dry, at, video, poster, error, duration_s, gpu_seconds, proven_at, proven_by, stale, speaking";
+export const CUT_COLUMNS = "production_id, id, n, format, state, takes, receipt, job_id, dry, packet_id, video, error, duration_s, note, at, judged_at, judged_by";
 
 const opt = z.string().nullable();
 
@@ -148,6 +193,7 @@ export const headRowSchema = z.object({
   started_by: z.string().min(1),
   roles: z.string(),
   cast_jobs: z.string(),
+  audio: z.string().nullable(),
 });
 
 export const takeRowSchema = z.object({
@@ -172,6 +218,27 @@ export const takeRowSchema = z.object({
   proven_at: opt,
   proven_by: opt,
   stale: z.number(),
+  speaking: z.string().nullable(),
+});
+
+export const cutRowSchema = z.object({
+  production_id: z.string(),
+  id: z.string().min(1),
+  n: z.number().int().positive(),
+  format: z.enum(CUT_FORMATS),
+  state: z.enum(CUT_STATES),
+  takes: z.string(),
+  receipt: opt,
+  job_id: z.string().min(1),
+  dry: z.number(),
+  packet_id: opt,
+  video: opt,
+  error: opt,
+  duration_s: z.number().nullable(),
+  note: opt,
+  at: z.string(),
+  judged_at: opt,
+  judged_by: opt,
 });
 
 export const stringListSchema = z.array(z.string().min(1)).min(1);

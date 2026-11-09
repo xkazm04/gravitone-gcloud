@@ -116,12 +116,12 @@ const SLATE: readonly Raw[] = [
     poster: `${PICS}/panel-5.webp`,
   },
   {
-    production: { ...base("sigil-run", "Sigil Run", { kind: "codex-board", ref: "2026-11-07/t3-S2-04" }, "cutting"), takes: [rough("t-1", 1, { provenAt: NOW, provenBy: BY })], roles: [{ ...ROLE_ARCHER, cast: { characterId: CHR(2), voiceId: "el-voice-scripted-2", roundId: "round-sigil", pickedAt: NOW, pickedBy: BY } }], audio: { voice: "dub", music: "score", decidedAt: NOW, decidedBy: BY }, cut: { format: "trailer", state: "on-board", receipt: "rcpt-sigil-01", packetId: "pkt:production:sigil-run", at: NOW } },
+    production: { ...base("sigil-run", "Sigil Run", { kind: "codex-board", ref: "2026-11-07/t3-S2-04" }, "cutting"), takes: [rough("t-1", 1, { provenAt: NOW, provenBy: BY })], roles: [{ ...ROLE_ARCHER, cast: { characterId: CHR(2), voiceId: "el-voice-scripted-2", roundId: "round-sigil", pickedAt: NOW, pickedBy: BY } }], audio: { voice: "dub", music: "score", decidedAt: NOW, decidedBy: BY }, cut: { id: "cut-1", takes: ["t-1"], format: "trailer", state: "on-board", receipt: "rcpt-sigil-01", packetId: "pkt:production:sigil-run", at: NOW } },
     logline: "A courier carries a mark she cannot read.",
     poster: `${PICS}/panel-4.webp`,
   },
   {
-    production: { ...base("archivist", "The Archivist", { kind: "episode", ref: "chn-quiet-desk/ep-07" }, "done"), takes: [rough("t-1", 2, { provenAt: NOW, provenBy: BY })], roles: [{ ...ROLE_HARBOURMASTER, cast: { characterId: CHR(1), voiceId: "el-voice-scripted-3", roundId: "round-archivist", pickedAt: NOW, pickedBy: BY } }], audio: { voice: "ref-audio", music: "track", decidedAt: NOW, decidedBy: BY }, cut: { format: "music-clip", state: "approved", receipt: "rcpt-archivist-02", packetId: "pkt:production:archivist", at: NOW } },
+    production: { ...base("archivist", "The Archivist", { kind: "episode", ref: "chn-quiet-desk/ep-07" }, "done"), takes: [rough("t-1", 2, { provenAt: NOW, provenBy: BY })], roles: [{ ...ROLE_HARBOURMASTER, cast: { characterId: CHR(1), voiceId: "el-voice-scripted-3", roundId: "round-archivist", pickedAt: NOW, pickedBy: BY } }], audio: { voice: "ref-audio", music: "track", decidedAt: NOW, decidedBy: BY }, cut: { id: "cut-1", takes: ["t-1"], format: "music-clip", state: "approved", receipt: "rcpt-archivist-02", packetId: "pkt:production:archivist", at: NOW } },
     logline: "Everything she filed for thirty years, filed once more.",
     poster: `${PICS}/panel-3.webp`,
     lessons: [
@@ -166,5 +166,5 @@ export function fixtureProductions(): Result<ProductionsView> {
     entries.push(e.value);
   }
   const scripted = entries.find((e) => e.rounds.length > 0) ?? entries[0];
-  return ok({ entries, kept, ventures: [{ id: "vn-quiet-desk", name: "Quiet Desk" }, { id: "vn-harbour-tales", name: "Harbour Tales" }], ...(scripted === undefined ? {} : { scripted }) });
+  return ok({ entries, kept, ventures: [{ id: "vn-quiet-desk", name: "Quiet Desk" }, { id: "vn-harbour-tales", name: "Harbour Tales" }], voiceRoute: "dub", ...(scripted === undefined ? {} : { scripted }) });
 }

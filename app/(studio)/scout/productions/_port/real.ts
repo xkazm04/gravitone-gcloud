@@ -4,7 +4,7 @@ import "server-only";
 // the concepts that can Start from Scout's own files (lib/foundry/scout/concepts.ts). A stage is read from the record,
 // never inferred from a night. A concept with a production no longer offers Start.
 //
-// Casting reads the record (S4); audio, cut, lessons and ventures keep drawing the scripted slate until S5-S6 (`scripted` on the view).
+// Casting, audio and the final cut read the record (S4, S5); lessons and ventures keep drawing the scripted slate until S6 (`scripted` on the view).
 
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
@@ -17,11 +17,13 @@ import { keptConcepts } from "../../../../../lib/foundry/scout/concepts.ts";
 import { blobRoute } from "../../../../../lib/library/media.ts";
 import { jobOfTake, markProven, moveProduction, requestTake, startProduction } from "../../../../../lib/producers/production.ts";
 import { castJobsView, castRoundView, markHeard, pickCast, recastRole, requestAudition, requestRoles, requestRound, retryDesigns, retryVoiceCreate, retryVoices, saveRoles } from "../../../../../lib/producers/productionCast.ts";
+import { decideAudio, productionVoiceRoute, requestSpeakingTake } from "../../../../../lib/producers/productionAudio.ts";
+import { jobOfCut, requestCut } from "../../../../../lib/producers/productionCut.ts";
 import type { CastRound } from "@gt/domain/production";
 import { kernel } from "../../../../../lib/kernelStore.ts";
 import type { Production, ProductionId } from "@gt/domain/production";
 
-import type { CastLaunchView, KeptConcept, ProductionEntry, ProductionFrame, ProductionsView, RoleEditInput, TakeLaunchView, TakeProgress, TakeRequestInput } from "./contract.ts";
+import type { AudioDecisionInput, CastLaunchView, CutLaunchInput, CutLaunchView, KeptConcept, ProductionEntry, ProductionFrame, ProductionsView, RoleEditInput, TakeLaunchView, TakeProgress, TakeRequestInput } from "./contract.ts";
 import { fixtureProductions } from "./fixture.ts";
 import type { ServerProductions } from "./port.ts";
 
@@ -48,7 +50,9 @@ function entryOf(p: Production, store: Parameters<typeof jobOfTake>[0]): Product
       if (view.ok) rounds.push(view.value);
     }
   }
-  return { production: p, logline: p.board.logline, ...(first === undefined ? {} : { poster: first.src }), frames, progress, rounds, castJobs: castJobsView(store, p.id), lessons: [] };
+  const job = p.cut?.jobId === undefined ? undefined : jobOfCut(store, p.cut.jobId);
+  const cutJob: TakeProgress | undefined = job === undefined ? undefined : { jobState: job.state, done: job.progress.done, total: job.progress.total, ...(job.progress.stage === undefined ? {} : { step: job.progress.stage }) };
+  return { production: p, logline: p.board.logline, ...(first === undefined ? {} : { poster: first.src }), frames, progress, rounds, castJobs: castJobsView(store, p.id), lessons: [], ...(cutJob === undefined ? {} : { cutJob }) };
 }
 
 /** The screen's whole view: the record's productions, the concepts still to start, and the scripted panels. */
@@ -63,7 +67,9 @@ export async function realView(): Promise<Result<ProductionsView>> {
     const kept: readonly KeptConcept[] = (await keptConcepts()).filter((c) => !started.has(`${c.source.kind}:${c.source.ref}`));
     const script = fixtureProductions();
     const scripted = script.ok ? script.value.scripted : undefined;
-    return ok({ entries: productions.value.map((p) => entryOf(p, store)), kept, ventures: [], ...(scripted === undefined ? {} : { scripted }) });
+    const route = productionVoiceRoute(store);
+    if (!route.ok) return route;
+    return ok({ entries: productions.value.map((p) => entryOf(p, store)), kept, ventures: [], voiceRoute: route.value.route, ...(route.value.proof === undefined ? {} : { voiceProof: route.value.proof }), ...(scripted === undefined ? {} : { scripted }) });
   } catch (e) {
     return err("unavailable", errorMessage(e));
   }
@@ -122,4 +128,16 @@ export const realProductions: ServerProductions = {
   recast: async (id, roleId, who) => withStore((s) => recastRole(s, id, roleId, who)),
   retryVoices: async (id, roundId, who) => withStore((s) => retryVoices(s, id, roundId, who)),
   retryCreate: async (id, roundId, who) => withStore((s) => retryVoiceCreate(s, id, roundId, who)),
+  decideAudio: async (input: AudioDecisionInput, who) => then(decideAudio({ id: input.id, decision: { voice: input.voice, music: input.music, sound: input.sound, ...(input.musicRef === undefined ? {} : { musicRef: input.musicRef }), ...(input.note === undefined ? {} : { note: input.note }) }, actor: who })),
+  cutLaunch: async (input: CutLaunchInput, who) => {
+    const store = storeOf();
+    if (!store.ok) return store;
+    const ask = { mode: input.mode, by: who.id, actor: who, dryOnly: dryOnlyFrom(process.env), ...(input.token === undefined ? {} : { token: input.token }) };
+    const r = input.kind === "speak" ? await requestSpeakingTake(store.value, { id: input.id, roleId: input.roleId ?? "", ...ask }) : await requestCut({ id: input.id, takes: input.takes ?? [], ...ask });
+    if (!r.ok) return r;
+    const v = await view();
+    if (!v.ok) return v;
+    const launch: CutLaunchView["launch"] = r.value.kind === "launched" ? { kind: "launched", jobId: r.value.jobId } : r.value.kind === "stale" ? { kind: "stale", receipt: r.value.fresh } : { kind: "receipt", receipt: r.value.receipt };
+    return ok({ view: v.value, launch });
+  },
 };

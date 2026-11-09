@@ -27,8 +27,10 @@ import {
   PRODUCTION_SOURCE_KINDS,
   ROUND_CHARACTERS,
   ROUND_VOICES,
+  SOUND_ROUTES,
   TAKE_KINDS,
   TAKE_STATES,
+  VOICE_PROOF_OUTCOMES,
   VOICE_ROUTES,
   productionMachine,
 } from "./production.machine.ts";
@@ -50,9 +52,12 @@ export {
   PRODUCTION_SOURCE_KINDS,
   ROUND_CHARACTERS,
   ROUND_VOICES,
+  SOUND_ROUTES,
   TAKE_KINDS,
   TAKE_STATES,
+  VOICE_PROOF_OUTCOMES,
   VOICE_ROUTES,
+  cutFormatOf,
   productionMachine,
   refusalOfMove,
   voicePickRefusal,
@@ -67,8 +72,10 @@ export {
   type MusicRoute,
   type ProductionSourceKind,
   type ProductionStage,
+  type SoundRoute,
   type TakeKind,
   type TakeState,
+  type VoiceProofOutcome,
   type VoiceRoute,
 } from "./production.machine.ts";
 
@@ -120,6 +127,8 @@ export const productionTakeSchema = z.object({
   /** Set by the operator only (OPERATOR_ONLY_STAGES). */
   provenAt: at.optional(),
   provenBy: text.optional(),
+  /** Present when this take renders a cast character speaking through ref2va (the S5 route, off until the proof holds). */
+  speaking: z.object({ roleId: text }).optional(),
   /** Present when a re-cast after this take made it stale. */
   stale: z.literal(true).optional(),
 });
@@ -230,10 +239,18 @@ export const characterRecordSchema = z.object({
 });
 export type CharacterRecord = z.output<typeof characterRecordSchema>;
 
-export const productionAudioSchema = z.object({ voice: z.enum(VOICE_ROUTES), music: z.enum(MUSIC_ROUTES), note: text.optional(), decidedAt: at, decidedBy: text });
+/**
+ * The operator's audio decision (`production.audio`), one record per production at stage `audio`. `musicRef` is the
+ * source reference of the music: a blob address or sha256 of a Library track; required for `score` and `track`.
+ */
+export const productionAudioSchema = z.object({ voice: z.enum(VOICE_ROUTES), music: z.enum(MUSIC_ROUTES), sound: z.enum(SOUND_ROUTES).optional(), musicRef: text.optional(), note: text.optional(), decidedAt: at, decidedBy: text });
 export type ProductionAudio = z.output<typeof productionAudioSchema>;
 
 export const productionCutSchema = z.object({
+  /** `cut-N`, appended: a returned cut stays. */
+  id: text,
+  /** The take ids assembled, in cut order. */
+  takes: z.array(text),
   format: z.enum(CUT_FORMATS),
   state: z.enum(CUT_STATES),
   /** The launch receipt; omitted before a launch. */
@@ -242,9 +259,20 @@ export const productionCutSchema = z.object({
   packetId: text.optional(),
   video: text.optional(),
   error: text.optional(),
+  /** The kernel job assembling it. */
+  jobId: text.optional(),
+  /** Present when a dry job answered: no video exists and nothing reaches the Board. */
+  dry: z.literal(true).optional(),
+  durationS: z.number().nonnegative().optional(),
+  /** What the door could not hold whole (a line cut at the picture's end, a track trimmed). */
+  note: text.optional(),
   at,
 });
 export type ProductionCut = z.output<typeof productionCutSchema>;
+
+/** The stored result of the ref-audios proof: the only way `ref-audio` becomes a route anyone can pick. */
+export const voiceProofSchema = z.object({ outcome: z.enum(VOICE_PROOF_OUTCOMES), note: text.optional(), evidence: text.optional(), at, by: text });
+export type VoiceProof = z.output<typeof voiceProofSchema>;
 
 export const productionLessonSchema = z.object({
   id: text,

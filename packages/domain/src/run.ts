@@ -88,6 +88,8 @@ export const PRODUCERS = [
   // A casting round's ElevenLabs voices (spark concept-casting-stages S3): designed previews levelled to one loudness, a voice created only on the pick; on cloud.elevenlabs.
   "production-voices",
   "production-cast",
+  // A production's final cut (spark concept-casting-stages S5): the trailer or music-clip craft by format, on box.render, the result to the Board.
+  "production-cut",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

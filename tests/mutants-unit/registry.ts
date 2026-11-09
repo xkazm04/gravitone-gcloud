@@ -1312,6 +1312,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A hero take gets a cut step: a single clip is sent through ffmpeg it does not need and its video never lands as the take.",
   },
   {
+    id: "production-cut-plan-lays-with-nothing",
+    test: "packages/producers/test/production-cut-define.test.ts",
+    file: "packages/producers/src/production-cut/define.ts",
+    find: "if (laysAudio(req)) steps.push(",
+    replace: "if (req.takes.length > 0) steps.push(",
+    why: "A bare trailer gets a lay step with nothing to lay: ffmpeg re-encodes a cut for no reason and a dub-free production fails on its empty line list.",
+  },
+  {
     id: "production-voices-plan-rebuys-design",
     test: "packages/producers/test/production-voices-define.test.ts",
     file: "packages/producers/src/production-voices/define.ts",

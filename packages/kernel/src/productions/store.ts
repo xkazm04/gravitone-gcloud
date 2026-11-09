@@ -14,12 +14,15 @@ import type { Actor } from "@gt/domain/event";
 import {
   PRODUCTION_EVENTS,
   PRODUCTION_ID_RE,
+  productionAudioSchema,
   productionBoardSchema,
   productionRoleSchema,
   productionSchema,
   refusalOfMove,
   type Production,
+  type ProductionAudio,
   type ProductionBoard,
+  type ProductionCut,
   type ProductionSource,
   type ProductionStage,
   type ProductionTake,
@@ -28,7 +31,7 @@ import {
 
 import { append } from "../events.ts";
 import type { Reader, Row, Tx } from "../store.ts";
-import { HEAD_COLUMNS, TAKE_COLUMNS, headRowSchema, startInputSchema, stringListSchema, takeRowSchema } from "./schema.ts";
+import { CUT_COLUMNS, HEAD_COLUMNS, TAKE_COLUMNS, cutRowSchema, headRowSchema, startInputSchema, stringListSchema, takeRowSchema } from "./schema.ts";
 
 const rolesSchema = z.array(productionRoleSchema);
 
@@ -59,8 +62,51 @@ function toTake(row: Row): ProductionTake {
     ...(r.proven_at === null ? {} : { provenAt: r.proven_at }),
     ...(r.proven_by === null ? {} : { provenBy: r.proven_by }),
     ...(r.stale === 1 ? { stale: true as const } : {}),
+    ...(r.speaking === null ? {} : { speaking: must(parseJsonAt(`take ${r.id} speaking`, z.object({ roleId: z.string().min(1) }), r.speaking)) }),
   };
 }
+
+function toCut(row: Row): ProductionCut {
+  const c = must(parseAt("production cut row", cutRowSchema, row));
+  return {
+    id: c.id,
+    takes: must(parseJsonAt(`cut ${c.id} takes`, z.array(z.string().min(1)), c.takes)),
+    format: c.format,
+    state: c.state,
+    ...(c.receipt === null ? {} : { receipt: c.receipt }),
+    ...(c.packet_id === null ? {} : { packetId: c.packet_id }),
+    ...(c.video === null ? {} : { video: c.video }),
+    ...(c.error === null ? {} : { error: c.error }),
+    jobId: c.job_id,
+    ...(c.dry === 1 ? { dry: true as const } : {}),
+    ...(c.duration_s === null ? {} : { durationS: c.duration_s }),
+    ...(c.note === null ? {} : { note: c.note }),
+    at: c.at,
+  };
+}
+
+/** A production's latest cut, the one the screen shows. Cuts are appended, `cut-N`. */
+export function latestCut(r: Reader, id: string): ProductionCut | undefined {
+  const row = r.get(`SELECT ${CUT_COLUMNS} FROM production_cuts WHERE production_id = ? ORDER BY n DESC LIMIT 1`, id);
+  return row === undefined ? undefined : toCut(row);
+}
+
+/** One cut by id. */
+export function readCut(r: Reader, id: string, cutId: string): ProductionCut | undefined {
+  const row = r.get(`SELECT ${CUT_COLUMNS} FROM production_cuts WHERE production_id = ? AND id = ?`, id, cutId);
+  return row === undefined ? undefined : toCut(row);
+}
+
+/** Every cut waiting on the Board, for its pile. */
+export function cutsOnBoard(r: Reader): readonly { readonly productionId: string; readonly title: string; readonly cut: ProductionCut }[] {
+  return r.all(`SELECT ${CUT_COLUMNS} FROM production_cuts WHERE state = 'on-board' ORDER BY at`).map((row) => {
+    const productionId = String(row["production_id"]);
+    const title = String(r.get("SELECT title FROM productions WHERE id = ?", productionId)?.["title"] ?? productionId);
+    return { productionId, title, cut: toCut(row) };
+  });
+}
+
+const audioOf = (h: { readonly id: string; readonly audio: string | null }): ProductionAudio | undefined => (h.audio === null ? undefined : must(parseJsonAt(`production ${h.id} audio`, productionAudioSchema, h.audio)));
 
 function takesOf(r: Reader, id: string): ProductionTake[] {
   return r.all(`SELECT ${TAKE_COLUMNS} FROM production_takes WHERE production_id = ? ORDER BY n`, id).map(toTake);
@@ -77,6 +123,8 @@ function toProduction(r: Reader, row: Row): Production {
       board: must(parseJsonAt(`production ${h.id} board`, productionBoardSchema, h.board)),
       takes: takesOf(r, h.id),
       roles: must(parseJsonAt(`production ${h.id} roles`, rolesSchema, h.roles)),
+      ...(audioOf(h) === undefined ? {} : { audio: audioOf(h) }),
+      ...(latestCut(r, h.id) === undefined ? {} : { cut: latestCut(r, h.id) }),
       startedAt: h.started_at,
       startedBy: h.started_by,
     }),
@@ -152,7 +200,7 @@ export function startProductionIn(t: Tx, input: StartInput, actor: Actor): Produ
   return mustHave(t, id);
 }
 
-function stageMove(t: Tx, id: string, from: ProductionStage, to: ProductionStage, actor: Actor): void {
+export function stageMove(t: Tx, id: string, from: ProductionStage, to: ProductionStage, actor: Actor): void {
   t.run("UPDATE productions SET stage = ? WHERE id = ?", to, id);
   append(t, { actor, type: PRODUCTION_EVENTS.staged, subject: { kind: "production", id }, data: { from, to } });
 }
@@ -163,6 +211,8 @@ function stageMove(t: Tx, id: string, from: ProductionStage, to: ProductionStage
  */
 export function refusalOfCastMove(p: Production, to: ProductionStage): string | undefined {
   if (to === "casting" && (p.stage === "audio" || p.stage === "cutting")) return "production: a re-cast names the role it re-casts; the stage does not move back on its own";
+  if (to === "cutting" && p.stage === "audio") return p.audio === undefined ? "production: the audio decision comes before the final cut" : undefined;
+  if (to === "done" && p.stage === "cutting") return p.cut?.state === "approved" ? undefined : "production: only the Board's approval of a final cut finishes a production";
   if (to !== "audio" || p.stage !== "casting") return undefined;
   if (p.roles.length === 0) return `production: ${p.id} has no roles to cast`;
   const open = p.roles.filter((r) => r.cast === undefined).map((r) => r.name);
@@ -190,10 +240,13 @@ export type NewTake = {
   readonly engine: string;
   readonly jobId: string;
   readonly dry: boolean;
+  /** A cast character speaking (the S5 route): rendered at `audio`, it walks no stage. */
+  readonly speaking?: { readonly roleId: string };
 };
 
-/** Why this take may not be asked for at this stage; undefined when it may. A rough cut needs a hero take that landed. */
-export function refusalOfTake(p: Production, kind: TakeKind): string | undefined {
+/** Why this take may not be asked for at this stage; undefined when it may. A rough cut needs a hero take that landed; a speaking take is rendered only at audio. */
+export function refusalOfTake(p: Production, kind: TakeKind, speaking = false): string | undefined {
+  if (speaking) return p.stage === "audio" ? undefined : `production: a speaking take is rendered at audio, not ${p.stage}`;
   if (kind === "hero") return p.stage === "accepted" || p.stage === "hero" || p.stage === "rough" ? undefined : `production: a hero take cannot be rendered from ${p.stage}`;
   if (p.stage !== "hero" && p.stage !== "rough") return `production: a rough cut cannot be rendered from ${p.stage}`;
   return p.takes.some((x) => x.kind === "hero" && x.state === "ready") ? undefined : "production: a rough cut comes only after a hero take has landed";
@@ -211,9 +264,9 @@ const stageForTake = (from: ProductionStage, kind: TakeKind): ProductionStage | 
  */
 export function appendTake(t: Tx, id: string, take: NewTake, actor: Actor): { readonly production: Production; readonly take: ProductionTake } {
   const p = mustHave(t, id);
-  const why = refusalOfTake(p, take.kind);
+  const why = refusalOfTake(p, take.kind, take.speaking !== undefined);
   if (why !== undefined) throw new AppError("refused", why);
-  const to = stageForTake(p.stage, take.kind);
+  const to = take.speaking !== undefined ? undefined : stageForTake(p.stage, take.kind);
   if (to !== undefined) {
     const refusal = refusalOfMove(p.stage, to, actor.kind);
     if (refusal !== undefined) throw new AppError("refused", refusal);
@@ -222,7 +275,7 @@ export function appendTake(t: Tx, id: string, take: NewTake, actor: Actor): { re
   const n = 1 + Number((t.get("SELECT COALESCE(MAX(n), 0) AS n FROM production_takes WHERE production_id = ?", id) ?? { n: 0 })["n"]);
   const takeId = `take-${n}`;
   t.run(
-    "INSERT INTO production_takes (production_id, id, n, kind, state, beats, frames, prompt, seed, engine, job_id, dry, at) VALUES (?, ?, ?, ?, 'rendering', ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO production_takes (production_id, id, n, kind, state, beats, frames, prompt, seed, engine, job_id, dry, at, speaking) VALUES (?, ?, ?, ?, 'rendering', ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     id,
     takeId,
     n,
@@ -235,6 +288,7 @@ export function appendTake(t: Tx, id: string, take: NewTake, actor: Actor): { re
     take.jobId,
     take.dry ? 1 : 0,
     t.at,
+    take.speaking === undefined ? null : JSON.stringify(take.speaking),
   );
   append(t, { actor, type: PRODUCTION_EVENTS.take, subject: { kind: "production", id }, data: { take: takeId, kind: take.kind, state: "rendering", jobId: take.jobId, dry: take.dry } });
   const production = mustHave(t, id);

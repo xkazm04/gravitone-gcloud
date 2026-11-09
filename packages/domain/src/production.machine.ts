@@ -60,10 +60,20 @@ export type VoiceRoute = (typeof VOICE_ROUTES)[number];
 export const MUSIC_ROUTES = ["score", "track", "none"] as const;
 export type MusicRoute = (typeof MUSIC_ROUTES)[number];
 
+/** What the picture's own sound does in the cut: `native` keeps H3's sound under it, `none` silences it. Absent reads native. */
+export const SOUND_ROUTES = ["native", "none"] as const;
+export type SoundRoute = (typeof SOUND_ROUTES)[number];
+
+/** The voice-to-picture proof's outcome (S5): only `held` opens the ref-audio route; anything else leaves the route at dub. */
+export const VOICE_PROOF_OUTCOMES = ["held", "failed"] as const;
+export type VoiceProofOutcome = (typeof VOICE_PROOF_OUTCOMES)[number];
+
 /** The door over the two final-cut pipelines is chosen by format. */
 export const CUT_FORMATS = ["trailer", "music-clip"] as const;
 export type CutFormat = (typeof CUT_FORMATS)[number];
-export const CUT_STATES = ["assembling", "on-board", "approved", "returned", "failed"] as const;
+/** A song track under the picture is the music-clip craft (the track carries the timeline); anything else is the trailer's, the picture's own sound and an optional bed. */
+export const cutFormatOf = (music: MusicRoute): CutFormat => (music === "track" ? "music-clip" : "trailer");
+export const CUT_STATES = ["assembling", "on-board", "approved", "returned", "failed", "rehearsed"] as const;
 export type CutState = (typeof CUT_STATES)[number];
 
 /** Every pool a character may enter the library from. Parody-cast is not one: its references are fan-site images. */
@@ -105,6 +115,9 @@ export const PRODUCTION_EVENTS = {
   characterUpdated: "character.updated",
   characterSaved: "character.saved",
   characterUsed: "character.used",
+  audio: "production.audio",
+  cut: "production.cut",
+  voiceProof: "production.voice-proof",
   lessonProposed: "production.lesson-proposed",
   lessonAccepted: "production.lesson-accepted",
 } as const;

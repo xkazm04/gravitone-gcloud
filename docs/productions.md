@@ -164,12 +164,42 @@ labelled by `creditsRead`, including `unread`.
 The way back to `casting` is only `recastRoleIn`, which clears the role's cast and round picks and marks takes at or after
 the old pick stale. A picked voice is reused if the operator picks it again; the slot is not spent twice.
 
+## Audio and the final cut (S5)
+
+`productions` migration 3 adds the `audio` column, `production_cuts`, `production_voice_proof`, and `production_takes.speaking`. Nothing here has run
+live: the craft scripts and ffmpeg are fakes in every test (`tests/next-server/production-cut.test.ts`); the scripts were run
+for real only with `--dry` over the folders this door writes (no encode), and no ComfyUI prompt, GPU or vendor call was made.
+
+**Audio decision.** One record per production at stage `audio`, operator only (`decideAudioIn`): dialogue route (`ref-audio`,
+`dub`, `none`), music route (`score`, `track`, `none`) with `musicRef` (a blob address or sha256; required for `score` and
+`track`), the picture's own sound (`native`, `none`), who decided. `audio -> cutting` is refused until it exists. A dry cast
+still cannot reach audio (S4).
+
+**The voice route, behind a switch.** `productionVoiceRoute` (`lib/producers/productionAudio.ts`) is `dub` until
+`recordVoiceProofIn` stores a held proof (`node pipeline/productions-voice-proof.mts --store <file> --set held|failed`), operator
+only: the decision door and the panel both read it, so `ref-audio` and a speaking take are refused, by name, until then. A
+speaking take (`requestSpeakingTake`, rendered at `audio`, appended, walks no stage) renders ref2va with `ref_images` set to
+the character's still and `ref_audios` to the cast voice's line (`lib/imaging/video/comfyH3Ref.ts`, the graph proved in the test
+without a submission). The design for the banked proof: `foundry-out/spark-casting-s5/ref-audios-proof.md`.
+
+The dub route lays each cast role's line, its picked voice's own mastered preview, over the picture in the cut: one line per
+scene from its opening; a line past the picture's end is cut there and named on the cut.
+
+**The final cut.** A receipt, one resumable job on `box.render` (`packages/producers/src/production-cut/define.ts`,
+`lib/producers/productionCutActs.ts`), `$0`. A track picks the music-clip craft, anything else the trailer's (`cutFormatOf`). It
+WRAPS `pipeline/trailer/cut.mts` and `pipeline/music-clip/assemble.mts`, unedited: `writeFolder` builds the folder each reads
+and the door runs it with `process.execPath` and no shell, then ffmpeg lays any dub lines or a score bed. Each uses `h264_nvenc`.
+A dry job asks no script and no ffmpeg and rehearses (`rehearsed`: no video, no packet).
+
+A live cut lands as `pkt:final:<production>/<cut>`, a kernel-native packet source (`lib/decision/v1/sources/final.ts`, read beside
+`liveNow`, as the proofs' and spend's are), so `runs-live` and `ledger-reconcile` have no row for it. Keep approves (`done`); reject
+must name a reason and returns the cut, the production staying at `cutting`. `done` is only ever reached through that approval.
+
 ## The screen
 
 `/scout/productions` is the operator's pick, graph first: columns idea, board, take, stage on the left, the inspector on
-the right. The Scout graph's `NodePanel` links a kept idea or storyboard here (`?from=<ref>`). Later stages (audio, final cut, lessons, ventures) stay as a marked, scripted fold on the slate from `_port/fixture.ts` until S2-S6;
-those acts live in memory and reset on reload.
+the right. The Scout graph's `NodePanel` links a kept idea or storyboard here (`?from=<ref>`). Audio and the final cut are real (`_productions/AudioCut.tsx`); lessons and ventures stay as a marked, scripted fold on the slate from
+`_port/fixture.ts` until S6, those acts living in memory and resetting on reload.
 
 - No fixture audio exists in the repo: each voice preview is a marked silent stub that only records "heard".
-- The Board gate is not wired: "open on Board" is disabled and says so.
 - `GRAVITONE_PRODUCE_SIDE=fixture` shows the scripted slate only and refuses every act.

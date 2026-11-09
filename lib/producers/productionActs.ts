@@ -17,6 +17,7 @@ import { settleTake, type TakeOutcome } from "@gt/kernel/productions/store";
 
 import { blobRoute } from "../library/media.ts";
 import { H3_ENGINE, H3_SECONDS, renderH3Clip, type H3Still } from "../imaging/video/comfyH3.ts";
+import { H3_REF_ENGINE, renderH3Speaking } from "../imaging/video/comfyH3Ref.ts";
 import { blobRootOf } from "../kernelProcess.ts";
 import { ffmpegCut } from "./scoutPieceActs.ts";
 
@@ -39,6 +40,8 @@ const DRY_CLIP = new TextEncoder().encode("dry-run take stand-in");
 export type TakeEngines = {
   readonly clip?: (input: { readonly first: H3Still; readonly last?: H3Still; readonly prompt: string; readonly seed: number; readonly width: number; readonly height: number }) => Promise<{ readonly bytes: Uint8Array; readonly durationS: number }>;
   readonly cut?: (clips: readonly string[], out: string) => Promise<{ readonly durationS: number }>;
+  /** A speaking take's render (the voice-proof route); live it is the ref2va client, a test hands a fake. */
+  readonly speak?: (input: { readonly image: H3Still; readonly voice: { readonly bytes: Uint8Array; readonly mime: string }; readonly prompt: string; readonly seed: number; readonly width: number; readonly height: number }) => Promise<{ readonly bytes: Uint8Array; readonly durationS: number }>;
 };
 
 function fence(ctx: StepContext): void {
@@ -56,6 +59,12 @@ async function stillOf(root: string, ref: BlobRef): Promise<StillBytes> {
   const r = await blobStore(root).read(ref);
   if (!r.ok) throw r.error;
   return { bytes: r.value, mime: ref.mime === "image/jpeg" ? "image/jpeg" : ref.mime === "image/webp" ? "image/webp" : "image/png" };
+}
+
+async function stillOfAudio(root: string, ref: BlobRef): Promise<{ readonly bytes: Uint8Array; readonly mime: string }> {
+  const r = await blobStore(root).read(ref);
+  if (!r.ok) throw r.error;
+  return { bytes: r.value, mime: ref.mime };
 }
 
 /** Where a live clip is measured and where its seconds come from: one number, written with the take. */
@@ -85,6 +94,12 @@ async function clipAct(e: TakeEngines, root: string, req: TakeRequest, k: number
     const last = ask.last === undefined ? undefined : await stillOf(root, ask.last);
     const render = async (): Promise<{ bytes: Uint8Array; durationS: number; model: string; wallS: number }> => {
       const t0 = Date.now();
+      if (ask.speaking !== undefined) {
+        const voice = await stillOfAudio(root, ask.speaking.voice);
+        const speakInput = { image: first, voice, prompt: ask.prompt, seed: req.seed, ...size };
+        const spoken = e.speak === undefined ? await renderH3Speaking(speakInput) : await e.speak(speakInput);
+        return { bytes: spoken.bytes, durationS: spoken.durationS, model: H3_REF_ENGINE, wallS: (Date.now() - t0) / 1000 };
+      }
       const input = { first, ...(last === undefined ? {} : { last }), prompt: ask.prompt, seed: req.seed, ...size };
       const got = e.clip === undefined ? await renderH3Clip(input) : await e.clip(input);
       return { bytes: got.bytes, durationS: got.durationS, model: H3_ENGINE, wallS: (Date.now() - t0) / 1000 };
@@ -93,7 +108,7 @@ async function clipAct(e: TakeEngines, root: string, req: TakeRequest, k: number
       ? await meteredCall<{ bytes: Uint8Array; durationS: number; model: string; wallS: number }>(ctx, {
           provider: "comfyui",
           model: H3_ENGINE,
-          payload: { first: ask.first.sha256, ...(ask.last === undefined ? {} : { last: ask.last.sha256 }), prompt: ask.prompt, seed: req.seed, ...size },
+          payload: { first: ask.first.sha256, ...(ask.last === undefined ? {} : { last: ask.last.sha256 }), ...(ask.speaking === undefined ? {} : { voice: ask.speaking.voice.sha256 }), prompt: ask.prompt, seed: req.seed, ...size },
           estimate: req.estimates.clip,
           stand: () => ({ bytes: DRY_CLIP, durationS: Math.round(H3_SECONDS * 100) / 100, model: "dry stand-in", wallS: 0 }),
           live: async () => ({ value: await render(), unpriced: "free: a local model" }),
