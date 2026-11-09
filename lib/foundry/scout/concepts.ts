@@ -9,6 +9,7 @@ import { AppError, type Result } from "@gt/domain/errors";
 import type { ProductionAspect, ProductionSource } from "@gt/domain/production";
 
 import { outPath } from "../../fixtures/roots";
+import { readJson } from "../runStore";
 import { readChannels, type ChannelFile } from "./channels";
 import { readNight, resolveInNight } from "./store";
 import type { Night, StoryboardCandidate } from "./types";
@@ -74,16 +75,7 @@ const outlinesSchema = z.array(z.object({ id: z.string().min(1), title: z.string
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-async function readJsonIf(file: string): Promise<unknown> {
-  let text: string;
-  try {
-    text = await readFile(file, "utf8");
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-    throw e;
-  }
-  return JSON.parse(text);
-}
+const readJsonIf = async (file: string): Promise<unknown> => (await readJson<unknown>(file)) ?? undefined;
 
 function parsed<T>(at: string, schema: z.ZodType<T>, raw: unknown): T {
   const r: Result<unknown> = parseAt(at, schema, raw);
