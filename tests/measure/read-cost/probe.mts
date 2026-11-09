@@ -1,5 +1,5 @@
 // THE READ-COST PROBE - counts what a loader asks of the disk and of SQLite, by wrapping the
-// two doors every reader goes through rather than guessing from the code (pipeline/read-cost.mts).
+// two doors every reader goes through rather than guessing from the code (tests/measure/read-cost.mts).
 //
 //   fs      the node:fs and node:fs/promises functions a store reader calls, patched on the
 //           module objects and pushed into every ESM named binding (syncBuiltinESMExports), so

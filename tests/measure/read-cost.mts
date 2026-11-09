@@ -1,12 +1,12 @@
 // READ-COST - what one server read of the Floor, Runs and the Ledger costs, measured in-process.
 //
-//   node pipeline/read-cost.mts [--events 40000] [--days 120] [--jobs 300] [--forge 50]
+//   node tests/measure/read-cost.mts [--events 40000] [--days 120] [--jobs 300] [--forge 50]
 //                               [--extract 50] [--training 10] [--n 20] [--json] [--keep]
 //
-// Builds a studio in a fresh temp root (pipeline/read-cost/seed.mts), then calls the real loaders
+// Builds a studio in a fresh temp root (tests/measure/read-cost/seed.mts), then calls the real loaders
 // - loadFloor, loadRuns, the Ledger's readView - once cold and `n` times warm, and prints per
 // loader the wall time (cold, warm median, warm p95) and what one call asked of the disk and of
-// SQLite (pipeline/read-cost/probe.mts wraps both doors and counts; nothing here is estimated).
+// SQLite (tests/measure/read-cost/probe.mts wraps both doors and counts; nothing here is estimated).
 // A breakdown times the parts each loader is made of, so a cut can be aimed at the largest.
 //
 // Nothing this measured had a timer before (spark fable-ten, package I). The router refreshes
@@ -25,7 +25,7 @@
 // load, and this box runs builders beside it; until a budget is stated from repeated runs on a
 // quiet machine, a fail threshold would be a guess. Exit 2: could not run, or touched outside.
 
-import "./lib-hooks.mts";
+import "../../pipeline/lib-hooks.mts";
 
 import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { cpus, hostname, tmpdir, totalmem } from "node:os";
@@ -48,7 +48,7 @@ const sizes = { events: num("--events", 40_000), days: num("--days", 120), jobs:
 const N = num("--n", 20);
 const json = args.includes("--json");
 if (unknown.length > 0 || Object.values(sizes).some((v) => !Number.isInteger(v) || v < 0) || sizes.days < 1 || !Number.isInteger(N) || N < 1) {
-  console.error(`usage: node pipeline/read-cost.mts [--events 40000] [--days 120] [--jobs 300] [--forge 50] [--extract 50] [--training 10] [--n 20] [--json] [--keep]  (unknown: ${unknown.join(" ")})`);
+  console.error(`usage: node tests/measure/read-cost.mts [--events 40000] [--days 120] [--jobs 300] [--forge 50] [--extract 50] [--training 10] [--n 20] [--json] [--keep]  (unknown: ${unknown.join(" ")})`);
   process.exit(2);
 }
 
@@ -71,7 +71,7 @@ process.env["GRAVITONE_PRODUCE_SIDE"] = "real";
 process.chdir(STUDIO);
 
 const probe = await import("./read-cost/probe.mts");
-const { storeLocation } = await import("../lib/kernelProcess.ts");
+const { storeLocation } = await import("../../lib/kernelProcess.ts");
 const where = storeLocation();
 if (!probe.within(ROOT, where) || /gravitone\.sqlite$/.test(where) === false) {
   console.error(`read-cost: refusing - the store would be ${where}, not under ${ROOT}`);
@@ -80,7 +80,7 @@ if (!probe.within(ROOT, where) || /gravitone\.sqlite$/.test(where) === false) {
 probe.install();
 
 const cleanup = (): void => {
-  void import("../lib/kernelProcess.ts").then((m) => m.closeKernel());
+  void import("../../lib/kernelProcess.ts").then((m) => m.closeKernel());
 };
 
 /* ── seed ─────────────────────────────────────────────────────────────────── */
@@ -95,17 +95,17 @@ const seedFs = probe.snapshot();
 
 /* ── the loaders, imported after the seed so their module-level roots are the temp root's ── */
 
-const { loadFloor } = await import("../app/(studio)/floor/_floor/load.ts");
-const { loadRuns } = await import("../app/(studio)/projects/runs/_runs/load.ts");
-const { readView, readStrip, readFacets, readPage } = await import("../app/(studio)/ledger/_ledger/read.ts");
-const { EMPTY } = await import("../app/(studio)/ledger/_ledger/filter.ts");
-const { V1_SOURCES } = await import("../lib/ledger/v1/sources.ts");
-const { liveJobs, v1Ctx } = await import("../lib/ledger/v1/sync.ts");
-const { readShelf } = await import("../app/(studio)/floor/_floor/shelf.ts");
-const { serverCalendar } = await import("../app/(studio)/floor/_calendar/port.ts");
-const { reconcileApplies } = await import("../lib/decision/v1/applier.ts");
+const { loadFloor } = await import("../../app/(studio)/floor/_floor/load.ts");
+const { loadRuns } = await import("../../app/(studio)/projects/runs/_runs/load.ts");
+const { readView, readStrip, readFacets, readPage } = await import("../../app/(studio)/ledger/_ledger/read.ts");
+const { EMPTY } = await import("../../app/(studio)/ledger/_ledger/filter.ts");
+const { V1_SOURCES } = await import("../../lib/ledger/v1/sources.ts");
+const { liveJobs, v1Ctx } = await import("../../lib/ledger/v1/sync.ts");
+const { readShelf } = await import("../../app/(studio)/floor/_floor/shelf.ts");
+const { serverCalendar } = await import("../../app/(studio)/floor/_calendar/port.ts");
+const { reconcileApplies } = await import("../../lib/decision/v1/applier.ts");
 const { listPacketSummaries } = await import("@gt/kernel/decision/view");
-const { serverProduce } = await import("../app/(studio)/projects/_port/port.ts");
+const { serverProduce } = await import("../../app/(studio)/projects/_port/port.ts");
 const store = seeded.store;
 
 type Sample = { ms: number; c: ReturnType<typeof probe.snapshot> };
@@ -175,7 +175,7 @@ try {
 
 // A module the loader hooks resolved or compiled is the checkout's code, not a store: it is kept
 // apart from the reads, and must still come from the checkout, never from a data directory.
-const REPO = path.resolve(import.meta.dirname, "..");
+const REPO = path.resolve(import.meta.dirname, "..", "..");
 const modules = [...probe.modules];
 const strayModules = modules.filter((p) => !probe.within(REPO, p) || /[\\/](foundry-out|fixtures-out)[\\/]/i.test(p));
 const outside = [...[...probe.touched].filter((p) => !probe.within(ROOT, p)), ...strayModules];
@@ -210,7 +210,7 @@ if (json) {
   for (const p of [...outside, ...badDb]) console.log(`    ${p}`);
 }
 
-const { closeKernel } = await import("../lib/kernelProcess.ts");
+const { closeKernel } = await import("../../lib/kernelProcess.ts");
 closeKernel();
 process.chdir(tmpdir());
 if (!args.includes("--keep")) rmSync(ROOT, { recursive: true, force: true });

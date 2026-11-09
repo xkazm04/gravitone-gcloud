@@ -52,7 +52,7 @@ export function containedIn(dir: string, rel: string, servableOnly = false, noun
 //
 // The Floor and Runs re-read every v1 store on each router.refresh (an event, or the 20 s
 // backstop), and the foundry listings read run.json + verdicts.json for every run directory,
-// twice per run for the forge (scanRuns, then getRun). Measured by pipeline/read-cost.mts on 50
+// twice per run for the forge (scanRuns, then getRun). Measured by tests/measure/read-cost.mts on 50
 // forge + 50 extract runs: ~500 file reads, about half of a warm loadFloor. A `stat` is ~20x
 // cheaper than open+read+close on this box (Windows, 67 manifests: 1.3 ms against 25 ms in
 // parallel), and JSON.parse is ~10% of the read, so the TEXT is kept and parsed on every call:
@@ -128,7 +128,7 @@ async function readText(file: string): Promise<string> {
   return text;
 }
 
-/** What the read cache holds and has served (tests, and pipeline/read-cost.mts). */
+/** What the read cache holds and has served (tests, and tests/measure/read-cost.mts). */
 export function readCacheStats(): { readonly entries: number; readonly bytes: number; readonly hits: number; readonly misses: number; readonly keys: readonly string[] } {
   return { entries: cache.size, bytes: cacheBytes, hits: counts.hits, misses: counts.misses, keys: [...cache.keys()] };
 }

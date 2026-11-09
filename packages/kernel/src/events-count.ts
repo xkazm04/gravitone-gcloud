@@ -117,7 +117,7 @@ export type DayKindCount = { readonly day: string; readonly kind: string; readon
  * its actor-kind predicate left out - the facet rule above, so a kind the filter excludes still
  * has its count (the caller decides to draw it as 0). The Ledger's strip read this as one
  * countEvents per day, four statements and a transaction each, ~84 a render (measured by
- * pipeline/read-cost.mts: 672 statements); this is ONE grouped statement over the `t` index.
+ * tests/measure/read-cost.mts: 672 statements); this is ONE grouped statement over the `t` index.
  *
  * The day is `substr(t, 1, 10)`: every stored instant is toISOString's shape (events-query.ts
  * `instant`, the door's precision-3 `Z` datetime), so its first ten characters ARE its UTC day,

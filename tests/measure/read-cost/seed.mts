@@ -1,4 +1,4 @@
-// THE READ-COST WORLD - a studio built in a temp root for pipeline/read-cost.mts to read.
+// THE READ-COST WORLD - a studio built in a temp root for tests/measure/read-cost.mts to read.
 //
 //   v1 stores   the fixture universe's own generators (pipeline/fixtures/*.ts: sound, publish,
 //               foundry, work, scout), written under <root>/fixtures-out because the process's
@@ -73,7 +73,7 @@ const KINDS = ["machine", "machine", "machine", "agent", "operator"] as const;
 export async function seedWorld(root: string, sizes: Sizes, now: number): Promise<{ store: Store; counts: Record<string, number>; ms: number }> {
   const t0 = Date.now();
   for (const name of GENERATORS) {
-    const mod = (await import(`../fixtures/${name}.ts`)) as { generate: () => string };
+    const mod = (await import(`../../../pipeline/fixtures/${name}.ts`)) as { generate: () => string };
     mod.generate();
   }
   const out = path.join(root, "fixtures-out");
@@ -87,9 +87,9 @@ export async function seedWorld(root: string, sizes: Sizes, now: number): Promis
   // in the seconds before the timing would measure only that edge.
   backdate(out, new Date(now - 3_600_000));
 
-  const { kernel } = await import("../../lib/kernelProcess.ts");
-  const { V1_SOURCES } = await import("../../lib/ledger/v1/sources.ts");
-  const { SYNC_CLAIM, syncV1, v1Ctx } = await import("../../lib/ledger/v1/sync.ts");
+  const { kernel } = await import("../../../lib/kernelProcess.ts");
+  const { V1_SOURCES } = await import("../../../lib/ledger/v1/sources.ts");
+  const { SYNC_CLAIM, syncV1, v1Ctx } = await import("../../../lib/ledger/v1/sync.ts");
   const { finishClaim, takeClaim } = await import("@gt/kernel/ingest");
   const { append } = await import("@gt/kernel/events");
   const { enqueueIn, recordImportedJobIn } = await import("@gt/kernel/job");

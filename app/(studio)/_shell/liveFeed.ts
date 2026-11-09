@@ -9,7 +9,7 @@
 //   advice     an EventSource on /api/events/stream from the seq the page rendered at. Any
 //              event but the sync's own bookkeeping (`ingest.*`) is advice to re-read - or, when
 //              the page names the event families its loader reads (`families`), an event of one
-//              of them: a refresh re-runs the whole loader (pipeline/read-cost.mts times it), so
+//              of them: a refresh re-runs the whole loader (tests/measure/read-cost.mts times it), so
 //              an event the page cannot show is a read paid for nothing.
 //   coalesce   a burst - a sync appends hundreds of events in one batch - is ONE refresh: the
 //              first event arms a COALESCE_MS timer and later ones ride it (realtime-events:

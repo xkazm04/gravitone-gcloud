@@ -199,7 +199,7 @@ export type Strip = { readonly days: readonly DayCount[]; readonly today: string
  *
  * One grouped statement for the whole window (events-count.ts countByDay). Until 2026-11 this
  * was one countEvents per day: 84 calls, 672 statements a render, ~17 ms on 40k events
- * (pipeline/read-cost.mts); tests/next-server/ledger-strip-grouped.test.ts holds the two equal on
+ * (tests/measure/read-cost.mts); tests/next-server/ledger-strip-grouped.test.ts holds the two equal on
  * rows that sit exactly on the day edges.
  */
 export function readStrip(store: Store, f: LedgerFilter, nowMs: number): Result<Strip> {
