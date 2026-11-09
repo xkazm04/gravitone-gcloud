@@ -9,6 +9,7 @@ import type { Receipt as ReceiptValue, ReceiptMode } from "@gt/domain/produce";
 import type { ProductionId, ProductionTake, TakeKind } from "@gt/domain/production";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Clip } from "@gt/ui/components/desk/Clip.tsx";
 import { Plate } from "@gt/ui/components/desk/Plate.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
@@ -18,6 +19,7 @@ import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { Receipt } from "@gt/ui/components/produce/Receipt.tsx";
 import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
+import { tokens } from "@gt/ui/tokens";
 
 import type { ActionResult } from "../../../../_server/actionCore.ts";
 import type { KeptConcept, ProductionEntry, ProductionsPort, ProductionsView, TakeLaunchView, TakeRequestInput } from "../_port/contract.ts";
@@ -25,6 +27,9 @@ import s from "./productions.module.css";
 import { LessonsPanel, SourceChip, STAGE_PILL, VenturePanel } from "./Sections.tsx";
 import { AudioPanel, CutPanel } from "./AudioCut.tsx";
 import { CastingPanel } from "./Casting.tsx";
+
+/** A frame or take tile's least width (productions.module.css `.frames`, `.takes`): a blob's variant hint. */
+const TILE = Number.parseInt(tokens["w-rail"], 10);
 
 type Act = (run: () => Promise<ActionResult<ProductionsView>>) => Promise<string | undefined>;
 
@@ -84,7 +89,7 @@ function FrameRow({ entry, chosen, onToggle, disabled }: { readonly entry: Produ
         const at = chosen.indexOf(f.id);
         return (
           <button type="button" key={f.id} className={s.frame} aria-pressed={at !== -1} disabled={disabled} onClick={() => onToggle(f.id)} data-frame={f.id}>
-            <Plate src={f.src} alt={f.beat} className={s.plate} lazy />
+            <Plate src={f.src} alt={f.beat} className={s.plate} lazy width={TILE} />
             <span className={s.meta}>{f.beat}</span>
             {at !== -1 && <Chip label={ORDINAL(at)} tone="cyan" casing="lower" />}
           </button>
@@ -102,9 +107,9 @@ function TakeCard({ take, entry, onProve, busy }: { readonly take: ProductionTak
   return (
     <div className={s.take} data-take={take.id}>
       {take.state === "ready" && take.dry !== true && take.video !== undefined ? (
-        <video className={s.plate} src={take.video} poster={take.poster} controls preload="metadata" />
+        <Clip className={s.plate} src={take.video} label={`${take.kind} take ${take.id}`} poster={take.poster} width={TILE} controls />
       ) : (
-        <Plate src={take.poster} alt={`${take.kind} take`} className={s.plate} lazy />
+        <Plate src={take.poster} alt={`${take.kind} take`} className={s.plate} lazy width={TILE} />
       )}
       <div className={s.row}>
         <Chip label={take.id} casing="lower" />

@@ -9,17 +9,18 @@
 // end card, an aspect per render, and finish.ts's checks with loudness.
 import { useState } from "react";
 
-import type { ClipView, CutData, FinishRow, PartView, TimelineData } from "@gt/domain/partView";
+import type { ClipView, CutData, FinishRow, MonitorFrame, PartView, TimelineData } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { cx } from "@gt/ui/components/cx.ts";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
-import { Ghost } from "@gt/ui/components/ghost/Ghost.tsx";
+import { Plate, PlateMissing } from "@gt/ui/components/desk/Plate.tsx";
 import { PartWorkspace } from "@gt/ui/components/part/PartWorkspace.tsx";
 import { clock, secs } from "@gt/ui/components/part/part.ts";
 import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
+import { tokens } from "@gt/ui/tokens";
 
 import { CLOCK_ZOOM_OPTIONS, CutClock, useClockT, useTransport, zoomStep, type ClockLane, type ClockStore, type ClockZoom } from "./CutClock.tsx";
 import { CutFinish } from "./CutFinish.tsx";
@@ -63,19 +64,27 @@ function Readout({ clock: c, fps }: { readonly clock: ClockStore; readonly fps: 
   return <span className={s.read}>{useClockT(c, (t) => tc(t, fps))}</span>;
 }
 
+/** The monitor's widest drawn width (Cut.module.css `.monitor`): the hint for a blob's variant. */
+const MONITOR = Math.ceil(Number.parseInt(tokens["w-detail"], 10) * 2.2);
+
+/** The picture under the playhead, by whatever door serves it (a blob, a public still, a data: URL). */
+const pictureOf = (f: MonitorFrame): string | undefined => f.url ?? (f.blob === undefined ? undefined : `/api/blob/${f.blob}`);
+
 function Monitor({ d, clock: c, tall, safe }: { readonly d: TimelineData; readonly clock: ClockStore; readonly tall: boolean; readonly safe: boolean }) {
   const i = useClockT(c, (t) => d.scenes.findIndex((x) => t >= x.startS && t < x.startS + x.durS));
   const at = i < 0 ? d.scenes.length - 1 : i;
   const sc = d.scenes[at];
   const f = sc === undefined ? undefined : d.monitor[sc.id];
+  const pic = f === undefined ? undefined : pictureOf(f);
   return (
-    <div className={cx(s.monitor, tall && s.tall)} role="img" aria-label={f === undefined ? "nothing on the clock" : `${f.title}${f.blob === undefined ? " · no plate" : ""}`}>
-      {f?.blob !== undefined ? (
-        // eslint-disable-next-line @next/next/no-img-element -- a kernel blob through /api/blob; nothing for next/image to optimise
-        <img className={s.plate} src={`/api/blob/${f.blob}`} alt="" />
+    <div className={cx(s.monitor, tall && s.tall)} role="img" aria-label={f === undefined ? "nothing on the clock" : `${f.title}${pic === undefined ? " · no plate" : ""}`}>
+      {pic !== undefined ? (
+        // The block's plate at the monitor's size (a variant when it is a blob); the monitor is named.
+        <Plate key={pic} className={s.plate} src={pic} alt="" width={MONITOR} />
       ) : (
         <div className={s.slate}>
-          <Ghost label={f?.placed === true ? "dry plate" : "no plate"} />
+          {/* No picture to draw: the hatched absence fills the frame, the unit's words over it. */}
+          <PlateMissing className={s.absent} />
           {f !== undefined && <span className={s.slateKind}>{f.kind}</span>}
           {f !== undefined && f.line !== "" && <p className={s.slateLine}>{f.line}</p>}
         </div>
@@ -83,7 +92,7 @@ function Monitor({ d, clock: c, tall, safe }: { readonly d: TimelineData; readon
       <span className={s.counter}>
         <Chip label={tall ? "9:16" : "16:9"} value={sc === undefined ? "—" : `${at + 1}/${d.scenes.length}`} casing="lower" />
       </span>
-      {f !== undefined && f.blob === undefined && (
+      {f !== undefined && pic === undefined && (
         <span className={s.badge}>
           {/* A placed plate with no bytes is a dry stand-in; an unplaced one is the hole. */}
           {f.placed ? <Chip label="dry plate" casing="lower" /> : <Chip label="no plate" tone="rose" casing="lower" />}

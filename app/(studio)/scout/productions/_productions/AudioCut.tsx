@@ -11,6 +11,7 @@ import { cutFormatOf, MUSIC_ROUTES, SOUND_ROUTES, type MusicRoute, type SoundRou
 import type { ProductionCut, ProductionId } from "@gt/domain/production";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Clip } from "@gt/ui/components/desk/Clip.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Facts } from "@gt/ui/components/facts/Facts.tsx";
@@ -235,7 +236,7 @@ export function CutPanel({ entry, port, act, onView }: { readonly entry: Product
         !launchable && <Empty label="no cut assembled yet" />
       ) : (
         <div className={s.take} data-cut={cut.id} data-cut-state={cut.state}>
-          {cut.video !== undefined && <video className={s.plate} src={cut.video} controls preload="metadata" />}
+          {cut.video !== undefined && <Clip className={s.plate} src={cut.video} label={`cut ${cut.id}`} controls />}
           <div className={s.row}>
             <Chip label={cut.id} casing="lower" />
             <EntryPill entry={CUT_PILL[cut.state]} />

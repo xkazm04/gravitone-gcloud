@@ -11,7 +11,9 @@
 
 import type { ReactNode } from "react";
 
+import { tokens } from "../../tokens.ts";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import { Tally, type TallyProps } from "../tally/Tally.tsx";
 import { FloorGlyph } from "./FloorGlyph.tsx";
 import s from "./ShelfCell.module.css";
@@ -51,6 +53,8 @@ export function ShelfGrid({ children }: { readonly children: ReactNode }) {
   return <div className={s.grid}>{children}</div>;
 }
 
+const SHELF_TILE = Number.parseInt(tokens["w-shelf-tile"], 10);
+
 /**
  * One ratified style: its plate (the shelf's row brings one when the style has a kept plate;
  * app/(studio)/floor/_floor/shelf.ts ShelfStyleRow), else a bare ground, its lock, its name.
@@ -61,8 +65,8 @@ export function ShelfStyle({ name, href, plate }: { readonly name: string; reado
       {plate === undefined ? (
         <span className={cx(s.hero, s.noHero)} aria-hidden="true" />
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element -- a style is shown as its own plate's bytes (desk/Plate.tsx, library/Face.tsx)
-        <img className={s.hero} src={plate} alt={name} loading="lazy" />
+        // A grid-size variant: the tile is a shelf's thumb (the browser measures it, `sizes="auto"`).
+        <Plate className={s.hero} src={plate} alt={name} lazy width={SHELF_TILE} aspect={16 / 10} />
       )}
       <span className={s.lock} aria-hidden="true">
         <FloorGlyph name="lock" className={s.lockMark} />

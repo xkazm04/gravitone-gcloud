@@ -7,12 +7,17 @@ import type { Cell } from "../../board/cull.ts";
 import type { ItemWords } from "../../board/port.ts";
 import { runLooks, runState, type Run } from "../../board/runs.ts";
 import { Chip } from "../chip/Chip.tsx";
+import { Clip } from "../desk/Clip.tsx";
 import { Plate } from "../desk/Plate.tsx";
+import { tokens } from "../../tokens.ts";
 import { cx } from "../cx.ts";
 import { PipRow } from "../piprow/PipRow.tsx";
 import { Wave } from "../wave/Wave.tsx";
 import { kindOf, type TileMedia } from "./CullTile.tsx";
 import s from "./Runs.module.css";
+
+/** A mosaic card's least width: the hint for a blob's grid-size variant (the opened run asks for the original). */
+const CARD = Number.parseInt(tokens["w-lib-tile-m"], 10);
 
 export type RunCardProps = {
   readonly run: Run;
@@ -47,7 +52,7 @@ export function RunFace({ run, cells, mediaOf, wordsOf }: Pick<RunCardProps, "ru
     );
   }
   const face = run.words?.ref ?? run.words?.poster;
-  if (face !== undefined) return <Plate className={s.face} src={face} alt="" lazy />;
+  if (face !== undefined) return <Plate className={s.face} src={face} alt="" lazy width={CARD} />;
   if (kind === "model") {
     // A model run is its first variant's poster render; a glb is never drawn on a card.
     const poster = wordsOf(firstId).poster;
@@ -56,11 +61,11 @@ export function RunFace({ run, cells, mediaOf, wordsOf }: Pick<RunCardProps, "ru
         <span className={s.clamp}>{wordsOf(firstId).label}</span>
       </span>
     ) : (
-      <Plate className={s.face} src={poster} alt="" lazy />
+      <Plate className={s.face} src={poster} alt="" lazy width={CARD} />
     );
   }
-  if (kind === "video") return <video className={s.face} src={first.url} muted playsInline preload="metadata" />;
-  return <Plate className={s.face} src={first.url} alt="" lazy />;
+  if (kind === "video") return <Clip className={s.face} src={first.url} label="" poster={wordsOf(firstId).poster} width={CARD} muted />;
+  return <Plate className={s.face} src={first.url} alt="" lazy width={CARD} />;
 }
 
 export function RunCard({ run, at, cells, verdicts, mediaOf, wordsOf, shape = "square", current, nudged, onPress }: RunCardProps) {

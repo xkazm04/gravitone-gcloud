@@ -11,17 +11,22 @@ import { useState } from "react";
 import type { FramesBoard, PartView, UnitView } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Plate } from "@gt/ui/components/desk/Plate.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { layerKey } from "@gt/ui/components/part/FrameCanvas.tsx";
 import { secs } from "@gt/ui/components/part/part.ts";
 import { Provenance } from "@gt/ui/components/provenance/Provenance.tsx";
 import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import { FIELD_ATTR } from "@gt/ui/keymap/target";
+import { tokens } from "@gt/ui/tokens";
 import { cx } from "@gt/ui/components/cx.ts";
 
 import { Findings } from "./Findings.tsx";
 import type { EditorProps } from "./PartEditor.tsx";
 import s from "./Frames.module.css";
+
+/** An alternative tile's width hint for a blob's grid-size variant (the browser measures the real one). */
+const TAKE = Number.parseInt(tokens["w-lib-tile-m"], 10);
 
 export type InspectorView = "unit" | "alternatives" | "review";
 
@@ -175,8 +180,7 @@ function Alternatives({ unit: u, send, act }: P) {
                 onClick={() => send({ op: "adopt-alt", unitId: u.id, altId: a.id })}
                 data-alt={a.id}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {a.url === null ? <span className={s.blank} /> : <img src={a.url} alt="" />}
+                {a.url === null ? <span className={s.blank} /> : <Plate className={s.takeArt} src={a.url} alt="" lazy width={TAKE} />}
                 <span className={s.takeFoot}>
                   <span>{a.id.split("~").pop()}</span>
                   {a.active && <Chip label="in the cut" tone="emerald" casing="lower" />}

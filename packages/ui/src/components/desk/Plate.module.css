@@ -1,1 +1,10 @@
+/* Plate's three states (Plate.tsx). Waiting: the box on the ink ground (the img paints its pixels
+   over it). Loaded by an event: one fade in, entrance only. Failed: the hatched "not loaded"
+   ground - the hatch and the dashed edge are the marks, each past 3:1 on the ink ground. The
+   attribute selectors out-rank a caller's one class, so a caller's ground cannot hide the wait. */
+.plate[data-state="waiting"]{background:var(--ink-2)}
+.plate[data-enter]{animation:settle var(--dur) var(--ease)}
+.blank{display:block;min-height:var(--sp-7)}
 .failed{display:block;box-sizing:border-box;min-height:var(--sp-7);background:var(--hatch);border:1px dashed var(--muted);border-radius:var(--r-arm)}
+@keyframes settle{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){.plate[data-enter]{animation:none}}
