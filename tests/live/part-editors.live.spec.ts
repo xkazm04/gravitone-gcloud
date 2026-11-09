@@ -70,9 +70,13 @@ test("every face opens in the workspace, each drawing its own project's work", a
   const free = await seeded(page, "any-video-the-night-market");
   await ready(page, `/projects/${free}/research`);
   await expect(chip(page)).toHaveAttribute("data-verdict", "empty");
-  // A part kind with no editor yet is a 404, never an empty editor.
-  expect((await page.request.get("/projects/why-bitcoin/gate:frames")).status()).toBe(404);
-  expect((await page.request.get("/projects/why-bitcoin/nope")).status()).toBe(404);
+  // A part kind with no editor yet is the studio's not-found, never an empty editor. Its status is
+  // 200 since spark fable-ten F: the part's loading frame starts the stream before notFound() runs,
+  // so the answer is the drawn state (noindex), named for the part that is not there.
+  for (const key of ["gate:frames", "nope"]) {
+    await page.goto(`/projects/why-bitcoin/${key}`);
+    await expect(page.locator('[data-state="not-found"]')).toBeVisible();
+  }
 });
 
 test("an op lands and ⌫ undoes it; the verdict chip moves both ways", async ({ page }) => {

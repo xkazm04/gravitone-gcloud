@@ -14,6 +14,10 @@
 // re-route moves spend to another vendor and goes through a receipt, as every launch does.
 // Each act's outcome is the server's words on the toast.
 //
+// `busy` is one flag for every act on the job (a key runs the same acts), so while one is in
+// flight pause, resume and retry draw it as pending - the job has an act under way - and the moves
+// stay disabled: they cannot be the act that is running and its answer.
+//
 // Only jobs the produce port answers for carry acts; v1's live work stays read-only here (its
 // writer is v1 until its producer migrates, COMMON decision 9) and keeps its way out to v1.
 import type { RefObject } from "react";
@@ -94,11 +98,11 @@ export function JobActs({ job: j, busy, onPause, onResume, onRetry, onMove, retr
             <Button size="sm" glyph="down" label="later" onPress={() => onMove("later")} disabled={busy} />
           </>
         )}
-        {canPause(j) && <Button size="sm" label="pause" onPress={onPause} disabled={busy} shortcut={{ mode: "projects.runs", verb: "pause" }} />}
-        {j.state === "paused" && <Button size="sm" tone="cyan" label="resume" onPress={onResume} disabled={busy} shortcut={{ mode: "projects.runs", verb: "pause" }} />}
+        {canPause(j) && <Button size="sm" label="pause" onPress={onPause} pending={busy} shortcut={{ mode: "projects.runs", verb: "pause" }} />}
+        {j.state === "paused" && <Button size="sm" tone="cyan" label="resume" onPress={onResume} pending={busy} shortcut={{ mode: "projects.runs", verb: "pause" }} />}
         {canRetry(j, holds) && (
           <span className={s.retry}>
-            <Button size="sm" tone="amber" label="retry · same route" onPress={() => (press === null ? undefined : onRetry(press.ceilingUsd))} disabled={busy || press === null} shortcut={{ mode: "projects", verb: "retry" }} />
+            <Button size="sm" tone="amber" label="retry · same route" onPress={() => (press === null ? undefined : onRetry(press.ceilingUsd))} disabled={press === null} pending={busy} shortcut={{ mode: "projects", verb: "retry" }} />
             <label className={s.ceil}>
               <span>ceiling $</span>
               <input className={s.ceilIn} inputMode="decimal" aria-label="retry ceiling in dollars" aria-invalid={press === null ? true : undefined} placeholder="none" value={retryCeiling} onChange={(e) => onRetryCeiling(e.currentTarget.value)} />

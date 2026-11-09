@@ -96,6 +96,14 @@ export function ControlSections() {
             <Button label="Launch" tone="cyan" disabled />
             <Button label="Commit packet" badge={{ label: "undecided", value: 7 }} disabled />
           </Row>
+          <Row label="default · disabled · pending">
+            <Button label="pause" size="sm" />
+            <Button label="pause" size="sm" disabled />
+            <Button label="pause" size="sm" pending />
+            <Button label="retry · same route" size="sm" tone="amber" />
+            <Button label="retry · same route" size="sm" tone="amber" disabled />
+            <Button label="retry · same route" size="sm" tone="amber" pending />
+          </Row>
         </Spec>
         <Spec names={["Chip"]} source="chip/Chip.tsx · button">
           <Row>
