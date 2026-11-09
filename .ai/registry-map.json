@@ -14433,7 +14433,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/publish/mode.ts:12 Publishing's whole claim is an effect on a platform it does not own, yet the live path is exercised only with stub adapters and a fake wire, and my search found no lane that reads back from the platform that an upload landed, so a green suite cannot witness delivery.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "quality-gates",

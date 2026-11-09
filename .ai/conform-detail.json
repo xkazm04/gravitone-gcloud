@@ -21043,6 +21043,48 @@
           "evidence": "packages/ui/src/components/cut/CutReview.tsx:36 The notes are joined into one verdict note line per beat, keyed to a caption beat's m:ss start, and none of the five parts of a pinned note beyond the text is captured."
         }
       ]
+    },
+    "d8928803-1de2-497f-882c-809d029b705b/test-harness": {
+      "context": "publish-producers",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:14:42.772Z",
+      "worker": "e284f2a8-000e-42a8-87a3-5899a831731a",
+      "techniques": [
+        {
+          "technique": "far-side-oracle",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/publish-youtube.test.ts:25 Near-side only. Searches for armLive, PUBLISH_MODE, videos.list and googleapis in tests found stubs and dry holds, no credential-gated lane that skips when unset."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/publish-timers.test.ts:115 Waits on observed tick counts; the 10 s limit is only a hang guard."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/publish-tick.test.ts:23 The worker-level tests use the same binding workers/runner.mts loads; the cheaper stub world in publish.test.ts says what it leaves out in its header."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/publish-tick.test.ts:24 Drives the roster production builds at workers/worker.ts:210, not a composition of the test's own."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "packages/producers/test/publish.test.ts:125 Counts on the stub prove the live act was never entered, beside a refused and counted fetch."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "packages/producers/test/publish.test.ts:41 Temp directory with a named reaper, and each world opens its own store file."
+        }
+      ],
+      "registryProposal": "far-side-oracle describes a deployed agent on a host the lane controls. For a third-party API, the only available oracle is a read under a separate credential, so the technique could say what the oracle is when nothing can be deployed on the far side."
     }
   }
 }
