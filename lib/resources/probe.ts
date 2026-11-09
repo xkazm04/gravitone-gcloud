@@ -27,7 +27,7 @@ import { comfyFree } from "./comfyFree.ts";
 // The CIM call costs ~0.5-1 s of PowerShell start-up, so its answer is cached for CACHE_MS; the
 // worker reads the machine once per look, and looks run faster than that while drives finish.
 
-export const CACHE_MS = 2_000;
+const CACHE_MS = 2_000;
 const CIM_TIMEOUT_MS = 8_000;
 const SMI_TIMEOUT_MS = 4_000;
 const COMFY_TIMEOUT_MS = 1_000;
