@@ -15,6 +15,8 @@
 //   the folds     which rail groups are closed or opened past seven: the operator's arrangement,
 //                 kept across queries (not in the URL: an arrangement is not an address).
 //   the drawers   below 1360px the detail, below 1280px the rail, are drawers (library.css).
+//   live          the ledger's stream re-renders the page (./live.ts); every piece above is local
+//                 state the new props do not reset, so the operator's place survives it.
 //
 // Keys: the `library` mode of the one keymap (packages/ui/src/keymap/bindings.ts).
 
@@ -38,11 +40,19 @@ import { settle, useBlocks } from "./blocks.ts";
 import { DetailView } from "./DetailView.tsx";
 import { Results, type ResultsHandle } from "./Results.tsx";
 import { Toolbar } from "./Toolbar.tsx";
+import { useLiveLibrary } from "./live.ts";
 import { useNarrow } from "./useNarrow.ts";
 import { hrefOf, identity, pressedBy, queryOf, toggled, withKind, type LibraryUrl } from "./url.ts";
 import s from "./library.module.css";
 
-export type LibraryProps = { readonly url: LibraryUrl; readonly page: ShownPage; readonly detail: ShownDetail | null; readonly port: LibraryPort };
+export type LibraryProps = {
+  readonly url: LibraryUrl;
+  readonly page: ShownPage;
+  readonly detail: ShownDetail | null;
+  readonly port: LibraryPort;
+  /** The ledger seq the page rendered at: the live feed continues from it. Absent (the ledger would not read), no feed; the backstop still re-reads. */
+  readonly head?: number;
+};
 
 type Failed = { readonly id: string; readonly text: string };
 
@@ -69,11 +79,12 @@ export function newestOf(sort: LibrarySort, items: readonly LibraryCard[]): read
 
 const STEP: Readonly<Record<string, Step>> = { "←": "left", "→": "right", "↑": "up", "↓": "down", PgUp: "page-up", PgDn: "page-down", Home: "first", End: "last" };
 
-export function Library({ url: u, page, detail: first, port }: LibraryProps) {
+export function Library({ url: u, page, detail: first, port, head }: LibraryProps) {
   const router = useRouter();
   const { toast } = useShell();
   const [pending, startTransition] = useTransition();
   const { narrow, railNarrow } = useNarrow();
+  useLiveLibrary(head);
 
   // ── the window: local, mirrored to the URL without a render ──
   const [view, setView] = useState<View>(u.view);
@@ -100,7 +111,7 @@ export function Library({ url: u, page, detail: first, port }: LibraryProps) {
   const go = useCallback((next: LibraryUrl) => startTransition(() => router.replace(hrefOf({ ...next, view, d: density, sel, detail: here.detail }), { scroll: false })), [router, view, density, sel, here.detail]);
   const id = identity(u);
   const query = useCallback((offset: number, limit: number) => queryOf(u, offset, limit), [u]);
-  const blocks = useBlocks(port, id, query, page.items);
+  const blocks = useBlocks(port, id, query, page.items, page.total);
 
   // ── details, by id ──
   const [details, setDetails] = useState<ReadonlyMap<string, ShownDetail>>(() => new Map(first === null ? [] : [[first.card.id, first]]));

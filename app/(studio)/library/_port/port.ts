@@ -18,7 +18,7 @@ import type { LibraryAct } from "@gt/domain/library";
 
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { ledgerFor } from "../../_shell/links.ts";
-import { fixtureAct, fixtureDetail, fixtureEverything, fixtureLook, fixtureProjects, fixtureQuery } from "./fixture.ts";
+import { fixtureAct, fixtureDetail, fixtureEverything, fixtureLook, fixtureMadeBy, fixtureProjects, fixtureQuery } from "./fixture.ts";
 import { fixtureUrl } from "./fixtureData.ts";
 import type { ActOutcome } from "./contract.ts";
 import { cardOf, detailOf, type Media } from "./present.ts";
@@ -51,6 +51,7 @@ const fixture: ServerLibrary = {
     return d.ok ? ok(detailOf(d.value, fixtureMedia, held, fixtureProjects(), atelierOf)) : d;
   },
   act: (id, act, held) => fixtureActed(id, act, held),
+  madeBy: (group, value) => ok(fixtureMadeBy(group, value)),
   exportItem: (id, project, held) => Promise.resolve(fixtureActed(id, { act: "export", project }, held)),
 };
 

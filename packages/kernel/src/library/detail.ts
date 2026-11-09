@@ -36,22 +36,44 @@ const BEFORE_SELF = new Set(["library-item", "run", "job", "candidate"]);
 /** Library ids the projection mints for things that are themselves items (lib/library/ids). */
 export const styleItemId = (styleId: string): string => `style:${styleId}`;
 
-function lineageOf(r: Reader, item: LibraryItem): LineageNode[] {
+/**
+ * Where a lineage pointer outside the Library opens, spelled by the caller (the app's
+ * _shell/links.ts owns its routes; the kernel only proves the target is there). Absent, the
+ * pointer is drawn as text.
+ */
+export type LineageLinks = {
+  /** A kernel job's page (Runs, on its bar). Asked only of a job the `jobs` table holds. */
+  readonly job?: (jobId: string) => string;
+};
+
+function lineageOf(r: Reader, item: LibraryItem, links: LineageLinks): LineageNode[] {
   // One lookup a pointer: the title is both the proof the index holds it and its label.
-  return resolveLineage(item, (id) => {
+  const titleOf = (id: string): string | undefined => {
     const t = r.get("SELECT title FROM library_docs WHERE id = ?", id)?.["title"];
     return typeof t === "string" ? t : undefined;
-  });
+  };
+  // A job is linked only while the kernel holds it (`jobs.id` is UNIQUE, so this is one index
+  // probe); a job record that is gone - an imported pointer, a pruned store - stays text.
+  const job = links.job;
+  const jobAt = job === undefined ? undefined : (id: string): string | undefined => (r.get("SELECT 1 AS x FROM jobs WHERE id = ?", id) === undefined ? undefined : job(id));
+  return resolveLineage(item, titleOf, jobAt);
 }
 
-/** The pure half of `lineageOf`: the fixture port resolves its records' pointers with this same rule. */
-export function resolveLineage(item: LibraryItem, titleOf: (id: string) => string | undefined): LineageNode[] {
+/**
+ * The pure half of `lineageOf`: the fixture port resolves its records' pointers with this same rule.
+ * `jobAt` answers a job pointer's page, or undefined when the job cannot be shown there.
+ */
+export function resolveLineage(item: LibraryItem, titleOf: (id: string) => string | undefined, jobAt?: (jobId: string) => string | undefined): LineageNode[] {
   const node = (l: LibraryItem["lineage"][number]): LineageNode => {
     const role = item.source === "derived" && l.kind === "library-item" ? "derived from" : (ROLE[l.kind] ?? l.kind);
     const target = l.kind === "library-item" ? l.id : l.kind === "style" ? styleItemId(l.id) : undefined;
     const title = target === undefined ? undefined : titleOf(target);
     const base = { role, ref: { kind: l.kind, id: l.id }, label: title ?? l.label ?? l.id };
     if (l.kind === "production") return { ...base, href: `/scout/productions?from=${encodeURIComponent(l.id)}` };
+    if (l.kind === "job") {
+      const href = jobAt?.(l.id);
+      return href === undefined ? base : { ...base, href };
+    }
     if (target !== undefined && title !== undefined) return { ...base, itemId: target };
     if (l.kind === "project" || l.kind === "run") return { ...base, facet: { group: l.kind, value: l.id } };
     return base;
@@ -126,7 +148,7 @@ function vocabularyOf(r: Reader, seq: number, item: LibraryItem): LibraryItemDet
   }));
 }
 
-export function libraryDetail(store: Store, id: string): Result<LibraryItemDetail> {
+export function libraryDetail(store: Store, id: string, links: LineageLinks = {}): Result<LibraryItemDetail> {
   return store.read((r): LibraryItemDetail => {
     const row = r.get(`${ROW_SELECT} WHERE d.id = ?`, id);
     if (row === undefined) throw new AppError("not-found", `library: no item ${id}`);
@@ -153,7 +175,7 @@ export function libraryDetail(store: Store, id: string): Result<LibraryItemDetai
       item,
       row: rowOf(row, chips),
       vocabulary,
-      lineage: lineageOf(r, item),
+      lineage: lineageOf(r, item, links),
       // An audio item's panel reads the ingest measure of its bytes (./measures.ts).
       extras: rec.value.extras.audio === undefined || item.media === undefined ? rec.value.extras : { ...rec.value.extras, audio: withMeasure(rec.value.extras.audio, readMeasure(r, item.media.sha256)) },
       media: item.media === undefined ? null : readFacts(r, item.media.sha256),

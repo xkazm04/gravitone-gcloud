@@ -39,8 +39,16 @@ const all = (v: string | readonly string[] | undefined): readonly string[] => (v
 const isKind = (v: string | undefined): v is LibraryKindName => LIBRARY_KINDS.some((k) => k === v);
 const isSort = (v: string | undefined): v is LibrarySort => LIBRARY_SORTS.some((k) => k === v);
 
-/** The groups a kind's rail can hold: its own vocabulary and the shared groups. */
-export const groupFits = (kind: LibraryKindName | "all", group: string): boolean => isSharedGroup(group) || VOCAB_GROUPS[kind].includes(group);
+/**
+ * Groups every kind may be filtered by though no rail draws them: the job that made an item, the
+ * address Runs' "made" door links with (_shell/links.ts `libraryFor`). The kernel's
+ * library/core.ts LINEAGE_GROUPS, spelled here because this module is client-safe; a test holds
+ * the two equal.
+ */
+export const LINEAGE_FILTERS: readonly string[] = ["job"];
+
+/** The groups a kind's rail can hold - its own vocabulary and the shared groups - and the lineage filters. */
+export const groupFits = (kind: LibraryKindName | "all", group: string): boolean => isSharedGroup(group) || VOCAB_GROUPS[kind].includes(group) || LINEAGE_FILTERS.includes(group);
 
 export function parseUrl(p: Params): LibraryUrl {
   const kindRaw = one(p["kind"]);

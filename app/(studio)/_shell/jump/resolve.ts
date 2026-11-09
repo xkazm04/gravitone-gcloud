@@ -41,12 +41,9 @@ function recordOf(id: string): JumpDest | null {
     return { key: `${kind}:${id}`, label: id, kind: label, href: link.href };
   };
   if (parsePacketId(id) !== null) return at("packet", "board", id);
-  // Runs selects a bar by its `<source>:<id>` key, and a kernel job's source is `kernel` (the
-  // Floor's run rows and Runs' own hold rows link `?job=kernel:<job id>`). A bare kernel id
-  // (`job:run:…`, `job:part:…`, what the kernel mints) is given its source, so the bar lights; a
-  // pasted key that already carries it goes as it is.
-  if (id.startsWith(KERNEL_JOB) && id.length > KERNEL_JOB.length) return at("job", "runs", id);
-  if (id.startsWith(JOB) && id.length > JOB.length) return at("job", "runs", `kernel:${id}`);
+  // A kernel id (`job:run:…`, `job:part:…`, what the kernel mints) or a Runs key that already
+  // carries its source (`kernel:job:…`) is a bar in Runs; subjectLink keys it as Runs does.
+  if ((id.startsWith(KERNEL_JOB) && id.length > KERNEL_JOB.length) || (id.startsWith(JOB) && id.length > JOB.length)) return at("job", "runs", id);
   return null;
 }
 

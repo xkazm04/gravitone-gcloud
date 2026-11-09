@@ -100,6 +100,13 @@ export const PROJECTS: readonly { readonly id: string; readonly title: string; r
   { id: "prj-peak-and-fall", title: "Peak and Fall · film", style: "paper-relief" },
   { id: "prj-signal-room", title: "Signal Room · ad", style: "blueprint" },
 ];
+/**
+ * The kernel job a project's cuts name in their lineage. Glass Harbor's is the trailer's Cut job
+ * in the produce fixture (projects/_port/fixtureData.ts SEED_PROJECTS, done), so its door opens
+ * on Runs; Signal Room's names a job no fixture holds - an imported pointer whose record is gone
+ * - and stays text.
+ */
+export const CUT_JOBS: Readonly<Record<string, string>> = { "prj-glass-harbor": "job:part:glass-harbor-trailer:cut", "prj-signal-room": "job:part:signal-room-ad:cut" };
 export const RUNS = { forge: ["2026-08-26-sweep-01", "2026-09-14-sweep-02", "2026-10-02-sweep-03"], extract: ["2026-09-03-extract-arcane", "2026-10-09-extract-harbor"], dojo: ["2026-09-01-dojo-cycle-7", "2026-09-05-dojo-cycle-9"], strips: ["2026-10-13-strips-edu"], articles: ["art-2026-10-11-search", "art-2026-10-14-faceting"] } as const;
 /** Hunts by id alone: the index labels a hunt collection by its id (kernel library/core.ts facetsOf). */
 export const HUNTS = ["hunt-rain-city", "hunt-glass-pulse", "hunt-chalk-march"] as const;

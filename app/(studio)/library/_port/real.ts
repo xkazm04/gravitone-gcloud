@@ -27,8 +27,8 @@ import type { Actor } from "@gt/domain/event";
 import type { AppErrorCode } from "@gt/domain/errors";
 import type { LibraryAct, LibraryQuery, LibraryRow, ModelExportProject } from "@gt/domain/library";
 import type { LibraryItemDetail } from "@gt/domain/libraryItem";
-import { libraryDetail, styleCovers } from "@gt/kernel/library/detail";
-import { queryLibrary } from "@gt/kernel/library/query";
+import { libraryDetail, styleCovers, type LineageLinks } from "@gt/kernel/library/detail";
+import { countMadeBy, queryLibrary } from "@gt/kernel/library/query";
 import { actOnItem, recordExport, type MarkAct } from "@gt/kernel/library/write";
 import type { Store } from "@gt/kernel/store";
 import type { Palette } from "@gt/ui/components/library/Face.tsx";
@@ -36,7 +36,7 @@ import type { Palette } from "@gt/ui/components/library/Face.tsx";
 import { exportVariant, type Exported } from "../../../../lib/foundry/mesh/export.ts";
 import { FoundryError } from "../../../../lib/foundry/runStore.ts";
 import { blobRoute } from "../../../../lib/library/media.ts";
-import { ledgerFor } from "../../_shell/links.ts";
+import { ledgerFor, runsJobFor } from "../../_shell/links.ts";
 import type { ActOutcome, Choice, ShownDetail, ShownPage } from "./contract.ts";
 import { cardOf, detailOf, type Media } from "./present.ts";
 
@@ -47,6 +47,8 @@ export type ServerLibrary = {
   readonly query: (q: LibraryQuery) => Result<ShownPage>;
   readonly detail: (id: string, held: Readonly<Record<string, readonly string[] | undefined>>) => Result<ShownDetail>;
   readonly act: (id: string, act: MarkAct, held: Readonly<Record<string, readonly string[] | undefined>>, who?: Who) => Result<ActOutcome>;
+  /** How many items carry `group:value`: what a job or a run made, counted before another screen links to it. */
+  readonly madeBy: (group: "job" | "run", value: string) => Result<number>;
   /** The `export` act: files into a game project, then its event. Async, unlike the marks: it copies. */
   readonly exportItem: (id: string, project: ModelExportProject, held: Readonly<Record<string, readonly string[] | undefined>>, who?: Who) => Promise<Result<ActOutcome>>;
 };
@@ -115,6 +117,9 @@ function withStyleCovers(store: Store, rows: readonly LibraryRow[]): Result<Libr
   return ok(rows.map((r) => (r.kind === "style" ? { ...r, cover: covers.value.get(r.id.slice(STYLE_PREFIX.length)) ?? r.cover } : r)));
 }
 
+/** Where the detail's lineage doors open: a job the kernel holds opens on its bar in Runs. */
+const LINKS: LineageLinks = { job: (id) => runsJobFor(id) };
+
 const everythingIn = (store: Store): Result<number> => store.read((r) => Number(r.get("SELECT count(*) AS n FROM library_items")?.["n"] ?? 0));
 
 export type RealDeps = {
@@ -154,7 +159,7 @@ export function makeRealLibrary(deps: RealDeps): ServerLibrary {
     detail: (id, held) => {
       const s = deps.store();
       if (!s.ok) return s;
-      const d = libraryDetail(s.value, id);
+      const d = libraryDetail(s.value, id, LINKS);
       return d.ok ? shown(s.value, d.value, held) : d;
     },
     act: (id, act, held, who) => {
@@ -176,16 +181,20 @@ export function makeRealLibrary(deps: RealDeps): ServerLibrary {
       // Using an item in a project it is already in is the same answer twice; a pin is a toggle,
       // and a toggle that found the other state was pressed against a page that is out of date.
       if (!done.value.changed && act.act !== "use-in-project") return err("conflict", act.act === "pin" ? `${title} is already pinned` : `${title} is not pinned`);
-      const after = libraryDetail(store, id);
+      const after = libraryDetail(store, id, LINKS);
       if (!after.ok) return after;
       const d = shown(store, after.value, held);
       return d.ok ? ok({ detail: d.value, said }) : d;
+    },
+    madeBy: (group, value) => {
+      const s = deps.store();
+      return s.ok ? countMadeBy(s.value, group, value) : s;
     },
     exportItem: async (id, project, held, who) => {
       const s = deps.store();
       if (!s.ok) return s;
       const store = s.value;
-      const before = libraryDetail(store, id);
+      const before = libraryDetail(store, id, LINKS);
       if (!before.ok) return before;
       const model = before.value.extras.model;
       if (before.value.item.kind !== "model" || model === undefined) return err("invalid", `${before.value.row.title} is not a model: only a model is exported to a game project`);

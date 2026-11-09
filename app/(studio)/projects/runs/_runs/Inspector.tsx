@@ -3,8 +3,9 @@
 // resource: what is on hold, what failed, what waits at the Weir, what runs, and which sources
 // could not be read. A produce job carries its acts (./Acts.tsx: pause, retry, earlier/later,
 // re-route); v1's live work keeps its ways OUT - the v1 page that decides it today, the
-// project's thread, the ledger - and acts there stay v1's until its producer migrates.
-import type { ReactNode } from "react";
+// project's thread, the ledger - and acts there stay v1's until its producer migrates. A job
+// that made something has a door to it in the Library, drawn once the Library has counted it.
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
@@ -19,6 +20,8 @@ import type { Dep } from "@gt/ui/components/runs/thread.ts";
 import { EntryPill, StatusPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { STATUS } from "@gt/ui/components/status/status.ts";
 
+import { LIBRARY_RUN_SOURCES } from "../../../../../lib/library/runSources.ts";
+import type { Made } from "../../../library/_port/made.ts";
 import type { LaneHoldView } from "../../_port/contract.ts";
 import { canReroute, Holds, JobActs, type JobActsProps } from "./Acts.tsx";
 import { MvActs, mvTrackOf, type MvChannel, type MvPart } from "./MvActs.tsx";
@@ -82,6 +85,40 @@ function DepRow({ j, m, at, onSelect }: { readonly j: RunJob; readonly m: RunsMo
   );
 }
 
+/**
+ * The Library facet a job's outputs are filed under: a kernel job's own id (`job`, read off each
+ * item's lineage), a ledger run's id (`run`, the collection v1's feeds file a run's work under).
+ * Only a source the Library files runs under (lib/library/runSources.ts) has a run door. A v1
+ * queue's live job is filed under neither until it lands, so it gets no door.
+ */
+export function madeOf(j: Pick<RunJob, "from" | "id" | "source">): { readonly group: "job" | "run"; readonly value: string } | null {
+  if (j.from === "kernel") return { group: "job", value: j.id };
+  if (j.from === "ledger" && LIBRARY_RUN_SOURCES.has(j.source)) return { group: "run", value: j.id };
+  return null;
+}
+
+/** The door to what a job made, drawn only once the Library has counted something there. */
+function MadeDoor({ group, value }: { readonly group: "job" | "run"; readonly value: string }) {
+  const [made, setMade] = useState<Made | null>(null);
+  useEffect(() => {
+    let live = true;
+    // A refused count draws no door: the inspector's other doors still stand, and the Ledger link beside it says the rest.
+    // The action module is loaded when a job is opened, not with the page: Runs' page and Runs.tsx (other lots'
+    // files) hand this inspector no port to carry it, and a static import would walk the client closure into its
+    // zod door (tests/next-gates/client-closure.test.ts). A "use server" module crosses as action references either way.
+    void import("../../../library/_port/made.ts").then(({ madeBy }) => madeBy({ group, value })).then(
+      (r) => {
+        if (live && r.ok && r.value.n > 0) setMade(r.value);
+      },
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [group, value]);
+  return made === null ? null : <Button size="sm" label="made" tally={{ value: made.n }} href={made.href} glyphAfter="chevR" />;
+}
+
 function JobView({ j, m, deps, blocked, onSelect, acts }: { readonly j: RunJob; readonly m: RunsModel; readonly deps: readonly Dep[]; readonly blocked: ReadonlyMap<string, string>; readonly onSelect: (key: string) => void; readonly acts: InspectorActs }) {
   const byKey = new Map(m.jobs.map((x) => [x.key, x]));
   const after = deps.filter((d) => d.to === j.key).flatMap((d) => byKey.get(d.from) ?? []);
@@ -89,6 +126,7 @@ function JobView({ j, m, deps, blocked, onSelect, acts }: { readonly j: RunJob; 
   const block = blocked.get(j.key);
   const track = j.from === "kernel" && (j.state === "done" || j.state === "failed") ? mvTrackOf(j.id) : null;
   const mv = acts.mv;
+  const made = madeOf(j);
   const facts: Fact[] = [
     { term: "source", value: j.source },
     ...(j.laneFrom === undefined ? [] : [{ term: "lane from", value: j.laneFrom }]),
@@ -122,6 +160,7 @@ function JobView({ j, m, deps, blocked, onSelect, acts }: { readonly j: RunJob; 
       <div className={s.acts}>
         {j.act === undefined && <Button size="sm" label={placeOf(j.href)} href={j.href} glyphAfter="chevR" />}
         {j.projectId !== undefined && j.act !== undefined && <Button size="sm" label="plan" href={`/projects/${encodeURIComponent(j.projectId)}`} glyphAfter="chevR" />}
+        {made !== null && <MadeDoor key={j.key} group={made.group} value={made.value} />}
         <LedgerLink href={ledgerHref(j.id)} subject={j.title} />
       </div>
       <Keycaps mode="projects" label="keys" map={RUNS_KEYS} facts={new Set(["job", ...(j.act !== undefined && canReroute(j.act, acts.holds) ? ["reroutable"] : []), ...(acts.holds.length > 0 ? ["hold"] : [])])} />

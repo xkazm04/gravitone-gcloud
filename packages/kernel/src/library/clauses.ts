@@ -14,7 +14,7 @@ import {
   railGroups,
 } from "@gt/domain/library";
 import type { Param, Reader } from "../store.ts";
-import { ftsExpression, isColumnGroup } from "./core.ts";
+import { ftsExpression, isColumnGroup, LINEAGE_GROUPS } from "./core.ts";
 
 // THE QUERY, COMPILED - every predicate of a LibraryQuery as a clause tagged with
 // the group it belongs to: `kind`, a rail group, or null for the search text
@@ -22,12 +22,13 @@ import { ftsExpression, isColumnGroup } from "./core.ts";
 // group's own clause out (./counts.ts). User text reaches SQL only as bound
 // parameters and as ONE quoted FTS5 expression (core.ts `ftsExpression`).
 
-const RAIL_KEYS: ReadonlySet<string> = new Set(LIBRARY_KINDS.flatMap((k) => railGroups(k).map((g) => g.key)));
+// The rail's groups and the lineage groups (core.ts LINEAGE_GROUPS): every group the index holds as facet rows.
+const RAIL_KEYS: ReadonlySet<string> = new Set([...LIBRARY_KINDS.flatMap((k) => railGroups(k).map((g) => g.key)), ...LINEAGE_GROUPS]);
 
 export const querySchema = z.object({
   kind: z.enum(LIBRARY_KINDS).optional(),
   q: z.string().max(500).optional(),
-  facets: z.record(z.string().refine((k) => RAIL_KEYS.has(k), "not a Library rail group"), z.array(z.string().min(1)).max(200)).optional(),
+  facets: z.record(z.string().refine((k) => RAIL_KEYS.has(k), "not a Library facet group"), z.array(z.string().min(1)).max(200)).optional(),
   sort: z.enum(LIBRARY_SORTS).optional(),
   offset: z.number().int().nonnegative().max(1_000_000).optional(),
   limit: z.number().int().min(0).max(LIBRARY_PAGE_MAX),

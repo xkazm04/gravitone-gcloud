@@ -31,7 +31,7 @@ export default async function ScoutRun({ params }: { readonly params: Promise<{ 
   return (
     <div className={s.page}>
       {head(rail.filter((p) => p.state === "open").length)}
-      <Board id={r.id} initial={r.packet} rail={rail} kind="full" port={BOARD_PORT} redrive={BOARD_REDRIVE} home={HOME} />
+      <Board id={r.id} initial={r.packet} rail={rail} kind="full" port={BOARD_PORT} redrive={BOARD_REDRIVE} home={HOME} {...(r.head === undefined ? {} : { head: r.head })} />
     </div>
   );
 }
