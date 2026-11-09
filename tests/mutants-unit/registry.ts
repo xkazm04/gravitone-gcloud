@@ -46,6 +46,14 @@ export const UNGUARDED_TEST_BUDGET = 0;
 export const MUTANTS: UnitMutant[] = [
   // ---- @gt/domain and @gt/catalog
   {
+    id: "thumb-width-admits-spellings",
+    test: "packages/domain/test/blob.thumb.test.ts",
+    file: "packages/domain/src/blob.thumb.ts",
+    find: "String(w) === s",
+    replace: "Number(s) === w",
+    why: "The width allow-list admits 0640, 640.0 and +640, so one variant gets many cache keys and the closed list the route relies on is open again.",
+  },
+  {
     id: "production-casts-before-proven",
     test: "packages/domain/test/production.test.ts",
     file: "packages/domain/src/production.machine.ts",
@@ -351,6 +359,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A project whose template id is unknown falls back to the short-form clip instead of the short educational video, so old records reopen with the wrong steps and runtime.",
   },
   // ---- @gt/kernel: blob .. job
+  {
+    id: "plan-gate-links-its-newest-packet",
+    test: "packages/kernel/test/parts.gates.test.ts",
+    file: "packages/kernel/src/parts/gates.ts",
+    find: "packetIdOf: (partId, r) => latestGatePacket(r, partId)?.id,",
+    replace: "packetIdOf: (partId) => `pkt:step:${partId}`,",
+    why: "A reopened gate's Plan row links its returned #1 attempt, so the operator lands on a packet that no longer takes a verdict.",
+  },
   {
     id: "blob-read-skips-hash-check",
     test: "packages/kernel/test/blob.test.ts",
@@ -691,6 +707,38 @@ export const MUTANTS: UnitMutant[] = [
     find: "if (press.repeat && b.repeat !== true) return null;",
     replace: "if (false) return null;",
     why: "A held K keeps firing and decides a whole row of items instead of one (v1 keyGuard's rule).",
+  },
+  {
+    id: "ui-keymap-global-scope-becomes-the-page",
+    test: "packages/ui/test/jump-keys.test.ts",
+    file: "packages/ui/src/keymap/route.ts",
+    find: "if (m !== undefined && m !== GLOBAL && !owned.has(m)) return m;",
+    replace: "if (m !== undefined && !owned.has(m)) return m;",
+    why: "The shell's global scope mounts after every screen, so it would become the page mode and every screen's keys would go dead the moment Jump is bound.",
+  },
+  {
+    id: "ui-keymap-global-past-a-confirm",
+    test: "packages/ui/test/jump-keys.test.ts",
+    file: "packages/ui/src/keymap/route.ts",
+    find: "return live(layers).every((e) => e.kind === \"sheet\" || !claims(e));",
+    replace: "return true;",
+    why: "Ctrl/⌘+K would open Jump over a confirm or the compose popover, leaving a half-made act unanswered underneath.",
+  },
+  {
+    id: "ui-keymap-help-skips-outer-modes",
+    test: "packages/ui/test/jump-keys.test.ts",
+    file: "packages/ui/src/keymap/help.ts",
+    find: "const path = mode === null || mode === GLOBAL ? [] : modePath(mode);",
+    replace: "const path = mode === null || mode === GLOBAL ? [] : [mode];",
+    why: "The key sheet over the cull would leave out the board's [ ] packet keys that still fire, so the reference would disagree with the keymap.",
+  },
+  {
+    id: "ui-keymap-jump-dead-in-fields",
+    test: "packages/ui/test/jump-keys.test.ts",
+    file: "packages/ui/src/keymap/bindings.ts",
+    find: "{ mode: GLOBAL, keys: [\"⌘K\"], verb: \"jump\", does: \"jump\", field: \"*\" },",
+    replace: "",
+    why: "Ctrl/⌘+K mid-search would fall to the browser's search bar instead of opening Jump.",
   },
   {
     id: "ui-layers-leaving-entry-owns-input",

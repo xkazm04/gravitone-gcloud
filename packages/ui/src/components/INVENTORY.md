@@ -325,7 +325,7 @@ Part workspace (`/projects/[id]/[part]`).
 
 | Kit name | Replaces (v1 / prototype) | Pages | States / variants |
 | --- | --- | --- | --- |
-| `PartWorkspace` | STEPS-DESIGN §1; v1 research page | P (every part editor) | header crumbs, verdict, acts, undo; rail, one primary and an optional inspector as labelled regions; foot part tabs and the upstream break when a part is not ready; fixed viewport |
+| `PartWorkspace` | STEPS-DESIGN §1; v1 research page | P (every part editor) | header crumbs, verdict, acts, jobs in flight (a live region of chips: act, stage, since), the walk's next door once ready, undo, the newest job's failure (ErrorLine in full + its door on Runs); rail, one primary and an optional inspector as labelled regions; foot part tabs and the upstream break when a part is not ready; fixed viewport |
 | `PartTabs` | v1 phase rail | P | the project's parts in recipe order with a state mark; the current one; a part with no editor, a gate and the slot aria-disabled; `[` `]` walk the rail |
 | `RailList` | v1 research board (39 cards, 7000 px) | P | one listbox, windowed past a screen, active-descendant keyboard (J / K); selected row scrolled into view; row height `h-pile-face`, or 1.5x when tall |
 | `VerdictChip` | STEPS-DESIGN §1 header verdict | P | the part's state as a status pill, its first reason in the work's words, the rest in a Tip on `+N` |
@@ -365,3 +365,10 @@ Cull and status.
 | `DrawTabs` | Knockout `.bhead` draw seg + `.cutfold` | /audio?s=songlab, /kit | the draws on `TabRail` (links; `n open` or `done` tally); the open draw's rule chips; decided `n/m` and upsets tallies; the field door; `cut n` chip opening the fold of cut takes with the reason and rights |
 | `Queue` | Knockout `.side` booked next + `#jobs` gpu queue | /audio?s=songlab, /kit | booked next (5 rows: round, `seed name × seed name`, main/post chip; each a door) or `no open match`; the GPU lane's song-lab jobs with state, stage, `n of m` and a progress rail (absent when none) |
 | `FieldSheet` | new (S2 W1: the field off the header) | /audio?s=songlab&f=1, /kit | on `sheet/LevelSheet` (fit): takes / past-gate tallies, the reference slot (attached references as chips or `none attached`, Upload reference to POST /audio/songlab/reference, pending, the refusal verbatim); one dense row per take: seed when drawn, name, condition, gate (✓ / ✗ / not scored yet), SongEval, wer, length, rights chip (absent figures are dashes); an empty lab is one line |
+
+## Jump (spark fable-ten, package C)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `JumpDialog` | new (no prototype counterpart; v1 had none) | all (studio shell, ⌘K), /kit | a `dialog` layer in the keymap mode `jump`: one `Field` (keyfield `jump`), rows as links (name + kind: section, project, board, runs, ledger; a plain click or ⏎ is routed by the caller, a modified click is the browser's); ⏎ in the field takes the first row (cyan rule while the field has focus), ↓ enters the rows, ↑ from the first returns; a loading source as one `Ghost` row; a failed source verbatim (`ErrorLine`); specimen in flow |
+| `KeySheet` | every desk's `Keycaps` strip, gathered | all (studio shell, ⌘/), /kit | a `dialog` layer with no mode: one `CapsHeading` + `Keycaps` legend per mode a press can reach from the screen beneath, innermost first, `studio` last (keymap/help.ts `helpTable`, the dispatcher's own rows and facts); specimen in flow |
