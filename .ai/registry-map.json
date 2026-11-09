@@ -2514,7 +2514,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/medium/fake.ts:38 The fake always reports every figure held and no leftover markers with no knob to change it, and figuresOf appears in no test, so the short read-back the real driver exists to report (three of thirteen figures once lost) is never exercised.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "production-pipeline-phasing",
@@ -11964,7 +11968,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/suno/fakeDriver.ts:59 Offline Suno probes run against this stand-in for lib/suno/driver.ts, which starts healthy with no failure configured, while a grep finds no test importing the real driver, browser or selectors, so a green suite says nothing about the shipped Suno path.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "live-system-demo-film",

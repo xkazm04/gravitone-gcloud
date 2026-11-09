@@ -20339,6 +20339,69 @@
           "evidence": "lib/studio/score.ts:178 One derivation of the clock from scene holds, with cue spans computed from it; the hand-typed TIMELINE beside it is fixture data."
         }
       ]
+    },
+    "492013a4-a2b2-4f74-b6e3-9dde233632a9/test-harness": {
+      "context": "article-trials-and-medium",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:06:37.073Z",
+      "worker": "fb64c161-2615-4360-9d9d-ec788cbab3a7",
+      "techniques": [
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "lib/medium/fake.ts:10 A passing default, the setting the technique names as the worst: probes must opt in to failure, and the figure count has no failing setting at all."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "tests/fixtures/articles/trialSeeds.ts:7 Cloning one real run per verdict is the right economics, but the manifests bypass the store and neither the seeds nor the gate probe call a validator afterwards, which the seeded-data rule requires of a raw write."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-trial.probe.spec.ts:395 The cutoff is read from the exec record's own duration, with a loose 30 s one-sided hang guard on the next line and polling for the killed pids."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-trial.probe.spec.ts:381 The probe detaches the grandchild on Windows precisely so the tree-kill decision is reached and another mechanism cannot answer for it."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants/registry.ts:384 A registered mutant makes every trial record better, proving the registry-record probe can fail."
+        }
+      ],
+      "registryProposal": "The technique marks its no-default rule for fakes as inference. These fakes reset to ok and each failing path is set explicitly, so the measured harm here is narrower: an outcome the fake has no knob for. The rule could be sharpened to require that every outcome the real driver can report is reachable through the fake."
+    },
+    "95dd9201-2503-481d-8cdd-a863f6566283/test-harness": {
+      "context": "music-vendors-and-publish",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:06:37.073Z",
+      "worker": "fb64c161-2615-4360-9d9d-ec788cbab3a7",
+      "techniques": [
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "lib/sound/suno/fakeDriver.ts:60 Health and create both default to a pass. The fake sits outside this context's file list, but it is the only thing standing in for this context's lib/suno/driver.ts in tests. suno-queue.probe does set unhealthy states explicitly."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/music-body-deadline.probe.spec.ts:60 The verdict is the MusicError kind raised by the request's own abort signal; the 3 s race is only a loose hang guard against one timer shortened to 50 ms."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:1696 A registered mutant drops the speech-hold release in elevenlabs.ts to prove its test can fail."
+        }
+      ]
     }
   }
 }
