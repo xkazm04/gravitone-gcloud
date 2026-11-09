@@ -11424,7 +11424,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/library/project.ts:15 This module indexes finished items for search and builds no cut; a search of lib/library found none of the listed terms, and its caption, keyframe and storyboard mentions are catalog facets and tile images for media already made.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "quality-gates",
@@ -19142,7 +19146,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/text/router.ts:17 This module routes reasoning calls across providers and assembles no media; a search of lib/text found none of the listed terms, and the only timeline or video mentions are unrelated comments and task names such as wiki timeline and mv-metadata.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "quality-gates",

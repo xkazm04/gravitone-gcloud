@@ -20103,16 +20103,11 @@
       "context": "text-reasoning-engine",
       "subject": "video-assembly",
       "bundle": "media-generation",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-09",
-      "evaluatedTs": "2026-11-09T02:02:05.803Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "9f9d4c10-f192-493d-b421-7c0cf6647ec9",
-        "state": "not-applicable",
-        "at": "2026-11-09T02:02:39.648930+00:00",
-        "reason": "reviewer (sonnet): The not-applicable anchor lib/text/types.ts:58 is an incidental comment on the TextCapability type, and the module does serve this subject: lib/text/router.ts and providers/google.ts route `scene-direction` and `edit-plan` capabilities for the frames, edit and music-video pair callers, which the sea"
-      }
+      "evaluatedTs": "2026-11-09T02:36:14.603Z",
+      "worker": "85d09863-b159-4d61-946a-92a9e3621c7e",
+      "techniques": []
     },
     "1eb57510-dcfa-4549-97ed-56f3f97519ec/video-assembly": {
       "context": "imaging-vendor-providers-and-video",
@@ -20288,6 +20283,16 @@
           "evidence": "tests/fixtures/articles/stub-gh.mjs:13 A single request with a one-line answer falls under the technique's trivial-exchange exclusion."
         }
       ]
+    },
+    "04e4702a-4221-4673-9cfa-130cbd21f93e/video-assembly": {
+      "context": "library-projection-feeds",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:36:14.603Z",
+      "worker": "85d09863-b159-4d61-946a-92a9e3621c7e",
+      "techniques": []
     }
   }
 }
