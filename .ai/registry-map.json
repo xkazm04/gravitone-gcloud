@@ -19180,7 +19180,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/router.ts:314 The sole-entry-point rule is stated in prose with no negative-space gate behind it (no no-restricted rule in eslint.config.mjs, no matching check in pipeline gates or tests/next-gates), and it is already breached: lib/music-clip/gemini.ts:95 posts generateContent directly, outside the router's trail and spend booking.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56
         },
         {
           "subject": "cost-metering",

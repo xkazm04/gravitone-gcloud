@@ -20513,6 +20513,83 @@
         "at": "2026-11-09T03:20:33.693799+00:00",
         "reason": "reviewer (sonnet): The claim that no verdict reaches a model as recalled memory is contradicted inside lib/foundry: lib/foundry/scout/idea-loop/generate.ts:25-38 (`ideaPrompt`) puts the operator's last 20 keep/reject idea verdicts, with reasons, into the generation prompt. The evidence mentions lib/foundry/scout only "
       }
+    },
+    "63ca5808-c5b5-4e64-840b-69d8c3c6991f/quality-gates": {
+      "context": "text-reasoning-engine",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:31:10.168Z",
+      "worker": "f513d6f8-88da-42fc-bee9-a8e14762ba04",
+      "techniques": [
+        {
+          "technique": "chokepoint-tag-registry",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:314 No call-site tag bijection and no confinement rule for the vendor endpoint or provider modules; lib/sound/suno/listen.ts:31 and lib/foundry/scout/doctorOllama.ts:1 also import from provider modules."
+        },
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:1 The forbidden action simply works: lib/music-clip/gemini.ts:95 calls Gemini directly and nothing goes red."
+        },
+        {
+          "technique": "oracle-frozen-during-repair",
+          "verdict": "conformant",
+          "evidence": "lib/text/repair.ts:237 The repaired object re-enters the validator the model cannot write, after diff and no-shrink guards in code. Limit: a finding with path \"\" (lib/notebook/failure.ts:45) makes covers() license edits everywhere, leaving only no-shrink on scope."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:425 A probe that cannot confirm an engine eliminates that candidate on the record; an empty chain ends in refusal, never a served answer."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:684 .env.example is tracked and declares GOOGLE_AI_API_KEY (:205), OLLAMA_HOST (:323) and TEXT_RETRIEVE (:92), so the named remedy resolves in the shipped tree."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:449 A vendor's native schema enforcement is not trusted; the door re-checks every served answer. Limit: the check is shallow by design (lib/text/json.ts:27)."
+        },
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "conformant",
+          "evidence": "pipeline/check-bundle.mjs:143 The seam's server-only claim is tested against emitted browser chunks, behind a positive control, not against source imports."
+        },
+        {
+          "technique": "renameable-detector-keys",
+          "verdict": "conformant",
+          "evidence": "pipeline/check-bundle.mjs:141 Each lib/text fingerprint names its source file and is asserted present there with comments stripped, so a rewording exits 2."
+        }
+      ]
+    },
+    "1de3c823-3d27-478d-8f7e-b3b940344faf/quality-gates": {
+      "context": "ui-status-provenance",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:31:10.168Z",
+      "techniques": [
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/status/status.ts:151 Unknown tokens draw amber rather than calm, which is display honesty; no verdict depends on it."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:90 The panel renders a Consequence built elsewhere; the enumeration and enforcement are the Board's and the kernel's."
+        }
+      ],
+      "withdrawn": {
+        "worker": "f513d6f8-88da-42fc-bee9-a8e14762ba04",
+        "state": "not-applicable",
+        "at": "2026-11-09T03:31:52.555721+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchor, status.ts:140, is the generic statusOf lookup. It doesn't show that gate machinery is absent. The absence terms searched (process.exit, pre-commit, husky, waiver) don't fit a UI component library, and the evidence rests on a lexical match."
+      }
     }
   }
 }
