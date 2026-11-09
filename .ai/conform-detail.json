@@ -20144,6 +20144,150 @@
           "evidence": "lib/imaging/video/leonardo.ts:209 The adapter asks for silent clips, so no synthesised channel exists to pin across calls."
         }
       ]
+    },
+    "cfbabdf6-58ed-4f4a-acad-2a2249c19dbd/test-harness": {
+      "context": "part-editor-media-cut-score",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:22:04.563Z",
+      "worker": "46ce2617-3a31-4991-9202-2e3cb6543eec",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/part-editor-media.test.ts:570 A universal claim over a three-member hand list. The population is not derived from the editor kinds, and part-editor-writing.test.ts covers only the writing editors."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/part-editor-media.test.ts:249 The preview's 30 fps claim is driven by a stubbed rAF with fabricated timestamps and asserted as a frame index, not by wall time."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/part-finish.live.spec.ts:3 Score, cut, voice and render journeys run in a real browser, and the lane states which claims need one."
+        },
+        {
+          "technique": "configuration-axes-cross-the-ladder",
+          "verdict": "conformant",
+          "evidence": "tests/live/part-finish.live.spec.ts:11 The lane names the side it runs, so its green carries that predicate."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/part-editor-media.test.ts:3 The cheaper hook dispatcher says what it leaves out, in the file header rather than its name, and the browser rung sits above it."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/part-editor-media.test.ts:24 The mocked compositor is declared in the file that makes it unreachable, along with the one fact still observed."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:7634 A seeded mutant demands a red run for the transport; the registry also carries CutFinish, Render, Score, ScoreTakes, Takes and Voice entries."
+        }
+      ]
+    },
+    "4eabdc72-cf31-48f3-a218-98ebd0914ff1/test-harness": {
+      "context": "runtime-support-and-local-mode",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:22:04.563Z",
+      "worker": "46ce2617-3a31-4991-9202-2e3cb6543eec",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/articles-git-env.probe.spec.ts:48 One of ten variables crosses into the subprocess. The claimed equivalence of the two lists is never exercised. Inferred from reading, no mutation was run."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/foundry-catalogue-tx.probe.spec.ts:336 The exemption list is checked in one direction only. lib/sound/store.ts and lib/articles/store.ts now import acquireLock from diskTx and hold no \"wx\", so both PENDING entries are stale and nothing reports it. The walk does declare a floor at line 328."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/lib-sleep.test.ts:14 The delay is asserted on fake timers at the boundary, with no wall-clock bound."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "lib/kernelProcess.ts:25 The handle exposes the one knob that lets a lane point away from the operator's store, resolved per call in storeLocation."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:6320 Two seeded mutants cover domain load. No mutant names diskTx, renameRetry or gitEnv."
+        }
+      ],
+      "registryProposal": "pin-the-call-not-the-name calls the two-direction exemption check a 'refinement worth copying' in its body but states it as a decision rule at the end; the two should agree on whether it binds."
+    },
+    "6a878b5f-8652-4265-839a-dce38680a9c7/test-harness": {
+      "context": "article-human-gate-and-landing",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:22:04.563Z",
+      "worker": "46ce2617-3a31-4991-9202-2e3cb6543eec",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/articles-git-env.probe.spec.ts:65 The file's header names the landing code, but no case drives landRun under an inherited GIT_DIR, and no mutant in either registry touches the adoption (repo search for cwdBoundGitEnv and GIT_DIR). Inferred from reading, no mutation was run."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/_articles.ts:74 Build once, copy per sandbox, with a private origin and registry per case and a measured build cost."
+        },
+        {
+          "technique": "far-side-oracle",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-engine.probe.spec.ts:154 The pushed result is read back from the bare origin, not from the run record. The GitHub PR itself is only an argv logged by a stub."
+        },
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-engine.probe.spec.ts:165 The approved patch goes through real git apply and is asserted by its effect at the origin."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/fixtures/articles/registry-fixture.mjs:63 The stub gate says it is a stub and names the real one, which limits the claim. No comparison against the real gate exists, so publication/1 acceptance by the real gate is unproven here."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/_articles.ts:126 Each sandbox gets its own store, registry and temp directory, and cleanup restores them."
+        },
+        {
+          "technique": "platform-quirk-absorption",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/_articles.ts:100 The hook-environment quirk is absorbed once in the sandbox, with its incident recorded in the probe header."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants/registry.ts:526 A seeded mutant proves the retry branch can fail its probe. It does not cover the environment adoption above."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-engine.probe.spec.ts:146 The landing is reached through the shipped engine after the shipped approveRun, not through a composition the test assembled."
+        },
+        {
+          "technique": "recorded-interaction-fixtures",
+          "verdict": "not-applicable",
+          "evidence": "tests/fixtures/articles/stub-gh.mjs:13 A single request with a one-line answer falls under the technique's trivial-exchange exclusion."
+        }
+      ]
     }
   }
 }

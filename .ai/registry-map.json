@@ -2184,7 +2184,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/registryWrite.ts:80 The landing's adoption of the cwd-bound git environment is unpinned: the predicate is tested alone and articleSandbox deletes the variables before article code runs, so reverting this call site would stay green while a hook's GIT_DIR could redirect a landing's add, commit and push.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "translation-quality-measurement",
@@ -12644,7 +12648,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/part-editor-media.test.ts:560 The claim that no media write button reads as pressable mid-write runs over a hand-written list of frames, motion and trailer, so the send-bound write buttons in Cut.tsx (nudge, snap) and Score.tsx (add cue, delete cue) are outside the walk and a new editor would turn nothing red.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "data-video-art-direction",
@@ -15440,7 +15448,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/gitEnv.ts:16 The header says the probe holds the fixture's copied variable list to the library's, but the probe aims only GIT_DIR at the fixture, so dropping any of the copy's other nine names stays green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "tenant-scoped-agent-runtime",
