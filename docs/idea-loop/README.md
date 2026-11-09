@@ -34,6 +34,9 @@ The prediction is **what the operator will keep**. The training data is `night.c
 Each verdict is scored out of fold and measured through `lib/foundry/calibration.ts`: same statuses, same floor
 (8 keeps and 8 throws).
 
+The bar's AUC covers idea artboard prompts (title + genre + prompt) and nothing else; the loop scores storyboard
+treatments, which it was not measured on. `IdeaBar.measuredOn` carries this and `barLine` prints it.
+
 **Verdicts counted 2026-11-08: n = 0. Status `insufficient`. The bar (0.5) is provisional and nothing here is
 calibrated.** This machine holds no scout night manifest (no `foundry-out/scout-nights/` or `foundry-out/scout/`),
 and a temp copy of the store has 0 rows in `decisions` and `packet_commits`. The `verdict.*` events in it sit on forge

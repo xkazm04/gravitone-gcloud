@@ -44,6 +44,17 @@ describe("the bar", () => {
     expect(barLine(bar)).toContain("n=0");
   });
 
+  it("names the population it was measured on, at n=0 and when calibrated", () => {
+    const empty = scorerFrom([]).bar;
+    expect(empty.measuredOn).toBe("idea artboard prompts");
+    expect(barLine(empty)).toContain("population: idea artboard prompts");
+    expect(barLine(empty)).not.toContain("storyboard");
+    const calibrated = scorerFrom([...keeps(12), ...throws(12)]).bar;
+    expect(calibrated.status).toBe("calibrated");
+    expect(barLine(calibrated)).toContain("population: idea artboard prompts");
+    expect(barLine(calibrated)).toContain("not measured on storyboard treatments");
+  });
+
   it("stays insufficient below the floor however cleanly the few verdicts split", () => {
     const { bar } = scorerFrom([...keeps(7), ...throws(30)]);
     expect(bar).toMatchObject({ n: 37, nKept: 7, nThrown: 30, status: "insufficient", auc: null, provisional: true });

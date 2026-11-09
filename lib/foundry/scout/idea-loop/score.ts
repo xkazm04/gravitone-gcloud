@@ -106,6 +106,9 @@ function bestCut(rows: readonly { readonly verdict: string; readonly score: numb
 
 export const PROVISIONAL_BAR = 0.5;
 
+/** What the training text is: title + genre + prompt of idea artboards. The loop scores storyboard treatments. */
+export const MEASURED_ON = "idea artboard prompts";
+
 export type IdeaBar = {
   readonly n: number;
   readonly nKept: number;
@@ -118,6 +121,8 @@ export type IdeaBar = {
   readonly value: number;
   /** True unless the status is `calibrated`. */
   readonly provisional: boolean;
+  /** The population the AUC was measured on. */
+  readonly measuredOn: string;
 };
 
 export type IdeaScorer = { readonly bar: IdeaBar; readonly predictedKeep: (idea: IdeaWords) => number; readonly passes: (idea: IdeaWords) => boolean };
@@ -138,6 +143,7 @@ export function scorerFrom(verdicts: readonly IdeaVerdict[]): IdeaScorer {
     ci: measured.ci,
     value,
     provisional: !calibrated,
+    measuredOn: MEASURED_ON,
   };
   const model = train(verdicts);
   return { bar, predictedKeep: (idea) => predict(model, idea), passes: (idea) => predict(model, idea) >= value };
@@ -145,6 +151,7 @@ export function scorerFrom(verdicts: readonly IdeaVerdict[]): IdeaScorer {
 
 /** One line for a human, saying what the bar is and is not. */
 export function barLine(b: IdeaBar): string {
-  const measure = b.auc === null ? "not measured" : `AUC ${b.auc} [${b.ci?.[0]}, ${b.ci?.[1]}]`;
+  const auc = b.auc === null ? "not measured" : `AUC ${b.auc} [${b.ci?.[0]}, ${b.ci?.[1]}]`;
+  const measure = `${auc} (population: ${b.measuredOn})${b.provisional ? "" : "; not measured on storyboard treatments"}`;
   return `bar ${b.value.toFixed(3)}${b.provisional ? " (provisional)" : ""} · ${b.status} · n=${b.n} (${b.nKept} kept, ${b.nThrown} thrown; floor ${b.floor} each) · ${measure}`;
 }
