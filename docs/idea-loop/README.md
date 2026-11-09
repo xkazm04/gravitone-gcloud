@@ -67,3 +67,19 @@ the idea `il-20261108-001` was drawn 3/3 panels, 165 s wall, `jobIds: []`. Panel
 
 Each panel is an independent Codex call with no reference image and no seed, so characters do not carry between panels:
 in the proof storyboard the street cleaner is a man in panel 1 and a woman in panels 2 and 3.
+
+## Operator rulings
+
+**2026-11-09, machine-passed ideas go straight to storyboards.** The `fromLoop` path stands as built: a brief naming
+`fromLoop: il-YYYYMMDD-NNN` is checked against the idea's record by the door, and no human step sits between the
+scorer's pass and the storyboard. The human triages on the Board.
+
+**2026-11-09, a Codex draw needs no priced receipt.** Codex is part of the monthly subscription. The receipt behaviour
+stands as built: a Codex night prints one line, `no metered charge · no job`, and prices nothing.
+
+Every storyboard panel is drawn by Codex.
+
+### Open
+
+- Panel character consistency: the operator has not ruled.
+- The Firebase deferral: the operator has not ruled.
